@@ -511,18 +511,20 @@
     "back": "뒤로"
   },
   "EditorPreparingHud": {
-    "title": "편집기 준비 중",
-    "openingWindow": "편집기 창을 만드는 중…",
-    "loadingEditor": "편집기 인터페이스를 불러오는 중…",
-    "loadingAppearance": "편집기 모양을 불러오는 중…",
-    "loadingProject": "프로젝트를 여는 중…",
-    "loadingTimeline": "타임라인을 불러오는 중…",
-    "loadingEditorModule": "편집기 구성 요소를 불러오는 중…",
-    "initializingEditor": "편집기 상태를 준비하는 중…",
-    "renderingEditor": "편집기를 렌더링하는 중…",
-    "loadingPreview": "첫 미리보기를 준비하는 중…",
-    "ready": "편집기 준비 완료",
-    "progressLabel": "편집기 로딩 진행률"
+    "title": "편집기를 여는 중",
+    "openingWindow": "편집기를 준비해 볼까요",
+    "loadingEditor": "준비하고 있어요",
+    "loadingAppearance": "작업 공간을 정리하고 있어요",
+    "loadingProject": "프로젝트를 열고 있어요",
+    "loadingTimeline": "타임라인을 준비하고 있어요",
+    "loadingEditorModule": "도구를 준비하고 있어요",
+    "initializingEditor": "마무리하고 있어요",
+    "renderingEditor": "거의 다 됐어요!",
+    "loadingPreview": "거의 다 됐어요!",
+    "ready": "거의 다 됐어요!",
+    "progressLabel": "편집기 로딩 진행률",
+    "almostThere": "거의 다 됐어요!",
+    "cancel": "취소"
   },
   "EditorOpenError": {
     "title": "편집기를 열 수 없습니다",
@@ -663,7 +665,18 @@
     "preset": "프리셋",
     "reset": "초기화",
     "cancel": "취소",
-    "useThisArea": "이 영역 사용"
+    "useThisArea": "이 영역 사용",
+    "fullScreen": "전체 화면",
+    "record": "녹화",
+    "settings": "빠른 설정",
+    "countdown": "카운트다운",
+    "off": "끔",
+    "hideTaskbar": "작업 표시줄 숨기기",
+    "hideDock": "Dock 숨기기",
+    "hideDesktopIcons": "바탕 화면 아이콘 숨기기",
+    "desktopUnavailable": "Linux에서는 사용할 수 없습니다.",
+    "captureOnly": "macOS 녹화에서 숨깁니다.",
+    "previewUnavailable": "바탕 화면 미리보기를 불러올 수 없습니다."
   },
   "SettingsPanel": {
     "themeMode": "테마 모드",
@@ -1033,5 +1046,19 @@
     "transitions": "강조 전환 효과",
     "highlightColor": "하이라이트 색상",
     "highlightOpacity": "하이라이트 강도"
+  },
+  "Brand": {
+    "animateBeamy": "Beamy 움직이기",
+    "loading": "Beam 로딩 중",
+    "reload": "Beam 다시 로드",
+    "tipLabel": "팁",
+    "tipRegion": "영역을 선택해 필요한 부분만 녹화하세요.",
+    "tipPresets": "프리셋으로 녹화 크기를 일정하게 유지하세요.",
+    "tipTeleprompter": "텔레프롬프터를 보며 카메라를 바라보세요.",
+    "tipCountdown": "카운트다운을 설정해 녹화를 준비하세요.",
+    "tipDevices": "녹화 전에 카메라와 마이크를 확인하세요.",
+    "tipInstant": "Instant로 바로 공유할 수 있는 영상을 만들어 보세요.",
+    "tipShortcuts": "설정에서 녹화 단축키를 변경하세요.",
+    "tipProjects": "기존 프로젝트를 열어 편집을 이어가세요."
   }
 }

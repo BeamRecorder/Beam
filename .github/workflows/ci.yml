@@ -41,7 +41,7 @@ jobs:
               - 'tests/**'
               - 'tsconfig*.json'
               - 'vite.config.ts'
-              - '*.html'
+              - 'html/**'
 
   quality:
     runs-on: ubuntu-latest

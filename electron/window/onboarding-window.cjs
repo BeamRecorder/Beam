@@ -52,8 +52,8 @@ function createOnboardingWindowManager({
   });
 
   const load = (target) => {
-    if (isPackaged) target.loadFile(path.join(applicationRoot, 'dist/onboarding.html'));
-    else target.loadURL('http://localhost:6500/onboarding.html');
+    if (isPackaged) target.loadFile(path.join(applicationRoot, 'dist/html/onboarding.html'));
+    else target.loadURL('http://localhost:6500/html/onboarding.html');
   };
 
   const showHud = () => {

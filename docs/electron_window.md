@@ -4,6 +4,8 @@ This application uses transparent, frameless Electron windows as part of the UI.
 
 ## Window modes
 
+All desktop document entries live in `html/`; Vite preserves this directory in `dist/html/`. Electron loads `/html/{entry}.html` during development and `dist/html/{entry}.html` in packaged builds. Resolve public images from the build root, one level above the documents, and keep the development renderer permission allowlist aligned with these exact paths.
+
 The transparent main window is controlled by `electron/window/window-controller.cjs` and owns the HUD and Recorder modes. The editor uses a separate opaque window created by `electron/window/editor-window.cjs`; this separation is required for native window animations and Windows Snap Layouts.
 
 | Mode       | Bounds / behavior                                                                                                                                                                                                                                                                                                                                                                                                                             | Interaction                                                                                                                                                                                                               |
@@ -14,7 +16,7 @@ The transparent main window is controlled by `electron/window/window-controller.
 
 Use `window:show-hud` / `capture.showHud()` to return from the editor. Do not reproduce it by separately changing mode, maximize state, size, and position: ordering matters.
 
-While the editor opens, keep the transparent HUD window visible and replace only its card contents. Loading progress is phase-based and comes from validated editor lifecycle events (`BrowserWindow` creation, renderer load, project load, timeline load, and first paint); do not replace it with timer-driven progress. After `editor:ready`, demote and hide the native HUD window before showing and focusing the editor window. Verify the HUD is no longer natively visible; if that postcondition fails, do not present the editor above a live HUD. Returning to the HUD restores its normal always-on-top policy.
+While the editor opens, keep the transparent HUD window visible and replace only its card contents with Beamy, one translated status and a ghost Cancel button. Hide the HUD topbar during preparation. Cancel invalidates pending renderer lookups before the owned `editor:cancel-opening` IPC disposes the pending editor; it resolves opening with `false` and keeps the saved project. Late ready events cannot present a disposed session. Loading progress is phase-based and comes from validated editor lifecycle events (`BrowserWindow` creation, renderer load, project load, timeline load, and first paint); do not replace it with timer-driven progress. After `editor:ready`, demote and hide the native HUD window before showing and focusing the editor window. Verify the HUD is no longer natively visible; if that postcondition fails, do not present the editor above a live HUD. Returning to the HUD restores its normal always-on-top policy.
 
 Disable background throttling while the editor initializes behind its native presentation gate. Main-frame navigation failure, renderer loss, unresponsiveness, or a 30-second startup deadline must reject the open request and dispose only that pending editor window. Keep the requesting controls usable for retry. Bind callbacks to the created window so a late event from a failed attempt cannot close its replacement or quit the HUD.
 
@@ -34,7 +36,7 @@ Electron clips painting outside the BrowserWindow. A CSS shadow around an elemen
 - When HUD content changes height or width, include the 32 px outer allowance in the Electron `setSize` request.
 - Do not solve a clipped shadow by increasing the shadow token. Prefer reserving physical renderer space first.
 - The countdown uses a centered `560 × 256` transparent window: its `160 × 160` circle and shortcut-hint row keep at least 16 px of outer room so the border and shadow remain intact.
-- The main HUD header keeps the Beam logo, flexible capture-mode group and window controls in no-drag regions. The countdown entry `countdown.html` loads only its overlay, theme and translations for shortcut hints.
+- The main HUD header keeps the Beam logo, flexible capture-mode group and window controls in no-drag regions. The countdown entry `html/countdown.html` loads only its overlay, theme and translations for shortcut hints.
 
 ## Mouse pass-through and focus stealing
 
@@ -94,11 +96,23 @@ The horizontal HUD card stays at its canonical size while mode and source select
 
 Capture issues live in a toolbar count button with a scrollable hover/focus/click panel and a copy action for each issue. Keep the list scrollbar at the panel edge. Enable interaction on opening, then continue pointer hit testing over both the card and teleported content; transparent added space passes clicks through on macOS/Windows. Linux retains its existing fully interactive policy because Electron cannot forward ignored mouse events there.
 
-Settings, Projects and the temporary Mascot Lab use independent, opaque, resizable windows managed by `electron/window/hud-panels.cjs`. Each role has one live window and loads `hud-panel.html` with a bounded `panel` query. The lab starts at `1280 × 900`, with a native minimum of `900 × 640`; its contents scroll below the native titlebar. Show it only after native readiness and `hud-panel:ready` from its own renderer. A failed load, renderer loss, close or 30-second deadline disposes that attempt and permits retry. Use native Window Controls Overlay, reset browser zoom before presentation, and keep the titlebar draggable.
+Settings and Projects use independent, opaque, resizable windows managed by `electron/window/hud-panels.cjs`. Each role has one live window and loads `html/hud-panel.html` with a bounded `panel` query. Show each panel only after native readiness and `hud-panel:ready` from its own renderer. A failed load, renderer loss, close or 30-second deadline disposes that attempt and permits retry. Use native Window Controls Overlay, reset browser zoom before presentation, and keep the titlebar draggable. Mascot Lab remains a prototype under `components/brand/lab/`; the application does not load it or expose a native window for it.
+
+Projects starts at `720 × 560`, with a native minimum of `560 × 440`. Its virtual grid measures the actual list width, computes square card dimensions and updates row heights and scroll anchoring on resize. Start only the selected view import alongside the locale and appearance bootstrap; mount once all three are ready. Panel readiness must not depend on a background animation frame. Thumbnail decoding is lazy, serial and limited to visible rows, including the small virtualization overscan.
 
 Only the HUD can request these panels through their named preload methods. Only the Projects renderer can request a validated UUID and capture mode through `hud-panel:open-project`. It delegates opening to the HUD's existing editor lifecycle; the panel never acquires editor ownership. Preferences and theme changes broadcast to all windows through the existing preferences store.
 
 The region overlay waits for both native readiness and `screen-region:ready` from its mounted renderer before delivering configuration and showing. Construct it with exact display bounds; Linux uses the forced X11 backend for placement instead of compositor fullscreen. Preserve the renderer opacity mask and transparent crop interior. Linux screen/window recording still belongs to Rust and the XDG Portal; forcing Electron to X11 does not replace that capture backend.
+
+Default region selection hides the HUD and asks Rust for an uncropped desktop PNG before presenting the selector. On Linux, the Portal chooses the monitor first; its geometry must match the Electron display, and Rust retains the authorized session for the subsequent crop recording or screenshot. Use that snapshot only inside the magnifier; never paint it across the selector or inside the crop, which must remain transparent to the live desktop. Canceling or failing selection releases the retained session. A failed native load, renderer loss, unresponsiveness or 30-second readiness deadline disposes the selector and permits retry.
+
+Keep dimensions visible and exact while dragging. Presets and recording controls hide during deliberate gestures and return with a reduced-motion-aware spring transition. A click or movement shorter than 8 logical pixels preserves the previous crop. Keep the magnifier below controls in the renderer stacking order.
+
+Selection controls reserve 16 px at every display edge for their border and shadow, including a Full screen crop. Measure both control groups, preserve their last visible size during gestures, and refresh renderer geometry on configuration. Controls above a crop or near the bottom display edge anchor from their bottom edge so wrapping and device errors cannot push them off screen before measurement catches up.
+
+On Linux and Windows 10, recording markers use opaque, non-focusable, click-through strips entirely outside the crop; omit strips at display boundaries. Each strip waits for its own themed renderer before showing. Never replace this with a display-sized protected Linux/Windows 10 window. On macOS, pass auxiliary native window IDs to ScreenCaptureKit explicitly: Electron content protection alone does not exclude them. Linux cannot exclude a teleprompter from monitor capture, so constrain it outside the crop, using another display when available, and explain when there is insufficient room. Restore its original bounds when capture finishes or selection is canceled.
+
+Windows hides visible taskbar and desktop icon windows in Rust and restores those same windows on normal completion, cancellation and failure. macOS filters Dock and desktop icon layers from the native capture instead of altering desktop preferences. Linux desktop hiding is unavailable and its switches stay disabled.
 
 ## HUD auxiliary window lifetime
 
@@ -135,10 +149,14 @@ Apply this same policy again when inspecting a selected native window.
 
 Start Vite normally, then run `DEV_CROSSPLATFORM=1 bun run electron:dev`. For layout
 inspection without Electron, Vite also serves
-`/source-picker.html?preview=1&kind=window` (or `kind=screen`); that development-only
+`/html/source-picker.html?preview=1&kind=window` (or `kind=screen`); that development-only
 route supplies the fixture catalogue to the production picker component.
 
-The editor window manager prepares the countdown and teleprompter at HUD startup and whenever the user returns to the HUD. Preparation runs alongside HUD presentation; it must not block the HUD on renderer loading. Both auxiliary windows are released once the editor can be presented and the HUD is hidden. A canceled countdown (`show(null)`) must not recreate a released window.
+The teleprompter uses a natively transparent BrowserWindow. Its saved opacity applies to the renderer body so the script, toolbar and teleported popovers fade together. Keep its resize grip wired to the owner-validated `teleprompter:resize` IPC because frameless transparent Linux windows may have no native resize edges. Clamp requested sizes before presentation and resolve Linux crop exclusion before committing bounds.
+
+The editor window manager prepares the countdown and teleprompter after the first native HUD presentation and completion of the capture capability warmup, and whenever the user returns to the HUD. Initial preparation must not compete with Linux encoder probing or block HUD presentation. Cancel deferred preparation on manager destruction; skip it when the HUD has since hidden or the application is shutting down. Explicit teleprompter/countdown requests still prepare their own renderer immediately. Both auxiliary windows are released once the editor can be presented and the HUD is hidden. A canceled countdown (`show(null)`) must not recreate a released window.
+
+Disable background throttling for both auxiliary renderers. Countdown presentation requires native loading and `countdown:ready` from the owning renderer, sent only after its event subscriptions are installed. Queue the latest value until both signals arrive; foreign and stale renderers cannot complete the handshake.
 
 Before releasing the teleprompter, hide it and request a checkpoint from its renderer. The renderer flushes pending document/preferences saves and returns its draft, matching session, reading line, scroll position and paused/editing state. Only the owning webContents can acknowledge the unique checkpoint request. A timeout or invalid checkpoint retains the renderer to preserve the draft; returning to the HUD during a pending checkpoint cancels disposal. Restore the matching state before announcing renderer readiness. Native loading and renderer readiness must both complete before showing a requested reader. Hidden readers do not autoscroll: use the native visibility notification as well as page visibility, because a preloaded `show: false` window can initially report `document.hidden === false`. Restore the saved scroll offset with instant scrolling so CSS smooth scrolling cannot move it while the renderer is being prepared.
 
@@ -149,6 +167,8 @@ Keep bounds persistence and existing visibility intent across suspension. Captur
 The recorder's HTML contains a small static export of the Mascot Lab cloud before Vue is imported. Its CSS animation and shared theme tokens load independently of the application, without fonts, an animation library, a timer that delays presentation, or a new native window. Remove it immediately for transparent camera, region, crop and teleprompter overlays. Remove the recorder shell on the first frame after mounting Vue; respect reduced motion and preserve the HUD's 16 px outer margin. Startup failures keep a readable error and native reload button available before Vue exists. These two bootstrap elements intentionally cannot use Vue UI primitives.
 
 `beam:renderer-bootstrap` measures the renderer import, selected-language initialization and first mounted frame. Native development startup logs include module loading, beginning at the first line of `main.cjs`. Read `docs/recorder-performance.md` for measurement limits and profiling. The frameless application has no default application menu; custom tray and context menus remain independent.
+
+The region selector loads `html/screen-region.html` independently of App/HUD. Load its hidden renderer in parallel with native preview preparation, with background throttling disabled. Present only after the preview, native readiness and renderer subscription have completed. Cancelled or failed preparations must remain hidden and release their authorized capture source. The floating region toolbar uses its intrinsic width independently of its screen position; keep its last positive measurement while `v-show` hides it so its spring begins at the final clamped coordinates.
 
 1. Read this document and `docs/ARCHITECTURE.md`.
 2. Identify whether the change affects renderer layout, native bounds, input pass-through, or all three.
@@ -207,7 +227,7 @@ For still capture, hide the HUD and selection overlays before requesting Rust ca
 
 ### Screenshot export status
 
-The status pill loads `quick-snip-status.html` independently of App/HUD and imports the video encoder only for a video render task. Screenshot start preloads this window hidden; presentation is requested only after the native capture returns, so the pill cannot enter its own screenshot. Both `ready-to-show` and the mounted renderer's `quick-snip:status-ready` handshake are required before showing it. The capture source preview is replaced by a bounded thumbnail of the styled canvas before clipboard encoding completes.
+The status pill loads `html/quick-snip-status.html` independently of App/HUD and imports the video encoder only for a video render task. Screenshot start preloads this window hidden; presentation is requested only after the native capture returns, so the pill cannot enter its own screenshot. Both `ready-to-show` and the mounted renderer's `quick-snip:status-ready` handshake are required before showing it. The capture source preview is replaced by a bounded thumbnail of the styled canvas before clipboard encoding completes.
 
 Completed dismissal starts after native presentation and waits five seconds without interaction. Native window blur clears stale DOM hover/focus; mouse focus cannot keep the pill pinned after pointer departure. Keyboard focus, pending actions and errors remain interactive. Progress updates neither reposition the window nor restart an existing completion deadline.
 

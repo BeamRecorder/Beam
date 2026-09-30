@@ -511,18 +511,20 @@
     "back": "Назад"
   },
   "EditorPreparingHud": {
-    "title": "Подготовка редактора",
-    "openingWindow": "Создание окна редактора…",
-    "loadingEditor": "Загрузка интерфейса редактора…",
-    "loadingAppearance": "Загрузка оформления редактора…",
-    "loadingProject": "Открытие проекта…",
-    "loadingTimeline": "Загрузка временной шкалы…",
-    "loadingEditorModule": "Загрузка компонентов редактора…",
-    "initializingEditor": "Подготовка состояния редактора…",
-    "renderingEditor": "Отрисовка редактора…",
-    "loadingPreview": "Подготовка первого предпросмотра…",
-    "ready": "Редактор готов",
-    "progressLabel": "Ход загрузки редактора"
+    "title": "Открываю редактор",
+    "openingWindow": "Давайте подготовим редактор",
+    "loadingEditor": "Я всё подготавливаю",
+    "loadingAppearance": "Я обустраиваю рабочее место",
+    "loadingProject": "Я открываю ваш проект",
+    "loadingTimeline": "Я готовлю вашу временную шкалу",
+    "loadingEditorModule": "Я готовлю ваши инструменты",
+    "initializingEditor": "Я собираю всё вместе",
+    "renderingEditor": "Почти готово!",
+    "loadingPreview": "Почти готово!",
+    "ready": "Почти готово!",
+    "progressLabel": "Ход загрузки редактора",
+    "almostThere": "Почти готово!",
+    "cancel": "Отмена"
   },
   "EditorOpenError": {
     "title": "Не удалось открыть редактор",
@@ -663,7 +665,18 @@
     "preset": "Пресет",
     "reset": "Сбросить",
     "cancel": "Отмена",
-    "useThisArea": "Использовать эту область"
+    "useThisArea": "Использовать эту область",
+    "fullScreen": "Весь экран",
+    "record": "Запись",
+    "settings": "Быстрые настройки",
+    "countdown": "Обратный отсчёт",
+    "off": "Выкл.",
+    "hideTaskbar": "Скрыть панель задач",
+    "hideDock": "Скрыть Dock",
+    "hideDesktopIcons": "Скрыть значки рабочего стола",
+    "desktopUnavailable": "Недоступно в Linux.",
+    "captureOnly": "Скрыто в записи на macOS.",
+    "previewUnavailable": "Не удалось загрузить предпросмотр рабочего стола."
   },
   "SettingsPanel": {
     "themeMode": "Режим темы",
@@ -1033,5 +1046,19 @@
     "transitions": "Переходы выделения",
     "highlightColor": "Цвет подсветки",
     "highlightOpacity": "Интенсивность подсветки"
+  },
+  "Brand": {
+    "animateBeamy": "Анимировать Beamy",
+    "loading": "Загрузка Beam",
+    "reload": "Перезагрузить Beam",
+    "tipLabel": "Совет",
+    "tipRegion": "Выберите область, чтобы записать только нужное.",
+    "tipPresets": "Используйте пресеты для одинакового размера записей.",
+    "tipTeleprompter": "Смотрите в камеру с помощью телесуфлёра.",
+    "tipCountdown": "Добавьте обратный отсчёт, чтобы подготовиться.",
+    "tipDevices": "Проверьте камеру и микрофон перед записью.",
+    "tipInstant": "Попробуйте Instant для видео, готового к отправке.",
+    "tipShortcuts": "Настройте горячие клавиши в параметрах.",
+    "tipProjects": "Откройте существующий проект, чтобы продолжить монтаж."
   }
 }

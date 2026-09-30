@@ -1,5 +1,6 @@
 const { BrowserWindow, screen } = require('electron');
 const path = require('path');
+const { placeOutsideRegion, regionRectangle } = require('./teleprompter-region.cjs');
 const { createTeleprompterCheckpoint } = require('./teleprompter-checkpoint.cjs');
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -32,6 +33,9 @@ const validContext = (context) =>
   context && typeof context === 'object' && UUID.test(context.projectId) && UUID.test(context.sessionId);
 
 function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStore = null, appIconPath }) {
+  let regionConstraint = null;
+  let unconstrainedBounds = null;
+  let constraining = false;
   let window = null;
   let currentSession = null;
   let ready = false;
@@ -46,12 +50,54 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
   let prepared = null;
   let finishPreparation = null;
 
+  const constrainWindow = () => {
+    if (process.platform !== 'linux' || !regionConstraint || !window || window.isDestroyed() || constraining) return;
+    const current = window.getBounds();
+    const bounds = placeOutsideRegion(current, regionConstraint, screen.getAllDisplays());
+    if (['x', 'y', 'width', 'height'].every((key) => current[key] === bounds[key])) return;
+    constraining = true;
+    try {
+      window.setBounds(bounds);
+    } finally {
+      constraining = false;
+    }
+  };
+  const clearRegionConstraint = () => {
+    regionConstraint = null;
+    if (unconstrainedBounds && window && !window.isDestroyed()) window.setBounds(unconstrainedBounds);
+    unconstrainedBounds = null;
+  };
+  const constrainAfterNativeChange = () => {
+    try {
+      constrainWindow();
+    } catch (error) {
+      hide();
+      console.error('Cannot keep the teleprompter outside the recording region:', error);
+    }
+  };
+  const setRegionConstraint = (options) => {
+    regionRectangle(options);
+    if (process.platform !== 'linux') return;
+    const bounds =
+      window && !window.isDestroyed()
+        ? window.getBounds()
+        : { x: options.bounds.x, y: options.bounds.y, ...DEFAULT_BOUNDS };
+    try {
+      placeOutsideRegion(bounds, options, screen.getAllDisplays());
+    } catch (error) {
+      hide();
+      throw error;
+    }
+    unconstrainedBounds ??= bounds;
+    regionConstraint = { bounds: { ...options.bounds }, region: { ...options.region } };
+    constrainWindow();
+  };
   const flushBounds = () => {
     if (persistTimer) clearTimeout(persistTimer);
     persistTimer = null;
     if (!preferencesStore || !window || window.isDestroyed()) return;
     try {
-      preferencesStore.patch({ extras: { teleprompterWindow: window.getBounds() } });
+      preferencesStore.patch({ extras: { teleprompterWindow: unconstrainedBounds ?? window.getBounds() } });
     } catch {
       // Window persistence is best effort and must not affect the window.
     }
@@ -67,8 +113,8 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
   };
 
   const load = (target) => {
-    if (isPackaged) return target.loadFile(path.join(applicationRoot, 'dist/teleprompter.html'));
-    return target.loadURL('http://localhost:6500/teleprompter.html');
+    if (isPackaged) return target.loadFile(path.join(applicationRoot, 'dist/html/teleprompter.html'));
+    return target.loadURL('http://localhost:6500/html/teleprompter.html');
   };
 
   const notifyVisibility = () => {
@@ -106,8 +152,8 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
       minHeight: MIN_BOUNDS.height,
       icon: appIconPath,
       frame: false,
-      transparent: false,
-      backgroundColor: '#f7f5f0',
+      transparent: true,
+      backgroundColor: '#00000000',
       alwaysOnTop: true,
       skipTaskbar: false,
       resizable: true,
@@ -119,11 +165,15 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
         nodeIntegration: false,
         contextIsolation: true,
         sandbox: false,
+        backgroundThrottling: false,
       },
     });
     if (isContentProtectionSupported(process.platform) && typeof window.setContentProtection === 'function')
       window.setContentProtection(true);
-    window.setAlwaysOnTop(true, 'floating');
+    window.setAlwaysOnTop(true, 'screen-saver');
+    if (process.platform === 'darwin')
+      window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
+    constrainWindow();
     ready = false;
     rendererReady = false;
     resumeDelivered = false;
@@ -133,8 +183,14 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
     const target = window;
     window.on('show', notifyVisibility);
     window.on('hide', notifyVisibility);
-    window.on('move', scheduleBoundsPersistence);
-    window.on('resize', scheduleBoundsPersistence);
+    window.on('move', () => {
+      constrainAfterNativeChange();
+      scheduleBoundsPersistence();
+    });
+    window.on('resize', () => {
+      constrainAfterNativeChange();
+      scheduleBoundsPersistence();
+    });
     window.on('close', flushBounds);
     window.on('closed', () => {
       if (window !== target) return;
@@ -235,6 +291,24 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
   };
 
   return {
+    resize(sender, size) {
+      if (!window || window.isDestroyed() || window.webContents !== sender)
+        throw new Error('Only the teleprompter may resize its window.');
+      if (!size || !Number.isFinite(size.width) || !Number.isFinite(size.height) || size.width <= 0 || size.height <= 0)
+        throw new Error('Invalid teleprompter size.');
+      const bounds = window.getBounds();
+      const display = screen.getDisplayNearestPoint({ x: bounds.x, y: bounds.y });
+      const requested = clampTeleprompterBounds(
+        { ...bounds, width: size.width, height: size.height },
+        display.workArea,
+      );
+      const next =
+        process.platform === 'linux' && regionConstraint
+          ? placeOutsideRegion(requested, regionConstraint, screen.getAllDisplays())
+          : requested;
+      window.setBounds(next);
+      scheduleBoundsPersistence();
+    },
     prepare: () => {
       suspension += 1;
       checkpoint.cancel();
@@ -272,6 +346,15 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
       return null;
     },
     acknowledgeSuspend: checkpoint.acknowledge,
+    clearRegionConstraint,
+    setRegionConstraint,
+    updateRegionConstraint(options) {
+      if (regionConstraint) setRegionConstraint(options);
+    },
+    toggleForRegion: (options) => {
+      setRegionConstraint(options);
+      return toggle();
+    },
     show,
     showInactive,
     hide,

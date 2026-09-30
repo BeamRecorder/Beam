@@ -68,7 +68,7 @@ describe('ScreenRegionOverlayApp', () => {
     await triggerPointer(main, 'pointerdown', { clientX: 100, clientY: 100, pointerId: 7 });
     await triggerPointer(main, 'pointermove', { clientX: 500, clientY: 400, pointerId: 7 });
     expect(wrapper.get('.region-frame').attributes('style')).toContain('width: 40%');
-    expect(wrapper.get('.region-size').text()).toBe('400 × 300');
+    expect(wrapper.get('.region-size').attributes('aria-label')).toBe('400 × 300');
     await triggerPointer(main, 'pointerup');
     expect(setPointerCapture).toHaveBeenCalledWith(7);
 
@@ -247,8 +247,9 @@ describe('ScreenRegionOverlayApp', () => {
     await wrapper.vm.$nextTick();
 
     const select = wrapper.getComponent(Select);
-    expect(select.props('options')).toHaveLength(6);
+    expect(select.props('options')).toHaveLength(7);
     expect(select.props('options').map((o: { value: string }) => o.value)).toEqual([
+      'fullscreen',
       '640x480',
       '800x600',
       '1024x768',

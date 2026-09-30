@@ -240,7 +240,7 @@ describe('useHudWindow', () => {
     expect(capture.getDisplayBounds).not.toHaveBeenCalled();
     expect(capture.selectScreenRegion).toHaveBeenCalledWith({ region: null });
     expect(capture.setWindowVisible).toHaveBeenCalledWith(true);
-    expect(capture.setWindowVisible).not.toHaveBeenCalledWith(false);
+    expect(capture.setWindowVisible).toHaveBeenCalledWith(false);
     expect(capture.setInteractive).toHaveBeenCalledWith(true);
   });
 

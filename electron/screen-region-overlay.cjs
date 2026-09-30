@@ -1,5 +1,8 @@
 const { BrowserWindow } = require('electron');
 const os = require('node:os');
+const { isCaptureCancellation } = require('./capture/capture-cancellation.cjs');
+const { createRegionRecordingMarker } = require('./region-recording-marker.cjs');
+const { regionRecordingSettings } = require('./region-selection-settings.cjs');
 const path = require('path');
 
 function supportsCaptureSafeRecordingOverlay(platform, release) {
@@ -53,7 +56,9 @@ function createScreenRegionOverlayWindow({
   platform = process.platform,
   platformRelease = os.release(),
   screen,
+  selectionPreview,
 }) {
+  const marker = createRegionRecordingMarker({ BrowserWindow, applicationRoot, isPackaged, platform });
   let window = null;
   let ready = false;
   let rendererReady = false;
@@ -63,6 +68,7 @@ function createScreenRegionOverlayWindow({
 
   const cancelPendingSelection = () => {
     if (!pending) return;
+    clearTimeout(pending.timer);
     const resolve = pending.resolve;
     pending = null;
     current = null;
@@ -78,6 +84,7 @@ function createScreenRegionOverlayWindow({
   const present = () => {
     if (!window || window.isDestroyed() || !ready || !rendererReady || !current) return;
     if (current.mode === 'select') {
+      clearTimeout(pending?.timer);
       window.show();
       window.focus();
     } else {
@@ -92,6 +99,7 @@ function createScreenRegionOverlayWindow({
     const target = new BrowserWindow({
       ...bounds,
       frame: false,
+      thickFrame: false,
       transparent: true,
       backgroundColor: '#00000000',
       hasShadow: false,
@@ -106,6 +114,7 @@ function createScreenRegionOverlayWindow({
         nodeIntegration: false,
         contextIsolation: true,
         sandbox: false,
+        backgroundThrottling: false,
       },
     });
     window = target;
@@ -115,7 +124,7 @@ function createScreenRegionOverlayWindow({
       window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
       window.setAlwaysOnTop(true, 'screen-saver');
       window.webContents.on('before-input-event', (event, input) => {
-        if (pending && input.type === 'keyDown' && input.key === 'Escape') {
+        if (pending && !current?.recording && input.type === 'keyDown' && input.key === 'Escape') {
           event.preventDefault();
           cancelPendingSelection();
         }
@@ -133,12 +142,27 @@ function createScreenRegionOverlayWindow({
       ready = false;
       window = null;
       if (pending) {
+        clearTimeout(pending.timer);
         pending.resolve(null);
         pending = null;
       }
     });
-    if (isPackaged) window.loadFile(path.join(applicationRoot, 'dist/index.html'), { query: { screenRegion: '1' } });
-    else window.loadURL('http://localhost:6500/?screenRegion=1');
+    const fail = (error) => {
+      if (window !== target || target.isDestroyed()) return;
+      if (pending) {
+        clearTimeout(pending.timer);
+        pending.reject(error);
+        pending = null;
+      }
+      current = null;
+      target.destroy();
+    };
+    target.webContents.on('render-process-gone', () => fail(new Error('Region selector renderer exited.')));
+    target.on('unresponsive', () => fail(new Error('Region selector is unresponsive.')));
+    const loaded = isPackaged
+      ? target.loadFile(path.join(applicationRoot, 'dist/html/screen-region.html'))
+      : target.loadURL('http://localhost:6500/html/screen-region.html');
+    void loaded.catch(fail);
     return window;
   };
 
@@ -146,7 +170,9 @@ function createScreenRegionOverlayWindow({
     const bounds = finiteBounds(options.bounds);
     const target = ensureWindow(bounds);
     current = { ...options, bounds, mode: interactive ? 'select' : 'record' };
-    target.setParentWindow(interactive && platform === 'linux' ? parentWindow : null);
+    target.setParentWindow(
+      interactive && platform === 'linux' && options.context === 'quick-snip' ? parentWindow : null,
+    );
     target.setBounds(current.bounds);
     target.setIgnoreMouseEvents(!interactive);
     send(current);
@@ -154,6 +180,8 @@ function createScreenRegionOverlayWindow({
   };
 
   return {
+    isSelecting: () => Boolean(pending),
+    markMarkerReady: (sender) => marker.ready(sender),
     markRendererReady(sender) {
       if (!window || window.isDestroyed() || window.webContents !== sender) return false;
       rendererReady = true;
@@ -161,54 +189,98 @@ function createScreenRegionOverlayWindow({
       present();
       return true;
     },
-    select(options, parentWindow = null) {
-      if (pending) {
-        pending.resolve(null);
-        pending = null;
-      }
-      const result = new Promise((resolve) => {
-        pending = { resolve };
+    async select(options, parentWindow = null) {
+      if (pending) throw new Error('A region selection is already open.');
+      const result = new Promise((resolve, reject) => {
+        pending = { resolve, reject, timer: null };
       });
+      // A renderer failure can arrive while the native Portal picker is still
+      // open. Handle that rejection now, then propagate it below after cleanup.
+      void result.catch(() => {});
+      const request = pending;
       try {
+        const recording = regionRecordingSettings(options.recording, platform);
+        const bounds = resolveSelectionBounds(options, platform, screen, parentWindow);
+        ensureWindow(bounds);
+        const preview =
+          options.context !== 'quick-snip' && selectionPreview ? await selectionPreview.prepare(bounds) : {};
+        if (pending !== request) {
+          await selectionPreview?.cancel();
+          return await result;
+        }
         configure(
-          { ...options, bounds: resolveSelectionBounds(options, platform, screen, parentWindow) },
+          {
+            context: options.context === 'quick-snip' ? 'quick-snip' : 'default',
+            captureMode: options.captureMode,
+            region: finiteRegion(options.region),
+            bounds,
+            ...preview,
+            ...(recording ? { recording } : {}),
+          },
           true,
           parentWindow,
         );
+        if (pending === request && (!ready || !rendererReady)) {
+          request.timer = setTimeout(() => {
+            if (pending !== request) return;
+            request.reject(new Error('Region selector did not become ready within 30 seconds.'));
+            pending = null;
+            current = null;
+            window?.destroy();
+          }, 30_000);
+          request.timer.unref();
+        }
       } catch (error) {
+        if (pending !== request) return await result;
         pending = null;
         current = null;
         if (window && !window.isDestroyed()) {
           window.hide();
           window.setParentWindow(null);
         }
+        if (isCaptureCancellation(error)) return null;
         throw error;
       }
-      return result;
+      let selection;
+      try {
+        selection = await result;
+      } catch (error) {
+        await selectionPreview?.cancel();
+        throw error;
+      }
+      if (!selection) await selectionPreview?.cancel();
+      return selection;
     },
     show(options) {
-      if (!supportsCaptureSafeRecordingOverlay(platform, platformRelease)) {
+      if (platform === 'linux' || !supportsCaptureSafeRecordingOverlay(platform, platformRelease)) {
         current = null;
         if (window && !window.isDestroyed()) window.hide();
+        const region = finiteRegion(options.region);
+        if (region) marker.show(finiteBounds(options.bounds), region);
         return;
       }
       configure(options, false);
     },
     hide() {
+      marker.hide();
       current = null;
       if (window && !window.isDestroyed()) window.hide();
     },
-    confirm(region) {
+    confirm(region, recording) {
       if (!pending) return;
       const selected = finiteRegion(region);
       if (!selected) return;
+      const settings = regionRecordingSettings(recording, platform);
       const resolve = pending.resolve;
+      clearTimeout(pending.timer);
       const bounds = current?.bounds;
       pending = null;
       current = null;
       window?.hide();
       window?.setParentWindow(null);
-      resolve(bounds ? { bounds: { ...bounds }, region: selected } : null);
+      resolve(
+        bounds ? { bounds: { ...bounds }, region: selected, ...(settings ? { recording: settings } : {}) } : null,
+      );
     },
     update(region) {
       if (!pending || !current) return false;
@@ -227,6 +299,7 @@ function createScreenRegionOverlayWindow({
     confirmCurrent() {
       if (!pending || !current?.region) return false;
       const resolve = pending.resolve;
+      clearTimeout(pending.timer);
       const result = { bounds: { ...current.bounds }, region: { ...current.region } };
       pending = null;
       current = null;
@@ -239,7 +312,9 @@ function createScreenRegionOverlayWindow({
       cancelPendingSelection();
     },
     destroy() {
+      marker.hide();
       if (pending) {
+        clearTimeout(pending.timer);
         pending.resolve(null);
         pending = null;
       }

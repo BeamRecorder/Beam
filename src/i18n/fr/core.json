@@ -523,18 +523,20 @@
     "developmentNotice": "Aperçu de développement · Toutes les sources sont simulées. Aucun enregistrement créé."
   },
   "EditorPreparingHud": {
-    "title": "Préparation de l’éditeur",
-    "openingWindow": "Création de la fenêtre de l’éditeur…",
-    "loadingEditor": "Chargement de l’interface…",
-    "loadingAppearance": "Chargement de l’apparence de l’éditeur…",
-    "loadingProject": "Ouverture de votre projet…",
-    "loadingTimeline": "Chargement de la timeline…",
-    "loadingEditorModule": "Chargement des composants de l’éditeur…",
-    "initializingEditor": "Initialisation de l’éditeur…",
-    "renderingEditor": "Rendu de l’éditeur…",
-    "loadingPreview": "Préparation du premier aperçu…",
-    "ready": "Éditeur prêt",
-    "progressLabel": "Progression du chargement de l’éditeur"
+    "title": "Ouverture de votre éditeur",
+    "openingWindow": "Préparons votre éditeur",
+    "loadingEditor": "Je prépare tout ça",
+    "loadingAppearance": "Je mets tout en place",
+    "loadingProject": "J’ouvre votre projet",
+    "loadingTimeline": "Je prépare votre timeline",
+    "loadingEditorModule": "Je prépare vos outils",
+    "initializingEditor": "J’assemble le tout",
+    "renderingEditor": "On y est presque !",
+    "loadingPreview": "On y est presque !",
+    "ready": "On y est presque !",
+    "progressLabel": "Progression du chargement de l’éditeur",
+    "almostThere": "On y est presque !",
+    "cancel": "Annuler"
   },
   "EditorOpenError": {
     "title": "Impossible d’ouvrir l’éditeur",
@@ -671,11 +673,22 @@
     "restart": "Recommencer"
   },
   "ScreenRegionOverlay": {
+    "fullScreen": "Plein écran",
     "instruction": "Sélectionnez une zone à enregistrer",
     "preset": "Préréglage",
     "reset": "Réinitialiser",
     "cancel": "Annuler",
-    "useThisArea": "Utiliser cette zone"
+    "useThisArea": "Utiliser cette zone",
+    "record": "Enregistrer",
+    "settings": "Réglages rapides",
+    "countdown": "Compte à rebours",
+    "off": "Désactivé",
+    "hideTaskbar": "Masquer la barre des tâches",
+    "hideDock": "Masquer le Dock",
+    "hideDesktopIcons": "Masquer les icônes du bureau",
+    "desktopUnavailable": "Le masquage du bureau n’est pas disponible sur Linux.",
+    "captureOnly": "Ces éléments sont masqués dans l’enregistrement sur macOS.",
+    "previewUnavailable": "L’aperçu du bureau n’a pas pu être chargé."
   },
   "SettingsPanel": {
     "themeMode": "Mode du thème",
@@ -1030,5 +1043,19 @@
     "transitions": "Transitions de mise en évidence",
     "highlightColor": "Couleur de la zone éclairée",
     "highlightOpacity": "Intensité de la zone éclairée"
+  },
+  "Brand": {
+    "animateBeamy": "Animer Beamy",
+    "loading": "Chargement de Beam",
+    "reload": "Recharger Beam",
+    "tipLabel": "Astuce",
+    "tipRegion": "Choisis Région pour filmer uniquement l’essentiel.",
+    "tipPresets": "Utilise les presets pour garder les mêmes dimensions.",
+    "tipTeleprompter": "Garde les yeux sur la caméra grâce au téléprompteur.",
+    "tipCountdown": "Ajoute un compte à rebours pour te préparer.",
+    "tipDevices": "Vérifie ta caméra et ton micro avant de filmer.",
+    "tipInstant": "Essaie Instant pour une vidéo prête à partager.",
+    "tipShortcuts": "Personnalise tes raccourcis dans les paramètres.",
+    "tipProjects": "Ouvre un projet existant pour poursuivre le montage."
   }
 }

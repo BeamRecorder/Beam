@@ -67,4 +67,25 @@ describe('ColorPicker', () => {
     expect(wrapper.get('input').element.value).toBe('#AABBCC');
     expect(wrapper.emitted('update:alpha')).toEqual([[0.5]]);
   });
+  it('passes compact inline options and relays alpha changes', () => {
+    const wrapper = mount(ColorPicker, {
+      props: {
+        inline: true,
+        hideHeader: true,
+        showLabel: false,
+        eyedropperLabel: 'Pipette',
+        formatLabel: 'Format couleur',
+      },
+      global: { stubs: { ColorPickerCustom: Custom } },
+    });
+    const custom = wrapper.findComponent(Custom);
+    expect(custom.attributes()).toMatchObject({
+      'hide-header': 'true',
+      'eyedropper-label': 'Pipette',
+      'format-label': 'Format couleur',
+    });
+    custom.vm.$emit('update:alpha', 0.4);
+    expect(wrapper.emitted('update:alpha')).toEqual([[0.4]]);
+    wrapper.unmount();
+  });
 });

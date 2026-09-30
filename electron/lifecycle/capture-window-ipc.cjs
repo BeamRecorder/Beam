@@ -4,6 +4,7 @@ function registerCaptureWindowIpc({
   cameraOverlay,
   countdownOverlay,
   screenRegionOverlay,
+  teleprompterWindow,
 }) {
   applicationIpc.on('camera-overlay:configure', (event, state) => {
     const fromOverlay = cameraOverlay.isRenderer(event.sender);
@@ -19,6 +20,7 @@ function registerCaptureWindowIpc({
   applicationIpc.handle('countdown:set', (_event, seconds) => {
     countdownOverlay.show(Number.isInteger(seconds) && seconds >= 0 ? seconds : null);
   });
+  applicationIpc.on('countdown:ready', (event) => countdownOverlay.markRendererReady(event.sender));
   applicationIpc.handle('recording-surface:prepare', async () => {
     countdownOverlay.show(null);
     screenRegionOverlay.hide();
@@ -27,12 +29,30 @@ function registerCaptureWindowIpc({
   applicationIpc.handle('screen-region:select', (event, options) =>
     screenRegionOverlay.select(options, BrowserWindow.fromWebContents(event.sender)),
   );
+  applicationIpc.handle('screen-region:teleprompter', (event, options) => {
+    if (screenRegionOverlay.nativeWindow()?.webContents !== event.sender)
+      throw new Error('Only the region selector can open its teleprompter.');
+    return teleprompterWindow.toggleForRegion(options);
+  });
+  applicationIpc.handle('screen-region:teleprompter-region', (event, options) => {
+    if (screenRegionOverlay.nativeWindow()?.webContents !== event.sender)
+      throw new Error('Only the region selector can update its teleprompter.');
+    teleprompterWindow.updateRegionConstraint(options);
+  });
+  applicationIpc.on('screen-region:marker-ready', (event) => screenRegionOverlay.markMarkerReady(event.sender));
   applicationIpc.on('screen-region:ready', (event) => screenRegionOverlay.markRendererReady(event.sender));
   applicationIpc.on('screen-region:show', (_event, options) => screenRegionOverlay.show(options));
   applicationIpc.on('screen-region:hide', () => screenRegionOverlay.hide());
-  applicationIpc.on('screen-region:confirm', (_event, region) => screenRegionOverlay.confirm(region));
-  applicationIpc.on('screen-region:update', (_event, region) => screenRegionOverlay.update(region));
-  applicationIpc.on('screen-region:cancel', () => screenRegionOverlay.cancel());
+  applicationIpc.on('screen-region:confirm', (event, region, recording) => {
+    if (screenRegionOverlay.nativeWindow()?.webContents === event.sender)
+      screenRegionOverlay.confirm(region, recording);
+  });
+  applicationIpc.on('screen-region:update', (event, region) => {
+    if (screenRegionOverlay.nativeWindow()?.webContents === event.sender) screenRegionOverlay.update(region);
+  });
+  applicationIpc.on('screen-region:cancel', (event) => {
+    if (screenRegionOverlay.nativeWindow()?.webContents === event.sender) screenRegionOverlay.cancel();
+  });
   applicationIpc.handle('camera-overlay:state', () => cameraOverlay.state());
 }
 module.exports = { registerCaptureWindowIpc };

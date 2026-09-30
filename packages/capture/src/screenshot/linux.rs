@@ -41,11 +41,17 @@ impl ScreenSampleSink for FirstFrame {
     }
 }
 
-pub(super) fn capture(request: &ScreenshotRequest) -> Result<OwnedVideoFrame, CaptureError> {
+pub(super) fn capture(
+    request: &ScreenshotRequest,
+    selection: Option<crate::screen::RegionSelection>,
+) -> Result<OwnedVideoFrame, CaptureError> {
     let (sender, receiver) = mpsc::sync_channel(1);
     let gate = Arc::new(StartGate::new());
     let mut recording = ScreenRecording::open(ScreenOpenRequest {
         selection: &request.screen,
+        hide_taskbar: false,
+        hide_desktop_icons: false,
+        region_selection: selection,
         recording: &RecordingSettings::default(),
         region: request.region,
         cursor: CursorSelection::Disabled,

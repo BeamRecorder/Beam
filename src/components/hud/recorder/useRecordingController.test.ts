@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => {
       getCameraOverlayState: vi.fn(async () => null),
       prepareRecording: vi.fn(async (): Promise<{ sessionId: string } | null> => ({ sessionId: 'prepared' })),
       cancelPreparedRecording: vi.fn(async () => undefined),
+      cancelRegionSelection: vi.fn(async () => undefined),
       setCountdown: vi.fn(async () => undefined),
       prepareRecordingSurface: vi.fn(async () => undefined),
       startPreparedRecording: vi.fn(async (): Promise<{ sessionId?: string; projectId?: string }> => ({

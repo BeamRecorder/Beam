@@ -167,12 +167,20 @@ const isCustomSecondaryColor = computed(() => {
 
     <div class="theme-mode-setting">
       <span class="row-label">{{ t('themeMode') }}</span>
-      <ButtonGroup full :columns="3" size="xs" class="theme-mode-group">
+      <ButtonGroup
+        full
+        :columns="3"
+        size="sm"
+        class="theme-mode-group"
+        role="group"
+        :aria-label="t('themeMode')"
+        :selection="{ index: themeModeOptions.findIndex((mode) => mode.value === themeStore.theme), count: 3 }"
+      >
         <Button
           v-for="mode in themeModeOptions"
           :key="mode.value"
           variant="tab"
-          size="xs"
+          size="sm"
           :class="{ active: themeStore.theme === mode.value }"
           :aria-pressed="themeStore.theme === mode.value"
           @click="handleThemeMode(mode.value)"

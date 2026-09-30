@@ -16,6 +16,7 @@ const capture = vi.hoisted(() => ({
   listCursorPacks: vi.fn(),
   onCursorPacksChanged: vi.fn(),
   getEditorPresets: vi.fn(),
+  getProjectEditorState: vi.fn().mockResolvedValue({ schemaVersion: 3 }),
   onEditorPresetsChanged: vi.fn(),
 }));
 const toast = vi.hoisted(() => ({
@@ -214,7 +215,7 @@ describe('useVideoEditor', () => {
     await flushPromises();
     expect(state.player.loadComposition).toHaveBeenCalledWith(state.compositionState.composition.value);
     expect(state.player.setUserBackgrounds).toHaveBeenCalledWith([{ id: 'background-1' }]);
-    expect(state.editorState.load).toHaveBeenCalledWith('project-1');
+    expect(state.editorState.load).toHaveBeenCalledWith('project-1', { schemaVersion: 3 });
     expect(capture.onBackgroundLibraryChanged).toHaveBeenCalledOnce();
     expect(api.exportRequest.value).toMatchObject({
       projectName: 'Demo project',
@@ -350,7 +351,7 @@ describe('useVideoEditor', () => {
     wrapper.unmount();
   });
 
-  it('ignores a slow preset load after switching to a newer project', async () => {
+  it('waits for state and presets before decoding a composition and ignores superseded work', async () => {
     const slowPresetLoad = deferred<any>();
     capture.getEditorPresets.mockReturnValueOnce(slowPresetLoad.promise).mockResolvedValueOnce({
       schemaVersion: 1,
@@ -364,16 +365,21 @@ describe('useVideoEditor', () => {
       template: '<div />',
     });
     const wrapper = mount(Harness);
+    expect(capture.getProjectEditorState).toHaveBeenCalledWith('project-slow');
+    expect(capture.getEditorPresets).toHaveBeenCalled();
+    expect(state.player.loadComposition).not.toHaveBeenCalled();
 
     projectRef.value = { ...project, id: 'project-current' };
     await flushPromises();
-    expect(state.editorState.load).toHaveBeenCalledWith('project-current');
+    expect(state.editorState.load).toHaveBeenCalledWith('project-current', { schemaVersion: 3 });
+    expect(state.player.loadComposition).toHaveBeenCalledOnce();
 
     slowPresetLoad.resolve({ schemaVersion: 1, activePresetId: 'default', presets: [] });
     await flushPromises();
 
-    expect(state.editorState.load).not.toHaveBeenCalledWith('project-slow');
+    expect(state.editorState.load).not.toHaveBeenCalledWith('project-slow', { schemaVersion: 3 });
     expect(state.editorState.enableDefaultCapture).toHaveBeenCalledOnce();
+    expect(state.player.loadComposition).toHaveBeenCalledOnce();
     wrapper.unmount();
   });
 
@@ -390,11 +396,11 @@ describe('useVideoEditor', () => {
       id === 'project-slow-state' ? staleStateLoad.promise : Promise.resolve(),
     );
     await flushPromises();
-    expect(state.editorState.load).toHaveBeenCalledWith('project-slow-state');
+    expect(state.editorState.load).toHaveBeenCalledWith('project-slow-state', { schemaVersion: 3 });
 
     projectRef.value = { ...project, id: 'project-latest-state' };
     await flushPromises();
-    expect(state.editorState.load).toHaveBeenCalledWith('project-latest-state');
+    expect(state.editorState.load).toHaveBeenCalledWith('project-latest-state', { schemaVersion: 3 });
     expect(state.editorState.enableDefaultCapture).toHaveBeenCalledOnce();
 
     staleStateLoad.resolve();

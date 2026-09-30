@@ -14,12 +14,17 @@ const document = {
   lineHeight: 1.5,
   textAlign: 'center',
   theme: 'dark',
+  textColor: null,
+  windowOpacity: 1,
   updatedAtUtc: '2026-01-01T00:00:00.000Z',
 };
 
 function createElectronFixture(savedBounds = null, loadResultForWindow = () => undefined) {
   const windows = [];
-  const display = { workArea: { x: 0, y: 0, width: 1920, height: 1080 } };
+  const display = {
+    workArea: { x: 0, y: 0, width: 1920, height: 1080 },
+    bounds: { x: 0, y: 0, width: 1920, height: 1080 },
+  };
   const preferenceState = { extras: savedBounds ? { teleprompterWindow: savedBounds } : {} };
   const patches = [];
 
@@ -134,6 +139,7 @@ function createElectronFixture(savedBounds = null, loadResultForWindow = () => u
     BrowserWindow: FakeWindow,
     screen: {
       getDisplayNearestPoint: () => display,
+      getAllDisplays: () => [display],
       getCursorScreenPoint: () => ({ x: 400, y: 300 }),
     },
   };
@@ -182,6 +188,7 @@ test('persists teleprompter bounds after native move and resize events', () => {
     teleprompter.showInactive();
     const window = fixture.windows[0];
     assert.equal(window.options.icon, appIconPath);
+    assert.equal(window.options.webPreferences.backgroundThrottling, false);
     window.setBounds({ x: 355, y: 277, width: 800, height: 500 });
     window.emit('move');
     window.emit('resize');
@@ -339,7 +346,7 @@ test('ignores aborted and subframe failures, then retries after a main-frame loa
     const failedPreparation = teleprompter.prepare();
     const firstWindow = fixture.windows[0];
 
-    firstWindow.emitContent('did-fail-load', {}, -3, 'aborted', 'http://localhost:6500/teleprompter.html', true);
+    firstWindow.emitContent('did-fail-load', {}, -3, 'aborted', 'http://localhost:6500/html/teleprompter.html', true);
     firstWindow.emitContent('did-fail-load', {}, -2, 'subframe failed', 'http://localhost:6500/child', false);
     await Promise.resolve();
     assert.equal(firstWindow.isDestroyed(), false);
@@ -349,7 +356,7 @@ test('ignores aborted and subframe failures, then retries after a main-frame loa
       {},
       -2,
       'main frame failed',
-      'http://localhost:6500/teleprompter.html',
+      'http://localhost:6500/html/teleprompter.html',
       true,
     );
     assert.equal(await failedPreparation, false);
@@ -554,3 +561,92 @@ test('a rejected checkpoint keeps the hidden renderer intact for an immediate HU
     fixture.restore();
   }
 });
+
+test('creates a transparent teleprompter and clamps owned resize requests before persisting', () => {
+  const fixture = createElectronFixture();
+  try {
+    const teleprompter = loadTeleprompterWindow().createTeleprompterWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+      preferencesStore: fixture.preferencesStore,
+    });
+    teleprompter.prepare();
+    const window = fixture.windows[0];
+    assert.equal(window.options.transparent, true);
+    assert.equal(window.options.backgroundColor, '#00000000');
+    teleprompter.resize(window.webContents, { width: 20, height: 30 });
+    assert.deepEqual(window.getBounds(), { x: 640, y: 340, width: 240, height: 140 });
+    teleprompter.resize(window.webContents, { width: 4000, height: 4000 });
+    assert.deepEqual(window.getBounds(), { x: 0, y: 0, width: 1920, height: 1080 });
+    teleprompter.destroy();
+    assert.deepEqual(fixture.patches.at(-1).extras.teleprompterWindow, { x: 0, y: 0, width: 1920, height: 1080 });
+  } finally {
+    fixture.restore();
+  }
+});
+test('rejects foreign, malformed and stale teleprompter resize requests without changing bounds', () => {
+  const fixture = createElectronFixture();
+  try {
+    const teleprompter = loadTeleprompterWindow().createTeleprompterWindow({
+      applicationRoot: '/app',
+      isPackaged: true,
+    });
+    assert.throws(() => teleprompter.resize({}, { width: 300, height: 200 }), /Only the teleprompter/);
+    teleprompter.prepare();
+    const window = fixture.windows[0];
+    const before = window.getBounds();
+    assert.throws(() => teleprompter.resize({}, { width: 300, height: 200 }), /Only the teleprompter/);
+    for (const size of [
+      null,
+      {},
+      { width: NaN, height: 200 },
+      { width: 300, height: Infinity },
+      { width: 0, height: 200 },
+      { width: 300, height: -1 },
+      { width: '300', height: 200 },
+    ]) {
+      assert.throws(() => teleprompter.resize(window.webContents, size), /Invalid teleprompter size/);
+      assert.deepEqual(window.getBounds(), before);
+    }
+    teleprompter.destroy();
+    assert.throws(() => teleprompter.resize(window.webContents, { width: 300, height: 200 }), /Only the teleprompter/);
+  } finally {
+    fixture.restore();
+  }
+});
+test(
+  'resolves Linux crop exclusion before a resized teleprompter is presented',
+  { skip: process.platform !== 'linux' },
+  () => {
+    const fixture = createElectronFixture();
+    try {
+      const teleprompter = loadTeleprompterWindow().createTeleprompterWindow({
+        applicationRoot: '/app',
+        isPackaged: false,
+      });
+      teleprompter.prepare();
+      const window = fixture.windows[0];
+      teleprompter.setRegionConstraint({
+        bounds: { x: 0, y: 0, width: 1920, height: 1080 },
+        region: { x: 0.25, y: 0.2, width: 0.5, height: 0.6 },
+      });
+      const commits = [];
+      const original = window.setBounds.bind(window);
+      window.setBounds = (bounds) => {
+        commits.push(bounds);
+        original(bounds);
+      };
+      teleprompter.resize(window.webContents, { width: 1600, height: 1000 });
+      assert.equal(commits.length, 1);
+      const bounds = commits[0];
+      assert.ok(
+        bounds.x + bounds.width <= 464 || bounds.x >= 1456 || bounds.y + bounds.height <= 200 || bounds.y >= 880,
+      );
+      teleprompter.clearRegionConstraint();
+      assert.deepEqual(window.getBounds(), { x: 640, y: 340, width: 640, height: 400 });
+      teleprompter.destroy();
+    } finally {
+      fixture.restore();
+    }
+  },
+);

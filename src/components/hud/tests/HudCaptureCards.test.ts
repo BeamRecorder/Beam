@@ -8,6 +8,8 @@ describe('HUD capture choices', () => {
     for (const button of wrapper.findAll('button')) await button.trigger('click');
     expect(wrapper.emitted('choose')).toEqual([['screen'], ['region'], ['window']]);
     expect(wrapper.findAll('img').every((image) => image.attributes('src')?.includes('/wallpapers/image/'))).toBe(true);
+    expect(new Set(wrapper.findAll('img').map((image) => image.attributes('src'))).size).toBe(1);
+    expect(wrapper.findAll('img')[0]!.attributes('src')).toContain('/wallpapers/image/sequoia-blue.webp');
     expect(wrapper.get('.is-selected').attributes('aria-label')).toBe('Full screen');
   });
   it('leaves busy cards disabled and retains their accessible names', async () => {

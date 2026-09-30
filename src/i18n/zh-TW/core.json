@@ -511,18 +511,20 @@
     "back": "返回"
   },
   "EditorPreparingHud": {
-    "title": "正在準備編輯器",
-    "openingWindow": "正在建立編輯器視窗…",
-    "loadingEditor": "正在載入編輯器介面…",
-    "loadingAppearance": "正在載入編輯器外觀…",
-    "loadingProject": "正在開啟專案…",
-    "loadingTimeline": "正在載入時間軸…",
-    "loadingEditorModule": "正在載入編輯器元件…",
-    "initializingEditor": "正在準備編輯器狀態…",
-    "renderingEditor": "正在呈現編輯器…",
-    "loadingPreview": "正在準備第一個預覽…",
-    "ready": "編輯器已就緒",
-    "progressLabel": "編輯器載入進度"
+    "title": "正在開啟編輯器",
+    "openingWindow": "一起準備好編輯器吧",
+    "loadingEditor": "我正在準備一切",
+    "loadingAppearance": "我正在佈置工作區",
+    "loadingProject": "我正在開啟你的專案",
+    "loadingTimeline": "我正在整理時間軸",
+    "loadingEditorModule": "我正在準備工具",
+    "initializingEditor": "我正在完成最後的準備",
+    "renderingEditor": "馬上就好！",
+    "loadingPreview": "馬上就好！",
+    "ready": "馬上就好！",
+    "progressLabel": "編輯器載入進度",
+    "almostThere": "馬上就好！",
+    "cancel": "取消"
   },
   "EditorOpenError": {
     "title": "無法開啟編輯器",
@@ -663,7 +665,18 @@
     "preset": "預設",
     "reset": "重設",
     "cancel": "取消",
-    "useThisArea": "使用此區域"
+    "useThisArea": "使用此區域",
+    "fullScreen": "全螢幕",
+    "record": "錄製",
+    "settings": "快速設定",
+    "countdown": "倒數計時",
+    "off": "關閉",
+    "hideTaskbar": "隱藏工作列",
+    "hideDock": "隱藏 Dock",
+    "hideDesktopIcons": "隱藏桌面圖示",
+    "desktopUnavailable": "Linux 不支援此功能。",
+    "captureOnly": "在 macOS 錄製中隱藏。",
+    "previewUnavailable": "無法載入桌面預覽。"
   },
   "SettingsPanel": {
     "themeMode": "主題模式",
@@ -1033,5 +1046,19 @@
     "transitions": "突顯轉場效果",
     "highlightColor": "醒目提示顏色",
     "highlightOpacity": "醒目提示強度"
+  },
+  "Brand": {
+    "animateBeamy": "讓 Beamy 動起來",
+    "loading": "正在載入 Beam",
+    "reload": "重新載入 Beam",
+    "tipLabel": "提示",
+    "tipRegion": "選擇區域，只錄製重要內容。",
+    "tipPresets": "使用預設，讓錄製保持相同尺寸。",
+    "tipTeleprompter": "透過提詞器，保持看向攝影機。",
+    "tipCountdown": "設定倒數計時，為錄製做好準備。",
+    "tipDevices": "錄製前檢查攝影機和麥克風。",
+    "tipInstant": "試試 Instant，取得可直接分享的影片。",
+    "tipShortcuts": "在設定中自訂錄製快捷鍵。",
+    "tipProjects": "開啟現有專案，繼續編輯。"
   }
 }

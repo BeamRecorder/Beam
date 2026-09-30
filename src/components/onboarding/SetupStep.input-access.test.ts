@@ -10,6 +10,7 @@ const capture = vi.hoisted(() => ({
   platform: 'linux',
   inputAccessStatus: vi.fn(),
   requestInputAccess: vi.fn(),
+  updatePreferences: vi.fn().mockResolvedValue({}),
   getPreferences: vi.fn(),
   onPreferencesChanged: vi.fn().mockReturnValue(() => {}),
 }));
@@ -76,6 +77,53 @@ describe('SetupStep input access error', () => {
     expect(capture.requestInputAccess).toHaveBeenCalledOnce();
     expect(wrapper.find('.interaction-access-error[role="alert"]').exists()).toBe(false);
     expect(wrapper.find('.not-auth-group button').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it.each([new Error('Authorization failed'), 'unknown error'])(
+    'keeps retry available after rejection: %s',
+    async (error) => {
+      capture.requestInputAccess.mockRejectedValue(error);
+      const wrapper = mount(SetupStep, { global: { plugins: [i18n, MotionPlugin] } });
+      await flushPromises();
+      await wrapper.get('.not-auth-group button').trigger('click');
+      await flushPromises();
+      expect(wrapper.get('.not-auth-group button').attributes('disabled')).toBeUndefined();
+      expect(wrapper.get('.interaction-access-error[role="alert"]').text()).toContain(
+        error instanceof Error ? error.message : 'Could not request interaction access.',
+      );
+      wrapper.unmount();
+    },
+  );
+
+  it('disables the authorization button while native permission is pending', async () => {
+    let complete!: (status: InputAccessStatus) => void;
+    capture.requestInputAccess.mockReturnValue(
+      new Promise((resolve) => {
+        complete = resolve;
+      }),
+    );
+    const wrapper = mount(SetupStep, { global: { plugins: [i18n, MotionPlugin] } });
+    await flushPromises();
+    await wrapper.get('.not-auth-group button').trigger('click');
+    expect(wrapper.get('.not-auth-group button').attributes('disabled')).toBeDefined();
+    expect(wrapper.find('.spin-icon').exists()).toBe(true);
+    complete(available);
+    await flushPromises();
+    expect(wrapper.find('.not-auth-group button').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('keeps the theme selection usable if the read-only permission check fails', async () => {
+    capture.inputAccessStatus.mockRejectedValue(new Error('helper unavailable'));
+    const wrapper = mount(SetupStep, { global: { plugins: [i18n, MotionPlugin] } });
+    await flushPromises();
+    const buttons = wrapper.findAll('.theme-chip');
+    for (const [index, button] of buttons.entries()) {
+      await button.trigger('click');
+      expect(button.attributes('aria-pressed')).toBe('true');
+      expect(wrapper.get('.theme-chips-group').attributes('style')).toContain(`--button-group-index: ${index}`);
+    }
     wrapper.unmount();
   });
 });

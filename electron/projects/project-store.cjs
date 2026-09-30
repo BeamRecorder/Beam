@@ -96,7 +96,7 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
   const thumbnailFor = (directory) => {
     for (const file of ['thumbnail.webp', 'thumbnail.png', 'thumbnail.jpg', 'thumbnail.jpeg']) {
       const target = path.join(directory, file);
-      if (fs.existsSync(target)) return pathToFileURL(target).href;
+      if (fs.existsSync(target)) return mediaUrlFor(pathToFileURL(target).href);
     }
     return null;
   };
@@ -491,7 +491,7 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
       if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return null;
       const targetPath = path.join(directory, 'thumbnail.webp');
       fs.writeFileSync(targetPath, Buffer.from(dataUrl.replace(/^data:image\/\w+;base64,/, ''), 'base64'));
-      return pathToFileURL(targetPath).href;
+      return mediaUrlFor(pathToFileURL(targetPath).href);
     },
     delete: (id) => fs.rmSync(directoryFor(id), { recursive: true, force: false }),
   };

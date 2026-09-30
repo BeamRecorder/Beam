@@ -2,12 +2,10 @@ import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import './style.css';
 import CountdownOverlay from './components/hud/recorder/CountdownOverlay.vue';
-import { initI18n } from './i18n';
-import { useThemeStore } from './stores/theme';
+import { prepareWindowAppearance } from './window-bootstrap';
 
 const app = createApp(CountdownOverlay);
 const pinia = createPinia();
 app.use(pinia);
-app.use(await initI18n());
-useThemeStore(pinia);
+app.use(await prepareWindowAppearance(pinia));
 app.mount('#app');

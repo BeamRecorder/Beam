@@ -158,6 +158,10 @@ pub struct CaptureRequest {
     pub excluded_process_id: Option<u32>,
     #[serde(default)]
     pub excluded_window_handles: Vec<String>,
+    #[serde(default)]
+    pub hide_taskbar: bool,
+    #[serde(default)]
+    pub hide_desktop_icons: bool,
 }
 
 impl CaptureRequest {

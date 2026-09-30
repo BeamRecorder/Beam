@@ -511,18 +511,20 @@
     "back": "Quay lại"
   },
   "EditorPreparingHud": {
-    "title": "Đang chuẩn bị trình chỉnh sửa",
-    "openingWindow": "Đang tạo cửa sổ trình chỉnh sửa…",
-    "loadingEditor": "Đang tải giao diện trình chỉnh sửa…",
-    "loadingAppearance": "Đang tải giao diện hiển thị của trình chỉnh sửa…",
-    "loadingProject": "Đang mở dự án của bạn…",
-    "loadingTimeline": "Đang tải dòng thời gian…",
-    "loadingEditorModule": "Đang tải các thành phần của trình chỉnh sửa…",
-    "initializingEditor": "Đang chuẩn bị trạng thái trình chỉnh sửa…",
-    "renderingEditor": "Đang dựng hình trình chỉnh sửa…",
-    "loadingPreview": "Đang chuẩn bị bản xem trước đầu tiên…",
-    "ready": "Trình chỉnh sửa đã sẵn sàng",
-    "progressLabel": "Tiến trình tải trình chỉnh sửa"
+    "title": "Đang mở trình chỉnh sửa",
+    "openingWindow": "Cùng chuẩn bị trình chỉnh sửa nhé",
+    "loadingEditor": "Mình đang chuẩn bị mọi thứ",
+    "loadingAppearance": "Mình đang sắp xếp không gian",
+    "loadingProject": "Mình đang mở dự án của bạn",
+    "loadingTimeline": "Mình đang chuẩn bị dòng thời gian",
+    "loadingEditorModule": "Mình đang chuẩn bị công cụ",
+    "initializingEditor": "Mình đang hoàn thiện mọi thứ",
+    "renderingEditor": "Sắp xong rồi!",
+    "loadingPreview": "Sắp xong rồi!",
+    "ready": "Sắp xong rồi!",
+    "progressLabel": "Tiến trình tải trình chỉnh sửa",
+    "almostThere": "Sắp xong rồi!",
+    "cancel": "Hủy"
   },
   "EditorOpenError": {
     "title": "Không thể mở trình chỉnh sửa",
@@ -663,7 +665,18 @@
     "preset": "Cài đặt trước",
     "reset": "Đặt lại",
     "cancel": "Hủy",
-    "useThisArea": "Sử dụng khu vực này"
+    "useThisArea": "Sử dụng khu vực này",
+    "fullScreen": "Toàn màn hình",
+    "record": "Ghi",
+    "settings": "Cài đặt nhanh",
+    "countdown": "Đếm ngược",
+    "off": "Tắt",
+    "hideTaskbar": "Ẩn thanh tác vụ",
+    "hideDock": "Ẩn Dock",
+    "hideDesktopIcons": "Ẩn biểu tượng màn hình",
+    "desktopUnavailable": "Không khả dụng trên Linux.",
+    "captureOnly": "Ẩn trong bản ghi trên macOS.",
+    "previewUnavailable": "Không thể tải bản xem trước màn hình."
   },
   "SettingsPanel": {
     "themeMode": "Chế độ giao diện",
@@ -1018,5 +1031,19 @@
     "transitions": "Chuyển cảnh làm nổi bật",
     "highlightColor": "Màu vùng nổi bật",
     "highlightOpacity": "Cường độ vùng nổi bật"
+  },
+  "Brand": {
+    "animateBeamy": "Tạo chuyển động cho Beamy",
+    "loading": "Đang tải Beam",
+    "reload": "Tải lại Beam",
+    "tipLabel": "Mẹo",
+    "tipRegion": "Chọn vùng để chỉ ghi lại phần cần thiết.",
+    "tipPresets": "Dùng mẫu có sẵn để giữ cùng kích thước bản ghi.",
+    "tipTeleprompter": "Nhìn vào camera với sự hỗ trợ của máy nhắc chữ.",
+    "tipCountdown": "Đặt đếm ngược để chuẩn bị trước khi ghi.",
+    "tipDevices": "Kiểm tra camera và micrô trước khi ghi.",
+    "tipInstant": "Thử Instant để có video sẵn sàng chia sẻ.",
+    "tipShortcuts": "Tùy chỉnh phím tắt ghi hình trong phần cài đặt.",
+    "tipProjects": "Mở dự án có sẵn để tiếp tục chỉnh sửa."
   }
 }

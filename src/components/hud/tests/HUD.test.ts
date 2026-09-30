@@ -81,7 +81,6 @@ beforeEach(() => {
   capture.onPreferenceShortcut.mockReturnValue(() => undefined);
   capture.openHudSettings.mockResolvedValue(true);
   capture.openHudProjects.mockResolvedValue(true);
-  capture.openHudMascot.mockResolvedValue(true);
   browserCameraMock.listBrowserCameras.mockResolvedValue([
     { id: 'camera:1', kind: 'camera', label: 'Camera', isDefault: true },
   ]);
@@ -184,16 +183,15 @@ describe('horizontal HUD', () => {
     expect(document.body.textContent).toContain('Region failed');
     expect(hud.emitted('start-recording')).toBeUndefined();
   });
-  it('opens Settings, Projects and Mascot Lab without replacing or resizing the HUD', async () => {
+  it('opens Settings and Projects without replacing or resizing the HUD', async () => {
     const hud = await createHud();
     const sizeCalls = capture.setSize.mock.calls.length;
     await hud.get('[aria-label="Preferences"]').trigger('click');
     await hud.get('[aria-label="Open a project"]').trigger('click');
-    await hud.get('[aria-label="Mascot Lab"]').trigger('click');
     await flushPromises();
     expect(capture.openHudSettings).toHaveBeenCalledOnce();
     expect(capture.openHudProjects).toHaveBeenCalledOnce();
-    expect(capture.openHudMascot).toHaveBeenCalledOnce();
+    expect(hud.find('[aria-label="Mascot Lab"]').exists()).toBe(false);
     expect(hud.findAll('.capture-card')).toHaveLength(3);
     expect(capture.setSize.mock.calls).toHaveLength(sizeCalls);
   });
@@ -206,18 +204,6 @@ describe('horizontal HUD', () => {
     expect(document.body.textContent).toContain('Settings failed');
     await selectScreen(hud);
     expect(hud.emitted('start-recording')).toHaveLength(1);
-  });
-  it('reports Mascot Lab opening failures in the toolbar and permits retry', async () => {
-    capture.openHudMascot.mockRejectedValueOnce(new Error('Mascot Lab failed'));
-    const hud = await createHud();
-    await hud.get('[aria-label="Mascot Lab"]').trigger('click');
-    await flushPromises();
-    await openIssues(hud);
-    expect(document.body.textContent).toContain('Mascot Lab failed');
-    await hud.get('[aria-label="Mascot Lab"]').trigger('click');
-    await flushPromises();
-    expect(capture.openHudMascot).toHaveBeenCalledTimes(2);
-    expect(hud.findAll('.capture-card')).toHaveLength(3);
   });
   it('applies changes from the settings window to the next recording', async () => {
     const hud = await createHud();
@@ -325,7 +311,7 @@ describe('horizontal HUD', () => {
     expect(capture.close).not.toHaveBeenCalled();
     expect(hud.emitted('focus-feature')).toBeDefined();
   });
-  it('keeps the loading card in the same shell and close immediately available', async () => {
+  it('keeps one loading status in the same shell with cancellation and no titlebar', async () => {
     const hud = await createHud({
       preparingEditor: true,
       editorLoadingProgress: { stage: 'loadingProject', value: 45 },
@@ -333,8 +319,9 @@ describe('horizontal HUD', () => {
     expect(hud.find('.editor-preparing-hud').exists()).toBe(true);
     expect(hud.find('.capture-cards').exists()).toBe(false);
     expect(hud.find('[aria-label="Mascot Lab"]').exists()).toBe(false);
-    await hud.get('[aria-label="Close"]').trigger('click');
-    expect(capture.close).toHaveBeenCalledOnce();
+    expect(hud.find('.hud-topbar').exists()).toBe(false);
+    await hud.get('.editor-preparing-hud button').trigger('click');
+    expect(hud.emitted('cancel-editor-opening')).toEqual([[]]);
   });
 });
 

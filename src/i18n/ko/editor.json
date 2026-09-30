@@ -136,7 +136,16 @@
     "pause": "일시 중지",
     "resume": "재개",
     "autoscrolling": "자동 스크롤 중",
-    "autoscrollPaused": "자동 스크롤 일시 중지됨"
+    "autoscrollPaused": "자동 스크롤 일시 중지됨",
+    "close": "닫기",
+    "textColor": "텍스트 색상",
+    "transparency": "투명도",
+    "reset": "초기화",
+    "play": "재생",
+    "resize": "크기 조절",
+    "settingsReset": "설정이 초기화되었습니다",
+    "eyedropper": "화면 색상 선택",
+    "colorFormat": "색상 형식"
   },
   "TimelineToolbar": {
     "add": "추가",

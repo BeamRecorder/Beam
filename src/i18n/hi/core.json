@@ -511,18 +511,20 @@
     "back": "वापस"
   },
   "EditorPreparingHud": {
-    "title": "एडिटर तैयार हो रहा है",
-    "openingWindow": "एडिटर विंडो बनाई जा रही है…",
-    "loadingEditor": "एडिटर इंटरफ़ेस लोड हो रहा है…",
-    "loadingAppearance": "एडिटर का रूप लोड हो रहा है…",
-    "loadingProject": "आपका प्रोजेक्ट खोला जा रहा है…",
-    "loadingTimeline": "टाइमलाइन लोड हो रही है…",
-    "loadingEditorModule": "एडिटर के कॉम्पोनेंट लोड हो रहे हैं…",
-    "initializingEditor": "एडिटर की स्थिति तैयार की जा रही है…",
-    "renderingEditor": "एडिटर रेंडर हो रहा है…",
-    "loadingPreview": "पहला प्रीव्यू तैयार किया जा रहा है…",
-    "ready": "एडिटर तैयार है",
-    "progressLabel": "एडिटर लोडिंग प्रगति"
+    "title": "आपका एडिटर खोल रहा हूँ",
+    "openingWindow": "चलिए आपका एडिटर तैयार करें",
+    "loadingEditor": "मैं सब तैयार कर रहा हूँ",
+    "loadingAppearance": "मैं जगह तैयार कर रहा हूँ",
+    "loadingProject": "मैं आपका प्रोजेक्ट खोल रहा हूँ",
+    "loadingTimeline": "मैं आपकी टाइमलाइन तैयार कर रहा हूँ",
+    "loadingEditorModule": "मैं आपके टूल तैयार कर रहा हूँ",
+    "initializingEditor": "मैं सब एक साथ जोड़ रहा हूँ",
+    "renderingEditor": "बस तैयार होने वाला है!",
+    "loadingPreview": "बस तैयार होने वाला है!",
+    "ready": "बस तैयार होने वाला है!",
+    "progressLabel": "एडिटर लोडिंग प्रगति",
+    "almostThere": "बस तैयार होने वाला है!",
+    "cancel": "रद्द करें"
   },
   "EditorOpenError": {
     "title": "एडिटर नहीं खुल सका",
@@ -663,7 +665,18 @@
     "preset": "प्रीसेट",
     "reset": "रीसेट",
     "cancel": "रद्द करें",
-    "useThisArea": "इस क्षेत्र का उपयोग करें"
+    "useThisArea": "इस क्षेत्र का उपयोग करें",
+    "fullScreen": "पूरी स्क्रीन",
+    "record": "रिकॉर्ड करें",
+    "settings": "त्वरित सेटिंग",
+    "countdown": "उलटी गिनती",
+    "off": "बंद",
+    "hideTaskbar": "टास्कबार छिपाएँ",
+    "hideDock": "Dock छिपाएँ",
+    "hideDesktopIcons": "डेस्कटॉप आइकन छिपाएँ",
+    "desktopUnavailable": "Linux पर उपलब्ध नहीं है।",
+    "captureOnly": "macOS की रिकॉर्डिंग में छिपे रहते हैं।",
+    "previewUnavailable": "डेस्कटॉप पूर्वावलोकन लोड नहीं हो सका।"
   },
   "SettingsPanel": {
     "themeMode": "थीम मोड",
@@ -1033,5 +1046,19 @@
     "transitions": "हाइलाइट ट्रांज़िशन",
     "highlightColor": "हाइलाइट का रंग",
     "highlightOpacity": "हाइलाइट की तीव्रता"
+  },
+  "Brand": {
+    "animateBeamy": "Beamy को एनिमेट करें",
+    "loading": "Beam लोड हो रहा है",
+    "reload": "Beam फिर लोड करें",
+    "tipLabel": "सुझाव",
+    "tipRegion": "सिर्फ़ ज़रूरी हिस्सा रिकॉर्ड करने के लिए क्षेत्र चुनें।",
+    "tipPresets": "रिकॉर्डिंग का आकार समान रखने के लिए प्रीसेट इस्तेमाल करें।",
+    "tipTeleprompter": "टेलीप्रॉम्प्टर की मदद से कैमरे की ओर देखें।",
+    "tipCountdown": "तैयारी के लिए रिकॉर्डिंग से पहले उलटी गिनती लगाएँ।",
+    "tipDevices": "रिकॉर्डिंग से पहले कैमरा और माइक्रोफ़ोन जाँचें।",
+    "tipInstant": "तुरंत साझा करने लायक वीडियो के लिए Instant आज़माएँ।",
+    "tipShortcuts": "सेटिंग में रिकॉर्डिंग के शॉर्टकट बदलें।",
+    "tipProjects": "संपादन जारी रखने के लिए मौजूदा प्रोजेक्ट खोलें।"
   }
 }

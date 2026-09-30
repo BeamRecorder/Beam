@@ -5,8 +5,12 @@ const media = vi.hoisted(() => ({
   CanvasSink: vi.fn(),
   Input: vi.fn(),
   UrlSource: vi.fn(),
+  loaded: vi.fn(),
 }));
-vi.mock('mediabunny', () => media);
+vi.mock('mediabunny', () => {
+  media.loaded();
+  return media;
+});
 
 import { useProjectThumbnailGenerator } from './useProjectThumbnailGenerator';
 
@@ -39,6 +43,12 @@ describe('useProjectThumbnailGenerator', () => {
   });
 
   afterEach(() => vi.useRealTimers());
+
+  it('does not load the video decoder when no thumbnail is requested', async () => {
+    const { generateThumbnail } = useProjectThumbnailGenerator();
+    await expect(generateThumbnail('unused-project', '')).resolves.toBeNull();
+    expect(media.loaded).not.toHaveBeenCalled();
+  });
 
   it('generates, saves and caches a thumbnail at the middle of the video', async () => {
     const sourceCanvas = document.createElement('canvas');
@@ -139,6 +149,63 @@ describe('useProjectThumbnailGenerator', () => {
     await vi.advanceTimersByTimeAsync(10_000);
 
     await expect(result).resolves.toBeNull();
+    expect(input.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('deduplicates in-flight jobs and returns cached thumbnails without a source', async () => {
+    let complete!: (value: null) => void;
+    input.getPrimaryVideoTrack.mockReturnValue(
+      new Promise<null>((resolve) => {
+        complete = resolve;
+      }),
+    );
+    const { generateThumbnail, thumbnailCache } = useProjectThumbnailGenerator();
+    const first = generateThumbnail('duplicate-project', 'video://source');
+    await expect(generateThumbnail('duplicate-project', 'video://source')).resolves.toBeNull();
+    await vi.waitFor(() => expect(input.getPrimaryVideoTrack).toHaveBeenCalledOnce());
+    complete(null);
+    await expect(first).resolves.toBeNull();
+    thumbnailCache['cached-project'] = 'thumbnail://cached';
+    await expect(generateThumbnail('cached-project', '')).resolves.toBe('thumbnail://cached');
+  });
+
+  it.each([
+    [null, 8, 4],
+    [0, 8, 0.1],
+    [-1, 8, 0.1],
+    [NaN, 8, 0.1],
+    [Infinity, 8, 0.1],
+  ])('uses a bounded timestamp for duration %s', async (metadata, computed, timestamp) => {
+    input.getPrimaryVideoTrack.mockResolvedValue(track);
+    track.getDurationFromMetadata.mockResolvedValue(metadata);
+    track.computeDuration.mockResolvedValue(computed);
+    const source = document.createElement('canvas');
+    source.width = 0;
+    source.height = 0;
+    canvasesAtTimestamps.mockReturnValue(
+      (async function* () {
+        yield { canvas: source };
+      })(),
+    );
+    saveProjectThumbnail.mockResolvedValue(null);
+    const { generateThumbnail } = useProjectThumbnailGenerator();
+    await expect(generateThumbnail(`duration-${String(metadata)}`, 'video://source')).resolves.toBe(
+      'data:image/webp;base64,thumbnail',
+    );
+    expect(canvasesAtTimestamps).toHaveBeenCalledWith([timestamp]);
+    expect(input.dispose).toHaveBeenCalledOnce();
+  });
+
+  it.each(['no-frame', 'no-context'])('disposes media when rendering has %s', async (condition) => {
+    input.getPrimaryVideoTrack.mockResolvedValue(track);
+    track.getDurationFromMetadata.mockResolvedValue(10);
+    canvasesAtTimestamps.mockReturnValue(
+      (async function* () {
+        if (condition === 'no-context') yield { canvas: document.createElement('canvas') };
+      })(),
+    );
+    vi.mocked(HTMLCanvasElement.prototype.getContext).mockReturnValue(null);
+    await expect(useProjectThumbnailGenerator().generateThumbnail(condition, 'video://source')).resolves.toBeNull();
     expect(input.dispose).toHaveBeenCalledOnce();
   });
 });

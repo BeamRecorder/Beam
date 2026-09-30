@@ -31,6 +31,7 @@ export function useVideoEditor(options: {
   const outputCanvas = ref<OutputCanvasSettings>({ ...DEFAULT_OUTPUT_CANVAS });
   const player = useVideoPlayer();
   const initialPlaybackSettled = ref(false);
+  const projectStateReady = ref(false);
   const cursor = useCursorReplacer();
   const cursorMotion = ref(createDefaultCursorMotionSettings());
   const includeAudioInExport = ref(true);
@@ -194,12 +195,14 @@ export function useVideoEditor(options: {
   watch(
     () => project.value?.id,
     async (id) => {
-      if (!id) return;
       const request = ++editorLoad;
+      projectStateReady.value = false;
+      initialPlaybackSettled.value = false;
+      if (!id) return;
       try {
-        await editorPresets.load(true);
+        const [initialState] = await Promise.all([capture.getProjectEditorState(id), editorPresets.load(true)]);
         if (request !== editorLoad) return;
-        await editorState.load(id);
+        await editorState.load(id, initialState);
         if (request !== editorLoad) return;
         compositionState.synchronizeRecording();
         zoomState.ensureAutomaticZooms();
@@ -207,6 +210,7 @@ export function useVideoEditor(options: {
         await nextTick();
         if (request !== editorLoad) return;
         editorState.enableDefaultCapture();
+        projectStateReady.value = true;
       } catch (err: unknown) {
         if (request !== editorLoad) return;
         console.error('Failed to load editor state.', err);
@@ -217,6 +221,8 @@ export function useVideoEditor(options: {
           copyText: errorStack,
           detail: errorMessage,
         });
+        // Surface the error while allowing the recorded composition to open.
+        projectStateReady.value = true;
       }
     },
     { immediate: true },
@@ -226,11 +232,15 @@ export function useVideoEditor(options: {
     zoomState.ensureAutomaticZooms();
   });
   let playbackLoad = 0;
+  onScopeDispose(() => {
+    ++editorLoad;
+    ++playbackLoad;
+  });
   watch(
     () =>
-      `${project.value?.id ?? ''}:${editorData.value?.sessionId ?? ''}:${compositionPlaybackSignature(compositionState.composition.value)}`,
+      `${projectStateReady.value}:${project.value?.id ?? ''}:${editorData.value?.sessionId ?? ''}:${compositionPlaybackSignature(compositionState.composition.value)}`,
     () => {
-      if (!project.value) return;
+      if (!project.value || !projectStateReady.value) return;
       const request = ++playbackLoad;
       const composition = compositionState.composition.value;
       void player

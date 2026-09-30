@@ -147,7 +147,7 @@ test('creates the HUD at the canonical native size with isolated renderer settin
   assert.equal(options.webPreferences.nodeIntegration, false);
   assert.equal(options.webPreferences.contextIsolation, true);
   assert.equal(fixture.controllers.get(fixture.window) instanceof WindowController, true);
-  assert.ok(fixture.calls.some(([name, url]) => name === 'loadURL' && url === 'http://localhost:6500'));
+  assert.ok(fixture.calls.some(([name, url]) => name === 'loadURL' && url === 'http://localhost:6500/html/index.html'));
 });
 
 test('keeps the HUD hidden until ready-to-show, then applies native size constraints', () => {
@@ -188,8 +188,39 @@ test('does not show the HUD when onboarding is not complete', () => {
 
 test('trusts the dedicated local status entry but rejects unrelated origins and paths', () => {
   const setup = createRendererSetup({ applicationRoot: '/beam-app' });
-  assert.equal(setup.isTrustedRenderer('http://localhost:6500/quick-snip-status.html?quickSnipStatus=1'), true);
-  assert.equal(setup.isTrustedRenderer('http://localhost:6500/source-picker.html?role=chooser'), true);
+  assert.equal(setup.isTrustedRenderer('http://localhost:6500/html/quick-snip-status.html?quickSnipStatus=1'), true);
+  assert.equal(setup.isTrustedRenderer('http://localhost:6500/html/source-picker.html?role=chooser'), true);
   assert.equal(setup.isTrustedRenderer('http://localhost:6501/quick-snip-status.html'), false);
   assert.equal(setup.isTrustedRenderer('http://localhost:6500/untrusted.html'), false);
+});
+
+test('trusts each moved desktop entry at its exact development URL', () => {
+  const setup = createRendererSetup({ applicationRoot: '/beam-app' });
+  for (const entry of [
+    'index',
+    'countdown',
+    'editor',
+    'teleprompter',
+    'onboarding',
+    'hud-panel',
+    'quick-snip-status',
+    'screen-region',
+    'region-marker',
+  ]) {
+    assert.equal(setup.isTrustedRenderer(`http://localhost:6500/html/${entry}.html`), true, entry);
+    assert.equal(setup.isTrustedRenderer(`http://localhost:6500/${entry}.html`), false, entry);
+  }
+});
+test('does not authorize arbitrary HTML files or similar-looking development origins', () => {
+  const setup = createRendererSetup({ applicationRoot: '/beam-app' });
+  for (const url of [
+    'http://localhost:6500/',
+    'http://localhost:6500/html/untrusted.html',
+    'http://localhost:6500/html/nested/index.html',
+    'http://localhost:6501/html/index.html',
+    'https://localhost:6500/html/index.html',
+    'http://localhost:6500.example.com/html/index.html',
+  ]) {
+    assert.equal(setup.isTrustedRenderer(url), false, url);
+  }
 });

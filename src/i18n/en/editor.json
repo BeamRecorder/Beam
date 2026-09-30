@@ -136,7 +136,16 @@
     "pause": "Pause",
     "resume": "Resume",
     "autoscrolling": "Autoscrolling",
-    "autoscrollPaused": "Autoscroll paused"
+    "autoscrollPaused": "Autoscroll paused",
+    "close": "Close",
+    "textColor": "Text color",
+    "transparency": "Transparency",
+    "reset": "Reset",
+    "play": "Play",
+    "resize": "Resize",
+    "settingsReset": "Settings reset",
+    "eyedropper": "Pick screen color",
+    "colorFormat": "Color format"
   },
   "TimelineToolbar": {
     "add": "Add",

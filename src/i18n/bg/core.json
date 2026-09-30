@@ -511,18 +511,20 @@
     "back": "Назад"
   },
   "EditorPreparingHud": {
-    "title": "Подготовка на редактора",
-    "openingWindow": "Създаване на прозореца на редактора…",
-    "loadingEditor": "Зареждане на интерфейса…",
-    "loadingAppearance": "Зареждане на облика на редактора…",
-    "loadingProject": "Отваряне на проекта…",
-    "loadingTimeline": "Зареждане на времевата линия…",
-    "loadingEditorModule": "Зареждане на компонентите на редактора…",
-    "initializingEditor": "Подготовка на състоянието на редактора…",
-    "renderingEditor": "Изобразяване на редактора…",
-    "loadingPreview": "Подготовка на първия преглед…",
-    "ready": "Редакторът е готов",
-    "progressLabel": "Напредък на зареждането на редактора"
+    "title": "Отваряне на редактора",
+    "openingWindow": "Да подготвим редактора",
+    "loadingEditor": "Подготвям всичко",
+    "loadingAppearance": "Подреждам работното място",
+    "loadingProject": "Отварям проекта ви",
+    "loadingTimeline": "Подготвям времевата линия",
+    "loadingEditorModule": "Подготвям инструментите ви",
+    "initializingEditor": "Сглобявам всичко",
+    "renderingEditor": "Почти сме готови!",
+    "loadingPreview": "Почти сме готови!",
+    "ready": "Почти сме готови!",
+    "progressLabel": "Напредък на зареждането на редактора",
+    "almostThere": "Почти сме готови!",
+    "cancel": "Отказ"
   },
   "EditorOpenError": {
     "title": "Редакторът не можа да се отвори",
@@ -663,7 +665,18 @@
     "preset": "Шаблон",
     "reset": "Нулиране",
     "cancel": "Отказ",
-    "useThisArea": "Използване на тази област"
+    "useThisArea": "Използване на тази област",
+    "fullScreen": "Цял екран",
+    "record": "Запис",
+    "settings": "Бързи настройки",
+    "countdown": "Обратно броене",
+    "off": "Изкл.",
+    "hideTaskbar": "Скриване на лентата със задачи",
+    "hideDock": "Скриване на Dock",
+    "hideDesktopIcons": "Скриване на иконите на работния плот",
+    "desktopUnavailable": "Не е налично в Linux.",
+    "captureOnly": "Скрито в записа на macOS.",
+    "previewUnavailable": "Прегледът на работния плот не можа да се зареди."
   },
   "SettingsPanel": {
     "themeMode": "Режим на темата",
@@ -1033,5 +1046,19 @@
     "transitions": "Преходи на открояването",
     "highlightColor": "Цвят на осветената област",
     "highlightOpacity": "Интензитет на осветената област"
+  },
+  "Brand": {
+    "animateBeamy": "Анимирай Beamy",
+    "loading": "Beam се зарежда",
+    "reload": "Презареди Beam",
+    "tipLabel": "Съвет",
+    "tipRegion": "Избери област, за да запишеш само важното.",
+    "tipPresets": "Използвай шаблони за еднакъв размер на записите.",
+    "tipTeleprompter": "Гледай към камерата с помощта на телепромптера.",
+    "tipCountdown": "Добави обратно броене, за да се подготвиш.",
+    "tipDevices": "Провери камерата и микрофона преди запис.",
+    "tipInstant": "Опитай Instant за видео, готово за споделяне.",
+    "tipShortcuts": "Персонализирай клавишните комбинации в настройките.",
+    "tipProjects": "Отвори съществуващ проект, за да продължиш монтажа."
   }
 }

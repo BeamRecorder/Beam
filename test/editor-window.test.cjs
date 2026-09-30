@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const Module = require('node:module');
+const { EventEmitter } = require('node:events');
 const test = require('node:test');
 
 const projectId = '11111111-1111-4111-8111-111111111111';
@@ -296,7 +297,14 @@ test('editor window is opaque and routes native editor lifecycle without changin
   }
 });
 
-const createThemeFixture = ({ theme, resolveSystemDark = () => false, loadPromise = () => undefined }) => {
+const createThemeFixture = ({
+  theme,
+  resolveSystemDark = () => false,
+  loadPromise = () => undefined,
+  hudInitiallyVisible = true,
+  hudAuxiliaryWindows = [],
+  canAcceptWork = () => true,
+}) => {
   const calls = [];
   const windows = [];
   const ipcHandlers = new Map();
@@ -325,8 +333,11 @@ const createThemeFixture = ({ theme, resolveSystemDark = () => false, loadPromis
   };
   delete require.cache[require.resolve('../electron/window/editor-window.cjs')];
   const { createEditorWindowManager } = require('../electron/window/editor-window.cjs');
-  let hudVisible = true;
+  let hudVisible = hudInitiallyVisible;
+  const hudEvents = new EventEmitter();
   const hudWindow = {
+    once: hudEvents.once.bind(hudEvents),
+    removeListener: hudEvents.removeListener.bind(hudEvents),
     webContents: { send: (...args) => calls.push(['hud-send', ...args]) },
     hide: () => {
       hudVisible = false;
@@ -334,6 +345,7 @@ const createThemeFixture = ({ theme, resolveSystemDark = () => false, loadPromis
     },
     show: () => {
       hudVisible = true;
+      hudEvents.emit('show');
       calls.push(['hud-show']);
     },
     focus: () => calls.push(['hud-focus']),
@@ -351,6 +363,8 @@ const createThemeFixture = ({ theme, resolveSystemDark = () => false, loadPromis
       on: (channel, listener) => ipcListeners.set(channel, listener),
     },
     hudWindow,
+    hudAuxiliaryWindows,
+    canAcceptWork,
     hudController: {
       showHud: () => calls.push(['show-hud']),
       setVisible: (visible) => {
@@ -369,6 +383,8 @@ const createThemeFixture = ({ theme, resolveSystemDark = () => false, loadPromis
     ipcHandlers,
     ipcListeners,
     manager,
+    hudEvents,
+    hudWindow,
     preferenceState,
     hudVisible: () => hudVisible,
     restore: () => {
@@ -376,6 +392,37 @@ const createThemeFixture = ({ theme, resolveSystemDark = () => false, loadPromis
     },
   };
 };
+
+for (const outcome of ['show', 'destroy', 'shutdown'])
+  test(`auxiliary startup waits for the first HUD presentation (${outcome})`, () => {
+    let preparations = 0;
+    let active = true;
+    const fixture = createThemeFixture({
+      theme: 'light',
+      hudInitiallyVisible: false,
+      hudAuxiliaryWindows: [
+        {
+          prepare: () => {
+            preparations++;
+          },
+          suspend: () => {},
+        },
+      ],
+      canAcceptWork: () => active,
+    });
+    try {
+      assert.equal(preparations, 0);
+      if (outcome === 'destroy') fixture.manager.destroy();
+      if (outcome === 'shutdown') active = false;
+      fixture.hudWindow.show();
+      fixture.hudWindow.show();
+      assert.equal(preparations, outcome === 'show' ? 1 : 0);
+      assert.equal(fixture.hudEvents.listenerCount('show'), 0);
+      fixture.manager.destroy();
+    } finally {
+      fixture.restore();
+    }
+  });
 
 test('ignores canceled and subframe load failures while the editor document continues loading', async () => {
   const fixture = createThemeFixture({ theme: 'light' });
@@ -998,5 +1045,56 @@ test('concurrent new-window opens replace the first presentation request', async
     assert.equal(fixture.manager.window(), second);
   } finally {
     fixture.restore();
+  }
+});
+
+test('only the HUD may cancel a pending opening; cancellation preserves existing editors and ignores late ready', async () => {
+  const f = createRecorderFixture();
+  try {
+    const open = f.ipcHandlers.get('editor:open');
+    const cancel = f.ipcHandlers.get('editor:cancel-opening');
+    assert.equal(cancel({ sender: f.hudWindow.webContents }), false);
+    const originalOpening = open({ sender: f.hudWindow.webContents }, projectId);
+    const original = f.windows[0];
+    f.ipcListeners.get('editor:ready')({ sender: original.webContents });
+    assert.equal(await originalOpening, true);
+    const pendingOpening = open({ sender: f.hudWindow.webContents }, projectId, { disposition: 'new-window' });
+    const pending = f.windows[1];
+    assert.equal(cancel({ sender: original.webContents }), false);
+    assert.equal(cancel({ sender: {} }), false);
+    assert.equal(pending.isDestroyed(), false);
+    assert.equal(cancel({ sender: f.hudWindow.webContents }), true);
+    assert.equal(await pendingOpening, false);
+    assert.equal(pending.isDestroyed(), true);
+    assert.equal(original.isDestroyed(), false);
+    assert.equal(cancel({ sender: f.hudWindow.webContents }), false);
+    assert.equal(f.ipcListeners.get('editor:ready')({ sender: pending.webContents }), false);
+    assert.ok(f.calls.some(([name]) => name === 'hud-show'));
+    assert.equal(
+      f.calls.some(([name]) => name === 'hud-close'),
+      false,
+    );
+    const retry = open({ sender: f.hudWindow.webContents }, projectId, { disposition: 'new-window' });
+    const replacement = f.windows[2];
+    pending.emitContent('did-finish-load');
+    pending.emitContent('unresponsive');
+    assert.equal(replacement.isDestroyed(), false);
+    f.ipcListeners.get('editor:ready')({ sender: replacement.webContents });
+    assert.equal(await retry, true);
+  } finally {
+    f.restore();
+  }
+});
+
+test('cancelling after presentation cannot destroy the visible editor', async () => {
+  const f = createRecorderFixture();
+  try {
+    const opening = f.ipcHandlers.get('editor:open')({ sender: f.hudWindow.webContents }, projectId);
+    f.ipcListeners.get('editor:ready')({ sender: f.windows[0].webContents });
+    assert.equal(await opening, true);
+    assert.equal(f.ipcHandlers.get('editor:cancel-opening')({ sender: f.hudWindow.webContents }), false);
+    assert.equal(f.windows[0].isDestroyed(), false);
+  } finally {
+    f.restore();
   }
 });

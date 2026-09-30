@@ -11,6 +11,7 @@ import {
   createDefaultTeleprompterDocument,
   splitTeleprompterLines,
   TELEPROMPTER_FONT_SIZE,
+  TELEPROMPTER_DEFAULTS,
 } from './teleprompter-types';
 
 const saveDelay = 350;
@@ -40,6 +41,8 @@ export function useTeleprompter() {
     fontSize: document.value.fontSize,
     lineHeight: document.value.lineHeight,
     textAlign: document.value.textAlign,
+    textColor: document.value.textColor ?? null,
+    windowOpacity: document.value.windowOpacity ?? 1,
   });
 
   const storedSettings = (value: unknown): Partial<TeleprompterSettings> => {
@@ -55,6 +58,10 @@ export function useTeleprompter() {
     if (typeof input.lineHeight === 'number' && Number.isFinite(input.lineHeight))
       patch.lineHeight = Math.max(1, Math.min(2.5, input.lineHeight));
     if (input.textAlign === 'left' || input.textAlign === 'center') patch.textAlign = input.textAlign;
+    if (input.textColor === null || (typeof input.textColor === 'string' && /^#[0-9a-f]{6}$/i.test(input.textColor)))
+      patch.textColor = input.textColor;
+    if (typeof input.windowOpacity === 'number' && Number.isFinite(input.windowOpacity))
+      patch.windowOpacity = Math.max(0.2, Math.min(1, input.windowOpacity));
     return patch;
   };
 
@@ -120,10 +127,8 @@ export function useTeleprompter() {
   };
 
   const updateDocument = (patch: Partial<Omit<TeleprompterDocument, 'schemaVersion' | 'updatedAtUtc'>>) => {
-    const safePatch =
-      patch.fontSize === undefined
-        ? patch
-        : { ...patch, fontSize: Math.round(Math.max(16, Math.min(TELEPROMPTER_FONT_SIZE, patch.fontSize))) };
+    const { fontSize: _fontSize, windowOpacity: _opacity, textColor: _color, ...otherFields } = patch;
+    const safePatch = { ...otherFields, ...storedSettings(patch) };
     document.value = { ...document.value, ...safePatch, updatedAtUtc: new Date().toISOString() };
     if (Object.keys(patch).some((key) => key !== 'text')) {
       settingsRevision += 1;
@@ -151,6 +156,7 @@ export function useTeleprompter() {
     cancelLineTimer();
     if (
       !visible ||
+      isEditing.value ||
       !document.value.autoscroll ||
       isPaused.value ||
       document.value.mode !== 'line-by-line' ||
@@ -166,7 +172,14 @@ export function useTeleprompter() {
 
   const tick = (now: number) => {
     frame = null;
-    if (!visible || !document.value.autoscroll || isPaused.value || document.value.mode !== 'continuous') return;
+    if (
+      !visible ||
+      isEditing.value ||
+      !document.value.autoscroll ||
+      isPaused.value ||
+      document.value.mode !== 'continuous'
+    )
+      return;
     const element = displayRef.value;
     if (!element) {
       frame = window.requestAnimationFrame(tick);
@@ -182,7 +195,7 @@ export function useTeleprompter() {
   const startAutoscroll = () => {
     cancelFrame();
     cancelLineTimer();
-    if (!visible || !document.value.autoscroll || isPaused.value) return;
+    if (!visible || isEditing.value || !document.value.autoscroll || isPaused.value) return;
     if (document.value.mode === 'continuous') frame = window.requestAnimationFrame(tick);
     else scheduleLineAdvance();
   };
@@ -198,6 +211,23 @@ export function useTeleprompter() {
     isPaused.value = true;
     cancelFrame();
     cancelLineTimer();
+  };
+
+  const editScript = () => {
+    isPaused.value = true;
+    isEditing.value = true;
+    startAutoscroll();
+  };
+  const togglePlayback = () => {
+    if (isEditing.value) {
+      isEditing.value = false;
+      isPaused.value = true;
+    }
+    togglePause();
+  };
+  const resetSettings = () => {
+    const { text: _text, schemaVersion: _version, ...settings } = TELEPROMPTER_DEFAULTS;
+    updateDocument(settings);
   };
 
   const applySession = async (context: TeleprompterSessionContext | null) => {
@@ -256,6 +286,7 @@ export function useTeleprompter() {
   );
   watch(() => document.value.autoscroll, startAutoscroll);
   watch(() => document.value.scrollSpeed, startAutoscroll);
+  watch(isEditing, startAutoscroll);
   onBeforeUnmount(() => {
     cancelFrame();
     cancelLineTimer();
@@ -324,6 +355,9 @@ export function useTeleprompter() {
     previousLine,
     toggleAutoscroll,
     togglePause,
+    editScript,
+    togglePlayback,
+    resetSettings,
     save,
   };
 }

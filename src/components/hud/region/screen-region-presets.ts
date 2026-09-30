@@ -1,11 +1,6 @@
 import type { ScreenRegion, ScreenRegionBounds } from '../../../api/types/screen-region';
 
-export interface ScreenRegionPresetOption {
-  value: string;
-  label: string;
-  width: number;
-  height: number;
-}
+import type { ScreenRegionPresetOption } from './screen-region-preset-types';
 
 export const SCREEN_REGION_PRESETS: ScreenRegionPresetOption[] = [
   { value: '640x480', label: '640 × 480', width: 640, height: 480 },
@@ -22,6 +17,7 @@ export function findMatchingPreset(
   tolerance = 2,
 ): string | null {
   if (!region) return null;
+  if (region.x === 0 && region.y === 0 && region.width === 1 && region.height === 1) return 'fullscreen';
   const currentW = Math.round(region.width * Math.max(1, bounds.width));
   const currentH = Math.round(region.height * Math.max(1, bounds.height));
   const matched = SCREEN_REGION_PRESETS.find(
@@ -36,6 +32,7 @@ export function computePresetRegion(
   currentRegion: ScreenRegion | null,
   isFullScreen: boolean,
 ): ScreenRegion | null {
+  if (presetValue === 'fullscreen') return { x: 0, y: 0, width: 1, height: 1 };
   const preset = SCREEN_REGION_PRESETS.find((p) => p.value === presetValue);
   if (!preset) return null;
 

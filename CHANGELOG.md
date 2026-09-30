@@ -7,27 +7,49 @@ User-facing changes to Beam are documented in this file.
 ### Added
 
 - Added a shared screen/window chooser for Windows and macOS with searchable thumbnails, keyboard navigation, live window previews and a click-through selection aura that disappears before countdown. Development launches can supply 3 simulated displays and 21 windows through `DEV_CROSSPLATFORM=1`, including on Linux; normal Linux capture retains the Portal.
+- Beamy now appears large and centered during loading with translated tips, then gently moves into the HUD logo. Clicking the brand plays independent selections from twelve mascot morphs and twelve text effects, returning to the original cloud and plain Beam text.
 - The recorder shows a lightweight animated cloud while its interface loads, with a retry action if startup fails.
 - Instant capture now has a small cloud mascot that accompanies recording, dances and morphs during export, and briefly celebrates completed videos, respecting reduced-motion preferences.
-- Added a standalone Mascot Lab to explore Beam's SVG mascot with morphing star eyes, customizable looks, animation sequences, and transparent SVG/PNG exports before integrating it into the app.
-- Added a temporary Mascot Lab button to the recorder toolbar, opening the lab in its own desktop window.
+- Region recording now offers a desktop magnifier, live pixel dimensions, Full screen and size presets, teleprompter, device controls and a 0–10 second countdown. Controls hide during dragging and return with a spring animation. Desktop icons and the taskbar/Dock can be hidden from capture on supported platforms.
 - Capture problems now appear in the toolbar with a count and a scrollable hover panel, including individual copy actions.
 - Settings and Projects now open in separate, resizable desktop windows.
 
 ### Changed
 
+- Capture mode and Light/Dark/System controls share a sliding selection indicator, with instant updates when reduced motion is enabled.
+- Beam's light theme uses a clearer orange with subtle accent fills and borders, correcting its brown appearance on white surfaces; the dark theme and custom colors retain their selected shades.
+- Projects opens in a smaller window with square cards that adapt to resizing. Missing thumbnails are generated only for visible projects, one at a time.
+- Desktop windows load their selected interface, language and appearance in parallel. Camera and Quick Snip controls load independently of the HUD, and auxiliary startup waits for native capture discovery.
 - Recorder startup now loads other languages, recording overlays, font parsing and SVG validation only when needed, and exposes startup timings in developer tools.
 - Updated desktop and website JavaScript dependencies to their latest stable versions, including Electron 44, and upgraded Bun to 1.4.2 locally and in CI.
 - Recording controls are now a compact horizontal bar with Delete, confirmed Restart, Pause/Resume and Stop. Old bar positions reset once to the bottom center of each display; later moves remain saved.
+- Simplified the teleprompter to a larger floating toolbar for speed, text size/color, window transparency, reset and playback, with translated reset confirmation and only a title and Close button above the script.
+- Consolidated the desktop HTML entry pages in `html/`, including the recorder, editor and teleprompter.
+- The recorder source cards now share the Full screen artwork.
 - Redesigned the capture HUD into a compact horizontal layout with Full screen, Region and Window cards that open the matching selection and capture after confirmation.
 - Refreshed the default light and dark surfaces, typography and control shapes, with bundled Hanken Grotesk and themed device/preset menus.
 
 ### Fixed
 
+- Centered the Beam logo and wordmark vertically in the recorder toolbar, including animated text.
+- Editor opening now shows Beamy with a single friendly, translated status, no HUD titlebar, and a Cancel button that safely returns to the recorder without deleting the project.
+- Beamy shows a downcast expression with round eyes when editor opening or another Beamy status fails; editor error actions stay accessible with long translations.
+- Project playback starts after saved editor settings are restored; audio waveform GPU work runs in a shared worker to keep the editor responsive during loading.
+- Saved project thumbnails use the same media protocol as video previews, so development windows display them instead of a broken image.
 - macOS window selection excludes privacy indicators and other system UI surfaces while retaining real application windows.
+- The first countdown value now waits for its mounted renderer as well as native window readiness, preventing an empty countdown on first use.
+- The Beam wordmark stays vertically centered and unclipped at rest; Beamy uses the original rounded Mascot Lab cloud and eases back to it after each interaction.
+- Full screen region controls keep a visible margin at the top and bottom, and their placement adapts to translated labels, wrapped controls and device errors.
+- The region selector shows the live desktop through its transparent crop instead of covering it with a frozen screenshot; the snapshot is used only by the magnifier.
+- Region controls return directly to their final position at screen edges, and the selector loads independently while its native desktop preview prepares.
+- Linux region capture chooses a monitor once through the Portal and reuses that authorized source for the magnifier and recording. Accidental clicks no longer create empty crops.
 - Windows/macOS HUD popovers temporarily expand the transparent window; Linux menus scroll within compact bounds so added transparent space cannot block desktop clicks.
 - Development builds and launches now find native capture binaries in the Cargo-configured build directory, including shared Linux caches.
 - Linux now selects X11/XWayland at launch to avoid GPU startup crashes and enable native placement; screen region selection waits for renderer readiness and opens at the exact display bounds.
+
+### Removed
+
+- Removed the Mascot Lab from the application and build. Its prototype components remain in `components/brand/lab/`.
 
 ## [0.4.0] - 2026-09-27
 

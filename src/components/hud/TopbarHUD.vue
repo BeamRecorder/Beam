@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { FlaskConical, FolderOpen, Minus, Settings, X } from '@lucide/vue';
+import { FolderOpen, Minus, Settings, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import { resolvePublicAssetUrl } from '~/utils/public-asset';
+import BrandLogo from '../brand/BrandLogo.vue';
 import UpdateAvailableBadge from '~/components/updates/UpdateAvailableBadge.vue';
 
 const { t } = useTranslate('TopbarHUD');
@@ -11,44 +11,25 @@ withDefaults(
   defineProps<{
     title?: string;
     disabled?: boolean;
+    failed?: boolean;
     showSettings?: boolean;
     showProjects?: boolean;
-    showMascot?: boolean;
   }>(),
   {
     showSettings: true,
     showProjects: true,
-    showMascot: true,
   },
 );
-const emit = defineEmits<{ 'open-settings': []; 'open-projects': []; 'open-mascot': []; minimize: []; close: [] }>();
+const emit = defineEmits<{ 'open-settings': []; 'open-projects': []; minimize: []; close: [] }>();
 </script>
 
 <template>
   <header class="hud-topbar">
     <div class="topbar-identity">
-      <img
-        :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')"
-        class="brand-logo"
-        :alt="t('title')"
-        draggable="false"
-      />
-      <span class="topbar-title">{{ title || t('title') }}</span>
+      <BrandLogo :title="title || t('title')" :phase="failed ? 'failed' : 'idle'" />
     </div>
     <div class="window-actions">
       <slot name="issues" />
-      <Button
-        v-if="showMascot"
-        variant="ghost"
-        size="xs"
-        icon-only
-        :icon="FlaskConical"
-        class="window-action"
-        :disabled="disabled"
-        aria-label="Mascot Lab"
-        title="Mascot Lab"
-        @click="emit('open-mascot')"
-      />
       <Button
         v-if="showProjects"
         variant="ghost"
@@ -121,21 +102,6 @@ const emit = defineEmits<{ 'open-settings': []; 'open-projects': []; 'open-masco
 .topbar-identity {
   flex: 1;
   min-width: 0;
-}
-.brand-logo {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-  -webkit-app-region: no-drag;
-}
-.topbar-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--font-size-body);
-  font-weight: var(--weight-title);
-  color: var(--text-primary);
-  user-select: none;
 }
 .window-actions {
   gap: 2px;

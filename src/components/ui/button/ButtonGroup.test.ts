@@ -47,6 +47,53 @@ describe('ButtonGroup', () => {
     expect(wrapper.findAll('button')).toHaveLength(2);
   });
 
+  it.each([0, 1, 2])('moves the shared indicator to choice %i while keeping all buttons interactive', (index) => {
+    const wrapper = mount(ButtonGroup, {
+      props: { full: true, columns: 3, selection: { index, count: 3 } },
+      slots: { default: '<button>One</button><button>Two</button><button>Three</button>' },
+    });
+    expect(wrapper.classes()).toContain('has-indicator');
+    expect(wrapper.get('.selection-track').attributes('aria-hidden')).toBe('true');
+    expect(wrapper.attributes('style')).toContain(`--button-group-index: ${index}`);
+    expect(wrapper.attributes('style')).toContain('--button-group-count: 3');
+    expect(wrapper.findAll('button').map((button) => button.text())).toEqual(['One', 'Two', 'Three']);
+    wrapper.unmount();
+  });
+
+  it.each([
+    undefined,
+    { index: 0, count: 0 },
+    { index: 0, count: -1 },
+    { index: 0, count: 1.5 },
+    { index: 0, count: Number.NaN },
+    { index: -1, count: 3 },
+    { index: 3, count: 3 },
+    { index: 0.5, count: 3 },
+    { index: Number.NaN, count: 3 },
+  ])('keeps an invalid or missing selection out of the control layout: %j', (selection) => {
+    const wrapper = mount(ButtonGroup, { props: { selection }, slots: { default: '<button>One</button>' } });
+    expect(wrapper.find('.selection-track').exists()).toBe(false);
+    expect(wrapper.classes()).not.toContain('has-indicator');
+    expect(wrapper.attributes('style')).not.toContain('--button-group-index');
+    expect(wrapper.findAll('button')).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it('handles interrupted selection changes, a resized group and removal of the selected choice', async () => {
+    const wrapper = mount(ButtonGroup, { props: { selection: { index: 0, count: 3 } } });
+    const indicator = wrapper.get('.selection-indicator').element;
+    await wrapper.setProps({ selection: { index: 2, count: 3 } });
+    await wrapper.setProps({ selection: { index: 1, count: 2 }, full: true, columns: 2 });
+    expect(wrapper.get('.selection-indicator').element).toBe(indicator);
+    expect(wrapper.attributes('style')).toContain('--button-group-index: 1');
+    expect(wrapper.attributes('style')).toContain('--button-group-count: 2');
+    await wrapper.setProps({ selection: { index: -1, count: 2 } });
+    expect(wrapper.find('.selection-indicator').exists()).toBe(false);
+    await wrapper.setProps({ selection: { index: 0, count: 1 } });
+    expect(wrapper.find('.selection-indicator').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it('lays controls out with the requested number of columns', () => {
     const wrapper = mount(ButtonGroup, {
       props: { full: true, columns: 2 },

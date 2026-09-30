@@ -66,8 +66,8 @@ function createSourcePickerSurface({
       if (mainFrame) onFailure(new Error(`Source selection failed to load: ${description} (${code})`));
     });
     const loading = isPackaged
-      ? target.loadFile(path.join(applicationRoot, 'dist/source-picker.html'), { query: { role } })
-      : target.loadURL(`http://localhost:6500/source-picker.html?role=${role}`);
+      ? target.loadFile(path.join(applicationRoot, 'dist/html/source-picker.html'), { query: { role } })
+      : target.loadURL(`http://localhost:6500/html/source-picker.html?role=${role}`);
     loading.catch(onFailure);
     return {
       target,

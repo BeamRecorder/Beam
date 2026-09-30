@@ -98,8 +98,8 @@ function createCameraOverlayWindow({
   };
 
   const load = (target, query) => {
-    if (isPackaged) target.loadFile(path.join(applicationRoot, 'dist/index.html'), { query });
-    else target.loadURL(`http://localhost:6500/?${new URLSearchParams(query).toString()}`);
+    if (isPackaged) target.loadFile(path.join(applicationRoot, 'dist/html/index.html'), { query });
+    else target.loadURL(`http://localhost:6500/html/index.html?${new URLSearchParams(query).toString()}`);
   };
 
   let lastKnownBounds = null;

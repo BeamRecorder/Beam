@@ -194,12 +194,12 @@ describe('background import IPC', () => {
 
   it('imports a font for a trusted renderer and notifies every renderer', async () => {
     const { fontImportHandler, fontImportFile, dialog, event, window, trustedRenderer } = setup({
-      rendererUrl: 'http://localhost:6500/editor.html',
+      rendererUrl: 'http://localhost:6500/html/editor.html',
     });
     dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['C:/fonts/ImportedSans.ttf'] });
 
     await expect(fontImportHandler(event)).resolves.toEqual(importedFont);
-    expect(trustedRenderer).toHaveBeenCalledWith('http://localhost:6500/editor.html');
+    expect(trustedRenderer).toHaveBeenCalledWith('http://localhost:6500/html/editor.html');
     expect(dialog.showOpenDialog).toHaveBeenCalledWith({
       properties: ['openFile'],
       filters: [{ name: 'Polices', extensions: ['ttf', 'otf', 'woff', 'woff2'] }],

@@ -26,6 +26,7 @@ let mediaMatches = false;
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
+  document.documentElement.removeAttribute('style');
   document.documentElement.classList.remove('dark');
   mediaMatches = false;
   Object.defineProperty(window, 'capture', {
@@ -63,6 +64,39 @@ const loadStore = async () => {
 };
 
 describe('theme store', () => {
+  it('resolves the default light palette without rewriting the saved color', async () => {
+    const store = await loadStore();
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#c45318');
+    expect(document.documentElement.style.getPropertyValue('--color-primary-light')).toBe('rgba(196, 83, 24, 0.07)');
+    expect(store.primaryColor).toBe(DEFAULT_APPEARANCE.primaryColor);
+    expect(capture.updatePreferences).not.toHaveBeenCalled();
+  });
+
+  it('updates the accent when the system theme changes', async () => {
+    capture.getPreferences.mockResolvedValue(preferences('system'));
+    await loadStore();
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#c45318');
+    mediaChange?.({ matches: true } as MediaQueryListEvent);
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#b85c38');
+    mediaChange?.({ matches: false } as MediaQueryListEvent);
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#c45318');
+    expect(capture.updatePreferences).not.toHaveBeenCalled();
+  });
+
+  it('keeps custom colors across light and dark theme changes', async () => {
+    capture.getPreferences.mockResolvedValue({
+      ...preferences('light'),
+      appearance: { ...DEFAULT_APPEARANCE, primaryColor: '#b85c38', activePresetId: null },
+    });
+    const store = await loadStore();
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#b85c38');
+    store.theme = 'dark';
+    await nextTick();
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#b85c38');
+    store.theme = 'light';
+    await nextTick();
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#b85c38');
+  });
   it('hydrates the persisted dark theme and applies it to the document root', async () => {
     capture.getPreferences.mockResolvedValue(preferences('dark'));
     const store = await loadStore();

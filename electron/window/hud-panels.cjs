@@ -4,10 +4,9 @@ const { enforceDefaultZoom, installBrowserZoomPolicy } = require('./browser-zoom
 const PROJECT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PANEL_SIZES = {
   settings: { width: 720, height: 680, minWidth: 580, minHeight: 480 },
-  projects: { width: 900, height: 640, minWidth: 660, minHeight: 440 },
-  mascot: { width: 1280, height: 900, minWidth: 900, minHeight: 640 },
+  projects: { width: 720, height: 560, minWidth: 560, minHeight: 440 },
 };
-const PANEL_TITLES = { settings: 'Beam Settings', projects: 'Beam Projects', mascot: 'Beam Mascot Lab' };
+const PANEL_TITLES = { settings: 'Beam Settings', projects: 'Beam Projects' };
 
 function createHudPanelManager({
   applicationRoot,
@@ -84,15 +83,14 @@ function createHudPanelManager({
       if (panels.get(role) === panel) panels.delete(role);
     });
     const loading = isPackaged
-      ? window.loadFile(path.join(applicationRoot, 'dist/hud-panel.html'), { query: { panel: role } })
-      : window.loadURL(`http://localhost:6500/hud-panel.html?panel=${role}`);
+      ? window.loadFile(path.join(applicationRoot, 'dist/html/hud-panel.html'), { query: { panel: role } })
+      : window.loadURL(`http://localhost:6500/html/hud-panel.html?panel=${role}`);
     Promise.resolve(loading).catch(fail);
     return panel.ready;
   };
 
   ipcMain.handle('hud:open-settings', (event) => open('settings', event.sender));
   ipcMain.handle('hud:open-projects', (event) => open('projects', event.sender));
-  ipcMain.handle('hud:open-mascot', (event) => open('mascot', event.sender));
   ipcMain.on('hud-panel:ready', (event) => {
     for (const panel of panels.values()) {
       if (panel.window.webContents !== event.sender) continue;

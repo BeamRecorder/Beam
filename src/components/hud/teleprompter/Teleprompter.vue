@@ -1,45 +1,40 @@
 <script setup lang="ts">
 import type { VNodeRef } from 'vue';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import {
-  AlignCenter,
-  AlignLeft,
-  ChevronLeft,
-  ChevronRight,
-  Edit3,
-  Eye,
-  Minus,
-  Pause,
-  Play,
-  ScrollText,
-  Settings,
-} from '@lucide/vue';
+import { computed, onBeforeUnmount, onMounted, watch } from 'vue';
+import { ScrollText, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
-import BigSlider from '~/ui/slider/BigSlider.vue';
-import Select from '~/ui/select/Select.vue';
-import Switch from '~/ui/switch/Switch.vue';
 import Textarea from '~/ui/textarea/Textarea.vue';
+import TeleprompterToolbar from './TeleprompterToolbar.vue';
+import TeleprompterResizeHandle from './TeleprompterResizeHandle.vue';
+import ToastProvider from '~/ui/toast/ToastProvider.vue';
+import { useToastStore } from '~/ui/toast/toastStore';
 import { useTranslate } from '~/i18n/useTranslate';
 import { capture } from '~/api/capture';
 import { useTeleprompter } from './useTeleprompter';
-import type { TeleprompterMode } from './teleprompter-types';
 
 const { t } = useTranslate('Teleprompter');
 const state = useTeleprompter();
+const toast = useToastStore();
+const reset = () => {
+  state.resetSettings();
+  toast.success(t('settingsReset'), 2400);
+};
 state.setVisible(false);
 const setDisplayElement: VNodeRef = (element) => {
   state.setDisplayElement(element instanceof HTMLElement ? element : null);
 };
-const isSettingsOpen = ref(false);
-const modeOptions = computed(() => [
-  { value: 'continuous', label: t('continuous') },
-  { value: 'line-by-line', label: t('lineByLine') },
-]);
-const isAutoscrolling = computed(() => state.document.value.autoscroll && !state.isPaused.value);
+const isAutoscrolling = computed(
+  () => !state.isEditing.value && state.document.value.autoscroll && !state.isPaused.value,
+);
 const updateText = (text: string) => state.updateDocument({ text });
-const updateMode = (value: string | number) => {
-  if (typeof value === 'string') state.updateDocument({ mode: value as TeleprompterMode });
-};
+const initialOpacity = document.body.style.opacity;
+watch(
+  () => state.document.value.windowOpacity,
+  (value) => {
+    document.body.style.opacity = String(value ?? 1);
+  },
+  { immediate: true },
+);
 const hide = () => capture.hideTeleprompter();
 const onSession = (event: Event) => {
   const context = (event as CustomEvent).detail ?? null;
@@ -79,6 +74,7 @@ onMounted(async () => {
 });
 onBeforeUnmount(() => {
   mounted = false;
+  document.body.style.opacity = initialOpacity;
   unsubscribeSuspend?.();
   unsubscribeVisibility?.();
   document.removeEventListener('visibilitychange', updateVisibility);
@@ -88,211 +84,74 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main class="teleprompter-window">
+  <main
+    class="teleprompter-window"
+    :style="{
+      '--teleprompter-font-size': state.document.value.fontSize + 'px',
+      '--teleprompter-line-height': state.document.value.lineHeight,
+      '--teleprompter-text': state.document.value.textColor ?? 'var(--text-primary)',
+    }"
+  >
     <header class="teleprompter-header">
-      <div class="teleprompter-title-group">
-        <ScrollText class="teleprompter-title-icon" :size="16" aria-hidden="true" />
-        <Button
-          v-if="isSettingsOpen"
-          variant="ghost"
-          size="xs"
-          icon-only
-          :icon="ChevronLeft"
-          :aria-label="t('back')"
-          :tooltip="t('back')"
-          tooltip-position="bottom"
-          @click="isSettingsOpen = false"
-        />
-        <div class="teleprompter-title">{{ isSettingsOpen ? t('settings') : t('title') }}</div>
+      <div class="teleprompter-title">
+        <ScrollText :size="14" aria-hidden="true" />
+        <h1>{{ t('title') }}</h1>
       </div>
-      <div class="teleprompter-actions">
-        <Button
-          v-if="!isSettingsOpen"
-          variant="ghost"
-          size="xs"
-          icon-only
-          :icon="state.isEditing.value ? Eye : Edit3"
-          :aria-label="state.isEditing.value ? t('preview') : t('edit')"
-          :tooltip="state.isEditing.value ? t('preview') : t('edit')"
-          tooltip-position="bottom"
-          @click="state.isEditing.value = !state.isEditing.value"
-        />
-        <Button
-          v-if="!isSettingsOpen"
-          variant="ghost"
-          size="xs"
-          icon-only
-          :icon="Settings"
-          :aria-label="t('settings')"
-          :tooltip="t('settings')"
-          tooltip-position="bottom"
-          @click="isSettingsOpen = true"
-        />
+      <div class="teleprompter-close">
         <Button
           variant="ghost"
           size="xs"
           icon-only
-          :icon="Minus"
-          :aria-label="t('hide')"
-          :tooltip="t('hide')"
+          :icon="X"
+          :aria-label="t('close')"
+          :tooltip="t('close')"
           tooltip-position="bottom"
           @click="hide"
         />
       </div>
     </header>
-    <Transition name="teleprompter-view" mode="out-in">
-      <section v-if="isSettingsOpen" key="settings" class="settings-view" :aria-label="t('settings')">
-        <div class="settings-form">
-          <div class="setting-row">
-            <span>{{ t('mode') }}</span
-            ><Select :model-value="state.document.value.mode" :options="modeOptions" @update:model-value="updateMode" />
-          </div>
-          <div class="setting-row">
-            <span>{{ t('autoscroll') }}</span
-            ><Switch
-              :model-value="state.document.value.autoscroll"
-              :label="state.document.value.autoscroll ? t('on') : t('off')"
-              @update:model-value="state.updateDocument({ autoscroll: $event })"
-            />
-          </div>
-          <BigSlider
-            :model-value="state.document.value.scrollSpeed"
-            :min="5"
-            :max="200"
-            :step="1"
-            :label="t('speed')"
-            :format-value="(value) => String(value) + ' px/s'"
-            @update:model-value="state.updateDocument({ scrollSpeed: $event })"
-          />
-          <BigSlider
-            :model-value="state.document.value.fontSize"
-            :min="16"
-            :max="36"
-            :step="1"
-            :label="t('fontSize')"
-            :format-value="(value) => String(value) + 'px'"
-            @update:model-value="state.updateDocument({ fontSize: $event })"
-          />
-          <BigSlider
-            :model-value="state.document.value.lineHeight"
-            :min="1"
-            :max="2.5"
-            :step="0.05"
-            :label="t('lineHeight')"
-            @update:model-value="state.updateDocument({ lineHeight: $event })"
-          />
-          <div class="setting-row">
-            <span>{{ t('align') }}</span>
-            <div class="align-actions">
-              <Button
-                variant="tab"
-                size="sm"
-                icon-only
-                :class="{ active: state.document.value.textAlign === 'left' }"
-                :aria-label="t('alignLeft')"
-                :tooltip="t('alignLeft')"
-                tooltip-position="bottom"
-                :icon="AlignLeft"
-                @click="state.updateDocument({ textAlign: 'left' })"
-              /><Button
-                variant="tab"
-                size="sm"
-                icon-only
-                :class="{ active: state.document.value.textAlign === 'center' }"
-                :aria-label="t('alignCenter')"
-                :tooltip="t('alignCenter')"
-                tooltip-position="bottom"
-                :icon="AlignCenter"
-                @click="state.updateDocument({ textAlign: 'center' })"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-      <section v-else key="reader" class="reader-view">
-        <p v-if="state.error.value" class="teleprompter-error" role="alert">{{ state.error.value }}</p>
-        <section v-if="state.isEditing.value" class="editor-panel">
-          <Textarea
-            :model-value="state.document.value.text"
-            :placeholder="t('placeholder')"
-            :aria-label="t('editorLabel')"
-            :rows="4"
-            @update:model-value="updateText"
-          />
-        </section>
-        <section
-          :ref="setDisplayElement"
-          class="teleprompter-display"
-          :class="{ 'is-centered': state.document.value.textAlign === 'center' }"
-          :style="{
-            '--teleprompter-font-size': String(state.document.value.fontSize) + 'px',
-            '--teleprompter-line-height': state.document.value.lineHeight,
+    <section class="reader-view">
+      <p v-if="state.error.value" class="teleprompter-error" role="alert">{{ state.error.value }}</p>
+      <Textarea
+        v-if="state.isEditing.value"
+        class="teleprompter-editor"
+        :model-value="state.document.value.text"
+        :placeholder="t('placeholder')"
+        :aria-label="t('editorLabel')"
+        @update:model-value="updateText"
+      />
+      <section
+        v-show="!state.isEditing.value"
+        :ref="setDisplayElement"
+        class="teleprompter-display"
+        :class="{ 'is-centered': state.document.value.textAlign === 'center' }"
+        :aria-label="t('readerLabel')"
+      >
+        <p
+          v-for="(line, index) in state.lines.value"
+          :key="index + '-' + line"
+          :data-line-index="index"
+          class="teleprompter-line"
+          :class="{
+            active: state.document.value.mode === 'line-by-line' && state.activeLine.value === index,
+            past: state.document.value.mode === 'line-by-line' && index < state.activeLine.value,
           }"
-          :aria-label="t('readerLabel')"
         >
-          <p
-            v-for="(line, index) in state.lines.value"
-            :key="index + '-' + line"
-            :data-line-index="index"
-            class="teleprompter-line"
-            :class="{
-              active: state.document.value.mode === 'line-by-line' && state.activeLine.value === index,
-              past: state.document.value.mode === 'line-by-line' && index < state.activeLine.value,
-            }"
-          >
-            {{ line || '\u00a0' }}
-          </p>
-        </section>
-        <footer class="teleprompter-footer" :aria-label="t('playbackControls')">
-          <div class="player-controls">
-            <Button
-              variant="secondary"
-              size="xs"
-              icon-only
-              :icon="ChevronLeft"
-              :aria-label="t('previousLine')"
-              :tooltip="t('previousLine')"
-              tooltip-position="bottom"
-              :disabled="state.document.value.mode === 'line-by-line' && state.activeLine.value <= 0"
-              @click="state.previousLine"
-            />
-            <Button
-              class="player-toggle"
-              variant="primary"
-              size="sm"
-              icon-only
-              :icon="isAutoscrolling ? Pause : Play"
-              :aria-label="isAutoscrolling ? t('pause') : t('resume')"
-              :tooltip="isAutoscrolling ? t('pause') : t('resume')"
-              tooltip-position="bottom"
-              @click="state.togglePause"
-            />
-            <Button
-              variant="secondary"
-              size="xs"
-              icon-only
-              :icon="ChevronRight"
-              :aria-label="t('nextLine')"
-              :tooltip="t('nextLine')"
-              tooltip-position="bottom"
-              :disabled="
-                state.document.value.mode === 'line-by-line' && state.activeLine.value >= state.lines.value.length - 1
-              "
-              @click="state.nextLine"
-            />
-          </div>
-          <span
-            v-if="state.document.value.mode === 'line-by-line'"
-            class="line-progress"
-            :aria-label="
-              t('lineProgress', { current: state.activeLine.value + 1, total: Math.max(1, state.lines.value.length) })
-            "
-            >{{ state.activeLine.value + 1 }} / {{ Math.max(1, state.lines.value.length) }}</span
-          >
-        </footer>
+          {{ line || '\u00a0' }}
+        </p>
       </section>
-    </Transition>
+    </section>
+    <TeleprompterToolbar
+      :document="state.document.value"
+      :editing="state.isEditing.value"
+      :playing="isAutoscrolling"
+      @update="state.updateDocument"
+      @reset="reset"
+      @edit="state.editScript"
+      @play="state.togglePlayback"
+    />
+    <TeleprompterResizeHandle @error="state.error.value = $event" />
+    <ToastProvider class="teleprompter-toasts" :dismiss-label="t('close')" />
   </main>
 </template>
-
 <style scoped src="./Teleprompter.css"></style>

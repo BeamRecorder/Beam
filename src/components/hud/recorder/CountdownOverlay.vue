@@ -33,6 +33,7 @@ onMounted(() => {
     receivedPreferenceUpdate = true;
     applyPreferences(preferences);
   });
+  capture.notifyCountdownReady();
   void capture
     .getPreferences()
     .then((preferences) => {

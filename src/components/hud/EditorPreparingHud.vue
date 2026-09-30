@@ -1,43 +1,33 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Film } from '@lucide/vue';
+import { computed, onBeforeUnmount, onMounted } from 'vue';
 import type { EditorLoadingProgress } from '~/api/types/editor-window';
 import { useTranslate } from '~/i18n/useTranslate';
-import ProgressBar from '~/ui/progressbar/ProgressBar.vue';
+import Beamy from '~/components/brand/Beamy/Beamy.vue';
+import Button from '~/ui/button/Button.vue';
 import Throbber from '~/ui/throbber/Throbber.vue';
 
-const props = defineProps<{
-  progress: EditorLoadingProgress;
-}>();
-
+const props = defineProps<{ progress: EditorLoadingProgress }>();
+const emit = defineEmits<{ cancel: [] }>();
 const { t } = useTranslate('EditorPreparingHud');
-const percentage = computed(() => Math.round(Math.min(100, Math.max(0, props.progress.value))));
-const stageLabel = computed(() => t(props.progress.stage));
+const stageLabel = computed(() => t(props.progress.value >= 90 ? 'almostThere' : props.progress.stage));
+const onKeyDown = (event: KeyboardEvent) => {
+  if (event.key !== 'Escape' || event.defaultPrevented) return;
+  event.preventDefault();
+  emit('cancel');
+};
+onMounted(() => window.addEventListener('keydown', onKeyDown));
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown));
 </script>
 
 <template>
-  <section class="editor-preparing-hud" aria-live="polite" aria-busy="true">
-    <div class="editor-preparing-icon" aria-hidden="true">
-      <Film :size="28" :stroke-width="1.8" />
-    </div>
-
-    <div class="editor-preparing-copy">
-      <h2><Throbber :text="t('title')" variant="glow" color="default" size="lg" /></h2>
-      <p><Throbber :text="stageLabel" variant="glow" color="muted" size="sm" /></p>
-    </div>
-
-    <div
-      class="editor-progress"
-      role="progressbar"
-      :aria-label="t('progressLabel')"
-      aria-valuemin="0"
-      aria-valuemax="100"
-      :aria-valuenow="percentage"
-      :aria-valuetext="stageLabel"
-    >
-      <ProgressBar :value="percentage" :max="100" />
-      <span>{{ percentage }}%</span>
-    </div>
+  <section class="editor-preparing-hud" aria-busy="true" :aria-label="t('title')">
+    <Beamy phase="loading" :size="120" portrait />
+    <p class="editor-preparing-status">
+      <Throbber :text="stageLabel" variant="glow" color="default" size="sm" />
+    </p>
+    <Button variant="ghost" size="sm" autofocus style="-webkit-app-region: no-drag" @click="emit('cancel')">{{
+      t('cancel')
+    }}</Button>
   </section>
 </template>
 
@@ -49,52 +39,15 @@ const stageLabel = computed(() => t(props.progress.stage));
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 16px 28px;
+  gap: 8px;
+  padding: 8px 24px;
   color: var(--text-primary);
   text-align: center;
+  -webkit-app-region: drag;
 }
-
-.editor-preparing-icon {
-  width: 56px;
-  height: 56px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg-element);
-  color: var(--color-primary);
-  box-shadow: var(--shadow-sm);
-}
-
-.editor-preparing-copy {
-  display: grid;
-  gap: 6px;
-}
-
-.editor-preparing-copy h2 {
+.editor-preparing-status {
   margin: 0;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.25px;
-}
-
-.editor-preparing-copy p {
   min-height: 20px;
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
-.editor-progress {
-  width: 100%;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 36px;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-muted);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
+  font-size: var(--font-size-body);
 }
 </style>

@@ -7,6 +7,11 @@
 
 .project-card,
 .project-card-skeleton {
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: 1;
+  width: 100%;
+  height: 100%;
   min-width: 0;
   overflow: visible;
   border: 1px solid var(--color-border);
@@ -120,7 +125,8 @@
 .project-preview {
   position: relative;
   width: 100%;
-  height: 72px;
+  flex: 1;
+  min-height: 0;
   background: var(--color-bg-surface);
   overflow: hidden;
   border-top-left-radius: calc(var(--radius-md) - 1px);
@@ -219,9 +225,10 @@
 }
 
 .project-card-info {
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  padding: 2px 7px 3px;
+  padding: 8px 10px;
   min-width: 0;
   width: 100%;
   gap: 0;
@@ -290,7 +297,12 @@
 }
 
 .project-card-skeleton {
-  height: 124px;
+  height: auto;
+}
+
+.project-skeleton-preview {
+  flex: 1;
+  min-height: 0;
 }
 
 .project-card-skeleton-content {

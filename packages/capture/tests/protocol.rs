@@ -97,6 +97,8 @@ fn engine_eof_finalizes_an_active_session() -> Result<(), Box<dyn Error>> {
         region: None,
         excluded_process_id: None,
         excluded_window_handles: vec![],
+        hide_taskbar: false,
+        hide_desktop_icons: false,
     };
     let mut child = Command::new(env!("CARGO_BIN_EXE_capture-engine"))
         .stdin(Stdio::piped())
@@ -186,4 +188,55 @@ fn physical_display_lookup_rejects_non_integer_and_overflow_coordinates() {
             .is_err()
         );
     }
+}
+
+#[test]
+fn region_preview_command_preserves_monitor_and_cursor_mode() -> Result<(), Box<dyn Error>> {
+    let expected = serde_json::json!({
+        "id": "region", "command": "prepare-region-selection",
+        "cursor": { "mode": "separate", "captureClicks": false, "captureShortcuts": false, "captureShape": true },
+        "config": { "screen": { "mode": "portal", "kind": "monitor", "restoreToken": null },
+            "region": null, "output": "preview.png", "excludedWindowHandles": [] }
+    });
+    let request: RequestEnvelope = serde_json::from_value(expected.clone())?;
+    assert_eq!(serde_json::to_value(request)?, expected);
+    Ok(())
+}
+
+#[test]
+fn region_cancellation_command_roundtrips() -> Result<(), Box<dyn Error>> {
+    assert_command_roundtrip("cancel-region-selection")
+}
+
+#[test]
+fn region_cancellation_is_idempotent_without_hardware_or_a_recording() -> Result<(), Box<dyn Error>>
+{
+    let mut child = Command::new(env!("CARGO_BIN_EXE_capture-engine"))
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit())
+        .spawn()?;
+    let mut stdin = child.stdin.take().ok_or("missing engine stdin")?;
+    let mut responses = BufReader::new(child.stdout.take().ok_or("missing engine stdout")?);
+    for id in ["cancel-1", "cancel-2"] {
+        writeln!(
+            stdin,
+            "{}",
+            serde_json::json!({"id": id, "command": "cancel-region-selection"})
+        )?;
+        stdin.flush()?;
+        assert!(read_response(&mut responses)?.ok);
+    }
+    writeln!(
+        stdin,
+        "{}",
+        serde_json::json!({"id": "status", "command": "status"})
+    )?;
+    stdin.flush()?;
+    let status = read_response(&mut responses)?;
+    assert!(status.ok);
+    assert_eq!(status.result.ok_or("missing status")?["state"], "idle");
+    drop(stdin);
+    assert!(child.wait()?.success());
+    Ok(())
 }

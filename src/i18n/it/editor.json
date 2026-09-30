@@ -136,7 +136,16 @@
     "pause": "Pausa",
     "resume": "Riprendi",
     "autoscrolling": "Scorrimento automatico",
-    "autoscrollPaused": "Scorrimento automatico in pausa"
+    "autoscrollPaused": "Scorrimento automatico in pausa",
+    "close": "Chiudi",
+    "textColor": "Colore del testo",
+    "transparency": "Trasparenza",
+    "reset": "Ripristina",
+    "play": "Riproduci",
+    "resize": "Ridimensiona",
+    "settingsReset": "Impostazioni ripristinate",
+    "eyedropper": "Scegli colore dallo schermo",
+    "colorFormat": "Formato colore"
   },
   "TimelineToolbar": {
     "add": "Aggiungi",

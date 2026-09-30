@@ -31,7 +31,7 @@ const {
   registerProjectVoiceoverIpc,
 } = require('./projects/project-voiceover-storage.cjs');
 const { createCameraRecordingControl } = require('./camera/recording-control.cjs');
-const { registerCaptureWindowIpc } = require('./lifecycle/capture-window-ipc.cjs');
+const { createCaptureWindows } = require('./lifecycle/capture-windows.cjs');
 const { createProjectStore } = require('./projects/project-store.cjs');
 const { createProjectMediaHandler } = require('./projects/project-media-protocol.cjs');
 const { registerWindowIpc } = require('./window/window-ipc.cjs');
@@ -41,9 +41,6 @@ const { createHudPanelManager } = require('./window/hud-panels.cjs');
 const { createOnboardingWindowManager } = require('./window/onboarding-window.cjs');
 const { registerExportIpc } = require('./export/export-ipc.cjs');
 const { registerTranscriptExportIpc } = require('./captions/transcript-export-ipc.cjs');
-const { createCameraOverlayWindow } = require('./camera/overlay-window.cjs');
-const { createCountdownWindow } = require('./countdown-window.cjs');
-const { createScreenRegionOverlayWindow } = require('./screen-region-overlay.cjs');
 const { createCameraStorage, registerCameraIpc } = require('./camera-ipc.cjs');
 const { createMicrophoneStorage, registerMicrophoneIpc } = require('./microphone/ipc.cjs');
 const { createSystemAudioStorage, registerSystemAudioIpc } = require('./system-audio/ipc.cjs');
@@ -133,7 +130,7 @@ function initializeApplication() {
     .then(() => {
       logStartup('Electron app.whenReady resolved.');
       Menu.setApplicationMenu(null);
-      void prewarmCaptureCapabilities(captureEngine, { log: logStartup });
+      const captureWarmup = prewarmCaptureCapabilities(captureEngine, { log: logStartup });
       configureMediaPermission();
       logStartup('Media permission policy registered.');
       configureDesktopLoopback();
@@ -227,11 +224,12 @@ function initializeApplication() {
         captureEngine,
         app,
         userPaths,
+        teleprompterWindow,
         trackStorages: [cameraStorage, microphoneStorage, systemAudioStorage],
         canAcceptWork: () => coordinator.canAcceptWork(),
         canStartRecording: (event) => {
           const senderUrl = event?.sender?.getURL?.() || '';
-          if (screenshotService?.isBusy()) return false;
+          if (screenshotService?.isBusy() || screenRegionOverlay.isSelecting()) return false;
           if (senderUrl.includes('quickSnipCrop=1')) return quickSnipController?.state().job?.mode !== 'screenshot';
           return (
             !screenshotService?.isBusy() &&
@@ -289,20 +287,18 @@ function initializeApplication() {
         canAcceptWork: () => coordinator.canAcceptWork(),
       };
       let cameraRecordingCleanup = () => {};
-      const cameraOverlay = createCameraOverlayWindow({
-        ...lifecycleOptions,
+      const { cameraOverlay, countdownOverlay, screenRegionOverlay } = createCaptureWindows({
+        lifecycleOptions,
         preferencesStore,
-        platform: process.platform,
-        onWebContentsDestroyed: (contents) => {
+        captureEngine,
+        screen,
+        teleprompterWindow,
+        BrowserWindow,
+        applicationIpc,
+        onCameraClosed: (contents) => {
           if (contents) cameraStorage.cleanupOwner(contents.id);
           cameraRecordingCleanup('The camera overlay was closed while recording.');
         },
-      });
-      const countdownOverlay = createCountdownWindow(lifecycleOptions);
-      const screenRegionOverlay = createScreenRegionOverlayWindow({
-        ...lifecycleOptions,
-        platform: process.platform,
-        screen,
       });
       const quickSnipService = createQuickSnipService({
         captureEngine,
@@ -330,7 +326,6 @@ function initializeApplication() {
         getTrayManager: () => trayManager,
       });
       quickSnipController = quickSnipService.controller;
-      registerCaptureWindowIpc({ applicationIpc, BrowserWindow, cameraOverlay, countdownOverlay, screenRegionOverlay });
       logStartup('Window IPC registered.');
       const exportIpc = registerExportIpc({
         ipcMain: applicationIpc,
@@ -371,6 +366,7 @@ function initializeApplication() {
         hudWindow: win,
         screen,
         hudAuxiliaryWindows: [teleprompterWindow, countdownOverlay],
+        captureWarmup,
         hudController: controllers.get(win),
         registerController: (target, controller) => controllers.set(target, controller),
         preferencesStore,

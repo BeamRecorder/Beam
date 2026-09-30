@@ -146,4 +146,84 @@ describe('ColorPickerCustom', () => {
     await flushPromises();
     expect(failingOpen).toHaveBeenCalled();
   });
+  it('keeps flat pickers header-free and handles programmatic colors and invalid alpha safely', async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(canvasContext as never);
+    wrapper = mount(ColorPickerCustom, { props: { modelValue: '#abcdef', hideHeader: true, alphaValue: 0.5 } });
+    await flushPromises();
+    expect(wrapper.find('.picker-top-bar').exists()).toBe(false);
+    await wrapper.setProps({ modelValue: '#ABCDEF', alphaValue: NaN });
+    await wrapper.setProps({ modelValue: '' });
+    await wrapper.setProps({ modelValue: '#aabbcc', alphaValue: -0.5 });
+    expect(wrapper.get('input').element.value).toBe('#AABBCC');
+    expect(canvasContext.restore).toHaveBeenCalled();
+  });
+  it('supports touch hue-ring and triangle selection, empty touches and cancellation', async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(canvasContext as never);
+    wrapper = mount(ColorPickerCustom, { props: { modelValue: '#abcdef', hideHeader: true } });
+    const area = wrapper.get('.triangle-picker-container').element;
+    setRect(wrapper.get('.interaction-layer').element, { width: 160, height: 160 });
+    const touch = (target: EventTarget, type: string, points: Array<{ clientX: number; clientY: number }>) => {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'touches', { value: points });
+      target.dispatchEvent(event);
+    };
+    touch(area, 'touchstart', []);
+    expect(wrapper.emitted('drag-start')).toBeUndefined();
+    touch(area, 'touchstart', [{ clientX: 155, clientY: 70 }]);
+    touch(window, 'touchmove', [{ clientX: 5, clientY: 70 }]);
+    touch(window, 'touchmove', []);
+    touch(window, 'touchcancel', []);
+    expect(wrapper.emitted('drag-end')).toHaveLength(1);
+    touch(area, 'touchstart', [{ clientX: 80, clientY: 80 }]);
+    touch(window, 'touchmove', [{ clientX: 138, clientY: 80 }]);
+    touch(window, 'touchend', []);
+    expect(wrapper.emitted('drag-end')).toHaveLength(2);
+    expect(wrapper.emitted('update:modelValue')?.at(-1)?.[0]).toMatch(/^#[a-f0-9]{6}$/i);
+  });
+  it.each(['hue', 'alpha'])('supports touch %s slider dragging and ignores empty/hidden surfaces', async (channel) => {
+    wrapper = mount(ColorPickerCustom, { props: { modelValue: '#123456', type: 'standard', showAlpha: true } });
+    const slider = wrapper.get(`.${channel}-slider-vertical`).element;
+    setRect(slider, { left: 0, top: 0, width: 20, height: 100 });
+    const touch = (target: EventTarget, type: string, y: number | null) => {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'touches', { value: y === null ? [] : [{ clientX: 5, clientY: y }] });
+      target.dispatchEvent(event);
+    };
+    touch(slider, 'touchstart', 50);
+    touch(window, 'touchmove', 75);
+    touch(window, 'touchmove', null);
+    touch(window, 'touchend', null);
+    const update = channel === 'hue' ? 'update:modelValue' : 'update:alpha';
+    expect(wrapper.emitted(update)).toHaveLength(2);
+    setRect(slider, { width: 0, height: 0 });
+    touch(slider, 'touchstart', 50);
+    touch(window, 'touchend', null);
+    expect(wrapper.emitted(update)).toHaveLength(2);
+  });
+  it.each(['hue', 'alpha'])('updates %s through mouse movement after the initial press', async (channel) => {
+    wrapper = mount(ColorPickerCustom, { props: { modelValue: '#123456', type: 'standard', showAlpha: true } });
+    const slider = wrapper.get(`.${channel}-slider-vertical`);
+    setRect(slider.element, { left: 0, top: 0, width: 20, height: 100 });
+    await slider.trigger('mousedown', { clientY: 20 });
+    window.dispatchEvent(new MouseEvent('mousemove', { clientY: 80 }));
+    window.dispatchEvent(new MouseEvent('mouseup'));
+    const update = channel === 'hue' ? 'update:modelValue' : 'update:alpha';
+    expect(wrapper.emitted(update)).toHaveLength(2);
+  });
+  it('edits all RGB channels with clamped values and ignores zero-size triangle presses', async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+    wrapper = mount(ColorPickerCustom, { props: { modelValue: '#123456' } });
+    await wrapper.get('.triangle-picker-container').trigger('mousedown', { clientX: 0, clientY: 0 });
+    expect(wrapper.emitted('drag-start')).toBeUndefined();
+    await wrapper.get('.mode-switch-btn').trigger('click');
+    const inputs = wrapper.findAll('input');
+    await inputs[0].setValue('0');
+    await inputs[1].setValue('255');
+    await inputs[2].setValue('255');
+    expect(wrapper.emitted('update:modelValue')).toHaveLength(3);
+    await wrapper.setProps({ type: 'standard' });
+    await wrapper.get('.sv-container').trigger('mousedown');
+    expect(wrapper.emitted('update:modelValue')).toHaveLength(3);
+    window.dispatchEvent(new MouseEvent('mouseup'));
+  });
 });

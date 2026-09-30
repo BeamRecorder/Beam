@@ -29,6 +29,7 @@ interface HarnessElements {
 const harness = vi.hoisted(() => ({
   events: [] as string[],
   capture: {
+    getProjectEditorState: vi.fn().mockResolvedValue({ schemaVersion: 3 }),
     listBackgroundLibrary: vi.fn().mockResolvedValue([]),
     onBackgroundLibraryChanged: vi.fn().mockReturnValue(() => undefined),
     listCursorPacks: vi.fn().mockResolvedValue([]),

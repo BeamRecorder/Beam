@@ -1,6 +1,6 @@
 import type { CaptureMode } from './capture-mode';
 
-export type HudPanel = 'settings' | 'projects' | 'mascot';
+export type HudPanel = 'settings' | 'projects';
 export interface HudProjectRequest {
   id: string;
   mode: CaptureMode;
@@ -8,7 +8,6 @@ export interface HudProjectRequest {
 export interface HudPanelApi {
   openHudSettings(): Promise<boolean>;
   openHudProjects(): Promise<boolean>;
-  openHudMascot(): Promise<boolean>;
   notifyHudPanelReady(): void;
   requestHudProject(request: HudProjectRequest): Promise<boolean>;
   onHudProjectRequested(listener: (request: HudProjectRequest) => void): () => void;

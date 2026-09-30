@@ -84,6 +84,10 @@ function createQuickSnipController(dependencies) {
             screenKind: sourceOptions.screenKind ?? 'display',
             screenId: sourceOptions.screenId,
             region: sourceOptions.region ?? null,
+            regionBounds: sourceOptions.regionBounds ?? display.bounds,
+            countdownSeconds: sourceOptions.countdownSeconds,
+            hideTaskbar: sourceOptions.hideTaskbar === true,
+            hideDesktopIcons: sourceOptions.hideDesktopIcons === true,
             devices: sourceOptions.devices ?? preset.settings.devices,
           }
         : {}),

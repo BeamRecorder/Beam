@@ -192,7 +192,10 @@ describe('useProjectEditorState property persistence', () => {
     state.availableBackgrounds.value = [{ items: [globalBackground] }];
     const editor = useProjectEditorState(state);
 
-    await editor.load('project');
+    const prefetched = await mocks.getProjectEditorState('project');
+    mocks.getProjectEditorState.mockClear();
+    await editor.load('project', prefetched);
+    expect(mocks.getProjectEditorState).not.toHaveBeenCalled();
     expect(state.composition.value).toEqual(loadedComposition);
     expect(state.restoreComposition).toHaveBeenCalledWith(loadedComposition);
     expect(state.zoomElements.value).toEqual(loadedZoomElements);

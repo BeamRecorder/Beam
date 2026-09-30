@@ -136,7 +136,16 @@
     "pause": "Tạm dừng",
     "resume": "Tiếp tục",
     "autoscrolling": "Đang tự động cuộn",
-    "autoscrollPaused": "Đã tạm dừng tự động cuộn"
+    "autoscrollPaused": "Đã tạm dừng tự động cuộn",
+    "close": "Đóng",
+    "textColor": "Màu chữ",
+    "transparency": "Độ trong suốt",
+    "reset": "Đặt lại",
+    "play": "Phát",
+    "resize": "Đổi kích thước",
+    "settingsReset": "Đã đặt lại cài đặt",
+    "eyedropper": "Chọn màu trên màn hình",
+    "colorFormat": "Định dạng màu"
   },
   "TimelineToolbar": {
     "add": "Thêm",

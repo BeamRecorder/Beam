@@ -13,6 +13,8 @@ const state = vi.hoisted(() => ({
   deferVideoReady: false,
   resolveVideoReady: null as (() => void) | null,
   screenshotModuleLoads: 0,
+  preferencesListener: null as ((preferences: { extras: Record<string, unknown> }) => void) | null,
+  removePreferencesListener: vi.fn(),
 }));
 
 const capture = vi.hoisted(() => ({
@@ -31,6 +33,11 @@ const capture = vi.hoisted(() => ({
   showHud: vi.fn(),
   openEditor: vi.fn(),
   openScreenshot: vi.fn(),
+  getPreferences: vi.fn(),
+  onPreferencesChanged: vi.fn((listener) => {
+    state.preferencesListener = listener;
+    return state.removePreferencesListener;
+  }),
 }));
 
 vi.mock('../../../api/capture', () => ({ capture }));
@@ -110,6 +117,11 @@ describe('EditorWindowApp', () => {
     capture.getProjectEditorData.mockResolvedValue({ composition: {}, zoom: {}, presentation: {} });
     capture.openEditor.mockResolvedValue(true);
     capture.openScreenshot.mockResolvedValue(undefined);
+    capture.getPreferences.mockReset().mockResolvedValue({ extras: {} });
+    capture.onPreferencesChanged.mockImplementation((listener) => {
+      state.preferencesListener = listener;
+      return state.removePreferencesListener;
+    });
   });
 
   afterEach(() => {
@@ -168,7 +180,16 @@ describe('EditorWindowApp', () => {
 
     resolveProject(project);
     await flushPromises();
-    expect(loadEvents).toEqual(['stage:loadingProject', 'getProject', 'stage:loadingTimeline', 'getProjectEditorData']);
+    expect(loadEvents).toEqual([
+      'stage:loadingProject',
+      'getProject',
+      'stage:loadingTimeline',
+      'getProjectEditorData',
+      'stage:loadingEditorModule',
+      'import:VideoEditor',
+    ]);
+    expect(wrapper.find('.mock-editor').exists()).toBe(false);
+    expect(capture.notifyEditorReady).toHaveBeenCalledOnce();
 
     resolveEditorData(editorData);
     await flushPromises();
@@ -448,5 +469,109 @@ describe('EditorWindowApp', () => {
     await flushPromises();
     expect(capture.openScreenshot).toHaveBeenCalledWith('image-1');
     expect(capture.openEditor).not.toHaveBeenCalled();
+  });
+
+  it('reports an empty context and presents the error even without requestAnimationFrame', async () => {
+    vi.stubGlobal('requestAnimationFrame', undefined);
+    capture.getEditorContext.mockResolvedValue(null);
+    const wrapper = mountEditor();
+    await flushPromises();
+    expect(wrapper.get('[role="alert"]').text()).toContain('No project selected');
+    expect(capture.notifyEditorReady).toHaveBeenCalledOnce();
+    wrapper.unmount();
+    expect(state.removeContextListener).toHaveBeenCalled();
+    expect(state.removePreferencesListener).toHaveBeenCalled();
+  });
+  it('hydrates and updates the loading timeline height, ignoring invalid saved values', async () => {
+    capture.getPreferences.mockResolvedValue({ extras: { timelineHeight: 380 } });
+    capture.getProjectEditorData.mockReturnValue(new Promise(() => undefined));
+    const wrapper = mountEditor();
+    await flushPromises();
+    const overlay = wrapper.findComponent(EditorProjectLoadingOverlay);
+    expect(overlay.props('timelineHeight')).toBe(380);
+    for (const value of [0, -1, 'invalid', Infinity]) {
+      state.preferencesListener?.({ extras: { timelineHeight: value } });
+      await flushPromises();
+      expect(overlay.props('timelineHeight')).toBe(380);
+    }
+    state.preferencesListener?.({ extras: { timelineHeight: 320 } });
+    await flushPromises();
+    expect(overlay.props('timelineHeight')).toBe(320);
+  });
+  it('continues when preferences are unavailable or subscribing throws', async () => {
+    capture.getPreferences.mockRejectedValueOnce(new Error('preferences unavailable'));
+    const first = mountEditor();
+    await flushPromises();
+    expect(first.find('.mock-editor').exists()).toBe(true);
+    capture.onPreferencesChanged.mockImplementationOnce(() => {
+      throw new Error('cannot subscribe');
+    });
+    const second = mountEditor();
+    await flushPromises();
+    expect(second.find('.mock-editor').exists()).toBe(true);
+  });
+  it('rejects a screenshot on the video route and renders non-Error failures', async () => {
+    vi.stubGlobal('requestAnimationFrame', undefined);
+    capture.getProject.mockResolvedValueOnce({ ...project, mode: 'screenshot' });
+    const first = mountEditor();
+    await flushPromises();
+    expect(first.get('[role="alert"]').text()).toContain('Project not found');
+    capture.getProject.mockRejectedValueOnce('read failed');
+    const second = mountEditor();
+    await flushPromises();
+    expect(second.get('[role="alert"]').text()).toContain('read failed');
+  });
+  it('ignores project results and failures superseded by a newer context', async () => {
+    let resolveOld!: (value: typeof project) => void;
+    capture.getProject.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveOld = resolve;
+      }),
+    );
+    const wrapper = mountEditor();
+    await flushPromises();
+    state.contextListener?.({ projectId: 'project-2' });
+    await flushPromises();
+    resolveOld({ ...project, name: 'Stale project' });
+    await flushPromises();
+    expect(document.title).toBe('Project - Beam Editor');
+    let rejectOld!: (reason: Error) => void;
+    capture.getProjectEditorData.mockReturnValueOnce(
+      new Promise((_, reject) => {
+        rejectOld = reject;
+      }),
+    );
+    state.contextListener?.({ projectId: 'project-3' });
+    await flushPromises();
+    state.contextListener?.({ projectId: 'project-4' });
+    await flushPromises();
+    rejectOld(new Error('obsolete failure'));
+    await flushPromises();
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    expect(wrapper.find('.mock-editor').exists()).toBe(true);
+  });
+  it('keeps the editor usable when switching to another project fails', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    capture.openEditor.mockRejectedValueOnce(new Error('cannot switch'));
+    const wrapper = mountEditor();
+    await flushPromises();
+    await wrapper.get('.open-project').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.mock-editor').exists()).toBe(true);
+    expect(wrapper.findComponent(EditorProjectLoadingOverlay).props('visible')).toBe(false);
+    expect(error).toHaveBeenCalledOnce();
+    error.mockRestore();
+  });
+  it('does not acknowledge screenshot readiness after unmount while waiting for paint', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('requestAnimationFrame', vi.fn());
+    capture.getEditorContext.mockResolvedValue({ projectId: 'image-1', kind: 'screenshot' });
+    const wrapper = mountEditor();
+    await flushPromises();
+    wrapper.findComponent({ name: 'MockScreenshotEditor' }).vm.$emit('ready');
+    wrapper.unmount();
+    await vi.advanceTimersByTimeAsync(100);
+    await flushPromises();
+    expect(capture.notifyEditorReady).not.toHaveBeenCalled();
   });
 });

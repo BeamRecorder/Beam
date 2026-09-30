@@ -511,18 +511,20 @@
     "back": "Indietro"
   },
   "EditorPreparingHud": {
-    "title": "Preparazione dell’editor",
-    "openingWindow": "Creazione della finestra dell’editor…",
-    "loadingEditor": "Caricamento dell’interfaccia…",
-    "loadingAppearance": "Caricamento dell’aspetto dell’editor…",
-    "loadingProject": "Apertura del progetto…",
-    "loadingTimeline": "Caricamento della timeline…",
-    "loadingEditorModule": "Caricamento dei componenti dell’editor…",
-    "initializingEditor": "Preparazione dello stato dell’editor…",
-    "renderingEditor": "Rendering dell’editor…",
-    "loadingPreview": "Preparazione della prima anteprima…",
-    "ready": "Editor pronto",
-    "progressLabel": "Avanzamento del caricamento dell’editor"
+    "title": "Apertura del tuo editor",
+    "openingWindow": "Prepariamo il tuo editor",
+    "loadingEditor": "Sto preparando tutto",
+    "loadingAppearance": "Sto sistemando lo spazio",
+    "loadingProject": "Sto aprendo il tuo progetto",
+    "loadingTimeline": "Sto preparando la tua timeline",
+    "loadingEditorModule": "Sto preparando i tuoi strumenti",
+    "initializingEditor": "Sto mettendo tutto insieme",
+    "renderingEditor": "Ci siamo quasi!",
+    "loadingPreview": "Ci siamo quasi!",
+    "ready": "Ci siamo quasi!",
+    "progressLabel": "Avanzamento del caricamento dell’editor",
+    "almostThere": "Ci siamo quasi!",
+    "cancel": "Annulla"
   },
   "EditorOpenError": {
     "title": "Impossibile aprire l’editor",
@@ -663,7 +665,18 @@
     "preset": "Preimpostazione",
     "reset": "Reimposta",
     "cancel": "Annulla",
-    "useThisArea": "Usa quest'area"
+    "useThisArea": "Usa quest'area",
+    "fullScreen": "Schermo intero",
+    "record": "Registra",
+    "settings": "Impostazioni rapide",
+    "countdown": "Conto alla rovescia",
+    "off": "Disattivato",
+    "hideTaskbar": "Nascondi barra delle applicazioni",
+    "hideDock": "Nascondi Dock",
+    "hideDesktopIcons": "Nascondi icone del desktop",
+    "desktopUnavailable": "Non disponibile su Linux.",
+    "captureOnly": "Nascosti nella registrazione su macOS.",
+    "previewUnavailable": "Impossibile caricare l’anteprima del desktop."
   },
   "SettingsPanel": {
     "themeMode": "Modalità tema",
@@ -1033,5 +1046,19 @@
     "transitions": "Transizioni dell’evidenziazione",
     "highlightColor": "Colore dell’evidenziazione",
     "highlightOpacity": "Intensità dell’evidenziazione"
+  },
+  "Brand": {
+    "animateBeamy": "Anima Beamy",
+    "loading": "Caricamento di Beam",
+    "reload": "Ricarica Beam",
+    "tipLabel": "Suggerimento",
+    "tipRegion": "Scegli Regione per registrare solo ciò che conta.",
+    "tipPresets": "Usa i preset per mantenere le stesse dimensioni.",
+    "tipTeleprompter": "Guarda la camera con l’aiuto del teleprompter.",
+    "tipCountdown": "Imposta un conto alla rovescia per prepararti.",
+    "tipDevices": "Controlla camera e microfono prima di registrare.",
+    "tipInstant": "Prova Instant per un video pronto da condividere.",
+    "tipShortcuts": "Personalizza le scorciatoie nelle impostazioni.",
+    "tipProjects": "Apri un progetto esistente per continuare il montaggio."
   }
 }

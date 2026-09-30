@@ -1,4 +1,4 @@
-import { ALL_FORMATS, CanvasSink, Input, InputVideoTrack, UrlSource } from 'mediabunny';
+import type { InputVideoTrack } from 'mediabunny';
 import { reactive } from 'vue';
 
 const thumbnailCache = reactive<Record<string, string>>({});
@@ -12,6 +12,7 @@ const thumbnailTimestamp = async (track: InputVideoTrack) => {
 };
 
 const renderThumbnail = async (track: InputVideoTrack) => {
+  const { CanvasSink } = await import('mediabunny');
   const timestamp = await thumbnailTimestamp(track);
   const sink = new CanvasSink(track);
   for await (const sample of sink.canvasesAtTimestamps([timestamp])) {
@@ -29,6 +30,7 @@ const renderThumbnail = async (track: InputVideoTrack) => {
 };
 
 async function createThumbnail(videoSrc: string) {
+  const { ALL_FORMATS, Input, UrlSource } = await import('mediabunny');
   const input = new Input({ source: new UrlSource(videoSrc), formats: ALL_FORMATS });
   let timeout: ReturnType<typeof setTimeout> | undefined;
   try {

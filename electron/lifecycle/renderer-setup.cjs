@@ -30,15 +30,16 @@ function createRendererSetup({
       return (
         target.origin === 'http://localhost:6500' &&
         [
-          '/',
-          '/index.html',
-          '/countdown.html',
-          '/quick-snip-status.html',
-          '/editor.html',
-          '/teleprompter.html',
-          '/onboarding.html',
-          '/hud-panel.html',
-          '/source-picker.html',
+          '/html/index.html',
+          '/html/countdown.html',
+          '/html/quick-snip-status.html',
+          '/html/editor.html',
+          '/html/teleprompter.html',
+          '/html/onboarding.html',
+          '/html/hud-panel.html',
+          '/html/screen-region.html',
+          '/html/region-marker.html',
+          '/html/source-picker.html',
         ].includes(target.pathname)
       );
     } catch {
@@ -131,11 +132,11 @@ function createRendererSetup({
       win.webContents.once('did-finish-load', () => win.webContents.openDevTools({ mode: 'detach' }));
     }
     if (app.isPackaged) {
-      logStartup('Loading dist/index.html.');
-      win.loadFile(path.join(applicationRoot, 'dist/index.html'));
+      logStartup('Loading dist/html/index.html.');
+      win.loadFile(path.join(applicationRoot, 'dist/html/index.html'));
     } else {
-      logStartup('Loading http://localhost:6500.');
-      win.loadURL('http://localhost:6500');
+      logStartup('Loading http://localhost:6500/html/index.html.');
+      win.loadURL('http://localhost:6500/html/index.html');
     }
     return win;
   }

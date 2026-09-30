@@ -228,11 +228,14 @@ describe('Onboarding Components', () => {
     expect(wrapper.text()).toContain('Appearance');
     const themeButtons = wrapper.findAll('.theme-chip');
     expect(themeButtons.length).toBe(3);
+    expect(wrapper.get('.theme-chips-group').classes()).toContain('has-indicator');
 
     // Switch to light theme (index 1)
     await themeButtons[1].trigger('click');
     await wrapper.vm.$nextTick();
     expect(themeButtons[1].classes()).toContain('selected');
+    expect(themeButtons[1].attributes('aria-pressed')).toBe('true');
+    expect(wrapper.get('.theme-chips-group').attributes('style')).toContain('--button-group-index: 1');
   });
 
   it('renders CommunityStep and emits complete', async () => {

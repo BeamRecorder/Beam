@@ -42,6 +42,7 @@ const emit = defineEmits([
   'focus-feature',
   'dismiss-launcher',
   'popover-toggle',
+  'cancel-editor-opening',
 ]);
 const popoverViewport = useHudPopoverViewport(props.embedded);
 const presetError = ref('');
@@ -126,13 +127,12 @@ const choose = (target: HudCaptureTarget) => {
     :style="{ height: `${hudHeight}px` }"
   >
     <TopbarHUD
-      v-if="!embedded || showTopbar"
+      v-if="!preparingEditor && (!embedded || showTopbar)"
       :title="preparingEditor ? t('preparingEditor') : undefined"
       :disabled="isBusy || preparingEditor"
+      :failed="Boolean(externalError || errorMessage || presetError || popoverViewport.error.value)"
       :show-settings="!preparingEditor"
       :show-projects="!preparingEditor"
-      :show-mascot="!embedded && !preparingEditor"
-      @open-mascot="openPanel('mascot')"
       @open-settings="
         openPanel('settings');
         emit('focus-feature', 'topbar');
@@ -164,7 +164,11 @@ const choose = (target: HudCaptureTarget) => {
         </HudIssuesPopover>
       </template>
     </TopbarHUD>
-    <EditorPreparingHud v-if="preparingEditor" :progress="editorLoadingProgress" />
+    <EditorPreparingHud
+      v-if="preparingEditor"
+      :progress="editorLoadingProgress"
+      @cancel="emit('cancel-editor-opening')"
+    />
     <div v-else class="hud-body">
       <div class="hud-layout">
         <section class="capture-section">

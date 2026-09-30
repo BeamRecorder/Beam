@@ -136,7 +136,16 @@
     "pause": "一時停止",
     "resume": "再開",
     "autoscrolling": "自動スクロール中",
-    "autoscrollPaused": "自動スクロールを一時停止中"
+    "autoscrollPaused": "自動スクロールを一時停止中",
+    "close": "閉じる",
+    "textColor": "文字色",
+    "transparency": "透明度",
+    "reset": "リセット",
+    "play": "再生",
+    "resize": "サイズ変更",
+    "settingsReset": "設定をリセットしました",
+    "eyedropper": "画面の色を選択",
+    "colorFormat": "色の形式"
   },
   "TimelineToolbar": {
     "add": "追加",

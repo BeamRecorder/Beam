@@ -14,6 +14,7 @@ function createIpcFixture() {
     handle: (channel, callback) => handlers.set(channel, callback),
   };
   const teleprompterWindow = {
+    resize: (sender, size) => calls.push(['resize', sender, size]),
     show: () => calls.push(['show']),
     hide: () => calls.push(['hide']),
     toggle: () => calls.push(['toggle']),
@@ -72,5 +73,20 @@ test('forwards suspend acknowledgements with their original sender, id, and stat
   assert.deepEqual(fixture.calls, [
     ['acknowledgeSuspend', fixture.owner, id, state],
     ['acknowledgeSuspend', fixture.other, id, state],
+  ]);
+});
+
+test('forwards resize requests and the sender to native ownership validation', () => {
+  const fixture = createIpcFixture();
+  for (const [sender, size] of [
+    [fixture.owner, { width: 700, height: 400 }],
+    [fixture.other, { width: 1, height: 1 }],
+    [fixture.owner, null],
+  ])
+    fixture.handlers.get('teleprompter:resize')({ sender }, size);
+  assert.deepEqual(fixture.calls, [
+    ['resize', fixture.owner, { width: 700, height: 400 }],
+    ['resize', fixture.other, { width: 1, height: 1 }],
+    ['resize', fixture.owner, null],
   ]);
 });

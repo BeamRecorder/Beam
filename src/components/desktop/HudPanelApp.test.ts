@@ -8,13 +8,17 @@ const capture = vi.hoisted(() => ({
 }));
 vi.mock('~/api/capture', () => ({ capture }));
 import HudPanelApp from './HudPanelApp.vue';
+import type { HudPanel } from '~/api/types/hud-panel';
 const settings = { name: 'HudSettingsWindow', emits: ['ready'], template: '<div />' };
 const projects = { name: 'ProjectPicker', emits: ['open-project', 'back'], template: '<div />' };
-const mascot = { name: 'MascotLab', props: ['embedded'], template: '<div class="mascot-lab" />' };
 const create = async (panel: string) => {
   window.history.replaceState({}, '', `?panel=${panel}`);
   const wrapper = mount(HudPanelApp, {
-    global: { stubs: { HudSettingsWindow: settings, ProjectPicker: projects, MascotLab: mascot, ToastProvider: true } },
+    props: {
+      panel: panel === 'unknown' ? null : (panel as HudPanel),
+      content: panel === 'settings' ? settings : panel === 'projects' ? projects : null,
+    },
+    global: { stubs: { HudSettingsWindow: settings, ProjectPicker: projects, ToastProvider: true } },
   });
   await flushPromises();
   return wrapper;
@@ -25,21 +29,10 @@ beforeEach(() => {
   capture.requestHudProject.mockResolvedValue(true);
 });
 describe('independent HUD panel renderer', () => {
-  it('mounts the embedded lab with its own native title and readiness signal', async () => {
-    const wrapper = await create('mascot');
-    expect(document.title).toBe('Beam Mascot Lab');
-    expect(wrapper.get('.panel-titlebar').text()).toBe('Mascot Lab');
-    expect(wrapper.getComponent(mascot).props('embedded')).toBe('');
-    expect(capture.notifyHudPanelReady).toHaveBeenCalledOnce();
-    expect(wrapper.findComponent(settings).exists()).toBe(false);
-    expect(wrapper.findComponent(projects).exists()).toBe(false);
-    expect(capture.requestHudProject).not.toHaveBeenCalled();
-    wrapper.unmount();
-  });
   it('does not announce readiness for an unknown panel role', async () => {
     const wrapper = await create('unknown');
     expect(capture.notifyHudPanelReady).not.toHaveBeenCalled();
-    expect(wrapper.findComponent(mascot).exists()).toBe(false);
+    expect(wrapper.findComponent(projects).exists()).toBe(false);
     wrapper.unmount();
   });
   it('announces Settings readiness only after its settings component mounts', async () => {

@@ -206,6 +206,10 @@ describe('useHudCaptureMode', () => {
     await action;
 
     expect(captureMock.quickSnipFromHud).toHaveBeenCalledWith({
+      countdownSeconds: config.countdownSeconds,
+      hideTaskbar: config.hideTaskbar,
+      hideDesktopIcons: config.hideDesktopIcons,
+      regionBounds: config.regionOverlay?.bounds,
       screenKind: config.screenKind,
       screenId: config.screenId,
       region: config.region,

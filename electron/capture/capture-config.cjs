@@ -140,6 +140,8 @@ function buildDefaultCaptureConfig(catalog, options, environment) {
     },
     failurePolicy: options.failurePolicy || 'continue-without-optional-tracks',
     region,
+    hideTaskbar: options.hideTaskbar === true,
+    hideDesktopIcons: options.hideDesktopIcons === true,
     excludedProcessId: environment.excludedProcessId,
     excludedWindowHandles: Array.isArray(options.excludedWindowHandles)
       ? options.excludedWindowHandles

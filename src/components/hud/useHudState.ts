@@ -1,3 +1,4 @@
+import { useRegionRecordingSettings } from './region/useRegionRecordingSettings';
 import { restoreHudDevices } from './hud-devices';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { capture } from '../../api/capture';
@@ -87,6 +88,13 @@ export function useHudState(props: HudProps, emit: HudEmit) {
       recorderLauncherContext: () => props.recorderLauncherContext,
     });
   const systemAudioMode = ref<'on' | 'off'>('off');
+  const regionSettings = useRegionRecordingSettings({
+    cameraId: selectedCameraId,
+    microphoneId: selectedMicId,
+    systemAudioMode,
+    countdownSeconds,
+    error: errorMessage,
+  });
 
   const isMicEnabled = computed(() => selectedMicId.value !== 'no-audio');
   const { level: micLevel } = useAudioLevelMeter(
@@ -159,6 +167,9 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     selectedScreenId,
     selectedScreenPreview,
     loadPreviews: (kind) => loadPreviews(kind),
+    captureMode: () => captureMode.value,
+    regionRecording: regionSettings.snapshot,
+    applyRegionRecording: regionSettings.apply,
   });
   const systemAudioOptions = computed(() => [
     { value: 'on', label: t('systemAudio') },
@@ -208,6 +219,8 @@ export function useHudState(props: HudProps, emit: HudEmit) {
           systemAudio: systemAudioMode.value === 'on',
           targetFps: 60,
           countdownSeconds: countdownSeconds.value,
+          hideTaskbar: regionSettings.hideTaskbar.value,
+          hideDesktopIcons: regionSettings.hideDesktopIcons.value,
           recordingBarVisibility: recordingBarVisibility.value,
           recordInteractions: interactionAccess.recordingEnabled.value,
           region: activeTab.value === 'screen' && selectedScreenRegion.value ? { ...selectedScreenRegion.value } : null,
@@ -283,8 +296,7 @@ export function useHudState(props: HudProps, emit: HudEmit) {
 
   let unsubscribePreferences: (() => void) | null = null;
   const syncRecordingPreferences = (preferences: import('~/api/types/capture-api').PreferenceSettings) => {
-    const countdown = preferences.extras.recordingCountdownSeconds;
-    countdownSeconds.value = typeof countdown === 'number' && [0, 3, 5, 10].includes(countdown) ? countdown : 3;
+    regionSettings.hydrate(preferences);
     recordingBarVisibility.value = preferences.recordingBar.visibility;
     interactionAccess.hydrate(preferences);
     if (sourceDiscoveryCompleted.value) void interactionAccess.refresh();
@@ -387,7 +399,6 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     try {
       if (panel === 'settings') await capture.openHudSettings();
       else if (panel === 'projects') await capture.openHudProjects();
-      else await capture.openHudMascot();
     } catch (reason) {
       errorMessage.value = reason instanceof Error ? reason.message : String(reason);
     }

@@ -19,8 +19,8 @@ describe('Vite development configuration', () => {
     expect(loaded.config.resolve?.dedupe).toContain('vue');
   });
 
-  it('builds the mascot lab as an independent renderer page', async () => {
+  it('keeps the prototype lab out of production renderer entries', async () => {
     const loaded = await loadConfigFromFile({ command: 'build', mode: 'test' }, resolve('vite.config.ts'));
-    expect(loaded?.config.build?.rollupOptions?.input).toMatchObject({ mascot: resolve('mascot.html') });
+    expect(loaded?.config.build?.rollupOptions?.input).not.toHaveProperty('mascot');
   });
 });

@@ -37,6 +37,12 @@ pub enum Command {
         #[serde(default)]
         raise: bool,
     },
+    PrepareRegionSelection {
+        config: crate::screenshot::ScreenshotRequest,
+        #[serde(default)]
+        cursor: crate::model::CursorSelection,
+    },
+    CancelRegionSelection,
     Prepare {
         config: Box<CaptureRequest>,
     },

@@ -6,6 +6,33 @@ import EditorProjectLoadingOverlay from '../EditorProjectLoadingOverlay.vue';
 describe('EditorProjectLoadingOverlay', () => {
   afterEach(() => vi.useRealTimers());
 
+  it('starts hidden, reopens during its exit and never lets an old exit remove a new loading state', async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(EditorProjectLoadingOverlay, { props: { visible: false, label: 'Preparing' } });
+    expect(wrapper.find('[role="status"]').exists()).toBe(false);
+    await wrapper.setProps({ visible: true });
+    await vi.advanceTimersByTimeAsync(250);
+    await wrapper.setProps({ visible: false });
+    await vi.advanceTimersByTimeAsync(50);
+    await wrapper.setProps({ visible: true });
+    await vi.advanceTimersByTimeAsync(400);
+    expect(wrapper.find('[role="status"]').exists()).toBe(true);
+    await wrapper.setProps({ visible: false });
+    await vi.advanceTimersByTimeAsync(220);
+    expect(wrapper.find('[role="status"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+  it('disposes before the pending enter can run', async () => {
+    const wrapper = mount(EditorProjectLoadingOverlay, {
+      attachTo: document.body,
+      props: { visible: true, label: 'Preparing' },
+    });
+    const element = wrapper.get('[role="status"]').element;
+    wrapper.unmount();
+    await flushPromises();
+    expect(element.isConnected).toBe(false);
+  });
+
   it('renders every editor surface as a stable animated-gradient skeleton', async () => {
     vi.useFakeTimers();
     const wrapper = mount(EditorProjectLoadingOverlay, {
@@ -45,10 +72,10 @@ describe('EditorProjectLoadingOverlay', () => {
 
     await wrapper.setProps({ visible: false });
     expect(wrapper.find('.editor-project-loading-overlay').exists()).toBe(true);
-    await vi.advanceTimersByTimeAsync(299);
+    await vi.advanceTimersByTimeAsync(80);
     await flushPromises();
     expect(wrapper.find('.editor-project-loading-overlay').exists()).toBe(true);
-    await vi.advanceTimersByTimeAsync(321);
+    await vi.advanceTimersByTimeAsync(200);
     await flushPromises();
     expect(wrapper.find('.editor-project-loading-overlay').exists()).toBe(false);
 

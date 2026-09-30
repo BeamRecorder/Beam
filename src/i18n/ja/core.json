@@ -511,18 +511,20 @@
     "back": "戻る"
   },
   "EditorPreparingHud": {
-    "title": "エディターを準備しています",
-    "openingWindow": "エディターウィンドウを作成しています…",
-    "loadingEditor": "エディター画面を読み込んでいます…",
-    "loadingAppearance": "エディターの外観を読み込んでいます…",
-    "loadingProject": "プロジェクトを開いています…",
-    "loadingTimeline": "タイムラインを読み込んでいます…",
-    "loadingEditorModule": "エディターのコンポーネントを読み込んでいます…",
-    "initializingEditor": "エディターの状態を準備しています…",
-    "renderingEditor": "エディターを描画しています…",
-    "loadingPreview": "最初のプレビューを準備しています…",
-    "ready": "エディターの準備ができました",
-    "progressLabel": "エディターの読み込み進捗"
+    "title": "エディターを開いています",
+    "openingWindow": "エディターを準備しよう",
+    "loadingEditor": "準備を進めているよ",
+    "loadingAppearance": "作業スペースを整えているよ",
+    "loadingProject": "プロジェクトを開いているよ",
+    "loadingTimeline": "タイムラインを準備しているよ",
+    "loadingEditorModule": "ツールを準備しているよ",
+    "initializingEditor": "仕上げているよ",
+    "renderingEditor": "もうすぐできるよ！",
+    "loadingPreview": "もうすぐできるよ！",
+    "ready": "もうすぐできるよ！",
+    "progressLabel": "エディターの読み込み進捗",
+    "almostThere": "もうすぐできるよ！",
+    "cancel": "キャンセル"
   },
   "EditorOpenError": {
     "title": "エディターを開けませんでした",
@@ -663,7 +665,18 @@
     "preset": "プリセット",
     "reset": "リセット",
     "cancel": "キャンセル",
-    "useThisArea": "この範囲を使用"
+    "useThisArea": "この範囲を使用",
+    "fullScreen": "全画面",
+    "record": "録画",
+    "settings": "クイック設定",
+    "countdown": "カウントダウン",
+    "off": "オフ",
+    "hideTaskbar": "タスクバーを隠す",
+    "hideDock": "Dock を隠す",
+    "hideDesktopIcons": "デスクトップアイコンを隠す",
+    "desktopUnavailable": "Linux では利用できません。",
+    "captureOnly": "macOS の録画では非表示です。",
+    "previewUnavailable": "デスクトップのプレビューを読み込めませんでした。"
   },
   "SettingsPanel": {
     "themeMode": "テーマモード",
@@ -1033,5 +1046,19 @@
     "transitions": "ハイライトのトランジション",
     "highlightColor": "ハイライトの色",
     "highlightOpacity": "ハイライトの強さ"
+  },
+  "Brand": {
+    "animateBeamy": "Beamyを動かす",
+    "loading": "Beamを読み込み中",
+    "reload": "Beamを再読み込み",
+    "tipLabel": "ヒント",
+    "tipRegion": "領域を選んで、必要な部分だけ録画しましょう。",
+    "tipPresets": "プリセットで録画サイズを揃えられます。",
+    "tipTeleprompter": "テレプロンプターでカメラに視線を向けましょう。",
+    "tipCountdown": "カウントダウンを設定して録画に備えましょう。",
+    "tipDevices": "録画前にカメラとマイクを確認しましょう。",
+    "tipInstant": "Instantならすぐに共有できる動画を作れます。",
+    "tipShortcuts": "設定で録画ショートカットを変更できます。",
+    "tipProjects": "既存のプロジェクトを開いて編集を続けましょう。"
   }
 }

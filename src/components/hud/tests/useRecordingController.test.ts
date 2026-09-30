@@ -9,6 +9,7 @@ const capture = vi.hoisted(() => ({
   startPreparedRecording: vi.fn(),
   stopNativeRecording: vi.fn().mockResolvedValue({ state: 'completed' }),
   completeNativeRecording: vi.fn().mockResolvedValue({ state: 'completed' }),
+  cancelRegionSelection: vi.fn().mockResolvedValue(undefined),
   cancelPreparedRecording: vi.fn().mockResolvedValue(undefined),
   discardRecording: vi.fn().mockResolvedValue(undefined),
   stop: vi.fn().mockResolvedValue({ state: 'completed' }),

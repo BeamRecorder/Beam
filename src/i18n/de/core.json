@@ -511,18 +511,20 @@
     "back": "Zurück"
   },
   "EditorPreparingHud": {
-    "title": "Editor wird vorbereitet",
-    "openingWindow": "Editorfenster wird erstellt…",
-    "loadingEditor": "Editoroberfläche wird geladen…",
-    "loadingAppearance": "Editor-Darstellung wird geladen…",
-    "loadingProject": "Projekt wird geöffnet…",
-    "loadingTimeline": "Zeitleiste wird geladen…",
-    "loadingEditorModule": "Editor-Komponenten werden geladen…",
-    "initializingEditor": "Editorstatus wird vorbereitet…",
-    "renderingEditor": "Editor wird dargestellt…",
-    "loadingPreview": "Erste Vorschau wird vorbereitet…",
-    "ready": "Editor bereit",
-    "progressLabel": "Ladefortschritt des Editors"
+    "title": "Dein Editor wird geöffnet",
+    "openingWindow": "Machen wir deinen Editor bereit",
+    "loadingEditor": "Ich bereite alles vor",
+    "loadingAppearance": "Ich richte alles ein",
+    "loadingProject": "Ich öffne dein Projekt",
+    "loadingTimeline": "Ich ordne deine Zeitleiste",
+    "loadingEditorModule": "Ich bereite deine Werkzeuge vor",
+    "initializingEditor": "Ich füge alles zusammen",
+    "renderingEditor": "Gleich geschafft!",
+    "loadingPreview": "Gleich geschafft!",
+    "ready": "Gleich geschafft!",
+    "progressLabel": "Ladefortschritt des Editors",
+    "almostThere": "Gleich geschafft!",
+    "cancel": "Abbrechen"
   },
   "EditorOpenError": {
     "title": "Der Editor konnte nicht geöffnet werden",
@@ -663,7 +665,18 @@
     "preset": "Voreinstellung",
     "reset": "Zurücksetzen",
     "cancel": "Abbrechen",
-    "useThisArea": "Diesen Bereich verwenden"
+    "useThisArea": "Diesen Bereich verwenden",
+    "fullScreen": "Vollbild",
+    "record": "Aufnehmen",
+    "settings": "Schnelleinstellungen",
+    "countdown": "Countdown",
+    "off": "Aus",
+    "hideTaskbar": "Taskleiste ausblenden",
+    "hideDock": "Dock ausblenden",
+    "hideDesktopIcons": "Desktopsymbole ausblenden",
+    "desktopUnavailable": "Unter Linux nicht verfügbar.",
+    "captureOnly": "In macOS-Aufnahmen ausgeblendet.",
+    "previewUnavailable": "Desktopvorschau konnte nicht geladen werden."
   },
   "SettingsPanel": {
     "themeMode": "Designmodus",
@@ -1033,5 +1046,19 @@
     "transitions": "Übergänge der Hervorhebung",
     "highlightColor": "Farbe der Hervorhebung",
     "highlightOpacity": "Intensität der Hervorhebung"
+  },
+  "Brand": {
+    "animateBeamy": "Beamy animieren",
+    "loading": "Beam wird geladen",
+    "reload": "Beam neu laden",
+    "tipLabel": "Tipp",
+    "tipRegion": "Wähle Bereich, um nur das Wesentliche aufzunehmen.",
+    "tipPresets": "Nutze Vorlagen für gleich große Aufnahmen.",
+    "tipTeleprompter": "Halte mit dem Teleprompter Blickkontakt zur Kamera.",
+    "tipCountdown": "Stelle einen Countdown zur Vorbereitung ein.",
+    "tipDevices": "Prüfe Kamera und Mikrofon vor der Aufnahme.",
+    "tipInstant": "Probiere Instant für ein Video zum direkten Teilen.",
+    "tipShortcuts": "Passe deine Tastenkürzel in den Einstellungen an.",
+    "tipProjects": "Öffne ein bestehendes Projekt zum Weiterbearbeiten."
   }
 }

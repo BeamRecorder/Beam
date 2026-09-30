@@ -1,4 +1,5 @@
-import './startup.css';
+import './components/brand/startup/startup.css';
 import { startRecorder } from './recorder-startup';
+import { loadRecorderWindow } from './recorder-window-loader';
 
-void startRecorder(() => import('./main'));
+void startRecorder(() => loadRecorderWindow(location.search));

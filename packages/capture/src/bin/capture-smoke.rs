@@ -202,6 +202,8 @@ fn record_full_session() -> Result<(), capture::CaptureError> {
         region: None,
         excluded_process_id: None,
         excluded_window_handles: vec![],
+        hide_taskbar: false,
+        hide_desktop_icons: false,
     };
     let mut session = RecordingSession::prepare(request, snapshot)?;
     session.start()?;

@@ -45,7 +45,7 @@ export interface RadiusPresetOption {
 
 export const DEFAULT_APPEARANCE: AppearanceSettings = {
   theme: 'light',
-  primaryColor: '#ff5a1f',
+  primaryColor: '#b85c38',
   secondaryColor: '#6366f1',
   radiusPx: 7,
   isPillRadius: false,
@@ -66,7 +66,7 @@ export const DEFAULT_APPEARANCE: AppearanceSettings = {
 export const UI_SCALE_PRESETS: UiScalePercent[] = [50, 75, 100, 125];
 
 export const COLOR_PRESETS: ColorSwatch[] = [
-  { id: 'beam-orange', label: 'Beam Sunset', color: '#ff5a1f' },
+  { id: 'beam-orange', label: 'Beam Sunset', color: '#b85c38' },
   { id: 'electric-indigo', label: 'Indigo', color: '#6366f1' },
   { id: 'emerald-green', label: 'Emerald', color: '#10b981' },
   { id: 'crimson-rose', label: 'Crimson', color: '#f43f5e' },
@@ -80,7 +80,7 @@ export const COLOR_PRESETS: ColorSwatch[] = [
 
 export const SECONDARY_COLOR_PRESETS: ColorSwatch[] = [
   { id: 'sec-indigo', label: 'Indigo', color: '#6366f1' },
-  { id: 'sec-orange', label: 'Orange', color: '#ff5a1f' },
+  { id: 'sec-orange', label: 'Orange', color: '#b85c38' },
   { id: 'sec-emerald', label: 'Emerald', color: '#10b981' },
   { id: 'sec-cyan', label: 'Cyan', color: '#06b6d4' },
   { id: 'sec-violet', label: 'Violet', color: '#a855f7' },
@@ -103,7 +103,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     id: 'beam-sunset',
     name: 'Beam Sunset',
     nameFr: 'Coucher de soleil Beam',
-    primaryColor: '#ff5a1f',
+    primaryColor: '#b85c38',
     secondaryColor: '#6366f1',
     radiusPx: 7,
     isPillRadius: false,
@@ -299,7 +299,7 @@ export function adjustHexBrightness(hex: string, percent: number): string {
  */
 export function hexToRgba(hex: string, alpha: number): string {
   const cleanHex = hex.replace('#', '');
-  if (cleanHex.length !== 6) return `rgba(255, 90, 31, ${alpha})`;
+  if (cleanHex.length !== 6) return `rgba(184, 92, 56, ${alpha})`;
 
   const num = parseInt(cleanHex, 16);
   const r = (num >> 16) & 255;

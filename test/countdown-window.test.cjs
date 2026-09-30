@@ -9,6 +9,7 @@ function loadCountdownWindow({
   isPackaged = false,
   loadResultForWindow = () => undefined,
   workArea = { x: 0, y: 0, width: 1_000, height: 800 },
+  prepare = true,
 }) {
   const calls = [];
   const screenCalls = [];
@@ -100,20 +101,24 @@ function loadCountdownWindow({
       platform,
       environment,
     });
+    if (prepare) overlay.prepare();
     return {
       calls,
       screenCalls,
       windows,
       window: windows[0],
       overlay,
-      finishLoad: (index = 0) => windows[index].emitContent('did-finish-load'),
+      finishLoad: (index = 0) => {
+        windows[index].emitContent('did-finish-load');
+        overlay.markRendererReady(windows[index].webContents);
+      },
       failLoad: (index = 0, { code = -2, isMainFrame = true } = {}) =>
         windows[index].emitContent(
           'did-fail-load',
           {},
           code,
           'load failed',
-          'http://localhost:6500/countdown.html',
+          'http://localhost:6500/html/countdown.html',
           isMainFrame,
         ),
     };
@@ -126,13 +131,14 @@ test('prewarms the dedicated countdown renderer in development and packaged buil
   for (const isPackaged of [false, true]) {
     const fixture = loadCountdownWindow({ platform: 'linux', environment: {}, isPackaged });
     const expected = isPackaged
-      ? ['loadFile', path.join('/app', 'dist/countdown.html')]
-      : ['loadURL', 'http://localhost:6500/countdown.html'];
+      ? ['loadFile', path.join('/app', 'dist/html/countdown.html')]
+      : ['loadURL', 'http://localhost:6500/html/countdown.html'];
     assert.deepEqual(
       fixture.calls.find(([name]) => name.startsWith('load')),
       expected,
     );
     const ready = fixture.overlay.prepare();
+    assert.equal(fixture.calls.find(([name]) => name === 'constructor')[1].webPreferences.backgroundThrottling, false);
     fixture.overlay.show(3);
     fixture.overlay.show(2);
     fixture.finishLoad();
@@ -140,6 +146,22 @@ test('prewarms the dedicated countdown renderer in development and packaged buil
     assert.deepEqual(
       fixture.calls.filter(([name]) => name === 'send'),
       [['send', 'countdown:state', 2]],
+    );
+    fixture.overlay.destroy();
+  }
+});
+
+test('creates no countdown renderer until the presentation owner prepares it or requests a value', async () => {
+  for (const action of ['prepare', 'show']) {
+    const fixture = loadCountdownWindow({ platform: 'linux', environment: {}, prepare: false });
+    assert.equal(fixture.windows.length, 0);
+    if (action === 'prepare') fixture.overlay.prepare();
+    else fixture.overlay.show(3);
+    assert.equal(fixture.windows.length, 1);
+    fixture.finishLoad();
+    assert.equal(
+      fixture.calls.some(([name]) => name === 'showInactive'),
+      action === 'show',
     );
     fixture.overlay.destroy();
   }
@@ -185,6 +207,31 @@ test('suspend clears a queued countdown and ignores readiness from the destroyed
   );
   await fixture.overlay.suspend();
 });
+
+for (const first of ['native', 'renderer'])
+  test(`queues the latest countdown until both readiness signals arrive (${first} first)`, async () => {
+    const fixture = loadCountdownWindow({ platform: 'linux', environment: {} });
+    const window = fixture.windows[0];
+    const ready = fixture.overlay.prepare();
+    fixture.overlay.show(3);
+    assert.equal(fixture.overlay.markRendererReady({}), false);
+    if (first === 'native') window.emitContent('did-finish-load');
+    else fixture.overlay.markRendererReady(window.webContents);
+    fixture.overlay.show(2);
+    assert.equal(
+      fixture.calls.some(([name]) => name === 'showInactive'),
+      false,
+    );
+    if (first === 'native') fixture.overlay.markRendererReady(window.webContents);
+    else window.emitContent('did-finish-load');
+    assert.equal(await ready, true);
+    assert.deepEqual(
+      fixture.calls.filter(([name]) => name === 'send'),
+      [['send', 'countdown:state', 2]],
+    );
+    fixture.overlay.destroy();
+    assert.equal(fixture.overlay.markRendererReady(window.webContents), false);
+  });
 
 test('ignores aborted and subframe loads, then fails the main load and recreates for a retry', async () => {
   const fixture = loadCountdownWindow({ platform: 'linux', environment: { XDG_SESSION_TYPE: 'x11' } });

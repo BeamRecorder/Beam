@@ -224,6 +224,7 @@ export function useRecordingController(
         cleanupErrors.push(reason instanceof Error ? reason.message : String(reason));
       }
     };
+    await runCleanup(() => capture.cancelRegionSelection());
     const wasNativeStarted = nativeStarted;
     const wasNativePrepared = preparedGeneration === generation;
     const nativeSessionId = sessionId;
@@ -270,7 +271,7 @@ export function useRecordingController(
       if (!session.sessionId) throw new Error('The capture session did not provide an identifier.');
       sessionId = session.sessionId;
       projectId = session.projectId ?? null;
-      if (capture.platform !== 'linux' && configuration.region && configuration.regionOverlay)
+      if (configuration.region && configuration.regionOverlay)
         capture.showScreenRegionOverlay({ ...configuration.regionOverlay, region: configuration.region });
       if (projectId) capture.setTeleprompterSession({ projectId, sessionId });
       stage = 'start-sidecars';
@@ -363,6 +364,7 @@ export function useRecordingController(
   const resetState = async (sidecarsAlreadyStopped = false) => {
     recordingGeneration += 1;
     clearCountdown();
+    await capture.cancelRegionSelection();
     await capture.setCountdown(null);
     capture.hideScreenRegionOverlay();
     clearTimer();

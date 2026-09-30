@@ -219,6 +219,7 @@
 }
 
 .projects-viewport {
+  scrollbar-gutter: stable;
   min-height: 0;
   flex: 1;
   overflow-y: auto;
@@ -249,18 +250,23 @@
 
 .project-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--project-columns), minmax(0, 1fr));
   gap: 8px;
 }
 
 .project-row {
-  height: 132px;
+  height: var(--project-card-size);
   margin-bottom: 12px;
 }
 
-.compact .project-row {
-  height: 116px;
-  margin-bottom: 12px;
+.project-skeleton-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  padding: 4px 20px 4px 4px;
+}
+
+.compact .project-skeleton-grid {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  padding-right: 16px;
 }
 
 .project-tools-enter-from,

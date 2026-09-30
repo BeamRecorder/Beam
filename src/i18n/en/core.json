@@ -523,18 +523,20 @@
     "developmentNotice": "Development preview · All sources are simulated. No recording is created."
   },
   "EditorPreparingHud": {
-    "title": "Preparing your editor",
-    "openingWindow": "Creating the editor window…",
-    "loadingEditor": "Loading the editor interface…",
-    "loadingAppearance": "Loading the editor appearance…",
-    "loadingProject": "Opening your project…",
-    "loadingTimeline": "Loading the timeline…",
-    "loadingEditorModule": "Loading the editor components…",
-    "initializingEditor": "Preparing the editor state…",
-    "renderingEditor": "Rendering the editor…",
-    "loadingPreview": "Preparing the first preview…",
-    "ready": "Editor ready",
-    "progressLabel": "Editor loading progress"
+    "title": "Opening your editor",
+    "openingWindow": "Let’s get your editor ready",
+    "loadingEditor": "I’m getting things ready",
+    "loadingAppearance": "I’m setting the scene",
+    "loadingProject": "I’m opening your project",
+    "loadingTimeline": "I’m arranging your timeline",
+    "loadingEditorModule": "I’m getting your tools ready",
+    "initializingEditor": "I’m putting it all together",
+    "renderingEditor": "Almost there!",
+    "loadingPreview": "Almost there!",
+    "ready": "Almost there!",
+    "progressLabel": "Editor loading progress",
+    "almostThere": "Almost there!",
+    "cancel": "Cancel"
   },
   "EditorOpenError": {
     "title": "The editor could not open",
@@ -671,11 +673,22 @@
     "restart": "Restart"
   },
   "ScreenRegionOverlay": {
+    "fullScreen": "Full screen",
     "instruction": "Select an area to record",
     "preset": "Preset",
     "reset": "Reset",
     "cancel": "Cancel",
-    "useThisArea": "Use this area"
+    "useThisArea": "Use this area",
+    "record": "Record",
+    "settings": "Quick settings",
+    "countdown": "Countdown",
+    "off": "Off",
+    "hideTaskbar": "Hide taskbar",
+    "hideDock": "Hide Dock",
+    "hideDesktopIcons": "Hide desktop icons",
+    "desktopUnavailable": "Desktop visibility controls are unavailable on Linux.",
+    "captureOnly": "These elements are hidden in the recording on macOS.",
+    "previewUnavailable": "The desktop preview could not be loaded."
   },
   "SettingsPanel": {
     "themeMode": "Theme Mode",
@@ -1030,5 +1043,19 @@
     "transitions": "Highlight transitions",
     "highlightColor": "Highlight color",
     "highlightOpacity": "Highlight intensity"
+  },
+  "Brand": {
+    "animateBeamy": "Animate Beamy",
+    "loading": "Loading Beam",
+    "reload": "Reload Beam",
+    "tipLabel": "Tip",
+    "tipRegion": "Choose Region to record just what matters.",
+    "tipPresets": "Use presets to keep recordings the same size.",
+    "tipTeleprompter": "Keep your eyes on the camera with the teleprompter.",
+    "tipCountdown": "Set a countdown to get ready before recording.",
+    "tipDevices": "Check your camera and microphone before recording.",
+    "tipInstant": "Try Instant for a video ready to share.",
+    "tipShortcuts": "Customize your recording shortcuts in Settings.",
+    "tipProjects": "Open an existing project to keep editing."
   }
 }

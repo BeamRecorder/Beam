@@ -3,25 +3,15 @@ const { BrowserWindow } = require('electron');
 const path = require('path');
 const { shouldAutoOpenDevTools } = require('./devtools-policy.cjs');
 const { createEditorStartupGuard } = require('./editor-startup-guard.cjs');
+const { createEditorProgressReporter } = require('./editor-loading-progress.cjs');
 const { installBrowserZoomPolicy } = require('./browser-zoom-policy.cjs');
+const { scheduleHudAuxiliaryWarmup } = require('./hud-auxiliary-warmup.cjs');
 
 const EDITOR_DEFAULT_SIZE = { width: 1280, height: 800 };
 const EDITOR_MIN_SIZE = { width: 960, height: 600 };
 const PROJECT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TITLEBAR_HEIGHT = 40;
 const TITLEBAR_SYMBOL_COLOR = '#7a7a7a';
-const EDITOR_LOADING_PROGRESS = Object.freeze({
-  openingWindow: 10,
-  loadingEditor: 20,
-  loadingAppearance: 30,
-  loadingProject: 45,
-  loadingTimeline: 60,
-  loadingEditorModule: 75,
-  initializingEditor: 82,
-  renderingEditor: 90,
-  loadingPreview: 95,
-  ready: 100,
-});
 
 function createEditorWindowManager({
   applicationRoot,
@@ -29,6 +19,7 @@ function createEditorWindowManager({
   ipcMain,
   hudWindow,
   hudAuxiliaryWindows = [],
+  captureWarmup = null,
   hudController,
   registerController,
   initialDark = false,
@@ -63,8 +54,8 @@ function createEditorWindowManager({
   };
 
   const load = (target) => {
-    if (isPackaged) return target.loadFile(path.join(applicationRoot, 'dist/editor.html'));
-    return target.loadURL('http://localhost:6500/editor.html');
+    if (isPackaged) return target.loadFile(path.join(applicationRoot, 'dist/html/editor.html'));
+    return target.loadURL('http://localhost:6500/html/editor.html');
   };
 
   const sessionForSender = (sender) => {
@@ -76,16 +67,7 @@ function createEditorWindowManager({
 
   const isLive = (session) => Boolean(session && sessions.has(session.window) && !session.window.isDestroyed());
 
-  const sendProgress = (session, stage) => {
-    const value = EDITOR_LOADING_PROGRESS[stage];
-    if (presentingSession !== session || value === undefined || value < session.lastProgressValue) return false;
-    if (session.lastProgressStage !== stage) session.lastProgressAt = Date.now();
-    session.lastProgressValue = value;
-    session.lastProgressStage = stage;
-    if (hudWindow.isDestroyed()) return false;
-    hudWindow.webContents.send('editor:loading-progress', { stage, value });
-    return true;
-  };
+  const sendProgress = createEditorProgressReporter(hudWindow, (session) => presentingSession === session);
 
   const editorContext = (session) => ({
     projectId: session.currentProjectId,
@@ -390,6 +372,18 @@ function createEditorWindowManager({
     return true;
   };
 
+  const cancelOpening = (event) => {
+    if (event.sender !== hudWindow.webContents || !canAcceptWork()) return false;
+    const pending = presentingSession;
+    if (!isLive(pending) || pending.presented || !pending.resolvePresentation) return false;
+    // Closing settles the open request with false and removes this session.
+    // A late ready message can no longer find it or present a replacement.
+    pending.returningToHud = true;
+    pending.window.destroy();
+    presentHud();
+    return true;
+  };
+
   const openRecorder = (event) => {
     if (!canAcceptWork()) return false;
     const origin = sessionForSender(event.sender);
@@ -445,8 +439,16 @@ function createEditorWindowManager({
     return true;
   };
 
-  prepareHudAuxiliaryWindows();
+  const cancelAuxiliaryWarmup = hudAuxiliaryWindows.length
+    ? scheduleHudAuxiliaryWarmup({
+        hudWindow,
+        canAcceptWork,
+        prepare: prepareHudAuxiliaryWindows,
+        readiness: captureWarmup,
+      })
+    : () => {};
   ipcMain.handle('editor:open', (event, projectId, options) => open(projectId, options, event.sender));
+  ipcMain.handle('editor:cancel-opening', cancelOpening);
   ipcMain.handle('editor:open-recorder', openRecorder);
   ipcMain.handle('editor:dismiss-recorder', dismissRecorder);
   ipcMain.handle('editor:context', (event) => {
@@ -462,6 +464,7 @@ function createEditorWindowManager({
     open,
     showHud,
     destroy: () => {
+      cancelAuxiliaryWarmup();
       clearRecorderOrigin({ notify: false });
       for (const session of [...sessions.values()]) {
         session.returningToHud = true;

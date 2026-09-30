@@ -2,10 +2,9 @@ import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import { capture } from '../api/capture';
 import { usePreferencesStore } from './preferences';
+import { resolveAppearanceAccent } from '../theme/appearance-accent';
 import {
-  adjustHexBrightness,
   DEFAULT_APPEARANCE,
-  hexToRgba,
   SURFACE_TONES,
   type AppearanceSettings,
   type SurfaceTone,
@@ -73,16 +72,16 @@ export const useThemeStore = defineStore('theme', () => {
     }
 
     const style = root.style;
-    const primary = primaryColor.value;
+    const accent = resolveAppearanceAccent(appearance.value, isDark);
     const secondary = secondaryColor.value;
     const radius = radiusPx.value;
     const isPill = isPillRadius.value;
 
     // Primary color tokens
-    style.setProperty('--color-primary', primary);
-    style.setProperty('--color-primary-hover', adjustHexBrightness(primary, isDark ? 12 : -10));
-    style.setProperty('--color-primary-light', hexToRgba(primary, isDark ? 0.18 : 0.1));
-    style.setProperty('--color-primary-border', hexToRgba(primary, 0.35));
+    style.setProperty('--color-primary', accent.primary);
+    style.setProperty('--color-primary-hover', accent.hover);
+    style.setProperty('--color-primary-light', accent.light);
+    style.setProperty('--color-primary-border', accent.border);
 
     // Secondary color tokens
     style.setProperty('--color-secondary', secondary);

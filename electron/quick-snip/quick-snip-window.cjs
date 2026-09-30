@@ -158,8 +158,9 @@ function createQuickSnipWindow({
       pendingConfiguration = null;
       window = null;
     });
-    if (isPackaged) window.loadFile(path.join(applicationRoot, 'dist/index.html'), { query: { quickSnipCrop: '1' } });
-    else window.loadURL('http://localhost:6500/?quickSnipCrop=1');
+    if (isPackaged)
+      window.loadFile(path.join(applicationRoot, 'dist/html/index.html'), { query: { quickSnipCrop: '1' } });
+    else window.loadURL('http://localhost:6500/html/index.html?quickSnipCrop=1');
     return window;
   };
   return {

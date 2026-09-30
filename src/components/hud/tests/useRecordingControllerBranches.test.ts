@@ -14,6 +14,7 @@ const { capture, cameraApi, microphoneApi, systemApi } = vi.hoisted(() => ({
     startPreparedRecording: vi.fn(),
     stopNativeRecording: vi.fn(),
     completeNativeRecording: vi.fn(),
+    cancelRegionSelection: vi.fn().mockResolvedValue(undefined),
     cancelPreparedRecording: vi.fn(),
     discardRecording: vi.fn(),
     stop: vi.fn(),
@@ -243,7 +244,7 @@ describe('useRecordingController branch behavior', () => {
     );
   });
 
-  it('does not show a second region overlay while recording on Linux', async () => {
+  it('shows the native region marker while recording on Linux', async () => {
     capture.platform = 'linux';
     const controller = useRecordingController(vi.fn());
     await controller.start(
@@ -254,7 +255,10 @@ describe('useRecordingController branch behavior', () => {
     );
     await waitForRecording(controller);
 
-    expect(capture.showScreenRegionOverlay).not.toHaveBeenCalled();
+    expect(capture.showScreenRegionOverlay).toHaveBeenCalledWith({
+      bounds: { x: 10, y: 20, width: 100, height: 80 },
+      region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+    });
     await controller.stop();
   });
 

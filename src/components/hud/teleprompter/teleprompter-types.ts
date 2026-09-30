@@ -13,12 +13,14 @@ export interface TeleprompterDocument {
   lineHeight: number;
   textAlign: TeleprompterTextAlign;
   theme: TeleprompterTheme;
+  textColor?: string | null;
+  windowOpacity?: number;
   updatedAtUtc: string;
 }
 
 export type TeleprompterSettings = Pick<
   TeleprompterDocument,
-  'mode' | 'autoscroll' | 'scrollSpeed' | 'fontSize' | 'lineHeight' | 'textAlign'
+  'mode' | 'autoscroll' | 'scrollSpeed' | 'fontSize' | 'lineHeight' | 'textAlign' | 'textColor' | 'windowOpacity'
 >;
 
 export interface TeleprompterSessionContext {
@@ -42,6 +44,8 @@ export const TELEPROMPTER_DEFAULTS: Omit<TeleprompterDocument, 'updatedAtUtc'> =
   lineHeight: 1.35,
   textAlign: 'left',
   theme: 'system',
+  textColor: null,
+  windowOpacity: 1,
 };
 
 export const createDefaultTeleprompterDocument = (now = new Date().toISOString()): TeleprompterDocument => ({

@@ -86,7 +86,7 @@ function fixture({ packaged = false } = {}) {
   }
 }
 
-for (const role of ['settings', 'projects', 'mascot']) {
+for (const role of ['settings', 'projects']) {
   test(`${role} is an independent opaque window shown only after both readiness signals`, async () => {
     const f = fixture();
     const opening = f.open(role);
@@ -97,10 +97,11 @@ for (const role of ['settings', 'projects', 'mascot']) {
     assert.equal(win.options.webPreferences.nodeIntegration, false);
     assert.equal(win.options.webPreferences.zoomFactor, 1);
     assert.equal(win.options.titleBarStyle, 'hidden');
-    if (role === 'mascot') {
-      assert.equal(win.options.title, 'Beam Mascot Lab');
-      assert.equal(win.options.width, 1280);
-      assert.equal(win.options.resizable, true);
+    if (role === 'projects') {
+      assert.equal(win.options.width, 720);
+      assert.equal(win.options.height, 560);
+      assert.equal(win.options.minWidth, 560);
+      assert.equal(win.options.minHeight, 440);
     }
     assert.equal(win.shown, 0);
     win.emit('ready-to-show');
@@ -114,7 +115,7 @@ for (const role of ['settings', 'projects', 'mascot']) {
     f.manager.destroy();
   });
 }
-for (const role of ['settings', 'projects', 'mascot'])
+for (const role of ['settings', 'projects'])
   test(`reuses ${role} and creates a fresh renderer after closing it`, async () => {
     const f = fixture();
     const first = f.open(role);
@@ -133,19 +134,19 @@ test('loads the packaged entry and preserves separate settings and projects life
   const f = fixture({ packaged: true });
   const settings = f.open('settings');
   const projects = f.open('projects');
-  const mascot = f.open('mascot');
   for (const win of f.windows) f.ready(win);
-  await Promise.all([settings, projects, mascot]);
-  assert.equal(f.windows[0].file, '/beam/dist/hud-panel.html');
+  await Promise.all([settings, projects]);
+  assert.equal(f.windows[0].file, '/beam/dist/html/hud-panel.html');
   assert.equal(f.windows[0].query.panel, 'settings');
-  assert.equal(f.windows[2].query.panel, 'mascot');
+  assert.equal(f.windows[1].query.panel, 'projects');
+  assert.equal(f.handlers.has('hud:open-mascot'), false);
   f.windows[0].close();
   assert.equal(f.windows[1].isDestroyed(), false);
   f.manager.destroy();
 });
 test('only the HUD may open panels, and unavailable recorder states reject the request', () => {
   const f = fixture();
-  for (const role of ['settings', 'projects', 'mascot']) {
+  for (const role of ['settings', 'projects']) {
     assert.throws(() => f.handlers.get(`hud:open-${role}`)({ sender: {} }), /not available/);
   }
   f.controller.mode = 'recorder';
@@ -179,7 +180,7 @@ test('only the project window may request a validated project; selection delegat
   assert.equal(win.isDestroyed(), true);
   f.manager.destroy();
 });
-for (const role of ['settings', 'projects', 'mascot'])
+for (const role of ['settings', 'projects'])
   test(`a failed ${role} renderer permits an independent retry`, async () => {
     const f = fixture();
     const opening = f.open(role);

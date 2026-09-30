@@ -5,7 +5,7 @@ const { normalizeRecorderLayout } = require('../window/recorder-layout.cjs');
 
 const defaultAppearance = () => ({
   theme: 'light',
-  primaryColor: '#ff5a1f',
+  primaryColor: '#b85c38',
   secondaryColor: '#6366f1',
   radiusPx: 7,
   isPillRadius: false,
@@ -94,7 +94,9 @@ const normalizeAppearance = (value, fallbackTheme = 'light') => {
   const base = defaultAppearance();
   const raw = value && typeof value === 'object' ? value : {};
   const theme = themes.has(raw.theme) ? raw.theme : themes.has(fallbackTheme) ? fallbackTheme : base.theme;
-  const primaryColor = color(raw.primaryColor) ? raw.primaryColor.toLowerCase() : base.primaryColor;
+  const savedPrimary = color(raw.primaryColor) ? raw.primaryColor.toLowerCase() : base.primaryColor;
+  const primaryColor =
+    savedPrimary === '#ff5a1f' && raw.activePresetId === 'beam-sunset' ? base.primaryColor : savedPrimary;
   const secondaryColor = color(raw.secondaryColor) ? raw.secondaryColor.toLowerCase() : base.secondaryColor;
   const rawRadius = Number(raw.radiusPx);
   const radiusPx = Number.isFinite(rawRadius) ? Math.max(0, Math.min(64, Math.round(rawRadius))) : base.radiusPx;

@@ -4,7 +4,7 @@ import {
   BLICK_FRAGMENT_SHADER,
   BLICK_VERTEX_SHADER,
 } from './blick-waveform-shaders';
-import type { BlickWaveformData, BlickWaveformRenderer } from './blick-waveform-types';
+import type { BlickWaveformData, BlickWaveformRenderer, BlickWaveformRendererOptions } from './blick-waveform-types';
 
 export function waveformTexture(data: BlickWaveformData): Float32Array {
   const count = data.bars.length;
@@ -25,8 +25,8 @@ export function waveformTexture(data: BlickWaveformData): Float32Array {
   return pixels;
 }
 
-function createRenderer(): BlickWaveformRenderer {
-  const canvas = document.createElement('canvas');
+function createRenderer(options: BlickWaveformRendererOptions): BlickWaveformRenderer {
+  const canvas = options.createCanvas();
   const gl = canvas.getContext('webgl2', {
     alpha: true,
     antialias: true,
@@ -34,7 +34,7 @@ function createRenderer(): BlickWaveformRenderer {
     stencil: false,
     premultipliedAlpha: true,
     preserveDrawingBuffer: false,
-  });
+  }) as WebGL2RenderingContext | null;
   if (!gl) throw new Error('WebGL2 is unavailable for audio waveforms.');
   const shaders: WebGLShader[] = [];
   const program = gl.createProgram();
@@ -102,9 +102,9 @@ function createRenderer(): BlickWaveformRenderer {
     return {
       draw(target, data, width, height) {
         if (gl.isContextLost()) throw new Error('The audio waveform GPU context was lost.');
-        const context = target.getContext('2d');
+        const context = target.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
         if (!context) throw new Error('The audio waveform canvas is unavailable.');
-        const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        const ratio = Math.max(1, Math.min(2, options.pixelRatio() || 1));
         const bitmapWidth = Math.max(1, Math.min(maxSize, Math.round(width * ratio)));
         const bitmapHeight = Math.max(1, Math.min(maxSize, Math.round(height * ratio)));
         if (!data.bars.length) {
@@ -166,8 +166,13 @@ function createRenderer(): BlickWaveformRenderer {
 // Clips retain only their small bitmap. One shared GPU context avoids Chromium's context limit.
 let renderer: BlickWaveformRenderer | undefined;
 let users = 0;
-export function acquireBlickWaveformRenderer(): BlickWaveformRenderer {
-  renderer ??= createRenderer();
+export function acquireBlickWaveformRenderer(
+  options: BlickWaveformRendererOptions = {
+    createCanvas: () => document.createElement('canvas'),
+    pixelRatio: () => window.devicePixelRatio,
+  },
+): BlickWaveformRenderer {
+  renderer ??= createRenderer(options);
   const owned = renderer;
   users += 1;
   let released = false;

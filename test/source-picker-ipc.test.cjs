@@ -47,7 +47,9 @@ function fixture({ platform = 'win32', isPackaged = false, accepting = true } = 
     Module._load = originalLoad;
     delete require.cache[file];
   }
-  const owner = { getURL: () => (isPackaged ? 'file:///beam/dist/index.html' : 'http://localhost:6500/') };
+  const owner = {
+    getURL: () => (isPackaged ? 'file:///beam/dist/html/index.html' : 'http://localhost:6500/html/index.html'),
+  };
   return {
     calls,
     app,
@@ -60,7 +62,7 @@ function fixture({ platform = 'win32', isPackaged = false, accepting = true } = 
 
 test('only the HUD owner opens selection and only its chooser can send actions', async () => {
   const { calls, open, owner, chooser, ipcMain } = fixture();
-  assert.throws(() => open({ getURL: () => 'http://localhost:6500/editor.html' }), /Only the HUD/);
+  assert.throws(() => open({ getURL: () => 'http://localhost:6500/html/editor.html' }), /Only the HUD/);
   await open();
   assert.throws(() => open({ ...owner }), /Another HUD/);
   ipcMain.emit('source-picker:action', { sender: owner }, { type: 'cancel' });

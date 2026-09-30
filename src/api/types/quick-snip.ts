@@ -35,6 +35,9 @@ export interface QuickSnipConfiguration {
   displayId: string;
   screenId?: string;
   outputRoot?: string;
+  countdownSeconds?: number;
+  hideTaskbar?: boolean;
+  hideDesktopIcons?: boolean;
   screenshotAction?: 'copy' | 'edit';
   devices: Record<string, unknown>;
   excludedWindowHandle?: string;
@@ -76,6 +79,10 @@ export type QuickSnipRenderReport =
   | { id: string; type: 'failed'; error: string };
 
 export interface InstantCaptureOptions {
+  countdownSeconds?: number;
+  hideTaskbar?: boolean;
+  hideDesktopIcons?: boolean;
+  regionBounds?: ScreenRegionBounds;
   screenKind?: 'display' | 'window';
   screenId?: string;
   region?: ScreenRegion | null;

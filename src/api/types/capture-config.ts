@@ -21,6 +21,8 @@ export interface StartRecordingOptions {
   failurePolicy?: 'fail-fast' | 'continue-without-optional-tracks';
   region?: ScreenRegion | null;
   excludedWindowHandles?: string[];
+  hideTaskbar?: boolean;
+  hideDesktopIcons?: boolean;
 }
 
 export interface RecordingSettings {
@@ -56,5 +58,7 @@ export interface CaptureConfig {
   /** Electron process whose windows must be excluded by native capturers when supported. */
   excludedProcessId?: number;
   excludedWindowHandles?: string[];
+  hideTaskbar?: boolean;
+  hideDesktopIcons?: boolean;
   region?: ScreenRegion | null;
 }

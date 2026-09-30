@@ -136,7 +136,16 @@
     "pause": "Пауза",
     "resume": "Продолжить",
     "autoscrolling": "Автопрокрутка выполняется",
-    "autoscrollPaused": "Автопрокрутка приостановлена"
+    "autoscrollPaused": "Автопрокрутка приостановлена",
+    "close": "Закрыть",
+    "textColor": "Цвет текста",
+    "transparency": "Прозрачность",
+    "reset": "Сбросить",
+    "play": "Воспроизвести",
+    "resize": "Изменить размер",
+    "settingsReset": "Настройки сброшены",
+    "eyedropper": "Выбрать цвет с экрана",
+    "colorFormat": "Формат цвета"
   },
   "TimelineToolbar": {
     "add": "Добавить",

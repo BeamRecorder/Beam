@@ -1,14 +1,18 @@
 import { createI18n } from 'vue-i18n';
-import { flushPromises, mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import BigSlider from '~/ui/slider/BigSlider.vue';
-import Select from '~/ui/select/Select.vue';
-import Switch from '~/ui/switch/Switch.vue';
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
+import { createPinia } from 'pinia';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import Slider from '~/ui/slider/Slider.vue';
+import TeleprompterToolbar from './TeleprompterToolbar.vue';
 import enEditor from '~/i18n/en/editor.json';
 import frEditor from '~/i18n/fr/editor.json';
 
+enableAutoUnmount(afterEach);
+
 const capture = vi.hoisted(() => ({
   hideTeleprompter: vi.fn(),
+  onPreferencesChanged: vi.fn().mockReturnValue(() => undefined),
+  resizeTeleprompter: vi.fn().mockResolvedValue(undefined),
   saveSessionTeleprompter: vi.fn().mockResolvedValue(null),
   getSessionTeleprompter: vi.fn().mockResolvedValue(null),
   onTeleprompterSession: vi.fn().mockReturnValue(() => undefined),
@@ -50,26 +54,29 @@ describe('Teleprompter', () => {
     capture.onTeleprompterVisibility.mockReturnValue(() => undefined);
   });
 
-  it('keeps Hide, Edit, Settings and the script editor available', async () => {
-    const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } });
+  it('keeps a title, Close and one compact toolbar with no Settings view', async () => {
+    const wrapper = mount(Teleprompter, { global: { plugins: [createPinia(), i18n] } });
     await flushPromises();
-    expect(wrapper.find('[aria-label="Hide"]').exists()).toBe(true);
-    expect(wrapper.find('[aria-label="Settings"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="Close"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="Settings"]').exists()).toBe(false);
+    expect(wrapper.get('h1').text()).toBe('Teleprompter');
+    expect(wrapper.findAll('nav')).toHaveLength(1);
     expect(wrapper.find('[aria-label="Teleprompter script"]').exists()).toBe(true);
-    expect(wrapper.find('[aria-label="Preview"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="Preview"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-label="Play"]').exists()).toBe(true);
   });
 
   it('hides the native window and renders edited lines', async () => {
-    const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } });
+    const wrapper = mount(Teleprompter, { global: { plugins: [createPinia(), i18n] } });
     await flushPromises();
-    await wrapper.get('[aria-label="Hide"]').trigger('click');
+    await wrapper.get('[aria-label="Close"]').trigger('click');
     await wrapper.get('textarea').setValue('First line\nSecond line');
     expect(capture.hideTeleprompter).toHaveBeenCalledOnce();
     expect(wrapper.findAll('.teleprompter-line').map((line) => line.text())).toEqual(['First line', 'Second line']);
   });
 
   it('switches from editing to preview when recording starts', async () => {
-    const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } });
+    const wrapper = mount(Teleprompter, { global: { plugins: [createPinia(), i18n] } });
     await flushPromises();
     window.dispatchEvent(
       new CustomEvent('teleprompter-session', { detail: { projectId: 'project-1', sessionId: 'session-1' } }),
@@ -79,72 +86,59 @@ describe('Teleprompter', () => {
     expect(wrapper.find('[aria-label="Edit"]').exists()).toBe(true);
   });
 
-  it('opens settings as a dedicated view and returns to the reader', async () => {
-    const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } });
+  it('opens a speed popover and starts reading with a single Play button', async () => {
+    const wrapper = mount(Teleprompter, { global: { plugins: [createPinia(), i18n] } });
     await flushPromises();
-    await wrapper.get('[aria-label="Settings"]').trigger('click');
-    expect(wrapper.find('.settings-view').exists()).toBe(true);
-    await wrapper.get('[aria-label="Back"]').trigger('click');
-    expect(wrapper.find('.settings-view').exists()).toBe(false);
-    expect(wrapper.find('[aria-label="Teleprompter script"]').exists()).toBe(true);
-  });
-
-  it('routes settings, reader controls, session events and shortcuts to the teleprompter state', async () => {
-    const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } });
+    await wrapper.get('[aria-label="Speed"]').trigger('click');
     await flushPromises();
-    await wrapper.get('[aria-label="Settings"]').trigger('click');
-    const mode = wrapper.findComponent(Select);
-    mode.vm.$emit('update:modelValue', 7);
-    mode.vm.$emit('update:modelValue', 'line-by-line');
-
-    const autoscroll = wrapper.findComponent(Switch);
-    autoscroll.vm.$emit('update:modelValue', false);
+    const slider = wrapper.findComponent(Slider);
+    slider.vm.$emit('update:modelValue', 83);
     await wrapper.vm.$nextTick();
-    expect(autoscroll.props('label')).toBe('Off');
-    autoscroll.vm.$emit('update:modelValue', true);
-    await wrapper.vm.$nextTick();
-    expect(autoscroll.props('label')).toBe('On');
-
-    const sliders = wrapper.findAllComponents(BigSlider);
-    expect(sliders).toHaveLength(3);
-    sliders[0].vm.$emit('update:modelValue', 83);
-    sliders[1].vm.$emit('update:modelValue', 90);
-    sliders[2].vm.$emit('update:modelValue', 2.1);
-    await wrapper.vm.$nextTick();
-    expect(sliders.map((slider) => slider.props('modelValue'))).toEqual([83, 36, 2.1]);
-    await wrapper.get('[aria-label="Align left"]').trigger('click');
-    await wrapper.get('[aria-label="Center text"]').trigger('click');
-    await wrapper.get('[aria-label="Back"]').trigger('click');
-    await flushPromises();
-
-    await wrapper.get('textarea').setValue('First line\nSecond line');
-    await wrapper.get('[aria-label="Preview"]').trigger('click');
-    expect(wrapper.find('[aria-label="Teleprompter script"]').exists()).toBe(false);
+    expect(slider.props('modelValue')).toBe(83);
+    await wrapper.get('[aria-label="Play"]').trigger('click');
+    expect(wrapper.find('[aria-label="Pause"]').exists()).toBe(true);
+    await wrapper.get('[aria-label="Pause"]').trigger('click');
     await wrapper.get('[aria-label="Edit"]').trigger('click');
-    expect(wrapper.find('[aria-label="Teleprompter script"]').exists()).toBe(true);
-
+    expect(wrapper.find('textarea').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="Play"]').exists()).toBe(true);
+  });
+  it('applies text color and whole window transparency, then resets settings without losing the script', async () => {
+    const wrapper = mount(Teleprompter, { global: { plugins: [createPinia(), i18n] } });
+    await flushPromises();
+    await wrapper.get('textarea').setValue('Keep my script');
+    const toolbar = wrapper.findComponent(TeleprompterToolbar);
+    toolbar.vm.$emit('update', { scrollSpeed: 120, fontSize: 20, textColor: '#0088aa', windowOpacity: 0.45 });
+    await wrapper.vm.$nextTick();
+    expect(document.body.style.opacity).toBe('0.45');
+    expect(wrapper.get('main').attributes('style')).toContain('#0088aa');
+    await wrapper.get('[aria-label="Reset"]').trigger('click');
+    expect(wrapper.get('textarea').element.value).toBe('Keep my script');
+    expect(document.body.style.opacity).toBe('1');
+    expect(wrapper.find('.toast-message').text()).toBe('Settings reset');
+    expect(toolbar.props('document')).toMatchObject({
+      scrollSpeed: 42,
+      fontSize: 36,
+      textColor: null,
+      windowOpacity: 1,
+    });
+  });
+  it('routes native session and shortcut events without a settings page or extra playback bar', async () => {
+    const wrapper = mount(Teleprompter, { global: { plugins: [createPinia(), i18n] } });
+    await flushPromises();
+    await wrapper.get('textarea').setValue('First line\nSecond line');
+    wrapper.findComponent(TeleprompterToolbar).vm.$emit('update', { mode: 'line-by-line' });
     window.dispatchEvent(
       new CustomEvent('teleprompter-session', { detail: { projectId: 'project-1', sessionId: 'session-1' } }),
     );
     await flushPromises();
-    expect(wrapper.find('[aria-label="Teleprompter script"]').exists()).toBe(false);
     window.dispatchEvent(new CustomEvent('teleprompter-shortcut', { detail: 'teleprompter.nextLine' }));
     window.dispatchEvent(new CustomEvent('teleprompter-shortcut', { detail: null }));
     await wrapper.vm.$nextTick();
-    expect(wrapper.find('.line-progress').text()).toContain('2 / 2');
-    await wrapper.get('[aria-label="Previous line"]').trigger('click');
-    expect(wrapper.find('.line-progress').text()).toContain('1 / 2');
-    await wrapper.get('[aria-label="Next line"]').trigger('click');
-    expect(wrapper.find('.line-progress').text()).toContain('2 / 2');
-    await wrapper.get('[aria-label="Pause"]').trigger('click');
-    await wrapper.get('[aria-label="Resume"]').trigger('click');
-
+    expect(wrapper.get('.teleprompter-line.active').text()).toBe('Second line');
     window.dispatchEvent(new CustomEvent('teleprompter-session', { detail: null }));
     await flushPromises();
-    expect(wrapper.find('.teleprompter-line').exists()).toBe(true);
-    await wrapper.get('[aria-label="Hide"]').trigger('click');
+    await wrapper.get('[aria-label="Close"]').trigger('click');
     expect(capture.hideTeleprompter).toHaveBeenCalledOnce();
-    wrapper.unmount();
   });
 
   it('restores a checkpoint before announcing readiness and acknowledges the next suspend request', async () => {
@@ -179,11 +173,11 @@ describe('Teleprompter', () => {
       return vi.fn();
     });
 
-    const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } });
+    const wrapper = mount(Teleprompter, { global: { plugins: [createPinia(), i18n] } });
     await flushPromises();
 
     expect(wrapper.find('[aria-label="Teleprompter script"]').exists()).toBe(false);
-    expect(wrapper.find('[aria-label="Resume"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="Play"]').exists()).toBe(true);
     expect(capture.notifyTeleprompterReady).toHaveBeenCalledOnce();
     expect(capture.getTeleprompterResumeState).toHaveBeenCalledOnce();
     expect(capture.getTeleprompterResumeState.mock.invocationCallOrder[0]).toBeLessThan(
@@ -241,7 +235,7 @@ describe('Teleprompter', () => {
         resolveResume = resolve;
       }),
     );
-    const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } });
+    const wrapper = mount(Teleprompter, { global: { plugins: [createPinia(), i18n] } });
     const display = wrapper.get('.teleprompter-display').element as HTMLElement;
     const scrollTo = vi.fn();
     Object.defineProperty(display, 'scrollTo', { configurable: true, value: scrollTo });
@@ -260,7 +254,7 @@ describe('Teleprompter', () => {
         resolveResume = resolve;
       }),
     );
-    const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } });
+    const wrapper = mount(Teleprompter, { global: { plugins: [createPinia(), i18n] } });
     await wrapper.vm.$nextTick();
     expect(capture.notifyTeleprompterReady).not.toHaveBeenCalled();
 
@@ -289,7 +283,7 @@ describe('Teleprompter', () => {
       visibilityListener = listener as (visible: boolean) => void;
       return unsubscribeVisibility;
     });
-    const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } });
+    const wrapper = mount(Teleprompter, { global: { plugins: [createPinia(), i18n] } });
 
     try {
       await flushPromises();
@@ -299,6 +293,7 @@ describe('Teleprompter', () => {
       visibilityListener?.(false);
       expect(pendingFrames.size).toBe(0);
 
+      await wrapper.get('[aria-label="Play"]').trigger('click');
       visibilityListener?.(true);
       expect(pendingFrames.size).toBe(1);
       visibilityListener?.(false);
@@ -319,7 +314,7 @@ describe('Teleprompter', () => {
     ['checkpoint unavailable as text', 'checkpoint unavailable as text'],
   ])('shows a resume-state error and still announces readiness for %s', async (reason, message) => {
     capture.getTeleprompterResumeState.mockRejectedValueOnce(reason);
-    const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } });
+    const wrapper = mount(Teleprompter, { global: { plugins: [createPinia(), i18n] } });
     await flushPromises();
     expect(wrapper.get('[role="alert"]').text()).toBe(message);
     expect(capture.notifyTeleprompterReady).toHaveBeenCalledOnce();
@@ -330,7 +325,7 @@ describe('Teleprompter', () => {
     const original = capture.notifyTeleprompterReady;
     Object.defineProperty(capture, 'notifyTeleprompterReady', { configurable: true, value: undefined });
     try {
-      const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } });
+      const wrapper = mount(Teleprompter, { global: { plugins: [createPinia(), i18n] } });
       await flushPromises();
       expect(wrapper.find('[aria-label="Teleprompter script"]').exists()).toBe(true);
       wrapper.unmount();
@@ -354,12 +349,12 @@ describe('Teleprompter', () => {
     ['mixed', 'Hello — Привет всем!\nMCP: пример кода'],
   ])('preserves %s script text in the editor and reader with English menus', async (_language, text) => {
     i18n.global.locale.value = 'en';
-    const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } });
+    const wrapper = mount(Teleprompter, { global: { plugins: [createPinia(), i18n] } });
     try {
       await wrapper.get('textarea').setValue(text);
       expect(wrapper.get('textarea').element.value).toBe(text);
       expect(wrapper.findAll('.teleprompter-line').map((line) => line.text())).toEqual(text.split('\n'));
-      await wrapper.get('[aria-label="Preview"]').trigger('click');
+      await wrapper.get('[aria-label="Play"]').trigger('click');
       expect(wrapper.find('textarea').exists()).toBe(false);
       expect(wrapper.findAll('.teleprompter-line').map((line) => line.text())).toEqual(text.split('\n'));
     } finally {
@@ -369,9 +364,9 @@ describe('Teleprompter', () => {
 
   it('uses the French translation namespace when the locale changes', async () => {
     i18n.global.locale.value = 'fr';
-    const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } });
+    const wrapper = mount(Teleprompter, { global: { plugins: [createPinia(), i18n] } });
     await flushPromises();
-    expect(wrapper.find('[aria-label="Masquer"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="Fermer"]').exists()).toBe(true);
     i18n.global.locale.value = 'en';
   });
 });

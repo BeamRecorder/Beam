@@ -25,6 +25,8 @@ const document = {
   lineHeight: 1.5,
   textAlign: 'center',
   theme: 'dark',
+  textColor: null,
+  windowOpacity: 1,
   updatedAtUtc: '2026-01-01T00:00:00.000Z',
 };
 
@@ -92,4 +94,23 @@ test('clamps persisted teleprompter bounds to the active display', () => {
     clampTeleprompterBounds({ x: 20, y: 20, width: 80, height: 80 }, { x: 0, y: 0, width: 1280, height: 720 }),
     { x: 20, y: 20, width: 240, height: 140 },
   );
+});
+
+test('migrates older documents to theme text color and full opacity', () => {
+  const { textColor, windowOpacity, ...legacy } = document;
+  assert.deepEqual(normalizeTeleprompterDocument(legacy), document);
+});
+test('retains valid text colors and clamps both ends of native opacity', () => {
+  assert.equal(
+    normalizeTeleprompterDocument({ ...document, textColor: '#AbCdEf', windowOpacity: -2 }).textColor,
+    '#AbCdEf',
+  );
+  assert.equal(normalizeTeleprompterDocument({ ...document, windowOpacity: -2 }).windowOpacity, 0.2);
+  assert.equal(normalizeTeleprompterDocument({ ...document, windowOpacity: 10 }).windowOpacity, 1);
+});
+test('discards invalid colors and nonfinite opacity instead of injecting styles', () => {
+  for (const textColor of ['red', '#fff', 'url(file:///secret)', 55, {}, undefined])
+    assert.equal(normalizeTeleprompterDocument({ ...document, textColor }).textColor, null);
+  for (const windowOpacity of [NaN, Infinity, undefined])
+    assert.equal(normalizeTeleprompterDocument({ ...document, windowOpacity }).windowOpacity, 1);
 });

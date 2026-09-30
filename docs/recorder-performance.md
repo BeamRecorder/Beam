@@ -2,14 +2,14 @@
 
 ## Changes
 
-- The recorder's HTML contains a static SVG export of the Mascot Lab cloud. A small CSS animation dances and squashes the cloud while the application imports. It requires no Vue, font download or JavaScript animation engine. The shell disappears on the first frame after mounting; there is no minimum display time. Reduced motion disables both animations.
+- The recorder's HTML contains a static SVG export of Beamy's shared Mascot Lab cloud, then its lightweight TypeScript shape engine animates the large centered portrait at at most 30 fps while Vue loads. Only the selected core language loads for eight rotating tips. Shape/eye fitting is calculated and cached only for displayed poses, rather than eagerly fitting the whole lab catalogue. The portrait morphs to rest and docks into the measured HUD logo slot over 650 ms without delaying renderer readiness. Reduced motion skips the movement; hidden documents stop animation frames and tip timers.
 - English remains bundled for translation fallback. Other languages load as separate core/editor chunks when selected, with deduplication, caching and protection against an earlier request overriding a later selection. Each renderer awaits its initial language before mounting. Previously, all 15 languages were included in every renderer's initial translation module: about 1.05 MB of source JSON.
-- Recorder controls and the screen-region overlay load on demand. The HUD no longer installs the unused global Motion plugin; onboarding retains its directives.
+- Recorder controls load on demand; region selection has its own lightweight `html/screen-region.html` entry, prepared alongside the native preview. The HUD no longer installs the unused global Motion plugin; onboarding retains its directives.
 - Electron imports `fontkit` only when importing a font, and `@xmldom/xmldom` only when validating an SVG. Existing validation limits remain in place.
 - The desktop bundle no longer includes Vite's module-preload polyfill: Electron's Chromium supports module preload. Website bundling remains independently configured.
 - The frameless application no longer creates Electron's default application menu. Explicit tray and context menus remain available.
 
-The camera, region, crop and teleprompter overlays remove the startup shell before loading their Vue application, keeping the desktop transparent. Before Vue is available, an import failure displays plain error text and a native HTML reload button. The shell shares the full renderer's palette and surface tokens.
+The camera, region, crop and teleprompter overlays remove the startup shell before loading their Vue application, keeping the desktop transparent. Before Vue is available, an import failure displays plain error text and a native HTML reload button. The shell shares the full renderer's palette and surface tokens and reads saved appearance before the handoff. The full renderer waits for its existing theme bootstrap before mounting. The measurements below precede the larger Beamy portrait and docking transition; they are not measurements of that new animation.
 
 ## Measurements
 
@@ -49,6 +49,8 @@ performance.getEntriesByName('beam:renderer-bootstrap').at(-1)?.toJSON()
 
 Use the **Network** panel to check which chunks are requested initially and which appear only when recording, selecting a region or changing language. Profile a packaged/local production bundle when comparing performance; Vite development transforms and open developer tools change the timing. The native terminal logs now start before the main process loads its modules and separately report app readiness, navigation, DOM readiness, first show and load completion. Reloading the renderer does not repeat main-process startup.
 
-Necessary capture initialization, permission policies, IPC registration and preference repair retain their ordering. Auxiliary countdown/teleprompter preparation runs alongside HUD presentation under the existing window-lifecycle contract. This change does not postpone capture correctness work just to improve a timing marker.
+Necessary capture initialization, permission policies, IPC registration and preference repair retain their ordering. Initial auxiliary countdown/teleprompter preparation now follows first HUD presentation and completion of capability discovery, without blocking the HUD. Explicit requests still prepare immediately. The newer [window performance audit](window-performance.md) covers the larger Beamy startup, cold process launches, panel loading, overlay bootstraps and window transitions, with separate capture-readiness measurements.
+
+The [editor loading audit](editor-loading-performance.md) measures actual project opening, first preview, interface blocking and memory, including the waveform Worker and safe cancellation.
 
 See the [Electron performance checklist](https://www.electronjs.org/docs/latest/tutorial/performance) for the profiling and deferred-loading guidance used in this audit.

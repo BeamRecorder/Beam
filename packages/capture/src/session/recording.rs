@@ -19,6 +19,9 @@ use super::{
 /// A prepared native recording session controlled by the JSONL engine.
 pub struct RecordingSession {
     request: CaptureRequest,
+    region_selection: Option<crate::screen::RegionSelection>,
+    #[cfg(windows)]
+    desktop_visibility: Option<crate::screen::win::desktop_visibility::DesktopVisibility>,
     snapshot: CatalogSnapshot,
     session_id: SessionId,
     layout: crate::storage::SessionLayout,
@@ -40,6 +43,17 @@ impl RecordingSession {
         request: CaptureRequest,
         snapshot: CatalogSnapshot,
     ) -> Result<Self, CaptureError> {
+        Self::prepare_with_selection(request, snapshot, None)
+    }
+
+    pub fn prepare_with_selection(
+        request: CaptureRequest,
+        snapshot: CatalogSnapshot,
+        region_selection: Option<crate::screen::RegionSelection>,
+    ) -> Result<Self, CaptureError> {
+        if let Some(selection) = &region_selection {
+            selection.validate_source(request.screen.as_ref())?;
+        }
         validate_request(&request, &snapshot)?;
         ensure_free_space(
             &request.recording.output_root,
@@ -80,6 +94,9 @@ impl RecordingSession {
         checkpoint_tracks(&layout, &manifest.tracks)?;
         let session = Self {
             request,
+            region_selection,
+            #[cfg(windows)]
+            desktop_visibility: None,
             snapshot,
             session_id,
             layout,
@@ -95,8 +112,17 @@ impl RecordingSession {
             #[cfg(all(target_os = "macos", feature = "cursor"))]
             cursor_shape_source: crate::cursor::mac::MacCursorShapeSource::default(),
         };
-        #[cfg(target_os = "linux")]
+        #[cfg(any(windows, target_os = "linux"))]
         let mut session = session;
+        #[cfg(windows)]
+        {
+            session.desktop_visibility = Some(
+                crate::screen::win::desktop_visibility::DesktopVisibility::hide(
+                    session.request.hide_taskbar,
+                    session.request.hide_desktop_icons,
+                )?,
+            );
+        }
         #[cfg(target_os = "linux")]
         if matches!(
             session.request.screen,
@@ -263,6 +289,7 @@ impl RecordingSession {
             self.generation = self.generation.saturating_add(1);
             let result = self.active.resume_portal(OpenContext {
                 request: &self.request,
+                region_selection: &mut self.region_selection,
                 snapshot: &self.snapshot,
                 layout: &self.layout,
                 generation: self.generation,
@@ -303,6 +330,12 @@ impl RecordingSession {
         } else {
             None
         };
+        #[cfg(windows)]
+        if let Some(mut desktop) = self.desktop_visibility.take()
+            && let Err(error) = desktop.restore()
+        {
+            self.manifest.warnings.push(error.to_string());
+        }
         self.state = super::SessionState::Finalizing;
         self.manifest.duration_ns = now;
         if let Some(error) = &close_error {
@@ -348,6 +381,7 @@ impl RecordingSession {
         let mut opened = ActiveRecordings::default();
         let result = opened.open(OpenContext {
             request: &self.request,
+            region_selection: &mut self.region_selection,
             snapshot: &self.snapshot,
             layout: &self.layout,
             generation,

@@ -58,6 +58,8 @@ export interface RecordingConfiguration {
   outputRoot?: string;
   cursor?: boolean;
   excludedWindowHandles?: string[];
+  hideTaskbar?: boolean;
+  hideDesktopIcons?: boolean;
 }
 
 export interface RecordingSessionResult {

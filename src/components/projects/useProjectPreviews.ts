@@ -1,17 +1,38 @@
-import { ref, nextTick, onBeforeUnmount, type Ref } from 'vue';
+import { ref, nextTick, onBeforeUnmount, watch, type Ref } from 'vue';
 import type { CaptureProject } from '~/api/types/capture-api';
 import { useProjectThumbnailGenerator } from '../hud/useProjectThumbnailGenerator';
 
-export function useProjectPreviews(container: Ref<HTMLElement | null>) {
+export function useProjectPreviews(container: Ref<HTMLElement | null>, visibleProjects: Ref<CaptureProject[]>) {
   const hoveredProjectId = ref<string | null>(null);
   const { thumbnailCache, generateThumbnail } = useProjectThumbnailGenerator();
 
-  const generateThumbnailsForProjects = async (projectList: CaptureProject[]) => {
-    for (const project of projectList) {
-      if (project.previewSrc && !project.thumbnailSrc && !thumbnailCache[project.id]) {
-        void generateThumbnail(project.id, project.previewSrc);
+  let disposed = false;
+  let generating = false;
+  const attempted = new Map<string, string>();
+  const generateVisibleThumbnails = async () => {
+    if (generating || disposed) return;
+    generating = true;
+    try {
+      while (!disposed) {
+        const project = visibleProjects.value.find(
+          (candidate) =>
+            candidate.previewSrc &&
+            !candidate.thumbnailSrc &&
+            !thumbnailCache[candidate.id] &&
+            attempted.get(candidate.id) !== candidate.previewSrc,
+        );
+        if (!project?.previewSrc) break;
+        attempted.set(project.id, project.previewSrc);
+        await generateThumbnail(project.id, project.previewSrc);
       }
+    } finally {
+      generating = false;
     }
+  };
+  watch(visibleProjects, generateVisibleThumbnails, { immediate: true });
+  const retryVisibleThumbnails = () => {
+    attempted.clear();
+    void generateVisibleThumbnails();
   };
 
   const videoProgress = ref<Record<string, { current: number; total: number }>>({});
@@ -80,6 +101,7 @@ export function useProjectPreviews(container: Ref<HTMLElement | null>) {
   };
 
   onBeforeUnmount(() => {
+    disposed = true;
     if (scrollTimeout) clearTimeout(scrollTimeout);
     container.value?.querySelectorAll('video').forEach((video) => {
       video.pause();
@@ -90,7 +112,6 @@ export function useProjectPreviews(container: Ref<HTMLElement | null>) {
 
   return {
     thumbnailCache,
-    generateThumbnailsForProjects,
     hoveredProjectId,
     videoProgress,
     isVideoLoaded,
@@ -99,5 +120,6 @@ export function useProjectPreviews(container: Ref<HTMLElement | null>) {
     handleVideoTimeUpdate,
     handleProjectMouseEnter,
     handleProjectMouseLeave,
+    retryVisibleThumbnails,
   };
 }

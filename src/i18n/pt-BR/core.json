@@ -511,18 +511,20 @@
     "back": "Voltar"
   },
   "EditorPreparingHud": {
-    "title": "Preparando o editor",
-    "openingWindow": "Criando a janela do editor…",
-    "loadingEditor": "Carregando a interface do editor…",
-    "loadingAppearance": "Carregando a aparência do editor…",
-    "loadingProject": "Abrindo seu projeto…",
-    "loadingTimeline": "Carregando a linha do tempo…",
-    "loadingEditorModule": "Carregando os componentes do editor…",
-    "initializingEditor": "Preparando o estado do editor…",
-    "renderingEditor": "Renderizando o editor…",
-    "loadingPreview": "Preparando a primeira prévia…",
-    "ready": "Editor pronto",
-    "progressLabel": "Progresso de carregamento do editor"
+    "title": "Abrindo seu editor",
+    "openingWindow": "Vamos preparar seu editor",
+    "loadingEditor": "Estou preparando tudo",
+    "loadingAppearance": "Estou organizando o espaço",
+    "loadingProject": "Estou abrindo seu projeto",
+    "loadingTimeline": "Estou preparando sua linha do tempo",
+    "loadingEditorModule": "Estou preparando suas ferramentas",
+    "initializingEditor": "Estou juntando tudo",
+    "renderingEditor": "Já está quase pronto!",
+    "loadingPreview": "Já está quase pronto!",
+    "ready": "Já está quase pronto!",
+    "progressLabel": "Progresso de carregamento do editor",
+    "almostThere": "Já está quase pronto!",
+    "cancel": "Cancelar"
   },
   "EditorOpenError": {
     "title": "Não foi possível abrir o editor",
@@ -663,7 +665,18 @@
     "preset": "Predefinição",
     "reset": "Redefinir",
     "cancel": "Cancelar",
-    "useThisArea": "Usar esta área"
+    "useThisArea": "Usar esta área",
+    "fullScreen": "Tela inteira",
+    "record": "Gravar",
+    "settings": "Ajustes rápidos",
+    "countdown": "Contagem regressiva",
+    "off": "Desativado",
+    "hideTaskbar": "Ocultar barra de tarefas",
+    "hideDock": "Ocultar Dock",
+    "hideDesktopIcons": "Ocultar ícones da área de trabalho",
+    "desktopUnavailable": "Indisponível no Linux.",
+    "captureOnly": "Ocultos na gravação no macOS.",
+    "previewUnavailable": "Não foi possível carregar a prévia da área de trabalho."
   },
   "SettingsPanel": {
     "themeMode": "Modo do tema",
@@ -1033,5 +1046,19 @@
     "transitions": "Transições do destaque",
     "highlightColor": "Cor do destaque",
     "highlightOpacity": "Intensidade do destaque"
+  },
+  "Brand": {
+    "animateBeamy": "Animar Beamy",
+    "loading": "Carregando Beam",
+    "reload": "Recarregar Beam",
+    "tipLabel": "Dica",
+    "tipRegion": "Escolha Região para gravar só o que importa.",
+    "tipPresets": "Use predefinições para manter o mesmo tamanho.",
+    "tipTeleprompter": "Olhe para a câmera com a ajuda do teleprompter.",
+    "tipCountdown": "Defina uma contagem regressiva para se preparar.",
+    "tipDevices": "Confira a câmera e o microfone antes de gravar.",
+    "tipInstant": "Experimente Instant para um vídeo pronto para compartilhar.",
+    "tipShortcuts": "Personalize os atalhos nas configurações.",
+    "tipProjects": "Abra um projeto existente para continuar editando."
   }
 }

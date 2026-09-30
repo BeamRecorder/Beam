@@ -4,6 +4,7 @@ import { X, CheckCircle, AlertCircle, ClipboardPaste, Copy, Info } from '@lucide
 import Button from '../button/Button.vue';
 import CopyButton from '../button/CopyButton.vue';
 import type { Toast } from './toastStore';
+withDefaults(defineProps<{ dismissLabel?: string }>(), { dismissLabel: 'Dismiss toast' });
 
 const toastStore = useToastStore();
 const reportCopyError = (error: Error) => {
@@ -99,7 +100,7 @@ const handleToastAction = async (toast: Toast) => {
           </div>
         </div>
 
-        <button type="button" class="toast-close" @click="toastStore.remove(toast.id)" aria-label="Dismiss toast">
+        <button type="button" class="toast-close" @click="toastStore.remove(toast.id)" :aria-label="dismissLabel">
           <X class="close-icon" />
         </button>
 

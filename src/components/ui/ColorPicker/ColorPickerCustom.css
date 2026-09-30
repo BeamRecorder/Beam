@@ -1,0 +1,332 @@
+.custom-color-picker {
+  width: fit-content;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+  padding: 8px 12px 12px 12px;
+  box-sizing: border-box;
+}
+
+.picker-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.picker-top-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-color-secondary, #9ca3af);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.custom-color-picker--dragging .controls-container {
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.picker-main-area {
+  padding: 0;
+  display: flex;
+  justify-content: stretch;
+  gap: 10px;
+}
+
+.custom-color-picker--triangle .picker-main-area {
+  justify-content: center;
+}
+
+.triangle-picker-container {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.hue-wheel {
+  position: absolute;
+  border-radius: 50%;
+  background: conic-gradient(from 90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hue-wheel-inner {
+  background: var(--surface-color, #1e293b);
+  border-radius: 50%;
+}
+
+.triangle-canvas {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.interaction-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hue-indicator {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 14px;
+  background: #fff;
+  border-radius: 1px;
+  margin-left: -1.5px;
+  margin-top: -7px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.7);
+  border: 0.5px solid rgba(0, 0, 0, 0.2);
+}
+
+.triangle-cursor {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  margin-left: -6px;
+  margin-top: -6px;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+.sv-container {
+  position: relative;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  height: 154px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: crosshair;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  background-clip: padding-box;
+  /* Force hardware acceleration for better clipping */
+  transform: translateZ(0);
+  touch-action: none;
+}
+
+.sv-color-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sv-white {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, #fff, transparent);
+}
+
+.sv-black {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, #000, transparent);
+}
+
+.sv-cursor {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+.hue-slider-vertical {
+  position: relative;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 154px;
+  border-radius: 7px;
+  background: linear-gradient(to bottom, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  cursor: pointer;
+  touch-action: none;
+}
+
+.hue-cursor-vertical {
+  position: absolute;
+  left: 50%;
+  width: 24px;
+  height: 6px;
+  background: #fff;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.alpha-slider-vertical {
+  position: relative;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 154px;
+  border-radius: 7px;
+  cursor: pointer;
+  touch-action: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background:
+    linear-gradient(to bottom, var(--alpha-color), color-mix(in srgb, var(--alpha-color) 0%, transparent)),
+    linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.16) 25%,
+      transparent 25%,
+      transparent 50%,
+      rgba(255, 255, 255, 0.16) 50%,
+      rgba(255, 255, 255, 0.16) 75%,
+      transparent 75%,
+      transparent
+    );
+  background-size:
+    100% 100%,
+    8px 8px;
+}
+
+.alpha-cursor-vertical {
+  position: absolute;
+  left: 50%;
+  width: 24px;
+  height: 6px;
+  background: #fff;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.channel-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.channel-input-wrapper :deep(.spidd-input) {
+  height: 28px !important;
+  padding: 0 4px !important;
+  font-size: 11px !important;
+  text-align: center;
+}
+
+.channel-input-wrapper :deep(.number-input-icon) {
+  display: none !important;
+}
+
+.channel-input-wrapper :deep(.spidd-number-input) {
+  padding-right: 4px !important;
+  cursor: text !important;
+}
+
+.channel-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--color-text-muted, #9ca3af);
+  text-transform: uppercase;
+}
+
+.hex-wrapper {
+  flex: 2;
+}
+
+.controls-container {
+  padding: 12px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.previews-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.color-preview-large {
+  flex: 1;
+  min-height: 32px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.eyedropper-btn {
+  flex: 0 0 32px;
+  align-self: stretch;
+  height: auto;
+}
+
+.inputs-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.inputs-group {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+}
+
+.mode-switch-btn {
+  opacity: 0.6;
+}
+
+.mode-switch-btn:hover {
+  opacity: 1;
+}
+
+@media (max-width: 480px) {
+  .custom-color-picker {
+    max-width: calc(100vw - 52px);
+  }
+
+  .picker-main-area {
+    gap: 10px;
+  }
+
+  .sv-container {
+    height: 156px;
+  }
+
+  .hue-slider-vertical,
+  .alpha-slider-vertical {
+    flex-basis: 18px;
+    width: 18px;
+    height: 156px;
+  }
+
+  .hue-cursor-vertical,
+  .alpha-cursor-vertical {
+    width: 24px;
+  }
+
+  .controls-container {
+    gap: 8px;
+  }
+
+  .color-preview-large {
+    height: 34px;
+    border-radius: 7px;
+  }
+
+  .inputs-row {
+    gap: 6px;
+  }
+}

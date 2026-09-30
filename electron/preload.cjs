@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld(
     requestInputAccess: () => ipcRenderer.invoke('input-access:request'),
     formats: (sourceId) => invoke('formats', { source: sourceId }),
     prepare: (config) => invoke('prepare', { config }),
+    cancelRegionSelection: () => invoke('cancel-region-selection'),
     prepareRecording: (options = {}) => invoke('prepare-default-recording', { options }),
     startPreparedRecording: () => invoke('start-prepared-recording'),
     stopNativeRecording: () => invoke('stop-native-recording'),
@@ -69,7 +70,6 @@ contextBridge.exposeInMainWorld(
     showHud: () => ipcRenderer.send('window:show-hud'),
     openHudSettings: () => ipcRenderer.invoke('hud:open-settings'),
     openHudProjects: () => ipcRenderer.invoke('hud:open-projects'),
-    openHudMascot: () => ipcRenderer.invoke('hud:open-mascot'),
     notifyHudPanelReady: () => ipcRenderer.send('hud-panel:ready'),
     requestHudProject: (request) => ipcRenderer.invoke('hud-panel:open-project', request),
     onHudProjectRequested: (listener) => {
@@ -78,6 +78,7 @@ contextBridge.exposeInMainWorld(
       return () => ipcRenderer.removeListener('hud:open-project', callback);
     },
     openEditor: (projectId, options) => ipcRenderer.invoke('editor:open', projectId, options),
+    cancelEditorOpening: () => ipcRenderer.invoke('editor:cancel-opening'),
     openRecorderFromEditor: () => ipcRenderer.invoke('editor:open-recorder'),
     dismissRecorderLauncher: () => ipcRenderer.invoke('editor:dismiss-recorder'),
     setRecorderLauncherActive: (active) => ipcRenderer.send('editor:recorder-active', Boolean(active)),
@@ -116,8 +117,11 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.on('screen-region:configure', callback);
       return () => ipcRenderer.removeListener('screen-region:configure', callback);
     },
+    toggleRegionTeleprompter: (options) => ipcRenderer.invoke('screen-region:teleprompter', options),
+    updateTeleprompterRegion: (options) => ipcRenderer.invoke('screen-region:teleprompter-region', options),
+    notifyRegionMarkerReady: () => ipcRenderer.send('screen-region:marker-ready'),
     notifyScreenRegionReady: () => ipcRenderer.send('screen-region:ready'),
-    confirmScreenRegion: (region) => ipcRenderer.send('screen-region:confirm', region),
+    confirmScreenRegion: (region, recording) => ipcRenderer.send('screen-region:confirm', region, recording),
     updateScreenRegion: (region) => ipcRenderer.send('screen-region:update', region),
     cancelScreenRegion: () => ipcRenderer.send('screen-region:cancel'),
     getWindowBounds: () => ipcRenderer.invoke('window:bounds'),
@@ -215,6 +219,7 @@ contextBridge.exposeInMainWorld(
     },
     showTeleprompter: () => ipcRenderer.send('teleprompter:show'),
     hideTeleprompter: () => ipcRenderer.send('teleprompter:hide'),
+    resizeTeleprompter: (size) => ipcRenderer.invoke('teleprompter:resize', size),
     toggleTeleprompterVisibility: () => ipcRenderer.send('teleprompter:toggle-visibility'),
     setTeleprompterSession: (context) => ipcRenderer.send('teleprompter:set-session', context),
     getTeleprompterResumeState: () => ipcRenderer.invoke('teleprompter:resume-state'),
@@ -245,6 +250,7 @@ contextBridge.exposeInMainWorld(
     getSessionTeleprompter: (projectId, sessionId) =>
       ipcRenderer.invoke('teleprompter:get-session', { projectId, sessionId }),
     setCountdown: (seconds) => ipcRenderer.invoke('countdown:set', seconds),
+    notifyCountdownReady: () => ipcRenderer.send('countdown:ready'),
     prepareRecordingSurface: () => ipcRenderer.invoke('recording-surface:prepare'),
     onCountdown: (listener) => {
       const callback = (_event, seconds) => listener(seconds);

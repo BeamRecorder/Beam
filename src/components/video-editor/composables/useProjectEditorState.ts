@@ -163,7 +163,7 @@ export function useProjectEditorState(options: {
     );
   };
 
-  const load = async (projectId: string) => {
+  const load = async (projectId: string, initialState?: ProjectEditorState) => {
     const generation = ++loadGeneration;
     if (timer) clearTimeout(timer);
     timer = null;
@@ -172,7 +172,7 @@ export function useProjectEditorState(options: {
     defaultCaptureEnabled = false;
     loading.value = true;
     try {
-      const loadedState = await capture.getProjectEditorState(projectId);
+      const loadedState = initialState ?? (await capture.getProjectEditorState(projectId));
       if (generation !== loadGeneration) return;
       const state = loadedState.isFresh
         ? applyGlobalCursorDefaults(

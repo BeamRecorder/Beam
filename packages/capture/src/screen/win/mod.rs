@@ -11,3 +11,5 @@ pub use selection::preview_window_selection;
 
 mod screenshot;
 pub(crate) use screenshot::capture_screenshot;
+
+pub(crate) mod desktop_visibility;

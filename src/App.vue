@@ -17,13 +17,10 @@ import { capture } from './api/capture';
 import { useLocaleStore } from './stores/locale';
 import { useTranslate } from './i18n/useTranslate';
 import type { CaptureProject, RecorderLauncherContext } from './api/types/capture-api';
-import type { EditorLoadingProgress } from './api/types/editor-window';
+import { useEditorOpening } from './components/hud/useEditorOpening';
 
 const RecorderBar = defineAsyncComponent(() =>
   import('./components/hud/recorder/RecorderBar.vue').then((module) => module.default),
-);
-const ScreenRegionOverlayApp = defineAsyncComponent(() =>
-  import('./components/hud/region/ScreenRegionOverlayApp.vue').then((module) => module.default),
 );
 
 let removeRecorderLauncherListener: (() => void) | null = null;
@@ -40,7 +37,7 @@ const { t: tHud } = useTranslate('HUD');
 const { t: tRecorderBar } = useTranslate('RecorderBar');
 
 const syncTrayMenu = () => {
-  if (isCameraOverlay || isScreenRegionOverlay || isTeleprompter || isQuickSnipCrop) return;
+  if (isCameraOverlay || isTeleprompter || isQuickSnipCrop) return;
   capture.updateTrayMenu?.({
     openHud: tHud('openHud'),
     stopRecording: tRecorderBar('stopRecording'),
@@ -82,7 +79,6 @@ onBeforeUnmount(() => {
 
 const currentView = ref<'hud' | 'recorder'>('hud');
 const isCameraOverlay = new URLSearchParams(window.location.search).has('cameraOverlay');
-const isScreenRegionOverlay = new URLSearchParams(window.location.search).has('screenRegion');
 const isQuickSnipCrop = new URLSearchParams(window.location.search).has('quickSnipCrop');
 const isTeleprompter = new URLSearchParams(window.location.search).has('teleprompter');
 const CameraOverlayApp = defineAsyncComponent(() => import('./components/hud/camera/CameraOverlayApp.vue'));
@@ -90,13 +86,14 @@ const QuickSnipCropBar = defineAsyncComponent(() => import('./components/quick-s
 const TeleprompterWindowApp = defineAsyncComponent(
   () => import('./components/hud/teleprompter/TeleprompterWindowApp.vue'),
 );
-const currentProject = ref<CaptureProject | null>(null);
-const isPreparingEditor = ref(false);
+const editorOpening = useEditorOpening();
+const currentProject = editorOpening.project;
+const isPreparingEditor = editorOpening.preparing;
 const editorLoadError = ref('');
 const editorLoadErrorCode = ref('');
 const editorLoadErrorAt = ref('');
 const appVersion = ref('Unknown');
-const editorLoadingProgress = ref<EditorLoadingProgress>({ stage: 'openingWindow', value: 10 });
+const editorLoadingProgress = editorOpening.progress;
 const recorderLauncherContext = ref<RecorderLauncherContext | null>(null);
 
 const recordingBarVisibility = ref<RecordingBarVisibility>('always');
@@ -131,7 +128,7 @@ watch(
   [recording.phase, isRestartingRecording],
   ([phase, restarting]) => {
     syncTrayMenu();
-    if (!isCameraOverlay && !isScreenRegionOverlay && !isTeleprompter && !isQuickSnipCrop) {
+    if (!isCameraOverlay && !isTeleprompter && !isQuickSnipCrop) {
       capture.setNormalRecordingActive(
         restarting || ['countdown', 'starting', 'recording', 'paused', 'finalizing'].includes(phase),
       );
@@ -261,22 +258,16 @@ const cancelRecording = async () => {
   returnToHud();
 };
 
-const revealEditor = (disposition: 'reuse' | 'new-window' = 'reuse') => {
-  logEditor('Preparing native editor window', {
-    projectId: currentProject.value?.id,
-  });
-  capture.hideTeleprompter?.();
-  capture.setCameraOverlayActive(false);
-  const projectId = currentProject.value?.id;
-  if (!projectId) throw new Error('No project selected');
-  const opening =
-    currentProject.value?.mode === 'screenshot'
-      ? capture.openScreenshot(projectId)
-      : capture.openEditor(projectId, { disposition });
-  return opening.then(() => {
-    isPreparingEditor.value = false;
-    currentView.value = 'hud';
-  });
+const revealEditor = async (attempt: number, disposition: 'reuse' | 'new-window' = 'reuse') => {
+  const project = currentProject.value;
+  if (!project) throw new Error('No project selected');
+  const presented = await editorOpening.open(project, { disposition }, attempt);
+  if (editorOpening.isCurrent(attempt)) currentView.value = 'hud';
+  return presented;
+};
+
+const cancelEditorOpening = () => {
+  void editorOpening.cancel().catch(showEditorLoadError);
 };
 
 const projectForCompletedRecording = (projects: CaptureProject[], session: RecordingSessionResult) => {
@@ -292,16 +283,15 @@ const handleStopRecording = async (session: RecordingSessionResult) => {
   isRecordingStartedFromEditor.value = false;
   capture.setCameraOverlayActive(false);
   editorLoadError.value = '';
-  isPreparingEditor.value = true;
-  editorLoadingProgress.value = { stage: 'openingWindow', value: 10 };
+  const attempt = editorOpening.begin();
   currentView.value = 'hud';
   capture.showHud();
   try {
-    const projects = await capture.listProjects();
-    let targetProject = projectForCompletedRecording(
-      projects.filter((project) => project.mode !== 'screenshot'),
-      session,
-    );
+    const projectId = typeof session?.projectId === 'string' ? session.projectId.trim() : '';
+    let targetProject = projectId
+      ? await capture.getProject(projectId)
+      : projectForCompletedRecording(await capture.listProjects(), session);
+    if (!editorOpening.isCurrent(attempt)) return;
 
     if (targetProject && launchedFromEditor) {
       const baseName = targetProject.name || `Project ${targetProject.id.slice(0, 8)}`;
@@ -314,17 +304,21 @@ const handleStopRecording = async (session: RecordingSessionResult) => {
       }
     }
 
+    if (!editorOpening.isCurrent(attempt)) return;
     currentProject.value = targetProject;
     logEditor('Recording project resolved', { projectId: currentProject.value?.id });
   } catch {
+    if (!editorOpening.isCurrent(attempt)) return;
     logEditor('Recording editor data load failed');
     currentProject.value = null;
   }
   if (currentProject.value) {
     try {
-      await revealEditor(launchedFromEditor ? 'new-window' : 'reuse');
+      await revealEditor(attempt, launchedFromEditor ? 'new-window' : 'reuse');
+      if (!editorOpening.isCurrent(attempt)) return;
       if (launchedFromEditor) recorderLauncherContext.value = null;
     } catch (error) {
+      if (!editorOpening.isCurrent(attempt)) return;
       isPreparingEditor.value = false;
       showEditorLoadError(error);
       capture.showHud();
@@ -347,11 +341,11 @@ const handleStopRecording = async (session: RecordingSessionResult) => {
 const handleOpenProject = (project: CaptureProject) => {
   logEditor('Project open requested', { projectId: project.id });
   if (isPreparingEditor.value) return;
-  isPreparingEditor.value = true;
-  editorLoadingProgress.value = { stage: 'openingWindow', value: 10 };
+  const attempt = editorOpening.begin();
   editorLoadError.value = '';
   currentProject.value = project;
-  void revealEditor().catch((error) => {
+  void revealEditor(attempt).catch((error) => {
+    if (!editorOpening.isCurrent(attempt)) return;
     logEditor('Project editor data load failed', error);
     if (currentProject.value?.id !== project.id || currentProject.value?.mode !== project.mode) return;
     isPreparingEditor.value = false;
@@ -381,10 +375,9 @@ const dismissRecorderLauncher = async () => {
   <template v-else>
     <ToastProvider />
     <CameraOverlayApp v-if="isCameraOverlay" />
-    <ScreenRegionOverlayApp v-else-if="isScreenRegionOverlay" />
     <QuickSnipCropBar v-else-if="isQuickSnipCrop" />
   </template>
-  <div v-if="!isTeleprompter && !isCameraOverlay && !isScreenRegionOverlay && !isQuickSnipCrop" class="app-container">
+  <div v-if="!isTeleprompter && !isCameraOverlay && !isQuickSnipCrop" class="app-container">
     <HUD
       @popover-toggle="interactivity.togglePopover"
       v-if="currentView === 'hud' && !editorLoadError"
@@ -395,6 +388,7 @@ const dismissRecorderLauncher = async () => {
       @start-recording="startRecording"
       @open-project="handleOpenProject"
       @dismiss-launcher="dismissRecorderLauncher"
+      @cancel-editor-opening="cancelEditorOpening"
     />
     <Transition name="recorder-return">
       <RecorderBar

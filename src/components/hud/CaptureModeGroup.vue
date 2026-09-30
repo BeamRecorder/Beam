@@ -37,6 +37,7 @@ const columns = computed(() => (visibleModes.value.length === 1 ? 1 : visibleMod
     :class="{ 'is-stacked': stacked }"
     :full="full"
     :columns="full ? columns : undefined"
+    :selection="{ index: visibleModes.findIndex((mode) => mode.id === modelValue), count: visibleModes.length }"
     role="group"
     :aria-label="t('mode')"
   >
@@ -63,9 +64,6 @@ const columns = computed(() => (visibleModes.value.length === 1 ? 1 : visibleMod
 <style scoped>
 .capture-modes {
   -webkit-app-region: no-drag;
-}
-.capture-modes.is-stacked {
-  background: var(--color-bg-well);
 }
 /* Button forwards attributes to its native control inside a wrapper. */
 .capture-modes :deep(.stacked) {

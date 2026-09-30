@@ -136,7 +136,16 @@
     "pause": "暫停",
     "resume": "繼續",
     "autoscrolling": "正在自動捲動",
-    "autoscrollPaused": "自動捲動已暫停"
+    "autoscrollPaused": "自動捲動已暫停",
+    "close": "關閉",
+    "textColor": "文字顏色",
+    "transparency": "透明度",
+    "reset": "重設",
+    "play": "播放",
+    "resize": "調整大小",
+    "settingsReset": "設定已重設",
+    "eyedropper": "擷取螢幕顏色",
+    "colorFormat": "色彩格式"
   },
   "TimelineToolbar": {
     "add": "新增",

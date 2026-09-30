@@ -1,27 +1,51 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useResizeObserver } from '@vueuse/core';
 import { Check, Move, RotateCcw, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Select from '~/ui/select/Select.vue';
 import { capture } from '../../../api/capture';
 import type { ScreenRegionOverlayOptions, ScreenRegion } from '../../../api/types/screen-region';
 import { useTranslate } from '~/i18n/useTranslate';
+import RegionDimensions from './RegionDimensions.vue';
+import RegionMagnifier from './RegionMagnifier.vue';
+import RegionRecordingToolbar from './RegionRecordingToolbar.vue';
+import { regionControlPosition } from './region-overlay-layout';
+import type { RegionInteraction, RegionHandle, RegionPointer } from './region-overlay-types';
+import type { RegionRecordingSettings } from '../../../api/types/screen-region';
 import { SCREEN_REGION_PRESETS, computePresetRegion, findMatchingPreset } from './screen-region-presets';
 
 const { t } = useTranslate('ScreenRegionOverlay');
 
-type Interaction =
-  | { kind: 'draw'; startX: number; startY: number }
-  | { kind: 'move'; startX: number; startY: number; region: ScreenRegion }
-  | { kind: 'resize'; handle: Handle; startX: number; startY: number; region: ScreenRegion }
-  | null;
-type Handle = 'nw' | 'ne' | 'sw' | 'se';
-
 const options = ref<(ScreenRegionOverlayOptions & { mode?: 'select' | 'record' }) | null>(null);
 const region = ref<ScreenRegion | null>(null);
+const selectionError = ref('');
+let userInteracted = false;
 const selectedPreset = ref<string | null>(null);
-let interaction: Interaction = null;
+const presetOptions = computed(() => [{ value: 'fullscreen', label: t('fullScreen') }, ...SCREEN_REGION_PRESETS]);
+let interaction: RegionInteraction = null;
+const pointer = ref<RegionPointer | null>(null);
+const viewport = ref({ width: window.innerWidth, height: window.innerHeight });
+const topControls = ref<HTMLElement | null>(null);
+const topSize = ref({ width: 310, height: 36 });
+const toolbarSize = ref({ width: 656, height: 56 });
+const recording = ref<RegionRecordingSettings | null>(null);
+const onResize = () => {
+  viewport.value = { width: window.innerWidth, height: window.innerHeight };
+};
+const topPosition = computed(() =>
+  region.value ? regionControlPosition(region.value, viewport.value, topSize.value, 'top') : {},
+);
+const toolbarPosition = computed(() =>
+  region.value ? regionControlPosition(region.value, viewport.value, toolbarSize.value, 'bottom') : {},
+);
+const pixelBounds = computed(() => ({ ...getEffectiveBounds(), ...options.value?.pixelSize }));
 let unsubscribe: (() => void) | null = null;
+useResizeObserver(topControls, () => {
+  if (pointer.value || !topControls.value) return;
+  const { offsetWidth: width, offsetHeight: height } = topControls.value;
+  if (width > 0 && height > 0) topSize.value = { width, height };
+});
 
 const isSelecting = computed(() => options.value?.mode === 'select');
 const regionStyle = computed(() => {
@@ -49,7 +73,7 @@ const normalize = (x1: number, y1: number, x2: number, y2: number): ScreenRegion
 
 const isFullScreenRegion = (r: ScreenRegion | null): boolean => {
   if (!r) return false;
-  return r.x <= 0.01 && r.y <= 0.01 && r.width >= 0.98 && r.height >= 0.98;
+  return r.x === 0 && r.y === 0 && r.width === 1 && r.height === 1;
 };
 
 const getEffectiveBounds = () =>
@@ -75,17 +99,18 @@ const persistPreset = async (presetValue: string | null) => {
 };
 
 const updatePresetMatch = () => {
-  if (!region.value || isFullScreenRegion(region.value)) {
+  if (!region.value) {
     selectedPreset.value = null;
     return;
   }
-  const bounds = getEffectiveBounds();
+  const bounds = pixelBounds.value;
   selectedPreset.value = findMatchingPreset(region.value, bounds);
 };
 
 const applyPreset = (presetValue: string | number) => {
+  userInteracted = true;
   const value = String(presetValue);
-  const bounds = getEffectiveBounds();
+  const bounds = pixelBounds.value;
   const nextRegion = computePresetRegion(value, bounds, region.value, isFullScreenRegion(region.value));
   if (nextRegion) {
     region.value = nextRegion;
@@ -97,7 +122,9 @@ const applyPreset = (presetValue: string | number) => {
 const begin = (event: PointerEvent) => {
   if (!isSelecting.value) return;
   const target = event.target as HTMLElement;
-  const handle = target.dataset.handle as Handle | undefined;
+  const handle = target.dataset.handle as RegionHandle | undefined;
+  if (event.button !== 0) return;
+  userInteracted = true;
   const current = region.value;
   const next = point(event);
   if (handle && current) {
@@ -112,8 +139,7 @@ const begin = (event: PointerEvent) => {
   ) {
     interaction = { kind: 'move', startX: next.x, startY: next.y, region: { ...current } };
   } else {
-    region.value = { x: next.x, y: next.y, width: 0, height: 0 };
-    interaction = { kind: 'draw', startX: next.x, startY: next.y };
+    interaction = { kind: 'draw', startX: next.x, startY: next.y, previous: current ? { ...current } : null };
   }
   (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
 };
@@ -121,6 +147,19 @@ const begin = (event: PointerEvent) => {
 const move = (event: PointerEvent) => {
   if (!interaction) return;
   const next = point(event);
+  if (
+    !pointer.value &&
+    Math.hypot(
+      (next.x - interaction.startX) * viewport.value.width,
+      (next.y - interaction.startY) * viewport.value.height,
+    ) < 8
+  )
+    return;
+  pointer.value = {
+    x: event.clientX,
+    y: event.clientY,
+    handle: interaction.kind === 'resize' ? interaction.handle : undefined,
+  };
   if (interaction.kind === 'draw') {
     region.value = normalize(interaction.startX, interaction.startY, next.x, next.y);
     updatePresetMatch();
@@ -157,10 +196,14 @@ const move = (event: PointerEvent) => {
 const FULL_SCREEN_REGION: ScreenRegion = { x: 0, y: 0, width: 1, height: 1 };
 
 const end = () => {
+  if (interaction?.kind === 'draw' && (!region.value?.width || !region.value.height)) {
+    region.value = interaction.previous;
+  }
   if (interaction && (interaction.kind === 'draw' || interaction.kind === 'resize')) {
     updatePresetMatch();
   }
   interaction = null;
+  pointer.value = null;
 };
 const reset = () => {
   region.value = { ...FULL_SCREEN_REGION };
@@ -168,10 +211,14 @@ const reset = () => {
   void persistPreset(null);
 };
 const confirm = () => {
-  if (!region.value || region.value.width <= 0 || region.value.height <= 0) return;
-  capture.confirmScreenRegion({ ...region.value });
+  if (interaction || !region.value || region.value.width <= 0 || region.value.height <= 0) return;
+  if (recording.value) capture.confirmScreenRegion({ ...region.value }, { ...recording.value });
+  else capture.confirmScreenRegion({ ...region.value });
 };
-const cancel = () => capture.cancelScreenRegion();
+const cancel = () => {
+  if (options.value?.recording) capture.configureCameraOverlay({ cameraId: options.value.recording.cameraId });
+  capture.cancelScreenRegion();
+};
 const handleKeydown = (event: KeyboardEvent) => {
   if (!isSelecting.value || event.defaultPrevented || event.repeat || event.metaKey || event.ctrlKey || event.altKey)
     return;
@@ -190,9 +237,10 @@ const loadSavedPreset = async () => {
   try {
     const prefs = await capture.getPreferences();
     const saved = prefs.extras?.screenRegionPreset;
-    if (typeof saved === 'string' && SCREEN_REGION_PRESETS.some((p) => p.value === saved)) {
+    if (userInteracted) return;
+    if (typeof saved === 'string' && presetOptions.value.some((p) => p.value === saved)) {
       selectedPreset.value = saved;
-      if (!region.value || isFullScreenRegion(region.value)) {
+      if (!options.value?.region) {
         applyPreset(saved);
       }
     }
@@ -203,8 +251,14 @@ const loadSavedPreset = async () => {
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown);
+  window.addEventListener('resize', onResize);
   unsubscribe = capture.onScreenRegionConfigure((next) => {
+    onResize();
+    end();
+    userInteracted = false;
+    selectionError.value = '';
     options.value = next;
+    recording.value = next.recording && next.captureMode !== 'screenshot' ? { ...next.recording } : null;
     if (next.region) {
       region.value = { ...next.region };
       updatePresetMatch();
@@ -221,6 +275,12 @@ onMounted(() => {
 watch(
   region,
   (next) => {
+    if (capture.platform === 'linux' && options.value?.recording && next?.width && next.height)
+      void capture
+        .updateTeleprompterRegion({ bounds: { ...options.value.bounds }, region: { ...next } })
+        .catch((reason) => {
+          selectionError.value = String(reason);
+        });
     if (options.value?.context === 'quick-snip' && next?.width && next.height) {
       capture.updateScreenRegion({ ...next });
     }
@@ -229,6 +289,7 @@ watch(
 );
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown);
+  window.removeEventListener('resize', onResize);
   unsubscribe?.();
 });
 </script>
@@ -241,6 +302,7 @@ onBeforeUnmount(() => {
     @pointermove="move"
     @pointerup="end"
     @pointercancel="end"
+    @lostpointercapture="end"
     @keydown="handleKeydown"
   >
     <div v-if="isSelecting && !region" class="region-empty-backdrop" />
@@ -254,154 +316,65 @@ onBeforeUnmount(() => {
       <span v-if="isSelecting" class="resize-handle ne" data-handle="ne" />
       <span v-if="isSelecting" class="resize-handle sw" data-handle="sw" />
       <span v-if="isSelecting" class="resize-handle se" data-handle="se" />
-      <span v-if="isSelecting" class="region-size"
-        >{{ Math.round(region.width * (options?.bounds.width || 0)) }} ×
-        {{ Math.round(region.height * (options?.bounds.height || 0)) }}</span
-      >
     </div>
-    <aside v-if="isSelecting" class="region-toolbar" @pointerdown.stop>
-      <span class="region-instruction"><Move :size="16" /> {{ t('instruction') }}</span>
-      <div class="region-preset-picker">
-        <Select
-          :model-value="selectedPreset"
-          :options="SCREEN_REGION_PRESETS"
-          :placeholder="t('preset')"
-          size="sm"
-          direction="up"
-          @update:model-value="applyPreset"
-        />
-      </div>
-      <div class="region-actions">
-        <Button variant="ghost" size="sm" :icon="RotateCcw" @click="reset">{{ t('reset') }}</Button>
-        <Button variant="ghost" size="sm" :icon="X" @click="cancel">{{ t('cancel') }}</Button>
-        <Button variant="primary" size="sm" :icon="Check" :disabled="!region" @click="confirm">{{
-          t('useThisArea')
-        }}</Button>
-      </div>
-    </aside>
+    <div ref="topControls" v-if="isSelecting && region" class="region-top-controls" :style="topPosition" @pointerdown.stop>
+      <RegionDimensions
+        :width="Math.round(region.width * pixelBounds.width)"
+        :height="Math.round(region.height * pixelBounds.height)"
+        :live="Boolean(pointer)"
+      />
+      <Transition name="region-controls">
+        <div v-show="!pointer" class="region-preset-picker">
+          <Select
+            :model-value="selectedPreset"
+            :options="presetOptions"
+            :placeholder="t('preset')"
+            size="sm"
+            @update:model-value="applyPreset"
+          />
+        </div>
+      </Transition>
+    </div>
+    <RegionMagnifier
+      v-if="isSelecting && pointer && options?.preview"
+      :image="options.preview"
+      :pointer="pointer"
+      :viewport="viewport"
+    />
+    <p v-if="isSelecting && (options?.previewError || selectionError)" class="region-preview-error" role="alert">
+      {{ options?.previewError || selectionError }}
+    </p>
+    <Transition name="region-controls">
+      <RegionRecordingToolbar
+        v-if="isSelecting && recording"
+        v-show="!pointer"
+        v-model="recording"
+        :style="toolbarPosition"
+        :region-options="{ bounds: getEffectiveBounds(), region }"
+        :disabled="!region || region.width <= 0 || region.height <= 0"
+        @resize="(width, height) => (toolbarSize = { width, height })"
+        @record="confirm"
+        @cancel="cancel"
+      />
+    </Transition>
+    <Transition name="region-controls">
+      <aside v-if="isSelecting && !recording" v-show="!pointer" class="region-toolbar" @pointerdown.stop>
+        <span class="region-instruction"><Move :size="16" /> {{ t('instruction') }}</span>
+        <div class="region-actions">
+          <Button variant="ghost" size="sm" :icon="RotateCcw" @click="reset">{{ t('reset') }}</Button>
+          <Button variant="ghost" size="sm" :icon="X" @click="cancel">{{ t('cancel') }}</Button>
+          <Button
+            variant="primary"
+            size="sm"
+            :icon="Check"
+            :disabled="!region?.width || !region.height"
+            @click="confirm"
+            >{{ t('useThisArea') }}</Button
+          >
+        </div>
+      </aside>
+    </Transition>
   </main>
 </template>
 
-<style scoped>
-.region-overlay {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  cursor: default;
-  background: transparent;
-  user-select: none;
-  touch-action: none;
-}
-.region-overlay.selecting {
-  cursor: crosshair;
-}
-.region-empty-backdrop {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: rgb(8 12 20 / 42%);
-}
-.region-frame {
-  position: absolute;
-  z-index: 1;
-  border: 2px solid var(--color-primary);
-  cursor: move;
-}
-.region-frame.selecting {
-  box-shadow: 0 0 0 9999px rgb(8 12 20 / 42%);
-}
-.region-frame.recording {
-  border: 0;
-  cursor: default;
-  outline: 2px solid var(--color-primary);
-}
-.resize-handle {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border: 2px solid white;
-  border-radius: 50%;
-  background: var(--color-primary);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 45%);
-}
-.nw {
-  top: -7px;
-  left: -7px;
-  cursor: nwse-resize;
-}
-.ne {
-  top: -7px;
-  right: -7px;
-  cursor: nesw-resize;
-}
-.sw {
-  bottom: -7px;
-  left: -7px;
-  cursor: nesw-resize;
-}
-.se {
-  right: -7px;
-  bottom: -7px;
-  cursor: nwse-resize;
-}
-.region-size {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  background: var(--color-primary);
-  color: var(--text-on-primary);
-  font: 600 12px var(--font-sans);
-  transform: translateX(-50%);
-  white-space: nowrap;
-}
-.region-toolbar {
-  position: fixed;
-  z-index: 20;
-  left: 50%;
-  bottom: max(24px, env(safe-area-inset-bottom));
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 10px 12px 10px 16px;
-  border: 1px solid color-mix(in srgb, var(--color-border-strong) 76%, transparent);
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--color-bg-surface) 82%, transparent);
-  box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(18px) saturate(1.15);
-  -webkit-backdrop-filter: blur(18px) saturate(1.15);
-  color: var(--text-primary);
-  transform: translateX(-50%);
-  max-width: calc(100vw - 32px);
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.region-instruction {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font: 600 13px var(--font-sans);
-  white-space: nowrap;
-}
-.region-preset-picker {
-  width: 140px;
-  flex-shrink: 0;
-}
-.region-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-@media (max-width: 760px), (max-height: 560px) {
-  .region-toolbar {
-    gap: 8px;
-    padding: 8px;
-  }
-
-  .region-instruction {
-    display: none;
-  }
-}
-</style>
+<style scoped src="./screen-region-overlay.css"></style>

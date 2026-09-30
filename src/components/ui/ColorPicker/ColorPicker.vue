@@ -17,6 +17,9 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  hideHeader: { type: Boolean, default: false },
+  eyedropperLabel: { type: String, default: undefined },
+  formatLabel: { type: String, default: undefined },
   type: {
     type: String as () => 'standard' | 'triangle',
     default: 'standard',
@@ -103,6 +106,9 @@ function handleDragEnd() {
     <!-- Inline Mode: just the full picker -->
     <ColorPickerCustom
       v-if="inline"
+      :hide-header="hideHeader"
+      :eyedropper-label="eyedropperLabel"
+      :format-label="formatLabel"
       :model-value="props.modelValue"
       :type="type"
       :alpha-value="props.alphaValue"

@@ -75,12 +75,10 @@ const interactionTitle = computed(() =>
   t(props.platform === 'linux' ? 'recordInteractionsLinux' : 'recordInteractions'),
 );
 
-const countdownOptions = [
-  { value: 0, label: t('off') },
-  { value: 3, label: t('option3s') },
-  { value: 5, label: t('option5s') },
-  { value: 10, label: t('option10s') },
-];
+const countdownOptions = Array.from({ length: 11 }, (_, seconds) => ({
+  value: seconds,
+  label: seconds === 0 ? t('off') : `${seconds}s`,
+}));
 const recordingBarOptions = [
   { value: 'always', label: t('alwaysVisible') },
   { value: 'auto-fade', label: t('autoFade') },

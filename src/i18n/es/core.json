@@ -511,18 +511,20 @@
     "back": "Volver"
   },
   "EditorPreparingHud": {
-    "title": "Preparando el editor",
-    "openingWindow": "Creando la ventana del editor…",
-    "loadingEditor": "Cargando la interfaz del editor…",
-    "loadingAppearance": "Cargando la apariencia del editor…",
-    "loadingProject": "Abriendo tu proyecto…",
-    "loadingTimeline": "Cargando la línea de tiempo…",
-    "loadingEditorModule": "Cargando los componentes del editor…",
-    "initializingEditor": "Preparando el estado del editor…",
-    "renderingEditor": "Renderizando el editor…",
-    "loadingPreview": "Preparando la primera vista previa…",
-    "ready": "Editor listo",
-    "progressLabel": "Progreso de carga del editor"
+    "title": "Abriendo tu editor",
+    "openingWindow": "Vamos a preparar tu editor",
+    "loadingEditor": "Estoy preparando todo",
+    "loadingAppearance": "Estoy organizando el espacio",
+    "loadingProject": "Estoy abriendo tu proyecto",
+    "loadingTimeline": "Estoy preparando tu línea de tiempo",
+    "loadingEditorModule": "Estoy preparando tus herramientas",
+    "initializingEditor": "Estoy montándolo todo",
+    "renderingEditor": "¡Ya casi está!",
+    "loadingPreview": "¡Ya casi está!",
+    "ready": "¡Ya casi está!",
+    "progressLabel": "Progreso de carga del editor",
+    "almostThere": "¡Ya casi está!",
+    "cancel": "Cancelar"
   },
   "EditorOpenError": {
     "title": "No se pudo abrir el editor",
@@ -663,7 +665,18 @@
     "preset": "Preajuste",
     "reset": "Restablecer",
     "cancel": "Cancelar",
-    "useThisArea": "Usar esta área"
+    "useThisArea": "Usar esta área",
+    "fullScreen": "Pantalla completa",
+    "record": "Grabar",
+    "settings": "Ajustes rápidos",
+    "countdown": "Cuenta atrás",
+    "off": "Desactivado",
+    "hideTaskbar": "Ocultar barra de tareas",
+    "hideDock": "Ocultar Dock",
+    "hideDesktopIcons": "Ocultar iconos del escritorio",
+    "desktopUnavailable": "No disponible en Linux.",
+    "captureOnly": "Se ocultan en la grabación en macOS.",
+    "previewUnavailable": "No se pudo cargar la vista del escritorio."
   },
   "SettingsPanel": {
     "themeMode": "Modo de tema",
@@ -1033,5 +1046,19 @@
     "transitions": "Transiciones del resaltado",
     "highlightColor": "Color del resaltado",
     "highlightOpacity": "Intensidad del resaltado"
+  },
+  "Brand": {
+    "animateBeamy": "Animar a Beamy",
+    "loading": "Cargando Beam",
+    "reload": "Recargar Beam",
+    "tipLabel": "Consejo",
+    "tipRegion": "Elige Región para grabar solo lo importante.",
+    "tipPresets": "Usa preajustes para mantener el mismo tamaño.",
+    "tipTeleprompter": "Mira a la cámara con ayuda del teleprompter.",
+    "tipCountdown": "Añade una cuenta atrás para prepararte.",
+    "tipDevices": "Comprueba la cámara y el micrófono antes de grabar.",
+    "tipInstant": "Prueba Instant para un vídeo listo para compartir.",
+    "tipShortcuts": "Personaliza los atajos en Ajustes.",
+    "tipProjects": "Abre un proyecto existente para seguir editando."
   }
 }

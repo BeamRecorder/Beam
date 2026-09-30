@@ -11,7 +11,7 @@ vi.mock('~/api/capture', () => ({ capture }));
 
 import AppearanceSettings from './AppearanceSettings.vue';
 import { useThemeStore } from '~/stores/theme';
-import { COLOR_PRESETS, THEME_PRESETS } from '~/types/appearance';
+import { COLOR_PRESETS, DEFAULT_APPEARANCE, THEME_PRESETS } from '~/types/appearance';
 
 describe('AppearanceSettings.vue', () => {
   beforeEach(async () => {
@@ -42,11 +42,15 @@ describe('AppearanceSettings.vue', () => {
     const store = useThemeStore();
 
     const modeButtons = wrapper.findAll('.theme-mode-group button');
+    expect(wrapper.get('.theme-mode-group').classes()).toContain('has-indicator');
+    expect(wrapper.get('.theme-mode-group').attributes('role')).toBe('group');
     expect(modeButtons.map((button) => button.text())).toEqual(['Light', 'Dark', 'System']);
     await modeButtons[1].trigger('click');
     expect(store.theme).toBe('dark');
+    expect(wrapper.get('.theme-mode-group').attributes('style')).toContain('--button-group-index: 1');
     await modeButtons[2].trigger('click');
     expect(store.theme).toBe('system');
+    expect(wrapper.get('.theme-mode-group').attributes('style')).toContain('--button-group-index: 2');
   });
 
   it('applies a global UI scale and allows each region to follow global or override it', async () => {
@@ -292,7 +296,7 @@ describe('AppearanceSettings.vue', () => {
     expect(resetBtn.classes()).toEqual(expect.arrayContaining(['btn-ghost', 'btn-xs', 'btn-block']));
     await resetBtn.trigger('click');
 
-    expect(store.primaryColor).toBe('#ff5a1f');
+    expect(store.primaryColor).toBe(DEFAULT_APPEARANCE.primaryColor);
     expect(store.radiusPx).toBe(7);
     expect(store.surfaceTone).toBe('default');
   });

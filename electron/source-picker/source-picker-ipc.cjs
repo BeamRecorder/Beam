@@ -10,8 +10,8 @@ function isHudSourcePickerOwner(url, applicationRoot, isPackaged) {
     const target = new URL(url);
     if (target.search || target.hash) return false;
     return isPackaged
-      ? fileURLToPath(target) === path.join(applicationRoot, 'dist/index.html')
-      : target.origin === 'http://localhost:6500' && ['/', '/index.html'].includes(target.pathname);
+      ? fileURLToPath(target) === path.join(applicationRoot, 'dist/html/index.html')
+      : target.origin === 'http://localhost:6500' && target.pathname === '/html/index.html';
   } catch {
     return false;
   }

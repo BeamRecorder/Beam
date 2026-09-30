@@ -4,6 +4,7 @@ const test = require('node:test');
 const { createDevelopmentSourceProvider } = require('../electron/source-picker/development-source-provider.cjs');
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 const { createSourcePickerController } = require('../electron/source-picker/source-picker-controller.cjs');
+const path = require('node:path');
 
 function fixture(options = {}) {
   const windows = [];
@@ -101,6 +102,29 @@ function fixture(options = {}) {
   const latest = (target) => target.calls.filter(([type]) => type === 'send').at(-1)?.[2];
   return { controller, windows, hudWindow, handlers, ipcMain, ready, act, latest, provider };
 }
+
+test('development surfaces load their moved HTML with the owning role', async () => {
+  const { controller, windows } = fixture();
+  const result = controller.open('window');
+  await flush();
+  for (const window of windows) {
+    assert.match(window.url, /^http:\/\/localhost:6500\/html\/source-picker\.html\?role=(chooser|aura|target)$/);
+  }
+  controller.action({ type: 'cancel' });
+  assert.equal(await result, null);
+});
+
+test('packaged surfaces load the same document from dist/html', async () => {
+  const { controller, windows } = fixture({ isPackaged: true });
+  const result = controller.open('window');
+  await flush();
+  for (const window of windows) {
+    assert.equal(window.file, path.join('/beam', 'dist/html/source-picker.html'));
+    assert.ok(['chooser', 'aura', 'target'].includes(window.query.role));
+  }
+  controller.action({ type: 'cancel' });
+  assert.equal(await result, null);
+});
 
 test('shared chooser waits for its renderer and development targets/aura are click-through', async () => {
   const { controller, windows, ready, act, latest } = fixture({ platform: 'darwin' });

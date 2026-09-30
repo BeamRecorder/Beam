@@ -110,6 +110,7 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipA
   setWindowMode(mode: 'hud' | 'recorder'): void;
   showHud(): void;
   openEditor(projectId: string, options?: EditorOpenOptions): Promise<boolean>;
+  cancelEditorOpening(): Promise<boolean>;
   openRecorderFromEditor(): Promise<boolean>;
   dismissRecorderLauncher(): Promise<boolean>;
   setRecorderLauncherActive(active: boolean): void;
@@ -127,18 +128,23 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipA
   setWindowVisible(visible: boolean): void;
   setInteractive(overInteractive: boolean): void;
   setCountdown(seconds: number | null): Promise<void>;
+  notifyCountdownReady(): void;
   prepareRecordingSurface(): Promise<void>;
   onCountdown(listener: (seconds: number | null) => void): () => void;
   getSources(types?: string[]): Promise<CapturePreview[]>;
   getDisplayBounds(displayId: string): Promise<ScreenRegionBounds | null>;
+  cancelRegionSelection(): Promise<void>;
   selectScreenRegion(options: ScreenRegionSelectionOptions): Promise<ScreenRegionSelectionResult | null>;
   showScreenRegionOverlay(options: ScreenRegionOverlayOptions): void;
   hideScreenRegionOverlay(): void;
   onScreenRegionConfigure(
     listener: (options: ScreenRegionOverlayOptions & { mode?: 'select' | 'record' }) => void,
   ): () => void;
+  toggleRegionTeleprompter(options: ScreenRegionOverlayOptions): Promise<boolean>;
+  updateTeleprompterRegion(options: ScreenRegionOverlayOptions): Promise<void>;
+  notifyRegionMarkerReady(): void;
   notifyScreenRegionReady(): void;
-  confirmScreenRegion(region: ScreenRegion): void;
+  confirmScreenRegion(region: ScreenRegion, recording?: import('./screen-region').RegionRecordingSettings): void;
   updateScreenRegion(region: ScreenRegion): void;
   cancelScreenRegion(): void;
   getWindowBounds(): Promise<{ x: number; y: number; width: number; height: number } | null>;
@@ -157,6 +163,7 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipA
   onEditorPresetsChanged(listener: (document: EditorPresetDocument) => void, kind?: PresetKind): () => void;
   showTeleprompter(): void;
   hideTeleprompter(): void;
+  resizeTeleprompter(size: { width: number; height: number }): Promise<void>;
   toggleTeleprompterVisibility(): void;
   setTeleprompterSession(context: TeleprompterSessionContext | null): void;
   getTeleprompterResumeState(): Promise<TeleprompterViewState | null>;

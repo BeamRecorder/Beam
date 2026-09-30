@@ -8,10 +8,11 @@ import type { HudCaptureTarget } from './hud-state-types';
 defineProps<{ selected: HudCaptureTarget; disabled: boolean }>();
 const emit = defineEmits<{ choose: [target: HudCaptureTarget] }>();
 const { t } = useTranslate('HUD');
+const wallpaper = resolvePublicAssetUrl('/wallpapers/image/sequoia-blue.webp');
 const targets = [
-  { id: 'screen', label: 'fullScreen', icon: Monitor, wallpaper: 'sequoia-blue.webp' },
-  { id: 'region', label: 'region', icon: Crop, wallpaper: 'ventura-dark.webp' },
-  { id: 'window', label: 'window', icon: PanelsTopLeft, wallpaper: 'sonoma-dark.webp' },
+  { id: 'screen', label: 'fullScreen', icon: Monitor },
+  { id: 'region', label: 'region', icon: Crop },
+  { id: 'window', label: 'window', icon: PanelsTopLeft },
 ] as const;
 </script>
 
@@ -30,7 +31,7 @@ const targets = [
       @click="emit('choose', target.id)"
     >
       <span class="capture-artwork" :class="target.id" aria-hidden="true">
-        <img :src="resolvePublicAssetUrl(`/wallpapers/image/${target.wallpaper}`)" alt="" draggable="false" />
+        <img :src="wallpaper" alt="" draggable="false" />
         <span v-if="target.id === 'region'" class="region-outline" />
         <span v-if="target.id === 'window'" class="window-outline"><span class="window-dots">•••</span></span>
       </span>

@@ -4,8 +4,8 @@ import { Check, Copy, ExternalLink, Film, LoaderCircle, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import CopyButton from '~/ui/button/CopyButton.vue';
 import QuickSnipCountdown from './QuickSnipCountdown.vue';
-import BeamMascot from '../mascot/BeamMascot.vue';
-import type { MascotPhase } from '../mascot/mascot-types';
+import Beamy from '../brand/Beamy/Beamy.vue';
+import type { BeamyPhase } from '../brand/Beamy/beamy-types';
 import { capture } from '~/api/capture';
 import { useTranslate } from '../../i18n/useTranslate';
 import type { QuickSnipSnapshot } from '~/api/types/quick-snip';
@@ -56,7 +56,7 @@ const detail = computed(() => {
 const error = computed(
   () => actionError.value || status.value?.error || (!copied.value && status.value?.clipboardError),
 );
-const mascotPhase = computed<MascotPhase>(() => {
+const mascotPhase = computed<BeamyPhase>(() => {
   if (error.value || failed.value) return 'failed';
   if (completed.value) return 'completed';
   if (status.value?.state === 'processing') return 'processing';
@@ -297,7 +297,7 @@ onBeforeUnmount(() => {
         </div>
         <div class="status-value" :class="{ 'mascot-value': instant }">
           <template v-if="instant">
-            <BeamMascot :key="status?.job?.name" :phase="mascotPhase" :size="52" />
+            <Beamy :key="status?.job?.name" :phase="mascotPhase" :size="52" />
             <span v-if="!completed && !failed" class="mascot-percent">{{ percent }}<small>%</small></span>
           </template>
           <Check v-else-if="completed" :size="20" />

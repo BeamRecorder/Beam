@@ -19,6 +19,8 @@ export async function prepareNativeRecording(configuration: RecordingConfigurati
     recordInteractions: configuration.recordInteractions === true,
     targetFps: configuration.targetFps,
     region: configuration.region,
+    hideTaskbar: configuration.hideTaskbar,
+    hideDesktopIcons: configuration.hideDesktopIcons,
     outputRoot: configuration.outputRoot,
     excludedWindowHandles: configuration.excludedWindowHandles,
   });

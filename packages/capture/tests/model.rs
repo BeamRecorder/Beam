@@ -27,11 +27,49 @@ fn request_json_roundtrip_and_defaults_are_stable() {
         region: None,
         excluded_process_id: None,
         excluded_window_handles: vec![],
+        hide_taskbar: false,
+        hide_desktop_icons: false,
     };
     let json = serde_json::to_string(&request).expect("serialize request");
     let decoded: CaptureRequest = serde_json::from_str(&json).expect("deserialize request");
     assert_eq!(request, decoded);
     assert!(decoded.validate_basic().is_ok());
+}
+
+#[test]
+fn desktop_hiding_defaults_preserve_older_capture_requests() {
+    let value = serde_json::json!({ "projectId": ProjectId::new(), "screen": null, "failurePolicy": "fail-fast", "cursor": { "mode": "disabled" } });
+    let request: CaptureRequest = serde_json::from_value(value).expect("legacy request");
+    assert!(!request.hide_taskbar);
+    assert!(!request.hide_desktop_icons);
+}
+
+#[test]
+fn desktop_hiding_options_roundtrip_independently() {
+    for (taskbar, icons) in [(true, false), (false, true), (true, true)] {
+        let value = serde_json::json!({ "projectId": ProjectId::new(), "screen": null, "failurePolicy": "fail-fast",
+            "cursor": { "mode": "disabled" }, "hideTaskbar": taskbar, "hideDesktopIcons": icons });
+        let request: CaptureRequest = serde_json::from_value(value).expect("desktop options");
+        let saved = serde_json::to_value(request).expect("saved request");
+        assert_eq!(saved["hideTaskbar"], taskbar);
+        assert_eq!(saved["hideDesktopIcons"], icons);
+    }
+}
+
+#[test]
+fn desktop_hiding_rejects_non_boolean_protocol_values() {
+    for invalid in [
+        serde_json::json!(1),
+        serde_json::json!("true"),
+        serde_json::Value::Null,
+    ] {
+        assert!(
+            serde_json::from_value::<CaptureRequest>(serde_json::json!({
+                "projectId": ProjectId::new(), "screen": null, "failurePolicy": "fail-fast", "hideTaskbar": invalid,
+            }))
+            .is_err()
+        );
+    }
 }
 
 #[test]
@@ -57,6 +95,8 @@ fn cursor_without_screen_is_rejected() {
         region: None,
         excluded_process_id: None,
         excluded_window_handles: vec![],
+        hide_taskbar: false,
+        hide_desktop_icons: false,
     };
     assert!(request.validate_basic().is_err());
 }
@@ -82,6 +122,8 @@ fn portal_monitor_accepts_a_region_but_portal_window_kinds_reject_it() {
             }),
             excluded_process_id: None,
             excluded_window_handles: vec![],
+            hide_taskbar: false,
+            hide_desktop_icons: false,
         }
     }
 

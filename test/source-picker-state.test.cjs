@@ -63,10 +63,14 @@ test('development geometry preserves aspects and negative origins within the dis
   assert.deepEqual((await provider.preview(data[0])).bounds, display);
 });
 test('only exact HUD entry URLs may request source selection', () => {
-  assert.equal(isHudSourcePickerOwner('http://localhost:6500/', '/beam', false), true);
-  assert.equal(isHudSourcePickerOwner('file:///beam/dist/index.html', '/beam', true), true);
+  assert.equal(isHudSourcePickerOwner('http://localhost:6500/html/index.html', '/beam', false), true);
+  assert.equal(isHudSourcePickerOwner('file:///beam/dist/html/index.html', '/beam', true), true);
   for (const url of [
-    'http://localhost:6500/editor.html',
+    'http://localhost:6500/html/editor.html',
+    'http://localhost:6500/',
+    'http://localhost:6500/index.html',
+    'http://localhost:6500/html/index.html?cameraOverlay=1',
+    'http://localhost:6500/html/index.html#hud',
     'http://localhost:6500/?screenRegion=1',
     'http://evil.test/',
     'file:///other/index.html',
@@ -74,4 +78,6 @@ test('only exact HUD entry URLs may request source selection', () => {
   ])
     assert.equal(isHudSourcePickerOwner(url, '/beam', false), false);
   assert.equal(isHudSourcePickerOwner('http://localhost:6500/', '/beam', true), false);
+  assert.equal(isHudSourcePickerOwner('file:///beam/dist/index.html', '/beam', true), false);
+  assert.equal(isHudSourcePickerOwner('file:///beam/dist/html/index.html?quickSnipCrop=1', '/beam', true), false);
 });

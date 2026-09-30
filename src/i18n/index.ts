@@ -4,6 +4,7 @@ import enEditor from './en/editor.json';
 import { isSupportedLocale } from './locales';
 import type { AppLocale } from './types';
 import { createLocaleLoader } from './locale-loader';
+import { detectLocale } from './locale-detection';
 import type { CoreMessages, EditorMessages, LocaleMessages } from './locale-message-types';
 
 const english = { ...enCore, ...enEditor };
@@ -12,33 +13,6 @@ const loadLocale = createLocaleLoader(
   import.meta.glob<EditorMessages>('./*/editor.json', { import: 'default' }),
   english,
 );
-
-function detectLocale(): AppLocale {
-  try {
-    const stored = localStorage.getItem('locale');
-    if (stored && isSupportedLocale(stored)) return stored;
-    const languages =
-      typeof navigator !== 'undefined'
-        ? navigator.languages?.length
-          ? navigator.languages
-          : [navigator.language]
-        : [];
-    for (const lang of languages) {
-      if (!lang) continue;
-      const navLang = lang.toLowerCase();
-      const normalized =
-        navLang.startsWith('zh-tw') || navLang.startsWith('zh-hk')
-          ? 'zh-TW'
-          : navLang.startsWith('zh')
-            ? 'zh-CN'
-            : navLang.startsWith('pt-br')
-              ? 'pt-BR'
-              : navLang.split('-')[0];
-      if (isSupportedLocale(normalized)) return normalized;
-    }
-  } catch {}
-  return 'en';
-}
 
 function syncDocumentLanguage(locale: AppLocale) {
   if (typeof document !== 'undefined') document.documentElement.lang = locale;

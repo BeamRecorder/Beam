@@ -1,5 +1,6 @@
 import type { Ref, ComputedRef } from 'vue';
 import type { SourcePickerSelection } from '~/api/types/source-picker';
+import type { RegionRecordingSettings } from '~/api/types/screen-region';
 import type {
   CapturePreview,
   CaptureSource,
@@ -55,4 +56,7 @@ export interface HudWindowOptions {
   selectedScreenId: Ref<string | null>;
   selectedScreenPreview: ComputedRef<CapturePreview | null>;
   loadPreviews: (kind: PreviewKind) => Promise<void>;
+  regionRecording?: () => RegionRecordingSettings;
+  applyRegionRecording?: (settings: RegionRecordingSettings) => void;
+  captureMode?: () => 'studio' | 'instant' | 'screenshot';
 }

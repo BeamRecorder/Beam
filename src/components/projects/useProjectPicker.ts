@@ -1,10 +1,10 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
-import { useVirtualList } from '@vueuse/core';
 import { useScrollShadow } from '~/ui/scroll-shadow/useScrollShadow';
 import { capture } from '~/api/capture';
 import type { CaptureProject } from '~/api/types/capture-api';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useProjectPreviews } from './useProjectPreviews';
+import { useProjectGrid } from './useProjectGrid';
 import type { ProjectPickerProps, ProjectPickerEmit, ProjectPickerSearchInput } from './project-picker-types';
 
 export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerEmit) {
@@ -142,19 +142,10 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
     return projects.value.filter((project) => project.name.toLowerCase().includes(query));
   });
 
-  const projectRows = computed(() => {
-    const rows: CaptureProject[][] = [];
-    const listToDisplay = filteredProjects.value;
-    for (let index = 0; index < listToDisplay.length; index += 2) {
-      rows.push(listToDisplay.slice(index, index + 2));
-    }
-    return rows;
-  });
-
-  const { list, containerProps, wrapperProps } = useVirtualList(projectRows, {
-    itemHeight: () => (props.compact ? 128 : 144),
-    overscan: 3,
-  });
+  const { list, containerProps, wrapperProps, gridRef, gridStyle } = useProjectGrid(
+    filteredProjects,
+    () => props.compact,
+  );
 
   const { hasTopShadow, hasBottomShadow } = useScrollShadow(containerProps.ref, {
     offset: 2,
@@ -186,8 +177,10 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
     return {};
   });
 
-  const previews = useProjectPreviews(containerProps.ref);
-  const { generateThumbnailsForProjects } = previews;
+  const previews = useProjectPreviews(
+    containerProps.ref,
+    computed(() => list.value.flatMap((row) => row.data)),
+  );
 
   const selectedProject = computed(
     () => projects.value.find((project) => project.id === selectedProjectId.value) ?? null,
@@ -201,7 +194,6 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
     if (cachedProjects && cachedProjects.length > 0) {
       projects.value = [...cachedProjects];
       isLoading.value = false;
-      void generateThumbnailsForProjects(projects.value);
     } else {
       isLoading.value = true;
     }
@@ -213,7 +205,6 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
       selectedProjectId.value = projects.value.some((project) => project.id === props.currentProjectId)
         ? props.currentProjectId
         : (projects.value[0]?.id ?? null);
-      void generateThumbnailsForProjects(projects.value);
     } catch (error) {
       if (!cachedProjects) projects.value = [];
       errorMessage.value = error instanceof Error ? error.message : String(error);
@@ -238,8 +229,9 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
       selectedProjectId.value = projects.value.some((project) => project.id === props.currentProjectId)
         ? props.currentProjectId
         : (projects.value[0]?.id ?? null);
-      void generateThumbnailsForProjects(projects.value);
       isRefreshSuccess.value = true;
+      await nextTick();
+      previews.retryVisibleThumbnails();
       refreshSuccessTimeout = setTimeout(() => {
         isRefreshSuccess.value = false;
       }, 1600);
@@ -489,6 +481,8 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
     list,
     containerProps,
     wrapperProps,
+    gridRef,
+    gridStyle,
     ...previews,
     invalidate: () => {
       cachedProjects = null;

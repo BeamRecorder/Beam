@@ -136,7 +136,16 @@
     "pause": "रोकें",
     "resume": "जारी रखें",
     "autoscrolling": "ऑटो-स्क्रॉल हो रहा है",
-    "autoscrollPaused": "ऑटो-स्क्रॉल रुका हुआ है"
+    "autoscrollPaused": "ऑटो-स्क्रॉल रुका हुआ है",
+    "close": "बंद करें",
+    "textColor": "पाठ का रंग",
+    "transparency": "पारदर्शिता",
+    "reset": "रीसेट करें",
+    "play": "चलाएँ",
+    "resize": "आकार बदलें",
+    "settingsReset": "सेटिंग रीसेट हो गईं",
+    "eyedropper": "स्क्रीन का रंग चुनें",
+    "colorFormat": "रंग फ़ॉर्मैट"
   },
   "TimelineToolbar": {
     "add": "जोड़ें",

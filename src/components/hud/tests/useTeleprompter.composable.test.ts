@@ -150,6 +150,7 @@ describe('useTeleprompter composable', () => {
   });
 
   it('autoscrolls continuously and by line, scrolls the active line, pauses and resumes', async () => {
+    api.isEditing.value = false;
     const target = display();
     api.updateDocument({
       text: 'first\nsecond\nthird',
@@ -200,6 +201,7 @@ describe('useTeleprompter composable', () => {
   });
 
   it('stops animation while hidden and resumes it when the native window becomes visible', () => {
+    api.isEditing.value = false;
     const target = display();
     api.updateDocument({ mode: 'continuous', autoscroll: true, scrollSpeed: 100 });
     api.setDisplayElement(target);
@@ -224,6 +226,7 @@ describe('useTeleprompter composable', () => {
       }),
     );
     wrapper = mountApi();
+    api.isEditing.value = false;
     api.updateDocument({ mode: 'continuous', autoscroll: true });
     api.setDisplayElement(display());
     expect(frames).toHaveLength(1);
@@ -459,5 +462,118 @@ describe('useTeleprompter composable', () => {
   it('does not fail a checkpoint when global preference writes reject', async () => {
     captureMock.updatePreferences.mockRejectedValueOnce(new Error('preferences write failed'));
     await expect(api.suspendState()).resolves.toMatchObject({ session: null });
+  });
+  it('starts from editing with Play and pauses/resumes without losing the reading position', async () => {
+    const reader = display();
+    api.setDisplayElement(reader);
+    expect(frames).toHaveLength(0);
+    api.togglePlayback();
+    await flushPromises();
+    expect(api.isEditing.value).toBe(false);
+    expect(api.isPaused.value).toBe(false);
+    expect(frames.length).toBeGreaterThan(0);
+    reader.scrollTop = 85;
+    api.togglePlayback();
+    expect(api.isPaused.value).toBe(true);
+    api.togglePlayback();
+    expect(api.isPaused.value).toBe(false);
+    expect(reader.scrollTop).toBe(85);
+  });
+  it('Play enables a previously disabled autoscroll and respects hidden native windows', async () => {
+    api.updateDocument({ autoscroll: false });
+    api.setVisible(false);
+    api.togglePlayback();
+    await flushPromises();
+    expect(api.document.value.autoscroll).toBe(true);
+    expect(api.isPaused.value).toBe(false);
+    expect(frames).toHaveLength(0);
+    api.setVisible(true);
+    expect(frames).toHaveLength(1);
+  });
+  it('Edit stops continuous scrolling and is idempotent', async () => {
+    api.togglePlayback();
+    await flushPromises();
+    api.editScript();
+    expect(api.isEditing.value).toBe(true);
+    expect(api.isPaused.value).toBe(true);
+    expect(window.cancelAnimationFrame).toHaveBeenCalled();
+    api.editScript();
+    expect(api.isEditing.value).toBe(true);
+    expect(api.isPaused.value).toBe(true);
+  });
+  it('Edit cancels automatic line advances while preserving script and active line', async () => {
+    api.updateDocument({ mode: 'line-by-line', text: 'one\ntwo\nthree', scrollSpeed: 200 });
+    api.togglePlayback();
+    await flushPromises();
+    api.setDisplayElement(display());
+    api.nextLine();
+    api.editScript();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(api.activeLine.value).toBe(1);
+    expect(api.document.value.text).toBe('one\ntwo\nthree');
+  });
+  it('resets all settings but preserves Unicode script and pause/editing state', async () => {
+    api.updateDocument({
+      text: '日本語 🎥',
+      fontSize: 20,
+      textColor: '#0088aa',
+      windowOpacity: 0.4,
+      mode: 'line-by-line',
+      autoscroll: false,
+      scrollSpeed: 150,
+      lineHeight: 2,
+      textAlign: 'center',
+      theme: 'dark',
+    });
+    api.resetSettings();
+    await flushPromises();
+    expect(api.document.value).toMatchObject({
+      text: '日本語 🎥',
+      fontSize: 36,
+      textColor: null,
+      windowOpacity: 1,
+      mode: 'continuous',
+      autoscroll: true,
+      scrollSpeed: 42,
+      lineHeight: 1.35,
+      textAlign: 'left',
+      theme: 'system',
+    });
+    expect(api.isEditing.value).toBe(true);
+    expect(frames).toHaveLength(0);
+  });
+  it('persists reset settings once after replacing an outstanding preferences save', async () => {
+    await flushPromises();
+    api.updateDocument({ textColor: '#ff0000', windowOpacity: 0.3 });
+    api.resetSettings();
+    api.resetSettings();
+    await vi.advanceTimersByTimeAsync(350);
+    expect(captureMock.updatePreferences).toHaveBeenCalledOnce();
+    expect(captureMock.updatePreferences).toHaveBeenCalledWith({
+      extras: { teleprompterSettings: expect.objectContaining({ textColor: null, windowOpacity: 1 }) },
+    });
+  });
+  it('normalizes saved opacity and hex color without accepting invalid values', async () => {
+    wrapper.unmount();
+    captureMock.getPreferences.mockResolvedValueOnce({
+      extras: { teleprompterSettings: { textColor: '#AbCdEf', windowOpacity: -2 } },
+    });
+    wrapper = mountApi();
+    await flushPromises();
+    expect(api.document.value.textColor).toBe('#AbCdEf');
+    expect(api.document.value.windowOpacity).toBe(0.2);
+    api.updateDocument({ textColor: 'red', windowOpacity: NaN, fontSize: Infinity });
+    expect(api.document.value).toMatchObject({ textColor: '#AbCdEf', windowOpacity: 0.2, fontSize: 36 });
+    api.updateDocument({ textColor: null, windowOpacity: 5 });
+    expect(api.document.value).toMatchObject({ textColor: null, windowOpacity: 1 });
+  });
+  it('ignores invalid stored color/opacity and restores defaults for older settings', async () => {
+    wrapper.unmount();
+    captureMock.getPreferences.mockResolvedValueOnce({
+      extras: { teleprompterSettings: { textColor: 'url(secret)', windowOpacity: Infinity } },
+    });
+    wrapper = mountApi();
+    await flushPromises();
+    expect(api.document.value).toMatchObject({ textColor: null, windowOpacity: 1 });
   });
 });

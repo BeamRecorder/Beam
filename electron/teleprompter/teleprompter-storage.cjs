@@ -41,6 +41,8 @@ function normalizeTeleprompterDocument(value, now = new Date().toISOString()) {
     lineHeight: numberInRange(input.lineHeight, 1.35, 1, 2.5),
     textAlign: input.textAlign,
     theme: input.theme,
+    textColor: typeof input.textColor === 'string' && /^#[0-9a-f]{6}$/i.test(input.textColor) ? input.textColor : null,
+    windowOpacity: numberInRange(input.windowOpacity, 1, 0.2, 1),
     updatedAtUtc,
   };
 }

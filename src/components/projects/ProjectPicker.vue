@@ -86,6 +86,8 @@ const {
   list,
   containerProps,
   wrapperProps,
+  gridRef,
+  gridStyle,
   thumbnailCache,
   hoveredProjectId,
   videoProgress,
@@ -230,7 +232,7 @@ defineExpose({ refresh: loadProjects, invalidate });
             <Skeleton
               class="project-skeleton-preview"
               variant="linear"
-              height="72px"
+              height="100%"
               radius="var(--radius-md) var(--radius-md) 0 0"
             />
             <div class="project-card-skeleton-content">
@@ -265,7 +267,12 @@ defineExpose({ refresh: loadProjects, invalidate });
           :style="maskStyle"
           @scroll.passive="handleScroll"
         >
-          <div v-bind="wrapperProps" class="projects-list">
+          <div
+            :ref="(element) => (gridRef = element as HTMLElement | null)"
+            v-bind="wrapperProps"
+            class="projects-list"
+            :style="gridStyle"
+          >
             <div v-for="row in list" :key="row.index" class="project-grid project-row">
               <div
                 v-for="project in row.data"

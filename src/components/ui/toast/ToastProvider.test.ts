@@ -136,4 +136,39 @@ describe('ToastProvider', () => {
       expect(wrapper.find('.toast-icon-confirmed').exists()).toBe(true);
     },
   );
+  it.each(['Fermer', 'Schließen', '閉じる'])(
+    'uses the supplied translated dismissal label %s',
+    async (dismissLabel) => {
+      const store = useToastStore();
+      store.success('Settings reset', 0);
+      const wrapper = mount(ToastProvider, { props: { dismissLabel } });
+      expect(wrapper.get('.toast-close').attributes('aria-label')).toBe(dismissLabel);
+      await wrapper.get('.toast-close').trigger('click');
+      expect(store.toasts).toHaveLength(0);
+      wrapper.unmount();
+    },
+  );
+  it.each([2, 0, NaN])('prepares video thumbnails safely for duration %s', async (duration) => {
+    const store = useToastStore();
+    store.success('Video', 0, undefined, { preview: { kind: 'video', src: 'blob:video', alt: 'Video' } });
+    const wrapper = mount(ToastProvider);
+    const video = wrapper.get('video');
+    Object.defineProperty(video.element, 'duration', { value: duration });
+    await video.trigger('loadedmetadata');
+    expect(video.element.currentTime).toBe(duration > 0 ? 0.1 : 0);
+    wrapper.unmount();
+  });
+  it('reports a failed copy action without dismissing the toast', async () => {
+    const report = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const store = useToastStore();
+    store.error('Failure', 0, { label: 'Copy', copyText: 'details' });
+    const wrapper = mount(ToastProvider);
+    const copy = wrapper.findComponent({ name: 'CopyButton' });
+    const reason = new Error('Denied');
+    copy.vm.$emit('error', reason);
+    expect(report).toHaveBeenCalledWith('Unable to copy toast details.', reason);
+    expect(store.toasts).toHaveLength(1);
+    wrapper.unmount();
+    report.mockRestore();
+  });
 });

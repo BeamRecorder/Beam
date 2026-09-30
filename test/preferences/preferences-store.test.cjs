@@ -401,7 +401,7 @@ test('normalizes and patches appearance customizer settings properly', () => {
   const store = createPreferencesStore(directory);
   const initial = store.read();
   assert.ok(initial.appearance);
-  assert.equal(initial.appearance.primaryColor, '#ff5a1f');
+  assert.equal(initial.appearance.primaryColor, '#b85c38');
   assert.equal(initial.appearance.radiusPx, 7);
   assert.equal(initial.appearance.surfaceTone, 'default');
 
@@ -427,4 +427,27 @@ test('normalizes and patches appearance customizer settings properly', () => {
   assert.equal(themePatched.theme, 'dark');
   assert.equal(themePatched.appearance.theme, 'dark');
   assert.equal(themePatched.appearance.primaryColor, '#8b5cf6');
+});
+test('upgrades the legacy Beam Sunset accent while preserving its theme and radius', () => {
+  const settings = normalize({
+    appearance: { primaryColor: '#FF5A1F', activePresetId: 'beam-sunset', theme: 'dark', radiusPx: 12 },
+  });
+  assert.equal(settings.appearance.primaryColor, '#b85c38');
+  assert.equal(settings.appearance.theme, 'dark');
+  assert.equal(settings.appearance.radiusPx, 12);
+});
+test('preserves custom orange and colors belonging to other presets', () => {
+  for (const activePresetId of [null, 'custom-orange'])
+    assert.equal(
+      normalize({ appearance: { primaryColor: '#ff5a1f', activePresetId } }).appearance.primaryColor,
+      '#ff5a1f',
+    );
+  assert.equal(
+    normalize({ appearance: { primaryColor: '#c47751', activePresetId: 'beam-sunset' } }).appearance.primaryColor,
+    '#c47751',
+  );
+});
+test('new and invalid appearance settings use the same softer default orange', () => {
+  assert.equal(defaults().appearance.primaryColor, '#b85c38');
+  assert.equal(normalize({ appearance: { primaryColor: 'orange' } }).appearance.primaryColor, '#b85c38');
 });

@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
+const { captureWindowExclusions } = require('./capture-window-exclusions.cjs');
 const { buildDefaultCaptureConfig } = require('./capture-config.cjs');
 const { createSystemAudioPreview } = require('./system-audio-preview.cjs');
 const { isCaptureCancellation } = require('./capture-cancellation.cjs');
@@ -9,6 +10,7 @@ const { registerSourcePickerIpc } = require('../source-picker/source-picker-ipc.
 
 const ALLOWED_COMMANDS = new Set([
   'discover',
+  'cancel-region-selection',
   'capabilities',
   'permissions',
   'formats',
@@ -79,6 +81,7 @@ function registerCaptureIpc({
   captureEngine,
   userPaths,
   trackStorages,
+  teleprompterWindow,
   platform = process.platform,
   canAcceptWork = () => true,
   canStartRecording = () => true,
@@ -145,6 +148,9 @@ function registerCaptureIpc({
         excludedProcessId: process.pid,
       });
       try {
+        config.excludedWindowHandles = [
+          ...new Set([...config.excludedWindowHandles, ...captureWindowExclusions(BrowserWindow, platform)]),
+        ];
         return withProjectId(await requestEngine('prepare', { config }));
       } catch (error) {
         if (isCaptureCancellation(error)) return null;
@@ -190,6 +196,10 @@ function registerCaptureIpc({
       return registerSession(session);
     }
     if (command === 'prepare-default-recording') return prepareDefaultRecording(payload.options);
+    if (command === 'cancel-region-selection') {
+      teleprompterWindow?.clearRegionConstraint();
+      return requestEngine(command);
+    }
     if (command === 'start-prepared-recording') return registerSession(await requestEngine('start'));
     if (command === 'cancel-prepared-recording') {
       await requestEngine('cancel');

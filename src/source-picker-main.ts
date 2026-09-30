@@ -14,11 +14,11 @@ if (window.capture || browserPreview) {
   const app = createApp(SourcePickerApp, { initialSources });
   const pinia = createPinia();
   app.use(pinia);
-  app.use(await initI18n());
   if (window.capture) {
-    const { useThemeStore } = await import('./stores/theme');
-    await useThemeStore(pinia).ready;
+    const { prepareWindowAppearance } = await import('./window-bootstrap');
+    app.use(await prepareWindowAppearance(pinia));
   } else {
+    app.use(await initI18n());
     document.documentElement.classList.add('dark');
   }
   app.mount('#app');

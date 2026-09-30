@@ -84,7 +84,7 @@ export function useHudWindow(options: HudWindowOptions) {
     errorMessage.value = '';
     isRegionSelectionLeaving.value = true;
     await wait(180);
-    if (!linuxPortalSelection) capture.setWindowVisible(false);
+    capture.setWindowVisible(false);
     try {
       // The saved region is only a starting point for the next selection. It
       // must not activate crop mode just because the HUD was opened.
@@ -92,11 +92,14 @@ export function useHudWindow(options: HudWindowOptions) {
       const selection = await capture.selectScreenRegion({
         ...(bounds ? { bounds } : {}),
         region: currentRegion ? { ...currentRegion } : null,
+        ...(options.regionRecording ? { recording: options.regionRecording() } : {}),
+        ...(options.captureMode ? { captureMode: options.captureMode() } : {}),
       });
       if (!selection) return false;
+      if (selection.recording) options.applyRegionRecording?.(selection.recording);
       const region = selection.region;
       const selectionBounds = snapshotScreenBounds(selection.bounds);
-      const isFullScreen = region.x <= 0.01 && region.y <= 0.01 && region.width >= 0.98 && region.height >= 0.98;
+      const isFullScreen = region.x === 0 && region.y === 0 && region.width === 1 && region.height === 1;
       if (isFullScreen) {
         selectedScreenRegion.value = null;
         selectedScreenOverlay.value = null;

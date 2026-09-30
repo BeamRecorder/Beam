@@ -6,6 +6,7 @@ const { capture } = vi.hoisted(() => ({
     onCountdown: vi.fn(),
     onPreferencesChanged: vi.fn(),
     getPreferences: vi.fn(),
+    notifyCountdownReady: vi.fn(),
   },
 }));
 vi.mock('../../../api/capture', () => ({ capture }));
@@ -40,6 +41,10 @@ describe('CountdownOverlay', () => {
       return unsubscribePreferences;
     });
     const wrapper = mount(CountdownOverlay);
+    expect(capture.notifyCountdownReady).toHaveBeenCalledOnce();
+    expect(capture.onCountdown.mock.invocationCallOrder[0]).toBeLessThan(
+      capture.notifyCountdownReady.mock.invocationCallOrder[0],
+    );
     expect(wrapper.get('.countdown').text()).toBe('');
     listener?.(3);
     await wrapper.vm.$nextTick();

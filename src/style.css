@@ -63,7 +63,7 @@
   --color-success-light: rgba(16, 185, 129, 0.1);
   --color-error-light: rgba(239, 68, 68, 0.1);
   --color-info: #ff8a5c;
-  --color-info-light: rgba(255, 90, 31, 0.1);
+  --color-info-light: rgba(184, 92, 56, 0.1);
   --color-warning: #f59e0b;
   --color-warning-light: rgba(245, 158, 11, 0.1);
 
@@ -299,7 +299,7 @@ h6 {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-primary, #ff5a1f) !important;
+  background: var(--color-primary, #b85c38) !important;
 }
 
 /* Default Input and Select background overrides */
@@ -307,4 +307,10 @@ input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='
 select {
   background-color: var(--color-bg-surface);
   color: var(--text-primary);
+}
+
+html.region-marker-root, html.region-marker-root body {
+  background: var(--color-primary) !important;
+  margin: 0;
+  overflow: hidden;
 }

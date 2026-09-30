@@ -199,8 +199,10 @@ function createQuickSnipStatusWindow({
     contents.on('render-process-gone', failed);
     contents.on('did-fail-load', failed);
     if (isPackaged)
-      target.loadFile(path.join(applicationRoot, 'dist/quick-snip-status.html'), { query: { quickSnipStatus: '1' } });
-    else target.loadURL('http://localhost:6500/quick-snip-status.html?quickSnipStatus=1');
+      target.loadFile(path.join(applicationRoot, 'dist/html/quick-snip-status.html'), {
+        query: { quickSnipStatus: '1' },
+      });
+    else target.loadURL('http://localhost:6500/html/quick-snip-status.html?quickSnipStatus=1');
     return target;
   };
   return {

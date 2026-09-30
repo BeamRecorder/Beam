@@ -16,7 +16,7 @@ const error = ref('');
 const access = useInteractionAccess();
 const countdown = computed(() => {
   const value = preferences.settings?.extras.recordingCountdownSeconds;
-  return typeof value === 'number' && [0, 3, 5, 10].includes(value) ? value : 3;
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 10 ? value : 3;
 });
 const save = async (patch: PreferencePatch) => {
   try {

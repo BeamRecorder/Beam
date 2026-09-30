@@ -4,7 +4,6 @@ import type { ScreenRegionSelectionOptions, ScreenRegionSelectionResult } from '
 export const captureMock = {
   openHudSettings: vi.fn().mockResolvedValue(true),
   openHudProjects: vi.fn().mockResolvedValue(true),
-  openHudMascot: vi.fn().mockResolvedValue(true),
   notifyScreenRegionReady: vi.fn(),
   platform: 'darwin',
   devCrossplatform: false,

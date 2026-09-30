@@ -136,7 +136,16 @@
     "pause": "Пауза",
     "resume": "Продължаване",
     "autoscrolling": "Автоматично превъртане",
-    "autoscrollPaused": "Автоматичното превъртане е на пауза"
+    "autoscrollPaused": "Автоматичното превъртане е на пауза",
+    "close": "Затваряне",
+    "textColor": "Цвят на текста",
+    "transparency": "Прозрачност",
+    "reset": "Нулиране",
+    "play": "Пускане",
+    "resize": "Преоразмеряване",
+    "settingsReset": "Настройките са нулирани",
+    "eyedropper": "Избери цвят от екрана",
+    "colorFormat": "Цветови формат"
   },
   "TimelineToolbar": {
     "add": "Добавяне",

@@ -136,7 +136,16 @@
     "pause": "Wstrzymaj",
     "resume": "Wznów",
     "autoscrolling": "Automatyczne przewijanie",
-    "autoscrollPaused": "Automatyczne przewijanie wstrzymane"
+    "autoscrollPaused": "Automatyczne przewijanie wstrzymane",
+    "close": "Zamknij",
+    "textColor": "Kolor tekstu",
+    "transparency": "Przezroczystość",
+    "reset": "Resetuj",
+    "play": "Odtwórz",
+    "resize": "Zmień rozmiar",
+    "settingsReset": "Ustawienia zresetowane",
+    "eyedropper": "Wybierz kolor z ekranu",
+    "colorFormat": "Format koloru"
   },
   "TimelineToolbar": {
     "add": "Dodaj",

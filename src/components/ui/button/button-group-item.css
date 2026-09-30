@@ -61,3 +61,11 @@
 .btn-group .btn-icon-wrapper {
   flex-shrink: 0;
 }
+
+/* The group owns the moving selection background; buttons keep their focus ring. */
+.btn-group.has-indicator .btn-tab.active,
+.btn-group.has-indicator .btn-tab.active:hover:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}

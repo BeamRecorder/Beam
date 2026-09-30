@@ -93,6 +93,30 @@ describe('CaptureModeGroup', () => {
     expect(wrapper.emitted('update:modelValue')).toEqual([['instant']]);
   });
 
+  it('shares one sliding indicator across mode changes without replacing the buttons', async () => {
+    const wrapper = mount(CaptureModeGroup, { props: { modelValue: 'studio', full: true, labels: true } });
+    const buttons = wrapper.findAll('button').map((button) => button.element);
+    expect(wrapper.get('[role="group"]').classes()).toContain('has-indicator');
+    for (const [index, mode] of ['instant', 'screenshot', 'studio'].entries()) {
+      await wrapper.setProps({ modelValue: mode as 'studio' | 'screenshot' | 'instant' });
+      expect(wrapper.get('[role="group"]').attributes('style')).toContain(`--button-group-index: ${2 - index}`);
+      expect(wrapper.findAll('button').map((button) => button.element)).toEqual(buttons);
+    }
+    wrapper.unmount();
+  });
+
+  it('hides the indicator if the selected mode is no longer available', async () => {
+    const wrapper = mount(CaptureModeGroup, { props: { modelValue: 'instant', full: true } });
+    await wrapper.setProps({ modes: ['studio', 'screenshot'] });
+    expect(wrapper.find('.selection-indicator').exists()).toBe(false);
+    await wrapper.setProps({ modelValue: 'screenshot' });
+    expect(wrapper.get('[role="group"]').attributes('style')).toContain('--button-group-index: 1');
+    expect(wrapper.get('[role="group"]').attributes('style')).toContain('--button-group-count: 2');
+    await wrapper.setProps({ modes: ['screenshot'] });
+    expect(wrapper.get('[role="group"]').attributes('style')).toContain('--button-group-count: 1');
+    wrapper.unmount();
+  });
+
   it('disables every mode button without emitting a selection', async () => {
     const wrapper = mount(CaptureModeGroup, { props: { modelValue: 'screenshot', disabled: true } });
 

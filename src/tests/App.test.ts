@@ -23,6 +23,8 @@ const mocks = vi.hoisted(() => ({
     showHud: vi.fn(),
     hideTeleprompter: vi.fn(),
     openEditor: vi.fn(),
+    getProject: vi.fn(),
+    cancelEditorOpening: vi.fn().mockResolvedValue(true),
     openScreenshot: vi.fn(),
     dismissRecorderLauncher: vi.fn(),
     setRecorderLauncherActive: vi.fn(),
@@ -86,7 +88,7 @@ vi.mock('../components/hud/HUD.vue', async () => {
         editorLoadingProgress: { type: Object, default: () => ({ stage: 'openingWindow', value: 10 }) },
         recorderLauncherContext: { type: Object, default: null },
       },
-      emits: ['start-recording', 'open-project', 'dismiss-launcher'],
+      emits: ['start-recording', 'open-project', 'dismiss-launcher', 'cancel-editor-opening'],
       setup(props, { emit }) {
         return () =>
           h(
@@ -99,6 +101,7 @@ vi.mock('../components/hud/HUD.vue', async () => {
               'data-launcher-source': props.recorderLauncherContext?.preferredSourceId ?? '',
             },
             [
+              h('button', { class: 'cancel-opening', onClick: () => emit('cancel-editor-opening') }),
               h('button', {
                 class: 'start',
                 onClick: () =>
@@ -178,6 +181,7 @@ beforeEach(async () => {
   });
   mocks.capture.listProjects.mockResolvedValue([project]);
   mocks.capture.openEditor.mockResolvedValue(true);
+  mocks.capture.getProject.mockResolvedValue(project);
   mocks.capture.openScreenshot.mockResolvedValue(true);
   mocks.capture.dismissRecorderLauncher.mockResolvedValue(true);
   mocks.capture.onRecorderLauncherContext.mockImplementation((listener) => {
@@ -216,6 +220,41 @@ const settle = async () => {
 };
 
 describe('App', () => {
+  it('cancels editor preparation and ignores its late completion and loading events', async () => {
+    let finish!: (value: boolean) => void;
+    mocks.capture.openEditor.mockReturnValueOnce(
+      new Promise<boolean>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    await wrapper.get('.open').trigger('click');
+    await wrapper.get('.cancel-opening').trigger('click');
+    await settle();
+    expect(mocks.capture.cancelEditorOpening).toHaveBeenCalledOnce();
+    expect(mocks.capture.showHud).toHaveBeenCalled();
+    mocks.controller.editorProgress?.({ stage: 'ready', value: 100 });
+    finish(true);
+    await settle();
+    expect(wrapper.get('.mock-hud').attributes('data-preparing-editor')).toBe('false');
+    expect(wrapper.get('.mock-hud').attributes('data-editor-progress')).toBe('10');
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+  });
+  it('does not open a completed recording after its project lookup was cancelled', async () => {
+    let resolve!: (value: typeof project) => void;
+    mocks.capture.getProject.mockReturnValueOnce(
+      new Promise<typeof project>((finish) => {
+        resolve = finish;
+      }),
+    );
+    mocks.controller.onComplete?.({ projectId: project.id, sessionId: 'session' });
+    await settle();
+    await wrapper.get('.cancel-opening').trigger('click');
+    resolve(project);
+    await settle();
+    expect(mocks.capture.openEditor).not.toHaveBeenCalled();
+    expect(wrapper.get('.mock-hud').attributes('data-preparing-editor')).toBe('false');
+    expect(mocks.capture.listProjects).not.toHaveBeenCalled();
+  });
   it('opens a project requested by its separate Projects window', async () => {
     await settle();
     const requested = mocks.capture.onHudProjectRequested.mock.calls[0]![0];
@@ -528,7 +567,7 @@ describe('App', () => {
         'Beam n’a pas reçu le signal de disponibilité de l’éditeur. Votre enregistrement est toujours conservé.',
       );
       expect(error.text()).toMatch(/délai|temps d’attente/i);
-      expect(error.text()).toContain('Dernière étape signalée : Chargement de la timeline…');
+      expect(error.text()).toContain('Dernière étape signalée : Je prépare votre timeline');
       expect(error.text()).toContain('Retour à Beam');
       expect(error.text()).not.toContain('diagnostic détaillé');
       expect(error.text()).not.toContain('Error:');
@@ -605,7 +644,7 @@ describe('App', () => {
       expect(error.text()).toContain(
         'Beam n’a pas reçu le signal de disponibilité de l’éditeur. Votre enregistrement est toujours conservé.',
       );
-      expect(error.text()).toContain('Dernière étape signalée : Initialisation de l’éditeur…');
+      expect(error.text()).toContain('Dernière étape signalée : J’assemble le tout');
     } finally {
       errorSpy.mockRestore();
     }
@@ -688,7 +727,7 @@ describe('App', () => {
   it('resolves editor-launched recordings by projectId when file and preview URLs differ', async () => {
     const previousProject = { id: 'project-old', name: 'Old project', previewSrc: 'project-media://old' };
     const recordedProject = { id: 'project-new', name: 'New project', previewSrc: 'project-media://new' };
-    mocks.capture.listProjects.mockResolvedValueOnce([previousProject, recordedProject]);
+    mocks.capture.getProject.mockResolvedValueOnce(recordedProject);
     mocks.capture.renameProject.mockResolvedValueOnce({ ...recordedProject, name: 'DEBUG New project' });
     mocks.controller.recorderLauncherContext?.({
       requestId: 'launcher-project-id',
@@ -712,7 +751,7 @@ describe('App', () => {
   });
 
   it('does not open the first project when a completed projectId is unknown', async () => {
-    mocks.capture.listProjects.mockResolvedValueOnce([project]);
+    mocks.capture.getProject.mockResolvedValueOnce(null);
 
     mocks.controller.onComplete?.({
       projectId: 'project-missing',
@@ -770,6 +809,12 @@ describe('App', () => {
       { id: 'other', name: 'Other recording', mode: 'studio', previewSrc: 'other.mp4' },
       { id: 'recorded', name: 'Recorded', mode: 'studio', previewSrc: 'recorded.mp4' },
     ]);
+    mocks.capture.getProject.mockResolvedValueOnce({
+      id: 'recorded',
+      name: 'Recorded',
+      mode: 'studio',
+      previewSrc: 'recorded.mp4',
+    });
     mocks.controller.onComplete?.({ projectId: 'recorded', videoSrc: null });
     await settle();
     expect(mocks.capture.openEditor).toHaveBeenCalledWith('recorded', { disposition: 'reuse' });

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import { acquireBlickWaveformRenderer } from './blick-waveform-renderer';
+import { acquireBlickWaveformWorker } from './blick-waveform-worker-client';
 import type {
   BlickWaveformCanvasProps,
   BlickWaveformPresentation,
-  BlickWaveformRenderer,
+  BlickWaveformWorkerRenderer,
 } from './blick-waveform-types';
 
 const props = defineProps<BlickWaveformCanvasProps>();
@@ -19,7 +19,7 @@ const painted = ref<BlickWaveformPresentation[]>([
   { leftPercent: 0, widthPercent: 100, loadingSegments: [] },
   { leftPercent: 0, widthPercent: 100, loadingSegments: [] },
 ]);
-let renderer: BlickWaveformRenderer | undefined;
+let renderer: BlickWaveformWorkerRenderer | undefined;
 let resizeObserver: ResizeObserver | undefined;
 let animationFrame = 0;
 let mounted = false;
@@ -50,7 +50,8 @@ const onMotionChange = () => {
   if (motionQuery?.matches) finishTransition();
 };
 
-const draw = () => {
+let drawGeneration = 0;
+const draw = async () => {
   animationFrame = 0;
   if (!mounted || !container.value || props.deferDraw) return;
   // Finish the visible blend before committing the latest queued refinement.
@@ -67,9 +68,12 @@ const draw = () => {
   const width = (bounds.width * widthPercent) / 100;
   const height = bounds.height;
   if (width <= 0 || height <= 0) return;
+  const generation = ++drawGeneration;
+  const presentation = { leftPercent: props.leftPercent ?? 0, widthPercent, loadingSegments: props.loadingSegments };
   try {
-    renderer ??= acquireBlickWaveformRenderer();
-    renderer.draw(element, props, width, height);
+    renderer ??= acquireBlickWaveformWorker();
+    if (!(await renderer.draw(element, props, width, height))) return;
+    if (!mounted || generation !== drawGeneration || props.deferDraw) return;
     const crossfade =
       hasPainted &&
       props.bars.length > 0 &&
@@ -77,7 +81,7 @@ const draw = () => {
       !painted.value[previous]!.loadingSegments.length &&
       !props.loadingSegments.length;
     // Publish geometry and pending regions only after the hidden bitmap is ready.
-    painted.value[next] = { leftPercent: props.leftPercent ?? 0, widthPercent, loadingSegments: props.loadingSegments };
+    painted.value[next] = presentation;
     current.value = next;
     hasPainted = props.bars.length > 0;
     error.value = '';
@@ -90,6 +94,7 @@ const draw = () => {
       animations[1]!.onfinish = finishTransition;
     } else releasePreviousBitmap();
   } catch (cause) {
+    if (!mounted || generation !== drawGeneration) return;
     error.value = cause instanceof Error ? cause.message : 'The audio waveform could not be rendered.';
     console.error('[Beam media:waveform]', cause);
   }
@@ -133,6 +138,7 @@ onMounted(() => {
 });
 onUnmounted(() => {
   mounted = false;
+  ++drawGeneration;
   finishTransition();
   motionQuery?.removeEventListener('change', onMotionChange);
   cancelAnimationFrame(animationFrame);

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { TriangleAlert } from '@lucide/vue';
+import Beamy from '~/components/brand/Beamy/Beamy.vue';
 import type { CaptureMode } from '~/api/types/capture-mode';
 import type { EditorLoadingProgress } from '~/api/types/editor-window';
 import Button from '~/components/ui/button/Button.vue';
@@ -58,14 +58,16 @@ const diagnosticReport = computed(() =>
 
 <template>
   <section class="editor-open-error" role="alert" aria-labelledby="editor-open-error-title">
-    <div class="editor-open-error-icon" aria-hidden="true">
-      <TriangleAlert :size="26" :stroke-width="1.8" />
-    </div>
-    <div class="editor-open-error-copy">
-      <h2 id="editor-open-error-title">{{ t('title') }}</h2>
-      <p class="editor-open-error-reason">{{ failureMessage }}</p>
-      <p>{{ t('description') }}</p>
-      <p class="editor-open-error-stage">{{ t('lastStage', { stage: stageLabel }) }}</p>
+    <div class="editor-open-error-body">
+      <div class="editor-open-error-icon" aria-hidden="true">
+        <Beamy phase="failed" :size="64" portrait />
+      </div>
+      <div class="editor-open-error-copy">
+        <h2 id="editor-open-error-title">{{ t('title') }}</h2>
+        <p class="editor-open-error-reason">{{ failureMessage }}</p>
+        <p>{{ t('description') }}</p>
+        <p class="editor-open-error-stage">{{ t('lastStage', { stage: stageLabel }) }}</p>
+      </div>
     </div>
     <div class="editor-open-error-actions">
       <CopyButton
@@ -90,26 +92,34 @@ const diagnosticReport = computed(() =>
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 28px 24px;
+  gap: 10px;
+  padding: 12px 24px;
   background: var(--color-bg-surface);
   color: var(--text-primary);
   text-align: center;
 }
 
 .editor-open-error-icon {
-  width: 52px;
-  height: 52px;
+  width: 64px;
+  height: 64px;
+  flex: none;
   display: grid;
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--color-error) 28%, var(--color-border));
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--color-error) 10%, var(--color-bg-element));
-  color: var(--color-error);
+}
+
+.editor-open-error-body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: min(100%, 560px);
+  min-height: 0;
+  overflow-y: auto;
+  text-align: start;
 }
 
 .editor-open-error-copy {
-  max-width: 420px;
+  flex: 1;
+  min-width: 0;
   display: grid;
   gap: 8px;
 }
@@ -142,6 +152,7 @@ const diagnosticReport = computed(() =>
 
 .editor-open-error-actions {
   display: flex;
+  flex: none;
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;

@@ -23,7 +23,7 @@ function createElectronFixture(savedExtras = {}) {
       this.visible = false;
       this.destroyed = false;
       this.webContents = {
-        getURL: () => 'http://localhost:6500/?cameraOverlay=1',
+        getURL: () => 'http://localhost:6500/html/index.html?cameraOverlay=1',
         once: (event, listener) => this.contentListeners.set(event, listener),
         emit: (event, ...args) => {
           const listener = this.contentListeners.get(event);

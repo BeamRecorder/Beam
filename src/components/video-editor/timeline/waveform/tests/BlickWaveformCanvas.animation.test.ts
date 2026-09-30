@@ -1,14 +1,14 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
-import type { BlickWaveformData, BlickWaveformRenderer } from '../blick-waveform-types';
+import type { BlickWaveformData, BlickWaveformWorkerRenderer } from '../blick-waveform-types';
 import BlickWaveformCanvas from '../BlickWaveformCanvas.vue';
-import { acquireBlickWaveformRenderer } from '../blick-waveform-renderer';
+import { acquireBlickWaveformWorker } from '../blick-waveform-worker-client';
 
 vi.mock('~/i18n/useTranslate', () => ({ useTranslate: () => ({ t: (key: string) => key }) }));
-vi.mock('../blick-waveform-renderer', () => ({ acquireBlickWaveformRenderer: vi.fn() }));
+vi.mock('../blick-waveform-worker-client', () => ({ acquireBlickWaveformWorker: vi.fn() }));
 
-const acquireRenderer = vi.mocked(acquireBlickWaveformRenderer);
+const acquireRenderer = vi.mocked(acquireBlickWaveformWorker);
 const originalMatchMediaDescriptor = Object.getOwnPropertyDescriptor(window, 'matchMedia');
 const originalAnimateDescriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'animate');
 
@@ -43,10 +43,11 @@ const makeData = (overrides: Partial<BlickWaveformData> = {}): BlickWaveformData
   ...overrides,
 });
 
-const makeRenderer = (): BlickWaveformRenderer => ({
-  draw: vi.fn((target: HTMLCanvasElement) => {
+const makeRenderer = (): BlickWaveformWorkerRenderer => ({
+  draw: vi.fn(async (target: HTMLCanvasElement) => {
     target.width = bounds.width;
     target.height = bounds.height;
+    return true;
   }),
   dispose: vi.fn(),
 });
@@ -64,10 +65,12 @@ const makeAnimation = (): Animation => {
   return animation as unknown as Animation;
 };
 
-const flushAnimationFrames = () => {
+const flushAnimationFrames = async () => {
   const frames = [...pendingFrames.entries()];
   pendingFrames.clear();
   for (const [, callback] of frames) callback(0);
+  await flushPromises();
+  await nextTick();
 };
 
 const setReducedMotion = (matches: boolean) => {
@@ -159,7 +162,7 @@ describe('BlickWaveformCanvas replacement animation', () => {
     const renderer = makeRenderer();
     acquireRenderer.mockReturnValue(renderer);
     const wrapper = mount(BlickWaveformCanvas, { props: { ...makeData() } });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
     expect(animateMock).not.toHaveBeenCalled();
 
@@ -168,17 +171,17 @@ describe('BlickWaveformCanvas replacement animation', () => {
       loadingSegments: [{ leftPercent: 20, widthPercent: 25 }],
       leftPercent: 10,
     });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
     expect(animateMock).not.toHaveBeenCalled();
 
     await wrapper.setProps({ bars: [4, 7], loadingSegments: [], leftPercent: 25 });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
     expect(animateMock).not.toHaveBeenCalled();
 
     await wrapper.setProps({ bars: [], leftPercent: 35 });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
     expect(renderer.draw).toHaveBeenCalledTimes(4);
     expect(animateMock).not.toHaveBeenCalled();
@@ -192,12 +195,12 @@ describe('BlickWaveformCanvas replacement animation', () => {
     const wrapper = mount(BlickWaveformCanvas, {
       props: { ...makeData(), leftPercent: 10, widthPercent: 70 },
     });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
     expect(animateMock).not.toHaveBeenCalled();
 
     await wrapper.setProps({ bars: [3, 8, 13], leftPercent: 40, widthPercent: 30 });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
 
     expect(animateMock).toHaveBeenCalledTimes(2);
@@ -233,10 +236,10 @@ describe('BlickWaveformCanvas replacement animation', () => {
     const renderer = makeRenderer();
     acquireRenderer.mockReturnValue(renderer);
     const wrapper = mount(BlickWaveformCanvas, { props: { ...makeData() } });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
     await wrapper.setProps({ bars: [3, 4], leftPercent: 20, widthPercent: 60 });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
     expect(renderer.draw).toHaveBeenCalledTimes(2);
     expect(animateMock).toHaveBeenCalledTimes(2);
@@ -254,7 +257,7 @@ describe('BlickWaveformCanvas replacement animation', () => {
 
     animationStubs[1]!.finish();
     expect(pendingFrames.size).toBe(1);
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
 
     expect(renderer.draw).toHaveBeenCalledTimes(3);
@@ -276,10 +279,10 @@ describe('BlickWaveformCanvas replacement animation', () => {
     const renderer = makeRenderer();
     acquireRenderer.mockReturnValue(renderer);
     const wrapper = mount(BlickWaveformCanvas, { props: { ...makeData() } });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
     await wrapper.setProps({ bars: [3, 5, 8], leftPercent: 20 });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
     await wrapper.setProps({ bars: [11, 13, 17], leftPercent: 45, widthPercent: 40 });
     expect(renderer.draw).toHaveBeenCalledTimes(2);
@@ -289,7 +292,7 @@ describe('BlickWaveformCanvas replacement animation', () => {
     expect(animationStubs[0]!.cancel).toHaveBeenCalledOnce();
     expect(animationStubs[1]!.cancel).toHaveBeenCalledOnce();
     expect(pendingFrames.size).toBe(1);
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
 
     expect(renderer.draw).toHaveBeenCalledTimes(3);
@@ -309,10 +312,10 @@ describe('BlickWaveformCanvas replacement animation', () => {
     const renderer = makeRenderer();
     acquireRenderer.mockReturnValue(renderer);
     const wrapper = mount(BlickWaveformCanvas, { props: { ...makeData() } });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
     await wrapper.setProps({ bars: [3, 8, 13] });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
     const observer = observers[0]!;
 

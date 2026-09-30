@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { defineAsyncComponent, onMounted, ref } from 'vue';
+import { onMounted, ref, type Component } from 'vue';
 import { capture } from '~/api/capture';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { CaptureProject } from '~/api/types/capture-api';
+import type { HudPanel } from '~/api/types/hud-panel';
 import ToastProvider from '~/ui/toast/ToastProvider.vue';
-const panel = new URLSearchParams(window.location.search).get('panel');
+const { panel, content } = defineProps<{ panel: HudPanel | null; content: Component | null }>();
 const { t } = useTranslate('HudPreferences');
 const { t: tProjects } = useTranslate('ProjectPicker');
-const ProjectPicker = defineAsyncComponent(() => import('../projects/ProjectPicker.vue'));
-const HudSettingsWindow = defineAsyncComponent(() => import('../hud/settings/HudSettingsWindow.vue'));
-const MascotLab = defineAsyncComponent(() => import('../mascot-lab/MascotLab.vue'));
-const title = panel === 'mascot' ? 'Beam Mascot Lab' : panel === 'settings' ? 'Beam Settings' : 'Beam Projects';
+const title = panel === 'settings' ? 'Beam Settings' : 'Beam Projects';
 const error = ref('');
+const contentMounted = () => {
+  if (panel !== 'settings') capture.notifyHudPanelReady();
+};
 const openProject = async (project: CaptureProject) => {
   error.value = '';
   try {
@@ -28,19 +29,14 @@ onMounted(() => {
 <template>
   <main class="panel-window" :class="{ mac: capture.platform === 'darwin' }">
     <header class="panel-titlebar">
-      {{ panel === 'mascot' ? 'Mascot Lab' : panel === 'settings' ? t('preferences') : tProjects('projects') }}
+      {{ panel === 'settings' ? t('preferences') : tProjects('projects') }}
     </header>
     <p v-if="error" class="panel-error" role="alert">{{ error }}</p>
-    <HudSettingsWindow v-if="panel === 'settings'" @ready="capture.notifyHudPanelReady()" />
-    <MascotLab
-      v-else-if="panel === 'mascot'"
-      embedded
-      class="panel-content"
-      @vue:mounted="capture.notifyHudPanelReady()"
-    />
-    <ProjectPicker
-      v-else-if="panel === 'projects'"
-      @vue:mounted="capture.notifyHudPanelReady()"
+    <component
+      :is="content"
+      v-if="content"
+      @ready="capture.notifyHudPanelReady()"
+      @vue:mounted="contentMounted"
       @open-project="openProject"
       @back="capture.close()"
     />
@@ -76,9 +72,5 @@ onMounted(() => {
   padding: 12px 16px;
   color: var(--color-error);
   font-size: var(--font-size-body);
-}
-.panel-content {
-  flex: 1;
-  min-height: 0;
 }
 </style>

@@ -1,14 +1,14 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
-import type { BlickWaveformData, BlickWaveformRenderer } from '../blick-waveform-types';
+import type { BlickWaveformData, BlickWaveformWorkerRenderer } from '../blick-waveform-types';
 import BlickWaveformCanvas from '../BlickWaveformCanvas.vue';
-import { acquireBlickWaveformRenderer } from '../blick-waveform-renderer';
+import { acquireBlickWaveformWorker } from '../blick-waveform-worker-client';
 
 vi.mock('~/i18n/useTranslate', () => ({ useTranslate: () => ({ t: (key: string) => key }) }));
-vi.mock('../blick-waveform-renderer', () => ({ acquireBlickWaveformRenderer: vi.fn() }));
+vi.mock('../blick-waveform-worker-client', () => ({ acquireBlickWaveformWorker: vi.fn() }));
 
-const acquireRenderer = vi.mocked(acquireBlickWaveformRenderer);
+const acquireRenderer = vi.mocked(acquireBlickWaveformWorker);
 const originalDevicePixelRatio = window.devicePixelRatio;
 const originalMatchMediaDescriptor = Object.getOwnPropertyDescriptor(window, 'matchMedia');
 
@@ -26,12 +26,14 @@ const makeData = (overrides: Partial<BlickWaveformData> = {}): BlickWaveformData
   ...overrides,
 });
 
-const makeRenderer = (): BlickWaveformRenderer => ({ draw: vi.fn(), dispose: vi.fn() });
+const makeRenderer = (): BlickWaveformWorkerRenderer => ({ draw: vi.fn().mockResolvedValue(true), dispose: vi.fn() });
 
-const flushAnimationFrames = () => {
+const flushAnimationFrames = async () => {
   const frames = [...pendingFrames.entries()];
   pendingFrames.clear();
   for (const [, callback] of frames) callback(0);
+  await flushPromises();
+  await nextTick();
 };
 
 const notifyResize = () => resizeCallback?.([] as ResizeObserverEntry[], {} as ResizeObserver);
@@ -94,6 +96,27 @@ afterEach(() => {
 });
 
 describe('BlickWaveformCanvas', () => {
+  it.each([false, true])('ignores a pending worker result after unmount (failure: %s)', async (failure) => {
+    const renderer = makeRenderer();
+    let resolve!: (value: boolean) => void;
+    let reject!: (cause: Error) => void;
+    vi.mocked(renderer.draw).mockReturnValueOnce(
+      new Promise<boolean>((done, fail) => {
+        resolve = done;
+        reject = fail;
+      }),
+    );
+    acquireRenderer.mockReturnValue(renderer);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const wrapper = mount(BlickWaveformCanvas, { props: { ...makeData() } });
+    await flushAnimationFrames();
+    wrapper.unmount();
+    if (failure) reject(new Error('late worker'));
+    else resolve(true);
+    await flushPromises();
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(renderer.dispose).toHaveBeenCalledOnce();
+  });
   it('coalesces prop changes into one frame and draws the latest data', async () => {
     const renderer = makeRenderer();
     acquireRenderer.mockReturnValue(renderer);
@@ -105,7 +128,7 @@ describe('BlickWaveformCanvas', () => {
 
     expect(window.requestAnimationFrame).toHaveBeenCalledOnce();
     expect(pendingFrames.size).toBe(1);
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
 
     expect(acquireRenderer).toHaveBeenCalledOnce();
@@ -137,7 +160,7 @@ describe('BlickWaveformCanvas', () => {
     await wrapper.setProps({ deferDraw: false });
     await nextTick();
     expect(window.requestAnimationFrame).toHaveBeenCalledOnce();
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
 
     expect(renderer.draw).toHaveBeenCalledOnce();
@@ -160,7 +183,7 @@ describe('BlickWaveformCanvas', () => {
         widthPercent: 70,
       },
     });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
 
     let layer = wrapper.get('.blick-waveform-current');
@@ -190,7 +213,7 @@ describe('BlickWaveformCanvas', () => {
     expect(wrapper.get('.blick-waveform-current').get('.waveform-segment-loading').attributes('style')).toContain(
       'left: 25%',
     );
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
 
     expect(renderer.draw).toHaveBeenCalledTimes(2);
@@ -211,11 +234,12 @@ describe('BlickWaveformCanvas', () => {
   it('preserves the last painted bitmap, range, and overlays when drawing fails', async () => {
     const renderer = makeRenderer();
     vi.mocked(renderer.draw)
-      .mockImplementationOnce((target) => {
+      .mockImplementationOnce(async (target) => {
         target.width = 120;
         target.height = 40;
+        return true;
       })
-      .mockImplementationOnce((target) => {
+      .mockImplementationOnce(async (target) => {
         target.width = 777;
         target.height = 333;
         throw new Error('Replacement draw failed.');
@@ -229,7 +253,7 @@ describe('BlickWaveformCanvas', () => {
         widthPercent: 60,
       },
     });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
 
     const displayedLayer = wrapper.get('.blick-waveform-current');
@@ -247,7 +271,7 @@ describe('BlickWaveformCanvas', () => {
       leftPercent: 35,
       widthPercent: 30,
     });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
 
     expect(wrapper.get('.waveform-error').attributes('title')).toBe('Replacement draw failed.');
@@ -289,17 +313,17 @@ describe('BlickWaveformCanvas', () => {
     acquireRenderer.mockReturnValue(renderer);
     bounds = { width: 0, height: 40 };
     const wrapper = mount(BlickWaveformCanvas, { props: { ...makeData() } });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     expect(acquireRenderer).not.toHaveBeenCalled();
 
     bounds = { width: 120, height: 0 };
     notifyResize();
-    flushAnimationFrames();
+    await flushAnimationFrames();
     expect(acquireRenderer).not.toHaveBeenCalled();
 
     bounds = { width: 220, height: 64 };
     notifyResize();
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
     expect(renderer.draw).toHaveBeenCalledOnce();
     expect(renderer.draw).toHaveBeenCalledWith(
@@ -311,7 +335,7 @@ describe('BlickWaveformCanvas', () => {
 
     bounds = { width: 260, height: 70 };
     notifyResize();
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
     expect(renderer.draw).toHaveBeenCalledTimes(2);
     expect(renderer.draw).toHaveBeenLastCalledWith(
@@ -327,7 +351,7 @@ describe('BlickWaveformCanvas', () => {
     const renderer = makeRenderer();
     acquireRenderer.mockReturnValue(renderer);
     const wrapper = mount(BlickWaveformCanvas, { props: { ...makeData() } });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     expect(renderer.draw).toHaveBeenCalledOnce();
     expect(observers[0]?.observe).toHaveBeenCalledWith(wrapper.get('.blick-waveform').element);
 
@@ -340,7 +364,7 @@ describe('BlickWaveformCanvas', () => {
     expect(window.cancelAnimationFrame).toHaveBeenCalledOnce();
     expect(pendingFrames.size).toBe(0);
     expect(renderer.dispose).toHaveBeenCalledOnce();
-    flushAnimationFrames();
+    await flushAnimationFrames();
     expect(renderer.draw).toHaveBeenCalledOnce();
     const scheduledCount = vi.mocked(window.requestAnimationFrame).mock.calls.length;
     notifyResize();
@@ -353,7 +377,7 @@ describe('BlickWaveformCanvas', () => {
     });
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const wrapper = mount(BlickWaveformCanvas, { props: { ...makeData() } });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
 
     const error = wrapper.get('.waveform-error');
@@ -371,7 +395,7 @@ describe('BlickWaveformCanvas', () => {
     acquireRenderer.mockReturnValue(renderer);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const wrapper = mount(BlickWaveformCanvas, { props: { ...makeData() } });
-    flushAnimationFrames();
+    await flushAnimationFrames();
     await nextTick();
 
     expect(wrapper.get('.waveform-error').attributes('title')).toBe('The audio waveform could not be rendered.');

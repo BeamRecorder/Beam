@@ -2,12 +2,10 @@ import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import './style.css';
 import TeleprompterWindowApp from './components/hud/teleprompter/TeleprompterWindowApp.vue';
-import { initI18n } from './i18n';
-import { useThemeStore } from './stores/theme';
+import { prepareWindowAppearance } from './window-bootstrap';
 
 const app = createApp(TeleprompterWindowApp);
 const pinia = createPinia();
 app.use(pinia);
-app.use(await initI18n());
-useThemeStore(pinia);
+app.use(await prepareWindowAppearance(pinia));
 app.mount('#app');

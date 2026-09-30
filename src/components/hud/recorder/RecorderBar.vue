@@ -5,7 +5,7 @@ import type { RecordingBarVisibility, RecordingPhase } from './recording-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import Button from '~/ui/button/Button.vue';
 import Throbber from '~/ui/throbber/Throbber.vue';
-import BeamMascot from '../../mascot/BeamMascot.vue';
+import Beamy from '../../brand/Beamy/Beamy.vue';
 
 const { t } = useTranslate('RecorderBar');
 const props = withDefaults(
@@ -151,7 +151,7 @@ watch(
           @click="emit('stop')"
         >
           <template #icon>
-            <BeamMascot
+            <Beamy
               v-if="mascot"
               :phase="mascotPhase"
               :size="36"

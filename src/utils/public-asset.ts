@@ -9,7 +9,8 @@ export function resolvePublicAssetUrl(path: string): string {
 
   if (typeof window !== 'undefined' && window.location?.href) {
     try {
-      return new URL(cleanPath, window.location.href).href;
+      // Renderer documents live in html/, public assets at the build root.
+      return new URL(cleanPath, new URL('../', window.location.href)).href;
     } catch {
       // Fallback if URL construction fails
     }

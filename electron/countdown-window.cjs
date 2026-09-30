@@ -5,6 +5,7 @@ function createCountdownWindow({ applicationRoot, isPackaged, canAcceptWork = ()
   let window = null;
   let seconds = null;
   let ready = false;
+  let rendererReady = false;
   let prepared = null;
   let finishPreparation = null;
   const width = 560;
@@ -21,6 +22,7 @@ function createCountdownWindow({ applicationRoot, isPackaged, canAcceptWork = ()
     window = null;
     seconds = null;
     ready = false;
+    rendererReady = false;
     finishPreparation?.(false);
     finishPreparation = null;
     prepared = null;
@@ -31,10 +33,20 @@ function createCountdownWindow({ applicationRoot, isPackaged, canAcceptWork = ()
     window.showInactive();
     window.moveTop();
   };
+  const present = () => {
+    if (!window || window.isDestroyed() || !ready || !rendererReady) return;
+    finishPreparation?.(true);
+    finishPreparation = null;
+    if (seconds === null) return;
+    window.webContents.send('countdown:state', seconds);
+    position();
+    reveal();
+  };
   const prepare = () => {
     if (!canAcceptWork()) return Promise.resolve(false);
     if (window && !window.isDestroyed()) return prepared;
     ready = false;
+    rendererReady = false;
     prepared = new Promise((resolve) => {
       finishPreparation = resolve;
     });
@@ -55,6 +67,7 @@ function createCountdownWindow({ applicationRoot, isPackaged, canAcceptWork = ()
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: false,
+        backgroundThrottling: false,
       },
     });
     window = target;
@@ -68,16 +81,11 @@ function createCountdownWindow({ applicationRoot, isPackaged, canAcceptWork = ()
     target.webContents.once('did-finish-load', () => {
       if (target !== window || target.isDestroyed()) return;
       ready = true;
-      finishPreparation?.(true);
-      finishPreparation = null;
-      if (seconds === null) return;
-      target.webContents.send('countdown:state', seconds);
-      position();
-      reveal();
+      present();
     });
     const loading = isPackaged
-      ? target.loadFile(path.join(applicationRoot, 'dist/countdown.html'))
-      : target.loadURL('http://localhost:6500/countdown.html');
+      ? target.loadFile(path.join(applicationRoot, 'dist/html/countdown.html'))
+      : target.loadURL('http://localhost:6500/html/countdown.html');
     void Promise.resolve(loading).catch(failPreparation);
     return prepared;
   };
@@ -90,14 +98,24 @@ function createCountdownWindow({ applicationRoot, isPackaged, canAcceptWork = ()
     }
     prepare();
     position();
-    if (ready) {
+    if (ready && rendererReady) {
       window.webContents.send('countdown:state', value);
       reveal();
     }
     return true;
   };
-  prepare();
-  return { show, prepare, suspend: destroy, destroy };
+  return {
+    show,
+    prepare,
+    suspend: destroy,
+    destroy,
+    markRendererReady(sender) {
+      if (!window || window.isDestroyed() || window.webContents !== sender) return false;
+      rendererReady = true;
+      present();
+      return true;
+    },
+  };
 }
 
 module.exports = { createCountdownWindow };

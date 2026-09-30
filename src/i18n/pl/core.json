@@ -511,18 +511,20 @@
     "back": "Wstecz"
   },
   "EditorPreparingHud": {
-    "title": "Przygotowywanie edytora",
-    "openingWindow": "Tworzenie okna edytora…",
-    "loadingEditor": "Ładowanie interfejsu edytora…",
-    "loadingAppearance": "Ładowanie wyglądu edytora…",
-    "loadingProject": "Otwieranie projektu…",
-    "loadingTimeline": "Ładowanie osi czasu…",
-    "loadingEditorModule": "Ładowanie komponentów edytora…",
-    "initializingEditor": "Przygotowywanie stanu edytora…",
-    "renderingEditor": "Renderowanie edytora…",
-    "loadingPreview": "Przygotowywanie pierwszego podglądu…",
-    "ready": "Edytor gotowy",
-    "progressLabel": "Postęp ładowania edytora"
+    "title": "Otwieranie edytora",
+    "openingWindow": "Przygotujmy twój edytor",
+    "loadingEditor": "Przygotowuję wszystko",
+    "loadingAppearance": "Przygotowuję przestrzeń",
+    "loadingProject": "Otwieram twój projekt",
+    "loadingTimeline": "Układam twoją oś czasu",
+    "loadingEditorModule": "Przygotowuję twoje narzędzia",
+    "initializingEditor": "Łączę wszystko w całość",
+    "renderingEditor": "Już prawie gotowe!",
+    "loadingPreview": "Już prawie gotowe!",
+    "ready": "Już prawie gotowe!",
+    "progressLabel": "Postęp ładowania edytora",
+    "almostThere": "Już prawie gotowe!",
+    "cancel": "Anuluj"
   },
   "EditorOpenError": {
     "title": "Nie udało się otworzyć edytora",
@@ -663,7 +665,18 @@
     "preset": "Preset",
     "reset": "Resetuj",
     "cancel": "Anuluj",
-    "useThisArea": "Użyj tego obszaru"
+    "useThisArea": "Użyj tego obszaru",
+    "fullScreen": "Pełny ekran",
+    "record": "Nagrywaj",
+    "settings": "Szybkie ustawienia",
+    "countdown": "Odliczanie",
+    "off": "Wył.",
+    "hideTaskbar": "Ukryj pasek zadań",
+    "hideDock": "Ukryj Dock",
+    "hideDesktopIcons": "Ukryj ikony pulpitu",
+    "desktopUnavailable": "Niedostępne w systemie Linux.",
+    "captureOnly": "Ukryte w nagraniu na macOS.",
+    "previewUnavailable": "Nie udało się wczytać podglądu pulpitu."
   },
   "SettingsPanel": {
     "themeMode": "Tryb motywu",
@@ -1033,5 +1046,19 @@
     "transitions": "Przejścia wyróżnienia",
     "highlightColor": "Kolor podświetlenia",
     "highlightOpacity": "Intensywność podświetlenia"
+  },
+  "Brand": {
+    "animateBeamy": "Animuj Beamy",
+    "loading": "Ładowanie Beam",
+    "reload": "Załaduj Beam ponownie",
+    "tipLabel": "Wskazówka",
+    "tipRegion": "Wybierz obszar, aby nagrać tylko to, co ważne.",
+    "tipPresets": "Używaj presetów, aby zachować ten sam rozmiar nagrań.",
+    "tipTeleprompter": "Patrz w kamerę z pomocą telepromptera.",
+    "tipCountdown": "Ustaw odliczanie, aby przygotować się do nagrania.",
+    "tipDevices": "Sprawdź kamerę i mikrofon przed nagrywaniem.",
+    "tipInstant": "Wypróbuj Instant, aby od razu udostępnić film.",
+    "tipShortcuts": "Dostosuj skróty nagrywania w ustawieniach.",
+    "tipProjects": "Otwórz istniejący projekt i kontynuuj edycję."
   }
 }

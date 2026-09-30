@@ -16,6 +16,7 @@ import { useThemeStore } from '~/stores/theme';
 import { useTranslate } from '~/i18n/useTranslate';
 import { capture } from '~/api/capture';
 import Button from '~/ui/button/Button.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Badge from '~/ui/badge/Badge.vue';
 import type { InputAccessStatus } from '~/api/types/capture-api';
 import InteractionAccessError from '../hud/interactions/InteractionAccessError.vue';
@@ -103,19 +104,28 @@ onMounted(() => {
             <span class="box-desc">{{ t('themeDesc') }}</span>
           </div>
 
-          <div class="theme-chips-group">
-            <button
+          <ButtonGroup
+            class="theme-chips-group"
+            size="sm"
+            :columns="3"
+            :selection="{ index: themes.findIndex((opt) => opt.id === themeStore.theme), count: 3 }"
+            role="group"
+            :aria-label="t('themeTitle')"
+          >
+            <Button
               v-for="opt in themes"
               :key="opt.id"
-              type="button"
+              variant="tab"
+              size="sm"
+              :icon="opt.icon"
               class="theme-chip"
-              :class="{ selected: themeStore.theme === opt.id }"
+              :class="{ active: themeStore.theme === opt.id, selected: themeStore.theme === opt.id }"
+              :aria-pressed="themeStore.theme === opt.id"
               @click="themeStore.theme = opt.id"
             >
-              <component :is="opt.icon" class="chip-icon" />
-              <span>{{ t(opt.labelKey) }}</span>
-            </button>
-          </div>
+              {{ t(opt.labelKey) }}
+            </Button>
+          </ButtonGroup>
         </div>
       </div>
 
@@ -293,45 +303,6 @@ onMounted(() => {
   font-size: 11.5px;
   color: var(--text-muted);
   line-height: 1.35;
-}
-
-.theme-chips-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.theme-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 11.5px;
-  font-weight: 600;
-  background: color-mix(in srgb, var(--color-bg-element) 80%, transparent);
-  border: 1px solid var(--color-border);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.theme-chip:hover {
-  background: var(--color-bg-surface-hover);
-  color: var(--text-primary);
-  border-color: var(--color-border-strong);
-}
-
-.theme-chip.selected {
-  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  font-weight: 700;
-}
-
-.chip-icon {
-  width: 13px;
-  height: 13px;
 }
 
 .box-action-area {

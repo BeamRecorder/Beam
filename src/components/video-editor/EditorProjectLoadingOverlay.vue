@@ -13,16 +13,13 @@ const props = defineProps<{
 const displayOverlay = ref(props.visible);
 const motionTarget = ref<HTMLElement | null>(null);
 let transitionGeneration = 0;
-let visibleSince = props.visible ? Date.now() : 0;
-let hideTimer: ReturnType<typeof setTimeout> | null = null;
-const MINIMUM_VISIBLE_MS = 300;
 
 const variants = {
   initial: { opacity: 0 },
   enter: { opacity: 1, transition: { type: 'tween', duration: 210, ease: [0.22, 1, 0.36, 1] } },
   leave: {
     opacity: 0,
-    transition: { type: 'tween', duration: 320, ease: [0.4, 0, 0.2, 1] },
+    transition: { type: 'tween', duration: 160, ease: [0.4, 0, 0.2, 1] },
   },
 } satisfies Record<'initial' | 'enter' | 'leave', Variant>;
 
@@ -45,20 +42,11 @@ watch(
   () => props.visible,
   (visible) => {
     const generation = visible ? ++transitionGeneration : transitionGeneration;
-    if (hideTimer) {
-      clearTimeout(hideTimer);
-      hideTimer = null;
-    }
     if (visible) {
-      visibleSince = Date.now();
       displayOverlay.value = true;
       void show(generation);
     } else if (displayOverlay.value) {
-      const remainingMs = Math.max(0, MINIMUM_VISIBLE_MS - (Date.now() - visibleSince));
-      hideTimer = setTimeout(() => {
-        hideTimer = null;
-        void hide(generation);
-      }, remainingMs);
+      void hide(generation);
     }
   },
 );
@@ -68,7 +56,6 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  if (hideTimer) clearTimeout(hideTimer);
   motion.stop();
 });
 </script>

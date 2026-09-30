@@ -2,15 +2,17 @@ import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import './style.css';
 import HudPanelApp from './components/desktop/HudPanelApp.vue';
-import { useThemeStore } from './stores/theme';
-import { initI18n } from './i18n';
+import { prepareWindowAppearance } from './window-bootstrap';
 import { installBrowserZoomGuard } from './utils/browserZoomGuard';
+import { loadHudPanelContent, readHudPanel } from './components/desktop/hud-panel-content';
 
 installBrowserZoomGuard();
-const app = createApp(HudPanelApp);
 const pinia = createPinia();
+const panel = readHudPanel(window.location.search);
+// Start the selected view, locale and preferences together; mount once all are ready.
+const [i18n, content] = await Promise.all([prepareWindowAppearance(pinia), loadHudPanelContent(panel)]);
+const app = createApp(HudPanelApp, { panel, content });
 app.use(pinia);
-app.use(await initI18n());
-await useThemeStore(pinia).ready;
+app.use(i18n);
 document.documentElement.classList.add('editor-window-root');
 app.mount('#app');

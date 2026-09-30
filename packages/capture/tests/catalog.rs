@@ -41,6 +41,8 @@ fn incompatible_source_kinds_are_rejected() {
         region: None,
         excluded_process_id: None,
         excluded_window_handles: vec![],
+        hide_taskbar: false,
+        hide_desktop_icons: false,
     };
     assert!(validate_request(&request, &snapshot).is_err());
 }
@@ -96,6 +98,8 @@ fn unsupported_cursor_mode_is_rejected_by_runtime_capabilities() {
         region: None,
         excluded_process_id: None,
         excluded_window_handles: vec![],
+        hide_taskbar: false,
+        hide_desktop_icons: false,
     };
     assert!(matches!(
         validate_request(&request, &snapshot),
@@ -136,6 +140,8 @@ fn supported_cursor_shape_mode_is_accepted_by_runtime_capabilities() {
         region: None,
         excluded_process_id: None,
         excluded_window_handles: vec![],
+        hide_taskbar: false,
+        hide_desktop_icons: false,
     };
 
     assert!(validate_request(&request, &snapshot).is_ok());
@@ -155,6 +161,8 @@ fn portal_request(kind: PortalSourceKind) -> CaptureRequest {
         region: None,
         excluded_process_id: None,
         excluded_window_handles: vec![],
+        hide_taskbar: false,
+        hide_desktop_icons: false,
     }
 }
 
