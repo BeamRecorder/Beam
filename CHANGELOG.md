@@ -4,6 +4,10 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Added a standalone Mascot Lab to explore Beam's SVG mascot with morphing star eyes, customizable looks, animation sequences, and transparent SVG/PNG exports before integrating it into the app.
+
 ## [0.4.0] - 2026-09-27
 
 ### Added

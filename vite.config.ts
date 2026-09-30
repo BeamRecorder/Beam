@@ -85,6 +85,7 @@ export default defineConfig({
         editor: fileURLToPath(new URL('./editor.html', import.meta.url)),
         teleprompter: fileURLToPath(new URL('./teleprompter.html', import.meta.url)),
         onboarding: fileURLToPath(new URL('./onboarding.html', import.meta.url)),
+        mascot: fileURLToPath(new URL('./mascot.html', import.meta.url)),
       },
     },
   },

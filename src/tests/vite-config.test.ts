@@ -18,4 +18,9 @@ describe('Vite development configuration', () => {
     if (!loaded) throw new Error('Vite configuration could not be loaded');
     expect(loaded.config.resolve?.dedupe).toContain('vue');
   });
+
+  it('builds the mascot lab as an independent renderer page', async () => {
+    const loaded = await loadConfigFromFile({ command: 'build', mode: 'test' }, resolve('vite.config.ts'));
+    expect(loaded?.config.build?.rollupOptions?.input).toMatchObject({ mascot: resolve('mascot.html') });
+  });
 });
