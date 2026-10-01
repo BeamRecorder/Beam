@@ -267,7 +267,7 @@ describe('CaptionPanel', () => {
     });
     await vi.waitFor(() => expect(capture.whisperModels).toHaveBeenCalledOnce());
     expect(wrapper.find('.sub-group').exists()).toBe(true);
-    expect(wrapper.find('button[variant="primary"]').attributes('disabled')).toBeDefined();
+    expect(wrapper.find('.generate-action-footer button[variant="secondary"]').attributes('disabled')).toBeDefined();
     await wrapper.get('button[variant="secondary"]').trigger('click');
     await vi.waitFor(() => expect(capture.downloadWhisperModel).toHaveBeenCalledWith('Xenova/whisper-tiny'));
     progressListener({
@@ -352,7 +352,7 @@ describe('CaptionPanel', () => {
     });
     await vi.waitFor(() => expect(capture.whisperModels).toHaveBeenCalledOnce());
     await vi.waitFor(() => expect(wrapper.find('.model-ready-text').exists()).toBe(true));
-    await wrapper.get('button[variant="primary"]').trigger('click');
+    await wrapper.get('.generate-action-footer button[variant="secondary"]').trigger('click');
     await vi.waitFor(() => expect(whisper.transcribe).toHaveBeenCalledOnce());
 
     whisper.progress!.value = {
@@ -455,7 +455,7 @@ describe('CaptionPanel', () => {
       global: { stubs },
     });
     await vi.waitFor(() => expect(wrapper.find('.model-ready-text').exists()).toBe(true));
-    await wrapper.get('button[variant="primary"]').trigger('click');
+    await wrapper.get('.generate-action-footer button[variant="secondary"]').trigger('click');
     await vi.waitFor(() => expect(whisper.transcribe).toHaveBeenCalledOnce());
 
     onPartial(firstPartial);
@@ -578,7 +578,7 @@ describe('CaptionPanel', () => {
       global: { stubs },
     });
     await vi.waitFor(() => expect(wrapper.find('.model-ready-text').exists()).toBe(true));
-    await wrapper.get('button[variant="primary"]').trigger('click');
+    await wrapper.get('.generate-action-footer button[variant="secondary"]').trigger('click');
     await vi.waitFor(() => expect(whisper.transcribe).toHaveBeenCalledOnce());
 
     onPartial(partial);
@@ -650,7 +650,7 @@ describe('CaptionPanel', () => {
     });
     await vi.waitFor(() => expect(wrapper.find('.model-ready-text').exists()).toBe(true));
     expect(wrapper.text()).toContain('2 subtitle track(s)');
-    await wrapper.get('button[variant="primary"]').trigger('click');
+    await wrapper.get('.generate-action-footer button[variant="secondary"]').trigger('click');
     await vi.waitFor(() =>
       expect(whisper.transcribe).toHaveBeenCalledWith(
         'audio://system',
@@ -720,7 +720,7 @@ describe('CaptionPanel', () => {
       global: { stubs },
     });
     await vi.waitFor(() => expect(wrapper.find('.model-ready-text').exists()).toBe(true));
-    const generateButton = wrapper.get('button[variant="primary"]');
+    const generateButton = wrapper.get('.generate-action-footer button[variant="secondary"]');
     await generateButton.trigger('click');
     await vi.waitFor(() => expect(whisper.transcribe).toHaveBeenCalledOnce());
     expect(generateButton.attributes('disabled')).toBeDefined();
@@ -729,7 +729,11 @@ describe('CaptionPanel', () => {
     expect(whisper.transcribe).toHaveBeenCalledOnce();
 
     resolveTranscription({ words: [], sentences: [] });
-    await vi.waitFor(() => expect(wrapper.find('button[variant="primary"]').attributes('disabled')).toBeUndefined());
+    await vi.waitFor(() =>
+      expect(
+        wrapper.find('.generate-action-footer button[variant="secondary"]').attributes('disabled'),
+      ).toBeUndefined(),
+    );
     wrapper.unmount();
   });
 
@@ -747,7 +751,7 @@ describe('CaptionPanel', () => {
       global: { stubs },
     });
     await vi.waitFor(() => expect(wrapper.find('.model-ready-text').exists()).toBe(true));
-    await wrapper.get('button[variant="primary"]').trigger('click');
+    await wrapper.get('.generate-action-footer button[variant="secondary"]').trigger('click');
     await vi.waitFor(() => expect(whisper.transcribe).toHaveBeenCalled());
     expect(wrapper.emitted('update:composition')).toBeUndefined();
   });

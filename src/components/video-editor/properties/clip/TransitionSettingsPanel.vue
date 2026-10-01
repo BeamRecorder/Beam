@@ -178,12 +178,12 @@ const choose = (preset: TransitionPreset | null) => {
   transform: none !important;
 }
 .preset-card:hover:not(.is-selected) {
-  border-color: var(--color-primary-hover) !important;
+  border-color: var(--text-primary) !important;
 }
 .preset-card.is-selected,
 .preset-card.is-selected:hover {
-  border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 2px var(--color-primary-light) !important;
+  border-color: var(--text-secondary) !important;
+  box-shadow: 0 0 0 2px var(--color-bg-field) !important;
 }
 .preset-card-media {
   position: relative;
@@ -202,8 +202,8 @@ const choose = (preset: TransitionPreset | null) => {
   height: 18px;
   place-items: center;
   border-radius: var(--radius-full);
-  background: var(--color-primary);
-  color: white;
+  background: var(--color-bg-field-active);
+  color: var(--text-primary);
   box-shadow: 0 1px 5px rgb(0 0 0 / 0.34);
 }
 .preset-card-info {

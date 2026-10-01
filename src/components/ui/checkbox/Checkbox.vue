@@ -175,7 +175,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
   background: var(--color-bg-element);
-  color: #ffffff;
+  color: var(--color-bg-element);
   cursor: inherit;
   outline: none;
   transition:
@@ -197,17 +197,18 @@ const handleKeyDown = (event: KeyboardEvent) => {
 }
 
 .checkbox-box:focus-visible {
-  box-shadow: 0 0 0 2px var(--color-primary-light);
-  border-color: var(--color-primary);
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 2px;
+  border-color: var(--text-secondary);
 }
 
 .checkbox-container:hover:not(.is-disabled) .checkbox-box:not(.is-checked) {
-  border-color: var(--color-primary);
+  border-color: var(--text-secondary);
 }
 
 .checkbox-box.is-checked {
-  background-color: var(--color-primary);
-  border-color: var(--color-primary);
+  background-color: var(--text-secondary);
+  border-color: var(--text-secondary);
 }
 
 .checkbox-icon {

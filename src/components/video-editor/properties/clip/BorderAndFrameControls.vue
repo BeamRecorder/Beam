@@ -102,7 +102,7 @@ const selectFrameType = (type: 'desktop' | 'phone') =>
         <Button
           v-for="type in ['desktop', 'phone'] as const"
           :key="type"
-          :variant="activeFrameType === type ? 'primary' : 'ghost'"
+          :variant="activeFrameType === type ? 'selected' : 'ghost'"
           size="xs"
           @click="selectFrameType(type)"
           >{{ t(type) }}</Button
@@ -113,7 +113,7 @@ const selectFrameType = (type: 'desktop' | 'phone') =>
         <Button
           v-for="item in frames"
           :key="item.id"
-          :variant="activeFrame === item.id ? 'primary' : 'ghost'"
+          :variant="activeFrame === item.id ? 'selected' : 'ghost'"
           size="xs"
           @click="emit('update', { frame: item.id })"
           >{{ item.label }}</Button

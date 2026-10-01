@@ -123,7 +123,7 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
   background: var(--color-bg-surface);
 }
 .canvas-track-row {
-  background: var(--color-bg-element);
+  background: var(--color-timeline-lane);
 }
 .canvas-track-info {
   display: flex;
@@ -156,25 +156,13 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
   min-height: var(--timeline-track-min-height);
   margin-inline: 80px 150px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--color-primary) 5%, var(--color-bg-element));
 }
 .canvas-transition-zone {
   position: absolute;
   inset-block: 3px;
   min-width: 18px;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--color-primary) 58%, var(--color-border));
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--color-primary) 7%, var(--color-bg-surface));
-  color: var(--text-primary);
   cursor: pointer;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 20%, transparent);
-}
-.canvas-transition-zone:hover,
-.canvas-transition-zone:focus-visible {
-  border-color: var(--color-primary);
-  outline: none;
-  box-shadow: inset 0 0 0 1px var(--color-primary);
 }
 .canvas-transition-zone.entry {
   left: 0;
@@ -194,9 +182,7 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
 .duration-handle {
   position: absolute;
   inset-block: 0;
-  width: 8px;
   cursor: col-resize;
-  background: color-mix(in srgb, var(--color-primary) 52%, transparent);
 }
 .duration-handle.start {
   left: 0;
@@ -210,3 +196,4 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
   }
 }
 </style>
+<style scoped src="./timeline-item-states.css"></style>

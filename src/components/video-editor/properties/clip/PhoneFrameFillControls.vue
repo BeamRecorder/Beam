@@ -64,7 +64,7 @@ const updateContinuity = (patch: Partial<Omit<typeof DEFAULT_PHONE_FRAME_CONTINU
       <Button
         v-for="item in ['color', 'gradient', 'adaptive', 'continuity'] as const"
         :key="item"
-        :variant="mode === item ? 'primary' : 'ghost'"
+        :variant="mode === item ? 'selected' : 'ghost'"
         size="xs"
         @click="selectMode(item)"
       >

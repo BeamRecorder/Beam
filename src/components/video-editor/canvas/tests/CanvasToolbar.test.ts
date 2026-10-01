@@ -14,6 +14,19 @@ const Button = {
 };
 
 describe('CanvasToolbar', () => {
+  it('groups format controls separately from the canvas view and makes reset keyboard accessible', async () => {
+    const wrapper = mount(CanvasToolbar, {
+      props: { preset: '16:9', canCrop: true, isCropping: false, zoomPercent: 175 },
+      global: { stubs: { PopoverMenuButton, Button } },
+    });
+    expect(wrapper.get('.canvas-format-controls').find('.crop-button').exists()).toBe(true);
+    expect(wrapper.get('.canvas-view-controls').find('.zoom-indicator').exists()).toBe(true);
+    expect(wrapper.get('.zoom-indicator').element.tagName).toBe('BUTTON');
+    expect(wrapper.get('.zoom-indicator').attributes('aria-label')).toBe('Reset canvas view');
+    await wrapper.get('.zoom-indicator').trigger('click');
+    expect(wrapper.emitted('reset:zoom')).toHaveLength(1);
+  });
+
   it('keeps a stable toolbar height with an animated skeleton while loading', async () => {
     const wrapper = mount(CanvasToolbar, {
       props: { preset: '16:9', canCrop: true, isCropping: false, loading: true },

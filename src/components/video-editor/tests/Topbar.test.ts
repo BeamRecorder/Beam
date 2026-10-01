@@ -21,13 +21,11 @@ vi.mock('../VideoProjectEdition.vue', () => ({ default: { template: '<div />' } 
 describe('VideoEditor Topbar', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('opens the Discord invite through the capture bridge', async () => {
+  it('keeps community shortcuts out of the editing titlebar', () => {
     const wrapper = mount(Topbar);
-
-    await wrapper.get('[aria-label="Open Beam Discord"]').trigger('click');
-
-    expect(capture.openDiscordInvite).toHaveBeenCalledOnce();
-    expect(wrapper.get('.discord-icon').attributes('src')).toContain('discord_svg.svg');
+    expect(wrapper.find('[aria-label="Open Beam Discord"]').exists()).toBe(false);
+    expect(wrapper.find('.discord-icon').exists()).toBe(false);
+    expect(wrapper.get('.brand-logo').attributes('alt')).toBe('Beam');
   });
 
   it('emits navigation back to the HUD', async () => {
@@ -86,7 +84,7 @@ describe('VideoEditor Topbar', () => {
     expect(wrapper.find('[aria-label="Maximize"]').exists()).toBe(false);
   });
 
-  it('renders the preview performance widget only when a snapshot is available', () => {
+  it('keeps preview diagnostics out of the titlebar for idle and active snapshots', () => {
     const PerformanceWidgetStub = {
       props: ['snapshot'],
       template: '<div class="preview-performance-widget-stub" :data-status="snapshot.status" />',
@@ -106,12 +104,12 @@ describe('VideoEditor Topbar', () => {
       },
       global: { stubs: { PreviewPerformanceWidget: PerformanceWidgetStub } },
     });
-    expect(idleWrapper.find('.preview-performance-widget-stub').exists()).toBe(true);
+    expect(idleWrapper.find('.preview-performance-widget-stub').exists()).toBe(false);
 
     const activeWrapper = mount(Topbar, {
       props: { performanceSnapshot: { ...snapshot, status: 'good' } },
       global: { stubs: { PreviewPerformanceWidget: PerformanceWidgetStub } },
     });
-    expect(activeWrapper.get('.preview-performance-widget-stub').attributes('data-status')).toBe('good');
+    expect(activeWrapper.find('.preview-performance-widget-stub').exists()).toBe(false);
   });
 });

@@ -61,6 +61,7 @@ const menuItems = computed(
           v-for="item in menuItems"
           :key="item.id"
           class="nav-tooltip"
+          :class="{ 'insertion-entry': item.id === 'elements', 'effects-entry': item.id === 'zoom' }"
           :style="{ display: 'block', width: '100%' }"
           :content="item.label"
           position="right"
@@ -113,11 +114,9 @@ const menuItems = computed(
   width: calc(92px * var(--ui-scale-sidebar, 1));
   height: 100%;
   max-height: 100%;
-  background: var(--color-bg-element);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  padding: calc(12px * var(--ui-scale-sidebar, 1)) calc(6px * var(--ui-scale-sidebar, 1));
+  background: transparent;
+  border: 0;
+  padding: 0 calc(6px * var(--ui-scale-sidebar, 1));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -165,15 +164,22 @@ const menuItems = computed(
 }
 
 :deep(.sidebar-viewport::-webkit-scrollbar-thumb:hover) {
-  background: var(--color-primary, #ff5a1f) !important;
+  background: var(--text-muted);
 }
 
 .nav-menu {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   width: 100%;
   flex-shrink: 0;
+}
+
+.insertion-entry,
+.effects-entry {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--color-border);
 }
 
 .sidebar-footer {
@@ -186,11 +192,11 @@ const menuItems = computed(
 .nav-btn {
   position: relative;
   width: 100%;
-  height: 52px;
+  height: 48px;
   flex-shrink: 0;
   border: none;
   background: transparent;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   display: grid;
   grid-template-rows: 18px minmax(15px, auto);
   place-content: center;
@@ -202,7 +208,6 @@ const menuItems = computed(
 }
 
 .labels-hidden .nav-btn {
-  height: 38px;
   grid-template-rows: 18px;
 }
 
@@ -212,8 +217,8 @@ const menuItems = computed(
 }
 
 .nav-btn.active {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
+  background: var(--color-bg-field-active);
+  color: var(--text-primary);
 }
 
 .nav-icon {
@@ -232,9 +237,7 @@ const menuItems = computed(
   padding-block: 1px;
   line-height: 1.4;
   box-sizing: border-box;
-  font-size: 9px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.2px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-title);
 }
 </style>

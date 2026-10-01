@@ -489,7 +489,7 @@ describe('CaptionStyleControls', () => {
     expect(wrapper.emitted('update')).toContainEqual(['textDecoration', 'underline line-through']);
 
     await wrapper.setProps({ style: { ...style, textDecoration: 'underline line-through' } });
-    expect(underlineButton()!.attributes('variant')).toBe('primary');
+    expect(underlineButton()!.attributes('variant')).toBe('selected');
     await underlineButton()!.trigger('click');
     expect(wrapper.emitted('update')).toContainEqual(['textDecoration', 'line-through']);
   });
@@ -504,7 +504,7 @@ describe('CaptionStyleControls', () => {
 
     const alignButton = (label: string) =>
       alignmentGroup!.findAllComponents(Button).find((button) => button.attributes('aria-label') === label);
-    expect(alignButton('Align center')!.attributes('variant')).toBe('primary');
+    expect(alignButton('Align center')!.attributes('variant')).toBe('selected');
     expect(alignButton('Align right')!.attributes('variant')).toBe('ghost');
 
     await alignButton('Align right')!.trigger('click');
@@ -512,6 +512,6 @@ describe('CaptionStyleControls', () => {
 
     await wrapper.setProps({ style: { ...style, textAlign: 'right' } });
     expect(alignButton('Align center')!.attributes('variant')).toBe('ghost');
-    expect(alignButton('Align right')!.attributes('variant')).toBe('primary');
+    expect(alignButton('Align right')!.attributes('variant')).toBe('selected');
   });
 });

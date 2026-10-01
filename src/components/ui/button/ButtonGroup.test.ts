@@ -108,7 +108,7 @@ describe('ButtonGroup', () => {
       slots: { default: '<button class="btn">One</button><button class="btn">Two</button>' },
     });
 
-    expect(wrapper.attributes('style')).toContain('--button-group-inner-radius: calc(var(--radius-lg) - 3px)');
+    expect(wrapper.attributes('style')).toContain('--button-group-inner-radius: calc(var(--radius-md) - 3px)');
     expect(wrapper.findAll('.btn')).toHaveLength(2);
     expect(wrapper.findAll('.btn').every((button) => button.classes().includes('btn'))).toBe(true);
   });

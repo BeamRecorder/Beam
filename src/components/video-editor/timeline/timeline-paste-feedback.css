@@ -6,11 +6,11 @@
 @keyframes timeline-paste-arrival {
   0% {
     filter: brightness(1.5);
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 70%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--text-secondary) 70%, transparent);
   }
   45% {
     filter: brightness(1.15);
-    box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-primary) 22%, transparent);
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--text-secondary) 22%, transparent);
   }
   100% {
     filter: brightness(1);

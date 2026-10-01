@@ -332,7 +332,7 @@ const runTranscription = async () => {
         </Button>
 
         <Button
-          variant="primary"
+          variant="secondary"
           size="md"
           :disabled="!modelReady || !selectedSource || isProcessing"
           @click="runTranscription"

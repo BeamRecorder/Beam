@@ -55,7 +55,7 @@ const selectPreset = (preset: ZoomAutoFollowPreset) =>
         v-for="preset in presets"
         :key="preset"
         size="xs"
-        :variant="activePreset === preset ? 'primary' : 'ghost'"
+        :variant="activePreset === preset ? 'selected' : 'ghost'"
         :data-auto-follow-preset="preset"
         @click="selectPreset(preset)"
       >

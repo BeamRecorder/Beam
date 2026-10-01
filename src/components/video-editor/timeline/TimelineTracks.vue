@@ -492,6 +492,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
   </div>
 </template>
 <style scoped src="./timeline-tracks.css"></style>
-<style scoped src="./timeline-highlight.css"></style>
+<style scoped src="./timeline-indicators.css"></style>
+<style scoped src="./timeline-item-states.css"></style>
 <style scoped src="./timeline-zoom-badges.css"></style>
 <style src="./timeline-paste-feedback.css"></style>

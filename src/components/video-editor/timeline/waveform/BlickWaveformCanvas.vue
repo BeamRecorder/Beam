@@ -192,6 +192,7 @@ onUnmounted(() => {
   display: block;
   width: 100%;
   height: 100%;
+  filter: var(--timeline-waveform-filter);
 }
 .waveform-segment-loading {
   position: absolute;

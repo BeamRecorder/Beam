@@ -126,7 +126,7 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
     <div class="header-action">
       <Button
         v-if="!hasAutomaticZooms"
-        variant="primary"
+        variant="secondary"
         size="sm"
         :icon="Sparkles"
         :disabled="!canGenerate"
@@ -195,10 +195,10 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
       <div class="section-block">
         <span class="section-title">{{ t('mode') }}</span>
         <ButtonGroup class="zoom-mode-options" full>
-          <Button size="xs" :variant="selectedZoom.mode === 'auto' ? 'primary' : 'ghost'" @click="setMode('auto')">
+          <Button size="xs" :variant="selectedZoom.mode === 'auto' ? 'selected' : 'ghost'" @click="setMode('auto')">
             {{ t('autoCursor') }}
           </Button>
-          <Button size="xs" :variant="selectedZoom.mode === 'manual' ? 'primary' : 'ghost'" @click="setMode('manual')">
+          <Button size="xs" :variant="selectedZoom.mode === 'manual' ? 'selected' : 'ghost'" @click="setMode('manual')">
             {{ t('manualFocus') }}
           </Button>
         </ButtonGroup>
@@ -215,14 +215,14 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
         <ButtonGroup class="zoom-projection-options" full>
           <Button
             size="xs"
-            :variant="normalizeZoomProjection(selectedZoom.projection) === '2d' ? 'primary' : 'ghost'"
+            :variant="normalizeZoomProjection(selectedZoom.projection) === '2d' ? 'selected' : 'ghost'"
             @click="setProjection('2d')"
           >
             {{ t('projection2d') }}
           </Button>
           <Button
             size="xs"
-            :variant="normalizeZoomProjection(selectedZoom.projection) === '3d' ? 'primary' : 'ghost'"
+            :variant="normalizeZoomProjection(selectedZoom.projection) === '3d' ? 'selected' : 'ghost'"
             @click="setProjection('3d')"
           >
             {{ t('projection3d') }}
@@ -237,7 +237,7 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
               size="xs"
               :variant="
                 normalizeZoomTiltPreset(selectedZoom.tiltPreset, selectedZoom.tiltIntensity) === preset
-                  ? 'primary'
+                  ? 'selected'
                   : 'ghost'
               "
               :icon="preset === 'custom' ? SlidersHorizontal : undefined"
@@ -376,7 +376,7 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
 .depth-badge {
   font-size: 11px;
   font-weight: 700;
-  color: var(--color-primary);
+  color: var(--text-secondary);
 }
 
 .hint-card {
@@ -395,7 +395,7 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
 .hint-icon {
   flex-shrink: 0;
   margin-top: 1px;
-  color: var(--color-primary);
+  color: var(--text-secondary);
 }
 
 .depth-presets {
@@ -417,14 +417,14 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
 }
 
 .preset-pill:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--text-secondary);
+  color: var(--text-secondary);
 }
 
 .preset-pill.active {
-  background: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
+  background: var(--color-bg-field-active);
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
 }
 
 .danger-zone {

@@ -145,7 +145,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="big-slider-container" :class="{ 'is-editing': isEditing }">
+  <div class="big-slider-container" :class="{ 'is-editing': isEditing, 'is-interacting': isInteracting }">
     <span
       v-if="!isEditing"
       class="big-slider-fill"
@@ -159,7 +159,9 @@ onBeforeUnmount(() => {
           :id="`slider-input-${label.replace(/\s+/g, '-')}`"
           v-model="editValue"
           type="number"
-          size="sm"
+          size="xs"
+          width="72px"
+          :aria-label="label"
           :min="min"
           :max="max"
           :step="step"
@@ -221,15 +223,16 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .big-slider-container {
+  --big-slider-height: calc(var(--control-height) + 4px);
   position: relative;
   width: 100%;
-  height: 38px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  height: var(--big-slider-height);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
   overflow: hidden;
   display: flex;
   align-items: center;
-  background: var(--color-bg-surface);
+  background: var(--color-bg-field);
   transition: border-color var(--fast) ease;
 }
 
@@ -238,20 +241,20 @@ onBeforeUnmount(() => {
   inset: 0;
   pointer-events: none;
   transform-origin: left center;
-  background: linear-gradient(
-    to right,
-    color-mix(in srgb, var(--color-primary) 22%, var(--color-bg-surface-hover)),
-    color-mix(in srgb, var(--color-primary) 36%, var(--color-bg-surface-hover))
-  );
+  background: var(--color-bg-field-active);
 }
 
 .big-slider-container:hover {
-  border-color: var(--color-primary);
+  border-color: var(--color-border-strong);
 }
 
 .big-slider-container.is-editing {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
+  border-color: var(--text-secondary);
+}
+
+.big-slider-container:has(.big-slider-input:focus-visible) {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 2px;
 }
 
 .big-slider-overlay {
@@ -260,18 +263,16 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
+  padding: 0 10px;
   pointer-events: none;
   z-index: 5;
 }
 
 .big-slider-label {
   font-family: var(--font-sans);
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--font-size-body);
+  font-weight: var(--weight-title);
   color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   pointer-events: none;
 }
 
@@ -307,7 +308,7 @@ onBeforeUnmount(() => {
 }
 
 .slider-reset-btn:hover {
-  color: var(--color-primary);
+  color: var(--text-primary);
   background-color: var(--color-bg-surface-hover);
 }
 
@@ -336,7 +337,7 @@ onBeforeUnmount(() => {
 
 .big-slider-value:hover {
   background: var(--color-bg-surface-hover);
-  color: var(--color-primary);
+  color: var(--text-primary);
 }
 
 .big-slider-edit-wrapper {
@@ -345,19 +346,10 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 8px 0 14px;
-  background: var(--color-bg-surface);
+  padding: 0 8px 0 10px;
+  background: var(--color-bg-field);
   z-index: 10;
   gap: 8px;
-}
-
-.slider-inline-input {
-  width: 80px !important;
-  font-family: var(--font-sans) !important;
-  font-variant-numeric: tabular-nums !important;
-  font-feature-settings: 'tnum' !important;
-  font-size: 12px !important;
-  font-weight: 600 !important;
 }
 
 .big-slider-input {
@@ -378,21 +370,41 @@ onBeforeUnmount(() => {
   -webkit-appearance: none;
   appearance: none;
   width: 2px;
-  height: 38px;
-  background: var(--color-primary);
-  box-shadow: 0 0 6px rgba(255, 90, 31, 0.45);
+  height: calc(var(--big-slider-height) - 10px);
+  background: var(--text-secondary);
   cursor: ew-resize;
   border: none;
+  border-radius: var(--radius-sm);
+  transition: transform var(--fast) ease;
+}
+
+.big-slider-container:hover .big-slider-input::-webkit-slider-thumb,
+.big-slider-container.is-interacting .big-slider-input::-webkit-slider-thumb {
+  transform: scale(1.5, 1.2);
 }
 
 /* Firefox */
 .big-slider-input::-moz-range-thumb {
   width: 2px;
-  height: 38px;
-  background: var(--color-primary);
-  box-shadow: 0 0 6px rgba(255, 90, 31, 0.45);
+  height: calc(var(--big-slider-height) - 10px);
+  background: var(--text-secondary);
   cursor: ew-resize;
   border: none;
-  border-radius: 0;
+  border-radius: var(--radius-sm);
+  transition: transform var(--fast) ease;
+}
+
+.big-slider-container:hover .big-slider-input::-moz-range-thumb,
+.big-slider-container.is-interacting .big-slider-input::-moz-range-thumb {
+  transform: scale(1.5, 1.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .big-slider-input::-webkit-slider-thumb {
+    transition: none;
+  }
+  .big-slider-input::-moz-range-thumb {
+    transition: none;
+  }
 }
 </style>

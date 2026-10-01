@@ -204,7 +204,7 @@ onBeforeUnmount(cleanup);
   pointer-events: none;
   z-index: 30;
   box-sizing: border-box;
-  border: 1px solid var(--color-primary);
-  background: var(--color-primary-light);
+  border: 1px solid var(--text-secondary);
+  background: var(--color-bg-field);
 }
 </style>

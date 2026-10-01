@@ -1,14 +1,11 @@
 <script setup lang="ts">
-import { capture } from '../../api/capture';
 import EditorHistoryControls from './EditorHistoryControls.vue';
 import VideoProjectEdition from './VideoProjectEdition.vue';
 import ExportPopover from '../export/ExportPopover.vue';
 import Button from '~/ui/button/Button.vue';
-import Tooltip from '~/ui/tooltip/Tooltip.vue';
 import { ArrowLeft } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
-import PreviewPerformanceWidget from './performance/PreviewPerformanceWidget.vue';
 import type { PreviewPerformanceSnapshot } from './performance/preview-performance-types';
 import type { EditorExportSource } from '../export/export-types';
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
@@ -59,10 +56,6 @@ const emit = defineEmits<{
 const handleExit = () => {
   emit('back-to-hud');
 };
-
-const openDiscordInvite = () => {
-  void capture.openDiscordInvite();
-};
 </script>
 
 <template>
@@ -94,12 +87,6 @@ const openDiscordInvite = () => {
         @delete="emit('presetDelete')"
         @save="emit('presetSave')"
       />
-      <PreviewPerformanceWidget v-if="performanceSnapshot" :snapshot="performanceSnapshot" />
-      <Tooltip :content="t('discordTooltip')" position="bottom">
-        <button type="button" class="discord-btn" :aria-label="t('discordAriaLabel')" @click.stop="openDiscordInvite">
-          <img :src="resolvePublicAssetUrl('/discord_svg.svg')" class="discord-icon" alt="" aria-hidden="true" />
-        </button>
-      </Tooltip>
       <ExportPopover
         v-if="exportRequest"
         :request="exportRequest"
@@ -113,7 +100,7 @@ const openDiscordInvite = () => {
 <style scoped>
 .editor-titlebar {
   height: 40px;
-  background: var(--color-bg-element);
+  background: var(--color-bg-surface);
   border-bottom: 1px solid var(--color-border);
   padding-left: env(titlebar-area-x, 0px);
   padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
@@ -164,38 +151,5 @@ const openDiscordInvite = () => {
 
 .exit-btn {
   margin-right: 4px;
-}
-
-.discord-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-sizing: border-box;
-}
-
-.discord-btn:hover {
-  background-color: var(--color-bg-surface-hover, #2a2a32);
-  border-color: var(--color-border-dark, #3f3f46);
-  transform: translateY(-1px);
-}
-
-.discord-btn:active {
-  transform: translateY(0);
-}
-
-.discord-icon {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-  display: block;
 }
 </style>

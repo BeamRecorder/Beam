@@ -357,3 +357,4 @@ onUnmounted(() => {
 </template>
 
 <style scoped src="./timeline-caption-tracks.css"></style>
+<style scoped src="./timeline-item-states.css"></style>

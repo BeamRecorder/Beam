@@ -104,22 +104,14 @@ const handleFullscreenClick = (event?: MouseEvent) => {
             @click="emit('split')"
           />
           <Button
-            :variant="isSnappingEnabled ? 'primary' : 'ghost'"
+            :variant="isSnappingEnabled ? 'selected' : 'ghost'"
             size="sm"
             icon-only
             :icon="Magnet"
             :tooltip="isSnappingEnabled ? t('snappingOn') : t('snappingOff')"
             class="toolbar-snap-btn"
+            :aria-pressed="isSnappingEnabled"
             @click="emit('update:isSnappingEnabled', !isSnappingEnabled)"
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            icon-only
-            :icon="Maximize2"
-            :tooltip="t('fullscreenPreview')"
-            class="toolbar-fullscreen-btn"
-            @click="handleFullscreenClick"
           />
         </div>
       </div>
@@ -136,7 +128,7 @@ const handleFullscreenClick = (event?: MouseEvent) => {
             @click="emit('update:currentTime', 0)"
           />
           <Button
-            variant="primary"
+            variant="selected"
             size="sm"
             icon-only
             :icon="isPlaying ? Pause : Play"
@@ -168,7 +160,17 @@ const handleFullscreenClick = (event?: MouseEvent) => {
           :performance-snapshot="performanceSnapshot"
           @update:model-value="emit('update:previewQuality', $event)"
         />
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="Maximize2"
+          :tooltip="t('fullscreenPreview')"
+          class="toolbar-fullscreen-btn"
+          @click="handleFullscreenClick"
+        />
         <div class="zoom-controls">
+          <span class="zoom-label">{{ t('timelineZoom') }}</span>
           <Button
             variant="ghost"
             size="sm"
@@ -192,7 +194,7 @@ const handleFullscreenClick = (event?: MouseEvent) => {
             </template>
             <div class="zoom-popover-content">
               <BigSlider
-                :label="t('zoom') || 'Zoom'"
+                :label="t('timelineZoom')"
                 :model-value="zoomLevel"
                 :min="MIN_TIMELINE_ZOOM"
                 :max="MAX_TIMELINE_ZOOM"
@@ -222,13 +224,15 @@ const handleFullscreenClick = (event?: MouseEvent) => {
 <style scoped>
 .timeline-toolbar {
   position: relative;
+  container-type: inline-size;
   width: 100%;
   box-sizing: border-box;
   display: flex;
   padding: 0;
   background: transparent;
   border-bottom: none;
-  height: calc(48px * var(--ui-scale-canvas-controls, 1));
+  min-height: calc(48px * var(--ui-scale-canvas-controls, 1));
+  flex: none;
   user-select: none;
   gap: 12px;
 }
@@ -289,26 +293,23 @@ const handleFullscreenClick = (event?: MouseEvent) => {
 }
 
 .play-pause-btn {
-  border-radius: var(--radius-full);
-  background-color: var(--color-primary);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-field-active);
 }
 
 .play-pause-btn:hover {
-  background-color: var(--color-primary-hover);
+  background-color: var(--color-bg-field-hover);
 }
 
 .time-display-container {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+  font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 600;
-  background: var(--color-bg-surface-hover);
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  letter-spacing: 0.02em;
+  padding: 4px 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .time-current {
@@ -335,10 +336,14 @@ const handleFullscreenClick = (event?: MouseEvent) => {
   display: flex;
   align-items: center;
   gap: 2px;
-  background: var(--color-bg-surface-hover);
-  padding: 2px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  padding: 0;
+}
+
+.zoom-label {
+  margin-right: 4px;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
 }
 
 .zoom-percent-trigger {
@@ -364,12 +369,43 @@ const handleFullscreenClick = (event?: MouseEvent) => {
 }
 
 .zoom-percent-text {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-sans);
 }
 
 .zoom-popover-content {
   padding: 8px;
   min-width: 170px;
   box-sizing: border-box;
+}
+
+@container (max-width: 640px) {
+  .timeline-toolbar-content {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    padding-inline: 8px;
+  }
+  .center-section {
+    gap: 8px;
+  }
+  .right-section {
+    gap: 6px;
+  }
+  .zoom-label {
+    display: none;
+  }
+}
+
+@container (max-width: 430px) {
+  .timeline-toolbar-content {
+    height: 80px;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 4px 8px;
+  }
+  .center-section {
+    justify-self: end;
+  }
+  .right-section {
+    grid-column: 1 / -1;
+  }
 }
 </style>

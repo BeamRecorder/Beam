@@ -17,6 +17,9 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Simplified the editor with Concat-inspired light/dark surfaces, neutral controls, taller sliders with rounded handles and compact value editors, a softer orange accent, aligned sidebar buttons and subtle properties-panel opening animations. Slider focus outlines appear with keyboard navigation.
+- Background imports now occupy the first library tile. Image, video, color and gradient tiles share their dimensions, with translated addition tooltips in all 15 languages.
+- Zoom and caption tracks are larger; audio tracks are shorter. Timeline items share neutral selection, hover and disabled states, with quieter lane backgrounds and clearer colored blocks and waveforms in both themes.
 - Beamy now uses Bloub’s original circular body, rounded capsule eyes and neutral/sad/happy expressions in Beam’s theme color, without cloud styling or cheeks. Sad states blink and move their gaze naturally.
 - Startup immediately shows compact animated loading dots. After three seconds, Beamy briefly morphs into a triangle before returning to the dancing dots, using the shared Mascot Lab engine.
 - Projects and Preferences now use smaller muted gray titlebar icons and lighter titles. Preferences matches the recorder’s compact 38 px titlebar height, including native window controls.
@@ -41,6 +44,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Gradient preset tiles now render clean rounded corners without repeated color seams along their borders.
+- Whisper transcription now releases decoder and alignment buffers to prevent GPU memory accumulation. Failed workers are released before retrying, and failure reports show the planned segments and actual inference time.
 - Linux AV1 playback and timeline thumbnails use the software decoder to avoid hardware decoding failures during seeking. Copied playback diagnostics now identify the file, clip, codec, decoder configuration, operation and exact source/timeline position.
 - Copy buttons keep their icon stable while copying, then show confirmation without briefly flashing disabled or displaying a spinner.
 - Playback errors now show a sad Beamy and a translated diagnostic copy button in the editor preview, instead of drawing technical errors into the canvas.

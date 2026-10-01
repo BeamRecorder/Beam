@@ -40,6 +40,7 @@ describe('Slider', () => {
     const wrapper = mount(Slider, { props: { modelValue: 25, min: 0, max: 50, step: 5 } });
     expect(wrapper.get('input').attributes()).toMatchObject({ min: '0', max: '50', step: '5' });
     expect(wrapper.get('input').attributes('style')).toContain('50%');
+    expect(wrapper.get('input').attributes('style')).toContain('var(--text-secondary)');
   });
   it('emits a numeric value from user input', async () => {
     const wrapper = mount(Slider, { props: { modelValue: 0 } });

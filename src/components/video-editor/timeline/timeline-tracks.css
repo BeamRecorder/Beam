@@ -1,9 +1,4 @@
 .timeline-root {
-  --timeline-track-min-height: 32px;
-  --timeline-track-max-height: 56px;
-  --timeline-audio-track-min-height: 48px;
-  --timeline-audio-track-max-height: 64px;
-
   width: 100%;
   height: 100%;
   max-height: 100%;
@@ -15,8 +10,8 @@
   user-select: none;
 }
 .timeline-sidebar {
-  width: 120px;
-  flex: 0 0 120px;
+  width: 160px;
+  flex: 0 0 160px;
   height: 100%;
   overflow: hidden;
   background: var(--color-bg-surface);
@@ -65,21 +60,15 @@
   flex: 1;
   cursor: default;
 }
-.sidebar-track-item.disabled .track-info {
-  opacity: 0.35;
-}
 .sidebar-track-item .track-info {
   transition: opacity var(--fast) ease;
-}
-.sidebar-track-item.dragging {
-  opacity: 0.55;
 }
 .timeline-tracks-container {
   flex: 1;
   min-width: 0;
   height: 100%;
   max-height: 100%;
-  background: var(--color-bg-element);
+  background: var(--color-timeline-lane);
   overflow-x: auto;
   overflow-y: auto;
   position: relative;
@@ -123,7 +112,7 @@
   height: 28px;
   flex: 0 0 28px;
   display: flex;
-  background: var(--color-bg-element);
+  background: var(--color-timeline-ruler);
   border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
@@ -141,8 +130,8 @@
 .ruler-export-progress-bar {
   position: absolute;
   inset: 0 auto 0 0;
-  background: rgba(255, 90, 31, 0.25);
-  border-right: 2px solid var(--color-primary);
+  background: color-mix(in srgb, var(--text-secondary) 12%, transparent);
+  border-right: 2px solid var(--text-secondary);
   pointer-events: none;
   z-index: 1;
 }
@@ -193,7 +182,7 @@
   position: absolute;
   inset-block: 0;
   width: 1px;
-  border-left: 1px dashed var(--color-primary);
+  border-left: 1px dashed var(--text-secondary);
   opacity: 0.85;
   pointer-events: none;
 }
@@ -203,8 +192,8 @@
   left: 5px;
   padding: 1px 4px;
   border-radius: var(--radius-sm);
-  background: var(--color-primary);
-  color: #ffffff;
+  background: var(--text-primary);
+  color: var(--color-bg-element);
   font-family: monospace;
   font-size: 8px;
   font-weight: 800;
@@ -231,7 +220,7 @@
   left: -5px;
   width: 12px;
   height: 15px;
-  color: var(--color-primary);
+  color: var(--text-secondary);
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
   z-index: 33;
   display: flex;
@@ -245,8 +234,8 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background: var(--color-primary);
-  box-shadow: 0 0 10px var(--color-primary);
+  background: var(--text-secondary);
+  box-shadow: none;
   z-index: 34;
   pointer-events: none;
 }
@@ -257,8 +246,8 @@
   transform: translateX(-50%);
   padding: 1px 5px;
   border-radius: var(--radius-sm);
-  background: var(--color-primary);
-  color: #ffffff;
+  background: var(--text-primary);
+  color: var(--color-bg-element);
   font-size: 9px;
   font-weight: 800;
   font-family: monospace;
@@ -278,13 +267,22 @@
   min-height: var(--timeline-track-min-height);
   max-height: var(--timeline-track-max-height);
   flex: 1 1 var(--timeline-track-min-height);
-  background: var(--color-bg-element);
+  background: var(--color-timeline-lane);
   border-bottom: 1px solid var(--color-border);
+}
+.track-row:nth-child(even) {
+  background: var(--color-timeline-lane-alt);
 }
 .track-row.audio-track {
   min-height: var(--timeline-audio-track-min-height);
   max-height: var(--timeline-audio-track-max-height);
   flex-basis: var(--timeline-audio-track-min-height);
+}
+.track-row.cursor-track,
+.track-row.annotation-track {
+  min-height: var(--timeline-effect-track-min-height);
+  max-height: var(--timeline-effect-track-max-height);
+  flex-basis: var(--timeline-effect-track-min-height);
 }
 .visual-tracks-group {
   display: contents;
@@ -292,14 +290,10 @@
 .track-reorder-move {
   transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.track-row.disabled .track-content {
-  opacity: 0.35;
-}
 .track-row .track-content {
   transition: opacity var(--fast) ease;
 }
 .track-row.dragging {
-  opacity: 0.7;
   z-index: 10;
 }
 .track-info {
@@ -350,10 +344,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-title);
 }
 .track-content {
   flex: 1;
@@ -362,9 +354,6 @@
   overflow: hidden;
   margin-left: 80px;
   margin-right: 150px;
-}
-.visual-content {
-  background: var(--color-track-video-light);
 }
 .visual-content.addable-content {
   cursor: crosshair;
@@ -380,34 +369,13 @@
   justify-content: center;
   overflow: hidden;
   padding: 0 6px;
-  border-radius: var(--radius-sm);
-  box-sizing: border-box;
-  color: var(--text-primary);
   font-size: 8px;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.visual-add-indicator.kind-color,
-.visual-add-indicator.kind-image {
-  background: var(--color-bg-surface);
-}
-.visual-add-indicator.kind-blur {
-  background: linear-gradient(110deg, var(--color-track-blur), var(--color-track-blur-highlight));
-  color: #fff;
-}
-.visual-add-indicator.kind-shape {
-  background: color-mix(in srgb, var(--color-track-annotation) 24%, var(--color-bg-surface));
-}
-.cursor-content {
-  background: var(--color-track-cursor-light);
-}
-.annotation-content {
-  background: var(--color-track-annotation-light);
-}
 .audio-content {
   position: relative;
-  background: var(--color-track-audio-light);
 }
 .voiceover-draft-clip {
   position: absolute;
@@ -415,124 +383,6 @@
   min-width: 2px;
   overflow: hidden;
   pointer-events: none;
-  border: 1px solid color-mix(in srgb, var(--color-primary) 75%, transparent);
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--color-primary) 18%, var(--color-bg-element));
-}
-.cursor-zoom-indicator,
-.annotation-indicator {
-  position: absolute;
-  top: 4px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 6px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  color: #fff;
-  font-size: 8px;
-  font-weight: 700;
-  cursor: grab;
-  box-shadow: var(--shadow-sm);
-  transition: border-color var(--fast) ease;
-  overflow: visible;
-  box-sizing: border-box;
-}
-.annotation-indicator {
-  background: var(--color-track-annotation);
-}
-.cursor-zoom-indicator:hover,
-.annotation-indicator:hover {
-  border-color: #fff;
-}
-.cursor-zoom-indicator.selected {
-  outline: 2px solid #ffffff;
-  outline-offset: 1px;
-  box-shadow: 0 0 12px rgba(236, 72, 153, 0.45);
-}
-.annotation-indicator.selected {
-  outline: 2px solid var(--color-primary);
-}
-.annotation-indicator.disabled {
-  opacity: 0.42;
-}
-.preview-ghost {
-  opacity: 0.65;
-  border: 1.5px dashed var(--color-primary) !important;
-  pointer-events: none;
-  z-index: 8;
-  box-shadow: 0 0 8px rgba(255, 90, 31, 0.3);
-  animation: pulse-ghost 1.2s infinite alternate ease-in-out;
-}
-@keyframes pulse-ghost {
-  from {
-    opacity: 0.45;
-  }
-  to {
-    opacity: 0.85;
-  }
-}
-.trim-handle {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  z-index: 20;
-  width: 10px;
-  max-width: 28%;
-  cursor: col-resize;
-  background: rgba(255, 255, 255, 0.28);
-  transition: background var(--fast) ease;
-}
-.trim-handle:hover {
-  background: var(--color-primary);
-}
-.cursor-zoom-indicator .trim-handle:hover {
-  background: #ffffff;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
-}
-.cursor-zoom-indicator .trim-side-badge {
-  background: #ffffff;
-  color: #111827;
-  font-weight: 800;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-.trim-handle.start {
-  left: 0;
-  border-top-left-radius: var(--radius-sm);
-  border-bottom-left-radius: var(--radius-sm);
-}
-.trim-handle.end {
-  right: 0;
-  border-top-right-radius: var(--radius-sm);
-  border-bottom-right-radius: var(--radius-sm);
-}
-.trim-side-badge {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 1px 5px;
-  border-radius: var(--radius-sm);
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 9px;
-  font-weight: 800;
-  font-family: monospace;
-  white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-}
-.trim-handle.start .trim-side-badge {
-  left: 8px;
-}
-.trim-handle.end .trim-side-badge {
-  right: 8px;
-}
-.clip-center-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  pointer-events: none;
-  white-space: nowrap;
 }
 .export-audio-disabled {
   position: absolute;
@@ -554,7 +404,6 @@
   white-space: nowrap;
   pointer-events: none;
 }
-
 .export-disabled-status {
   min-width: 0;
   margin-left: 4px;

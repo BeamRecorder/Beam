@@ -184,7 +184,7 @@ self.onmessage = async ({ data }: MessageEvent<WhisperTranscribeRequest>) => {
     return;
   }
   activeRequestId = data.id;
-  const inferenceStartedAt = performance.now();
+  let inferenceStartedAt: number | null = null;
   let inferenceMs = 0;
   try {
     if (
@@ -256,6 +256,11 @@ self.onmessage = async ({ data }: MessageEvent<WhisperTranscribeRequest>) => {
     const stepSamples = data.sampleRate * STEP_SECONDS;
     const chunkCount = chunkCountFor(totalSeconds);
     const words: CaptionWord[] = [];
+    post({
+      type: 'diagnostics',
+      id: data.id,
+      diagnostics: { status: 'transcribing', modelLoadMs, totalChunks: chunkCount, completedChunks: 0 },
+    });
     const transcriptionOptions: TranscriptionOptions = {
       sampling_rate: data.sampleRate,
       return_timestamps: 'word',
@@ -268,7 +273,7 @@ self.onmessage = async ({ data }: MessageEvent<WhisperTranscribeRequest>) => {
     };
     const activeTranscriber = transcriber;
     if (!activeTranscriber) throw new Error(translate(locale, 'failed'));
-    const transcriptionStartedAt = performance.now();
+    inferenceStartedAt = performance.now();
     let completedChunks = 0;
     for (let offset = 0; offset < data.audio.length; offset += stepSamples) {
       const chunkIndex = Math.floor(offset / stepSamples);
@@ -297,7 +302,7 @@ self.onmessage = async ({ data }: MessageEvent<WhisperTranscribeRequest>) => {
       const processedSeconds = isLast
         ? totalSeconds
         : Math.min(totalSeconds, offsetSeconds + CHUNK_SECONDS - STRIDE_SECONDS);
-      inferenceMs = performance.now() - transcriptionStartedAt;
+      inferenceMs = performance.now() - inferenceStartedAt;
       post({ type: 'partial', id: data.id, words: partialWords });
       post({
         type: 'diagnostics',
@@ -345,7 +350,7 @@ self.onmessage = async ({ data }: MessageEvent<WhisperTranscribeRequest>) => {
       type: 'error',
       id: data.id,
       message: error instanceof Error ? error.message : translate(locale, 'failed'),
-      diagnostics: { inferenceMs: inferenceMs || performance.now() - inferenceStartedAt },
+      diagnostics: { inferenceMs: inferenceStartedAt === null ? 0 : performance.now() - inferenceStartedAt },
     });
   } finally {
     activeRequestId = null;

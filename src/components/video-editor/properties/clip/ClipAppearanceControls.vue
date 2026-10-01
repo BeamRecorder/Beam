@@ -130,7 +130,7 @@ const handleShadowColorChange = (color: string) => {
       <Button
         v-for="item in radiusPresets"
         :key="item.id"
-        :variant="selectedRadius === item.id ? 'primary' : 'ghost'"
+        :variant="selectedRadius === item.id ? 'selected' : 'ghost'"
         size="xs"
         :icon="item.icon"
         :icon-only="!!item.icon"
@@ -164,7 +164,7 @@ const handleShadowColorChange = (color: string) => {
       <Button
         v-for="item in shadowPresets"
         :key="item.id"
-        :variant="selectedShadowSize === item.id ? 'primary' : 'ghost'"
+        :variant="selectedShadowSize === item.id ? 'selected' : 'ghost'"
         size="xs"
         :icon="item.icon"
         :icon-only="!!item.icon"
@@ -180,14 +180,14 @@ const handleShadowColorChange = (color: string) => {
       <span class="sub-label">{{ t('shadowStyle') }}</span>
       <ButtonGroup full>
         <Button
-          :variant="selectedShadowMode === 'solid' ? 'primary' : 'ghost'"
+          :variant="selectedShadowMode === 'solid' ? 'selected' : 'ghost'"
           size="xs"
           @click="handleShadowModeChange('solid')"
         >
           {{ t('solid') }}
         </Button>
         <Button
-          :variant="selectedShadowMode === 'adaptive' ? 'primary' : 'ghost'"
+          :variant="selectedShadowMode === 'adaptive' ? 'selected' : 'ghost'"
           size="xs"
           @click="handleShadowModeChange('adaptive')"
         >
@@ -232,7 +232,7 @@ const handleShadowColorChange = (color: string) => {
     </div>
     <ButtonGroup full>
       <Button
-        :variant="selectedClip.isMirrored ? 'primary' : 'ghost'"
+        :variant="selectedClip.isMirrored ? 'selected' : 'ghost'"
         size="xs"
         :icon="FlipHorizontal"
         @click="emit('update:isMirrored', !selectedClip.isMirrored)"
@@ -240,7 +240,7 @@ const handleShadowColorChange = (color: string) => {
         {{ t('horizontal') }}
       </Button>
       <Button
-        :variant="selectedClip.isMirroredY ? 'primary' : 'ghost'"
+        :variant="selectedClip.isMirroredY ? 'selected' : 'ghost'"
         size="xs"
         :icon="FlipVertical"
         @click="emit('update:isMirroredY', !selectedClip.isMirroredY)"

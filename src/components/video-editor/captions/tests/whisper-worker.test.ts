@@ -43,6 +43,43 @@ const send = (message: unknown) => workerSelf.onmessage!({ data: message } as Me
 const messages = () => workerSelf.postMessage.mock.calls.map(([message]) => message as WhisperWorkerEvent);
 
 describe('whisper worker', () => {
+  it('does not report model-loading time as inference when loading fails', async () => {
+    runtime.pipeline.mockRejectedValue(new Error('Model loading failed'));
+    await send({
+      type: 'transcribe',
+      id: 'load-error',
+      model: 'Xenova/whisper-medium.en',
+      audio: new Float32Array(1),
+      sampleRate: 1,
+      locale: 'en',
+    });
+    expect(messages().at(-1)).toMatchObject({ type: 'error', diagnostics: { inferenceMs: 0 } });
+  });
+
+  it.each([1, 30, 38.3])('reports the planned chunks before an allocation fails for %s seconds', async (duration) => {
+    const transcriber = vi.fn().mockImplementation(async () => {
+      expect(
+        messages()
+          .filter((event) => event.type === 'diagnostics')
+          .at(-1),
+      ).toMatchObject({
+        diagnostics: { totalChunks: duration <= 30 ? 1 : 2, completedChunks: 0, modelLoadMs: expect.any(Number) },
+      });
+      throw new Error('failed to call OrtRun(). ERROR_CODE: 6, ERROR_MESSAGE: std::bad_alloc');
+    });
+    runtime.pipeline.mockResolvedValue(transcriber);
+    await send({
+      type: 'transcribe',
+      id: 'allocation-failure',
+      model: 'Xenova/whisper-medium.en',
+      audio: new Float32Array(Math.round(duration * 10)),
+      sampleRate: 10,
+      locale: 'en',
+    });
+    expect(messages().at(-1)).toMatchObject({ type: 'error', message: expect.stringContaining('std::bad_alloc') });
+    expect(messages().some((event) => event.type === 'result')).toBe(false);
+  });
+
   it('uses 30-second windows with 5-second overlap and emits partial deltas', async () => {
     const transcriber = vi
       .fn()

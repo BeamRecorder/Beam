@@ -26,6 +26,12 @@
 }
 @keyframes waveform-pending {
   to {
-    opacity: 0.45;
+    opacity: var(--timeline-pending-opacity);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waveform-loading {
+    animation: none;
   }
 }

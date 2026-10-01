@@ -287,3 +287,4 @@ const allZoomsSelected = () =>
   </div>
 </template>
 <style scoped src="./timeline-track-headers.css"></style>
+<style scoped src="./timeline-item-states.css"></style>

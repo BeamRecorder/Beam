@@ -3,6 +3,7 @@ import { nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import BigSlider from './BigSlider.vue';
+import InputField from '../input/Input.vue';
 
 const Input = {
   inheritAttrs: false,
@@ -13,6 +14,21 @@ const Input = {
 };
 
 describe('BigSlider', () => {
+  it.each([0, 25.5, 100])('edits %s in a compact field while keeping the label visible', async (value) => {
+    const wrapper = mount(BigSlider, {
+      props: { modelValue: value, min: 0, max: 100, label: 'Opacity' },
+    });
+    await wrapper.get('.big-slider-value').trigger('click');
+    const field = wrapper.getComponent(InputField);
+    expect(field.props('size')).toBe('xs');
+    expect(field.props('width')).toBe('72px');
+    expect(wrapper.get('.big-slider-edit-wrapper .big-slider-label').text()).toBe('Opacity');
+    expect(field.get('input').attributes('aria-label')).toBe('Opacity');
+    await field.get('input').trigger('keydown.esc');
+    expect(wrapper.findComponent(InputField).exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   afterEach(() => vi.unstubAllGlobals());
 
   it('updates the range and reports interaction boundaries', async () => {
@@ -31,12 +47,14 @@ describe('BigSlider', () => {
     await wrapper.get('.big-slider-input').setValue('80');
     expect(wrapper.emitted('update:modelValue')).toContainEqual([80]);
     await triggerPointer(wrapper.get('.big-slider-input'), 'pointerdown');
+    expect(wrapper.classes()).toContain('is-interacting');
     await wrapper.get('.big-slider-input').trigger('change');
+    expect(wrapper.classes()).not.toContain('is-interacting');
     expect(wrapper.emitted('interaction-start')).toHaveLength(1);
     expect(wrapper.emitted('interaction-end')).toHaveLength(1);
   });
 
-  it('scales the static fill from the minimum through the midpoint to the maximum', async () => {
+  it('scales the full-height fill from the minimum through the midpoint to the maximum', async () => {
     const wrapper = mount(BigSlider, {
       props: { modelValue: 0, min: 0, max: 100, label: 'Opacity' },
       global: { stubs: { Input } },
@@ -54,6 +72,17 @@ describe('BigSlider', () => {
     expect(!editingFill.exists() || !editingFill.isVisible()).toBe(true);
     await wrapper.get('.slider-inline-input').trigger('keydown.esc');
     expect(wrapper.get('.big-slider-fill').isVisible()).toBe(true);
+  });
+
+  it.each([-10, 0, 50, 100, 110])('keeps the full-height fill inside the range for %s', (value) => {
+    const wrapper = mount(BigSlider, {
+      props: { modelValue: value, min: 0, max: 100, label: 'Opacity' },
+    });
+    expect(wrapper.get('.big-slider-fill').attributes('style')).toContain(
+      `scale3d(${Math.max(0, Math.min(100, value)) / 100}, 1, 1)`,
+    );
+    expect(wrapper.get('input[type="range"]').attributes('aria-label')).toBe('Opacity');
+    wrapper.unmount();
   });
 
   it('edits, clamps and resets a changed value', async () => {
@@ -147,6 +176,7 @@ describe('BigSlider', () => {
     const input = wrapper.get('.big-slider-input');
 
     await input.trigger('keydown', { key: 'ArrowRight' });
+    expect(wrapper.classes()).toContain('is-interacting');
     (input.element as HTMLInputElement).value = '10';
     await input.trigger('input');
     await input.trigger('change');
@@ -161,6 +191,7 @@ describe('BigSlider', () => {
     expect(wrapper.emitted('update:modelValue')).toEqual([[20]]);
 
     await input.trigger('keyup', { key: 'ArrowRight' });
+    expect(wrapper.classes()).not.toContain('is-interacting');
     frameCallbacks[0]!(0);
     expect(wrapper.emitted('interaction-end')).toHaveLength(1);
     await input.trigger('change');
@@ -250,6 +281,7 @@ describe('BigSlider', () => {
     (input.element as HTMLInputElement).value = '42';
     await input.trigger('input');
     await triggerPointer(input, 'pointercancel');
+    expect(wrapper.classes()).not.toContain('is-interacting');
 
     expect(frameCallbacks).toHaveLength(1);
     expect(cancelFrame).toHaveBeenCalledWith(1);

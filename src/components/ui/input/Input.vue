@@ -14,7 +14,7 @@ const props = withDefaults(
     disabled?: boolean;
     error?: boolean | string;
     id?: string;
-    size?: 'sm' | 'md';
+    size?: 'xs' | 'sm' | 'md';
     width?: string;
     min?: number;
     max?: number;
@@ -260,6 +260,31 @@ const handleMouseDown = (e: MouseEvent) => {
 .input-wrapper:focus-within:not(.is-disabled):not(.is-error) {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.input-wrapper.input-xs {
+  height: calc(var(--control-height) - 4px);
+  min-width: 0;
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-element);
+  border-color: var(--color-border-strong);
+}
+
+.input-wrapper.input-xs:focus-within:not(.is-disabled):not(.is-error) {
+  border-color: var(--text-secondary);
+  box-shadow: none;
+}
+
+.input-wrapper.input-xs .input-element {
+  min-width: 0;
+  font-size: var(--font-size-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.input-wrapper.input-xs.is-number .input-element {
+  text-align: right;
 }
 
 .input-wrapper.is-disabled {

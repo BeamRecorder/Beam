@@ -3,6 +3,19 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import Input from './Input.vue';
 
 describe('Input', () => {
+  it.each([0, 25.5, 100])('keeps the compact numeric field at its requested width for %s', async (value) => {
+    const wrapper = mount(Input, {
+      props: { modelValue: value, type: 'number', size: 'xs', width: '72px', min: 0, max: 100, step: 0.5 },
+      attrs: { 'aria-label': 'Opacity' },
+    });
+    expect(wrapper.get('.input-wrapper').classes()).toContain('input-xs');
+    expect(wrapper.get('.input-wrapper').attributes('style')).toContain('width: 72px');
+    expect(wrapper.get('input').attributes('aria-label')).toBe('Opacity');
+    await wrapper.get('input').setValue('50');
+    expect(wrapper.emitted('update:modelValue')).toContainEqual(['50']);
+    wrapper.unmount();
+  });
+
   afterEach(() => {
     vi.useRealTimers();
   });

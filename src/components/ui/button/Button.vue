@@ -8,10 +8,11 @@ export default {
 import { computed, nextTick, onBeforeUnmount, onMounted, onUpdated, ref, type Component } from 'vue';
 import Tooltip from '../tooltip/Tooltip.vue';
 import { Loader } from '@lucide/vue';
+import type { ButtonVariant } from './button-types';
 
 const props = withDefaults(
   defineProps<{
-    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'tab' | 'card' | 'danger' | 'frosted';
+    variant?: ButtonVariant;
     size?: 'xs' | 'sm' | 'md' | 'lg';
     loading?: boolean;
     disabled?: boolean;
@@ -231,10 +232,11 @@ const handleClick = (event: MouseEvent) => {
 /* Variants */
 .btn-primary {
   background-color: var(--color-primary);
-  color: white;
+  color: var(--text-on-primary);
 }
 .btn-primary:hover:not(:disabled, [aria-disabled='true']) {
   background-color: var(--color-primary-hover);
+  color: var(--text-on-primary-hover);
   transform: translateY(-1px);
 }
 .btn-primary:active:not(:disabled, [aria-disabled='true']) {
@@ -242,13 +244,13 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .btn-secondary {
-  background-color: var(--color-bg-element);
-  border-color: var(--color-border);
+  background-color: var(--color-bg-field);
+  border-color: transparent;
   color: var(--text-primary);
 }
 .btn-secondary:hover:not(:disabled) {
   background-color: var(--color-bg-surface-hover);
-  border-color: var(--color-border-dark);
+  border-color: var(--color-border-strong);
 }
 
 .btn-danger {
@@ -262,6 +264,19 @@ const handleClick = (event: MouseEvent) => {
 }
 .btn-secondary:active:not(:disabled) {
   transform: translateY(0);
+}
+
+.btn-selected {
+  background-color: var(--color-bg-field-active);
+  border-color: var(--color-border-strong);
+  color: var(--text-primary);
+}
+.btn-selected:hover:not(:disabled) {
+  background-color: var(--color-bg-field-hover);
+}
+.btn-selected:focus-visible {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 2px;
 }
 
 .btn-outline {
@@ -280,7 +295,7 @@ const handleClick = (event: MouseEvent) => {
   border-color: transparent;
 }
 .btn-ghost:hover:not(:disabled) {
-  background-color: var(--color-bg-surface, #1e1e1e);
+  background-color: var(--color-bg-field-hover);
   border-color: transparent;
 }
 
@@ -408,13 +423,21 @@ const handleClick = (event: MouseEvent) => {
 
 .btn-tab.active {
   background: var(--color-bg-element);
-  color: var(--color-primary);
+  color: var(--text-primary);
   box-shadow: var(--shadow-sm);
   border-color: var(--color-border);
 }
 
 .btn-tab.active:hover:not(:disabled) {
   background: var(--color-bg-element);
+}
+
+.btn-tab.btn-xs {
+  height: var(--control-height);
+  padding: 0 6px;
+  font-size: var(--font-size-body);
+  font-weight: var(--weight-title);
+  gap: 4px;
 }
 
 /* Loader and Icon Animation */

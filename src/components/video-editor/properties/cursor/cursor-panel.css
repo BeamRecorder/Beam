@@ -86,7 +86,7 @@
 }
 
 .info-button:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--text-secondary);
 }
 
 .discovery-popover {
@@ -105,7 +105,7 @@
 }
 
 .discovery-popover a {
-  color: var(--color-primary);
+  color: var(--text-secondary);
   font-size: 11px;
 }
 

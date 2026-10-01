@@ -5,23 +5,15 @@
   width: 100%;
 }
 
-.kind-group {
-  width: 100%;
-  display: flex;
+.background-section,
+.background-options {
+  display: grid;
+  gap: 12px;
 }
-
-.kind-group :deep(.btn-container) {
-  flex: 1;
-  min-width: 0;
-}
-
-.kind-group :deep(.btn) {
-  padding-left: 2px;
-  padding-right: 2px;
-}
-
-.import-btn {
-  width: 100%;
+.section-heading {
+  color: var(--text-primary);
+  font-size: var(--font-size-body);
+  font-weight: var(--weight-title);
 }
 
 /* Content Panel */
@@ -32,16 +24,13 @@
   width: 100%;
 }
 
-/* Three compact rows are enough for quick selection. More media is explicit. */
+/* Two rows keep the background library secondary to the preview. */
 .media-scroll-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-  padding: 8px;
+  gap: 6px;
+  padding: 0;
   box-sizing: border-box;
-  background: var(--color-bg-surface, rgba(0, 0, 0, 0.2));
-  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
-  border-radius: var(--radius-md);
   contain: layout style paint;
 }
 
@@ -72,13 +61,12 @@
 }
 
 .media-tile:hover:not(.active) {
-  border: 1px dashed var(--color-primary);
-  box-shadow: 0 0 0 1px var(--color-primary-light);
+  border-color: var(--text-muted);
 }
 
 .media-tile.active {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 1px var(--color-primary);
+  border-color: var(--text-secondary);
+  box-shadow: inset 0 0 0 1px var(--text-secondary);
 }
 
 .media-content {
@@ -136,16 +124,20 @@ img.media-content {
 .swatches-grid,
 .gradients-grid {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 7px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .swatch-tile {
   width: 100%;
   aspect-ratio: 1;
   padding: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   border: 1.5px solid var(--color-border, rgba(255, 255, 255, 0.15));
+  /* Paint one gradient through the border, without wrapping its edges. */
+  background-origin: border-box;
+  background-clip: border-box;
+  background-repeat: no-repeat;
   cursor: pointer;
   box-sizing: border-box;
   transition:
@@ -160,28 +152,22 @@ img.media-content {
 }
 
 .swatch-tile:hover:not(.active) {
-  border: 2px dashed rgba(255, 255, 255, 0.5);
-  transform: scale(1.04);
+  border-color: var(--text-muted);
 }
 
 .swatch-tile.active {
-  border: 2px solid var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 2px var(--color-primary-light, rgba(59, 130, 246, 0.4));
+  border: 2px solid var(--text-secondary);
+  box-shadow: inset 0 0 0 1px var(--text-secondary);
 }
 
 .swatch-tile.editing {
-  animation: swatch-pulse 2s infinite ease-in-out alternate;
+  outline: 1px solid var(--text-secondary);
+  outline-offset: 2px;
 }
-
-@keyframes swatch-pulse {
-  from {
-    box-shadow: 0 0 0 2px var(--color-primary, #3b82f6);
-    transform: scale(1);
-  }
-  to {
-    box-shadow: 0 0 0 3px var(--color-primary-light, rgba(59, 130, 246, 0.4));
-    transform: scale(1.02);
-  }
+.media-tile:focus-visible,
+.swatch-tile:focus-visible {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 2px;
 }
 
 .custom-editor-row {

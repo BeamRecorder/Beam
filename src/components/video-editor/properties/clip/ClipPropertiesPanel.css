@@ -121,14 +121,14 @@
 }
 
 .preset-pill:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--text-secondary);
+  color: var(--text-secondary);
 }
 
 .preset-pill.active {
-  background: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
+  background: var(--color-bg-field-active);
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
 }
 
 .prop-row {

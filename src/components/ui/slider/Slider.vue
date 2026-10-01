@@ -60,7 +60,7 @@ const handleCommit = (event: Event) => {
         :aria-label="label"
         class="slider-input"
         :style="{
-          background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${percentage}%, var(--color-border) ${percentage}%, var(--color-border) 100%)`,
+          background: `linear-gradient(to right, var(--text-secondary) 0%, var(--text-secondary) ${percentage}%, var(--color-border) ${percentage}%, var(--color-border) 100%)`,
         }"
         @input="handleInput"
         @change="handleCommit"
@@ -93,11 +93,16 @@ const handleCommit = (event: Event) => {
   width: 100%;
   -webkit-appearance: none;
   appearance: none;
-  height: 12px; /* Fat track! */
+  height: 8px;
   border-radius: var(--radius-full);
   outline: none;
   cursor: pointer;
   transition: transform 0.1s ease;
+}
+
+.slider-input:focus-visible {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 4px;
 }
 
 .slider-input:disabled {
@@ -108,21 +113,20 @@ const handleCommit = (event: Event) => {
 .slider-input::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 24px; /* Large thumb */
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: white;
-  border: 4px solid var(--color-primary);
-  box-shadow: var(--shadow-md);
+  background: var(--color-bg-element);
+  border: 2px solid var(--text-secondary);
+  box-shadow: var(--shadow-sm);
   transition:
     transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
     border-color 0.2s ease;
 }
 
 .slider-input:hover:not(:disabled)::-webkit-slider-thumb {
-  transform: scale(1.2);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--color-primary-hover);
+  transform: scale(1.08);
+  border-color: var(--text-primary);
 }
 
 .slider-input:active:not(:disabled)::-webkit-slider-thumb {
@@ -131,12 +135,12 @@ const handleCommit = (event: Event) => {
 
 /* Firefox Thumb */
 .slider-input::-moz-range-thumb {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: white;
-  border: 4px solid var(--color-primary);
-  box-shadow: var(--shadow-md);
+  background: var(--color-bg-element);
+  border: 2px solid var(--text-secondary);
+  box-shadow: var(--shadow-sm);
   transition:
     transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
     border-color 0.2s ease;
@@ -144,9 +148,8 @@ const handleCommit = (event: Event) => {
 }
 
 .slider-input:hover:not(:disabled)::-moz-range-thumb {
-  transform: scale(1.2);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--color-primary-hover);
+  transform: scale(1.08);
+  border-color: var(--text-primary);
 }
 
 .slider-input:active:not(:disabled)::-moz-range-thumb {
@@ -155,8 +158,8 @@ const handleCommit = (event: Event) => {
 
 .slider-value {
   font-family: var(--font-sans);
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: var(--font-size-body);
+  font-weight: var(--weight-title);
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';
   color: var(--text-primary);
@@ -175,13 +178,13 @@ const handleCommit = (event: Event) => {
 .size-compact .slider-input::-webkit-slider-thumb {
   width: 16px;
   height: 16px;
-  border-width: 3px;
+  border-width: 2px;
 }
 
 .size-compact .slider-input::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  border-width: 3px;
+  border-width: 2px;
 }
 
 .size-compact .slider-value {

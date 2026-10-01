@@ -262,40 +262,20 @@ onUnmounted(() => stopMarquee());
   bottom: 2px;
   min-width: 14px;
   padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
   overflow: hidden;
-  background: var(--color-bg-surface);
-  color: var(--text-primary);
   cursor: grab;
   isolation: isolate;
   contain: layout paint style;
-  box-sizing: border-box;
   transition:
     opacity var(--fast) ease,
     transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
     width 180ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-.timeline-clip:active {
-  cursor: grabbing;
-}
-.timeline-clip:hover {
-  border-color: var(--color-primary);
-}
-.timeline-clip.disabled {
-  opacity: 0.42;
-}
-.timeline-clip.selected {
-  border-color: var(--color-primary);
-  box-shadow: inset 0 0 0 1px var(--color-primary);
 }
 .transition-zone {
   position: absolute;
   inset-block: 0;
   z-index: 30;
   pointer-events: none;
-  background: color-mix(in srgb, var(--color-primary) 7%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 .transition-zone.entry {
   left: 0;
@@ -303,46 +283,14 @@ onUnmounted(() => stopMarquee());
 .transition-zone.exit {
   right: 0;
 }
-.timeline-clip.disabled .transition-zone {
-  opacity: 0.65;
-}
-.timeline-clip.kind-caption {
-  background: var(--color-track-annotation);
-  color: #fff;
-}
-.timeline-clip.kind-blur {
-  background: linear-gradient(110deg, var(--color-track-blur), var(--color-track-blur-highlight));
-  color: #fff;
-}
-.timeline-clip.kind-color {
-  background: var(--color-bg-surface);
-  color: #fff;
-}
-.timeline-clip.kind-shape {
-  background: color-mix(in srgb, var(--color-track-annotation) 24%, var(--color-bg-surface));
-  color: var(--text-primary);
-}
-.timeline-clip.kind-audio {
-  background: var(--color-track-audio-light);
-}
 .trim-handle {
   position: absolute;
   top: 0;
   bottom: 0;
   z-index: 40;
-  width: 10px;
   max-width: 28%;
-  background: rgba(255, 255, 255, 0.28);
   cursor: col-resize;
   transition: background var(--fast) ease;
-}
-.trim-handle:hover {
-  background: var(--color-primary);
-}
-.trim-handle.at-limit,
-.trim-handle.at-limit:hover {
-  background: var(--color-destructive, #ef4444);
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
 }
 .trim-handle.start {
   left: 0;
@@ -360,21 +308,10 @@ onUnmounted(() => stopMarquee());
   transform: translateY(-50%);
   padding: 1px 5px;
   border-radius: var(--radius-sm);
-  background: var(--color-primary);
-  color: #fff;
   font-size: 9px;
   font-weight: 800;
   font-family: monospace;
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-}
-.trim-side-badge.at-limit {
-  background: var(--color-destructive, #ef4444);
-  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.5);
-}
-.timeline-clip.trim-at-limit {
-  border-color: var(--color-destructive, #ef4444) !important;
-  box-shadow: 0 0 0 1px var(--color-destructive, #ef4444);
 }
 .trim-handle.start .trim-side-badge {
   left: 8px;
@@ -395,10 +332,10 @@ onUnmounted(() => stopMarquee());
   white-space: nowrap;
   padding: 1px 5px;
   border-radius: var(--radius-sm);
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
+  background: var(--color-timeline-media-label);
+  color: var(--color-timeline-media-label-text);
   font-size: 9px;
-  font-weight: 800;
+  font-weight: var(--weight-title);
   line-height: 1.1;
   pointer-events: none;
 }
@@ -417,18 +354,18 @@ onUnmounted(() => stopMarquee());
   align-items: center;
   padding: 1px 3px;
   border-radius: var(--radius-xs);
-  background: var(--color-primary);
-  color: #fff;
+  background: transparent;
+  color: var(--text-light);
 }
 .speed-badge {
   flex: none;
   padding: 1px 4px;
   border-radius: var(--radius-xs);
-  background: var(--color-primary);
-  color: #fff;
+  background: transparent;
+  color: var(--text-light);
 }
 </style>
 
 <style scoped src="./waveform/audio-waveform.css"></style>
-<style scoped src="./timeline-highlight.css"></style>
+<style scoped src="./timeline-item-states.css"></style>
 <style scoped src="./timeline-thumbnail.css"></style>

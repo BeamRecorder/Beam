@@ -142,7 +142,7 @@ const { t } = useTranslate('ZoomPanel');
   left: 35%;
   width: 1.5px;
   height: 100%;
-  background: var(--color-primary);
+  background: var(--text-secondary);
 }
 
 .track-row {
@@ -228,8 +228,8 @@ const { t } = useTranslate('ZoomPanel');
 /* Hover Ghost state */
 .preview-ghost {
   opacity: 0;
-  border: 1.5px dashed var(--color-primary) !important;
-  color: var(--color-primary);
+  border: 1.5px dashed var(--text-secondary) !important;
+  color: var(--text-secondary);
   background: rgba(255, 90, 31, 0.12);
   animation: hoverGhostAnim 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
@@ -264,7 +264,7 @@ const { t } = useTranslate('ZoomPanel');
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 2px solid var(--color-primary);
+  border: 2px solid var(--text-secondary);
   top: 62px;
   left: 130px;
   transform: translate(-50%, -50%) scale(0);
@@ -306,8 +306,8 @@ const { t } = useTranslate('ZoomPanel');
   82% {
     opacity: 1;
     transform: scale(1);
-    outline: 2px solid var(--color-primary);
-    box-shadow: 0 0 12px var(--color-primary);
+    outline: 2px solid var(--text-secondary);
+    box-shadow: 0 0 12px var(--text-secondary);
   }
   90%,
   100% {

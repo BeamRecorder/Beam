@@ -69,17 +69,18 @@ const toggle = () => {
 }
 
 .switch-button:focus-visible {
-  box-shadow: 0 0 0 2px var(--color-primary-light);
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 2px;
 }
 
 .switch-button.is-checked {
-  background-color: var(--color-primary);
+  background-color: var(--text-secondary);
 }
 
 .switch-thumb {
   width: 20px;
   height: 20px;
-  background-color: white;
+  background-color: var(--color-bg-element);
   border-radius: var(--radius-full);
   box-shadow: var(--shadow-sm);
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);

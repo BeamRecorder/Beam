@@ -351,7 +351,7 @@ describe('ClipAppearanceControls', () => {
     const horizontal = buttonWithText(wrapper, 'horizontal')!;
     const vertical = buttonWithText(wrapper, 'vertical')!;
     expect(horizontal.attributes('data-variant')).toBe('ghost');
-    expect(vertical.attributes('data-variant')).toBe('primary');
+    expect(vertical.attributes('data-variant')).toBe('selected');
 
     await horizontal.trigger('click');
     expect(wrapper.emitted('update:isMirrored')).toEqual([[true]]);
@@ -389,7 +389,7 @@ describe('ClipAppearanceControls', () => {
       }),
     });
     await nextTick();
-    expect(buttonWithText(wrapper, 'horizontal')!.attributes('data-variant')).toBe('primary');
+    expect(buttonWithText(wrapper, 'horizontal')!.attributes('data-variant')).toBe('selected');
     expect(buttonWithText(wrapper, 'vertical')!.attributes('data-variant')).toBe('ghost');
   });
 });

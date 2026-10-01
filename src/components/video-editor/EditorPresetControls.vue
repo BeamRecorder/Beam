@@ -145,7 +145,7 @@ const confirmName = (name: string) => {
         </div>
         <Button
           size="xs"
-          variant="primary"
+          variant="selected"
           :icon="Save"
           class="save-action"
           :aria-label="t('saveTitle')"

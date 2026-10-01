@@ -43,7 +43,7 @@ const hasIndicator = computed(() => {
       },
     ]"
     :style="{
-      '--button-group-inner-radius': 'calc(var(--radius-lg) - 3px)',
+      '--button-group-inner-radius': 'calc(var(--radius-md) - 3px)',
       ...(props.columns ? { '--button-group-columns': props.columns } : {}),
       ...(hasIndicator
         ? { '--button-group-count': props.selection!.count, '--button-group-index': props.selection!.index }
@@ -67,10 +67,10 @@ const hasIndicator = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: var(--button-group-gap);
-  background: var(--color-bg-surface-hover);
-  border-radius: var(--radius-lg);
+  background: var(--color-bg-well);
+  border-radius: var(--radius-md);
   padding: var(--button-group-padding-y) var(--button-group-padding-x);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   width: fit-content;
   max-width: 100%;
   box-sizing: border-box;
@@ -79,7 +79,7 @@ const hasIndicator = computed(() => {
 .btn-group.size-xs {
   --button-group-padding-x: 2px;
   --button-group-padding-y: 2px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   gap: 2px;
 }
 
@@ -107,10 +107,9 @@ const hasIndicator = computed(() => {
   display: block;
   width: calc((100% - (var(--button-group-count) - 1) * var(--button-group-gap)) / var(--button-group-count));
   height: 100%;
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--button-group-inner-radius);
-  background: var(--color-bg-element);
-  box-shadow: var(--shadow-sm);
+  background: var(--color-bg-field-hover);
   transform: translateX(calc(var(--button-group-index) * (100% + var(--button-group-gap))));
   transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }

@@ -91,7 +91,7 @@ const presetIsActive = (patch: BlurPatch) =>
         <Button
           v-for="preset in presets"
           :key="preset.value"
-          :variant="presetIsActive(preset.patch) ? 'primary' : 'secondary'"
+          :variant="presetIsActive(preset.patch) ? 'selected' : 'secondary'"
           size="sm"
           block
           :icon="preset.icon"
@@ -111,7 +111,7 @@ const presetIsActive = (patch: BlurPatch) =>
         <Button
           v-for="item in modes"
           :key="item.value"
-          :variant="clip.mode === item.value ? 'primary' : 'secondary'"
+          :variant="clip.mode === item.value ? 'selected' : 'secondary'"
           size="sm"
           block
           :icon="item.icon"
@@ -128,7 +128,7 @@ const presetIsActive = (patch: BlurPatch) =>
         <Button
           v-for="item in shapes"
           :key="item.value"
-          :variant="clip.shape === item.value ? 'primary' : 'secondary'"
+          :variant="clip.shape === item.value ? 'selected' : 'secondary'"
           size="xs"
           block
           :icon="item.icon"
@@ -254,6 +254,6 @@ const presetIsActive = (patch: BlurPatch) =>
   height: 14px;
   margin-top: 1px;
   flex: 0 0 auto;
-  color: var(--color-primary);
+  color: var(--text-secondary);
 }
 </style>

@@ -82,6 +82,8 @@ export const useThemeStore = defineStore('theme', () => {
     style.setProperty('--color-primary-hover', accent.hover);
     style.setProperty('--color-primary-light', accent.light);
     style.setProperty('--color-primary-border', accent.border);
+    style.setProperty('--text-on-primary', accent.foreground);
+    style.setProperty('--text-on-primary-hover', accent.foregroundHover);
 
     // Secondary color tokens
     style.setProperty('--color-secondary', secondary);

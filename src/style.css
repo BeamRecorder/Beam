@@ -1,5 +1,6 @@
 @import './theme/palette.css';
 @import './theme/surfaces.css';
+@import './theme/timeline.css';
 
 /* Design System: Beam styles */
 
@@ -37,20 +38,8 @@
 
 :root {
   --github-icon-filter: brightness(0);
-  --editor-ambient-media-opacity: 0.7;
-  --editor-ambient-veil-opacity: 0.82;
-
-  /* Track Colors */
-  --color-track-video: #6366f1;
-  --color-track-video-light: rgba(99, 102, 241, 0.15);
-  --color-track-audio: #10b981;
-  --color-track-audio-light: rgba(16, 185, 129, 0.15);
-  --color-track-cursor: #f43f5e;
-  --color-track-cursor-light: rgba(244, 63, 94, 0.15);
-  --color-track-annotation: #f59e0b;
-  --color-track-annotation-light: rgba(245, 158, 11, 0.15);
-  --color-track-blur: #0e7490;
-  --color-track-blur-highlight: #0891b2;
+  --editor-ambient-media-opacity: 0.4;
+  --editor-ambient-veil-opacity: 0.9;
 
   /* Texts */
 
@@ -118,12 +107,8 @@
 
 :root.dark {
   --github-icon-filter: brightness(0) invert(1);
-  --editor-ambient-media-opacity: 0.78;
-  --editor-ambient-veil-opacity: 0.7;
-
-  /* Track Colors */
-  --color-track-blur: #155e75;
-  --color-track-blur-highlight: #0e7490;
+  --editor-ambient-media-opacity: 0.4;
+  --editor-ambient-veil-opacity: 0.9;
 
   /* Texts */
 
@@ -309,7 +294,8 @@ select {
   color: var(--text-primary);
 }
 
-html.region-marker-root, html.region-marker-root body {
+html.region-marker-root,
+html.region-marker-root body {
   background: var(--color-primary) !important;
   margin: 0;
   overflow: hidden;

@@ -77,14 +77,14 @@ const effectOptions = computed(() => [
         <ButtonGroup full :columns="2">
           <Button
             size="xs"
-            :variant="modelValue.fill === 'solid' ? 'primary' : 'ghost'"
+            :variant="modelValue.fill === 'solid' ? 'selected' : 'ghost'"
             @click="update({ fill: 'solid' })"
           >
             {{ t('highlightSolid') }}
           </Button>
           <Button
             size="xs"
-            :variant="modelValue.fill === 'gradient' ? 'primary' : 'ghost'"
+            :variant="modelValue.fill === 'gradient' ? 'selected' : 'ghost'"
             @click="update({ fill: 'gradient' })"
           >
             {{ t('highlightGradient') }}

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useWhisperTranscription } from '../useWhisperTranscription';
 import type { WhisperResult } from '../whisper-types';
 
-type WorkerMode = 'result' | 'stream' | 'error' | 'crash';
+type WorkerMode = 'result' | 'stream' | 'error' | 'crash' | 'messageerror';
 
 const workerState = vi.hoisted(() => ({
   mode: 'result' as WorkerMode,
@@ -49,6 +49,10 @@ class FakeWorker {
     }
     if (workerState.mode === 'error') {
       this.emit('message', { id: message.id, type: 'error', message: 'Whisper failed' });
+      return;
+    }
+    if (workerState.mode === 'messageerror') {
+      this.emit('messageerror', {});
       return;
     }
     this.emit('message', {
@@ -156,7 +160,7 @@ describe('useWhisperTranscription composable', () => {
     vi.stubGlobal('Worker', FakeWorker);
     vi.stubGlobal('AudioContext', FakeAudioContext);
     vi.stubGlobal('OfflineAudioContext', FakeOfflineAudioContext);
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(new ArrayBuffer(8), { status: 200 }));
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(new ArrayBuffer(8), { status: 200 }));
   });
 
   afterEach(() => {
@@ -218,8 +222,29 @@ describe('useWhisperTranscription composable', () => {
     await expect(api.transcribe('audio.wav', 'Xenova/whisper-tiny')).rejects.toThrow('Worker exploded');
     expect(api.progress.value).toMatchObject({ status: 'error', message: 'Worker exploded' });
     expect(api.diagnostics.value).toMatchObject({ status: 'failed', error: 'Worker exploded' });
+    expect(workerState.instances[0]!.terminate).toHaveBeenCalledOnce();
     wrapper.unmount();
   });
+
+  it.each(['error', 'crash', 'messageerror'] as const)(
+    'releases a worker after %s and creates a fresh worker for a successful retry',
+    async (mode) => {
+      workerState.mode = mode;
+      const { api, wrapper } = mountApi();
+      await expect(api.transcribe('audio.wav', 'Xenova/whisper-medium.en')).rejects.toThrow();
+      const failedWorker = workerState.instances[0]!;
+      expect(failedWorker.terminate).toHaveBeenCalledOnce();
+      workerState.mode = 'result';
+      await expect(api.transcribe('audio.wav', 'Xenova/whisper-medium.en')).resolves.toMatchObject({ words });
+      expect(workerState.instances).toHaveLength(2);
+      expect(failedWorker.messages).toHaveLength(1);
+      expect(workerState.instances[1]!.terminated).toBe(false);
+      expect(api.diagnostics.value).toMatchObject({ status: 'completed', error: null });
+      wrapper.unmount();
+      expect(failedWorker.terminate).toHaveBeenCalledOnce();
+      expect(workerState.instances[1]!.terminate).toHaveBeenCalledOnce();
+    },
+  );
 
   it('reports preparation failures before creating a worker', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 404 }));

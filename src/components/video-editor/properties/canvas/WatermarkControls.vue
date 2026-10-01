@@ -8,7 +8,6 @@ import Switch from '~/ui/switch/Switch.vue';
 import Input from '~/ui/input/Input.vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import { DEFAULT_WATERMARK, normalizeWatermark, type WatermarkSettings } from '../../canvas/output-canvas';
 
 const props = defineProps<{ modelValue?: WatermarkSettings; description?: string }>();
@@ -48,7 +47,6 @@ const positions = [
   <div class="watermark-section">
     <div class="toggle-row">
       <div class="heading">
-        <img :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')" alt="" class="logo" />
         <div>
           <span class="title">{{ t('watermark') }}</span
           ><span class="description">{{ description ?? t('watermarkDescription') }}</span>
@@ -67,7 +65,7 @@ const positions = [
           <Button
             v-for="choice in textChoices"
             :key="choice.value"
-            :variant="value.text === choice.value ? 'primary' : 'ghost'"
+            :variant="value.text === choice.value ? 'selected' : 'ghost'"
             size="xs"
             :icon="choice.icon"
             :icon-only="!!choice.icon"
@@ -114,7 +112,7 @@ const positions = [
             :icon="position.icon"
             icon-only
             size="xs"
-            :variant="value.position === position.value ? 'primary' : 'ghost'"
+            :variant="value.position === position.value ? 'selected' : 'ghost'"
             :tooltip="t(position.label)"
             :aria-label="t(position.label)"
             @click="update({ position: position.value })"
@@ -202,11 +200,6 @@ const positions = [
 .option {
   gap: 6px;
 }
-.logo {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-}
 .title,
 .option-label {
   color: var(--text-secondary);
@@ -220,9 +213,7 @@ const positions = [
   line-height: 1.35;
 }
 .options {
-  padding: 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  padding-top: 4px;
 }
 .compact {
   min-height: 28px;

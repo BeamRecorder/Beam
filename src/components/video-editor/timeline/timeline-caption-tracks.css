@@ -2,17 +2,17 @@
   display: flex;
   align-items: center;
   height: auto;
-  min-height: var(--timeline-track-min-height);
-  max-height: var(--timeline-track-max-height);
-  flex: 1 1 var(--timeline-track-min-height);
-  background: var(--color-bg-element);
+  min-height: var(--timeline-effect-track-min-height);
+  max-height: var(--timeline-effect-track-max-height);
+  flex: 1 1 var(--timeline-effect-track-min-height);
+  background: var(--color-timeline-lane);
   border-bottom: 1px solid var(--color-border);
+}
+.track-row:nth-child(even) {
+  background: var(--color-timeline-lane-alt);
 }
 .text-caption-layers-group {
   display: contents;
-}
-.text-caption-layer.dragging {
-  opacity: 0.55;
 }
 .track-info {
   width: 120px;
@@ -40,10 +40,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-title);
 }
 .track-content {
   flex: 1;
@@ -53,53 +51,25 @@
   margin-left: 80px;
   margin-right: 150px;
 }
-.annotation-content {
-  background: var(--color-track-annotation-light);
-}
-.keyboard-caption-track .annotation-content {
-  filter: saturate(0.78);
-}
 .annotation-indicator {
   position: absolute;
-  top: 4px;
-  height: 24px;
+  top: var(--timeline-effect-item-inset);
+  height: var(--timeline-effect-item-height);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 8px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  color: #fff;
   font-size: 11px;
   font-weight: 650;
   cursor: grab;
-  box-shadow: var(--shadow-sm);
   transition: border-color var(--fast) ease;
   overflow: hidden;
-  box-sizing: border-box;
-  background: var(--color-track-annotation);
-}
-.annotation-indicator:hover {
-  border-color: #fff;
-}
-.annotation-indicator.selected {
-  outline: 2px solid var(--color-primary);
-}
-.annotation-indicator.disabled {
-  opacity: 0.42;
-}
-.preview-ghost {
-  opacity: 0.65;
-  border: 1.5px dashed var(--color-primary);
-  pointer-events: none;
 }
 .transition-zone {
   position: absolute;
   inset-block: 0;
   z-index: 10;
   pointer-events: none;
-  background: color-mix(in srgb, var(--color-primary) 7%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 .transition-zone.entry {
   left: 0;
@@ -107,20 +77,12 @@
 .transition-zone.exit {
   right: 0;
 }
-.annotation-indicator.disabled .transition-zone {
-  opacity: 0.65;
-}
 .trim-handle {
   position: absolute;
   inset-block: 0;
   z-index: 30;
-  width: 10px;
   max-width: 28%;
   cursor: col-resize;
-  background: rgba(255, 255, 255, 0.28);
-}
-.trim-handle:hover {
-  background: var(--color-primary);
 }
 .trim-handle.start {
   left: 0;
@@ -138,8 +100,6 @@
   transform: translateY(-50%);
   padding: 1px 5px;
   border-radius: var(--radius-sm);
-  background: var(--color-primary);
-  color: #fff;
   font-size: 9px;
   font-weight: 800;
   font-family: monospace;
@@ -164,7 +124,6 @@
   max-width: calc(100% - 16px);
   width: 100%;
 }
-
 .caption-label-text {
   display: inline-block;
   white-space: nowrap;
@@ -178,20 +137,18 @@
   transition: transform 0.05s linear;
   will-change: transform;
 }
-
 .caption-label-text.is-marqueeing {
   overflow: visible;
   text-overflow: clip;
   max-width: none;
 }
-
 .sparkles-icon {
   flex-shrink: 0;
 }
 
 @keyframes caption-settle-in {
   0% {
-    opacity: 0.55;
+    opacity: var(--timeline-pending-opacity);
     transform: translateY(2px);
   }
   100% {
@@ -199,11 +156,9 @@
     transform: translateY(0);
   }
 }
-
 .caption-label-text.caption-settled {
   animation: caption-settle-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-
 .caption-item-enter-active {
   transition:
     opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1),
@@ -222,11 +177,9 @@
   opacity: 0;
   transform: scale(0.95);
 }
-
 .motion-reduced .caption-label-text.caption-settled {
   animation: none;
 }
-
 .motion-reduced .caption-item-enter-active,
 .motion-reduced .caption-item-leave-active {
   transition: none;

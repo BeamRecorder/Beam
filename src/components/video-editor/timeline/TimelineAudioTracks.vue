@@ -100,3 +100,4 @@ const lanes = computed(() => {
   transition: none;
 }
 </style>
+<style scoped src="./timeline-item-states.css"></style>

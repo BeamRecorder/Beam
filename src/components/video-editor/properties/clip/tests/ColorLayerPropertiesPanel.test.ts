@@ -204,12 +204,12 @@ describe('ColorLayerPropertiesPanel', () => {
 
     expect(modes).toHaveLength(2);
     expect(modes.map((mode) => mode.text())).toEqual(['Color', 'Gradient']);
-    expect(modes[0]?.attributes('data-variant')).toBe('primary');
+    expect(modes[0]?.attributes('data-variant')).toBe('selected');
     expect(modes[1]?.attributes('data-variant')).toBe('ghost');
     expect(wrapper.find('.preset-tile.active').attributes('aria-label')).toBe('#111827');
 
     await modes[1]!.trigger('click');
-    expect(wrapper.findAll('.kind-group .btn')[1]?.attributes('data-variant')).toBe('primary');
+    expect(wrapper.findAll('.kind-group .btn')[1]?.attributes('data-variant')).toBe('selected');
     expect(wrapper.findAll('.preset-tile').length).toBeGreaterThan(1);
     wrapper.unmount();
   });

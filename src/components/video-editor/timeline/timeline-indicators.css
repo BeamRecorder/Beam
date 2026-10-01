@@ -1,0 +1,62 @@
+.cursor-zoom-indicator,
+.annotation-indicator {
+  position: absolute;
+  top: var(--timeline-effect-item-inset);
+  height: var(--timeline-effect-item-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-title);
+  cursor: grab;
+  transition: border-color var(--fast) ease;
+  overflow: visible;
+}
+.preview-ghost {
+  z-index: 8;
+}
+
+.trim-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 20;
+  max-width: 28%;
+  cursor: col-resize;
+  transition: background var(--fast) ease;
+}
+.trim-handle.start {
+  left: 0;
+  border-top-left-radius: var(--radius-sm);
+  border-bottom-left-radius: var(--radius-sm);
+}
+.trim-handle.end {
+  right: 0;
+  border-top-right-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
+}
+.trim-side-badge {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  font-size: 9px;
+  font-weight: 800;
+  font-family: monospace;
+  white-space: nowrap;
+}
+.trim-handle.start .trim-side-badge {
+  left: 8px;
+}
+.trim-handle.end .trim-side-badge {
+  right: 8px;
+}
+.clip-center-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  white-space: nowrap;
+}

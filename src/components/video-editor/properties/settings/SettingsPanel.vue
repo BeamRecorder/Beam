@@ -261,8 +261,8 @@ const { copied: isCopiedSysInfo, copy: copySystemInfo } = useCopySystemInformati
 }
 
 .dev-switch.active {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background: var(--text-secondary);
+  border-color: var(--text-secondary);
 }
 
 .switch-thumb {
@@ -299,7 +299,7 @@ const { copied: isCopiedSysInfo, copy: copySystemInfo } = useCopySystemInformati
 .dev-header-icon {
   width: 14px;
   height: 14px;
-  color: var(--color-primary);
+  color: var(--text-secondary);
 }
 
 .dev-frame-title {

@@ -70,7 +70,7 @@ const directions = computed(() => [
 }
 
 .direction-btn.active {
-  background: var(--color-primary);
-  color: white;
+  background: var(--color-bg-field-active);
+  color: var(--text-primary);
 }
 </style>

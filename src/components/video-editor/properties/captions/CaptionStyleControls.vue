@@ -118,7 +118,7 @@ const shadowDirectionOptions = computed(() => [
         :icon="Bold"
         icon-only
         size="xs"
-        :variant="style.fontWeight === 800 ? 'primary' : 'ghost'"
+        :variant="style.fontWeight === 800 ? 'selected' : 'ghost'"
         :tooltip="t('bold')"
         :aria-label="t('bold')"
         @click="emit('update', 'fontWeight', style.fontWeight === 800 ? 400 : 800)"
@@ -127,7 +127,7 @@ const shadowDirectionOptions = computed(() => [
         :icon="Italic"
         icon-only
         size="xs"
-        :variant="style.fontStyle === 'italic' ? 'primary' : 'ghost'"
+        :variant="style.fontStyle === 'italic' ? 'selected' : 'ghost'"
         :tooltip="t('italic')"
         :aria-label="t('italic')"
         @click="emit('update', 'fontStyle', style.fontStyle === 'italic' ? 'normal' : 'italic')"
@@ -136,7 +136,7 @@ const shadowDirectionOptions = computed(() => [
         :icon="Strikethrough"
         icon-only
         size="xs"
-        :variant="style.textDecoration.includes('line-through') ? 'primary' : 'ghost'"
+        :variant="style.textDecoration.includes('line-through') ? 'selected' : 'ghost'"
         :tooltip="t('strikethrough')"
         :aria-label="t('strikethrough')"
         @click="emit('update', 'textDecoration', toggleTextDecoration(style.textDecoration, 'line-through'))"
@@ -145,7 +145,7 @@ const shadowDirectionOptions = computed(() => [
         :icon="Underline"
         icon-only
         size="xs"
-        :variant="style.textDecoration.includes('underline') ? 'primary' : 'ghost'"
+        :variant="style.textDecoration.includes('underline') ? 'selected' : 'ghost'"
         :tooltip="t('underline')"
         :aria-label="t('underline')"
         @click="emit('update', 'textDecoration', toggleTextDecoration(style.textDecoration, 'underline'))"
@@ -162,7 +162,7 @@ const shadowDirectionOptions = computed(() => [
         :icon="item.icon"
         icon-only
         size="xs"
-        :variant="style.textAlign === item.value ? 'primary' : 'ghost'"
+        :variant="style.textAlign === item.value ? 'selected' : 'ghost'"
         :tooltip="item.label"
         :aria-label="item.label"
         @click="emit('update', 'textAlign', item.value as CaptionStyle['textAlign'])"

@@ -93,10 +93,10 @@ defineExpose({ focusTransitionButton });
   flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
-  height: 64px;
-  min-height: 64px;
-  max-height: 64px;
-  padding: 0 20px;
+  height: 48px;
+  min-height: 48px;
+  max-height: 48px;
+  padding: 0 16px;
   box-sizing: border-box;
 }
 .panel-header-view {
@@ -111,8 +111,8 @@ defineExpose({ focusTransitionButton });
   margin: 0;
   overflow: hidden;
   color: var(--text-primary);
-  font-size: 16px;
-  font-weight: 700;
+  font-size: var(--font-size-xl);
+  font-weight: var(--weight-title);
   line-height: 24px;
   text-overflow: ellipsis;
   white-space: nowrap;

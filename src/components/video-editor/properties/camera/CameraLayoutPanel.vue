@@ -80,7 +80,7 @@ const splitUnavailable = computed(() => props.supportsSplitLayouts !== false && 
         v-for="item in layouts"
         :key="item.id"
         class="layout-button"
-        :variant="layout === item.id ? 'primary' : 'outline'"
+        :variant="layout === item.id ? 'selected' : 'outline'"
         size="sm"
         :disabled="isSplitCameraLayout(item.id) && splitUnavailable"
         :tooltip="isSplitCameraLayout(item.id) && splitUnavailable ? t('splitRequiresScreen') : item.label"
@@ -139,7 +139,7 @@ const splitUnavailable = computed(() => props.supportsSplitLayouts !== false && 
       <Button
         v-for="item in framings"
         :key="item.id"
-        :variant="framing === item.id ? 'primary' : 'ghost'"
+        :variant="framing === item.id ? 'selected' : 'ghost'"
         size="xs"
         :aria-label="item.label"
         @click="emit('update:framing', item.id)"

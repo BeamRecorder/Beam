@@ -1,27 +1,31 @@
 /* Shared by the lightweight startup shell and the full renderer. */
 :root {
-  --color-primary: #c45318;
-  --color-primary-hover: #ab3a00;
-  --color-primary-light: rgba(196, 83, 24, 0.07);
-  --color-primary-border: rgba(196, 83, 24, 0.25);
+  --color-primary: #ac5938;
+  --color-primary-hover: #93401f;
+  --color-primary-light: rgba(172, 89, 56, 0.07);
+  --color-primary-border: rgba(172, 89, 56, 0.25);
+  --text-on-primary: #ffffff;
+  --text-on-primary-hover: #ffffff;
   --color-bg-app: #d2d2d9;
   --color-bg-surface: #f7f7f8;
   --color-bg-surface-hover: #e8e8ec;
   --color-bg-element: #ffffff;
-  --color-border: #e6e3dc;
-  --color-border-strong: #d3cfc5;
-  --color-border-dark: #334155;
+  --color-border: #0000001f;
+  --color-border-strong: #00000038;
+  --color-border-dark: #00000038;
 }
 :root.dark {
-  --color-primary: #b85c38;
-  --color-primary-hover: #d77b57;
-  --color-primary-light: rgba(184, 92, 56, 0.18);
-  --color-primary-border: rgba(184, 92, 56, 0.35);
+  --color-primary: #c07a58;
+  --color-primary-hover: #df9977;
+  --color-primary-light: rgba(192, 122, 88, 0.18);
+  --color-primary-border: rgba(192, 122, 88, 0.35);
+  --text-on-primary: #000000;
+  --text-on-primary-hover: #000000;
   --color-bg-app: #151517;
   --color-bg-surface: #212123;
   --color-bg-surface-hover: #3b3b3e;
   --color-bg-element: #2b2b2e;
-  --color-border: #2e2c28;
-  --color-border-strong: #3d3a34;
-  --color-border-dark: #3d3a34;
+  --color-border: #ffffff1a;
+  --color-border-strong: #ffffff33;
+  --color-border-dark: #ffffff33;
 }

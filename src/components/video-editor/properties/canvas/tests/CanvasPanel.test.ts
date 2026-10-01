@@ -10,6 +10,9 @@ import {
 } from '../../../composables/backgroundCatalog';
 import CanvasPanel from '../CanvasPanel.vue';
 import AddTileButton from '../../../../ui/button/AddTileButton.vue';
+import Tooltip from '~/ui/tooltip/Tooltip.vue';
+import { i18n, setCurrentLocale } from '~/i18n';
+import { SUPPORTED_LOCALES } from '~/i18n/locales';
 
 const { capture, previewState } = vi.hoisted(() => ({
   capture: {
@@ -182,13 +185,72 @@ afterEach(() => {
 });
 
 describe('CanvasPanel', () => {
-  it('inverts showBackground for Remove Background and places it before the watermark', async () => {
+  it('places image import first and keeps nine wallpapers in the two-row library', async () => {
+    capture.pickBackgroundLibraryMedia.mockResolvedValueOnce(imageItems[0]);
+    const mounted = await mountPanel(null, groups, true);
+    const grid = mounted!.get('.media-scroll-grid');
+    expect(grid.element.firstElementChild).toBe(mounted!.get('.media-import-tile').element);
+    expect(grid.findAll('.media-tile')).toHaveLength(9);
+    expect(mounted!.find('.import-btn').exists()).toBe(false);
+    await mounted!.get('.import-tile').trigger('click');
+    await flushPromises();
+    expect(capture.pickBackgroundLibraryMedia).toHaveBeenCalledWith('image');
+    expect(mounted!.emitted('import:background')).toEqual([[imageItems[0]]]);
+  });
+
+  it('keeps the import tile available when the file dialog is canceled', async () => {
+    capture.pickBackgroundLibraryMedia.mockResolvedValue(null);
+    const mounted = await mountPanel(null, [], true);
+    await mounted!.get('.import-tile').trigger('click');
+    await flushPromises();
+    expect(mounted!.get('.import-tile').attributes('aria-label')).toBe('Import custom image');
+    expect(mounted!.get('.empty-backgrounds').text()).toBeTruthy();
+    expect(mounted!.emitted('import:background')).toBeUndefined();
+    expect(mounted!.emitted('update:selectedBackground')).toBeUndefined();
+  });
+
+  it.each(SUPPORTED_LOCALES)('uses the shared translated tooltips for all four additions in %s', async (locale) => {
+    await setCurrentLocale(locale);
+    const mounted = await mountPanel(null, groups, true);
+    const importTooltip = mounted!
+      .findAllComponents(Tooltip)
+      .find((tooltip) => tooltip.props('content') === i18n.global.t('CanvasPanel.importCustomImage'))!;
+    expect(importTooltip.props('content')).toBe(i18n.global.t('CanvasPanel.importCustomImage'));
+    await mounted!.get('.media-import-tile').trigger('mouseenter');
+    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toContain(
+      i18n.global.t('CanvasPanel.importCustomImage'),
+    );
+    await mounted!.get('.media-import-tile').trigger('mouseleave');
+    const tabs = mounted!.findAll('.kind-group button');
+    await tabs[1]!.trigger('click');
+    expect(importTooltip.props('content')).toBe(i18n.global.t('CanvasPanel.importCustomVideo'));
+    for (const [index, selector, key] of [
+      [2, '.swatches-grid', 'customColor'],
+      [3, '.gradients-grid', 'customGradient'],
+    ] as const) {
+      await tabs[index]!.trigger('click');
+      const tooltip = mounted!
+        .findAllComponents(Tooltip)
+        .find((tooltip) => tooltip.props('content') === i18n.global.t(`CanvasPanel.${key}`))!;
+      expect(tooltip.props('content')).toBe(i18n.global.t(`CanvasPanel.${key}`));
+      expect(tooltip.getComponent(AddTileButton).props('label')).toBe(tooltip.props('content'));
+      expect(mounted!.get(`${selector} .tooltip-wrapper`).attributes('style')).toContain('width: 100%');
+      expect(mounted!.get(`${selector} .tooltip-wrapper`).attributes('style')).toContain('display: flex');
+      await mounted!.get(`${selector} .tooltip-wrapper`).trigger('mouseenter');
+      expect(document.body.querySelector('[role="tooltip"]')?.textContent).toContain(tooltip.props('content'));
+      await mounted!.get(`${selector} .tooltip-wrapper`).trigger('mouseleave');
+    }
+  });
+
+  it('shows a positive background visibility switch before the library and watermark', async () => {
     const mounted = await mountPanel(imageItems[0], groups, true);
     const removeBackgroundSwitch = mounted!.get('.switch-stub');
     const watermark = mounted!.get('.watermark-controls-stub');
 
     expect(removeBackgroundSwitch.attributes('aria-label')).toBeTruthy();
-    expect(removeBackgroundSwitch.attributes('data-model-value')).toBe('false');
+    expect(removeBackgroundSwitch.attributes('data-model-value')).toBe('true');
+    expect(mounted!.get('.background-section').text()).toContain('Background');
+    expect(mounted!.get('.background-options').isVisible()).toBe(true);
     expect(
       removeBackgroundSwitch.element.compareDocumentPosition(watermark.element) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
@@ -198,7 +260,8 @@ describe('CanvasPanel', () => {
     expect(mounted!.emitted('update:selectedBackground')).toBeUndefined();
 
     await mounted!.setProps({ showBackground: false });
-    expect(mounted!.get('.switch-stub').attributes('data-model-value')).toBe('true');
+    expect(mounted!.get('.switch-stub').attributes('data-model-value')).toBe('false');
+    expect(mounted!.get('.background-options').attributes('style')).toContain('display: none');
     await mounted!.get('.switch-stub').trigger('click');
     expect(mounted!.emitted('update:showBackground')).toEqual([[false], [true]]);
   });
@@ -209,7 +272,7 @@ describe('CanvasPanel', () => {
     const mounted = await mountPanel(imageItems[0]);
     const observer = TestIntersectionObserver.instances[0]!;
     const tiles = mounted!.findAll('.media-tile');
-    expect(tiles).toHaveLength(15);
+    expect(tiles).toHaveLength(9);
     expect(tiles[0]!.classes()).toContain('active');
     expect(tiles[0]!.find('img').attributes('src')).toBe('blob:image-0');
     expect(tiles[0]!.findAll('img')).toHaveLength(1);
@@ -251,7 +314,7 @@ describe('CanvasPanel', () => {
     expect(observer.unobserve.mock.calls.length).toBe(initialUnobserveCount);
   });
 
-  it('adds one 15-item load-more batch across animation frames', async () => {
+  it('adds one 9-item load-more batch across animation frames', async () => {
     const mounted = await mountPanel();
     const observer = TestIntersectionObserver.instances[0]!;
     const initialObservedCount = observer.observe.mock.calls.length;
@@ -259,19 +322,19 @@ describe('CanvasPanel', () => {
 
     await loadMore.trigger('click');
     await nextTick();
-    expect(mounted!.findAll('.media-tile')).toHaveLength(15);
+    expect(mounted!.findAll('.media-tile')).toHaveLength(9);
 
     const frameCounts: number[] = [];
     while (await runNextFrame()) frameCounts.push(mounted!.findAll('.media-tile').length);
-    expect(frameCounts.some((count) => count > 15)).toBe(true);
-    expect(mounted!.findAll('.media-tile')).toHaveLength(30);
-    expect(observer.observe.mock.calls.length).toBe(initialObservedCount + 15);
+    expect(frameCounts.some((count) => count > 9)).toBe(true);
+    expect(mounted!.findAll('.media-tile')).toHaveLength(18);
+    expect(observer.observe.mock.calls.length).toBe(initialObservedCount + 9);
 
     await mounted!.get('.load-more button').trigger('click');
     await nextTick();
     await drainFrames();
-    expect(mounted!.findAll('.media-tile')).toHaveLength(45);
-    expect(observer.observe.mock.calls.length).toBe(initialObservedCount + 30);
+    expect(mounted!.findAll('.media-tile')).toHaveLength(27);
+    expect(observer.observe.mock.calls.length).toBe(initialObservedCount + 18);
   });
 
   it('coalesces multiple load-more clicks and cancels pending work on unmount', async () => {
@@ -281,9 +344,9 @@ describe('CanvasPanel', () => {
     await loadMore.trigger('click');
     await loadMore.trigger('click');
     await nextTick();
-    expect(mounted!.findAll('.media-tile')).toHaveLength(15);
+    expect(mounted!.findAll('.media-tile')).toHaveLength(9);
     await drainFrames();
-    expect(mounted!.findAll('.media-tile')).toHaveLength(30);
+    expect(mounted!.findAll('.media-tile')).toHaveLength(18);
 
     await mounted!.get('.load-more button').trigger('click');
     await nextTick();
@@ -314,7 +377,7 @@ describe('CanvasPanel', () => {
     expect(previewState.request).toHaveBeenCalledWith(videoItems[1]);
     await mounted!.findAll('.media-tile')[0]!.trigger('mouseenter');
     expect(mounted!.findAll('video')).toHaveLength(0);
-    await mounted!.get('.import-btn').trigger('click');
+    await mounted!.get('.import-tile').trigger('click');
     await flushPromises();
     expect(capture.pickBackgroundLibraryMedia).toHaveBeenCalledWith('video');
     expect(mounted!.emitted('import:background')).toEqual([[videoItems[0]]]);
@@ -323,28 +386,30 @@ describe('CanvasPanel', () => {
     expect(mounted!.findAll('.media-tile')).toHaveLength(2);
   });
 
-  it('shows empty media states and imports a generic background from color or gradient tabs', async () => {
+  it('keeps an import tile in empty media libraries and separate color and gradient additions', async () => {
     capture.pickBackgroundLibraryMedia.mockResolvedValueOnce(undefined);
     const mounted = await mountPanel(null, [{ kind: 'video', label: 'Videos', items: videoItems }]);
     expect(mounted!.find('.empty-backgrounds').exists()).toBe(true);
-    await mounted!.get('.empty-backgrounds button').trigger('click');
+    await mounted!.get('.import-tile').trigger('click');
     expect(capture.pickBackgroundLibraryMedia).toHaveBeenCalledWith('image');
 
     const tabs = mounted!.findAll('.kind-group button');
     await tabs[2]!.trigger('click');
     expect(mounted!.find('.swatches-section').exists()).toBe(true);
+    expect(mounted!.get('.swatches-grid .swatch-tile').attributes('style')).toContain('background-color:');
     expect(mounted!.findAll('.swatch-tile').length).toBeGreaterThan(1);
     await mounted!.find('.swatch-tile').trigger('click');
     expect(mounted!.emitted('update:selectedBackground')).toBeTruthy();
 
     await tabs[3]!.trigger('click');
     expect(mounted!.find('.gradients-section').exists()).toBe(true);
+    expect(mounted!.get('.gradients-grid .swatch-tile').attributes('style')).toContain('background-image:');
     expect(mounted!.findAll('.swatch-tile').length).toBeGreaterThan(1);
     await mounted!.find('.swatch-tile').trigger('click');
     expect(mounted!.emitted('update:selectedBackground')).toHaveLength(2);
-    await mounted!.get('.import-btn').trigger('click');
-    await flushPromises();
-    expect(capture.pickBackgroundLibraryMedia).toHaveBeenLastCalledWith('media');
+    expect(mounted!.get('.media-scroll-grid').attributes('style')).toContain('display: none');
+    expect(capture.pickBackgroundLibraryMedia).toHaveBeenCalledTimes(1);
+    expect(mounted!.emitted('import:background')).toBeUndefined();
   });
 
   it('uses the shared add tile for custom color and gradient composer flows', async () => {
@@ -352,7 +417,7 @@ describe('CanvasPanel', () => {
     const tabs = mounted!.findAll('.kind-group button');
 
     await tabs[2]!.trigger('click');
-    const colorAdd = mounted!.findComponent(AddTileButton);
+    const colorAdd = mounted!.get('.swatches-grid').findComponent(AddTileButton);
     expect(colorAdd.props('label')).toBe('Custom color');
     await colorAdd.trigger('click');
     await flushPromises();
@@ -381,7 +446,7 @@ describe('CanvasPanel', () => {
     const selectedColor = { id: 'color:#111827', name: '#111827', kind: 'color' as const, color: '#111827' };
     const mounted = await mountPanel(selectedColor);
     await mounted!.findAll('.kind-group button')[2]!.trigger('click');
-    await mounted!.findComponent(AddTileButton).trigger('click');
+    await mounted!.get('.swatches-grid').findComponent(AddTileButton).trigger('click');
     await flushPromises();
     const colorComposer = document.body.querySelector('.composer-stub')!;
     expect(colorComposer.getAttribute('data-color')).not.toBe(selectedColor.color);

@@ -3,7 +3,7 @@ import type { BackgroundMedia } from '../../composables/backgroundCatalog';
 import { useBackgroundPreviews } from './useBackgroundPreviews';
 
 export function useCanvasMediaTiles(items: ComputedRef<BackgroundMedia[]>) {
-  const INITIAL_MEDIA_COUNT = 15;
+  const INITIAL_MEDIA_COUNT = 9;
   const LOAD_MORE_FRAME_SIZE = 3;
   const visibleCount = ref(INITIAL_MEDIA_COUNT);
   const isLoadingMore = ref(false);

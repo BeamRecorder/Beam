@@ -38,6 +38,22 @@ const PreviewQualityPopover = {
     '<div class="preview-quality-popover-stub" :data-quality="modelValue" :data-status="performanceSnapshot?.status || \'idle\'" />',
 };
 describe('TimelineToolbar', () => {
+  it('uses neutral snapping states and groups fullscreen with the view controls', async () => {
+    const wrapper = mount(TimelineToolbar, {
+      props: { currentTime: 0, duration: 100, isPlaying: false, zoomLevel: 100, isSnappingEnabled: true },
+      global: { stubs: { PopoverMenuButton, Popover, BigSlider, Button, PreviewQualityPopover } },
+    });
+    expect(wrapper.get('.toolbar-snap-btn').attributes('data-variant')).toBe('selected');
+    expect(wrapper.get('.toolbar-snap-btn').attributes('aria-pressed')).toBe('true');
+    expect(wrapper.get('.right-section').find('.toolbar-fullscreen-btn').exists()).toBe(true);
+    expect(wrapper.get('.zoom-label').text()).toBe('Timeline zoom');
+    await wrapper.get('.toolbar-snap-btn').trigger('click');
+    expect(wrapper.emitted('update:isSnappingEnabled')).toEqual([[false]]);
+    await wrapper.setProps({ isSnappingEnabled: false });
+    expect(wrapper.get('.toolbar-snap-btn').attributes('data-variant')).toBe('ghost');
+    expect(wrapper.get('.toolbar-snap-btn').attributes('aria-pressed')).toBe('false');
+  });
+
   it('emits canvas fullscreen and updates its tooltip and icon', async () => {
     const wrapper = mount(TimelineToolbar, {
       props: { currentTime: 0, duration: 100, isPlaying: false, zoomLevel: 100 },

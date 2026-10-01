@@ -4,19 +4,19 @@ import { useTranslate } from '~/i18n/useTranslate';
 
 defineProps<{ modelValue: boolean; description?: string }>();
 const emit = defineEmits<{ (event: 'update:modelValue', value: boolean): void }>();
-const { t } = useTranslate('CanvasPanel');
+const { t: tComposition } = useTranslate('ScreenshotComposition');
 </script>
 
 <template>
   <div class="remove-background-row">
     <div class="copy">
-      <span class="title">{{ t('removeBackground') }}</span>
-      <span class="description">{{ description ?? t('removeBackgroundDescription') }}</span>
+      <span class="title">{{ tComposition('show', { name: tComposition('background') }) }}</span>
+      <span v-if="description" class="description">{{ description }}</span>
     </div>
     <Switch
-      :model-value="modelValue"
-      :aria-label="t('removeBackground')"
-      @update:model-value="emit('update:modelValue', $event)"
+      :model-value="!modelValue"
+      :aria-label="tComposition('show', { name: tComposition('background') })"
+      @update:model-value="emit('update:modelValue', !$event)"
     />
   </div>
 </template>
@@ -27,8 +27,6 @@ const { t } = useTranslate('CanvasPanel');
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-border);
 }
 
 .copy {

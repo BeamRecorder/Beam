@@ -48,10 +48,10 @@ const rotationPresets = [0, 90, 180, 270] as const;
 <template>
   <section class="shape-panel">
     <ButtonGroup full :columns="2" size="xs">
-      <Button size="xs" :variant="showText ? 'secondary' : 'primary'" @click="showText = false">{{
+      <Button size="xs" :variant="showText ? 'secondary' : 'selected'" @click="showText = false">{{
         elementText('appearance')
       }}</Button>
-      <Button size="xs" :variant="showText ? 'primary' : 'secondary'" @click="showText = true">{{
+      <Button size="xs" :variant="showText ? 'selected' : 'secondary'" @click="showText = true">{{
         elementText('text')
       }}</Button>
     </ButtonGroup>
@@ -67,7 +67,7 @@ const rotationPresets = [0, 90, 180, 270] as const;
         <Button
           block
           size="xs"
-          :variant="style.family === 'shape' ? 'primary' : 'secondary'"
+          :variant="style.family === 'shape' ? 'selected' : 'secondary'"
           @click="selectFamily('shape')"
         >
           {{ t('shapes') }}
@@ -75,7 +75,7 @@ const rotationPresets = [0, 90, 180, 270] as const;
         <Button
           block
           size="xs"
-          :variant="style.family === 'arrow' ? 'primary' : 'secondary'"
+          :variant="style.family === 'arrow' ? 'selected' : 'secondary'"
           @click="selectFamily('arrow')"
         >
           {{ t('arrows') }}
@@ -94,7 +94,7 @@ const rotationPresets = [0, 90, 180, 270] as const;
           :key="rotation"
           block
           size="xs"
-          :variant="style.rotation === rotation ? 'primary' : 'secondary'"
+          :variant="style.rotation === rotation ? 'selected' : 'secondary'"
           @click="update({ rotation })"
         >
           {{ rotation }}°

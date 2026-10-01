@@ -135,7 +135,7 @@ onUnmounted(() => {
   overflow: hidden;
   pointer-events: none;
   user-select: none;
-  background: var(--color-bg-surface);
+  background: var(--color-bg-app);
 }
 
 .ambient-media,
@@ -145,7 +145,7 @@ onUnmounted(() => {
   width: calc(100% + 128px);
   height: calc(100% + 128px);
   opacity: var(--editor-ambient-media-opacity);
-  filter: blur(56px) saturate(0.9) contrast(0.92);
+  filter: blur(56px) saturate(0.12) contrast(0.85);
   transform: scale(1.06);
   transition:
     opacity 0.4s cubic-bezier(0.25, 0.1, 0.25, 1),
@@ -173,7 +173,7 @@ onUnmounted(() => {
 .ambient-veil {
   position: absolute;
   inset: 0;
-  background: var(--color-bg-surface);
+  background: var(--color-bg-app);
   opacity: var(--editor-ambient-veil-opacity);
   transition: opacity 0.4s ease;
 }

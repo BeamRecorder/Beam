@@ -66,20 +66,22 @@ const loadStore = async () => {
 describe('theme store', () => {
   it('resolves the default light palette without rewriting the saved color', async () => {
     const store = await loadStore();
-    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#c45318');
-    expect(document.documentElement.style.getPropertyValue('--color-primary-light')).toBe('rgba(196, 83, 24, 0.07)');
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#ac5938');
+    expect(document.documentElement.style.getPropertyValue('--color-primary-light')).toBe('rgba(172, 89, 56, 0.07)');
     expect(store.primaryColor).toBe(DEFAULT_APPEARANCE.primaryColor);
+    expect(document.documentElement.style.getPropertyValue('--text-on-primary')).toBe('#ffffff');
     expect(capture.updatePreferences).not.toHaveBeenCalled();
   });
 
   it('updates the accent when the system theme changes', async () => {
     capture.getPreferences.mockResolvedValue(preferences('system'));
     await loadStore();
-    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#c45318');
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#ac5938');
     mediaChange?.({ matches: true } as MediaQueryListEvent);
-    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#b85c38');
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#c07a58');
+    expect(document.documentElement.style.getPropertyValue('--text-on-primary')).toBe('#000000');
     mediaChange?.({ matches: false } as MediaQueryListEvent);
-    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#c45318');
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#ac5938');
     expect(capture.updatePreferences).not.toHaveBeenCalled();
   });
 

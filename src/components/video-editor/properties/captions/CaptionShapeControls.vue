@@ -31,7 +31,7 @@ const selectPreset = (preset: CaptionShapePreset) =>
         v-for="preset in presets"
         :key="preset.value"
         size="xs"
-        :variant="modelValue.preset === preset.value ? 'primary' : 'ghost'"
+        :variant="modelValue.preset === preset.value ? 'selected' : 'ghost'"
         :aria-label="preset.label"
         @click="selectPreset(preset.value)"
       >

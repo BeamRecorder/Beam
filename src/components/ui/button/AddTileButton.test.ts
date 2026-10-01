@@ -14,6 +14,14 @@ describe('AddTileButton', () => {
     expect(button.find('svg').exists()).toBe(true);
   });
 
+  it('updates the accessible name and selection independently', async () => {
+    const wrapper = mount(AddTileButton, { props: { label: 'Import image' } });
+    expect(wrapper.get('button').classes()).not.toContain('active');
+    await wrapper.setProps({ label: 'Import video', active: true });
+    expect(wrapper.get('button').attributes('aria-label')).toBe('Import video');
+    expect(wrapper.get('button').classes()).toContain('active');
+  });
+
   it('forwards clicks to the parent', async () => {
     const onClick = vi.fn();
     const wrapper = mount(AddTileButton, { props: { label: 'Add gradient', onClick } });

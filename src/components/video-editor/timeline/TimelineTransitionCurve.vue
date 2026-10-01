@@ -69,7 +69,7 @@ const hatchedAreaPath = computed(() => {
   height: calc(100% - 4px);
   overflow: visible;
   pointer-events: none;
-  color: var(--color-primary);
+  color: var(--text-secondary);
 }
 .timeline-transition-curve path {
   vector-effect: non-scaling-stroke;

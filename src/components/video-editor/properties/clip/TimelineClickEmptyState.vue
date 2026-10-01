@@ -149,7 +149,7 @@ const { t } = useTranslate('ClipPropertiesPanel');
   left: 35%;
   width: 1.5px;
   height: 100%;
-  background: var(--color-primary);
+  background: var(--text-secondary);
 }
 
 .track-row {
@@ -256,7 +256,7 @@ const { t } = useTranslate('ClipPropertiesPanel');
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 2px solid var(--color-primary);
+  border: 2px solid var(--text-secondary);
   top: 34px;
   left: 130px;
   transform: translate(-50%, -50%) scale(0);
@@ -290,8 +290,8 @@ const { t } = useTranslate('ClipPropertiesPanel');
   82% {
     /* Selected state */
     border: 1px solid transparent;
-    outline: 2px solid var(--color-primary);
-    box-shadow: 0 0 12px var(--color-primary);
+    outline: 2px solid var(--text-secondary);
+    box-shadow: 0 0 12px var(--text-secondary);
   }
   90%,
   100% {

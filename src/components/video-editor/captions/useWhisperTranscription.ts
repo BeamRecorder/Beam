@@ -207,6 +207,9 @@ export function useWhisperTranscription() {
       };
       const rejectWith = (error: Error, update: Partial<TranscriptionDiagnostics> = {}) => {
         cleanup();
+        // Failed ONNX sessions and their GPU allocations must not survive a retry.
+        activeWorker.terminate();
+        if (worker === activeWorker) worker = null;
         fail(error, { ...update, elapsedMs: performance.now() - startedAt });
         reject(error);
       };

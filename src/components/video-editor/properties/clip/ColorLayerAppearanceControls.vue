@@ -73,7 +73,7 @@ const updateShadowDirection = (shadowDirection: ColorLayerShadowDirection) => em
           v-for="preset in radiusPresets"
           :key="preset.id"
           size="xs"
-          :variant="selectedRadius === preset.id ? 'primary' : 'ghost'"
+          :variant="selectedRadius === preset.id ? 'selected' : 'ghost'"
           :icon="preset.icon"
           :icon-only="!!preset.icon"
           :tooltip="preset.tooltip"
@@ -107,7 +107,7 @@ const updateShadowDirection = (shadowDirection: ColorLayerShadowDirection) => em
           v-for="preset in shadowPresets"
           :key="preset.id"
           size="xs"
-          :variant="style.shadowSize === preset.id ? 'primary' : 'ghost'"
+          :variant="style.shadowSize === preset.id ? 'selected' : 'ghost'"
           :icon="preset.icon"
           :icon-only="!!preset.icon"
           :tooltip="preset.tooltip"
@@ -123,14 +123,14 @@ const updateShadowDirection = (shadowDirection: ColorLayerShadowDirection) => em
           <ButtonGroup full>
             <Button
               size="xs"
-              :variant="style.shadowMode === 'solid' ? 'primary' : 'ghost'"
+              :variant="style.shadowMode === 'solid' ? 'selected' : 'ghost'"
               @click="updateShadowMode('solid')"
             >
               {{ t('solid') }}
             </Button>
             <Button
               size="xs"
-              :variant="style.shadowMode === 'adaptive' ? 'primary' : 'ghost'"
+              :variant="style.shadowMode === 'adaptive' ? 'selected' : 'ghost'"
               @click="updateShadowMode('adaptive')"
             >
               {{ t('adaptive') }}

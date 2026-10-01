@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { SlidersHorizontal } from '@lucide/vue';
 import AddTileButton from '~/ui/button/AddTileButton.vue';
+import Tooltip from '~/ui/tooltip/Tooltip.vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Popover from '~/ui/popover/Popover.vue';
@@ -78,17 +79,17 @@ const selectedGradientPreset = computed(() =>
       })
     : undefined,
 );
-const gradientStyle = (gradient: GradientBackground) => ({ background: gradientCssBackground(gradient) });
+const gradientStyle = (gradient: GradientBackground) => ({ backgroundImage: gradientCssBackground(gradient) });
 </script>
 
 <template>
   <section class="fill-preset-controls">
     <span v-if="label" class="section-label">{{ label }}</span>
     <ButtonGroup full :columns="2" :aria-label="label ?? t('backgroundType')" class="kind-group">
-      <Button size="xs" :variant="activeKind === 'color' ? 'primary' : 'ghost'" @click="activeKind = 'color'">
+      <Button size="xs" :variant="activeKind === 'color' ? 'selected' : 'ghost'" @click="activeKind = 'color'">
         {{ t('color') }}
       </Button>
-      <Button size="xs" :variant="activeKind === 'gradient' ? 'primary' : 'ghost'" @click="activeKind = 'gradient'">
+      <Button size="xs" :variant="activeKind === 'gradient' ? 'selected' : 'ghost'" @click="activeKind = 'gradient'">
         {{ t('gradient') }}
       </Button>
     </ButtonGroup>
@@ -97,7 +98,9 @@ const gradientStyle = (gradient: GradientBackground) => ({ background: gradientC
       <div class="preset-grid">
         <Popover block :match-trigger-width="false" flush @toggle="(open) => !open && closeCustomEditor()">
           <template #trigger>
-            <AddTileButton :label="t('customColor')" @click="beginAdd('color')" />
+            <Tooltip :content="t('customColor')" class="preset-add-tooltip" :style="{ width: '100%', display: 'flex' }">
+              <AddTileButton :label="t('customColor')" @click="beginAdd('color')" />
+            </Tooltip>
           </template>
           <template #default="{ close }">
             <BackgroundPresetComposer
@@ -124,7 +127,7 @@ const gradientStyle = (gradient: GradientBackground) => ({ background: gradientC
           type="button"
           class="preset-tile"
           :class="{ active: selectedColorPreset?.id === item.id, editing: isEditing(item.id) }"
-          :style="{ background: item.color }"
+          :style="{ backgroundColor: item.color }"
           :aria-label="item.name"
           @click="applyPreset(item)"
         />
@@ -173,7 +176,13 @@ const gradientStyle = (gradient: GradientBackground) => ({ background: gradientC
       <div class="preset-grid">
         <Popover block :match-trigger-width="false" flush @toggle="(open) => !open && closeCustomEditor()">
           <template #trigger>
-            <AddTileButton :label="t('customGradient')" @click="beginAdd('gradient')" />
+            <Tooltip
+              :content="t('customGradient')"
+              class="preset-add-tooltip"
+              :style="{ width: '100%', display: 'flex' }"
+            >
+              <AddTileButton :label="t('customGradient')" @click="beginAdd('gradient')" />
+            </Tooltip>
           </template>
           <template #default="{ close }">
             <BackgroundPresetComposer
@@ -264,15 +273,22 @@ const gradientStyle = (gradient: GradientBackground) => ({ background: gradientC
 .preset-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .preset-tile {
   position: relative;
   aspect-ratio: 1;
+  width: 100%;
   min-width: 0;
+  padding: 0;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
+  /* Paint one gradient through the border, without wrapping its edges. */
+  background-origin: border-box;
+  background-clip: border-box;
+  background-repeat: no-repeat;
+  box-sizing: border-box;
   cursor: pointer;
   transition:
     border-color 120ms ease,
@@ -281,20 +297,24 @@ const gradientStyle = (gradient: GradientBackground) => ({ background: gradientC
 }
 
 .preset-tile:hover:not(.active) {
-  border-color: var(--color-border-hover);
-  transform: translateY(-1px);
+  border-color: var(--color-border-strong);
 }
 
 .preset-tile.active {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 30%, transparent);
+  border-color: var(--text-secondary);
+  box-shadow: inset 0 0 0 1px var(--text-secondary);
+}
+
+.preset-tile:focus-visible {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 2px;
 }
 
 .preset-tile.editing::after {
   position: absolute;
   inset: 3px;
   border: 1px dashed color-mix(in srgb, var(--text-primary) 70%, transparent);
-  border-radius: calc(var(--radius-md) - 3px);
+  border-radius: calc(var(--radius-sm) - 3px);
   content: '';
 }
 

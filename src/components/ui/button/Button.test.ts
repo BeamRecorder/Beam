@@ -4,6 +4,30 @@ import { describe, expect, it } from 'vitest';
 import Button from './Button.vue';
 
 describe('Button', () => {
+  it('renders neutral selected controls with their accessible pressed state', async () => {
+    const wrapper = mount(Button, { props: { variant: 'selected' }, attrs: { 'aria-pressed': 'true' } });
+    expect(wrapper.get('button').classes()).toContain('btn-selected');
+    expect(wrapper.get('button').attributes('aria-pressed')).toBe('true');
+    await wrapper.get('button').trigger('click');
+    expect(wrapper.emitted('click')).toHaveLength(1);
+  });
+
+  it('keeps a disabled neutral selected control inert', async () => {
+    const wrapper = mount(Button, { props: { variant: 'selected', disabled: true } });
+    expect(wrapper.get('button').attributes('disabled')).toBeDefined();
+    await wrapper.get('button').trigger('click');
+    expect(wrapper.emitted('click')).toBeUndefined();
+  });
+
+  it('keeps loading neutral selected controls inert and announces their loader', async () => {
+    const wrapper = mount(Button, { props: { variant: 'selected', loading: true } });
+    expect(wrapper.get('button').classes()).toContain('btn-selected');
+    expect(wrapper.get('button').attributes('disabled')).toBeDefined();
+    expect(wrapper.find('.icon-spin').exists()).toBe(true);
+    await wrapper.get('button').trigger('click');
+    expect(wrapper.emitted('click')).toBeUndefined();
+  });
+
   it('keeps normal labels centered unless start alignment is requested', async () => {
     const wrapper = mount(Button, { slots: { default: 'Project title' } });
     expect(wrapper.get('button').classes()).not.toContain('btn-align-start');

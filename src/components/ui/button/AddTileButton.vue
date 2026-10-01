@@ -20,10 +20,10 @@ defineProps<{
   width: 100%;
   aspect-ratio: 1;
   padding: 0;
-  color: var(--text-secondary, #9ca3af);
-  background: repeating-conic-gradient(rgba(255, 255, 255, 0.1) 0 25%, rgba(0, 0, 0, 0.3) 0 50%) 50% / 10px 10px;
-  border: 1.5px dashed var(--color-border, rgba(255, 255, 255, 0.15));
-  border-radius: 10px;
+  color: var(--text-secondary);
+  background: var(--color-bg-field);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-sm);
   box-sizing: border-box;
   cursor: pointer;
   transition:
@@ -33,13 +33,18 @@ defineProps<{
 }
 
 .add-tile-button:hover:not(.active) {
-  border: 2px dashed rgba(255, 255, 255, 0.5);
-  transform: scale(1.04);
+  border-color: var(--text-secondary);
+  background: var(--color-bg-field-hover);
 }
 
 .add-tile-button.active {
-  border: 2px solid var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 2px var(--color-primary-light, rgba(59, 130, 246, 0.4));
+  border: 1px solid var(--text-secondary);
+  background: var(--color-bg-field-active);
+}
+
+.add-tile-button:focus-visible {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
