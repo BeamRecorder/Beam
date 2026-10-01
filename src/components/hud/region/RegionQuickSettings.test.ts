@@ -11,6 +11,7 @@ const settings = {
   countdownSeconds: 3,
   hideTaskbar: false,
   hideDesktopIcons: false,
+  showRealCursor: false,
 };
 const Popover = {
   setup: () => ({ close }),
@@ -44,7 +45,7 @@ it.each([0, 1, 10])('exposes the hover submenu with all eleven countdown values,
 });
 it('switches the native Windows desktop options and closes on dismissal', () => {
   const wrapper = mountSettings();
-  const switches = wrapper.findAllComponents(Switch);
+  const switches = wrapper.findAllComponents(Switch).slice(1);
   switches[0]!.vm.$emit('update:modelValue', true);
   switches[1]!.vm.$emit('update:modelValue', true);
   expect(wrapper.emitted('update:modelValue')).toEqual([
@@ -58,7 +59,12 @@ it('switches the native Windows desktop options and closes on dismissal', () => 
 it('disables both desktop switches on Linux and explains availability', () => {
   capture.platform = 'linux';
   const wrapper = mountSettings();
-  expect(wrapper.findAllComponents(Switch).every((control) => control.props('disabled'))).toBe(true);
+  expect(
+    wrapper
+      .findAllComponents(Switch)
+      .slice(1)
+      .every((control) => control.props('disabled')),
+  ).toBe(true);
   expect(wrapper.text()).toContain('desktopUnavailable');
   wrapper.unmount();
 });
@@ -67,6 +73,16 @@ it('labels the macOS Dock and explains that native filtering affects the recordi
   const wrapper = mountSettings();
   expect(wrapper.text()).toContain('hideDock');
   expect(wrapper.text()).toContain('captureOnly');
-  expect(wrapper.findComponent(Switch).props('disabled')).toBe(false);
+  expect(wrapper.findAllComponents(Switch)[1]!.props('disabled')).toBe(false);
+  wrapper.unmount();
+});
+
+it('keeps the real cursor available on Linux and updates the shared setting', () => {
+  capture.platform = 'linux';
+  const wrapper = mountSettings();
+  const toggle = wrapper.findAllComponents(Switch)[0]!;
+  expect(toggle.props('disabled')).not.toBe(true);
+  toggle.vm.$emit('update:modelValue', true);
+  expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([{ ...settings, showRealCursor: true }]);
   wrapper.unmount();
 });

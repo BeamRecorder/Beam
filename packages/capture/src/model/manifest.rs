@@ -39,6 +39,8 @@ pub struct SessionManifest {
     #[serde(default)]
     pub warnings: Vec<String>,
     pub completed: bool,
+    #[serde(default)]
+    pub cursor_embedded: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

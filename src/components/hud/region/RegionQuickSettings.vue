@@ -4,13 +4,12 @@ import { Settings, Timer } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import PopoverMenuList from '~/ui/popover/PopoverMenuList.vue';
-import Switch from '~/ui/switch/Switch.vue';
-import { capture } from '~/api/capture';
+import RealCursorPreference from '../settings/RealCursorPreference.vue';
+import RecordingDesktopPreferences from '../settings/RecordingDesktopPreferences.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { RegionRecordingSettings } from '~/api/types/screen-region';
 const settings = defineModel<RegionRecordingSettings>({ required: true });
 const { t } = useTranslate('ScreenRegionOverlay');
-const supported = capture.platform === 'win32' || capture.platform === 'darwin';
 const items = computed(() => [
   {
     id: 'countdown',
@@ -48,25 +47,19 @@ const items = computed(() => [
           @dismiss="close"
         />
         <div class="switch-row">
-          <span>{{ t(capture.platform === 'darwin' ? 'hideDock' : 'hideTaskbar') }}</span>
-          <Switch
-            :model-value="settings.hideTaskbar"
-            :disabled="!supported"
-            :aria-label="t(capture.platform === 'darwin' ? 'hideDock' : 'hideTaskbar')"
-            @update:model-value="settings = { ...settings, hideTaskbar: $event }"
+          <RealCursorPreference
+            :model-value="settings.showRealCursor"
+            @update:model-value="settings = { ...settings, showRealCursor: $event }"
           />
         </div>
-        <div class="switch-row">
-          <span>{{ t('hideDesktopIcons') }}</span>
-          <Switch
-            :model-value="settings.hideDesktopIcons"
-            :disabled="!supported"
-            :aria-label="t('hideDesktopIcons')"
-            @update:model-value="settings = { ...settings, hideDesktopIcons: $event }"
+        <div class="desktop-settings">
+          <RecordingDesktopPreferences
+            :hide-taskbar="settings.hideTaskbar"
+            :hide-desktop-icons="settings.hideDesktopIcons"
+            @update:hide-taskbar="settings = { ...settings, hideTaskbar: $event }"
+            @update:hide-desktop-icons="settings = { ...settings, hideDesktopIcons: $event }"
           />
         </div>
-        <p v-if="!supported" class="platform-note">{{ t('desktopUnavailable') }}</p>
-        <p v-else-if="capture.platform === 'darwin'" class="platform-note">{{ t('captureOnly') }}</p>
       </div>
     </template>
   </Popover>
@@ -83,9 +76,7 @@ const items = computed(() => [
   padding: 8px 12px;
   font: 500 13px var(--font-sans);
 }
-.platform-note {
-  margin: 4px 12px 8px;
-  color: var(--text-muted);
-  font: 400 11px var(--font-sans);
+.desktop-settings {
+  padding: 8px 12px;
 }
 </style>

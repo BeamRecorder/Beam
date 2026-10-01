@@ -56,6 +56,7 @@ export function useHudCaptureMode(
           countdownSeconds: configuration.countdownSeconds,
           hideTaskbar: configuration.hideTaskbar,
           hideDesktopIcons: configuration.hideDesktopIcons,
+          showRealCursor: configuration.showRealCursor,
           regionBounds: configuration.regionOverlay?.bounds,
           devices: {
             cameraId: configuration.cameraId,

@@ -1,4 +1,16 @@
 {
+  "EditorSearch": {
+    "title": "搜索编辑器",
+    "placeholder": "搜索操作、片段和设置…",
+    "noResults": "无结果",
+    "insert": "添加",
+    "navigation": "区域",
+    "selection": "项目元素",
+    "setting": "设置",
+    "unavailable": "当前选区无法使用此操作或设置。",
+    "clips": "片段",
+    "action": "操作"
+  },
   "LinkedClipsDeleteDialog": {
     "preview": "预览",
     "selectPreview": "预览{name}",
@@ -281,7 +293,47 @@
   },
   "UndoRedoToast": {
     "undo": "撤销",
-    "redo": "重做"
+    "redo": "重做",
+    "undoAction": "已撤销：{action}",
+    "redoAction": "已重做：{action}",
+    "action": "{operation} · {item}",
+    "namedItem": "{kind} “{name}”",
+    "items": "{count} 个项目",
+    "operations": {
+      "add": "添加",
+      "remove": "删除",
+      "edit": "编辑",
+      "move": "移动",
+      "resize": "调整大小",
+      "crop": "裁剪",
+      "timing": "时长与时间位置",
+      "visibility": "可见性",
+      "reorder": "调整顺序",
+      "rename": "重命名"
+    },
+    "targets": {
+      "screen": "屏幕录制",
+      "video": "视频",
+      "image": "图像",
+      "webcam": "摄像头",
+      "color": "颜色",
+      "shape": "形状",
+      "arrow": "箭头",
+      "text": "文本",
+      "drawing": "绘图",
+      "blur": "模糊",
+      "highlight": "高亮",
+      "audio": "音频",
+      "caption": "字幕",
+      "keyboardCaption": "按键字幕",
+      "cursor": "光标",
+      "zoom": "缩放",
+      "background": "背景",
+      "canvas": "画布",
+      "layers": "图层",
+      "export": "导出设置",
+      "changes": "更改"
+    }
   },
   "Updates": {
     "title": "应用更新",
@@ -298,7 +350,9 @@
     "updateAvailable": "版本 {version} 可用。",
     "updateAvailableGeneric": "有可用更新。",
     "updateError": "无法检查更新。",
-    "showDetails": "错误详情"
+    "showDetails": "错误详情",
+    "check": "检查",
+    "changelog": "更新日志"
   },
   "VideoEditor": {
     "exportBanner": "正在导出。实时编辑不会影响当前正在导出的文件。",
@@ -387,7 +441,7 @@
     "projection": "透视",
     "projection2d": "2D",
     "projection3d": "3D 倾斜",
-    "projectionDesc": "添加跟随缩放焦点的透视倾斜效果。可调整强度以及水平/垂直方向。预览和导出使用相同的渲染结果。",
+    "projectionDesc": "添加跟随缩放焦点的透视倾斜效果。\n可调整强度以及水平/垂直方向。预览和导出使用相同的渲染结果。",
     "tiltIntensity": "倾斜强度",
     "tiltHorizontal": "左 / 右",
     "tiltVertical": "上 / 下",
@@ -396,6 +450,12 @@
     "tiltPresetMedium": "中等",
     "tiltPresetLarge": "强烈",
     "tiltPresetCustom": "自定义",
+    "tiltBack": "向后倾斜",
+    "tiltFront": "向前倾斜",
+    "tiltLeft": "向左倾斜",
+    "tiltRight": "向右倾斜",
+    "pullBack": "拉远",
+    "pullFront": "拉近",
     "magnification": "放大倍率",
     "zoomLevel": "缩放级别",
     "motionBlur": "缩放运动模糊",

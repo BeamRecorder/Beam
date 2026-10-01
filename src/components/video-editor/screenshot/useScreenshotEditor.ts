@@ -1,3 +1,6 @@
+import { useScreenshotPanel } from './useScreenshotPanel';
+import { provideScreenshotEditorSearch } from '../search/useScreenshotEditorSearch';
+import { screenshotInserter } from './screenshot-insert';
 import { useScreenshotEffects } from './useScreenshotEffects';
 import { editorTitle } from '../editor-window-title';
 import { provideElementEditor } from '../elements/useElementEditor';
@@ -25,7 +28,7 @@ import { useScreenshotHistory } from './useScreenshotHistory';
 import { useScreenshotCursors } from './useScreenshotCursors';
 import { useScreenshotLayerShortcuts } from './useScreenshotLayerShortcuts';
 import { useScreenshotLayerClipboard } from './useScreenshotLayerClipboard';
-import { screenshotImage, createScreenshotImage } from './screenshot-images';
+import { screenshotImage, createScreenshotImage, screenshotImageProperties } from './screenshot-images';
 import { createScreenshotImageLoader } from './screenshot-assets';
 import { validScreenshotDimensions } from './screenshot-dimensions';
 import {
@@ -33,14 +36,12 @@ import {
   insertScreenshotLayer,
   removeScreenshotLayer,
   canRemoveScreenshotLayer,
-  restoreScreenshotLayer,
   screenshotLayers,
-  SCREENSHOT_BACKGROUND_ID,
-  SCREENSHOT_WATERMARK_ID,
 } from './screenshot-layers';
 
 export function useScreenshotEditor(id: () => string, ready: () => void, previewFullscreen: () => boolean) {
   const { t } = useTranslate('ScreenshotEditor');
+  const { t: elementsText } = useTranslate('Elements');
   const toast = useToastStore();
   const document = ref<ScreenshotDocument | null>(null);
   const state = ref<ScreenshotState | null>(null);
@@ -76,15 +77,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     state.value ? screenshotLayers(state.value).find((layer) => layer.id === selectedId.value) : undefined,
   );
   const image = computed(() => (state.value ? screenshotImage(state.value, selectedId.value) : undefined));
-  const selectedImage = computed(() =>
-    image.value
-      ? {
-          ...image.value,
-          ...image.value.appearance,
-          clipTransform: image.value.transform,
-        }
-      : null,
-  );
+  const selectedImage = computed(() => screenshotImageProperties(image.value));
   const save = () => {
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = null;
@@ -163,21 +156,17 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     selection.selectMany(next.ids, next.primaryId);
     showSelection(selectedId.value);
   };
-  const showSelection = (id: string | null) => {
-    if (state.value?.effects?.some((effect) => effect.id === id)) {
+  const { showSelection, selectPanel } = useScreenshotPanel({
+    state,
+    panel,
+    cropping,
+    selectedId,
+    select,
+    finishDrawing: () => {
       elements.finishText();
       elements.drawingMode.value = false;
-    }
-    panel.value =
-      id === state.value?.image.id
-        ? 'image'
-        : state.value?.cursors?.some((cursor) => cursor.id === id)
-          ? 'cursor'
-          : !id || id === SCREENSHOT_BACKGROUND_ID || id === SCREENSHOT_WATERMARK_ID
-            ? 'canvas'
-            : 'shapes';
-    cropping.value = false;
-  };
+    },
+  });
   const removeLayer = (id: string) => {
     if (!state.value || busy.value || cropping.value) return;
     const targets = selectedIds.value.includes(id) ? selectedIds.value : [id];
@@ -298,6 +287,27 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     canInteract: () => !busy.value && !cropping.value && !previewFullscreen() && !selectedLayer.value?.locked,
   });
   const cursors = useScreenshotCursors(state, selectedId, select, fail);
+  const addElement = screenshotInserter({
+    canInsert: () => Boolean(state.value && !busy.value && !cropping.value && !previewFullscreen()),
+    selectClip: () => selectPanel('clip'),
+    shape: elements.add,
+    image: addImage,
+    cursor: () => cursors.add(elementsText('cursor')),
+    effect: (kind) => {
+      elements.finishText();
+      elements.drawingMode.value = false;
+      effects.add(kind);
+    },
+  });
+  provideScreenshotEditorSearch({
+    state,
+    document,
+    selectedId,
+    select,
+    insert: addElement,
+    packs: () => cursors.packs.value,
+    canInsert: () => Boolean(state.value && !busy.value && !cropping.value && !previewFullscreen()),
+  });
   const shortcutsDisabled = () =>
     busy.value ||
     cropping.value ||
@@ -438,19 +448,6 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     if (activePreset.value?.id === 'default' && dirty.value) void savePreset().catch(fail);
   });
 
-  const selectPanel = (next: string) => {
-    if (next === 'image') {
-      if (state.value) restoreScreenshotLayer(state.value, state.value.image.id);
-      select(state.value?.image.id ?? null);
-    } else if (next === 'canvas') select(null);
-    else if (next === 'shapes' || next === 'settings') {
-      panel.value = next;
-      cropping.value = false;
-      const importedImageSelected = image.value && image.value.id !== state.value?.image.id;
-      if (next === 'shapes' && !selectedShape.value && !effects.selected.value && !importedImageSelected)
-        selectedId.value = state.value?.shapes.at(-1)?.id ?? null;
-    }
-  };
   return {
     document,
     state,
@@ -471,6 +468,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     selectedImage,
     image,
     addImage,
+    addElement,
     pasteImage,
     canPasteLayers: layerClipboard.canPaste,
     fail,

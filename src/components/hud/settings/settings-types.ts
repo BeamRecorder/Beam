@@ -5,6 +5,9 @@ export type SettingsView = 'general' | 'recording' | 'accessibility' | 'shortcut
 
 export interface HudPreferenceProps {
   countdownSeconds: number;
+  showRealCursor?: boolean;
+  hideTaskbar?: boolean;
+  hideDesktopIcons?: boolean;
   alwaysOnTop?: boolean;
   recordingBarVisibility?: RecordingBarVisibility;
   inputAccess?: InteractionAccessViewState;

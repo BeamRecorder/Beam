@@ -218,6 +218,7 @@ function initializeApplication() {
       logStartup('Desktop loopback policy registered.');
       registerCaptureIpc({
         ipcMain,
+        isTrustedRenderer,
         desktopCapturer,
         BrowserWindow,
         screen,

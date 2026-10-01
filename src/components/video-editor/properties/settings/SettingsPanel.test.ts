@@ -16,6 +16,7 @@ const capture = vi.hoisted(() => ({
 vi.mock('~/api/capture', () => ({ capture }));
 
 import SettingsPanel from './SettingsPanel.vue';
+import { setCurrentLocale } from '~/i18n';
 
 const Button = {
   inheritAttrs: true,
@@ -32,7 +33,7 @@ const Select = {
 const UpdateControls = { template: '<div class="update-controls-stub">Updates</div>' };
 
 describe('SettingsPanel', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     setActivePinia(createPinia());
     localStorage.clear();
     Object.defineProperty(window, 'matchMedia', {
@@ -43,13 +44,14 @@ describe('SettingsPanel', () => {
       configurable: true,
       value: { writeText: vi.fn().mockResolvedValue(undefined) },
     });
-    capture.getPreferences.mockResolvedValue({ theme: 'light' });
-    capture.updatePreferences.mockResolvedValue({ theme: 'light' });
+    capture.getPreferences.mockResolvedValue({ theme: 'light', extras: {} });
+    capture.updatePreferences.mockResolvedValue({ theme: 'light', extras: {} });
     vi.clearAllMocks();
-    capture.getPreferences.mockResolvedValue({ theme: 'light' });
-    capture.updatePreferences.mockResolvedValue({ theme: 'light' });
+    capture.getPreferences.mockResolvedValue({ theme: 'light', extras: {} });
+    capture.updatePreferences.mockResolvedValue({ theme: 'light', extras: {} });
     capture.openRecorderFromEditor.mockResolvedValue(true);
     capture.getUpdateState.mockResolvedValue({ currentVersion: '1.2.3' });
+    await setCurrentLocale('en');
   });
 
   it('keeps recording controls out of screenshot settings even in developer mode', async () => {
@@ -59,9 +61,9 @@ describe('SettingsPanel', () => {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
     });
     expect(wrapper.find('.appearance-settings').exists()).toBe(true);
-    expect(wrapper.findAll('.dev-option-card')).toHaveLength(2);
+    expect(wrapper.findAll('.dev-option-card')).toHaveLength(1);
     await wrapper.setProps({ hideRecorder: false });
-    expect(wrapper.findAll('.dev-option-card')).toHaveLength(3);
+    expect(wrapper.findAll('.dev-option-card')).toHaveLength(2);
     wrapper.unmount();
   });
 
@@ -84,24 +86,21 @@ describe('SettingsPanel', () => {
     expect(advanced.attributes('aria-expanded')).toBe('false');
     expect(wrapper.find('.appearance-advanced-panel').exists()).toBe(false);
     await advanced.trigger('click');
-    wrapper.get('.appearance-advanced-panel .ui-scale-setting');
+    await wrapper.get('.language-setting .language-select').trigger('click');
+    await vi.waitFor(() => expect(capture.updatePreferences).toHaveBeenCalledWith({ extras: { locale: 'fr' } }));
+    expect(wrapper.find('.appearance-advanced-panel .ui-scale-setting').exists()).toBe(false);
+    wrapper.get('.scaling-panel.ui-scale-setting');
+    expect(wrapper.find('.scale-overrides').exists()).toBe(false);
     wrapper.get('.appearance-advanced-panel .theme-customization-section');
     expect(wrapper.find('.appearance-advanced-panel .accordion').exists()).toBe(false);
   });
 
-  it('opens language advanced settings and toggles spell check', async () => {
+  it('groups writing assistance in Accessibility and toggles spell check', async () => {
     const wrapper = mount(SettingsPanel, {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
     });
 
-    const advanced = wrapper.get('.language-setting .advanced-toggle');
-    expect(advanced.attributes('aria-expanded')).toBe('false');
-    expect(wrapper.find('#language-advanced-panel').exists()).toBe(false);
-
-    await advanced.trigger('click');
-
-    expect(advanced.attributes('aria-expanded')).toBe('true');
-    const spellCheck = wrapper.get('#language-advanced-panel [role="switch"]');
+    const spellCheck = wrapper.get('.accessibility-setting .spell-check-preference [role="switch"]');
     expect(spellCheck.attributes('aria-checked')).toBe('true');
 
     capture.updatePreferences.mockResolvedValueOnce({ spellCheck: { enabled: false } });
@@ -116,7 +115,14 @@ describe('SettingsPanel', () => {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
     });
     expect(wrapper.find('.update-controls-stub').exists()).toBe(true);
-    expect(wrapper.text()).toContain('Theme Mode');
+    expect(wrapper.findAll('.category-heading').map((section) => section.text())).toEqual([
+      'General',
+      'Appearance',
+      'Accessibility',
+      'Updates',
+      'About',
+      'Developer',
+    ]);
   });
 
   it('opens the community links from the socials section', async () => {
@@ -139,7 +145,7 @@ describe('SettingsPanel', () => {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
     });
 
-    const switchBtn = wrapper.get('.dev-switch');
+    const switchBtn = wrapper.get('.dev-switch [role="switch"]');
     await switchBtn.trigger('click');
 
     expect(wrapper.find('.dev-frame').exists()).toBe(true);
@@ -164,7 +170,7 @@ describe('SettingsPanel', () => {
     const wrapper = mount(SettingsPanel, {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
     });
-    await wrapper.get('.dev-switch').trigger('click');
+    await wrapper.get('.dev-switch [role="switch"]').trigger('click');
     const launchButton = wrapper.findAll('.dev-action-btn')[0];
 
     await launchButton.trigger('click');
@@ -187,9 +193,7 @@ describe('SettingsPanel', () => {
     const wrapper = mount(SettingsPanel, {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
     });
-    await wrapper.get('.dev-switch').trigger('click');
-
-    const copyBtn = wrapper.findAll('.dev-action-btn')[1];
+    const copyBtn = wrapper.get('.about-setting .system-info-button');
     await copyBtn.trigger('click');
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('App Version: 1.2.3'));

@@ -79,6 +79,7 @@ export function drawCursorLayer(
   motionCursor: CursorMotionSample | null,
 ) {
   const settings = snapshot.cursorSettings;
+  if (settings.enabled === false) return;
   // Cursor size and shadow blur are output pixels. Keep the value selected in
   // the editor stable when the user exports at a different video resolution.
   const cursorSize = settings.size;

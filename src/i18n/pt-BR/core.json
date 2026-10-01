@@ -1,4 +1,11 @@
 {
+  "ColorPicker": {
+    "color": "Cor",
+    "close": "Fechar",
+    "eyedropper": "Escolher cor da tela",
+    "colorFormat": "Formato de cor",
+    "eyedropperError": "Não foi possível selecionar uma cor da tela. Tente novamente."
+  },
   "VoiceoverRecorder": {
     "record": "Gravar",
     "pause": "Pausar",
@@ -344,6 +351,7 @@
     "crop": "Recorte"
   },
   "CursorPanel": {
+    "appearance": "Aparência",
     "cursorStyle": "Estilo do cursor",
     "cursorSize": "Tamanho do cursor",
     "autoHideCursor": "Ocultar cursor automaticamente",
@@ -745,7 +753,7 @@
     "title": "Aparência",
     "subtitle": "Personalize temas, cores, raio dos cantos e superfícies",
     "customization": "Personalização",
-    "themeMode": "Modo do tema",
+    "themeMode": "Tema",
     "light": "Claro",
     "dark": "Escuro",
     "system": "Sistema",
@@ -763,7 +771,9 @@
     "toneSlate": "Ardósia",
     "toneDeep": "Escuro profundo",
     "resetDefault": "Restaurar padrão",
-    "custom": "Personalizado"
+    "custom": "Personalizado",
+    "systemDescription": "Sistema acompanha a aparência clara ou escura do seu dispositivo.",
+    "uiScaleGlobal": "Escala da interface (global)"
   },
   "Onboarding": {
     "skip": "Skip",
@@ -1087,5 +1097,16 @@
     "tipInstant": "Experimente Instant para um vídeo pronto para compartilhar.",
     "tipShortcuts": "Personalize os atalhos nas configurações.",
     "tipProjects": "Abra um projeto existente para continuar editando."
+  },
+  "EditorAccessibility": {
+    "title": "Acessibilidade",
+    "doubleClick": "Clique duplo para adicionar clipes",
+    "doubleClickDescription": "Adicione zooms, legendas e elementos visuais às faixas vazias com um clique duplo."
+  },
+  "CursorRecording": {
+    "showRealCursor": "Mostrar cursor real",
+    "description": "Grava o cursor do sistema diretamente no vídeo. Os zooms automáticos continuam a segui-lo. O cursor do Beam começa desativado; você pode sobrepô-lo nas configurações de Cursor. O cursor gravado não pode ser removido.",
+    "customCursor": "Cursor personalizado",
+    "overlayDescription": "Sobrepõe o cursor do Beam ao vídeo. Desative-o se a gravação já incluir o cursor do sistema."
   }
 }

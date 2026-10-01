@@ -28,17 +28,20 @@ const { t } = useTranslate('CanvasPanel');
       @update:shadow-blur="emit('update', { shadowBlur: $event })"
       @update:shadow-color="emit('update', { shadowColor: $event })"
       @update:shadow-direction="emit('update', { shadowDirection: $event })"
-    />
-    <BigSlider
-      :model-value="cursor.rotation"
-      :min="0"
-      :max="360"
-      :step="1"
-      :default-value="0"
-      :label="t('shapeRotation')"
-      :format-value="(value) => `${value}°`"
-      @update:model-value="emit('update', { rotation: $event })"
-    />
+    >
+      <template #appearance>
+        <BigSlider
+          :model-value="cursor.rotation"
+          :min="0"
+          :max="360"
+          :step="1"
+          :default-value="0"
+          :label="t('shapeRotation')"
+          :format-value="(value) => `${value}°`"
+          @update:model-value="emit('update', { rotation: $event })"
+        />
+      </template>
+    </CursorAppearanceControls>
   </section>
 </template>
 <style scoped>

@@ -29,6 +29,7 @@ fn request_json_roundtrip_and_defaults_are_stable() {
         excluded_window_handles: vec![],
         hide_taskbar: false,
         hide_desktop_icons: false,
+        show_real_cursor: false,
     };
     let json = serde_json::to_string(&request).expect("serialize request");
     let decoded: CaptureRequest = serde_json::from_str(&json).expect("deserialize request");
@@ -97,6 +98,7 @@ fn cursor_without_screen_is_rejected() {
         excluded_window_handles: vec![],
         hide_taskbar: false,
         hide_desktop_icons: false,
+        show_real_cursor: false,
     };
     assert!(request.validate_basic().is_err());
 }
@@ -124,6 +126,7 @@ fn portal_monitor_accepts_a_region_but_portal_window_kinds_reject_it() {
             excluded_window_handles: vec![],
             hide_taskbar: false,
             hide_desktop_icons: false,
+            show_real_cursor: false,
         }
     }
 
@@ -180,6 +183,7 @@ fn manifest_schema_is_versioned_and_roundtrips() {
         permissions: PermissionSnapshot::default(),
         warnings: Vec::new(),
         completed: false,
+        cursor_embedded: false,
     };
     let json = serde_json::to_value(&manifest).expect("serialize manifest");
     assert_eq!(json["schemaVersion"], SCHEMA_VERSION);
@@ -250,4 +254,45 @@ fn track_metrics_accept_manifests_created_before_camera_pipeline_metrics() {
     assert_eq!(metrics.frames_acquired, 0);
     assert_eq!(metrics.frames_encoded, 0);
     assert_eq!(metrics.frames_received, 12);
+}
+
+#[test]
+fn real_cursor_option_preserves_telemetry_and_roundtrips() {
+    for enabled in [true, false] {
+        let request: CaptureRequest = serde_json::from_value(serde_json::json!({
+            "projectId": ProjectId::new(), "screen": { "mode": "portal", "kind": "monitor" },
+            "failurePolicy": "fail-fast", "showRealCursor": enabled,
+            "cursor": { "mode": "separate", "captureClicks": true, "captureShortcuts": true, "captureShape": true }
+        })).expect("real cursor request");
+        assert_eq!(request.show_real_cursor, enabled);
+        assert!(matches!(
+            request.cursor,
+            CursorSelection::Separate {
+                capture_clicks: true,
+                ..
+            }
+        ));
+        assert_eq!(
+            serde_json::to_value(request).expect("serialize")["showRealCursor"],
+            enabled
+        );
+    }
+}
+#[test]
+fn real_cursor_defaults_off_and_rejects_invalid_values() {
+    let value = serde_json::json!({ "projectId": ProjectId::new(), "screen": null, "failurePolicy": "fail-fast", "cursor": { "mode": "disabled" } });
+    assert!(
+        !serde_json::from_value::<CaptureRequest>(value.clone())
+            .expect("old request")
+            .show_real_cursor
+    );
+    for invalid in [
+        serde_json::json!("true"),
+        serde_json::json!(1),
+        serde_json::Value::Null,
+    ] {
+        let mut request = value.clone();
+        request["showRealCursor"] = invalid;
+        assert!(serde_json::from_value::<CaptureRequest>(request).is_err());
+    }
 }

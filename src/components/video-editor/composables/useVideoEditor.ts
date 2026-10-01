@@ -1,3 +1,6 @@
+import { getCurrentInstance, provide } from 'vue';
+import { customCursorKey } from '../properties/cursor/custom-cursor-context';
+import { provideVideoEditorSearch } from '../search/useVideoEditorSearch';
 import { useVideoElements } from '../elements/useVideoElements';
 import { computed, nextTick, onScopeDispose, ref, watch, type Ref } from 'vue';
 import { capture } from '../../../api/capture';
@@ -33,6 +36,7 @@ export function useVideoEditor(options: {
   const initialPlaybackSettled = ref(false);
   const projectStateReady = ref(false);
   const cursor = useCursorReplacer();
+  if (getCurrentInstance()) provide(customCursorKey, cursor.enabled);
   const cursorMotion = ref(createDefaultCursorMotionSettings());
   const includeAudioInExport = ref(true);
   const editorDefaults = ref(normalizeEditorPreferenceDefaults(undefined));
@@ -86,6 +90,8 @@ export function useVideoEditor(options: {
     cursorEffects: cursor.clickEffects,
     cursorMotion,
     cursorAutoHide: cursor.autoHide,
+    cursorEnabled: cursor.enabled,
+    nativeCursorEmbedded: () => editorData.value?.manifest.cursorEmbedded === true,
     cursorSelection: cursor.selection,
     cursorSize: cursor.cursorSize,
     cursorColor: cursor.cursorColor,
@@ -163,6 +169,7 @@ export function useVideoEditor(options: {
       zoomAutoFollow: normalizeZoomAutoFollow(zoomState.zoomAutoFollow?.value),
       composition: compositionState.composition.value,
       cursorSettings: {
+        enabled: cursor.enabled.value,
         selection: cursor.selection.value,
         size: cursor.cursorSize.value,
         color: cursor.cursorColor.value,
@@ -260,6 +267,24 @@ export function useVideoEditor(options: {
     },
     { immediate: true, flush: 'post' },
   );
+  const addEditorElement = async (kind: Exclude<TimelineElementKind, 'voiceover'>) => {
+    if (kind === 'shape' || kind === 'arrow' || kind === 'text' || kind === 'drawing') {
+      if (player.isPlaying.value) await player.setPlaying(false);
+      compositionState.selectClips([]);
+      zoomState.selectedZoomId.value = null;
+      zoomState.selectedZoomIds.value = [];
+      activeTab.value = 'clip';
+      elements.add(kind);
+      return;
+    }
+    return compositionState.addElement(kind);
+  };
+  provideVideoEditorSearch({
+    compositionState,
+    zoomState,
+    addEditorElement,
+    canInsert: () => projectStateReady.value && !editorState.loading.value,
+  });
   return {
     activeTab,
     systemVolume,
@@ -271,18 +296,7 @@ export function useVideoEditor(options: {
     cursorMotion,
     compositionState: {
       ...compositionState,
-      addElement: async (kind: Exclude<TimelineElementKind, 'voiceover'>) => {
-        if (kind === 'shape' || kind === 'arrow' || kind === 'text' || kind === 'drawing') {
-          if (player.isPlaying.value) await player.setPlaying(false);
-          compositionState.selectClips([]);
-          zoomState.selectedZoomId.value = null;
-          zoomState.selectedZoomIds.value = [];
-          activeTab.value = 'elements';
-          elements.add(kind);
-          return;
-        }
-        return compositionState.addElement(kind);
-      },
+      addElement: addEditorElement,
     },
     editorState,
     zoomState,

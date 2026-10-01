@@ -1,7 +1,9 @@
-import { flushPromises, mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import UpdateControls from '../UpdateControls.vue';
 import type { AppUpdateState } from '~/api/types/capture-api';
+import { setCurrentLocale } from '~/i18n';
+enableAutoUnmount(afterEach);
 
 const captureMock = vi.hoisted(() => ({
   getUpdateState: vi.fn(),
@@ -60,8 +62,8 @@ describe('UpdateControls', () => {
     expect(wrapper.get('.update-version').text()).toBe('v1.0.0');
     expect(wrapper.get('.update-description').text()).toContain('1.0.0');
     const buttons = wrapper.findAll('.action-button');
-    await buttons[0]!.trigger('click');
     await buttons[1]!.trigger('click');
+    await buttons[0]!.trigger('click');
     expect(captureMock.openUpdateChangelog).toHaveBeenCalledOnce();
     expect(captureMock.checkForUpdates).toHaveBeenCalledOnce();
 
@@ -77,13 +79,13 @@ describe('UpdateControls', () => {
     const available = mount(UpdateControls, { global: { stubs: { Button } } });
     await flushPromises();
     expect(available.get('.update-description').text()).toContain('1.1.0');
-    await available.findAll('.action-button')[1]!.trigger('click');
+    await available.get('.update-actions .action-button:not(.changelog-btn)').trigger('click');
     expect(captureMock.downloadUpdate).toHaveBeenCalledOnce();
 
     captureMock.getUpdateState.mockResolvedValue(state('downloaded'));
     const downloaded = mount(UpdateControls, { global: { stubs: { Button } } });
     await flushPromises();
-    await downloaded.findAll('.action-button')[1]!.trigger('click');
+    await downloaded.get('.update-actions .action-button:not(.changelog-btn)').trigger('click');
     expect(captureMock.quitAndInstallUpdate).toHaveBeenCalledOnce();
     available.unmount();
     downloaded.unmount();
@@ -98,11 +100,85 @@ describe('UpdateControls', () => {
         expect(wrapper.find('.error-copy').exists()).toBe(true);
       }
       if (current.status === 'checking' || current.status === 'downloading' || current.status === 'unsupported') {
-        const actionBtn = wrapper.findAll('.action-button')[1]!;
+        const actionBtn = wrapper.get('.update-actions .action-button:not(.changelog-btn)');
         expect(actionBtn.attributes('disabled')).toBeDefined();
         expect(actionBtn.attributes('data-tooltip')).toBeTruthy();
       }
       wrapper.unmount();
     }
+  });
+
+  it('keeps compact actions together with short translated labels and a full accessible changelog name', async () => {
+    await setCurrentLocale('fr');
+    captureMock.getUpdateState.mockResolvedValue(state('idle'));
+    const wrapper = mount(UpdateControls, { props: { compact: true }, global: { stubs: { Button } } });
+    await flushPromises();
+    expect(wrapper.classes()).toContain('update-compact');
+    expect(wrapper.find('.update-description').exists()).toBe(false);
+    expect(wrapper.findAll('.update-actions button').map((button) => button.text())).toEqual(['Vérifier', 'Changelog']);
+    expect(wrapper.get('.changelog-btn').attributes('aria-label')).toBe('Voir le changelog');
+    await wrapper.get('.changelog-btn').trigger('click');
+    expect(captureMock.openUpdateChangelog).toHaveBeenCalledOnce();
+  });
+
+  it('keeps initial actions disabled and exposes status icons and missing-value descriptions', async () => {
+    let resolve!: (value: AppUpdateState) => void;
+    captureMock.getUpdateState.mockReturnValue(
+      new Promise<AppUpdateState>((done) => {
+        resolve = done;
+      }),
+    );
+    const wrapper = mount(UpdateControls, { props: { showIcon: true, center: true }, global: { stubs: { Button } } });
+    expect(wrapper.get('.update-btn').attributes('disabled')).toBeDefined();
+    expect(wrapper.get('.changelog-btn').attributes('disabled')).toBeDefined();
+    expect(wrapper.get('.update-description').text()).toContain('…');
+    resolve(state('checking'));
+    await flushPromises();
+    expect(wrapper.get('.update-top-icon').classes()).toContain('icon-spin');
+    captureMock.listener?.(state('downloading', { percent: null }));
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get('.update-description').text()).toContain('0');
+    captureMock.listener?.(state('available', { availableVersion: null }));
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get('.update-description').text()).toContain('…');
+  });
+
+  it('copies errors and resets feedback, including a repeated copy and unmount', async () => {
+    vi.useFakeTimers();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    captureMock.getUpdateState.mockResolvedValue(state('error'));
+    const wrapper = mount(UpdateControls, { global: { stubs: { Button } } });
+    await flushPromises();
+    await wrapper.get('.error-copy').trigger('click');
+    await flushPromises();
+    expect(writeText).toHaveBeenCalledWith('Update failed');
+    expect(wrapper.get('.error-copy').text()).toContain('Copied');
+    await wrapper.get('.error-copy').trigger('click');
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(wrapper.get('.error-copy').text()).toContain('Copy error');
+    await wrapper.get('.error-copy').trigger('click');
+    await flushPromises();
+    wrapper.unmount();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+  });
+
+  it('copies through the native text command when clipboard access fails and cleans up the textarea', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+    });
+    const execCommand = vi.fn(() => true);
+    Object.defineProperty(document, 'execCommand', { configurable: true, value: execCommand });
+    captureMock.getUpdateState.mockResolvedValue(state('error'));
+    const wrapper = mount(UpdateControls, { global: { stubs: { Button } } });
+    await flushPromises();
+    await wrapper.get('.error-copy').trigger('click');
+    await flushPromises();
+    expect(execCommand).toHaveBeenCalledWith('copy');
+    expect(document.querySelector('textarea')).toBeNull();
+    expect(wrapper.get('.error-copy').text()).toContain('Copied');
   });
 });

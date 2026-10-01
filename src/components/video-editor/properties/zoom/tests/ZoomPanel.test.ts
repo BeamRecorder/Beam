@@ -5,7 +5,7 @@ import type { ZoomAutoFollowSettings, ZoomElement } from '../../../zoom/zoom-typ
 
 const Button = {
   inheritAttrs: true,
-  props: ['disabled', 'iconOnly', 'icon', 'tooltip'],
+  props: { disabled: Boolean, iconOnly: Boolean, icon: [Object, Function], tooltip: String },
   emits: ['click'],
   template:
     '<button v-bind="$attrs" :disabled="disabled" :title="tooltip || undefined" :data-icon-only="iconOnly ? \'true\' : undefined" :data-icon="icon ? \'lucide\' : undefined" @click="$emit(\'click\')"><slot /></button>',
@@ -38,6 +38,26 @@ const selectedZoom: ZoomElement = {
 const balancedAutoFollow: ZoomAutoFollowSettings = { safeZone: 0.5, responsiveness: 0.55, directionLock: true };
 
 describe('ZoomPanel', () => {
+  it('moves perspective help into a compact Info control', () => {
+    const wrapper = mount(ZoomPanel, {
+      props: {
+        selectedZoom,
+        canGenerate: true,
+        hasAutomaticZooms: false,
+        motionBlur: { enabled: false, intensity: 0.55 },
+      },
+      global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
+    });
+    const info = wrapper.get('.projection-info');
+    expect(info.attributes('data-icon-only')).toBe('true');
+    expect(info.attributes('title')).toContain('perspective tilt');
+    expect(info.attributes('title')).toContain('zoom focus.\nAdjust');
+    expect(info.attributes('aria-label')).toBe('Perspective');
+    expect(wrapper.findAll('.section-description').some((element) => element.text().includes('perspective tilt'))).toBe(
+      false,
+    );
+    wrapper.unmount();
+  });
   it('shows the empty state and generates automatic zooms', async () => {
     const wrapper = mount(ZoomPanel, {
       props: {
@@ -285,7 +305,7 @@ describe('ZoomPanel', () => {
     ]);
   });
 
-  it('applies Small, Medium, and Large presets while Custom preserves the current values', async () => {
+  it('applies illustrated directional presets while Custom preserves the current values', async () => {
     const wrapper = mount(ZoomPanel, {
       props: {
         selectedZoom: {
@@ -320,31 +340,31 @@ describe('ZoomPanel', () => {
     await presetButtons[0]!.trigger('click');
     expect(wrapper.emitted('update')).toContainEqual([
       expect.objectContaining({
-        tiltPreset: 'small',
-        tiltIntensity: 0.3,
-        tiltHorizontal: -0.25,
-        tiltVertical: 0.45,
+        tiltPreset: 'tilt-back',
+        tiltIntensity: 0.6,
+        tiltHorizontal: 0,
+        tiltVertical: 0.85,
       }),
     ]);
     await presetButtons[1]!.trigger('click');
     expect(wrapper.emitted('update')).toContainEqual([
       expect.objectContaining({
-        tiltPreset: 'medium',
+        tiltPreset: 'tilt-front',
         tiltIntensity: 0.6,
-        tiltHorizontal: -0.25,
-        tiltVertical: 0.45,
+        tiltHorizontal: 0,
+        tiltVertical: -0.85,
       }),
     ]);
     await presetButtons[2]!.trigger('click');
     expect(wrapper.emitted('update')).toContainEqual([
       expect.objectContaining({
-        tiltPreset: 'large',
-        tiltIntensity: 1,
-        tiltHorizontal: -0.25,
-        tiltVertical: 0.45,
+        tiltPreset: 'tilt-left',
+        tiltIntensity: 0.6,
+        tiltHorizontal: -0.85,
+        tiltVertical: 0,
       }),
     ]);
-    await presetButtons[3]!.trigger('click');
+    await wrapper.get('.custom-tilt').trigger('click');
     expect(wrapper.emitted('update')).toContainEqual([
       expect.objectContaining({
         tiltPreset: 'custom',
@@ -373,7 +393,7 @@ describe('ZoomPanel', () => {
       global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
     });
 
-    const customButton = wrapper.findAll('.zoom-tilt-presets button')[3]!;
+    const customButton = wrapper.get('.custom-tilt');
     expect(customButton.text()).toBe('');
     expect(customButton.attributes('data-icon')).toBe('lucide');
     expect(customButton.attributes('data-icon-only')).toBe('true');

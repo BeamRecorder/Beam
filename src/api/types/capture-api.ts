@@ -65,6 +65,8 @@ export interface ImportedFont {
 
 export interface CaptureApi {
   readonly platform: string;
+  pickScreenColor(): Promise<string | null>;
+  cancelScreenColorPicker(): Promise<void>;
   discover(): Promise<CaptureCatalog>;
   capabilities(): Promise<Record<string, boolean>>;
   permissions(): Promise<Record<string, unknown>>;

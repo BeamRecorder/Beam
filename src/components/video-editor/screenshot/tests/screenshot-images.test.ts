@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { MediaAsset } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
-import { createScreenshotImage, screenshotImage } from '../screenshot-images';
+import { createScreenshotImage, screenshotImage, screenshotImageProperties } from '../screenshot-images';
 import { screenshotState } from '../screenshot-state';
 
 const asset: MediaAsset = {
@@ -98,5 +98,26 @@ describe('screenshotImage', () => {
     expect(screenshotImage(state, null)).toBeUndefined();
     delete state.images;
     expect(screenshotImage(state, 'missing')).toBeUndefined();
+  });
+});
+
+describe('screenshotImageProperties', () => {
+  it('has no editable image properties when selection is empty', () => {
+    expect(screenshotImageProperties(undefined)).toBeNull();
+  });
+  it('exposes captured appearance and transform through the shared Clip contract', () => {
+    const image = stateFixture().image;
+    const props = screenshotImageProperties(image)!;
+    expect(props.id).toBe(image.id);
+    expect(props.cornerRadius).toBe(image.appearance.cornerRadius);
+    expect(props.clipTransform).toBe(image.transform);
+  });
+  it('keeps imported media metadata and does not mutate the selected image', () => {
+    const image = createScreenshotImage(asset, 800, 600, canvas);
+    const props = screenshotImageProperties(image)!;
+    expect(props).not.toBe(image);
+    expect(props).toMatchObject({ assetId: asset.id, name: 'Photo' });
+    props.name = 'Changed';
+    expect(image.name).toBe('Photo');
   });
 });

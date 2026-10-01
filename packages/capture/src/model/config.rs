@@ -162,6 +162,8 @@ pub struct CaptureRequest {
     pub hide_taskbar: bool,
     #[serde(default)]
     pub hide_desktop_icons: bool,
+    #[serde(default)]
+    pub show_real_cursor: bool,
 }
 
 impl CaptureRequest {

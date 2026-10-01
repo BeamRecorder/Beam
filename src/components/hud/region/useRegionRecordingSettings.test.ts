@@ -27,6 +27,7 @@ it('snapshots independent device, audio, countdown and desktop settings', () => 
     countdownSeconds: 3,
     hideTaskbar: false,
     hideDesktopIcons: false,
+    showRealCursor: false,
   });
   refs.systemAudioMode.value = 'on';
   expect(settings.snapshot().systemAudio).toBe(true);
@@ -41,12 +42,13 @@ it('applies chosen settings and persists countdown and desktop options', async (
     countdownSeconds: 10,
     hideTaskbar: true,
     hideDesktopIcons: true,
+    showRealCursor: true,
   };
   settings.apply(next);
   await flushPromises();
   expect(settings.snapshot()).toEqual(next);
   expect(updatePreferences).toHaveBeenCalledWith({
-    extras: { recordingCountdownSeconds: 10, hideTaskbar: true, hideDesktopIcons: true },
+    extras: { recordingCountdownSeconds: 10, hideTaskbar: true, hideDesktopIcons: true, showRealCursor: true },
   });
   settings.apply({ ...next, systemAudio: false });
   expect(refs.systemAudioMode.value).toBe('off');

@@ -5,6 +5,7 @@ import type { ShapeClip } from '~/media/shared/composition-types';
 import type { ElementText } from '~/media/shared/element-types';
 import { createElementText } from '~/media/shared/element-text';
 import ElementTextControls from '../ElementTextControls.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 
 const importedFontId = 'b'.repeat(64);
 
@@ -163,4 +164,22 @@ describe('ElementTextControls', () => {
     });
     wrapper.unmount();
   });
+
+  it.each(['top', 'center', 'bottom'] as const)(
+    'animates vertical alignment to %s while retaining the indicator',
+    async (alignment) => {
+      const wrapper = mount(ElementTextControls, {
+        props: { clip: clipWithText() },
+        global: { stubs: { ...uiStubs, ButtonGroup: false } },
+      });
+      await flushPromises();
+      const group = wrapper.getComponent(ButtonGroup);
+      const indicator = group.get('.selection-indicator').element;
+      await wrapper.get(`[aria-label="translated:${alignment}"]`).trigger('click');
+      expect(group.props('selection')).toEqual({ count: 3, index: ['top', 'center', 'bottom'].indexOf(alignment) });
+      expect(group.get('.selection-indicator').element).toBe(indicator);
+      expect((wrapper.emitted('update')!.at(-1)![0] as ElementText).verticalAlign).toBe(alignment);
+      wrapper.unmount();
+    },
+  );
 });

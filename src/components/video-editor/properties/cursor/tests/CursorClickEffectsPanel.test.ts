@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest';
 import CursorClickEffectsPanel from '../CursorClickEffectsPanel.vue';
 
 const BigSlider = {
+  props: ['modelValue', 'formatValue'],
   emits: ['update:modelValue'],
-  template: '<button class="effect-slider" @click="$emit(\'update:modelValue\', 55)">Slider</button>',
+  template:
+    '<button class="effect-slider" @click="$emit(\'update:modelValue\', 55)">{{ formatValue(modelValue) }}</button>',
 };
 const Switch = {
   props: ['modelValue'],
@@ -61,6 +63,29 @@ describe('CursorClickEffectsPanel', () => {
     });
     expect(wrapper.findAll('.effect-slider')).toHaveLength(0);
     expect(wrapper.findAll('.effect-color')).toHaveLength(0);
+  });
+
+  it('edits both buttons independently and labels the color within its effect group', async () => {
+    const modelValue = { left: effects.left, right: { ...effects.right, springEnabled: true, rippleEnabled: true } };
+    const wrapper = mount(CursorClickEffectsPanel, {
+      props: { modelValue },
+      global: { stubs: { BigSlider, Switch, ColorInput } },
+    });
+    expect(wrapper.find('.divider').exists()).toBe(false);
+    const right = wrapper.get('.click-card[aria-label="Right click"]');
+    expect(right.get('.prop-item').text()).toContain('Ripple Color');
+    await right.findAll('.effect-slider')[1]!.trigger('click');
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([
+      { left: effects.left, right: { ...modelValue.right, rippleSize: 55 } },
+    ]);
+    await right.findAll('.effect-slider')[0]!.trigger('click');
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([
+      { left: effects.left, right: { ...modelValue.right, springIntensity: 55 } },
+    ]);
+    await right.findAll('.effect-switch')[0]!.trigger('click');
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([
+      { left: effects.left, right: { ...modelValue.right, springEnabled: false } },
+    ]);
   });
 
   it('toggles left and right ripple activation independently without changing the shared shape', async () => {

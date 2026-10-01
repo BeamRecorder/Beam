@@ -1,4 +1,16 @@
 {
+  "EditorSearch": {
+    "title": "搜尋編輯器",
+    "placeholder": "搜尋操作、片段和設定…",
+    "noResults": "沒有結果",
+    "insert": "新增",
+    "navigation": "區域",
+    "selection": "專案項目",
+    "setting": "設定",
+    "unavailable": "目前選取項目無法使用此操作或設定。",
+    "clips": "片段",
+    "action": "操作"
+  },
   "LinkedClipsDeleteDialog": {
     "preview": "預覽",
     "selectPreview": "預覽{name}",
@@ -281,7 +293,47 @@
   },
   "UndoRedoToast": {
     "undo": "復原",
-    "redo": "重做"
+    "redo": "重做",
+    "undoAction": "已復原：{action}",
+    "redoAction": "已重做：{action}",
+    "action": "{operation} · {item}",
+    "namedItem": "{kind} “{name}”",
+    "items": "{count} 個項目",
+    "operations": {
+      "add": "新增",
+      "remove": "刪除",
+      "edit": "編輯",
+      "move": "移動",
+      "resize": "調整大小",
+      "crop": "裁切",
+      "timing": "長度與時間位置",
+      "visibility": "可見性",
+      "reorder": "調整順序",
+      "rename": "重新命名"
+    },
+    "targets": {
+      "screen": "螢幕錄影",
+      "video": "影片",
+      "image": "影像",
+      "webcam": "攝影機",
+      "color": "顏色",
+      "shape": "形狀",
+      "arrow": "箭頭",
+      "text": "文字",
+      "drawing": "繪圖",
+      "blur": "模糊",
+      "highlight": "醒目提示",
+      "audio": "音訊",
+      "caption": "字幕",
+      "keyboardCaption": "按鍵字幕",
+      "cursor": "游標",
+      "zoom": "縮放",
+      "background": "背景",
+      "canvas": "畫布",
+      "layers": "圖層",
+      "export": "匯出設定",
+      "changes": "變更"
+    }
   },
   "Updates": {
     "title": "應用程式更新",
@@ -298,7 +350,9 @@
     "updateAvailable": "版本 {version} 可用。",
     "updateAvailableGeneric": "有可用更新。",
     "updateError": "無法檢查更新。",
-    "showDetails": "錯誤詳細資料"
+    "showDetails": "錯誤詳細資料",
+    "check": "檢查",
+    "changelog": "更新紀錄"
   },
   "VideoEditor": {
     "exportBanner": "正在匯出。即時編輯不會影響目前正在匯出的檔案。",
@@ -387,7 +441,7 @@
     "projection": "透視",
     "projection2d": "2D",
     "projection3d": "3D 傾斜",
-    "projectionDesc": "加入跟隨縮放焦點的透視傾斜效果。可調整強度以及水平／垂直方向。預覽與匯出使用相同的渲染結果。",
+    "projectionDesc": "加入跟隨縮放焦點的透視傾斜效果。\n可調整強度以及水平／垂直方向。預覽與匯出使用相同的渲染結果。",
     "tiltIntensity": "傾斜強度",
     "tiltHorizontal": "左 / 右",
     "tiltVertical": "上 / 下",
@@ -396,6 +450,12 @@
     "tiltPresetMedium": "中等",
     "tiltPresetLarge": "強烈",
     "tiltPresetCustom": "自訂",
+    "tiltBack": "向後傾斜",
+    "tiltFront": "向前傾斜",
+    "tiltLeft": "向左傾斜",
+    "tiltRight": "向右傾斜",
+    "pullBack": "拉遠",
+    "pullFront": "拉近",
     "magnification": "放大倍率",
     "zoomLevel": "縮放等級",
     "motionBlur": "縮放動態模糊",

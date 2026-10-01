@@ -11,6 +11,8 @@ const props = withDefaults(
     y?: number;
     items?: readonly ContextMenuItemOrDivider[];
     minWidth?: number | string;
+    flush?: boolean;
+    allowOverflow?: boolean;
     closeOnSelect?: boolean;
     closeOnWindowBlur?: boolean;
   }>(),
@@ -193,6 +195,7 @@ defineExpose({
         v-if="activeIsOpen"
         ref="menuRef"
         class="context-menu-surface"
+        :class="{ 'context-menu-flush': flush, 'context-menu-allow-overflow': allowOverflow }"
         :style="floatingStyle"
         role="menu"
         tabindex="-1"
@@ -236,6 +239,13 @@ defineExpose({
   user-select: none;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+.context-menu-flush {
+  padding: 0;
+}
+.context-menu-allow-overflow {
+  overflow: visible;
 }
 
 .context-menu-pop-enter-active,

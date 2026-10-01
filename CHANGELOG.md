@@ -6,6 +6,10 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Double-clicking empty Studio canvas space opens the grouped Add menu, while double-clicking clips still opens text editing or cropping.
+- Video editor Accessibility settings can require double-clicks to add zooms, captions and elements from empty timeline tracks, preventing accidental additions.
+- Recorder and region settings can record the real system cursor on Windows, macOS and Linux while keeping automatic zooms. These recordings start with Beam's custom cursor overlay disabled; a toggle in the Cursor header can enable it again, and the choice is saved with the project and used for exports.
+- Studio and Screenshot share a compact Ctrl+F / Cmd+F Spotlight with grouped Add, Clips, sections, settings and actions. Clips show their project thumbnails; results stay aligned and scroll smoothly, with scroll shadows and mouse Back/Forward navigation.
 - Development Settings now include shortcuts to detached DevTools and a separate Mascot Lab, with adjustable eye size, width, height, spacing and vertical position. Eye proportions are saved with lab presets and included in exports.
 - Added a shared screen/window chooser for Windows and macOS with searchable thumbnails and keyboard navigation. Development launches can supply 3 simulated displays and 21 windows through `DEV_CROSSPLATFORM=1`, including on Linux; normal Linux capture retains the Portal.
 - Beamy appears centered during loading with translated tips, then disappears when the recorder is ready. Clicking the Beam wordmark plays one of twelve text effects before returning to plain text.
@@ -17,6 +21,20 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Editor settings now use clear categories, consistent option typography and aligned category icons. Update actions sit together with a shorter Changelog label; About groups community links and system information, and developer tools no longer sit inside nested boxes.
+- Recorder and editor settings share clearer Light/Dark/System previews, with brighter dark previews and one sliding selection indicator instead of an extra orange checkmark. The redundant language description is removed and Theme replaces Theme Mode.
+- Theme Advanced contains colors and style. Scaling keeps the global UI scale visible and puts per-area overrides behind its own Advanced button.
+- Recording defaults and region controls share desktop icon and taskbar/Dock visibility switches and the same saved preferences, also used by Quick Snip.
+- Advanced panels share smooth opening and closing animations, including quick reversals and reduced-motion support.
+- Cursor properties now group appearance, shadow, motion and click effects without repeated dividers. Shadow options appear directly when Drop Shadow is enabled and hide when disabled. Motion details use Advanced, Custom motion opens its sliders automatically, and Screenshot keeps rotation with appearance.
+- Element properties now live in Clip in Studio and Screenshot. Each editor keeps a single grouped Add menu with arrow submenus, neutral actions, rounded corners and equal padding.
+- Editor sidebars now share the button groups' sliding orange selection animation, including Settings, with immediate positioning during scroll/resize and reduced-motion support.
+- 3D zooms offer six compact, outlined tilt previews and show the selected perspective in the timeline. Advanced reveals the sliders, Custom opens them automatically, and a small Info tooltip replaces the long perspective explanation.
+- Color pickers now use a compact control row without the redundant large swatch, HEX caption or repeated Color header. HEX/RGB switching and the eyedropper have visible icons, and Escape closes the popover from its controls.
+- Buttons and custom selects keep neutral hover and open states. Button groups offer orange or neutral selections with clearer light-theme contrast; preview eyes appear only in menus that offer a visible preview.
+- Watermark text/position and text alignment button groups now use the Recorder's sliding selection animation.
+- Undo/redo feedback identifies the action and affected item, including reopened Screenshot history.
+- New editor and recording controls, Spotlight labels, undo/redo descriptions and contextual help are translated into all 15 supported languages.
 - The Recorder and editors use one shared light/dark palette with a livelier Beam orange and white action labels and icons, including saved orange appearances with custom corner radii.
 - Editor titlebars now center a borderless project switcher with a wider rectangular project panel, place presets on the left with a settings icon, and shorten video export labels in all 15 languages. Export buttons fit their labels.
 - Capture modes now use Beam’s original Recorder, Screenshot and Instant SVG icons in the HUD, Quick Snip controls and project pickers.
@@ -47,6 +65,15 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Shape and zoom selections no longer prevent manual navigation to Clip.
+- Spotlight no longer flashes on each typed letter or scales its text when opening; panel height changes animate smoothly.
+- Tooltips preserve intentional line breaks, including the perspective explanation.
+- The eyedropper on Wayland uses the native color portal without closing the screen chooser immediately or dismissing nested color pickers; cancellation and failures have clear feedback.
+- Color picker popovers stay open when a drag starts inside and ends outside, including nested pickers; a new outside click still dismisses them.
+- The color picker's saturation/value pad now paints one continuous rounded surface, removing gaps and seams around its corners.
+- Selected editor sidebar sections now use Beam's orange and matching legible labels and icons in both themes, including Settings, without a permanent border around the active item.
+- Recenter and undo/redo overlays use quieter shadows with enough canvas margin to avoid clipping against the editor bars.
+- Linux recordings with the real cursor enabled respect hidden-cursor metadata and refresh cursor-only frames without leaving trails.
 - Gradient preset tiles now render clean rounded corners without repeated color seams along their borders.
 - Whisper transcription now releases decoder and alignment buffers to prevent GPU memory accumulation. Failed workers are released before retrying, and failure reports show the planned segments and actual inference time.
 - Linux AV1 playback and timeline thumbnails use the software decoder to avoid hardware decoding failures during seeking. Copied playback diagnostics now identify the file, clip, codec, decoder configuration, operation and exact source/timeline position.
@@ -73,6 +100,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Removed
 
+- Removed the redundant Elements sidebar section; its properties are available in Clip.
 - Removed the standalone Mascot Lab entry from production builds; the lab remains accessible through development Settings.
 
 ## [0.4.0] - 2026-09-27

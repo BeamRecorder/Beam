@@ -50,6 +50,7 @@ export type CursorType = (typeof CURSOR_TYPES)[number];
 export type CursorShadowDirection = 'all' | 'bottom' | 'bottom-right' | 'top-left';
 
 export interface CursorPresentationSettings {
+  enabled: boolean;
   selection: CursorSelection;
   size: number;
   color: string;
@@ -65,6 +66,7 @@ export interface CursorPresentationSettings {
 }
 
 export const createDefaultCursorPresentation = (): CursorPresentationSettings => ({
+  enabled: true,
   selection: { packId: 'builtin:macos', mode: 'automatic', cursorId: null },
   size: 45,
   color: '#000000',

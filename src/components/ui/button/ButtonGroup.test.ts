@@ -44,7 +44,36 @@ describe('ButtonGroup', () => {
   it('keeps grouped controls in its slot', () => {
     const wrapper = mount(ButtonGroup, { slots: { default: '<button>One</button><button>Two</button>' } });
     expect(wrapper.classes()).toContain('btn-group');
+    expect(wrapper.classes()).toContain('variant-primary');
     expect(wrapper.findAll('button')).toHaveLength(2);
+  });
+
+  it.each(['primary', 'neutral'] as const)(
+    'exposes the %s selection appearance without changing controls',
+    (variant) => {
+      const wrapper = mount(ButtonGroup, {
+        props: { variant, selection: { index: 0, count: 2 } },
+        slots: { default: '<button>One</button><button>Two</button>' },
+      });
+      expect(wrapper.classes()).toContain(`variant-${variant}`);
+      expect(wrapper.findAll('button').map((button) => button.text())).toEqual(['One', 'Two']);
+      expect(wrapper.find('.selection-indicator').exists()).toBe(true);
+      wrapper.unmount();
+    },
+  );
+
+  it('switches appearance while preserving the moving selection element and index', async () => {
+    const wrapper = mount(ButtonGroup, { props: { selection: { index: 1, count: 2 } } });
+    const indicator = wrapper.get('.selection-indicator').element;
+    await wrapper.setProps({ variant: 'neutral' });
+    expect(wrapper.classes()).toContain('variant-neutral');
+    expect(wrapper.classes()).not.toContain('variant-primary');
+    expect(wrapper.get('.selection-indicator').element).toBe(indicator);
+    expect(wrapper.attributes('style')).toContain('--button-group-index: 1');
+    await wrapper.setProps({ variant: 'primary' });
+    expect(wrapper.classes()).toContain('variant-primary');
+    expect(wrapper.get('.selection-indicator').element).toBe(indicator);
+    wrapper.unmount();
   });
 
   it.each([0, 1, 2])('moves the shared indicator to choice %i while keeping all buttons interactive', (index) => {

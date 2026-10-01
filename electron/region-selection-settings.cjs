@@ -7,7 +7,7 @@ function regionRecordingSettings(value, platform) {
   }
   if (!Number.isInteger(value.countdownSeconds) || value.countdownSeconds < 0 || value.countdownSeconds > 10)
     throw new TypeError('Invalid region countdown');
-  for (const key of ['systemAudio', 'hideTaskbar', 'hideDesktopIcons'])
+  for (const key of ['systemAudio', 'hideTaskbar', 'hideDesktopIcons', 'showRealCursor'])
     if (typeof value[key] !== 'boolean') throw new TypeError(`Invalid region ${key}`);
   const desktopSupported = platform === 'win32' || platform === 'darwin';
   return {
@@ -17,6 +17,7 @@ function regionRecordingSettings(value, platform) {
     countdownSeconds: value.countdownSeconds,
     hideTaskbar: desktopSupported && value.hideTaskbar,
     hideDesktopIcons: desktopSupported && value.hideDesktopIcons,
+    showRealCursor: value.showRealCursor,
   };
 }
 module.exports = { regionRecordingSettings };

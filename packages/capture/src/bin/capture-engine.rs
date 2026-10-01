@@ -185,6 +185,9 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
         Command::RequestInputAccess => {
             serde_json::to_value(capture::input::request_input_access()?).map_err(Into::into)
         }
+        Command::PickScreenColor { parent_window_id } => {
+            serde_json::to_value(capture::screen_color::pick(parent_window_id)?).map_err(Into::into)
+        }
         Command::Formats { source } => {
             let snapshot = discover_snapshot(engine)?;
             serde_json::to_value(

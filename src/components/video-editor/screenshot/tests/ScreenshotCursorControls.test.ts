@@ -54,9 +54,14 @@ const ButtonStub = defineComponent({
 });
 
 const DividerStub = defineComponent({ template: '<div class="divider"></div>' });
-const BlurRevealTransitionStub = defineComponent({ template: '<div><slot /></div>' });
+const RafRevealTransitionStub = defineComponent({ template: '<div><slot /></div>' });
 const PopoverStub = defineComponent({ template: '<div><slot name="trigger" /><slot /></div>' });
-const AdvancedButtonStub = defineComponent({ template: '<button><slot /></button>' });
+const AdvancedButtonStub = defineComponent({
+  props: ['open', 'controls', 'label'],
+  emits: ['update:open'],
+  template:
+    '<button :aria-controls="controls" :aria-expanded="open" @click="$emit(\'update:open\', !open)">{{ label }}</button>',
+});
 
 const asset = (id: string): CursorAssetDescriptor => ({
   id,
@@ -106,7 +111,7 @@ const global = {
     Switch: SwitchStub,
     Button: ButtonStub,
     Divider: DividerStub,
-    BlurRevealTransition: BlurRevealTransitionStub,
+    RafRevealTransition: RafRevealTransitionStub,
     Popover: PopoverStub,
     AdvancedButton: AdvancedButtonStub,
   },
@@ -142,6 +147,8 @@ describe('ScreenshotCursorControls', () => {
       shadowDirection: cursor.shadowDirection,
       still: true,
     });
+    expect(rotation.element.closest('[aria-label="CursorPanel.appearance"]')).not.toBeNull();
+    expect(wrapper.find('#cursor-shadow-options').exists()).toBe(true);
     expect(rotation.props('modelValue')).toBe(cursor.rotation);
     expect(rotation.props('min')).toBe(0);
     expect(rotation.props('max')).toBe(360);

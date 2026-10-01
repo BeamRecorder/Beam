@@ -107,6 +107,9 @@ impl LinuxRecording {
             metrics: metrics.clone(),
             repair_window_crop,
             region: request.region,
+            target_fps: request.recording.target_fps,
+            show_real_cursor: request.show_real_cursor
+                && matches!(request.cursor, CursorSelection::Separate { .. }),
         })?;
         Ok(Self {
             portal: Some(portal),

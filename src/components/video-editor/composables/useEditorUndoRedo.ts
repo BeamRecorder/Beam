@@ -16,7 +16,7 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 export function useEditorUndoRedo<T extends object = EditorStateSnapshot>(options: EditorHistoryOptions<T>) {
   const undoStack = shallowRef<T[]>([]);
   const redoStack = shallowRef<T[]>([]);
-  const lastAction = ref<HistoryAction | null>(null);
+  const lastAction = shallowRef<HistoryAction | null>(null);
   const restoring = ref(false);
   const pending = ref(false);
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -85,7 +85,14 @@ export function useEditorUndoRedo<T extends object = EditorStateSnapshot>(option
       await options.onRestoreSnapshot(clone(snapshot));
       undoStack.value = type === 'undo' ? undo.slice(0, -1) : [...undo, clone(snapshot)];
       redoStack.value = type === 'undo' ? [...redo, undo[undo.length - 1]!] : redo.slice(0, -1);
-      lastAction.value = { type, timestamp: Date.now() };
+      lastAction.value = {
+        type,
+        timestamp: Date.now(),
+        snapshots: {
+          before: type === 'undo' ? snapshot : undo[undo.length - 1]!,
+          after: type === 'undo' ? undo[undo.length - 1]! : snapshot,
+        },
+      };
     } finally {
       restoring.value = false;
     }

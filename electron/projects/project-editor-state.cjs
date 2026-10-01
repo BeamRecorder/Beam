@@ -86,6 +86,7 @@ const canvasTransitions = (value) => {
 };
 
 const defaultCursor = () => ({
+  enabled: true,
   selection: { packId: 'builtin:macos', mode: 'automatic', cursorId: null },
   size: 45,
   color: '#000000',
@@ -151,7 +152,19 @@ const zoomState = (value) => {
       (element.tiltIntensity !== undefined && !finite(element.tiltIntensity)) ||
       (element.tiltHorizontal !== undefined && !finite(element.tiltHorizontal)) ||
       (element.tiltVertical !== undefined && !finite(element.tiltVertical)) ||
-      (element.tiltPreset !== undefined && !['small', 'medium', 'large', 'custom'].includes(element.tiltPreset))
+      (element.tiltPreset !== undefined &&
+        ![
+          'small',
+          'medium',
+          'large',
+          'custom',
+          'tilt-back',
+          'tilt-front',
+          'tilt-left',
+          'tilt-right',
+          'pull-back',
+          'pull-front',
+        ].includes(element.tiltPreset))
     )
       throw new Error('Propriétés de zoom invalides');
     ids.add(element.id);
@@ -228,6 +241,8 @@ const clickEffect = (value) => {
 };
 
 const cursorState = (value) => {
+  if (value?.enabled !== undefined && typeof value.enabled !== 'boolean')
+    throw new Error('Invalid cursor enabled state');
   const legacyCursor = value?.selectedCursor;
   const selection =
     value?.selection && typeof value.selection === 'object'
@@ -271,6 +286,7 @@ const cursorState = (value) => {
       (style) => style === 'single' || style === 'double' || style === 'solid',
     ) || 'single';
   return {
+    enabled: value.enabled !== false,
     selection: {
       packId: selection.packId,
       mode: selection.mode,

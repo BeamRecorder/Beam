@@ -53,7 +53,7 @@ base64 = "0.23.1"
 jpeg-encoder = "0.7.1"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-ashpd = { version = "=0.13.13", default-features = false, features = ["tokio", "screencast"] }
+ashpd = { version = "=0.13.13", default-features = false, features = ["tokio", "screencast", "screenshot"] }
 evdev = "=0.13.2"
 libc = "0.2"
 pipewire = { version = "=0.10.0", features = ["v0_3_65"] }

@@ -1,4 +1,16 @@
 {
+  "EditorSearch": {
+    "title": "Szukaj w edytorze",
+    "placeholder": "Szukaj działań, klipów i ustawień…",
+    "noResults": "Brak wyników",
+    "insert": "Dodaj",
+    "navigation": "Sekcje",
+    "selection": "Element projektu",
+    "setting": "Ustawienia",
+    "unavailable": "To działanie lub ustawienie jest niedostępne dla bieżącego zaznaczenia.",
+    "clips": "Klipy",
+    "action": "Akcje"
+  },
   "LinkedClipsDeleteDialog": {
     "preview": "Podgląd",
     "selectPreview": "Podgląd {name}",
@@ -281,7 +293,47 @@
   },
   "UndoRedoToast": {
     "undo": "Cofnij",
-    "redo": "Ponów"
+    "redo": "Ponów",
+    "undoAction": "Cofnięto: {action}",
+    "redoAction": "Ponowiono: {action}",
+    "action": "{operation} · {item}",
+    "namedItem": "{kind} “{name}”",
+    "items": "Elementy: {count}",
+    "operations": {
+      "add": "Dodanie",
+      "remove": "Usunięcie",
+      "edit": "Edycja",
+      "move": "Przesunięcie",
+      "resize": "Zmiana rozmiaru",
+      "crop": "Kadrowanie",
+      "timing": "Czas trwania i pozycja",
+      "visibility": "Widoczność",
+      "reorder": "Zmiana kolejności",
+      "rename": "Zmiana nazwy"
+    },
+    "targets": {
+      "screen": "Nagranie ekranu",
+      "video": "Wideo",
+      "image": "Obraz",
+      "webcam": "Kamera",
+      "color": "Kolor",
+      "shape": "Kształt",
+      "arrow": "Strzałka",
+      "text": "Tekst",
+      "drawing": "Rysunek",
+      "blur": "Rozmycie",
+      "highlight": "Wyróżnienie",
+      "audio": "Dźwięk",
+      "caption": "Napis",
+      "keyboardCaption": "Naciśnięcia klawiszy",
+      "cursor": "Kursor",
+      "zoom": "Powiększenie",
+      "background": "Tło",
+      "canvas": "Płótno",
+      "layers": "Warstwy",
+      "export": "Ustawienia eksportu",
+      "changes": "Zmiany"
+    }
   },
   "Updates": {
     "title": "Aktualizacja aplikacji",
@@ -298,7 +350,9 @@
     "updateAvailable": "Wersja {version} jest dostępna.",
     "updateAvailableGeneric": "Dostępna jest aktualizacja.",
     "updateError": "Nie można sprawdzić aktualizacji.",
-    "showDetails": "Szczegóły błędu"
+    "showDetails": "Szczegóły błędu",
+    "check": "Sprawdź",
+    "changelog": "Zmiany"
   },
   "VideoEditor": {
     "exportBanner": "Eksportowanie w toku. Bieżące zmiany nie wpłyną na aktualnie eksportowany plik.",
@@ -387,7 +441,7 @@
     "projection": "Perspektywa",
     "projection2d": "2D",
     "projection3d": "Pochylenie 3D",
-    "projectionDesc": "Dodaje perspektywiczne pochylenie podążające za punktem ostrości zoomu. Dostosuj jego siłę oraz kierunek poziomy/pionowy. Podgląd i eksport korzystają z tego samego renderowania.",
+    "projectionDesc": "Dodaje perspektywiczne pochylenie podążające za punktem ostrości zoomu.\nDostosuj jego siłę oraz kierunek poziomy/pionowy. Podgląd i eksport korzystają z tego samego renderowania.",
     "tiltIntensity": "Intensywność pochylenia",
     "tiltHorizontal": "Lewo / Prawo",
     "tiltVertical": "Góra / Dół",
@@ -396,6 +450,12 @@
     "tiltPresetMedium": "Średnie",
     "tiltPresetLarge": "Silne",
     "tiltPresetCustom": "Niestandardowe",
+    "tiltBack": "Pochyl w tył",
+    "tiltFront": "Pochyl w przód",
+    "tiltLeft": "Pochyl w lewo",
+    "tiltRight": "Pochyl w prawo",
+    "pullBack": "Oddal",
+    "pullFront": "Przybliż",
     "magnification": "Powiększenie",
     "zoomLevel": "Poziom powiększenia",
     "motionBlur": "Rozmycie ruchu zoomu",

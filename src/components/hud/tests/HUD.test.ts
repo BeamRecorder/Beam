@@ -104,6 +104,20 @@ describe('horizontal HUD', () => {
     expect(hud.get('.hud-wrapper').attributes('style')).toContain('236px');
     expect(capture.setSize).toHaveBeenLastCalledWith(672, 268);
   });
+  it('keeps device menus free of preview eyes while retaining their selected check', async () => {
+    const hud = await createHud();
+    const selects = hud.findAllComponents(Select);
+    expect(selects).toHaveLength(3);
+    expect(selects.every((select) => !select.props('showPreviewIndicator'))).toBe(true);
+    await selects[0]!.get('.select-trigger').trigger('click');
+    await flushPromises();
+    const options = document.querySelectorAll<HTMLElement>('[role="option"]');
+    expect(options.length).toBeGreaterThan(1);
+    options[1]!.dispatchEvent(new Event('pointerenter'));
+    await hud.vm.$nextTick();
+    expect(document.querySelector('.option-eye')).toBeNull();
+    expect(document.querySelector('[aria-selected="true"] .lucide-check')).not.toBeNull();
+  });
   it('starts the chosen native screen with the selected devices and restored countdown', async () => {
     capture.getPreferences.mockResolvedValue({
       ...preferences,

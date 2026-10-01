@@ -114,6 +114,18 @@ beforeEach(() => {
   runtime.loadCursorImage.mockReset().mockImplementation(async (_pack, cursor) => ({ id: cursor.id }));
 });
 
+it('exports a disabled overlay without requiring an imported cursor pack or loading artwork', async () => {
+  const value = request();
+  value.snapshot.cursorSettings.enabled = false;
+  value.snapshot.cursorPack = null;
+  const events = value.snapshot.cursor.events;
+  expect(requiredExportCursorAssets(value)).toEqual([]);
+  const prepared = await prepareExportCursorImages(value);
+  expect(prepared).toEqual([]);
+  expect(runtime.loadCursorImage).not.toHaveBeenCalled();
+  expect(value.snapshot.cursor.events).toBe(events);
+});
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });

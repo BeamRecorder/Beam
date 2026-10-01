@@ -263,6 +263,7 @@ onUnmounted(() => {
         @mousemove="hoverTextLayer($event, layer.id)"
         @mouseleave="leaveTextLayer"
         @click.stop="addAt($event, 'caption')"
+        @dblclick.stop="addAt($event, 'caption')"
       >
         <div
           v-if="hoverCaptionTimeMs !== null && hoveredTextLayerId === layer.id"
@@ -344,6 +345,7 @@ onUnmounted(() => {
       @mousemove="hoverTextLayer($event, 'empty')"
       @mouseleave="leaveTextLayer"
       @click.stop="addAt($event, 'caption')"
+      @dblclick.stop="addAt($event, 'caption')"
     >
       <div
         v-if="hoverCaptionTimeMs !== null"

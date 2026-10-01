@@ -23,6 +23,7 @@ export interface StartRecordingOptions {
   excludedWindowHandles?: string[];
   hideTaskbar?: boolean;
   hideDesktopIcons?: boolean;
+  showRealCursor?: boolean;
 }
 
 export interface RecordingSettings {
@@ -60,5 +61,6 @@ export interface CaptureConfig {
   excludedWindowHandles?: string[];
   hideTaskbar?: boolean;
   hideDesktopIcons?: boolean;
+  showRealCursor?: boolean;
   region?: ScreenRegion | null;
 }

@@ -7,6 +7,8 @@ export type HistoryActionType = 'undo' | 'redo';
 export interface HistoryAction {
   type: HistoryActionType;
   timestamp: number;
+  /** The original edit, in chronological order for both undo and redo. */
+  snapshots?: { before: object; after: object };
 }
 export interface EditorStateSnapshot {
   composition: ClipComposition;

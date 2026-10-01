@@ -221,6 +221,7 @@ export function useHudState(props: HudProps, emit: HudEmit) {
           countdownSeconds: countdownSeconds.value,
           hideTaskbar: regionSettings.hideTaskbar.value,
           hideDesktopIcons: regionSettings.hideDesktopIcons.value,
+          showRealCursor: regionSettings.showRealCursor.value,
           recordingBarVisibility: recordingBarVisibility.value,
           recordInteractions: interactionAccess.recordingEnabled.value,
           region: activeTab.value === 'screen' && selectedScreenRegion.value ? { ...selectedScreenRegion.value } : null,

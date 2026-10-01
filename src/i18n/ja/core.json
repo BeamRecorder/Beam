@@ -1,4 +1,11 @@
 {
+  "ColorPicker": {
+    "color": "カラー",
+    "close": "閉じる",
+    "eyedropper": "画面の色を選択",
+    "colorFormat": "色の形式",
+    "eyedropperError": "画面の色を選択できませんでした。もう一度お試しください。"
+  },
   "VoiceoverRecorder": {
     "record": "録音",
     "pause": "一時停止",
@@ -344,6 +351,7 @@
     "crop": "クロップ"
   },
   "CursorPanel": {
+    "appearance": "外観",
     "cursorStyle": "カーソルスタイル",
     "cursorSize": "カーソルサイズ",
     "autoHideCursor": "カーソルを自動的に隠す",
@@ -745,7 +753,7 @@
     "title": "外観",
     "subtitle": "テーマ、カラー、角丸、サーフェスをカスタマイズ",
     "customization": "カスタマイズ",
-    "themeMode": "テーマモード",
+    "themeMode": "テーマ",
     "light": "ライト",
     "dark": "ダーク",
     "system": "システム",
@@ -763,7 +771,9 @@
     "toneSlate": "スレート",
     "toneDeep": "ディープダーク",
     "resetDefault": "デフォルトに戻す",
-    "custom": "カスタム"
+    "custom": "カスタム",
+    "systemDescription": "システムはデバイスのライトまたはダークの外観に合わせます。",
+    "uiScaleGlobal": "UIの拡大率（全体）"
   },
   "Onboarding": {
     "skip": "Skip",
@@ -1087,5 +1097,16 @@
     "tipInstant": "Instantならすぐに共有できる動画を作れます。",
     "tipShortcuts": "設定で録画ショートカットを変更できます。",
     "tipProjects": "既存のプロジェクトを開いて編集を続けましょう。"
+  },
+  "EditorAccessibility": {
+    "title": "アクセシビリティ",
+    "doubleClick": "ダブルクリックでクリップを追加",
+    "doubleClickDescription": "空のタイムライントラックにズーム、字幕、視覚要素をダブルクリックで追加します。"
+  },
+  "CursorRecording": {
+    "showRealCursor": "実際のカーソルを表示",
+    "description": "システムカーソルを動画に直接記録します。自動ズームは引き続きカーソルを追従します。Beamカーソルは最初は無効ですが、カーソル設定で重ねて表示できます。記録されたカーソルは削除できません。",
+    "customCursor": "カスタムカーソル",
+    "overlayDescription": "動画にBeamカーソルを重ねて表示します。録画にシステムカーソルが含まれている場合は無効にしてください。"
   }
 }

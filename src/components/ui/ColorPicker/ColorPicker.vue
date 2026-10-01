@@ -148,8 +148,16 @@ function handleDragEnd() {
       </template>
 
       <template #default="{ close }">
-        <div class="popover-picker-content" :class="{ 'is-triangle': type === 'triangle' }" @click.stop>
+        <div
+          class="popover-picker-content"
+          :class="{ 'is-triangle': type === 'triangle' }"
+          @click.stop
+          @keydown.esc.stop="close"
+        >
           <ColorPickerCustom
+            hide-header
+            :eyedropper-label="eyedropperLabel"
+            :format-label="formatLabel"
             :model-value="props.modelValue"
             :type="type"
             :alpha-value="props.alphaValue"

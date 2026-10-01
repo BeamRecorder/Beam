@@ -5,7 +5,7 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Switch from '~/ui/switch/Switch.vue';
-import BlurRevealTransition from '~/ui/transitions/BlurRevealTransition.vue';
+import RafRevealTransition from '~/ui/transitions/RafRevealTransition.vue';
 import {
   normalizeZoomAutoFollow,
   ZOOM_AUTO_FOLLOW_PRESETS,
@@ -62,7 +62,7 @@ const selectPreset = (preset: ZoomAutoFollowPreset) =>
         {{ t(`followPreset${preset[0]!.toUpperCase()}${preset.slice(1)}`) }}
       </Button>
     </ButtonGroup>
-    <BlurRevealTransition>
+    <RafRevealTransition>
       <div v-if="advancedOpen" id="zoom-auto-follow-advanced-panel" class="advanced-options">
         <BigSlider
           :model-value="modelValue.safeZone * 100"
@@ -96,7 +96,7 @@ const selectPreset = (preset: ZoomAutoFollowPreset) =>
           />
         </div>
       </div>
-    </BlurRevealTransition>
+    </RafRevealTransition>
   </div>
 </template>
 

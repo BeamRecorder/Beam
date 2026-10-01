@@ -120,6 +120,7 @@ vi.mock('../../properties/cursor/useCursorReplacer', async () => {
   return {
     useCursorReplacer: () => {
       const value = {
+        enabled: ref(true),
         selection: ref({ packId: 'builtin:macos', mode: 'automatic', cursorId: null }),
         importedPacks: ref([]),
         packs: computed(() => []),

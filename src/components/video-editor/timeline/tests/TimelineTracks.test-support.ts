@@ -1,3 +1,4 @@
+import { createPinia, setActivePinia } from 'pinia';
 import { defineComponent } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, vi } from 'vitest';
@@ -15,6 +16,10 @@ import TimelineTracks from '../TimelineTracks.vue';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { useTimelineClipboard } from '../composables/useTimelineClipboard';
 import { timelineClipStyle } from '../timeline-clip-geometry';
+
+vi.mock('~/api/capture', () => ({
+  capture: { getPreferences: vi.fn(async () => ({ extras: {} })), onPreferencesChanged: vi.fn(() => () => {}) },
+}));
 
 const waveformTestState = vi.hoisted(() => ({
   viewport: null as
@@ -350,6 +355,7 @@ const originalElementFromPoint = (document as Document & { elementFromPoint?: ty
   .elementFromPoint;
 
 export const mountTracks = async (overrides: Record<string, unknown> = {}) => {
+  setActivePinia(createPinia());
   wrapper = mount(TimelineTracks, {
     props: {
       currentTime: 2,

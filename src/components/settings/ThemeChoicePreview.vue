@@ -14,24 +14,19 @@ const skins = computed(() => (props.mode === 'system' ? (['light', 'dark'] as co
       :key="skin"
       class="preview-skin"
       :class="{ 'split-right': index === 1 }"
-      :style="{ background: SURFACE_TONES.neutral[skin].bgApp }"
+      :style="{
+        background: SURFACE_TONES.neutral[skin].bgApp,
+        '--preview-ink': SURFACE_TONES.neutral[skin === 'dark' ? 'light' : 'dark'].borderStrong,
+      }"
     >
-      <span
-        class="preview-window"
-        :style="{ background: SURFACE_TONES.neutral[skin].bgSurface, borderColor: SURFACE_TONES.neutral[skin].border }"
-      >
+      <span class="preview-window" :style="{ background: SURFACE_TONES.neutral[skin].bgSurfaceHover }">
         <span class="preview-sidebar" :style="{ background: SURFACE_TONES.neutral[skin].bgElement }">
-          <span
-            v-for="row in 3"
-            :key="row"
-            class="sidebar-line"
-            :style="{ background: SURFACE_TONES.neutral[skin].bgSurfaceHover }"
-          />
+          <span v-for="row in 3" :key="row" class="sidebar-line" />
         </span>
         <span class="preview-page"
-          ><span class="page-heading" :style="{ background: SURFACE_TONES.neutral[skin].bgSurfaceHover }" /><span
+          ><span class="page-heading" /><span
             class="page-card"
-            :style="{ background: SURFACE_TONES.neutral[skin].bgElement }"
+            :style="{ '--preview-card': SURFACE_TONES.neutral[skin].bgElement }"
         /></span>
       </span>
     </span>
@@ -44,13 +39,15 @@ const skins = computed(() => (props.mode === 'system' ? (['light', 'dark'] as co
   position: relative;
   width: 100%;
   height: 64px;
+  border: 1px solid var(--color-border-strong);
+  box-sizing: border-box;
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
 .preview-skin {
   position: absolute;
   inset: 0;
-  padding: 12px;
+  padding: 10px 8px;
   display: flex;
 }
 .split .preview-skin:first-child {
@@ -64,6 +61,7 @@ const skins = computed(() => (props.mode === 'system' ? (['light', 'dark'] as co
   flex: 1;
   overflow: hidden;
   border: 1px solid;
+  border-color: color-mix(in srgb, var(--preview-ink) 45%, transparent);
   border-radius: 5px;
 }
 .preview-sidebar {
@@ -74,6 +72,7 @@ const skins = computed(() => (props.mode === 'system' ? (['light', 'dark'] as co
   padding: 7px 5px;
 }
 .sidebar-line {
+  background: color-mix(in srgb, var(--preview-ink) 80%, transparent);
   height: 3px;
   border-radius: var(--radius-xs);
 }
@@ -85,11 +84,14 @@ const skins = computed(() => (props.mode === 'system' ? (['light', 'dark'] as co
   gap: 5px;
 }
 .page-heading {
+  background: var(--preview-ink);
   height: 3px;
   width: 50%;
   border-radius: var(--radius-xs);
 }
 .page-card {
+  background: color-mix(in srgb, var(--preview-card) 78%, var(--preview-ink));
+  border: 1px solid color-mix(in srgb, var(--preview-ink) 30%, transparent);
   flex: 1;
   border-radius: var(--radius-xs);
 }

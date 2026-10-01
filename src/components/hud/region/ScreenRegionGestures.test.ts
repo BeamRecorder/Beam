@@ -28,6 +28,7 @@ const recording = {
   countdownSeconds: 3,
   hideTaskbar: false,
   hideDesktopIcons: false,
+  showRealCursor: false,
 };
 const Select = {
   name: 'Select',
@@ -50,11 +51,16 @@ beforeEach(() => {
     innerWidth: { configurable: true, value: 1000 },
     innerHeight: { configurable: true, value: 500 },
   });
-  vi.stubGlobal('ResizeObserver', class {
-    constructor(callback: ResizeObserverCallback) { resizedTop = callback; }
-    observe() {}
-    disconnect() {}
-  });
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      constructor(callback: ResizeObserverCallback) {
+        resizedTop = callback;
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
 });
 afterEach(() => vi.unstubAllGlobals());
 async function setup(region = crop, extra: Partial<ScreenRegionOverlayOptions> = {}) {
@@ -236,8 +242,12 @@ it('refreshes viewport geometry when configuration arrives before the window res
     innerWidth: { configurable: true, value: 600 },
     innerHeight: { configurable: true, value: 400 },
   });
-  configure({ mode: 'select', bounds: { x: 0, y: 0, width: 600, height: 400 },
-    region: { x: 0.9, y: 0, width: 0.1, height: 1 }, recording });
+  configure({
+    mode: 'select',
+    bounds: { x: 0, y: 0, width: 600, height: 400 },
+    region: { x: 0.9, y: 0, width: 0.1, height: 1 },
+    recording,
+  });
   await wrapper.vm.$nextTick();
   const top = wrapper.get('.region-top-controls').element as HTMLElement;
   expect(top.style.left).toBe('274px');

@@ -207,6 +207,7 @@ fn run_linux_native_capture() -> Result<serde_json::Value, capture::CaptureError
         excluded_window_handles: &[],
         hide_taskbar: false,
         hide_desktop_icons: false,
+        show_real_cursor: false,
         region_selection: None,
         start_ns: 0,
         start_gate: gate.clone(),

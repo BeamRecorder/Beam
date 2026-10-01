@@ -18,7 +18,7 @@ import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
 import { DEFAULT_OUTPUT_CANVAS } from '../canvas/output-canvas';
 import { useTimelineClipboardShortcuts } from './composables/useTimelineClipboardShortcuts';
 import TimelineTrackHeaders from './TimelineTrackHeaders.vue';
-import { normalizeZoomProjection } from '../zoom/zoom-types';
+import TimelineZoomProjectionBadge from './TimelineZoomProjectionBadge.vue';
 import TimelineAddMenu from './TimelineAddMenu.vue';
 import { useTimelineItemInteractions } from './composables/useTimelineItemInteractions';
 import TimelineAudioTracks from './TimelineAudioTracks.vue';
@@ -307,6 +307,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 @mousemove="visualKindFor(track) && hoverAt($event, track)"
                 @mouseleave="visualKindFor(track) && leaveTrack(track)"
                 @click.stop="visualKindFor(track) && addAt($event, track)"
+                @dblclick.stop="visualKindFor(track) && addAt($event, track)"
               >
                 <div
                   v-if="hoverVisualPlacements[`visual:${track.id}`]"
@@ -362,6 +363,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
               @mousemove="hoverAt($event, 'zoom')"
               @mouseleave="leaveTrack('zoom')"
               @click.stop="addAt($event, 'zoom')"
+              @dblclick.stop="addAt($event, 'zoom')"
             >
               <div
                 v-if="hoverZoomTimeMs !== null"
@@ -404,9 +406,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 <TimelineLockOverlay v-if="zoom.locked" />
                 <span class="zoom-clip-labels">
                   <Lock v-if="zoom.locked" :size="12" :aria-label="t('locked')" />
-                  <span class="zoom-meta-badge zoom-projection-badge">
-                    {{ normalizeZoomProjection(zoom.projection) === '3d' ? '3D' : '2D' }}
-                  </span>
+                  <TimelineZoomProjectionBadge :zoom="zoom" />
                   <span class="clip-center-title zoom-title">
                     {{ t('zoomTitle', { level: zoomScale(zoom.depth).toFixed(2) }) }}
                   </span>

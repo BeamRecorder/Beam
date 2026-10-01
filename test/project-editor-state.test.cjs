@@ -592,3 +592,43 @@ test('rejects invalid recording link identifiers on zooms', () => {
     );
   }
 });
+
+for (const tiltPreset of ['tilt-back', 'tilt-front', 'tilt-left', 'tilt-right', 'pull-back', 'pull-front']) {
+  test(`round-trips the illustrated ${tiltPreset} zoom preset`, () => {
+    const state = zoomState({
+      elements: [
+        {
+          id: 'preset-zoom',
+          sessionId: 'session',
+          startMs: 0,
+          endMs: 1000,
+          focus: { cx: 0.4, cy: 0.6 },
+          depth: 2,
+          mode: 'manual',
+          projection: '3d',
+          tiltPreset,
+          tiltIntensity: 0.6,
+          tiltHorizontal: 0.65,
+          tiltVertical: -0.35,
+        },
+      ],
+      generatedSessions: [],
+    });
+    assert.equal(state.elements[0].tiltPreset, tiltPreset);
+    assert.equal(state.elements[0].tiltHorizontal, 0.65);
+    assert.deepEqual(zoomState(state), state);
+  });
+}
+
+test('persists the custom cursor toggle and preserves enabled cursors from older projects', () => {
+  const state = createDefaultPresentation();
+  assert.equal(state.cursor.enabled, true);
+  for (const enabled of [true, false]) {
+    assert.equal(presentationState({ ...state, cursor: { ...state.cursor, enabled } }).cursor.enabled, enabled);
+  }
+  const legacy = { ...state.cursor };
+  delete legacy.enabled;
+  assert.equal(presentationState({ ...state, cursor: legacy }).cursor.enabled, true);
+  for (const enabled of ['false', 1, null])
+    assert.throws(() => presentationState({ ...state, cursor: { ...state.cursor, enabled } }), /cursor enabled/);
+});

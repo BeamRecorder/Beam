@@ -30,6 +30,7 @@ export function usePropertiesPanelNavigation(options: { contextKey: () => string
     target instanceof Element && Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
 
   const handleMouseNavigation = (event: MouseEvent) => {
+    if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
     if ((event.button !== 3 && event.button !== 4) || isEditableTarget(event.target)) return;
     event.preventDefault();
     event.stopPropagation();
@@ -38,6 +39,7 @@ export function usePropertiesPanelNavigation(options: { contextKey: () => string
   };
 
   const preventAuxiliaryNavigation = (event: MouseEvent) => {
+    if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
     if ((event.button === 3 || event.button === 4) && !isEditableTarget(event.target)) {
       event.preventDefault();
       event.stopPropagation();

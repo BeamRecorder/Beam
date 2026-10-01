@@ -54,7 +54,7 @@ impl MacRecording {
             matches!(
                 request.cursor,
                 crate::model::CursorSelection::Separate { .. }
-            ),
+            ) && !request.show_real_cursor,
             request.region,
             request.excluded_window_handles,
             request.hide_taskbar,

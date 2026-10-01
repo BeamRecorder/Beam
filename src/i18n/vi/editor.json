@@ -1,4 +1,16 @@
 {
+  "EditorSearch": {
+    "title": "Tìm trong trình chỉnh sửa",
+    "placeholder": "Tìm thao tác, đoạn clip và cài đặt…",
+    "noResults": "Không có kết quả",
+    "insert": "Thêm",
+    "navigation": "Mục",
+    "selection": "Thành phần dự án",
+    "setting": "Cài đặt",
+    "unavailable": "Thao tác hoặc cài đặt này không khả dụng cho lựa chọn hiện tại.",
+    "clips": "Clip",
+    "action": "Thao tác"
+  },
   "LinkedClipsDeleteDialog": {
     "preview": "Xem trước",
     "selectPreview": "Xem trước {name}",
@@ -281,7 +293,47 @@
   },
   "UndoRedoToast": {
     "undo": "Hoàn tác",
-    "redo": "Làm lại"
+    "redo": "Làm lại",
+    "undoAction": "Đã hoàn tác: {action}",
+    "redoAction": "Đã làm lại: {action}",
+    "action": "{operation} · {item}",
+    "namedItem": "{kind} “{name}”",
+    "items": "{count} mục",
+    "operations": {
+      "add": "Thêm",
+      "remove": "Xóa",
+      "edit": "Chỉnh sửa",
+      "move": "Di chuyển",
+      "resize": "Đổi kích thước",
+      "crop": "Cắt",
+      "timing": "Thời lượng và vị trí thời gian",
+      "visibility": "Hiển thị",
+      "reorder": "Sắp xếp lại",
+      "rename": "Đổi tên"
+    },
+    "targets": {
+      "screen": "Bản ghi màn hình",
+      "video": "Video",
+      "image": "Hình ảnh",
+      "webcam": "Camera",
+      "color": "Màu",
+      "shape": "Hình dạng",
+      "arrow": "Mũi tên",
+      "text": "Văn bản",
+      "drawing": "Nét vẽ",
+      "blur": "Làm mờ",
+      "highlight": "Làm nổi bật",
+      "audio": "Âm thanh",
+      "caption": "Phụ đề",
+      "keyboardCaption": "Phụ đề bàn phím",
+      "cursor": "Con trỏ",
+      "zoom": "Thu phóng",
+      "background": "Nền",
+      "canvas": "Khung vẽ",
+      "layers": "Lớp",
+      "export": "Cài đặt xuất",
+      "changes": "Thay đổi"
+    }
   },
   "Updates": {
     "title": "Cập nhật ứng dụng",
@@ -298,7 +350,9 @@
     "updateAvailable": "Đã có phiên bản {version}.",
     "updateAvailableGeneric": "Có bản cập nhật mới.",
     "updateError": "Không thể kiểm tra cập nhật.",
-    "showDetails": "Chi tiết lỗi"
+    "showDetails": "Chi tiết lỗi",
+    "check": "Kiểm tra",
+    "changelog": "Thay đổi"
   },
   "VideoEditor": {
     "exportBanner": "Đang trong quá trình xuất video. Các chỉnh sửa trực tiếp sẽ không ảnh hưởng đến tệp đang được xuất.",
@@ -387,7 +441,7 @@
     "projection": "Phối cảnh",
     "projection2d": "2D",
     "projection3d": "Nghiêng 3D",
-    "projectionDesc": "Thêm hiệu ứng nghiêng phối cảnh theo tiêu điểm thu phóng. Điều chỉnh cường độ và hướng ngang/dọc. Bản xem trước và bản xuất sử dụng cùng một cách kết xuất.",
+    "projectionDesc": "Thêm hiệu ứng nghiêng phối cảnh theo tiêu điểm thu phóng.\nĐiều chỉnh cường độ và hướng ngang/dọc. Bản xem trước và bản xuất sử dụng cùng một cách kết xuất.",
     "tiltIntensity": "Cường độ nghiêng",
     "tiltHorizontal": "Trái / Phải",
     "tiltVertical": "Lên / Xuống",
@@ -396,6 +450,12 @@
     "tiltPresetMedium": "Vừa",
     "tiltPresetLarge": "Mạnh",
     "tiltPresetCustom": "Tùy chỉnh",
+    "tiltBack": "Nghiêng ra sau",
+    "tiltFront": "Nghiêng về trước",
+    "tiltLeft": "Nghiêng sang trái",
+    "tiltRight": "Nghiêng sang phải",
+    "pullBack": "Kéo ra sau",
+    "pullFront": "Kéo về trước",
     "magnification": "Mức phóng đại",
     "zoomLevel": "Mức thu phóng",
     "motionBlur": "Nhòe chuyển động khi thu phóng",

@@ -1,4 +1,11 @@
 {
+  "ColorPicker": {
+    "color": "Màu",
+    "close": "Đóng",
+    "eyedropper": "Chọn màu trên màn hình",
+    "colorFormat": "Định dạng màu",
+    "eyedropperError": "Không thể chọn màu trên màn hình. Vui lòng thử lại."
+  },
   "VoiceoverRecorder": {
     "record": "Ghi âm",
     "pause": "Tạm dừng",
@@ -344,6 +351,7 @@
     "crop": "Cắt"
   },
   "CursorPanel": {
+    "appearance": "Giao diện",
     "cursorStyle": "Kiểu con trỏ",
     "cursorSize": "Cỡ con trỏ",
     "autoHideCursor": "Tự động ẩn con trỏ",
@@ -732,7 +740,7 @@
     "title": "Giao diện",
     "subtitle": "Tùy chỉnh chủ đề, màu sắc, bo góc và bề mặt",
     "customization": "Tùy chỉnh",
-    "themeMode": "Chế độ giao diện",
+    "themeMode": "Giao diện",
     "uiScale": "Tỷ lệ giao diện",
     "uiScaleHint": "Thay đổi kích thước điều khiển mà không ảnh hưởng đến video xuất.",
     "advancedScaling": "Tỷ lệ nâng cao",
@@ -763,7 +771,9 @@
     "toneSlate": "Đá phiến",
     "toneDeep": "Tối sâu",
     "resetDefault": "Đặt lại mặc định",
-    "custom": "Tùy chỉnh"
+    "custom": "Tùy chỉnh",
+    "systemDescription": "Hệ thống dùng giao diện sáng hoặc tối theo thiết bị của bạn.",
+    "uiScaleGlobal": "Tỷ lệ giao diện (toàn cục)"
   },
   "Onboarding": {
     "titlebarTitle": "Beam • Giới thiệu",
@@ -1072,5 +1082,16 @@
     "tipInstant": "Thử Instant để có video sẵn sàng chia sẻ.",
     "tipShortcuts": "Tùy chỉnh phím tắt ghi hình trong phần cài đặt.",
     "tipProjects": "Mở dự án có sẵn để tiếp tục chỉnh sửa."
+  },
+  "EditorAccessibility": {
+    "title": "Trợ năng",
+    "doubleClick": "Nhấp đúp để thêm clip",
+    "doubleClickDescription": "Thêm thu phóng, phụ đề và yếu tố trực quan vào các rãnh trống bằng cách nhấp đúp."
+  },
+  "CursorRecording": {
+    "showRealCursor": "Hiển thị con trỏ thật",
+    "description": "Ghi con trỏ hệ thống trực tiếp vào video. Thu phóng tự động vẫn theo dõi con trỏ. Con trỏ Beam ban đầu bị tắt; bạn có thể phủ nó trong cài đặt Con trỏ. Không thể xóa con trỏ đã ghi.",
+    "customCursor": "Con trỏ tùy chỉnh",
+    "overlayDescription": "Phủ con trỏ Beam lên video. Tắt nếu bản ghi đã có con trỏ hệ thống."
   }
 }

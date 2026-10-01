@@ -55,6 +55,7 @@ pub(super) fn capture(
         recording: &RecordingSettings::default(),
         region: request.region,
         cursor: CursorSelection::Disabled,
+        show_real_cursor: false,
         excluded_window_handles: &request.excluded_window_handles,
         start_ns: 0,
         start_gate: gate.clone(),

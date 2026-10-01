@@ -57,6 +57,7 @@ const base = (): Parameters<typeof createCompositionSnapshot>[0] => ({
   zoomAutoFollow: { safeZone: 0.5, responsiveness: 0.55, directionLock: true },
   composition: composition(),
   cursorSettings: {
+    enabled: true,
     selection: { packId: MACOS_CURSOR_PACK.id, mode: 'automatic' as const, cursorId: null },
     size: 24,
     color: '#000000',

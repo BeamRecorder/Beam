@@ -29,6 +29,7 @@ const settings = {
   countdownSeconds: 3,
   hideTaskbar: false,
   hideDesktopIcons: false,
+  showRealCursor: false,
 };
 const options: ScreenRegionOverlayOptions = {
   bounds: { x: -1000, y: 0, width: 1000, height: 800 },

@@ -1,20 +1,23 @@
 <script setup lang="ts">
+import { inject } from 'vue';
+import { customCursorKey } from '../properties/cursor/custom-cursor-context';
+import CanvasAddMenu from '../search/CanvasAddMenu.vue';
+import { canvasDoubleClick } from './composables/canvas-double-click';
 import ElementCanvasOverlay from '../elements/ElementCanvasOverlay.vue';
 import { useCanvasElements } from '../elements/useCanvasElements';
 import { useCanvasFormatTransition } from './composables/useCanvasFormatTransition';
 import { computed, onUnmounted, ref, shallowRef, toRaw, watch } from 'vue';
-import { RotateCcw } from '@lucide/vue';
-import Button from '../../ui/button/Button.vue';
+import CanvasRecenterButton from './CanvasRecenterButton.vue';
 import CanvasLoadingSkeleton from './CanvasLoadingSkeleton.vue';
 import CanvasPlaybackError from './CanvasPlaybackError.vue';
 import UndoRedoToast from './UndoRedoToast.vue';
-import { isVisualClip, type VisualClip } from '~/media/shared/composition-types';
+import { type VisualClip } from '~/media/shared/composition-types';
 import { createCompositionSceneLayerResolver } from '../composition/scene-layers';
 import { OUTPUT_FALLBACK_COLOR, OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from './output-canvas';
 import { useCanvasBackground } from './composables/useCanvasBackground';
 import { useCompositionMedia } from './composables/useCompositionMedia';
 import { createCanvasFrameScheduler } from './composables/canvas-frame-scheduler';
-import { useCursorOverlay } from './composables/useCursorOverlay';
+import { useEditorCanvasCursor } from './composables/useEditorCanvasCursor';
 import { useCameraZoom, type RenderedVideoWindow, type VideoWindowBounds } from './composables/useCameraZoom';
 import { useLayerTransformAndCrop } from './composables/useLayerTransformAndCrop';
 import { useViewportZoom } from './composables/useViewportZoom';
@@ -222,28 +225,11 @@ const compositionMedia = useCompositionMedia({
 const visualStackRenderer = createEditorVisualStackRenderer(compositionMedia);
 const drawNonScreenVisuals = visualStackRenderer.drawNonScreenVisuals;
 drawVisualStack = visualStackRenderer.drawVisualStack;
-const cursorOverlay = useCursorOverlay({
-  cursorSelection: () => props.cursorSelection,
-  cursorPack: () => props.cursorPack,
-  cursorSize: () => props.cursorSize,
-  cursorColor: () => props.cursorColor,
-  enableShadow: () => props.enableShadow,
-  clickEffects: () => props.clickEffects,
-  motion: () => props.motion,
-  autoHide: () => props.autoHide,
-  shadowBlur: () => props.shadowBlur,
-  shadowColor: () => props.shadowColor,
-  shadowDirection: () => props.shadowDirection,
-  outputCanvas: () => props.outputCanvas,
+const cursorOverlay = useEditorCanvasCursor(props, {
   deviceScale: () => deviceScale.value,
-  currentTime: () => props.currentTime,
-  isPlaying: () => props.isPlaying,
-  editorData: () => props.editorData,
-  composition: () => props.composition,
   screenClip: () => liveScreenClip.value,
-  isScreenEnabled: () => Boolean(liveScreenClip.value && screenFrame.value),
-  showBackground: () => props.outputCanvas.showBackground,
-  onRenderOnce: renderOnce,
+  hasScreenFrame: () => Boolean(screenFrame.value),
+  renderOnce,
 });
 const cursorInteraction = useCursorCanvasInteraction({
   bounds: cursorOverlay.cursorBounds,
@@ -360,14 +346,21 @@ const {
   onToggleClip: selectCanvasClip,
   onDoneCrop: () => emit('done:crop'),
 });
-const editCanvasContent = (event: MouseEvent) => {
-  if (elements.begin(event)) return;
-  if (captionEditing.begin(event)) return;
-  if (props.isPlaying || props.isCropping || props.selectedZoom?.mode === 'manual') return;
-  const clipId = transformAndCrop.clipIdAt(event, canvasRef.value, true);
-  const clip = props.composition.clips.find((candidate) => candidate.id === clipId);
-  if (clip && isVisualClip(clip) && !clip.locked) emit('request:crop', clip.id);
-};
+const customCursorEnabled = inject(customCursorKey, ref(true));
+watch(customCursorEnabled, () => renderOnce());
+const addMenu = ref<InstanceType<typeof CanvasAddMenu> | null>(null);
+const editCanvasContent = (event: MouseEvent) =>
+  canvasDoubleClick(event, {
+    beginElement: elements.begin,
+    beginCaption: captionEditing.begin,
+    blocked: () => props.isPlaying || Boolean(props.isCropping) || props.selectedZoom?.mode === 'manual',
+    clipIdAt: (event) => transformAndCrop.clipIdAt(event, canvasRef.value, true),
+    composition: () => props.composition,
+    crop: (id) => emit('request:crop', id),
+    add: (event) => {
+      void addMenu.value?.open(event);
+    },
+  });
 onUnmounted(() => frameScheduler.dispose());
 onUnmounted(() => perspectivePreviewRenderer.dispose());
 const captureCurrentFrame = () => {
@@ -393,17 +386,10 @@ defineExpose({ viewportZoom, captureCurrentFrame });
     @pointercancel="handleIslandPointerUp"
     @dblclick="editCanvasContent"
   >
+    <CanvasAddMenu ref="addMenu" />
     <Transition name="fade-slide">
       <div v-if="viewportZoom.isOutOfBounds.value" class="canvas-recenter-float" @pointerdown.stop>
-        <Button
-          variant="frosted"
-          size="xs"
-          :icon="RotateCcw"
-          class="recenter-button"
-          @click.stop="viewportZoom.resetZoom"
-        >
-          {{ t('recenter') }}
-        </Button>
+        <CanvasRecenterButton @click="viewportZoom.resetZoom" />
       </div>
     </Transition>
     <CanvasMarqueeSurface

@@ -84,6 +84,8 @@ impl LinuxRegionSelection {
             metrics: Arc::new(ScreenCaptureMetrics::default()),
             repair_window_crop: false,
             region: None,
+            show_real_cursor: false,
+            target_fps: 60,
         })?;
         let frame = (|| {
             gate.release(0)?;

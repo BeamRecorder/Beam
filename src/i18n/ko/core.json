@@ -1,4 +1,11 @@
 {
+  "ColorPicker": {
+    "color": "색상",
+    "close": "닫기",
+    "eyedropper": "화면 색상 선택",
+    "colorFormat": "색상 형식",
+    "eyedropperError": "화면 색상을 선택할 수 없습니다. 다시 시도해 주세요."
+  },
   "VoiceoverRecorder": {
     "record": "녹음",
     "pause": "일시 정지",
@@ -344,6 +351,7 @@
     "crop": "자르기"
   },
   "CursorPanel": {
+    "appearance": "모양",
     "cursorStyle": "커서 스타일",
     "cursorSize": "커서 크기",
     "autoHideCursor": "커서 자동 숨기기",
@@ -745,7 +753,7 @@
     "title": "화면 설정",
     "subtitle": "테마, 색상, 모서리 곡률 및 패널 스타일 맞춤 설정",
     "customization": "사용자 지정",
-    "themeMode": "테마 모드",
+    "themeMode": "테마",
     "light": "라이트",
     "dark": "다크",
     "system": "시스템",
@@ -763,7 +771,9 @@
     "toneSlate": "슬레이트",
     "toneDeep": "딥 다크",
     "resetDefault": "기본값으로 재설정",
-    "custom": "사용자 지정"
+    "custom": "사용자 지정",
+    "systemDescription": "시스템 모드는 기기의 밝은 모드 또는 어두운 모드를 따릅니다.",
+    "uiScaleGlobal": "UI 크기 (전체)"
   },
   "Onboarding": {
     "skip": "Skip",
@@ -1087,5 +1097,16 @@
     "tipInstant": "Instant로 바로 공유할 수 있는 영상을 만들어 보세요.",
     "tipShortcuts": "설정에서 녹화 단축키를 변경하세요.",
     "tipProjects": "기존 프로젝트를 열어 편집을 이어가세요."
+  },
+  "EditorAccessibility": {
+    "title": "접근성",
+    "doubleClick": "두 번 클릭하여 클립 추가",
+    "doubleClickDescription": "빈 타임라인 트랙에 줌, 자막, 시각 요소를 두 번 클릭하여 추가합니다."
+  },
+  "CursorRecording": {
+    "showRealCursor": "실제 커서 표시",
+    "description": "시스템 커서를 동영상에 직접 녹화합니다. 자동 줌은 계속 커서를 따라갑니다. Beam 커서는 처음에 꺼져 있으며 커서 설정에서 겹쳐 표시할 수 있습니다. 녹화된 커서는 제거할 수 없습니다.",
+    "customCursor": "사용자 지정 커서",
+    "overlayDescription": "동영상에 Beam 커서를 겹쳐 표시합니다. 녹화에 시스템 커서가 이미 포함되어 있다면 끄세요."
   }
 }

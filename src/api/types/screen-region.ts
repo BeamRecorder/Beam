@@ -43,4 +43,5 @@ export interface RegionRecordingSettings {
   countdownSeconds: number;
   hideTaskbar: boolean;
   hideDesktopIcons: boolean;
+  showRealCursor: boolean;
 }

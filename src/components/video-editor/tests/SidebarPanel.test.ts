@@ -74,7 +74,7 @@ describe('SidebarPanel', () => {
     await nextTick();
 
     expect(wrapper.get('.sidebar-island').classes()).not.toContain('labels-hidden');
-    expect(wrapper.findAll('.nav-label')).toHaveLength(8);
+    expect(wrapper.findAll('.nav-label')).toHaveLength(7);
     expect(wrapper.findAllComponents({ name: 'Tooltip' }).every((tooltip) => tooltip.props('disabled') === true)).toBe(
       true,
     );
@@ -115,7 +115,7 @@ describe('SidebarPanel', () => {
       resizeCallbacks.forEach((callback) => callback());
       await nextTick();
       expect(wrapper.get('.sidebar-island').classes()).not.toContain('labels-hidden');
-      expect(wrapper.findAll('.nav-label')).toHaveLength(8);
+      expect(wrapper.findAll('.nav-label')).toHaveLength(7);
 
       const scrollWrapper = wrapper.get('.sidebar-scroll-wrapper');
       const footer = wrapper.get('.sidebar-footer');
@@ -139,8 +139,8 @@ describe('SidebarPanel', () => {
     expect(viewport.find('.sidebar-footer').exists()).toBe(false);
     expect(scrollWrapper.element.parentElement).toBe(footer.element.parentElement);
     expect(scrollWrapper.element.nextElementSibling).toBe(footer.element);
-    expect(navMenu.findAll('.nav-btn')).toHaveLength(7);
-    expect(wrapper.findAll('.nav-btn')).toHaveLength(8);
+    expect(navMenu.findAll('.nav-btn')).toHaveLength(6);
+    expect(wrapper.findAll('.nav-btn')).toHaveLength(7);
     expect(wrapper.findAll('.nav-btn.active')).toHaveLength(1);
     expect(wrapper.find('.nav-btn.active').attributes('title')).toBe('Zoom');
     expect(wrapper.findComponent({ name: 'ScrollShadow' }).exists()).toBe(true);
@@ -161,7 +161,6 @@ describe('SidebarPanel', () => {
       expect(wrapper.findAll('.nav-label').map((label) => label.text())).toEqual([
         'Khung nền',
         'Đoạn clip',
-        'Phần tử',
         'Thu phóng',
         'Con trỏ',
         'Phụ đề',

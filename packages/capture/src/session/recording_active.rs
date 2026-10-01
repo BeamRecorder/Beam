@@ -271,6 +271,7 @@ impl ActiveRecordings {
             hide_taskbar: request.hide_taskbar,
             hide_desktop_icons: request.hide_desktop_icons,
             cursor: request.cursor,
+            show_real_cursor: request.show_real_cursor,
             excluded_window_handles: &request.excluded_window_handles,
             start_ns,
             start_gate: start_gate.clone(),

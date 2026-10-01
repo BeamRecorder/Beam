@@ -1,4 +1,11 @@
 {
+  "ColorPicker": {
+    "color": "Kolor",
+    "close": "Zamknij",
+    "eyedropper": "Wybierz kolor z ekranu",
+    "colorFormat": "Format koloru",
+    "eyedropperError": "Nie można wybrać koloru z ekranu. Spróbuj ponownie."
+  },
   "VoiceoverRecorder": {
     "record": "Nagraj",
     "pause": "Wstrzymaj",
@@ -344,6 +351,7 @@
     "crop": "Kadrowanie"
   },
   "CursorPanel": {
+    "appearance": "Wygląd",
     "cursorStyle": "Styl kursora",
     "cursorSize": "Rozmiar kursora",
     "autoHideCursor": "Automatycznie ukrywaj kursor",
@@ -745,7 +753,7 @@
     "title": "Wygląd",
     "subtitle": "Dostosuj motywy, kolory, promień zaokrąglenia i powierzchnie",
     "customization": "Personalizacja",
-    "themeMode": "Tryb motywu",
+    "themeMode": "Motyw",
     "light": "Jasny",
     "dark": "Ciemny",
     "system": "Systemowy",
@@ -763,7 +771,9 @@
     "toneSlate": "Łupek",
     "toneDeep": "Głęboka czerń",
     "resetDefault": "Przywróć domyślne",
-    "custom": "Własny"
+    "custom": "Własny",
+    "systemDescription": "System dopasowuje jasny lub ciemny wygląd do ustawień urządzenia.",
+    "uiScaleGlobal": "Skala interfejsu (globalna)"
   },
   "Onboarding": {
     "skip": "Skip",
@@ -1087,5 +1097,16 @@
     "tipInstant": "Wypróbuj Instant, aby od razu udostępnić film.",
     "tipShortcuts": "Dostosuj skróty nagrywania w ustawieniach.",
     "tipProjects": "Otwórz istniejący projekt i kontynuuj edycję."
+  },
+  "EditorAccessibility": {
+    "title": "Dostępność",
+    "doubleClick": "Dodawaj klipy dwukrotnym kliknięciem",
+    "doubleClickDescription": "Dodawaj zbliżenia, napisy i elementy wizualne do pustych ścieżek osi czasu dwukrotnym kliknięciem."
+  },
+  "CursorRecording": {
+    "showRealCursor": "Pokaż rzeczywisty kursor",
+    "description": "Nagrywa kursor systemowy bezpośrednio w filmie. Automatyczne zbliżenia nadal go śledzą. Kursor Beam jest początkowo wyłączony; możesz go nałożyć w ustawieniach kursora. Nagranego kursora nie można usunąć.",
+    "customCursor": "Własny kursor",
+    "overlayDescription": "Nakłada kursor Beam na film. Wyłącz go, jeśli nagranie zawiera już kursor systemowy."
   }
 }

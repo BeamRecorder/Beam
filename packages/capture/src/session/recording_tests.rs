@@ -31,6 +31,7 @@ fn prepared_session_without_screen() -> (tempfile::TempDir, RecordingSession) {
         excluded_window_handles: vec![],
         hide_taskbar: false,
         hide_desktop_icons: false,
+        show_real_cursor: false,
     };
     let snapshot = CatalogSnapshot {
         generation: 1,

@@ -79,6 +79,9 @@ function createQuickSnipController(dependencies) {
       screenId: windowCapture ? 'portal:window' : undefined,
       devices: preset.settings.devices,
       screenshotAction: 'copy',
+      showRealCursor: preferences.extras.showRealCursor === true,
+      hideTaskbar: preferences.extras.hideTaskbar === true,
+      hideDesktopIcons: preferences.extras.hideDesktopIcons === true,
       ...(sourceOptions
         ? {
             screenKind: sourceOptions.screenKind ?? 'display',
@@ -88,6 +91,7 @@ function createQuickSnipController(dependencies) {
             countdownSeconds: sourceOptions.countdownSeconds,
             hideTaskbar: sourceOptions.hideTaskbar === true,
             hideDesktopIcons: sourceOptions.hideDesktopIcons === true,
+            showRealCursor: sourceOptions.showRealCursor === true,
             devices: sourceOptions.devices ?? preset.settings.devices,
           }
         : {}),

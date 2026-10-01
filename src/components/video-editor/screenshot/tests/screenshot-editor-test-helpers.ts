@@ -1,5 +1,5 @@
 import { defineComponent, type Component, type PropType } from 'vue';
-import { mount } from '@vue/test-utils';
+import { mount, flushPromises } from '@vue/test-utils';
 import { useElementEditor } from '../../elements/useElementEditor';
 import type { ElementEditorContext } from '../../elements/element-editor-types';
 import type { EditorPresetDocument, EditorPresetSettings } from '~/api/types/editor-preset';
@@ -173,6 +173,23 @@ export function createScreenshotEditorTestHarness(
     });
 
   const clickText = async (wrapper: ReturnType<typeof mount>, text: string) => {
+    const insert = ['Shape', 'Arrow', 'Text', 'Draw', 'Highlight', 'Blur', 'Image', 'Cursor'].includes(text);
+    if (insert) {
+      const menu = wrapper.findComponent({ name: 'ScreenshotAddMenu' });
+      const ids: Record<string, string> = {
+        Shape: 'shape',
+        Arrow: 'arrow',
+        Text: 'text',
+        Draw: 'drawing',
+        Highlight: 'highlight',
+        Blur: 'blur',
+        Image: 'image',
+        Cursor: 'cursor',
+      };
+      menu.vm.$emit('add', ids[text]);
+      await flushPromises();
+      return;
+    }
     const button = wrapper.findAll('button').find((candidate) => candidate.text().trim() === text);
     if (!button) throw new Error(`Missing button: ${text}`);
     await button.trigger('click');

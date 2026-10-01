@@ -22,6 +22,7 @@ const props = withDefaults(
     autofocus?: boolean;
     selectOnFocus?: boolean;
     debounce?: number;
+    appearance?: 'default' | 'neutral';
   }>(),
   {
     type: 'text',
@@ -29,6 +30,7 @@ const props = withDefaults(
     autofocus: false,
     selectOnFocus: false,
     debounce: 0,
+    appearance: 'default',
   },
 );
 
@@ -184,6 +186,7 @@ const handleMouseDown = (e: MouseEvent) => {
     :class="[
       {
         'is-disabled': disabled,
+        'input-neutral': appearance === 'neutral',
         'is-error': !!error,
         'is-number': type === 'number',
         'is-dragging': isDragging,
@@ -355,5 +358,9 @@ const handleMouseDown = (e: MouseEvent) => {
   color: var(--color-error);
   margin-top: 4px;
   font-weight: 500;
+}
+.input-wrapper.input-neutral:focus-within:not(.is-disabled):not(.is-error) {
+  border-color: var(--text-secondary);
+  box-shadow: none;
 }
 </style>

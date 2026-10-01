@@ -1,20 +1,26 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useTranslate } from '~/i18n/useTranslate';
+import RealCursorPreference from './RealCursorPreference.vue';
+import RecordingDesktopPreferences from './RecordingDesktopPreferences.vue';
 import Select from '~/ui/select/Select.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import RecordingWindowPreview from './RecordingWindowPreview.vue';
+import type { RecordingPreferenceProps } from './recording-preference-types';
 import type { RecordingBarVisibility } from '../recorder/recording-types';
 
-withDefaults(
-  defineProps<{ countdownSeconds: number; recordingBarVisibility?: RecordingBarVisibility; alwaysOnTop?: boolean }>(),
-  {
-    recordingBarVisibility: 'always',
-    alwaysOnTop: true,
-  },
-);
+withDefaults(defineProps<RecordingPreferenceProps>(), {
+  recordingBarVisibility: 'always',
+  showRealCursor: false,
+  hideTaskbar: false,
+  hideDesktopIcons: false,
+  alwaysOnTop: true,
+});
 const emit = defineEmits<{
   'update:countdownSeconds': [number];
+  'update:showRealCursor': [boolean];
+  'update:hideTaskbar': [boolean];
+  'update:hideDesktopIcons': [boolean];
   'update:alwaysOnTop': [boolean];
   'update:recordingBarVisibility': [RecordingBarVisibility];
 }>();
@@ -39,6 +45,15 @@ const updateCountdownSeconds = (value: string | number) => {
 
 <template>
   <div class="preference-stack">
+    <div class="preference-item preview-preference">
+      <RealCursorPreference :model-value="showRealCursor" @update:model-value="emit('update:showRealCursor', $event)" />
+      <RecordingDesktopPreferences
+        :hide-taskbar="hideTaskbar"
+        :hide-desktop-icons="hideDesktopIcons"
+        @update:hide-taskbar="emit('update:hideTaskbar', $event)"
+        @update:hide-desktop-icons="emit('update:hideDesktopIcons', $event)"
+      />
+    </div>
     <div class="preference-item preview-preference" data-setting="always-on-top" tabindex="-1">
       <RecordingWindowPreview kind="window" />
       <div class="preview-control-row">

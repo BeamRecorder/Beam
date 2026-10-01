@@ -13,6 +13,7 @@ const settings = {
   countdownSeconds: 3,
   hideTaskbar: true,
   hideDesktopIcons: true,
+  showRealCursor: true,
 };
 test('settings accepts every countdown from zero to ten and strips extra IPC data', () => {
   for (let countdownSeconds = 0; countdownSeconds <= 10; countdownSeconds++)
@@ -39,7 +40,7 @@ test('settings rejects malformed IPC values', () => {
     { ...settings, cameraId: '' },
     { ...settings, microphoneId: 'a'.repeat(257) },
     ...[-1, 11, 0.5, NaN, '3'].map((countdownSeconds) => ({ ...settings, countdownSeconds })),
-    ...['systemAudio', 'hideTaskbar', 'hideDesktopIcons'].map((key) => ({ ...settings, [key]: 1 })),
+    ...['systemAudio', 'hideTaskbar', 'hideDesktopIcons', 'showRealCursor'].map((key) => ({ ...settings, [key]: 1 })),
   ])
     assert.throws(() => regionRecordingSettings(value, 'win32'), TypeError);
 });

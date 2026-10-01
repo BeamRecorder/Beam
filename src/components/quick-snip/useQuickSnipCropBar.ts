@@ -169,6 +169,7 @@ export function useQuickSnipCropBar() {
       countdownSeconds: current.countdownSeconds ?? 0,
       hideTaskbar: current.hideTaskbar,
       hideDesktopIcons: current.hideDesktopIcons,
+      showRealCursor: current.showRealCursor,
       recordingBarVisibility: visibility.value,
       recordInteractions: true,
       region: current.region ? { ...current.region } : null,

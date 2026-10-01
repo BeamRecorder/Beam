@@ -3,6 +3,7 @@ import { resolveCursorAsset } from '../../video-editor/properties/cursor/cursor-
 import { ExportValidationError, type ExportRequest } from '../export-types';
 
 export function requiredExportCursorAssets(request: ExportRequest): CursorAssetDescriptor[] {
+  if (request.snapshot.cursorSettings.enabled === false) return [];
   const pack = request.snapshot.cursorPack;
   if (!pack)
     throw new ExportValidationError({

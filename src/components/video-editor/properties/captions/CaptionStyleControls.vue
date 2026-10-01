@@ -87,6 +87,7 @@ const shadowDirectionOptions = computed(() => [
         :search-placeholder="t('searchFonts')"
         :no-results-label="t('noFontsFound')"
         variant="search"
+        show-preview-indicator
         size="sm"
         @toggle="$event && refreshSystem()"
         @preview:model-value="previewFont"
@@ -151,7 +152,12 @@ const shadowDirectionOptions = computed(() => [
         @click="emit('update', 'textDecoration', toggleTextDecoration(style.textDecoration, 'underline'))"
       />
     </ButtonGroup>
-    <ButtonGroup full :columns="3" :aria-label="t('textAlignment')">
+    <ButtonGroup
+      full
+      :columns="3"
+      :aria-label="t('textAlignment')"
+      :selection="{ count: 3, index: ['left', 'center', 'right'].indexOf(style.textAlign) }"
+    >
       <Button
         v-for="item in [
           { value: 'left', icon: AlignLeft, label: t('alignLeft') },

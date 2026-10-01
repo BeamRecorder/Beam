@@ -38,6 +38,7 @@ export interface QuickSnipConfiguration {
   countdownSeconds?: number;
   hideTaskbar?: boolean;
   hideDesktopIcons?: boolean;
+  showRealCursor?: boolean;
   screenshotAction?: 'copy' | 'edit';
   devices: Record<string, unknown>;
   excludedWindowHandle?: string;
@@ -82,6 +83,7 @@ export interface InstantCaptureOptions {
   countdownSeconds?: number;
   hideTaskbar?: boolean;
   hideDesktopIcons?: boolean;
+  showRealCursor?: boolean;
   regionBounds?: ScreenRegionBounds;
   screenKind?: 'display' | 'window';
   screenId?: string;

@@ -1,26 +1,24 @@
-.options-group,
-.pack-section,
+.cursor-panel,
+.appearance-options,
+.cursor-section,
 .advanced-options,
-.nested-options,
-.motion-options,
-.section-heading {
+.nested-options {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.options-group {
-  gap: 10px;
+.cursor-panel,
+.appearance-options {
+  gap: 24px;
 }
 
-.pack-section,
-.click-effects-control {
-  gap: 0;
+.cursor-section {
+  min-width: 0;
 }
 
 .advanced-options {
-  margin-top: 10px;
-  gap: 16px;
+  gap: 12px;
 }
 
 .pack-heading,
@@ -39,12 +37,7 @@
 }
 
 .heading-actions {
-  gap: 2px;
-}
-
-.pack-heading,
-.section-control-heading {
-  margin-bottom: 6px;
+  gap: 8px;
 }
 
 .pack-row {
@@ -66,12 +59,6 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
-}
-
-.sub-label,
-.color-note {
-  color: var(--text-muted);
-  font-size: 11px;
 }
 
 .info-button {
@@ -118,23 +105,13 @@
   font-size: 11px;
 }
 
-.section-heading {
-  gap: 3px;
-}
-
 .section-title {
-  color: var(--text-secondary);
-  font-size: 11px;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
-.section-description {
-  color: var(--text-muted);
-  font-size: 10px;
-}
-
-.color-note {
-  margin: -10px 0 0;
+.reset-automatic-button {
+  margin-top: 4px;
 }

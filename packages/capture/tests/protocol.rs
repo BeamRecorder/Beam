@@ -99,6 +99,7 @@ fn engine_eof_finalizes_an_active_session() -> Result<(), Box<dyn Error>> {
         excluded_window_handles: vec![],
         hide_taskbar: false,
         hide_desktop_icons: false,
+        show_real_cursor: false,
     };
     let mut child = Command::new(env!("CARGO_BIN_EXE_capture-engine"))
         .stdin(Stdio::piped())

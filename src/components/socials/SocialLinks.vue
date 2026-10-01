@@ -3,6 +3,7 @@ import Button from '~/ui/button/Button.vue';
 import { capture } from '~/api/capture';
 import { useTranslate } from '~/i18n/useTranslate';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
+defineProps<{ compact?: boolean }>();
 
 const { t } = useTranslate('Socials');
 
@@ -17,8 +18,8 @@ const openGithubRepository = () => {
 
 <template>
   <div class="socials-section">
-    <span class="socials-title">{{ t('title') }}</span>
-    <span class="socials-description">{{ t('description') }}</span>
+    <span v-if="!compact" class="socials-title">{{ t('title') }}</span>
+    <span v-if="!compact" class="socials-description">{{ t('description') }}</span>
     <div class="social-links">
       <Button variant="secondary" size="sm" block @click="openDiscordInvite">
         <template #icon>

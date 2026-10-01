@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { inject, nextTick, provide, ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import { popoverViewportKey, popoverAnchorConstraintKey } from './popover-viewport-types';
+import { holdPopoverInteractionKey } from './popover-interaction-types';
 
 const props = withDefaults(
   defineProps<{
@@ -45,13 +46,27 @@ const floatingStyle = ref<Record<string, string>>({});
 const pinned = ref(false);
 let closeTimer: ReturnType<typeof setTimeout> | null = null;
 let gestureResetTimer: ReturnType<typeof setTimeout> | null = null;
-let gestureStartedInOwnedPopover = false;
+let gestureStartedInsidePopover = false;
 const VIEWPORT_MARGIN = 8;
 const parentPopoverId = inject<string | null>('popover-owner-id', null);
 const resizeViewport = inject(popoverViewportKey, null);
 const fitAnchor = inject(popoverAnchorConstraintKey, false);
 const popoverId = `popover-${Math.random().toString(36).slice(2)}`;
 provide('popover-owner-id', popoverId);
+const holdParentInteraction = inject(holdPopoverInteractionKey, null);
+let externalInteractions = 0;
+provide(holdPopoverInteractionKey, () => {
+  const releaseParent = holdParentInteraction?.();
+  externalInteractions++;
+  cancelClose();
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    externalInteractions--;
+    releaseParent?.();
+  };
+});
 
 const toggle = () => {
   if (props.disabled) return;
@@ -78,7 +93,7 @@ const openTransient = () => {
   isOpen.value = true;
 };
 const scheduleClose = () => {
-  if (props.interaction !== 'hover-focus-click' || pinned.value) return;
+  if (externalInteractions || props.interaction !== 'hover-focus-click' || pinned.value) return;
   cancelClose();
   closeTimer = setTimeout(() => {
     const active = document.activeElement;
@@ -87,7 +102,7 @@ const scheduleClose = () => {
   }, props.closeDelay);
 };
 const scheduleFocusClose = () => {
-  if (props.interaction !== 'hover-focus-click') return;
+  if (externalInteractions || props.interaction !== 'hover-focus-click') return;
   cancelClose();
   closeTimer = setTimeout(() => {
     const active = document.activeElement;
@@ -206,7 +221,7 @@ const repositionOpenPopover = () => {
 };
 watch(() => props.gap, repositionOpenPopover);
 const closeOnWindowBlur = () => {
-  if (props.closeOnWindowBlur) close();
+  if (props.closeOnWindowBlur && !externalInteractions) close();
 };
 
 const isClickInsideThisOrChildPopover = (target: Element | null) => {
@@ -218,35 +233,34 @@ const isClickInsideThisOrChildPopover = (target: Element | null) => {
   return false;
 };
 
-const isOwnedPopoverTarget = (target: Element | null) =>
-  target?.closest('[data-popover-owner]')?.getAttribute('data-popover-owner') === popoverId;
-
 const handleInteractionStart = (event: Event) => {
   const target = event.target as Element | null;
-  gestureStartedInOwnedPopover = isOwnedPopoverTarget(target);
+  gestureStartedInsidePopover = isClickInsideThisOrChildPopover(target);
   handleOutsideInteraction(event);
 };
 
 const scheduleGestureReset = () => {
   if (gestureResetTimer) clearTimeout(gestureResetTimer);
+  // The release can dispatch a click on the shared ancestor outside the panel.
   gestureResetTimer = setTimeout(() => {
-    gestureStartedInOwnedPopover = false;
+    gestureStartedInsidePopover = false;
     gestureResetTimer = null;
   });
 };
 
 const handleOutsideInteraction = (event: Event) => {
-  if (!isOpen.value) return;
+  if (!isOpen.value || externalInteractions) return;
   const target = event.target as Element | null;
   if (isClickInsideThisOrChildPopover(target)) return;
-  if (event.type === 'click' && gestureStartedInOwnedPopover) {
-    gestureStartedInOwnedPopover = false;
+  if (event.type === 'click' && gestureStartedInsidePopover) {
+    gestureStartedInsidePopover = false;
     return;
   }
   close();
 };
 const handleEscape = (event: KeyboardEvent) => {
-  if (props.interaction === 'hover-focus-click' && event.key === 'Escape' && isOpen.value) close();
+  if (!externalInteractions && props.interaction === 'hover-focus-click' && event.key === 'Escape' && isOpen.value)
+    close();
 };
 
 onMounted(() => {

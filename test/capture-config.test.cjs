@@ -236,3 +236,25 @@ test('keeps Linux Portal intents when a second discovery is empty', () => {
     });
   }
 });
+
+test('records the native cursor without disabling separate cursor telemetry on every OS', () => {
+  for (const platform of ['win32', 'darwin', 'linux']) {
+    const nativeCatalog = {
+      ...catalog,
+      capabilities: { ...catalog.capabilities, portalSelection: true, embeddedCursor: true },
+    };
+    const config = buildDefaultCaptureConfig(
+      nativeCatalog,
+      { showRealCursor: true, recordInteractions: true },
+      { ...environment, platform },
+    );
+    assert.equal(config.showRealCursor, true);
+    assert.equal(config.cursor.mode, 'separate');
+    assert.equal(config.cursor.captureClicks, true);
+  }
+});
+test('defaults native cursor off and rejects non-boolean cursor options', () => {
+  assert.equal(buildDefaultCaptureConfig(catalog, {}, environment).showRealCursor, false);
+  for (const showRealCursor of ['true', null, 1])
+    assert.throws(() => buildDefaultCaptureConfig(catalog, { showRealCursor }, environment), /showRealCursor/);
+});

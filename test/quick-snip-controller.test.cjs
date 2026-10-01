@@ -219,6 +219,30 @@ async function selectAndStart(controller, mode = 'studio') {
   await controller.toggle();
 }
 
+test('Quick Snip inherits shared recording desktop and real cursor defaults', async () => {
+  const f = harness({ preferences: { extras: { hideTaskbar: true, hideDesktopIcons: true, showRealCursor: true } } });
+  await f.controller.toggle();
+  const job = f.controller.state().job;
+  assert.equal(job.hideTaskbar, true);
+  assert.equal(job.hideDesktopIcons, true);
+  assert.equal(job.showRealCursor, true);
+});
+
+test('Instant source options override the shared desktop and cursor defaults', async () => {
+  const f = harness({ preferences: { extras: { hideTaskbar: true, hideDesktopIcons: true, showRealCursor: true } } });
+  await f.controller.fromHud({
+    screenKind: 'display',
+    screenId: 'display:1',
+    hideTaskbar: false,
+    hideDesktopIcons: false,
+    showRealCursor: false,
+  });
+  const job = f.controller.state().job;
+  assert.equal(job.hideTaskbar, false);
+  assert.equal(job.hideDesktopIcons, false);
+  assert.equal(job.showRealCursor, false);
+});
+
 test('one toggle selects, starts, stops and finalizes Instant Quick Snip according to state', async () => {
   const { controller, calls, finalizeCalls } = harness();
   assert.equal(controller.state().state, 'idle');

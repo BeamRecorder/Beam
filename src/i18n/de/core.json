@@ -1,4 +1,11 @@
 {
+  "ColorPicker": {
+    "color": "Farbe",
+    "close": "Schließen",
+    "eyedropper": "Bildschirmfarbe wählen",
+    "colorFormat": "Farbformat",
+    "eyedropperError": "Die Bildschirmfarbe konnte nicht ausgewählt werden. Bitte erneut versuchen."
+  },
   "VoiceoverRecorder": {
     "record": "Aufnehmen",
     "pause": "Pausieren",
@@ -344,6 +351,7 @@
     "crop": "Zuschneiden"
   },
   "CursorPanel": {
+    "appearance": "Aussehen",
     "cursorStyle": "Cursorstil",
     "cursorSize": "Cursorgröße",
     "autoHideCursor": "Cursor automatisch ausblenden",
@@ -745,7 +753,7 @@
     "title": "Erscheinungsbild",
     "subtitle": "Themes, Farben, Eckenradius und Oberflächen anpassen",
     "customization": "Anpassung",
-    "themeMode": "Design-Modus",
+    "themeMode": "Design",
     "light": "Hell",
     "dark": "Dunkel",
     "system": "System",
@@ -763,7 +771,9 @@
     "toneSlate": "Schiefer",
     "toneDeep": "Tiefes Dunkel",
     "resetDefault": "Auf Standard zurücksetzen",
-    "custom": "Benutzerdefiniert"
+    "custom": "Benutzerdefiniert",
+    "systemDescription": "System übernimmt das helle oder dunkle Erscheinungsbild deines Geräts.",
+    "uiScaleGlobal": "Oberflächenskalierung (global)"
   },
   "Onboarding": {
     "skip": "Überspringen",
@@ -1087,5 +1097,16 @@
     "tipInstant": "Probiere Instant für ein Video zum direkten Teilen.",
     "tipShortcuts": "Passe deine Tastenkürzel in den Einstellungen an.",
     "tipProjects": "Öffne ein bestehendes Projekt zum Weiterbearbeiten."
+  },
+  "EditorAccessibility": {
+    "title": "Barrierefreiheit",
+    "doubleClick": "Clips per Doppelklick hinzufügen",
+    "doubleClickDescription": "Füge Zooms, Untertitel und visuelle Elemente mit einem Doppelklick zu leeren Zeitleistenspuren hinzu."
+  },
+  "CursorRecording": {
+    "showRealCursor": "Systemcursor anzeigen",
+    "description": "Zeichnet den Systemcursor direkt im Video auf. Automatische Zooms folgen ihm weiterhin. Der Beam-Cursor ist anfangs deaktiviert und kann in den Cursor-Einstellungen eingeblendet werden. Der aufgezeichnete Cursor lässt sich nicht entfernen.",
+    "customCursor": "Eigener Cursor",
+    "overlayDescription": "Blendet den Beam-Cursor im Video ein. Deaktiviere ihn, wenn die Aufnahme bereits den Systemcursor enthält."
   }
 }

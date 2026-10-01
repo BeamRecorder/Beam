@@ -24,8 +24,8 @@ use crate::{
 
 use super::{
     BufferLayout, CursorState, DmaBufImporter, FrameGeometry, NegotiatedFormat, TimestampMapper,
-    copy_frame, crop_frame, expand_crop_to_content, has_fatal, metadata, repaired_window_crop,
-    set_fatal, sink_error, video_format,
+    copy_frame, crop_frame, enqueue_cursor_message, expand_crop_to_content, flush_cursor_message,
+    has_fatal, metadata, repaired_window_crop, set_fatal, sink_error, video_format,
 };
 
 pub(super) enum SinkMessage {
@@ -46,6 +46,7 @@ pub(super) struct ProcessState {
     pub negotiated: Option<NegotiatedFormat>,
     pub last_announced: Option<VideoFormat>,
     pub cursor: CursorState,
+    pub native_cursor: super::NativeCursorOverlay,
     pub timestamp: TimestampMapper,
     pub start_gate: Arc<StartGate>,
     pub active: bool,
@@ -96,6 +97,12 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
     };
     let header = metadata::header(&buffer);
     let cursor = metadata::cursor(&buffer, state.cursor.classifier_mut());
+    let bitmap = if state.native_cursor.enabled() {
+        metadata::native_bitmap(&buffer)
+    } else {
+        None
+    };
+    state.native_cursor.update(cursor, bitmap);
     let has_cursor_metadata = cursor.as_ref().is_some_and(|cursor| cursor.id != 0);
     let reported_crop = metadata::crop(&buffer);
     let transform = metadata::transform(&buffer);
@@ -151,6 +158,19 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
             .resolve(cursor, geometry.width(), geometry.height());
         if has_cursor_metadata && matches!(sample_cursor, CursorSampleState::Known { .. }) {
             try_cursor_sample(&mut state, timestamp.session_ns, sample_cursor);
+            if let Some(frame) = state.native_cursor.cursor_frame(geometry, format) {
+                flush_pending_drops(&mut state, timestamp.session_ns);
+                enqueue_video_sample(
+                    &mut state,
+                    OwnedScreenSample {
+                        frame,
+                        timestamp,
+                        sequence: header.sequence,
+                        cursor: CursorSampleState::Unknown,
+                    },
+                    true,
+                );
+            }
         } else {
             invalid_buffer(
                 &mut state,
@@ -309,6 +329,7 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
     if has_cursor {
         try_cursor_sample(&mut state, timestamp.session_ns, sample_cursor.clone());
     }
+    let frame = state.native_cursor.frame(frame, geometry, format);
     let sample = OwnedScreenSample {
         frame,
         timestamp,
@@ -355,9 +376,19 @@ pub(super) fn enqueue_video_sample(
     sample: OwnedScreenSample,
     has_cursor: bool,
 ) {
+    // Metadata-only updates share the recording cadence with video frames; adding
+    // another frame in the same tick would speed up FFmpeg's fixed-rate input.
+    if !state
+        .native_cursor
+        .frame_due_at(sample.timestamp.session_ns)
+    {
+        return;
+    }
+    let session_ns = sample.timestamp.session_ns;
     let native_pts = sample.timestamp.native_pts_ns;
     match state.sink.try_send(SinkMessage::Sample(sample)) {
         Ok(()) => {
+            state.native_cursor.record_frame_at(session_ns);
             state.metrics.received_frame(native_pts, has_cursor);
             // Format and this first usable image now precede any Stop in the
             // sink queue. Only now may the session advertise Recording.
@@ -394,43 +425,6 @@ pub(super) fn flush_pending_cursor(state: &mut ProcessState) {
     if flush_cursor_message(&state.cursor_sink, &mut state.pending_cursor).is_err() {
         set_fatal(&state.fatal, sink_error("cursor sink channel disconnected"));
     }
-}
-
-pub(super) fn enqueue_cursor_message(
-    sink: &Sender<CursorMessage>,
-    pending: &mut Option<CursorMessage>,
-    message: CursorMessage,
-) -> Result<(), ()> {
-    if let Some(previous) = pending.take() {
-        match sink.try_send(previous) {
-            Ok(()) => {}
-            Err(TrySendError::Full(_)) => {
-                // The worker is still behind. Keep only the freshest cursor
-                // state so the callback remains realtime-safe.
-                *pending = Some(message);
-                return Ok(());
-            }
-            Err(TrySendError::Disconnected(_)) => return Err(()),
-        }
-    }
-    match sink.try_send(message) {
-        Ok(()) => Ok(()),
-        Err(TrySendError::Full(message)) => {
-            *pending = Some(message);
-            Ok(())
-        }
-        Err(TrySendError::Disconnected(_)) => Err(()),
-    }
-}
-
-pub(super) fn flush_cursor_message(
-    sink: &Sender<CursorMessage>,
-    pending: &mut Option<CursorMessage>,
-) -> Result<(), ()> {
-    let Some(message) = pending.take() else {
-        return Ok(());
-    };
-    sink.send(message).map_err(|_| ())
 }
 
 fn invalid_buffer(state: &mut ProcessState, session_ns: u64, message: &str) {

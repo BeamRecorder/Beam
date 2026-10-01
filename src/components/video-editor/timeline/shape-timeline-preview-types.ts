@@ -4,4 +4,5 @@ import type { OutputCanvasSettings } from '../canvas/output-canvas';
 export interface ShapeTimelinePreviewProps {
   clip: ShapeClip;
   canvas?: Pick<OutputCanvasSettings, 'width' | 'height'>;
+  presentation?: 'timeline' | 'thumbnail';
 }

@@ -1,4 +1,11 @@
 {
+  "ColorPicker": {
+    "color": "Colore",
+    "close": "Chiudi",
+    "eyedropper": "Scegli colore dallo schermo",
+    "colorFormat": "Formato colore",
+    "eyedropperError": "Impossibile selezionare un colore dallo schermo. Riprova."
+  },
   "VoiceoverRecorder": {
     "record": "Registra",
     "pause": "Pausa",
@@ -344,6 +351,7 @@
     "crop": "Ritaglio"
   },
   "CursorPanel": {
+    "appearance": "Aspetto",
     "cursorStyle": "Stile cursore",
     "cursorSize": "Dimensione cursore",
     "autoHideCursor": "Nascondi automaticamente il cursore",
@@ -745,7 +753,7 @@
     "title": "Aspetto",
     "subtitle": "Personalizza temi, colori, raggio degli angoli e superfici",
     "customization": "Personalizzazione",
-    "themeMode": "Modalità tema",
+    "themeMode": "Tema",
     "light": "Chiaro",
     "dark": "Scuro",
     "system": "Sistema",
@@ -763,7 +771,9 @@
     "toneSlate": "Lavagna",
     "toneDeep": "Scuro profondo",
     "resetDefault": "Ripristina predefinito",
-    "custom": "Personalizzato"
+    "custom": "Personalizzato",
+    "systemDescription": "Sistema segue l’aspetto chiaro o scuro del dispositivo.",
+    "uiScaleGlobal": "Scala dell’interfaccia (globale)"
   },
   "Onboarding": {
     "skip": "Skip",
@@ -1087,5 +1097,16 @@
     "tipInstant": "Prova Instant per un video pronto da condividere.",
     "tipShortcuts": "Personalizza le scorciatoie nelle impostazioni.",
     "tipProjects": "Apri un progetto esistente per continuare il montaggio."
+  },
+  "EditorAccessibility": {
+    "title": "Accessibilità",
+    "doubleClick": "Doppio clic per aggiungere clip",
+    "doubleClickDescription": "Aggiungi zoom, sottotitoli ed elementi visivi alle tracce vuote con un doppio clic."
+  },
+  "CursorRecording": {
+    "showRealCursor": "Mostra cursore reale",
+    "description": "Registra il cursore di sistema direttamente nel video. Gli zoom automatici continuano a seguirlo. Il cursore Beam è inizialmente disattivato; puoi sovrapporlo nelle impostazioni Cursore. Il cursore registrato non può essere rimosso.",
+    "customCursor": "Cursore personalizzato",
+    "overlayDescription": "Sovrapponi il cursore Beam al video. Disattivalo se la registrazione include già il cursore di sistema."
   }
 }

@@ -1,7 +1,11 @@
 import { nextTick } from 'vue';
-import { mount } from '@vue/test-utils';
+import { enableAutoUnmount, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { parse } from '@vue/compiler-sfc';
 import Tooltip from './Tooltip.vue';
+
+enableAutoUnmount(afterEach);
 
 describe('Tooltip', () => {
   beforeEach(() => {
@@ -10,6 +14,21 @@ describe('Tooltip', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it('renders intentional line breaks while keeping normal text wrapping', async () => {
+    const content = 'First sentence.\nSecond sentence.';
+    const wrapper = mount(Tooltip, {
+      attachTo: document.body,
+      props: { content },
+      slots: { default: '<button>Info</button>' },
+    });
+    await wrapper.get('.tooltip-wrapper').trigger('mouseenter');
+    const tooltip = document.body.querySelector<HTMLElement>('.tooltip-content');
+    expect(tooltip?.textContent).toContain(content);
+    const style = parse(readFileSync('src/components/ui/tooltip/Tooltip.vue', 'utf8')).descriptor.styles[0]!.content;
+    expect(style).toMatch(/\.tooltip-content\s*\{[^}]*white-space: pre-line;/);
+    wrapper.unmount();
   });
 
   it('positions a tooltip for every direction and applies variant and max width', async () => {

@@ -1,4 +1,11 @@
 {
+  "ColorPicker": {
+    "color": "Color",
+    "close": "Close",
+    "eyedropper": "Pick screen color",
+    "colorFormat": "Color format",
+    "eyedropperError": "Unable to pick a screen color. Please try again."
+  },
   "VoiceoverRecorder": {
     "record": "Record",
     "pause": "Pause",
@@ -344,6 +351,7 @@
     "crop": "Crop"
   },
   "CursorPanel": {
+    "appearance": "Appearance",
     "cursorStyle": "Cursor Style",
     "cursorSize": "Cursor Size",
     "autoHideCursor": "Auto-hide cursor",
@@ -744,7 +752,7 @@
     "title": "Appearance",
     "subtitle": "Customize themes, colors, radius, and surface styling",
     "customization": "Customization",
-    "themeMode": "Theme Mode",
+    "themeMode": "Theme",
     "uiScale": "UI scaling",
     "uiScaleHint": "Resize editor controls without changing the exported video.",
     "advancedScaling": "Advanced scaling",
@@ -775,7 +783,9 @@
     "toneSlate": "Slate",
     "toneDeep": "Deep Dark",
     "resetDefault": "Reset to Default",
-    "custom": "Custom"
+    "custom": "Custom",
+    "systemDescription": "System follows your device’s light or dark appearance.",
+    "uiScaleGlobal": "UI scaling (global)"
   },
   "Onboarding": {
     "titlebarTitle": "Beam • Onboarding",
@@ -1084,5 +1094,16 @@
     "tipInstant": "Try Instant for a video ready to share.",
     "tipShortcuts": "Customize your recording shortcuts in Settings.",
     "tipProjects": "Open an existing project to keep editing."
+  },
+  "EditorAccessibility": {
+    "title": "Accessibility",
+    "doubleClick": "Double-click to add clips",
+    "doubleClickDescription": "Add zooms, captions and visual elements to empty timeline tracks with a double-click."
+  },
+  "CursorRecording": {
+    "showRealCursor": "Show real cursor",
+    "description": "Records the system cursor directly in the video. Automatic zooms still follow it. The Beam cursor starts disabled; you can overlay it in Cursor settings. The recorded cursor cannot be removed.",
+    "customCursor": "Custom cursor",
+    "overlayDescription": "Overlay the Beam cursor on the video. Turn it off when the recording already includes the system cursor."
   }
 }

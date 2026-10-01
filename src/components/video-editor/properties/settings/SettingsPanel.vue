@@ -1,365 +1,103 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { Accessibility, Check, Code, Copy, Globe, Info, Palette, RefreshCw } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
-import AdvancedButton from '~/ui/button/AdvancedButton.vue';
 import Select from '~/ui/select/Select.vue';
-import Divider from '~/ui/divider/Divider.vue';
-import { Code, Video, Copy, Check, Terminal } from '@lucide/vue';
-import { useLocaleStore } from '~/stores/locale';
-import { useTranslate } from '~/i18n/useTranslate';
-import { capture } from '~/api/capture';
+import SettingsSection from '~/components/settings/SettingsSection.vue';
 import AppearanceSettings from '~/components/settings/AppearanceSettings.vue';
+import SpellCheckPreference from '~/components/settings/SpellCheckPreference.vue';
 import UpdateControls from '~/components/updates/UpdateControls.vue';
 import SocialLinks from '~/components/socials/SocialLinks.vue';
+import { useLocaleStore } from '~/stores/locale';
+import { useTranslate } from '~/i18n/useTranslate';
 import { isSupportedLocale, localeOptions } from '~/i18n/locales';
 import { useCopySystemInformation } from '~/composables/useCopySystemInformation';
-import SpellCheckPreference from '~/components/settings/SpellCheckPreference.vue';
+import EditorAccessibilitySettings from './EditorAccessibilitySettings.vue';
+import EditorDeveloperSettings from './EditorDeveloperSettings.vue';
 
 defineProps<{ hideRecorder?: boolean }>();
 const { t } = useTranslate('SettingsPanel');
-const { t: tPreferences } = useTranslate('HudPreferences');
-const { t: tAppearance } = useTranslate('AppearanceSettings');
+const { t: category } = useTranslate('HudPreferences');
+const { t: appearance } = useTranslate('AppearanceSettings');
 const localeStore = useLocaleStore();
-const languageAdvancedOpen = ref(false);
 const updateLocale = (value: string | number) => {
   if (typeof value === 'string' && isSupportedLocale(value)) localeStore.setLocale(value);
 };
-
-const toggleDevTools = () => {
-  capture.toggleDevTools?.();
-};
-
-const isDevModeEnabled = ref(localStorage.getItem('dev_mode_enabled') === 'true');
-watch(isDevModeEnabled, (value) => {
-  localStorage.setItem('dev_mode_enabled', String(value));
-});
-
-const recorderOpening = ref(false);
-const recorderLaunchError = ref('');
-const openRecorder = async () => {
-  if (recorderOpening.value) return;
-  recorderOpening.value = true;
-  recorderLaunchError.value = '';
-  try {
-    const opened = await capture.openRecorderFromEditor();
-    if (!opened) throw new Error(t('recorderUnavailable'));
-  } catch (error) {
-    recorderLaunchError.value = error instanceof Error ? error.message : String(error);
-  } finally {
-    recorderOpening.value = false;
-  }
-};
-
 const { copied: isCopiedSysInfo, copy: copySystemInfo } = useCopySystemInformation();
 </script>
 
 <template>
-  <div class="options-group">
-    <div class="prop-item language-setting">
-      <div class="language-heading">
-        <span class="prop-label">{{ t('language') }}</span>
-        <AdvancedButton
-          :open="languageAdvancedOpen"
-          controls="language-advanced-panel"
-          :label="tPreferences('advanced')"
-          @update:open="languageAdvancedOpen = $event"
+  <div class="editor-settings">
+    <SettingsSection :title="category('categoryGeneral')" :icon="Globe" class="general-setting">
+      <div class="language-setting setting-option">
+        <label class="option-label" for="editor-language">{{ t('language') }}</label>
+        <Select
+          id="editor-language"
+          :model-value="localeStore.locale"
+          :options="localeOptions"
+          direction="up"
+          :aria-label="t('language')"
+          @update:model-value="updateLocale"
         />
       </div>
-      <Select
-        :model-value="localeStore.locale"
-        :options="localeOptions"
-        direction="up"
-        @update:model-value="updateLocale"
-      />
-      <div v-if="languageAdvancedOpen" id="language-advanced-panel" class="language-advanced-panel">
-        <SpellCheckPreference />
+    </SettingsSection>
+    <SettingsSection :title="appearance('title')" :icon="Palette" class="appearance-setting">
+      <AppearanceSettings :show-title="false" compact />
+    </SettingsSection>
+    <SettingsSection :title="category('categoryAccessibility')" :icon="Accessibility" class="accessibility-setting">
+      <SpellCheckPreference />
+      <EditorAccessibilitySettings v-if="!hideRecorder" :show-title="false" />
+    </SettingsSection>
+    <SettingsSection :title="category('categoryUpdates')" :icon="RefreshCw" class="updates-setting">
+      <UpdateControls compact />
+    </SettingsSection>
+    <SettingsSection :title="category('categoryAbout')" :icon="Info" class="about-setting">
+      <SocialLinks compact />
+      <div class="system-info-row">
+        <span>{{ t('sysInfoTool') }}</span>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="isCopiedSysInfo ? Check : Copy"
+          class="system-info-button"
+          :aria-label="isCopiedSysInfo ? t('copied') : t('copySysInfo')"
+          :tooltip="isCopiedSysInfo ? t('copied') : t('copySysInfo')"
+          @click="copySystemInfo"
+        />
       </div>
-    </div>
-
-    <Divider spacing="xs" />
-
-    <div class="prop-item appearance-setting">
-      <span class="prop-label appearance-heading">{{ tAppearance('title') }}</span>
-      <AppearanceSettings :show-title="false" />
-    </div>
-
-    <Divider spacing="xs" />
-
-    <div class="prop-item">
-      <UpdateControls />
-    </div>
-
-    <Divider spacing="xs" />
-
-    <SocialLinks />
-
-    <Divider spacing="xs" />
-
-    <!-- Dev Mode Toggle & Framed Options -->
-    <div class="prop-item dev-mode-section">
-      <div class="dev-toggle-row">
-        <div class="dev-toggle-info">
-          <span class="prop-label">{{ t('devMode') }}</span>
-          <span class="prop-desc">{{ t('devModeDesc') }}</span>
-        </div>
-        <button
-          type="button"
-          class="dev-switch"
-          :class="{ active: isDevModeEnabled }"
-          :aria-pressed="isDevModeEnabled"
-          @click="isDevModeEnabled = !isDevModeEnabled"
-        >
-          <span class="switch-thumb" />
-        </button>
-      </div>
-
-      <Transition name="dev-frame-fade">
-        <div v-if="isDevModeEnabled" class="dev-frame">
-          <div class="dev-frame-header">
-            <Code class="dev-header-icon" />
-            <span class="dev-frame-title">{{ t('devOptionsTitle') }}</span>
-          </div>
-
-          <!-- Video Recorder Card -->
-          <div v-if="!hideRecorder" class="dev-option-card">
-            <div class="dev-option-info">
-              <span class="dev-option-label">{{ t('recorderTool') }}</span>
-              <span class="dev-option-desc">{{ t('recorderDesc') }}</span>
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              class="dev-action-btn"
-              :loading="recorderOpening"
-              @click="openRecorder"
-            >
-              <template #icon><Video class="btn-icon" /></template>
-              {{ t('launchRecorder') }}
-            </Button>
-            <p v-if="recorderLaunchError" class="dev-option-error" role="alert">
-              {{ t('recorderLaunchError', { error: recorderLaunchError }) }}
-            </p>
-          </div>
-
-          <!-- System Info Copy Card -->
-          <div class="dev-option-card">
-            <div class="dev-option-info">
-              <span class="dev-option-label">{{ t('sysInfoTool') }}</span>
-              <span class="dev-option-desc">{{ t('sysInfoDesc') }}</span>
-            </div>
-            <Button variant="secondary" size="sm" class="dev-action-btn" @click="copySystemInfo">
-              <template #icon>
-                <Check v-if="isCopiedSysInfo" class="btn-icon text-success" />
-                <Copy v-else class="btn-icon" />
-              </template>
-              {{ isCopiedSysInfo ? t('copied') : t('copySysInfo') }}
-            </Button>
-          </div>
-
-          <!-- Developer Tools Card -->
-          <div class="dev-option-card">
-            <div class="dev-option-info">
-              <span class="dev-option-label">{{ t('devToolsTool') }}</span>
-              <span class="dev-option-desc">{{ t('devToolsDesc') }}</span>
-            </div>
-            <Button variant="secondary" size="sm" class="dev-action-btn" @click="toggleDevTools">
-              <template #icon><Terminal class="btn-icon" /></template>
-              {{ t('openDevTools') }}
-            </Button>
-          </div>
-        </div>
-      </Transition>
-    </div>
+    </SettingsSection>
+    <SettingsSection :title="category('categoryDeveloper')" :icon="Code" class="developer-setting">
+      <EditorDeveloperSettings :hide-recorder="hideRecorder" />
+    </SettingsSection>
   </div>
 </template>
 
 <style scoped>
-.options-group {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.editor-settings {
+  display: grid;
+  gap: 26px;
 }
-
-.prop-item {
-  display: flex;
-  flex-direction: column;
+.setting-option {
+  display: grid;
   gap: 8px;
 }
-
-.prop-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.prop-desc {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.language-heading,
-.language-advanced-panel {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.language-advanced-panel {
-  padding: 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-surface);
-}
-
-.theme-button-group {
-  width: 100%;
-}
-
-.theme-button-group :deep(.btn) {
-  flex: 1;
-  justify-content: center;
-}
-
-.btn-icon {
-  width: 14px;
-  height: 14px;
-}
-
-/* Dev Mode Styles */
-.dev-mode-section {
-  padding-top: 0;
-  margin-top: 0;
-}
-
-.dev-toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.dev-toggle-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.dev-switch {
-  position: relative;
-  width: 38px;
-  height: 22px;
-  border-radius: 999px;
-  background: var(--color-bg-surface-hover);
-  border: 1px solid var(--color-border-strong);
-  cursor: pointer;
-  padding: 2px;
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease;
-  flex-shrink: 0;
-}
-
-.dev-switch.active {
-  background: var(--text-secondary);
-  border-color: var(--text-secondary);
-}
-
-.switch-thumb {
-  display: block;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.dev-switch.active .switch-thumb {
-  transform: translateX(16px);
-}
-
-.dev-frame {
-  margin-top: 12px;
-  padding: 12px;
-  background: var(--color-bg-surface);
-  border: 1px dashed var(--color-border-strong);
-  border-radius: var(--radius-md);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.dev-frame-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.dev-header-icon {
-  width: 14px;
-  height: 14px;
-  color: var(--text-secondary);
-}
-
-.dev-frame-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
-.dev-option-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  background: var(--color-bg-element);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-}
-
-.dev-option-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.dev-option-label {
-  font-size: 12px;
-  font-weight: 600;
+.option-label {
   color: var(--text-primary);
+  font-size: var(--font-size-body);
+  font-weight: var(--weight-title);
 }
-
-.dev-option-desc {
-  font-size: 11px;
-  color: var(--text-muted);
+.option-description {
+  margin: -3px 0 2px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
 }
-
-.dev-action-btn {
-  width: 100%;
-  justify-content: center;
-}
-
-.text-success {
-  color: var(--color-success) !important;
-}
-
-.dev-option-error {
-  margin: 0;
-  font-size: 11px;
-  color: var(--color-error);
-}
-
-.dev-frame-fade-enter-active,
-.dev-frame-fade-leave-active {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.dev-frame-fade-enter-from,
-.dev-frame-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
+.system-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-body);
 }
 </style>

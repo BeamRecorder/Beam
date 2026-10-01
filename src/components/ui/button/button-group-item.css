@@ -62,9 +62,22 @@
   flex-shrink: 0;
 }
 
+.btn-group .btn-selected,
+.btn-group .btn-selected:hover:not(:disabled),
+.btn-group .btn-tab.active,
+.btn-group .btn-tab.active:hover:not(:disabled) {
+  background: var(--button-group-selection-background);
+  color: var(--button-group-selection-foreground);
+  border-color: transparent;
+  box-shadow: none;
+  font-weight: var(--weight-display);
+}
+
 /* The group owns the moving selection background; buttons keep their focus ring. */
 .btn-group.has-indicator .btn-tab.active,
-.btn-group.has-indicator .btn-tab.active:hover:not(:disabled) {
+.btn-group.has-indicator .btn-tab.active:hover:not(:disabled),
+.btn-group.has-indicator .btn-selected,
+.btn-group.has-indicator .btn-selected:hover:not(:disabled) {
   background: transparent;
   border-color: transparent;
   box-shadow: none;

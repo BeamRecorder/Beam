@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Switch from '~/ui/switch/Switch.vue';
+import TogglePreference from './TogglePreference.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useSpellCheckStore } from '~/stores/spell-check';
 
@@ -8,43 +8,11 @@ const spellCheckStore = useSpellCheckStore();
 </script>
 
 <template>
-  <div class="spell-check-preference">
-    <div class="spell-check-copy">
-      <span class="spell-check-title">{{ t('spellCheck') }}</span>
-      <span class="spell-check-description">{{ t('spellCheckDescription') }}</span>
-    </div>
-    <Switch
-      :model-value="spellCheckStore.enabled"
-      :aria-label="t('spellCheck')"
-      @update:model-value="spellCheckStore.setEnabled"
-    />
-  </div>
+  <TogglePreference
+    class="spell-check-preference"
+    :model-value="spellCheckStore.enabled"
+    :label="t('spellCheck')"
+    :description="t('spellCheckDescription')"
+    @update:model-value="spellCheckStore.setEnabled"
+  />
 </template>
-
-<style scoped>
-.spell-check-preference {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-}
-
-.spell-check-copy {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-
-.spell-check-title {
-  color: var(--text-primary);
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-}
-
-.spell-check-description {
-  color: var(--text-secondary);
-  font-size: 11px;
-  line-height: 1.35;
-}
-</style>

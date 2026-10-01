@@ -127,7 +127,7 @@ const compositionFor = (...clips: Clip[]) => {
 };
 
 const baseProps = {
-  activeTab: 'elements',
+  activeTab: 'clip',
   selectedClip: null,
   selectedCaptionClip: null,
   selectedClipIds: [],
@@ -263,19 +263,14 @@ afterEach(() => {
   for (const wrapper of wrappers.splice(0)) wrapper.unmount();
 });
 
-describe('PropertiesPanel Elements tab', () => {
-  it('shows the tool catalog and selected shape properties without duplicating its generated panel', () => {
+describe('PropertiesPanel Clip tab', () => {
+  it('shows shape properties in Clip without insertion tools or duplicate panels', () => {
     const shape = makeShapeClip('selected-shape');
     const { wrapper } = mountPanel(shape);
 
-    expect(
-      wrapper
-        .get('.element-tools')
-        .findAll('button')
-        .map((button) => button.text()),
-    ).toEqual(['shape', 'arrow', 'text', 'drawing', 'title', 'blur', 'color', 'image']);
-    expect(wrapper.find('[data-test="shape-layer-properties"]').exists()).toBe(true);
-    expect(wrapper.find('[data-test="generated-layer-properties"]').exists()).toBe(false);
+    expect(wrapper.find('.element-tools').exists()).toBe(false);
+    expect(wrapper.find('[data-test="generated-layer-properties"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="shape-layer-properties"]').exists()).toBe(false);
   });
 
   it.each([
@@ -288,13 +283,13 @@ describe('PropertiesPanel Elements tab', () => {
       panel: 'caption-clip-properties',
     },
   ] satisfies Array<{ label: string; clip: Clip; panel: string }>)(
-    'shows the Elements catalog beside selected $label properties',
+    'shows selected $label properties in Clip',
     ({ clip, panel }) => {
       const { wrapper } = mountPanel(clip);
 
-      expect(wrapper.find('.element-tools').exists()).toBe(true);
+      expect(wrapper.find('.element-tools').exists()).toBe(false);
       expect(wrapper.find(`[data-test="${panel}"]`).exists()).toBe(true);
-      expect(wrapper.get('.panel-title').text()).toBe('elements');
+      expect(wrapper.get('.panel-title').text()).toBe(clip.kind === 'caption' ? 'captions' : clip.kind);
       expect(wrapper.find('button[aria-label="enabled"]').exists()).toBe(true);
       expect(wrapper.find('button[aria-label="clipTransitions"]').exists()).toBe(true);
       expect(wrapper.find('.properties-footer').exists()).toBe(true);

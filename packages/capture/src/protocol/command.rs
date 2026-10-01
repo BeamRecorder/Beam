@@ -22,6 +22,10 @@ pub enum Command {
     Permissions,
     InputAccessStatus,
     RequestInputAccess,
+    PickScreenColor {
+        #[serde(rename = "parentWindowId")]
+        parent_window_id: u32,
+    },
     Formats {
         source: String,
     },
@@ -64,6 +68,41 @@ pub enum Command {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn color_selection_preserves_the_owning_window_identifier() {
+        let command = serde_json::from_str::<Command>(
+            r#"{"command":"pick-screen-color","parentWindowId":42}"#,
+        );
+        assert!(matches!(
+            command,
+            Ok(Command::PickScreenColor {
+                parent_window_id: 42
+            })
+        ));
+    }
+
+    #[test]
+    fn color_selection_serializes_the_unsigned_x11_identifier() {
+        let value = serde_json::to_value(Command::PickScreenColor {
+            parent_window_id: u32::MAX,
+        })
+        .unwrap_or_default();
+        assert_eq!(value["command"], "pick-screen-color");
+        assert_eq!(value["parentWindowId"], u32::MAX);
+    }
+
+    #[test]
+    fn color_selection_rejects_missing_or_invalid_window_identifiers() {
+        for value in [
+            r#"{"command":"pick-screen-color"}"#,
+            r#"{"command":"pick-screen-color","parentWindowId":-1}"#,
+            r#"{"command":"pick-screen-color","parentWindowId":4294967296}"#,
+            r#"{"command":"pick-screen-color","parentWindowId":"42"}"#,
+        ] {
+            assert!(serde_json::from_str::<Command>(value).is_err());
+        }
+    }
 
     #[test]
     fn window_selection_inspection_does_not_raise_by_default() {

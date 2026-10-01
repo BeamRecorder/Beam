@@ -11,6 +11,7 @@ import { CURSOR_SIZE_DEFAULT } from './cursor-size';
 import { loadCursorImage } from './cursor-image-loader';
 
 export function useCursorReplacer() {
+  const enabled = ref(true);
   const selection = ref<CursorSelection>({ packId: MACOS_CURSOR_PACK.id, mode: 'automatic', cursorId: null });
   const importedPacks = ref<CursorPackDescriptor[]>([]);
   const packs = computed(() => orderedCursorPacks(importedPacks.value));
@@ -35,6 +36,7 @@ export function useCursorReplacer() {
   };
 
   return {
+    enabled,
     selection,
     importedPacks,
     packs,

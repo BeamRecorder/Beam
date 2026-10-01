@@ -844,6 +844,22 @@ describe('PropertiesPanel', () => {
     wrapper.unmount();
   });
 
+  it.each(['mouseup', 'auxclick'])('lets an open modal own mouse navigation for %s', async (type) => {
+    const wrapper = mountTransitionPropertiesPanel();
+    await wrapper.get('[aria-label="Clip transitions"]').trigger('click');
+    const modal = document.createElement('div');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    document.body.append(modal);
+    const event = new MouseEvent(type, { button: 3, cancelable: true });
+    window.dispatchEvent(event);
+    await nextTick();
+    expect(event.defaultPrevented).toBe(false);
+    expect(wrapper.find('.transitions-panel').exists()).toBe(true);
+    modal.remove();
+    wrapper.unmount();
+  });
+
   it.each([
     ['active tab', { activeTab: 'canvas' }],
     [
@@ -1002,7 +1018,7 @@ describe('PropertiesPanel', () => {
     const element = mount(PropertiesPanel, {
       props: {
         ...baseProps,
-        activeTab: 'elements',
+        activeTab: 'clip',
         selectedClip: {
           id: layer.id,
           kind: 'shape',

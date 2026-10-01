@@ -81,17 +81,11 @@
 }
 .canvas-recenter-float {
   position: absolute;
-  top: 0px;
+  top: 16px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 50;
   pointer-events: auto;
-}
-.recenter-button {
-  border-radius: 9999px;
-  height: 26px;
-  padding: 0 12px;
-  font-size: 11px;
 }
 .fade-slide-enter-active,
 .fade-slide-leave-active {

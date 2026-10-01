@@ -33,6 +33,7 @@ pub struct ScreenOpenRequest<'a> {
     pub hide_taskbar: bool,
     pub hide_desktop_icons: bool,
     pub cursor: CursorSelection,
+    pub show_real_cursor: bool,
     pub excluded_window_handles: &'a [String],
     pub start_ns: u64,
     pub start_gate: Arc<StartGate>,

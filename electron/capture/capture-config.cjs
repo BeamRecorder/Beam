@@ -95,6 +95,8 @@ function screenRegion(value, screenKind) {
 }
 
 function buildDefaultCaptureConfig(catalog, options, environment) {
+  if (options.showRealCursor !== undefined && typeof options.showRealCursor !== 'boolean')
+    throw new TypeError('Invalid showRealCursor');
   const sources = Array.isArray(catalog?.sources) ? catalog.sources : [];
   const capabilities = catalog?.capabilities || {};
   const screenKind = options.screenKind === 'window' ? 'window' : 'display';
@@ -142,6 +144,7 @@ function buildDefaultCaptureConfig(catalog, options, environment) {
     region,
     hideTaskbar: options.hideTaskbar === true,
     hideDesktopIcons: options.hideDesktopIcons === true,
+    showRealCursor: options.showRealCursor === true,
     excludedProcessId: environment.excludedProcessId,
     excludedWindowHandles: Array.isArray(options.excludedWindowHandles)
       ? options.excludedWindowHandles

@@ -45,7 +45,11 @@ const ColorPicker = {
   template: '<button class="color-picker" @click="$emit(\'update:modelValue\', \'#abcdef\')">Color</button>',
 };
 const Select = {
-  props: { modelValue: { type: [String, Number], default: '' }, options: { type: Array, default: () => [] } },
+  props: {
+    modelValue: { type: [String, Number], default: '' },
+    options: { type: Array, default: () => [] },
+    showPreviewIndicator: Boolean,
+  },
   emits: ['update:modelValue', 'preview:modelValue', 'toggle'],
   template:
     '<button class="select" @click="$emit(\'update:modelValue\', options[0]?.value ?? modelValue)">{{ modelValue }}</button>',
@@ -86,7 +90,7 @@ beforeEach(() => {
   capture.pickImportedFont.mockResolvedValue(null);
 });
 
-const mountCaptionControls = (style: ReturnType<typeof createDefaultCaptionStyle>) =>
+const mountCaptionControls = (style: ReturnType<typeof createDefaultCaptionStyle>, animatedGroups = false) =>
   mount(CaptionStyleControls, {
     props: { style, defaultFontSize: 42 },
     global: {
@@ -97,7 +101,7 @@ const mountCaptionControls = (style: ReturnType<typeof createDefaultCaptionStyle
         Switch,
         Divider,
         Button,
-        ButtonGroup,
+        ButtonGroup: animatedGroups ? false : ButtonGroup,
         BackdropBlurControl,
         Gradient,
       },
@@ -105,6 +109,13 @@ const mountCaptionControls = (style: ReturnType<typeof createDefaultCaptionStyle
   });
 
 describe('CaptionStyleControls', () => {
+  it('enables the preview indicator only on the live font preview menu', () => {
+    const wrapper = mountCaptionControls(createDefaultCaptionStyle(42));
+    const selects = wrapper.findAllComponents(Select);
+    expect(selects[0]!.props('showPreviewIndicator')).toBe(true);
+    expect(selects.slice(1).every((select) => !select.props('showPreviewIndicator'))).toBe(true);
+    wrapper.unmount();
+  });
   it('allows caption font sizes up to 256px', () => {
     const wrapper = mount(CaptionStyleControls, {
       props: { style: createDefaultCaptionStyle(42), defaultFontSize: 42 },
@@ -514,4 +525,24 @@ describe('CaptionStyleControls', () => {
     expect(alignButton('Align center')!.attributes('variant')).toBe('ghost');
     expect(alignButton('Align right')!.attributes('variant')).toBe('selected');
   });
+});
+
+describe('animated text alignment', () => {
+  it.each(['left', 'center', 'right'] as const)(
+    'keeps one shared indicator while changing alignment to %s',
+    async (textAlign) => {
+      const wrapper = mountCaptionControls(createDefaultCaptionStyle(42), true);
+      const group = wrapper.findAll('.btn-group').find((item) => item.attributes('aria-label') === 'Text alignment')!;
+      const indicator = group.get('.selection-indicator').element;
+      await wrapper.setProps({ style: { ...createDefaultCaptionStyle(42), textAlign } });
+      expect(group.get('.selection-indicator').element).toBe(indicator);
+      expect(group.attributes('style')).toContain(
+        `--button-group-index: ${['left', 'center', 'right'].indexOf(textAlign)}`,
+      );
+      expect(wrapper.findAll('.btn-group').filter((item) => item.find('.selection-indicator').exists())).toHaveLength(
+        1,
+      );
+      wrapper.unmount();
+    },
+  );
 });

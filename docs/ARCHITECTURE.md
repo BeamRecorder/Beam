@@ -116,6 +116,8 @@ Linux interaction capture uses the privileged input helper under both Wayland an
 
 ## Feature boundaries
 
+Directional 3D zoom presets live in `video-editor/zoom/`. Applying a preset stores its name and bounded intensity/axis controls in the existing zoom document; project/default normalization preserves these names, while older intensity presets remain readable. The inspector and timeline share `ZoomTiltPreview`, which derives SVG geometry from the same camera/projection math as preview and export. Custom thumbnails use the actual saved controls. Advanced controls are renderer-local disclosure state and are not saved in project history.
+
 - UI components render state and emit user intent.
 - Composables coordinate reactive behavior and browser media primitives.
 - Typed API modules define renderer-facing contracts.
@@ -135,3 +137,7 @@ Do not move native capture logic into Vue, add filesystem reads to components, o
 ## Change review
 
 Architecture changes must explain the affected boundary, the data contract, failure behavior, and the verification performed. Security boundary changes require focused review of preload exposure and path validation.
+
+### Native cursor recordings
+
+`showRealCursor` is independent of separate cursor telemetry. Windows Graphics Capture and ScreenCaptureKit include the system cursor in screen pixels when enabled, while the cursor sidecar still supplies zoom anchors. Linux retains Portal Metadata mode and composites the compositor's actual PipeWire bitmap in Rust, respecting hotspot, alpha, crop and transform. Cursor-only updates repaint a cached clean frame on the recording cadence; they never add a second frame in the same FFmpeg tick. The bitmap and clean frame remain capture-local and are cleared at segment/format boundaries as appropriate. `cursorEmbedded` in the session manifest records this baked-in cursor; older manifests default to false. Fresh projects disable `presentation.cursor.enabled` for these sessions, independently of telemetry availability; an explicit saved overlay choice survives reopening.

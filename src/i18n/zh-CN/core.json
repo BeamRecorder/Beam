@@ -1,4 +1,11 @@
 {
+  "ColorPicker": {
+    "color": "颜色",
+    "close": "关闭",
+    "eyedropper": "拾取屏幕颜色",
+    "colorFormat": "颜色格式",
+    "eyedropperError": "无法选择屏幕颜色，请重试。"
+  },
   "VoiceoverRecorder": {
     "record": "录制",
     "pause": "暂停",
@@ -344,6 +351,7 @@
     "crop": "裁剪"
   },
   "CursorPanel": {
+    "appearance": "外观",
     "cursorStyle": "光标样式",
     "cursorSize": "光标大小",
     "autoHideCursor": "自动隐藏光标",
@@ -745,7 +753,7 @@
     "title": "外观",
     "subtitle": "自定义主题、颜色、圆角与面板表面风格",
     "customization": "自定义",
-    "themeMode": "主题模式",
+    "themeMode": "主题",
     "light": "浅色",
     "dark": "深色",
     "system": "跟随系统",
@@ -763,7 +771,9 @@
     "toneSlate": "板岩蓝",
     "toneDeep": "极夜黑",
     "resetDefault": "恢复默认",
-    "custom": "自定义"
+    "custom": "自定义",
+    "systemDescription": "系统模式随设备的浅色或深色外观自动切换。",
+    "uiScaleGlobal": "界面缩放（全局）"
   },
   "Onboarding": {
     "skip": "Skip",
@@ -1087,5 +1097,16 @@
     "tipInstant": "试试 Instant，获得可直接分享的视频。",
     "tipShortcuts": "在设置中自定义录制快捷键。",
     "tipProjects": "打开已有项目，继续编辑。"
+  },
+  "EditorAccessibility": {
+    "title": "辅助功能",
+    "doubleClick": "双击添加片段",
+    "doubleClickDescription": "双击空白时间线轨道以添加缩放、字幕和视觉元素。"
+  },
+  "CursorRecording": {
+    "showRealCursor": "显示真实光标",
+    "description": "将系统光标直接录入视频。自动缩放仍会跟随光标。Beam 光标默认关闭；可在光标设置中叠加显示。已录入的光标无法移除。",
+    "customCursor": "自定义光标",
+    "overlayDescription": "在视频上叠加 Beam 光标。如果录制内容已包含系统光标，请关闭此选项。"
   }
 }

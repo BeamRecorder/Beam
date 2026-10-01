@@ -35,6 +35,7 @@ export const createState = () => {
     cursorEffects: ref(createDefaultCursorClickEffects()),
     cursorMotion: ref(createDefaultCursorMotionSettings()),
     cursorAutoHide: ref({ ...cursor.autoHide }),
+    cursorEnabled: ref(true),
     cursorSelection: ref<CursorSelection>({ ...cursor.selection }),
     cursorSize: ref(cursor.size),
     cursorColor: ref(cursor.color),

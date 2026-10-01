@@ -61,6 +61,7 @@ Teleporting a popover to `body` does not let it escape its BrowserWindow. It can
 - Keep the Recorder native window fixed at `352 × 88`, including during hover and drag. Labels use the controls' accessible names and native `title` hints; never resize or reposition the native window to make renderer tooltips overflow because that makes the bar jump under the pointer.
 - The camera popover temporarily expands its native window. Before expansion, store the window bounds; after expansion, offset the rendered camera preview by the inverse native-window displacement. On close, restore both the original bounds and a zero preview offset. Without that compensation, opening the popover visibly moves the camera preview.
 - Nested teleported popovers must be registered as descendants using `data-popover-owner`; otherwise selecting an inner `Select` is treated as an outside click and closes its parent.
+- Screen color selection temporarily holds dismissal of its popover and all ancestor popovers while the operating-system picker owns focus. Release that hold on completion, cancellation and disposal. Linux uses the Screenshot portal's `PickColor` operation in a separate Rust engine process, with the Electron X11/XWayland window ID as parent; never open a ScreenCast session for a pipette or block recording commands while waiting for selection. Main-frame navigation, owner destruction and app shutdown cancel the owned operation.
 
 ## Compact recorder lifecycle
 

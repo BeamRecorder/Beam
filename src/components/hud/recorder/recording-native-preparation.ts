@@ -21,6 +21,7 @@ export async function prepareNativeRecording(configuration: RecordingConfigurati
     region: configuration.region,
     hideTaskbar: configuration.hideTaskbar,
     hideDesktopIcons: configuration.hideDesktopIcons,
+    showRealCursor: configuration.showRealCursor,
     outputRoot: configuration.outputRoot,
     excludedWindowHandles: configuration.excludedWindowHandles,
   });

@@ -60,6 +60,7 @@ export interface RecordingConfiguration {
   excludedWindowHandles?: string[];
   hideTaskbar?: boolean;
   hideDesktopIcons?: boolean;
+  showRealCursor?: boolean;
 }
 
 export interface RecordingSessionResult {

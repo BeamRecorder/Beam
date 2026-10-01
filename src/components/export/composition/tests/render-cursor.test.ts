@@ -424,3 +424,18 @@ describe('cursor and ripple composition rendering', () => {
     },
   );
 });
+
+it('does not render Beam cursor or ripples when its overlay is disabled, retaining telemetry', () => {
+  const value = snapshot();
+  value.cursorSettings.enabled = false;
+  value.cursor.available = true;
+  value.cursor.events = [
+    { event: 'move', sessionNs: 0, pixelX: 50, pixelY: 25, normalizedX: 0.5, normalizedY: 0.5, visible: true },
+    { event: 'button', sessionNs: 0, button: 1, pressed: true, normalizedX: 0.5, normalizedY: 0.5 },
+  ];
+  value.cursorSettings.clickEffects.left.rippleEnabled = true;
+  const ctx = context();
+  renderCompositionFrame(ctx, { source: {} as CanvasImageSource, width: 100, height: 50 }, value, 0.1);
+  expect(ctx.arc).not.toHaveBeenCalled();
+  expect(value.cursor.events).toHaveLength(2);
+});

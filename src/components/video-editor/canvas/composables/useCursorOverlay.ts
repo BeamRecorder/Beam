@@ -32,6 +32,7 @@ import { resolveClipTransitionState } from '~/media/shared/clip-transitions';
 import { drawWithClipTransition, transitionPointWithClip } from '../../composition/transitions/render-transition';
 
 export interface UseCursorOverlayOptions {
+  enabled?: () => boolean;
   cursorSelection: () => CursorSelection;
   cursorPack: () => CursorPackDescriptor | null;
   cursorSize: () => number;
@@ -227,7 +228,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     drawInCameraSpace: (drawContent: () => void) => void,
   ) => {
     const screen = options.screenClip();
-    if (!screen || !options.isScreenEnabled()) {
+    if (options.enabled?.() === false || !screen || !options.isScreenEnabled()) {
       updateCursorBounds(null);
       return;
     }

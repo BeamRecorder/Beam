@@ -1,5 +1,5 @@
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { MediaAsset } from '~/media/shared/composition-types';
+import type { MediaAsset, VisualClip } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import type { ScreenshotImageLayer } from './screenshot-layer-types';
 
@@ -40,4 +40,8 @@ export function createScreenshotImage(
     isMirroredY: false,
     cameraFramingPreset: 'fit',
   };
+}
+
+export function screenshotImageProperties(image: VisualClip | undefined) {
+  return image ? { ...image, ...image.appearance, clipTransform: image.transform } : null;
 }

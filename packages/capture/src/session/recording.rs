@@ -88,6 +88,8 @@ impl RecordingSession {
             permissions: snapshot.permissions.clone(),
             warnings: snapshot.limitations.clone(),
             completed: false,
+            cursor_embedded: request.show_real_cursor
+                || matches!(request.cursor, crate::model::CursorSelection::Embedded),
         };
         let writer = ManifestWriter::new(layout.clone());
         writer.checkpoint(&manifest)?;

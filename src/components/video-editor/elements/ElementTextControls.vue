@@ -39,6 +39,10 @@ const alignments = [
   { value: 'center', icon: AlignVerticalJustifyCenter },
   { value: 'bottom', icon: AlignVerticalJustifyEnd },
 ] as const;
+const alignmentSelection = computed(() => ({
+  count: alignments.length,
+  index: alignments.findIndex((item) => item.value === text.value?.verticalAlign),
+}));
 const edit = () => {
   if (editor) editor.beginText(props.clip.id);
   else updateText(createElementText());
@@ -57,14 +61,14 @@ const edit = () => {
           @update:model-value="updateText({ ...text, content: $event })"
         />
       </label>
-      <ButtonGroup full :columns="3" :aria-label="t('verticalAlignment')">
+      <ButtonGroup full :columns="3" :aria-label="t('verticalAlignment')" :selection="alignmentSelection">
         <Button
           v-for="item in alignments"
           :key="item.value"
           size="xs"
           :icon="item.icon"
           icon-only
-          :variant="text.verticalAlign === item.value ? 'primary' : 'ghost'"
+          :variant="text.verticalAlign === item.value ? 'selected' : 'ghost'"
           :aria-label="t(item.value)"
           :tooltip="t(item.value)"
           @click="updateText({ ...text, verticalAlign: item.value })"

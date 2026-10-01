@@ -25,6 +25,7 @@ const props = withDefaults(
 );
 
 const viewportRef = ref<HTMLElement | null>(null);
+const emit = defineEmits<{ scroll: [event: Event] }>();
 
 const { hasTopShadow, hasBottomShadow, hasLeftShadow, hasRightShadow, isScrollableY, isScrollableX, updateShadows } =
   useScrollShadow(viewportRef, {
@@ -103,6 +104,7 @@ defineExpose({
         },
       ]"
       :style="maskStyle"
+      @scroll="emit('scroll', $event)"
     >
       <slot />
     </div>

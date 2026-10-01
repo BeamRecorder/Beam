@@ -12,6 +12,14 @@ describe('ScrollShadow.vue', () => {
     expect(wrapper.get('.scroll-shadow-viewport').classes().includes('is-both')).toBe(orientation === 'both');
     wrapper.unmount();
   });
+  it('forwards the viewport scroll event to virtualized consumers', async () => {
+    const wrapper = mount(ScrollShadow);
+    await wrapper.get('.scroll-shadow-viewport').trigger('scroll');
+    expect(wrapper.emitted('scroll')).toHaveLength(1);
+    expect(wrapper.emitted('scroll')?.[0]?.[0]).toBeInstanceOf(Event);
+    wrapper.unmount();
+  });
+
   it('renders slot content inside scrollable viewport', () => {
     const wrapper = mount(ScrollShadow, {
       slots: {

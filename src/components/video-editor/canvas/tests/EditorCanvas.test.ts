@@ -1397,6 +1397,8 @@ describe('EditorCanvas', () => {
 
     expect(mounted.find('.recenter-button').exists()).toBe(true);
     const recenterButton = mounted.get('.recenter-button');
+    expect((recenterButton.element as HTMLButtonElement).style.boxShadow).toBe('var(--shadow-sm)');
+    expect((recenterButton.element as HTMLButtonElement).style.height).toBe('26px');
     await triggerPointer(recenterButton, 'pointerdown', { button: 0, clientX: 400, clientY: 225, pointerId: 1 });
     await recenterButton.trigger('click');
     await nextTick();

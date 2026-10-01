@@ -1,4 +1,16 @@
 {
+  "EditorSearch": {
+    "title": "편집기 검색",
+    "placeholder": "작업, 클립 및 설정 검색…",
+    "noResults": "결과 없음",
+    "insert": "추가",
+    "navigation": "섹션",
+    "selection": "프로젝트 항목",
+    "setting": "설정",
+    "unavailable": "현재 선택에서는 이 작업 또는 설정을 사용할 수 없습니다.",
+    "clips": "클립",
+    "action": "작업"
+  },
   "LinkedClipsDeleteDialog": {
     "preview": "미리보기",
     "selectPreview": "{name} 미리보기",
@@ -281,7 +293,47 @@
   },
   "UndoRedoToast": {
     "undo": "실행 취소",
-    "redo": "다시 실행"
+    "redo": "다시 실행",
+    "undoAction": "실행 취소: {action}",
+    "redoAction": "다시 실행: {action}",
+    "action": "{operation} · {item}",
+    "namedItem": "{kind} “{name}”",
+    "items": "항목 {count}개",
+    "operations": {
+      "add": "추가",
+      "remove": "삭제",
+      "edit": "편집",
+      "move": "이동",
+      "resize": "크기 조정",
+      "crop": "자르기",
+      "timing": "길이 및 시간 위치",
+      "visibility": "표시 여부",
+      "reorder": "순서 변경",
+      "rename": "이름 변경"
+    },
+    "targets": {
+      "screen": "화면 녹화",
+      "video": "동영상",
+      "image": "이미지",
+      "webcam": "카메라",
+      "color": "색상",
+      "shape": "도형",
+      "arrow": "화살표",
+      "text": "텍스트",
+      "drawing": "그림",
+      "blur": "흐림",
+      "highlight": "강조",
+      "audio": "오디오",
+      "caption": "자막",
+      "keyboardCaption": "키보드 자막",
+      "cursor": "커서",
+      "zoom": "확대/축소",
+      "background": "배경",
+      "canvas": "캔버스",
+      "layers": "레이어",
+      "export": "내보내기 설정",
+      "changes": "변경 사항"
+    }
   },
   "Updates": {
     "title": "앱 업데이트",
@@ -298,7 +350,9 @@
     "updateAvailable": "버전 {version}을(를) 사용할 수 있습니다.",
     "updateAvailableGeneric": "업데이트를 사용할 수 있습니다.",
     "updateError": "업데이트를 확인할 수 없습니다.",
-    "showDetails": "오류 세부 정보"
+    "showDetails": "오류 세부 정보",
+    "check": "확인",
+    "changelog": "변경 내역"
   },
   "VideoEditor": {
     "exportBanner": "내보내는 중입니다. 현재 내보내는 파일에는 실시간 편집 내용이 적용되지 않습니다.",
@@ -387,7 +441,7 @@
     "projection": "원근감",
     "projection2d": "2D",
     "projection3d": "3D 기울기",
-    "projectionDesc": "줌 초점을 따라 원근감 있는 기울기를 추가합니다. 강도와 가로/세로 방향을 조절할 수 있습니다. 미리보기와 내보내기에 동일한 렌더링을 사용합니다.",
+    "projectionDesc": "줌 초점을 따라 원근감 있는 기울기를 추가합니다.\n강도와 가로/세로 방향을 조절할 수 있습니다. 미리보기와 내보내기에 동일한 렌더링을 사용합니다.",
     "tiltIntensity": "기울기 강도",
     "tiltHorizontal": "왼쪽 / 오른쪽",
     "tiltVertical": "위 / 아래",
@@ -396,6 +450,12 @@
     "tiltPresetMedium": "중간",
     "tiltPresetLarge": "강하게",
     "tiltPresetCustom": "사용자 지정",
+    "tiltBack": "뒤로 기울이기",
+    "tiltFront": "앞으로 기울이기",
+    "tiltLeft": "왼쪽으로 기울이기",
+    "tiltRight": "오른쪽으로 기울이기",
+    "pullBack": "뒤로 당기기",
+    "pullFront": "앞으로 당기기",
     "magnification": "확대 배율",
     "zoomLevel": "확대/축소 수준",
     "motionBlur": "줌 모션 블러",

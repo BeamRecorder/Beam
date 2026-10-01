@@ -25,6 +25,7 @@ fn manifest(project_id: ProjectId, session_id: SessionId) -> SessionManifest {
         permissions: PermissionSnapshot::default(),
         warnings: Vec::new(),
         completed: false,
+        cursor_embedded: false,
     }
 }
 

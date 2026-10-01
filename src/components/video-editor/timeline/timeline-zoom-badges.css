@@ -25,6 +25,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.zoom-projection-badge {
+  display: inline-flex;
+  align-items: center;
+  pointer-events: auto;
+}
 
 @container (max-width: 118px) {
   .zoom-mode-badge {

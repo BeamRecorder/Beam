@@ -31,6 +31,9 @@ const stub = {
   name: 'HudPreferences',
   props: [
     'alwaysOnTop',
+    'hideTaskbar',
+    'hideDesktopIcons',
+    'showRealCursor',
     'focusedSetting',
     'view',
     'countdownSeconds',
@@ -78,10 +81,16 @@ describe('separate HUD settings', () => {
     wrapper.unmount();
   });
   it('hydrates settings before announcing readiness and releases listeners on close', async () => {
-    mocks.preferences.settings!.extras.recordingCountdownSeconds = 5;
+    mocks.preferences.settings!.extras = {
+      recordingCountdownSeconds: 5,
+      hideTaskbar: true,
+      hideDesktopIcons: true,
+      showRealCursor: true,
+    };
     const wrapper = await create();
     const child = wrapper.getComponent(stub);
     expect(child.props('countdownSeconds')).toBe(5);
+    for (const option of ['hideTaskbar', 'hideDesktopIcons', 'showRealCursor']) expect(child.props(option)).toBe(true);
     expect(child.props('inputAccess').state).toBe('available');
     expect(wrapper.emitted('ready')).toEqual([[]]);
     const unsubscribe = mocks.capture.onPreferencesChanged.mock.results[0]!.value;
@@ -97,6 +106,11 @@ describe('separate HUD settings', () => {
   it('persists recording preferences and reports failed saves', async () => {
     const wrapper = await create();
     const child = wrapper.getComponent(stub);
+    for (const option of ['hideTaskbar', 'hideDesktopIcons', 'showRealCursor']) {
+      child.vm.$emit(`update:${option}`, true);
+      await flushPromises();
+      expect(mocks.preferences.update).toHaveBeenCalledWith({ extras: { [option]: true } });
+    }
     child.vm.$emit('update:countdownSeconds', 10);
     await flushPromises();
     expect(mocks.preferences.update).toHaveBeenCalledWith({ extras: { recordingCountdownSeconds: 10 } });

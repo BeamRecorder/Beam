@@ -32,6 +32,7 @@ const select = (id: string, close: () => void) => {
 
 <template>
   <Popover
+    flush
     align="left"
     :direction="direction"
     :block="block"
@@ -106,7 +107,7 @@ const select = (id: string, close: () => void) => {
 .menu-button-icon {
   width: 14px;
   height: 14px;
-  color: var(--color-primary);
+  color: var(--text-secondary);
 }
 .menu-button-chevron {
   width: 12px;

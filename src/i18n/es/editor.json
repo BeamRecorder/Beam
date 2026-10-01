@@ -1,4 +1,16 @@
 {
+  "EditorSearch": {
+    "title": "Buscar en el editor",
+    "placeholder": "Buscar acciones, clips y ajustes…",
+    "noResults": "Sin resultados",
+    "insert": "Añadir",
+    "navigation": "Secciones",
+    "selection": "Elemento del proyecto",
+    "setting": "Ajustes",
+    "unavailable": "Esta acción o ajuste no está disponible para la selección actual.",
+    "clips": "Clips",
+    "action": "Acciones"
+  },
   "LinkedClipsDeleteDialog": {
     "preview": "Vista previa",
     "selectPreview": "Previsualizar {name}",
@@ -281,7 +293,47 @@
   },
   "UndoRedoToast": {
     "undo": "Deshacer",
-    "redo": "Rehacer"
+    "redo": "Rehacer",
+    "undoAction": "Deshecho: {action}",
+    "redoAction": "Rehecho: {action}",
+    "action": "{operation} · {item}",
+    "namedItem": "{kind} “{name}”",
+    "items": "{count} elementos",
+    "operations": {
+      "add": "Adición",
+      "remove": "Eliminación",
+      "edit": "Edición",
+      "move": "Movimiento",
+      "resize": "Cambio de tamaño",
+      "crop": "Recorte",
+      "timing": "Duración y posición temporal",
+      "visibility": "Visibilidad",
+      "reorder": "Reordenación",
+      "rename": "Cambio de nombre"
+    },
+    "targets": {
+      "screen": "Grabación de pantalla",
+      "video": "Vídeo",
+      "image": "Imagen",
+      "webcam": "Cámara",
+      "color": "Color",
+      "shape": "Forma",
+      "arrow": "Flecha",
+      "text": "Texto",
+      "drawing": "Dibujo",
+      "blur": "Desenfoque",
+      "highlight": "Resaltado",
+      "audio": "Audio",
+      "caption": "Subtítulo",
+      "keyboardCaption": "Teclas del teclado",
+      "cursor": "Cursor",
+      "zoom": "Zoom",
+      "background": "Fondo",
+      "canvas": "Lienzo",
+      "layers": "Capas",
+      "export": "Ajustes de exportación",
+      "changes": "Cambios"
+    }
   },
   "Updates": {
     "title": "Actualización de la aplicación",
@@ -298,7 +350,9 @@
     "updateAvailable": "La versión {version} está disponible.",
     "updateAvailableGeneric": "Hay una actualización disponible.",
     "updateError": "No se pueden buscar actualizaciones.",
-    "showDetails": "Detalles del error"
+    "showDetails": "Detalles del error",
+    "check": "Buscar",
+    "changelog": "Cambios"
   },
   "VideoEditor": {
     "exportBanner": "Exportación en curso. Los cambios en directo no afectarán al archivo que se está exportando.",
@@ -387,7 +441,7 @@
     "projection": "Perspectiva",
     "projection2d": "2D",
     "projection3d": "Inclinación 3D",
-    "projectionDesc": "Añade una inclinación en perspectiva que sigue el foco del zoom. Ajusta su intensidad y la dirección horizontal/vertical. La vista previa y la exportación usan el mismo renderizado.",
+    "projectionDesc": "Añade una inclinación en perspectiva que sigue el foco del zoom.\nAjusta su intensidad y la dirección horizontal/vertical. La vista previa y la exportación usan el mismo renderizado.",
     "tiltIntensity": "Intensidad de la inclinación",
     "tiltHorizontal": "Izquierda / Derecha",
     "tiltVertical": "Arriba / Abajo",
@@ -396,6 +450,12 @@
     "tiltPresetMedium": "Media",
     "tiltPresetLarge": "Fuerte",
     "tiltPresetCustom": "Personalizado",
+    "tiltBack": "Inclinar atrás",
+    "tiltFront": "Inclinar adelante",
+    "tiltLeft": "Inclinar a la izquierda",
+    "tiltRight": "Inclinar a la derecha",
+    "pullBack": "Alejar",
+    "pullFront": "Acercar",
     "magnification": "Ampliación",
     "zoomLevel": "Nivel de zoom",
     "motionBlur": "Desenfoque de movimiento del zoom",

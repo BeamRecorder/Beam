@@ -1,4 +1,16 @@
 {
+  "EditorSearch": {
+    "title": "Search the editor",
+    "placeholder": "Search actions, clips and settings…",
+    "noResults": "No results",
+    "insert": "Add",
+    "navigation": "Sections",
+    "selection": "Project item",
+    "setting": "Settings",
+    "unavailable": "This action or setting is unavailable in the current selection.",
+    "clips": "Clips",
+    "action": "Actions"
+  },
   "LinkedClipsDeleteDialog": {
     "preview": "Preview",
     "selectPreview": "Preview {name}",
@@ -281,7 +293,47 @@
   },
   "UndoRedoToast": {
     "undo": "Undo",
-    "redo": "Redo"
+    "redo": "Redo",
+    "undoAction": "Undone: {action}",
+    "redoAction": "Redone: {action}",
+    "action": "{operation} · {item}",
+    "namedItem": "{kind} “{name}”",
+    "items": "{count} items",
+    "operations": {
+      "add": "Add",
+      "remove": "Delete",
+      "edit": "Edit",
+      "move": "Move",
+      "resize": "Resize",
+      "crop": "Crop",
+      "timing": "Timing",
+      "visibility": "Visibility",
+      "reorder": "Reorder",
+      "rename": "Rename"
+    },
+    "targets": {
+      "screen": "Screen recording",
+      "video": "Video",
+      "image": "Image",
+      "webcam": "Camera",
+      "color": "Color",
+      "shape": "Shape",
+      "arrow": "Arrow",
+      "text": "Text",
+      "drawing": "Drawing",
+      "blur": "Blur",
+      "highlight": "Highlight",
+      "audio": "Audio",
+      "caption": "Caption",
+      "keyboardCaption": "Keyboard caption",
+      "cursor": "Cursor",
+      "zoom": "Zoom",
+      "background": "Background",
+      "canvas": "Canvas",
+      "layers": "Layers",
+      "export": "Export settings",
+      "changes": "Changes"
+    }
   },
   "Updates": {
     "title": "Application update",
@@ -298,7 +350,9 @@
     "updateAvailable": "Version {version} is available.",
     "updateAvailableGeneric": "An update is available.",
     "updateError": "Unable to check for updates.",
-    "showDetails": "Error details"
+    "showDetails": "Error details",
+    "check": "Check",
+    "changelog": "Changelog"
   },
   "VideoEditor": {
     "exportBanner": "Export in progress. Live edits will not affect the file currently being exported.",
@@ -387,7 +441,7 @@
     "projection": "Perspective",
     "projection2d": "2D",
     "projection3d": "3D Tilt",
-    "projectionDesc": "Adds a perspective tilt that follows the zoom focus. Adjust its strength and horizontal/vertical direction. Preview and export use the same render.",
+    "projectionDesc": "Adds a perspective tilt that follows the zoom focus.\nAdjust its strength and horizontal/vertical direction. Preview and export use the same render.",
     "tiltIntensity": "Tilt intensity",
     "tiltHorizontal": "Left / Right",
     "tiltVertical": "Up / Down",
@@ -396,6 +450,12 @@
     "tiltPresetMedium": "Medium",
     "tiltPresetLarge": "Strong",
     "tiltPresetCustom": "Custom",
+    "tiltBack": "Tilt back",
+    "tiltFront": "Tilt front",
+    "tiltLeft": "Tilt left",
+    "tiltRight": "Tilt right",
+    "pullBack": "Pull back",
+    "pullFront": "Pull front",
     "magnification": "Magnification",
     "zoomLevel": "Zoom Level",
     "motionBlur": "Zoom motion blur",

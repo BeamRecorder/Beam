@@ -21,6 +21,7 @@ import { normalizeShapeLayerStyle } from '~/media/shared/shape-layer-style';
 import { createComposition } from '../../composition/engine/clip-engine';
 import type { ElementEditorContext } from '../element-editor-types';
 import { useVideoElements } from '../useVideoElements';
+import { useMixedTimelineSelection } from '../../composables/useMixedTimelineSelection';
 
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: () => ({ t: (key: string) => `translated:${key}` }),
@@ -181,6 +182,7 @@ const mountVideoElements = (configuration: HarnessOptions = {}) => {
   const isPlaying = ref(configuration.isPlaying ?? false);
   const select = vi.fn((id: string) => {
     selectedId.value = id;
+    activeTab.value = 'clip';
   });
   const clearZoom = vi.fn();
   let editor!: ElementEditorContext;
@@ -213,38 +215,41 @@ describe('useVideoElements', () => {
     ['color', makeColorClip('selected-color')],
     ['blur', makeBlurClip('selected-blur')],
     ['manual text caption', makeCaptionClip('manual-caption', { customText: '' })],
-  ] satisfies Array<[string, Clip]>)('routes a selected %s from Clip to Elements synchronously', (_name, clip) => {
+  ] satisfies Array<[string, Clip]>)('routes a selected %s from inside Clip', (_name, clip) => {
     const state = mountVideoElements({
       composition: makeCompositionWith(clip),
       selectedId: clip.id,
       activeTab: 'clip',
     });
 
-    expect(state.activeTab.value).toBe('elements');
+    expect(state.activeTab.value).toBe('clip');
   });
 
-  it('routes a newly selected shape from Clip to Elements synchronously', () => {
+  it('routes a newly selected shape to Clip after the selection handler settles', async () => {
     const shape = makeShapeClip('selected-shape', 0);
     const state = mountVideoElements({ composition: makeCompositionWith(shape), activeTab: 'clip' });
 
-    state.selectedId.value = shape.id;
+    state.select(shape.id);
+    await nextTick();
 
-    expect(state.activeTab.value).toBe('elements');
+    expect(state.activeTab.value).toBe('clip');
   });
 
-  it('returns to Elements when the Clip tab is chosen while the same shape remains selected', () => {
+  it('keeps drawing active when choosing Clip again', async () => {
     const shape = makeShapeClip('selected-shape', 0);
     const state = mountVideoElements({
       composition: makeCompositionWith(shape),
       selectedId: shape.id,
-      activeTab: 'elements',
+      activeTab: 'clip',
     });
     state.editor.add('drawing');
     expect(state.editor.drawingMode.value).toBe(true);
 
     state.activeTab.value = 'clip';
+    await nextTick();
 
-    expect(state.activeTab.value).toBe('elements');
+    expect(state.activeTab.value).toBe('clip');
+    expect(state.selectedId.value).toBe(shape.id);
     expect(state.editor.drawingMode.value).toBe(true);
   });
 
@@ -264,7 +269,7 @@ describe('useVideoElements', () => {
     expect(state.activeTab.value).toBe('clip');
   });
 
-  it('routes a generated caption to Elements when the same clip becomes manual text', () => {
+  it('routes a generated caption to Clip when the same clip becomes manual text', async () => {
     const generated = makeCaptionClip('selected-caption', { isAiGenerated: true });
     const state = mountVideoElements({
       composition: makeCompositionWith(generated),
@@ -275,9 +280,86 @@ describe('useVideoElements', () => {
     expect(state.activeTab.value).toBe('clip');
 
     state.composition.value = makeCompositionWith(makeCaptionClip(generated.id, { customText: 'Edited caption' }));
+    await nextTick();
 
     expect(state.selectedId.value).toBe(generated.id);
-    expect(state.activeTab.value).toBe('elements');
+    expect(state.activeTab.value).toBe('clip');
+  });
+
+  it.each([
+    ['shape', makeShapeClip('selected-shape', 0)],
+    ['image', makeImageClip('selected-image')],
+    ['color', makeColorClip('selected-color')],
+    ['blur', makeBlurClip('selected-blur')],
+    ['manual text', makeCaptionClip('manual-caption', { customText: 'Text' })],
+  ] satisfies Array<[string, Clip]>)('preserves manual sidebar navigation with a selected %s', async (_name, clip) => {
+    const state = mountVideoElements({
+      composition: makeCompositionWith(clip),
+      selectedId: clip.id,
+      activeTab: 'clip',
+    });
+    for (const tab of ['clip', 'canvas', 'zoom', 'clip', 'settings', 'clip']) {
+      state.activeTab.value = tab;
+      await nextTick();
+      expect(state.activeTab.value).toBe(tab);
+      expect(state.selectedId.value).toBe(clip.id);
+    }
+    state.composition.value = { ...state.composition.value, clips: [{ ...clip, name: 'Renamed selection' }] };
+    await nextTick();
+    expect(state.activeTab.value).toBe('clip');
+  });
+
+  it('opens Clip for a different shape after choosing Clip manually', async () => {
+    const first = makeShapeClip('first-shape', 0);
+    const second = makeShapeClip('second-shape', 1);
+    const composition = makeCompositionWith(first);
+    composition.clips.push(second);
+    const state = mountVideoElements({ composition, selectedId: first.id, activeTab: 'clip' });
+    state.activeTab.value = 'clip';
+    await nextTick();
+    state.select(second.id);
+    await nextTick();
+    expect(state.activeTab.value).toBe('clip');
+    expect(state.selectedId.value).toBe(second.id);
+  });
+
+  it('keeps sidebar choices free with both a shape and zoom selected through the timeline', async () => {
+    const shape = makeShapeClip('timeline-shape', 0);
+    const state = mountVideoElements({ composition: makeCompositionWith(shape), activeTab: 'canvas' });
+    const selectedClipIds = ref<string[]>([]);
+    const selectedZoomId = ref<string | null>(null);
+    const selectedZoomIds = ref<string[]>([]);
+    const timeline = useMixedTimelineSelection({
+      composition: state.composition,
+      zoomElements: ref([
+        {
+          id: 'zoom',
+          sessionId: 'session',
+          startMs: 0,
+          endMs: 1000,
+          focus: { cx: 0.5, cy: 0.5 },
+          depth: 2,
+          mode: 'manual',
+        },
+      ]),
+      selectedClipId: state.selectedId,
+      selectedClipIds,
+      selectedZoomId,
+      selectedZoomIds,
+      activeTab: state.activeTab,
+      openPropertiesPanel: vi.fn(),
+    });
+    timeline.selectItem({ id: shape.id, kind: 'clip', intent: 'replace' });
+    await nextTick();
+    expect(state.activeTab.value).toBe('clip');
+    timeline.selectItem({ id: 'zoom', kind: 'zoom', intent: 'toggle' });
+    await nextTick();
+    expect(state.activeTab.value).toBe('zoom');
+    state.activeTab.value = 'clip';
+    await nextTick();
+    expect(state.activeTab.value).toBe('clip');
+    expect(selectedClipIds.value).toEqual([shape.id]);
+    expect(selectedZoomIds.value).toEqual(['zoom']);
   });
 
   it('preserves another properties tab when an element is selected', () => {
@@ -318,7 +400,7 @@ describe('useVideoElements', () => {
       .map((clip) => clip.order);
     expect(otherOrders.every((order) => inserted!.order < order)).toBe(true);
     expect(state.editor.selected.value?.id).toBe(inserted!.id);
-    expect(state.activeTab.value).toBe('elements');
+    expect(state.activeTab.value).toBe('clip');
     expect(state.clearZoom).toHaveBeenCalled();
     expect(state.clearZoom.mock.invocationCallOrder[0]).toBeLessThan(state.select.mock.invocationCallOrder[0]!);
   });
@@ -399,7 +481,7 @@ describe('useVideoElements', () => {
     expect(state.editor.selected.value).toBeNull();
   });
 
-  it('closes drawing mode when leaving the Elements tab or starting playback', async () => {
+  it('closes drawing mode when leaving the Clip tab or starting playback', async () => {
     const state = mountVideoElements();
     state.editor.add('drawing');
     expect(state.editor.drawingMode.value).toBe(true);
@@ -408,7 +490,7 @@ describe('useVideoElements', () => {
     await nextTick();
     expect(state.editor.drawingMode.value).toBe(false);
 
-    state.activeTab.value = 'elements';
+    state.activeTab.value = 'clip';
     await nextTick();
     state.editor.add('drawing');
     expect(state.editor.drawingMode.value).toBe(true);

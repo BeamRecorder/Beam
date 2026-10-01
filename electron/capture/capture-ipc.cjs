@@ -8,6 +8,7 @@ const { createSystemAudioPreview } = require('./system-audio-preview.cjs');
 const { isCaptureCancellation } = require('./capture-cancellation.cjs');
 const { createSourcePreviewService } = require('./source-preview-service.cjs');
 const { registerSourcePickerIpc } = require('../source-picker/source-picker-ipc.cjs');
+const { registerScreenColorIpc } = require('./screen-color-ipc.cjs');
 
 const ALLOWED_COMMANDS = new Set([
   'discover',
@@ -84,9 +85,19 @@ function registerCaptureIpc({
   trackStorages,
   teleprompterWindow,
   platform = process.platform,
+  isTrustedRenderer = () => false,
   canAcceptWork = () => true,
   canStartRecording = () => true,
 }) {
+  registerScreenColorIpc({
+    ipcMain,
+    app,
+    BrowserWindow,
+    platform,
+    applicationRoot: path.join(__dirname, '../..'),
+    isTrustedRenderer,
+    canAcceptWork,
+  });
   const registerSession = (session) => {
     for (const storage of trackStorages) storage.registerSession(session);
     return withProjectId(session);

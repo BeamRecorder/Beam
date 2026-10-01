@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld(
   'capture',
   Object.freeze({
     platform: process.platform,
+    pickScreenColor: () => ipcRenderer.invoke('screen-color:pick'),
+    cancelScreenColorPicker: () => ipcRenderer.invoke('screen-color:cancel'),
     devCrossplatform: process.argv.includes('--beam-dev-crossplatform'),
     selectCaptureSource: (kind) => ipcRenderer.invoke('source-picker:open', kind),
     sourcePickerAction: (action) => ipcRenderer.send('source-picker:action', action),

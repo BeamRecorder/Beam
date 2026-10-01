@@ -152,6 +152,7 @@ vi.mock('../../properties/cursor/useCursorReplacer', async () => {
   const { computed, ref } = await import('vue');
   return {
     useCursorReplacer: () => ({
+      enabled: ref(true),
       selection: ref({ packId: 'builtin:macos', mode: 'automatic', cursorId: null }),
       importedPacks: ref([]),
       packs: computed(() => []),
@@ -219,7 +220,7 @@ describe('useVideoEditor timeline element insertion', () => {
 
       expect(harness.elements!.add).toHaveBeenCalledWith(family);
       expect(harness.compositionState!.addElement).not.toHaveBeenCalled();
-      expect(api.activeTab.value).toBe('elements');
+      expect(api.activeTab.value).toBe('clip');
     },
   );
 
@@ -235,7 +236,7 @@ describe('useVideoEditor timeline element insertion', () => {
     expect(harness.compositionState!.selectedClipIds.value).toEqual([]);
     expect(harness.zoomState!.selectedZoomId.value).toBeNull();
     expect(harness.zoomState!.selectedZoomIds.value).toEqual([]);
-    expect(api.activeTab.value).toBe('elements');
+    expect(api.activeTab.value).toBe('clip');
   });
 
   it('keeps captions and media on the existing composition insertion path', async () => {

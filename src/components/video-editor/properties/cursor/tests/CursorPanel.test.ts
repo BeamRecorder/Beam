@@ -3,164 +3,30 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CursorPanel from '../CursorPanel.vue';
 import { MACOS_CURSOR_PACK, orderedCursorPacks } from '../cursor-packs';
-import type { CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
 import {
   createDefaultCursorAutoHideSettings,
   createDefaultCursorClickEffects,
   createDefaultCursorMotionSettings,
-  type CursorAutoHideSettings,
-  type CursorMotionSettings,
+  cursorMotionPreset,
 } from '~/api/types/cursor-settings';
 import type { CursorClickEffects } from '~/api/types/cursor-settings';
 import { useToastStore } from '~/ui/toast/toastStore';
+import {
+  Select,
+  global,
+  importedPack,
+  mixedOriginalPack,
+  baseProps,
+  mountPanel,
+  cursorColorControl,
+} from './cursor-panel-test-helpers';
+import { focusEditorProperty } from '../../../search/focus-editor-property';
 
 const capture = vi.hoisted(() => ({
   pickCursorPackImport: vi.fn(),
   openCursorPackDiscovery: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-
-const Select = {
-  props: ['modelValue', 'options', 'disabled'],
-  emits: ['update:modelValue', 'preview:modelValue'],
-  template: `
-    <button
-      type="button"
-      class="cursor-select"
-      :disabled="disabled"
-      :data-model-value="modelValue"
-      @mouseenter="$emit('preview:modelValue', options?.[1]?.value ?? null)"
-      @mouseleave="$emit('preview:modelValue', null)"
-      @focus="$emit('preview:modelValue', options?.[1]?.value ?? null)"
-      @blur="$emit('preview:modelValue', null)"
-      @click="$emit('update:modelValue', options?.[1]?.value ?? modelValue)"
-    >
-      {{ options?.map((option) => option.label).join(' | ') }}
-    </button>
-  `,
-};
-
-const BigSlider = {
-  props: ['label', 'modelValue', 'defaultValue', 'min', 'max', 'step'],
-  emits: ['update:modelValue'],
-  template:
-    '<button type="button" class="cursor-slider" :data-label="label" :data-model-value="modelValue" :data-default-value="defaultValue" :data-min="min" :data-max="max" :data-step="step" @click="$emit(\'update:modelValue\', max <= 1 ? 0.3 : 30)">Slider</button>',
-};
-
-const ColorInput = {
-  props: ['disabled', 'label'],
-  emits: ['update:modelValue'],
-  template:
-    '<button type="button" class="cursor-color" :data-label="label" :disabled="disabled" @click="$emit(\'update:modelValue\', \'#fff\')">Color</button>',
-};
-
-const Switch = {
-  props: ['modelValue'],
-  emits: ['update:modelValue'],
-  template:
-    '<button type="button" class="cursor-switch" :data-model-value="modelValue" @click="$emit(\'update:modelValue\', !modelValue)">Switch</button>',
-};
-
-const ShadowDirectionGroup = {
-  emits: ['update:modelValue'],
-  template:
-    '<button type="button" class="shadow-direction" @click="$emit(\'update:modelValue\', \'top-left\')">Direction</button>',
-};
-
-const CursorClickEffectsPanel = {
-  emits: ['update:modelValue'],
-  template:
-    '<button type="button" class="click-effects-stub" @click="$emit(\'update:modelValue\', {})">Clicks</button>',
-};
-
-const Button = {
-  props: ['disabled', 'loading'],
-  emits: ['click'],
-  template:
-    '<button type="button" class="cursor-button" :disabled="disabled || loading" @click="$emit(\'click\', $event)"><slot /></button>',
-};
-
-const BlurRevealTransition = {
-  template: '<div class="blur-reveal-transition-stub"><slot /></div>',
-};
-
-const global = {
-  stubs: {
-    Select,
-    BigSlider,
-    ColorInput,
-    Switch,
-    ShadowDirectionGroup,
-    CursorClickEffectsPanel,
-    Button,
-    BlurRevealTransition,
-  },
-};
-
-const asset = (id: string, label = id) => ({
-  id,
-  label,
-  url: `project-media://cursor/pack/${id}`,
-  format: 'svg' as const,
-  intrinsicSize: { width: 32, height: 32 },
-  nominalSize: 32,
-  hotspot: { x: 4, y: 5 },
-});
-
-const importedPack = (id: string, name: string, ids = ['default', 'pointer']): CursorPackDescriptor => ({
-  id,
-  name,
-  source: 'imported',
-  colorMode: 'tintable',
-  defaultCursorId: ids[0]!,
-  cursors: ids.map((cursorId) => asset(cursorId, `${name} ${cursorId}`)),
-  automaticMap: Object.fromEntries(ids.map((cursorId) => [cursorId, cursorId])),
-});
-
-const mixedOriginalPack = (): CursorPackDescriptor => ({
-  id: 'pack:mixed-original',
-  name: 'Mixed original',
-  source: 'imported',
-  colorMode: 'original',
-  defaultCursorId: 'png-default',
-  cursors: [
-    { ...asset('png-default'), format: 'png', tintable: false },
-    { ...asset('tintable-svg'), tintable: true },
-  ],
-  automaticMap: { default: 'png-default', handpointing: 'tintable-svg' },
-});
-
-const baseProps = (
-  overrides: Partial<{
-    selection: CursorSelection;
-    packs: CursorPackDescriptor[];
-    cursorSize: number;
-    cursorColor: string;
-    enableShadow: boolean;
-    clickEffects: CursorClickEffects;
-    autoHide: CursorAutoHideSettings;
-    motion: CursorMotionSettings;
-  }> = {},
-) => ({
-  selection: { packId: MACOS_CURSOR_PACK.id, mode: 'automatic' as const, cursorId: null },
-  packs: orderedCursorPacks([importedPack('pack:zeta', 'Zeta'), importedPack('pack:alpha', 'Alpha')]),
-  cursorSize: 24,
-  cursorColor: '#000000',
-  enableShadow: true,
-  shadowBlur: 8,
-  shadowColor: '#111111',
-  shadowDirection: 'bottom-right' as const,
-  motion: createDefaultCursorMotionSettings(),
-  clickEffects: createDefaultCursorClickEffects(),
-  autoHide: createDefaultCursorAutoHideSettings(),
-  ...overrides,
-});
-
-const mountPanel = (overrides: Parameters<typeof baseProps>[0] = {}) =>
-  mount(CursorPanel, { props: baseProps(overrides), global });
-
-const cursorColorControl = (wrapper: ReturnType<typeof mountPanel>) =>
-  wrapper.findAll('.cursor-color').find((control) => control.attributes('data-label') === 'Cursor Color');
 
 describe('CursorPanel', () => {
   beforeEach(() => {
@@ -169,7 +35,7 @@ describe('CursorPanel', () => {
     capture.openCursorPackDiscovery.mockReset();
   });
 
-  it('keeps macOS first, exposes the selected pack and starts with both Advanced panels closed', () => {
+  it('keeps macOS first and starts with clearly grouped, collapsed advanced controls', () => {
     const packs = orderedCursorPacks([importedPack('pack:zeta', 'Zeta'), importedPack('pack:alpha', 'Alpha')]);
     const wrapper = mountPanel({ packs });
 
@@ -180,11 +46,23 @@ describe('CursorPanel', () => {
     expect(packSelect.text()).toContain('Zeta');
 
     const toggles = wrapper.findAll('.advanced-toggle');
-    expect(toggles).toHaveLength(2);
+    expect(toggles).toHaveLength(3);
     expect(toggles[0]!.attributes('aria-expanded')).toBe('false');
     expect(toggles[0]!.attributes('aria-controls')).toBe('cursor-advanced-panel');
     expect(toggles[1]!.attributes('aria-expanded')).toBe('false');
-    expect(toggles[1]!.attributes('aria-controls')).toBe('click-effects-advanced-panel');
+    expect(toggles[1]!.attributes('aria-controls')).toBe('cursor-motion-advanced-panel');
+    expect(toggles[2]!.attributes('aria-controls')).toBe('click-effects-advanced-panel');
+    expect(wrapper.find('.shadow-options .advanced-toggle').exists()).toBe(false);
+    expect(wrapper.find('#cursor-shadow-options').exists()).toBe(true);
+    expect(toggles.every((toggle) => toggle.attributes('aria-expanded') === 'false')).toBe(true);
+    expect(wrapper.find('.divider').exists()).toBe(false);
+    expect(wrapper.findAll('.cursor-section').map((section) => section.attributes('aria-label'))).toEqual([
+      'Appearance',
+      'Drop Shadow',
+      'Cursor Motion',
+      'Clicks',
+      'Auto-hide cursor',
+    ]);
     expect(wrapper.find('#cursor-advanced-panel').exists()).toBe(false);
     expect(wrapper.find('#click-effects-advanced-panel').exists()).toBe(false);
     expect(wrapper.find('.cursor-size-control').exists()).toBe(true);
@@ -192,7 +70,8 @@ describe('CursorPanel', () => {
 
   it('keeps presentation controls visible and separates cursor advanced from click effects advanced', async () => {
     const wrapper = mountPanel();
-    const [cursorTrigger, clickTrigger] = wrapper.findAll('.advanced-toggle');
+    const cursorTrigger = wrapper.get('[aria-controls="cursor-advanced-panel"]');
+    const clickTrigger = wrapper.get('[aria-controls="click-effects-advanced-panel"]');
 
     expect(wrapper.find('.cursor-size-control').exists()).toBe(true);
     expect(wrapper.find('.motion-options').exists()).toBe(true);
@@ -207,7 +86,7 @@ describe('CursorPanel', () => {
 
     expect(cursorTrigger!.attributes('aria-expanded')).toBe('true');
     expect(wrapper.get('#cursor-advanced-panel')).toBeDefined();
-    expect(wrapper.get('#cursor-advanced-panel').element.closest('.blur-reveal-transition-stub')).not.toBeNull();
+    expect(wrapper.get('#cursor-advanced-panel').element.closest('.raf-reveal-transition-stub')).not.toBeNull();
     expect(wrapper.get('#cursor-advanced-panel .cursor-select')).toBeDefined();
     expect(wrapper.find('#cursor-advanced-panel .click-effects-stub').exists()).toBe(false);
 
@@ -217,9 +96,110 @@ describe('CursorPanel', () => {
 
     expect(clickTrigger!.attributes('aria-expanded')).toBe('true');
     expect(wrapper.get('#click-effects-advanced-panel')).toBeDefined();
-    expect(wrapper.get('#click-effects-advanced-panel').element.closest('.blur-reveal-transition-stub')).not.toBeNull();
+    expect(wrapper.get('#click-effects-advanced-panel').element.closest('.raf-reveal-transition-stub')).not.toBeNull();
     expect(wrapper.get('#click-effects-advanced-panel .click-effects-stub')).toBeDefined();
     expect(wrapper.find('#click-effects-advanced-panel .cursor-select').exists()).toBe(false);
+    await wrapper.get('.click-effects-stub').trigger('click');
+    expect(wrapper.emitted('update:clickEffects')?.at(-1)).toEqual([{}]);
+  });
+
+  it('keeps motion sliders behind Advanced and opens Custom without discarding its values', async () => {
+    const motion = { ...createDefaultCursorMotionSettings(), smoothing: 0.62, springMassMultiplier: 1.2 };
+    const wrapper = mountPanel({ motion });
+    const preset = wrapper
+      .findAllComponents(Select)
+      .find((select) => select.attributes('aria-label') === 'Motion Preset')!;
+    expect(wrapper.find('#cursor-motion-advanced-panel').exists()).toBe(false);
+
+    preset.vm.$emit('update:modelValue', 'custom');
+    await flushPromises();
+    expect(wrapper.emitted('update:motion')?.at(-1)).toEqual([{ ...motion, preset: 'custom' }]);
+    expect(wrapper.find('#cursor-motion-advanced-panel').exists()).toBe(true);
+
+    for (const [label, field, value] of [
+      ['Cursor Smoothing', 'smoothing', 0.3],
+      ['Spring Mass', 'springMassMultiplier', 30],
+      ['Motion Blur', 'motionBlur', 0.3],
+    ] as const) {
+      const slider = wrapper.findAll('.cursor-slider').find((control) => control.attributes('data-label') === label)!;
+      await slider.trigger('click');
+      expect(wrapper.emitted('update:motion')?.at(-1)).toEqual([{ ...motion, preset: 'custom', [field]: value }]);
+    }
+    preset.vm.$emit('update:modelValue', 'smooth');
+    await flushPromises();
+    expect(wrapper.emitted('update:motion')?.at(-1)).toEqual([cursorMotionPreset('smooth')]);
+    expect(wrapper.find('#cursor-motion-advanced-panel').exists()).toBe(false);
+
+    await wrapper.setProps({ motion: { ...motion, preset: 'custom' } });
+    expect(wrapper.get('[aria-controls="cursor-motion-advanced-panel"]').attributes('aria-expanded')).toBe('true');
+    await wrapper.get('[aria-controls="cursor-motion-advanced-panel"]').trigger('click');
+    expect(wrapper.find('#cursor-motion-advanced-panel').exists()).toBe(false);
+    await wrapper.setProps({ motion: cursorMotionPreset('focused') });
+    expect(wrapper.find('#cursor-motion-advanced-panel').exists()).toBe(false);
+  });
+
+  it('opens an existing custom motion on mount and forwards appearance edits', async () => {
+    const wrapper = mountPanel({ motion: { ...createDefaultCursorMotionSettings(), preset: 'custom' } });
+    expect(wrapper.find('#cursor-motion-advanced-panel').exists()).toBe(true);
+    await wrapper.get('.cursor-size-control').trigger('click');
+    await cursorColorControl(wrapper)!.trigger('click');
+    await wrapper.get('#cursor-shadow-options .cursor-slider').trigger('click');
+    await wrapper.get('#cursor-shadow-options .cursor-color').trigger('click');
+    await wrapper.get('.shadow-direction').trigger('click');
+    await wrapper.get('.shadow-options .cursor-switch').trigger('click');
+    expect(wrapper.emitted('update:cursorSize')).toEqual([[30]]);
+    expect(wrapper.emitted('update:cursorColor')).toEqual([['#fff']]);
+    expect(wrapper.emitted('update:shadowBlur')).toEqual([[30]]);
+    expect(wrapper.emitted('update:shadowColor')).toEqual([['#fff']]);
+    expect(wrapper.emitted('update:shadowDirection')).toEqual([['top-left']]);
+    expect(wrapper.emitted('update:enableShadow')).toEqual([[false]]);
+  });
+
+  it('lets Spotlight focus a visible shadow property without editing the cursor', async () => {
+    const wrapper = mount(CursorPanel, {
+      props: baseProps(),
+      global,
+      attrs: { class: 'properties-island' },
+      attachTo: document.body,
+    });
+    try {
+      expect(wrapper.find('#cursor-shadow-options').exists()).toBe(true);
+      const pending = focusEditorProperty('Shadow Blur');
+      await flushPromises();
+      expect(await pending).toBe(true);
+      expect(document.activeElement?.getAttribute('aria-label')).toBe('Shadow Blur');
+      expect(wrapper.emitted('update:shadowBlur')).toBeUndefined();
+      expect(wrapper.emitted('update:motion')).toBeUndefined();
+      expect(wrapper.emitted('update:enableShadow')).toBeUndefined();
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it('moves the ripple selection indicator with the saved style and handles disabled ripples', async () => {
+    const defaults = createDefaultCursorClickEffects();
+    const wrapper = mountPanel({
+      clickEffects: {
+        left: { ...defaults.left, rippleStyle: 'none' },
+        right: { ...defaults.right, rippleStyle: 'double' },
+      },
+    });
+    const group = () => wrapper.get('.click-effects-control .btn-group');
+    expect(group().attributes('style')).toContain('--button-group-index: 1');
+    await wrapper.setProps({
+      clickEffects: {
+        left: { ...defaults.left, rippleStyle: 'none' },
+        right: { ...defaults.right, rippleStyle: 'solid' },
+      },
+    });
+    expect(group().attributes('style')).toContain('--button-group-index: 2');
+    await wrapper.setProps({
+      clickEffects: {
+        left: { ...defaults.left, rippleStyle: 'none' },
+        right: { ...defaults.right, rippleStyle: 'none' },
+      },
+    });
+    expect(group().attributes('style')).toContain('--button-group-index: 0');
   });
 
   it('keeps auto-hide disabled by default and reveals its delay slider only when enabled', async () => {
@@ -266,6 +246,7 @@ describe('CursorPanel', () => {
 
   it('enables the stop spring by default and preserves its strength when switched off', async () => {
     const wrapper = mountPanel();
+    await wrapper.get('[aria-controls="cursor-motion-advanced-panel"]').trigger('click');
     const stopSwitch = wrapper.get('[aria-label="Spring when stopping"]');
     expect(stopSwitch.attributes('data-model-value')).toBe('true');
     const strengthSlider = () =>
@@ -398,13 +379,13 @@ describe('CursorPanel', () => {
     expect(wrapper.find('button[aria-label="None"]').exists()).toBe(false);
   });
 
-  it('places both Advanced controls on their section title rows', () => {
+  it('places Advanced controls on their section title rows', () => {
     const wrapper = mountPanel();
     const advancedTitleRows = wrapper
       .findAll('.advanced-toggle')
       .map((toggle) => toggle.element.closest('.pack-heading, .section-control-heading, .section-heading, .prop-row'));
 
-    expect(advancedTitleRows).toHaveLength(2);
+    expect(advancedTitleRows).toHaveLength(3);
     for (const row of advancedTitleRows) {
       expect(row?.textContent?.replace(/Advanced/g, '').trim()).not.toBe('');
     }

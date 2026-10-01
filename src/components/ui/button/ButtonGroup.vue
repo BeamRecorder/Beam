@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { ButtonGroupSelection } from './button-group-types';
+import type { ButtonGroupSelection, ButtonGroupVariant } from './button-group-types';
+import SelectionIndicator from '../transitions/SelectionIndicator.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -8,6 +9,7 @@ const props = withDefaults(
     columns?: 1 | 2 | 3 | 4;
     divided?: boolean;
     size?: 'xs' | 'sm' | 'md';
+    variant?: ButtonGroupVariant;
     selection?: ButtonGroupSelection;
   }>(),
   {
@@ -15,6 +17,7 @@ const props = withDefaults(
     columns: undefined,
     divided: false,
     size: 'md',
+    variant: 'primary',
   },
 );
 const hasIndicator = computed(() => {
@@ -35,6 +38,7 @@ const hasIndicator = computed(() => {
     class="btn-group"
     :class="[
       `size-${props.size}`,
+      `variant-${props.variant}`,
       {
         'full-width': props.full,
         'column-layout': props.columns,
@@ -51,7 +55,7 @@ const hasIndicator = computed(() => {
     }"
   >
     <div v-if="hasIndicator" class="selection-track" aria-hidden="true">
-      <span class="selection-indicator" />
+      <SelectionIndicator />
     </div>
     <slot />
   </div>
@@ -62,6 +66,8 @@ const hasIndicator = computed(() => {
   --button-group-padding-x: 4px;
   --button-group-padding-y: 3px;
   --button-group-gap: 2px;
+  --button-group-selection-background: var(--color-primary);
+  --button-group-selection-foreground: var(--text-on-primary);
   position: relative;
   isolation: isolate;
   display: inline-flex;
@@ -74,6 +80,15 @@ const hasIndicator = computed(() => {
   width: fit-content;
   max-width: 100%;
   box-sizing: border-box;
+}
+
+.btn-group.variant-neutral {
+  --button-group-selection-background: var(--color-bg-element);
+  --button-group-selection-foreground: var(--text-primary);
+}
+
+:root.dark .btn-group.variant-neutral {
+  --button-group-selection-background: var(--color-bg-field-active);
 }
 
 .btn-group.size-xs {
@@ -109,14 +124,8 @@ const hasIndicator = computed(() => {
   height: 100%;
   border: 1px solid transparent;
   border-radius: var(--button-group-inner-radius);
-  background: var(--color-bg-field-hover);
+  background: var(--button-group-selection-background);
   transform: translateX(calc(var(--button-group-index) * (100% + var(--button-group-gap))));
-  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-@media (prefers-reduced-motion: reduce) {
-  .selection-indicator {
-    transition: none;
-  }
 }
 
 /* Tooltip-backed buttons add one component boundary, so this shared item

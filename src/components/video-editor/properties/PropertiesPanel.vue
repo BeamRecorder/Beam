@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import CustomCursorToggle from './cursor/CustomCursorToggle.vue';
 import PropertiesDeleteAction from './PropertiesDeleteAction.vue';
-import { isVideoElementClip } from '../elements/video-elements';
-import ElementsPanel from '../elements/ElementsPanel.vue';
+import ElementClipControls from '../elements/ElementClipControls.vue';
 import RecordingSidecarLinks from './clip/RecordingSidecarLinks.vue';
 import PropertiesLockGuard from './PropertiesLockGuard.vue';
 import type { PropertiesPanelProps, PropertiesPanelEmits } from './properties-panel-contract-types';
@@ -67,9 +67,7 @@ const selectedDomainClip = computed(() => {
   const id = props.selectedClip?.id ?? props.selectedCaptionClip?.id;
   return id ? (props.composition.clips.find((clip) => clip.id === id) ?? null) : null;
 });
-const showsSelectedProperties = computed(
-  () => props.activeTab === 'clip' || (props.activeTab === 'elements' && isVideoElementClip(selectedDomainClip.value)),
-);
+const showsSelectedProperties = computed(() => props.activeTab === 'clip');
 const selectedDomainClips = computed(() => {
   const ids = new Set(
     props.selectedClipIds?.length
@@ -236,7 +234,9 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
         @delete="handleDelete"
         @transition="openTransitionEdge()"
         @after-enter="!transitionsOpen && panelHeader?.focusTransitionButton()"
-      />
+      >
+        <template v-if="activeTab === 'cursor'" #actions><CustomCursorToggle /></template>
+      </PropertiesPanelHeader>
       <PropertiesLockGuard
         :locked="Boolean(editLocked && !['canvas', 'settings', 'cursor'].includes(activeTab))"
         :name="lockedSelectionName"
@@ -249,7 +249,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               class="panel-body"
               :inert="editLocked && activeTab !== 'canvas' && activeTab !== 'settings' && activeTab !== 'cursor'"
             >
-              <ElementsPanel v-if="activeTab === 'elements' && !transitionsOpen" :disabled="editLocked" />
+              <ElementClipControls v-if="activeTab === 'clip' && !transitionsOpen" :show-properties="false" />
               <TransitionSettingsPanel
                 v-if="transitionsOpen && activeTab === 'canvas'"
                 :transitions="canvas.transitions ?? EMPTY_CLIP_TRANSITIONS"
@@ -302,7 +302,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
                 v-else-if="
                   showsSelectedProperties &&
                   selectedDomainClip &&
-                  (isColorClip(selectedDomainClip) || (activeTab === 'clip' && isShapeClip(selectedDomainClip)))
+                  (isColorClip(selectedDomainClip) || isShapeClip(selectedDomainClip))
                 "
                 :composition="composition"
                 :clip="selectedDomainClip"

@@ -1,4 +1,16 @@
 {
+  "EditorSearch": {
+    "title": "Editor durchsuchen",
+    "placeholder": "Aktionen, Clips und Einstellungen suchen…",
+    "noResults": "Keine Ergebnisse",
+    "insert": "Hinzufügen",
+    "navigation": "Bereiche",
+    "selection": "Projektelement",
+    "setting": "Einstellungen",
+    "unavailable": "Diese Aktion oder Einstellung ist für die aktuelle Auswahl nicht verfügbar.",
+    "clips": "Clips",
+    "action": "Aktionen"
+  },
   "LinkedClipsDeleteDialog": {
     "preview": "Vorschau",
     "selectPreview": "Vorschau von {name}",
@@ -281,7 +293,47 @@
   },
   "UndoRedoToast": {
     "undo": "Rückgängig",
-    "redo": "Wiederholen"
+    "redo": "Wiederholen",
+    "undoAction": "Rückgängig: {action}",
+    "redoAction": "Wiederhergestellt: {action}",
+    "action": "{operation} · {item}",
+    "namedItem": "{kind} “{name}”",
+    "items": "{count} Elemente",
+    "operations": {
+      "add": "Hinzufügen",
+      "remove": "Löschen",
+      "edit": "Bearbeiten",
+      "move": "Verschieben",
+      "resize": "Größenänderung",
+      "crop": "Zuschneiden",
+      "timing": "Dauer und Zeitposition",
+      "visibility": "Sichtbarkeit",
+      "reorder": "Neu anordnen",
+      "rename": "Umbenennen"
+    },
+    "targets": {
+      "screen": "Bildschirmaufnahme",
+      "video": "Video",
+      "image": "Bild",
+      "webcam": "Kamera",
+      "color": "Farbe",
+      "shape": "Form",
+      "arrow": "Pfeil",
+      "text": "Text",
+      "drawing": "Zeichnung",
+      "blur": "Unschärfe",
+      "highlight": "Hervorhebung",
+      "audio": "Audio",
+      "caption": "Untertitel",
+      "keyboardCaption": "Tastatureinblendung",
+      "cursor": "Cursor",
+      "zoom": "Zoom",
+      "background": "Hintergrund",
+      "canvas": "Leinwand",
+      "layers": "Ebenen",
+      "export": "Exporteinstellungen",
+      "changes": "Änderungen"
+    }
   },
   "Updates": {
     "title": "App-Update",
@@ -298,7 +350,9 @@
     "updateAvailable": "Version {version} ist verfügbar.",
     "updateAvailableGeneric": "Ein Update ist verfügbar.",
     "updateError": "Updates konnten nicht gesucht werden.",
-    "showDetails": "Fehlerdetails"
+    "showDetails": "Fehlerdetails",
+    "check": "Prüfen",
+    "changelog": "Änderungen"
   },
   "VideoEditor": {
     "exportBanner": "Export läuft. Live-Änderungen wirken sich nicht auf die gerade exportierte Datei aus.",
@@ -387,7 +441,7 @@
     "projection": "Perspektive",
     "projection2d": "2D",
     "projection3d": "3D-Neigung",
-    "projectionDesc": "Fügt eine perspektivische Neigung hinzu, die dem Zoomfokus folgt. Stärke und horizontale/vertikale Richtung lassen sich anpassen. Vorschau und Export verwenden dasselbe Rendering.",
+    "projectionDesc": "Fügt eine perspektivische Neigung hinzu, die dem Zoomfokus folgt.\nStärke und horizontale/vertikale Richtung lassen sich anpassen. Vorschau und Export verwenden dasselbe Rendering.",
     "tiltIntensity": "Neigungsstärke",
     "tiltHorizontal": "Links / Rechts",
     "tiltVertical": "Oben / Unten",
@@ -396,6 +450,12 @@
     "tiltPresetMedium": "Mittel",
     "tiltPresetLarge": "Stark",
     "tiltPresetCustom": "Benutzerdefiniert",
+    "tiltBack": "Nach hinten neigen",
+    "tiltFront": "Nach vorne neigen",
+    "tiltLeft": "Nach links neigen",
+    "tiltRight": "Nach rechts neigen",
+    "pullBack": "Zurückziehen",
+    "pullFront": "Heranziehen",
     "magnification": "Vergrößerung",
     "zoomLevel": "Zoomstufe",
     "motionBlur": "Zoom-Bewegungsunschärfe",

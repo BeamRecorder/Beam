@@ -68,7 +68,7 @@ describe('Popover', () => {
     const parent = wrapper.vm.$refs.parent as { isOpen: boolean };
     const child = wrapper.vm.$refs.child as { isOpen: boolean };
     expect(parent.isOpen).toBe(true);
-    expect(child.isOpen).toBe(false);
+    expect(child.isOpen).toBe(true);
     wrapper.unmount();
   });
   it('stays open when the containing window loses focus to a native dialog', async () => {

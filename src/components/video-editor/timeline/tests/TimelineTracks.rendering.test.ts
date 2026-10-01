@@ -168,7 +168,8 @@ describe('TimelineTracks', () => {
     expect(indicators[0]!.find('.zoom-clip-labels').findAll('.zoom-meta-badge')[0]!.text()).toBe('2D');
     expect(indicators[0]!.find('.zoom-title').text()).toBe('Zoom 5.00×');
     expect(indicators[0]!.find('.zoom-clip-labels').findAll('.zoom-meta-badge')[1]!.text()).toBe('Manual');
-    expect(indicators[1]!.find('.zoom-clip-labels').findAll('.zoom-meta-badge')[0]!.text()).toBe('3D');
+    expect(indicators[1]!.find('.zoom-projection-badge svg.tilt-preview').exists()).toBe(true);
+    expect(indicators[1]!.find('.zoom-projection-badge').attributes('title')).toBe('Pull front');
     expect(indicators[1]!.find('.zoom-title').text()).toBe('Zoom 1.80×');
     expect(indicators[1]!.find('.zoom-clip-labels').findAll('.zoom-meta-badge')[1]!.text()).toBe('Auto');
 

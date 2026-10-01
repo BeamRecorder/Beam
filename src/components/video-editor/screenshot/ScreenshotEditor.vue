@@ -1,21 +1,11 @@
 <script setup lang="ts">
 import EditorTitlebar from '../EditorTitlebar.vue';
 import EditorHistoryControls from '../EditorHistoryControls.vue';
+import UndoRedoToast from '../canvas/UndoRedoToast.vue';
 import PropertiesDeleteAction from '../properties/PropertiesDeleteAction.vue';
-import ElementsPanel from '../elements/ElementsPanel.vue';
+import ElementClipControls from '../elements/ElementClipControls.vue';
 import { computed, ref } from 'vue';
-import {
-  ArrowLeft,
-  Copy,
-  Crop,
-  Image,
-  Layers,
-  Maximize2,
-  Monitor,
-  MousePointer2,
-  RotateCcw,
-  SlidersHorizontal,
-} from '@lucide/vue';
+import { ArrowLeft, Copy, Crop, Film, Maximize2, Monitor, RotateCcw, SlidersHorizontal } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import Button from '~/ui/button/Button.vue';
 import Popover from '~/ui/popover/Popover.vue';
@@ -32,6 +22,8 @@ import ScreenshotCanvas from './ScreenshotCanvas.vue';
 import ScreenshotPropertiesPanel from './ScreenshotPropertiesPanel.vue';
 import ScreenshotExportPopover from './ScreenshotExportPopover.vue';
 import ScreenshotSizeControls from './ScreenshotSizeControls.vue';
+import ScreenshotAddMenu from './ScreenshotAddMenu.vue';
+import EditorSearchButton from '../search/EditorSearchButton.vue';
 import { useScreenshotEditor } from './useScreenshotEditor';
 import ScreenshotCursorControls from './ScreenshotCursorControls.vue';
 import ScreenshotComposition from './composition/ScreenshotComposition.vue';
@@ -81,6 +73,7 @@ const {
   selectedImage,
   image,
   pasteImage,
+  addElement,
   canPasteLayers,
   fail,
   savePreset,
@@ -117,13 +110,10 @@ useClipboardImagePaste({
 });
 const tabs = computed(() => [
   { id: 'canvas', label: t('canvas'), icon: Monitor },
-  { id: 'image', label: t('image'), icon: Image },
-  { id: 'shapes', label: elementsText('title'), icon: Layers },
+  { id: 'clip', label: sidebarText('clip'), icon: Film },
 ]);
 const panelTitle = computed(() =>
-  panel.value === 'cursor'
-    ? elementsText('cursor')
-    : (tabs.value.find((tab) => tab.id === panel.value)?.label ?? sidebarText('settings')),
+  panel.value === 'canvas' ? t('canvas') : panel.value === 'settings' ? sidebarText('settings') : sidebarText('clip'),
 );
 const composition = computed(() => (state.value ? screenshotLayers(state.value) : []));
 </script>
@@ -159,6 +149,8 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
           @undo="history.undo().catch(fail)"
           @redo="history.redo().catch(fail)"
         />
+        <ScreenshotAddMenu :disabled="!state || busy || cropping" @add="addElement" />
+        <EditorSearchButton />
       </template>
       <template #center>
         <VideoProjectEdition
@@ -195,7 +187,11 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
     </EditorTitlebar>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <div v-if="state && document" class="editor-body">
-      <SidebarPanel :active-tab="panel === 'cursor' ? 'shapes' : panel" :items="tabs" @select-tab="selectPanel" />
+      <SidebarPanel
+        :active-tab="['image', 'shapes', 'cursor'].includes(panel) ? 'clip' : panel"
+        :items="tabs"
+        @select-tab="selectPanel"
+      />
       <ScreenshotPropertiesPanel :title="panelTitle">
         <template v-if="selectedLayer" #footer>
           <PropertiesDeleteAction
@@ -229,19 +225,7 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
           </div>
         </template>
         <fieldset class="layer-properties" :disabled="selectedLayer?.locked && panel !== 'settings'">
-          <ElementsPanel v-if="panel === 'shapes' || panel === 'cursor'" :disabled="busy || cropping">
-            <template #tools
-              ><Button
-                block
-                size="sm"
-                variant="secondary"
-                :icon="MousePointer2"
-                :disabled="busy || cropping"
-                @click="cursors.add(elementsText('cursor'))"
-                >{{ elementsText('cursor') }}</Button
-              ></template
-            >
-          </ElementsPanel>
+          <ElementClipControls v-if="panel === 'shapes' || panel === 'cursor'" />
           <div v-if="panel === 'shapes' && effects.selected.value" class="effect-properties">
             <BlurPropertiesPanel
               :clip="{ ...effects.selected.value, cornerRadius: effects.selected.value.cornerRadius ?? 0 }"
@@ -340,6 +324,7 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
           @ready="emit('ready')"
         >
           <template #overlay>
+            <UndoRedoToast :action="history.lastAction.value" class="screenshot-history-feedback" />
             <ScreenshotComposition
               v-if="!canvasFullscreen.isFullscreen.value"
               :layers="composition"
@@ -446,6 +431,9 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
   width: 320px;
   max-width: calc(100vw - 48px);
   padding: 16px;
+}
+.screenshot-history-feedback {
+  bottom: 76px;
 }
 .format-badge {
   color: var(--text-secondary);

@@ -26,7 +26,7 @@ export function registerScreenshotEditorHistoryAndFooterTests(
     vi.stubGlobal('crypto', { randomUUID: () => 'footer-shape' });
     const wrapper = mountEditor();
     await flushPromises();
-    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await wrapper.get('[aria-label="Clip"]').trigger('click');
     await clickText(wrapper, 'Arrow');
 
     const composition = wrapper.findComponent(ScreenshotCompositionStub);
@@ -71,7 +71,7 @@ export function registerScreenshotEditorHistoryAndFooterTests(
     vi.stubGlobal('crypto', { randomUUID: () => 'footer-cursor' });
     const wrapper = mountEditor();
     await flushPromises();
-    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await wrapper.get('[aria-label="Clip"]').trigger('click');
     await clickText(wrapper, 'Cursor');
 
     const composition = wrapper.findComponent(ScreenshotCompositionStub);
@@ -107,7 +107,7 @@ export function registerScreenshotEditorHistoryAndFooterTests(
     vi.stubGlobal('crypto', { randomUUID: () => 'history-shape' });
     const first = mountEditor();
     await flushPromises();
-    await first.get('[aria-label="Elements"]').trigger('click');
+    await first.get('[aria-label="Clip"]').trigger('click');
     await clickText(first, 'Arrow');
     const initialFill = canvasState(first).shapes[0]!.fillColor;
     await first.get('[data-testid="change-shape-style"]').trigger('click');
@@ -116,7 +116,8 @@ export function registerScreenshotEditorHistoryAndFooterTests(
     await clickText(first, 'Export');
     await first.get('[aria-label="Size preset"]').setValue('1:1');
     await first.vm.$nextTick();
-    await first.get('[aria-label="Image"]').trigger('click');
+    canvas(first).vm.$emit('select', 'screenshot');
+    await flushPromises();
     await clickText(first, 'Crop');
     const crop = { x: 0.2, y: 0.1, width: 0.6, height: 0.7 };
     canvas(first).vm.$emit('crop', crop);
@@ -165,6 +166,7 @@ export function registerScreenshotEditorHistoryAndFooterTests(
 
     await undoOnce();
     expect(canvasState(reopened).image.crop).toBeUndefined();
+    expect(reopened.get('.screenshot-history-feedback').text()).toBe('Undone: Crop · Image “Captured screen”');
     await undoOnce();
     expect(canvasState(reopened).canvas).toMatchObject({
       width: 1200,
@@ -174,10 +176,12 @@ export function registerScreenshotEditorHistoryAndFooterTests(
     expect(canvasState(reopened).shapes[0]?.fillColor).toBe(initialFill);
     await undoOnce();
     expect(canvasState(reopened).shapes).toEqual([]);
+    expect(reopened.get('.screenshot-history-feedback').text()).toBe('Undone: Add · Arrow');
     expect((redo.element as HTMLButtonElement).disabled).toBe(false);
 
     await redoOnce();
     expect(canvasState(reopened).shapes).toHaveLength(1);
+    expect(reopened.get('.screenshot-history-feedback').text()).toBe('Redone: Add · Arrow');
     await redoOnce();
     expect(canvasState(reopened).shapes[0]?.fillColor).toBe('#123456');
     await redoOnce();

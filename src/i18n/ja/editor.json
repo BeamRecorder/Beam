@@ -1,4 +1,16 @@
 {
+  "EditorSearch": {
+    "title": "エディター内を検索",
+    "placeholder": "操作、クリップ、設定を検索…",
+    "noResults": "結果がありません",
+    "insert": "追加",
+    "navigation": "セクション",
+    "selection": "プロジェクト項目",
+    "setting": "設定",
+    "unavailable": "この操作または設定は現在の選択では使用できません。",
+    "clips": "クリップ",
+    "action": "アクション"
+  },
   "LinkedClipsDeleteDialog": {
     "preview": "プレビュー",
     "selectPreview": "{name} をプレビュー",
@@ -281,7 +293,47 @@
   },
   "UndoRedoToast": {
     "undo": "元に戻す",
-    "redo": "やり直す"
+    "redo": "やり直す",
+    "undoAction": "元に戻しました：{action}",
+    "redoAction": "やり直しました：{action}",
+    "action": "{operation} · {item}",
+    "namedItem": "{kind} “{name}”",
+    "items": "{count} 個の項目",
+    "operations": {
+      "add": "追加",
+      "remove": "削除",
+      "edit": "編集",
+      "move": "移動",
+      "resize": "サイズ変更",
+      "crop": "切り抜き",
+      "timing": "長さと時間位置",
+      "visibility": "表示状態",
+      "reorder": "並べ替え",
+      "rename": "名前変更"
+    },
+    "targets": {
+      "screen": "画面録画",
+      "video": "動画",
+      "image": "画像",
+      "webcam": "カメラ",
+      "color": "色",
+      "shape": "図形",
+      "arrow": "矢印",
+      "text": "テキスト",
+      "drawing": "描画",
+      "blur": "ぼかし",
+      "highlight": "ハイライト",
+      "audio": "音声",
+      "caption": "字幕",
+      "keyboardCaption": "キー入力字幕",
+      "cursor": "カーソル",
+      "zoom": "ズーム",
+      "background": "背景",
+      "canvas": "キャンバス",
+      "layers": "レイヤー",
+      "export": "書き出し設定",
+      "changes": "変更"
+    }
   },
   "Updates": {
     "title": "アプリのアップデート",
@@ -298,7 +350,9 @@
     "updateAvailable": "バージョン{version}を利用できます。",
     "updateAvailableGeneric": "アップデートを利用できます。",
     "updateError": "アップデートを確認できません。",
-    "showDetails": "エラーの詳細"
+    "showDetails": "エラーの詳細",
+    "check": "確認",
+    "changelog": "変更履歴"
   },
   "VideoEditor": {
     "exportBanner": "書き出し中です。書き出し中のファイルにはライブ編集は反映されません。",
@@ -387,7 +441,7 @@
     "projection": "遠近感",
     "projection2d": "2D",
     "projection3d": "3D傾き",
-    "projectionDesc": "ズームのフォーカスに合わせて遠近感のある傾きを加えます。強さと水平方向／垂直方向を調整できます。プレビューと書き出しには同じレンダリングが使われます。",
+    "projectionDesc": "ズームのフォーカスに合わせて遠近感のある傾きを加えます。\n強さと水平方向／垂直方向を調整できます。プレビューと書き出しには同じレンダリングが使われます。",
     "tiltIntensity": "傾きの強さ",
     "tiltHorizontal": "左 / 右",
     "tiltVertical": "上 / 下",
@@ -396,6 +450,12 @@
     "tiltPresetMedium": "標準",
     "tiltPresetLarge": "強め",
     "tiltPresetCustom": "カスタム",
+    "tiltBack": "後ろに傾ける",
+    "tiltFront": "前に傾ける",
+    "tiltLeft": "左に傾ける",
+    "tiltRight": "右に傾ける",
+    "pullBack": "引く",
+    "pullFront": "近づける",
     "magnification": "拡大率",
     "zoomLevel": "ズームレベル",
     "motionBlur": "ズームのモーションブラー",

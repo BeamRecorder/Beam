@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, useId, watch } from 'vue';
 import AdvancedButton from '~/ui/button/AdvancedButton.vue';
+import RafRevealTransition from '~/ui/transitions/RafRevealTransition.vue';
 import Checkbox from '~/ui/checkbox/Checkbox.vue';
 import Input from '~/ui/input/Input.vue';
 import Select from '~/ui/select/Select.vue';
@@ -62,46 +63,48 @@ const sizeOptions = computed(() =>
       <h3>{{ t('dimensions') }}</h3>
       <AdvancedButton v-model:open="advanced" :controls="controlsId" :label="t('advanced')" />
     </div>
-    <div v-if="advanced" :id="controlsId" class="advanced-size">
-      <div class="dimensions">
-        <label
-          >{{ t('width')
-          }}<Input
-            :model-value="canvas.width"
-            type="number"
-            :min="1"
-            :max="16384"
-            :aria-label="t('width')"
-            @focus="startDimensionEdit"
-            @mousedown="startDimensionEdit"
-            @blur="endDimensionEdit"
-            @update:model-value="resizeDimension('width', $event)"
-        /></label>
-        <span class="dimension-separator" aria-hidden="true">×</span>
-        <label
-          >{{ t('height')
-          }}<Input
-            :model-value="canvas.height"
-            type="number"
-            :min="1"
-            :max="16384"
-            :aria-label="t('height')"
-            @focus="startDimensionEdit"
-            @mousedown="startDimensionEdit"
-            @blur="endDimensionEdit"
-            @update:model-value="resizeDimension('height', $event)"
-        /></label>
+    <RafRevealTransition mode="out-in">
+      <div v-if="advanced" :id="controlsId" class="advanced-size">
+        <div class="dimensions">
+          <label
+            >{{ t('width')
+            }}<Input
+              :model-value="canvas.width"
+              type="number"
+              :min="1"
+              :max="16384"
+              :aria-label="t('width')"
+              @focus="startDimensionEdit"
+              @mousedown="startDimensionEdit"
+              @blur="endDimensionEdit"
+              @update:model-value="resizeDimension('width', $event)"
+          /></label>
+          <span class="dimension-separator" aria-hidden="true">×</span>
+          <label
+            >{{ t('height')
+            }}<Input
+              :model-value="canvas.height"
+              type="number"
+              :min="1"
+              :max="16384"
+              :aria-label="t('height')"
+              @focus="startDimensionEdit"
+              @mousedown="startDimensionEdit"
+              @blur="endDimensionEdit"
+              @update:model-value="resizeDimension('height', $event)"
+          /></label>
+        </div>
+        <Checkbox v-model="keepAspect" :label="t('keepAspectRatio')" size="sm" />
       </div>
-      <Checkbox v-model="keepAspect" :label="t('keepAspectRatio')" size="sm" />
-    </div>
-    <Select
-      v-else
-      :model-value="selected"
-      :options="sizeOptions"
-      :aria-label="t('sizePreset')"
-      size="md"
-      @update:model-value="canvas = screenshotCanvasPreset(canvas, String($event), original)"
-    />
+      <Select
+        v-else
+        :model-value="selected"
+        :options="sizeOptions"
+        :aria-label="t('sizePreset')"
+        size="md"
+        @update:model-value="canvas = screenshotCanvasPreset(canvas, String($event), original)"
+      />
+    </RafRevealTransition>
   </section>
 </template>
 

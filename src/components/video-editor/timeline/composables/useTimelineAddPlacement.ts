@@ -1,4 +1,5 @@
 import { computed, reactive } from 'vue';
+import { useTimelineInsertPreference } from './useTimelineInsertPreference';
 import type { CaptionClip } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../../zoom/zoom-types';
 import type { TimelineTracksEmits, VisualTimelineTrack } from './timeline-tracks-types';
@@ -24,6 +25,7 @@ export function useTimelineAddPlacement(options: {
   timeAt: (clientX: number) => number;
   emit: TimelineTracksEmits;
 }) {
+  const { accepts } = useTimelineInsertPreference();
   const hoverPlacements = reactive<Record<string, Placement>>({});
   const targetKey = (target: BasicTarget | VisualTimelineTrack) =>
     typeof target === 'string' ? target : `visual:${target.id}`;
@@ -69,6 +71,7 @@ export function useTimelineAddPlacement(options: {
   const addAt = (event: MouseEvent, target: BasicTarget | VisualTimelineTrack) => {
     event.preventDefault();
     event.stopPropagation();
+    if (!accepts(event)) return;
     const placement = placementAt(event, target);
     if (!placement) return;
     if (target === 'zoom') options.emit('add:zoom', placement);

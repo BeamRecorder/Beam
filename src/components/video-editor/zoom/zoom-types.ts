@@ -1,3 +1,5 @@
+import type { ZoomTiltDirectionPreset } from './zoom-tilt-preset-types';
+
 export interface ZoomFocus {
   cx: number;
   cy: number;
@@ -6,7 +8,7 @@ export interface ZoomFocus {
 export type ZoomDepth = 1 | 2 | 3 | 4 | 5 | 6;
 export type ZoomMode = 'auto' | 'manual';
 export type ZoomProjection = '2d' | '3d';
-export type ZoomTiltPreset = 'small' | 'medium' | 'large' | 'custom';
+export type ZoomTiltPreset = 'small' | 'medium' | 'large' | 'custom' | ZoomTiltDirectionPreset;
 
 export const ZOOM_DEPTH_SCALES: Record<ZoomDepth, number> = {
   1: 1.25,
@@ -123,6 +125,15 @@ export const normalizeZoomTiltAxis = (value: unknown, fallback: number): number 
   typeof value === 'number' && Number.isFinite(value) ? Math.min(1, Math.max(-1, value)) : fallback;
 export const normalizeZoomTiltPreset = (value: unknown, intensity: unknown): ZoomTiltPreset => {
   if (value === 'small' || value === 'medium' || value === 'large' || value === 'custom') return value;
+  if (
+    value === 'tilt-back' ||
+    value === 'tilt-front' ||
+    value === 'tilt-left' ||
+    value === 'tilt-right' ||
+    value === 'pull-back' ||
+    value === 'pull-front'
+  )
+    return value;
   const normalizedIntensity = normalizeZoomTiltIntensity(intensity);
   const matched = Object.entries(ZOOM_TILT_PRESET_INTENSITIES).find(
     ([, presetIntensity]) => Math.abs(presetIntensity - normalizedIntensity) < 1e-6,

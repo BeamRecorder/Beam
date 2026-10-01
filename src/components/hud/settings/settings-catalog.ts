@@ -86,6 +86,15 @@ const definitions = [
     'HudPreferences.autoFade',
     'HudPreferences.hiddenUntilHovered',
   ],
+  ['show-real-cursor', 'recording', 'CursorRecording.showRealCursor', 'CursorRecording.description'],
+  [
+    'hide-taskbar',
+    'recording',
+    'ScreenRegionOverlay.hideTaskbar',
+    'ScreenRegionOverlay.hideDock',
+    'ScreenRegionOverlay.captureOnly',
+  ],
+  ['hide-desktop-icons', 'recording', 'ScreenRegionOverlay.hideDesktopIcons', 'ScreenRegionOverlay.captureOnly'],
   ['countdown', 'recording', 'HudPreferences.countdown', 'HudPreferences.selectDelay', 'HudPreferences.off'],
   [
     'interactions',

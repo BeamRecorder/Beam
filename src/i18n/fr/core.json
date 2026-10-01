@@ -1,4 +1,11 @@
 {
+  "ColorPicker": {
+    "color": "Couleur",
+    "close": "Fermer",
+    "eyedropper": "Pipette",
+    "colorFormat": "Format couleur",
+    "eyedropperError": "Impossible de sélectionner une couleur à l’écran. Réessaie."
+  },
   "VoiceoverRecorder": {
     "record": "Enregistrer",
     "pause": "Pause",
@@ -344,6 +351,7 @@
     "crop": "Recadrage"
   },
   "CursorPanel": {
+    "appearance": "Apparence",
     "cursorStyle": "Style du curseur",
     "cursorSize": "Taille du curseur",
     "autoHideCursor": "Masquer automatiquement le curseur",
@@ -357,7 +365,7 @@
     "shadowColor": "Couleur de l’ombre",
     "direction": "Direction",
     "clickSpring": "Rebond au clic",
-    "clicks": "Cliques",
+    "clicks": "Clics",
     "clicksDescription": "Réglez séparément les effets du clic gauche et du clic droit.",
     "leftClick": "Clic gauche",
     "rightClick": "Clic droit",
@@ -744,7 +752,7 @@
     "title": "Apparence",
     "subtitle": "Personnalisez thèmes, couleurs, rayon de courbure et surfaces",
     "customization": "Personnalisation",
-    "themeMode": "Mode du thème",
+    "themeMode": "Thème",
     "uiScale": "Échelle de l’interface",
     "uiScaleHint": "Redimensionne les contrôles de l’éditeur sans modifier la vidéo exportée.",
     "advancedScaling": "Échelle avancée",
@@ -775,7 +783,9 @@
     "toneSlate": "Ardoise",
     "toneDeep": "Sombre profond",
     "resetDefault": "Réinitialiser par défaut",
-    "custom": "Sur-mesure"
+    "custom": "Sur-mesure",
+    "systemDescription": "Système suit l’apparence claire ou sombre de votre appareil.",
+    "uiScaleGlobal": "Taille de l’interface (globale)"
   },
   "Onboarding": {
     "titlebarTitle": "Beam • Prise en main",
@@ -1084,5 +1094,16 @@
     "tipInstant": "Essaie Instant pour une vidéo prête à partager.",
     "tipShortcuts": "Personnalise tes raccourcis dans les paramètres.",
     "tipProjects": "Ouvre un projet existant pour poursuivre le montage."
+  },
+  "EditorAccessibility": {
+    "title": "Accessibilité",
+    "doubleClick": "Double-clic pour ajouter des clips",
+    "doubleClickDescription": "Ajoutez des zooms, sous-titres et éléments visuels aux pistes vides de la timeline avec un double-clic."
+  },
+  "CursorRecording": {
+    "showRealCursor": "Afficher le curseur réel",
+    "description": "Enregistre le curseur système directement dans la vidéo. Les zooms automatiques continuent de le suivre. Le curseur Beam est désactivé au départ ; vous pouvez le superposer dans les paramètres Curseur. Le curseur enregistré ne peut pas être retiré.",
+    "customCursor": "Curseur personnalisé",
+    "overlayDescription": "Superpose le curseur Beam à la vidéo. Désactivez-le si la vidéo contient déjà le curseur système."
   }
 }

@@ -23,6 +23,9 @@ const props = withDefaults(defineProps<HudPreferenceProps>(), {
 });
 const emit = defineEmits<{
   'update:countdownSeconds': [number];
+  'update:showRealCursor': [boolean];
+  'update:hideTaskbar': [boolean];
+  'update:hideDesktopIcons': [boolean];
   'update:alwaysOnTop': [boolean];
   'update:recordingBarVisibility': [RecordingBarVisibility];
   'update:recordInteractions': [boolean];
@@ -68,6 +71,12 @@ onMounted(focusSetting);
         <RecordingPreferences
           v-else-if="view === 'recording'"
           :countdown-seconds="countdownSeconds"
+          :show-real-cursor="showRealCursor"
+          :hide-taskbar="hideTaskbar"
+          :hide-desktop-icons="hideDesktopIcons"
+          @update:hide-taskbar="emit('update:hideTaskbar', $event)"
+          @update:hide-desktop-icons="emit('update:hideDesktopIcons', $event)"
+          @update:show-real-cursor="emit('update:showRealCursor', $event)"
           :always-on-top="alwaysOnTop"
           :recording-bar-visibility="recordingBarVisibility"
           @update:countdown-seconds="emit('update:countdownSeconds', $event)"

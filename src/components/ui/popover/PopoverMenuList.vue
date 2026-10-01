@@ -138,6 +138,7 @@ const handleKeydown = (event: KeyboardEvent, item: PopoverMenuItem) => {
   max-width: min(280px, calc(100vw - 16px));
   padding: 4px;
   background: var(--color-bg-element);
+  border-radius: var(--radius-md);
   box-sizing: border-box;
 }
 .menu-entry {
@@ -173,7 +174,7 @@ const handleKeydown = (event: KeyboardEvent, item: PopoverMenuItem) => {
 .menu-item-icon {
   width: 14px;
   height: 14px;
-  color: var(--color-primary);
+  color: var(--text-secondary);
 }
 .item-label {
   min-width: 0;
@@ -187,9 +188,16 @@ const handleKeydown = (event: KeyboardEvent, item: PopoverMenuItem) => {
   color: var(--text-muted);
 }
 .menu-item:hover:not(:disabled),
-.menu-item:focus-visible:not(:disabled),
-.menu-item.active {
+.menu-item:focus-visible:not(:disabled) {
   outline: none;
+  background: var(--color-bg-surface-hover);
+  color: var(--text-primary);
+}
+.menu-item:focus-visible {
+  outline: 2px solid var(--color-border-strong);
+  outline-offset: -2px;
+}
+.menu-item.active {
   background: var(--color-primary-light);
   color: var(--color-primary);
 }

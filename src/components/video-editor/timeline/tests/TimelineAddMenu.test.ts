@@ -28,21 +28,18 @@ describe('TimelineAddMenu', () => {
       id: string;
       children?: Array<{ id: string }>;
     }>;
-    expect(items.map((item) => item.id)).toEqual(['video', 'elements', 'audio']);
-    expect(items[0]?.children).toBeUndefined();
-    expect(items[1]?.children?.map((item) => item.id)).toEqual([
+    expect(items.map((item) => item.id)).toEqual(['video', 'insert-elements', 'insert-audio']);
+    expect(items[1]!.children?.map((item) => item.id)).toEqual([
+      'text',
       'shape',
       'arrow',
-      'text',
       'drawing',
+      'image',
       'highlight',
       'blur',
       'color',
-      'image',
     ]);
-    expect(items[2]?.children?.map((item) => item.id)).toEqual(['sound', 'voiceover']);
-    expect(items.flatMap((item) => item.children ?? []).filter((child) => child.id === 'text')).toHaveLength(1);
-    expect(items.some((item) => item.id === 'caption')).toBe(false);
+    expect(items[2]!.children?.map((item) => item.id)).toEqual(['sound', 'voiceover']);
 
     await wrapper.get('.add-trigger').trigger('click');
     menu.vm.$emit('select', 'drawing');

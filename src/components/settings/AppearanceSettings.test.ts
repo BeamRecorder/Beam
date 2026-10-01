@@ -43,7 +43,7 @@ describe('AppearanceSettings.vue', () => {
 
     const modeButtons = wrapper.findAll('.theme-mode-group button');
     expect(wrapper.get('.theme-mode-group').classes()).toContain('has-indicator');
-    expect(wrapper.get('.theme-mode-group').attributes('role')).toBe('group');
+    expect(wrapper.get('.theme-mode-group').attributes('role')).toBe('radiogroup');
     expect(modeButtons.map((button) => button.text())).toEqual(['Light', 'Dark', 'System']);
     await modeButtons[1].trigger('click');
     expect(store.theme).toBe('dark');
@@ -58,12 +58,10 @@ describe('AppearanceSettings.vue', () => {
     await flushPromises();
     const store = useThemeStore();
 
-    const advancedTrigger = wrapper.get('.advanced-toggle');
+    const advancedTrigger = wrapper.get('.scaling-settings > .section-title-row .advanced-toggle');
     expect(advancedTrigger.attributes('aria-expanded')).toBe('false');
-    expect(wrapper.find('.appearance-advanced-panel').exists()).toBe(false);
-    await advancedTrigger.trigger('click');
-    expect(advancedTrigger.attributes('aria-expanded')).toBe('true');
-    expect(wrapper.find('.appearance-advanced-panel').exists()).toBe(true);
+    expect(wrapper.find('.ui-scale-slider').exists()).toBe(true);
+    expect(wrapper.find('.scale-overrides').exists()).toBe(false);
 
     const globalSlider = wrapper.get('.ui-scale-slider input[type="range"]');
     expect(wrapper.get('.ui-scale-slider.slider-wrapper').classes()).toContain('size-default');
@@ -89,6 +87,8 @@ describe('AppearanceSettings.vue', () => {
     expect(store.uiScaleGlobal).toBe(125);
     expect(store.resolvedUiScale('topbar')).toBe(125);
 
+    expect(wrapper.findAll('.scale-override-row')).toHaveLength(0);
+    await advancedTrigger.trigger('click');
     expect(wrapper.findAll('.scale-override-row')).toHaveLength(5);
 
     const topbarRow = wrapper.get('.scale-override-row:first-child');
@@ -121,7 +121,6 @@ describe('AppearanceSettings.vue', () => {
       const wrapper = mount(AppearanceSettings);
       await flushPromises();
       const store = useThemeStore();
-      await wrapper.get('.advanced-toggle').trigger('click');
       capture.updatePreferences.mockClear();
       const slider = wrapper.get('.ui-scale-slider input[type="range"]');
       const inputOnly = async (value: number) => {
@@ -144,7 +143,7 @@ describe('AppearanceSettings.vue', () => {
     }
   });
 
-  it('keeps Advanced closed and opens scaling and theme customization categories together', async () => {
+  it('keeps theme and scaling disclosures separate', async () => {
     const wrapper = mount(AppearanceSettings);
     await flushPromises();
 
@@ -154,9 +153,10 @@ describe('AppearanceSettings.vue', () => {
 
     await trigger.trigger('click');
     expect(trigger.attributes('aria-expanded')).toBe('true');
-    wrapper.get('.appearance-advanced-panel .advanced-category.ui-scale-setting');
+    expect(wrapper.find('.ui-scale-slider').exists()).toBe(true);
+    expect(wrapper.find('.scale-overrides').exists()).toBe(false);
     wrapper.get('.appearance-advanced-panel .theme-customization-section');
-    expect(wrapper.findAll('.appearance-advanced-panel .advanced-category')).toHaveLength(2);
+    expect(wrapper.findAll('.appearance-advanced-panel .advanced-category')).toHaveLength(1);
     expect(wrapper.find('.appearance-advanced-panel .accordion').exists()).toBe(false);
   });
 
@@ -175,7 +175,7 @@ describe('AppearanceSettings.vue', () => {
     const wrapper = mount(AppearanceSettings);
     await flushPromises();
 
-    await wrapper.get('.advanced-toggle').trigger('click');
+    await wrapper.get('.scaling-settings > .section-title-row .advanced-toggle').trigger('click');
 
     expect(wrapper.find('.ui-scale-setting').exists()).toBe(true);
     expect(wrapper.find('.ui-scale-slider').exists()).toBe(true);

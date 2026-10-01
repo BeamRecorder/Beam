@@ -12,7 +12,7 @@ vi.mock('~/ui/toast/toastStore', () => ({ useToastStore: () => toast }));
 
 const Select = {
   name: 'TestSelect',
-  props: ['modelValue', 'options', 'disabled'],
+  props: ['modelValue', 'options', 'disabled', 'showPreviewIndicator'],
   emits: ['update:modelValue', 'preview:modelValue'],
   template: `
     <select class="cursor-select" :value="modelValue" :disabled="disabled"
@@ -22,10 +22,10 @@ const Select = {
   `,
 };
 const BigSlider = {
-  props: ['label', 'modelValue', 'defaultValue', 'min', 'max'],
+  props: ['label', 'modelValue', 'defaultValue', 'min', 'max', 'formatValue'],
   emits: ['update:modelValue'],
   template:
-    '<div class="cursor-slider" :data-label="label" :data-value="modelValue" :data-default="defaultValue" :data-min="min" :data-max="max"><button class="slider-change" @click="$emit(\'update:modelValue\', modelValue + 1)" /></div>',
+    '<div class="cursor-slider" :data-label="label" :data-value="modelValue" :data-default="defaultValue" :data-min="min" :data-max="max">{{ formatValue(modelValue) }}<button class="slider-change" @click="$emit(\'update:modelValue\', modelValue + 1)" /></div>',
 };
 const ColorInput = {
   props: ['label', 'modelValue'],
@@ -48,7 +48,8 @@ const Button = {
 const AdvancedButton = {
   props: ['open', 'controls', 'label'],
   emits: ['update:open'],
-  template: '<button class="advanced-toggle" @click="$emit(\'update:open\', !open)">{{ label }}</button>',
+  template:
+    '<button class="advanced-toggle" :aria-expanded="open" :aria-controls="controls" @click="$emit(\'update:open\', !open)">{{ label }}</button>',
 };
 const ShadowDirectionGroup = {
   props: ['modelValue'],
@@ -57,7 +58,7 @@ const ShadowDirectionGroup = {
     '<button class="shadow-direction" :data-value="modelValue" @click="$emit(\'update:modelValue\', \'top-left\')" />',
 };
 const Divider = { template: '<div class="divider" />' };
-const BlurRevealTransition = { template: '<div class="transition"><slot /></div>' };
+const RafRevealTransition = { template: '<div class="transition"><slot /></div>' };
 const Popover = { template: '<div><slot name="trigger" /><slot /></div>' };
 const global = {
   stubs: {
@@ -69,7 +70,7 @@ const global = {
     AdvancedButton,
     ShadowDirectionGroup,
     Divider,
-    BlurRevealTransition,
+    RafRevealTransition,
     Popover,
   },
 };
@@ -124,7 +125,9 @@ describe('CursorAppearanceControls', () => {
     const selects = wrapper.findAll('select.cursor-select');
 
     expect(selects).toHaveLength(2);
-    expect(wrapper.find('.advanced-toggle').exists()).toBe(false);
+    expect(wrapper.findAllComponents(Select).every((select) => !select.props('showPreviewIndicator'))).toBe(true);
+    expect(wrapper.find('[aria-controls="cursor-advanced-panel"]').exists()).toBe(false);
+    expect(wrapper.find('#cursor-shadow-options').exists()).toBe(true);
     expect(selects[1]!.findAll('option').map((option) => option.element.value)).toEqual(['default', 'pointer']);
     await selects[1]!.setValue('default');
 
@@ -142,6 +145,41 @@ describe('CursorAppearanceControls', () => {
     const wrapper = mount(CursorAppearanceControls, { props: { ...baseProps() }, global });
 
     expect(wrapper.find('.cursor-size-control').attributes('data-max')).toBe('384');
+  });
+
+  it('shows shadow options only while enabled, without an Advanced button', async () => {
+    const wrapper = mount(CursorAppearanceControls, { props: { ...baseProps({ enableShadow: false }) }, global });
+    expect(wrapper.find('.divider').exists()).toBe(false);
+    expect(wrapper.find('[aria-controls="cursor-shadow-options"]').exists()).toBe(false);
+    expect(wrapper.find('#cursor-shadow-options').exists()).toBe(false);
+    await wrapper.get('.cursor-switch').trigger('click');
+    expect(wrapper.emitted('update:enableShadow')).toEqual([[true]]);
+    await wrapper.setProps({ enableShadow: true });
+    expect(wrapper.find('#cursor-shadow-options').exists()).toBe(true);
+    expect(wrapper.find('.shadow-options .advanced-toggle').exists()).toBe(false);
+    await wrapper.get('.cursor-switch').trigger('click');
+    await wrapper.setProps({ enableShadow: false });
+    expect(wrapper.find('#cursor-shadow-options').exists()).toBe(false);
+  });
+
+  it('shows saved shadow values immediately on mount and keeps them through off/on changes', async () => {
+    const wrapper = mount(CursorAppearanceControls, {
+      props: baseProps({ shadowBlur: 13, shadowColor: '#123456', shadowDirection: 'top-left' }),
+      global,
+    });
+    const expectValues = () => {
+      expect(wrapper.get('#cursor-shadow-options .cursor-slider').attributes('data-value')).toBe('13');
+      expect(wrapper.get('#cursor-shadow-options .cursor-color').attributes('data-value')).toBe('#123456');
+      expect(wrapper.get('#cursor-shadow-options .shadow-direction').attributes('data-value')).toBe('top-left');
+    };
+    expectValues();
+    await wrapper.setProps({ enableShadow: false });
+    expect(wrapper.find('#cursor-shadow-options').exists()).toBe(false);
+    await wrapper.setProps({ enableShadow: true });
+    expectValues();
+    expect(wrapper.emitted('update:shadowBlur')).toBeUndefined();
+    expect(wrapper.emitted('update:shadowColor')).toBeUndefined();
+    expect(wrapper.emitted('update:shadowDirection')).toBeUndefined();
   });
 
   it('switches static layers to the new pack fixed default when the selected style is missing', async () => {
@@ -233,7 +271,7 @@ describe('CursorAppearanceControls', () => {
     ).toBe(false);
   });
 
-  it('forwards size, tint, shadow, and direction changes from the shared controls', () => {
+  it('forwards size, tint, shadow, and direction changes from the shared controls', async () => {
     const wrapper = mount(CursorAppearanceControls, { props: { ...baseProps() }, global });
     const sliders = wrapper.findAllComponents(BigSlider);
     const colors = wrapper.findAllComponents(ColorInput);
@@ -263,6 +301,8 @@ describe('CursorAppearanceControls', () => {
     await wrapper.get('.advanced-toggle').trigger('click');
 
     const selects = wrapper.findAllComponents(Select);
+    expect(selects[0]!.props('showPreviewIndicator')).not.toBe(true);
+    expect(selects[1]!.props('showPreviewIndicator')).toBe(true);
     expect(selects[1]!.props('options').map((option: { value: string }) => option.value)).toContain('__automatic__');
     selects[1]!.vm.$emit('preview:modelValue', 'pointer');
     selects[1]!.vm.$emit('preview:modelValue', '__automatic__');

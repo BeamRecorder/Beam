@@ -1,4 +1,16 @@
 {
+  "EditorSearch": {
+    "title": "एडिटर में खोजें",
+    "placeholder": "क्रियाएँ, क्लिप और सेटिंग खोजें…",
+    "noResults": "कोई परिणाम नहीं",
+    "insert": "जोड़ें",
+    "navigation": "अनुभाग",
+    "selection": "प्रोजेक्ट आइटम",
+    "setting": "सेटिंग्स",
+    "unavailable": "यह क्रिया या सेटिंग वर्तमान चयन के लिए उपलब्ध नहीं है।",
+    "clips": "क्लिप",
+    "action": "क्रियाएँ"
+  },
   "LinkedClipsDeleteDialog": {
     "preview": "पूर्वावलोकन",
     "selectPreview": "{name} का पूर्वावलोकन",
@@ -281,7 +293,47 @@
   },
   "UndoRedoToast": {
     "undo": "अनडू",
-    "redo": "रीडू"
+    "redo": "रीडू",
+    "undoAction": "पूर्ववत किया: {action}",
+    "redoAction": "फिर से किया: {action}",
+    "action": "{operation} · {item}",
+    "namedItem": "{kind} “{name}”",
+    "items": "{count} आइटम",
+    "operations": {
+      "add": "जोड़ना",
+      "remove": "हटाना",
+      "edit": "संपादन",
+      "move": "स्थान बदलना",
+      "resize": "आकार बदलना",
+      "crop": "क्रॉप करना",
+      "timing": "अवधि और समय स्थिति",
+      "visibility": "दृश्यता",
+      "reorder": "क्रम बदलना",
+      "rename": "नाम बदलना"
+    },
+    "targets": {
+      "screen": "स्क्रीन रिकॉर्डिंग",
+      "video": "वीडियो",
+      "image": "छवि",
+      "webcam": "कैमरा",
+      "color": "रंग",
+      "shape": "आकृति",
+      "arrow": "तीर",
+      "text": "टेक्स्ट",
+      "drawing": "चित्र",
+      "blur": "धुंधलापन",
+      "highlight": "हाइलाइट",
+      "audio": "ऑडियो",
+      "caption": "कैप्शन",
+      "keyboardCaption": "कीबोर्ड कैप्शन",
+      "cursor": "कर्सर",
+      "zoom": "ज़ूम",
+      "background": "पृष्ठभूमि",
+      "canvas": "कैनवास",
+      "layers": "लेयर",
+      "export": "निर्यात सेटिंग",
+      "changes": "बदलाव"
+    }
   },
   "Updates": {
     "title": "ऐप अपडेट",
@@ -298,7 +350,9 @@
     "updateAvailable": "वर्ज़न {version} उपलब्ध है।",
     "updateAvailableGeneric": "एक अपडेट उपलब्ध है।",
     "updateError": "अपडेट जाँचा नहीं जा सका।",
-    "showDetails": "त्रुटि विवरण"
+    "showDetails": "त्रुटि विवरण",
+    "check": "जाँचें",
+    "changelog": "बदलाव"
   },
   "VideoEditor": {
     "exportBanner": "एक्सपोर्ट हो रहा है। लाइव एडिटिंग से वर्तमान एक्सपोर्ट प्रभावित नहीं होगा।",
@@ -387,7 +441,7 @@
     "projection": "परिप्रेक्ष्य",
     "projection2d": "2D",
     "projection3d": "3D टिल्ट",
-    "projectionDesc": "ज़ूम फ़ोकस के अनुसार परिप्रेक्ष्य टिल्ट जोड़ता है। इसकी तीव्रता और क्षैतिज/ऊर्ध्वाधर दिशा समायोजित करें। पूर्वावलोकन और एक्सपोर्ट में एक ही रेंडरिंग का उपयोग होता है।",
+    "projectionDesc": "ज़ूम फ़ोकस के अनुसार परिप्रेक्ष्य टिल्ट जोड़ता है।\nइसकी तीव्रता और क्षैतिज/ऊर्ध्वाधर दिशा समायोजित करें। पूर्वावलोकन और एक्सपोर्ट में एक ही रेंडरिंग का उपयोग होता है।",
     "tiltIntensity": "टिल्ट की तीव्रता",
     "tiltHorizontal": "बाएँ / दाएँ",
     "tiltVertical": "ऊपर / नीचे",
@@ -396,6 +450,12 @@
     "tiltPresetMedium": "मध्यम",
     "tiltPresetLarge": "ज़ोरदार",
     "tiltPresetCustom": "कस्टम",
+    "tiltBack": "पीछे झुकाएँ",
+    "tiltFront": "आगे झुकाएँ",
+    "tiltLeft": "बाएँ झुकाएँ",
+    "tiltRight": "दाएँ झुकाएँ",
+    "pullBack": "पीछे खींचें",
+    "pullFront": "आगे खींचें",
     "magnification": "मैग्निफ़िकेशन",
     "zoomLevel": "ज़ूम स्तर",
     "motionBlur": "ज़ूम मोशन ब्लर",

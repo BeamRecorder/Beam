@@ -179,6 +179,27 @@ const baseOptions = (): UseCursorOverlayOptions => ({
   onRenderOnce: vi.fn(),
 });
 
+it('can disable the Beam overlay while retaining recorded cursor telemetry', async () => {
+  const enabled = ref(false);
+  const options = baseOptions();
+  const cursor = options.editorData()!.cursor;
+  getCursorImage.mockClear().mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
+  const overlay = useCursorOverlay({ ...options, enabled: () => enabled.value });
+  const disabled = drawOverlay(overlay);
+  expect(disabled.drawImage).not.toHaveBeenCalled();
+  expect(disabled.arc).not.toHaveBeenCalled();
+  expect(overlay.cursorBounds.value).toBeNull();
+  expect(cursor.available).toBe(true);
+  expect(cursor.events.length).toBeGreaterThan(0);
+  enabled.value = true;
+  drawOverlay(overlay);
+  await settleCursorImage();
+  expect(drawOverlay(overlay).drawImage).toHaveBeenCalled();
+  enabled.value = false;
+  expect(drawOverlay(overlay).drawImage).not.toHaveBeenCalled();
+  expect(overlay.cursorBounds.value).toBeNull();
+});
+
 describe('useCursorOverlay', () => {
   it('formats ripple colors and loads the current cursor image', async () => {
     expect(getRippleStyleColor('#12ab34', 0.5)).toBe('rgba(18, 171, 52, 0.5)');

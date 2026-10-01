@@ -33,6 +33,16 @@ describe('Dialog', () => {
     wrapper.unmount();
   });
 
+  it('offers the compact command presentation without the scaled modal or redundant header', async () => {
+    const wrapper = mountDialog({ title: 'Search', presentation: 'command' });
+    await nextTick();
+    expect(document.body.querySelector('.command-content')).not.toBeNull();
+    expect(document.body.querySelector('.command-overlay')).not.toBeNull();
+    expect(document.body.querySelector('.dialog-header')).toBeNull();
+    expect(document.body.querySelector('[role="dialog"]')?.getAttribute('aria-label')).toBe('Search');
+    wrapper.unmount();
+  });
+
   it('locks body scrolling while open and closes on Escape only when open', async () => {
     const wrapper = mountDialog();
     await wrapper.setProps({ isOpen: false });

@@ -50,6 +50,8 @@ export function useProjectEditorState(options: {
   cursorEffects: Ref<CursorClickEffects>;
   cursorMotion: Ref<CursorMotionSettings>;
   cursorAutoHide: Ref<CursorAutoHideSettings>;
+  cursorEnabled: Ref<boolean>;
+  nativeCursorEmbedded?: () => boolean;
   cursorSelection: Ref<CursorSelection>;
   cursorSize: Ref<number>;
   cursorColor: Ref<string>;
@@ -94,6 +96,7 @@ export function useProjectEditorState(options: {
       blurPercent: Math.max(0, Math.min(100, Math.round(options.backgroundBlurPercent.value))),
       importedBackgrounds: [],
       cursor: {
+        enabled: options.cursorEnabled.value,
         selection: clone(options.cursorSelection.value),
         size: options.cursorSize.value,
         color: options.cursorColor.value,
@@ -205,6 +208,8 @@ export function useProjectEditorState(options: {
       options.backgroundBlurPercent.value = Math.max(0, Math.min(100, Number(state.presentation.blurPercent) || 0));
       options.canvas.value = state.presentation.canvas;
       const cursor = state.presentation.cursor;
+      options.cursorEnabled.value =
+        loadedState.isFresh && options.nativeCursorEmbedded?.() ? false : cursor.enabled !== false;
       options.cursorSelection.value = clone(cursor.selection);
       options.cursorSize.value = cursor.size;
       options.cursorColor.value = cursor.color;
@@ -247,6 +252,7 @@ export function useProjectEditorState(options: {
       options.cursorEffects,
       options.cursorMotion,
       options.cursorAutoHide,
+      options.cursorEnabled,
       options.cursorSelection,
       options.cursorSize,
       options.cursorColor,

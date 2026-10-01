@@ -197,7 +197,7 @@ onBeforeUnmount(() => {
   font-size: 0.75rem;
   font-weight: 600;
   max-width: min(260px, calc(100vw - 24px));
-  white-space: normal;
+  white-space: pre-line;
   overflow-wrap: break-word;
   word-break: normal;
   line-height: 1.35;

@@ -61,7 +61,13 @@ const positions = [
     <div v-if="value.enabled" class="options">
       <div class="option">
         <span class="option-label">{{ t('watermarkText') }}</span>
-        <ButtonGroup full>
+        <ButtonGroup
+          full
+          :selection="{
+            count: textChoices.length,
+            index: textChoices.findIndex((choice) => choice.value === value.text),
+          }"
+        >
           <Button
             v-for="choice in textChoices"
             :key="choice.value"
@@ -105,7 +111,13 @@ const positions = [
       </div>
       <div class="option">
         <span class="option-label">{{ t('watermarkPosition') }}</span
-        ><ButtonGroup full :aria-label="t('watermarkPosition')"
+        ><ButtonGroup
+          full
+          :aria-label="t('watermarkPosition')"
+          :selection="{
+            count: positions.length,
+            index: positions.findIndex((position) => position.value === value.position),
+          }"
           ><Button
             v-for="position in positions"
             :key="position.value"

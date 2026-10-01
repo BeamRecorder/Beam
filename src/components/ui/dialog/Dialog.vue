@@ -24,11 +24,13 @@ const props = withDefaults(
     title?: string;
     size?: 'sm' | 'md' | 'lg' | 'xl';
     closeOnOverlayClick?: boolean;
+    presentation?: 'default' | 'command';
   }>(),
   {
     title: '',
     size: 'md',
     closeOnOverlayClick: true,
+    presentation: 'default',
   },
 );
 
@@ -109,22 +111,24 @@ onUnmounted(() => {
       <div
         v-if="isOpen"
         class="dialog-overlay"
+        :class="{ 'command-overlay': presentation === 'command' }"
         :data-popover-owner="popoverOwner"
         @mousedown="handleOverlayMouseDown"
         @mouseup="handleOverlayMouseUp"
       >
-        <Transition name="scale-modal" appear>
+        <Transition :name="presentation === 'command' ? 'command-modal' : 'scale-modal'" appear>
           <div
             ref="content"
             tabindex="-1"
             class="dialog-content"
-            :class="size"
+            :class="[size, { 'command-content': presentation === 'command' }]"
             @mousedown.stop
             @mouseup.stop
             role="dialog"
             aria-modal="true"
+            :aria-label="title || undefined"
           >
-            <header class="dialog-header">
+            <header v-if="presentation !== 'command'" class="dialog-header">
               <h3 v-if="title" class="dialog-title">{{ title }}</h3>
               <button type="button" class="dialog-close" @click="close" :aria-label="t('close')">
                 <X class="close-icon" />
@@ -275,5 +279,37 @@ onUnmounted(() => {
 .scale-modal-leave-from {
   transform: scale(1);
   opacity: 1;
+}
+.command-overlay {
+  align-items: flex-start;
+  padding-top: min(18vh, 140px);
+}
+.dialog-content.command-content {
+  max-width: 480px;
+}
+.command-content .dialog-body {
+  padding: 0;
+  overflow: hidden;
+}
+.command-modal-enter-active,
+.command-modal-leave-active {
+  transition:
+    opacity 160ms ease,
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.command-modal-enter-from,
+.command-modal-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .command-modal-enter-active,
+  .command-modal-leave-active {
+    transition: none;
+  }
+  .command-modal-enter-from,
+  .command-modal-leave-to {
+    transform: none;
+  }
 }
 </style>

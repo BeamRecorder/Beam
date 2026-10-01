@@ -211,7 +211,17 @@ export interface ZoomElement {
   tiltIntensity?: number;
   tiltHorizontal?: number;
   tiltVertical?: number;
-  tiltPreset?: 'small' | 'medium' | 'large' | 'custom';
+  tiltPreset?:
+    | 'small'
+    | 'medium'
+    | 'large'
+    | 'custom'
+    | 'tilt-back'
+    | 'tilt-front'
+    | 'tilt-left'
+    | 'tilt-right'
+    | 'pull-back'
+    | 'pull-front';
 }
 
 export interface ProjectZoomState {
@@ -249,6 +259,7 @@ export interface SessionTrackData {
 }
 
 export interface SessionManifestData {
+  cursorEmbedded?: boolean;
   schemaVersion: number;
   projectId: string;
   sessionId: string;

@@ -10,6 +10,7 @@ const props = withDefaults(
   defineProps<{
     showIcon?: boolean;
     center?: boolean;
+    compact?: boolean;
   }>(),
   {
     showIcon: false,
@@ -19,6 +20,7 @@ const props = withDefaults(
 
 const { t } = useTranslate('Updates');
 const { t: tHud } = useTranslate('HUD');
+const { t: preferences } = useTranslate('HudPreferences');
 const state = ref<AppUpdateState | null>(null);
 const copiedError = ref(false);
 let copiedErrorTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -93,16 +95,16 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="update-controls" :class="{ 'update-centered': center }">
+  <div class="update-controls" :class="{ 'update-centered': center, 'update-compact': compact }">
     <div class="update-header" :class="{ 'header-centered': center }">
       <div v-if="showIcon" class="update-icon-wrap">
         <RefreshCw class="update-top-icon" :class="{ 'icon-spin': state?.status === 'checking' }" />
       </div>
       <span class="update-title">
-        {{ t('title') }}
+        {{ compact ? preferences('version') : t('title') }}
         <span v-if="state?.currentVersion" class="update-version">v{{ state.currentVersion }}</span>
       </span>
-      <p class="update-description">
+      <p v-if="!compact || state?.status !== 'idle'" class="update-description">
         <template v-if="state?.status === 'downloaded'">{{
           t('readyToRestart', { version: state.availableVersion })
         }}</template>
@@ -133,18 +135,22 @@ onBeforeUnmount(() => {
       </Button>
     </div>
     <div class="update-actions">
-      <Button variant="secondary" size="xs" :disabled="!state" @click="openChangelog" class="update-btn">
-        <template #icon><ExternalLink class="button-icon" /></template>
-        {{ t('viewChangelog') }}
-      </Button>
-      <Button v-if="state?.status === 'downloaded'" variant="primary" size="xs" @click="restart" class="update-btn">
+      <Button
+        v-if="state?.status === 'downloaded'"
+        variant="primary"
+        :size="compact ? 'sm' : 'xs'"
+        :block="compact"
+        @click="restart"
+        class="update-btn"
+      >
         <template #icon><RotateCcw class="button-icon" /></template>
         {{ t('restart') }}
       </Button>
       <Button
         v-else-if="state?.status === 'available'"
         variant="primary"
-        size="xs"
+        :size="compact ? 'sm' : 'xs'"
+        :block="compact"
         @click="download"
         class="update-btn"
       >
@@ -154,7 +160,8 @@ onBeforeUnmount(() => {
       <Button
         v-else
         variant="secondary"
-        size="xs"
+        :size="compact ? 'sm' : 'xs'"
+        :block="compact"
         :disabled="checkForUpdatesDisabled"
         :tooltip="checkForUpdatesTooltip"
         @click="refresh"
@@ -163,7 +170,19 @@ onBeforeUnmount(() => {
         <template #icon
           ><Download v-if="state?.status === 'downloading'" class="button-icon" /><RefreshCw v-else class="button-icon"
         /></template>
-        {{ state?.status === 'checking' ? t('checking') : t('checkForUpdates') }}
+        {{ state?.status === 'checking' ? t('checking') : compact ? t('check') : t('checkForUpdates') }}
+      </Button>
+      <Button
+        :variant="compact ? 'ghost' : 'secondary'"
+        :size="compact ? 'sm' : 'xs'"
+        :block="compact"
+        :disabled="!state"
+        @click="openChangelog"
+        class="update-btn changelog-btn"
+        :aria-label="t('viewChangelog')"
+      >
+        <template #icon><ExternalLink class="button-icon" /></template>
+        {{ compact ? t('changelog') : t('viewChangelog') }}
       </Button>
     </div>
   </div>
@@ -281,5 +300,34 @@ onBeforeUnmount(() => {
 .error-copy {
   align-self: flex-start;
   margin-top: 2px;
+}
+.update-compact {
+  gap: 12px;
+}
+.update-compact .update-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-size-body);
+  font-weight: var(--weight-title);
+}
+.update-compact .update-version {
+  margin-left: 0;
+  border: 0;
+  padding: 2px 6px;
+}
+.update-compact .update-description {
+  min-height: 0;
+  margin-top: 6px;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+.update-compact .update-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+.update-compact .changelog-btn {
+  color: var(--text-secondary);
 }
 </style>

@@ -28,6 +28,7 @@ const props = withDefaults(
     iconOnly?: boolean;
     wrap?: boolean;
     align?: 'center' | 'start';
+    contentLayout?: 'label' | 'custom';
   }>(),
   {
     variant: 'primary',
@@ -44,6 +45,7 @@ const props = withDefaults(
     iconOnly: false,
     wrap: false,
     align: 'center',
+    contentLayout: 'label',
   },
 );
 
@@ -87,6 +89,7 @@ const buttonClasses = computed(() => {
     { 'btn-block': props.block },
     { 'btn-icon-only': props.iconOnly },
     { 'btn-wrap': props.wrap },
+    { 'btn-custom-content': props.contentLayout === 'custom' },
     { 'btn-align-start': props.align === 'start' },
   ];
 });
@@ -115,7 +118,7 @@ const handleClick = (event: MouseEvent) => {
           }
         : {}
     "
-    :class="['btn-container', { 'btn-block': block }]"
+    :class="['btn-container', { 'btn-block': block, 'has-custom-content': contentLayout === 'custom' }]"
   >
     <component
       :is="href ? 'a' : 'button'"
@@ -304,20 +307,14 @@ const handleClick = (event: MouseEvent) => {
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-color: var(--color-border);
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.35),
-    0 1px 3px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-sm);
   color: var(--text-primary);
 }
 .btn-frosted:hover:not(:disabled) {
   background-color: color-mix(in srgb, var(--color-bg-surface-hover) 85%, transparent);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  box-shadow:
-    0 6px 20px rgba(0, 0, 0, 0.4),
-    0 0 14px rgba(255, 90, 31, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  border-color: var(--color-border-strong);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
 }
 .btn-frosted:active:not(:disabled) {
@@ -351,14 +348,14 @@ const handleClick = (event: MouseEvent) => {
   color: var(--text-primary);
 }
 
-.btn-card:hover:not(:disabled) {
-  border-color: var(--color-primary-border);
+.btn-card:hover:not(:disabled):not(.is-selected) {
+  border-color: var(--color-border-strong);
   transform: translateY(-1px);
   box-shadow: none;
 }
 
 .btn-card:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--text-secondary);
   outline-offset: 2px;
 }
 
@@ -472,6 +469,20 @@ const handleClick = (event: MouseEvent) => {
 .btn-align-start .btn-content {
   justify-content: flex-start;
   text-align: left;
+}
+.btn-custom-content {
+  height: 100%;
+  padding: 0;
+}
+.btn-custom-content .btn-content {
+  width: 100%;
+  height: 100%;
+}
+.btn-container.has-custom-content {
+  height: 100%;
+}
+.btn-custom-content .btn-content-label {
+  display: contents;
 }
 </style>
 

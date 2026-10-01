@@ -9,6 +9,17 @@ This document defines the visual and implementation rules for the Vue renderer.
 - Keep feature-specific composition in the feature folder, not in the shared UI primitives.
 - Use semantic HTML and preserve keyboard access, focus visibility, disabled states, and accessible names.
 - Keep interactive state in Vue components or composables; do not hide application state in CSS.
+- Keep ordinary button and select hover/open surfaces neutral, including their borders and text. Reserve the accent for primary actions and selected navigation or choices; retain a visible neutral keyboard-focus outline.
+- `ButtonGroup` uses `variant="primary"` by default for accent-colored selections. Use `variant="neutral"` for neutral selections. Both variants keep unselected hover states neutral and use the theme's matching selected-text color.
+- Single-choice groups use `selection="{ index, count }"` for the Recorder's sliding indicator; both `tab` and `selected` buttons share this surface. Keep multi-choice style toggles independent.
+- `SelectionIndicator` shares the Recorder's movement timing and reduced-motion behavior between button groups and editor sidebars. Sidebars measure the selected button across menu separators and the Settings footer; scroll and resize updates position it instantly.
+- `Select` hides preview eyes by default. Opt into `showPreviewIndicator` only where `preview:modelValue` drives a visible preview; device and other choice-only menus keep it disabled.
+
+The shared `CommandPalette` composes editor Spotlight views with fixed-height virtual rows and `ScrollShadow`. Use `Button`'s `contentLayout="custom"` for structured rows, keeping label, metadata and chevron in explicit aligned cells. Search inputs use the rounded neutral appearance. Animate height and category changes only; typing and thumbnail completion must retain the list surface. Respect reduced motion and keep mouse Back/Forward navigation inside the palette. Domain adapters supply real editor actions and visible-row thumbnail requests.
+
+Shared settings use `SettingsSection` for category headings and `TogglePreference` for consistent option labels, descriptions and accessible switches. Recorder and editor appearance choices reuse `ThemeModePicker`; System shows both palettes with a localized explanation. Theme Advanced contains colors/style only. Scaling keeps its global slider visible and reveals per-area overrides separately.
+
+Advanced disclosures use `ui/transitions/RafRevealTransition.vue`. It measures geometry once, batches style writes per animation frame, preserves the current height on reversal and cancels work on unmount. Keep the content unscaled, preserve reduced motion, and use the same transition for opening and closing.
 
 ## Icons and imagery
 

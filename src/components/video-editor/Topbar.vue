@@ -13,6 +13,7 @@ import type { PreviewPerformanceSnapshot } from './performance/preview-performan
 import type { EditorExportSource } from '../export/export-types';
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
 import EditorPresetControls from './EditorPresetControls.vue';
+import EditorSearchButton from './search/EditorSearchButton.vue';
 
 const { t } = useTranslate('Topbar');
 
@@ -92,6 +93,7 @@ const handleExit = () => {
         @undo="emit('undo')"
         @redo="emit('redo')"
       />
+      <EditorSearchButton />
     </template>
     <template #center>
       <VideoProjectEdition :project="project" :is-saving="isSaving" @open-project="emit('open-project', $event)" />

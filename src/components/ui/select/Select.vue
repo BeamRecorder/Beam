@@ -25,6 +25,7 @@ const props = withDefaults(
     variant?: 'default' | 'source' | 'search';
     size?: 'sm' | 'md' | 'lg' | 'compact' | 'small' | 'medium' | 'large';
     icon?: Component;
+    showPreviewIndicator?: boolean;
   }>(),
   {
     placeholder: 'Select an option',
@@ -37,6 +38,7 @@ const props = withDefaults(
     searchPlaceholder: 'Search options',
     variant: 'default',
     size: 'lg',
+    showPreviewIndicator: false,
   },
 );
 
@@ -419,11 +421,13 @@ onBeforeUnmount(() => {
                 </slot>
               </div>
 
-              <template v-if="item.data.value === hoveredValue && item.data.value !== modelValue">
-                <Eye class="option-check option-eye" />
+              <template
+                v-if="showPreviewIndicator && item.data.value === hoveredValue && item.data.value !== modelValue"
+              >
+                <Eye class="option-check option-eye" aria-hidden="true" />
               </template>
               <template v-else-if="item.data.value === modelValue">
-                <Check class="option-check" />
+                <Check class="option-check" aria-hidden="true" />
               </template>
             </li>
           </ul>

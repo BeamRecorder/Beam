@@ -60,10 +60,8 @@ const asset: MediaAsset = {
 const canvasState = (wrapper: ReturnType<typeof mount>) =>
   wrapper.findComponent(ScreenshotCanvasStub).props('state') as ScreenshotState;
 const addImage = async (wrapper: ReturnType<typeof mount>) => {
-  await wrapper.get('[aria-label="Elements"]').trigger('click');
-  const button = wrapper.findAll('.element-tools button').find((candidate) => candidate.text().trim() === 'Image');
-  if (!button) throw new Error('Missing Add Image button.');
-  await button.trigger('click');
+  await wrapper.get('[aria-label="Clip"]').trigger('click');
+  wrapper.findComponent({ name: 'ScreenshotAddMenu' }).vm.$emit('add', 'image');
   await flushPromises();
 };
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -175,7 +173,7 @@ describe('ScreenshotEditor imported image layers', () => {
     wrapper.unmount();
   });
 
-  it('keeps imported images in the Elements panel with palette, crop controls, properties, and one footer delete', async () => {
+  it('keeps imported images in the Clip panel, crop controls, properties, and one footer delete', async () => {
     capture.pickScreenshotImage.mockResolvedValueOnce(asset);
     const wrapper = mountEditor();
     await flushPromises();
@@ -185,11 +183,9 @@ describe('ScreenshotEditor imported image layers', () => {
     const canvas = wrapper.findComponent(ScreenshotCanvasStub);
     const state = canvasState(wrapper);
     const importedId = state.images![0]!.id;
-    expect(wrapper.get('.sidebar-island .nav-btn.active').attributes('aria-label')).toBe('Elements');
-    expect(wrapper.find('.elements-panel .element-tools').exists()).toBe(true);
-    const palette = wrapper.get('.elements-panel').element;
-    const properties = wrapper.get('[data-testid="clip-properties"]').element;
-    expect(palette.compareDocumentPosition(properties) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(wrapper.get('.sidebar-island .nav-btn.active').attributes('aria-label')).toBe('Clip');
+    expect(wrapper.find('.element-tools').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="clip-properties"]').exists()).toBe(true);
     expect(wrapper.findAll('button').filter((button) => button.text().trim().startsWith('Delete'))).toHaveLength(1);
     expect(wrapper.find('.elements-panel [aria-label="Delete"]').exists()).toBe(false);
     expect(wrapper.get('.properties-footer button').text()).toContain(asset.name);
@@ -202,7 +198,7 @@ describe('ScreenshotEditor imported image layers', () => {
     wrapper.unmount();
   });
 
-  it('returns to the Elements tab after selecting an imported image from composition and keeps it selected on tab click', async () => {
+  it('returns to the Clip tab after selecting an imported image from composition and keeps it selected on tab click', async () => {
     capture.pickScreenshotImage.mockResolvedValueOnce(asset);
     const wrapper = mountEditor();
     await flushPromises();
@@ -211,20 +207,21 @@ describe('ScreenshotEditor imported image layers', () => {
     const canvas = wrapper.findComponent(ScreenshotCanvasStub);
     const composition = wrapper.findComponent(ScreenshotCompositionStub);
     const importedId = canvasState(wrapper).images![0]!.id;
-    await wrapper.get('[aria-label="Image"]').trigger('click');
+    composition.vm.$emit('select', 'screenshot');
+    await flushPromises();
     expect(canvas.props('selectedId')).toBe('screenshot');
-    expect(wrapper.get('.sidebar-island .nav-btn.active').attributes('aria-label')).toBe('Image');
+    expect(wrapper.get('.sidebar-island .nav-btn.active').attributes('aria-label')).toBe('Clip');
 
     composition.vm.$emit('select', importedId);
     await wrapper.vm.$nextTick();
     expect(canvas.props('selectedId')).toBe(importedId);
     expect(composition.props('selectedId')).toBe(importedId);
-    expect(wrapper.get('.sidebar-island .nav-btn.active').attributes('aria-label')).toBe('Elements');
+    expect(wrapper.get('.sidebar-island .nav-btn.active').attributes('aria-label')).toBe('Clip');
 
-    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await wrapper.get('[aria-label="Clip"]').trigger('click');
     expect(canvas.props('selectedId')).toBe(importedId);
     expect(composition.props('selectedId')).toBe(importedId);
-    expect(wrapper.get('.sidebar-island .nav-btn.active').attributes('aria-label')).toBe('Elements');
+    expect(wrapper.get('.sidebar-island .nav-btn.active').attributes('aria-label')).toBe('Clip');
     wrapper.unmount();
   });
 

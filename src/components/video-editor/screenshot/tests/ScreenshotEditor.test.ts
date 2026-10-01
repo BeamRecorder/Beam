@@ -220,11 +220,11 @@ describe('ScreenshotEditor', () => {
     expect(document.body.classList.contains('beam-app-fullscreen-active')).toBe(false);
   });
 
-  it('opens with the Elements panel active instead of canvas settings', async () => {
+  it('opens with the Clip panel active instead of canvas settings', async () => {
     const wrapper = mountEditor();
     await flushPromises();
 
-    expect(wrapper.get('[aria-label="Elements"]').classes()).toContain('active');
+    expect(wrapper.get('[aria-label="Clip"]').classes()).toContain('active');
     expect(wrapper.find('[data-testid="canvas-panel"]').exists()).toBe(false);
     wrapper.unmount();
   });
@@ -237,7 +237,7 @@ describe('ScreenshotEditor', () => {
     canvas.vm.$emit('cropRequest', 'screenshot');
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.get('[aria-label="Image"]').classes()).toContain('active');
+    expect(wrapper.get('[aria-label="Clip"]').classes()).toContain('active');
     expect(canvas.props('selectedId')).toBe('screenshot');
     expect(canvas.props('cropping')).toBe(true);
     wrapper.unmount();
@@ -326,7 +326,7 @@ describe('ScreenshotEditor', () => {
   it('adds a highlight with shared controls, saves it, and supports undo/redo', async () => {
     const wrapper = mountEditor();
     await flushPromises();
-    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await wrapper.get('[aria-label="Clip"]').trigger('click');
     await clickText(wrapper, 'Highlight');
     await flushPromises();
     const canvas = wrapper.findComponent(ScreenshotCanvasStub);
@@ -366,7 +366,7 @@ describe('ScreenshotEditor', () => {
     vi.stubGlobal('crypto', { randomUUID: () => 'blur-1' });
     const wrapper = mountEditor();
     await flushPromises();
-    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await wrapper.get('[aria-label="Clip"]').trigger('click');
     await clickText(wrapper, 'Blur');
     await flushPromises();
 
@@ -412,7 +412,7 @@ describe('ScreenshotEditor', () => {
     vi.stubGlobal('crypto', { randomUUID: () => `layer-${++id}` });
     const wrapper = mountEditor();
     await flushPromises();
-    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await wrapper.get('[aria-label="Clip"]').trigger('click');
 
     await clickText(wrapper, 'Text');
     screenshotCanvasEditor?.updateText('Committed text');
@@ -436,7 +436,7 @@ describe('ScreenshotEditor', () => {
     const wrapper = mountEditor();
     await flushPromises();
 
-    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await wrapper.get('[aria-label="Clip"]').trigger('click');
     await clickText(wrapper, 'Arrow');
     expect(wrapper.findComponent(ShapePropertiesStub).props('clip')).toMatchObject({
       id: 'shape-1',
@@ -512,7 +512,7 @@ describe('ScreenshotEditor', () => {
     expect(canvas.props('cursorPacks')).toContainEqual(cursorPack);
     expect(compositionLayers(wrapper).map(({ id }) => id)).toEqual(['__background__', 'screenshot', '__watermark__']);
 
-    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await wrapper.get('[aria-label="Clip"]').trigger('click');
     await clickText(wrapper, 'Cursor');
     await wrapper.vm.$nextTick();
 
@@ -589,7 +589,7 @@ describe('ScreenshotEditor', () => {
     vi.stubGlobal('crypto', { randomUUID: () => ids[nextId++]! });
     const wrapper = mountEditor();
     await flushPromises();
-    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await wrapper.get('[aria-label="Clip"]').trigger('click');
     await clickText(wrapper, 'Arrow');
     await clickText(wrapper, 'Arrow');
     await clickText(wrapper, 'Arrow');
@@ -630,7 +630,7 @@ describe('ScreenshotEditor', () => {
     });
     const wrapper = mountEditor();
     await flushPromises();
-    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await wrapper.get('[aria-label="Clip"]').trigger('click');
     await clickText(wrapper, 'Arrow');
     await clickText(wrapper, 'Arrow');
     await clickText(wrapper, 'Arrow');
@@ -809,7 +809,7 @@ describe('ScreenshotEditor', () => {
     vi.stubGlobal('crypto', { randomUUID: () => ids[nextId++]! });
     const wrapper = mountEditor();
     await flushPromises();
-    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await wrapper.get('[aria-label="Clip"]').trigger('click');
     await clickText(wrapper, 'Arrow');
     await clickText(wrapper, 'Arrow');
     await clickText(wrapper, 'Arrow');
@@ -879,7 +879,7 @@ describe('ScreenshotEditor', () => {
     vi.stubGlobal('crypto', { randomUUID: () => ids[nextId++]! });
     const wrapper = mountEditor();
     await flushPromises();
-    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await wrapper.get('[aria-label="Clip"]').trigger('click');
     await clickText(wrapper, 'Arrow');
     await clickText(wrapper, 'Arrow');
 
@@ -917,7 +917,7 @@ describe('ScreenshotEditor', () => {
     vi.stubGlobal('crypto', { randomUUID: () => ids[nextId++]! });
     const wrapper = mountEditor();
     await flushPromises();
-    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await wrapper.get('[aria-label="Clip"]').trigger('click');
     await clickText(wrapper, 'Arrow');
     await clickText(wrapper, 'Arrow');
 
@@ -1000,9 +1000,9 @@ describe('ScreenshotEditor', () => {
     await wrapper.vm.$nextTick();
     expect(state.image.enabled).toBe(false);
     expect(compositionLayers(wrapper).map(({ id }) => id)).not.toContain('screenshot');
-    await wrapper.get('[aria-label="Image"]').trigger('click');
-    expect(state.image.enabled).toBe(true);
-    expect(compositionLayers(wrapper).map(({ id }) => id)).toEqual(['__background__', 'screenshot', '__watermark__']);
+    await wrapper.get('[aria-label="Clip"]').trigger('click');
+    expect(state.image.enabled).toBe(false);
+    expect(compositionLayers(wrapper).map(({ id }) => id)).toEqual(['__background__', '__watermark__']);
     wrapper.unmount();
   });
 
@@ -1012,7 +1012,7 @@ describe('ScreenshotEditor', () => {
     const wrapper = mountEditor();
     await flushPromises();
 
-    await wrapper.get('[aria-label="Elements"]').trigger('click');
+    await wrapper.get('[aria-label="Clip"]').trigger('click');
     await clickText(wrapper, 'Text');
     const editor = screenshotCanvasEditor;
     expect(editor).not.toBeNull();
@@ -1096,7 +1096,9 @@ describe('ScreenshotEditor', () => {
     expect(children[2]?.classList.contains('screenshot-preview-stage')).toBe(true);
     expect(children[2]?.querySelector('[data-testid="screenshot-canvas"]')).not.toBeNull();
     expect(wrapper.find('[aria-label="Audio"]').exists()).toBe(false);
-    await wrapper.get('[aria-label="Image"]').trigger('click');
+    wrapper.findComponent(ScreenshotCanvasStub).vm.$emit('select', 'screenshot');
+    await flushPromises();
+    await wrapper.get('[aria-label="Clip"]').trigger('click');
     expect(wrapper.findComponent(ClipPropertiesStub).attributes('hide-layout')).toBeDefined();
     await clickText(wrapper, 'Crop');
     const canvas = wrapper.findComponent(ScreenshotCanvasStub);

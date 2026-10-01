@@ -76,6 +76,7 @@ export const snapshot = (): CompositionSnapshot => ({
     events: [],
   },
   cursorSettings: {
+    enabled: true,
     selection: {
       packId: MACOS_CURSOR_PACK.id,
       mode: 'automatic',

@@ -15,4 +15,5 @@ pub mod system_audio;
 
 pub use error::{CaptureError, NativeCaptureErrorCode};
 
+pub mod screen_color;
 pub mod screenshot;

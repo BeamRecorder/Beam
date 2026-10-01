@@ -8,6 +8,8 @@ import { useColorPicker, type RGB } from './composables/useColorPicker';
 import Input from '../input/Input.vue';
 import Button from '../button/Button.vue';
 import { beginPropertyInteraction, endPropertyInteraction } from '~/composables/property-interaction';
+import { useTranslate } from '~/i18n/useTranslate';
+import { useScreenColorPicker } from './composables/useScreenColorPicker';
 
 const props = withDefaults(
   defineProps<{
@@ -37,6 +39,9 @@ const emit = defineEmits<{
 }>();
 
 const { hexToRgb, rgbToHex, rgbToHsv, hsvToRgb } = useColorPicker();
+const { t } = useTranslate('ColorPicker');
+const eyedropperName = computed(() => props.eyedropperLabel ?? t('eyedropper'));
+const formatName = computed(() => props.formatLabel ?? t('colorFormat'));
 
 const h = ref(0);
 const s = ref(0);
@@ -289,18 +294,12 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateIsMobileViewport);
 });
 
-const hasEyeDropper = ref(typeof window !== 'undefined' && 'EyeDropper' in window);
-
-async function openEyeDropper() {
-  if (!hasEyeDropper.value) return;
-  try {
-    const eyeDropper = new (window as any).EyeDropper();
-    const result = await eyeDropper.open();
-    emit('update:modelValue', result.sRGBHex);
-  } catch (e) {
-    /* silent */
-  }
-}
+const {
+  available: hasEyeDropper,
+  pending: eyedropperPending,
+  error: eyedropperError,
+  open: openEyeDropper,
+} = useScreenColorPicker((color) => emit('update:modelValue', color));
 function updateChannel(channel: keyof RGB, val: string | number) {
   const n = Math.max(0, Math.min(255, Number(val) || 0));
   const nextRgb = { ...rgb.value, [channel]: n };
@@ -338,10 +337,8 @@ const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileView
     }"
   >
     <div v-if="!hideHeader" class="picker-top-bar">
-      <span class="picker-top-title">Color</span>
-      <Button variant="ghost" size="xs" icon-only tooltip="Close" @click="emit('close')">
-        <X :size="14" />
-      </Button>
+      <span class="picker-top-title">{{ label ?? t('color') }}</span>
+      <Button variant="ghost" size="xs" icon-only :icon="X" :aria-label="t('close')" @click="emit('close')" />
     </div>
     <div class="picker-main-area">
       <template v-if="type === 'triangle'">
@@ -376,12 +373,10 @@ const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileView
         <div
           ref="svArea"
           class="sv-container"
+          :style="{ backgroundColor: pureHueColor }"
           @mousedown.prevent="onMouseDownSV"
           @touchstart.stop.prevent="onTouchStartSV"
         >
-          <div class="sv-color-layer" :style="{ backgroundColor: pureHueColor }"></div>
-          <div class="sv-white"></div>
-          <div class="sv-black"></div>
           <div class="sv-cursor" :style="{ left: `${s}%`, top: `${100 - v}%` }"></div>
         </div>
         <div
@@ -406,19 +401,6 @@ const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileView
     </div>
 
     <div class="controls-container">
-      <div class="previews-row">
-        <div class="color-preview-large" :style="{ backgroundColor: hex }"></div>
-        <Button
-          variant="secondary"
-          @click="openEyeDropper"
-          v-if="hasEyeDropper"
-          class="eyedropper-btn"
-          :aria-label="eyedropperLabel"
-        >
-          <Pipette :size="14" />
-        </Button>
-      </div>
-
       <div class="inputs-row">
         <div class="inputs-group">
           <template v-if="inputMode === 1">
@@ -429,7 +411,8 @@ const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileView
                 @update:model-value="updateChannel('r', $event)"
                 :min="0"
                 :max="255"
-                size="sm"
+                size="xs"
+                aria-label="R"
               />
               <span class="channel-label">R</span>
             </div>
@@ -440,7 +423,8 @@ const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileView
                 @update:model-value="updateChannel('g', $event)"
                 :min="0"
                 :max="255"
-                size="sm"
+                size="xs"
+                aria-label="G"
               />
               <span class="channel-label">G</span>
             </div>
@@ -451,7 +435,8 @@ const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileView
                 @update:model-value="updateChannel('b', $event)"
                 :min="0"
                 :max="255"
-                size="sm"
+                size="xs"
+                aria-label="B"
               />
               <span class="channel-label">B</span>
             </div>
@@ -460,25 +445,41 @@ const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileView
             <div class="channel-input-wrapper hex-wrapper">
               <Input
                 type="text"
-                size="sm"
+                size="xs"
+                aria-label="HEX"
                 :model-value="hex.toUpperCase()"
                 @update:model-value="emit('update:modelValue', $event as string)"
               />
-              <span class="channel-label">HEX</span>
             </div>
           </template>
         </div>
         <Button
           variant="ghost"
-          size="sm"
+          size="xs"
           icon-only
+          :icon="ArrowUpDown"
           @click="inputMode = (inputMode + 1) % 2"
           class="mode-switch-btn"
-          :aria-label="formatLabel"
-        >
-          <ArrowUpDown :size="14" />
-        </Button>
+          :aria-label="formatName"
+          :title="formatName"
+        />
+        <Button
+          v-if="hasEyeDropper"
+          variant="ghost"
+          size="xs"
+          icon-only
+          :icon="Pipette"
+          :disabled="eyedropperPending"
+          :aria-busy="eyedropperPending"
+          @click="openEyeDropper"
+          class="eyedropper-btn"
+          :aria-label="eyedropperName"
+          :title="eyedropperName"
+        />
       </div>
+      <p v-if="eyedropperError" class="eyedropper-error" role="alert" :title="eyedropperError">
+        {{ t('eyedropperError') }}
+      </p>
     </div>
   </div>
 </template>

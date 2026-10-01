@@ -7,7 +7,10 @@ import { DEFAULT_OUTPUT_CANVAS } from '../canvas/output-canvas';
 import { renderShapeTimelinePreview } from './shape-timeline-preview';
 import type { ShapeTimelinePreviewProps } from './shape-timeline-preview-types';
 
-const props = withDefaults(defineProps<ShapeTimelinePreviewProps>(), { canvas: () => DEFAULT_OUTPUT_CANVAS });
+const props = withDefaults(defineProps<ShapeTimelinePreviewProps>(), {
+  canvas: () => DEFAULT_OUTPUT_CANVAS,
+  presentation: 'timeline',
+});
 const { t } = useTranslate('ScreenshotComposition');
 const preview = ref('');
 const error = ref('');
@@ -89,7 +92,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <span class="shape-preview-wrap" aria-hidden="true">
+  <span class="shape-preview-wrap" :class="{ 'is-thumbnail': presentation === 'thumbnail' }" aria-hidden="true">
     <span v-if="preview" class="shape-preview" :style="{ backgroundImage: `url(${JSON.stringify(preview)})` }" />
     <ImageOff v-if="error" class="preview-status" :size="16" :aria-label="t('previewError')" :title="error" />
     <span v-else-if="!preview" class="preview-status">{{ t('previewLoading') }}</span>
@@ -119,5 +122,16 @@ onUnmounted(() => {
   place-items: center;
   font-size: 9px;
   color: var(--text-muted);
+}
+.shape-preview-wrap.is-thumbnail {
+  position: relative;
+  inset: auto;
+  width: 38px;
+  height: 28px;
+}
+.is-thumbnail .shape-preview {
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
 }
 </style>
