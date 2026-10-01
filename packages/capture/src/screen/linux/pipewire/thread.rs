@@ -64,6 +64,7 @@ pub(crate) struct PipewireCaptureRequest {
     pub(crate) metrics: Arc<ScreenCaptureMetrics>,
     pub(crate) repair_window_crop: bool,
     pub(crate) region: Option<ScreenRegion>,
+    pub(crate) separate_cursor_enabled: bool,
 }
 
 impl PipewireCapture {
@@ -79,6 +80,7 @@ impl PipewireCapture {
             metrics,
             repair_window_crop,
             region,
+            separate_cursor_enabled,
         } = request;
         if queue_capacity == 0 {
             return Err(CaptureError::InvalidConfiguration(
@@ -118,6 +120,7 @@ impl PipewireCapture {
                     ready_sender,
                     repair_window_crop,
                     region,
+                    separate_cursor_enabled,
                 );
                 let _ = finish_sender.send(SinkMessage::Finish);
                 result
@@ -269,9 +272,7 @@ impl PipewireCapture {
 }
 
 impl Drop for PipewireCapture {
-    fn drop(&mut self) {
-        let _ = self.stop();
-    }
+    fn drop(&mut self) { let _ = self.stop(); }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -284,11 +285,9 @@ fn pipewire_worker(
     cursor_sink: Sender<CursorMessage>,
     fatal: Arc<Mutex<Option<CaptureError>>>,
     metrics: Arc<ScreenCaptureMetrics>,
-    start_ns: u64,
-    start_gate: Arc<StartGate>,
-    ready: mpsc::SyncSender<Result<VideoFormat, CaptureError>>,
-    repair_window_crop: bool,
-    region: Option<ScreenRegion>,
+    start_ns: u64, start_gate: Arc<StartGate>,
+    ready: mpsc::SyncSender<Result<VideoFormat, CaptureError>>, repair_window_crop: bool,
+    region: Option<ScreenRegion>, separate_cursor_enabled: bool,
 ) -> Result<(), CaptureError> {
     pw::init();
     let mainloop = pw::main_loop::MainLoopRc::new(None).map_err(pipewire_error)?;
@@ -326,6 +325,7 @@ fn pipewire_worker(
         repair_window_crop,
         region,
         dmabuf_importer: DmaBufImporter::new(),
+        separate_cursor_enabled,
     }));
     let ready = Rc::new(RefCell::new(Some(ready)));
     let negotiation_stopped = Rc::new(Cell::new(false));

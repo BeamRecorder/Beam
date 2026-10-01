@@ -46,6 +46,7 @@ fn fixture(capacity: usize) -> Fixture {
         repair_window_crop: false,
         region: None,
         dmabuf_importer: DmaBufImporter::new(),
+        separate_cursor_enabled: false,
     };
     Fixture {
         state,
