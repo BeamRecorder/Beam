@@ -96,7 +96,11 @@ const project = { id: 'project-1', name: 'Project', previewSrc: 'project.mp4', m
 const wrappers: Array<ReturnType<typeof mount>> = [];
 
 const mountEditor = () => {
-  const wrapper = mount(EditorWindowApp);
+  const wrapper = mount(EditorWindowApp, {
+    global: {
+      stubs: { ScreenshotCompositionSkeleton: true, EditorSkeletonSurface: { template: '<div><slot /></div>' } },
+    },
+  });
   wrappers.push(wrapper);
   return wrapper;
 };
@@ -328,11 +332,28 @@ describe('EditorWindowApp', () => {
   });
 
   it('translates the animated editor loading message', async () => {
-    capture.getEditorContext.mockReturnValue(new Promise(() => undefined));
+    capture.getProject.mockReturnValue(new Promise(() => undefined));
     await setCurrentLocale('fr');
     const wrapper = mountEditor();
+    await flushPromises();
 
-    expect(wrapper.get('.editor-project-loading-overlay').attributes('aria-label')).toBe('Préparation de l’éditeur');
+    expect(wrapper.get('.editor-project-loading-overlay').attributes('aria-label')).toBe('Ouverture de votre éditeur');
+  });
+
+  it('does not guess a video layout before the actual editor context is known', async () => {
+    let resolveContext!: (value: { projectId: string; kind: 'screenshot' }) => void;
+    capture.getEditorContext.mockReturnValue(
+      new Promise((resolve) => {
+        resolveContext = resolve;
+      }),
+    );
+    const wrapper = mountEditor();
+    expect(wrapper.find('.editor-project-loading-overlay').exists()).toBe(false);
+    resolveContext({ projectId: 'image-1', kind: 'screenshot' });
+    await flushPromises();
+    expect(wrapper.findComponent(EditorProjectLoadingOverlay).props('kind')).toBe('screenshot');
+    expect(wrapper.find('.loading-sidebar').exists()).toBe(false);
+    expect(wrapper.find('.loading-timeline').exists()).toBe(false);
   });
 
   it('returns to the HUD when requested by the editor', async () => {

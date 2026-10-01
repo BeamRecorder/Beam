@@ -8,6 +8,7 @@ import ToastProvider from '~/components/ui/toast/ToastProvider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { clampTimelineHeight, DEFAULT_TIMELINE_HEIGHT } from './composables/useTimelineResize';
 import EditorProjectLoadingOverlay from './EditorProjectLoadingOverlay.vue';
+import type { EditorLayoutKind } from './layout/editor-layout-types';
 const VideoEditor = shallowRef<Component>();
 const ScreenshotEditor = shallowRef<Component>();
 const screenshotId = ref<string | null>(null);
@@ -17,6 +18,7 @@ const project = ref<CaptureProject | null>(null);
 // Keep them out of Vue's deep reactive graph during editor startup.
 const editorData = shallowRef<ProjectEditorData | null>(null);
 const loading = ref(true);
+const loadingKind = ref<EditorLayoutKind | null>(null);
 const error = ref('');
 const editorGeneration = ref(0);
 const loadingTimelineHeight = ref(DEFAULT_TIMELINE_HEIGHT);
@@ -91,6 +93,7 @@ const loadProject = async (projectId: string) => {
 };
 
 const loadContext = async (context: { projectId: string; kind?: 'screenshot' }) => {
+  loadingKind.value = context.kind === 'screenshot' ? 'screenshot' : 'video';
   if (context.kind === 'screenshot') {
     const generation = ++loadGeneration;
     loading.value = true;
@@ -206,7 +209,8 @@ onBeforeUnmount(() => {
     @ready="notifyEditorReady(editorGeneration)"
   />
   <EditorProjectLoadingOverlay
-    :visible="loading"
+    :visible="loading && loadingKind !== null"
+    :kind="loadingKind ?? 'video'"
     :label="t('title')"
     :show-topbar-skeleton="!project"
     :timeline-height="loadingTimelineHeight"

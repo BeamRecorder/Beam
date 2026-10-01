@@ -44,6 +44,74 @@ afterEach(() => {
 });
 
 describe('project picker loading and selection', () => {
+  it('lets cached cards present before requesting background revalidation', async () => {
+    const { picker, props } = await create({ compact: true, active: true });
+    props.active = false;
+    await flushPromises();
+    props.active = true;
+    await flushPromises();
+    expect(picker.projects.value).toEqual([first, image]);
+    expect(capture.listProjects).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(16);
+    expect(capture.listProjects).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(16);
+    expect(capture.listProjects).toHaveBeenCalledTimes(2);
+  });
+  it.each(['close', 'unmount'])('cancels a queued revalidation on %s', async (action) => {
+    const { props, wrapper } = await create({ compact: true, active: true });
+    props.active = false;
+    await flushPromises();
+    props.active = true;
+    await flushPromises();
+    if (action === 'close') props.active = false;
+    else wrapper.unmount();
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(capture.listProjects).toHaveBeenCalledOnce();
+  });
+  it('defers hidden loading and keeps cached cards visible while revalidating on reopen', async () => {
+    const { picker, props } = await create({ compact: true, active: false });
+    expect(capture.listProjects).not.toHaveBeenCalled();
+    props.active = true;
+    await flushPromises();
+    expect(picker.projects.value).toEqual([first, image]);
+    props.active = false;
+    await flushPromises();
+    let complete!: (projects: CaptureProject[]) => void;
+    capture.listProjects.mockReturnValueOnce(
+      new Promise((resolve) => {
+        complete = resolve;
+      }),
+    );
+    props.active = true;
+    await flushPromises();
+    expect(picker.isLoading.value).toBe(false);
+    expect(picker.projects.value).toEqual([first, image]);
+    void picker.loadProjects();
+    expect(capture.listProjects).toHaveBeenCalledTimes(2);
+    complete([image]);
+    await flushPromises();
+    expect(picker.projects.value).toEqual([image]);
+  });
+
+  it('keeps an already loaded empty catalogue stable on reopen', async () => {
+    capture.listProjects.mockResolvedValue([]);
+    const { picker, props } = await create({ active: true });
+    props.active = false;
+    await flushPromises();
+    capture.listProjects.mockReturnValueOnce(new Promise(() => undefined));
+    props.active = true;
+    await flushPromises();
+    expect(picker.isLoading.value).toBe(false);
+    expect(picker.projects.value).toEqual([]);
+  });
+
+  it('completes explicit refresh without an artificial minimum delay', async () => {
+    const { picker } = await create();
+    await picker.handleRefresh();
+    expect(picker.isRefreshing.value).toBe(false);
+    expect(picker.isRefreshSuccess.value).toBe(true);
+  });
   it('retains cached projects during reload and failed refresh, and invalidates explicitly', async () => {
     const { picker } = await create({ currentProjectId: 'image', compact: true });
     expect(picker.selectedProject.value).toEqual(image);

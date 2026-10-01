@@ -53,7 +53,12 @@ export function provideEditorSearch(options: EditorSearchOptions) {
     items: computed(() => {
       const categories = [
         { id: 'insert', label: t('EditorSearch.insert'), icon: Plus, terms: ['add', 'insert'] },
-        { id: 'selection', label: t('EditorSearch.clips'), icon: Layers, terms: ['clips', 'layers'] },
+        {
+          id: 'selection',
+          label: t(options.mode === 'screenshot' ? 'ScreenshotComposition.layers' : 'EditorSearch.clips'),
+          icon: Layers,
+          terms: ['clips', 'layers'],
+        },
         { id: 'navigation', label: t('EditorSearch.navigation'), icon: Monitor, terms: ['sections', 'navigate'] },
         { id: 'setting', label: t('EditorSearch.setting'), icon: SlidersHorizontal, terms: ['settings', 'properties'] },
         { id: 'action', label: t('EditorSearch.action'), icon: Film, terms: ['actions', 'undo', 'redo'] },
@@ -81,7 +86,11 @@ export function provideEditorSearch(options: EditorSearchOptions) {
         .map((section) => ({
           id: `navigate:${section.tab}`,
           group: 'navigation',
-          label: t(`SidebarPanel.${section.key}`),
+          label: t(
+            options.mode === 'screenshot' && section.tab === 'clip'
+              ? 'PropertiesPanel.properties'
+              : `SidebarPanel.${section.key}`,
+          ),
           icon: section.icon,
           terms: [section.tab],
           run: () => navigate(section.tab),
@@ -102,9 +111,11 @@ export function provideEditorSearch(options: EditorSearchOptions) {
         });
       }
       for (const group of EDITOR_PROPERTY_GROUPS) {
+        if (group.modes && !group.modes.includes(options.mode)) continue;
         if (group.kinds && !group.kinds.includes(options.clipKind() ?? '')) continue;
         if (group.videoOnly && options.mode !== 'video') continue;
         for (const key of group.keys) {
+          if (options.propertyAvailable?.(group, key) === false) continue;
           const path = `${group.namespace}.${key}`;
           if (!te(path)) continue;
           const label = t(path);
@@ -114,13 +125,18 @@ export function provideEditorSearch(options: EditorSearchOptions) {
             group: 'setting',
             label,
             icon: SlidersHorizontal,
-            detail: t(`SidebarPanel.${section.key}`),
+            detail: t(
+              options.mode === 'screenshot' && group.tab === 'clip'
+                ? 'PropertiesPanel.properties'
+                : `SidebarPanel.${section.key}`,
+            ),
             terms: [key, group.namespace],
             disabled:
               Boolean(group.clipOnly && !options.canEditClip()) || (group.tab === 'zoom' && !options.canEditZoom?.()),
             run: async () => {
               await navigate(group.tab);
-              if (!(await focusEditorProperty(label))) throw new Error(t('EditorSearch.unavailable'));
+              if (!(await focusEditorProperty(label, document, group.section)))
+                throw new Error(t('EditorSearch.unavailable'));
             },
           });
         }

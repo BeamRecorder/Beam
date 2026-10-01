@@ -1,7 +1,13 @@
+import type { EditorPropertyGroup } from './editor-search-types';
+
 const normalize = (value: string) => value.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().trim();
 const controls =
   'input:not(:disabled),button:not(:disabled),textarea:not(:disabled),[role="combobox"]:not([aria-disabled="true"])';
-export function focusEditorProperty(label: string, root: Document | HTMLElement = document): Promise<boolean> {
+export function focusEditorProperty(
+  label: string,
+  root: Document | HTMLElement = document,
+  section?: EditorPropertyGroup['section'],
+): Promise<boolean> {
   const revealed = new Set<HTMLElement>();
   const available = (item: HTMLElement) =>
     !item.closest('[inert],[hidden],:disabled,[aria-disabled="true"],[aria-hidden="true"]') &&
@@ -9,6 +15,12 @@ export function focusEditorProperty(label: string, root: Document | HTMLElement 
   const match = () => {
     const panel = root.querySelector<HTMLElement>('.properties-island');
     if (!panel) return false;
+    const sectionButton =
+      section && panel.querySelector<HTMLButtonElement>(`[data-editor-property-section="${section}"]`);
+    if (sectionButton && available(sectionButton) && !revealed.has(sectionButton)) {
+      revealed.add(sectionButton);
+      sectionButton.click();
+    }
     const named = [...panel.querySelectorAll<HTMLElement>('[aria-label]')].find(
       (item) => available(item) && normalize(item.getAttribute('aria-label') ?? '') === normalize(label),
     );
@@ -20,6 +32,13 @@ export function focusEditorProperty(label: string, root: Document | HTMLElement 
       text?.closest<HTMLElement>('label,.big-slider-container,.option,.prop-row,.section-block,.control-group') ??
       text;
     if (block && available(block)) {
+      if (block.hasAttribute('data-editor-property-edit')) {
+        if (!revealed.has(block)) {
+          revealed.add(block);
+          block.click();
+        }
+        return false;
+      }
       const target = block.matches(controls)
         ? block
         : ([...block.querySelectorAll<HTMLElement>(controls)].find(available) ?? block);

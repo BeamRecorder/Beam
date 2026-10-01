@@ -75,6 +75,35 @@ const compositing = (id: string, patch: Partial<LayerCompositing> = {}): LayerCo
   ...patch,
 });
 
+it('preserves custom text layer names when copying without changing the rendered text', () => {
+  const state = makeState([makeTextShape('text', 'Rendered content')]);
+  state.layerNames = { text: 'Heading' };
+  const clipboard = copyScreenshotLayerSelection(state, ['text'], 'text')!;
+  const target = makeState();
+  pasteScreenshotLayerSelection(target, clipboard, () => 'pasted-text');
+  expect(screenshotLayers(target).find((layer) => layer.id === 'pasted-text')?.name).toBe('Heading');
+  expect(target.shapes[0]!.text?.content).toBe('Rendered content');
+  expect(state.layerNames).toEqual({ text: 'Heading' });
+});
+it('preserves existing names and adds a copied alias without mutating the previous metadata map', () => {
+  const state = makeState([makeShape('shape')]);
+  state.layerNames = { shape: 'Annotation' };
+  const previous = state.layerNames;
+  const clipboard = copyScreenshotLayerSelection(state, ['shape'], 'shape')!;
+  pasteScreenshotLayerSelection(state, clipboard, () => 'duplicate');
+  expect(state.layerNames).toEqual({ shape: 'Annotation', duplicate: 'Annotation' });
+  expect(previous).toEqual({ shape: 'Annotation' });
+});
+it('does not freeze automatic text labels or change names if a paste is rejected', () => {
+  const state = makeState([makeTextShape('text', 'Automatic text')]);
+  const clipboard = copyScreenshotLayerSelection(state, ['text'], 'text')!;
+  pasteScreenshotLayerSelection(state, clipboard, () => 'pasted-text');
+  expect(state.layerNames).toBeUndefined();
+  state.layerNames = { text: 'Keep this' };
+  expect(() => pasteScreenshotLayerSelection(state, clipboard, () => 'text')).toThrow();
+  expect(state.layerNames).toEqual({ text: 'Keep this' });
+});
+
 const blurLayer = (): BlurClip => ({
   id: 'blur-layer',
   kind: 'blur',

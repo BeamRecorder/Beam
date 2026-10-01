@@ -81,13 +81,15 @@ FFmpeg must report:
 
 Beam checks these capabilities before opening the Portal picker. If FFmpeg is installed outside `PATH`, set `BEAM_FFMPEG_PATH` to its executable. A missing executable reports `ffmpeg-unavailable`; a build without either supported encoder reports `ffmpeg-encoder-unavailable`.
 
-Start Electron from the second development terminal with:
+Start Vite and Electron together in one terminal:
 
 ```bash
-bun run electron:dev
+bun run dev
 ```
 
 The command checks Cargo first. When Cargo is available, it builds both `capture-engine` and the filtered `beam-input-helper`, and stops if compilation fails. Without Cargo, it looks for the exact application version under `packages/native-recorder/linux/x64/`. If either native file is missing in an interactive terminal, confirm the verified download with `Y`; answer `N` to stop. Non-interactive execution never prompts and downloads only with the explicit `BEAM_DOWNLOAD_CAPTURE_ENGINE=1` opt-in.
+
+Run `bun run dev` in each worktree to test them in parallel. Chromium profiles and Vite ports are isolated automatically; projects, screenshots and preferences reuse the shared `Videos/Beam/user/` library. Use `bun run dev --session preview` for another profile in the same worktree. `Ctrl+C` stops Electron and Vite together. See the [session guide](CONTRIBUTING.md#4-installing-dependencies--running-locally) for storage locations and shortcut behavior.
 
 The deterministic FFmpeg tests use a fake child process. The opt-in synthetic runtime smoke uses the actual system executable without opening the Portal picker:
 

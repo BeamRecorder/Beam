@@ -930,6 +930,8 @@
     "defaultSystemAudio": "Default system output"
   },
   "ScreenshotEditor": {
+    "tools": "Tools",
+    "selectTool": "Select",
     "title": "Screenshot",
     "export": "Export",
     "layers": "Screenshot layers",
@@ -1055,6 +1057,8 @@
   },
   "ScreenshotComposition": {
     "title": "Composition",
+    "name": "Layer name",
+    "rename": "Rename layer · Double-click or F2",
     "layers": "Layers",
     "blendMode": "Blend mode",
     "opacity": "Opacity",

@@ -48,12 +48,20 @@ const rotationPresets = [0, 90, 180, 270] as const;
 <template>
   <section class="shape-panel">
     <ButtonGroup full :columns="2" size="xs">
-      <Button size="xs" :variant="showText ? 'secondary' : 'selected'" @click="showText = false">{{
-        elementText('appearance')
-      }}</Button>
-      <Button size="xs" :variant="showText ? 'selected' : 'secondary'" @click="showText = true">{{
-        elementText('text')
-      }}</Button>
+      <Button
+        data-editor-property-section="appearance"
+        size="xs"
+        :variant="showText ? 'secondary' : 'selected'"
+        @click="showText = false"
+        >{{ elementText('appearance') }}</Button
+      >
+      <Button
+        data-editor-property-section="text"
+        size="xs"
+        :variant="showText ? 'selected' : 'secondary'"
+        @click="showText = true"
+        >{{ elementText('text') }}</Button
+      >
     </ButtonGroup>
     <ElementTextControls v-if="showText" :clip="clip" @update="update({ text: $event })" />
     <template v-else>

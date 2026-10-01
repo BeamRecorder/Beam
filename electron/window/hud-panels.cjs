@@ -1,4 +1,5 @@
 const path = require('node:path');
+const { developmentRendererUrl } = require('../lifecycle/development-session.cjs');
 const { BrowserWindow } = require('electron');
 const { enforceDefaultZoom, installBrowserZoomPolicy } = require('./browser-zoom-policy.cjs');
 const PROJECT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -108,7 +109,7 @@ function createHudPanelManager({
     });
     const loading = isPackaged
       ? window.loadFile(path.join(applicationRoot, 'dist/html/hud-panel.html'), { query: { panel: role } })
-      : window.loadURL(`http://localhost:6500/html/hud-panel.html?panel=${role}`);
+      : window.loadURL(developmentRendererUrl(`hud-panel.html?panel=${role}`));
     Promise.resolve(loading).catch(fail);
     return panel.ready;
   };

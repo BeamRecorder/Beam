@@ -1,11 +1,11 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { createRafReveal } from './raf-reveal';
-import type { RevealRuntime } from './raf-reveal-types';
+import type { RevealAxis, RevealRuntime } from './raf-reveal-types';
 afterEach(() => {
   document.body.replaceChildren();
   vi.restoreAllMocks();
 });
-const harness = (gap = 12) => {
+const harness = (gap = 12, axis: RevealAxis = 'vertical') => {
   let time = 0,
     nextId = 0,
     reduced = false;
@@ -23,15 +23,20 @@ const harness = (gap = 12) => {
     reducedMotion: () => reduced,
   };
   const parent = document.createElement('div');
-  parent.style.cssText = `display:grid;row-gap:${gap}px`;
+  parent.style.cssText = `display:grid;row-gap:${gap}px;column-gap:${gap}px`;
   const node = document.createElement('div');
-  node.style.cssText = 'height:100px;padding:8px 0;border:1px solid;opacity:1;margin:2px 0;overflow:visible';
+  node.style.cssText =
+    'height:100px;width:300px;padding:8px 4px;border:1px solid;opacity:1;margin:2px 0;overflow:visible';
   parent.append(node);
   document.body.append(parent);
   vi.spyOn(node, 'getBoundingClientRect').mockImplementation(
-    () => ({ height: Number.parseFloat(node.style.height) || 0 }) as DOMRect,
+    () =>
+      ({
+        height: Number.parseFloat(node.style.height) || 0,
+        width: Number.parseFloat(node.style.width) || 0,
+      }) as DOMRect,
   );
-  const reveal = createRafReveal(runtime);
+  const reveal = createRafReveal(runtime, axis);
   return {
     node,
     reveal,
@@ -83,6 +88,78 @@ it('opens and closes with the same curve, compensates parent gaps and restores s
     original,
   );
   expect(h.frames.size).toBe(0);
+});
+it('reveals horizontal panels without changing their height and compensates the workspace gap', () => {
+  const h = harness(12, 'horizontal');
+  const styles = () =>
+    Object.fromEntries(
+      [
+        'width',
+        'height',
+        'padding',
+        'margin',
+        'borderLeftWidth',
+        'borderRightWidth',
+        'opacity',
+        'overflow',
+        'willChange',
+        'minWidth',
+        'boxSizing',
+      ].map((key) => [key, h.node.style[key as 'width']]),
+    );
+  const original = styles();
+  const opened = vi.fn(),
+    closed = vi.fn();
+  h.reveal.enter(h.node, opened);
+  expect(h.node.style.width).toBe('0px');
+  expect(h.node.style.height).toBe('100px');
+  expect(h.node.style.marginRight).toBe('-12px');
+  expect(h.node.style.willChange).toBe('width, opacity');
+  h.step(100);
+  expect(h.node.style.width).toBe('150px');
+  expect(h.node.style.opacity).toBe('0.5');
+  expect(h.node.style.paddingLeft).toBe('2px');
+  expect(h.node.style.borderLeftWidth).toBe('0.5px');
+  h.step(100);
+  expect(styles()).toEqual(original);
+  expect(opened).toHaveBeenCalledOnce();
+  h.reveal.leave(h.node, closed);
+  h.step(100);
+  expect(h.node.style.width).toBe('150px');
+  h.step(100);
+  expect(closed).toHaveBeenCalledOnce();
+  expect(styles()).toEqual(original);
+});
+it('reverses horizontal changes at their current width and honors reduced motion', () => {
+  const h = harness(12, 'horizontal');
+  h.reveal.leave(h.node, vi.fn());
+  h.step(70);
+  const width = h.node.style.width;
+  const done = vi.fn();
+  h.reveal.enter(h.node, done);
+  expect(h.node.style.width).toBe(width);
+  expect(h.frames.size).toBe(1);
+  h.step(50);
+  expect(Number.parseFloat(h.node.style.width)).toBeGreaterThan(Number.parseFloat(width));
+  h.reduced();
+  h.step(1);
+  expect(done).toHaveBeenCalledOnce();
+  expect(h.node.style.width).toBe('300px');
+  expect(h.frames.size).toBe(0);
+  h.reveal.leave(h.node, done);
+  expect(done).toHaveBeenCalledTimes(2);
+});
+it('compensates horizontal row gaps without affecting a column layout', () => {
+  for (const direction of ['row', 'row-reverse', 'column']) {
+    const h = harness(12, 'horizontal');
+    h.node.parentElement!.style.display = 'flex';
+    h.node.parentElement!.style.flexDirection = direction;
+    h.reveal.enter(h.node, vi.fn());
+    expect(h.node.style.marginRight).toBe(direction.startsWith('row') ? '-12px' : '0px');
+    h.reveal.dispose();
+    expect(h.node.style.width).toBe('300px');
+    expect(h.frames.size).toBe(0);
+  }
 });
 it('reverses quick toggles from the current height and cancels old frame zero', () => {
   const h = harness(0),

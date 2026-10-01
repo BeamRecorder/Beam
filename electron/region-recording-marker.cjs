@@ -1,4 +1,5 @@
 const path = require('node:path');
+const { developmentRendererUrl } = require('./lifecycle/development-session.cjs');
 function markerBounds(bounds, region) {
   const left = Math.floor(bounds.x + region.x * bounds.width);
   const top = Math.floor(bounds.y + region.y * bounds.height);
@@ -50,7 +51,7 @@ function createRegionRecordingMarker({ BrowserWindow, applicationRoot, isPackage
         }
         const loaded = isPackaged
           ? target.loadFile(path.join(applicationRoot, 'dist/html/region-marker.html'))
-          : target.loadURL('http://localhost:6500/html/region-marker.html');
+          : target.loadURL(developmentRendererUrl('region-marker.html'));
         void loaded.catch(() => {
           if (!target.isDestroyed()) target.destroy();
           windows.delete(target);

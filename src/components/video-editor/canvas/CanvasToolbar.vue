@@ -146,7 +146,7 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
   container-type: inline-size;
   width: 100%;
   z-index: 3;
-  height: calc(40px * var(--ui-scale-canvas-controls, 1));
+  height: var(--editor-canvas-toolbar-height);
   flex: none;
   display: flex;
   align-items: center;

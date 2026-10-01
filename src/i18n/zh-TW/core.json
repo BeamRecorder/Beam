@@ -933,6 +933,8 @@
     "defaultSystemAudio": "預設系統輸出"
   },
   "ScreenshotEditor": {
+    "tools": "工具",
+    "selectTool": "選取",
     "title": "螢幕截圖",
     "export": "匯出",
     "layers": "截圖圖層",
@@ -1058,6 +1060,8 @@
   },
   "ScreenshotComposition": {
     "title": "合成",
+    "name": "圖層名稱",
+    "rename": "重新命名圖層 · 按兩下或 F2",
     "layers": "圖層",
     "blendMode": "混合模式",
     "opacity": "不透明度",

@@ -30,6 +30,24 @@ const create = async (count = 30, width = 680) => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('responsive virtual project grid', () => {
+  it.each([0, -1, Number.NaN])(
+    'retains measured geometry and ready rows when hidden width is %s',
+    async (hiddenWidth) => {
+      const { grid, wrapper } = await create();
+      const style = grid.gridStyle.value;
+      const rows = grid.list.value;
+      const height = grid.wrapperProps.value.style.height;
+      observed.width!.value = hiddenWidth;
+      await flushPromises();
+      expect(grid.gridStyle.value).toBe(style);
+      expect(grid.list.value).toBe(rows);
+      expect(grid.wrapperProps.value.style.height).toBe(height);
+      observed.width!.value = 520;
+      await flushPromises();
+      expect(grid.gridStyle.value['--project-columns']).toBe(2);
+      wrapper.unmount();
+    },
+  );
   it('measures the list on mount while native ResizeObserver has not fired', async () => {
     const { grid, wrapper } = await create();
     expect(grid.gridStyle.value['--project-columns']).toBe(3);

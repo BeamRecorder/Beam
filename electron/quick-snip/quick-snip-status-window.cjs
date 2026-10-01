@@ -1,4 +1,5 @@
 const path = require('path');
+const { developmentRendererUrl } = require('../lifecycle/development-session.cjs');
 const { createCommittedWindowPosition } = require('../window/committed-window-position.cjs');
 const {
   STATUS_SIZE,
@@ -202,7 +203,7 @@ function createQuickSnipStatusWindow({
       target.loadFile(path.join(applicationRoot, 'dist/html/quick-snip-status.html'), {
         query: { quickSnipStatus: '1' },
       });
-    else target.loadURL('http://localhost:6500/html/quick-snip-status.html?quickSnipStatus=1');
+    else target.loadURL(developmentRendererUrl('quick-snip-status.html?quickSnipStatus=1', environment));
     return target;
   };
   return {

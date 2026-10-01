@@ -26,9 +26,14 @@ import ProjectFeatureBadges from '../projects/ProjectFeatureBadges.vue';
 
 import ProjectModeIcon from './ProjectModeIcon.vue';
 import ProjectTitle from './ProjectTitle.vue';
+import ProjectPreviewImage from './ProjectPreviewImage.vue';
 import { useProjectPicker } from './useProjectPicker';
 import type { ProjectPickerProps, ProjectPickerEvents } from './project-picker-types';
-const props = withDefaults(defineProps<Partial<ProjectPickerProps>>(), { compact: false, currentProjectId: null });
+const props = withDefaults(defineProps<Partial<ProjectPickerProps>>(), {
+  compact: false,
+  currentProjectId: null,
+  active: true,
+});
 const emit = defineEmits<ProjectPickerEvents>();
 const {
   t,
@@ -296,13 +301,10 @@ defineExpose({ refresh: loadProjects, invalidate });
                   @keydown.space.self="isSelectionMode ? toggleBatchSelect(project.id) : selectProject(project)"
                 >
                   <div class="project-preview project-card-media">
-                    <img
-                      v-if="thumbnailCache[project.id] || project.thumbnailSrc"
-                      :src="thumbnailCache[project.id] || project.thumbnailSrc!"
-                      class="project-preview-thumb"
+                    <ProjectPreviewImage
+                      :src="thumbnailCache[project.id] || project.thumbnailSrc"
                       :alt="t('preview')"
                     />
-                    <Skeleton v-else class="project-preview-skeleton" variant="linear" height="100%" width="100%" />
                     <video
                       v-if="project.previewSrc && hoveredProjectId === project.id"
                       :src="project.previewSrc"

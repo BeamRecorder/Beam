@@ -7,10 +7,18 @@ import type { CaptureProject } from '../../api/types/capture-api';
 import { useTranslate } from '~/i18n/useTranslate';
 import Button from '~/ui/button/Button.vue';
 import Popover from '~/ui/popover/Popover.vue';
+import ProjectPickerLoading from '../projects/ProjectPickerLoading.vue';
 
 const { t } = useTranslate('VideoProjectEdition');
 const { t: pickerText } = useTranslate('ProjectPicker');
-const ProjectPicker = defineAsyncComponent(() => import('../projects/ProjectPicker.vue'));
+const ProjectPicker = defineAsyncComponent({
+  loader: () => import('../projects/ProjectPicker.vue'),
+  loadingComponent: ProjectPickerLoading,
+  delay: 0,
+});
+const warmPicker = () => {
+  void import('../projects/ProjectPicker.vue').catch((error) => console.warn('Project picker preload failed:', error));
+};
 const props = withDefaults(
   defineProps<{ project?: ProjectIdentity | null; disabled?: boolean; isSaving?: boolean }>(),
   { project: null, isSaving: false },
@@ -78,13 +86,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="switcher" class="project-switcher">
+  <div ref="switcher" class="project-switcher" @pointerenter="warmPicker" @focusin="warmPicker">
     <Popover
       ref="picker"
       block
       align="center"
       surface="attached"
       flush
+      keep-mounted
+      motion="lift"
+      trigger-on="pointerdown"
       :gap="panelGap"
       :match-trigger-width="false"
       :close-on-window-blur="false"
@@ -112,23 +123,26 @@ onUnmounted(() => {
           </span>
         </Button>
       </template>
-      <section
-        ref="panel"
-        :id="panelId"
-        class="project-menu-panel"
-        role="dialog"
-        :aria-label="pickerText('projects')"
-        tabindex="-1"
-      >
-        <ProjectPicker
-          compact
-          :current-project-id="project?.id"
-          @select-project="handleProjectSelected"
-          @open-project="handleProjectSelected"
-          @rename-project="handleProjectRenamed"
-          @delete-project="emit('delete-project', $event)"
-        />
-      </section>
+      <template #default="{ isOpen }">
+        <section
+          ref="panel"
+          :id="panelId"
+          class="project-menu-panel"
+          role="dialog"
+          :aria-label="pickerText('projects')"
+          tabindex="-1"
+        >
+          <ProjectPicker
+            compact
+            :active="isOpen"
+            :current-project-id="project?.id"
+            @select-project="handleProjectSelected"
+            @open-project="handleProjectSelected"
+            @rename-project="handleProjectRenamed"
+            @delete-project="emit('delete-project', $event)"
+          />
+        </section>
+      </template>
     </Popover>
   </div>
 </template>

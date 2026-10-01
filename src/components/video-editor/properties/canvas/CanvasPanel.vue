@@ -3,13 +3,11 @@ import { computed, ref, watch } from 'vue';
 import { SlidersHorizontal, Video } from '@lucide/vue';
 import AddTileButton from '~/ui/button/AddTileButton.vue';
 import Button from '~/ui/button/Button.vue';
-import CanvasBackgroundTabs from './CanvasBackgroundTabs.vue';
-import BigSlider from '~/ui/slider/BigSlider.vue';
+import CanvasPanelLayout from './CanvasPanelLayout.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import Tooltip from '~/ui/tooltip/Tooltip.vue';
 import BackgroundPresetComposer from './BackgroundPresetComposer.vue';
-import RemoveBackgroundControl from './RemoveBackgroundControl.vue';
 import { capture } from '../../../../api/capture';
 import {
   customColor,
@@ -23,11 +21,8 @@ import { useCanvasMediaTiles } from './useCanvasMediaTiles';
 import { useBackgroundPresets } from './useBackgroundPresets';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { WatermarkSettings } from '../../canvas/output-canvas';
-import WatermarkControls from './WatermarkControls.vue';
 
 const { t } = useTranslate('CanvasPanel');
-const { t: tProperties } = useTranslate('PropertiesPanel');
-const { t: tScreenshot } = useTranslate('ScreenshotEditor');
 
 const props = defineProps<{
   still?: boolean;
@@ -115,302 +110,276 @@ const importLabel = computed(() =>
 </script>
 
 <template>
-  <div class="canvas-panel-container">
-    <section class="background-section" aria-labelledby="canvas-background-heading">
-      <h4 id="canvas-background-heading" class="section-heading">{{ tProperties('background') }}</h4>
-      <RemoveBackgroundControl
-        :description="still ? tScreenshot('removeBackgroundDescription') : undefined"
-        :model-value="!showBackground"
-        @update:model-value="emit('update:showBackground', !$event)"
-      />
-      <div v-show="showBackground" class="background-options">
-        <CanvasBackgroundTabs :model-value="activeKind" :still="still" @update:model-value="switchKind" />
-
-        <div class="tab-content-panel">
-          <div v-show="activeKind === 'image' || activeKind === 'video'" ref="gridRef" class="media-scroll-grid">
-            <Tooltip :content="importLabel" class="media-import-tile" :style="{ width: '100%', display: 'flex' }">
-              <AddTileButton :label="importLabel" class="import-tile" @click="triggerImport" />
-            </Tooltip>
-            <div v-if="!items.length" class="empty-backgrounds">
-              <span>{{ t('noBackgroundFound') }}</span>
-            </div>
-            <button
-              v-for="item in visibleItems"
-              :key="item.id"
-              type="button"
-              class="media-tile"
-              :ref="mediaTileRef(item)"
-              :class="{
-                active: isSelected(item),
-              }"
-              :aria-label="item.name"
-              :aria-busy="!previews[item.id] && !failed[item.id]"
-              draggable="false"
-              @dragstart.prevent
-              @click="emit('update:selectedBackground', item)"
-            >
-              <img
-                v-if="previews[item.id]"
-                :src="previews[item.id]"
-                :alt="item.name"
-                class="media-content loaded"
-                loading="lazy"
-                decoding="async"
-                draggable="false"
-                @dragstart.prevent
-              />
-              <img
-                v-else-if="item.kind === 'image' && failed[item.id]"
-                :src="item.path"
-                :alt="item.name"
-                class="media-content loaded"
-                loading="lazy"
-                decoding="async"
-                draggable="false"
-                @dragstart.prevent
-              />
-              <span v-else-if="item.kind === 'video' && failed[item.id]" class="video-placeholder">
-                <Video :size="16" />
-              </span>
-              <Skeleton v-else class="media-loading-skeleton" width="100%" height="100%" radius="inherit" />
-            </button>
-            <div v-if="hasMore" class="load-more">
-              <Button variant="secondary" size="sm" block :disabled="isLoadingMore" @click="loadMore">
-                {{ t('showMore') }}
-              </Button>
-            </div>
-          </div>
-
-          <div v-show="activeKind === 'color'" class="swatches-section">
-            <div class="swatches-grid">
-              <Popover
-                block
-                :match-trigger-width="false"
-                flush
-                @toggle="
-                  (open) => {
-                    if (!open) closeCustomEditor();
-                  }
-                "
-              >
-                <template #trigger>
-                  <Tooltip
-                    :content="t('customColor')"
-                    class="preset-add-tooltip"
-                    :style="{ width: '100%', display: 'flex' }"
-                  >
-                    <AddTileButton
-                      :active="isSelected(customColor(customColorValue))"
-                      :label="t('customColor')"
-                      @click="beginAdd('color')"
-                    />
-                  </Tooltip>
-                </template>
-                <template #default="{ close }">
-                  <BackgroundPresetComposer
-                    kind="color"
-                    :color="customColorValue"
-                    :gradient="customGradientValue"
-                    @add-color="
-                      (val) => {
-                        addColorPreset(val);
-                        close();
-                      }
-                    "
-                    @update-color="updateLiveColor"
-                    @close="
-                      () => {
-                        closeCustomEditor();
-                        close();
-                      }
-                    "
-                  />
-                </template>
-              </Popover>
-              <button
-                v-for="item in colorPresets"
-                :key="item.id"
-                type="button"
-                class="swatch-tile"
-                :class="{ active: isSelected(item), editing: isEditing(item.id) }"
-                :style="{ backgroundColor: item.color }"
-                :aria-label="item.name"
-                @click="emit('update:selectedBackground', item)"
-              />
-            </div>
-            <Popover
-              v-if="selectedColorPreset"
-              block
-              :match-trigger-width="false"
-              flush
-              @toggle="
-                (open) => {
-                  if (!open) closeCustomEditor();
-                }
-              "
-            >
-              <template #trigger>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  block
-                  :icon="SlidersHorizontal"
-                  :aria-pressed="isEditing(selectedColorPreset.id)"
-                  class="edit-selected-preset"
-                  @click="toggleColor(selectedColorPreset)"
-                  >{{ isEditing(selectedColorPreset.id) ? t('closeEditing') : t('edit') }}</Button
-                >
-              </template>
-              <template #default="{ close }">
-                <BackgroundPresetComposer
-                  kind="color"
-                  :color="selectedColorPreset?.color ?? customColorValue"
-                  :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
-                  @add-color="
-                    (val) => {
-                      addColorPreset(val);
-                      close();
-                    }
-                  "
-                  @update-color="updateLiveColor"
-                  @close="
-                    () => {
-                      closeCustomEditor();
-                      close();
-                    }
-                  "
-                />
-              </template>
-            </Popover>
-          </div>
-
-          <div v-show="activeKind === 'gradient'" class="gradients-section">
-            <div class="gradients-grid">
-              <Popover
-                block
-                :match-trigger-width="false"
-                flush
-                @toggle="
-                  (open) => {
-                    if (!open) closeCustomEditor();
-                  }
-                "
-              >
-                <template #trigger>
-                  <Tooltip
-                    :content="t('customGradient')"
-                    class="preset-add-tooltip"
-                    :style="{ width: '100%', display: 'flex' }"
-                  >
-                    <AddTileButton
-                      :active="isSelected(customGradient(customGradientValue))"
-                      :label="t('customGradient')"
-                      @click="beginAdd('gradient')"
-                    />
-                  </Tooltip>
-                </template>
-                <template #default="{ close }">
-                  <BackgroundPresetComposer
-                    kind="gradient"
-                    :color="customColorValue"
-                    :gradient="customGradientValue"
-                    @add-gradient="
-                      (val) => {
-                        addGradientPreset(val);
-                        close();
-                      }
-                    "
-                    @update-gradient="updateLiveGradient"
-                    @close="
-                      () => {
-                        closeCustomEditor();
-                        close();
-                      }
-                    "
-                  />
-                </template>
-              </Popover>
-              <button
-                v-for="item in gradientPresets"
-                :key="item.id"
-                type="button"
-                class="swatch-tile"
-                :class="{ active: isSelected(item), editing: isEditing(item.id) }"
-                :style="{
-                  backgroundImage: gradientCssBackground(item.gradient),
-                }"
-                :aria-label="item.name"
-                @click="emit('update:selectedBackground', item)"
-              />
-            </div>
-            <Popover
-              v-if="selectedGradientPreset"
-              block
-              :match-trigger-width="false"
-              flush
-              @toggle="
-                (open) => {
-                  if (!open) closeCustomEditor();
-                }
-              "
-            >
-              <template #trigger>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  block
-                  :icon="SlidersHorizontal"
-                  :aria-pressed="isEditing(selectedGradientPreset.id)"
-                  class="edit-selected-preset"
-                  @click="toggleGradient(selectedGradientPreset)"
-                  >{{ isEditing(selectedGradientPreset.id) ? t('closeEditing') : t('edit') }}</Button
-                >
-              </template>
-              <template #default="{ close }">
-                <BackgroundPresetComposer
-                  kind="gradient"
-                  :color="selectedColorPreset?.color ?? customColorValue"
-                  :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
-                  @add-gradient="
-                    (val) => {
-                      addGradientPreset(val);
-                      close();
-                    }
-                  "
-                  @update-gradient="updateLiveGradient"
-                  @close="
-                    () => {
-                      closeCustomEditor();
-                      close();
-                    }
-                  "
-                />
-              </template>
-            </Popover>
-          </div>
-        </div>
-
-        <div class="slider-row">
-          <BigSlider
-            :model-value="blurDraft"
-            :min="0"
-            :max="100"
-            :step="1"
-            :label="t('blur')"
-            :format-value="(value: number) => `${Math.round(value)}%`"
-            @update:model-value="updateBlur"
-            @interaction-end="emit('update:blurPercent', blurDraft)"
-          />
-        </div>
+  <CanvasPanelLayout
+    :still="still"
+    :show-background="showBackground"
+    :active-kind="activeKind"
+    :blur-percent="blurDraft"
+    :watermark="watermark"
+    @update:show-background="emit('update:showBackground', $event)"
+    @update:active-kind="switchKind"
+    @update:blur-percent="updateBlur"
+    @blur-interaction-end="emit('update:blurPercent', blurDraft)"
+    @update:watermark="emit('update:watermark', $event)"
+  >
+    <div v-show="activeKind === 'image' || activeKind === 'video'" ref="gridRef" class="media-scroll-grid">
+      <Tooltip :content="importLabel" class="media-import-tile" :style="{ width: '100%', display: 'flex' }">
+        <AddTileButton :label="importLabel" class="import-tile" @click="triggerImport" />
+      </Tooltip>
+      <div v-if="!items.length" class="empty-backgrounds">
+        <span>{{ t('noBackgroundFound') }}</span>
       </div>
-    </section>
+      <button
+        v-for="item in visibleItems"
+        :key="item.id"
+        type="button"
+        class="media-tile"
+        :ref="mediaTileRef(item)"
+        :class="{
+          active: isSelected(item),
+        }"
+        :aria-label="item.name"
+        :aria-busy="!previews[item.id] && !failed[item.id]"
+        draggable="false"
+        @dragstart.prevent
+        @click="emit('update:selectedBackground', item)"
+      >
+        <img
+          v-if="previews[item.id]"
+          :src="previews[item.id]"
+          :alt="item.name"
+          class="media-content loaded"
+          loading="lazy"
+          decoding="async"
+          draggable="false"
+          @dragstart.prevent
+        />
+        <img
+          v-else-if="item.kind === 'image' && failed[item.id]"
+          :src="item.path"
+          :alt="item.name"
+          class="media-content loaded"
+          loading="lazy"
+          decoding="async"
+          draggable="false"
+          @dragstart.prevent
+        />
+        <span v-else-if="item.kind === 'video' && failed[item.id]" class="video-placeholder">
+          <Video :size="16" />
+        </span>
+        <Skeleton v-else class="media-loading-skeleton" width="100%" height="100%" radius="inherit" />
+      </button>
+      <div v-if="hasMore" class="load-more">
+        <Button variant="secondary" size="sm" block :disabled="isLoadingMore" @click="loadMore">
+          {{ t('showMore') }}
+        </Button>
+      </div>
+    </div>
 
-    <WatermarkControls
-      :description="still ? tScreenshot('watermarkDescription') : undefined"
-      :model-value="watermark"
-      @update:model-value="emit('update:watermark', $event)"
-    />
-  </div>
+    <div v-show="activeKind === 'color'" class="swatches-section">
+      <div class="swatches-grid">
+        <Popover
+          block
+          :match-trigger-width="false"
+          flush
+          @toggle="
+            (open) => {
+              if (!open) closeCustomEditor();
+            }
+          "
+        >
+          <template #trigger>
+            <Tooltip :content="t('customColor')" class="preset-add-tooltip" :style="{ width: '100%', display: 'flex' }">
+              <AddTileButton
+                :active="isSelected(customColor(customColorValue))"
+                :label="t('customColor')"
+                @click="beginAdd('color')"
+              />
+            </Tooltip>
+          </template>
+          <template #default="{ close }">
+            <BackgroundPresetComposer
+              kind="color"
+              :color="customColorValue"
+              :gradient="customGradientValue"
+              @add-color="
+                (val) => {
+                  addColorPreset(val);
+                  close();
+                }
+              "
+              @update-color="updateLiveColor"
+              @close="
+                () => {
+                  closeCustomEditor();
+                  close();
+                }
+              "
+            />
+          </template>
+        </Popover>
+        <button
+          v-for="item in colorPresets"
+          :key="item.id"
+          type="button"
+          class="swatch-tile"
+          :class="{ active: isSelected(item), editing: isEditing(item.id) }"
+          :style="{ backgroundColor: item.color }"
+          :aria-label="item.name"
+          @click="emit('update:selectedBackground', item)"
+        />
+      </div>
+      <Popover
+        v-if="selectedColorPreset"
+        block
+        :match-trigger-width="false"
+        flush
+        @toggle="
+          (open) => {
+            if (!open) closeCustomEditor();
+          }
+        "
+      >
+        <template #trigger>
+          <Button
+            variant="secondary"
+            size="sm"
+            block
+            :icon="SlidersHorizontal"
+            :aria-pressed="isEditing(selectedColorPreset.id)"
+            class="edit-selected-preset"
+            @click="toggleColor(selectedColorPreset)"
+            >{{ isEditing(selectedColorPreset.id) ? t('closeEditing') : t('edit') }}</Button
+          >
+        </template>
+        <template #default="{ close }">
+          <BackgroundPresetComposer
+            kind="color"
+            :color="selectedColorPreset?.color ?? customColorValue"
+            :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
+            @add-color="
+              (val) => {
+                addColorPreset(val);
+                close();
+              }
+            "
+            @update-color="updateLiveColor"
+            @close="
+              () => {
+                closeCustomEditor();
+                close();
+              }
+            "
+          />
+        </template>
+      </Popover>
+    </div>
+
+    <div v-show="activeKind === 'gradient'" class="gradients-section">
+      <div class="gradients-grid">
+        <Popover
+          block
+          :match-trigger-width="false"
+          flush
+          @toggle="
+            (open) => {
+              if (!open) closeCustomEditor();
+            }
+          "
+        >
+          <template #trigger>
+            <Tooltip
+              :content="t('customGradient')"
+              class="preset-add-tooltip"
+              :style="{ width: '100%', display: 'flex' }"
+            >
+              <AddTileButton
+                :active="isSelected(customGradient(customGradientValue))"
+                :label="t('customGradient')"
+                @click="beginAdd('gradient')"
+              />
+            </Tooltip>
+          </template>
+          <template #default="{ close }">
+            <BackgroundPresetComposer
+              kind="gradient"
+              :color="customColorValue"
+              :gradient="customGradientValue"
+              @add-gradient="
+                (val) => {
+                  addGradientPreset(val);
+                  close();
+                }
+              "
+              @update-gradient="updateLiveGradient"
+              @close="
+                () => {
+                  closeCustomEditor();
+                  close();
+                }
+              "
+            />
+          </template>
+        </Popover>
+        <button
+          v-for="item in gradientPresets"
+          :key="item.id"
+          type="button"
+          class="swatch-tile"
+          :class="{ active: isSelected(item), editing: isEditing(item.id) }"
+          :style="{
+            backgroundImage: gradientCssBackground(item.gradient),
+          }"
+          :aria-label="item.name"
+          @click="emit('update:selectedBackground', item)"
+        />
+      </div>
+      <Popover
+        v-if="selectedGradientPreset"
+        block
+        :match-trigger-width="false"
+        flush
+        @toggle="
+          (open) => {
+            if (!open) closeCustomEditor();
+          }
+        "
+      >
+        <template #trigger>
+          <Button
+            variant="secondary"
+            size="sm"
+            block
+            :icon="SlidersHorizontal"
+            :aria-pressed="isEditing(selectedGradientPreset.id)"
+            class="edit-selected-preset"
+            @click="toggleGradient(selectedGradientPreset)"
+            >{{ isEditing(selectedGradientPreset.id) ? t('closeEditing') : t('edit') }}</Button
+          >
+        </template>
+        <template #default="{ close }">
+          <BackgroundPresetComposer
+            kind="gradient"
+            :color="selectedColorPreset?.color ?? customColorValue"
+            :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
+            @add-gradient="
+              (val) => {
+                addGradientPreset(val);
+                close();
+              }
+            "
+            @update-gradient="updateLiveGradient"
+            @close="
+              () => {
+                closeCustomEditor();
+                close();
+              }
+            "
+          />
+        </template>
+      </Popover>
+    </div>
+  </CanvasPanelLayout>
 </template>
 
 <style scoped src="./canvas-panel.css"></style>

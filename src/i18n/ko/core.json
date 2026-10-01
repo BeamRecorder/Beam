@@ -933,6 +933,8 @@
     "defaultSystemAudio": "기본 시스템 출력"
   },
   "ScreenshotEditor": {
+    "tools": "도구",
+    "selectTool": "선택",
     "title": "스크린샷",
     "export": "내보내기",
     "layers": "스크린샷 레이어",
@@ -1058,6 +1060,8 @@
   },
   "ScreenshotComposition": {
     "title": "컴포지션",
+    "name": "레이어 이름",
+    "rename": "레이어 이름 변경 · 두 번 클릭 또는 F2",
     "layers": "레이어",
     "blendMode": "혼합 모드",
     "opacity": "불투명도",

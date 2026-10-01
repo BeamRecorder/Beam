@@ -1,6 +1,7 @@
 import type { EditorPropertyGroup } from './editor-search-types';
 
 export const EDITOR_PROPERTY_GROUPS: readonly EditorPropertyGroup[] = [
+  { namespace: 'ScreenshotComposition', tab: 'clip', clipOnly: true, modes: ['screenshot'], keys: ['name'] },
   {
     namespace: 'CanvasPanel',
     tab: 'canvas',
@@ -52,6 +53,7 @@ export const EDITOR_PROPERTY_GROUPS: readonly EditorPropertyGroup[] = [
     namespace: 'CanvasPanel',
     kinds: ['color', 'shape'],
     tab: 'clip',
+    section: 'appearance',
     clipOnly: true,
     keys: [
       'colorLayerOpacity',
@@ -77,10 +79,20 @@ export const EDITOR_PROPERTY_GROUPS: readonly EditorPropertyGroup[] = [
     kinds: ['shape'],
     tab: 'clip',
     clipOnly: true,
-    keys: ['shapeLibrary', 'editText', 'verticalAlignment', 'textPadding', 'strokeColor', 'strokeWidth', 'smoothing'],
+    section: 'text',
+    keys: ['editText', 'verticalAlignment', 'textPadding'],
+  },
+  {
+    namespace: 'Elements',
+    kinds: ['shape'],
+    tab: 'clip',
+    clipOnly: true,
+    section: 'appearance',
+    keys: ['shapeLibrary', 'strokeColor', 'strokeWidth', 'smoothing'],
   },
   {
     namespace: 'CaptionClipPanel',
+    section: 'text',
     kinds: ['caption', 'shape'],
     tab: 'clip',
     clipOnly: true,
@@ -121,6 +133,20 @@ export const EDITOR_PROPERTY_GROUPS: readonly EditorPropertyGroup[] = [
     clipOnly: true,
     videoOnly: true,
     keys: ['volume', 'normalize'],
+  },
+  {
+    namespace: 'Highlight',
+    tab: 'clip',
+    kinds: ['blur'],
+    clipOnly: true,
+    modes: ['screenshot'],
+    keys: ['opacity', 'highlightOpacity', 'highlightColor'],
+  },
+  {
+    namespace: 'AppearanceSettings',
+    tab: 'settings',
+    modes: ['screenshot'],
+    keys: ['themeMode', 'primaryColor', 'secondaryColor', 'cornerRadius', 'surfaceTone'],
   },
   {
     namespace: 'ZoomPanel',

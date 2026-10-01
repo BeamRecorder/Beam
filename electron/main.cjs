@@ -83,7 +83,7 @@ const logStartup = (step) => {
 };
 
 const applicationRoot = path.join(__dirname, '..');
-configureDevelopmentProfile(app);
+configureDevelopmentProfile(app, process.env, { applicationRoot });
 if (process.platform === 'linux') {
   // Use Chromium's XDG GlobalShortcuts portal on desktops that provide it.
   app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal');
@@ -106,8 +106,14 @@ function restoreCanonicalHud() {
   else pendingHudRestore = true;
 }
 
-const { isTrustedRenderer, configureMediaPermission, configureDesktopLoopback, getAppIconPath, createWindow } =
-  createRendererSetup({ app, BrowserWindow, session, desktopCapturer, applicationRoot, controllers, logStartup });
+const {
+  isTrustedRenderer,
+  configureMediaPermission,
+  configureDesktopLoopback,
+  getAppIconPath,
+  createWindow,
+  applyHudPreferences,
+} = createRendererSetup({ app, BrowserWindow, session, desktopCapturer, applicationRoot, controllers, logStartup });
 function initializeApplication() {
   const inputAccess = new InputAccess({
     app,
@@ -134,7 +140,7 @@ function initializeApplication() {
       logStartup('Media permission policy registered.');
       configureDesktopLoopback();
       registerInputAccessIpc(applicationIpc, inputAccess);
-      const userPaths = createUserPaths(app.getPath('videos'));
+      const userPaths = createUserPaths(app);
       organizeProjectCategories(userPaths.projects);
       const preferencesStore = createPreferencesStore(userPaths.preferences, { platform: process.platform });
       const startupPreferences = preferencesStore.repair();
@@ -199,13 +205,7 @@ function initializeApplication() {
         }),
         onPreferencesChanged: (preferences) => {
           applySpellCheck(preferences);
-          for (const win of BrowserWindow.getAllWindows()) {
-            const controller = controllers.get(win);
-            if (controller) {
-              controller.setHudAlwaysOnTop(preferences.alwaysOnTop);
-              controller.applyModePolicy();
-            }
-          }
+          applyHudPreferences(preferences);
         },
       });
       registerEditorPresetIpc({ ipcMain: applicationIpc, BrowserWindow, store: editorPresetStore });

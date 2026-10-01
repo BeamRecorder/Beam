@@ -481,3 +481,4 @@ defineExpose({ viewportZoom, captureCurrentFrame });
   </div>
 </template>
 <style scoped src="./EditorCanvas.css"></style>
+<style scoped src="../layout/editor-preview-layout.css"></style>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { inject, nextTick, provide, ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import { popoverViewportKey, popoverAnchorConstraintKey } from './popover-viewport-types';
-import { holdPopoverInteractionKey } from './popover-interaction-types';
+import { holdPopoverInteractionKey, popoverOpenStateKey, popoverVisibilityKey } from './popover-interaction-types';
 
 const props = withDefaults(
   defineProps<{
@@ -17,6 +17,9 @@ const props = withDefaults(
     allowOverflow?: boolean;
     surface?: 'default' | 'attached';
     gap?: number;
+    keepMounted?: boolean;
+    motion?: 'default' | 'lift';
+    triggerOn?: 'click' | 'pointerdown';
   }>(),
   {
     align: 'left',
@@ -31,6 +34,9 @@ const props = withDefaults(
     allowOverflow: false,
     surface: 'default',
     gap: 8,
+    keepMounted: false,
+    motion: 'default',
+    triggerOn: 'click',
   },
 );
 
@@ -39,10 +45,15 @@ const emit = defineEmits<{
 }>();
 
 const isOpen = ref(false);
+const hasOpened = ref(false);
+const notifyOpenState = inject(popoverOpenStateKey, null);
+const parentVisibility = inject(popoverVisibilityKey, null);
+provide(popoverVisibilityKey, isOpen);
 const popoverRef = ref<HTMLElement | null>(null);
 const contentRef = ref<HTMLElement | null>(null);
 const directionClass = ref(props.direction);
 const floatingStyle = ref<Record<string, string>>({});
+const liftStartStyle = ref<Record<string, string>>({});
 const pinned = ref(false);
 let closeTimer: ReturnType<typeof setTimeout> | null = null;
 let gestureResetTimer: ReturnType<typeof setTimeout> | null = null;
@@ -78,11 +89,24 @@ const toggle = () => {
   }
   isOpen.value = !isOpen.value;
 };
+const handleTriggerPress = (event: PointerEvent) => {
+  if (props.triggerOn !== 'pointerdown' || event.button !== 0 || event.ctrlKey) return;
+  event.preventDefault();
+  toggle();
+};
+const handleTriggerClick = (event: MouseEvent) => {
+  if (props.triggerOn === 'pointerdown' && event.detail > 0) return;
+  toggle();
+};
 
 const close = () => {
   pinned.value = false;
   isOpen.value = false;
 };
+if (parentVisibility)
+  watch(parentVisibility, (visible) => {
+    if (!visible) close();
+  });
 const cancelClose = () => {
   if (closeTimer) clearTimeout(closeTimer);
   closeTimer = null;
@@ -174,7 +198,20 @@ const adjustPosition = async () => {
 let resizeObserver: ResizeObserver | null = null;
 
 watch(isOpen, (val) => {
+  notifyOpenState?.(popoverId, val);
+  if (props.motion === 'lift') {
+    const content = contentRef.value;
+    const interrupted =
+      content &&
+      (content.classList.contains('pop-lift-enter-active') || content.classList.contains('pop-lift-leave-active'));
+    const style = interrupted ? window.getComputedStyle(content) : null;
+    liftStartStyle.value = {
+      '--popover-lift-opacity': style?.opacity || (val ? '0.16' : '1'),
+      '--popover-lift-transform': style?.transform || `translate3d(0, ${val ? 6 : 0}px, 0)`,
+    };
+  }
   if (val) {
+    hasOpened.value = true;
     // Prevent teleported content from painting at its unpositioned origin.
     // This is most noticeable for Selects nested inside another popover.
     const trigger = popoverRef.value?.querySelector('.popover-trigger')?.getBoundingClientRect();
@@ -277,6 +314,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  notifyOpenState?.(popoverId, false);
   void resizeViewport?.(popoverId, null);
   if (isOpen.value) emit('toggle', false);
   resizeObserver?.disconnect();
@@ -306,7 +344,8 @@ defineExpose({
   <div :class="['popover-container', { 'popover-block': block }]" ref="popoverRef">
     <div
       :class="['popover-trigger', { 'popover-block': block }]"
-      @click.stop="toggle"
+      @pointerdown="handleTriggerPress"
+      @click.stop="handleTriggerClick"
       @mouseenter="openTransient"
       @mouseleave="scheduleClose"
       @focusin="openTransient"
@@ -316,12 +355,14 @@ defineExpose({
     </div>
 
     <Teleport to="body">
-      <Transition name="pop">
+      <Transition :name="motion === 'lift' ? 'pop-lift' : 'pop'">
         <div
-          v-if="isOpen"
+          v-if="isOpen || (keepMounted && hasOpened)"
+          v-show="isOpen"
           ref="contentRef"
           class="popover-content"
           :data-popover-id="popoverId"
+          :inert="!isOpen || undefined"
           :data-popover-owner="parentPopoverId"
           :class="[
             align,
@@ -329,13 +370,13 @@ defineExpose({
             { 'popover-attached': surface === 'attached' },
             { 'popover-block': block, 'popover-flush': flush, 'popover-allow-overflow': allowOverflow },
           ]"
-          :style="floatingStyle"
+          :style="[floatingStyle, liftStartStyle]"
           @mouseenter="cancelClose"
           @mouseleave="scheduleClose"
           @focusin="cancelClose"
           @focusout="scheduleFocusClose"
         >
-          <slot :close="close" />
+          <slot :close="close" :isOpen="isOpen" />
         </div>
       </Transition>
     </Teleport>
@@ -405,6 +446,33 @@ defineExpose({
     opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1),
     transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
+.pop-lift-enter-active {
+  /* Keyframes start at presentation, without Vue's two-frame transition setup. */
+  animation: pop-lift-in 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.pop-lift-leave-active {
+  animation: pop-lift-out 100ms ease-in both;
+}
+@keyframes pop-lift-in {
+  from {
+    opacity: var(--popover-lift-opacity, 0.16);
+    transform: var(--popover-lift-transform, translate3d(0, 6px, 0));
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+@keyframes pop-lift-out {
+  from {
+    opacity: var(--popover-lift-opacity, 1);
+    transform: var(--popover-lift-transform, translate3d(0, 0, 0));
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, 4px, 0);
+  }
+}
 
 .pop-enter-from,
 .pop-leave-to {
@@ -419,8 +487,11 @@ defineExpose({
 }
 @media (prefers-reduced-motion: reduce) {
   .pop-enter-active,
-  .pop-leave-active {
+  .pop-leave-active,
+  .pop-lift-enter-active,
+  .pop-lift-leave-active {
     transition: none;
+    animation: none;
   }
 }
 </style>

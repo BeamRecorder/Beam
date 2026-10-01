@@ -1,6 +1,7 @@
 const { EditorWindowController } = require('./editor-window-controller.cjs');
 const { BrowserWindow } = require('electron');
 const path = require('path');
+const { developmentRendererUrl } = require('../lifecycle/development-session.cjs');
 const { shouldAutoOpenDevTools } = require('./devtools-policy.cjs');
 const { createEditorStartupGuard } = require('./editor-startup-guard.cjs');
 const { createEditorProgressReporter } = require('./editor-loading-progress.cjs');
@@ -55,7 +56,7 @@ function createEditorWindowManager({
 
   const load = (target) => {
     if (isPackaged) return target.loadFile(path.join(applicationRoot, 'dist/html/editor.html'));
-    return target.loadURL('http://localhost:6500/html/editor.html');
+    return target.loadURL(developmentRendererUrl('editor.html'));
   };
 
   const sessionForSender = (sender) => {

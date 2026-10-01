@@ -231,7 +231,7 @@ const handleFullscreenClick = (event?: MouseEvent) => {
   padding: 0;
   background: transparent;
   border-bottom: none;
-  min-height: calc(48px * var(--ui-scale-canvas-controls, 1));
+  min-height: var(--editor-playback-toolbar-height);
   flex: none;
   user-select: none;
   gap: 12px;

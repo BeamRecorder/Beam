@@ -110,6 +110,7 @@ export function pasteScreenshotLayerSelection(
     cursors: state.cursors ? [...state.cursors] : undefined,
     images: state.images ? [...state.images] : undefined,
     composition: state.composition ? [...state.composition] : undefined,
+    layerNames: state.layerNames ? { ...state.layerNames } : undefined,
   };
   initializeScreenshotComposition(next);
   const names: string[] = [];
@@ -142,6 +143,8 @@ export function pasteScreenshotLayerSelection(
       blendMode: entry.blendMode,
       locked: false,
     });
+    if (entry.name && screenshotLayers(next).find((layer) => layer.id === id)?.name !== entry.name)
+      next.layerNames = { ...next.layerNames, [id]: entry.name };
     names.push(entry.name);
   });
   const overlayCount =
@@ -153,6 +156,7 @@ export function pasteScreenshotLayerSelection(
   state.cursors = next.cursors;
   state.images = next.images;
   state.composition = next.composition;
+  state.layerNames = next.layerNames;
   return {
     ids,
     primaryId: ids[Math.min(clipboard.primaryIndex, ids.length - 1)]!,

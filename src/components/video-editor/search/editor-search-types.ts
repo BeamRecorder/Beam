@@ -34,6 +34,7 @@ export interface EditorSearchOptions {
   canEditClip: () => boolean;
   canEditZoom?: () => boolean;
   clipKind: () => string | undefined;
+  propertyAvailable?: (group: EditorPropertyGroup, key: string) => boolean;
   visible?: (ids: string[]) => void;
   insert: (kind: EditorInsertKind) => void | Promise<void>;
   selections: () => EditorSearchAction[];
@@ -56,6 +57,8 @@ export interface EditorPropertyGroup {
   videoOnly?: boolean;
   clipOnly?: boolean;
   kinds?: readonly string[];
+  section?: 'appearance' | 'text';
+  modes?: readonly ('video' | 'screenshot')[];
 }
 export interface VideoEditorSearchOptions {
   compositionState: ReturnType<typeof useClipComposition>;

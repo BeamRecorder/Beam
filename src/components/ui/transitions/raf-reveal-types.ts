@@ -4,14 +4,22 @@ export interface RevealRuntime {
   now: () => number;
   reducedMotion: () => boolean;
 }
+export type RevealAxis = 'vertical' | 'horizontal';
 export type RevealProperty =
   | 'height'
+  | 'width'
   | 'paddingTop'
   | 'paddingBottom'
+  | 'paddingLeft'
+  | 'paddingRight'
   | 'marginTop'
   | 'marginBottom'
+  | 'marginLeft'
+  | 'marginRight'
   | 'borderTopWidth'
   | 'borderBottomWidth'
+  | 'borderLeftWidth'
+  | 'borderRightWidth'
   | 'opacity';
 export interface RevealState {
   frame: number | null;

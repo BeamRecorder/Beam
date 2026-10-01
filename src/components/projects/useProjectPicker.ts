@@ -1,4 +1,4 @@
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
 import { useScrollShadow } from '~/ui/scroll-shadow/useScrollShadow';
 import { capture } from '~/api/capture';
 import type { CaptureProject } from '~/api/types/capture-api';
@@ -6,6 +6,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { useProjectPreviews } from './useProjectPreviews';
 import { useProjectGrid } from './useProjectGrid';
 import { useProjectSearch } from './useProjectSearch';
+import { createProjectPickerRefresh } from './project-picker-refresh';
 import type { ProjectPickerProps, ProjectPickerEmit } from './project-picker-types';
 
 export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerEmit) {
@@ -150,7 +151,7 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
 
   const previews = useProjectPreviews(
     containerProps.ref,
-    computed(() => list.value.flatMap((row) => row.data)),
+    computed(() => (props.active === false ? [] : list.value.flatMap((row) => row.data))),
   );
 
   const selectedProject = computed(
@@ -161,9 +162,9 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
   const isRefreshSuccess = ref(false);
   let refreshSuccessTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  const loadProjects = async () => {
-    if (cachedProjects && cachedProjects.length > 0) {
-      projects.value = [...cachedProjects];
+  let loadingRequest: Promise<void> | null = null;
+  const fetchProjects = async () => {
+    if (cachedProjects) {
       isLoading.value = false;
     } else {
       isLoading.value = true;
@@ -183,18 +184,24 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
       isLoading.value = false;
     }
   };
+  const loadProjects = () => {
+    loadingRequest ??= fetchProjects().finally(() => {
+      loadingRequest = null;
+    });
+    return loadingRequest;
+  };
+  const reopeningRefresh = createProjectPickerRefresh(() => {
+    void loadProjects();
+  });
 
   const handleRefresh = async () => {
-    if (isRefreshing.value || isLoading.value) return;
+    if (isRefreshing.value || isLoading.value || loadingRequest) return;
     isRefreshing.value = true;
     isRefreshSuccess.value = false;
     if (refreshSuccessTimeout) clearTimeout(refreshSuccessTimeout);
     try {
       cachedProjects = null;
-      const [nextProjects] = await Promise.all([
-        capture.listProjects(),
-        new Promise((resolve) => setTimeout(resolve, 350)),
-      ]);
+      const nextProjects = await capture.listProjects();
       cachedProjects = nextProjects;
       projects.value = [...nextProjects];
       selectedProjectId.value = projects.value.some((project) => project.id === props.currentProjectId)
@@ -235,11 +242,20 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
     openSelectedProject();
   };
 
-  onMounted(() => {
-    void loadProjects();
-  });
+  watch(
+    () => props.active !== false,
+    (active) => {
+      reopeningRefresh.cancel();
+      if (!active) return;
+      if (cachedProjects) reopeningRefresh.schedule();
+      else void loadProjects();
+      void nextTick(() => containerProps.onScroll());
+    },
+    { immediate: true },
+  );
 
   onUnmounted(() => {
+    reopeningRefresh.cancel();
     if (refreshSuccessTimeout) clearTimeout(refreshSuccessTimeout);
   });
 

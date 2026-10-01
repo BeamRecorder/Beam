@@ -1,5 +1,6 @@
 const { BrowserWindow } = require('electron');
 const path = require('path');
+const { developmentRendererUrl } = require('../lifecycle/development-session.cjs');
 
 const ONBOARDING_DEFAULT_SIZE = { width: 920, height: 620 };
 const ONBOARDING_MIN_SIZE = { width: 800, height: 520 };
@@ -53,7 +54,7 @@ function createOnboardingWindowManager({
 
   const load = (target) => {
     if (isPackaged) target.loadFile(path.join(applicationRoot, 'dist/html/onboarding.html'));
-    else target.loadURL('http://localhost:6500/html/onboarding.html');
+    else target.loadURL(developmentRendererUrl('onboarding.html'));
   };
 
   const showHud = () => {

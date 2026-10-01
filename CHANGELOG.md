@@ -6,6 +6,9 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Screenshot layers can be renamed by single-clicking their title in the left inspector header or double-clicking their Composition label (or pressing F2), with saved names, undo/redo and copy/paste support.
+- Screenshot shows a translated Recenter view button when the preview is moved or zoomed too far, matching the video editor.
+- `bun run dev` now starts Vite and Electron together, with automatic ports and persistent Electron profiles isolated per worktree; `--session <name>` supports additional parallel sessions in the same worktree while retaining the usual shared project library.
 - Double-clicking empty Studio canvas space opens the grouped Add menu, while double-clicking clips still opens text editing or cropping.
 - Video editor Accessibility settings can require double-clicks to add zooms, captions and elements from empty timeline tracks, preventing accidental additions.
 - Recorder and region settings can record the real system cursor on Windows, macOS and Linux while keeping automatic zooms. These recordings start with Beam's custom cursor overlay disabled; a toggle in the Cursor header can enable it again, and the choice is saved with the project and used for exports.
@@ -21,6 +24,10 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Video and screenshot project pickers retain their cards between openings while refreshing the catalogue, reveal projects and decoded images smoothly, and generate up to two visible video thumbnails concurrently.
+- Screenshot's lighter editing dock includes undo/redo, while dimensions, fullscreen and Settings live in the topbar. The dock, Composition and topbar share subtle frosted surfaces; the preview supports wheel zoom and middle-button or Space-drag panning without changing exports.
+- Screenshot editing uses a centered floating tool dock and a contextual inspector on the left, consistent with the video editor. A visible Properties toggle smoothly hides and restores the inspector without losing its context, replacing the separate Canvas/Clip/Settings navigation rail.
+- Development launches reuse the configured Cargo target directory and incremental compilation cache across worktrees, while keeping each running instance's native executables separate.
 - Editor settings now use clear categories, consistent option typography and aligned category icons. Update actions sit together with a shorter Changelog label; About groups community links and system information, and developer tools no longer sit inside nested boxes.
 - Recorder and editor settings share clearer Light/Dark/System previews, with brighter dark previews and one sliding selection indicator instead of an extra orange checkmark. The redundant language description is removed and Theme replaces Theme Mode.
 - Theme Advanced contains colors and style. Scaling keeps the global UI scale visible and puts per-area overrides behind its own Advanced button.
@@ -52,7 +59,7 @@ User-facing changes to Beam are documented in this file.
 - The countdown now has a Cancel button translated into all 15 supported languages, which releases the prepared recording without starting capture.
 - Capture mode and Light/Dark/System controls share a sliding selection indicator, with instant updates when reduced motion is enabled.
 - Beam's light theme uses a clearer orange with subtle accent fills and borders, correcting its brown appearance on white surfaces; the dark theme and custom colors retain their selected shades.
-- Projects opens in a smaller window with square cards that adapt to resizing. Missing thumbnails are generated only for visible projects, one at a time.
+- Projects opens in a smaller window with square cards that adapt to resizing. Missing thumbnails are generated only for visible projects, with bounded concurrency.
 - Desktop windows load their selected interface, language and appearance in parallel. Camera and Quick Snip controls load independently of the HUD, and auxiliary startup waits for native capture discovery.
 - Recorder startup now loads other languages, recording overlays, font parsing and SVG validation only when needed, and exposes startup timings in developer tools.
 - Updated desktop and website JavaScript dependencies to their latest stable versions, including Electron 44, and upgraded Bun to 1.4.2 locally and in CI.
@@ -65,6 +72,16 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Screenshot exports move rendering off the interface thread, avoid repeated image decoding and oversized working rasters, and reuse unchanged results for repeated saves or copies with a bounded cache. Large Composition lists no longer rebuild every row when export starts or finishes.
+- Startup skeletons follow each editor's actual workspace, scaled inspector and controls: Screenshot has its editing dock and Composition instead of a video timeline, while Studio preserves the saved timeline height. Screenshot keeps a correctly sized placeholder until its first canvas paint.
+- Theme previews keep proportional miniature layouts and a readable maximum width in recorder settings, including maximized windows and compact editor inspectors.
+- Restored Screenshot's topbar search and Ctrl/Cmd+F using Studio's shared command palette, with layer-aware categories, supported properties and capture actions. Search results reopen the left inspector and focus the appropriate Appearance or Text controls.
+- Editor project menus fade and lift smoothly from their first presented frame, avoiding abrupt bright flashes when opening and closing without delaying interaction.
+- Editor project menus respond on the initial pointer press; cached catalogue refresh waits until after presentation, and first-use loading no longer leaves a blank panel.
+- Clicking empty editor topbar space now dismisses its popovers; native window dragging resumes once the menus close.
+- Screenshot fullscreen transitions keep their backdrop opaque to prevent bright flashes when entering or leaving the preview.
+- Development sessions show existing videos and screenshots and reuse saved preferences from the usual Beam library instead of an empty profile-specific library.
+- Fresh development sessions can save onboarding preferences without applying recorder-only window methods to the welcome screen.
 - Shape and zoom selections no longer prevent manual navigation to Clip.
 - Spotlight no longer flashes on each typed letter or scales its text when opening; panel height changes animate smoothly.
 - Tooltips preserve intentional line breaks, including the perspective explanation.

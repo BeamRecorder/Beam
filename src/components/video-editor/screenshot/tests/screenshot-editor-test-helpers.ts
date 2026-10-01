@@ -1,4 +1,5 @@
 import { defineComponent, type Component, type PropType } from 'vue';
+import { vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { useElementEditor } from '../../elements/useElementEditor';
 import type { ElementEditorContext } from '../../elements/element-editor-types';
@@ -41,6 +42,7 @@ export function createScreenshotEditorTestHarness(
   screenshotEditor: Component,
   onCanvasEditor: (editor: ElementEditorContext | null) => void,
 ) {
+  const canvasResetView = vi.fn();
   const ButtonStub = defineComponent({
     name: 'Button',
     inheritAttrs: false,
@@ -92,8 +94,20 @@ export function createScreenshotEditorTestHarness(
       cropping: Boolean,
       cursorPacks: Array,
     },
-    emits: ['select', 'transform', 'translate', 'error', 'ready', 'crop', 'cropDone'],
-    setup() {
+    emits: [
+      'select',
+      'selectMany',
+      'transform',
+      'translate',
+      'rotate',
+      'error',
+      'ready',
+      'crop',
+      'cropDone',
+      'cropRequest',
+    ],
+    setup(_props, { expose }) {
+      expose({ resetView: canvasResetView });
       onCanvasEditor(useElementEditor());
     },
     template:
@@ -108,7 +122,7 @@ export function createScreenshotEditorTestHarness(
       source: String,
       disabled: Boolean,
     },
-    emits: ['select', 'reorder', 'update', 'visibility', 'remove'],
+    emits: ['select', 'reorder', 'update', 'visibility', 'remove', 'rename'],
     template: '<div data-testid="screenshot-composition" />',
   });
   const ScreenshotCursorControlsStub = defineComponent({
@@ -122,7 +136,7 @@ export function createScreenshotEditorTestHarness(
   });
   const CanvasPanelStub = defineComponent({
     name: 'CanvasPanel',
-    props: ['selectedBackground', 'blurPercent', 'showBackground', 'watermark'],
+    props: ['selectedBackground', 'backgroundGroups', 'blurPercent', 'showBackground', 'watermark'],
     emits: ['update:selectedBackground', 'update:blurPercent', 'update:showBackground', 'update:watermark'],
     template: '<div data-testid="canvas-panel" />',
   });
@@ -135,11 +149,15 @@ export function createScreenshotEditorTestHarness(
     template: '<div data-testid="preset-controls" />',
   };
 
-  const mountEditor = () =>
+  const mountEditor = (attach = false) =>
     mount(screenshotEditor, {
+      attachTo: attach ? document.body : undefined,
       props: { id: 'screen-1' },
       global: {
         stubs: {
+          ScreenshotCompositionSkeleton: true,
+          EditorSkeletonSurface: { template: '<div><slot /></div>' },
+          RafRevealTransition: { props: ['axis'], template: '<slot />' },
           UpdateAvailableBadge: true,
           EditorAmbientBackground: {
             name: 'EditorAmbientBackground',
@@ -154,6 +172,16 @@ export function createScreenshotEditorTestHarness(
           },
           Popover: defineComponent({
             data: () => ({ open: false }),
+            computed: {
+              isOpen() {
+                return this.open;
+              },
+            },
+            methods: {
+              toggle() {
+                this.open = !this.open;
+              },
+            },
             template:
               '<div><div @click="open = !open"><slot name="trigger" /></div><div v-if="open" data-testid="popover"><slot /></div></div>',
           }),
@@ -166,6 +194,12 @@ export function createScreenshotEditorTestHarness(
           ScreenshotComposition: ScreenshotCompositionStub,
           ScreenshotCursorControls: ScreenshotCursorControlsStub,
           CanvasPanel: CanvasPanelStub,
+          SettingsPanel: {
+            name: 'SettingsPanel',
+            props: ['hideRecorder'],
+            emits: ['back-to-hud'],
+            template: '<div data-testid="editor-settings" />',
+          },
           ClipPropertiesPanel: ClipPropertiesStub,
           EditorPresetControls: PresetControlsStub,
         },
@@ -190,7 +224,9 @@ export function createScreenshotEditorTestHarness(
       await flushPromises();
       return;
     }
-    const button = wrapper.findAll('button').find((candidate) => candidate.text().trim() === text);
+    const button = wrapper
+      .findAll('button')
+      .find((candidate) => candidate.text().trim() === text || candidate.attributes('aria-label') === text);
     if (!button) throw new Error(`Missing button: ${text}`);
     await button.trigger('click');
   };
@@ -199,6 +235,7 @@ export function createScreenshotEditorTestHarness(
     wrapper.findComponent(ScreenshotCompositionStub).props('layers') as ScreenshotLayer[];
 
   return {
+    canvasResetView,
     ScreenshotCanvasStub,
     ScreenshotCompositionStub,
     ShapePropertiesStub,

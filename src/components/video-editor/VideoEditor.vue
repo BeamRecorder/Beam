@@ -26,6 +26,7 @@ import TimelineToolbar from '~/components/video-editor/timeline/TimelineToolbar.
 import VoiceoverRecorderBar from '~/components/video-editor/voiceover/VoiceoverRecorderBar.vue';
 import Topbar from '~/components/video-editor/Topbar.vue';
 import EditorAmbientBackground from '~/components/video-editor/EditorAmbientBackground.vue';
+import EditorWorkspace from './layout/EditorWorkspace.vue';
 import EditorMediaDropOverlay from '~/components/video-editor/EditorMediaDropOverlay.vue';
 import LinkedClipsDeleteDialog from '~/components/video-editor/LinkedClipsDeleteDialog.vue';
 import Button from '~/components/ui/button/Button.vue';
@@ -875,326 +876,324 @@ capture.reportEditorLoadingStage?.('renderingEditor');
     <div v-if="isExporting" class="export-notice-banner">
       <Sparkles :size="14" class="banner-icon" /><span>{{ t('exportBanner') }}</span>
     </div>
-    <div class="editor-workspace">
-      <div class="workspace-upper">
-        <SidebarPanel :active-tab="activeTab" :panel-open="isPropertiesPanelOpen" @select-tab="selectPropertiesTab" />
-        <PropertiesPanel
-          v-if="isPropertiesPanelOpen"
-          :locked-selection="lockedSelection"
-          @unlock:selection="lockTimelineSelection({ ...lockedSelection, locked: false })"
-          ref="propertiesPanelRef"
-          :active-tab="activeTab"
-          :selected-clip="
-            selectedClipInfo && cropPreview ? { ...selectedClipInfo, crop: cropPreview } : selectedClipInfo
-          "
-          :selected-caption-clip="selectedCaptionClip"
-          :selected-clip-ids="selectedClipIds"
-          :selected-zoom-ids="selectedZoomIds"
-          v-model:cursor-selection="cursorSelection"
-          :cursor-packs="cursorPacks"
-          @preview:cursor-selection="cursorPreview = $event"
-          v-model:cursor-size="cursorSize"
-          v-model:cursor-color="cursorColor"
-          v-model:enable-shadow="enableShadow"
-          v-model:shadow-blur="shadowBlur"
-          v-model:shadow-color="shadowColor"
-          v-model:shadow-direction="shadowDirection"
-          v-model:click-effects="clickEffects"
-          v-model:motion="cursorMotion"
-          v-model:auto-hide="cursorAutoHide"
-          v-model:volume="volume"
-          v-model:system-volume="systemVolume"
-          v-model:mic-volume="micVolume"
-          v-model:is-system-audio-enabled="isSystemAudioEnabled"
-          v-model:is-mic-audio-enabled="isMicAudioEnabled"
-          :has-system-audio="hasSystemAudio"
-          :has-mic-audio="hasMicAudio"
-          :selected-background="selectedBackground"
-          :blur-percent="backgroundBlurPercent"
-          :background-groups="backgroundGroups"
-          :selected-zoom="selectedZoom"
-          :zoom-elements="zoomElements"
-          :can-generate-zooms="canGenerateZooms"
-          :has-automatic-zooms="hasAutomaticZooms"
-          :zoom-motion-blur="zoomMotionBlur"
-          :zoom-auto-follow="zoomAutoFollow"
-          :composition="composition"
-          :editor-data="editorData"
-          :timeline-duration-ms="Math.round(duration * 1000)"
-          :project-id="project?.id"
-          :canvas="renderedOutputCanvas"
-          :audio-normalization-statuses="audioNormalization.statuses"
-          :audio-normalization-errors="audioNormalization.errors"
-          @import:background="addBackground($event)"
-          @update:selected-background="selectedBackground = $event"
-          @update:blur-percent="backgroundBlurPercent = $event"
-          @update:canvas="outputCanvas = $event"
-          @update:zoom="updateZoom"
-          @update:zoom-motion-blur="zoomState.updateZoomMotionBlur"
-          @update:zoom-auto-follow="zoomState.updateZoomAutoFollow"
-          @delete:zoom="deleteSelectedTimelineZooms"
-          @generate:zooms="generateZooms()"
-          @update:caption="commitCaption"
-          @update:composition="replaceComposition"
-          @preview:composition="previewComposition"
-          @select-caption="selectEditorClip"
-          @delete-clip="
-            requestClipDeletion(selectedClipIds.length ? selectedClipIds : selectedClipId ? [selectedClipId] : [])
-          "
-          @delete:system-audio="deleteAudioRole('system')"
-          @delete:mic-audio="deleteAudioRole('microphone')"
-          @normalize:audio="audioNormalization.normalizeClipIds($event)"
-          @reset:audio-normalization="audioNormalization.resetClipIds($event)"
-          @split-clip="splitSelectedClip"
-          @update:clip-rate="updateSelectedRate"
-          @update:clip-volume="updateSelectedVolume"
-          @update:blur="updateSelectedBlur"
-          @update:clip-enabled="updateSelectedEnabled"
-          @unlink-sidecars="unlinkSidecars"
-          @update:clip-is-mirrored="updateSelectedMirrored"
-          @update:clip-is-mirrored-y="updateSelectedMirroredY"
-          @update:clip-corner-radius="
-            updateSelectedAppearance({
-              cornerRadius: ['none', 'sm', 'md', 'lg', 'full'].includes($event)
-                ? ($event as 'none' | 'sm' | 'md' | 'lg' | 'full')
-                : Number($event),
-            })
-          "
-          @corner-radius-interaction="transformHandlesMuted = $event"
-          @update:clip-shadow="
-            updateSelectedAppearance({
-              shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg' | 'custom',
-              shadowBlur: Number($event.blur ?? 40),
-              shadowMode: ($event.mode ?? 'solid') as 'solid' | 'adaptive',
-              shadowColor: $event.color ?? '#000000',
-              shadowDirection: ($event.direction ?? 'bottom') as 'all' | 'bottom' | 'bottom-right' | 'top-left',
-            })
-          "
-          @update:clip-appearance="updateSelectedAppearance($event)"
-          @update:clip-crop="commitSelectedCrop"
-          @preview:clip-crop="previewCrop"
-          @update:clip-transform="commitSelectedTransform"
-          @update:camera-layout="updateSelectedCameraLayout"
-          @update:camera-framing="updateSelectedCameraFraming"
-          @update:camera-split-ratio="updateSelectedCameraSplitRatio"
-          @update:camera-split-padding="updateSelectedCameraSplitPadding"
-          @update:webcam-react-to-zoom="updateSelectedWebcamReactToZoom"
-          @reset:clip-transform="commitSelectedTransform({ x: 0, y: 0, width: 1, height: 1 })"
-          @back-to-hud="emit('back-to-hud')"
-        />
+    <EditorWorkspace kind="video">
+      <SidebarPanel :active-tab="activeTab" :panel-open="isPropertiesPanelOpen" @select-tab="selectPropertiesTab" />
+      <PropertiesPanel
+        v-if="isPropertiesPanelOpen"
+        :locked-selection="lockedSelection"
+        @unlock:selection="lockTimelineSelection({ ...lockedSelection, locked: false })"
+        ref="propertiesPanelRef"
+        :active-tab="activeTab"
+        :selected-clip="selectedClipInfo && cropPreview ? { ...selectedClipInfo, crop: cropPreview } : selectedClipInfo"
+        :selected-caption-clip="selectedCaptionClip"
+        :selected-clip-ids="selectedClipIds"
+        :selected-zoom-ids="selectedZoomIds"
+        v-model:cursor-selection="cursorSelection"
+        :cursor-packs="cursorPacks"
+        @preview:cursor-selection="cursorPreview = $event"
+        v-model:cursor-size="cursorSize"
+        v-model:cursor-color="cursorColor"
+        v-model:enable-shadow="enableShadow"
+        v-model:shadow-blur="shadowBlur"
+        v-model:shadow-color="shadowColor"
+        v-model:shadow-direction="shadowDirection"
+        v-model:click-effects="clickEffects"
+        v-model:motion="cursorMotion"
+        v-model:auto-hide="cursorAutoHide"
+        v-model:volume="volume"
+        v-model:system-volume="systemVolume"
+        v-model:mic-volume="micVolume"
+        v-model:is-system-audio-enabled="isSystemAudioEnabled"
+        v-model:is-mic-audio-enabled="isMicAudioEnabled"
+        :has-system-audio="hasSystemAudio"
+        :has-mic-audio="hasMicAudio"
+        :selected-background="selectedBackground"
+        :blur-percent="backgroundBlurPercent"
+        :background-groups="backgroundGroups"
+        :selected-zoom="selectedZoom"
+        :zoom-elements="zoomElements"
+        :can-generate-zooms="canGenerateZooms"
+        :has-automatic-zooms="hasAutomaticZooms"
+        :zoom-motion-blur="zoomMotionBlur"
+        :zoom-auto-follow="zoomAutoFollow"
+        :composition="composition"
+        :editor-data="editorData"
+        :timeline-duration-ms="Math.round(duration * 1000)"
+        :project-id="project?.id"
+        :canvas="renderedOutputCanvas"
+        :audio-normalization-statuses="audioNormalization.statuses"
+        :audio-normalization-errors="audioNormalization.errors"
+        @import:background="addBackground($event)"
+        @update:selected-background="selectedBackground = $event"
+        @update:blur-percent="backgroundBlurPercent = $event"
+        @update:canvas="outputCanvas = $event"
+        @update:zoom="updateZoom"
+        @update:zoom-motion-blur="zoomState.updateZoomMotionBlur"
+        @update:zoom-auto-follow="zoomState.updateZoomAutoFollow"
+        @delete:zoom="deleteSelectedTimelineZooms"
+        @generate:zooms="generateZooms()"
+        @update:caption="commitCaption"
+        @update:composition="replaceComposition"
+        @preview:composition="previewComposition"
+        @select-caption="selectEditorClip"
+        @delete-clip="
+          requestClipDeletion(selectedClipIds.length ? selectedClipIds : selectedClipId ? [selectedClipId] : [])
+        "
+        @delete:system-audio="deleteAudioRole('system')"
+        @delete:mic-audio="deleteAudioRole('microphone')"
+        @normalize:audio="audioNormalization.normalizeClipIds($event)"
+        @reset:audio-normalization="audioNormalization.resetClipIds($event)"
+        @split-clip="splitSelectedClip"
+        @update:clip-rate="updateSelectedRate"
+        @update:clip-volume="updateSelectedVolume"
+        @update:blur="updateSelectedBlur"
+        @update:clip-enabled="updateSelectedEnabled"
+        @unlink-sidecars="unlinkSidecars"
+        @update:clip-is-mirrored="updateSelectedMirrored"
+        @update:clip-is-mirrored-y="updateSelectedMirroredY"
+        @update:clip-corner-radius="
+          updateSelectedAppearance({
+            cornerRadius: ['none', 'sm', 'md', 'lg', 'full'].includes($event)
+              ? ($event as 'none' | 'sm' | 'md' | 'lg' | 'full')
+              : Number($event),
+          })
+        "
+        @corner-radius-interaction="transformHandlesMuted = $event"
+        @update:clip-shadow="
+          updateSelectedAppearance({
+            shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg' | 'custom',
+            shadowBlur: Number($event.blur ?? 40),
+            shadowMode: ($event.mode ?? 'solid') as 'solid' | 'adaptive',
+            shadowColor: $event.color ?? '#000000',
+            shadowDirection: ($event.direction ?? 'bottom') as 'all' | 'bottom' | 'bottom-right' | 'top-left',
+          })
+        "
+        @update:clip-appearance="updateSelectedAppearance($event)"
+        @update:clip-crop="commitSelectedCrop"
+        @preview:clip-crop="previewCrop"
+        @update:clip-transform="commitSelectedTransform"
+        @update:camera-layout="updateSelectedCameraLayout"
+        @update:camera-framing="updateSelectedCameraFraming"
+        @update:camera-split-ratio="updateSelectedCameraSplitRatio"
+        @update:camera-split-padding="updateSelectedCameraSplitPadding"
+        @update:webcam-react-to-zoom="updateSelectedWebcamReactToZoom"
+        @reset:clip-transform="commitSelectedTransform({ x: 0, y: 0, width: 1, height: 1 })"
+        @back-to-hud="emit('back-to-hud')"
+      />
 
-        <div class="canvas-column">
-          <CanvasToolbar
-            :preset="outputCanvas.preset"
-            :loading="!initialPlaybackSettled"
-            :can-crop="Boolean(selectedTransformClip && isVisualClip(selectedTransformClip))"
+      <div class="canvas-column">
+        <CanvasToolbar
+          :preset="outputCanvas.preset"
+          :loading="!initialPlaybackSettled"
+          :can-crop="Boolean(selectedTransformClip && isVisualClip(selectedTransformClip))"
+          :is-cropping="isCropping"
+          :is-grid-visible="isGridVisible"
+          :is-capturing-screenshot="isCapturingScreenshot"
+          :zoom-percent="editorCanvasRef?.viewportZoom.zoomPercent.value ?? 100"
+          :is-zoomed-or-panned="editorCanvasRef?.viewportZoom.isZoomedOrPanned.value ?? false"
+          @select:preset="selectCanvasPreset"
+          @toggle:crop="toggleCrop"
+          @toggle:grid="isGridVisible = !isGridVisible"
+          @take:screenshot="takeCanvasScreenshot"
+          @zoom:in="editorCanvasRef?.viewportZoom.zoomIn()"
+          @zoom:out="editorCanvasRef?.viewportZoom.zoomOut()"
+          @reset:zoom="editorCanvasRef?.viewportZoom.resetZoom()"
+        />
+        <div
+          ref="canvasPreviewStageRef"
+          class="canvas-preview-stage"
+          :class="{
+            'is-app-fullscreen': canvasFullscreen.isFullscreen.value,
+            'is-fullscreen-exiting': canvasFullscreen.isExiting.value,
+          }"
+        >
+          <div v-if="canvasFullscreen.isFullscreen.value" class="fullscreen-preview-back">
+            <Button
+              variant="frosted"
+              size="sm"
+              :icon="ArrowLeft"
+              :tooltip="tTimelineToolbar('exitFullscreenPreview')"
+              @click="canvasFullscreen.toggleFullscreen"
+            >
+              {{ tTopbarHud('back') }}
+            </Button>
+          </div>
+          <EditorCanvas
+            ref="editorCanvasRef"
+            :is-playing="isPlaying"
+            :current-time="currentTime"
+            :duration="duration"
+            :cursor-selection="cursorPreview ?? cursorSelection"
+            :cursor-pack="cursorPack"
+            :cursor-size="cursorSize"
+            :cursor-color="cursorColor"
+            :enable-shadow="enableShadow"
+            :shadow-blur="shadowBlur"
+            :shadow-color="shadowColor"
+            :shadow-direction="shadowDirection"
+            :click-effects="clickEffects"
+            :motion="cursorMotion"
+            :auto-hide="cursorAutoHide"
+            :selected-background="renderedBackground"
+            :background-blur-percent="backgroundBlurPercent"
+            :frame-for="player.frameFor"
+            :frame-version="frameVersion"
+            :preview-quality="previewQuality"
+            :playback-state="playbackState"
+            :playback-error="playbackError"
+            :editor-data="editorData"
+            :zoom-elements="timelineZoomPreview ?? zoomElements"
+            :zoom-motion-blur="zoomMotionBlur"
+            :zoom-auto-follow="zoomAutoFollow"
+            :selected-zoom="editLocked ? null : selectedZoom"
+            :composition="canvasComposition"
+            :output-canvas="renderedOutputCanvas"
+            :active-tab="activeTab"
+            :selected-transform-clip="selectedTransformClip"
+            :selected-clip-ids="selectedClipIds"
+            :transform-handles-muted="transformHandlesMuted"
             :is-cropping="isCropping"
             :is-grid-visible="isGridVisible"
-            :is-capturing-screenshot="isCapturingScreenshot"
-            :zoom-percent="editorCanvasRef?.viewportZoom.zoomPercent.value ?? 100"
-            :is-zoomed-or-panned="editorCanvasRef?.viewportZoom.isZoomedOrPanned.value ?? false"
-            @select:preset="selectCanvasPreset"
-            @toggle:crop="toggleCrop"
-            @toggle:grid="isGridVisible = !isGridVisible"
-            @take:screenshot="takeCanvasScreenshot"
-            @zoom:in="editorCanvasRef?.viewportZoom.zoomIn()"
-            @zoom:out="editorCanvasRef?.viewportZoom.zoomOut()"
-            @reset:zoom="editorCanvasRef?.viewportZoom.resetZoom()"
+            :history-action="historyAction"
+            @update:zoom="commitZoom"
+            @select:clip="selectEditorClip"
+            @select:clips="
+              selectEditorTrack({ clipIds: $event.ids, primaryClipId: $event.primaryId, additive: $event.additive })
+            "
+            @select:canvas="selectEditorCanvas"
+            @select:cursor="selectEditorCursor"
+            @update:cursor-size="cursorSize = $event"
+            @deselect:transform-clip="deselectTransformClip"
+            @update:clip-transform="commitSelectedTransform"
+            @update:clip-transforms="commitSelectedTransforms"
+            @update:clip-crop="commitSelectedCrop"
+            @preview:clip-crop="previewCrop"
+            @preview:shape-rotation="previewSelectedShapeRotation"
+            @update:shape-rotation="commitSelectedShapeRotation"
+            @request:crop="startCrop"
+            @update:caption-text="updateInlineCaptionText"
+            @caption-editing-start="beginInlineCaptionEditing"
+            @caption-editing-end="endInlineCaptionEditing"
+            @done:crop="finishCrop"
+            @deselect:zoom="selectedZoomId = null"
           />
-          <div
-            ref="canvasPreviewStageRef"
-            class="canvas-preview-stage"
-            :class="{
-              'is-app-fullscreen': canvasFullscreen.isFullscreen.value,
-              'is-fullscreen-exiting': canvasFullscreen.isExiting.value,
-            }"
-          >
-            <div v-if="canvasFullscreen.isFullscreen.value" class="fullscreen-preview-back">
-              <Button
-                variant="frosted"
-                size="sm"
-                :icon="ArrowLeft"
-                :tooltip="tTimelineToolbar('exitFullscreenPreview')"
-                @click="canvasFullscreen.toggleFullscreen"
-              >
-                {{ tTopbarHud('back') }}
-              </Button>
-            </div>
-            <EditorCanvas
-              ref="editorCanvasRef"
-              :is-playing="isPlaying"
-              :current-time="currentTime"
-              :duration="duration"
-              :cursor-selection="cursorPreview ?? cursorSelection"
-              :cursor-pack="cursorPack"
-              :cursor-size="cursorSize"
-              :cursor-color="cursorColor"
-              :enable-shadow="enableShadow"
-              :shadow-blur="shadowBlur"
-              :shadow-color="shadowColor"
-              :shadow-direction="shadowDirection"
-              :click-effects="clickEffects"
-              :motion="cursorMotion"
-              :auto-hide="cursorAutoHide"
-              :selected-background="renderedBackground"
-              :background-blur-percent="backgroundBlurPercent"
-              :frame-for="player.frameFor"
-              :frame-version="frameVersion"
-              :preview-quality="previewQuality"
-              :playback-state="playbackState"
-              :playback-error="playbackError"
-              :editor-data="editorData"
-              :zoom-elements="timelineZoomPreview ?? zoomElements"
-              :zoom-motion-blur="zoomMotionBlur"
-              :zoom-auto-follow="zoomAutoFollow"
-              :selected-zoom="editLocked ? null : selectedZoom"
-              :composition="canvasComposition"
-              :output-canvas="renderedOutputCanvas"
-              :active-tab="activeTab"
-              :selected-transform-clip="selectedTransformClip"
-              :selected-clip-ids="selectedClipIds"
-              :transform-handles-muted="transformHandlesMuted"
-              :is-cropping="isCropping"
-              :is-grid-visible="isGridVisible"
-              :history-action="historyAction"
-              @update:zoom="commitZoom"
-              @select:clip="selectEditorClip"
-              @select:clips="
-                selectEditorTrack({ clipIds: $event.ids, primaryClipId: $event.primaryId, additive: $event.additive })
-              "
-              @select:canvas="selectEditorCanvas"
-              @select:cursor="selectEditorCursor"
-              @update:cursor-size="cursorSize = $event"
-              @deselect:transform-clip="deselectTransformClip"
-              @update:clip-transform="commitSelectedTransform"
-              @update:clip-transforms="commitSelectedTransforms"
-              @update:clip-crop="commitSelectedCrop"
-              @preview:clip-crop="previewCrop"
-              @preview:shape-rotation="previewSelectedShapeRotation"
-              @update:shape-rotation="commitSelectedShapeRotation"
-              @request:crop="startCrop"
-              @update:caption-text="updateInlineCaptionText"
-              @caption-editing-start="beginInlineCaptionEditing"
-              @caption-editing-end="endInlineCaptionEditing"
-              @done:crop="finishCrop"
-              @deselect:zoom="selectedZoomId = null"
-            />
-            <TimelineToolbar
-              :current-time="currentTime"
-              :duration="timelineDisplayDuration"
-              :is-playing="isPlaying"
-              :loading="!initialPlaybackSettled || isVoiceoverOpen"
-              :can-split="!editLocked && selectedClipIds.length === 1"
-              :is-canvas-fullscreen="canvasFullscreen.isFullscreen.value"
-              v-model:zoom-level="timelineZoomLevel"
-              v-model:is-snapping-enabled="isSnappingEnabled"
-              v-model:preview-quality="previewQuality"
-              :performance-snapshot="performanceSnapshot"
-              @update:is-playing="handlePlayingIntent"
-              @update:current-time="handleSeekIntent"
-              @split="splitSelectedClip"
-              @toggle:canvas-fullscreen="canvasFullscreen.toggleFullscreen"
+          <TimelineToolbar
+            :current-time="currentTime"
+            :duration="timelineDisplayDuration"
+            :is-playing="isPlaying"
+            :loading="!initialPlaybackSettled || isVoiceoverOpen"
+            :can-split="!editLocked && selectedClipIds.length === 1"
+            :is-canvas-fullscreen="canvasFullscreen.isFullscreen.value"
+            v-model:zoom-level="timelineZoomLevel"
+            v-model:is-snapping-enabled="isSnappingEnabled"
+            v-model:preview-quality="previewQuality"
+            :performance-snapshot="performanceSnapshot"
+            @update:is-playing="handlePlayingIntent"
+            @update:current-time="handleSeekIntent"
+            @split="splitSelectedClip"
+            @toggle:canvas-fullscreen="canvasFullscreen.toggleFullscreen"
+          />
+        </div>
+      </div>
+      <template #after-upper>
+        <div
+          class="timeline-resize-handle"
+          role="separator"
+          tabindex="0"
+          :class="{ 'is-resizing': isResizingTimeline }"
+          @pointerdown="startTimelineResize"
+        >
+          <div class="resize-handle-bar" />
+        </div>
+        <div class="workspace-lower" :style="{ height: `${timelineHeight}px` }">
+          <div v-if="isVoiceoverOpen" class="voiceover-recorder-float">
+            <VoiceoverRecorderBar
+              :state="voiceoverState"
+              @start="startVoiceover"
+              @pause="pauseVoiceover"
+              @resume="resumeVoiceover"
+              @stop="stopVoiceover"
+              @discard="discardVoiceover"
+              @select-microphone="selectVoiceoverMicrophone"
+              @update-countdown="updateVoiceoverCountdown"
+              @toggle-monitoring="toggleVoiceoverMonitoring"
             />
           </div>
-        </div>
-      </div>
-      <div
-        class="timeline-resize-handle"
-        role="separator"
-        tabindex="0"
-        :class="{ 'is-resizing': isResizingTimeline }"
-        @pointerdown="startTimelineResize"
-      >
-        <div class="resize-handle-bar" />
-      </div>
-      <div class="workspace-lower" :style="{ height: `${timelineHeight}px` }">
-        <div v-if="isVoiceoverOpen" class="voiceover-recorder-float">
-          <VoiceoverRecorderBar
-            :state="voiceoverState"
-            @start="startVoiceover"
-            @pause="pauseVoiceover"
-            @resume="resumeVoiceover"
-            @stop="stopVoiceover"
-            @discard="discardVoiceover"
-            @select-microphone="selectVoiceoverMicrophone"
-            @update-countdown="updateVoiceoverCountdown"
-            @toggle-monitoring="toggleVoiceoverMonitoring"
+          <EditorTimeline
+            :current-time="currentTime"
+            :is-playing="isPlaying"
+            v-model:zoom-level="timelineZoomLevel"
+            :is-snapping-enabled="isSnappingEnabled"
+            :project-id="project?.id"
+            :duration="timelineBaseDuration"
+            :export-progress="exportProgress"
+            :include-audio-in-export="includeAudioInExport"
+            :zoom-elements="zoomElements"
+            :new-zoom-duration-ms="newZoomDurationMs"
+            :selected-zoom-id="selectedZoomId"
+            :selected-zoom-ids="selectedZoomIds"
+            :composition="composition"
+            :selected-clip-id="selectedClipId"
+            :selected-clip-ids="selectedClipIds"
+            :recent-paste="recentPaste"
+            :canvas="outputCanvas"
+            :controls-locked="isVoiceoverOpen"
+            :voiceover-draft="voiceoverState.draft"
+            @add:element="addTimelineElement"
+            @select:zoom="selectEditorZoom"
+            @select:zoom-track="selectEditorZoomTrack"
+            @select:clip="selectEditorClip"
+            @select:track="selectEditorTrack"
+            @select:item="handleTimelineItemSelection"
+            @lock:selection="lockTimelineSelection"
+            @remove:gap="closeTimelineGap"
+            @select:box="
+              finishCrop();
+              selectTimelineBox($event);
+            "
+            @select:all="
+              finishCrop();
+              selectAllTimelineItems();
+            "
+            @toggle:clip="toggleClip"
+            @delete:clips="requestClipDeletion"
+            @delete:zoom="deleteTimelineZoom"
+            @delete:selection="deleteTimelineSelection"
+            @hold:clip="holdClip($event.id, $event.timeMs)"
+            @trim:clip="trimClipEdge($event.id, $event.edge, $event.timeMs)"
+            @move:clip="moveClipTo($event.id, $event.startMs)"
+            @preview:composition="timelineCompositionPreview = $event"
+            @preview:zooms="timelineZoomPreview = $event"
+            @trim:zoom="trimZoomEdge($event.id, $event.edge, $event.timeMs)"
+            @move:zoom="moveZoom($event.id, $event.startMs, $event.endMs)"
+            @move:selection="moveTimelineSelection"
+            @add:zoom="
+              finishCrop();
+              addZoomAtTime($event);
+            "
+            @add:caption="
+              finishCrop();
+              addCaptionAtTime($event);
+            "
+            @add:visual-element="addTimelineVisualElement"
+            @reorder:clip="reorderVisualClip($event.id, $event.targetIndex)"
+            @reorder:caption="reorderCaptionClip($event.id, $event.targetIndex)"
+            @paste:item="pasteTimelineItem"
+            @paste:error="reportTimelinePasteError"
+            @clipboard:copied="reportTimelineCopySuccess"
+            @preview:canvas="timelineCanvasPreview = $event"
+            @update:canvas="
+              outputCanvas = $event;
+              timelineCanvasPreview = null;
+            "
+            @open:canvas-transition="openCanvasTransition"
+            @normalize:audio="audioNormalization.normalizeClipIds($event)"
+            @update:current-time="handleSeekIntent($event, 'scrub')"
+            @update:is-playing="handlePlayingIntent"
           />
         </div>
-        <EditorTimeline
-          :current-time="currentTime"
-          :is-playing="isPlaying"
-          v-model:zoom-level="timelineZoomLevel"
-          :is-snapping-enabled="isSnappingEnabled"
-          :project-id="project?.id"
-          :duration="timelineBaseDuration"
-          :export-progress="exportProgress"
-          :include-audio-in-export="includeAudioInExport"
-          :zoom-elements="zoomElements"
-          :new-zoom-duration-ms="newZoomDurationMs"
-          :selected-zoom-id="selectedZoomId"
-          :selected-zoom-ids="selectedZoomIds"
-          :composition="composition"
-          :selected-clip-id="selectedClipId"
-          :selected-clip-ids="selectedClipIds"
-          :recent-paste="recentPaste"
-          :canvas="outputCanvas"
-          :controls-locked="isVoiceoverOpen"
-          :voiceover-draft="voiceoverState.draft"
-          @add:element="addTimelineElement"
-          @select:zoom="selectEditorZoom"
-          @select:zoom-track="selectEditorZoomTrack"
-          @select:clip="selectEditorClip"
-          @select:track="selectEditorTrack"
-          @select:item="handleTimelineItemSelection"
-          @lock:selection="lockTimelineSelection"
-          @remove:gap="closeTimelineGap"
-          @select:box="
-            finishCrop();
-            selectTimelineBox($event);
-          "
-          @select:all="
-            finishCrop();
-            selectAllTimelineItems();
-          "
-          @toggle:clip="toggleClip"
-          @delete:clips="requestClipDeletion"
-          @delete:zoom="deleteTimelineZoom"
-          @delete:selection="deleteTimelineSelection"
-          @hold:clip="holdClip($event.id, $event.timeMs)"
-          @trim:clip="trimClipEdge($event.id, $event.edge, $event.timeMs)"
-          @move:clip="moveClipTo($event.id, $event.startMs)"
-          @preview:composition="timelineCompositionPreview = $event"
-          @preview:zooms="timelineZoomPreview = $event"
-          @trim:zoom="trimZoomEdge($event.id, $event.edge, $event.timeMs)"
-          @move:zoom="moveZoom($event.id, $event.startMs, $event.endMs)"
-          @move:selection="moveTimelineSelection"
-          @add:zoom="
-            finishCrop();
-            addZoomAtTime($event);
-          "
-          @add:caption="
-            finishCrop();
-            addCaptionAtTime($event);
-          "
-          @add:visual-element="addTimelineVisualElement"
-          @reorder:clip="reorderVisualClip($event.id, $event.targetIndex)"
-          @reorder:caption="reorderCaptionClip($event.id, $event.targetIndex)"
-          @paste:item="pasteTimelineItem"
-          @paste:error="reportTimelinePasteError"
-          @clipboard:copied="reportTimelineCopySuccess"
-          @preview:canvas="timelineCanvasPreview = $event"
-          @update:canvas="
-            outputCanvas = $event;
-            timelineCanvasPreview = null;
-          "
-          @open:canvas-transition="openCanvasTransition"
-          @normalize:audio="audioNormalization.normalizeClipIds($event)"
-          @update:current-time="handleSeekIntent($event, 'scrub')"
-          @update:is-playing="handlePlayingIntent"
-        />
-      </div>
-    </div>
+      </template>
+    </EditorWorkspace>
     <LinkedClipsDeleteDialog
       :is-open="isDeleteDialogOpen"
       :clips="linkedDeleteClips"
@@ -1238,39 +1237,6 @@ capture.reportEditorLoadingStage?.('renderingEditor');
 }
 .editor-page > :not(.editor-ambient-background, .media-drop-overlay) {
   position: relative;
-}
-.editor-workspace {
-  flex: 1;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  overflow: hidden;
-}
-.workspace-upper {
-  flex: 1;
-  display: flex;
-  gap: 12px;
-  overflow: hidden;
-}
-.canvas-column {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  overflow: hidden;
-  position: relative;
-}
-.canvas-preview-stage {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 .canvas-preview-stage.is-app-fullscreen {
   position: fixed;
@@ -1325,7 +1291,7 @@ capture.reportEditorLoadingStage?.('renderingEditor');
   }
 }
 .timeline-resize-handle {
-  height: 12px;
+  height: var(--editor-timeline-resize-height);
   margin-block: -6px;
   cursor: ns-resize;
   display: flex;
@@ -1366,3 +1332,4 @@ capture.reportEditorLoadingStage?.('renderingEditor');
   transform: translateX(-50%);
 }
 </style>
+<style scoped src="./layout/editor-preview-layout.css"></style>

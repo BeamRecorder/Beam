@@ -1,5 +1,6 @@
 const { BrowserWindow, screen } = require('electron');
 const path = require('path');
+const { developmentRendererUrl } = require('../lifecycle/development-session.cjs');
 
 const DEFAULT_SIZE = { width: 220, height: 220 };
 const PREVIOUS_DEFAULT_SIZE = { width: 320, height: 180 };
@@ -99,7 +100,7 @@ function createCameraOverlayWindow({
 
   const load = (target, query) => {
     if (isPackaged) target.loadFile(path.join(applicationRoot, 'dist/html/index.html'), { query });
-    else target.loadURL(`http://localhost:6500/html/index.html?${new URLSearchParams(query).toString()}`);
+    else target.loadURL(developmentRendererUrl(`index.html?${new URLSearchParams(query).toString()}`));
   };
 
   let lastKnownBounds = null;

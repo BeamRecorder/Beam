@@ -933,6 +933,8 @@
     "defaultSystemAudio": "डिफ़ॉल्ट सिस्टम आउटपुट"
   },
   "ScreenshotEditor": {
+    "tools": "टूल",
+    "selectTool": "चुनें",
     "title": "स्क्रीनशॉट",
     "export": "निर्यात करें",
     "layers": "स्क्रीनशॉट की परतें",
@@ -1058,6 +1060,8 @@
   },
   "ScreenshotComposition": {
     "title": "कंपोज़िशन",
+    "name": "लेयर का नाम",
+    "rename": "लेयर का नाम बदलें · डबल-क्लिक या F2",
     "layers": "लेयर",
     "blendMode": "ब्लेंड मोड",
     "opacity": "अपारदर्शिता",

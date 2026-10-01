@@ -1,0 +1,60 @@
+.loading-sidebar {
+  flex: none;
+  width: var(--editor-sidebar-width);
+  padding: 0 calc(6px * var(--ui-scale-sidebar, 1));
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.loading-sidebar-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  zoom: var(--ui-scale-sidebar, 1);
+}
+.loading-properties {
+  flex: none;
+  width: var(--editor-video-inspector-width);
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-surface);
+  box-sizing: border-box;
+}
+.loading-properties.screenshot {
+  width: var(--editor-screenshot-inspector-width);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.loading-properties-content {
+  zoom: var(--ui-scale-properties, 1);
+}
+.loading-property-fields {
+  padding: 0 16px 24px;
+}
+.loading-canvas-toolbar,
+.loading-playback-toolbar {
+  flex: none;
+}
+.loading-canvas-toolbar {
+  height: var(--editor-canvas-toolbar-height);
+}
+.loading-playback-toolbar {
+  height: var(--editor-playback-toolbar-height);
+}
+.loading-timeline-resize-space {
+  flex: none;
+  height: var(--editor-timeline-resize-height);
+  margin-block: -6px;
+}
+.loading-timeline {
+  flex: none;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+}
+.loading-dock {
+  position: relative;
+  max-width: 100%;
+}

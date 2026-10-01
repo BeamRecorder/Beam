@@ -1,4 +1,5 @@
 const path = require('path');
+const { developmentRendererUrl } = require('../lifecycle/development-session.cjs');
 const { placeCropBar, restoreWindowPosition, saveWindowPosition } = require('./quick-snip-position.cjs');
 const { createCommittedWindowPosition } = require('../window/committed-window-position.cjs');
 const { RECORDER_SIZE, bottomCenterRecorder } = require('../window/recorder-layout.cjs');
@@ -160,7 +161,7 @@ function createQuickSnipWindow({
     });
     if (isPackaged)
       window.loadFile(path.join(applicationRoot, 'dist/html/index.html'), { query: { quickSnipCrop: '1' } });
-    else window.loadURL('http://localhost:6500/html/index.html?quickSnipCrop=1');
+    else window.loadURL(developmentRendererUrl('index.html?quickSnipCrop=1', environment));
     return window;
   };
   return {

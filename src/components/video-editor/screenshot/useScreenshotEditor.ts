@@ -18,7 +18,7 @@ import type { ClipAppearance, MediaAsset, NormalizedTransform } from '~/media/sh
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
 import { BACKGROUND_MEDIA, groupBackgroundMedia, type BackgroundMedia } from '../composables/backgroundCatalog';
 import { screenshotState, screenshotPresetSettings } from './screenshot-state';
-import { encodeScreenshot } from './screenshot-render';
+import { useScreenshotExport } from './export/useScreenshotExport';
 import {
   beginPropertyInteraction,
   endPropertyInteraction,
@@ -43,13 +43,14 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
   const { t } = useTranslate('ScreenshotEditor');
   const { t: elementsText } = useTranslate('Elements');
   const toast = useToastStore();
+  const encodeScreenshot = useScreenshotExport();
   const document = ref<ScreenshotDocument | null>(null);
   const state = ref<ScreenshotState | null>(null);
   const presets = ref<EditorPresetDocument | null>(null);
   const backgroundLibrary = ref<BackgroundMedia[]>([]);
   const selection = useScreenshotSelection(() => (state.value ? screenshotLayers(state.value) : []));
   const { selectedId, selectedIds } = selection;
-  const panel = ref<ScreenshotPanel>('shapes');
+  const panel = ref<ScreenshotPanel>('canvas');
   const cropping = ref(false);
   const advanced = ref(false);
   const keepAspect = ref(true);

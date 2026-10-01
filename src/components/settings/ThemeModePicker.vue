@@ -72,6 +72,7 @@ const navigate = (event: KeyboardEvent) => {
 }
 .theme-mode-group {
   height: auto;
+  max-width: 36rem;
 }
 .theme-mode-choice {
   position: relative;
@@ -104,5 +105,6 @@ const navigate = (event: KeyboardEvent) => {
   font-size: var(--font-size-xs);
   line-height: 1.5;
   color: var(--text-secondary);
+  max-width: 36rem;
 }
 </style>

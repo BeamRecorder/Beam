@@ -1,4 +1,5 @@
 const path = require('node:path');
+const { developmentRendererUrl } = require('../lifecycle/development-session.cjs');
 const { installBrowserZoomPolicy } = require('../window/browser-zoom-policy.cjs');
 
 function createSourcePickerSurface({
@@ -73,7 +74,7 @@ function createSourcePickerSurface({
     });
     const loading = isPackaged
       ? target.loadFile(path.join(applicationRoot, 'dist/html/source-picker.html'), { query: { role } })
-      : target.loadURL(`http://localhost:6500/html/source-picker.html?role=${role}`);
+      : target.loadURL(developmentRendererUrl(`source-picker.html?role=${role}`));
     loading.catch(onFailure);
     return {
       target,

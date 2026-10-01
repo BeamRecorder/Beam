@@ -7,26 +7,26 @@ export function useProjectPreviews(container: Ref<HTMLElement | null>, visiblePr
   const { thumbnailCache, generateThumbnail } = useProjectThumbnailGenerator();
 
   let disposed = false;
-  let generating = false;
+  const active = new Set<string>();
+  const MAX_DECODERS = 2;
   const attempted = new Map<string, string>();
-  const generateVisibleThumbnails = async () => {
-    if (generating || disposed) return;
-    generating = true;
-    try {
-      while (!disposed) {
-        const project = visibleProjects.value.find(
-          (candidate) =>
-            candidate.previewSrc &&
-            !candidate.thumbnailSrc &&
-            !thumbnailCache[candidate.id] &&
-            attempted.get(candidate.id) !== candidate.previewSrc,
-        );
-        if (!project?.previewSrc) break;
-        attempted.set(project.id, project.previewSrc);
-        await generateThumbnail(project.id, project.previewSrc);
-      }
-    } finally {
-      generating = false;
+  const generateVisibleThumbnails = () => {
+    while (!disposed && active.size < MAX_DECODERS) {
+      const project = visibleProjects.value.find(
+        (candidate) =>
+          candidate.previewSrc &&
+          !candidate.thumbnailSrc &&
+          !thumbnailCache[candidate.id] &&
+          !active.has(candidate.id) &&
+          attempted.get(candidate.id) !== candidate.previewSrc,
+      );
+      if (!project?.previewSrc) break;
+      attempted.set(project.id, project.previewSrc);
+      active.add(project.id);
+      void generateThumbnail(project.id, project.previewSrc).finally(() => {
+        active.delete(project.id);
+        generateVisibleThumbnails();
+      });
     }
   };
   watch(visibleProjects, generateVisibleThumbnails, { immediate: true });
@@ -48,9 +48,10 @@ export function useProjectPreviews(container: Ref<HTMLElement | null>, visiblePr
     }
   };
 
-  const handleMouseEnterVideo = (_projectId: string, event: MouseEvent) => {
+  const handleMouseEnterVideo = (projectId: string, event: MouseEvent) => {
     const target = event.currentTarget as HTMLElement | null;
     void nextTick(() => {
+      if (disposed || hoveredProjectId.value !== projectId) return;
       const video = (target?.tagName === 'VIDEO' ? target : target?.querySelector('video')) as HTMLVideoElement | null;
       if (video && typeof video.play === 'function') {
         if (video.readyState === 0) {
@@ -73,6 +74,9 @@ export function useProjectPreviews(container: Ref<HTMLElement | null>, visiblePr
   };
 
   const isScrolling = ref(false);
+  watch(visibleProjects, (projects) => {
+    if (!projects.some((project) => project.id === hoveredProjectId.value)) hoveredProjectId.value = null;
+  });
   let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
 
   const handleScroll = () => {

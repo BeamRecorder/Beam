@@ -11,6 +11,8 @@ import {
 import CanvasPanel from '../CanvasPanel.vue';
 import AddTileButton from '../../../../ui/button/AddTileButton.vue';
 import Tooltip from '~/ui/tooltip/Tooltip.vue';
+import Popover from '~/ui/popover/Popover.vue';
+import WatermarkControls from '../WatermarkControls.vue';
 import { i18n, setCurrentLocale } from '~/i18n';
 import { SUPPORTED_LOCALES } from '~/i18n/locales';
 
@@ -185,6 +187,64 @@ afterEach(() => {
 });
 
 describe('CanvasPanel', () => {
+  it('keeps new color and gradient drafts live and cancels each composer through the shared layout', async () => {
+    const mounted = await mountPanel(null, groups, true);
+    const tabs = mounted.findAll('.kind-group button');
+    for (const [index, selector, kind] of [
+      [2, '.swatches-grid', 'color'],
+      [3, '.gradients-grid', 'gradient'],
+    ] as const) {
+      await tabs[index]!.trigger('click');
+      await mounted.get(selector).findComponent(AddTileButton).trigger('click');
+      await flushPromises();
+      const composer = mounted.findAllComponents(ComposerStub).find((item) => item.props('kind') === kind)!;
+      composer.vm.$emit(
+        kind === 'color' ? 'update-color' : 'update-gradient',
+        kind === 'color' ? '#123456' : BACKGROUND_GRADIENTS[0]!.gradient,
+      );
+      await flushPromises();
+      composer.vm.$emit('close');
+      await flushPromises();
+      for (const popover of mounted.findAllComponents(Popover)) popover.vm.$emit('toggle', false);
+    }
+    expect(mounted.emitted('update:selectedBackground')).toBeTruthy();
+  });
+  it.each(['color', 'gradient'] as const)(
+    'edits, previews and saves the selected %s through its contextual composer',
+    async (kind) => {
+      const selected =
+        kind === 'color'
+          ? { id: 'color:#111827', name: '#111827', kind: 'color' as const, color: '#111827' }
+          : BACKGROUND_GRADIENTS[0]!;
+      const mounted = await mountPanel(selected, groups, true);
+      await mounted.findAll('.kind-group button')[kind === 'color' ? 2 : 3]!.trigger('click');
+      await mounted.get('.edit-selected-preset').trigger('click');
+      await flushPromises();
+      const composer = mounted.findAllComponents(ComposerStub).find((item) => item.props('kind') === kind)!;
+      const value = kind === 'color' ? '#123456' : BACKGROUND_GRADIENTS[0]!.gradient;
+      composer.vm.$emit(`update-${kind}`, value);
+      composer.vm.$emit('close');
+      await flushPromises();
+      await mounted.get('.edit-selected-preset').trigger('click');
+      await flushPromises();
+      mounted
+        .findAllComponents(ComposerStub)
+        .find((item) => item.props('kind') === kind)!
+        .vm.$emit(`add-${kind}`, value);
+      await flushPromises();
+      expect(capture.updatePreferences).toHaveBeenCalled();
+      expect(mounted.emitted('update:selectedBackground')).toBeTruthy();
+    },
+  );
+  it('preserves drag prevention and forwards watermark intents after extracting the shared layout', async () => {
+    reactivePreviews['image-0'] = 'blob:image-0';
+    reactiveFailed['image-1'] = true;
+    const mounted = await mountPanel(null, groups, true);
+    await mounted.get('.media-tile').trigger('dragstart');
+    for (const image of mounted.findAll('.media-tile img')) await image.trigger('dragstart');
+    mounted.findComponent(WatermarkControls).vm.$emit('update:modelValue', { enabled: false });
+    expect(mounted.emitted('update:watermark')).toEqual([[{ enabled: false }]]);
+  });
   it('places image import first and keeps nine wallpapers in the two-row library', async () => {
     capture.pickBackgroundLibraryMedia.mockResolvedValueOnce(imageItems[0]);
     const mounted = await mountPanel(null, groups, true);

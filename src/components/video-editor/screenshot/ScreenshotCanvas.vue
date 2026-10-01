@@ -11,8 +11,7 @@ import { withScreenshotTransform } from './screenshot-transform';
 import ElementCanvasOverlay from '../elements/ElementCanvasOverlay.vue';
 import { useElementEditor } from '../elements/useElementEditor';
 import { useTranslate } from '~/i18n/useTranslate';
-import { useElementSize } from '@vueuse/core';
-import { computed, nextTick, onMounted, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
 import type { ScreenshotState } from '~/api/types/screenshot';
 import type { CursorPackDescriptor } from '~/api/types/cursor-pack';
 import type { NormalizedTransform, NormalizedCrop } from '~/media/shared/composition-types';
@@ -20,6 +19,8 @@ import type { ResizeCorner } from '~/ui/ResizeHandle/types';
 import ScreenshotCropSelection from './ScreenshotCropSelection.vue';
 import { screenshotImageFraming, resizeScreenshotImage } from './screenshot-geometry';
 import CanvasLayerSelection from '../canvas/CanvasLayerSelection.vue';
+import CanvasRecenterButton from '../canvas/CanvasRecenterButton.vue';
+import EditorLoadingFrame from '../layout/EditorLoadingFrame.vue';
 import { loadScreenshotAssets, drawScreenshot } from './screenshot-render';
 import { moveScreenshotLayer } from './screenshot-state';
 import type {
@@ -40,21 +41,26 @@ import CanvasMarqueeSurface from '../canvas/CanvasMarqueeSurface.vue';
 import type { CanvasMarqueeSelection, CanvasMarqueeTarget } from '../canvas/canvas-marquee-types';
 import ScreenshotAlignmentGuides from './ScreenshotAlignmentGuides.vue';
 import { screenshotPreviewSize } from './screenshot-preview-resolution';
+import { useScreenshotViewport } from './useScreenshotViewport';
 
 const { t } = useTranslate('ScreenshotEditor');
 const { t: canvasText } = useTranslate('CanvasPanel');
 const elements = useElementEditor();
-const props = defineProps<{
-  source: string;
-  state: ScreenshotState;
-  selectedId: string | null;
-  selectedIds: string[];
-  disabled?: boolean;
-  cropping?: boolean;
-  cursorPacks?: CursorPackDescriptor[];
-  cursorPacksReady?: boolean;
-  handlesMuted?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    source: string;
+    state: ScreenshotState;
+    selectedId: string | null;
+    selectedIds: string[];
+    disabled?: boolean;
+    cropping?: boolean;
+    cursorPacks?: CursorPackDescriptor[];
+    cursorPacksReady?: boolean;
+    handlesMuted?: boolean;
+    zoomDisabled?: boolean;
+  }>(),
+  { zoomDisabled: undefined },
+);
 const emit = defineEmits<{
   select: [id: string | null, mode?: ScreenshotSelectionMode];
   selectMany: [selection: CanvasMarqueeSelection];
@@ -68,32 +74,20 @@ const emit = defineEmits<{
   rotate: [value: number];
 }>();
 const stage = ref<HTMLElement | null>(null);
-const available = useElementSize(stage);
-onMounted(async () => {
-  await nextTick();
-  const rect = stage.value?.getBoundingClientRect();
-  if (rect?.width && rect.height) {
-    available.width.value = rect.width;
-    available.height.value = rect.height;
-  }
-});
-const stageSize = computed(() => {
-  const scale = Math.min(
-    available.width.value / props.state.canvas.width,
-    available.height.value / props.state.canvas.height,
-  );
-  return {
-    width: Math.max(0, props.state.canvas.width * scale),
-    height: Math.max(0, props.state.canvas.height * scale),
-  };
-});
-const stageStyle = computed(() => ({ width: `${stageSize.value.width}px`, height: `${stageSize.value.height}px` }));
+const viewport = useScreenshotViewport(
+  stage,
+  () => props.state.canvas,
+  () => Boolean(props.zoomDisabled ?? props.disabled) || dragging.value || Boolean(elements?.editing.value),
+);
+const { available, stageSize, stageStyle } = viewport;
+defineExpose({ resetView: viewport.viewport.resetZoom, zoomPercent: viewport.viewport.zoomPercent });
 const canvas = ref<HTMLCanvasElement | null>(null);
 const assets = shallowRef<ScreenshotRenderAssets | null>(null);
 const loadImage = createScreenshotImageLoader();
 let generation = 0;
 let loadedGeneration = 0;
 let painted = false;
+const initialFramePending = ref(true);
 let drag: ScreenshotDrag | null = null;
 let rotating = false;
 const dragging = ref(false);
@@ -198,9 +192,11 @@ const paint = () => {
     else drawScreenshot(ctx, preview, assets.value, width, height, elements?.editing.value?.id);
     if (!painted) {
       painted = true;
+      initialFramePending.value = false;
       emit('ready');
     }
   } catch (reason) {
+    initialFramePending.value = false;
     emit('error', String(reason));
   }
 };
@@ -241,14 +237,17 @@ watch(
         paint();
       }
     } catch (error) {
-      if (current === generation) emit('error', String(error));
+      if (current === generation) {
+        initialFramePending.value = false;
+        emit('error', String(error));
+      }
     }
   },
   { immediate: true, deep: true },
 );
 watch(() => elements?.editing.value?.id, frames.requestRender);
 watch(
-  [canvas, available.width, available.height, () => props.state, () => props.cropping],
+  [canvas, stageSize, () => props.state, () => props.cropping],
   () => {
     dragRenderer.reset();
     frames.requestRender();
@@ -414,7 +413,17 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="screenshot-stage">
-    <div ref="stage" class="stage-bounds">
+    <div
+      ref="stage"
+      class="stage-bounds"
+      :class="{ 'is-grabbing': viewport.viewport.isPanning.value }"
+      @wheel="viewport.wheel"
+      @pointerdown.capture="viewport.beginPan"
+      @pointermove="viewport.movePan"
+      @pointerup="viewport.endPan"
+      @pointercancel="viewport.endPan"
+      @lostpointercapture="viewport.endPan"
+    >
       <CanvasMarqueeSurface
         class="image-stage"
         :style="stageStyle"
@@ -456,44 +465,19 @@ onBeforeUnmount(() => {
           @done="emit('cropDone')"
         />
       </CanvasMarqueeSurface>
+      <Transition name="canvas-frame-ready">
+        <EditorLoadingFrame v-if="initialFramePending" :aspect-ratio="state.canvas.width / state.canvas.height" />
+      </Transition>
+    </div>
+    <div v-if="viewport.viewport.isOutOfBounds.value" class="canvas-recenter-float" @pointerdown.stop>
+      <CanvasRecenterButton
+        :disabled="Boolean(zoomDisabled ?? disabled) || dragging || Boolean(elements?.editing.value)"
+        @click="viewport.viewport.resetZoom"
+      />
     </div>
     <div class="canvas-controls"><slot name="controls" /></div>
     <slot name="overlay" />
   </div>
 </template>
-<style scoped>
-.screenshot-stage {
-  position: relative;
-  flex: 1;
-  border-radius: var(--radius-lg);
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  background: transparent;
-}
-.stage-bounds {
-  position: absolute;
-  inset: 36px 36px 84px;
-  display: grid;
-  place-items: center;
-}
-.image-stage {
-  position: relative;
-  background: repeating-conic-gradient(var(--color-bg-surface) 0% 25%, var(--color-bg-surface-hover) 0% 50%) 0 0 / 20px
-    20px;
-}
-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.canvas-controls {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 20px;
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
-</style>
+<style scoped src="./screenshot-canvas.css"></style>
+<style scoped src="../layout/editor-preview-layout.css"></style>

@@ -1,4 +1,4 @@
-import { mount, type VueWrapper } from '@vue/test-utils';
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { ChevronDown } from '@lucide/vue';
 import { defineComponent, nextTick, ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -131,6 +131,81 @@ const closeContextMenu = async () => {
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   await nextTick();
 };
+
+it('renames a layer with a focused shared input on double-click and restores row focus on Enter', async () => {
+  const wrapper = mountComposition({}, document.body);
+  wrappers.push(wrapper);
+  const row = () => wrapper.get('[data-layer-id="text-1"]');
+  await row().get('.layer-name').trigger('dblclick');
+  await flushPromises();
+  expect(document.activeElement).toBe(row().get('input').element);
+  await row().get('input').setValue('Heading');
+  await row().get('input').trigger('keydown', { key: 'Enter' });
+  await flushPromises();
+  expect(wrapper.emitted('rename')).toEqual([['text-1', 'Heading']]);
+  expect(document.activeElement).toBe(row().get('.layer-select').element);
+});
+it('supports F2 and Escape without renaming or reordering the layer', async () => {
+  const wrapper = mountComposition({}, document.body);
+  wrappers.push(wrapper);
+  const row = wrapper.get('[data-layer-id="text-1"]');
+  await row.get('.layer-select').trigger('keydown', { key: 'F2' });
+  await flushPromises();
+  await row.get('input').setValue('Discard');
+  await row.get('input').trigger('keydown', { key: 'Escape' });
+  await flushPromises();
+  expect(wrapper.emitted('rename')).toBeUndefined();
+  expect(wrapper.emitted('reorder')).toBeUndefined();
+  expect(row.find('input').exists()).toBe(false);
+  expect(document.activeElement).toBe(row.get('.layer-select').element);
+});
+it('commits on blur without stealing focus, and prevents editing when disabled or locked', async () => {
+  const wrapper = mountComposition({}, document.body);
+  wrappers.push(wrapper);
+  const row = wrapper.get('[data-layer-id="text-1"]');
+  await row.get('.layer-select').trigger('dblclick');
+  await flushPromises();
+  await row.get('input').setValue('Title');
+  await row.get('input').trigger('blur');
+  expect(wrapper.emitted('rename')).toEqual([['text-1', 'Title']]);
+  await wrapper.setProps({ disabled: true });
+  await row.get('.layer-select').trigger('keydown', { key: 'F2' });
+  expect(row.find('input').exists()).toBe(false);
+  await wrapper.setProps({ disabled: false, layers: allLayers().map((layer) => ({ ...layer, locked: true })) });
+  await row.get('.layer-select').trigger('dblclick');
+  expect(row.find('input').exists()).toBe(false);
+});
+it('cancels a pending inline edit if its layer disappears or becomes locked', async () => {
+  const wrapper = mountComposition();
+  wrappers.push(wrapper);
+  await wrapper.get('[data-layer-id="text-1"] .layer-select').trigger('dblclick');
+  await wrapper.setProps({ layers: allLayers().filter((layer) => layer.id !== 'text-1') });
+  expect(wrapper.find('.layer-name-editor').exists()).toBe(false);
+  await wrapper.get('[data-layer-id="shape-1"] .layer-select').trigger('dblclick');
+  await wrapper.setProps({ layers: allLayers().map((layer) => ({ ...layer, locked: true })) });
+  expect(wrapper.find('.layer-name-editor').exists()).toBe(false);
+  expect(wrapper.emitted('rename')).toBeUndefined();
+});
+it('disables a large composition with one inert surface instead of mutating every row', async () => {
+  const layers = Array.from({ length: 283 }, (_, index) => makeLayer(`shape-${index}`, 'shape', `Shape ${index}`));
+  const wrapper = mountComposition({ layers });
+  wrappers.push(wrapper);
+  const mutations: MutationRecord[] = [];
+  const observer = new MutationObserver((records) => mutations.push(...records));
+  observer.observe(wrapper.get('.layer-rows').element, { subtree: true, attributes: true, childList: true });
+  try {
+    await wrapper.setProps({ disabled: true });
+    await flushPromises();
+    expect(wrapper.get('.layer-list').attributes('inert')).toBeDefined();
+    await wrapper.setProps({ disabled: false });
+    await flushPromises();
+    expect(wrapper.get('.layer-list').attributes('inert')).toBeUndefined();
+    expect(mutations).toHaveLength(0);
+    expect(wrapper.findAll('.layer-row')).toHaveLength(283);
+  } finally {
+    observer.disconnect();
+  }
+});
 
 type PointerCaptureDescriptor = PropertyDescriptor | undefined;
 let wrappers: VueWrapper[] = [];
@@ -685,20 +760,25 @@ describe('ScreenshotComposition', () => {
     await wrapper.setProps({ disabled: true });
     await shape.trigger('keydown', { key: 'ArrowUp', altKey: true });
     expect(wrapper.emitted('reorder')).toHaveLength(4);
-    expect((shape.element as HTMLButtonElement).disabled).toBe(true);
-    expect(
-      (
-        wrapper.get(
-          '.layer-row[data-layer-id="shape-1"] button[aria-label="ScreenshotComposition.lock (Elements.shape)"]',
-        ).element as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
-    expect(
-      (
-        wrapper.get(
-          '.layer-row[data-layer-id="shape-1"] button[aria-label="ScreenshotComposition.hide (Elements.shape)"]',
-        ).element as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
+    expect(wrapper.get('.layer-list').attributes('inert')).toBeDefined();
+    expect(wrapper.get('.layer-list').attributes('aria-disabled')).toBe('true');
+    await shape.trigger('click');
+    dispatchPointer(shape.element, 'pointerdown', { pointerId: 42, clientY: 100 });
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 42, clientY: 200 }));
+    await wrapper
+      .get('.layer-row[data-layer-id="shape-1"] button[aria-label="ScreenshotComposition.lock (Elements.shape)"]')
+      .trigger('click');
+    await wrapper
+      .get('.layer-row[data-layer-id="shape-1"] button[aria-label="ScreenshotComposition.hide (Elements.shape)"]')
+      .trigger('click');
+    expect(wrapper.emitted('select')).toBeUndefined();
+    expect(wrapper.emitted('update')).toBeUndefined();
+    expect(wrapper.emitted('visibility')).toBeUndefined();
+    expect(wrapper.emitted('reorder')).toHaveLength(4);
+    expect(callbacks.size).toBe(0);
+    await wrapper.setProps({ disabled: false });
+    expect(wrapper.get('.layer-list').attributes('inert')).toBeUndefined();
+    await shape.trigger('click');
+    expect(wrapper.emitted('select')).toEqual([['shape-1']]);
   });
 });

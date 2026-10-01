@@ -1,6 +1,6 @@
 import type { CaptureProject } from '~/api/types/capture-api';
 
-export type ProjectPickerProps = { compact: boolean; currentProjectId: string | null };
+export type ProjectPickerProps = { compact: boolean; currentProjectId: string | null; active?: boolean };
 export type ProjectPickerEvents = {
   'open-project': [project: CaptureProject];
   'select-project': [project: CaptureProject];

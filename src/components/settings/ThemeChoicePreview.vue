@@ -38,7 +38,8 @@ const skins = computed(() => (props.mode === 'system' ? (['light', 'dark'] as co
   display: block;
   position: relative;
   width: 100%;
-  height: 64px;
+  aspect-ratio: 3 / 2;
+  container-type: inline-size;
   border: 1px solid var(--color-border-strong);
   box-sizing: border-box;
   border-radius: var(--radius-sm);
@@ -47,7 +48,7 @@ const skins = computed(() => (props.mode === 'system' ? (['light', 'dark'] as co
 .preview-skin {
   position: absolute;
   inset: 0;
-  padding: 10px 8px;
+  padding: 10cqi 8cqi;
   display: flex;
 }
 .split .preview-skin:first-child {
@@ -62,30 +63,35 @@ const skins = computed(() => (props.mode === 'system' ? (['light', 'dark'] as co
   overflow: hidden;
   border: 1px solid;
   border-color: color-mix(in srgb, var(--preview-ink) 45%, transparent);
-  border-radius: 5px;
+  border-radius: 5cqi;
 }
 .preview-sidebar {
   display: flex;
   flex-direction: column;
   width: 30%;
-  gap: 4px;
-  padding: 7px 5px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  gap: 4cqi;
+  padding: 7cqi 5cqi;
 }
 .sidebar-line {
   background: color-mix(in srgb, var(--preview-ink) 80%, transparent);
-  height: 3px;
+  height: 3cqi;
+  flex-shrink: 0;
   border-radius: var(--radius-xs);
 }
 .preview-page {
   flex: 1;
-  padding: 7px;
+  min-width: 0;
+  padding: 7cqi;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 5cqi;
 }
 .page-heading {
   background: var(--preview-ink);
-  height: 3px;
+  height: 3cqi;
+  flex-shrink: 0;
   width: 50%;
   border-radius: var(--radius-xs);
 }

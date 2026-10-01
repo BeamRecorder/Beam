@@ -7,7 +7,7 @@ import { editorInsertMenu } from '../search/editor-insert-menu';
 import { editorInsertItems } from '../search/editor-insert-items';
 import type { EditorInsertKind } from '../search/editor-search-types';
 const { t } = useI18n();
-defineProps<{ disabled?: boolean }>();
+defineProps<{ disabled?: boolean; direction?: 'up' | 'down' }>();
 const items = computed(() => editorInsertMenu(editorInsertItems('screenshot', t), t));
 const emit = defineEmits<{ add: [kind: EditorInsertKind] }>();
 </script>
@@ -17,6 +17,7 @@ const emit = defineEmits<{ add: [kind: EditorInsertKind] }>();
     :label="t('TimelineToolbar.add')"
     :aria-label="t('TimelineToolbar.add')"
     :icon="Plus"
+    :direction="direction"
     :items="items"
     @select="emit('add', $event as EditorInsertKind)"
   />

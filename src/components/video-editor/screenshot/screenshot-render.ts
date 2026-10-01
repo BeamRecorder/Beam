@@ -1,14 +1,13 @@
-import { drawScreenshotLayer } from './screenshot-layer-render';
-import { screenshotLayers } from './screenshot-layers';
+import { drawScreenshot } from './screenshot-draw';
+export { drawScreenshot } from './screenshot-draw';
 import { loadScreenshotCursors } from './screenshot-cursors';
 import { BUILTIN_CURSOR_PACKS } from '../properties/cursor/cursor-packs';
 import type { CursorPackDescriptor } from '~/api/types/cursor-pack';
-import { releaseCompositedLayerSurface, renderCompositedLayer } from '../composition/render-composited-layer';
+import { releaseCompositedLayerSurface } from '../composition/render-composited-layer';
 import { loadElementFonts } from '~/media/shared/element-fonts';
 import { i18n } from '~/i18n';
 import { validScreenshotDimensions } from './screenshot-dimensions';
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { Canvas2DContext } from '~/types/canvas';
 import { WATERMARK_LOGO_PATH } from '../canvas/watermark-render';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import type { ScreenshotEncodeOptions, ScreenshotRenderAssets } from './screenshot-types';
@@ -20,23 +19,12 @@ export async function loadScreenshotAssets(
   packs?: readonly CursorPackDescriptor[],
   load = createScreenshotImageLoader(),
 ): Promise<ScreenshotRenderAssets> {
-  const loadCursors = async () => {
-    if (!state.cursors?.some((cursor) => cursor.enabled)) return undefined;
-    const library = packs ?? [
-      ...BUILTIN_CURSOR_PACKS,
-      ...(await (await import('~/api/capture')).capture.listCursorPacks()),
-    ];
-    return loadScreenshotCursors(state.cursors, library, state.canvas);
-  };
   const background = state.canvas.showBackground ? state.background : null;
   if (background && background.kind === 'video') throw new Error(i18n.global.t('ScreenshotEditor.backgroundError'));
-  const [image, backdrop, logo, cursors, images] = await Promise.all([
+  const [image, backdrop, decorations, images] = await Promise.all([
     load(source),
     background?.kind === 'image' ? load(background.path) : null,
-    state.canvas.watermark?.enabled && state.canvas.watermark.showLogo
-      ? load(resolvePublicAssetUrl(WATERMARK_LOGO_PATH))
-      : null,
-    loadCursors(),
+    loadScreenshotDecorations(state, packs, load),
     Promise.all(
       (state.images ?? []).map(async (layer) => {
         const image = await load(layer.source);
@@ -48,29 +36,36 @@ export async function loadScreenshotAssets(
   return {
     image,
     background: backdrop,
-    logo,
+    ...decorations,
     width: image.naturalWidth,
     height: image.naturalHeight,
-    ...(cursors ? { cursors } : {}),
     ...(images.length ? { images: new Map(images) } : {}),
   };
 }
 
-export function drawScreenshot(
-  ctx: Canvas2DContext,
+export async function loadScreenshotDecorations(
   state: ScreenshotState,
-  assets: ScreenshotRenderAssets,
-  width: number,
-  height: number,
-  editingId?: string,
+  packs?: readonly CursorPackDescriptor[],
+  load = createScreenshotImageLoader(),
 ) {
-  ctx.clearRect(0, 0, width, height);
-  for (const layer of screenshotLayers(state)) {
-    if (!layer.visible) continue;
-    renderCompositedLayer(ctx, layer, width, height, (target, backdrop) => {
-      drawScreenshotLayer(target, state, layer, assets, width, height, backdrop, editingId);
-    });
-  }
+  const loadCursors = async () => {
+    if (!state.cursors?.some((cursor) => cursor.enabled)) return undefined;
+    const library = packs ?? [
+      ...BUILTIN_CURSOR_PACKS,
+      ...(await (await import('~/api/capture')).capture.listCursorPacks()),
+    ];
+    return loadScreenshotCursors(state.cursors, library, state.canvas);
+  };
+  const [logo, cursors] = await Promise.all([
+    state.canvas.watermark?.enabled && state.canvas.watermark.showLogo
+      ? load(resolvePublicAssetUrl(WATERMARK_LOGO_PATH))
+      : null,
+    loadCursors(),
+  ]);
+  return {
+    logo,
+    ...(cursors ? { cursors } : {}),
+  };
 }
 
 export async function encodeScreenshot(
