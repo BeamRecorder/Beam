@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import EditorTitlebar from './EditorTitlebar.vue';
+import type { CaptureProject } from '~/api/types/capture-api';
+import type { ProjectIdentity } from '../projects/project-picker-types';
 import EditorHistoryControls from './EditorHistoryControls.vue';
 import VideoProjectEdition from './VideoProjectEdition.vue';
 import ExportPopover from '../export/ExportPopover.vue';
@@ -17,7 +20,7 @@ withDefaults(
   defineProps<{
     exportRequest?: EditorExportSource | null;
     playheadSeconds?: number;
-    project?: any;
+    project?: ProjectIdentity | null;
     isSaving?: boolean;
     canUndo?: boolean;
     canRedo?: boolean;
@@ -42,7 +45,7 @@ withDefaults(
 
 const emit = defineEmits<{
   (e: 'back-to-hud'): void;
-  (e: 'open-project', project: any): void;
+  (e: 'open-project', project: CaptureProject): void;
   (e: 'undo'): void;
   (e: 'redo'): void;
   (e: 'update:exportAudio', value: boolean): void;
@@ -59,25 +62,20 @@ const handleExit = () => {
 </script>
 
 <template>
-  <header class="editor-titlebar">
-    <div class="left-actions">
+  <EditorTitlebar>
+    <template #left>
       <img :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')" class="brand-logo" alt="Beam" />
-      <Button variant="ghost" size="sm" :icon="ArrowLeft" @click.stop="handleExit" class="exit-btn titlebar-btn">
-        {{ t('exitToHUD') }}
+      <Button
+        variant="ghost"
+        size="sm"
+        :icon="ArrowLeft"
+        @click.stop="handleExit"
+        class="exit-btn titlebar-btn"
+        :aria-label="t('exitToHUD')"
+        style="height: 28px; padding: 0 var(--editor-back-padding, 12px); gap: var(--editor-back-gap, 8px)"
+      >
+        <span class="back-label">{{ t('exitToHUD') }}</span>
       </Button>
-      <VideoProjectEdition :project="project" :is-saving="isSaving" @open-project="emit('open-project', $event)" />
-      <EditorHistoryControls
-        :can-undo="canUndo"
-        :can-redo="canRedo"
-        :tooltip-position="historyTooltipPosition"
-        @undo="emit('undo')"
-        @redo="emit('redo')"
-      />
-    </div>
-
-    <div class="titlebar-drag-region" aria-hidden="true" />
-
-    <div class="right-actions">
       <EditorPresetControls
         :document="presetDocument"
         :dirty="presetDirty"
@@ -87,69 +85,36 @@ const handleExit = () => {
         @delete="emit('presetDelete')"
         @save="emit('presetSave')"
       />
+      <EditorHistoryControls
+        :can-undo="canUndo"
+        :can-redo="canRedo"
+        :tooltip-position="historyTooltipPosition"
+        @undo="emit('undo')"
+        @redo="emit('redo')"
+      />
+    </template>
+    <template #center>
+      <VideoProjectEdition :project="project" :is-saving="isSaving" @open-project="emit('open-project', $event)" />
+    </template>
+    <template #right>
       <ExportPopover
         v-if="exportRequest"
         :request="exportRequest"
         :playhead-seconds="playheadSeconds"
         @update:include-audio="emit('update:exportAudio', $event)"
       />
-    </div>
-  </header>
+    </template>
+  </EditorTitlebar>
 </template>
 
 <style scoped>
-.editor-titlebar {
-  height: 40px;
-  background: var(--color-bg-surface);
-  border-bottom: 1px solid var(--color-border);
-  padding-left: env(titlebar-area-x, 0px);
-  padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  user-select: none;
-  flex-shrink: 0;
-  -webkit-app-region: drag;
-  app-region: drag;
-}
-
-.left-actions,
-.right-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 100%;
-  -webkit-app-region: no-drag;
-  app-region: no-drag;
-}
-
-.left-actions,
-.right-actions {
-  zoom: var(--ui-scale-topbar, 1);
-}
-
-.left-actions {
-  gap: 8px;
-}
-
-.titlebar-drag-region {
-  min-width: 32px;
-  height: 100%;
-  flex: 1 1 auto;
-  -webkit-app-region: drag;
-  app-region: drag;
-}
-
 .brand-logo {
   width: 24px;
   height: 24px;
-  margin-left: 10px;
   object-fit: contain;
-  flex: 0 0 auto;
+  flex: none;
 }
-
-.exit-btn {
-  margin-right: 4px;
+.back-label {
+  display: var(--editor-back-label-display, inline);
 }
 </style>

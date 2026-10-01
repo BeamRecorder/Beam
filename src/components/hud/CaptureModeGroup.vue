@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import { Camera, Clapperboard, ScanLine, Video, Zap } from '@lucide/vue';
+import CaptureModeIcon from '../capture/CaptureModeIcon.vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import type { CaptureMode } from '~/api/types/capture-mode';
@@ -21,11 +21,7 @@ const props = withDefaults(
   { modes: () => ['studio', 'screenshot', 'instant'] },
 );
 const emit = defineEmits<{ 'update:modelValue': [mode: CaptureMode] }>();
-const availableModes = [
-  { id: 'studio', icon: Clapperboard, stackedIcon: Video },
-  { id: 'screenshot', icon: ScanLine, stackedIcon: Camera },
-  { id: 'instant', icon: Zap, stackedIcon: Zap },
-] as const;
+const availableModes = [{ id: 'studio' }, { id: 'screenshot' }, { id: 'instant' }] as const;
 const visibleModes = computed(() => availableModes.filter((mode) => props.modes.includes(mode.id)));
 const columns = computed(() => (visibleModes.value.length === 1 ? 1 : visibleModes.value.length === 2 ? 2 : 3));
 </script>
@@ -46,7 +42,6 @@ const columns = computed(() => (visibleModes.value.length === 1 ? 1 : visibleMod
       :key="mode.id"
       size="sm"
       :icon-only="!labels"
-      :icon="stacked ? mode.stackedIcon : mode.icon"
       variant="tab"
       :class="{ active: modelValue === mode.id, stacked }"
       :title="labels ? (stacked && mode.id === 'studio' ? tHud('recorder') : t(mode.id)) : undefined"
@@ -56,8 +51,10 @@ const columns = computed(() => (visibleModes.value.length === 1 ? 1 : visibleMod
       :aria-pressed="modelValue === mode.id"
       :disabled="disabled"
       @click="emit('update:modelValue', mode.id)"
-      >{{ labels ? (stacked && mode.id === 'studio' ? tHud('recorder') : t(mode.id)) : undefined }}</Button
     >
+      <template #icon><CaptureModeIcon :mode="mode.id" decorative /></template>
+      {{ labels ? (stacked && mode.id === 'studio' ? tHud('recorder') : t(mode.id)) : undefined }}
+    </Button>
   </ButtonGroup>
 </template>
 

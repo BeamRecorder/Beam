@@ -409,8 +409,8 @@
     "recenter": "Ricentra visuale"
   },
   "ExportPopover": {
-    "exportVideo": "Esporta video",
-    "exportVideoDuration": "Esporta video ({seconds} s)",
+    "exportVideo": "Esporta",
+    "exportVideoDuration": "Esporta ({seconds} s)",
     "exportUntilPlayhead": "Esporta fino alla testina",
     "exportUntilPlayheadDesc": "Limita il video dall’inizio alla posizione corrente della testina.",
     "exportUntilPlayheadEnabled": "L’esportazione fino alla testina è attiva. Il video verrà esportato fino alla sua posizione.",
@@ -432,7 +432,7 @@
     "savedTo": "Salvato in {path}",
     "openFile": "Apri file",
     "frameCount": "Fotogramma {completed} / {total}",
-    "exportVideoAria": "Esporta video",
+    "exportVideoAria": "Esporta",
     "video": "video",
     "resolution": "Risoluzione",
     "frameRate": "Frequenza fotogrammi",

@@ -3,7 +3,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { capture } from '~/api/capture';
 import Select from '~/ui/select/Select.vue';
-import { Clapperboard, ScanLine } from '@lucide/vue';
+import CaptureModeIcon from '../capture/CaptureModeIcon.vue';
 import type { PresetKind } from '~/api/types/capture-mode';
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
 
@@ -68,7 +68,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="preset-control" :class="{ compact }">
-    <component v-if="!compact" :is="kind === 'screenshot' ? ScanLine : Clapperboard" :size="17" aria-hidden="true" />
+    <CaptureModeIcon v-if="!compact" :mode="kind === 'screenshot' ? 'screenshot' : 'studio'" :size="17" decorative />
     <Select
       :model-value="document?.activePresetId ?? 'default'"
       :options="options"
@@ -80,7 +80,7 @@ onBeforeUnmount(() => {
       @toggle="emit('toggle', $event)"
     >
       <template v-if="compact" #icon
-        ><component :is="kind === 'screenshot' ? ScanLine : Clapperboard" :size="14"
+        ><CaptureModeIcon :mode="kind === 'screenshot' ? 'screenshot' : 'studio'" :size="14" decorative
       /></template>
     </Select>
     <p v-if="error && !compact" role="alert">{{ error }}</p>

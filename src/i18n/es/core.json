@@ -409,8 +409,8 @@
     "recenter": "Recentrar vista"
   },
   "ExportPopover": {
-    "exportVideo": "Exportar vídeo",
-    "exportVideoDuration": "Exportar vídeo ({seconds} s)",
+    "exportVideo": "Exportar",
+    "exportVideoDuration": "Exportar ({seconds} s)",
     "exportUntilPlayhead": "Exportar hasta el cabezal de reproducción",
     "exportUntilPlayheadDesc": "Limita el vídeo desde el inicio hasta la posición actual del cabezal de reproducción.",
     "exportUntilPlayheadEnabled": "La exportación hasta el cabezal de reproducción está activada. El vídeo se exportará hasta esa posición.",
@@ -432,7 +432,7 @@
     "savedTo": "Guardado en {path}",
     "openFile": "Abrir archivo",
     "frameCount": "Fotograma {completed} / {total}",
-    "exportVideoAria": "Exportar vídeo",
+    "exportVideoAria": "Exportar",
     "video": "vídeo",
     "resolution": "Resolución",
     "frameRate": "Velocidad de fotogramas",

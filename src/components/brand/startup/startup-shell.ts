@@ -78,15 +78,22 @@ export function mountStartupShell(element: HTMLElement): StartupShell {
       const root = document.documentElement;
       root.classList.toggle('dark', dark);
       if (!appearance) return;
-      const tone = SURFACE_TONES[appearance.surfaceTone];
-      const surfaces = dark ? tone.dark : tone.light;
-      root.style.setProperty('--color-primary', resolveAppearanceAccent(appearance, dark).primary);
+      const tone = SURFACE_TONES[appearance.surfaceTone] ?? SURFACE_TONES.default;
+      const surfaces = tone === SURFACE_TONES.default ? null : dark ? tone.dark : tone.light;
+      const accent = resolveAppearanceAccent(appearance, dark);
+      if (accent) root.style.setProperty('--color-primary', accent.primary);
+      else root.style.removeProperty('--color-primary');
       root.style.setProperty(
         '--radius-lg',
         appearance.isPillRadius ? '9999px' : `${Math.round(appearance.radiusPx * 1.5)}px`,
       );
-      root.style.setProperty('--color-bg-element', surfaces.bgElement);
-      root.style.setProperty('--color-border', surfaces.border);
+      if (surfaces) {
+        root.style.setProperty('--color-bg-element', surfaces.bgElement);
+        root.style.setProperty('--color-border', surfaces.border);
+      } else {
+        root.style.removeProperty('--color-bg-element');
+        root.style.removeProperty('--color-border');
+      }
     })
     .catch((reason: unknown) => console.error('Beam startup appearance failed:', reason));
 

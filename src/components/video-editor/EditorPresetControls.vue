@@ -1,20 +1,18 @@
 <script setup lang="ts">
 import { useTranslate } from '~/i18n/useTranslate';
 import { computed, ref } from 'vue';
-import { Clapperboard, ScanLine, Plus, Save, Pencil, Trash2 } from '@lucide/vue';
+import { SlidersHorizontal, Plus, Save, Pencil, Trash2 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Select from '~/ui/select/Select.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import ConfirmDialog from '~/ui/dialog/ConfirmDialog.vue';
 import TextInputDialog from '~/ui/dialog/TextInputDialog.vue';
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
-import type { PresetKind } from '~/api/types/capture-mode';
 
 const { t } = useTranslate('EditorPresetControls');
 const props = defineProps<{
   document: EditorPresetDocument | null;
   dirty: boolean;
-  kind?: PresetKind;
 }>();
 const emit = defineEmits<{
   select: [id: string | number];
@@ -79,7 +77,7 @@ const confirmName = (name: string) => {
 <template>
   <Popover
     ref="presetPopover"
-    align="right"
+    align="left"
     :match-trigger-width="false"
     :close-on-window-blur="false"
     class="preset-controls"
@@ -89,9 +87,9 @@ const confirmName = (name: string) => {
       <Button
         size="xs"
         variant="secondary"
-        :icon="kind === 'screenshot' ? ScanLine : Clapperboard"
+        :icon="SlidersHorizontal"
         class="preset-trigger"
-        style="height: 28px; max-width: 180px"
+        style="height: 28px; max-width: var(--editor-preset-max-width, 180px)"
         :aria-label="t('editorPreset')"
         :aria-expanded="isOpen"
       >

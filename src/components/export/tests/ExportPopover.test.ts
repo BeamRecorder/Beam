@@ -161,7 +161,7 @@ describe('ExportPopover', () => {
 
     await openMoreOptions(wrapper);
     expect(playheadSwitch(wrapper).attributes('aria-checked')).toBe('false');
-    expect(exportAction(wrapper).text()).toBe('Export Video');
+    expect(exportAction(wrapper).text()).toBe('Export');
 
     await exportAction(wrapper).trigger('click');
 
@@ -190,7 +190,7 @@ describe('ExportPopover', () => {
       },
     });
 
-    expect(wrapper.text()).toContain('Export Video');
+    expect(wrapper.text()).toContain('Export');
     expect(createSnapshot).not.toHaveBeenCalled();
   });
 
@@ -278,7 +278,7 @@ describe('ExportPopover', () => {
     await openMoreOptions(wrapper);
     await playheadSwitch(wrapper).trigger('click');
 
-    expect(exportAction(wrapper).text()).toBe('Export Video (5.3s)');
+    expect(exportAction(wrapper).text()).toBe('Export (5.3s)');
     expect(wrapper.get('.playhead-export-note').text()).toBe(i18n.global.t('ExportPopover.exportUntilPlayheadEnabled'));
 
     await exportAction(wrapper).trigger('click');
@@ -294,10 +294,10 @@ describe('ExportPopover', () => {
     await playheadSwitch(wrapper).trigger('click');
 
     await wrapper.setProps({ playheadSeconds: 7.5 });
-    expect(exportAction(wrapper).text()).toBe('Export Video (7.5s)');
+    expect(exportAction(wrapper).text()).toBe('Export (7.5s)');
 
     await wrapper.setProps({ playheadSeconds: 99 });
-    expect(exportAction(wrapper).text()).toBe('Export Video (12s)');
+    expect(exportAction(wrapper).text()).toBe('Export (12s)');
     await exportAction(wrapper).trigger('click');
     expect(mockJob.start).toHaveBeenCalledWith(
       expect.objectContaining({ snapshot: expect.objectContaining({ duration: request.duration }) }),
@@ -690,7 +690,7 @@ describe('ExportPopover', () => {
 
   it('keeps the full export label before starting and shows only the percentage while exporting', async () => {
     const wrapper = mountExport();
-    expect(wrapper.get('.export-trigger').text()).toBe('Export Video');
+    expect(wrapper.get('.export-trigger').text()).toBe('Export');
 
     const progress = mockJob.state!.progress as Ref<Record<string, unknown> | null>;
     const exporting = mockJob.state!.exporting as Ref<boolean>;

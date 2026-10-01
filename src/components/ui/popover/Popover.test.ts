@@ -152,15 +152,15 @@ describe('Popover', () => {
   });
   it('measures at full width away from the viewport edge before making its first position visible', async () => {
     const measurements: Array<{ left: string; width: string; visibility: string }> = [];
-    const bounds = vi
-      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-      .mockImplementation(function (this: HTMLElement) {
-        if (this.classList.contains('popover-content')) {
-          measurements.push({ left: this.style.left, width: this.style.width, visibility: this.style.visibility });
-          return new DOMRect(8, 8, Number.parseFloat(this.style.width), 180);
-        }
-        return new DOMRect(800, 100, 300, 32);
-      });
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      if (this.classList.contains('popover-content')) {
+        measurements.push({ left: this.style.left, width: this.style.width, visibility: this.style.visibility });
+        return new DOMRect(8, 8, Number.parseFloat(this.style.width), 180);
+      }
+      return new DOMRect(800, 100, 300, 32);
+    });
     const wrapper = mountPopover({ align: 'right', matchTriggerWidth: true });
     try {
       await wrapper.get('.popover-trigger').trigger('click');
@@ -179,11 +179,11 @@ describe('Popover', () => {
 describe('Popover native viewport coordination', () => {
   it('requests natural content height before positioning and releases it on close', async () => {
     const resize = vi.fn().mockResolvedValue(undefined);
-    const bounds = vi
-      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-      .mockImplementation(function (this: HTMLElement) {
-        return this.classList.contains('popover-content') ? new DOMRect(0, 0, 180, 224) : new DOMRect(50, 100, 180, 28);
-      });
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains('popover-content') ? new DOMRect(0, 0, 180, 224) : new DOMRect(50, 100, 180, 28);
+    });
     const wrapper = mount(Popover, {
       attachTo: document.body,
       global: { provide: { [popoverViewportKey as symbol]: resize } },
@@ -245,11 +245,11 @@ describe('Popover native viewport coordination', () => {
 
 describe('compact Linux popover bounds', () => {
   it('fits the scroll viewport above a low trigger without native expansion', async () => {
-    const bounds = vi
-      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-      .mockImplementation(function (this: HTMLElement) {
-        return this.classList.contains('popover-content') ? new DOMRect(0, 0, 180, 300) : new DOMRect(50, 180, 180, 28);
-      });
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains('popover-content') ? new DOMRect(0, 0, 180, 300) : new DOMRect(50, 180, 180, 28);
+    });
     const previousHeight = window.innerHeight;
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 268 });
     const wrapper = mount(Popover, {
@@ -271,4 +271,59 @@ describe('compact Linux popover bounds', () => {
       Object.defineProperty(window, 'innerHeight', { configurable: true, value: previousHeight });
     }
   });
+});
+
+describe('attached popover surfaces', () => {
+  it('repositions an open panel when its anchor gap changes', async () => {
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains('popover-content') ? new DOMRect(0, 0, 300, 200) : new DOMRect(400, 8, 200, 32);
+    });
+    const wrapper = mountPopover({ gap: 4 });
+    try {
+      await wrapper.get('.popover-trigger').trigger('click');
+      await flushPromises();
+      expect(document.querySelector<HTMLElement>('.popover-content')!.style.top).toBe('44px');
+      await wrapper.setProps({ gap: 12 });
+      await flushPromises();
+      expect(document.querySelector<HTMLElement>('.popover-content')!.style.top).toBe('52px');
+    } finally {
+      wrapper.unmount();
+      bounds.mockRestore();
+    }
+  });
+
+  it.each([
+    { direction: 'down' as const, trigger: new DOMRect(400, 8, 200, 32), expected: '44px' },
+    { direction: 'up' as const, trigger: new DOMRect(400, 400, 200, 32), expected: '196px' },
+    { direction: 'up' as const, trigger: new DOMRect(400, 600, 200, 32), height: 900, expected: '8px' },
+  ])(
+    'uses the requested gap for $direction while staying in the viewport',
+    async ({ direction, trigger, expected, height = 200 }) => {
+      const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return this.classList.contains('popover-content') ? new DOMRect(0, 0, 720, height) : trigger;
+      });
+      const wrapper = mountPopover({
+        surface: 'attached',
+        gap: 4,
+        align: 'center',
+        direction,
+        matchTriggerWidth: false,
+      });
+      try {
+        await wrapper.get('.popover-trigger').trigger('click');
+        await flushPromises();
+        const content = document.querySelector<HTMLElement>('.popover-content')!;
+        expect(content.classList.contains('popover-attached')).toBe(true);
+        expect(content.style.top).toBe(expected);
+        expect(content.style.left).toBe('140px');
+      } finally {
+        wrapper.unmount();
+        bounds.mockRestore();
+      }
+    },
+  );
 });

@@ -409,8 +409,8 @@
     "recenter": "Recentralizar exibição"
   },
   "ExportPopover": {
-    "exportVideo": "Exportar vídeo",
-    "exportVideoDuration": "Exportar vídeo ({seconds} s)",
+    "exportVideo": "Exportar",
+    "exportVideoDuration": "Exportar ({seconds} s)",
     "exportUntilPlayhead": "Exportar até o cursor de reprodução",
     "exportUntilPlayheadDesc": "Limita o vídeo do início até a posição atual do cursor de reprodução.",
     "exportUntilPlayheadEnabled": "A exportação até o cursor está ativada. O vídeo será exportado até essa posição.",
@@ -432,7 +432,7 @@
     "savedTo": "Salvo em {path}",
     "openFile": "Abrir arquivo",
     "frameCount": "Quadro {completed} / {total}",
-    "exportVideoAria": "Exportar vídeo",
+    "exportVideoAria": "Exportar",
     "video": "vídeo",
     "resolution": "Resolução",
     "frameRate": "Taxa de quadros",

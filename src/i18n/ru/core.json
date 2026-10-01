@@ -409,8 +409,8 @@
     "recenter": "Центрировать вид"
   },
   "ExportPopover": {
-    "exportVideo": "Экспортировать видео",
-    "exportVideoDuration": "Экспортировать видео ({seconds} с)",
+    "exportVideo": "Экспорт",
+    "exportVideoDuration": "Экспорт ({seconds} с)",
     "exportUntilPlayhead": "Экспортировать до курсора воспроизведения",
     "exportUntilPlayheadDesc": "Ограничивает видео от начала до текущей позиции курсора воспроизведения.",
     "exportUntilPlayheadEnabled": "Экспорт до курсора включён. Видео будет экспортировано до его позиции.",
@@ -432,7 +432,7 @@
     "savedTo": "Сохранено в {path}",
     "openFile": "Открыть файл",
     "frameCount": "Кадр {completed} / {total}",
-    "exportVideoAria": "Экспортировать видео",
+    "exportVideoAria": "Экспорт",
     "video": "видео",
     "resolution": "Разрешение",
     "frameRate": "Частота кадров",

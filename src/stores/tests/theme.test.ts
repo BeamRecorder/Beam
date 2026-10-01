@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { createPinia, setActivePinia } from 'pinia';
 import { nextTick } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -22,8 +23,14 @@ const capture = {
 };
 let mediaChange: ((event: MediaQueryListEvent) => void) | undefined;
 let mediaMatches = false;
+let stylesheet: HTMLStyleElement;
+const palette = readFileSync('src/theme/surfaces.css', 'utf8');
+const token = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
 beforeEach(() => {
+  stylesheet = document.createElement('style');
+  stylesheet.textContent = palette;
+  document.head.append(stylesheet);
   vi.resetModules();
   vi.clearAllMocks();
   document.documentElement.removeAttribute('style');
@@ -52,6 +59,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  stylesheet.remove();
   delete window.capture;
 });
 
@@ -66,39 +74,84 @@ const loadStore = async () => {
 describe('theme store', () => {
   it('resolves the default light palette without rewriting the saved color', async () => {
     const store = await loadStore();
-    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#ac5938');
-    expect(document.documentElement.style.getPropertyValue('--color-primary-light')).toBe('rgba(172, 89, 56, 0.07)');
+    expect(token('--color-primary')).toBe('#cf4a1d');
+    expect(token('--color-primary-light').replaceAll(' ', '')).toBe('rgba(207,74,29,0.07)');
     expect(store.primaryColor).toBe(DEFAULT_APPEARANCE.primaryColor);
-    expect(document.documentElement.style.getPropertyValue('--text-on-primary')).toBe('#ffffff');
+    expect(token('--text-on-primary')).toBe('#ffffff');
     expect(capture.updatePreferences).not.toHaveBeenCalled();
   });
 
   it('updates the accent when the system theme changes', async () => {
     capture.getPreferences.mockResolvedValue(preferences('system'));
     await loadStore();
-    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#ac5938');
+    expect(token('--color-primary')).toBe('#cf4a1d');
     mediaChange?.({ matches: true } as MediaQueryListEvent);
-    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#c07a58');
-    expect(document.documentElement.style.getPropertyValue('--text-on-primary')).toBe('#000000');
+    expect(token('--color-primary')).toBe('#cf4a1d');
+    expect(token('--text-on-primary')).toBe('#ffffff');
     mediaChange?.({ matches: false } as MediaQueryListEvent);
-    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#ac5938');
+    expect(token('--color-primary')).toBe('#cf4a1d');
     expect(capture.updatePreferences).not.toHaveBeenCalled();
   });
+
+  it.each(['light', 'dark', 'system'] as const)(
+    'keeps saved Beam orange actions white without an active preset in %s',
+    async (theme) => {
+      capture.getPreferences.mockResolvedValue({
+        ...preferences(theme),
+        appearance: { ...DEFAULT_APPEARANCE, theme, primaryColor: '#ff5a1f', activePresetId: null, radiusPx: 10 },
+      });
+      const store = await loadStore();
+      expect(token('--color-primary')).toBe('#cf4a1d');
+      expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('');
+      expect(token('--text-on-primary')).toBe('#ffffff');
+      expect(token('--text-on-primary-hover')).toBe('#ffffff');
+      expect(store.primaryColor).toBe('#ff5a1f');
+      expect(store.activePresetId).toBeNull();
+      expect(capture.updatePreferences).not.toHaveBeenCalled();
+    },
+  );
 
   it('keeps custom colors across light and dark theme changes', async () => {
     capture.getPreferences.mockResolvedValue({
       ...preferences('light'),
-      appearance: { ...DEFAULT_APPEARANCE, primaryColor: '#b85c38', activePresetId: null },
+      appearance: { ...DEFAULT_APPEARANCE, primaryColor: '#123456', activePresetId: null },
     });
     const store = await loadStore();
-    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#b85c38');
+    expect(token('--color-primary')).toBe('#123456');
     store.theme = 'dark';
     await nextTick();
-    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#b85c38');
+    expect(token('--color-primary')).toBe('#123456');
     store.theme = 'light';
     await nextTick();
-    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#b85c38');
+    expect(token('--color-primary')).toBe('#123456');
   });
+  it('clears custom accent overrides when returning to the shared Beam palette', async () => {
+    const store = await loadStore();
+    store.setPrimaryColor('#123456');
+    await nextTick();
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('#123456');
+    store.resetToDefault();
+    await nextTick();
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('');
+    expect(document.documentElement.style.getPropertyValue('--text-on-primary')).toBe('');
+    expect(token('--color-primary')).toBe('#cf4a1d');
+    expect(token('--text-on-primary')).toBe('#ffffff');
+  });
+
+  it('inherits default surfaces from CSS after restoring a custom surface tone', async () => {
+    const store = await loadStore();
+    store.setSurfaceTone('slate');
+    await nextTick();
+    expect(document.documentElement.style.getPropertyValue('--color-bg-surface')).toBe('#f1f5f9');
+    store.setSurfaceTone('default');
+    await nextTick();
+    expect(document.documentElement.style.getPropertyValue('--color-bg-surface')).toBe('');
+    expect(token('--color-bg-surface')).toBe('#f7f7f8');
+    store.theme = 'dark';
+    await nextTick();
+    expect(token('--color-bg-surface')).toBe('#212123');
+  });
+
   it('hydrates the persisted dark theme and applies it to the document root', async () => {
     capture.getPreferences.mockResolvedValue(preferences('dark'));
     const store = await loadStore();

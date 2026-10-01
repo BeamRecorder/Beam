@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import EditorTitlebar from '../EditorTitlebar.vue';
 import EditorHistoryControls from '../EditorHistoryControls.vue';
 import PropertiesDeleteAction from '../properties/PropertiesDeleteAction.vue';
 import ElementsPanel from '../elements/ElementsPanel.vue';
@@ -130,48 +131,68 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
 <template>
   <main class="screenshot-editor">
     <EditorAmbientBackground :background="state?.canvas.showBackground ? state.background : null" />
-    <header class="screenshot-topbar">
-      <Button variant="ghost" size="sm" :icon="ArrowLeft" :disabled="busy" @click="back">{{
-        topbarText('exitToHUD')
-      }}</Button>
-      <VideoProjectEdition
-        v-if="document"
-        :project="{ ...document, mode: 'screenshot' }"
-        :disabled="busy"
-        @open-project="openProject"
-        @rename-project="renameProject"
-        @delete-project="deleteProject"
-      />
-      <EditorHistoryControls
-        :can-undo="history.canUndo.value"
-        :can-redo="history.canRedo.value"
-        @undo="history.undo().catch(fail)"
-        @redo="history.redo().catch(fail)"
-      />
-      <span class="titlebar-space" />
-      <EditorPresetControls
-        kind="screenshot"
-        :document="presets"
-        :dirty="dirty"
-        @select="presetAction('select', String($event))"
-        @add="presetAction('add', $event)"
-        @rename="presetAction('rename', $event)"
-        @delete="presetAction('delete')"
-        @save="savePreset().catch(fail)"
-      />
-      <Button variant="secondary" size="sm" :icon="Copy" :disabled="!state || busy" @click="exportImage(true)">{{
-        t(copied ? 'copied' : 'copy')
-      }}</Button>
-      <ScreenshotExportPopover
-        v-if="state && document"
-        :state="state"
-        :original="document"
-        :busy="busy"
-        v-model:advanced="advanced"
-        v-model:keep-aspect="keepAspect"
-        @export="exportImage(false)"
-      />
-    </header>
+    <EditorTitlebar class="screenshot-topbar">
+      <template #left>
+        <Button
+          variant="ghost"
+          size="sm"
+          :icon="ArrowLeft"
+          :disabled="busy"
+          :aria-label="topbarText('exitToHUD')"
+          style="height: 28px; padding: 0 var(--editor-back-padding, 12px); gap: var(--editor-back-gap, 8px)"
+          @click="back"
+        >
+          <span class="back-label">{{ topbarText('exitToHUD') }}</span>
+        </Button>
+        <EditorPresetControls
+          :document="presets"
+          :dirty="dirty"
+          @select="presetAction('select', String($event))"
+          @add="presetAction('add', $event)"
+          @rename="presetAction('rename', $event)"
+          @delete="presetAction('delete')"
+          @save="savePreset().catch(fail)"
+        />
+        <EditorHistoryControls
+          :can-undo="history.canUndo.value"
+          :can-redo="history.canRedo.value"
+          @undo="history.undo().catch(fail)"
+          @redo="history.redo().catch(fail)"
+        />
+      </template>
+      <template #center>
+        <VideoProjectEdition
+          v-if="document"
+          :project="{ ...document, mode: 'screenshot' }"
+          :disabled="busy"
+          @open-project="openProject"
+          @rename-project="renameProject"
+          @delete-project="deleteProject"
+        />
+      </template>
+      <template #right>
+        <Button
+          variant="secondary"
+          size="sm"
+          :icon="Copy"
+          :disabled="!state || busy"
+          :aria-label="t(copied ? 'copied' : 'copy')"
+          style="height: 28px"
+          @click="exportImage(true)"
+        >
+          <span class="copy-label">{{ t(copied ? 'copied' : 'copy') }}</span>
+        </Button>
+        <ScreenshotExportPopover
+          v-if="state && document"
+          :state="state"
+          :original="document"
+          :busy="busy"
+          v-model:advanced="advanced"
+          v-model:keep-aspect="keepAspect"
+          @export="exportImage(false)"
+        />
+      </template>
+    </EditorTitlebar>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <div v-if="state && document" class="editor-body">
       <SidebarPanel :active-tab="panel === 'cursor' ? 'shapes' : panel" :items="tabs" @select-tab="selectPanel" />
@@ -388,17 +409,11 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
 .screenshot-editor > :not(.editor-ambient-background) {
   position: relative;
 }
-.screenshot-topbar {
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 144px 4px 12px;
+.back-label {
+  display: var(--editor-back-label-display, inline);
 }
-.titlebar-space {
-  flex: 1;
-  align-self: stretch;
-  -webkit-app-region: drag;
+.copy-label {
+  display: var(--editor-copy-label-display, inline);
 }
 .editor-body {
   display: flex;

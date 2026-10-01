@@ -1,9 +1,9 @@
-/* Shared by the lightweight startup shell and the full renderer. */
+/* One palette for the Recorder, editors and lightweight startup shell. */
 :root {
-  --color-primary: #ac5938;
-  --color-primary-hover: #93401f;
-  --color-primary-light: rgba(172, 89, 56, 0.07);
-  --color-primary-border: rgba(172, 89, 56, 0.25);
+  --color-primary: #cf4a1d;
+  --color-primary-hover: #bd4119;
+  --color-primary-light: rgba(207, 74, 29, 0.07);
+  --color-primary-border: rgba(207, 74, 29, 0.25);
   --text-on-primary: #ffffff;
   --text-on-primary-hover: #ffffff;
   --color-bg-app: #d2d2d9;
@@ -15,12 +15,8 @@
   --color-border-dark: #00000038;
 }
 :root.dark {
-  --color-primary: #c07a58;
-  --color-primary-hover: #df9977;
-  --color-primary-light: rgba(192, 122, 88, 0.18);
-  --color-primary-border: rgba(192, 122, 88, 0.35);
-  --text-on-primary: #000000;
-  --text-on-primary-hover: #000000;
+  --color-primary-light: rgba(207, 74, 29, 0.18);
+  --color-primary-border: rgba(207, 74, 29, 0.35);
   --color-bg-app: #151517;
   --color-bg-surface: #212123;
   --color-bg-surface-hover: #3b3b3e;

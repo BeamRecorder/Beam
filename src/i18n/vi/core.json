@@ -409,8 +409,8 @@
     "recenter": "Căn giữa góc nhìn"
   },
   "ExportPopover": {
-    "exportVideo": "Xuất Video",
-    "exportVideoDuration": "Xuất video ({seconds} giây)",
+    "exportVideo": "Xuất",
+    "exportVideoDuration": "Xuất ({seconds} giây)",
     "exportUntilPlayhead": "Xuất đến đầu phát",
     "exportUntilPlayheadDesc": "Giới hạn video từ đầu đến vị trí hiện tại của đầu phát.",
     "exportUntilPlayheadEnabled": "Đã bật xuất đến đầu phát. Video sẽ được xuất đến vị trí của đầu phát.",
@@ -432,7 +432,7 @@
     "savedTo": "Đã lưu vào {path}",
     "openFile": "Mở tệp",
     "frameCount": "Khung hình {completed} / {total}",
-    "exportVideoAria": "Xuất video",
+    "exportVideoAria": "Xuất",
     "video": "video",
     "resolution": "Độ phân giải",
     "frameRate": "Tốc độ khung hình",

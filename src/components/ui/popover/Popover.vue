@@ -14,6 +14,8 @@ const props = withDefaults(
     closeDelay?: number;
     disabled?: boolean;
     allowOverflow?: boolean;
+    surface?: 'default' | 'attached';
+    gap?: number;
   }>(),
   {
     align: 'left',
@@ -26,6 +28,8 @@ const props = withDefaults(
     closeDelay: 180,
     disabled: false,
     allowOverflow: false,
+    surface: 'default',
+    gap: 8,
   },
 );
 
@@ -99,7 +103,7 @@ const adjustPosition = async () => {
   const rect = triggerEl.getBoundingClientRect();
   if (resizeViewport && props.direction === 'down') {
     const height = Math.max(contentRef.value.scrollHeight, contentRef.value.getBoundingClientRect().height);
-    await resizeViewport(popoverId, rect.bottom + VIEWPORT_MARGIN + height);
+    await resizeViewport(popoverId, rect.bottom + props.gap + height);
     await nextTick();
     if (!contentRef.value || !isOpen.value) return;
   }
@@ -118,8 +122,7 @@ const adjustPosition = async () => {
 
   const availableHeight = Math.max(0, directionClass.value === 'down' ? spaceBelow : spaceAbove);
   const fittedHeight = fitAnchor ? Math.min(content.height, availableHeight) : content.height;
-  const top =
-    directionClass.value === 'down' ? rect.bottom + VIEWPORT_MARGIN : rect.top - fittedHeight - VIEWPORT_MARGIN;
+  const top = directionClass.value === 'down' ? rect.bottom + props.gap : rect.top - fittedHeight - props.gap;
   let left = rect.left;
 
   if (props.align === 'left') {
@@ -201,6 +204,7 @@ watch(
 const repositionOpenPopover = () => {
   if (isOpen.value) void adjustPosition();
 };
+watch(() => props.gap, repositionOpenPopover);
 const closeOnWindowBlur = () => {
   if (props.closeOnWindowBlur) close();
 };
@@ -308,6 +312,7 @@ defineExpose({
           :class="[
             align,
             directionClass,
+            { 'popover-attached': surface === 'attached' },
             { 'popover-block': block, 'popover-flush': flush, 'popover-allow-overflow': allowOverflow },
           ]"
           :style="floatingStyle"
@@ -371,6 +376,10 @@ defineExpose({
   background: var(--color-bg-surface);
 }
 
+.popover-content.popover-attached {
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
 .popover-content.popover-allow-overflow {
   overflow: visible;
 }
@@ -393,5 +402,11 @@ defineExpose({
 .pop-leave-from {
   opacity: 1;
   transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pop-enter-active,
+  .pop-leave-active {
+    transition: none;
+  }
 }
 </style>

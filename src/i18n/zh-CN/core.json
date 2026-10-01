@@ -409,8 +409,8 @@
     "recenter": "重新居中"
   },
   "ExportPopover": {
-    "exportVideo": "导出视频",
-    "exportVideoDuration": "导出视频（{seconds} 秒）",
+    "exportVideo": "导出",
+    "exportVideoDuration": "导出（{seconds} 秒）",
     "exportUntilPlayhead": "导出至播放头",
     "exportUntilPlayheadDesc": "将视频限制为从开头到当前播放头位置。",
     "exportUntilPlayheadEnabled": "已启用导出至播放头。视频将导出到播放头所在位置。",
@@ -432,7 +432,7 @@
     "savedTo": "已保存到 {path}",
     "openFile": "打开文件",
     "frameCount": "帧 {completed} / {total}",
-    "exportVideoAria": "导出视频",
+    "exportVideoAria": "导出",
     "video": "视频",
     "resolution": "分辨率",
     "frameRate": "帧率",

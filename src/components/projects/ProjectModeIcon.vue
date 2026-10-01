@@ -1,20 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Clapperboard, ScanLine, Zap } from '@lucide/vue';
+import CaptureModeIcon from '../capture/CaptureModeIcon.vue';
 import type { CaptureMode } from '~/api/types/capture-mode';
-import { useTranslate } from '~/i18n/useTranslate';
-const props = withDefaults(defineProps<{ mode?: CaptureMode }>(), { mode: 'studio' });
-const { t } = useTranslate('QuickSnipCropBar');
-const icon = computed(() => ({ studio: Clapperboard, screenshot: ScanLine, instant: Zap })[props.mode]);
+withDefaults(defineProps<{ mode?: CaptureMode }>(), { mode: 'studio' });
 </script>
 <template>
-  <component :is="icon" class="project-mode-icon" :class="mode" :data-mode="mode" role="img" :aria-label="t(mode)" />
+  <CaptureModeIcon :mode="mode" :size="16" class="project-mode-icon" :class="mode" />
 </template>
 <style scoped>
 .project-mode-icon {
-  width: 13px;
-  height: 13px;
-  flex: 0 0 13px;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
 }
 .studio {
   color: var(--color-track-video);

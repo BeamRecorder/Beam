@@ -16,7 +16,7 @@ vi.mock('../../export/ExportPopover.vue', () => ({
       '<div class="export-popover-stub" :data-project-name="request?.projectName" :data-duration="request?.duration" :data-playhead="playheadSeconds" />',
   },
 }));
-vi.mock('../VideoProjectEdition.vue', () => ({ default: { template: '<div />' } }));
+vi.mock('../VideoProjectEdition.vue', () => ({ default: { template: '<div class="project-switcher-stub" />' } }));
 
 describe('VideoEditor Topbar', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -26,6 +26,14 @@ describe('VideoEditor Topbar', () => {
     expect(wrapper.find('[aria-label="Open Beam Discord"]').exists()).toBe(false);
     expect(wrapper.find('.discord-icon').exists()).toBe(false);
     expect(wrapper.get('.brand-logo').attributes('alt')).toBe('Beam');
+  });
+
+  it('places presets on the left and project navigation in the center', () => {
+    const wrapper = mount(Topbar);
+    expect(wrapper.find('.left-actions .preset-controls').exists()).toBe(true);
+    expect(wrapper.find('.center-actions .project-switcher-stub').exists()).toBe(true);
+    expect(wrapper.find('.right-actions .preset-controls').exists()).toBe(false);
+    wrapper.unmount();
   });
 
   it('emits navigation back to the HUD', async () => {

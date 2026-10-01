@@ -409,8 +409,8 @@
     "recenter": "Wyśrodkuj widok"
   },
   "ExportPopover": {
-    "exportVideo": "Eksportuj wideo",
-    "exportVideoDuration": "Eksportuj wideo ({seconds} s)",
+    "exportVideo": "Eksportuj",
+    "exportVideoDuration": "Eksportuj ({seconds} s)",
     "exportUntilPlayhead": "Eksportuj do głowicy odtwarzania",
     "exportUntilPlayheadDesc": "Ogranicza wideo od początku do bieżącej pozycji głowicy odtwarzania.",
     "exportUntilPlayheadEnabled": "Eksport do głowicy jest włączony. Wideo zostanie wyeksportowane do jej pozycji.",
@@ -432,7 +432,7 @@
     "savedTo": "Zapisano w {path}",
     "openFile": "Otwórz plik",
     "frameCount": "Klatka {completed} / {total}",
-    "exportVideoAria": "Eksportuj wideo",
+    "exportVideoAria": "Eksportuj",
     "video": "wideo",
     "resolution": "Rozdzielczość",
     "frameRate": "Liczba klatek",

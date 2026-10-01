@@ -17,6 +17,9 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- The Recorder and editors use one shared light/dark palette with a livelier Beam orange and white action labels and icons, including saved orange appearances with custom corner radii.
+- Editor titlebars now center a borderless project switcher with a wider rectangular project panel, place presets on the left with a settings icon, and shorten video export labels in all 15 languages. Export buttons fit their labels.
+- Capture modes now use Beam’s original Recorder, Screenshot and Instant SVG icons in the HUD, Quick Snip controls and project pickers.
 - Simplified the editor with Concat-inspired light/dark surfaces, neutral controls, taller sliders with rounded handles and compact value editors, a softer orange accent, aligned sidebar buttons and subtle properties-panel opening animations. Slider focus outlines appear with keyboard navigation.
 - Background imports now occupy the first library tile. Image, video, color and gradient tiles share their dimensions, with translated addition tooltips in all 15 languages.
 - Zoom and caption tracks are larger; audio tracks are shorter. Timeline items share neutral selection, hover and disabled states, with quieter lane backgrounds and clearer colored blocks and waveforms in both themes.

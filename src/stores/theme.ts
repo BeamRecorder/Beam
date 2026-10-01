@@ -77,13 +77,19 @@ export const useThemeStore = defineStore('theme', () => {
     const radius = radiusPx.value;
     const isPill = isPillRadius.value;
 
-    // Primary color tokens
-    style.setProperty('--color-primary', accent.primary);
-    style.setProperty('--color-primary-hover', accent.hover);
-    style.setProperty('--color-primary-light', accent.light);
-    style.setProperty('--color-primary-border', accent.border);
-    style.setProperty('--text-on-primary', accent.foreground);
-    style.setProperty('--text-on-primary-hover', accent.foregroundHover);
+    // Recorder and editors inherit the same CSS palette; only custom accents override it.
+    const accentTokens = {
+      '--color-primary': accent?.primary,
+      '--color-primary-hover': accent?.hover,
+      '--color-primary-light': accent?.light,
+      '--color-primary-border': accent?.border,
+      '--text-on-primary': accent?.foreground,
+      '--text-on-primary-hover': accent?.foregroundHover,
+    };
+    for (const [token, value] of Object.entries(accentTokens)) {
+      if (value) style.setProperty(token, value);
+      else style.removeProperty(token);
+    }
 
     // Secondary color tokens
     style.setProperty('--color-secondary', secondary);
@@ -104,13 +110,19 @@ export const useThemeStore = defineStore('theme', () => {
 
     // Surface tone tokens
     const toneConfig = SURFACE_TONES[surfaceTone.value] ?? SURFACE_TONES.default;
-    const toneStyles = isDark ? toneConfig.dark : toneConfig.light;
-    style.setProperty('--color-bg-app', toneStyles.bgApp);
-    style.setProperty('--color-bg-surface', toneStyles.bgSurface);
-    style.setProperty('--color-bg-surface-hover', toneStyles.bgSurfaceHover);
-    style.setProperty('--color-bg-element', toneStyles.bgElement);
-    style.setProperty('--color-border', toneStyles.border);
-    style.setProperty('--color-border-strong', toneStyles.borderStrong);
+    const toneStyles = toneConfig === SURFACE_TONES.default ? null : isDark ? toneConfig.dark : toneConfig.light;
+    const surfaceTokens = {
+      '--color-bg-app': toneStyles?.bgApp,
+      '--color-bg-surface': toneStyles?.bgSurface,
+      '--color-bg-surface-hover': toneStyles?.bgSurfaceHover,
+      '--color-bg-element': toneStyles?.bgElement,
+      '--color-border': toneStyles?.border,
+      '--color-border-strong': toneStyles?.borderStrong,
+    };
+    for (const [token, value] of Object.entries(surfaceTokens)) {
+      if (value) style.setProperty(token, value);
+      else style.removeProperty(token);
+    }
 
     const resolvedScale = (region: UiScaleRegion) => (uiScaleOverrides.value[region] ?? uiScaleGlobal.value) / 100;
     style.setProperty('--ui-scale-topbar', String(resolvedScale('topbar')));

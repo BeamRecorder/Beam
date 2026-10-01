@@ -20,7 +20,9 @@ const { t } = useTranslate('ScreenshotEditor');
 <template>
   <Popover align="right" :match-trigger-width="false" :close-on-window-blur="false">
     <template #trigger
-      ><Button variant="primary" size="sm" :icon="Download" :loading="busy">{{ t('export') }}</Button></template
+      ><Button variant="primary" size="xs" :icon="Download" :loading="busy" style="height: 28px; padding: 0 12px">{{
+        t('export')
+      }}</Button></template
     >
     <div class="export-options">
       <h2>{{ t('exportImage') }}</h2>

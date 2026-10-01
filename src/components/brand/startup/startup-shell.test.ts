@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { flushPromises } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_APPEARANCE, SURFACE_TONES } from '~/types/appearance';
@@ -7,6 +8,8 @@ import type { StartupShell } from './startup-types';
 const portrait = vi.hoisted(() => ({ dispose: vi.fn() }));
 vi.mock('./startup-portrait', () => ({ animateStartupPortrait: () => portrait }));
 let element: HTMLElement;
+let stylesheet: HTMLStyleElement;
+const palette = readFileSync('src/theme/surfaces.css', 'utf8');
 let hidden: boolean;
 const shells: StartupShell[] = [];
 const flush = async () => {
@@ -19,6 +22,9 @@ const setup = () => {
   return shell;
 };
 beforeEach(() => {
+  stylesheet = document.createElement('style');
+  stylesheet.textContent = palette;
+  document.head.append(stylesheet);
   vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
   localStorage.clear();
   hidden = false;
@@ -31,6 +37,7 @@ beforeEach(() => {
   vi.stubGlobal('capture', undefined);
 });
 afterEach(() => {
+  stylesheet.remove();
   shells.splice(0).forEach((shell) => shell.dispose());
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -131,9 +138,9 @@ describe('startup shell tips and theme', () => {
     vi.stubGlobal('capture', { getPreferences: async () => ({ theme, appearance: DEFAULT_APPEARANCE }) });
     setup();
     await flush();
-    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe(
-      theme === 'light' ? '#c45318' : '#b85c38',
-    );
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('');
+    expect(document.documentElement.style.getPropertyValue('--color-bg-element')).toBe('');
+    expect(getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim()).toBe('#cf4a1d');
   });
   it('supports pill corners and preference snapshots without appearance', async () => {
     vi.stubGlobal('capture', {

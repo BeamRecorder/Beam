@@ -4,10 +4,11 @@ export function resolveAppearanceAccent(
   appearance: Pick<AppearanceSettings, 'primaryColor' | 'activePresetId'>,
   isDark: boolean,
 ) {
-  const isBeamPreset =
-    appearance.activePresetId === DEFAULT_APPEARANCE.activePresetId &&
-    appearance.primaryColor.toLowerCase() === DEFAULT_APPEARANCE.primaryColor;
-  const primary = isBeamPreset ? (isDark ? '#c07a58' : '#ac5938') : appearance.primaryColor;
+  // The shared CSS palette owns Beam orange, including saved legacy shades.
+  // Only custom colors need inline overrides. Radius edits can clear the preset ID.
+  const selectedColor = appearance.primaryColor.toLowerCase();
+  if ([DEFAULT_APPEARANCE.primaryColor, '#ff5a1f', '#cf4a1d'].includes(selectedColor)) return null;
+  const primary = appearance.primaryColor;
   const hover = adjustHexBrightness(primary, isDark ? 12 : -10);
   const foregroundFor = (color: string) => {
     const rgb = parseInt(color.slice(1), 16);
@@ -23,7 +24,7 @@ export function resolveAppearanceAccent(
     hover,
     foreground: foregroundFor(primary),
     foregroundHover: foregroundFor(hover),
-    light: hexToRgba(primary, isDark ? 0.18 : isBeamPreset ? 0.07 : 0.1),
-    border: hexToRgba(primary, !isDark && isBeamPreset ? 0.25 : 0.35),
+    light: hexToRgba(primary, isDark ? 0.18 : 0.1),
+    border: hexToRgba(primary, 0.35),
   };
 }

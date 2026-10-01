@@ -1205,18 +1205,13 @@ describe('ScreenshotEditor', () => {
     expect(useToastStore().toasts).toHaveLength(0);
     wrapper.unmount();
   });
-  it('shares the ambient canvas background and puts project navigation before the right-hand presets', async () => {
+  it('shares the ambient canvas background and centers project navigation with presets on the left', async () => {
     const wrapper = mountEditor();
     await flushPromises();
     expect(wrapper.get('.screenshot-topbar').text()).toContain('Back to HUD');
-    const header = wrapper.get('.screenshot-topbar').element;
-    const children = Array.from(header.children);
-    expect(children.indexOf(wrapper.get('[data-testid="project-switcher"]').element)).toBeLessThan(
-      children.indexOf(header.querySelector('.titlebar-space')!),
-    );
-    expect(children.indexOf(wrapper.get('[data-testid="preset-controls"]').element)).toBeGreaterThan(
-      children.indexOf(header.querySelector('.titlebar-space')!),
-    );
+    expect(wrapper.find('.left-actions [data-testid="preset-controls"]').exists()).toBe(true);
+    expect(wrapper.find('.center-actions [data-testid="project-switcher"]').exists()).toBe(true);
+    expect(wrapper.find('.right-actions [data-testid="preset-controls"]').exists()).toBe(false);
     const state = wrapper.findComponent(ScreenshotCanvasStub).props('state')!;
     state.background = { kind: 'color', color: '#d54f68' };
     state.canvas.showBackground = true;

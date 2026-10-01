@@ -409,8 +409,8 @@
     "recenter": "Центриране"
   },
   "ExportPopover": {
-    "exportVideo": "Експортиране на видео",
-    "exportVideoDuration": "Експортиране на видео ({seconds} сек)",
+    "exportVideo": "Експортиране",
+    "exportVideoDuration": "Експортиране ({seconds} сек)",
     "exportUntilPlayhead": "Експортиране до плейхеда",
     "exportUntilPlayheadDesc": "Ограничава видеото от началото до текущата позиция на плейхеда.",
     "exportUntilPlayheadEnabled": "Експортирането до плейхеда е включено. Видеото ще се експортира до тази позиция.",
@@ -432,7 +432,7 @@
     "savedTo": "Запазено в {path}",
     "openFile": "Отваряне на файла",
     "frameCount": "Кадър {completed} / {total}",
-    "exportVideoAria": "Експортиране на видео",
+    "exportVideoAria": "Експортиране",
     "video": "видео",
     "resolution": "Разделителна способност",
     "frameRate": "Честота на кадрите",

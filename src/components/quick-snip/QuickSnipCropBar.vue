@@ -3,11 +3,9 @@ import {
   Camera,
   CameraOff,
   ChevronDown,
-  Clapperboard,
   GripVertical,
   MicOff,
   Play,
-  ScanLine,
   Slash,
   Square,
   VolumeOff,
@@ -15,6 +13,7 @@ import {
   ZoomIn,
 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
+import CaptureModeIcon from '../capture/CaptureModeIcon.vue';
 import CaptureModeGroup from '../hud/CaptureModeGroup.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import AudioIconMeter from '~/components/hud/audio/AudioIconMeter.vue';
@@ -109,7 +108,7 @@ const openSelect = (event: MouseEvent) => {
           />
           <Divider orientation="vertical" spacing="none" class="field-divider" />
           <label class="setting-field preset-field" :title="t('presetHint')" @click="openSelect">
-            <component :is="mode === 'screenshot' ? ScanLine : Clapperboard" :size="16" aria-hidden="true" />
+            <CaptureModeIcon :mode="displayMode" decorative />
             <span class="field-content">
               <span class="field-label">{{ t('preset') }}</span>
               <select
@@ -215,13 +214,15 @@ const openSelect = (event: MouseEvent) => {
               <Button
                 variant="primary"
                 size="sm"
-                :icon="mode === 'screenshot' ? ScanLine : recording ? Square : Play"
+                :icon="mode === 'screenshot' ? undefined : recording ? Square : Play"
                 :title="captureHint"
                 :loading="preparing || actionPending"
                 :disabled="!configured || preparing || actionPending || deviceMenuBusy"
                 @click="toggleFromControls()"
-                >{{ mode === 'screenshot' ? t('screenshot') : t(recording ? 'stop' : 'start') }}</Button
               >
+                <template v-if="mode === 'screenshot'" #icon><CaptureModeIcon mode="screenshot" decorative /></template>
+                {{ mode === 'screenshot' ? t('screenshot') : t(recording ? 'stop' : 'start') }}
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"

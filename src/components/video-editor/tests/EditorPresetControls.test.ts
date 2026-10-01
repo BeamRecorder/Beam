@@ -142,12 +142,10 @@ afterEach(() => {
 });
 
 describe('EditorPresetControls', () => {
-  it('shows the preset kind in the editor trigger and updates it when the kind changes', async () => {
-    const wrapper = mount(EditorPresetControls, { props: { document: presetDocument(), dirty: false, kind: 'video' } });
+  it('uses a settings icon for editor presets', async () => {
+    const wrapper = mount(EditorPresetControls, { props: { document: presetDocument(), dirty: false } });
     mountedWrappers.push(wrapper);
-    expect(wrapper.get('.preset-trigger').find('.lucide-clapperboard').exists()).toBe(true);
-    await wrapper.setProps({ kind: 'screenshot' });
-    expect(wrapper.get('.preset-trigger').find('.lucide-scan-line').exists()).toBe(true);
+    expect(wrapper.get('.preset-trigger').find('.lucide-sliders-horizontal').exists()).toBe(true);
     expect(wrapper.get('.preset-trigger').find('.lucide-clapperboard').exists()).toBe(false);
   });
 

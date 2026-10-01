@@ -409,8 +409,8 @@
     "recenter": "Recenter view"
   },
   "ExportPopover": {
-    "exportVideo": "Export Video",
-    "exportVideoDuration": "Export Video ({seconds}s)",
+    "exportVideo": "Export",
+    "exportVideoDuration": "Export ({seconds}s)",
     "exportUntilPlayhead": "Export until playhead",
     "exportUntilPlayheadDesc": "Limit the video from the start to the current playhead position.",
     "exportUntilPlayheadEnabled": "Export at playhead is enabled. The video will export until the playhead position.",
@@ -432,7 +432,7 @@
     "savedTo": "Saved to {path}",
     "openFile": "Open File",
     "frameCount": "Frame {completed} / {total}",
-    "exportVideoAria": "Export video",
+    "exportVideoAria": "Export",
     "video": "video",
     "resolution": "Resolution",
     "frameRate": "Frame rate",

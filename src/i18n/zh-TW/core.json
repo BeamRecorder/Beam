@@ -409,8 +409,8 @@
     "recenter": "重新置中"
   },
   "ExportPopover": {
-    "exportVideo": "匯出影片",
-    "exportVideoDuration": "匯出影片（{seconds} 秒）",
+    "exportVideo": "匯出",
+    "exportVideoDuration": "匯出（{seconds} 秒）",
     "exportUntilPlayhead": "匯出至播放頭",
     "exportUntilPlayheadDesc": "將影片限制為從開頭到目前播放頭位置。",
     "exportUntilPlayheadEnabled": "已啟用匯出至播放頭。影片將匯出到播放頭所在位置。",
@@ -432,7 +432,7 @@
     "savedTo": "已儲存至 {path}",
     "openFile": "開啟檔案",
     "frameCount": "影格 {completed} / {total}",
-    "exportVideoAria": "匯出影片",
+    "exportVideoAria": "匯出",
     "video": "影片",
     "resolution": "解析度",
     "frameRate": "影格率",

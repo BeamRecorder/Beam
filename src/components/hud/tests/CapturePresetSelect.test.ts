@@ -86,10 +86,10 @@ describe('CapturePresetSelect', () => {
 
   it('uses the screenshot icon for still presets and the Studio icon for video presets', async () => {
     const wrapper = mountSelector('screenshot');
-    expect(wrapper.find('.lucide-scan-line').exists()).toBe(true);
+    expect(wrapper.find('.capture-mode-icon[data-mode="screenshot"]').exists()).toBe(true);
     await wrapper.setProps({ kind: 'video' });
-    expect(wrapper.find('.lucide-clapperboard').exists()).toBe(true);
-    expect(wrapper.find('.lucide-scan-line').exists()).toBe(false);
+    expect(wrapper.find('.capture-mode-icon[data-mode="studio"]').exists()).toBe(true);
+    expect(wrapper.find('.capture-mode-icon[data-mode="screenshot"]').exists()).toBe(false);
     wrapper.unmount();
   });
 
@@ -116,7 +116,7 @@ describe('CapturePresetSelect', () => {
     await flushPromises();
     expect(wrapper.get('.select-trigger').attributes('aria-label')).toBe('Preset');
     expect(wrapper.get('.select-trigger').classes()).toContain('select-compact');
-    expect(wrapper.find('.lucide-clapperboard').exists()).toBe(true);
+    expect(wrapper.find('.capture-mode-icon[data-mode="studio"]').exists()).toBe(true);
     await wrapper.get('.select-trigger').trigger('click');
     expect(wrapper.emitted('toggle')).toEqual([[true]]);
     await wrapper.setProps({ disabled: true });

@@ -30,6 +30,19 @@ describe('CaptureModeGroup', () => {
     expect(wrapper.get('[aria-label="Instant"]').classes()).not.toContain('active');
   });
 
+  it.each([false, true])('uses the original Beam assets with stacked=%s', (stacked) => {
+    const wrapper = mount(CaptureModeGroup, { props: { modelValue: 'studio', stacked } });
+    const icons = wrapper.findAll('.capture-mode-icon');
+    expect(icons.map((icon) => icon.attributes('data-mode'))).toEqual(['studio', 'screenshot', 'instant']);
+    expect(icons.every((icon) => icon.attributes('aria-hidden') === 'true')).toBe(true);
+    expect(icons.map((icon) => icon.attributes('style'))).toEqual([
+      expect.stringContaining('beam-recorder.svg'),
+      expect.stringContaining('beam-screenshot.svg'),
+      expect.stringContaining('beam-instant.svg'),
+    ]);
+    wrapper.unmount();
+  });
+
   it('updates accessible mode labels when the language changes', async () => {
     const wrapper = mount(CaptureModeGroup, { props: { modelValue: 'screenshot' } });
     await setCurrentLocale('fr');

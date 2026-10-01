@@ -409,8 +409,8 @@
     "recenter": "보기 중앙 정렬"
   },
   "ExportPopover": {
-    "exportVideo": "동영상 내보내기",
-    "exportVideoDuration": "동영상 내보내기 ({seconds}초)",
+    "exportVideo": "내보내기",
+    "exportVideoDuration": "내보내기 ({seconds}초)",
     "exportUntilPlayhead": "재생 헤드까지 내보내기",
     "exportUntilPlayheadDesc": "동영상 시작부터 현재 재생 헤드 위치까지만 내보냅니다.",
     "exportUntilPlayheadEnabled": "재생 헤드까지 내보내기가 활성화되었습니다. 동영상은 재생 헤드 위치까지만 내보내집니다.",
@@ -432,7 +432,7 @@
     "savedTo": "{path}에 저장됨",
     "openFile": "파일 열기",
     "frameCount": "프레임 {completed} / {total}",
-    "exportVideoAria": "동영상 내보내기",
+    "exportVideoAria": "내보내기",
     "video": "동영상",
     "resolution": "해상도",
     "frameRate": "프레임 속도",

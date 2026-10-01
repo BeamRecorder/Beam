@@ -1,33 +1,38 @@
 <script setup lang="ts">
-import { defineAsyncComponent, ref, watch, onMounted, onUnmounted } from 'vue';
+import { defineAsyncComponent, ref, watch, nextTick, onMounted, onUnmounted, useId } from 'vue';
 import ProjectModeIcon from '../projects/ProjectModeIcon.vue';
 import type { ProjectIdentity } from '../projects/project-picker-types';
 import { ChevronDown, LoaderCircle } from '@lucide/vue';
 import type { CaptureProject } from '../../api/types/capture-api';
 import { useTranslate } from '~/i18n/useTranslate';
+import Button from '~/ui/button/Button.vue';
+import Popover from '~/ui/popover/Popover.vue';
 
 const { t } = useTranslate('VideoProjectEdition');
+const { t: pickerText } = useTranslate('ProjectPicker');
 const ProjectPicker = defineAsyncComponent(() => import('../projects/ProjectPicker.vue'));
-
 const props = withDefaults(
-  defineProps<{
-    project?: ProjectIdentity | null;
-    disabled?: boolean;
-    isSaving?: boolean;
-  }>(),
-  {
-    project: null,
-    isSaving: false,
-  },
+  defineProps<{ project?: ProjectIdentity | null; disabled?: boolean; isSaving?: boolean }>(),
+  { project: null, isSaving: false },
 );
-
 const emit = defineEmits<{
   (event: 'open-project', project: CaptureProject): void;
   (event: 'rename-project', project: CaptureProject): void;
   (event: 'delete-project', project: CaptureProject): void;
 }>();
-
 const projectTitle = ref(props.project?.name);
+const picker = ref<InstanceType<typeof Popover> | null>(null);
+const switcher = ref<HTMLElement | null>(null);
+const panel = ref<HTMLElement | null>(null);
+const panelId = useId();
+const panelGap = ref(4);
+let titlebarObserver: ResizeObserver | null = null;
+const updatePanelGap = () => {
+  const header = switcher.value?.closest('header');
+  const trigger = switcher.value?.querySelector('button');
+  if (header && trigger)
+    panelGap.value = Math.max(0, header.getBoundingClientRect().bottom - trigger.getBoundingClientRect().bottom);
+};
 watch(
   () => props.project?.name,
   (name) => {
@@ -38,72 +43,83 @@ const handleProjectRenamed = (project: CaptureProject) => {
   if (props.project?.id === project.id) projectTitle.value = project.name;
   emit('rename-project', project);
 };
-const projectMenuOpen = ref(false);
-const switcherRef = ref<HTMLDivElement | null>(null);
-
-const toggleProjectMenu = () => {
-  if (!props.disabled) projectMenuOpen.value = !projectMenuOpen.value;
-};
-
 const handleProjectSelected = (project: CaptureProject) => {
-  projectMenuOpen.value = false;
-  if (props.project?.id !== project.id) {
-    emit('open-project', project);
-  }
+  picker.value?.close();
+  if (props.project?.id !== project.id) emit('open-project', project);
 };
-
-const handleWindowPointerDown = (event: MouseEvent | PointerEvent) => {
-  if (!projectMenuOpen.value) return;
-  const target = event.target as Element | null;
-  if (
-    target?.closest('.popover-content') ||
-    target?.closest('.dialog-overlay') ||
-    target?.closest('.dialog-container')
-  ) {
-    return;
-  }
-  if (switcherRef.value && !switcherRef.value.contains(target as Node)) {
-    projectMenuOpen.value = false;
-  }
+const focusPicker = (event: MouseEvent) => {
+  updatePanelGap();
+  if (event.detail === 0 && !props.disabled) void nextTick(() => panel.value?.focus());
 };
-
 const handleKeyDown = (event: KeyboardEvent) => {
-  if (event.key === 'Escape' && projectMenuOpen.value) {
-    projectMenuOpen.value = false;
-  }
+  if (event.key !== 'Escape' || !picker.value?.isOpen || event.defaultPrevented) return;
+  const target = event.target instanceof Element ? event.target : null;
+  if (target?.closest('.dialog-overlay')) return;
+  const content = target?.closest('.popover-content');
+  if (content && !content.contains(panel.value)) return;
+  event.preventDefault();
+  picker.value.close();
+  switcher.value?.querySelector<HTMLButtonElement>('button')?.focus();
 };
-
 onMounted(() => {
-  window.addEventListener('pointerdown', handleWindowPointerDown, { capture: true });
-  window.addEventListener('mousedown', handleWindowPointerDown, { capture: true });
   window.addEventListener('keydown', handleKeyDown);
+  updatePanelGap();
+  if (typeof ResizeObserver !== 'undefined' && switcher.value) {
+    titlebarObserver = new ResizeObserver(updatePanelGap);
+    const header = switcher.value.closest('header');
+    if (header) titlebarObserver.observe(header);
+    if (switcher.value.parentElement) titlebarObserver.observe(switcher.value.parentElement);
+  }
 });
-
 onUnmounted(() => {
-  window.removeEventListener('pointerdown', handleWindowPointerDown, { capture: true });
-  window.removeEventListener('mousedown', handleWindowPointerDown, { capture: true });
   window.removeEventListener('keydown', handleKeyDown);
+  titlebarObserver?.disconnect();
 });
 </script>
 
 <template>
-  <div ref="switcherRef" class="project-switcher">
-    <button
-      class="project-name-button"
+  <div ref="switcher" class="project-switcher">
+    <Popover
+      ref="picker"
+      block
+      align="center"
+      surface="attached"
+      flush
+      :gap="panelGap"
+      :match-trigger-width="false"
+      :close-on-window-blur="false"
       :disabled="disabled"
-      :title="projectTitle || t('untitledProject')"
-      aria-haspopup="true"
-      :aria-expanded="projectMenuOpen"
-      @click="toggleProjectMenu"
     >
-      <ProjectModeIcon :mode="project?.mode" />
-      <span class="project-title">{{ projectTitle || t('untitledProject') }}</span>
-      <LoaderCircle class="save-spinner" :class="{ 'is-visible': isSaving }" :aria-label="t('savingProject')" />
-      <ChevronDown class="chevron-icon" />
-    </button>
-
-    <Transition name="project-menu">
-      <div v-if="projectMenuOpen" class="project-menu-panel">
+      <template #trigger="{ isOpen }">
+        <Button
+          class="project-name-button"
+          variant="ghost"
+          size="sm"
+          block
+          :disabled="disabled"
+          :title="projectTitle || t('untitledProject')"
+          aria-haspopup="dialog"
+          :aria-controls="isOpen ? panelId : undefined"
+          :aria-expanded="isOpen"
+          style="height: 32px; padding: 0 4px; border: 0; background: transparent; font-weight: 500"
+          @click="focusPicker"
+        >
+          <template #icon><ProjectModeIcon :mode="project?.mode" /></template>
+          <span class="project-label">
+            <span class="project-title">{{ projectTitle || t('untitledProject') }}</span>
+            <LoaderCircle v-if="isSaving" class="save-spinner" :aria-label="t('savingProject')" />
+            <ChevronDown class="chevron-icon" :class="{ 'is-open': isOpen }" aria-hidden="true" />
+          </span>
+        </Button>
+      </template>
+      <section
+        ref="panel"
+        :id="panelId"
+        class="project-menu-panel"
+        role="dialog"
+        :aria-label="pickerText('projects')"
+        tabindex="-1"
+      >
         <ProjectPicker
           compact
           :current-project-id="project?.id"
@@ -112,64 +128,43 @@ onUnmounted(() => {
           @rename-project="handleProjectRenamed"
           @delete-project="emit('delete-project', $event)"
         />
-      </div>
-    </Transition>
+      </section>
+    </Popover>
   </div>
 </template>
 
 <style scoped>
 .project-switcher {
-  position: relative;
+  min-width: 0;
+  max-width: 100%;
   -webkit-app-region: no-drag;
+  app-region: no-drag;
 }
-
-.project-name-button {
-  display: inline-flex;
+.project-label {
+  display: flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  background: var(--color-bg-surface, #1e1e24);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md, 6px);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  max-width: 200px;
+  min-width: 0;
 }
-
-.project-name-button:hover {
-  background: var(--color-bg-surface-hover, #2a2a32);
-  border-color: var(--color-border-dark, #3f3f46);
-}
-
 .project-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.chevron-icon {
-  width: 14px;
-  height: 14px;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
+.chevron-icon,
 .save-spinner {
   width: 14px;
   height: 14px;
   color: var(--text-muted);
-  flex-shrink: 0;
-  visibility: hidden;
-  opacity: 0;
-  transition: opacity 0.15s ease;
+  flex: none;
 }
-.save-spinner.is-visible {
-  visibility: visible;
-  opacity: 1;
+.chevron-icon {
+  transition: transform 150ms ease;
+}
+.chevron-icon.is-open {
+  transform: rotate(180deg);
+}
+.save-spinner {
   animation: spin 700ms linear infinite;
 }
 @keyframes spin {
@@ -177,31 +172,19 @@ onUnmounted(() => {
     transform: rotate(360deg);
   }
 }
-
 .project-menu-panel {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  z-index: 100;
-  width: 344px;
-  overflow: hidden;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg-element);
-  box-shadow: var(--shadow-xl);
+  width: min(720px, calc(100vw - 32px));
+  --project-picker-height: min(440px, calc(100vh - 96px));
+  outline: none;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
 }
-
-.project-menu-enter-active,
-.project-menu-leave-active {
-  transition:
-    opacity 0.16s ease,
-    transform 0.16s ease;
-  transform-origin: top left;
-}
-
-.project-menu-enter-from,
-.project-menu-leave-to {
-  opacity: 0;
-  transform: translateY(-5px) scale(0.98);
+@media (prefers-reduced-motion: reduce) {
+  .chevron-icon {
+    transition: none;
+  }
+  .save-spinner {
+    animation: none;
+  }
 }
 </style>
