@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
 
-const { readJsonSync, writeJsonAtomicSync, writeJsonBatchSync } = require('./json-file.cjs');
+const { readJsonSync, writeJsonAtomicSync, writeJsonBatchSync } = require('@beam/storage/node/json-file');
 
 function rewriteProjectReferences(directory, root, previous) {
   const oldRelative = path.relative(root, previous).split(path.sep).join('/');

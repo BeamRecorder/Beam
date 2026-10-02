@@ -88,6 +88,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Desktop startup resolves the shared JSON storage adapter when organizing project categories.
 - Horizontal timeline scrolling keeps clip artwork, titles, trim handles and audio waveforms aligned; audio titles stay above waveforms and zoom badges retain the theme's text color.
 - VP9/AV1 exports on Linux use buffered software decoding to prevent decoder flush failures. Multi-video scenes retain every current image instead of evicting visible layers when the seek-history cache fills.
 - Imported VP9 videos, timeline thumbnails and video posters use buffered software decoding on Linux to prevent hardware decoder failures during playback and seeking.
