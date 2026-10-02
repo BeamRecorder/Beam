@@ -2,7 +2,7 @@ import { vi } from 'vitest';
 import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
 import type { ClipAppearance, ClipComposition } from '@beam/engine/shared/composition-types';
-import { MACOS_CURSOR_PACK } from '@desktop/components/video-editor/properties/cursor/cursor-packs';
+import { MACOS_CURSOR_PACK } from '@desktop/components/editor/properties/cursor/cursor-packs';
 import { createDefaultCursorAutoHideSettings } from '@beam/engine/capture/cursor-settings';
 
 export const screenAppearance: ClipAppearance = {

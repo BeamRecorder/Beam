@@ -1,9 +1,12 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { regionRecordingSettings } = require('../electron/region-selection-settings.cjs');
-const { markerBounds, createRegionRecordingMarker } = require('../electron/region-recording-marker.cjs');
-const { regionRectangle, placeOutsideRegion } = require('../electron/teleprompter/teleprompter-region.cjs');
-const { captureWindowExclusions } = require('../electron/capture/capture-window-exclusions.cjs');
+const { regionRecordingSettings } = require('../apps/desktop/electron/region-selection-settings.cjs');
+const { markerBounds, createRegionRecordingMarker } = require('../apps/desktop/electron/region-recording-marker.cjs');
+const {
+  regionRectangle,
+  placeOutsideRegion,
+} = require('../apps/desktop/electron/teleprompter/teleprompter-region.cjs');
+const { captureWindowExclusions } = require('../apps/desktop/electron/capture/capture-window-exclusions.cjs');
 const bounds = { x: -1000, y: 0, width: 1000, height: 800 };
 const region = { x: 0.25, y: 0.25, width: 0.5, height: 0.5 };
 const settings = {
@@ -39,8 +42,14 @@ test('settings rejects malformed IPC values', () => {
     {},
     { ...settings, cameraId: '' },
     { ...settings, microphoneId: 'a'.repeat(257) },
-    ...[-1, 11, 0.5, NaN, '3'].map((countdownSeconds) => ({ ...settings, countdownSeconds })),
-    ...['systemAudio', 'hideTaskbar', 'hideDesktopIcons', 'showRealCursor'].map((key) => ({ ...settings, [key]: 1 })),
+    ...[-1, 11, 0.5, NaN, '3'].map((countdownSeconds) => ({
+      ...settings,
+      countdownSeconds,
+    })),
+    ...['systemAudio', 'hideTaskbar', 'hideDesktopIcons', 'showRealCursor'].map((key) => ({
+      ...settings,
+      [key]: 1,
+    })),
   ])
     assert.throws(() => regionRecordingSettings(value, 'win32'), TypeError);
 });
@@ -133,7 +142,12 @@ test('new marker bounds dispose the old strips and failed loads cannot leave nat
   marker.hide();
 });
 test('teleprompter geometry uses global display coordinates and rejects invalid crops', () => {
-  assert.deepEqual(regionRectangle({ bounds, region }), { x: -750, y: 200, width: 500, height: 400 });
+  assert.deepEqual(regionRectangle({ bounds, region }), {
+    x: -750,
+    y: 200,
+    width: 500,
+    height: 400,
+  });
   for (const value of [
     null,
     { bounds, region: null },

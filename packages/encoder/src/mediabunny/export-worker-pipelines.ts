@@ -1,8 +1,9 @@
+import type { FrameSource, FrameLease } from '@beam/runtime/frames/frame-source-types';
 import { mayBeEnabled } from '@beam/engine/scene/scene-visibility';
 import { createSnapshotCameraEvaluator } from '@beam/runtime/rendering/snapshot-camera';
 import { VideoSampleSink, type VideoSample } from 'mediabunny';
 import { engineMetrics } from '@beam/runtime/performance/engine-metrics';
-import type { EngineMetricsSnapshot } from '@beam/runtime/performance/engine-metrics-types';
+import type { VideoPipelineStats, VideoFrameWriter, ExportFrameRange } from './video-pipeline-types';
 import { sourceTimeAt } from '@beam/runtime/shared/index';
 import { isVisualClip, type AudioClip, type VisualClip } from '@beam/engine/shared/composition-types';
 import { createProgressiveAudioMixer } from '@beam/encoder/audio/pcm-mixer';
@@ -25,20 +26,12 @@ import type { ExportAssets } from '@beam/encoder/mediabunny/export-worker-assets
 import { ExportWorkerOutput } from '@beam/encoder/mediabunny/export-worker-output';
 import { WATERMARK_LOGO_KEY } from '@beam/runtime/rendering/watermark-render';
 
-export type VideoPipelineStats = {
-  engine?: EngineMetricsSnapshot;
-  elapsedMs: number;
-  decodeMs: number;
-  renderMs: number;
-  encoderBackpressureMs: number;
-};
-
 const abortIfNeeded = (signal: AbortSignal) => {
   if (signal.aborted) throw new DOMException('Export cancelled.', 'AbortError');
 };
 
-function* clipTimestamps(clip: VisualClip, totalFrames: number, fps: number) {
-  const firstFrame = Math.max(0, Math.floor((clip.timelineStartMs * fps) / 1_000));
+function* clipTimestamps(clip: VisualClip, totalFrames: number, fps: number, first: number) {
+  const firstFrame = Math.max(first, Math.floor((clip.timelineStartMs * fps) / 1_000));
   const lastFrame = Math.min(totalFrames, Math.ceil(((clip.timelineStartMs + clip.timelineDurationMs) * fps) / 1_000));
   for (let frame = firstFrame; frame < lastFrame; frame += 1) {
     const sourceTime = sourceTimeAt(clip, (frame / fps) * 1_000);
@@ -113,9 +106,11 @@ export async function renderExportVideo(
   images: ReadonlyMap<string, RenderableMedia>,
   cursorImages: ReadonlyMap<string, ImageBitmap>,
   context: OffscreenCanvasRenderingContext2D,
-  mediaOutput: ExportWorkerOutput,
+  mediaOutput: VideoFrameWriter,
   signal: AbortSignal,
   onFrame: (done: number, stats: Omit<VideoPipelineStats, 'elapsedMs'>) => void | Promise<void>,
+  frameSources: ReadonlyMap<string, FrameSource> = new Map(),
+  range?: ExportFrameRange,
 ): Promise<VideoPipelineStats> {
   engineMetrics.reset();
   const started = performance.now();
@@ -124,6 +119,16 @@ export async function renderExportVideo(
   let encoderBackpressureMs = 0;
   const fps = request.snapshot.render.fps;
   const totalFrames = Math.max(1, Math.ceil(request.snapshot.duration * fps));
+  const firstFrame = range?.first ?? 0,
+    endFrame = range?.end ?? totalFrames;
+  if (
+    !Number.isSafeInteger(firstFrame) ||
+    !Number.isSafeInteger(endFrame) ||
+    firstFrame < 0 ||
+    firstFrame >= endFrame ||
+    endFrame > totalFrames
+  )
+    throw new RangeError('Invalid render frame range.');
   const consumers = new Map<string, AsyncIterator<VideoSample | null>>();
   const sharedConsumers = new Map<string, AsyncIterator<VideoSample | null>>();
   let backgroundReader: BackgroundVideoReader | null = null;
@@ -150,7 +155,7 @@ export async function renderExportVideo(
       let consumer = sharedConsumers.get(key);
       if (!consumer) {
         consumer = new VideoSampleSink(track, softwareLinuxDecoderOptions(await track.getCodec(), navigator.userAgent))
-          .samplesAtTimestamps(clipTimestamps(clip, totalFrames, fps), { skipLiveWait: true })
+          .samplesAtTimestamps(clipTimestamps(clip, endFrame, fps, firstFrame), { skipLiveWait: true })
           [Symbol.asyncIterator]();
         sharedConsumers.set(key, consumer);
       }
@@ -184,12 +189,13 @@ export async function renderExportVideo(
     );
 
     const sceneAt = createCompositionSceneLayerResolver(request.snapshot.composition);
-    for (let frame = 0; frame < totalFrames; frame += 1) {
+    for (let frame = firstFrame; frame < endFrame; frame += 1) {
       abortIfNeeded(signal);
       const time = frame / fps;
       const layers = sceneAt(time * 1_000);
       const activeVisuals = [...layers.cameraVisuals, ...layers.webcams];
       const samples: VideoSample[] = [];
+      const leasedFrames: FrameLease[] = [];
       const decoded: Array<{ clip: VisualClip; sample: VideoSample }> = [];
       const sharedSamples = new Map<AsyncIterator<VideoSample | null>, VideoSample | null>();
       const visuals = new Map<string, RenderableMedia>();
@@ -199,6 +205,17 @@ export async function renderExportVideo(
       const decodeStarted = performance.now();
       try {
         for (const clip of activeVisuals) {
+          const provider = frameSources.get(clip.assetId);
+          if (provider) {
+            const sourceTime = sourceTimeAt(clip, time * 1000);
+            if (sourceTime !== null) {
+              const lease = await provider.frameAt(sourceTime, signal);
+              leasedFrames.push(lease);
+              visuals.set(clip.id, lease.media);
+              if (clip.id === layers.screen?.id) screen = lease.media;
+            }
+            continue;
+          }
           if (clip.kind === 'image') {
             const image = images.get(clip.assetId);
             if (image) visuals.set(clip.id, image);
@@ -257,6 +274,7 @@ export async function renderExportVideo(
         engineMetrics.observe('render', renderElapsed);
       } finally {
         for (const sample of samples) sample.close();
+        for (const lease of leasedFrames) lease.close();
       }
       const encoderStarted = performance.now();
       await mediaOutput.addVideo(time, Math.min(1 / fps, Math.max(0, request.snapshot.duration - time)));

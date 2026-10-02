@@ -23,3 +23,16 @@ export * from './scene/scene-types';
 export * from './scene/keyframes';
 export * from './scene/scene-clock';
 export * from './scene/scene-animation';
+export * from './document/transaction-channel';
+export type { DocumentTransaction, DocumentTransactionEvent } from './document/transaction-types';
+export * from './screenshot/still-document';
+export * from './screenshot/still-commands';
+export type { StillDocument } from './screenshot/still-document-types';
+export * from './document/document-endpoint';
+export * from './document/render-document';
+export * from './document/render-document-validation';
+export * from './commands/render-commands';
+export type { DocumentRequest, DocumentResponse } from './document/endpoint-types';
+
+export * from './document/authoring-session';
+export type { DocumentEvent, DocumentHistoryEvent } from './document/endpoint-types';

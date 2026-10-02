@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isExportWorkerRequest } from '@beam/encoder/mediabunny/export-worker-protocol';
 import type { PreparedCursorImage } from '@beam/encoder/mediabunny/export-cursor-images';
 import type { ExportRequest } from '@beam/encoder/export-types';
-import { BUNDLED_CURSOR_PACKS } from '@desktop/components/video-editor/properties/cursor/cursor-packs';
+import { BUNDLED_CURSOR_PACKS } from '@desktop/components/editor/properties/cursor/cursor-packs';
 
 const runtime = vi.hoisted(() => ({
   openExportAssets: vi.fn(),
@@ -50,7 +50,7 @@ vi.mock('@beam/runtime/rendering/render', () => ({
   disposeCompositionRenderer: vi.fn(),
   renderCompositionFrame: vi.fn(),
 }));
-vi.mock('@desktop/components/video-editor/properties/cursor/useCursorReplacer', () => ({
+vi.mock('@desktop/components/editor/properties/cursor/useCursorReplacer', () => ({
   cursorTypeForKind: vi.fn(() => 'default'),
 }));
 vi.mock('@beam/encoder/audio/pcm-mixer', () => ({

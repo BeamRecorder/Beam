@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const test = require('node:test');
 
-const { configureDevelopmentProfile } = require('../electron/lifecycle/development-profile.cjs');
+const { configureDevelopmentProfile } = require('../apps/desktop/electron/lifecycle/development-profile.cjs');
 
 function fakeApp() {
   const calls = [];

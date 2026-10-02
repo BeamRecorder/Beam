@@ -1,16 +1,16 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const sources = require('../electron/source-picker/development-sources.json');
+const sources = require('../apps/desktop/electron/source-picker/development-sources.json');
 const {
   isDevelopmentSourceDataEnabled,
   initialPickerState,
   reducePickerState,
-} = require('../electron/source-picker/source-picker-state.cjs');
+} = require('../apps/desktop/electron/source-picker/source-picker-state.cjs');
 const {
   createDevelopmentSourceProvider,
   developmentTargetBounds,
-} = require('../electron/source-picker/development-source-provider.cjs');
-const { isHudSourcePickerOwner } = require('../electron/source-picker/source-picker-ipc.cjs');
+} = require('../apps/desktop/electron/source-picker/development-source-provider.cjs');
+const { isHudSourcePickerOwner } = require('../apps/desktop/electron/source-picker/source-picker-ipc.cjs');
 
 test('development data requires an exact unpackaged opt-in', () => {
   assert.equal(isDevelopmentSourceDataEnabled(false, { DEV_CROSSPLATFORM: '1' }), true);

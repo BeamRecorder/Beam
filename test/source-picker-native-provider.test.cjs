@@ -5,7 +5,7 @@ const {
   sourceDescription,
   windowSourceId,
   validBounds,
-} = require('../electron/source-picker/native-source-provider.cjs');
+} = require('../apps/desktop/electron/source-picker/native-source-provider.cjs');
 
 test('canonicalizes Electron handles without reinterpreting native hexadecimal IDs', () => {
   assert.equal(windowSourceId('window:42:0', 'win32'), 'wgc:window:2a');
@@ -13,7 +13,13 @@ test('canonicalizes Electron handles without reinterpreting native hexadecimal I
   assert.equal(windowSourceId('wgc:window:1000', 'win32'), 'wgc:window:1000');
 });
 test('source metadata preserves names and dimensions with and without application labels', () => {
-  assert.deepEqual(sourceDescription('id', 'window', 'Title — Editor', { width: 1280, height: 720 }).app, 'Editor');
+  assert.deepEqual(
+    sourceDescription('id', 'window', 'Title — Editor', {
+      width: 1280,
+      height: 720,
+    }).app,
+    'Editor',
+  );
   assert.equal(sourceDescription('id', 'window', 'Untitled').name, 'Untitled');
   assert.equal(sourceDescription('id', 'screen', 'Monitor', { width: 0, height: 0 }).aspect, 16 / 9);
 });
@@ -30,7 +36,10 @@ test('bounds validation preserves negative origins and rejects missing or invali
 
 function fixture(platform = 'win32') {
   const calls = [];
-  const display = { id: 1, bounds: { x: -1920, y: 0, width: 1920, height: 1080 } };
+  const display = {
+    id: 1,
+    bounds: { x: -1920, y: 0, width: 1920, height: 1080 },
+  };
   const windows = [
     { id: 'screen:1:0', name: 'Display', display_id: '1' },
     { id: 'window:42:0', name: 'Editor' },
@@ -84,9 +93,15 @@ function fixture(platform = 'win32') {
   const screen = {
     getAllDisplays: () => [display],
     dipToScreenPoint: (point) => ({ x: point.x * 2, y: point.y * 2 }),
-    screenToDipRect: (_window, bounds) => ({ ...bounds, width: bounds.width / 2, height: bounds.height / 2 }),
+    screenToDipRect: (_window, bounds) => ({
+      ...bounds,
+      width: bounds.width / 2,
+      height: bounds.height / 2,
+    }),
   };
-  const getNativePreview = async ({ sourceId }) => ({ thumbnail: `native:${sourceId}` });
+  const getNativePreview = async ({ sourceId }) => ({
+    thumbnail: `native:${sourceId}`,
+  });
   const BrowserWindow = {
     getAllWindows: () => [
       ownWindow('window:43:0', 'http://localhost:6500/'),
@@ -141,7 +156,9 @@ test('missing display bounds and invalid native window bounds fail explicitly', 
   await assert.rejects(provider.preview({ id: 'missing', kind: 'screen' }, false), /no longer available/);
   const native = createNativeSourceProvider({
     platform: 'win32',
-    requestNative: async () => ({ bounds: { x: 0, y: 0, width: 0, height: 1 } }),
+    requestNative: async () => ({
+      bounds: { x: 0, y: 0, width: 0, height: 1 },
+    }),
   });
   await assert.rejects(native.preview({ id: 'wgc:window:2a', kind: 'window' }, true), /invalid bounds/);
 });
@@ -154,7 +171,10 @@ test('macOS never admits Chromium-only privacy indicators or application entries
     kind: 'application',
     label: 'Control Center',
   });
-  windows.push({ id: 'window:999:0', name: 'Microphone indicator — Control Center' });
+  windows.push({
+    id: 'window:999:0',
+    name: 'Microphone indicator — Control Center',
+  });
   desktopCapturer.getSources = async () => {
     throw new Error('macOS must use the filtered Rust catalogue');
   };

@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const { EventEmitter } = require('node:events');
-const { registerQuickSnipDeviceMenu } = require('../electron/quick-snip/quick-snip-device-menu.cjs');
+const { registerQuickSnipDeviceMenu } = require('../apps/desktop/electron/quick-snip/quick-snip-device-menu.cjs');
 
 function fixture() {
   const sender = new EventEmitter();
@@ -155,7 +155,10 @@ test('reports native popup failures and releases listeners for a retry', async (
 
 test('anchors keyboard menus to the focused control without forwarding unrelated request fields', async () => {
   const f = fixture();
-  const result = f.invoke({ ...f.request, position: { x: 45, y: 90, window: 'untrusted' } });
+  const result = f.invoke({
+    ...f.request,
+    position: { x: 45, y: 90, window: 'untrusted' },
+  });
   assert.equal(f.popup().x, 45);
   assert.equal(f.popup().y, 90);
   assert.equal(f.popup().sourceType, 'keyboard');

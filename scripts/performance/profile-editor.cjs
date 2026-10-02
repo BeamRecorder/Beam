@@ -19,7 +19,10 @@ const root = process.env.BEAM_EDITOR_PROFILE_ROOT || path.resolve(__dirname, '..
 const source = process.env.BEAM_EDITOR_PROFILE_SOURCE;
 const gpuTrace = process.env.BEAM_GPU_TRACE;
 const screenshot = process.env.BEAM_EDITOR_PROFILE_SCREENSHOT;
-if (screenshot && (!path.isAbsolute(screenshot) || !screenshot.startsWith(os.tmpdir() + path.sep) || fs.existsSync(screenshot)))
+if (
+  screenshot &&
+  (!path.isAbsolute(screenshot) || !screenshot.startsWith(os.tmpdir() + path.sep) || fs.existsSync(screenshot))
+)
   throw new Error('Screenshots require a fresh temporary output file.');
 if (gpuTrace && (!path.resolve(gpuTrace).startsWith(os.tmpdir() + path.sep) || fs.existsSync(gpuTrace)))
   throw new Error('GPU traces require a fresh temporary output file.');
@@ -49,7 +52,7 @@ for (const category of ['studio', 'instant']) {
 const manifestFile = path.join(destination, 'project.json');
 const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8').split(source).join(destination));
 fs.writeFileSync(manifestFile, JSON.stringify(manifest));
-const { defaults } = require(path.join(root, 'electron/preferences/preferences-store.cjs'));
+const { defaults } = require(path.join(root, 'apps/desktop/electron/preferences/preferences-store.cjs'));
 const preferences = defaults();
 preferences.onboardingCompleted = true;
 preferences.devices = { cameraId: 'off', micId: 'no-audio', systemAudioMode: 'off' };
@@ -204,7 +207,7 @@ finish = () => {
   );
   app.quit();
 };
-require(path.join(root, 'electron/main.cjs'));
+require(path.join(root, 'apps/desktop/electron/main.cjs'));
 setTimeout(
   () => {
     result.error = 'Profile deadline';

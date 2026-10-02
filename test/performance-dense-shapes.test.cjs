@@ -10,8 +10,20 @@ const fixture = () => ({
   editor: {
     composition: {
       clips: [
-        { id: 'video', kind: 'video', order: 200, timelineStartMs: 0, timelineDurationMs: 60000 },
-        { id: 'blur', kind: 'blur', order: 100, timelineStartMs: 0, timelineDurationMs: 60000 },
+        {
+          id: 'video',
+          kind: 'video',
+          order: 200,
+          timelineStartMs: 0,
+          timelineDurationMs: 60000,
+        },
+        {
+          id: 'blur',
+          kind: 'blur',
+          order: 100,
+          timelineStartMs: 0,
+          timelineDurationMs: 60000,
+        },
         { id: 'shape', kind: 'shape' },
       ],
     },

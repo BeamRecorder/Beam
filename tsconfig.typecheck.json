@@ -6,9 +6,9 @@
     "checkJs": false,
     "types": ["vite/client", "node"],
     "paths": {
-      "@desktop/*": ["./src/*"],
-      "~/ui/*": ["./src/components/ui/*"],
-      "~/*": ["./src/*"],
+      "@desktop/*": ["./apps/desktop/src/*"],
+      "~/ui/*": ["./apps/desktop/src/components/ui/*"],
+      "~/*": ["./apps/desktop/src/*"],
       "@website/*": ["./website/src/*"]
     },
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.typecheck.tsbuildinfo"

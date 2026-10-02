@@ -1,13 +1,21 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Clip } from '@beam/engine/shared/composition-types';
-import { loadElementFonts } from '@beam/runtime/shared/element-font-loader';
+import { loadElementFonts as loadFonts } from '@beam/runtime/shared/element-font-loader';
 
+const loadElementFonts = (clips: readonly Clip[]) => loadFonts(clips, (id) => `project-media://font/${id}`);
 const fontId = (letter: string) => letter.repeat(64);
 const shapeWithFont = (family: string, id: string) =>
-  ({ kind: 'shape', text: { style: { fontFamily: family, fontAssetId: id } } }) as unknown as Clip;
+  ({
+    kind: 'shape',
+    text: { style: { fontFamily: family, fontAssetId: id } },
+  }) as unknown as Clip;
 
 const installWorkerFontContext = (
-  faces: Array<{ family: string; source: string; load: ReturnType<typeof vi.fn> }>,
+  faces: Array<{
+    family: string;
+    source: string;
+    load: ReturnType<typeof vi.fn>;
+  }>,
   add: ReturnType<typeof vi.fn>,
 ) => {
   class FakeFontFace {
@@ -32,7 +40,11 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe('shared imported font loader', () => {
   it('registers imported fonts in the worker font set when document is unavailable', async () => {
-    const faces: Array<{ family: string; source: string; load: ReturnType<typeof vi.fn> }> = [];
+    const faces: Array<{
+      family: string;
+      source: string;
+      load: ReturnType<typeof vi.fn>;
+    }> = [];
     const add = vi.fn();
     installWorkerFontContext(faces, add);
     const id = fontId('a');
@@ -55,7 +67,11 @@ describe('shared imported font loader', () => {
     const gate = new Promise<void>((resolve) => {
       finish = resolve;
     });
-    const faces: Array<{ family: string; source: string; load: ReturnType<typeof vi.fn> }> = [];
+    const faces: Array<{
+      family: string;
+      source: string;
+      load: ReturnType<typeof vi.fn>;
+    }> = [];
     const add = vi.fn();
     installWorkerFontContext(faces, add);
     const id = fontId('b');
@@ -99,11 +115,18 @@ describe('shared imported font loader', () => {
   });
 
   it('loads distinct family registrations separately and ignores clips without imported fonts', async () => {
-    const faces: Array<{ family: string; source: string; load: ReturnType<typeof vi.fn> }> = [];
+    const faces: Array<{
+      family: string;
+      source: string;
+      load: ReturnType<typeof vi.fn>;
+    }> = [];
     const add = vi.fn();
     installWorkerFontContext(faces, add);
     const id = fontId('c');
-    const systemText = { kind: 'shape', text: { style: { fontFamily: 'Arial' } } } as unknown as Clip;
+    const systemText = {
+      kind: 'shape',
+      text: { style: { fontFamily: 'Arial' } },
+    } as unknown as Clip;
 
     await loadElementFonts([systemText, shapeWithFont('Inter', id), shapeWithFont('Inter Display', id)]);
 
@@ -112,7 +135,11 @@ describe('shared imported font loader', () => {
   });
 
   it('loads text-caption fonts and ignores shapes without embedded text', async () => {
-    const faces: Array<{ family: string; source: string; load: ReturnType<typeof vi.fn> }> = [];
+    const faces: Array<{
+      family: string;
+      source: string;
+      load: ReturnType<typeof vi.fn>;
+    }> = [];
     const add = vi.fn();
     installWorkerFontContext(faces, add);
     const id = fontId('f');
@@ -130,7 +157,11 @@ describe('shared imported font loader', () => {
   });
 
   it('prefers document.fonts in the renderer when both font sets exist', async () => {
-    const faces: Array<{ family: string; source: string; load: ReturnType<typeof vi.fn> }> = [];
+    const faces: Array<{
+      family: string;
+      source: string;
+      load: ReturnType<typeof vi.fn>;
+    }> = [];
     const rendererFonts = { add: vi.fn() };
     const workerFonts = { add: vi.fn() };
     installWorkerFontContext(faces, workerFonts.add);
@@ -144,7 +175,11 @@ describe('shared imported font loader', () => {
   });
 
   it('rejects malformed ids before constructing a font face', async () => {
-    const faces: Array<{ family: string; source: string; load: ReturnType<typeof vi.fn> }> = [];
+    const faces: Array<{
+      family: string;
+      source: string;
+      load: ReturnType<typeof vi.fn>;
+    }> = [];
     installWorkerFontContext(faces, vi.fn());
 
     await expect(loadElementFonts([shapeWithFont('Broken', 'not-a-font-id')])).rejects.toThrow(
@@ -154,7 +189,11 @@ describe('shared imported font loader', () => {
   });
 
   it('does not keep a failed font load cached and retries successfully', async () => {
-    const faces: Array<{ family: string; source: string; load: ReturnType<typeof vi.fn> }> = [];
+    const faces: Array<{
+      family: string;
+      source: string;
+      load: ReturnType<typeof vi.fn>;
+    }> = [];
     const add = vi.fn();
     const load = vi.fn().mockRejectedValueOnce(new Error('bad font data')).mockResolvedValue(undefined);
     class FakeFontFace {
@@ -184,7 +223,11 @@ describe('shared imported font loader', () => {
   });
 
   it('fails when imported fonts are loaded without a font set, then succeeds after one becomes available', async () => {
-    const faces: Array<{ family: string; source: string; load: ReturnType<typeof vi.fn> }> = [];
+    const faces: Array<{
+      family: string;
+      source: string;
+      load: ReturnType<typeof vi.fn>;
+    }> = [];
     const add = vi.fn();
     installWorkerFontContext(faces, add);
     vi.stubGlobal('fonts', undefined);

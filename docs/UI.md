@@ -4,7 +4,7 @@ This document defines the visual and implementation rules for the Vue renderer.
 
 ## Component system
 
-- Reuse components from `src/components/ui/` before creating a new control.
+- Reuse components from `apps/desktop/src/components/ui/` before creating a new control.
 - Extend an existing UI primitive when the behavior is shared by multiple features.
 - Keep feature-specific composition in the feature folder, not in the shared UI primitives.
 - Use semantic HTML and preserve keyboard access, focus visibility, disabled states, and accessible names.
@@ -33,7 +33,7 @@ Advanced disclosures use `ui/transitions/RafRevealTransition.vue`. It measures g
 - Prefer component-scoped styles and local class names.
 - Avoid deep selectors (`:deep`, `::v-deep`, or equivalent) whenever possible. Use an explicit class or a component prop instead.
 - Before adding a color, spacing, radius, shadow, typography, or z-index value, check whether a theme token already exists.
-- Use the existing theme variables from `src/style.css` and related theme files. Do not introduce a parallel token naming system.
+- Use the existing theme variables from `apps/desktop/src/style.css` and related theme files. Do not introduce a parallel token naming system.
 - Hard-coded values are acceptable for geometry that is intrinsic to a component, but not for reusable visual language.
 - Keep layout responsibilities clear: parents control placement; children control their internal layout.
 - Do not use global element selectors to style a feature unless the global behavior is intentional and documented.
@@ -48,7 +48,7 @@ Advanced disclosures use `ui/transitions/RafRevealTransition.vue`. It measures g
 
 ## Review checklist
 
-- Is the component using an existing `src/components/ui/` primitive where applicable?
+- Is the component using an existing `apps/desktop/src/components/ui/` primitive where applicable?
 - Are all icons Lucide icons or approved product assets?
 - Are styles scoped and free of unnecessary deep selectors?
 - Do all new CSS tokens match the existing theme keys?

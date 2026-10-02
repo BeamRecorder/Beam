@@ -30,8 +30,21 @@ const fixture = (t) => {
           },
         ],
         clips: [
-          { id: 'screen', kind: 'screen', assetId: 'screen', trackId: 'screen-lane', enabled: false },
-          { id: 'blur', kind: 'blur', mode: 'blur', enabled: false, feather: 14, strength: 30 },
+          {
+            id: 'screen',
+            kind: 'screen',
+            assetId: 'screen',
+            trackId: 'screen-lane',
+            enabled: false,
+          },
+          {
+            id: 'blur',
+            kind: 'blur',
+            mode: 'blur',
+            enabled: false,
+            feather: 14,
+            strength: 30,
+          },
         ],
       },
     },

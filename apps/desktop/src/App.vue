@@ -1,0 +1,463 @@
+<script setup lang="ts">
+import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import HUD from './components/hud/HUD.vue';
+import { useHudInteractivity } from './components/hud/useHudInteractivity';
+import ToastProvider from './components/ui/toast/ToastProvider.vue';
+import EditorOpenError from './components/hud/EditorOpenError.vue';
+import { useRecordingController } from './components/hud/recorder/useRecordingController';
+import type {
+  RecordingBarVisibility,
+  RecordingConfiguration,
+  RecordingSessionResult,
+  RecordingStartFailure,
+} from './components/hud/recorder/recording-types';
+import { formatRecordingStartFailure } from './components/hud/recorder/recording-types';
+
+import { capture } from './api/capture';
+import { useLocaleStore } from './stores/locale';
+import { useTranslate } from './i18n/useTranslate';
+import type { CaptureProject, RecorderLauncherContext } from './api/types/capture-api';
+import { useEditorOpening } from './components/hud/useEditorOpening';
+
+const RecorderBar = defineAsyncComponent(() =>
+  import('./components/hud/recorder/RecorderBar.vue').then((module) => module.default),
+);
+
+let removeRecorderLauncherListener: (() => void) | null = null;
+let removeEditorLoadingListener: (() => void) | null = null;
+let removeTrayStopListener: (() => void) | null = null;
+let removeHudProjectListener: (() => void) | null = null;
+let disposed = false;
+let removeRecordingShortcutListener: (() => void) | null = null;
+let pauseShortcutPending = false;
+const interactivity = useHudInteractivity(() => currentView.value === 'hud' || recording.phase.value !== 'idle');
+
+const localeStore = useLocaleStore();
+const { t: tHud } = useTranslate('HUD');
+const { t: tRecorderBar } = useTranslate('RecorderBar');
+
+const syncTrayMenu = () => {
+  if (isCameraOverlay || isTeleprompter || isQuickSnipCrop) return;
+  capture.updateTrayMenu?.({
+    openHud: tHud('openHud'),
+    stopRecording: tRecorderBar('stopRecording'),
+    quit: tHud('quit'),
+    tooltip: 'Beam',
+    quickSnip: tHud('quickSnip'),
+    startQuickSnip: tHud('startQuickSnip'),
+    stopQuickSnip: tHud('stopQuickSnip'),
+    recording: ['countdown', 'starting', 'recording', 'paused'].includes(recording.phase.value),
+  });
+};
+
+watch(
+  () => localeStore.locale,
+  () => {
+    void nextTick(() => syncTrayMenu());
+  },
+  { immediate: true },
+);
+const logEditor = (message: string, details?: unknown) => {
+  if (!import.meta.env.DEV) return;
+  if (details === undefined) console.log(`[Beam editor] ${message}`);
+  else console.log(`[Beam editor] ${message}`, details);
+};
+onMounted(() => {
+  void capture.getPreferences().then((preferences) => {
+    recordingBarVisibility.value = preferences.recordingBar.visibility;
+  });
+});
+
+onBeforeUnmount(() => {
+  disposed = true;
+  removeRecorderLauncherListener?.();
+  removeEditorLoadingListener?.();
+  removeTrayStopListener?.();
+  removeRecordingShortcutListener?.();
+  removeHudProjectListener?.();
+});
+
+const currentView = ref<'hud' | 'recorder'>('hud');
+const isCameraOverlay = new URLSearchParams(window.location.search).has('cameraOverlay');
+const isQuickSnipCrop = new URLSearchParams(window.location.search).has('quickSnipCrop');
+const isTeleprompter = new URLSearchParams(window.location.search).has('teleprompter');
+const CameraOverlayApp = defineAsyncComponent(() => import('./components/hud/camera/CameraOverlayApp.vue'));
+const QuickSnipCropBar = defineAsyncComponent(() => import('./components/quick-snip/QuickSnipCropBar.vue'));
+const TeleprompterWindowApp = defineAsyncComponent(
+  () => import('./components/hud/teleprompter/TeleprompterWindowApp.vue'),
+);
+const editorOpening = useEditorOpening();
+const currentProject = editorOpening.project;
+const isPreparingEditor = editorOpening.preparing;
+const editorLoadError = ref('');
+const editorLoadErrorCode = ref('');
+const editorLoadErrorAt = ref('');
+const appVersion = ref('Unknown');
+const editorLoadingProgress = editorOpening.progress;
+const recorderLauncherContext = ref<RecorderLauncherContext | null>(null);
+
+const recordingBarVisibility = ref<RecordingBarVisibility>('always');
+const recordingStartupError = ref('');
+const isRestartingRecording = ref(false);
+const recording = useRecordingController(
+  (session) => {
+    void handleStopRecording(session);
+  },
+  (failure) => {
+    handleRecordingStartupFailure(failure);
+  },
+  () => returnToHud(),
+);
+
+const returnToHud = () => {
+  if (currentView.value !== 'recorder') return;
+  if (recorderLauncherContext.value) capture.setRecorderLauncherActive(false);
+  capture.hideScreenRegionOverlay();
+  void capture.setCountdown(null);
+  capture.setCameraOverlayActive(true);
+  capture.showHud();
+  currentView.value = 'hud';
+};
+
+const handleRecordingStartupFailure = (failure: RecordingStartFailure) => {
+  recordingStartupError.value = formatRecordingStartFailure(failure);
+  returnToHud();
+};
+
+watch(
+  [recording.phase, isRestartingRecording],
+  ([phase, restarting]) => {
+    syncTrayMenu();
+    if (!isCameraOverlay && !isTeleprompter && !isQuickSnipCrop) {
+      capture.setNormalRecordingActive(
+        restarting || ['countdown', 'starting', 'recording', 'paused', 'finalizing'].includes(phase),
+      );
+    }
+    // A restart briefly becomes idle while discarding the old take. Keep the
+    // compact window in place until the replacement starts or fails.
+    if (phase === 'idle' && !restarting) returnToHud();
+  },
+  { immediate: true },
+);
+
+const restartRecording = async () => {
+  if (isRestartingRecording.value) return;
+  isRestartingRecording.value = true;
+  try {
+    await recording.restart();
+  } catch (reason) {
+    recordingStartupError.value = reason instanceof Error ? reason.message : String(reason);
+  } finally {
+    isRestartingRecording.value = false;
+  }
+};
+
+watch(currentView, (view) => {
+  if (view !== 'hud') return;
+  interactivity.reset();
+});
+
+const isRecordingStartedFromEditor = ref(false);
+
+onMounted(() => {
+  removeHudProjectListener = capture.onHudProjectRequested((request) => {
+    if (recording.phase.value !== 'idle' || isPreparingEditor.value) return;
+    void capture
+      .listProjects()
+      .then((projects) => {
+        if (disposed || recording.phase.value !== 'idle' || isPreparingEditor.value) return;
+        const project = projects.find(
+          (candidate) => candidate.id === request.id && (candidate.mode ?? 'studio') === request.mode,
+        );
+        if (!project) throw new Error('The selected project is no longer available.');
+        handleOpenProject(project);
+      })
+      .catch((error) => {
+        recordingStartupError.value = String(error);
+      });
+  });
+  removeRecorderLauncherListener = capture.onRecorderLauncherContext((context) => {
+    recorderLauncherContext.value = context;
+    if (!context) return;
+    currentView.value = 'hud';
+    recordingStartupError.value = '';
+  });
+  removeEditorLoadingListener = capture.onEditorLoadingProgress((progress) => {
+    if (isPreparingEditor.value) editorLoadingProgress.value = progress;
+  });
+  removeTrayStopListener =
+    capture.onTrayStopRecording?.(() => {
+      void cancelOrStopRecording();
+    }) ?? null;
+  removeRecordingShortcutListener = capture.onPreferenceShortcut((actionId) => {
+    if (actionId === 'hud.startStopRecording') {
+      if (!['countdown', 'starting', 'recording', 'paused'].includes(recording.phase.value)) return;
+      void cancelOrStopRecording();
+    } else if (actionId === 'hud.playPause' && ['recording', 'paused'].includes(recording.phase.value)) {
+      if (pauseShortcutPending) return;
+      pauseShortcutPending = true;
+      void Promise.resolve(recording.togglePause())
+        .catch((error) => console.error('Failed to toggle recording pause from shortcut:', error))
+        .finally(() => {
+          pauseShortcutPending = false;
+        });
+    }
+  });
+  void capture
+    .getUpdateState()
+    .then((state) => {
+      appVersion.value = state?.currentVersion || appVersion.value;
+    })
+    .catch(() => undefined);
+});
+
+const showEditorLoadError = (reason: unknown) => {
+  editorLoadError.value = reason instanceof Error ? reason.message : String(reason);
+  editorLoadErrorCode.value =
+    reason instanceof Error && 'code' in reason && typeof reason.code === 'string' ? reason.code : '';
+  editorLoadErrorAt.value = new Date().toISOString();
+};
+
+const startRecording = async (configuration: RecordingConfiguration) => {
+  isRecordingStartedFromEditor.value = recorderLauncherContext.value !== null;
+  const launchedFromEditor = isRecordingStartedFromEditor.value;
+  if (launchedFromEditor) capture.setRecorderLauncherActive(true);
+  editorLoadError.value = '';
+  currentProject.value = null;
+  recordingStartupError.value = '';
+  recordingBarVisibility.value = configuration.recordingBarVisibility;
+  currentView.value = 'recorder';
+  capture.setWindowMode('recorder');
+  capture.setCameraOverlayActive(true);
+  try {
+    await recording.start(configuration);
+  } catch (error) {
+    if (launchedFromEditor) capture.setRecorderLauncherActive(false);
+    isRecordingStartedFromEditor.value = false;
+    recordingStartupError.value = error instanceof Error ? error.message : String(error);
+    returnToHud();
+    return;
+  }
+  if (recording.phase.value === 'idle') {
+    if (launchedFromEditor) capture.setRecorderLauncherActive(false);
+    isRecordingStartedFromEditor.value = false;
+    returnToHud();
+  }
+};
+
+const cancelOrStopRecording = async () => {
+  const wasStartup = recording.phase.value === 'countdown' || recording.phase.value === 'starting';
+  await recording.stop();
+  if (!wasStartup && recording.phase.value !== 'idle') capture.setCameraOverlayActive(true);
+  if (wasStartup) returnToHud();
+};
+
+const cancelRecording = async () => {
+  await recording.cancel();
+  if (recording.phase.value !== 'idle') return;
+  returnToHud();
+};
+
+const revealEditor = async (attempt: number, disposition: 'reuse' | 'new-window' = 'reuse') => {
+  const project = currentProject.value;
+  if (!project) throw new Error('No project selected');
+  const presented = await editorOpening.open(project, { disposition }, attempt);
+  if (editorOpening.isCurrent(attempt)) currentView.value = 'hud';
+  return presented;
+};
+
+const cancelEditorOpening = () => {
+  void editorOpening.cancel().catch(showEditorLoadError);
+};
+
+const projectForCompletedRecording = (projects: CaptureProject[], session: RecordingSessionResult) => {
+  const projectId = typeof session?.projectId === 'string' ? session.projectId.trim() : '';
+  if (projectId) return projects.find((project) => project.id === projectId) ?? null;
+  return session?.videoSrc ? (projects.find((project) => project.previewSrc === session.videoSrc) ?? null) : null;
+};
+
+const handleStopRecording = async (session: RecordingSessionResult) => {
+  logEditor('Recording finished; loading editor data', {
+    videoSrc: session?.videoSrc,
+  });
+  const launchedFromEditor = isRecordingStartedFromEditor.value;
+  if (launchedFromEditor) capture.setRecorderLauncherActive(false);
+  isRecordingStartedFromEditor.value = false;
+  capture.setCameraOverlayActive(false);
+  editorLoadError.value = '';
+  const attempt = editorOpening.begin();
+  currentView.value = 'hud';
+  capture.showHud();
+  try {
+    const projectId = typeof session?.projectId === 'string' ? session.projectId.trim() : '';
+    let targetProject = projectId
+      ? await capture.getProject(projectId)
+      : projectForCompletedRecording(await capture.listProjects(), session);
+    if (!editorOpening.isCurrent(attempt)) return;
+
+    if (targetProject && launchedFromEditor) {
+      const baseName = targetProject.name || `Project ${targetProject.id.slice(0, 8)}`;
+      if (!baseName.startsWith('DEBUG ')) {
+        try {
+          targetProject = await capture.renameProject(targetProject.id, `DEBUG ${baseName}`);
+        } catch (renameErr) {
+          console.error('Failed to rename project with DEBUG prefix:', renameErr);
+        }
+      }
+    }
+
+    if (!editorOpening.isCurrent(attempt)) return;
+    currentProject.value = targetProject;
+    logEditor('Recording project resolved', {
+      projectId: currentProject.value?.id,
+    });
+  } catch {
+    if (!editorOpening.isCurrent(attempt)) return;
+    logEditor('Recording editor data load failed');
+    currentProject.value = null;
+  }
+  if (currentProject.value) {
+    try {
+      await revealEditor(attempt, launchedFromEditor ? 'new-window' : 'reuse');
+      if (!editorOpening.isCurrent(attempt)) return;
+      if (launchedFromEditor) recorderLauncherContext.value = null;
+    } catch (error) {
+      if (!editorOpening.isCurrent(attempt)) return;
+      isPreparingEditor.value = false;
+      showEditorLoadError(error);
+      capture.showHud();
+    }
+  } else {
+    if (launchedFromEditor) {
+      try {
+        await capture.dismissRecorderLauncher();
+      } catch (error) {
+        console.error('Failed to clear the editor recorder launcher:', error);
+      }
+      recorderLauncherContext.value = null;
+    }
+    isPreparingEditor.value = false;
+    showEditorLoadError('No recorded project was found');
+    capture.showHud();
+  }
+};
+
+const handleOpenProject = (project: CaptureProject) => {
+  logEditor('Project open requested', { projectId: project.id });
+  if (isPreparingEditor.value) return;
+  const attempt = editorOpening.begin();
+  editorLoadError.value = '';
+  currentProject.value = project;
+  void revealEditor(attempt).catch((error) => {
+    if (!editorOpening.isCurrent(attempt)) return;
+    logEditor('Project editor data load failed', error);
+    if (currentProject.value?.id !== project.id || currentProject.value?.mode !== project.mode) return;
+    isPreparingEditor.value = false;
+    showEditorLoadError(error);
+    capture.showHud();
+    console.error('Failed to load project editor data:', error);
+  });
+};
+
+const dismissEditorLoadError = () => {
+  editorLoadError.value = '';
+  editorLoadErrorAt.value = '';
+};
+
+const dismissRecorderLauncher = async () => {
+  if (recording.phase.value !== 'idle') return;
+  try {
+    if (await capture.dismissRecorderLauncher()) recorderLauncherContext.value = null;
+  } catch (error) {
+    recordingStartupError.value = error instanceof Error ? error.message : String(error);
+  }
+};
+</script>
+
+<template>
+  <TeleprompterWindowApp v-if="isTeleprompter" />
+  <template v-else>
+    <ToastProvider />
+    <CameraOverlayApp v-if="isCameraOverlay" />
+    <QuickSnipCropBar v-else-if="isQuickSnipCrop" />
+  </template>
+  <div v-if="!isTeleprompter && !isCameraOverlay && !isQuickSnipCrop" class="app-container">
+    <HUD
+      @popover-toggle="interactivity.togglePopover"
+      v-if="currentView === 'hud' && !editorLoadError"
+      :preparing-editor="isPreparingEditor"
+      :editor-loading-progress="editorLoadingProgress"
+      :external-error="recordingStartupError"
+      :recorder-launcher-context="recorderLauncherContext"
+      @start-recording="startRecording"
+      @open-project="handleOpenProject"
+      @dismiss-launcher="dismissRecorderLauncher"
+      @cancel-editor-opening="cancelEditorOpening"
+    />
+    <Transition name="recorder-return">
+      <RecorderBar
+        v-if="currentView === 'recorder'"
+        :phase="recording.phase.value"
+        :recording-time="recording.recordingTime.value"
+        :visibility="recordingBarVisibility"
+        :hover-only-active="recording.recorderHoverOnlyActive.value"
+        :busy="isRestartingRecording"
+        @stop="cancelOrStopRecording"
+        @cancel="cancelRecording"
+        @pause="recording.togglePause"
+        @restart="restartRecording"
+      />
+    </Transition>
+    <EditorOpenError
+      v-if="editorLoadError"
+      :error="editorLoadError"
+      :error-code="editorLoadErrorCode"
+      :progress="editorLoadingProgress"
+      :app-version="appVersion"
+      :runtime-platform="capture.platform"
+      :project-id="currentProject?.id"
+      :project-mode="currentProject?.mode"
+      :occurred-at="editorLoadErrorAt"
+      @dismiss="dismissEditorLoadError"
+    />
+  </div>
+</template>
+
+<style scoped>
+.app-container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+.recorder-return-enter-active,
+.recorder-return-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+.recorder-return-enter-from,
+.recorder-return-leave-to {
+  opacity: 0;
+  transform: translateX(8px);
+}
+</style>
+
+<style>
+body.app-minimizing {
+  animation: minimizeShrink 0.16s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes minimizeShrink {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0.15;
+    transform: scale(0.93) translateY(24px);
+  }
+}
+</style>

@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { registerTeleprompterIpc } = require('../electron/teleprompter/teleprompter-ipc.cjs');
+const { registerTeleprompterIpc } = require('../apps/desktop/electron/teleprompter/teleprompter-ipc.cjs');
 
 function createIpcFixture() {
   const listeners = new Map();

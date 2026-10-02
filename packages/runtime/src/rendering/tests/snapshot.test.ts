@@ -4,7 +4,7 @@ import { createCompositionSnapshot } from '@beam/runtime/rendering/snapshot';
 import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import type { ClipComposition, ShapeClip } from '@beam/engine/shared/composition-types';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
-import { MACOS_CURSOR_PACK } from '@desktop/components/video-editor/properties/cursor/cursor-packs';
+import { MACOS_CURSOR_PACK } from '@desktop/components/editor/properties/cursor/cursor-packs';
 import { createDefaultCursorAutoHideSettings } from '@beam/engine/capture/cursor-settings';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 

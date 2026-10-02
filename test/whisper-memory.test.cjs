@@ -118,10 +118,16 @@ for (const failure of [false, true]) {
   test(`Whisper preserves timestamps and releases alignment resources${failure ? ' when alignment fails' : ''}`, async (t) => {
     const { PreTrainedModel, WhisperForConditionalGeneration, full } = await library;
     const tensor = { dispose: t.mock.fn() };
-    const outputs = { cross_attentions: [[tensor]], past_key_values: { dispose: t.mock.fn(async () => {}) } };
+    const outputs = {
+      cross_attentions: [[tensor]],
+      past_key_values: { dispose: t.mock.fn(async () => {}) },
+    };
     t.mock.method(PreTrainedModel.prototype, 'generate', async () => outputs);
     const model = new WhisperForConditionalGeneration({ model_type: 'whisper' }, {}, {});
-    model._prepare_generation_config = () => ({ return_token_timestamps: true, alignment_heads: [[0, 0]] });
+    model._prepare_generation_config = () => ({
+      return_token_timestamps: true,
+      alignment_heads: [[0, 0]],
+    });
     model._retrieve_init_tokens = () => [0];
     const timestamps = full([1, 2], 0.5);
     model._extract_token_timestamps = () => {
@@ -194,7 +200,10 @@ for (const scenario of ['owned encoder', 'caller encoder', 'decoder only']) {
     model._prepare_model_inputs = () => ({
       inputs_tensor: ids,
       model_input_name: 'input_ids',
-      model_inputs: { input_ids: ids, ...(scenario === 'caller encoder' ? { encoder_outputs: encoder } : {}) },
+      model_inputs: {
+        input_ids: ids,
+        ...(scenario === 'caller encoder' ? { encoder_outputs: encoder } : {}),
+      },
     });
     model._prepare_encoder_decoder_kwargs_for_generation = async ({ model_inputs }) => ({
       ...model_inputs,

@@ -2,6 +2,56 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { ExportRequest } from '@beam/encoder';
+import type { CliRenderJob, StillRenderJob } from './render-job-types';
+
+export function registerRenderAssets(request: CliRenderJob, directory: string, auth: string) {
+  if ('kind' in request && request.kind === 'frame') {
+    const assets = registerLocalAssets(request.request, directory, auth);
+    return { files: assets.files, request: { ...request, request: assets.request } };
+  }
+  if (!('kind' in request)) return registerLocalAssets(request, directory, auth);
+  const files = new Map<string, string>();
+  const source = (value: string) => {
+    if (/^(https?:|data:)/i.test(value)) return value;
+    if (/^(project-media:|blob:)/i.test(value)) throw new Error('Still rendering needs portable asset URLs.');
+    const id = randomUUID();
+    files.set(id, value.startsWith('file:') ? fileURLToPath(value) : resolve(directory, value));
+    return `/beam-cli/asset/${id}?auth=${encodeURIComponent(auth)}`;
+  };
+  const document = request.document,
+    state = document.state;
+  return {
+    files,
+    request: {
+      ...request,
+      document: {
+        ...document,
+        source: source(document.source),
+        fontSources: Object.fromEntries(
+          Object.entries(document.fontSources ?? {}).map(([id, path]) => [id, source(path)]),
+        ),
+        state: {
+          ...state,
+          images: state.images?.map((image) => ({
+            ...image,
+            source: source(image.source),
+          })),
+          background:
+            state.background && 'path' in state.background
+              ? { ...state.background, path: source(state.background.path) }
+              : state.background,
+        },
+      },
+      cursorPacks: request.cursorPacks?.map((pack) => ({
+        ...pack,
+        cursors: pack.cursors.map((cursor) => ({
+          ...cursor,
+          url: source(cursor.url),
+        })),
+      })),
+    } satisfies StillRenderJob,
+  };
+}
 
 /** URLs reveal only registered assets, never a renderer-supplied filesystem path. */
 export function registerLocalAssets(request: ExportRequest, directory: string, auth: string) {
@@ -28,7 +78,10 @@ export function registerLocalAssets(request: ExportRequest, directory: string, a
         ),
         composition: {
           ...snapshot.composition,
-          assets: snapshot.composition.assets.map((asset) => ({ ...asset, src: source(asset.src) })),
+          assets: snapshot.composition.assets.map((asset) => ({
+            ...asset,
+            src: source(asset.src),
+          })),
         },
         background:
           snapshot.background && 'src' in snapshot.background
@@ -37,7 +90,10 @@ export function registerLocalAssets(request: ExportRequest, directory: string, a
         cursorPack: snapshot.cursorPack
           ? {
               ...snapshot.cursorPack,
-              cursors: snapshot.cursorPack.cursors.map((cursor) => ({ ...cursor, url: source(cursor.url) })),
+              cursors: snapshot.cursorPack.cursors.map((cursor) => ({
+                ...cursor,
+                url: source(cursor.url),
+              })),
             }
           : null,
       },

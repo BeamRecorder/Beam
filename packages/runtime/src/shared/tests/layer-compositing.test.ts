@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultLayerCompositing, LAYER_BLEND_MODES, reorderLayer } from '@beam/runtime/shared/layer-compositing';
+import { defaultLayerCompositing, LAYER_BLEND_MODES, reorderLayer } from '@beam/engine/shared/layer-compositing';
 import type { LayerCompositing } from '@beam/engine/shared/layer-compositing-types';
 
 const layers = (): LayerCompositing[] => [

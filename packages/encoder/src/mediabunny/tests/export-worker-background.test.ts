@@ -48,7 +48,7 @@ vi.mock('@beam/runtime/rendering/render', () => ({
   disposeCompositionRenderer: vi.fn(),
   renderCompositionFrame: runtime.renderCompositionFrame,
 }));
-vi.mock('@desktop/components/video-editor/properties/cursor/useCursorReplacer', () => ({
+vi.mock('@desktop/components/editor/properties/cursor/useCursorReplacer', () => ({
   cursorTypeForKind: vi.fn(() => 'default'),
 }));
 vi.mock('@beam/encoder/audio/pcm-mixer', () => ({

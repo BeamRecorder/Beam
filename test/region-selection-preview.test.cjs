@@ -2,7 +2,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const test = require('node:test');
-const { createRegionSelectionPreview, portalDisplayBounds } = require('../electron/region-selection-preview.cjs');
+const {
+  createRegionSelectionPreview,
+  portalDisplayBounds,
+} = require('../apps/desktop/electron/region-selection-preview.cjs');
 const bounds = { x: -1000, y: 0, width: 1000, height: 800 };
 const other = { x: 0, y: 0, width: 1920, height: 1080 };
 const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -21,7 +24,11 @@ function harness(platform = 'linux', respond = null) {
     if (command === 'prepare-region-selection') {
       output = payload.config.output;
       await fs.writeFile(output, png);
-      return { width: 2000, height: 1600, display: { position: [-1000, 0], size: [1000, 800] } };
+      return {
+        width: 2000,
+        height: 1600,
+        display: { position: [-1000, 0], size: [1000, 800] },
+      };
     }
     return {};
   };
@@ -63,7 +70,11 @@ test('Linux preview requests one monitor selection and transfers real PNG pixels
   assert.deepEqual(result.pixelSize, { width: 2000, height: 1600 });
   assert.equal(result.preview, `data:image/png;base64,${png.toString('base64')}`);
   const config = calls.find(([command]) => command === 'prepare-region-selection')[1];
-  assert.deepEqual(config.config.screen, { mode: 'portal', kind: 'monitor', restoreToken: null });
+  assert.deepEqual(config.config.screen, {
+    mode: 'portal',
+    kind: 'monitor',
+    restoreToken: null,
+  });
   assert.equal(config.cursor.mode, 'separate');
   assert.equal(config.config.region, null);
   assert.equal(
@@ -104,7 +115,11 @@ test('invalid dimensions and images release the native authorization and tempora
       if (command !== 'prepare-region-selection') return;
       output = payload.config.output;
       await fs.writeFile(output, bytes);
-      return { width, height: 1, display: { position: [-1000, 0], size: [1000, 800] } };
+      return {
+        width,
+        height: 1,
+        display: { position: [-1000, 0], size: [1000, 800] },
+      };
     });
     await assert.rejects(preview.prepare(bounds), message);
     assert.equal(calls.at(-1)[0], 'cancel-region-selection');

@@ -77,6 +77,17 @@ export function isExportWorkerRequest(value: unknown): value is ExportWorkerRequ
     });
     return (
       validCursorImages &&
+      (value.request.frameSources === undefined ||
+        (Array.isArray(value.request.frameSources) &&
+          value.request.frameSources.length <= 100 &&
+          value.request.frameSources.every(
+            (source) =>
+              record(source) &&
+              typeof source.assetId === 'string' &&
+              Boolean(source.assetId) &&
+              typeof source.url === 'string' &&
+              Boolean(source.url),
+          ))) &&
       (value.request.preview === undefined || typeof value.request.preview === 'boolean') &&
       typeof value.request.projectName === 'string' &&
       (value.request.format === 'webm' || value.request.format === 'mp4') &&

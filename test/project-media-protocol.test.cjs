@@ -3,8 +3,11 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { createProjectMediaHandler, mimeTypeFor } = require('../electron/projects/project-media-protocol.cjs');
-const { createScreenshotStore } = require('../electron/screenshot/screenshot-store.cjs');
+const {
+  createProjectMediaHandler,
+  mimeTypeFor,
+} = require('../apps/desktop/electron/projects/project-media-protocol.cjs');
+const { createScreenshotStore } = require('../apps/desktop/electron/screenshot/screenshot-store.cjs');
 
 function fixture(contents = Buffer.from('0123456789')) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-project-media-'));
@@ -47,9 +50,24 @@ test('serves the complete file without a Range header', async () => {
 
 test('serves closed, open-ended, and suffix byte ranges', async (t) => {
   const cases = [
-    { name: 'closed', range: 'bytes=2-5', expected: '2345', contentRange: 'bytes 2-5/10' },
-    { name: 'open-ended', range: 'bytes=7-', expected: '789', contentRange: 'bytes 7-9/10' },
-    { name: 'suffix', range: 'bytes=-4', expected: '6789', contentRange: 'bytes 6-9/10' },
+    {
+      name: 'closed',
+      range: 'bytes=2-5',
+      expected: '2345',
+      contentRange: 'bytes 2-5/10',
+    },
+    {
+      name: 'open-ended',
+      range: 'bytes=7-',
+      expected: '789',
+      contentRange: 'bytes 7-9/10',
+    },
+    {
+      name: 'suffix',
+      range: 'bytes=-4',
+      expected: '6789',
+      contentRange: 'bytes 6-9/10',
+    },
   ];
 
   for (const current of cases) {
@@ -126,7 +144,9 @@ test('returns 404 when the project store has no file for the URL', async () => {
   const existing = path.join(root, 'existing.mp4');
   fs.writeFileSync(existing, 'do not serve this');
   const url = 'project-media://asset/missing.mp4';
-  const handler = createProjectMediaHandler({ projectStore: { mediaFileForUrl: () => null } });
+  const handler = createProjectMediaHandler({
+    projectStore: { mediaFileForUrl: () => null },
+  });
   try {
     const response = await handler(request(url));
     assert.equal(response.status, 404);
@@ -218,7 +238,9 @@ test('serves image content types for background-library assets', async (t) => {
       fs.writeFileSync(file, 'image');
       const handler = createProjectMediaHandler({
         projectStore: { mediaFileForUrl: () => null },
-        backgroundLibrary: { fileForUrl: (candidate) => (candidate === url ? file : null) },
+        backgroundLibrary: {
+          fileForUrl: (candidate) => (candidate === url ? file : null),
+        },
       });
       try {
         const response = await handler(request(url));
@@ -260,7 +282,9 @@ test('serves only the exact path selected by projectStore', async (t) => {
     fs.writeFileSync(secret, 'private');
     const allowedUrl = 'project-media://asset/allowed.mp4';
     const handler = createProjectMediaHandler({
-      projectStore: { mediaFileForUrl: (candidate) => (candidate === allowedUrl ? null : null) },
+      projectStore: {
+        mediaFileForUrl: (candidate) => (candidate === allowedUrl ? null : null),
+      },
     });
     try {
       const response = await handler(request('project-media://asset/secret.mp4'));
@@ -335,7 +359,9 @@ test('uses the selected file extension for the response MIME type', async () => 
       fs.writeFileSync(file, 'x');
       const url = `project-media://asset/${name}`;
       const handler = createProjectMediaHandler({
-        projectStore: { mediaFileForUrl: (candidate) => (candidate === url ? file : null) },
+        projectStore: {
+          mediaFileForUrl: (candidate) => (candidate === url ? file : null),
+        },
       });
       const response = await handler(request(url));
       assert.equal(response.status, 200, name);

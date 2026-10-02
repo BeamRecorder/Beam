@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { emptyComposition } from '@beam/engine';
+import { createRenderDocument } from '@beam/engine';
 import { readExportRequest } from './export-request';
 import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 
@@ -8,15 +8,7 @@ const request = () => ({
   projectName: 'Owned job',
   format: 'webm',
   preset: 'high',
-  snapshot: {
-    duration: 1,
-    render: { fps: 30 },
-    canvas: { width: 64, height: 64 },
-    zooms: [],
-    cursor: { events: [], telemetry: [] },
-    cursorSettings: { enabled: false },
-    composition: emptyComposition(),
-  },
+  snapshot: createRenderDocument(undefined, 64, 64),
 });
 describe('CLI export job validation', () => {
   it('requires a host font source for every imported text font before backend startup', () => {
@@ -34,23 +26,39 @@ describe('CLI export job validation', () => {
       order: 0,
       enabled: true,
       transitions: { entry: null, exit: null },
-      caption: { type: 'text', sentences: [], style: { ...createDefaultCaptionStyle(), fontAssetId: font } },
+      caption: {
+        type: 'text',
+        sentences: [],
+        style: { ...createDefaultCaptionStyle(), fontAssetId: font },
+      },
     });
     expect(() => readExportRequest(value)).toThrow('Missing portable font source');
     expect(
-      readExportRequest({ ...value, snapshot: { ...value.snapshot, fontSources: { [font]: 'font.ttf' } } }),
+      readExportRequest({
+        ...value,
+        snapshot: { ...value.snapshot, fontSources: { [font]: 'font.ttf' } },
+      }),
     ).toBeTruthy();
   });
   it.each([null, [], { invalid: '/font.ttf' }, { ['a'.repeat(64)]: '' }, { ['a'.repeat(64)]: 42 }])(
     'rejects malformed portable font sources %j',
     (fontSources) => {
-      expect(() => readExportRequest({ ...request(), snapshot: { ...request().snapshot, fontSources } })).toThrow(
-        'font sources',
-      );
+      expect(() =>
+        readExportRequest({
+          ...request(),
+          snapshot: { ...request().snapshot, fontSources },
+        }),
+      ).toThrow('font sources');
     },
   );
   it('accepts explicit portable font resources', () => {
-    const value = { ...request(), snapshot: { ...request().snapshot, fontSources: { ['a'.repeat(64)]: 'font.ttf' } } };
+    const value = {
+      ...request(),
+      snapshot: {
+        ...request().snapshot,
+        fontSources: { ['a'.repeat(64)]: 'font.ttf' },
+      },
+    };
     expect(readExportRequest(value)).toBe(value);
   });
   it('accepts validated settings without copying the owned JSON object', () => {

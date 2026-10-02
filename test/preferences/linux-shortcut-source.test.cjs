@@ -6,7 +6,7 @@ const {
   customPath,
   gnomeAccelerator,
   isGnomeWayland,
-} = require('../../electron/preferences/linux-shortcut-source.cjs');
+} = require('../../apps/desktop/electron/preferences/linux-shortcut-source.cjs');
 
 const env = { XDG_SESSION_TYPE: 'wayland', XDG_CURRENT_DESKTOP: 'ubuntu:GNOME' };
 const app = { isPackaged: true, getPath: () => '/opt/Beam/beam' };
@@ -102,7 +102,9 @@ test('disables the dev Electron sandbox when GNOME launches a shortcut', async (
     execFile: fake.execFile,
   });
 
-  await source.register({ shortcuts: { 'hud.startStopRecording': { keys: 'Alt+Shift+R', scope: 'global' } } });
+  await source.register({
+    shortcuts: { 'hud.startStopRecording': { keys: 'Alt+Shift+R', scope: 'global' } },
+  });
   const command = fake.calls.find(({ args }) => args[0] === 'set' && args[2] === 'command').args[3];
   assert.match(command, /BEAM_DEVELOPMENT_INSTANCE=1/);
   assert.match(command, /opt\/electron/);

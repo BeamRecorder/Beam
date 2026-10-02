@@ -12,7 +12,10 @@ test('zero and invalid countdown values never allocate or reveal a window', () =
 test('Cancel only notifies the current requesting owner once', () => {
   const fixture = loadCountdownWindow({ platform: 'win32' });
   const messages = [];
-  const owner = { isDestroyed: () => false, send: (...args) => messages.push(args) };
+  const owner = {
+    isDestroyed: () => false,
+    send: (...args) => messages.push(args),
+  };
   fixture.overlay.show(3, owner);
   fixture.finishLoad();
   assert.equal(fixture.overlay.cancel({}), false);
@@ -26,11 +29,17 @@ test('Cancel only notifies the current requesting owner once', () => {
 test('Cancel cannot reach a closed owner or a replacement countdown session', () => {
   const fixture = loadCountdownWindow({ platform: 'win32' });
   const messages = [];
-  const closedOwner = { isDestroyed: () => true, send: () => assert.fail('closed owner was notified') };
+  const closedOwner = {
+    isDestroyed: () => true,
+    send: () => assert.fail('closed owner was notified'),
+  };
   fixture.overlay.show(3, closedOwner);
   assert.equal(fixture.overlay.cancel(fixture.window.webContents), false);
   fixture.overlay.destroy();
-  const owner = { isDestroyed: () => false, send: (...args) => messages.push(args) };
+  const owner = {
+    isDestroyed: () => false,
+    send: (...args) => messages.push(args),
+  };
   fixture.overlay.show(2, owner);
   assert.equal(fixture.overlay.cancel(fixture.window.webContents), false);
   assert.equal(fixture.overlay.cancel(fixture.windows[1].webContents), true);
@@ -140,7 +149,7 @@ function loadCountdownWindow({
   };
 
   const originalLoad = Module._load;
-  const modulePath = path.resolve(__dirname, '../electron/countdown-window.cjs');
+  const modulePath = path.resolve(__dirname, '../apps/desktop/electron/countdown-window.cjs');
   delete require.cache[modulePath];
   Module._load = function load(request, parent, isMain) {
     return request === 'electron' ? electron : originalLoad.call(this, request, parent, isMain);
@@ -182,7 +191,11 @@ function loadCountdownWindow({
 
 test('prewarms the dedicated countdown renderer in development and packaged builds', async () => {
   for (const isPackaged of [false, true]) {
-    const fixture = loadCountdownWindow({ platform: 'linux', environment: {}, isPackaged });
+    const fixture = loadCountdownWindow({
+      platform: 'linux',
+      environment: {},
+      isPackaged,
+    });
     const expected = isPackaged
       ? ['loadFile', path.join('/app', 'dist/html/countdown.html')]
       : ['loadURL', 'http://localhost:6500/html/countdown.html'];
@@ -206,7 +219,11 @@ test('prewarms the dedicated countdown renderer in development and packaged buil
 
 test('creates no countdown renderer until the presentation owner prepares it or requests a value', async () => {
   for (const action of ['prepare', 'show']) {
-    const fixture = loadCountdownWindow({ platform: 'linux', environment: {}, prepare: false });
+    const fixture = loadCountdownWindow({
+      platform: 'linux',
+      environment: {},
+      prepare: false,
+    });
     assert.equal(fixture.windows.length, 0);
     if (action === 'prepare') fixture.overlay.prepare();
     else fixture.overlay.show(3);
@@ -221,7 +238,10 @@ test('creates no countdown renderer until the presentation owner prepares it or 
 });
 
 test('suspend clears a queued countdown and ignores readiness from the destroyed renderer after recreation', async () => {
-  const fixture = loadCountdownWindow({ platform: 'linux', environment: { XDG_SESSION_TYPE: 'x11' } });
+  const fixture = loadCountdownWindow({
+    platform: 'linux',
+    environment: { XDG_SESSION_TYPE: 'x11' },
+  });
   const firstReady = fixture.overlay.prepare();
   firstReady.catch(() => undefined);
   fixture.overlay.show(3);
@@ -287,7 +307,10 @@ for (const first of ['native', 'renderer'])
   });
 
 test('ignores aborted and subframe loads, then fails the main load and recreates for a retry', async () => {
-  const fixture = loadCountdownWindow({ platform: 'linux', environment: { XDG_SESSION_TYPE: 'x11' } });
+  const fixture = loadCountdownWindow({
+    platform: 'linux',
+    environment: { XDG_SESSION_TYPE: 'x11' },
+  });
   const firstReady = fixture.overlay.prepare();
   fixture.overlay.show(3);
 

@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
-const { createAutoUpdater } = require('../electron/updates/auto-updater.cjs');
+const { createAutoUpdater } = require('../apps/desktop/electron/updates/auto-updater.cjs');
 
 function setup({ packaged = true, version = '0.1.0', onUpdateDownloaded = null } = {}) {
   const autoUpdater = new EventEmitter();
@@ -40,7 +40,9 @@ test('downloads only after the user requests it', async () => {
 
 test('calls onUpdateDownloaded with the downloaded version', () => {
   const downloadedVersions = [];
-  const { autoUpdater } = setup({ onUpdateDownloaded: (version) => downloadedVersions.push(version) });
+  const { autoUpdater } = setup({
+    onUpdateDownloaded: (version) => downloadedVersions.push(version),
+  });
 
   autoUpdater.emit('update-downloaded', { version: '0.2.0' });
 

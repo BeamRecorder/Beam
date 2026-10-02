@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { shouldAutoOpenDevTools } = require('../electron/window/devtools-policy.cjs');
+const { shouldAutoOpenDevTools } = require('../apps/desktop/electron/window/devtools-policy.cjs');
 
 test('does not auto-open DevTools in development without opt-in', () => {
   assert.equal(shouldAutoOpenDevTools({ isPackaged: false, environment: {} }), false);

@@ -30,6 +30,7 @@ export interface ExportRequest {
   /** Defaults to true for requests created before this option existed. */
   includeAudio?: boolean;
   snapshot: CompositionSnapshot;
+  frameSources?: import('@beam/runtime/frames/frame-source-types').HttpFrameSourceDescriptor[];
 }
 
 /** Live UI metadata; expensive, owned render data is captured only when export starts. */

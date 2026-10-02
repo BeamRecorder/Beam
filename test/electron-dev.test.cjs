@@ -44,10 +44,16 @@ test('cargoAvailable distinguishes Cargo from a missing executable and checks it
     }),
     true,
   );
-  assert.deepEqual(invoked, { command: 'cargo', args: ['--version'], options: { stdio: 'ignore' } });
+  assert.deepEqual(invoked, {
+    command: 'cargo',
+    args: ['--version'],
+    options: { stdio: 'ignore' },
+  });
 
   assert.equal(
-    cargoAvailable(() => ({ error: Object.assign(new Error('missing'), { code: 'ENOENT' }) })),
+    cargoAvailable(() => ({
+      error: Object.assign(new Error('missing'), { code: 'ENOENT' }),
+    })),
     false,
   );
   assert.throws(() => cargoAvailable(() => ({ status: 1 })), /cargo --version failed/);
@@ -78,7 +84,9 @@ test('build arguments compile the engine and the Linux helper, with release and 
 test('development arguments enable the forced no-Rust path only when requested', () => {
   assert.deepEqual(parseDevelopmentArguments(), { forceNoRust: false });
   assert.deepEqual(parseDevelopmentArguments([]), { forceNoRust: false });
-  assert.deepEqual(parseDevelopmentArguments(['--force-no-rust']), { forceNoRust: true });
+  assert.deepEqual(parseDevelopmentArguments(['--force-no-rust']), {
+    forceNoRust: true,
+  });
 });
 
 test('development arguments reject unsupported options', () => {
@@ -107,7 +115,11 @@ test('startElectron marks GNOME Wayland shortcut launches as the development ins
   await start;
 
   assert.equal(invocation.command, process.execPath);
-  assert.deepEqual(invocation.args, [require.resolve('electron/cli.js'), '.', ...(process.platform === 'linux' ? ['--ozone-platform=x11'] : [])]);
+  assert.deepEqual(invocation.args, [
+    require.resolve('electron/cli.js'),
+    '.',
+    ...(process.platform === 'linux' ? ['--ozone-platform=x11'] : []),
+  ]);
   assert.equal(invocation.options.cwd, '/workspace');
   assert.equal(invocation.options.env.PATH, '/bin');
   assert.equal(invocation.options.env.BEAM_CAPTURE_ENGINE, '/built/capture-engine');

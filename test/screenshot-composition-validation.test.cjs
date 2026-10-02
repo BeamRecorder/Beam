@@ -1,8 +1,8 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { historicalAppearance } = require('../electron/projects/composition-appearance.cjs');
-const { validateScreenshotState } = require('../electron/screenshot/screenshot-validation.cjs');
-const { validateScreenshotHistory } = require('../electron/screenshot/screenshot-history.cjs');
+const { historicalAppearance } = require('../apps/desktop/electron/projects/composition-appearance.cjs');
+const { validateScreenshotState } = require('../apps/desktop/electron/screenshot/screenshot-validation.cjs');
+const { validateScreenshotHistory } = require('../apps/desktop/electron/screenshot/screenshot-history.cjs');
 
 const blendModes = [
   'source-over',
@@ -123,8 +123,20 @@ const withComposition = (state, ids = layerIds(state)) => {
 
 test('accepts boundary cursor payloads, normalized hex colours, and boundary layer opacities', () => {
   for (const boundary of [
-    { position: { x: -10, y: 10 }, size: 16, rotation: 0, shadowBlur: 0, color: '#AABBCCDD' },
-    { position: { x: 10, y: -10 }, size: 384, rotation: 360, shadowBlur: 24, color: '#aabbcc' },
+    {
+      position: { x: -10, y: 10 },
+      size: 16,
+      rotation: 0,
+      shadowBlur: 0,
+      color: '#AABBCCDD',
+    },
+    {
+      position: { x: 10, y: -10 },
+      size: 384,
+      rotation: 360,
+      shadowBlur: 24,
+      color: '#aabbcc',
+    },
   ]) {
     const state = withComposition(screenshotState({ cursors: [cursor(boundary)] }));
     state.composition[0].opacity = 0;
@@ -139,7 +151,11 @@ test('accepts boundary cursor payloads, normalized hex colours, and boundary lay
         cursor({
           id: longId,
           name: 'n'.repeat(200),
-          selection: { packId: 'p'.repeat(200), mode: 'fixed', cursorId: 'a'.repeat(200) },
+          selection: {
+            packId: 'p'.repeat(200),
+            mode: 'fixed',
+            cursorId: 'a'.repeat(200),
+          },
         }),
       ],
     }),
@@ -174,7 +190,16 @@ test('rejects cursor IDs, selection modes, and values outside their bounds', () 
     ['automatic selection', { selection: { packId: 'pack', mode: 'automatic', cursorId: null } }],
     ['empty pack id', { selection: { packId: '', mode: 'fixed', cursorId: 'default' } }],
     ['empty cursor id in selection', { selection: { packId: 'pack', mode: 'fixed', cursorId: '' } }],
-    ['oversized pack id', { selection: { packId: 'p'.repeat(201), mode: 'fixed', cursorId: 'default' } }],
+    [
+      'oversized pack id',
+      {
+        selection: {
+          packId: 'p'.repeat(201),
+          mode: 'fixed',
+          cursorId: 'default',
+        },
+      },
+    ],
     ['invalid colour', { color: 'rgb(0, 0, 0)' }],
     ['invalid shadow colour', { shadowColor: '#12345' }],
     ['non-boolean shadow toggle', { shadowEnabled: 'true' }],
@@ -298,7 +323,10 @@ test('requires a unique composition reference for each persisted highlight effec
   assert.throws(() => validateScreenshotState(staleReference), /invalid screenshot compositing settings/i);
 
   const duplicateId = withComposition(
-    screenshotState({ effects: [highlightEffect({ id: 'shape-1' })], shapes: [shape()] }),
+    screenshotState({
+      effects: [highlightEffect({ id: 'shape-1' })],
+      shapes: [shape()],
+    }),
   );
   assert.throws(() => validateScreenshotState(duplicateId), /duplicate screenshot layer identifier/i);
 });
@@ -317,7 +345,11 @@ test('validates highlight effects in undo and redo screenshot history snapshots'
       effects: [highlightEffect({ highlightColor: '#123456', tintOpacity: 35 })],
     }),
   );
-  const history = { version: 1, undo: [previous, structuredClone(current)], redo: [structuredClone(redo)] };
+  const history = {
+    version: 1,
+    undo: [previous, structuredClone(current)],
+    redo: [structuredClone(redo)],
+  };
 
   assert.doesNotThrow(() => validateScreenshotHistory(history, current));
   assert.equal(history.undo[1].effects[0].highlightColor, '#aabbccdd');
@@ -339,7 +371,10 @@ test('rejects duplicate IDs across content and reserved screenshot layers', () =
     [cursor({ id: '__watermark__' })],
   ]) {
     const state = withComposition(
-      screenshotState({ shapes: cursors.some(({ id }) => id === 'shape-1') ? [shape()] : [], cursors }),
+      screenshotState({
+        shapes: cursors.some(({ id }) => id === 'shape-1') ? [shape()] : [],
+        cursors,
+      }),
     );
     assert.throws(() => validateScreenshotState(state), /invalid screenshot cursor/i);
   }

@@ -6,7 +6,10 @@ const test = require('node:test');
 function fixture({ packaged = false } = {}) {
   const handlers = new Map();
   const windows = [];
-  const hud = { webContents: { send: (...args) => sent.push(args) }, isDestroyed: () => false };
+  const hud = {
+    webContents: { send: (...args) => sent.push(args) },
+    isDestroyed: () => false,
+  };
   const sent = [];
   const controller = { mode: 'hud' };
   let active = true;
@@ -56,7 +59,7 @@ function fixture({ packaged = false } = {}) {
     return request === 'electron' ? { BrowserWindow: Window } : previous.call(this, request, parent, main);
   };
   try {
-    const modulePath = require.resolve('../electron/window/hud-panels.cjs');
+    const modulePath = require.resolve('../apps/desktop/electron/window/hud-panels.cjs');
     delete require.cache[modulePath];
     const { createHudPanelManager } = require(modulePath);
     const manager = createHudPanelManager({
@@ -65,7 +68,10 @@ function fixture({ packaged = false } = {}) {
       hudWindow: hud,
       hudController: controller,
       canAcceptWork: () => active,
-      ipcMain: { handle: (name, fn) => handlers.set(name, fn), on: (name, fn) => handlers.set(name, fn) },
+      ipcMain: {
+        handle: (name, fn) => handlers.set(name, fn),
+        on: (name, fn) => handlers.set(name, fn),
+      },
     });
     return {
       windows,
@@ -177,7 +183,11 @@ test('Projects leaves ordinary typing and other shortcuts alone; Settings keeps 
     { type: 'keyDown', key: 'w', control: true, alt: true },
   ])
     f.windows[0].webContents.emit('before-input-event', event, input);
-  f.windows[1].webContents.emit('before-input-event', event, { type: 'keyDown', key: 'w', control: true });
+  f.windows[1].webContents.emit('before-input-event', event, {
+    type: 'keyDown',
+    key: 'w',
+    control: true,
+  });
   assert.equal(prevented, 0);
   assert.equal(
     f.windows.every((win) => !win.isDestroyed()),
@@ -239,7 +249,10 @@ test('Mascot Lab is independent, reuses its window and waits for both readiness 
   const settings = f.windows[0];
   f.ready(settings);
   await opening;
-  const open = () => f.handlers.get('developer:open-mascot-lab')({ sender: settings.webContents });
+  const open = () =>
+    f.handlers.get('developer:open-mascot-lab')({
+      sender: settings.webContents,
+    });
   const pending = open();
   const lab = f.windows[1];
   assert.equal(lab.options.title, 'Beam Mascot Lab');
@@ -303,7 +316,10 @@ test('only the project window may request a validated project; selection delegat
   f.ready(win);
   await opening;
   const select = f.handlers.get('hud-panel:open-project');
-  const request = { id: '019f84dd-4d9d-7f61-ac30-5da50169ecbc', mode: 'screenshot' };
+  const request = {
+    id: '019f84dd-4d9d-7f61-ac30-5da50169ecbc',
+    mode: 'screenshot',
+  };
   assert.throws(() => select({ sender: f.hud.webContents }, request), /not available/);
   for (const invalid of [
     null,

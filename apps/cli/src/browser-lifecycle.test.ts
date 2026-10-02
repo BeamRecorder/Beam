@@ -5,7 +5,13 @@ import { closeExportBrowser } from './browser-lifecycle';
 afterEach(() => vi.useRealTimers());
 function browser(close: () => Promise<void>, owned = true) {
   const kill = vi.fn();
-  return { host: { close, process: () => (owned ? { kill } : null) } as unknown as Browser, kill };
+  return {
+    host: {
+      close,
+      process: () => (owned ? { kill } : null),
+    } as unknown as Browser,
+    kill,
+  };
 }
 it('closes a responsive owned browser without killing it', async () => {
   const { host, kill } = browser(async () => {});

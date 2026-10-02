@@ -1,0 +1,25 @@
+{
+  "name": "@beam/desktop",
+  "private": true,
+  "version": "0.4.0",
+  "dependencies": {
+    "@huggingface/transformers": "4.3.0",
+    "@lucide/vue": "^1.49.0",
+    "@mediabunny/aac-encoder": "1.61.0",
+    "@vueuse/core": "^15.0.0",
+    "@vueuse/electron": "^15.0.0",
+    "@vueuse/motion": "^3.0.3",
+    "@xmldom/xmldom": "^0.9.12",
+    "electron-updater": "^6.8.9",
+    "fontkit": "^2.0.4",
+    "mediabunny": "^1.61.0",
+    "pinia": "^4.0.3",
+    "vue": "^3.5.43",
+    "vue-i18n": "^11.4.12",
+    "@beam/engine": "workspace:*",
+    "@beam/runtime": "workspace:*",
+    "@beam/encoder": "workspace:*",
+    "@beam/storage": "workspace:*",
+    "@beam/native-client": "workspace:*"
+  }
+}

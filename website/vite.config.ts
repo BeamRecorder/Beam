@@ -22,8 +22,8 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '~/ui': fileURLToPath(new URL('../src/components/ui', import.meta.url)),
-      '~': fileURLToPath(new URL('../src', import.meta.url)),
+      '~/ui': fileURLToPath(new URL('../apps/desktop/src/components/ui', import.meta.url)),
+      '~': fileURLToPath(new URL('../apps/desktop/src', import.meta.url)),
       '@website': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },

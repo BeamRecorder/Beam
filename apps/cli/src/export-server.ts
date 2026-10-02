@@ -2,8 +2,8 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { extname } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { ExportRequest } from '@beam/encoder';
-import type { createBinaryOutput } from './binary-output';
+import type { CliRenderJob } from './render-job-types';
+import type { createBinaryOutput } from '@beam/storage/node/binary-output';
 
 const body = async (request: IncomingMessage, maximum: number) => {
   const chunks: Buffer[] = [];
@@ -19,7 +19,7 @@ const body = async (request: IncomingMessage, maximum: number) => {
 
 export function createExportServer(
   auth: string,
-  job: ExportRequest,
+  job: CliRenderJob,
   files: Map<string, string>,
   output: Awaited<ReturnType<typeof createBinaryOutput>>,
   completed: (result: unknown) => void,
@@ -89,7 +89,9 @@ export function createExportServer(
         return;
       }
       if (url.pathname === '/beam-cli/error') {
-        const result = JSON.parse((await body(request, 8192)).toString()) as { error?: unknown };
+        const result = JSON.parse((await body(request, 8192)).toString()) as {
+          error?: unknown;
+        };
         json({ received: true });
         failed(new Error(typeof result.error === 'string' ? result.error : 'Export backend failed.'));
         return;

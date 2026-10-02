@@ -8,7 +8,7 @@ const {
   captureEngineAssetName,
   inputHelperAssetName,
   nativeManifestAssetName,
-} = require('../../electron/capture/capture-engine-path.cjs');
+} = require('@beam/native-client/capture-engine-path');
 
 const METADATA_CONTRACTS = Object.freeze({
   'latest.yml': ['.exe'],
@@ -32,7 +32,12 @@ function expectedEntries(version) {
   const entries = [];
   for (const [platform, target] of Object.entries(NATIVE_TARGETS)) {
     for (const arch of target.arches) {
-      entries.push({ kind: 'capture-engine', platform, arch, asset: captureEngineAssetName(version, platform, arch) });
+      entries.push({
+        kind: 'capture-engine',
+        platform,
+        arch,
+        asset: captureEngineAssetName(version, platform, arch),
+      });
       if (platform === 'linux') {
         entries.push({
           kind: 'beam-input-helper',
@@ -130,7 +135,10 @@ function validateAllMetadata(directory, version) {
 }
 
 function commandOutput(command, args) {
-  const result = childProcess.spawnSync(command, args, { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 });
+  const result = childProcess.spawnSync(command, args, {
+    encoding: 'utf8',
+    maxBuffer: 20 * 1024 * 1024,
+  });
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`${command} failed: ${result.stderr || result.stdout}`);
   return `${result.stdout}\n${result.stderr}`;

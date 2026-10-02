@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { registerWhisperIpc } = require('../electron/captions/whisper-ipc.cjs');
+const { registerWhisperIpc } = require('../apps/desktop/electron/captions/whisper-ipc.cjs');
 
 test('Whisper IPC returns each model state and forwards progress only to the caller', async () => {
   const handlers = new Map();

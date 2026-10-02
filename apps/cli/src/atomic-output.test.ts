@@ -3,12 +3,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, readFile, readdir, rm, writeFile, open, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { writeJsonOutput } from './atomic-output';
-import { createBinaryOutput } from './binary-output';
+import { writeJsonOutput } from '@beam/storage/node/atomic-output';
+import { createBinaryOutput } from '@beam/storage/node/binary-output';
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const original = await importOriginal<typeof import('node:fs/promises')>();
-  return { ...original, open: vi.fn(original.open), unlink: vi.fn(original.unlink) };
+  return {
+    ...original,
+    open: vi.fn(original.open),
+    unlink: vi.fn(original.unlink),
+  };
 });
 
 const directories: string[] = [];
@@ -31,7 +35,9 @@ describe('owned CLI outputs', () => {
   it('preserves an existing JSON destination unless overwrite is explicit', async () => {
     const path = await destination();
     await writeFile(path, 'original');
-    await expect(writeJsonOutput(path, {})).rejects.toMatchObject({ code: 'EEXIST' });
+    await expect(writeJsonOutput(path, {})).rejects.toMatchObject({
+      code: 'EEXIST',
+    });
     expect(await readFile(path, 'utf8')).toBe('original');
     await writeJsonOutput(path, { next: true }, true);
     expect(JSON.parse(await readFile(path, 'utf8'))).toEqual({ next: true });
@@ -87,7 +93,9 @@ describe('owned CLI outputs', () => {
   });
   it('surfaces cleanup failures for both JSON and binary output', async () => {
     const path = await destination();
-    const denied = Object.assign(new Error('Permission denied'), { code: 'EACCES' });
+    const denied = Object.assign(new Error('Permission denied'), {
+      code: 'EACCES',
+    });
     vi.mocked(unlink).mockRejectedValueOnce(denied);
     await expect(writeJsonOutput(path, {}, true)).rejects.toThrow('Permission denied');
     const output = await createBinaryOutput(path, false);

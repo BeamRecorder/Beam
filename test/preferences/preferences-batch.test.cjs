@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { createPreferencesStore } = require('../../electron/preferences/preferences-store.cjs');
+const { createPreferencesStore } = require('../../apps/desktop/electron/preferences/preferences-store.cjs');
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-preferences-batch-'));
@@ -32,7 +32,11 @@ test('merges all patches in memory, reads and writes once, and returns the previ
     result = store.patchBatch([
       { theme: 'dark' },
       { extras: { one: 1 }, recordingInteractions: { noticeDismissed: true } },
-      { appearance: { theme: 'system' }, extras: { two: 2 }, recordingInteractions: { enabled: true } },
+      {
+        appearance: { theme: 'system' },
+        extras: { two: 2 },
+        recordingInteractions: { enabled: true },
+      },
     ]);
   } finally {
     fs.readFileSync = read;
@@ -47,7 +51,10 @@ test('merges all patches in memory, reads and writes once, and returns the previ
   assert.equal(result.preferences.extras.retained, true);
   assert.equal(result.preferences.extras.one, 1);
   assert.equal(result.preferences.extras.two, 2);
-  assert.deepEqual(result.preferences.recordingInteractions, { enabled: true, noticeDismissed: true });
+  assert.deepEqual(result.preferences.recordingInteractions, {
+    enabled: true,
+    noticeDismissed: true,
+  });
   assert.deepEqual(store.read(), result.preferences);
 });
 
@@ -57,8 +64,16 @@ test('validates the final batch, allowing shortcut swaps without intermediate co
   const first = 'hud.startStopRecording';
   const second = 'hud.playPause';
   const { preferences } = store.patchBatch([
-    { shortcuts: { [first]: { ...previous[first], keys: previous[second].keys } } },
-    { shortcuts: { [second]: { ...previous[second], keys: previous[first].keys } } },
+    {
+      shortcuts: {
+        [first]: { ...previous[first], keys: previous[second].keys },
+      },
+    },
+    {
+      shortcuts: {
+        [second]: { ...previous[second], keys: previous[first].keys },
+      },
+    },
   ]);
   assert.equal(preferences.shortcuts[first].keys, previous[second].keys);
   assert.equal(preferences.shortcuts[second].keys, previous[first].keys);
@@ -75,7 +90,15 @@ test('rejects invalid batches or a conflicting final shortcut map without changi
     () =>
       store.patchBatch([
         { theme: 'dark' },
-        { shortcuts: { duplicate: { keys: 'Alt+Shift+R', scope: 'global', category: 'hud' } } },
+        {
+          shortcuts: {
+            duplicate: {
+              keys: 'Alt+Shift+R',
+              scope: 'global',
+              category: 'hud',
+            },
+          },
+        },
       ]),
     /dupliqué/,
   );

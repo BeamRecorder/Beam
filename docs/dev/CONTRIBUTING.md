@@ -35,7 +35,7 @@ Follow these exact steps to prepare your workspace, fork the repository, and del
 4. **Engineering Guidelines**:
    - Before making any code changes, read the contracts:
      - `AGENTS.md` & `docs/ARCHITECTURE.md` (Electron security boundary & Rust capture engine)
-     - `docs/UI.md` (Design tokens, reusable components in `src/components/ui/`, no `:deep` overrides)
+     - `docs/UI.md` (Design tokens, reusable components in `apps/desktop/src/components/ui/`, no `:deep` overrides)
      - `docs/CODE_QUALITY.md` (Max 500 lines per file, types in dedicated files, small units)
      - `docs/electron_window.md` (Mandatory before touching window sizes, transparent regions, or IPC)
 
@@ -134,7 +134,7 @@ git checkout -b feat/your-feature-name
 
 Before contributing, make sure your code aligns with our architecture and style rules:
 
-- **UI Primitives**: Always reuse existing UI components from [`src/components/ui/`](../../src/components/ui/) (`Button`, `Select`, `Popover`, `Dialog`, `Slider`, `Switch`, `Badge`, `CopyButton`, `DeleteItem`, etc.). Do not write ad-hoc styled buttons or custom controls.
+- **UI Primitives**: Always reuse existing UI components from [`apps/desktop/src/components/ui/`](../../apps/desktop/src/components/ui/) (`Button`, `Select`, `Popover`, `Dialog`, `Slider`, `Switch`, `Badge`, `CopyButton`, `DeleteItem`, etc.). Do not write ad-hoc styled buttons or custom controls.
 - **No `:deep` CSS Selectors**: Avoid `:deep` selectors in scoped Vue component styles.
 - **File Length**: No single source file should exceed **500 lines**. Split larger files into focused composables, modules, or sub-components.
 - **Type Definitions**: Place shared TypeScript interfaces and types in dedicated `.ts` files (e.g. `*-types.ts`), not inside Vue components.
@@ -148,7 +148,7 @@ Run focused tests directly related to the code you modified:
 
 - **Vue / Frontend tests**:
   ```bash
-  bunx vitest run src/components/video-editor/timeline/tests/
+  bunx vitest run apps/desktop/src/components/editor/timeline/tests/
   ```
 - **Electron / Node tests**:
   ```bash

@@ -7,7 +7,9 @@
       "dependencies": {
         "@beam/encoder": "workspace:*",
         "@beam/engine": "workspace:*",
+        "@beam/native-client": "workspace:*",
         "@beam/runtime": "workspace:*",
+        "@beam/storage": "workspace:*",
         "@huggingface/transformers": "4.3.0",
         "@lucide/vue": "^1.49.0",
         "@mediabunny/aac-encoder": "1.61.0",
@@ -50,10 +52,37 @@
       "dependencies": {
         "@beam/encoder": "workspace:*",
         "@beam/engine": "workspace:*",
+        "@beam/native-client": "workspace:*",
         "@beam/runtime": "workspace:*",
+        "@beam/storage": "workspace:*",
         "@puppeteer/browsers": "^3.2.3",
+        "@vitejs/plugin-vue": "^6.0.9",
         "puppeteer-core": "^25.12.0",
         "vite": "^8.3.1",
+      },
+    },
+    "apps/desktop": {
+      "name": "@beam/desktop",
+      "version": "0.4.0",
+      "dependencies": {
+        "@beam/encoder": "workspace:*",
+        "@beam/engine": "workspace:*",
+        "@beam/native-client": "workspace:*",
+        "@beam/runtime": "workspace:*",
+        "@beam/storage": "workspace:*",
+        "@huggingface/transformers": "4.3.0",
+        "@lucide/vue": "^1.49.0",
+        "@mediabunny/aac-encoder": "1.61.0",
+        "@vueuse/core": "^15.0.0",
+        "@vueuse/electron": "^15.0.0",
+        "@vueuse/motion": "^3.0.3",
+        "@xmldom/xmldom": "^0.9.12",
+        "electron-updater": "^6.8.9",
+        "fontkit": "^2.0.4",
+        "mediabunny": "^1.61.0",
+        "pinia": "^4.0.3",
+        "vue": "^3.5.43",
+        "vue-i18n": "^11.4.12",
       },
     },
     "packages/encoder": {
@@ -70,6 +99,10 @@
       "name": "@beam/engine",
       "version": "0.1.0",
     },
+    "packages/native-client": {
+      "name": "@beam/native-client",
+      "version": "0.1.0",
+    },
     "packages/runtime": {
       "name": "@beam/runtime",
       "version": "0.1.0",
@@ -77,6 +110,10 @@
         "@beam/engine": "workspace:*",
         "mediabunny": "^1.61.0",
       },
+    },
+    "packages/storage": {
+      "name": "@beam/storage",
+      "version": "0.1.0",
     },
     "website": {
       "name": "@beam/website",
@@ -180,11 +217,17 @@
 
     "@beam/cli": ["@beam/cli@workspace:apps/cli"],
 
+    "@beam/desktop": ["@beam/desktop@workspace:apps/desktop"],
+
     "@beam/encoder": ["@beam/encoder@workspace:packages/encoder"],
 
     "@beam/engine": ["@beam/engine@workspace:packages/engine"],
 
+    "@beam/native-client": ["@beam/native-client@workspace:packages/native-client"],
+
     "@beam/runtime": ["@beam/runtime@workspace:packages/runtime"],
+
+    "@beam/storage": ["@beam/storage@workspace:packages/storage"],
 
     "@beam/website": ["@beam/website@workspace:website"],
 

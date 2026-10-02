@@ -3,6 +3,7 @@ import type { ClipComposition } from '../shared/composition-types';
 import type { CommandRegistry, DocumentCommand } from './command-types';
 import { createCommandRegistry } from './command-registry';
 import { registerSceneCommands } from './scene-commands';
+import { registerAuthoringCommands } from './authoring-commands';
 import {
   moveClip,
   trimClip,
@@ -33,6 +34,7 @@ const number = (payload: Record<string, unknown>, name: string) => {
 export function createCompositionCommands(): CommandRegistry<ClipComposition> {
   const registry = createCommandRegistry<ClipComposition>();
   registerSceneCommands(registry);
+  registerAuthoringCommands(registry);
   const numeric = (
     type: string,
     key: string,
@@ -57,7 +59,11 @@ export function createCompositionCommands(): CommandRegistry<ClipComposition> {
     parse: (input) => {
       const payload = object(input);
       if (payload.edge !== 'start' && payload.edge !== 'end') throw new TypeError('Invalid trim edge.');
-      return { clipId: clipId(payload), edge: payload.edge as 'start' | 'end', timeMs: number(payload, 'timeMs') };
+      return {
+        clipId: clipId(payload),
+        edge: payload.edge as 'start' | 'end',
+        timeMs: number(payload, 'timeMs'),
+      };
     },
     apply: (document, payload) => trimClip(document, payload.clipId, payload.edge, payload.timeMs),
   });

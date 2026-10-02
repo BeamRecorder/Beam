@@ -17,7 +17,12 @@ const fixture = (t) => {
       zoom: { elements: [] },
       composition: {
         assets: [
-          { id: 'screen', durationMs: 7503, sessionId: 'recording', sessionPath: 'screen.mp4' },
+          {
+            id: 'screen',
+            durationMs: 7503,
+            sessionId: 'recording',
+            sessionPath: 'screen.mp4',
+          },
           { id: 'video', durationMs: 5000, fileName: 'video.webm' },
         ],
         clips: [

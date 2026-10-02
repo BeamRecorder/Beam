@@ -20,7 +20,10 @@ export function benchmarkDocument(composition: ClipComposition, iterations = 100
       metrics.measure('edit', () =>
         session.execute({
           type: 'clip.enable',
-          payload: { clipId: edited.id, enabled: index % 2 === 0 ? !edited.enabled : edited.enabled },
+          payload: {
+            clipId: edited.id,
+            enabled: index % 2 === 0 ? !edited.enabled : edited.enabled,
+          },
         }),
       );
   }

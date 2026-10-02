@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { normalizeInputSidecar, recordedPlatform } = require('../electron/projects/input-sidecar.cjs');
+const { normalizeInputSidecar, recordedPlatform } = require('../apps/desktop/electron/projects/input-sidecar.cjs');
 
 const sidecarWith = (event) => ({ version: 1, events: [event] });
 
@@ -69,10 +69,34 @@ test('rejects invalid timestamps and event envelopes', () => {
 
 test('rejects invalid modifiers, keys, and mouse buttons', () => {
   for (const event of [
-    { event: 'shortcut', sessionNs: 0, pressed: true, modifiers: ['command'], key: 'a' },
-    { event: 'shortcut', sessionNs: 0, pressed: true, modifiers: ['control', 'control'], key: 'a' },
-    { event: 'shortcut', sessionNs: 0, pressed: true, modifiers: 'control', key: 'a' },
-    { event: 'shortcut', sessionNs: 0, pressed: true, modifiers: [], key: 'unknown' },
+    {
+      event: 'shortcut',
+      sessionNs: 0,
+      pressed: true,
+      modifiers: ['command'],
+      key: 'a',
+    },
+    {
+      event: 'shortcut',
+      sessionNs: 0,
+      pressed: true,
+      modifiers: ['control', 'control'],
+      key: 'a',
+    },
+    {
+      event: 'shortcut',
+      sessionNs: 0,
+      pressed: true,
+      modifiers: 'control',
+      key: 'a',
+    },
+    {
+      event: 'shortcut',
+      sessionNs: 0,
+      pressed: true,
+      modifiers: [],
+      key: 'unknown',
+    },
     { event: 'shortcut', sessionNs: 0, pressed: true, modifiers: [], key: 'A' },
     { event: 'mouse-button', sessionNs: 0, button: -1, pressed: true },
     { event: 'mouse-button', sessionNs: 0, button: 32, pressed: true },

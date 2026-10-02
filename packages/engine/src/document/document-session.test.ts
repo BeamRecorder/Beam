@@ -120,4 +120,34 @@ describe('extensible document sessions', () => {
     expect(() => commands.register({ ...handler, type: ' ' })).toThrow('empty');
     expect(() => engine.execute({ type: 'add', payload: 'bad' })).toThrow('number required');
   });
+  it('rejects reentrant observer edits and history requests without altering the published revision', async () => {
+    const { engine } = session();
+    let observed = 0;
+    engine.subscribe(() => engine.execute({ type: 'add', payload: 99 }));
+    engine.subscribe(() => {
+      void engine.undo();
+    });
+    engine.subscribe(() => {
+      void engine.redo();
+    });
+    engine.subscribe(() => observed++);
+    engine.execute({ type: 'add', payload: 1 });
+    expect(engine.document.count).toBe(1);
+    expect(engine.revision).toBe(1);
+    expect(observed).toBe(1);
+    expect(engine.takeObserverErrors()).toHaveLength(3);
+    await engine.undo();
+    expect(engine.document.count).toBe(0);
+    expect(engine.revision).toBe(2);
+  });
+  it('rejects overlapping restoration while allowing edits after restoration finishes', async () => {
+    const { engine } = session();
+    engine.execute({ type: 'add', payload: 1 });
+    const restoring = engine.undo();
+    expect(() => engine.execute({ type: 'add', payload: 1 })).toThrow('restoration');
+    expect(() => engine.redo()).toThrow('restoration');
+    await restoring;
+    engine.execute({ type: 'add', payload: 2 });
+    expect(engine.document.count).toBe(2);
+  });
 });

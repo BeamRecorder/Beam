@@ -1,14 +1,14 @@
+import { createHttpFrameSource } from '@beam/runtime/frames/http-frame-source';
 import { mayBeEnabled } from '@beam/engine/scene/scene-visibility';
-import { isAudioClip, type AudioClip, type VisualClip } from '@beam/engine/shared/composition-types';
-import type { RenderableMedia } from '@beam/runtime/rendering/render';
+import { isAudioClip, type AudioClip } from '@beam/engine/shared/composition-types';
 import { ExportValidationError, type ExportProgress, type ExportRequest } from '@beam/encoder/export-types';
 import type { ExportRuntimeDiagnostics } from '@beam/encoder/export-diagnostics-types';
 import { isExportWorkerRequest, type ExportWorkerResponse } from '@beam/encoder/mediabunny/export-worker-protocol';
-import { loadBitmap, openExportAssets, type ExportAssets } from '@beam/encoder/mediabunny/export-worker-assets';
+import { loadExportImages } from './export-images';
+import { openExportAssets, type ExportAssets } from '@beam/encoder/mediabunny/export-worker-assets';
 import { ExportWorkerOutput } from '@beam/encoder/mediabunny/export-worker-output';
 import { renderExportAudio, renderExportVideo } from '@beam/encoder/mediabunny/export-worker-pipelines';
 import { loadExportFonts } from '@beam/encoder/mediabunny/export-worker-fonts';
-import { WATERMARK_LOGO_KEY, WATERMARK_LOGO_PATH } from '@beam/runtime/rendering/watermark-render';
 import type { PreparedCursorImage } from '@beam/encoder/mediabunny/export-cursor-images';
 import { requiredExportCursorAssets } from '@beam/encoder/mediabunny/export-cursor-selection';
 
@@ -141,7 +141,7 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
     console.info('[Beam export] asset validation', { elapsedMs: Math.round(measured.validationMs) });
     report(baseProgress('loading_assets', 0.05, totalFrames, audioClips.length > 0, totalTimeMs), true);
     const loadingStarted = performance.now();
-    const images = await loadImages(request, bitmaps);
+    const images = await loadExportImages(request, bitmaps);
     const cursorImages = loadCursors(request, transferredCursors);
     measured.assetLoadingMs = performance.now() - loadingStarted;
     console.info('[Beam export] asset loading', { elapsedMs: Math.round(measured.assetLoadingMs) });
@@ -213,6 +213,7 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
           shared.video = done / totalFrames;
           reportEncoding(Math.round((done / totalFrames) * totalTimeMs));
         },
+        new Map((request.frameSources ?? []).map((source) => [source.assetId, createHttpFrameSource(source.url)])),
       ),
     );
     const audioTask = stopPipelines(
@@ -296,53 +297,11 @@ const baseProgress = (
   totalTimeMs,
 });
 
-async function loadImages(request: ExportRequest, owned: Map<string, ImageBitmap>) {
-  const images = new Map<string, RenderableMedia>();
-  const watermark = request.snapshot.canvas.watermark;
-  if (watermark?.enabled && watermark.showLogo) {
-    const path = WATERMARK_LOGO_PATH.replace(/^\//, '');
-    const source = import.meta.env.DEV
-      ? new URL(`/${path}`, self.location.href).href
-      : new URL(`../${path}`, self.location.href).href;
-    if (!owned.has(source)) owned.set(source, await loadBitmap(source, 'Beam watermark logo'));
-    const bitmap = owned.get(source)!;
-    images.set(WATERMARK_LOGO_KEY, { source: bitmap, width: bitmap.width, height: bitmap.height });
-  }
-  const activeImageIds = new Set(
-    request.snapshot.composition.clips
-      .filter(
-        (clip): clip is VisualClip =>
-          clip.kind === 'image' && mayBeEnabled(request.snapshot.composition, clip) && clip.timelineDurationMs > 0,
-      )
-      .map((clip) => clip.assetId),
-  );
-  const assets = request.snapshot.composition.assets.filter(
-    (asset) => asset.kind === 'image' && activeImageIds.has(asset.id),
-  );
-  const assetsBySource = new Map(assets.map((asset) => [asset.src, asset]));
-  await Promise.all(
-    [...assetsBySource].map(async ([source, asset]) => {
-      if (owned.has(source)) return;
-      owned.set(source, await loadBitmap(source, `image asset "${asset.name}"`));
-    }),
-  );
-  for (const asset of assets) {
-    const bitmap = owned.get(asset.src)!;
-    images.set(asset.id, { source: bitmap, width: bitmap.width, height: bitmap.height });
-  }
-  const background = request.snapshot.background;
-  if (background?.kind === 'image') {
-    if (!owned.has(background.src)) owned.set(background.src, await loadBitmap(background.src, 'background image'));
-    const bitmap = owned.get(background.src)!;
-    images.set('export-background', { source: bitmap, width: bitmap.width, height: bitmap.height });
-  }
-  return images;
-}
-
 function loadCursors(request: ExportRequest, prepared: Map<string, ImageBitmap>) {
   const assets = requiredExportCursorAssets(request);
   const result = new Map<string, ImageBitmap>();
   for (const asset of assets) {
+    if (request.frameSources?.some((provider) => provider.assetId === asset.id)) continue;
     const bitmap = prepared.get(asset.id);
     if (!bitmap)
       throw new ExportValidationError({

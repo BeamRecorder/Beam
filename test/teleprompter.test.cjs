@@ -3,15 +3,15 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { defaults } = require('../electron/preferences/preferences-store.cjs');
+const { defaults } = require('../apps/desktop/electron/preferences/preferences-store.cjs');
 const {
   createTeleprompterStorage,
   normalizeTeleprompterDocument,
-} = require('../electron/teleprompter/teleprompter-storage.cjs');
+} = require('../apps/desktop/electron/teleprompter/teleprompter-storage.cjs');
 const {
   clampTeleprompterBounds,
   isContentProtectionSupported,
-} = require('../electron/teleprompter/teleprompter-window.cjs');
+} = require('../apps/desktop/electron/teleprompter/teleprompter-window.cjs');
 
 const projectId = '11111111-1111-4111-8111-111111111111';
 const sessionId = '22222222-2222-4222-8222-222222222222';
@@ -33,11 +33,22 @@ const document = {
 function storageFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-teleprompter-'));
   const file = path.join(root, 'session', 'teleprompter.json');
-  return { root, file, storage: createTeleprompterStorage({ projectStore: { teleprompterFileFor: () => file } }) };
+  return {
+    root,
+    file,
+    storage: createTeleprompterStorage({
+      projectStore: { teleprompterFileFor: () => file },
+    }),
+  };
 }
 
 test('normalizes supported values and clamps numeric settings', () => {
-  const normalized = normalizeTeleprompterDocument({ ...document, scrollSpeed: 999, fontSize: 1, lineHeight: 9 });
+  const normalized = normalizeTeleprompterDocument({
+    ...document,
+    scrollSpeed: 999,
+    fontSize: 1,
+    lineHeight: 9,
+  });
   assert.equal(normalized.scrollSpeed, 200);
   assert.equal(normalized.fontSize, 16);
   assert.equal(normalized.lineHeight, 2.5);
@@ -102,7 +113,11 @@ test('migrates older documents to theme text color and full opacity', () => {
 });
 test('retains valid text colors and clamps both ends of native opacity', () => {
   assert.equal(
-    normalizeTeleprompterDocument({ ...document, textColor: '#AbCdEf', windowOpacity: -2 }).textColor,
+    normalizeTeleprompterDocument({
+      ...document,
+      textColor: '#AbCdEf',
+      windowOpacity: -2,
+    }).textColor,
     '#AbCdEf',
   );
   assert.equal(normalizeTeleprompterDocument({ ...document, windowOpacity: -2 }).windowOpacity, 0.2);

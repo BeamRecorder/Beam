@@ -4,8 +4,8 @@ const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 
-const { registerEditorPresetIpc } = require('../electron/presets/editor-preset-ipc.cjs');
-const { createEditorPresetStore } = require('../electron/presets/editor-preset-store.cjs');
+const { registerEditorPresetIpc } = require('../apps/desktop/electron/presets/editor-preset-ipc.cjs');
+const { createEditorPresetStore } = require('../apps/desktop/electron/presets/editor-preset-store.cjs');
 
 const roots = [];
 
@@ -35,11 +35,20 @@ test('uses separate IPC channels and preset documents for screenshot and video C
   const screenshotStore = createEditorPresetStore(screenshotFile);
   const handlers = new Map();
   const sent = [];
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
-  const BrowserWindow = { getAllWindows: () => [windowWith('hud', sent), windowWith('editor', sent)] };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
+  const BrowserWindow = {
+    getAllWindows: () => [windowWith('hud', sent), windowWith('editor', sent)],
+  };
 
   registerEditorPresetIpc({ ipcMain, BrowserWindow, store: videoStore });
-  registerEditorPresetIpc({ ipcMain, BrowserWindow, store: screenshotStore, kind: 'screenshot' });
+  registerEditorPresetIpc({
+    ipcMain,
+    BrowserWindow,
+    store: screenshotStore,
+    kind: 'screenshot',
+  });
 
   assert.deepEqual(
     [...handlers.keys()].sort(),
@@ -73,7 +82,10 @@ test('uses separate IPC channels and preset documents for screenshot and video C
   const screenshotSettings = {
     editor: {
       schemaVersion: 1,
-      presentation: { selectedBackgroundId: '/wallpapers/image/paper.webp', blurPercent: 30 },
+      presentation: {
+        selectedBackgroundId: '/wallpapers/image/paper.webp',
+        blurPercent: 30,
+      },
     },
     export: { format: 'webp', width: 2560, height: 1440 },
   };
@@ -103,7 +115,10 @@ test('uses separate IPC channels and preset documents for screenshot and video C
     ['default'],
   );
   await assert.rejects(
-    invoke('screenshot-presets:rename', { id: 'default', name: 'Renamed Default' }),
+    invoke('screenshot-presets:rename', {
+      id: 'default',
+      name: 'Renamed Default',
+    }),
     /cannot be renamed/i,
   );
   await assert.rejects(invoke('screenshot-presets:delete', 'default'), /cannot be deleted/i);

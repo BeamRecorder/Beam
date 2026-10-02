@@ -1,6 +1,7 @@
 import type { DocumentSession, DocumentSessionOptions } from './document-types';
 import type { DocumentCommand } from '../commands/command-types';
 import { createSnapshotHistory } from '../history/snapshot-history';
+import { createObserverErrors } from './observer-errors';
 import { freezeDocument } from './immutable-document';
 
 /** One owner, one revision per committed transaction; failed batches leave document/history untouched. */
@@ -11,16 +12,33 @@ export function createDocumentSession<T extends object>(
   options.validate(initial);
   let document = freezeDocument(JSON.parse(JSON.stringify(initial)) as T);
   let revision = 0;
+  let publishing = false;
+  const observerErrors = createObserverErrors();
   const listeners = new Set<() => void>();
   const publish = (next: T) => {
     document = next;
     revision += 1;
-    for (const listener of listeners) listener();
+    publishing = true;
+    try {
+      for (const listener of listeners) {
+        try {
+          listener();
+        } catch (error) {
+          observerErrors.record(error);
+        }
+      }
+    } finally {
+      publishing = false;
+    }
   };
   const history = createSnapshotHistory<T>({ onRestoreSnapshot: publish, immutable: true });
   history.initialize(document);
-  const transaction = (commands: readonly DocumentCommand[]) => {
+  const assertEditable = () => {
+    if (publishing) throw new Error('Cannot edit while publishing a document revision.');
     if (history.state.restoring) throw new Error('Cannot edit during history restoration.');
+  };
+  const transaction = (commands: readonly DocumentCommand[]) => {
+    assertEditable();
     if (!commands.length) return;
     let next = document;
     for (const command of commands) next = options.commands.execute(next, command);
@@ -44,8 +62,15 @@ export function createDocumentSession<T extends object>(
     },
     execute: (command) => transaction([command]),
     transaction,
-    undo: history.undo,
-    redo: history.redo,
+    undo: () => {
+      assertEditable();
+      return history.undo();
+    },
+    redo: () => {
+      assertEditable();
+      return history.redo();
+    },
+    takeObserverErrors: observerErrors.take,
     subscribe(listener) {
       listeners.add(listener);
       return () => {

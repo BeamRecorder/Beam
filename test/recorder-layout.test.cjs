@@ -4,7 +4,7 @@ const {
   normalizeRecorderLayout,
   bottomCenterRecorder,
   RECORDER_SIZE,
-} = require('../electron/window/recorder-layout.cjs');
+} = require('../apps/desktop/electron/window/recorder-layout.cjs');
 
 test('resets every legacy recorder position once while preserving unrelated settings', () => {
   const legacy = {

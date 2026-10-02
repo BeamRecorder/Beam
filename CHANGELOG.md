@@ -6,6 +6,11 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Create and edit video or image documents through a shared engine API and CLI, with identified JSON transactions, revision conflicts, retry deduplication and undo/redo.
+- Packaged CLI launchers use Beam's bundled Electron runtime and support native recording/screenshot commands without a separate Bun or Node installation.
+- Render seekable HTML/Vue motion projects through the shared video renderer and encoder, including paused GSAP animations.
+- Extract a video frame into an editable image document, then modify layers and export PNG or WebP through the same still renderer as Screenshot.
+
 - Documents support nested scenes with group transforms, opacity, blending, masks and local clocks, plus generic property keyframes editable through shared commands and the CLI.
 - CLI export runs in headless Chromium on Linux without an X11 or Wayland display; imported fonts use explicit portable resources.
 - A development CLI can inspect, edit and benchmark Beam documents, and export portable render snapshots through an independent Chromium backend without opening the editor.
@@ -24,6 +29,9 @@ User-facing changes to Beam are documented in this file.
 - Settings and Projects now open in separate, resizable desktop windows.
 
 ### Changed
+
+- Desktop application code now lives under `apps/desktop`; reusable document, rendering, encoding, storage and native capture transport code lives in separate packages.
+- Timeline artwork shares one viewport-sized canvas and one measurement/paint queue; Ctrl/Cmd-wheel zoom keeps the time beneath the pointer and supports long timelines without a fixed ruler cap.
 
 - Studio preview and export use the same completed-frame renderer for scenes, camera effects, cursor, text and transitions.
 - Immutable engine edits and undo/redo share unchanged document records, reducing full-document JSON copies; CLI benchmarks now include editing timings.

@@ -56,14 +56,18 @@ describe('CLI transport capabilities', () => {
   it('authenticates the job and exposes no generic filesystem endpoint', async () => {
     const { url } = await backend();
     expect((await fetch(url('job').replace('auth=secret', 'auth=wrong'))).status).toBe(403);
-    expect(await (await fetch(url('job'))).json()).toMatchObject({ request: { projectName: 'owned job' } });
+    expect(await (await fetch(url('job'))).json()).toMatchObject({
+      request: { projectName: 'owned job' },
+    });
     expect((await fetch(url('asset/unknown'))).status).toBe(400);
     expect((await fetch(url('unknown'), { method: 'POST' })).status).toBe(400);
     expect((await fetch(url('unknown'))).status).toBe(400);
   });
   it('serves real media byte ranges and clamps requests at EOF', async () => {
     const { url } = await backend();
-    const response = await fetch(url('asset/media'), { headers: { Range: 'bytes=1-100' } });
+    const response = await fetch(url('asset/media'), {
+      headers: { Range: 'bytes=1-100' },
+    });
     expect(response.status).toBe(206);
     expect(response.headers.get('Content-Range')).toBe('bytes 1-3/4');
     expect([...new Uint8Array(await response.arrayBuffer())]).toEqual([2, 3, 4]);
@@ -85,9 +89,15 @@ describe('CLI transport capabilities', () => {
   });
   it('settles completion and backend errors as separate terminal events', async () => {
     const { url, completed, failed } = await backend();
-    await fetch(url('done'), { method: 'POST', body: JSON.stringify({ path: 'owned' }) });
+    await fetch(url('done'), {
+      method: 'POST',
+      body: JSON.stringify({ path: 'owned' }),
+    });
     expect(completed).toHaveBeenCalledWith({ path: 'owned' });
-    await fetch(url('error'), { method: 'POST', body: JSON.stringify({ error: 'failed codec' }) });
+    await fetch(url('error'), {
+      method: 'POST',
+      body: JSON.stringify({ error: 'failed codec' }),
+    });
     expect(failed.mock.calls[0]?.[0].message).toBe('failed codec');
   });
   it('returns an explicit error when output writes or terminal JSON fail', async () => {

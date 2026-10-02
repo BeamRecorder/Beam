@@ -128,7 +128,7 @@ test('editor window is opaque and routes native editor lifecycle without changin
       TITLEBAR_HEIGHT,
       TITLEBAR_SYMBOL_COLOR,
       createEditorWindowManager,
-    } = require('../electron/window/editor-window.cjs');
+    } = require('../apps/desktop/electron/window/editor-window.cjs');
     let hudVisible = true;
     let hudCanHide = true;
     const hudWindow = {
@@ -289,7 +289,12 @@ test('editor window is opaque and routes native editor lifecycle without changin
     ipcListeners.get('editor:ready')({ sender: reopenedEditor.webContents });
     await reopening;
 
-    assert.equal(await ipcHandlers.get('editor:open-recorder')({ sender: reopenedEditor.webContents }), true);
+    assert.equal(
+      await ipcHandlers.get('editor:open-recorder')({
+        sender: reopenedEditor.webContents,
+      }),
+      true,
+    );
     assert.ok(calls.some((call) => call[0] === 'hud-send' && call[1] === 'editor:recorder-launcher'));
     assert.equal(calls.filter(([name]) => name === 'aux-prepare').length, 6);
   } finally {
@@ -331,8 +336,8 @@ const createThemeFixture = ({
   Module._load = function load(request, parent, isMain) {
     return request === 'electron' ? electron : originalLoad.call(this, request, parent, isMain);
   };
-  delete require.cache[require.resolve('../electron/window/editor-window.cjs')];
-  const { createEditorWindowManager } = require('../electron/window/editor-window.cjs');
+  delete require.cache[require.resolve('../apps/desktop/electron/window/editor-window.cjs')];
+  const { createEditorWindowManager } = require('../apps/desktop/electron/window/editor-window.cjs');
   let hudVisible = hudInitiallyVisible;
   const hudEvents = new EventEmitter();
   const hudWindow = {
@@ -508,9 +513,13 @@ test('times out a hidden editor after 30 seconds without closing the HUD and all
     const retry = fixture.manager.open(projectId);
     const retryEditor = fixture.windows[1];
     timedOutEditor.emitContent('render-process-gone', {}, { reason: 'crashed' });
-    fixture.ipcListeners.get('editor:ready')({ sender: timedOutEditor.webContents });
+    fixture.ipcListeners.get('editor:ready')({
+      sender: timedOutEditor.webContents,
+    });
     assert.equal(fixture.manager.window(), retryEditor);
-    fixture.ipcListeners.get('editor:ready')({ sender: retryEditor.webContents });
+    fixture.ipcListeners.get('editor:ready')({
+      sender: retryEditor.webContents,
+    });
     await retry;
     assert.equal(retryEditor.isDestroyed(), false);
   } finally {
@@ -565,7 +574,9 @@ test('uses the current preference theme for every editor creation without live n
 
       fixture.manager.showHud();
       fixture.preferenceState.theme = secondTheme;
-      const secondOpening = fixture.manager.open(projectId, { disposition: 'new-window' });
+      const secondOpening = fixture.manager.open(projectId, {
+        disposition: 'new-window',
+      });
       const secondOptions = fixture.calls.filter((call) => call[0] === 'constructor').at(-1)[1];
       assert.equal(secondOptions.backgroundColor, secondTheme === 'dark' ? '#141310' : '#f7f5f0');
       const secondEditor = await readyEditor(fixture, secondOpening);
@@ -596,7 +607,9 @@ test('resolves system theme from the current callback on every editor creation',
 
     fixture.manager.showHud();
     systemDark = true;
-    const secondOpening = fixture.manager.open(projectId, { disposition: 'new-window' });
+    const secondOpening = fixture.manager.open(projectId, {
+      disposition: 'new-window',
+    });
     assert.equal(fixture.calls.filter((call) => call[0] === 'constructor').at(-1)[1].backgroundColor, '#141310');
     await readyEditor(fixture, secondOpening);
 
@@ -610,12 +623,17 @@ test('restores and persists editor window dimensions via preferencesStore', asyn
   const calls = [];
   const windows = [];
   const patches = [];
-  const preferenceState = { extras: { editorWindow: { width: 1400, height: 900 } } };
+  const preferenceState = {
+    extras: { editorWindow: { width: 1400, height: 900 } },
+  };
   const preferencesStore = {
     read: () => structuredClone(preferenceState),
     patch: (patch) => {
       patches.push(structuredClone(patch));
-      preferenceState.extras = { ...preferenceState.extras, ...(patch.extras || {}) };
+      preferenceState.extras = {
+        ...preferenceState.extras,
+        ...(patch.extras || {}),
+      };
       return structuredClone(preferenceState);
     },
   };
@@ -635,8 +653,8 @@ test('restores and persists editor window dimensions via preferencesStore', asyn
   };
 
   try {
-    delete require.cache[require.resolve('../electron/window/editor-window.cjs')];
-    const { createEditorWindowManager } = require('../electron/window/editor-window.cjs');
+    delete require.cache[require.resolve('../apps/desktop/electron/window/editor-window.cjs')];
+    const { createEditorWindowManager } = require('../apps/desktop/electron/window/editor-window.cjs');
     const hudWindow = {
       webContents: { send: () => undefined },
       hide: () => undefined,
@@ -693,7 +711,9 @@ function createRecorderFixture({ isPackaged = false, cleanupWindow = null } = {}
   const ipcHandlers = new Map();
   const ipcListeners = new Map();
   let hudVisible = true;
-  const hudWebContents = { send: (...args) => calls.push(['hud-send', ...args]) };
+  const hudWebContents = {
+    send: (...args) => calls.push(['hud-send', ...args]),
+  };
   const hudWindow = {
     webContents: hudWebContents,
     hide: () => {
@@ -743,8 +763,8 @@ function createRecorderFixture({ isPackaged = false, cleanupWindow = null } = {}
   Module._load = function load(request, parent, isMain) {
     return request === 'electron' ? electron : originalLoad.call(this, request, parent, isMain);
   };
-  delete require.cache[require.resolve('../electron/window/editor-window.cjs')];
-  const { createEditorWindowManager } = require('../electron/window/editor-window.cjs');
+  delete require.cache[require.resolve('../apps/desktop/electron/window/editor-window.cjs')];
+  const { createEditorWindowManager } = require('../apps/desktop/electron/window/editor-window.cjs');
   const manager = createEditorWindowManager({
     applicationRoot: '/app',
     isPackaged,
@@ -815,7 +835,9 @@ test('editor:open-recorder keeps the editor open, shows the real HUD, and suppli
     const closeCount = origin.closeCount;
     fixture.calls.length = 0;
 
-    const opened = await fixture.ipcHandlers.get('editor:open-recorder')({ sender: origin.webContents });
+    const opened = await fixture.ipcHandlers.get('editor:open-recorder')({
+      sender: origin.webContents,
+    });
     assert.equal(opened, true);
     assert.equal(fixture.manager.window(), origin);
     assert.equal(origin.closeCount, closeCount);
@@ -839,11 +861,15 @@ test('editor:dismiss-recorder hides the HUD and refocuses its originating editor
   try {
     const opening = fixture.manager.open(projectId);
     const origin = await readyEditor(fixture, opening);
-    await fixture.ipcHandlers.get('editor:open-recorder')({ sender: origin.webContents });
+    await fixture.ipcHandlers.get('editor:open-recorder')({
+      sender: origin.webContents,
+    });
     const focusCount = origin.focusCount;
 
     assert.equal(
-      await fixture.ipcHandlers.get('editor:dismiss-recorder')({ sender: fixture.hudWindow.webContents }),
+      await fixture.ipcHandlers.get('editor:dismiss-recorder')({
+        sender: fixture.hudWindow.webContents,
+      }),
       true,
     );
     assert.equal(fixture.hudWindow.isVisible(), false);
@@ -887,9 +913,24 @@ test('editor:open preserves screenshot kind per window and closing one editor pr
     });
 
     const foreign = fakeWindow(fixture.calls);
-    assert.equal(await fixture.ipcHandlers.get('editor:open-recorder')({ sender: foreign.webContents }), false);
-    assert.equal(fixture.ipcHandlers.get('editor:context')({ sender: foreign.webContents }), null);
-    assert.equal(await fixture.ipcHandlers.get('editor:dismiss-recorder')({ sender: foreign.webContents }), false);
+    assert.equal(
+      await fixture.ipcHandlers.get('editor:open-recorder')({
+        sender: foreign.webContents,
+      }),
+      false,
+    );
+    assert.equal(
+      fixture.ipcHandlers.get('editor:context')({
+        sender: foreign.webContents,
+      }),
+      null,
+    );
+    assert.equal(
+      await fixture.ipcHandlers.get('editor:dismiss-recorder')({
+        sender: foreign.webContents,
+      }),
+      false,
+    );
   } finally {
     fixture.restore();
   }
@@ -900,12 +941,16 @@ test('recorder launch is idempotent while idle and only the HUD may mark it acti
   try {
     const opening = fixture.manager.open(projectId);
     const origin = await readyEditor(fixture, opening);
-    const firstOpen = await fixture.ipcHandlers.get('editor:open-recorder')({ sender: origin.webContents });
+    const firstOpen = await fixture.ipcHandlers.get('editor:open-recorder')({
+      sender: origin.webContents,
+    });
     const firstContext = fixture.calls
       .filter((call) => call[0] === 'hud-send' && call[1] === 'editor:recorder-launcher')
       .at(-1)[2];
     const closeCount = origin.closeCount;
-    const secondOpen = await fixture.ipcHandlers.get('editor:open-recorder')({ sender: origin.webContents });
+    const secondOpen = await fixture.ipcHandlers.get('editor:open-recorder')({
+      sender: origin.webContents,
+    });
     const secondContext = fixture.calls
       .filter((call) => call[0] === 'hud-send' && call[1] === 'editor:recorder-launcher')
       .at(-1)[2];
@@ -916,7 +961,9 @@ test('recorder launch is idempotent while idle and only the HUD may mark it acti
     assert.equal(origin.closeCount, closeCount);
     assert.throws(
       () =>
-        fixture.ipcHandlers.get('editor:open')({ sender: origin.webContents }, projectId, { disposition: 'invalid' }),
+        fixture.ipcHandlers.get('editor:open')({ sender: origin.webContents }, projectId, {
+          disposition: 'invalid',
+        }),
       /invalide/,
     );
 
@@ -926,7 +973,12 @@ test('recorder launch is idempotent while idle and only the HUD may mark it acti
     );
     const foreign = fakeWindow(fixture.calls);
     assert.equal(fixture.ipcListeners.get('editor:recorder-active')({ sender: foreign.webContents }, false), false);
-    assert.equal(await fixture.ipcHandlers.get('editor:open-recorder')({ sender: origin.webContents }), false);
+    assert.equal(
+      await fixture.ipcHandlers.get('editor:open-recorder')({
+        sender: origin.webContents,
+      }),
+      false,
+    );
   } finally {
     fixture.restore();
   }
@@ -964,14 +1016,24 @@ test('closing a recorder origin while active blocks another editor from launchin
     });
     const second = await readyEditor(fixture, secondOpening);
 
-    assert.equal(await fixture.ipcHandlers.get('editor:open-recorder')({ sender: first.webContents }), true);
+    assert.equal(
+      await fixture.ipcHandlers.get('editor:open-recorder')({
+        sender: first.webContents,
+      }),
+      true,
+    );
     assert.equal(
       fixture.ipcListeners.get('editor:recorder-active')({ sender: fixture.hudWindow.webContents }, true),
       true,
     );
     first.destroy();
 
-    assert.equal(await fixture.ipcHandlers.get('editor:open-recorder')({ sender: second.webContents }), false);
+    assert.equal(
+      await fixture.ipcHandlers.get('editor:open-recorder')({
+        sender: second.webContents,
+      }),
+      false,
+    );
   } finally {
     fixture.restore();
   }
@@ -982,12 +1044,16 @@ test('dismissing a recorder whose origin is gone leaves the HUD visible', async 
   try {
     const opening = fixture.manager.open(projectId);
     const origin = await readyEditor(fixture, opening);
-    await fixture.ipcHandlers.get('editor:open-recorder')({ sender: origin.webContents });
+    await fixture.ipcHandlers.get('editor:open-recorder')({
+      sender: origin.webContents,
+    });
     origin.destroy();
     const hiddenCount = fixture.calls.filter((call) => call[0] === 'hud-visible' && call[1] === false).length;
 
     assert.equal(
-      await fixture.ipcHandlers.get('editor:dismiss-recorder')({ sender: fixture.hudWindow.webContents }),
+      await fixture.ipcHandlers.get('editor:dismiss-recorder')({
+        sender: fixture.hudWindow.webContents,
+      }),
       false,
     );
     assert.equal(fixture.hudWindow.isVisible(), true);
@@ -1058,7 +1124,9 @@ test('only the HUD may cancel a pending opening; cancellation preserves existing
     const original = f.windows[0];
     f.ipcListeners.get('editor:ready')({ sender: original.webContents });
     assert.equal(await originalOpening, true);
-    const pendingOpening = open({ sender: f.hudWindow.webContents }, projectId, { disposition: 'new-window' });
+    const pendingOpening = open({ sender: f.hudWindow.webContents }, projectId, {
+      disposition: 'new-window',
+    });
     const pending = f.windows[1];
     assert.equal(cancel({ sender: original.webContents }), false);
     assert.equal(cancel({ sender: {} }), false);
@@ -1074,7 +1142,9 @@ test('only the HUD may cancel a pending opening; cancellation preserves existing
       f.calls.some(([name]) => name === 'hud-close'),
       false,
     );
-    const retry = open({ sender: f.hudWindow.webContents }, projectId, { disposition: 'new-window' });
+    const retry = open({ sender: f.hudWindow.webContents }, projectId, {
+      disposition: 'new-window',
+    });
     const replacement = f.windows[2];
     pending.emitContent('did-finish-load');
     pending.emitContent('unresponsive');
@@ -1092,7 +1162,12 @@ test('cancelling after presentation cannot destroy the visible editor', async ()
     const opening = f.ipcHandlers.get('editor:open')({ sender: f.hudWindow.webContents }, projectId);
     f.ipcListeners.get('editor:ready')({ sender: f.windows[0].webContents });
     assert.equal(await opening, true);
-    assert.equal(f.ipcHandlers.get('editor:cancel-opening')({ sender: f.hudWindow.webContents }), false);
+    assert.equal(
+      f.ipcHandlers.get('editor:cancel-opening')({
+        sender: f.hudWindow.webContents,
+      }),
+      false,
+    );
     assert.equal(f.windows[0].isDestroyed(), false);
   } finally {
     f.restore();

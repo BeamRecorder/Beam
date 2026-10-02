@@ -4,7 +4,7 @@ const readline = require('node:readline');
 const { spawn } = require('node:child_process');
 const { buildCaptureEngine, cargoAvailable, cargoBuildArguments, runCommand } = require('../native/artifacts.cjs');
 const { downloadNativeFiles, requiredNativeFiles } = require('../native/download.cjs');
-const { x11LaunchArguments } = require('../../electron/lifecycle/linux-display-backend.cjs');
+const { x11LaunchArguments } = require('../../apps/desktop/electron/lifecycle/linux-display-backend.cjs');
 
 const applicationRoot = path.join(__dirname, '../..');
 
@@ -72,7 +72,14 @@ async function startElectron(
   await runCommand(
     process.execPath,
     [electronCli, ...(platform === 'linux' ? x11LaunchArguments(['.']) : ['.'])],
-    { cwd: root, env: { ...env, BEAM_CAPTURE_ENGINE: executable, BEAM_DEVELOPMENT_INSTANCE: '1' } },
+    {
+      cwd: root,
+      env: {
+        ...env,
+        BEAM_CAPTURE_ENGINE: executable,
+        BEAM_DEVELOPMENT_INSTANCE: '1',
+      },
+    },
     spawnImpl,
   );
 }

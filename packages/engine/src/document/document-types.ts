@@ -8,6 +8,7 @@ export interface DocumentSession<T> {
   transaction(commands: readonly DocumentCommand[]): void;
   undo(): Promise<void>;
   redo(): Promise<void>;
+  takeObserverErrors(): unknown[];
   subscribe(listener: () => void): () => void;
 }
 export interface DocumentSessionOptions<T> {

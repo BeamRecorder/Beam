@@ -21,14 +21,30 @@ const state = vi.hoisted(() => ({
   popupClose: vi.fn(),
 }));
 vi.mock('puppeteer-core', () => ({ default: { launch: state.launch } }));
-vi.mock('node:fs/promises', () => ({ mkdir: state.mkdir, mkdtemp: async () => '/cache/owned-beam', rm: state.rm }));
+vi.mock('node:fs/promises', () => ({
+  mkdir: state.mkdir,
+  mkdtemp: async () => '/cache/owned-beam',
+  rm: state.rm,
+}));
 vi.mock('./chromium-install', () => ({ chromiumExecutable: state.executable }));
-vi.mock('./chromium-settings', () => ({ chromiumSettings: () => ({ args: ['--headless'] }) }));
-vi.mock('./local-assets', () => ({ registerLocalAssets: (request: ExportRequest) => ({ request, files: new Map() }) }));
-vi.mock('./binary-output', () => ({ createBinaryOutput: async () => ({ abort: state.abort }) }));
+vi.mock('./chromium-settings', () => ({
+  chromiumSettings: () => ({ args: ['--headless'] }),
+}));
+vi.mock('./local-assets', () => ({
+  registerRenderAssets: (request: ExportRequest) => ({
+    request,
+    files: new Map(),
+  }),
+}));
+vi.mock('@beam/storage/node/binary-output', () => ({
+  createBinaryOutput: async () => ({ abort: state.abort }),
+}));
 vi.mock('./render-bundle', () => ({ buildRenderBundle: state.bundle }));
 vi.mock('./bundle-server', () => ({
-  serveRenderBundle: async () => ({ origin: 'http://127.0.0.1:9000', close: state.serverClose }),
+  serveRenderBundle: async () => ({
+    origin: 'http://127.0.0.1:9000',
+    close: state.serverClose,
+  }),
 }));
 vi.mock('./browser-lifecycle', () => ({ closeExportBrowser: state.close }));
 vi.mock('./export-server', () => ({
@@ -53,7 +69,10 @@ beforeEach(() => {
   const page = { on: state.pageOn, goto: state.goto, mainFrame: () => 'main' };
   state.launch.mockResolvedValue({
     on: state.browserOn,
-    createBrowserContext: async () => ({ overridePermissions: state.permissions, newPage: async () => page }),
+    createBrowserContext: async () => ({
+      overridePermissions: state.permissions,
+      newPage: async () => page,
+    }),
   });
   state.goto.mockReset().mockImplementation(async () => {
     state.completed?.({ path: 'published' });
@@ -61,15 +80,24 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 it('runs the independent compiled host and releases every owned resource on completion', async () => {
-  expect(await exportInChromium(request, '/input', '/output')).toEqual({ path: 'published' });
+  expect(await exportInChromium(request, '/input', '/output')).toEqual({
+    path: 'published',
+  });
   expect(state.launch).toHaveBeenCalledWith(
-    expect.objectContaining({ executablePath: '/chrome', headless: true, pipe: true }),
+    expect.objectContaining({
+      executablePath: '/chrome',
+      headless: true,
+      pipe: true,
+    }),
   );
   expect(state.permissions).toHaveBeenCalledWith('http://127.0.0.1:9000', []);
   expect(state.close).toHaveBeenCalledOnce();
   expect(state.serverClose).toHaveBeenCalledOnce();
   expect(state.abort).toHaveBeenCalledOnce();
-  expect(state.rm).toHaveBeenCalledWith('/cache/owned-beam', { recursive: true, force: true });
+  expect(state.rm).toHaveBeenCalledWith('/cache/owned-beam', {
+    recursive: true,
+    force: true,
+  });
 });
 it('propagates navigation failure and aborts partial output', async () => {
   state.goto.mockRejectedValueOnce(new Error('navigation failed'));
@@ -100,7 +128,10 @@ it('reports backend diagnostics, closes popups and accepts only its own main-fra
           .reverse()
           .find((call) => call[0] === name)![1];
       handler('console')({ text: () => 'progress' });
-      handler('requestfailed')({ url: () => '/asset', failure: () => ({ errorText: 'failed' }) });
+      handler('requestfailed')({
+        url: () => '/asset',
+        failure: () => ({ errorText: 'failed' }),
+      });
       handler('requestfailed')({ url: () => '/asset', failure: () => null });
       handler('popup')({ close: state.popupClose });
       handler('popup')(null);

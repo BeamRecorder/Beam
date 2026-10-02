@@ -9,7 +9,10 @@
     "@beam/runtime": "workspace:*",
     "@puppeteer/browsers": "^3.2.3",
     "puppeteer-core": "^25.12.0",
-    "vite": "^8.3.1"
+    "vite": "^8.3.1",
+    "@beam/storage": "workspace:*",
+    "@beam/native-client": "workspace:*",
+    "@vitejs/plugin-vue": "^6.0.9"
   },
   "bin": {
     "beam": "./src/index.ts"

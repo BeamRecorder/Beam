@@ -72,11 +72,15 @@ readline.createInterface = () => fakeInterface();
 fs.existsSync = () => true;
 process.env.BEAM_CAPTURE_ENGINE = '/fake/capture-engine';
 
-const { CaptureEngine } = require('../electron/capture/capture-engine.cjs');
+const { CaptureEngine } = require('../apps/desktop/electron/capture/capture-engine.cjs');
 
 function createEngine() {
   return new CaptureEngine(
-    { isPackaged: false, getVersion: () => '1.2.3', getPath: () => '/tmp/beam' },
+    {
+      isPackaged: false,
+      getVersion: () => '1.2.3',
+      getPath: () => '/tmp/beam',
+    },
     '/tmp/beam',
     {},
   );
@@ -277,7 +281,7 @@ test('shutdown gracefully stops, force-kills the child, and stays idempotent', a
 });
 
 test('native preview cleanup is allowed only on a live running engine', () => {
-  const { CaptureEngine } = require('../electron/capture/capture-engine.cjs');
+  const { CaptureEngine } = require('../apps/desktop/electron/capture/capture-engine.cjs');
   const engine = new CaptureEngine({}, '/beam');
   assert.equal(engine.canCleanup(), false);
   assert.equal(spawned.length, 0);
@@ -351,4 +355,10 @@ test('packaged engine resolution never queries the developer Cargo installation'
     fs.existsSync = previousExists;
     process.resourcesPath = previousResources;
   }
+});
+test('native transport rejects payloads that override its request envelope before spawning', async () => {
+  const engine = new CaptureEngine({ isPackaged: false, getVersion: () => '1.2.3' }, '/worktree');
+  for (const payload of [{ id: 'foreign' }, { command: 'stop' }, { requestId: 'foreign' }, [], null])
+    await assert.rejects(engine.request('capabilities', payload), /request envelope/);
+  assert.equal(spawned.length, 0);
 });

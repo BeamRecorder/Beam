@@ -6,15 +6,25 @@ import { benchmarkDocument } from './benchmark';
 
 describe('CLI document boundaries', () => {
   it('preserves Beam project metadata while replacing only the composition', () => {
-    const value = { projectId: 'owned', editor: { composition: emptyComposition(), other: 1 }, sessions: [] };
+    const value = {
+      projectId: 'owned',
+      editor: { composition: emptyComposition(), other: 1 },
+      sessions: [],
+    };
     const document = readDocumentFile(value);
     const next = emptyComposition();
-    expect(document.replace(next)).toEqual({ ...value, editor: { ...value.editor, composition: next } });
+    expect(document.replace(next)).toEqual({
+      ...value,
+      editor: { ...value.editor, composition: next },
+    });
   });
   it('accepts standalone compositions, snapshots and export jobs', () => {
     const composition = emptyComposition();
     expect(readDocumentFile(composition).replace(composition)).toBe(composition);
-    expect(readDocumentFile({ composition, duration: 1 }).replace(composition)).toEqual({ composition, duration: 1 });
+    expect(readDocumentFile({ composition, duration: 1 }).replace(composition)).toEqual({
+      composition,
+      duration: 1,
+    });
     expect(readDocumentFile({ snapshot: { composition }, format: 'webm' }).replace(composition)).toEqual({
       snapshot: { composition },
       format: 'webm',

@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { createQuickSnipFinalizer, safeName } = require('../electron/quick-snip/quick-snip-finalizer.cjs');
+const { createQuickSnipFinalizer, safeName } = require('../apps/desktop/electron/quick-snip/quick-snip-finalizer.cjs');
 
 function fixture(t, render) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-snip-'));
@@ -35,8 +35,17 @@ test('writes Instant exports into the project exports folder with preset and pro
     return { path: options.target, projectId: 'project-id' };
   });
   const values = [];
-  const configuration = { mode: 'instant', format: 'mp4', name: 'Demo', preset: { id: 'named' } };
-  const result = await f.finalize({ session: f.session, configuration, onProgress: (value) => values.push(value) });
+  const configuration = {
+    mode: 'instant',
+    format: 'mp4',
+    name: 'Demo',
+    preset: { id: 'named' },
+  };
+  const result = await f.finalize({
+    session: f.session,
+    configuration,
+    onProgress: (value) => values.push(value),
+  });
 
   assert.deepEqual(f.projectIds, ['project-id']);
   assert.equal(received.store, f.projectStore);
@@ -47,7 +56,10 @@ test('writes Instant exports into the project exports folder with preset and pro
 });
 
 test('supports WebM and avoids overwriting an existing project export', async (t) => {
-  const f = fixture(t, async (options) => ({ path: options.target, projectId: 'project-id' }));
+  const f = fixture(t, async (options) => ({
+    path: options.target,
+    projectId: 'project-id',
+  }));
   const exportsDirectory = path.join(f.projectDirectory, 'exports');
   fs.mkdirSync(exportsDirectory, { recursive: true });
   fs.writeFileSync(path.join(exportsDirectory, 'Demo.webm'), 'keep');
@@ -61,7 +73,10 @@ test('supports WebM and avoids overwriting an existing project export', async (t
 });
 
 test('uses the current session project directory rather than another project', async (t) => {
-  const f = fixture(t, async (options) => ({ path: options.target, projectId: options.configuration.projectId }));
+  const f = fixture(t, async (options) => ({
+    path: options.target,
+    projectId: options.configuration.projectId,
+  }));
   const session = { projectId: 'another-project' };
 
   const result = await f.finalize({
@@ -83,7 +98,11 @@ test('passes cancellation through to the renderer and leaves project data intact
   });
 
   await assert.rejects(
-    f.finalize({ session: f.session, configuration: { mode: 'instant' }, signal: abort.signal }),
+    f.finalize({
+      session: f.session,
+      configuration: { mode: 'instant' },
+      signal: abort.signal,
+    }),
     /Canceled/,
   );
   assert.equal(fs.existsSync(path.join(f.projectDirectory, 'exports')), true);

@@ -5,6 +5,7 @@ import { createServer, type ViteDevServer } from 'vite';
 import puppeteer, { type Browser, type Page } from 'puppeteer-core';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { chromiumExecutable } from './chromium-install';
 import { chromiumSettings } from './chromium-settings';
@@ -21,6 +22,8 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
   beforeAll(async () => {
     temp = await mkdtemp(resolve(homedir(), '.cache/beam-test-'));
     server = await createServer({
+      root: fileURLToPath(new URL('../../../', import.meta.url)),
+      cacheDir: resolve(temp, 'vite'),
       server: { host: '127.0.0.1', port: 0 },
       logLevel: 'silent',
       plugins: [
@@ -58,27 +61,43 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
   const snapshot = (): CompositionSnapshot => ({
     duration: 1,
     render: { fps: 10, sourceWidth: null, sourceHeight: null },
-    canvas: normalizeOutputCanvas({ width: 128, height: 72, showBackground: false }),
+    canvas: normalizeOutputCanvas({
+      width: 128,
+      height: 72,
+      showBackground: false,
+    }),
     background: null,
     blurPercent: 0,
     zooms: [],
-    cursor: { available: false, events: [], telemetry: [], shapes: {}, catalog: {}, missing: [] },
+    cursor: {
+      available: false,
+      events: [],
+      telemetry: [],
+      shapes: {},
+      catalog: {},
+      missing: [],
+    },
     cursorPack: null,
     cursorSettings: { ...createDefaultCursorPresentation(), enabled: false },
-    composition: { schemaVersion: 14, assets: [], keyboardCaptionSessions: [], clips: [colorClip()] },
+    composition: {
+      schemaVersion: 14,
+      assets: [],
+      keyboardCaptionSessions: [],
+      clips: [colorClip()],
+    },
   });
   const compare = async (snapshot: CompositionSnapshot, time = 0.5) =>
     page.evaluate(
       async ({ snapshot, time }) => {
         const renderPath = '/packages/runtime/src/rendering/render.ts';
-        const previewPath = '/src/components/video-editor/canvas/runtime-preview.ts';
+        const previewPath = '/apps/desktop/src/components/editor/canvas/runtime-preview.ts';
         const layersPath = '/packages/engine/src/composition/scene-layers.ts';
         // Keep imports inside the browser realm; Vitest rewrites lexical imports to SSR helpers.
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const { renderCompositionFrame } = (await load(renderPath)) as typeof import('@beam/runtime/rendering/render');
         const { createRuntimePreview } = (await load(
           previewPath,
-        )) as typeof import('../../../src/components/video-editor/canvas/runtime-preview');
+        )) as typeof import('../../desktop/src/components/editor/canvas/runtime-preview');
         const { resolveCompositionSceneLayers } = (await load(
           layersPath,
         )) as typeof import('@beam/engine/composition/scene-layers');
@@ -213,7 +232,10 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
     value.background = { kind: 'color', color: '#772255' };
     const clip = value.composition.clips[0];
     if (clip?.kind === 'color') clip.transform = { x: 0.25, y: 0.25, width: 0.5, height: 0.5 };
-    expect(await compare(value)).toMatchObject({ differingChannels: 0, maximumError: 0 });
+    expect(await compare(value)).toMatchObject({
+      differingChannels: 0,
+      maximumError: 0,
+    });
   });
   it('flattens overlapping children before applying group opacity and nested transforms', async () => {
     const value = snapshot();
@@ -258,7 +280,13 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
         {
           ...group(),
           mask: { shape: 'ellipse', x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
-          transform: { x: 0.05, y: 0, rotation: 10, scaleX: 0.8, scaleY: 0.8 },
+          transform: {
+            x: 0.05,
+            y: 0,
+            rotation: 10,
+            scaleX: 0.8,
+            scaleY: 0.8,
+          },
         },
       ],
     };
@@ -277,16 +305,26 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
         },
       ],
     };
-    value.canvas.transitions = { entry: { durationMs: 300, preset: { kind: 'fade' } }, exit: null };
+    value.canvas.transitions = {
+      entry: { durationMs: 300, preset: { kind: 'fade' } },
+      exit: null,
+    };
     for (const time of [0.1, 0.9, 0.5, 0.1])
-      expect(await compare(value, time)).toMatchObject({ differingChannels: 0, maximumError: 0 });
+      expect(await compare(value, time)).toMatchObject({
+        differingChannels: 0,
+        maximumError: 0,
+      });
   });
   it('matches decoded screens, cursor ripples, camera zoom and animated nested geometry', async () => {
     const value = snapshot();
     value.composition = { ...screenDocument(), schemaVersion: 14 };
     value.render.sourceWidth = 128;
     value.render.sourceHeight = 72;
-    value.composition.scene = { version: 1, roots: ['g'], groups: [{ ...group('g', ['screen']), opacity: 0.8 }] };
+    value.composition.scene = {
+      version: 1,
+      roots: ['g'],
+      groups: [{ ...group('g', ['screen']), opacity: 0.8 }],
+    };
     value.composition.animations = {
       version: 1,
       tracks: [
@@ -320,12 +358,30 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
     value.cursorSettings.enabled = true;
     value.cursorSettings.motion.motionBlur = 0;
     value.cursor.events = [
-      { event: 'move', sessionNs: 0, pixelX: 64, pixelY: 36, normalizedX: 0.5, normalizedY: 0.5, visible: true },
-      { event: 'button', sessionNs: 200000000, button: 1, pressed: true, normalizedX: 0.5, normalizedY: 0.5 },
+      {
+        event: 'move',
+        sessionNs: 0,
+        pixelX: 64,
+        pixelY: 36,
+        normalizedX: 0.5,
+        normalizedY: 0.5,
+        visible: true,
+      },
+      {
+        event: 'button',
+        sessionNs: 200000000,
+        button: 1,
+        pressed: true,
+        normalizedX: 0.5,
+        normalizedY: 0.5,
+      },
     ];
     value.cursorSettings.clickEffects.left.rippleEnabled = true;
     for (const time of [0.25, 0.8, 0.25])
-      expect(await compare(value, time)).toMatchObject({ differingChannels: 0, maximumError: 0 });
+      expect(await compare(value, time)).toMatchObject({
+        differingChannels: 0,
+        maximumError: 0,
+      });
   });
   it('matches generated text in an animated overlay group at cut boundaries', async () => {
     const value = snapshot();
@@ -342,7 +398,15 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
       enabled: true,
       caption: {
         type: 'text',
-        sentences: [{ id: 'sentence', text: 'Beam', startMs: 0, endMs: 1000, words: [] }],
+        sentences: [
+          {
+            id: 'sentence',
+            text: 'Beam',
+            startMs: 0,
+            endMs: 1000,
+            words: [],
+          },
+        ],
         style: { ...createDefaultCaptionStyle(), fontSize: 18 },
       },
     });
@@ -368,7 +432,10 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
     };
     expect((await compare(value, 0.5)).contrastingPixels).toBeGreaterThan(0);
     for (const time of [0, 0.5, 0.999, 1, 0.5])
-      expect(await compare(value, time)).toMatchObject({ differingChannels: 0, maximumError: 0 });
+      expect(await compare(value, time)).toMatchObject({
+        differingChannels: 0,
+        maximumError: 0,
+      });
   });
   it('renders a real blur effect with the same WebGL backend', async () => {
     const value = snapshot();

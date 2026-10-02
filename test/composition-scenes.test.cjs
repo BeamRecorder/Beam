@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { normalizeComposition, migrateComposition } = require('../electron/projects/clip-composition.cjs');
+const { normalizeComposition, migrateComposition } = require('../apps/desktop/electron/projects/clip-composition.cjs');
 const document = () => ({
   schemaVersion: 14,
   assets: [],
