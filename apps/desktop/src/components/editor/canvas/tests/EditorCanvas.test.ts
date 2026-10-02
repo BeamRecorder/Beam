@@ -1556,4 +1556,17 @@ describe('EditorCanvas', () => {
 
     expect(mounted.find('.recenter-button').exists()).toBe(false);
   });
+
+  it('routes horizontal wheel direction to canvas zoom and ignores an empty wheel event', async () => {
+    const mounted = mountEditor(),
+      island = mounted.get('.canvas-island');
+    const transform = () => (mounted.get('.canvas-viewport').element as HTMLElement).style.transform;
+    expect(transform()).toContain('scale(1)');
+    await island.trigger('wheel', { deltaX: -100, deltaY: 0 });
+    expect(transform()).toContain('scale(1.12)');
+    await island.trigger('wheel', { deltaX: 0, deltaY: 0 });
+    expect(transform()).toContain('scale(1.12)');
+    await island.trigger('wheel', { deltaX: 100, deltaY: 0 });
+    expect(transform()).toContain('scale(1)');
+  });
 });

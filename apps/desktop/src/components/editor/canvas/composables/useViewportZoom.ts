@@ -49,7 +49,9 @@ export function useViewportZoom() {
 
   const handleWheel = (event: WheelEvent, containerRect?: DOMRect | null) => {
     event.preventDefault();
-    const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+    if (!Number.isFinite(delta) || delta === 0) return;
+    const factor = delta < 0 ? 1.12 : 1 / 1.12;
     const nextScale = clampZoom(zoomScale.value * factor);
 
     if (containerRect) {
