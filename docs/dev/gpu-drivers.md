@@ -1,5 +1,7 @@
 # GPU drivers and WebCodecs export
 
+For the isolated CPU/GPU reproduction command and the identified Chromium storage mismatch, see [Linux image-buffer investigation](webcodecs-linux-buffers.md).
+
 Beam exports video with WebCodecs through Chromium. Chromium uses the operating system's media and graphics drivers underneath that API. Installing a VA-API driver does not introduce a native encoder into Beam.
 
 Hardware rendering, decoding and encoding are separate capabilities. A working WebGL canvas or accelerated video playback does not establish that WebCodecs can encode its frames. CBR (`constant`) and VBR (`variable`) are rate-control modes; neither forces hardware encoding or 100% GPU utilization.

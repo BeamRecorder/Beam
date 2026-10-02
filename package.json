@@ -53,6 +53,7 @@
     "build": "node scripts/native/artifacts.cjs build && vite build && bun run build:cli",
     "electron:dev": "node scripts/dev/electron.cjs",
     "electron:dev:no-rust": "node scripts/dev/electron.cjs --force-no-rust",
+    "diagnose:webcodecs": "node scripts/diagnostics/webcodecs-export.cjs",
     "electron:build": "bun run build && electron-builder --publish never",
     "typecheck:packages": "bun run --filter @beam/engine --filter @beam/runtime --filter @beam/encoder --filter @beam/cli --filter @beam/storage --filter @beam/system-metrics typecheck",
     "beam": "bun apps/cli/src/index.ts",

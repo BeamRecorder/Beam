@@ -6,6 +6,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- A WebCodecs diagnostic command checks CPU/GPU frame inputs in separate sandboxed Electron processes, records encoded packets and native GPU crashes, and compares hardware requests with software controls.
 - Export reports include native GPU utilization minimum, median, mean and maximum, plus per-engine measurements on Linux, Windows and macOS when driver counters are available. Reports identify process-wide versus device-wide scope and unavailable measurements.
 - Create and edit video or image documents through a shared engine API and CLI, with identified JSON transactions, revision conflicts, retry deduplication and undo/redo.
 - Packaged CLI launchers use Beam's bundled Electron runtime and support native recording/screenshot commands without a separate Bun or Node installation.
