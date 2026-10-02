@@ -418,7 +418,7 @@
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU (실험적)",
-    "experimentalFfmpegDesc": "Linux 네이티브 GPU 백엔드로 내보냅니다.",
+    "experimentalFfmpegDesc": "Quick Snip을 포함한 Linux GPU 동영상 내보내기에 적용되는 저장된 설정입니다.",
     "exportVideo": "내보내기",
     "exportVideoDuration": "내보내기 ({seconds}초)",
     "exportUntilPlayhead": "재생 헤드까지 내보내기",

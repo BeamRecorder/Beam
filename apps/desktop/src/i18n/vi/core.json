@@ -418,7 +418,7 @@
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU (thử nghiệm)",
-    "experimentalFfmpegDesc": "Xuất bằng backend GPU gốc trên Linux.",
+    "experimentalFfmpegDesc": "Tùy chọn đã lưu để xuất video bằng GPU trên Linux, bao gồm Quick Snip.",
     "exportVideo": "Xuất",
     "exportVideoDuration": "Xuất ({seconds} giây)",
     "exportUntilPlayhead": "Xuất đến đầu phát",

@@ -18,6 +18,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { safeExportErrorMessage, technicalExportError } from '@beam/encoder/mediabunny/export-preflight';
 import { buildBeamExportReport } from '@beam/encoder/export-diagnostics';
 import type { DesktopExportRequest } from './experimental-export-types';
+import { useExportBackendPreference } from './useExportBackendPreference';
 
 const { t, locale } = useTranslate('ExportPopover');
 
@@ -48,8 +49,14 @@ const presets: ExportPreset[] = ['low', 'medium', 'high'];
 const frameRates: ExportFrameRate[] = [24, 30, 60];
 const moreOptionsOpen = ref(false);
 const exportUntilPlayhead = ref(false);
-const isLinux = capture.platform === 'linux';
-const experimentalLinuxFfmpeg = ref(false);
+const {
+  available: isLinux,
+  enabled: experimentalLinuxFfmpeg,
+  ready: backendReady,
+  busy: backendBusy,
+  error: backendError,
+  setEnabled: setExperimentalLinuxFfmpeg,
+} = useExportBackendPreference();
 const includeAudio = computed({
   get: () => props.request.includeAudio !== false,
   set: (value: boolean) => emit('update:includeAudio', value),
@@ -97,7 +104,7 @@ const formattedExportDuration = computed(() =>
 const exportButtonLabel = computed(() =>
   exportUntilPlayhead.value ? t('exportVideoDuration', { seconds: formattedExportDuration.value }) : t('exportVideo'),
 );
-const canExport = computed(() => activeExportDuration.value > 0);
+const canExport = computed(() => activeExportDuration.value > 0 && backendReady.value && !backendBusy.value);
 
 const resolutionDescriptions = computed<Record<ExportResolutionOption, string>>(() => {
   const dims720 = computeExportDimensions('720p');
@@ -142,7 +149,9 @@ const percentage = computed(() => {
   const value = progress.value;
   return value?.totalImages ? (value.completedImages / value.totalImages) * 100 : 0;
 });
-const displayError = computed(() => availability.value || (error.value ? safeExportErrorMessage(error.value) : null));
+const displayError = computed(
+  () => availability.value || backendError.value || (error.value ? safeExportErrorMessage(error.value) : null),
+);
 
 const lastRequest = ref<ExportRequest | null>(null);
 const buildRequest = (): DesktopExportRequest => {
@@ -368,7 +377,12 @@ const run = async () => {
                   <span class="more-option-title">{{ t('experimentalFfmpeg') }}</span>
                   <span class="option-hint">{{ t('experimentalFfmpegDesc') }}</span>
                 </div>
-                <Switch v-model="experimentalLinuxFfmpeg" :aria-label="t('experimentalFfmpeg')" />
+                <Switch
+                  :model-value="experimentalLinuxFfmpeg"
+                  :disabled="backendBusy || !backendReady"
+                  :aria-label="t('experimentalFfmpeg')"
+                  @update:model-value="setExperimentalLinuxFfmpeg"
+                />
               </div>
               <div class="more-options-content">
                 <div class="more-option-copy">

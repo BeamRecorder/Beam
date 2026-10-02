@@ -105,4 +105,13 @@ describe('indexed bilingual settings search', () => {
       expect(catalogue.some(({ id }) => id === 'always-on-top')).toBe(true);
     }
   });
+  it.each(['linux', 'win32', 'darwin', 'unknown'])(
+    'indexes the video backend only where it is available (%s)',
+    (platform) => {
+      const translate = (key: string) => key;
+      const catalogue = settingsSearchEntries(translate, translate, false, platform);
+      expect(catalogue.some(({ id }) => id === 'video-export-backend')).toBe(platform === 'linux');
+      expect(catalogue.some(({ id }) => id === 'language')).toBe(true);
+    },
+  );
 });

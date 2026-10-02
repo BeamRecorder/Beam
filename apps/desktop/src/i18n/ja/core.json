@@ -418,7 +418,7 @@
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU（実験的）",
-    "experimentalFfmpegDesc": "Linux のネイティブ GPU バックエンドで書き出します。",
+    "experimentalFfmpegDesc": "Quick Snip を含む Linux の GPU 動画書き出しに適用する保存済み設定です。",
     "exportVideo": "書き出す",
     "exportVideoDuration": "書き出す（{seconds}秒）",
     "exportUntilPlayhead": "再生ヘッドまで書き出す",

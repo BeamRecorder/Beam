@@ -418,7 +418,7 @@
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU（實驗性）",
-    "experimentalFfmpegDesc": "使用 Linux 原生 GPU 後端匯出。",
+    "experimentalFfmpegDesc": "已儲存的 Linux GPU 影片匯出設定，同樣適用於 Quick Snip。",
     "exportVideo": "匯出",
     "exportVideoDuration": "匯出（{seconds} 秒）",
     "exportUntilPlayhead": "匯出至播放頭",

@@ -2,6 +2,8 @@
 
 Linux desktop exports can opt into **FFmpeg GPU (experimental)** under Export → More options. Preview and capture keep their existing backends. The normal export option continues to use WebCodecs. The experimental path supports MP4/H.264 and WebM/VP9, with hardware VBR encoding, even dimensions from 2 to 8192, and integer frame rates from 1 to 120. Actual driver limits can be lower.
 
+This is an application preference, also available under Preferences → General on Linux. Enabling or disabling it is saved through the desktop preference service (`extras.videoExportBackend`) and synchronized between open windows. It survives restarting Beam and applies to subsequent editor and Quick Snip video exports. Screenshot exports keep their image backend. Existing installations default to WebCodecs until this option is explicitly enabled; Windows/macOS ignore the Linux-only selection.
+
 ## Build and dependencies
 
 Install a C++17 compiler, `pkg-config`, Node.js development headers, FFmpeg development libraries (`libavcodec`, `libavutil`, `libavfilter`, `libavformat`), libva and libdrm development packages. The runtime needs matching FFmpeg shared libraries and a functioning VA-API driver with the requested encoder and RGB DMA-BUF import support. `vainfo` reporting an encoding entrypoint is necessary but does not prove that import will work.

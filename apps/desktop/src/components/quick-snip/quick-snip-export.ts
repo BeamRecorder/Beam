@@ -19,6 +19,7 @@ import { createCompositionSnapshot } from '@beam/runtime/rendering/snapshot';
 import { projectFontSources } from '../editor/text/project-font-sources';
 import { exportWithMediabunny } from '../export/mediabunny/exporter';
 import type { ExportRequest } from '@beam/encoder/export-types';
+import { usesExperimentalLinuxFfmpeg } from '../export/export-backend-preference';
 
 export function quickSnipExportRequest(
   task: QuickSnipRenderTask,
@@ -106,12 +107,20 @@ export function quickSnipExportRequest(
 }
 
 export async function renderQuickSnip(task: QuickSnipRenderTask, signal: AbortSignal) {
-  const [backgrounds, packs] = await Promise.all([capture.listBackgroundLibrary(), capture.listCursorPacks()]);
+  const [backgrounds, packs, preferences] = await Promise.all([
+    capture.listBackgroundLibrary(),
+    capture.listCursorPacks(),
+    capture.platform === 'linux' ? capture.getPreferences() : null,
+  ]);
   if (signal.aborted) return;
   const { state, request } = quickSnipExportRequest(task, backgrounds, packs);
   await capture.saveQuickSnipRenderState(task.id, state);
+  if (signal.aborted) return;
   const result = await exportWithMediabunny(
-    request,
+    {
+      ...request,
+      ...(usesExperimentalLinuxFfmpeg(preferences, capture.platform) ? { experimentalLinuxFfmpeg: true } : {}),
+    },
     (progress) => {
       void capture
         .reportQuickSnipRender({

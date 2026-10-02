@@ -1,6 +1,8 @@
 import type { ExportRequest, ExportProgress } from '@beam/encoder/export-types';
 import type { ExportRuntimeDiagnostics } from '@beam/encoder/export-diagnostics-types';
 
+export type DesktopVideoExportBackend = 'webcodecs' | 'ffmpeg-vaapi';
+
 export interface DesktopExportRequest extends ExportRequest {
   experimentalLinuxFfmpeg?: boolean;
 }

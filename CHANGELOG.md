@@ -33,6 +33,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- The experimental Linux FFmpeg GPU export choice is now saved across restarts, shared with General preferences, and applied to Quick Snip video exports.
 - Experimental Linux GPU exports send DMA-BUF descriptors through an asynchronous native bridge instead of launching a process for every frame. Reports separate Chromium presentation waits, GPU import/conversion and native encoding timings.
 - MP4 and WebM exports select a working WebCodecs encoder at the requested resolution, frame rate and bitrate, checking hardware variable and constant bitrate modes before software encoding. Linux desktop and hardware CLI backends enable accelerated video encoding; reports show the selected bitrate mode and hardware frame-check failures.
 - Preview and export reuse unchanged active clip order and text layout; Studio retains fixed background pixels, and export progress thumbnails convert without pausing video encoding.

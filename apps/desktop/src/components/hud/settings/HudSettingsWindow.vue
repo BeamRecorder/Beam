@@ -32,6 +32,8 @@ const searchIndex = computed(() => {
     settingsSearchEntries(
       (key) => translate(key, { version: '' }),
       (key) => translate(key, { version: '' }, { locale: 'en' }),
+      import.meta.env.DEV,
+      capture.platform,
     ),
   );
 });

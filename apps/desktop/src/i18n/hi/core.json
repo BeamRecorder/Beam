@@ -418,7 +418,7 @@
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU (प्रायोगिक)",
-    "experimentalFfmpegDesc": "Linux के नेटिव GPU बैकएंड से एक्सपोर्ट करें।",
+    "experimentalFfmpegDesc": "Quick Snip सहित Linux पर GPU से वीडियो एक्सपोर्ट करने की सहेजी गई प्राथमिकता।",
     "exportVideo": "निर्यात करें",
     "exportVideoDuration": "निर्यात करें ({seconds} सेकंड)",
     "exportUntilPlayhead": "प्लेहेड तक एक्सपोर्ट करें",

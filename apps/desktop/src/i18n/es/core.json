@@ -418,7 +418,7 @@
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU (experimental)",
-    "experimentalFfmpegDesc": "Exportar con el backend GPU nativo de Linux.",
+    "experimentalFfmpegDesc": "Preferencia guardada para exportar vídeos con la GPU en Linux, incluido Quick Snip.",
     "exportVideo": "Exportar",
     "exportVideoDuration": "Exportar ({seconds} s)",
     "exportUntilPlayhead": "Exportar hasta el cabezal de reproducción",

@@ -83,6 +83,7 @@ const definitions = [
   ],
   ['reset-theme', 'general', 'AppearanceSettings.resetDefault', 'AppearanceSettings.themeCustomization'],
   ['onboarding', 'general', 'HudPreferences.onboarding', 'HudPreferences.onboardingDesc'],
+  ['video-export-backend', 'general', 'ExportPopover.experimentalFfmpeg', 'ExportPopover.experimentalFfmpegDesc'],
   [
     'recorder-bar',
     'recording',
@@ -159,9 +160,11 @@ export function settingsSearchEntries(
   translate: (key: string) => string,
   english: (key: string) => string,
   development = import.meta.env.DEV,
+  platform = 'unknown',
 ): SettingsSearchEntry[] {
   const entries: SettingsSearchEntry[] = definitions
     .filter(([, view]) => development || view !== 'developer')
+    .filter(([id]) => id !== 'video-export-backend' || platform === 'linux')
     .map(([id, view, title, description, ...options]) => ({
       id,
       view,

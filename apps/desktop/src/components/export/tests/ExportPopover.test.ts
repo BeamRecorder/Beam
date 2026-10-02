@@ -6,6 +6,7 @@ import { i18n, setCurrentLocale } from '~/i18n';
 import { useToastStore } from '~/ui/toast/toastStore';
 import { ExportValidationError, type EditorExportSource, type ExportRequest } from '@beam/encoder/export-types';
 import { type CompositionSnapshot } from '@beam/engine/shared/render-document-types';
+import { usePreferencesStore } from '~/stores/preferences';
 
 const { mockJob, mockCapture } = vi.hoisted(() => ({
   mockJob: {
@@ -17,6 +18,9 @@ const { mockJob, mockCapture } = vi.hoisted(() => ({
     platform: 'linux',
     getEditorPresets: vi.fn(),
     updateEditorPreset: vi.fn(),
+    getPreferences: vi.fn(),
+    updatePreferences: vi.fn(),
+    onPreferencesChanged: vi.fn(() => vi.fn()),
   },
 }));
 
@@ -114,6 +118,18 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockCapture.getEditorPresets.mockReset().mockResolvedValue({ activePresetId: 'default', presets: [] });
   mockCapture.updateEditorPreset.mockReset().mockResolvedValue({});
+  mockCapture.getPreferences.mockReset().mockResolvedValue({ extras: {} });
+  usePreferencesStore().settings = {
+    schemaVersion: 3,
+    theme: 'light',
+    recordingBar: { visibility: 'always' },
+    recordingInteractions: { enabled: false, noticeDismissed: false },
+    devices: {},
+    shortcuts: {},
+    backgroundPresets: { colors: [], gradients: [] },
+    extras: {},
+  };
+  mockCapture.updatePreferences.mockReset().mockImplementation(async (patch) => ({ extras: patch.extras }));
   mockJob.start.mockReset();
   mockJob.cancel.mockReset();
   Object.defineProperty(window, 'capture', {
@@ -165,6 +181,8 @@ describe('ExportPopover', () => {
       .find((control) => control.attributes('aria-label') === i18n.global.t('ExportPopover.experimentalFfmpeg'))!;
     expect(toggle.attributes('aria-checked')).toBe('false');
     await toggle.trigger('click');
+    await flushPromises();
+    expect(mockCapture.updatePreferences).toHaveBeenCalledWith({ extras: { videoExportBackend: 'ffmpeg-vaapi' } });
     await exportAction(wrapper).trigger('click');
     expect(mockJob.start).toHaveBeenCalledWith(expect.objectContaining({ experimentalLinuxFfmpeg: true }));
   });
@@ -181,7 +199,75 @@ describe('ExportPopover', () => {
     const wrapper = mountExport();
     await openMoreOptions(wrapper);
     expect(wrapper.text()).toContain('FFmpeg GPU (expérimental)');
-    expect(wrapper.text()).toContain('Exporter avec le backend GPU natif Linux.');
+    expect(wrapper.text()).toContain(
+      'Préférence enregistrée pour les exports vidéo GPU sous Linux, y compris Quick Snip.',
+    );
+  });
+
+  it('keeps the saved backend checked after reopening the export popover', async () => {
+    usePreferencesStore().settings = null;
+    mockCapture.getPreferences.mockResolvedValue({ extras: { videoExportBackend: 'ffmpeg-vaapi' } });
+    const first = mountExport();
+    await flushPromises();
+    first.unmount();
+    const wrapper = mountExport();
+    await openMoreOptions(wrapper);
+    const toggle = wrapper
+      .findAll('[role="switch"]')
+      .find((control) => control.attributes('aria-label') === i18n.global.t('ExportPopover.experimentalFfmpeg'))!;
+    expect(toggle.attributes('aria-checked')).toBe('true');
+    await exportAction(wrapper).trigger('click');
+    expect(mockJob.start).toHaveBeenCalledWith(expect.objectContaining({ experimentalLinuxFfmpeg: true }));
+    expect(mockCapture.getPreferences).toHaveBeenCalledOnce();
+  });
+
+  it('uses changes from shared preferences and persists switching back to WebCodecs', async () => {
+    const wrapper = mountExport();
+    await flushPromises();
+    await openMoreOptions(wrapper);
+    usePreferencesStore().settings!.extras.videoExportBackend = 'ffmpeg-vaapi';
+    await nextTick();
+    const toggle = wrapper
+      .findAll('[role="switch"]')
+      .find((control) => control.attributes('aria-label') === i18n.global.t('ExportPopover.experimentalFfmpeg'))!;
+    expect(toggle.attributes('aria-checked')).toBe('true');
+    await toggle.trigger('click');
+    await flushPromises();
+    expect(toggle.attributes('aria-checked')).toBe('false');
+    expect(mockCapture.updatePreferences).toHaveBeenCalledWith({ extras: { videoExportBackend: 'webcodecs' } });
+    await exportAction(wrapper).trigger('click');
+    expect(mockJob.start.mock.calls[0]![0]).not.toHaveProperty('experimentalLinuxFfmpeg');
+  });
+
+  it('disables export while a backend save is pending and shows a failed save without changing the backend', async () => {
+    const pending = deferred<{ extras: Record<string, unknown> }>();
+    mockCapture.updatePreferences.mockReturnValue(pending.promise);
+    const wrapper = mountExport();
+    await flushPromises();
+    await openMoreOptions(wrapper);
+    const toggle = wrapper
+      .findAll('[role="switch"]')
+      .find((control) => control.attributes('aria-label') === i18n.global.t('ExportPopover.experimentalFfmpeg'))!;
+    await toggle.trigger('click');
+    expect(toggle.attributes('disabled')).toBeDefined();
+    expect(exportAction(wrapper).attributes('disabled')).toBeDefined();
+    await exportAction(wrapper).trigger('click');
+    expect(mockJob.start).not.toHaveBeenCalled();
+    pending.reject(new Error('disk full'));
+    await flushPromises();
+    expect(wrapper.get('[role="alert"]').text()).toContain('disk full');
+    expect(toggle.attributes('aria-checked')).toBe('false');
+    expect(exportAction(wrapper).attributes('disabled')).toBeUndefined();
+  });
+
+  it('blocks export until preferences are loaded and displays unavailable preferences', async () => {
+    usePreferencesStore().settings = null;
+    mockCapture.getPreferences.mockRejectedValue(new Error('preferences unavailable'));
+    const wrapper = mountExport();
+    await flushPromises();
+    expect(wrapper.get('[role="alert"]').text()).toContain('preferences unavailable');
+    expect(exportAction(wrapper).attributes('disabled')).toBeDefined();
+    expect(mockJob.start).not.toHaveBeenCalled();
   });
 
   it('keeps the playhead option off by default and exports the full snapshot duration', async () => {
