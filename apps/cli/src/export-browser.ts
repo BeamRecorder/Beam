@@ -1,3 +1,4 @@
+import { readGpuUsage } from '@beam/system-metrics/gpu-validation';
 import { jsonObject } from '@beam/engine/document/json-value';
 import { createBrowserExportWorker } from '@beam/encoder/browser';
 import { encodeWithWorker } from '@beam/encoder';
@@ -108,10 +109,11 @@ try {
         finalize: async () => {
           const result = await post('finalize');
           if (typeof result.path !== 'string') throw new TypeError('Output host returned an invalid destination.');
-          return { path: result.path };
+          return { path: result.path, gpuUsage: readGpuUsage(result.gpuUsage) };
         },
         abort: async () => {
-          await post('abort');
+          const result = await post('abort');
+          return { gpuUsage: readGpuUsage(result.gpuUsage) };
         },
       },
       diagnostics,

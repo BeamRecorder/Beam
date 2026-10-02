@@ -16,12 +16,16 @@ export async function encodeWithWorker(
   diagnostics: ExportDiagnostics,
   cursorImages: PreparedCursorImage[],
 ): Promise<ExportResult> {
+  const abortHost = async () => {
+    const aborted = await host.abort();
+    if (aborted?.gpuUsage) diagnostics.gpuUsage = aborted.gpuUsage;
+  };
   const closeCursorImages = () => {
     for (const image of cursorImages) image.bitmap.close();
   };
   if (signal.aborted) {
     closeCursorImages();
-    await host.abort();
+    await abortHost();
     throw abortError();
   }
   let worker: Worker;
@@ -29,7 +33,7 @@ export async function encodeWithWorker(
     worker = host.createWorker();
   } catch (error) {
     closeCursorImages();
-    await host.abort().catch(() => undefined);
+    await abortHost().catch(() => undefined);
     throw error;
   }
 
@@ -47,7 +51,7 @@ export async function encodeWithWorker(
       else resolve({ path: path!, format: request.format, diagnostics });
     };
     const abortNative = async (error: unknown) => {
-      await host.abort().catch(() => undefined);
+      await abortHost().catch(() => undefined);
       finish(error);
     };
     const cancel = () => {
@@ -98,7 +102,8 @@ export async function encodeWithWorker(
       }
       const nativeFinalizationStarted = performance.now();
       void host.finalize().then(
-        ({ path }) => {
+        ({ path, gpuUsage }) => {
+          diagnostics.gpuUsage = gpuUsage;
           const nativeFinalizationMs = performance.now() - nativeFinalizationStarted;
           diagnostics.completedAt = new Date().toISOString();
           diagnostics.runtime = {

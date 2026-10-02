@@ -18,6 +18,10 @@ pub enum Command {
         x: i32,
         y: i32,
     },
+    GpuUsage {
+        #[serde(rename = "processIds")]
+        process_ids: Vec<u32>,
+    },
     Capabilities,
     Permissions,
     InputAccessStatus,
@@ -69,6 +73,31 @@ pub enum Command {
 mod tests {
     use super::*;
 
+    #[test]
+    fn gpu_usage_preserves_host_process_identifiers() {
+        let command =
+            serde_json::from_str::<Command>(r#"{"command":"gpu-usage","processIds":[42,17]}"#);
+        assert!(matches!(command, Ok(Command::GpuUsage { process_ids }) if process_ids == [42,17]));
+    }
+    #[test]
+    fn gpu_usage_rejects_invalid_identifiers_at_the_protocol_boundary() {
+        for value in [
+            r#"{"command":"gpu-usage"}"#,
+            r#"{"command":"gpu-usage","processIds":[-1]}"#,
+            r#"{"command":"gpu-usage","processIds":["42"]}"#,
+        ] {
+            assert!(serde_json::from_str::<Command>(value).is_err());
+        }
+    }
+    #[test]
+    fn gpu_usage_serializes_the_named_command() {
+        let value = serde_json::to_value(Command::GpuUsage {
+            process_ids: vec![42],
+        })
+        .unwrap_or_default();
+        assert_eq!(value["command"], "gpu-usage");
+        assert_eq!(value["processIds"][0], 42);
+    }
     #[test]
     fn color_selection_preserves_the_owning_window_identifier() {
         let command = serde_json::from_str::<Command>(

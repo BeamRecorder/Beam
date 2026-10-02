@@ -1,3 +1,4 @@
+import { formatGpuUsage } from '@beam/system-metrics/gpu-report';
 import { mayBeEnabled } from '@beam/engine/scene/scene-visibility';
 import type { ExportDiagnostics, ExportRuntimeDiagnostics } from '@beam/encoder/export-diagnostics-types';
 import type { ExportProgress, ExportRequest } from '@beam/encoder/export-types';
@@ -159,7 +160,7 @@ export function buildBeamExportReport(options: {
     `  Encoder / Backpressure: ${finite(runtime?.encoderBackpressureMs)}`,
     `Audio Pipeline: ${finite(runtime?.audioPipelineMs)}`,
     `Mux Finalization: ${finite(runtime?.muxFinalizationMs)}`,
-    `Native File Sync / Rename: ${finite(runtime?.nativeFinalizationMs)}`,
+    `Native Finalization (publication / host diagnostics): ${finite(runtime?.nativeFinalizationMs)}`,
     `IPC / Disk Wait: ${finite(runtime?.ipcWriteWaitMs)}`,
     `Total Export Time: ${duration(elapsedMs)}`,
     `Encoding Throughput: ${runtime?.encodedFps === null || runtime?.encodedFps === undefined ? 'Unknown' : `${runtime.encodedFps.toFixed(2)} frames/s`}`,
@@ -171,6 +172,8 @@ export function buildBeamExportReport(options: {
     `Video Key Frames: ${runtime?.keyFrameCount ?? 'Unknown'}`,
     `Encoded Video Bytes: ${bytes(runtime?.encodedVideoBytes)}`,
     `Dominant Measured Bottleneck: ${dominantBottleneck(runtime)}`,
+    '',
+    ...formatGpuUsage(diagnostics?.gpuUsage),
     ...(runtime?.engine ? ['', '--- Engine Stages ---', ...formatEngineMetrics(runtime.engine)] : []),
     ...(cleanedError(options.error) ? ['', '--- Error ---', cleanedError(options.error)!] : []),
     '===================',

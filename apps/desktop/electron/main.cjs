@@ -39,6 +39,7 @@ const { createRendererSetup } = require('./lifecycle/renderer-setup.cjs');
 const { createEditorWindowManager } = require('./window/editor-window.cjs');
 const { createHudPanelManager } = require('./window/hud-panels.cjs');
 const { createOnboardingWindowManager } = require('./window/onboarding-window.cjs');
+const { createDesktopGpuMonitor } = require('./export/gpu-monitor.cjs');
 const { registerExportIpc } = require('./export/export-ipc.cjs');
 const { registerTranscriptExportIpc } = require('./captions/transcript-export-ipc.cjs');
 const { createCameraStorage, registerCameraIpc } = require('./camera-ipc.cjs');
@@ -334,6 +335,7 @@ function initializeApplication() {
         BrowserWindow,
         defaultExportDirectory: app.getPath('videos'),
         resolveAutomaticDestination: quickSnipService.exportDestination,
+        createGpuMonitor: () => createDesktopGpuMonitor({ app, captureEngine }),
       });
       logStartup('Export IPC registered.');
       registerTranscriptExportIpc({

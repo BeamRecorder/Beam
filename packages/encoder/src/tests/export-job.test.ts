@@ -1,3 +1,4 @@
+import { gpuSummary } from '../../../system-metrics/src/tests/gpu-fixture';
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { encodeWithWorker } from '../export-job';
@@ -112,5 +113,25 @@ describe('platform-independent export jobs', () => {
       sequence: 1,
       message: 'Export chunk write failed.',
     });
+  });
+  it('attaches native GPU statistics to the completed export result', async () => {
+    const fixture = exportJobFixture(),
+      gpuUsage = gpuSummary();
+    fixture.host.finalize.mockResolvedValue({ path: '/output.webm', gpuUsage });
+    const job = start(fixture);
+    job.worker.emit({ type: 'complete', diagnostics: job.runtime });
+    expect((await job.running).diagnostics.gpuUsage).toBe(gpuUsage);
+  });
+  it('retains GPU measurements when the worker fails or cancellation occurs before construction', async () => {
+    for (const cancelled of [false, true]) {
+      const fixture = exportJobFixture(),
+        gpuUsage = gpuSummary();
+      fixture.host.abort.mockResolvedValue({ gpuUsage });
+      if (cancelled) fixture.controller.abort();
+      const job = start(fixture);
+      if (!cancelled) job.worker.emit({ type: 'error', error: { name: 'Error', message: 'render failed' } });
+      await expect(job.running).rejects.toThrow();
+      expect(job.diagnostics.gpuUsage).toBe(gpuUsage);
+    }
   });
 });

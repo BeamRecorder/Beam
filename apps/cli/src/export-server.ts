@@ -1,3 +1,4 @@
+import type { GpuMonitor } from '@beam/system-metrics/node/gpu-monitor';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { extname } from 'node:path';
@@ -24,6 +25,7 @@ export function createExportServer(
   output: Awaited<ReturnType<typeof createBinaryOutput>>,
   completed: (result: unknown) => void,
   failed: (error: Error) => void,
+  gpuMonitor?: () => GpuMonitor | undefined,
 ) {
   return async (request: IncomingMessage, response: ServerResponse, next: () => void) => {
     const url = new URL(request.url ?? '/', 'http://127.0.0.1');
@@ -77,10 +79,14 @@ export function createExportServer(
         await output.write(position, await body(request, 16 * 1024 * 1024));
         return json({ written: true });
       }
-      if (url.pathname === '/beam-cli/finalize') return json(await output.finalize());
+      if (url.pathname === '/beam-cli/finalize') {
+        const gpuUsage = await gpuMonitor?.()?.finish();
+        return json({ ...(await output.finalize()), ...(gpuUsage ? { gpuUsage } : {}) });
+      }
       if (url.pathname === '/beam-cli/abort') {
+        const gpuUsage = await gpuMonitor?.()?.finish();
         await output.abort();
-        return json({ aborted: true });
+        return json({ aborted: true, ...(gpuUsage ? { gpuUsage } : {}) });
       }
       if (url.pathname === '/beam-cli/done') {
         const result: unknown = JSON.parse((await body(request, 1024 * 1024)).toString());

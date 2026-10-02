@@ -26,6 +26,7 @@ vi.mock('node:fs/promises', () => ({
   mkdtemp: async () => '/cache/owned-beam',
   rm: state.rm,
 }));
+vi.mock('./gpu-monitor', () => ({ createCliGpuMonitor: () => ({ finish: async () => undefined }) }));
 vi.mock('./chromium-install', () => ({ chromiumExecutable: state.executable }));
 vi.mock('./chromium-settings', () => ({
   chromiumSettings: () => ({ args: ['--headless'] }),

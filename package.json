@@ -19,7 +19,8 @@
     "apps/cli",
     "apps/desktop",
     "packages/storage",
-    "packages/native-client"
+    "packages/native-client",
+    "packages/system-metrics"
   ],
   "overrides": {
     "@unhead/dom": "3.4.2",
@@ -39,8 +40,8 @@
     "rust-test:coverage": "powershell.exe -NoProfile -Command \"cargo llvm-cov --workspace --all-features --html --output-dir coverage/rust; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; cargo llvm-cov report --text --show-missing-lines; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; cargo llvm-cov report --lcov --output-path coverage/rust/lcov.info\"",
     "typecheck": "tsc -p tsconfig.typecheck.json --noEmit --pretty false",
     "typecheck:vue": "vue-tsc -b --pretty false",
-    "format": "oxfmt --write \"apps/desktop/src/**/*.{vue,ts}\" \"packages/{engine,runtime,encoder,storage,native-client}/src/**/*.{ts,js}\" \"apps/cli/src/**/*.{ts,cjs}\" \"website/**/*.{vue,ts,css,html,json,jsonc}\" \"apps/desktop/electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
-    "format:check": "oxfmt --check \"apps/desktop/src/**/*.{vue,ts}\" \"packages/{engine,runtime,encoder,storage,native-client}/src/**/*.{ts,js}\" \"apps/cli/src/**/*.{ts,cjs}\" \"website/**/*.{vue,ts,css,html,json,jsonc}\" \"apps/desktop/electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
+    "format": "oxfmt --write \"apps/desktop/src/**/*.{vue,ts}\" \"packages/{engine,runtime,encoder,storage,native-client,system-metrics}/src/**/*.{ts,js,cjs}\" \"apps/cli/src/**/*.{ts,cjs}\" \"website/**/*.{vue,ts,css,html,json,jsonc}\" \"apps/desktop/electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
+    "format:check": "oxfmt --check \"apps/desktop/src/**/*.{vue,ts}\" \"packages/{engine,runtime,encoder,storage,native-client,system-metrics}/src/**/*.{ts,js,cjs}\" \"apps/cli/src/**/*.{ts,cjs}\" \"website/**/*.{vue,ts,css,html,json,jsonc}\" \"apps/desktop/electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
     "lint": "oxlint --vue-plugin",
     "dev": "vite",
     "website:dev": "bun run --filter @beam/website dev",
@@ -53,7 +54,7 @@
     "electron:dev": "node scripts/dev/electron.cjs",
     "electron:dev:no-rust": "node scripts/dev/electron.cjs --force-no-rust",
     "electron:build": "bun run build && electron-builder --publish never",
-    "typecheck:packages": "bun run --filter @beam/engine --filter @beam/runtime --filter @beam/encoder --filter @beam/cli --filter @beam/storage typecheck",
+    "typecheck:packages": "bun run --filter @beam/engine --filter @beam/runtime --filter @beam/encoder --filter @beam/cli --filter @beam/storage --filter @beam/system-metrics typecheck",
     "beam": "bun apps/cli/src/index.ts",
     "check:boundaries": "node scripts/check-package-boundaries.mjs",
     "build:cli": "bun scripts/build-cli.mjs"
@@ -77,7 +78,8 @@
     "@beam/runtime": "workspace:*",
     "@beam/encoder": "workspace:*",
     "@beam/storage": "workspace:*",
-    "@beam/native-client": "workspace:*"
+    "@beam/native-client": "workspace:*",
+    "@beam/system-metrics": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",
@@ -104,7 +106,8 @@
       "apps/desktop/electron/**/*",
       "packages/engine/src/scene/scene-schema.js",
       "packages/storage/src/node/*.cjs",
-      "packages/native-client/src/*.cjs"
+      "packages/native-client/src/*.cjs",
+      "packages/system-metrics/src/node/*.cjs"
     ],
     "directories": {
       "output": "dist_electron"

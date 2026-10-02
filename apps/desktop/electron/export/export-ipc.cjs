@@ -20,6 +20,7 @@ function registerExportIpc({
   BrowserWindow,
   defaultExportDirectory = null,
   resolveAutomaticDestination = () => null,
+  createGpuMonitor,
   fsModule = fs,
   pathModule = path,
 }) {
@@ -32,12 +33,14 @@ function registerExportIpc({
   };
   const cleanup = async (job) => {
     jobs.delete(job.id);
+    const gpuUsage = await job.gpuMonitor?.finish();
     await job.queue.catch(() => undefined);
     if (job.handle) await job.handle.close().catch(() => undefined);
     job.handle = null;
     await fsModule.promises.unlink(job.temporaryPath).catch((error) => {
       if (error?.code !== 'ENOENT') throw error;
     });
+    return { gpuUsage };
   };
 
   ipcMain.handle('export:begin', async (event, payload = {}) => {
@@ -67,6 +70,7 @@ function registerExportIpc({
       targetPath,
       temporaryPath,
       handle,
+      gpuMonitor: createGpuMonitor?.(),
       nextSequence: 0,
       queue: Promise.resolve(),
     });
@@ -95,12 +99,13 @@ function registerExportIpc({
   ipcMain.handle('export:finalize', async (event, payload = {}) => {
     const job = requireJob(event, payload.jobId);
     await job.queue;
+    const gpuUsage = await job.gpuMonitor?.finish();
     await job.handle.sync();
     await job.handle.close();
     job.handle = null;
     await fsModule.promises.rename(job.temporaryPath, job.targetPath);
     jobs.delete(job.id);
-    return { path: job.targetPath };
+    return { path: job.targetPath, ...(gpuUsage ? { gpuUsage } : {}) };
   });
   ipcMain.handle('export:abort', (event, payload = {}) => cleanup(requireJob(event, payload.jobId)));
   ipcMain.handle('export:open-file', (_event, payload = {}) => {

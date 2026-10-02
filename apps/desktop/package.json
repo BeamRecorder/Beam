@@ -20,6 +20,7 @@
     "@beam/runtime": "workspace:*",
     "@beam/encoder": "workspace:*",
     "@beam/storage": "workspace:*",
-    "@beam/native-client": "workspace:*"
+    "@beam/native-client": "workspace:*",
+    "@beam/system-metrics": "workspace:*"
   }
 }

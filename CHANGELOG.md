@@ -6,6 +6,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Export reports include native GPU utilization minimum, median, mean and maximum, plus per-engine measurements on Linux, Windows and macOS when driver counters are available. Reports identify process-wide versus device-wide scope and unavailable measurements.
 - Create and edit video or image documents through a shared engine API and CLI, with identified JSON transactions, revision conflicts, retry deduplication and undo/redo.
 - Packaged CLI launchers use Beam's bundled Electron runtime and support native recording/screenshot commands without a separate Bun or Node installation.
 - Render seekable HTML/Vue motion projects through the shared video renderer and encoder, including paused GSAP animations.

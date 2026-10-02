@@ -1,3 +1,4 @@
+import type { GpuUsageSummary } from '@beam/system-metrics';
 import type { EngineMetricsSnapshot } from '@beam/runtime/performance/engine-metrics-types';
 
 export interface ExportRuntimeDiagnostics {
@@ -55,6 +56,7 @@ export interface ExportEnvironmentDiagnostics {
 }
 
 export interface ExportDiagnostics {
+  gpuUsage?: GpuUsageSummary;
   schemaVersion: 1;
   startedAt: string;
   completedAt: string | null;

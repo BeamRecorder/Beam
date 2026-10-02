@@ -1,3 +1,4 @@
+import { readGpuUsage } from '@beam/system-metrics/gpu-validation';
 import { createBrowserExportWorker } from '@beam/encoder/browser';
 import { encodeWithWorker } from '@beam/encoder/export-job';
 import type { ExportProgress, ExportRequest, ExportResult } from '@beam/encoder/export-types';
@@ -76,7 +77,10 @@ export async function exportWithMediabunny(
     {
       createWorker: createBrowserExportWorker,
       writeChunk: (chunk) => window.capture!.writeExportChunk({ jobId: opened.jobId, ...chunk }),
-      finalize: () => window.capture!.finalizeExport(opened.jobId),
+      finalize: async () => {
+        const result = await window.capture!.finalizeExport(opened.jobId);
+        return { ...result, gpuUsage: readGpuUsage(result.gpuUsage) };
+      },
       abort: () => window.capture!.abortExport(opened.jobId),
     },
     diagnostics,

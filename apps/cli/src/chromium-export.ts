@@ -1,3 +1,4 @@
+import { createCliGpuMonitor } from './gpu-monitor';
 import type { MotionHost } from './motion-types';
 import puppeteer, { type Browser } from 'puppeteer-core';
 import { randomUUID } from 'node:crypto';
@@ -30,6 +31,7 @@ export async function exportInChromium(
   const output = await createBinaryOutput(destination, overwrite);
   let server: Awaited<ReturnType<typeof serveRenderBundle>> | undefined;
   let browser: Browser | undefined;
+  let gpuMonitor: ReturnType<typeof createCliGpuMonitor> | undefined;
   let browserTemp: string | undefined;
   let timeout: ReturnType<typeof setTimeout> | undefined;
   let onInterrupt: (() => void) | undefined;
@@ -52,7 +54,7 @@ export async function exportInChromium(
       for (const [route, file] of await buildMotionBundle(motion.entry, resolve(browserTemp, 'motion')))
         bundle.set(route, file);
     }
-    const handle = createExportServer(auth, assets.request, assets.files, output, completed, failed);
+    const handle = createExportServer(auth, assets.request, assets.files, output, completed, failed, () => gpuMonitor);
     server = await serveRenderBundle(bundle, async (request, response, next) => {
       const url = new URL(request.url ?? '/', 'http://127.0.0.1');
       if (url.pathname !== '/beam-cli/frame') return handle(request, response, next);
@@ -82,6 +84,7 @@ export async function exportInChromium(
       userDataDir: resolve(browserTemp, 'profile'),
       env: { ...process.env, TMPDIR: browserTemp },
     });
+    if (!('kind' in request)) gpuMonitor = createCliGpuMonitor(browser);
     browser.on('disconnected', () => failed(new Error('Chromium export backend disconnected.')));
     const context = await browser.createBrowserContext();
     await context.overridePermissions(new URL(url).origin, []);
@@ -118,6 +121,7 @@ export async function exportInChromium(
       process.removeListener('SIGINT', onInterrupt);
       process.removeListener('SIGTERM', onInterrupt);
     }
+    await gpuMonitor?.finish();
     if (browser) await closeExportBrowser(browser);
     try {
       await server?.close();

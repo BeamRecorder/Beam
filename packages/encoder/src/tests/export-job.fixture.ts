@@ -1,3 +1,4 @@
+import type { ExportHostServices } from '../export-host-types';
 import { vi } from 'vitest';
 import { emptyComposition } from '@beam/engine';
 import type { ExportRequest, ExportProgress } from '../export-types';
@@ -17,8 +18,8 @@ export const exportJobFixture = () => {
   const host = {
     createWorker: vi.fn(() => worker as unknown as Worker),
     writeChunk: vi.fn(async () => {}),
-    finalize: vi.fn(async () => ({ path: '/output.webm' })),
-    abort: vi.fn(async () => {}),
+    finalize: vi.fn<ExportHostServices['finalize']>(async () => ({ path: '/output.webm' })),
+    abort: vi.fn<ExportHostServices['abort']>(async () => {}),
   };
   const request = {
     projectName: 'Test',

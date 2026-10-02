@@ -8,9 +8,17 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const allowed = {
   storage: new Set(['@beam/storage']),
   'native-client': new Set(['@beam/native-client']),
+  'system-metrics': new Set(['@beam/system-metrics']),
   engine: new Set(['@beam/engine']),
   runtime: new Set(['@beam/engine', '@beam/runtime', 'mediabunny']),
-  encoder: new Set(['@beam/engine', '@beam/runtime', '@beam/encoder', 'mediabunny', '@mediabunny/aac-encoder']),
+  encoder: new Set([
+    '@beam/engine',
+    '@beam/runtime',
+    '@beam/encoder',
+    '@beam/system-metrics',
+    'mediabunny',
+    '@mediabunny/aac-encoder',
+  ]),
 };
 const failures = [];
 let checked = 0;
@@ -42,7 +50,8 @@ for (const [name, dependencies] of Object.entries(allowed)) {
         check(node.moduleSpecifier.text);
       if (
         ts.isCallExpression(node) &&
-        (node.expression.kind === ts.SyntaxKind.ImportKeyword || ts.isIdentifier(node.expression) && node.expression.text === 'require') &&
+        (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+          (ts.isIdentifier(node.expression) && node.expression.text === 'require')) &&
         ts.isStringLiteral(node.arguments[0])
       )
         check(node.arguments[0].text);
@@ -65,8 +74,11 @@ for (const [name, dependencies] of Object.entries(allowed)) {
           failures.push(`${filename}: relative import escapes package: ${specifier}`);
         return;
       }
-      if ((name === 'native-client' || name === 'storage' && filename.includes(path.sep + 'node' + path.sep)) &&
-        builtinModules.includes(specifier.replace(/^node:/, ''))) return;
+      if (
+        (name === 'native-client' || (name === 'storage' && filename.includes(path.sep + 'node' + path.sep))) &&
+        builtinModules.includes(specifier.replace(/^node:/, ''))
+      )
+        return;
       if (![...dependencies].some((dependency) => specifier === dependency || specifier.startsWith(dependency + '/'))) {
         failures.push(`${filename}: forbidden dependency ${specifier}`);
       }
@@ -81,7 +93,11 @@ for (const application of ['desktop', 'cli']) {
       if (['node_modules', 'dist', 'tests'].includes(entry.name)) continue;
       const filename = path.join(directory, entry.name);
       if (entry.isDirectory()) checkSize(filename);
-      else if (/\.(ts|js|cjs|vue)$/.test(entry.name) && !entry.name.includes('.test.') && !entry.name.endsWith('.d.ts')) {
+      else if (
+        /\.(ts|js|cjs|vue)$/.test(entry.name) &&
+        !entry.name.includes('.test.') &&
+        !entry.name.endsWith('.d.ts')
+      ) {
         if (readFileSync(filename, 'utf8').split('\n').length > 501) failures.push(`${filename}: exceeds 500 lines`);
       }
     }

@@ -115,6 +115,7 @@ struct Engine {
     session: Option<RecordingSession>,
     region_selection: Option<capture::screen::RegionSelection>,
     catalog: NativeCatalog,
+    gpu_sampler: beam_system_metrics::GpuSampler,
     system_audio_preview: Option<SystemAudioMonitor>,
     #[cfg(target_os = "linux")]
     last_portal_snapshot: Option<CatalogSnapshot>,
@@ -158,6 +159,9 @@ fn prepare_snapshot(engine: &mut Engine) -> Result<CatalogSnapshot, capture::Cap
 
 fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
     let result: Result<serde_json::Value, capture::CaptureError> = (|| match request.command {
+        Command::GpuUsage { process_ids } => {
+            serde_json::to_value(engine.gpu_sampler.sample(&process_ids)).map_err(Into::into)
+        }
         Command::Discover => serde_json::to_value(discover_snapshot(engine)?).map_err(Into::into),
         Command::ResolveDisplay { x, y } => {
             #[cfg(windows)]

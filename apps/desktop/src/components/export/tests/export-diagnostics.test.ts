@@ -1,3 +1,4 @@
+import { gpuSummary } from '../../../../../../packages/system-metrics/src/tests/gpu-fixture';
 import { describe, expect, it } from 'vitest';
 import { buildBeamExportReport } from '@beam/encoder/export-diagnostics';
 import type { ExportDiagnostics } from '@beam/encoder/export-diagnostics-types';
@@ -183,4 +184,17 @@ describe('buildBeamExportReport', () => {
     expect(report).toContain('Audio Clips: 0');
     expect(report).toContain('Audio Progress: None');
   });
+});
+
+it('includes native GPU statistics and their scope in the copied report', () => {
+  const report = buildBeamExportReport({
+    request,
+    format: 'webm',
+    preset: 'high',
+    status: 'completed',
+    progress,
+    diagnostics: { ...diagnostics, gpuUsage: gpuSummary() },
+  });
+  expect(report).toContain('GPU Busiest Engine: min 10.0%, median 30.0%, mean 40.0%, max 80.0%');
+  expect(report).toContain('Beam GPU processes');
 });

@@ -12,7 +12,8 @@
     "vite": "^8.3.1",
     "@beam/storage": "workspace:*",
     "@beam/native-client": "workspace:*",
-    "@vitejs/plugin-vue": "^6.0.9"
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@beam/system-metrics": "workspace:*"
   },
   "bin": {
     "beam": "./src/index.ts"

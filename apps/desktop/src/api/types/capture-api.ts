@@ -1,3 +1,4 @@
+import type { GpuUsageSummary } from '@beam/system-metrics';
 import type { HudPanelApi } from './hud-panel';
 import type { SourcePickerApi } from './source-picker';
 import type { InputAccessStatus } from './input-access';
@@ -262,8 +263,8 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipA
     format: 'webm' | 'mp4';
   }): Promise<{ canceled: true } | { canceled: false; jobId: string }>;
   writeExportChunk(payload: { jobId: string; sequence: number; data: Uint8Array; position: number }): Promise<void>;
-  finalizeExport(jobId: string): Promise<{ path: string }>;
-  abortExport(jobId: string): Promise<void>;
+  finalizeExport(jobId: string): Promise<{ path: string; gpuUsage?: GpuUsageSummary }>;
+  abortExport(jobId: string): Promise<void | { gpuUsage?: GpuUsageSummary }>;
   openFile(path: string): Promise<void>;
   showItemInFolder(path: string): Promise<void>;
   getUpdateState(): Promise<AppUpdateState>;

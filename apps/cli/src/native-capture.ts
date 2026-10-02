@@ -1,53 +1,15 @@
-import { NativeCaptureClient } from '@beam/native-client';
-import { access, mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
-import { constants } from 'node:fs';
+import { createNativeClient } from './native-client';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
-import { applicationPaths } from '@beam/storage/node/platform-paths';
 import { createBinaryOutput } from '@beam/storage/node/binary-output';
 import { jsonObject } from '@beam/engine/document/json-value';
-
-async function nativeClient() {
-  const root = process.env.BEAM_APPLICATION_ROOT ?? fileURLToPath(new URL('../../../', import.meta.url));
-  const version = process.env.BEAM_APP_VERSION ?? '0.4.0';
-  const extension = process.platform === 'win32' ? '.exe' : '';
-  const platform = process.platform === 'darwin' ? 'mac' : process.platform === 'win32' ? 'win' : 'linux';
-  const candidates = process.env.BEAM_CAPTURE_ENGINE
-    ? [process.env.BEAM_CAPTURE_ENGINE]
-    : [
-        ...(process.env.BEAM_RESOURCES_PATH
-          ? [join(process.env.BEAM_RESOURCES_PATH, 'capture-engine', `capture-engine-${version}${extension}`)]
-          : []),
-        join(root, 'packages', 'native-recorder', platform, process.arch, `capture-engine-${version}${extension}`),
-        join(root, 'target', 'debug', `capture-engine${extension}`),
-      ];
-  let executable: string | undefined;
-  for (const path of candidates) {
-    try {
-      await access(path, constants.X_OK);
-      executable = path;
-      break;
-    } catch {
-      /* Try the next explicit installation location. */
-    }
-  }
-  if (!executable)
-    throw new Error(`Native capture backend unavailable. Set BEAM_CAPTURE_ENGINE. Checked: ${candidates.join(', ')}`);
-  const data = applicationPaths().data;
-  await mkdir(data, { recursive: true });
-  return new NativeCaptureClient({
-    executable: () => executable!,
-    workingDirectory: () => data,
-    inputHelperPath: () => process.env.BEAM_INPUT_HELPER_PATH ?? null,
-  });
-}
 
 /** Rust owns discovery, source permissions, recording clocks and capture encoding on every platform. */
 export async function runCaptureCommand(args: string[]) {
   const [command, input, output, flag] = args;
   if (!input) throw new Error('Capture requires a command or configuration file.');
-  const client = await nativeClient();
+  const client = await createNativeClient();
   try {
     if (command === 'capture') {
       if (input === 'serve' && args.length === 2) {

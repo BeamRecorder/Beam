@@ -1,3 +1,4 @@
+import { gpuSummary } from '../../../packages/system-metrics/src/tests/gpu-fixture';
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createServer, type Server } from 'node:http';
@@ -17,7 +18,7 @@ afterEach(async () => {
   server = undefined;
   directory = undefined;
 });
-async function backend() {
+async function backend(gpuUsage?: ReturnType<typeof gpuSummary>) {
   directory = await mkdtemp(join(tmpdir(), 'beam-cli-server-'));
   const file = join(directory, 'source.webm');
   await writeFile(file, new Uint8Array([1, 2, 3, 4]));
@@ -39,6 +40,7 @@ async function backend() {
     output,
     completed,
     failed,
+    gpuUsage ? () => ({ finish: async () => gpuUsage, snapshot: () => gpuUsage }) : undefined,
   );
   server = createServer((request, response) => {
     void handle(request, response, () => {
@@ -121,4 +123,11 @@ describe('CLI transport capabilities', () => {
     expect((await fetch(url('asset/binary'))).headers.get('Content-Type')).toBe('application/octet-stream');
     await expect(fetch(url('asset/directory'))).rejects.toThrow();
   });
+});
+
+it('publishes native GPU statistics with completed and aborted output responses', async () => {
+  const gpuUsage = gpuSummary(),
+    { url } = await backend(gpuUsage);
+  expect(await (await fetch(url('finalize'), { method: 'POST' })).json()).toMatchObject({ gpuUsage });
+  expect(await (await fetch(url('abort'), { method: 'POST' })).json()).toMatchObject({ gpuUsage });
 });
