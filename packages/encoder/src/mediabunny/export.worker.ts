@@ -11,6 +11,8 @@ import { renderExportAudio, renderExportVideo } from '@beam/encoder/mediabunny/e
 import { loadExportFonts } from '@beam/encoder/mediabunny/export-worker-fonts';
 import type { PreparedCursorImage } from '@beam/encoder/mediabunny/export-cursor-images';
 import { requiredExportCursorAssets } from '@beam/encoder/mediabunny/export-cursor-selection';
+import { createExportPreview } from './export-preview';
+import type { ExportPreview } from './export-preview-types';
 
 let controller: AbortController | null = null;
 let output: ExportWorkerOutput | null = null;
@@ -69,15 +71,7 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
         )
       : [];
   const totalFrames = Math.max(1, Math.ceil(request.snapshot.duration * request.snapshot.render.fps));
-  let lastPreviewAt = -Infinity;
-  let preview: string | undefined;
-  const previewScale = Math.min(256 / request.snapshot.canvas.width, 144 / request.snapshot.canvas.height);
-  const previewCanvas = request.preview
-    ? new OffscreenCanvas(
-        Math.max(2, Math.round(request.snapshot.canvas.width * previewScale)),
-        Math.max(2, Math.round(request.snapshot.canvas.height * previewScale)),
-      )
-    : null;
+  let preview: ExportPreview | null = null;
   let assets: ExportAssets | null = null;
   const bitmaps = new Map<string, ImageBitmap>();
   const transferredCursors = new Map<string, ImageBitmap>();
@@ -115,13 +109,14 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
     phase,
   });
   const report = (value: ExportProgress, force = false) =>
-    progress({ ...value, preview, diagnostics: diagnostics(value.stage) }, force);
+    progress({ ...value, preview: preview?.current, diagnostics: diagnostics(value.stage) }, force);
   try {
     if (typeof OffscreenCanvas === 'undefined') throw new Error('OffscreenCanvas is required for export.');
     if (typeof VideoEncoder === 'undefined' || typeof VideoDecoder === 'undefined')
       throw new Error('WebCodecs is required for export.');
     if (audioClips.length && (typeof AudioEncoder === 'undefined' || typeof AudioDecoder === 'undefined'))
       throw new Error('WebCodecs audio support is required for export.');
+    if (request.preview) preview = createExportPreview(request.snapshot.canvas.width, request.snapshot.canvas.height);
     report(baseProgress('validating_assets', 0, totalFrames, audioClips.length > 0, totalTimeMs), true);
     await loadExportFonts(request.snapshot.composition, request.snapshot.fontSources);
     assets = await openExportAssets(request, signal, (completed, total) => {
@@ -196,17 +191,8 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
         context,
         output,
         pipelineController.signal,
-        async (done, stats) => {
-          if (previewCanvas && performance.now() - lastPreviewAt > 500) {
-            lastPreviewAt = performance.now();
-            const previewContext = previewCanvas.getContext('2d');
-            if (previewContext) {
-              previewContext.drawImage(context.canvas, 0, 0, previewCanvas.width, previewCanvas.height);
-              const blob = await previewCanvas.convertToBlob({ type: 'image/jpeg', quality: 0.65 });
-              const bytes = new Uint8Array(await blob.arrayBuffer());
-              preview = `data:image/jpeg;base64,${btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(''))}`;
-            }
-          }
+        (done, stats) => {
+          preview?.capture(context.canvas);
           measured.decodeMs = stats.decodeMs;
           measured.renderMs = stats.renderMs;
           measured.encoderBackpressureMs = stats.encoderBackpressureMs;
@@ -237,6 +223,8 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
     }
     const videoStats = videoResult.value;
     const audioStats = audioResult.value;
+    await preview?.settle();
+    if (signal.aborted) throw new DOMException('Export cancelled.', 'AbortError');
     measured.videoPipelineMs = videoStats.elapsedMs;
     measured.engine = videoStats.engine;
     measured.decodeMs = videoStats.decodeMs;
@@ -271,6 +259,7 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
     await cancelOutput();
     throw error;
   } finally {
+    preview?.dispose();
     if (activeAssets === assets) {
       assets?.dispose();
       activeAssets = null;

@@ -178,6 +178,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
           watermarkImage: () => null,
           drafts: () => ({}),
           editingCaptionId: () => null,
+          backgroundCacheKey: () => [snapshot.background],
           drawBackground: (ctx, bounds) => {
             if (snapshot.background?.kind === 'color') {
               ctx.fillStyle = snapshot.background.color;
@@ -341,6 +342,96 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
     }, clips);
     expect(differences).toEqual(Array.from({ length: 6 }, () => ({ different: 0, max: 0 })));
   }, 60000);
+  it('retains text preparation without changing pixels through edits, reverse changes and late font loading', async () => {
+    const style = {
+      ...createDefaultCaptionStyle(18),
+      fontFamily: 'BeamCacheFont',
+      fontSize: 18,
+      wrap: true,
+      outlineWidth: 0,
+      extrusionDepth: 0,
+      shadowBlur: 0,
+    };
+    const result = await page.evaluate(async (style) => {
+      const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+      const { drawCaptionText } = (await load(
+        '/packages/runtime/src/composition/captions/render-caption-text.ts',
+      )) as typeof import('@beam/runtime/composition/captions/render-caption-text');
+      const value = {
+        id: 'cache-text',
+        kind: 'caption',
+        name: 'Text',
+        enabled: true,
+        order: 0,
+        timelineStartMs: 0,
+        timelineDurationMs: 1000,
+        sourceInMs: 0,
+        sourceDurationMs: 1000,
+        playbackRate: 1,
+        transform: { x: 0.1, y: 0.2, width: 0.7, height: 0.3 },
+        caption: { type: 'text', sentences: [], style },
+      } satisfies import('@beam/engine').CaptionClip;
+      const canvas = new OffscreenCanvas(256, 144),
+        ctx = canvas.getContext('2d')!;
+      let measured = 0;
+      const original = ctx.measureText.bind(ctx);
+      ctx.measureText = (text) => {
+        measured++;
+        return original(text);
+      };
+      const options = {
+        clip: value,
+        text: 'Beam has clear reusable rendering',
+        canvas: { width: 256, height: 144 },
+        viewport: { x: 0, y: 0, width: 256, height: 144 },
+      };
+      let differingChannels = 0;
+      const check = () => {
+        const fresh = new OffscreenCanvas(256, 144),
+          baseline = fresh.getContext('2d')!;
+        ctx.clearRect(0, 0, 256, 144);
+        drawCaptionText(ctx, options);
+        drawCaptionText(baseline, options);
+        const a = ctx.getImageData(0, 0, 256, 144).data,
+          b = baseline.getImageData(0, 0, 256, 144).data;
+        for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) differingChannels++;
+        fresh.width = fresh.height = 0;
+        return Array.from(a);
+      };
+      const fallback = check(),
+        firstMeasures = measured;
+      for (let tick = 0; tick < 60; tick++) check();
+      const repeatedMeasures = measured - firstMeasures;
+      options.text = 'Edited text with a different width';
+      check();
+      style.letterSpacing = 1.3;
+      check();
+      value.transform.width = 0.45;
+      check();
+      style.fontSize = 22;
+      check();
+      style.wrap = false;
+      check();
+      style.wrap = true;
+      style.fontSize = 18;
+      style.letterSpacing = 0;
+      value.transform.width = 0.7;
+      options.text = 'Beam has clear reusable rendering';
+      check();
+      const face = new FontFace('BeamCacheFont', 'url(/font/StackSansText-VariableFont_wght.woff2)');
+      await face.load();
+      document.fonts.add(face);
+      const loaded = check();
+      const fontChangedPixels = loaded.some((channel, i) => channel !== fallback[i]);
+      document.fonts.delete(face);
+      check();
+      canvas.width = canvas.height = 0;
+      return { differingChannels, repeatedMeasures, firstMeasures, fontChangedPixels };
+    }, style);
+    expect(result).toMatchObject({ differingChannels: 0, repeatedMeasures: 0, fontChangedPixels: true });
+    expect(result.firstMeasures).toBeGreaterThan(0);
+  });
+
   it('paints the same completed flat frame through both hosts', async () => {
     expect(await compare(snapshot())).toMatchObject({
       differingChannels: 0,

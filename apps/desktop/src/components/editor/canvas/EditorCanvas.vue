@@ -105,7 +105,7 @@ const clipToggleTransition = useCanvasClipToggleTransition({
   composition: () => props.composition,
   onRenderOnce: renderOnce,
 });
-const { drawBackground, syncPlayback, isTransitioningBackground } = useCanvasBackground(
+const { drawBackground, backgroundCacheKey, syncPlayback, isTransitioningBackground } = useCanvasBackground(
   () => props.selectedBackground,
   () => props.backgroundBlurPercent,
   () => props.previewQuality,
@@ -273,6 +273,7 @@ const runtimePreview = createRuntimePreview({
     return single && id ? { [id]: toRaw(single), ...drafts } : drafts;
   },
   editingCaptionId: () => elements.editingId.value ?? captionEditing.editingCaptionId.value,
+  backgroundCacheKey,
   drawBackground,
 });
 const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {

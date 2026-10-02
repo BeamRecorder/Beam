@@ -440,4 +440,51 @@ describe('resolveCompositionSceneLayers', () => {
     expect(editedResolver(500).cameraVisuals).toEqual([]);
     expect(editedResolver(2_000).cameraVisuals.map((clip) => clip.id)).toEqual(['editable']);
   });
+
+  it('continues evaluating geometry and enabled keyframes inside a retained active interval', () => {
+    const screen = visual('screen', 'animated', 0, false);
+    const doc = composition(screen, color(1));
+    doc.animations = {
+      version: 1,
+      tracks: [
+        {
+          id: 'visibility',
+          targetId: screen.id,
+          property: 'enabled',
+          interpolation: 'discrete',
+          keyframes: [
+            { timeMs: 0, value: true },
+            { timeMs: 500, value: false },
+            { timeMs: 750, value: true },
+          ],
+        },
+        {
+          id: 'position',
+          targetId: screen.id,
+          property: 'transform.x',
+          interpolation: 'number',
+          keyframes: [
+            { timeMs: 0, value: 0 },
+            { timeMs: 1000, value: 1 },
+          ],
+        },
+      ],
+    };
+    const at = createCompositionSceneLayerResolver(doc);
+    expect(at(250).screen?.transform.x).toBeCloseTo(0.25);
+    expect(at(600).screen).toBeNull();
+    expect(at(800).screen?.transform.x).toBeCloseTo(0.8);
+    expect(at(250).screen?.transform.x).toBeCloseTo(0.25);
+    expect(screen.enabled).toBe(false);
+    expect(screen.transform.x).toBe(0);
+  });
+
+  it('returns independent host arrays without exposing the retained ordered query', () => {
+    const at = createCompositionSceneLayerResolver(composition(visual('video', 'video', 0), color(1)));
+    const first = at(100);
+    first.visualStack.length = 0;
+    first.cameraVisuals.length = 0;
+    expect(at(200).visualStack.map((clip) => clip.id)).toEqual(['color', 'video']);
+    expect(at(200).cameraVisuals.map((clip) => clip.id)).toEqual(['video']);
+  });
 });

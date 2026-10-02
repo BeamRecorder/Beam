@@ -1,16 +1,13 @@
 import { drawTextDecoration } from '@beam/runtime/composition/captions/text-decoration';
 import type { CaptionClip, CaptionStyle } from '@beam/engine/shared/composition-types';
-import {
-  layoutCaptionText,
-  wrapCaptionHighlightLines,
-  type CaptionTextMeasurer,
-} from '@beam/engine/shared/caption-text-layout';
+import { wrapCaptionHighlightLines } from '@beam/engine/shared/caption-text-layout';
 import type { CaptionWordHighlightContent } from '@beam/engine/shared/caption-highlight-types';
 import type { KeyboardCaptionRun } from '@beam/engine/shared/keyboard-captions';
 import { keyboardCaptionTransformAtCursor } from '@beam/engine/shared/keyboard-caption-position';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import { applyCanvasCaptionFont } from '@beam/runtime/shared/caption-font-render';
 import { drawCaptionShape } from '@beam/runtime/composition/captions/render-caption-shape';
+import { captionTextCache } from './caption-text-cache';
 
 export interface CaptionViewport {
   x: number;
@@ -99,7 +96,7 @@ export function drawCaptionText(
   const style = options.clip.caption.style;
   ctx.save();
   applyCanvasCaptionFont(ctx, style);
-  const measureText: CaptionTextMeasurer = (text) => ctx.measureText(text).width;
+  const cache = captionTextCache(ctx);
   const canonicalCursor = options.cursorPosition
     ? {
         x:
@@ -122,7 +119,7 @@ export function drawCaptionText(
             width:
               options.runs.reduce((width, run) => {
                 applyCanvasCaptionFont(ctx, style, style.fontSize * run.fontScale);
-                return width + ctx.measureText(run.text).width;
+                return width + cache.measure(run.text);
               }, 0) +
               style.outlineWidth * 2 +
               style.extrusionDepth,
@@ -131,12 +128,11 @@ export function drawCaptionText(
         })
       : undefined;
   applyCanvasCaptionFont(ctx, style);
-  const layout = layoutCaptionText({
+  const layout = cache.layout({
     clip: options.clip,
     text: options.text,
     canvasWidth: options.canvas.width,
     canvasHeight: options.canvas.height,
-    measureText,
     transform: followTransform,
   });
   const scale = options.viewport.width / Math.max(1, options.canvas.width);
@@ -179,7 +175,7 @@ export function drawCaptionText(
     const highlight = style.wordHighlight;
     const baseWidth = (text: string) => {
       applyCanvasCaptionFont(ctx, style, fontSize);
-      return ctx.measureText(text).width;
+      return cache.measure(text);
     };
     const lines = layout.wrap
       ? wrapCaptionHighlightLines(options.wordHighlight.words, maxTextWidth, baseWidth)
@@ -219,7 +215,7 @@ export function drawCaptionText(
         const motion = word.active ? highlightMotion(highlight, word.progress, fontSize) : { scale: 1, offsetY: 0 };
         const wordFontSize = fontSize * motion.scale;
         applyCanvasCaptionFont(ctx, style, wordFontSize);
-        const renderedWidth = ctx.measureText(word.text).width;
+        const renderedWidth = cache.measure(word.text);
         const drawX = x + (width - renderedWidth) / 2;
         const drawY = lineY + motion.offsetY;
         ctx.save();
@@ -263,7 +259,7 @@ export function drawCaptionText(
     const measured = options.runs.map((run) => {
       const runFontSize = fontSize * run.fontScale;
       applyCanvasCaptionFont(ctx, style, runFontSize);
-      return { ...run, fontSize: runFontSize, width: ctx.measureText(run.text).width };
+      return { ...run, fontSize: runFontSize, width: cache.measure(run.text) };
     });
     const naturalWidth = measured.reduce((width, run) => width + run.width, 0);
     const fitScale = Math.min(1, maxTextWidth / Math.max(1, naturalWidth));
@@ -321,9 +317,7 @@ export function drawCaptionText(
         : centerX;
   const textWidth = Math.max(
     1,
-    ...layout.lines.map((line) =>
-      layout.wrap ? ctx.measureText(line).width : Math.min(maxTextWidth, ctx.measureText(line).width),
-    ),
+    ...layout.lines.map((line) => (layout.wrap ? cache.measure(line) : Math.min(maxTextWidth, cache.measure(line)))),
   );
   drawShapeForText({
     x: style.textAlign === 'left' ? textX : style.textAlign === 'right' ? textX - textWidth : textX - textWidth / 2,
@@ -367,7 +361,7 @@ export function drawCaptionText(
     if (layout.wrap) ctx.fillText(line, textX, y);
     else ctx.fillText(line, textX, y, maxTextWidth);
     if (style.textDecoration !== 'none') {
-      const width = Math.min(maxTextWidth, ctx.measureText(line).width);
+      const width = Math.min(maxTextWidth, cache.measure(line));
       const startX =
         style.textAlign === 'left' ? textX : style.textAlign === 'right' ? textX - width : textX - width / 2;
       drawTextDecoration(ctx, style.textDecoration, startX, y, width, fontSize);

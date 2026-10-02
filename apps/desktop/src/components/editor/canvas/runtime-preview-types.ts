@@ -9,5 +9,7 @@ export interface RuntimePreviewOptions {
   cursorEnabled(): boolean;
   drafts(): Readonly<Record<string, NormalizedTransform>>;
   editingCaptionId(): string | null;
+  /** Stable pixel inputs; null keeps video and background transitions live. */
+  backgroundCacheKey(): readonly unknown[] | null;
   drawBackground(context: Canvas2DContext, bounds: { x: number; y: number; width: number; height: number }): void;
 }

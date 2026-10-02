@@ -283,6 +283,10 @@ export function useCanvasBackground(
   };
 
   return {
+    backgroundCacheKey: () =>
+      isTransitioningBackground.value || activeBgState.value?.kind === 'video'
+        ? null
+        : [backgroundLoadVersion, activeBgImg.value, backgroundBlurPercent() ?? 0],
     drawBackground,
     syncPlayback,
     isTransitioningBackground,

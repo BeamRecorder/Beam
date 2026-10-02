@@ -239,6 +239,75 @@ afterEach(() => {
 });
 
 describe('export worker', () => {
+  it('encodes all video frames while its first progress thumbnail is still converting', async () => {
+    installCanvasRuntime();
+    let complete!: (blob: Blob) => void;
+    const convertToBlob = vi.fn(
+      () =>
+        new Promise<Blob>((resolve) => {
+          complete = resolve;
+        }),
+    );
+    const drawImage = vi.fn();
+    const context = { drawImage };
+    vi.stubGlobal(
+      'OffscreenCanvas',
+      class {
+        constructor(
+          public width: number,
+          public height: number,
+        ) {}
+        getContext() {
+          return context;
+        }
+        convertToBlob = convertToBlob;
+      },
+    );
+    const worker = await importWorker();
+    startWorker(worker, request({ preview: true }));
+    await vi.waitFor(() => expect(runtime.output.addVideo).toHaveBeenCalledTimes(30));
+    expect(convertToBlob).toHaveBeenCalledOnce();
+    expect(runtime.output.closeVideo).toHaveBeenCalledOnce();
+    expect(runtime.output.finalize).not.toHaveBeenCalled();
+    complete(new Blob([new Uint8Array([0, 255])]));
+    await vi.waitFor(() => expect(runtime.output.finalize).toHaveBeenCalledOnce());
+    expect(worker.postMessage).toHaveBeenCalledWith({
+      type: 'progress',
+      progress: expect.objectContaining({ preview: 'data:image/jpeg;base64,AP8=' }),
+    });
+  });
+
+  it('keeps cancellation authoritative while awaiting the final thumbnail', async () => {
+    installCanvasRuntime();
+    let complete!: (blob: Blob) => void;
+    vi.stubGlobal(
+      'OffscreenCanvas',
+      class {
+        constructor(
+          public width: number,
+          public height: number,
+        ) {}
+        getContext() {
+          return { drawImage: vi.fn() };
+        }
+        convertToBlob() {
+          return new Promise<Blob>((resolve) => {
+            complete = resolve;
+          });
+        }
+      },
+    );
+    const worker = await importWorker();
+    startWorker(worker, request({ preview: true }));
+    await vi.waitFor(() => expect(runtime.output.addVideo).toHaveBeenCalledTimes(30));
+    worker.onmessage?.({ data: { type: 'cancel' } } as MessageEvent<unknown>);
+    await vi.waitFor(() => expect(runtime.output.cancel).toHaveBeenCalledOnce());
+    complete(new Blob([]));
+    await vi.waitFor(() => expect(worker.postMessage).toHaveBeenCalledWith({ type: 'disposed' }));
+    expect(runtime.output.finalize).not.toHaveBeenCalled();
+    expect(worker.postMessage.mock.calls.some(([message]) => message.type === 'complete')).toBe(false);
+  });
+
   it('configures the export canvas for high-quality image smoothing', async () => {
     const context = installCanvasRuntime();
     const worker = await importWorker();

@@ -30,6 +30,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Preview and export reuse unchanged active clip order and text layout; Studio retains fixed background pixels, and export progress thumbnails convert without pausing video encoding.
 - Dense previews evaluate canvas selection geometry only when needed, reuse shape paint styles and skip rectangles fully outside the rendered image during zooms. Preview and export share the same visibility checks without reducing image quality.
 - Timeline playback moves the playhead with a composited 3D transform and reuses unchanged visible clip lists instead of repainting static artwork on every tick.
 - Desktop application code now lives under `apps/desktop`; reusable document, rendering, encoding, storage and native capture transport code lives in separate packages.

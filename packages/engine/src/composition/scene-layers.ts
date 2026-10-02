@@ -2,6 +2,7 @@ import { scenePaintOrder } from '../scene/scene-order';
 import { mayBeEnabled } from '@beam/engine/scene/scene-visibility';
 import { sourceTimeAt } from '@beam/engine';
 import { createTimelineIntervalIndex } from '@beam/engine/shared/timeline-interval-index';
+import { createOrderedTimelineIndex } from '@beam/engine/shared/ordered-timeline-index';
 import { timingPreviewFor } from '@beam/engine/composition/timing-preview';
 import { compileSceneComposition } from '../scene/scene-clock';
 import { createSceneAnimator } from '../scene/scene-animation';
@@ -89,9 +90,12 @@ export function createCompositionSceneLayerResolver(composition: ClipComposition
   composition = compileSceneComposition(composition);
   const preview = timingPreviewFor(composition);
   const order = preview ? null : new Map(composition.clips.map((clip, index) => [clip, index]));
+  const byDescendingOrder = (left: Clip, right: Clip) =>
+    right.order - left.order ||
+    (preview ? preview.order(left) - preview.order(right) : order!.get(left)! - order!.get(right)!);
   const clipsAt = preview
-    ? preview.at
-    : createTimelineIntervalIndex(
+    ? (timeMs: number) => preview.at(timeMs).sort(byDescendingOrder)
+    : createOrderedTimelineIndex(
         composition.clips
           .filter((clip) => mayBeEnabled(composition, clip) && clip.kind !== 'audio')
           .map((clip) => ({
@@ -99,10 +103,8 @@ export function createCompositionSceneLayerResolver(composition: ClipComposition
             end: clip.timelineStartMs + clip.timelineDurationMs,
             value: clip,
           })),
+        byDescendingOrder,
       );
-  const byDescendingOrder = (left: Clip, right: Clip) =>
-    right.order - left.order ||
-    (preview ? preview.order(left) - preview.order(right) : order!.get(left)! - order!.get(right)!);
 
   return (timeMs) => {
     const cameraVisuals: VisualClip[] = [];
@@ -111,7 +113,7 @@ export function createCompositionSceneLayerResolver(composition: ClipComposition
     const captions: CaptionClip[] = [];
     let screen: VisualClip | null = null;
 
-    for (const entry of clipsAt(timeMs).sort(byDescendingOrder)) {
+    for (const entry of clipsAt(timeMs)) {
       const clip = animate(entry, timeMs);
       if (clip.kind === 'audio' || !clip.enabled || sourceTimeAt(clip, timeMs) === null) continue;
       if (clip.kind === 'caption') {

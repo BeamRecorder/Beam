@@ -178,6 +178,57 @@ afterEach(() => {
 });
 
 describe('useCanvasBackground', () => {
+  it('exposes fixed pixel inputs and invalidates them after blur and deep gradient edits', async () => {
+    const clock = vi.spyOn(performance, 'now').mockReturnValue(1000);
+    const initial = state.backgroundCacheKey();
+    selected.value = gradient();
+    await nextTick();
+    expect(state.backgroundCacheKey()).toBeNull();
+    clock.mockReturnValue(1200);
+    state.drawBackground(context(), { x: 0, y: 0, width: 100, height: 100 });
+    const ready = state.backgroundCacheKey();
+    expect(ready).not.toEqual(initial);
+    expect(state.backgroundCacheKey()).toEqual(ready);
+    blur.value = 25;
+    await nextTick();
+    expect(state.backgroundCacheKey()).not.toEqual(ready);
+    const blurred = state.backgroundCacheKey();
+    if (selected.value.kind !== 'gradient') throw new Error('gradient');
+    selected.value.gradient.stops[0]!.color = '#123456';
+    await nextTick();
+    expect(state.backgroundCacheKey()).not.toEqual(blurred);
+    selected.value = null;
+    await nextTick();
+    expect(state.backgroundCacheKey()).not.toEqual(initial);
+  });
+
+  it('changes the pixel key when a loaded image replaces the previous background', async () => {
+    const clock = vi.spyOn(performance, 'now').mockReturnValue(1000);
+    const before = state.backgroundCacheKey();
+    selected.value = image();
+    await nextTick();
+    const loading = state.backgroundCacheKey();
+    expect(loading).not.toEqual(before);
+    FakeImage.instances[0]!.dispatchEvent(new Event('load'));
+    await nextTick();
+    expect(state.backgroundCacheKey()).toBeNull();
+    clock.mockReturnValue(1200);
+    state.drawBackground(context(), { x: 0, y: 0, width: 100, height: 100 });
+    expect(state.backgroundCacheKey()).not.toEqual(loading);
+  });
+
+  it('keeps video pixel keys live after the background transition finishes', async () => {
+    const clock = vi.spyOn(performance, 'now').mockReturnValue(1000);
+    selected.value = video();
+    await nextTick();
+    await flushPromises();
+    expect(state.backgroundCacheKey()).toBeNull();
+    clock.mockReturnValue(1200);
+    state.drawBackground(context(), { x: 0, y: 0, width: 100, height: 100 });
+    expect(state.isTransitioningBackground.value).toBe(false);
+    expect(state.backgroundCacheKey()).toBeNull();
+  });
+
   it('draws colors, gradients, fallback media, and applies clamped blur', async () => {
     const ctx = context();
     selected.value = color();

@@ -26,6 +26,7 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
     missing: [],
   };
   let background: OffscreenCanvas | null = null;
+  let backgroundKey: readonly unknown[] | null = null;
   let cameraKey: readonly unknown[] = [];
   let camera: ReturnType<typeof createSnapshotCameraEvaluator> | null = null;
   let motionKey: readonly unknown[] = [];
@@ -174,13 +175,26 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
         : null;
       const image = options.cursorImage();
       if (asset && image) cursorImages.set(asset.id, image);
+      const resized = !background || background.width !== size.width || background.height !== size.height;
+      if (resized) backgroundKey = null;
       background ??= new OffscreenCanvas(size.width, size.height);
       if (background.width !== size.width) background.width = size.width;
       if (background.height !== size.height) background.height = size.height;
       const backgroundCtx = background.getContext('2d');
       if (!backgroundCtx) throw new Error('Preview background canvas unavailable.');
-      backgroundCtx.clearRect(0, 0, size.width, size.height);
-      options.drawBackground(backgroundCtx, { x: 0, y: 0, ...size });
+      const pixelInputs = options.backgroundCacheKey();
+      if (
+        resized ||
+        !pixelInputs ||
+        !backgroundKey ||
+        pixelInputs.length !== backgroundKey.length ||
+        pixelInputs.some((value, index) => !Object.is(value, backgroundKey![index]))
+      ) {
+        backgroundKey = null;
+        backgroundCtx.clearRect(0, 0, size.width, size.height);
+        options.drawBackground(backgroundCtx, { x: 0, y: 0, ...size });
+        backgroundKey = pixelInputs?.slice() ?? null;
+      }
       const tilt = selectedZoomPreviewTilt(props.selectedZoom, props.isPlaying);
       const evaluator = tilt
         ? {
@@ -215,6 +229,7 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
       disposeCompositionRenderer();
       if (background) background.width = background.height = 0;
       background = null;
+      backgroundKey = null;
     },
   };
 }

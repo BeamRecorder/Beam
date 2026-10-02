@@ -38,6 +38,7 @@ const { state } = vi.hoisted(() => ({
     moveSelection: vi.fn(),
     endSelectionMove: vi.fn(),
     drawBackground: vi.fn(),
+    backgroundCacheKey: () => [0],
     syncPlayback: vi.fn(),
     drawComposition: vi.fn(),
     drawWebcamClips: vi.fn(),
@@ -119,6 +120,7 @@ vi.mock('../composables/useCanvasBackground', async () => {
       state.transition = ref(false);
       return {
         drawBackground: state.drawBackground,
+        backgroundCacheKey: state.backgroundCacheKey,
         syncPlayback: state.syncPlayback,
         isTransitioningBackground: state.transition,
       };

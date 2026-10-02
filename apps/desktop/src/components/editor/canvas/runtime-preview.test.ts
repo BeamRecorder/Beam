@@ -88,6 +88,7 @@ function host() {
     cursorEnabled: () => true,
     drafts: () => ({}),
     editingCaptionId: () => null,
+    backgroundCacheKey: () => [0],
     drawBackground: vi.fn(),
   };
   const preview = createRuntimePreview(options),
@@ -101,6 +102,54 @@ function host() {
   });
   return { preview, options, draw, ctx, painted };
 }
+it('retains fixed backgrounds across playback ticks and invalidates for keys, resizes and disposal', () => {
+  const { draw, options, preview } = host();
+  const key: unknown[] = [0];
+  options.backgroundCacheKey = () => key;
+  for (let frame = 0; frame < 60; frame++) draw();
+  expect(options.drawBackground).toHaveBeenCalledOnce();
+  key[0] = 1;
+  draw();
+  key.push('loaded image');
+  draw();
+  expect(options.drawBackground).toHaveBeenCalledTimes(3);
+  draw(null, 101, 50);
+  expect(options.drawBackground).toHaveBeenCalledTimes(4);
+  preview.dispose();
+  draw();
+  expect(options.drawBackground).toHaveBeenCalledTimes(5);
+});
+it('keeps video and transitions live and repaints when returning to a fixed background', () => {
+  const { draw, options } = host();
+  draw();
+  options.backgroundCacheKey = () => null;
+  draw();
+  draw();
+  expect(options.drawBackground).toHaveBeenCalledTimes(3);
+  options.backgroundCacheKey = () => [0];
+  draw();
+  draw();
+  expect(options.drawBackground).toHaveBeenCalledTimes(4);
+});
+it('does not retain a partially painted background after a drawing failure', () => {
+  const { draw, options } = host();
+  vi.mocked(options.drawBackground).mockImplementationOnce(() => {
+    throw new Error('paint failed');
+  });
+  expect(draw).toThrow('paint failed');
+  draw();
+  draw();
+  expect(options.drawBackground).toHaveBeenCalledTimes(2);
+});
+it('repaints after a resized surface temporarily loses its context', () => {
+  const { draw, options } = host();
+  draw();
+  state.background = false;
+  expect(() => draw(null, 101, 50)).toThrow('Preview background canvas unavailable.');
+  state.background = true;
+  draw(null, 101, 50);
+  expect(options.drawBackground).toHaveBeenCalledTimes(2);
+});
 it('delegates completed frames and caches camera/motion until their inputs change', () => {
   const { draw, options, painted, ctx } = host();
   draw();
