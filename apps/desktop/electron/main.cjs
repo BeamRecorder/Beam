@@ -50,6 +50,7 @@ const { registerWhisperIpc } = require('./captions/whisper-ipc.cjs');
 const { createPreferencesStore } = require('./preferences/preferences-store.cjs');
 const { registerEditorPresetIpc } = require('./presets/editor-preset-ipc.cjs');
 const { registerPreferencesIpc } = require('./preferences/preferences-ipc.cjs');
+const { applyHudWindowPreferences } = require('./preferences/window-preferences.cjs');
 const { applySpellCheckPreferences } = require('./preferences/spell-check.cjs');
 const { registerSpellCheckContextMenu } = require('./preferences/spell-check-context-menu.cjs');
 const { createLinuxShortcutSource } = require('./preferences/linux-shortcut-source.cjs');
@@ -200,13 +201,7 @@ function initializeApplication() {
         }),
         onPreferencesChanged: (preferences) => {
           applySpellCheck(preferences);
-          for (const win of BrowserWindow.getAllWindows()) {
-            const controller = controllers.get(win);
-            if (controller) {
-              controller.setHudAlwaysOnTop(preferences.alwaysOnTop);
-              controller.applyModePolicy();
-            }
-          }
+          applyHudWindowPreferences({ windows: BrowserWindow.getAllWindows(), controllers, preferences });
         },
       });
       registerEditorPresetIpc({ ipcMain: applicationIpc, BrowserWindow, store: editorPresetStore });

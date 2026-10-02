@@ -92,6 +92,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Updating preferences while an editor is open no longer fails on the Recorder window's always-on-top setting; hidden Recorder windows remain hidden and editor windows retain their native behavior.
+
 - Canvas horizontal mouse-wheel scrolling now zooms in and out according to its direction instead of always zooming out; zero-motion events no longer change the zoom.
 - Fast horizontal and vertical timeline scrolling keeps the canvas covering the viewport and prepares newly visible tracks before painting.
 - Desktop startup resolves the shared JSON storage adapter when organizing project categories.
