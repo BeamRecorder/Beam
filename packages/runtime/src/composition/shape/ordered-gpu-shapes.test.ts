@@ -50,6 +50,19 @@ beforeEach(() => {
   effects.group.mockImplementation((_ctx, draw) => draw());
 });
 describe('ordered native and GPU paint', () => {
+  it('omits offscreen and genuinely empty paint without invoking native drawing or allocating a GPU', () => {
+    const ctx = context(),
+      native = vi.fn();
+    withOrderedGpuShapes(ctx, (batch) => {
+      expect(batch.tryShape(shape({ transform: { x: 2, y: 2, width: 0.1, height: 0.1 } }), viewport, native)).toBe(
+        true,
+      );
+      expect(batch.tryShape(shape({ fillEnabled: false, borderWidth: 0 }), viewport, native)).toBe(true);
+    });
+    expect(native).not.toHaveBeenCalled();
+    expect(runtime.construct).not.toHaveBeenCalled();
+    disposeGpuShapes(ctx);
+  });
   it('uses native drawing below the measured GPU admission size and respects explicit barriers', () => {
     const ctx = context(),
       draw = vi.fn(),

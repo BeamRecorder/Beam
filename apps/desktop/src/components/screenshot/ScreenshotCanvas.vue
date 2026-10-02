@@ -418,7 +418,7 @@ onBeforeUnmount(() => {
       <CanvasMarqueeSurface
         class="image-stage"
         :style="stageStyle"
-        :targets="marqueeTargets"
+        :targets="() => marqueeTargets"
         :selection="selectedIds"
         :disabled="disabled || cropping || Boolean(elements?.editing.value) || elements?.drawingMode.value"
         @select="emit('selectMany', $event)"

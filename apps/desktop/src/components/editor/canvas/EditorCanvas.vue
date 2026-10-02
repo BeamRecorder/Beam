@@ -266,7 +266,12 @@ const runtimePreview = createRuntimePreview({
   cursorImage: () => cursorOverlay.customCursorImage.value,
   watermarkImage: () => watermarkLogo.value,
   cursorEnabled: () => customCursorEnabled.value,
-  draftFor: transformAndCrop.transformDraftFor,
+  drafts: () => {
+    const drafts = toRaw(transformAndCrop.transformDrafts.value);
+    const single = transformAndCrop.transformDraft.value;
+    const id = props.selectedTransformClip?.id;
+    return single && id ? { [id]: toRaw(single), ...drafts } : drafts;
+  },
   editingCaptionId: () => elements.editingId.value ?? captionEditing.editingCaptionId.value,
   drawBackground,
 });
@@ -393,9 +398,9 @@ defineExpose({ viewportZoom, captureCurrentFrame });
     <CanvasMarqueeSurface
       class="canvas-viewport"
       :style="viewportZoom.viewportStyle.value"
-      :targets="transformAndCrop.marqueeTargets.value"
+      :targets="() => transformAndCrop.marqueeTargets.value"
       :selection="selectedClipIds"
-      show-selection-outlines
+      :show-selection-outlines="!isPlaying"
       :disabled="isPlaying || isCropping || selectedZoom?.mode === 'manual'"
       @select="emit('select:clips', $event)"
     >

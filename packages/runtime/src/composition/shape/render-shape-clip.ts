@@ -1,6 +1,6 @@
 import { drawElementText, drawFreehand } from '@beam/runtime/composition/shape/render-element-content';
 import type { BlurClip, NormalizedTransform, ShapeClip } from '@beam/engine/shared/composition-types';
-import { normalizeShapeLayerStyle, shapeLayerFill } from '@beam/engine/shared/shape-layer-style';
+import { shapeLayerFill } from '@beam/engine/shared/shape-layer-style';
 import type { ShapeLayerStyle } from '@beam/engine/shared/shape-layer-types';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import { isShapeKind, shapeDefinition, type ShapeKind } from '@beam/engine/shared/shape-catalog';
@@ -8,6 +8,7 @@ import { applyBlurEffect } from '@beam/runtime/composition/effects/blur-effect';
 import type { EffectRect } from '@beam/runtime/composition/effects/effect-types';
 import { backgroundFillStyle } from '@beam/runtime/composition/background/render-background';
 import { cachedShapePath } from '@beam/runtime/composition/shape/shape-path-cache';
+import { shapePaintStyle } from './shape-paint-style';
 
 const shadowOffset = (direction: ShapeClip['shadowDirection'], scale: number) => {
   const distance = 12 * scale;
@@ -148,7 +149,7 @@ export function drawShapeClip(
     height: transform.height * viewport.height,
   };
   if (rect.width <= 0 || rect.height <= 0) return;
-  const style = normalizeShapeLayerStyle(clip);
+  const style = shapePaintStyle(clip);
   const scale = Math.min(viewport.width, viewport.height) / 1080;
   if (style.family !== 'drawing' && style.family !== 'text' && style.opacityEnabled && style.backdropBlur > 0) {
     const backdropClip: BlurClip = {
@@ -215,6 +216,6 @@ export function drawShapeClip(
     }
   }
   ctx.shadowColor = 'transparent';
-  drawElementText(ctx, { ...clip, transform }, viewport);
+  if (clip.text?.content) drawElementText(ctx, transform === clip.transform ? clip : { ...clip, transform }, viewport);
   ctx.restore();
 }

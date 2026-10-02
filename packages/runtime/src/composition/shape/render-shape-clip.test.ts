@@ -134,6 +134,41 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('drawShapeClip', () => {
+  it.each(['rectangle', 'ellipse', 'triangle', 'diamond', 'star'] as const)(
+    'keeps %s on its native vector path',
+    (preset) => {
+      const ctx = context();
+      drawShapeClip(ctx, shapeClip({ preset, borderWidth: 8, fillEnabled: false }), {
+        x: 0,
+        y: 0,
+        width: 1920,
+        height: 1080,
+      });
+      expect(ctx.stroke).toHaveBeenCalledOnce();
+      expect(ctx.fill).not.toHaveBeenCalled();
+      expect(elementContent.drawElementText).not.toHaveBeenCalled();
+    },
+  );
+  it('retains the same authored record when rendering integrated text without a draft', () => {
+    const ctx = context(),
+      clip = shapeClip({ text: createElementText('Label') });
+    const viewport = { x: 0, y: 0, width: 1920, height: 1080 };
+    drawShapeClip(ctx, clip, viewport);
+    expect(elementContent.drawElementText.mock.lastCall?.[1]).toBe(clip);
+    drawShapeClip(ctx, shapeClip({ text: createElementText('') }), viewport);
+    expect(elementContent.drawElementText).toHaveBeenCalledOnce();
+  });
+  it('uses an already painted catalog mask without leaving a duplicate native path', () => {
+    const ctx = context(),
+      clip = shapeClip({ preset: 'heart', opacityEnabled: true, backdropBlur: 10 });
+    const viewport = { x: 0, y: 0, width: 1920, height: 1080 };
+    drawShapeClip(ctx, clip, viewport);
+    const mask = blurEffect.applyBlurEffect.mock.lastCall![3].maskPath;
+    const maskCtx = context();
+    mask(maskCtx, { x: 10, y: 20, width: 100, height: 60 });
+    expect(maskCtx.fill).toHaveBeenCalledWith(expect.anything(), 'nonzero');
+    expect(maskCtx.beginPath).toHaveBeenCalledOnce();
+  });
   it('uses the optional opacity toggle without applying a canvas filter', () => {
     const disabled = context();
     drawShapeClip(disabled, shapeClip({ opacityEnabled: false, opacity: 42 }), {
@@ -412,7 +447,7 @@ describe('drawShapeClip', () => {
       { x: 90, y: 100, width: 400, height: 160 },
       400 / 1_080,
     );
-    expect(elementContent.drawElementText).toHaveBeenCalledWith(ctx, clip, viewport);
+    expect(elementContent.drawElementText).not.toHaveBeenCalled();
   });
 
   it('ignores a layer whose transform has no drawable area', () => {

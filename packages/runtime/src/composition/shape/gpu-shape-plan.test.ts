@@ -4,6 +4,41 @@ import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import { shape, context } from '@beam/runtime/composition/shape/tests/gpu-shape.fixtures';
 const viewport = { x: 0, y: 0, width: 1920, height: 1080 };
 describe('pixel equivalent GPU shape plans', () => {
+  it.each([
+    { x: -1, y: 0.2 },
+    { x: 0.2, y: -1 },
+    { x: 2, y: 0.2 },
+    { x: 0.2, y: 2 },
+  ])('omits only proven invisible rectangles beyond the physical target %j', (position) => {
+    const clip = shape({ transform: { ...position, width: 0.2, height: 0.2 } });
+    expect(gpuShapePlan(context(), clip, viewport)).toEqual([]);
+    expect(clip.enabled).toBe(true);
+  });
+  it('keeps a stroked or fractional edge near the target boundary on the native painter', () => {
+    const clip = shape({ transform: { x: -100 / 1920, y: 0.2, width: 99 / 1920, height: 0.2 } });
+    expect(gpuShapePlan(context(), clip, viewport)).toBeNull();
+  });
+  it('makes an offscreen clip visible again after a mutable transform draft without changing its identity', () => {
+    const clip = shape({ transform: { x: 2, y: 0.3, width: 0.4, height: 0.3 } });
+    expect(gpuShapePlan(context(), clip, viewport)).toEqual([]);
+    clip.transform.x = 0.3;
+    expect(gpuShapePlan(context(), clip, viewport)).toHaveLength(4);
+  });
+  it('reevaluates an invisible plan after canvas resize, camera movement and mutable appearance edits', () => {
+    const ctx = context(),
+      clip = shape({ transform: { x: 1.1, y: 0.2, width: 0.2, height: 0.2 } });
+    expect(gpuShapePlan(ctx, clip, viewport)).toEqual([]);
+    ctx.canvas.width = 4000;
+    expect(gpuShapePlan(ctx, clip, viewport)).toBeNull();
+    ctx.canvas.width = 1920;
+    vi.mocked(ctx.getTransform).mockReturnValue({ a: 1, b: 0, c: 0, d: 1, e: -2000, f: 0 } as DOMMatrix);
+    expect(gpuShapePlan(ctx, clip, viewport)).toBeNull();
+    const filled = shape({ fillEnabled: false });
+    const plan = gpuShapePlan(context(), filled, viewport);
+    filled.fillEnabled = true;
+    expect(gpuShapePlan(context(), filled, viewport)).toHaveLength(5);
+    expect(gpuShapePlan(context(), filled, viewport)).not.toBe(plan);
+  });
   it('treats normalized binary round-off as a pixel edge without admitting real fractional geometry', () => {
     const plan = gpuShapePlan(
       context(),

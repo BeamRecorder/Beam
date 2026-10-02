@@ -2,7 +2,7 @@
 // Real browser verification is opt-in and uses owned Chromium with no system display.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createServer, type ViteDevServer } from 'vite';
-import puppeteer, { type Browser, type Page } from 'puppeteer-core';
+import puppeteer, { type Browser, type Page, type Protocol } from 'puppeteer-core';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
@@ -53,6 +53,15 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
     page = await browser.newPage();
     await page.setViewport({ width: 1200, height: 600 });
     await page.goto(`http://127.0.0.1:${address.port}/beam-timeline-test`);
+    // Provide only preferences before importing the actual desktop timeline module graph.
+    await page.evaluate(() =>
+      Object.defineProperty(window, 'capture', {
+        value: {
+          getPreferences: async () => ({ extras: {}, accessibility: {} }),
+          onPreferencesChanged: () => () => {},
+        },
+      }),
+    );
   }, 30000);
   afterAll(async () => {
     await browser?.close();
@@ -67,42 +76,11 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
     }));
     const composition: ClipComposition = { schemaVersion: 14, assets: [], clips, keyboardCaptionSessions: [] };
     const result = await page.evaluate(async (composition) => {
-      // The page hosts the actual Vue component; only desktop service discovery is injected for this isolated editor view.
-      document.body.innerHTML = '<div id="test" style="width:1000px;height:300px"></div>';
-      Object.defineProperty(window, 'capture', {
-        value: {
-          getPreferences: async () => ({ extras: {}, accessibility: {} }),
-          onPreferencesChanged: () => () => {},
-        },
-      });
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
-      const vue = (await load(
+      const host = (await load(
         '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
       )) as typeof import('./timeline-browser-host');
-      const { createPinia, i18n, Timeline } = vue;
-      const state = vue.reactive({
-        currentTime: 0,
-        duration: 10000,
-        isPlaying: false,
-        zoomLevel: 10000,
-        zoomElements: [],
-        selectedZoomId: null,
-        selectedClipId: null,
-        composition,
-      });
-      const app = vue.createApp({ render: () => vue.h(Timeline, state) });
-      app.use(createPinia());
-      app.use(i18n);
-      app.mount('#test');
-      await vue.nextTick();
-      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-      const scroll = document.querySelector<HTMLDivElement>('.timeline-tracks-container')!,
-        canvas = document.querySelector<HTMLCanvasElement>('.timeline-content-surface')!;
-      const painted = () =>
-        canvas
-          .getContext('2d')!
-          .getImageData(0, 0, canvas.width, canvas.height)
-          .data.some((value, index) => index % 4 === 3 && value > 0);
+      const { dispose, scroll, canvas, settle, painted } = await host.mountTimeline(composition, 10000, 10000);
       const first = {
         canvases: document.querySelectorAll('canvas').length,
         painted: painted(),
@@ -112,15 +90,15 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
       };
       scroll.scrollLeft = scroll.scrollWidth - scroll.clientWidth;
       scroll.dispatchEvent(new Event('scroll'));
-      await vue.nextTick();
-      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      await settle();
       const last = {
         painted: painted(),
-        left: canvas.style.left,
+        left: canvas.getBoundingClientRect().left,
+        viewportLeft: scroll.getBoundingClientRect().left,
         scroll: scroll.scrollLeft,
         controls: document.querySelectorAll('[data-timeline-clip-id]').length,
       };
-      app.unmount();
+      dispose();
       return { first, last };
     }, composition);
     expect(result.first.canvases).toBe(1);
@@ -129,6 +107,170 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
     expect(result.first.controls).toBeLessThan(250);
     expect(result.last.controls).toBeLessThan(250);
     expect(result.last.painted).toBe(true);
-    expect(result.last.left).toBe(`${result.last.scroll}px`);
+    expect(result.last.left).toBe(result.last.viewportLeft);
+  }, 30000);
+  it('keeps canvas coverage during fast diagonal scrolling and paints newly mounted lanes in the first frame', async () => {
+    const composition: ClipComposition = {
+      schemaVersion: 14,
+      assets: [],
+      keyboardCaptionSessions: [],
+      clips: Array.from({ length: 10000 }, (_, index) => ({
+        ...colorClip(String(index)),
+        trackId: `lane-${Math.floor(index / 50)}`,
+        order: Math.floor(index / 50),
+        timelineStartMs: (index % 50) * 1000,
+      })),
+    };
+    const samples = await page.evaluate(async (composition) => {
+      const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+      const host = (await load(
+        '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
+      )) as typeof import('./timeline-browser-host');
+      const { dispose, scroll, canvas, frame, painted } = await host.mountTimeline(composition, 50, 2000);
+      const samples = [];
+      for (const [x, y] of [
+        [4000, 3000],
+        [1000, 32],
+        [12000, 5500],
+        [8000, 1000],
+        [0, 0],
+      ]) {
+        scroll.scrollLeft = x!;
+        scroll.scrollTop = y!;
+        scroll.dispatchEvent(new Event('scroll'));
+        const bounds = canvas.getBoundingClientRect(),
+          viewport = scroll.getBoundingClientRect();
+        const covered =
+          bounds.left <= viewport.left &&
+          bounds.top <= viewport.top &&
+          bounds.right >= viewport.left + scroll.clientWidth &&
+          bounds.bottom >= viewport.top + scroll.clientHeight;
+        await frame();
+        samples.push({
+          covered,
+          painted: painted(),
+          controls: document.querySelectorAll('[data-timeline-clip-id]').length,
+        });
+      }
+      dispose();
+      return samples;
+    }, composition);
+    expect(samples.every((sample) => sample.covered)).toBe(true);
+    expect(samples.every((sample) => sample.painted)).toBe(true);
+    expect(samples.every((sample) => sample.controls < 250)).toBe(true);
+  }, 30000);
+
+  it('moves the playhead without repainting unchanged artwork on a 10000-clip document', async () => {
+    const composition: ClipComposition = {
+      schemaVersion: 14,
+      assets: [],
+      keyboardCaptionSessions: [],
+      clips: Array.from({ length: 10000 }, (_, index) => ({
+        ...colorClip(String(index)),
+        trackId: 'track',
+        timelineStartMs: index * 1000,
+      })),
+    };
+    const result = await page.evaluate(async (composition) => {
+      const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+      const host = (await load(
+        '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
+      )) as typeof import('./timeline-browser-host');
+      const { dispose, state, canvas, scroll, frame, settle, nextTick } = await host.mountTimeline(
+        composition,
+        10000,
+        10000,
+      );
+      const ctx = canvas.getContext('2d')!,
+        clear = ctx.clearRect.bind(ctx);
+      let repaints = 0;
+      ctx.clearRect = (x, y, width, height) => {
+        if (width === scroll.clientWidth && height === scroll.clientHeight) repaints++;
+        clear(x, y, width, height);
+      };
+      state.isPlaying = true;
+      await settle();
+      repaints = 0;
+      const samples: number[] = [];
+      for (let i = 1; i <= 60; i++) {
+        await frame();
+        const start = performance.now();
+        state.currentTime = i / 60;
+        await nextTick();
+        samples.push(performance.now() - start);
+      }
+      await settle();
+      samples.sort((a, b) => a - b);
+      const result = { repaints, medianMs: samples[30]!, p95Ms: samples[57]!, scroll: scroll.scrollLeft };
+      dispose();
+      return result;
+    }, composition);
+    console.info('Timeline 10000-clip playback updates:', result);
+    expect(result.scroll).toBe(0);
+    expect(result.repaints).toBe(0);
+  }, 30000);
+
+  it('composites the playhead and viewport bitmap without allocating layers for all 10000 clips', async () => {
+    const cdp = await page.createCDPSession();
+    let layers: Protocol.LayerTree.Layer[] = [];
+    cdp.on('LayerTree.layerTreeDidChange', (event) => {
+      layers = event.layers ?? [];
+    });
+    await cdp.send('LayerTree.enable');
+    const composition: ClipComposition = {
+      schemaVersion: 14,
+      assets: [],
+      keyboardCaptionSessions: [],
+      clips: Array.from({ length: 10000 }, (_, index) => ({
+        ...colorClip(String(index)),
+        trackId: 'track',
+        timelineStartMs: index * 1000,
+      })),
+    };
+    try {
+      const geometry = await page.evaluate(async (composition) => {
+        const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+        const host = (await load(
+          '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
+        )) as typeof import('./timeline-browser-host');
+        const { state, scroll, settle } = await host.mountTimeline(composition, 10000, 10000);
+        state.isPlaying = true;
+        state.currentTime = 0.5;
+        await settle();
+        const playhead = document.querySelector<HTMLElement>('.timeline-playhead')!;
+        return {
+          width: scroll.clientWidth,
+          height: scroll.clientHeight,
+          transform: playhead.style.transform,
+          left: playhead.style.left,
+        };
+      }, composition);
+      expect(geometry.transform).toMatch(/^translate3d\(/);
+      expect(geometry.left).toBe('');
+      const { root } = await cdp.send('DOM.getDocument');
+      for (const selector of ['.timeline-content-surface', '.timeline-playhead']) {
+        const { nodeId } = await cdp.send('DOM.querySelector', { nodeId: root.nodeId, selector });
+        const { node } = await cdp.send('DOM.describeNode', { nodeId });
+        const layer = layers.find((layer) => layer.backendNodeId === node.backendNodeId);
+        expect(layer, selector).toBeDefined();
+        const reasons = await cdp.send('LayerTree.compositingReasons', { layerId: layer!.layerId });
+        expect(reasons.compositingReasonIds).toContain('WillChangeTransform');
+        if (selector === '.timeline-content-surface') {
+          expect(layer!.width).toBeLessThanOrEqual(geometry.width);
+          expect(layer!.height).toBeLessThanOrEqual(geometry.height);
+        }
+      }
+      console.info('Timeline 10000-clip composited layers:', layers.length);
+      expect(layers.length).toBeLessThan(250);
+    } finally {
+      await page.evaluate(async () => {
+        const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+        const host = (await load(
+          '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
+        )) as typeof import('./timeline-browser-host');
+        host.unmountTimeline();
+      });
+      await cdp.detach();
+    }
   }, 30000);
 });

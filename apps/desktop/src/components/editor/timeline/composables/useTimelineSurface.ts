@@ -69,9 +69,7 @@ export function useTimelineSurface(
         ctx.restore();
       }
     });
-    // Placement and backing pixels belong to the same committed frame.
-    element.style.left = `${viewport.scrollLeft}px`;
-    element.style.top = `${viewport.scrollTop}px`;
+    // Native sticky placement retains coverage during compositor scrolling, before the next JS paint.
     element.style.width = `${width}px`;
     element.style.height = `${height}px`;
   };

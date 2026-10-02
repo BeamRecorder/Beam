@@ -1,8 +1,9 @@
 import type { NormalizedTransform, ShapeClip } from '@beam/engine/shared/composition-types';
-import { normalizeShapeLayerStyle, shapeLayerFill } from '@beam/engine/shared/shape-layer-style';
+import { shapeLayerFill } from '@beam/engine/shared/shape-layer-style';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import type { GpuColor, GpuSceneCommand } from '@beam/runtime/gpu/gpu-scene-types';
 import type { CachedGpuShapePlan, GpuShapePaintContext } from '@beam/runtime/composition/shape/gpu-shape-plan-types';
+import { shapePaintStyle } from './shape-paint-style';
 
 const plans = new WeakMap<ShapeClip, CachedGpuShapePlan>();
 const color = (hex: string): GpuColor | null => {
@@ -39,11 +40,19 @@ export function gpuShapePlan(
     clip.transitions?.exit
   )
     return null;
-  const key = paint?.key ?? JSON.stringify([viewport, m.a, m.d, m.e, m.f]);
+  const key = paint?.key ?? JSON.stringify([viewport, m.a, m.d, m.e, m.f, ctx.canvas.width, ctx.canvas.height]);
+  const style = shapePaintStyle(clip);
   const cached = plans.get(clip);
-  if (cached?.key === key && cached.transform === transform) return cached.commands;
-  const style = normalizeShapeLayerStyle(clip),
-    fill = shapeLayerFill(style);
+  if (
+    cached?.key === key &&
+    cached.style === style &&
+    cached.transform.x === transform.x &&
+    cached.transform.y === transform.y &&
+    cached.transform.width === transform.width &&
+    cached.transform.height === transform.height
+  )
+    return cached.commands;
+  const fill = shapeLayerFill(style);
   let commands: GpuSceneCommand[] | null = null;
   if (
     style.family === 'shape' &&
@@ -60,6 +69,17 @@ export function gpuShapePlan(
       h = transform.height * viewport.height * m.d;
     const b = ((style.borderWidth * Math.min(viewport.width, viewport.height)) / 1080) * m.a,
       half = b / 2;
+    // Outside the physical target, even the stroked edge and its AA fringe cannot contribute pixels.
+    // Keep the document intact and skip only this paint; camera/keyframe changes reevaluate the bounds.
+    if (
+      w > 0 &&
+      h > 0 &&
+      (x + w + half < -1 || y + h + half < -1 || x - half > ctx.canvas.width + 1 || y - half > ctx.canvas.height + 1)
+    ) {
+      commands = [];
+      plans.set(clip, { key, transform: { ...transform }, style, commands });
+      return commands;
+    }
     const fillColor = color(fill.color),
       borderColor = color(style.borderColor);
     // Leave native clipping edges untouched: batching must not collapse repeated AA coverage.
@@ -96,6 +116,6 @@ export function gpuShapePlan(
       }
     }
   }
-  plans.set(clip, { key, transform, commands });
+  plans.set(clip, { key, transform: { ...transform }, style, commands });
   return commands;
 }

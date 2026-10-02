@@ -3,6 +3,7 @@ import { onScopeDispose } from 'vue';
 import { createBrowserTimelineFrameQueue } from '@beam/runtime/timeline/browser-frame-queue';
 import { bindElementRef } from '~/utils/element-ref';
 import { useTimelineSurface } from './composables/useTimelineSurface';
+import TimelineSurfaceCanvas from './TimelineSurfaceCanvas.vue';
 import ReorderGroup from '~/ui/transitions/ReorderGroup.vue';
 import TimelineGapButtons from './TimelineGapButtons.vue';
 import TimelineCanvasClips from './TimelineCanvasClips.vue';
@@ -11,7 +12,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { useTimelineTracks } from './composables/useTimelineTracks';
 import { useTimelineContextMenu } from './composables/useTimelineContextMenu';
 import ContextMenu from '~/components/ui/context-menu/ContextMenu.vue';
-import { computed, watchEffect, type ComponentPublicInstance } from 'vue';
+import { computed, watchEffect } from 'vue';
 import TimelineCaptionTracks from './TimelineCaptionTracks.vue';
 import type { TimelineTracksEmits, TimelineTracksProps } from './composables/timeline-tracks-types';
 import TimelineCanvasTransitionTrack from './TimelineCanvasTransitionTrack.vue';
@@ -102,10 +103,7 @@ const {
 } = useTimelineTracks(props, emit, frameQueue);
 const setSidebarScrollElement = bindElementRef(sidebarScrollRef, HTMLDivElement);
 const setTracksScrollElement = bindElementRef(tracksScrollRef, HTMLDivElement);
-const timelineSurface = useTimelineSurface(tracksScrollRef, frameQueue);
-const setTimelineCanvasElement = (element: Element | ComponentPublicInstance | null) => {
-  timelineSurface.canvas.value = element instanceof HTMLCanvasElement ? element : null;
-};
+useTimelineSurface(tracksScrollRef, frameQueue);
 const setTracksViewportElement = bindElementRef(tracksViewportRef, HTMLDivElement);
 const setTicksAreaElement = bindElementRef(ticksAreaRef, HTMLDivElement);
 const {
@@ -262,13 +260,13 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
       </div>
     </div>
     <div :ref="setTracksScrollElement" class="timeline-tracks-container" @scroll="onScroll">
-      <canvas :ref="setTimelineCanvasElement" class="timeline-content-surface" aria-hidden="true" />
       <div
         :ref="setTracksViewportElement"
         class="timeline-viewport"
         :class="{ 'is-trimming': activeTrimState !== null, 'is-moving': isMoving, 'is-wheel-zooming': isWheelZooming }"
         :style="tracksWidthStyle"
       >
+        <TimelineSurfaceCanvas />
         <div class="timeline-ruler">
           <div :ref="setTicksAreaElement" class="ruler-ticks-area" @pointerdown="beginScrub">
             <div

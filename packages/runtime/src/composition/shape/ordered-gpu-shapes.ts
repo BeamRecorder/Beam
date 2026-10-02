@@ -44,11 +44,20 @@ class OrderedGpuShapes {
       this.paint = {
         matrix,
         viewport,
-        key: JSON.stringify([viewport, matrix.a, matrix.d, matrix.e, matrix.f]),
+        key: JSON.stringify([
+          viewport,
+          matrix.a,
+          matrix.d,
+          matrix.e,
+          matrix.f,
+          this.ctx.canvas.width,
+          this.ctx.canvas.height,
+        ]),
       };
     }
     const commands = gpuShapePlan(this.ctx, clip, viewport, transform, this.paint!);
     if (!commands) return false;
+    if (commands.length === 0) return true;
     this.commands.push(...commands);
     this.native.push(draw);
     if (this.commands.length >= MAX_GPU_PRIMITIVES || this.native.length >= MAX_PENDING_SHAPES) this.flush();

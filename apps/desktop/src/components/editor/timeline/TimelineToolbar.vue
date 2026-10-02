@@ -260,7 +260,7 @@ const handleFullscreenClick = (event?: MouseEvent) => {
   top: 6px;
   left: 50%;
   z-index: 2;
-  transform: translateX(-50%);
+  transform: translate3d(-50%, 0, 0);
 }
 
 .timeline-toolbar.is-loading > :not(.timeline-toolbar-loading-skeleton) {

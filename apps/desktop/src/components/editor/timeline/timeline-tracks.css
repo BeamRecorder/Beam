@@ -173,10 +173,12 @@
 }
 .timeline-playhead {
   position: absolute;
+  left: 0;
   top: 0;
   bottom: 0;
   width: 2px;
   pointer-events: none;
+  will-change: transform;
 }
 .timeline-export-limit {
   position: absolute;
@@ -203,7 +205,7 @@
 }
 .timeline-export-limit.is-at-end .timeline-export-limit-badge {
   left: -5px;
-  transform: translateX(-100%);
+  transform: translate3d(-100%, 0, 0);
 }
 .timeline-playhead::after {
   content: '';
@@ -243,7 +245,7 @@
   position: absolute;
   top: 18px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate3d(-50%, 0, 0);
   padding: 1px 5px;
   border-radius: var(--radius-sm);
   background: var(--text-primary);
@@ -390,7 +392,7 @@
   top: 50%;
   left: 50%;
   max-width: calc(100% - 24px);
-  transform: translate(-50%, -50%);
+  transform: translate3d(-50%, -50%, 0);
   padding: 3px 8px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
@@ -422,10 +424,4 @@
   .track-row .track-content {
     transition: none;
   }
-}
-
-.timeline-content-surface {
-  position: absolute;
-  pointer-events: none;
-  z-index: 1;
 }

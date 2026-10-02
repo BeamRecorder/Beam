@@ -68,6 +68,15 @@ const probe = {
       );
     } else if (id.endsWith('/composition/shape/render-shape-clip.ts')) {
       code.append('\nif (typeof window !== "undefined") window.__beamShapeClip = drawShapeClip;');
+    } else if (id.endsWith('/composition/shape/gpu-shape-plan.ts')) {
+      replace(
+        '  const key = paint?.key ?? JSON.stringify([viewport, m.a, m.d, m.e, m.f, ctx.canvas.width, ctx.canvas.height]);',
+        '  const key = (paint?.key ?? JSON.stringify([viewport, m.a, m.d, m.e, m.f, ctx.canvas.width, ctx.canvas.height])) + "|" + Boolean(typeof window !== "undefined" && window.__beamBypassShapeCulling);',
+      );
+      replace(
+        '    if (\n      w > 0 &&\n      h > 0 &&',
+        '    if (\n      !(typeof window !== "undefined" && window.__beamBypassShapeCulling) && w > 0 &&\n      h > 0 &&',
+      );
     } else if (id.endsWith('/composition/shape/ordered-gpu-shapes.ts')) {
       code.append(
         '\nif (typeof window !== "undefined") window.__beamOrderedShapes = { render: withOrderedGpuShapes, dispose: disposeGpuShapes };',
@@ -106,7 +115,7 @@ const probe = {
 };
 await build({
   ...loaded.config,
-  root,
+  root: loaded.config.root,
   configFile: false,
   plugins: [probe, ...loaded.config.plugins],
   build: {
@@ -116,8 +125,9 @@ await build({
   },
 });
 mkdirSync(output, { recursive: true });
-cpSync(path.join(root, 'electron'), path.join(output, 'electron'), {
+cpSync(path.join(root, 'apps/desktop/electron'), path.join(output, 'apps/desktop/electron'), {
   recursive: true,
 });
 cpSync(path.join(root, 'package.json'), path.join(output, 'package.json'));
 symlinkSync(path.join(root, 'node_modules'), path.join(output, 'node_modules'), 'dir');
+symlinkSync(path.join(root, 'packages'), path.join(output, 'packages'), 'dir');

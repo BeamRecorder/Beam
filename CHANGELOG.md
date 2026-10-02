@@ -30,6 +30,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Dense previews evaluate canvas selection geometry only when needed, reuse shape paint styles and skip rectangles fully outside the rendered image during zooms. Preview and export share the same visibility checks without reducing image quality.
+- Timeline playback moves the playhead with a composited 3D transform and reuses unchanged visible clip lists instead of repainting static artwork on every tick.
 - Desktop application code now lives under `apps/desktop`; reusable document, rendering, encoding, storage and native capture transport code lives in separate packages.
 - Timeline artwork shares one viewport-sized canvas and one measurement/paint queue; Ctrl/Cmd-wheel zoom keeps the time beneath the pointer and supports long timelines without a fixed ruler cap.
 
@@ -88,6 +90,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Fast horizontal and vertical timeline scrolling keeps the canvas covering the viewport and prepares newly visible tracks before painting.
 - Desktop startup resolves the shared JSON storage adapter when organizing project categories.
 - Horizontal timeline scrolling keeps clip artwork, titles, trim handles and audio waveforms aligned; audio titles stay above waveforms and zoom badges retain the theme's text color.
 - VP9/AV1 exports on Linux use buffered software decoding to prevent decoder flush failures. Multi-video scenes retain every current image instead of evicting visible layers when the seek-history cache fills.

@@ -16,6 +16,8 @@ import { composition as screenDocument } from '../../../packages/runtime/src/ren
 import type { ProjectEditorData } from '@beam/engine/capture/capture-session';
 import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
+import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '@beam/engine/shared/shape-layer-style';
+import type { ShapeClip } from '@beam/engine';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export frames in displayless Chrome', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temp: string;
@@ -174,7 +176,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
           cursorImage: () => null,
           cursorEnabled: () => cursor.enabled,
           watermarkImage: () => null,
-          draftFor: () => null,
+          drafts: () => ({}),
           editingCaptionId: () => null,
           drawBackground: (ctx, bounds) => {
             if (snapshot.background?.kind === 'color') {
@@ -219,6 +221,126 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
       },
       { snapshot, time },
     );
+  it('preserves exact native rectangle pixels through fractional zooms, overlaps, alpha and shadows', async () => {
+    const clips: ShapeClip[] = Array.from({ length: 10000 }, (_, i) => ({
+      ...DEFAULT_ANNOTATION_SHAPE_STYLE,
+      id: `rectangle-${i}`,
+      kind: 'shape',
+      assetId: '',
+      name: 'Rectangle',
+      enabled: true,
+      order: i,
+      timelineStartMs: 0,
+      timelineDurationMs: 1000,
+      sourceInMs: 0,
+      sourceDurationMs: 1000,
+      playbackRate: 1,
+      fillEnabled: i % 3 === 0,
+      fillColor: '#ab304a',
+      borderColor: i % 2 ? '#ffc24a' : '#357fea',
+      borderWidth: 8,
+      transform: { x: ((i * 17) % 200) / 300, y: ((i * 13) % 120) / 180, width: 0.16, height: 0.17 },
+    }));
+    const differences = await page.evaluate(async (clips) => {
+      const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+      const { drawShapeClip } = (await load(
+        '/packages/runtime/src/composition/shape/render-shape-clip.ts',
+      )) as typeof import('../../../packages/runtime/src/composition/shape/render-shape-clip');
+      const { withOrderedGpuShapes, disposeGpuShapes } = (await load(
+        '/packages/runtime/src/composition/shape/ordered-gpu-shapes.ts',
+      )) as typeof import('../../../packages/runtime/src/composition/shape/ordered-gpu-shapes');
+      const canvas = new OffscreenCanvas(300, 180),
+        ctx = canvas.getContext('2d')!;
+      const viewport = { x: 1.25, y: 2.5, width: 277.3, height: 155.9 };
+      const results: { different: number; max: number }[] = [];
+      for (const [scale, alpha, shadow] of [
+        [0.5, 1, false],
+        [0.83, 1, false],
+        [1.37, 1, false],
+        [2.03, 1, false],
+        [0.83, 0.45, false],
+        [1.37, 0.6, true],
+      ] as const) {
+        // Shadow/alpha cases need fewer overlaps to expose edge errors and stay bounded.
+        const shapes = shadow || alpha !== 1 ? clips.slice(0, 30) : clips;
+        const paint = (retained: boolean) => {
+          ctx.resetTransform();
+          ctx.clearRect(0, 0, 300, 180);
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(3, 4, 290, 168, 12);
+          ctx.clip();
+          ctx.translate(0.27, 0.63);
+          ctx.scale(scale, scale);
+          const paintClip = (entry: ShapeClip, batch?: Parameters<Parameters<typeof withOrderedGpuShapes>[1]>[0]) => {
+            const clip = {
+              ...entry,
+              opacityEnabled: alpha !== 1,
+              opacity: alpha * 100,
+              backdropBlur: 0,
+              shadowEnabled: shadow,
+              shadowDirection: 'all' as const,
+              shadowBlur: 12,
+              shadowColor: '#000000',
+            };
+            if (retained) {
+              const native = () => drawShapeClip(ctx, clip, viewport);
+              if (!batch!.tryShape(clip, viewport, native)) {
+                batch!.flush();
+                native();
+              }
+              return;
+            }
+            const rect = {
+              x: viewport.x + clip.transform.x * viewport.width,
+              y: viewport.y + clip.transform.y * viewport.height,
+              width: clip.transform.width * viewport.width,
+              height: clip.transform.height * viewport.height,
+            };
+            ctx.save();
+            ctx.globalAlpha *= alpha;
+            if (shadow) {
+              ctx.shadowColor = '#000000';
+              ctx.shadowBlur = (12 * viewport.height) / 1080;
+            }
+            ctx.save();
+            ctx.translate(rect.x + rect.width / 2, rect.y + rect.height / 2);
+            ctx.rotate(0);
+            ctx.translate(-rect.width / 2, -rect.height / 2);
+            ctx.scale(rect.width, rect.height);
+            ctx.beginPath();
+            ctx.rect(0, 0, 1, 1);
+            ctx.restore();
+            if (clip.fillEnabled) {
+              ctx.fillStyle = clip.fillColor;
+              ctx.fill();
+              ctx.shadowColor = 'transparent';
+            }
+            ctx.strokeStyle = clip.borderColor;
+            ctx.lineWidth = (8 * viewport.height) / 1080;
+            ctx.stroke();
+            ctx.restore();
+          };
+          if (retained) withOrderedGpuShapes(ctx, (batch) => shapes.forEach((clip) => paintClip(clip, batch)));
+          else shapes.forEach((clip) => paintClip(clip));
+          ctx.restore();
+          return ctx.getImageData(0, 0, 300, 180).data;
+        };
+        const before = paint(false),
+          after = paint(true);
+        let different = 0,
+          max = 0;
+        for (let i = 0; i < before.length; i++) {
+          if (before[i] !== after[i]) different++;
+          max = Math.max(max, Math.abs(before[i]! - after[i]!));
+        }
+        results.push({ different, max });
+      }
+      disposeGpuShapes(ctx);
+      return results;
+    }, clips);
+    expect(differences).toEqual(Array.from({ length: 6 }, () => ({ different: 0, max: 0 })));
+  }, 60000);
   it('paints the same completed flat frame through both hosts', async () => {
     expect(await compare(snapshot())).toMatchObject({
       differingChannels: 0,

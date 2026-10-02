@@ -25,6 +25,15 @@ const wheelZoomEvent = (deltaY = -100) => {
 };
 
 describe('TimelineTracks', () => {
+  it.each([0, 5, 10])(
+    'moves the playhead at %s seconds with a 3D transform instead of layout offsets',
+    async (currentTime) => {
+      const mounted = await mountTracks({ duration: 10, currentTime }, 1000);
+      const playhead = mounted!.get('.timeline-playhead').element as HTMLElement;
+      expect(playhead.style.left).toBe('');
+      expect(playhead.style.transform).toBe(`translate3d(${currentTime * 100}px, 0, 0)`);
+    },
+  );
   it('keeps linked metadata stable on playback ticks and refreshes it on composition edits', async () => {
     const initial = composition();
     const mounted = await mountTracks({ composition: initial });
@@ -76,6 +85,22 @@ describe('TimelineTracks', () => {
     await mounted!.setProps({ currentTime: 8 });
 
     expect(scroll.scrollLeft).toBe(0);
+  });
+  it('scrubs without snapping and keeps the transform aligned to the source time', async () => {
+    const mounted = await mountTracks({ isSnappingEnabled: false });
+    setScrubViewportGeometry(mounted!);
+    await triggerPointer(mounted!.get('.ruler-ticks-area'), 'pointerdown', { clientX: 400 });
+    await flushPromises();
+    expect(mounted!.emitted('update:currentTime')?.at(-1)).toEqual([1.4]);
+    expect(mounted!.find('.timeline-snap-guide').exists()).toBe(false);
+    window.dispatchEvent(pointerEvent('pointerup', 400));
+  });
+  it('handles an invalid playback time without assigning a nonfinite scroll offset', async () => {
+    const mounted = await mountTracks({ isPlaying: true });
+    const scroll = setPlaybackViewportGeometry(mounted!);
+    scroll.scrollLeft = 400;
+    await mounted!.setProps({ currentTime: Number.NaN });
+    expect(Number.isFinite(scroll.scrollLeft)).toBe(true);
   });
 
   it('keeps scrubbing at the right edge and advances time across animation frames without pointer movement', async () => {

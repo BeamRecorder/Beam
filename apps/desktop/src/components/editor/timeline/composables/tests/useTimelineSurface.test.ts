@@ -4,6 +4,7 @@ import { defineComponent, h, ref, reactive, nextTick } from 'vue';
 import { afterEach, expect, it, vi } from 'vitest';
 import { useTimelineSurface } from '../useTimelineSurface';
 import TimelineCanvasLane from '../../TimelineCanvasLane.vue';
+import TimelineSurfaceCanvas from '../../TimelineSurfaceCanvas.vue';
 const paint = vi.hoisted(() => vi.fn());
 vi.mock('@beam/runtime/timeline/timeline-canvas-paint', () => ({ paintTimelineCanvas: paint }));
 afterEach(() => {
@@ -113,7 +114,7 @@ function setup(count = 2) {
             },
           },
           [
-            h('canvas', { ref: surface.canvas }),
+            h(TimelineSurfaceCanvas),
             ...Array.from({ length: count }, (_, key) => h(TimelineCanvasLane, { ...props, key })),
           ],
         );
@@ -219,18 +220,26 @@ it('uses a unit scale while CSS bounds or device ratio are unavailable', () => {
   expect(paint).toHaveBeenCalledOnce();
   state.wrapper.unmount();
 });
-it('commits scrolling pixels and placement together and skips arbitrary logical extent allocation', async () => {
+it('leaves placement to the native sticky frame and repaints bounded scroll coordinates', async () => {
   const state = setup(1);
   state.flush();
   const canvas = state.wrapper.get('canvas').element;
   state.scroll().scrollLeft = 200;
   await state.wrapper.trigger('scroll');
-  expect(canvas.style.left).toBe('0px');
+  expect(canvas.style.left).toBe('');
   state.flush();
-  expect(canvas.style.left).toBe('200px');
+  expect(canvas.style.left).toBe('');
   expect(canvas.width).toBe(1800);
   expect(paint.mock.calls.at(-1)?.[2]).toMatchObject({ left: 120, viewportWidth: 900 });
   state.wrapper.unmount();
+});
+it('requires a surface owner and releases the shared canvas reference on unmount', () => {
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
+  expect(() => mount(TimelineSurfaceCanvas)).toThrow('requires the shared surface');
+  const state = setup(0);
+  expect(state.owner().canvas.value).toBeInstanceOf(HTMLCanvasElement);
+  state.wrapper.unmount();
+  expect(state.owner().canvas.value).toBeNull();
 });
 it('coalesces theme/size invalidation, reads tokens and reports unavailable rendering', () => {
   const state = setup(1);

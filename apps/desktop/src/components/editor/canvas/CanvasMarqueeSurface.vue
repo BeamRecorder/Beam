@@ -10,7 +10,7 @@ import type {
 
 const props = withDefaults(
   defineProps<{
-    targets: CanvasMarqueeTarget[];
+    targets: () => readonly CanvasMarqueeTarget[];
     selection: string[];
     disabled?: boolean;
     showSelectionOutlines?: boolean;
@@ -35,7 +35,7 @@ const boxStyle = computed(
 );
 const selectedTargets = computed(() =>
   props.showSelectionOutlines && props.selection.length > 1
-    ? props.targets.filter((target) => props.selection.includes(target.id))
+    ? props.targets().filter((target) => props.selection.includes(target.id))
     : [],
 );
 const selectionStyle = (target: CanvasMarqueeTarget) => ({
@@ -186,7 +186,7 @@ const begin = (event: PointerEvent) => {
     target: event.target,
     initial,
     last: initial,
-    targets: props.targets.filter((target) => target.width > 0 && target.height > 0),
+    targets: props.targets().filter((target) => target.width > 0 && target.height > 0),
     additive: startsFromSelection || event.shiftKey || event.ctrlKey || event.metaKey,
     dragged: false,
   };

@@ -97,7 +97,7 @@
 .trim-side-badge {
   position: absolute;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translate3d(0, -50%, 0);
   padding: 1px 5px;
   border-radius: var(--radius-sm);
   font-size: 9px;
@@ -149,11 +149,11 @@
 @keyframes caption-settle-in {
   0% {
     opacity: var(--timeline-pending-opacity);
-    transform: translateY(2px);
+    transform: translate3d(0, 2px, 0);
   }
   100% {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
   }
 }
 .caption-label-text.caption-settled {
@@ -171,7 +171,7 @@
 }
 .caption-item-enter-from {
   opacity: 0;
-  transform: translateY(6px) scale(0.92);
+  transform: translate3d(0, 6px, 0) scale(0.92);
 }
 .caption-item-leave-to {
   opacity: 0;

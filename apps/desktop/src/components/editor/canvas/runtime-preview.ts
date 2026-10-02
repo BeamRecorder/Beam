@@ -42,28 +42,30 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
         width: Math.max(1, Math.round(bounds.width)),
         height: Math.max(1, Math.round(bounds.height)),
       };
+      const drafts = options.drafts();
+      const editingId = options.editingCaptionId();
+      const cropped = props.isCropping ? props.selectedTransformClip : null;
       const draft = <T extends { id: string }>(clip: T): T => {
-        const transform = options.draftFor(clip.id);
-        if (clip.id === options.editingCaptionId()) return { ...clip, enabled: false };
-        if (
-          props.isCropping &&
-          clip.id === props.selectedTransformClip?.id &&
-          isVisualClip(props.selectedTransformClip)
-        )
+        const transform = Object.hasOwn(drafts, clip.id) ? drafts[clip.id] : undefined;
+        if (clip.id === editingId) return { ...clip, enabled: false };
+        if (cropped && clip.id === cropped.id && isVisualClip(cropped))
           return {
             ...clip,
             crop: { x: 0, y: 0, width: 1, height: 1 },
-            cameraFramingPreset: isPhoneFrame(props.selectedTransformClip.appearance.frame) ? 'fit' : 'custom',
+            cameraFramingPreset: isPhoneFrame(cropped.appearance.frame) ? 'fit' : 'custom',
             ...(transform ? { transform } : {}),
           };
         return transform ? { ...clip, transform } : clip;
       };
-      const evaluated = {
-        ...layers,
-        screen: layers.screen ? draft(layers.screen) : null,
-        visualStack: layers.visualStack.map(draft),
-        captions: layers.captions.filter((clip) => clip.id !== options.editingCaptionId()).map(draft),
-      };
+      const evaluated =
+        !editingId && !cropped && Object.keys(drafts).length === 0
+          ? layers
+          : {
+              ...layers,
+              screen: layers.screen ? draft(layers.screen) : null,
+              visualStack: layers.visualStack.map(draft),
+              captions: layers.captions.filter((clip) => clip.id !== editingId).map(draft),
+            };
       const cursor = props.editorData?.cursor ?? absentCursor;
       const snapshot: CompositionSnapshot = {
         duration: props.duration ?? compositionDurationMs(props.composition) / 1000,
@@ -140,6 +142,7 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
       }
       const visuals = new Map<string, RenderableMedia>();
       for (const clip of evaluated.visualStack) {
+        if (!isVisualClip(clip)) continue;
         const media = props.frameFor(clip.id);
         const image = options.images.get(clip.assetId);
         if (media)

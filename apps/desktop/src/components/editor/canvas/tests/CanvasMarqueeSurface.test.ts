@@ -42,7 +42,7 @@ let pendingFrame: FrameRequestCallback | null = null;
 const mountSurface = (selection: string[] = [], disabled = false) => {
   wrapper = mount(CanvasMarqueeSurface, {
     attachTo: document.body,
-    props: { targets, selection, disabled },
+    props: { targets: () => targets, selection, disabled },
     slots: {
       default: () => [h('canvas'), h('div', { class: 'webcam-selection' })],
     },
@@ -95,6 +95,42 @@ afterEach(() => {
 });
 
 describe('CanvasMarqueeSurface', () => {
+  it('does not evaluate selection geometry during idle renders or disabled playback', async () => {
+    const mounted = mountSurface();
+    const geometry = vi.fn(() => targets);
+    await mounted.setProps({ targets: geometry, selection: ['shape'], showSelectionOutlines: true });
+    await mounted.setProps({ disabled: true, showSelectionOutlines: false, selection: ['shape', 'image'] });
+    await drag(mounted.element, [100, 200], [400, 380]);
+    expect(geometry).not.toHaveBeenCalled();
+    expect(mounted.emitted('select')).toBeUndefined();
+  });
+  it('captures current geometry once per marquee gesture and retains it while dragging', async () => {
+    const mounted = mountSurface();
+    const geometry = vi.fn(() => targets);
+    await mounted.setProps({ targets: geometry });
+    mounted.element.dispatchEvent(pointerEvent('pointerdown', { pointerId: 7, clientX: 100, clientY: 200 }));
+    geometry.mockReturnValue([]);
+    window.dispatchEvent(pointerEvent('pointermove', { pointerId: 7, clientX: 220, clientY: 290 }));
+    pendingFrame?.(0);
+    await nextTick();
+    expect(geometry).toHaveBeenCalledOnce();
+    expect(mounted.emitted('select')?.at(-1)).toEqual([{ ids: ['shape'], primaryId: 'shape', additive: false }]);
+    window.dispatchEvent(pointerEvent('pointerup', { pointerId: 7, clientX: 220, clientY: 290 }));
+    await mounted.setProps({ selection: ['shape'] });
+    await drag(mounted.element, [100, 200], [220, 290]);
+    expect(geometry).toHaveBeenCalledTimes(2);
+    expect(mounted.emitted('select')?.at(-1)).toEqual([{ ids: [], primaryId: null, additive: false }]);
+  });
+  it('evaluates live geometry for multiple selection outlines and stops when hidden', async () => {
+    const mounted = mountSurface(['shape', 'image']);
+    const geometry = vi.fn(() => targets);
+    await mounted.setProps({ targets: geometry, showSelectionOutlines: true });
+    expect(geometry).toHaveBeenCalledOnce();
+    expect(mounted.findAll('.canvas-marquee-selection')).toHaveLength(2);
+    await mounted.setProps({ showSelectionOutlines: false });
+    expect(mounted.findAll('.canvas-marquee-selection')).toHaveLength(0);
+    expect(geometry).toHaveBeenCalledOnce();
+  });
   it('selects foreground targets with a right-button drag without always selecting the backdrop', async () => {
     const mounted = mountSurface();
     await drag(mounted.element, [105, 205], [190, 290]);
@@ -145,5 +181,70 @@ describe('CanvasMarqueeSurface', () => {
     await mounted.setProps({ showSelectionOutlines: true });
 
     expect(mounted.findAll('.canvas-marquee-selection')).toHaveLength(2);
+  });
+  it('replays a stationary right-click context menu once and permits keyboard context menus afterward', () => {
+    const mounted = mountSurface();
+    const menu = vi.fn();
+    mounted.element.addEventListener('contextmenu', menu);
+    mounted.element.dispatchEvent(pointerEvent('pointerdown', { pointerId: 7, clientX: 120, clientY: 220 }));
+    const original = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2 });
+    mounted.element.dispatchEvent(original);
+    expect(original.defaultPrevented).toBe(true);
+    expect(menu).not.toHaveBeenCalled();
+    window.dispatchEvent(pointerEvent('pointermove', { pointerId: 7, clientX: 121, clientY: 221 }));
+    window.dispatchEvent(pointerEvent('pointerup', { pointerId: 7, clientX: 121, clientY: 221 }));
+    expect(menu).toHaveBeenCalledOnce();
+    mounted.element.dispatchEvent(new KeyboardEvent('keydown', { key: 'F10', shiftKey: true, bubbles: true }));
+    mounted.element.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2 }));
+    expect(menu).toHaveBeenCalledTimes(2);
+  });
+  it.each(['Escape', 'pointercancel', 'blur', 'resize'])(
+    'restores the initial selection when cancelled by %s',
+    async (kind) => {
+      const mounted = mountSurface(['image']);
+      mounted.element.dispatchEvent(pointerEvent('pointerdown', { pointerId: 7, clientX: 100, clientY: 200 }));
+      window.dispatchEvent(pointerEvent('pointermove', { pointerId: 7, clientX: 220, clientY: 290 }));
+      pendingFrame?.(0);
+      await nextTick();
+      window.dispatchEvent(
+        kind === 'Escape'
+          ? new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })
+          : kind === 'pointercancel'
+            ? pointerEvent(kind, { pointerId: 7 })
+            : new Event(kind),
+      );
+      await nextTick();
+      expect(mounted.emitted('select')?.at(-1)).toEqual([{ ids: ['image'], primaryId: 'image', additive: false }]);
+      expect(mounted.find('.canvas-marquee-box').exists()).toBe(false);
+    },
+  );
+  it('ignores unrelated pointers and keys and releases a pending gesture on unmount', async () => {
+    const mounted = mountSurface();
+    mounted.element.dispatchEvent(pointerEvent('pointerdown', { button: 0 }));
+    expect(pendingFrame).toBeNull();
+    mounted.element.dispatchEvent(pointerEvent('pointerdown', { pointerId: 7, clientX: 100, clientY: 200 }));
+    window.dispatchEvent(pointerEvent('pointermove', { pointerId: 8, clientX: 400, clientY: 400 }));
+    window.dispatchEvent(pointerEvent('pointerup', { pointerId: 8 }));
+    window.dispatchEvent(pointerEvent('pointercancel', { pointerId: 8 }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(mounted.emitted('select')).toBeUndefined();
+    window.dispatchEvent(pointerEvent('pointermove', { pointerId: 7, clientX: 400, clientY: 400 }));
+    expect(pendingFrame).not.toBeNull();
+    mounted.unmount();
+    wrapper = undefined;
+    expect(pendingFrame).toBeNull();
+  });
+  it('selects rotated bounds and excludes targets with no area using the latest surface scale', async () => {
+    const mounted = mountSurface();
+    await mounted.setProps({
+      targets: () => [
+        { id: 'rotated', x: 50, y: 30, width: 60, height: 20, rotation: 90 },
+        { id: 'empty', x: 50, y: 30, width: 0, height: 20 },
+      ],
+    });
+    Object.defineProperty(mounted.element, 'clientWidth', { value: 800 });
+    Object.defineProperty(mounted.element, 'clientHeight', { value: 400 });
+    await drag(mounted.element, [133, 208], [147, 214]);
+    expect(mounted.emitted('select')?.at(-1)).toEqual([{ ids: ['rotated'], primaryId: 'rotated', additive: false }]);
   });
 });

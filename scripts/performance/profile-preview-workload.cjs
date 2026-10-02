@@ -68,6 +68,10 @@ module.exports = async (editor, result) => {
     fs.writeFileSync(path.join(profileRoot, 'loading.cpuprofile'), JSON.stringify(initial.profile));
   }
   await editor.webContents.executeJavaScript('window.__beamPreview.player.volume.value = 0');
+  if (process.env.BEAM_PREVIEW_FRAME_PROFILE) {
+    result.previewFrames = await require('./profile-preview-frames.cjs')(editor);
+    return;
+  }
   if (process.env.BEAM_TIMELINE_SCROLL_QUALITY) {
     result.timelineScroll = await require('./profile-timeline-scroll-quality.cjs')(editor);
     return;

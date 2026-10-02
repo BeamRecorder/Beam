@@ -7,7 +7,7 @@ export interface RuntimePreviewOptions {
   cursorImage(): HTMLImageElement | null;
   watermarkImage(): HTMLImageElement | null;
   cursorEnabled(): boolean;
-  draftFor(id: string): NormalizedTransform | null;
+  drafts(): Readonly<Record<string, NormalizedTransform>>;
   editingCaptionId(): string | null;
   drawBackground(context: Canvas2DContext, bounds: { x: number; y: number; width: number; height: number }): void;
 }

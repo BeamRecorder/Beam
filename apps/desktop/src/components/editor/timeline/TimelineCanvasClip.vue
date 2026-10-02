@@ -189,7 +189,7 @@ const labelInset = computed(() => (props.clip.locked ? 15 : 0) + (props.linkedCl
 .trim-side-badge {
   position: absolute;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translate3d(0, -50%, 0);
   padding: 1px 5px;
   border-radius: var(--radius-sm);
   font-size: 9px;

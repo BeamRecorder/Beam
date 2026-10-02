@@ -41,7 +41,7 @@ export function useTimelineViewport(
   const scrubPreviewTime = ref<number | null>(null);
   const displayedPlayheadTime = computed(() => scrubPreviewTime.value ?? props.currentTime);
   const playheadStyle = computed(() => ({
-    left: `${currentDuration.value > 0 ? (displayedPlayheadTime.value / currentDuration.value) * 100 : 0}%`,
+    transform: `translate3d(${(displayedPlayheadTime.value / currentDuration.value) * rulerLayoutWidth.value}px, 0, 0)`,
   }));
   const rulerLabelStep = computed(() => {
     const dur = Math.max(0.1, currentDuration.value);
@@ -141,23 +141,28 @@ export function useTimelineViewport(
   let pendingScrubTime: number | null = null;
   let resizeObserver: ResizeObserver | null = null;
   let syncedScrollTop = NaN;
+  const syncScrollPosition = () => {
+    const scroll = tracksScrollRef.value;
+    if (!scroll) return;
+    timelineViewport.top = scroll.scrollTop;
+    timelineViewport.left = scroll.scrollLeft;
+    if (sidebarScrollRef.value && syncedScrollTop !== timelineViewport.top) {
+      syncedScrollTop = timelineViewport.top;
+      sidebarScrollRef.value.scrollTop = syncedScrollTop;
+    }
+  };
   const updateVisibleRange = () => {
     const scroll = tracksScrollRef.value;
     const ticks = ticksAreaRef.value;
     if (!scroll || !ticks || currentDuration.value <= 0) return;
+    syncScrollPosition();
     Object.assign(timelineViewport, {
-      top: scroll.scrollTop,
-      left: scroll.scrollLeft,
       width: scroll.clientWidth,
       height: Math.max(0, scroll.clientHeight - 28) || 320,
     });
     const scrollRect = scroll.getBoundingClientRect();
     const ticksRect = ticks.getBoundingClientRect();
     const timelineWidth = Math.max(1, ticksRect.width || ticks.clientWidth);
-    if (sidebarScrollRef.value && syncedScrollTop !== timelineViewport.top) {
-      syncedScrollTop = timelineViewport.top;
-      sidebarScrollRef.value.scrollTop = syncedScrollTop;
-    }
     rulerWidth.value = timelineWidth;
     rulerLayoutWidth.value = Math.max(0, ticks.offsetWidth || ticks.clientWidth || ticksRect.width);
     const startPixel = Math.max(0, Math.min(timelineWidth, scrollRect.left - ticksRect.left));
@@ -167,6 +172,8 @@ export function useTimelineViewport(
     viewportReady.value = true;
   };
   const onScroll = () => {
+    // Publish cheap offsets now so Vue mounts the new window before this frame's shared canvas paint.
+    syncScrollPosition();
     if (scrollFrame !== null) return;
     scrollFrame = frameQueue.request('measure', () => {
       scrollFrame = null;

@@ -1,4 +1,4 @@
-import { computed, inject, onMounted, onScopeDispose, provide, ref, type InjectionKey } from 'vue';
+import { computed, inject, onMounted, onScopeDispose, provide, ref, type ComputedRef, type InjectionKey } from 'vue';
 import type { Clip } from '@beam/engine/shared/composition-types';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type { TimelineVirtualizationOptions, TimelineVirtualWindow } from './timeline-virtualization-types';
@@ -85,37 +85,42 @@ export function useTimelineVirtualization(options: TimelineVirtualizationOptions
     };
   });
   // Weak keys allow departed compositions to be collected rather than retaining every edit.
-  const clipIndexes = new WeakMap<readonly Clip[], ReturnType<typeof createTimelineRangeIndex<Clip>>>();
-  const zoomIndexes = new WeakMap<readonly ZoomElement[], ReturnType<typeof createTimelineRangeIndex<ZoomElement>>>();
+  const clipWindows = new WeakMap<readonly Clip[], ComputedRef<Clip[]>>();
+  const zoomWindows = new WeakMap<readonly ZoomElement[], ComputedRef<ZoomElement[]>>();
+  const createWindow = <T extends { id: string }>(
+    items: readonly T[],
+    interval: (item: T) => { start: number; end: number },
+  ) => {
+    const index = createTimelineRangeIndex(items, interval);
+    return computed((previous: T[] | undefined) => {
+      const result = index(range.value.start, range.value.end);
+      const retainedId = pinnedItem.value ?? focusedItem.value;
+      const pinned = retainedId ? items.find((item) => item.id === retainedId) : undefined;
+      if (pinned && !result.includes(pinned)) result.push(pinned);
+      return previous?.length === result.length && result.every((item, i) => item === previous[i]) ? previous : result;
+    });
+  };
   const visibleClips = <T extends Clip>(clips: readonly T[]): T[] => {
-    let index = clipIndexes.get(clips);
-    if (!index) {
-      index = createTimelineRangeIndex(clips, (clip) => ({
+    let window = clipWindows.get(clips);
+    if (!window) {
+      window = createWindow(clips, (clip) => ({
         start: clip.timelineStartMs,
         end: clip.timelineStartMs + clip.timelineDurationMs,
       }));
-      clipIndexes.set(clips, index);
+      clipWindows.set(clips, window);
     }
-    const result = index(range.value.start, range.value.end);
-    const retainedId = pinnedItem.value ?? focusedItem.value;
-    const pinned = retainedId ? clips.find((clip) => clip.id === retainedId) : undefined;
-    if (pinned && !result.includes(pinned)) result.push(pinned);
-    return result as T[];
+    return window.value as T[];
   };
   const visibleZooms = (zooms: readonly ZoomElement[]) => {
-    let index = zoomIndexes.get(zooms);
-    if (!index) {
-      index = createTimelineRangeIndex(zooms, (zoom) => ({
+    let window = zoomWindows.get(zooms);
+    if (!window) {
+      window = createWindow(zooms, (zoom) => ({
         start: zoom.startMs,
         end: zoom.endMs,
       }));
-      zoomIndexes.set(zooms, index);
+      zoomWindows.set(zooms, window);
     }
-    const result = index(range.value.start, range.value.end);
-    const retainedId = pinnedItem.value ?? focusedItem.value;
-    const pinned = retainedId ? zooms.find((zoom) => zoom.id === retainedId) : undefined;
-    if (pinned && !result.includes(pinned)) result.push(pinned);
-    return result;
+    return window.value;
   };
   const selectionTargets: TimelineVirtualWindow['selectionTargets'] = () =>
     layout.value.flatMap((row) => {

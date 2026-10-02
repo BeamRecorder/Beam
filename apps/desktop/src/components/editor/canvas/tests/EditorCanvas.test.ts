@@ -8,7 +8,12 @@ import CanvasLoadingSkeleton from '../CanvasLoadingSkeleton.vue';
 import CanvasPlaybackError from '../CanvasPlaybackError.vue';
 import { PLAYBACK_ERROR_REPORT, playbackErrorDiagnostic } from '../../composables/playback-error-diagnostics';
 import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
-import type { CaptionClip, ClipComposition, VisualClip } from '@beam/engine/shared/composition-types';
+import type {
+  CaptionClip,
+  ClipComposition,
+  VisualClip,
+  NormalizedTransform,
+} from '@beam/engine/shared/composition-types';
 import type { MediaFrame } from '@beam/runtime/shared/index';
 import {
   createDefaultCursorMotionSettings,
@@ -26,6 +31,7 @@ const { state } = vi.hoisted(() => ({
     runtimeDraw: vi.fn(),
     runtimeDispose: vi.fn(),
     runtimeOptions: undefined as RuntimePreviewOptions | undefined,
+    geometryReads: vi.fn(),
     drawInCameraSpace: vi.fn(),
     resetCamera: vi.fn(),
     beginSelectionMove: vi.fn(),
@@ -51,6 +57,7 @@ const { state } = vi.hoisted(() => ({
     endSelectedTransformDrag: vi.fn(() => false),
     selectTransformClip: undefined as ((clipId: string, event?: PointerEvent) => void) | undefined,
     transformDraft: undefined as { value: unknown } | undefined,
+    transformDrafts: undefined as { value: Record<string, NormalizedTransform> } | undefined,
     transformSelectionViewportStyle: undefined as { value: unknown } | undefined,
     transformHandlePositions: undefined as { value: unknown } | undefined,
     transformPerspectiveCorners: undefined as { value: unknown } | undefined,
@@ -188,11 +195,15 @@ vi.mock('../composables/useCameraZoom', async () => {
 });
 
 vi.mock('../composables/useLayerTransformAndCrop', async () => {
-  const { ref } = await import('vue');
+  const { ref, computed } = await import('vue');
   return {
-    useLayerTransformAndCrop: (options: { onSelectTransformClip: (clipId: string, event?: PointerEvent) => void }) => {
+    useLayerTransformAndCrop: (options: {
+      currentTime: () => number;
+      onSelectTransformClip: (clipId: string, event?: PointerEvent) => void;
+    }) => {
       state.selectTransformClip = options.onSelectTransformClip;
       state.transformDraft = ref(null);
+      state.transformDrafts = ref({});
       state.transformSelectionViewportStyle = ref({
         left: '0px',
         top: '0px',
@@ -226,9 +237,13 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
         }),
         cropMeasurements: ref(null),
         activeGuideLines: ref([]),
-        marqueeTargets: ref([]),
+        marqueeTargets: computed(() => {
+          state.geometryReads();
+          options.currentTime();
+          return [];
+        }),
         transformDraft: state.transformDraft,
-        transformDrafts: ref({}),
+        transformDrafts: state.transformDrafts,
         transformDraftFor: () => null,
         transformResizeCorners: state.transformResizeCorners,
         beginTransformDrag: state.beginTransformDrag,
@@ -589,6 +604,42 @@ describe('EditorCanvas', () => {
     await nextTick();
 
     expect(mounted.emitted('select:clips')).toEqual([[selection]]);
+  });
+  it('avoids evaluating marquee geometry on idle and playback ticks and resumes live paused outlines', async () => {
+    const mounted = mountEditor({ selectedClipIds: ['image'] });
+    await mounted.setProps({ currentTime: 0.2 });
+    expect(state.geometryReads).not.toHaveBeenCalled();
+    await mounted.setProps({ isPlaying: true, selectedClipIds: ['image', 'screen'], currentTime: 0.3 });
+    expect(state.geometryReads).not.toHaveBeenCalled();
+    await mounted.setProps({ isPlaying: false });
+    expect(state.geometryReads).toHaveBeenCalledOnce();
+    await mounted.setProps({ currentTime: 0.4 });
+    expect(state.geometryReads).toHaveBeenCalledTimes(2);
+  });
+  it('supplies no single transform draft without a selected clip', () => {
+    mountEditor({ selectedTransformClip: null });
+    state.transformDraft!.value = { x: 0.2, y: 0.3, width: 0.4, height: 0.5 };
+    expect(state.runtimeOptions!.drafts()).toEqual({});
+  });
+  it('supplies the selected single draft and clears it when the gesture finishes', () => {
+    const clip = props().composition.clips[0]!;
+    mountEditor({ selectedTransformClip: clip });
+    const draft = { x: 0.2, y: 0.3, width: 0.4, height: 0.5 };
+    state.transformDraft!.value = draft;
+    expect(state.runtimeOptions!.drafts()[clip.id]).toBe(draft);
+    state.transformDraft!.value = null;
+    expect(state.runtimeOptions!.drafts()).toEqual({});
+  });
+  it('preserves multiple-selection draft precedence and unrelated drafts', () => {
+    const clip = props().composition.clips[0]!;
+    mountEditor({ selectedTransformClip: clip });
+    const one = { x: 0.2, y: 0.3, width: 0.4, height: 0.5 },
+      multiple = { ...one, x: 0.6 };
+    state.transformDraft!.value = one;
+    state.transformDrafts!.value = { [clip.id]: multiple, other: one };
+    const drafts = state.runtimeOptions!.drafts();
+    expect(drafts[clip.id]).toBe(multiple);
+    expect(drafts.other).toBe(one);
   });
 
   it('defaults to full preview quality', async () => {
