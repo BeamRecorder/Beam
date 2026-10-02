@@ -1,14 +1,14 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h, nextTick, ref, shallowRef } from 'vue';
-import type { ShapeClip } from '~/media/shared/composition-types';
-import { createElementText } from '~/media/shared/element-text';
-import { normalizeShapeLayerStyle } from '~/media/shared/shape-layer-style';
-import type { ShapeLayerStyle } from '~/media/shared/shape-layer-types';
+import type { ShapeClip } from '@beam/engine/shared/composition-types';
+import { createElementText } from '@beam/engine/shared/element-text';
+import { normalizeShapeLayerStyle } from '@beam/engine/shared/shape-layer-style';
+import type { ShapeLayerStyle } from '@beam/engine/shared/shape-layer-types';
 import type { ElementEditorContext } from '../element-editor-types';
 import { provideElementEditor } from '../useElementEditor';
 import ElementCanvasOverlay from '../ElementCanvasOverlay.vue';
-import { finishDrawing, MAX_DRAWING_POINTS } from '~/media/shared/freehand';
+import { finishDrawing, MAX_DRAWING_POINTS } from '@beam/engine/shared/freehand';
 import {
   beginPropertyInteraction,
   endPropertyInteraction,

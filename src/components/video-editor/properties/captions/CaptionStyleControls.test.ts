@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
-import type { CaptionShapeStyle } from '~/media/shared/caption-shape-types';
+import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
+import type { CaptionShapeStyle } from '@beam/engine/shared/caption-shape-types';
 
 const capture = vi.hoisted(() => ({
   listImportedFonts: vi.fn(),

@@ -1,8 +1,8 @@
-import type { NormalizedCrop, NormalizedTransform } from '~/media/shared/composition-types';
+import type { NormalizedCrop, NormalizedTransform } from '@beam/engine/shared/composition-types';
 import type { ScreenshotState } from '~/api/types/screenshot';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
-import { frameMediaRect } from '../composition/appearance/frames';
-import { containedMediaRect } from '../canvas/output-canvas';
+import { frameMediaRect } from '@beam/engine/shared/frame-layout';
+import { containedMediaRect } from '@beam/engine/layout/output-canvas';
 import { clampNormalizedCrop } from '../canvas/composables/layer-transform-geometry';
 
 export function screenshotImageFraming(

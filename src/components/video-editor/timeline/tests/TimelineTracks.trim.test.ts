@@ -1,8 +1,8 @@
 import { triggerPointer } from '../../../../../tests/support/pointer';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
-import { clipTrimBounds } from '../../composition/engine/trim-clip';
+import type { ClipComposition, VisualClip } from '@beam/engine/shared/composition-types';
+import { clipTrimBounds } from '@beam/engine/commands/trim-clip';
 import {
   TimelineClipStub,
   asset,

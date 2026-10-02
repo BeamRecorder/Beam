@@ -2,10 +2,10 @@ import { defineComponent, h, ref, type Ref } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import type { ScreenshotState } from '~/api/types/screenshot';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { defaultLayerCompositing } from '~/media/shared/layer-compositing';
-import { HIGHLIGHT_DEFAULTS } from '~/media/shared/highlight-defaults';
-import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { defaultLayerCompositing } from '@beam/runtime/shared/layer-compositing';
+import { HIGHLIGHT_DEFAULTS } from '@beam/engine/shared/highlight-defaults';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: (namespace: string) => ({ t: (key: string) => `${namespace}.${key}` }),

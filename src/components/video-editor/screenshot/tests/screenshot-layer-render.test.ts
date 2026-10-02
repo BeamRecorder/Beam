@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { Canvas2DContext } from '~/types/canvas';
-import type { ShapeClip } from '~/media/shared/composition-types';
-import { DEFAULT_OUTPUT_CANVAS, DEFAULT_WATERMARK } from '../../canvas/output-canvas';
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
+import type { ShapeClip } from '@beam/engine/shared/composition-types';
+import { DEFAULT_OUTPUT_CANVAS, DEFAULT_WATERMARK } from '@beam/engine/layout/output-canvas';
 import type { ScreenshotCursorAsset, ScreenshotCursorLayer, ScreenshotLayer } from '../screenshot-layer-types';
 
 const renderers = vi.hoisted(() => ({
@@ -11,10 +11,10 @@ const renderers = vi.hoisted(() => ({
   screenshotCursor: vi.fn(),
 }));
 
-vi.mock('../../composition/appearance/render-decorated-media', () => ({
+vi.mock('@beam/runtime/composition/appearance/render-decorated-media', () => ({
   drawDecoratedMedia: renderers.decoratedMedia,
 }));
-vi.mock('../../composition/shape/render-shape-clip', () => ({ drawShapeClip: renderers.shapeClip }));
+vi.mock('@beam/runtime/composition/shape/render-shape-clip', () => ({ drawShapeClip: renderers.shapeClip }));
 vi.mock('../screenshot-cursors', () => ({ drawScreenshotCursor: renderers.screenshotCursor }));
 
 import { drawScreenshotLayer } from '../screenshot-layer-render';

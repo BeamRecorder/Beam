@@ -1,4 +1,4 @@
-import { loadElementFonts } from '~/media/shared/element-fonts';
+import { loadElementFonts } from '@beam/runtime/shared/element-font-loader';
 import { useToastStore } from '~/ui/toast/toastStore';
 import { computed, watch } from 'vue';
 import type { ElementViewport } from './element-editor-types';

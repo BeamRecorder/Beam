@@ -1,10 +1,10 @@
-import type { CursorAssetDescriptor, CursorPackDescriptor } from '~/api/types/cursor-pack';
-import type { NormalizedTransform } from '~/media/shared/composition-types';
-import type { Canvas2DContext } from '~/types/canvas';
-import { cursorGeometry } from '../properties/cursor/cursor-packs';
+import type { CursorAssetDescriptor, CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
+import type { NormalizedTransform } from '@beam/engine/shared/composition-types';
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
+import { cursorGeometry } from '@beam/engine/shared/cursor-assets';
 import { CURSOR_SIZE_DEFAULT, CURSOR_SIZE_MAX, clampCursorSize } from '../properties/cursor/cursor-size';
-import { cursorShadowOffset } from '../properties/cursor/cursor-shadow';
-import { loadCursorImage } from '../properties/cursor/cursor-image-loader';
+import { cursorShadowOffset } from '@beam/runtime/cursor/cursor-shadow';
+import { loadCursorImage } from '@beam/runtime/cursor/cursor-image-loader';
 import type { ScreenshotCursorAsset, ScreenshotCursorLayer } from './screenshot-layer-types';
 
 export function createScreenshotCursor(id: string, name: string, pack: CursorPackDescriptor): ScreenshotCursorLayer {

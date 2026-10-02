@@ -67,6 +67,7 @@ export default defineConfig({
     dedupe: ['vue'],
     alias: {
       '~/ui': fileURLToPath(new URL('./src/components/ui', import.meta.url)),
+      '@desktop': fileURLToPath(new URL('./src', import.meta.url)),
       '~': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
@@ -98,14 +99,14 @@ export default defineConfig({
     port: 6500,
   },
   test: {
-    include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'tests/**/*.test.ts', 'packages/**/*.test.ts', 'apps/**/*.test.ts'],
     setupFiles: ['tests/setup.ts'],
     environment: 'jsdom',
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],
-      include: ['src/**/*.{ts,vue}'],
-      exclude: ['src/**/*.test.ts', 'src/vite-env.d.ts'],
+      include: ['src/**/*.{ts,vue}', 'packages/**/src/**/*.ts', 'apps/cli/src/**/*.ts'],
+      exclude: ['**/*.test.ts', 'src/vite-env.d.ts'],
       thresholds: {
         statements: 90,
         branches: 90,

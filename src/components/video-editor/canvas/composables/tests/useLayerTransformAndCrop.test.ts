@@ -9,19 +9,19 @@ import type {
   ClipComposition,
   NormalizedTransform,
   VisualClip,
-} from '~/media/shared/composition-types';
+} from '@beam/engine/shared/composition-types';
 import type { VideoWindowBounds } from '../useCameraZoom';
-import { DEFAULT_OUTPUT_CANVAS } from '../../output-canvas';
-import { computeWebcamLayout, webcamSettingsForAppearance } from '../../../composition/webcam/webcam-zoom';
-import { resolveCameraFraming } from '../../../composition/camera-layout';
-import { frameOuterRect } from '../../../composition/appearance/frames';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
+import { computeWebcamLayout, webcamSettingsForAppearance } from '@beam/runtime/composition/webcam/webcam-zoom';
+import { resolveCameraFraming } from '@beam/engine/composition/camera-layout';
+import { frameOuterRect } from '@beam/engine/shared/frame-layout';
 import { projectCameraRect } from '../layer-transform-geometry';
 import {
   perspectiveCoverScale,
   projectPerspectivePoint,
   unprojectPerspectivePoint,
-} from '../../../zoom/perspective-projection';
-import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+} from '@beam/engine/zoom/perspective-projection';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 
 const screenClip = (): VisualClip => ({
   id: 'screen',

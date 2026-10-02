@@ -1,9 +1,9 @@
 import { effectScope, nextTick } from 'vue';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { ProjectEditorState } from '~/api/types/capture-api';
-import { createDefaultCursorPresentation } from '~/api/types/cursor-presentation';
-import { emptyComposition } from '~/media/shared/composition-types';
-import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
+import { createDefaultCursorPresentation } from '@beam/engine/capture/cursor-presentation';
+import { emptyComposition } from '@beam/engine/shared/composition-types';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { useProjectEditorState } from '../useProjectEditorState';
 import { createState } from './editor-state-fixture';
 const capture = vi.hoisted(() => ({

@@ -9,7 +9,7 @@ import {
 } from '~/composables/property-interaction';
 import type { EditorPresetSettings } from '~/api/types/editor-preset';
 import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
-import type { NormalizedTransform } from '~/media/shared/composition-types';
+import type { NormalizedTransform } from '@beam/engine/shared/composition-types';
 import type { ScreenshotRenderAssets } from '../screenshot-types';
 import { screenshotShape, screenshotState } from '../screenshot-state';
 

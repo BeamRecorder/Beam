@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { CaptureMode } from '~/api/types/capture-mode';
+import type { CaptureMode } from '@beam/engine/capture/capture-mode';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import { useTranslate } from '~/i18n/useTranslate';
 

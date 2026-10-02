@@ -1,8 +1,8 @@
 import type { ProjectEditorData } from '~/api/types/capture-api';
-import type { ClipComposition, NormalizedTransform } from '~/media/shared/composition-types';
-import type { ZoomAutoFollowSettings, ZoomElement, ZoomMotionBlurSettings } from '../../zoom/zoom-types';
-import type { OutputCanvasSettings } from '../output-canvas';
-import type { CompositionSceneLayers } from '../../composition/scene-layers';
+import type { ClipComposition, NormalizedTransform } from '@beam/engine/shared/composition-types';
+import type { ZoomAutoFollowSettings, ZoomElement, ZoomMotionBlurSettings } from '@beam/engine/zoom/zoom-types';
+import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
+import type { CompositionSceneLayers } from '@beam/engine/composition/scene-layers';
 
 export interface VideoWindowBounds {
   dx: number;

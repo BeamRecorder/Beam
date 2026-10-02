@@ -1,46 +1,32 @@
 import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue';
-import type { SnapshotHistory } from '~/media/shared/editor-history-types';
+import type { SnapshotHistory } from '@beam/engine/shared/editor-history-types';
 import type {
   EditorHistoryOptions,
   EditorStateSnapshot,
-  HistoryAction,
   SnapshotSource,
   SnapshotOwnership,
-  SerializedSnapshot,
 } from './editor-history-types';
 export type { EditorStateSnapshot, HistoryAction, HistoryActionType } from './editor-history-types';
 
-export const MAX_HISTORY_DEPTH = 50;
-const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
-const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+import { createSnapshotHistory } from '@beam/engine/history/snapshot-history';
+export { MAX_HISTORY_DEPTH } from '@beam/engine/history/snapshot-history';
 
 export function useEditorUndoRedo<T extends object = EditorStateSnapshot>(options: EditorHistoryOptions<T>) {
-  const undoStack = shallowRef<T[]>([]);
-  const redoStack = shallowRef<T[]>([]);
-  const lastAction = shallowRef<HistoryAction | null>(null);
-  const restoring = ref(false);
+  const history = createSnapshotHistory(options);
+  const state = shallowRef(history.state);
+  const unsubscribe = history.subscribe(() => {
+    state.value = history.state;
+  });
+  const undoStack = computed(() => state.value.undo);
+  const redoStack = computed(() => state.value.redo);
+  const lastAction = computed(() => state.value.lastAction);
+  const restoring = computed(() => state.value.restoring);
   const pending = ref(false);
   let timer: ReturnType<typeof setTimeout> | null = null;
   let pendingSnapshot: SnapshotSource<T> | null = null;
-  let serializedHead: SerializedSnapshot<T> | null = null;
   const available = () => !restoring.value && !options.disabled?.();
   const canUndo = computed(() => available() && (undoStack.value.length > 1 || pending.value));
   const canRedo = computed(() => available() && redoStack.value.length > 0);
-  const resolveSnapshot = (source: SnapshotSource<T>) => (typeof source === 'function' ? source() : source);
-
-  const recordImmediate = (snapshot: T) => {
-    if (restoring.value) return;
-    const json = JSON.stringify(snapshot);
-    const head = undoStack.value.at(-1);
-    if (head && serializedHead?.snapshot !== head) serializedHead = { snapshot: head, json: JSON.stringify(head) };
-    if (head && serializedHead?.json === json) return;
-    const next = JSON.parse(json) as T;
-    // Only the current history-owned immutable snapshot retains a fingerprint.
-    // Live/IPC/restore values still cross a copy boundary; no source identity cache.
-    serializedHead = { snapshot: next, json };
-    undoStack.value = [...undoStack.value, next].slice(-MAX_HISTORY_DEPTH);
-    redoStack.value = [];
-  };
   const cancel = () => {
     if (timer) clearTimeout(timer);
     timer = null;
@@ -50,7 +36,7 @@ export function useEditorUndoRedo<T extends object = EditorStateSnapshot>(option
   const flushPending = () => {
     const source = pendingSnapshot;
     cancel();
-    if (source) recordImmediate(resolveSnapshot(source));
+    if (source) history.record(typeof source === 'function' ? source() : source);
   };
   const recordSnapshot = (snapshot: SnapshotSource<T>, debounceMs = 0) => {
     if (restoring.value) return;
@@ -59,56 +45,27 @@ export function useEditorUndoRedo<T extends object = EditorStateSnapshot>(option
       pendingSnapshot = snapshot;
       pending.value = true;
       timer = setTimeout(flushPending, debounceMs);
-    } else recordImmediate(resolveSnapshot(snapshot));
+    } else history.record(typeof snapshot === 'function' ? snapshot() : snapshot);
   };
   const commitNow = (snapshot: T) => recordSnapshot(snapshot);
-  // Transfer is for freshly received IPC snapshots: the caller relinquishes
-  // the history. Restoring still clones so live edits never mutate a snapshot.
-  const initialize = (snapshot: T, history?: SnapshotHistory<T>, ownership: SnapshotOwnership = 'copy') => {
+  const initialize = (snapshot: T, saved?: SnapshotHistory<T>, ownership: SnapshotOwnership = 'copy') => {
     cancel();
-    serializedHead = null;
-    const valid =
-      history?.version === 1 &&
-      Array.isArray(history.undo) &&
-      Array.isArray(history.redo) &&
-      history.undo.length > 0 &&
-      history.undo.length + history.redo.length <= MAX_HISTORY_DEPTH &&
-      same(history.undo.at(-1), snapshot);
-    undoStack.value = valid ? (ownership === 'transfer' ? history.undo : clone(history.undo)) : [clone(snapshot)];
-    redoStack.value = valid ? (ownership === 'transfer' ? history.redo : clone(history.redo)) : [];
-    lastAction.value = null;
+    history.initialize(snapshot, saved, ownership);
   };
-  const serialize = (): SnapshotHistory<T> => {
+  const serialize = () => {
     flushPending();
-    return clone({ version: 1, undo: undoStack.value, redo: redoStack.value });
+    return history.serialize();
   };
-  const restore = async (type: 'undo' | 'redo') => {
-    if (!available()) return;
+  const undo = () => {
+    if (!available()) return Promise.resolve();
     flushPending();
-    const undo = undoStack.value,
-      redo = redoStack.value;
-    const snapshot = type === 'undo' ? undo.at(-2) : redo.at(-1);
-    if (!snapshot) return;
-    restoring.value = true;
-    try {
-      await options.onRestoreSnapshot(clone(snapshot));
-      undoStack.value = type === 'undo' ? undo.slice(0, -1) : [...undo, clone(snapshot)];
-      redoStack.value = type === 'undo' ? [...redo, undo[undo.length - 1]!] : redo.slice(0, -1);
-      lastAction.value = {
-        type,
-        timestamp: Date.now(),
-        snapshots: {
-          before: type === 'undo' ? snapshot : undo[undo.length - 1]!,
-          after: type === 'undo' ? undo[undo.length - 1]! : snapshot,
-        },
-      };
-      serializedHead = null;
-    } finally {
-      restoring.value = false;
-    }
+    return history.undo();
   };
-  const undo = () => restore('undo');
-  const redo = () => restore('redo');
+  const redo = () => {
+    if (!available()) return Promise.resolve();
+    flushPending();
+    return history.redo();
+  };
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.defaultPrevented || event.isComposing || event.altKey || !available()) return;
     const active = document.activeElement;
@@ -129,6 +86,7 @@ export function useEditorUndoRedo<T extends object = EditorStateSnapshot>(option
   onUnmounted(() => {
     window.removeEventListener('keydown', handleKeyDown);
     cancel();
+    unsubscribe();
   });
   return {
     undoStack,

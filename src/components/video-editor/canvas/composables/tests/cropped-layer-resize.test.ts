@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import type { NormalizedCrop, NormalizedTransform, VisualClip } from '~/media/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import type { NormalizedCrop, NormalizedTransform, VisualClip } from '@beam/engine/shared/composition-types';
 import { resizeCroppedLayer } from '../cropped-layer-resize';
 
 const crop: NormalizedCrop = { x: 0.2, y: 0.25, width: 0.5, height: 0.5 };

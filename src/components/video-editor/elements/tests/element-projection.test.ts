@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { DrawingPoint } from '~/media/shared/element-types';
+import type { DrawingPoint } from '@beam/engine/shared/element-types';
 import type { ElementCamera, ElementViewport } from '../element-editor-types';
 import { elementMatrix, projectElementPoint, unprojectElementPoint } from '../element-projection';
 

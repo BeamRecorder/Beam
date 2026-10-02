@@ -1,4 +1,4 @@
-import { cropSourceDimensions } from '../composition/crop/crop-pixels';
+import { cropSourceDimensions } from '@beam/engine/layout/crop/crop-pixels';
 import { computed, ref, watch, type Ref } from 'vue';
 import {
   isAudioClip,
@@ -13,13 +13,13 @@ import {
   type ClipComposition,
   type NormalizedCrop,
   type NormalizedTransform,
-} from '~/media/shared/composition-types';
-import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
+} from '@beam/engine/shared/composition-types';
+import type { CameraFramingPreset, CameraLayoutPreset } from '@beam/engine/shared/camera-layout-types';
 import type { ClipTransformUpdate } from '../canvas/editor-canvas-types';
-import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { cameraScreenPartner } from '../composition/camera-screen-link';
-import { applyCaptionSelectionUpdate } from '../composition/caption-selection';
+import { isSplitCameraLayout } from '@beam/engine/shared/camera-layout-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { cameraScreenPartner } from '@beam/engine/composition/camera-screen-link';
+import { applyCaptionSelectionUpdate } from '@beam/engine/composition/caption-selection';
 import {
   deleteClip,
   detachClip,
@@ -37,7 +37,7 @@ import {
   setTransform,
   setVolume,
   setWebcamReactToZoom,
-} from '../composition/engine/clip-engine';
+} from '@beam/engine/commands/clip-engine';
 
 export function useSelectedClips(options: { composition: Ref<ClipComposition>; activeTab: Ref<string> }) {
   const selectedClipId = ref<string | null>(null);

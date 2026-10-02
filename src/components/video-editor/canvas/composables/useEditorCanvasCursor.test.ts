@@ -1,10 +1,10 @@
 import { defineComponent, h, provide, reactive, ref } from 'vue';
 import { enableAutoUnmount, mount } from '@vue/test-utils';
 import { afterEach, expect, it, vi } from 'vitest';
-import { createDefaultCursorPresentation } from '~/api/types/cursor-presentation';
-import type { VisualClip } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { DEFAULT_OUTPUT_CANVAS } from '../output-canvas';
+import { createDefaultCursorPresentation } from '@beam/engine/capture/cursor-presentation';
+import type { VisualClip } from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import type { EditorCanvasProps } from '../editor-canvas-types';
 import type { UseCursorOverlayOptions } from './useCursorOverlay';
 import { customCursorKey } from '../../properties/cursor/custom-cursor-context';

@@ -1,9 +1,9 @@
 import { defineComponent, h, nextTick, ref } from 'vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import type { CaptionClip } from '~/media/shared/composition-types';
+import type { CaptionClip } from '@beam/engine/shared/composition-types';
 import { useCaptionDraft } from './useCaptionDraft';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 
 const captionClip = (id = 'caption-1'): CaptionClip => ({
   id,

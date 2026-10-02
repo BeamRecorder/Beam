@@ -1,8 +1,8 @@
 import { defineComponent, h, nextTick, reactive } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Clip, ClipComposition } from '~/media/shared/composition-types';
-import type { ZoomElement } from '../../../zoom/zoom-types';
+import type { Clip, ClipComposition } from '@beam/engine/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type { TimelineTracksProps } from '../timeline-tracks-types';
 import { useTimelineItemInteractions } from '../useTimelineItemInteractions';
 

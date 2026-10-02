@@ -1,8 +1,8 @@
-import { selectionHasLocks } from '../../composition/timeline-locks';
+import { selectionHasLocks } from '@beam/engine/composition/timeline-locks';
 import { markRaw, nextTick, type Ref } from 'vue';
-import type { Clip, ClipComposition } from '~/media/shared/composition-types';
-import { MIN_CLIP_DURATION_MS } from '../../composition/engine/clip-composition-validation';
-import { clipTrimBounds } from '../../composition/engine/trim-clip';
+import type { Clip, ClipComposition } from '@beam/engine/shared/composition-types';
+import { MIN_CLIP_DURATION_MS } from '@beam/engine/commands/clip-composition-validation';
+import { clipTrimBounds } from '@beam/engine/commands/trim-clip';
 import { createAnimationFrameCoalescer } from './animation-frame-coalescer';
 import { calculateSnapThresholdMs, collectSnapTargets, snapValue } from './timeline-snap';
 import { previewClipTrim } from './timeline-composition-preview';

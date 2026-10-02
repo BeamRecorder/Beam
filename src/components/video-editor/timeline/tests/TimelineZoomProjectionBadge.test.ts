@@ -2,8 +2,8 @@ import { enableAutoUnmount, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import TimelineZoomProjectionBadge from '../TimelineZoomProjectionBadge.vue';
 import ZoomTiltPreview from '../../zoom/ZoomTiltPreview.vue';
-import { applyZoomTiltPreset, ZOOM_TILT_PRESETS } from '../../zoom/zoom-tilt-presets';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import { applyZoomTiltPreset, ZOOM_TILT_PRESETS } from '@beam/engine/zoom/zoom-tilt-presets';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 
 enableAutoUnmount(afterEach);
 const zoom: ZoomElement = {

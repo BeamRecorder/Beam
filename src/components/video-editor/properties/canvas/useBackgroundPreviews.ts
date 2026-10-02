@@ -1,10 +1,10 @@
 import { onUnmounted, reactive } from 'vue';
 import BackgroundPreviewWorker from './background-preview.worker?worker&inline';
-import type { BackgroundMedia } from '../../composables/backgroundCatalog';
+import type { BackgroundMedia } from '@beam/engine/shared/background-types';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
-import { decodeVideoPoster } from '~/media/playback';
-import { mediaSourceDescriptor } from '~/media/shared';
-import type { MediaAsset } from '~/media/shared/composition-types';
+import { decodeVideoPoster } from '@beam/runtime/playback/index';
+import { mediaSourceDescriptor } from '@beam/runtime/shared/index';
+import type { MediaAsset } from '@beam/engine/shared/composition-types';
 
 const CACHE_LIMIT = 180;
 const sharedPreviewCache = new Map<string, string>();

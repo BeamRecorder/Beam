@@ -2,15 +2,15 @@ import { defineComponent, h, nextTick, ref } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCameraZoom, type RenderedVideoWindow } from '../useCameraZoom';
-import * as compositionCamera from '../../../zoom/composition-camera';
-import type { ClipComposition, NormalizedTransform, VisualClip } from '~/media/shared/composition-types';
-import type { MediaFrame } from '~/media/shared';
-import type { ZoomElement } from '../../../zoom/zoom-types';
+import * as compositionCamera from '@beam/engine/zoom/composition-camera';
+import type { ClipComposition, NormalizedTransform, VisualClip } from '@beam/engine/shared/composition-types';
+import type { MediaFrame } from '@beam/runtime/shared/index';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type { CompositeMotionBlurOptions } from './use-camera-zoom-test-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { clampFocusToScale } from '../../../zoom/zoom-playback';
-import { ZOOM_DEPTH_SCALES } from '../../../zoom/zoom-types';
-import { frameOuterRect } from '../../../composition/appearance/frames';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { clampFocusToScale } from '@beam/engine/zoom/zoom-playback';
+import { ZOOM_DEPTH_SCALES } from '@beam/engine/zoom/zoom-types';
+import { frameOuterRect } from '@beam/engine/shared/frame-layout';
 
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
 const drawFrameOverlay = vi.hoisted(() => vi.fn());
@@ -19,12 +19,12 @@ const motionBlurCompositor = vi.hoisted(() => ({
   resizeMotionBlurSurface: vi.fn(),
   compositeIsolatedMotionBlurSample: vi.fn((_options: CompositeMotionBlurOptions) => true),
 }));
-vi.mock('../../../composition/appearance/render-decorated-media', () => ({ drawDecoratedMedia }));
-vi.mock('../../../composition/appearance/frames', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../../composition/appearance/frames')>()),
+vi.mock('@beam/runtime/composition/appearance/render-decorated-media', () => ({ drawDecoratedMedia }));
+vi.mock('@beam/runtime/composition/appearance/frames', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@beam/runtime/composition/appearance/frames')>()),
   drawFrameOverlay,
 }));
-vi.mock('../../../zoom/zoom-motion-blur-compositor', () => motionBlurCompositor);
+vi.mock('@beam/runtime/zoom/zoom-motion-blur-compositor', () => motionBlurCompositor);
 
 const screenClip = (enabled = true): VisualClip => ({
   id: 'screen',

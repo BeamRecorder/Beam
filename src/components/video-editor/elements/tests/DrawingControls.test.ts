@@ -1,8 +1,8 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import { defineComponent, h, type PropType } from 'vue';
-import type { ColorFill } from '~/media/shared/color-fill-types';
-import type { DrawingSettings } from '~/media/shared/element-types';
+import type { ColorFill } from '@beam/engine/shared/color-fill-types';
+import type { DrawingSettings } from '@beam/engine/shared/element-types';
 import DrawingControls from '../DrawingControls.vue';
 
 vi.mock('~/i18n/useTranslate', () => ({

@@ -1,12 +1,12 @@
 import { nextTick, ref } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
-import type { CursorPackDescriptor } from '../../../../api/types/cursor-pack';
+import type { CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import {
   createDefaultCursorAutoHideSettings,
   createDefaultCursorMotionSettings,
-} from '../../../../api/types/cursor-settings';
+} from '@beam/engine/capture/cursor-settings';
 import { MACOS_CURSOR_PACK } from '../../properties/cursor/cursor-packs';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 
 const getCursorImage = vi.hoisted(() => vi.fn());
 vi.mock('../../properties/cursor/useCursorReplacer', () => ({

@@ -1,5 +1,5 @@
-import type { BlurClip, ShapeClip } from '~/media/shared/composition-types';
-import type { LayerBlendMode } from '~/media/shared/layer-compositing-types';
+import type { BlurClip, ShapeClip } from '@beam/engine/shared/composition-types';
+import type { LayerBlendMode } from '@beam/engine/shared/layer-compositing-types';
 import type { ScreenshotCursorLayer, ScreenshotImageLayer } from './screenshot-layer-types';
 
 export type ScreenshotClipboardLayer =

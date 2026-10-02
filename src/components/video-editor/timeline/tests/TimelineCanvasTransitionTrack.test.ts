@@ -1,7 +1,7 @@
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import TimelineCanvasTransitionTrack from '../TimelineCanvasTransitionTrack.vue';
-import type { ClipTransitions } from '~/media/shared/composition-types';
+import type { ClipTransitions } from '@beam/engine/shared/composition-types';
 
 const transitions: ClipTransitions = {
   entry: { preset: { kind: 'fade' }, durationMs: 200 },
@@ -58,7 +58,10 @@ describe('TimelineCanvasTransitionTrack', () => {
       global: { stubs: { TimelineCanvasLane: true } },
     });
     const lane = wrapper.getComponent({ name: 'TimelineCanvasLane' });
-    expect(lane.props('items')).toMatchObject([{ edge: 'entry', transition: { easingPower: 1 } }, { edge: 'exit', transition: { easingPower: 5 } }]);
+    expect(lane.props('items')).toMatchObject([
+      { edge: 'entry', transition: { easingPower: 1 } },
+      { edge: 'exit', transition: { easingPower: 5 } },
+    ]);
     expect(wrapper.find('svg.timeline-transition-curve').exists()).toBe(false);
 
     await wrapper.setProps({
@@ -67,7 +70,10 @@ describe('TimelineCanvasTransitionTrack', () => {
         exit: { preset: { kind: 'fade' }, durationMs: 300, easingPower: 5 },
       },
     });
-    expect(lane.props('items')).toMatchObject([{ edge: 'entry', transition: { easingPower: 5 } }, { edge: 'exit', transition: { easingPower: 5 } }]);
+    expect(lane.props('items')).toMatchObject([
+      { edge: 'entry', transition: { easingPower: 5 } },
+      { edge: 'exit', transition: { easingPower: 5 } },
+    ]);
   });
 
   it('previews an entry resize and commits it only on pointerup', async () => {

@@ -1,9 +1,9 @@
-import type { ClipTransition } from '~/media/shared/composition-types';
+import type { ClipTransition } from '@beam/engine/shared/composition-types';
 import {
   DEFAULT_TRANSITION_EASING_POWER,
   MAX_TRANSITION_EASING_POWER,
   MIN_TRANSITION_EASING_POWER,
-} from '~/media/shared/clip-transitions';
+} from '@beam/engine/shared/clip-transitions';
 import type { TimelineCanvasPalette } from './timeline-canvas-types';
 
 export function paintTimelineTransition(

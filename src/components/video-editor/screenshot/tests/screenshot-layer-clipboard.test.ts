@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { BlurClip, ShapeClip } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { createElementText } from '~/media/shared/element-text';
-import { defaultLayerCompositing } from '~/media/shared/layer-compositing';
-import type { LayerCompositing } from '~/media/shared/layer-compositing-types';
-import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
+import type { BlurClip, ShapeClip } from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { createElementText } from '@beam/engine/shared/element-text';
+import { defaultLayerCompositing } from '@beam/runtime/shared/layer-compositing';
+import type { LayerCompositing } from '@beam/engine/shared/layer-compositing-types';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import type { ScreenshotCursorLayer, ScreenshotImageLayer } from '../screenshot-layer-types';
 import {
   capturedScreenshotClipboardLayer,

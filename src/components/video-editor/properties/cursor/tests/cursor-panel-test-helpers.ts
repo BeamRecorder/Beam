@@ -1,13 +1,13 @@
 import { mount } from '@vue/test-utils';
 import CursorPanel from '../CursorPanel.vue';
 import { MACOS_CURSOR_PACK, orderedCursorPacks } from '../cursor-packs';
-import type { CursorPackDescriptor } from '~/api/types/cursor-pack';
+import type { CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import type { CursorPanelProps } from '../cursor-panel-types';
 import {
   createDefaultCursorAutoHideSettings,
   createDefaultCursorClickEffects,
   createDefaultCursorMotionSettings,
-} from '~/api/types/cursor-settings';
+} from '@beam/engine/capture/cursor-settings';
 
 export const Select = {
   props: ['modelValue', 'options', 'disabled'],

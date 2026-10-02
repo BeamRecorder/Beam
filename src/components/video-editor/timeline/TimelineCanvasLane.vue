@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue';
-import { engineMetrics } from '~/media/performance/engine-metrics';
+import { engineMetrics } from '@beam/runtime/performance/engine-metrics';
 import { paintTimelineCanvas } from './timeline-canvas-paint';
 import type { TimelineCanvasLaneProps, TimelineCanvasPalette } from './timeline-canvas-types';
 import { useTimelineCanvasMarquee } from './composables/useTimelineCanvasMarquee';

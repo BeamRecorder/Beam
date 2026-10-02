@@ -1,4 +1,4 @@
-import type { OutputCanvasSettings } from '../canvas/output-canvas';
+import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 
 /** Match the display's physical pixels without downsampling the source twice. */
 export function screenshotPreviewSize(

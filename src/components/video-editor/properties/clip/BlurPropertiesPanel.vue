@@ -17,7 +17,7 @@ import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import type { BlurEffectMode, BlurEffectShape } from '~/media/shared/composition-types';
+import type { BlurEffectMode, BlurEffectShape } from '@beam/engine/shared/composition-types';
 
 import type { BlurSettings, BlurPatch, Choice } from './blur-properties-types';
 

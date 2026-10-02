@@ -1,7 +1,12 @@
 import { onScopeDispose, ref } from 'vue';
 import { capture } from '~/api/capture';
 import { useToastStore } from '~/ui/toast/toastStore';
-import { inspectDroppedMedia, MediaInputError, type DroppedMediaInspection, type MediaAsset } from '~/media/shared';
+import {
+  inspectDroppedMedia,
+  MediaInputError,
+  type DroppedMediaInspection,
+  type MediaAsset,
+} from '@beam/runtime/shared/index';
 
 type Translate = (key: string, params?: Record<string, unknown>) => string;
 type ImportedItem = { file: File; asset: MediaAsset; inspection: DroppedMediaInspection };

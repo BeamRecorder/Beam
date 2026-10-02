@@ -1,35 +1,39 @@
 import { ref, shallowRef } from 'vue';
-import type { ProjectEditorData } from '~/api/types/capture-session';
-import { buttonEventsBetween, cursorAutoHideOpacityAt, cursorStateAt } from '../../composables/cursorPlayback';
+import type { ProjectEditorData } from '@beam/engine/capture/capture-session';
+import { buttonEventsBetween, cursorAutoHideOpacityAt, cursorStateAt } from '@beam/engine/cursor/cursorPlayback';
 import { useCursorReplacer } from '../../properties/cursor/useCursorReplacer';
-import { ZOOM_DEPTH_SCALES } from '../../zoom/zoom-types';
-import { cursorClickSpringScale } from '../../composables/cursor-click-spring';
-import { cursorShadowOffset } from '../../properties/cursor/cursor-shadow';
-import type { ShadowDirection } from '../../properties/cursor/shadow-types';
+import { ZOOM_DEPTH_SCALES } from '@beam/engine/zoom/zoom-types';
+import { cursorClickSpringScale } from '@beam/engine/cursor/cursor-click-spring';
+import { cursorShadowOffset } from '@beam/runtime/cursor/cursor-shadow';
+import type { ShadowDirection } from '@beam/runtime/cursor/shadow-types';
 import {
   cursorAssetAt,
   cursorCanvasBounds,
   cursorGeometryAtSize,
   cursorPositionAt,
   type CursorCanvasBounds,
-} from '../../properties/cursor/cursor-rendering';
-import type { CursorPackDescriptor, CursorSelection } from '../../../../api/types/cursor-pack';
-import { cursorAssetSupportsTint, MACOS_CURSOR_PACK } from '../../properties/cursor/cursor-packs';
-import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
+} from '@beam/runtime/cursor/cursor-rendering';
+import type { CursorPackDescriptor, CursorSelection } from '@beam/engine/capture/cursor-pack';
+import { MACOS_CURSOR_PACK } from '../../properties/cursor/cursor-packs';
+import { cursorAssetSupportsTint } from '@beam/engine/shared/cursor-assets';
+import type { ClipComposition, VisualClip } from '@beam/engine/shared/composition-types';
 import { CURSOR_SIZE_MAX } from '../../properties/cursor/cursor-size';
-import { createCursorMotionPlayer, cursorMotionBlurTrail } from '../../composables/cursor-motion';
+import { createCursorMotionPlayer, cursorMotionBlurTrail } from '@beam/engine/cursor/cursor-motion';
 import {
   effectButtonForRecordedButton,
   type CursorClickEffectSettings,
   type CursorClickEffects,
   type CursorAutoHideSettings,
   type CursorMotionSettings,
-} from '../../../../api/types/cursor-settings';
-import type { OutputCanvasSettings } from '../output-canvas';
-import { cursorRippleAt } from '../../composables/cursor-ripple';
-import { sessionTimeAt } from '~/media/shared';
-import { resolveClipTransitionState } from '~/media/shared/clip-transitions';
-import { drawWithClipTransition, transitionPointWithClip } from '../../composition/transitions/render-transition';
+} from '@beam/engine/capture/cursor-settings';
+import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
+import { cursorRippleAt } from '@beam/engine/cursor/cursor-ripple';
+import { sessionTimeAt } from '@beam/runtime/shared/index';
+import { resolveClipTransitionState } from '@beam/engine/shared/clip-transitions';
+import {
+  drawWithClipTransition,
+  transitionPointWithClip,
+} from '@beam/runtime/composition/transitions/render-transition';
 
 export interface UseCursorOverlayOptions {
   enabled?: () => boolean;
@@ -226,6 +230,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     videoHeight: number,
     logicalWidth: number,
     drawInCameraSpace: (drawContent: () => void) => void,
+    paint = true,
   ) => {
     const screen = options.screenClip();
     if (options.enabled?.() === false || !screen || !options.isScreenEnabled()) {
@@ -257,7 +262,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
         { x: videoWindow.dx, y: videoWindow.dy, width: videoWindow.dw, height: videoWindow.dh },
         () => {
           const previewScale = previewScaleFor(videoWindow);
-          for (const button of buttonEventsBetween(cursorData.events, Math.max(0, time - 0.5), time)) {
+          for (const button of paint ? buttonEventsBetween(cursorData.events, Math.max(0, time - 0.5), time) : []) {
             const effect = settingsForButton(button.button);
             const style = effect?.rippleStyle ?? (effect?.rippleEnabled ? 'single' : 'none');
             const ripple = effect?.rippleEnabled
@@ -317,6 +322,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
               ? cursorCanvasBounds(transitionedCursorPosition, geometry, videoWindow, scale * screenTransition.scale)
               : null,
           );
+          if (!paint) return;
           const trail = cursorMotionBlurTrail(motionState, options.motion().motionBlur, {
             width: videoWindow.dw,
             height: videoWindow.dh,

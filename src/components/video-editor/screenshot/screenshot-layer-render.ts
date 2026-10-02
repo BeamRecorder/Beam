@@ -1,10 +1,10 @@
-import { applyBlurEffect } from '../composition/effects/blur-effect';
+import { applyBlurEffect } from '@beam/runtime/composition/effects/blur-effect';
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { Canvas2DContext } from '~/types/canvas';
-import { renderBackground } from '../composition/background/render-background';
-import { drawDecoratedMedia } from '../composition/appearance/render-decorated-media';
-import { drawShapeClip } from '../composition/shape/render-shape-clip';
-import { drawBeamWatermark } from '../canvas/watermark-render';
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
+import { renderBackground } from '@beam/runtime/composition/background/render-background';
+import { drawDecoratedMedia } from '@beam/runtime/composition/appearance/render-decorated-media';
+import { drawShapeClip } from '@beam/runtime/composition/shape/render-shape-clip';
+import { drawBeamWatermark } from '@beam/runtime/rendering/watermark-render';
 import { screenshotImageFraming } from './screenshot-geometry';
 import { drawScreenshotCursor } from './screenshot-cursors';
 import type { ScreenshotLayer } from './screenshot-layer-types';

@@ -1,17 +1,17 @@
-import type { CompositionSceneLayers } from '../composition/scene-layers';
+import type { CompositionSceneLayers } from '@beam/engine/composition/scene-layers';
 import type { RenderedVideoWindow } from './composables/useCameraZoom';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type {
   CursorAutoHideSettings,
   CursorClickEffects,
   CursorMotionSettings,
-} from '../../../api/types/cursor-settings';
+} from '@beam/engine/capture/cursor-settings';
 import type { HistoryAction } from '../composables/useEditorUndoRedo';
-import type { BackgroundValue } from '../composables/backgroundCatalog';
-import type { CursorPackDescriptor, CursorSelection } from '../../../api/types/cursor-pack';
-import type { ShadowDirection } from '../properties/cursor/shadow-types';
-import type { ZoomAutoFollowSettings, ZoomElement, ZoomMotionBlurSettings } from '../zoom/zoom-types';
-import type { MediaError, MediaFrame } from '~/media/shared';
+import type { BackgroundValue } from '@beam/engine/shared/background-types';
+import type { CursorPackDescriptor, CursorSelection } from '@beam/engine/capture/cursor-pack';
+import type { ShadowDirection } from '@beam/runtime/cursor/shadow-types';
+import type { ZoomAutoFollowSettings, ZoomElement, ZoomMotionBlurSettings } from '@beam/engine/zoom/zoom-types';
+import type { MediaError, MediaFrame } from '@beam/runtime/shared/index';
 import type {
   CaptionClip,
   BlurClip,
@@ -21,9 +21,9 @@ import type {
   NormalizedTransform,
   ShapeClip,
   VisualClip,
-} from '~/media/shared/composition-types';
-import type { OutputCanvasSettings } from './output-canvas';
-import type { PreviewQuality } from '~/media/playback';
+} from '@beam/engine/shared/composition-types';
+import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
+import type { PreviewQuality } from '@beam/runtime/playback/index';
 import type { CaptionInlineEditingEnd, CaptionInlineTextUpdate } from './caption-inline-editor-types';
 
 export type TransformClip = VisualClip | ColorClip | ShapeClip | BlurClip | CaptionClip;

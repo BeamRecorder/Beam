@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import type { Clip } from '~/media/shared/composition-types';
+import type { Clip } from '@beam/engine/shared/composition-types';
 import ClipTransitionsPanel from '../ClipTransitionsPanel.vue';
 
 const BigSlider = {

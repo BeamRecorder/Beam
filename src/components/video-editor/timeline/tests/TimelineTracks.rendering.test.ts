@@ -1,8 +1,8 @@
 import { triggerPointer } from '../../../../../tests/support/pointer';
 import { describe, expect, it, vi } from 'vitest';
 import { flushPromises } from '@vue/test-utils';
-import type { CaptionClip, ColorClip, VisualClip } from '~/media/shared/composition-types';
-import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
+import type { CaptionClip, ColorClip, VisualClip } from '@beam/engine/shared/composition-types';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import {
   TimelineClipStub,
   asset,

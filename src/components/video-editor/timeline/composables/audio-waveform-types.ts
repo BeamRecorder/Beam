@@ -1,4 +1,4 @@
-import type { AudioClip, MediaAsset } from '~/media/shared/composition-types';
+import type { AudioClip, MediaAsset } from '@beam/engine/shared/composition-types';
 
 export interface AudioWaveformViewport {
   startSeconds: number;

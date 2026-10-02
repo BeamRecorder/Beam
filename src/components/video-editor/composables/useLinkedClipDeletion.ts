@@ -1,10 +1,10 @@
-import { recordingLinkedClipIds } from '../composition/recording-media-links';
-import { selectionHasLocks } from '../composition/timeline-locks';
+import { recordingLinkedClipIds } from '@beam/engine/composition/recording-media-links';
+import { selectionHasLocks } from '@beam/engine/composition/timeline-locks';
 import { ref, type Ref } from 'vue';
-import type { Clip, ClipComposition } from '~/media/shared/composition-types';
-import type { ZoomElement } from '../zoom/zoom-types';
-import { deleteTimelineItems } from '../composition/timeline-edit-operations';
-import type { TimelineDeleteMode } from '../composition/timeline-edit-types';
+import type { Clip, ClipComposition } from '@beam/engine/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
+import { deleteTimelineItems } from '@beam/engine/composition/timeline-edit-operations';
+import type { TimelineDeleteMode } from '@beam/engine/composition/timeline-edit-types';
 import type { TimelineSelectionDelete } from '../timeline/composables/timeline-tracks-types';
 
 export function useLinkedClipDeletion(options: {

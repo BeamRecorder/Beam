@@ -1,8 +1,8 @@
-import type { MediaError } from '~/media/shared';
-import type { Clip, MediaAsset } from '~/media/shared/composition-types';
+import type { MediaError } from '@beam/runtime/shared/index';
+import type { Clip, MediaAsset } from '@beam/engine/shared/composition-types';
 import type { TimelineThumbnailSlot } from './composables/timeline-viewport';
 import type { AudioWaveformStatus } from './composables/useCompositionAudioWaveforms';
-import type { OutputCanvasSettings } from '../canvas/output-canvas';
+import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 
 export interface TimelineClipProps {
   clip: Clip;

@@ -9,8 +9,8 @@ import {
   normalizeZoomTiltAxis,
   normalizeZoomTiltIntensity,
   type ZoomElement,
-} from '../zoom/zoom-types';
-import { activeZoomTiltPreset, ZOOM_TILT_PRESETS } from '../zoom/zoom-tilt-presets';
+} from '@beam/engine/zoom/zoom-types';
+import { activeZoomTiltPreset, ZOOM_TILT_PRESETS } from '@beam/engine/zoom/zoom-tilt-presets';
 
 const props = defineProps<{ zoom: ZoomElement }>();
 const { t } = useTranslate('ZoomPanel');

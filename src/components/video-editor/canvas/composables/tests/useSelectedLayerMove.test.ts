@@ -1,8 +1,8 @@
 import { defineComponent, h, ref } from 'vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import type { ClipComposition, VisualClip } from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import { useSelectedLayerMove } from '../useSelectedLayerMove';
 
 const visual = (id: string, kind: 'screen' | 'image', x: number): VisualClip => ({

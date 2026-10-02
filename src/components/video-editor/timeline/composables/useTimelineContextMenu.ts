@@ -1,16 +1,16 @@
 import { computed, ref, type Ref } from 'vue';
-import { engineMetrics } from '~/media/performance/engine-metrics';
+import { engineMetrics } from '@beam/runtime/performance/engine-metrics';
 import { AudioLines, ClipboardPaste, Copy, Lock, Unlock, Pause, Trash2 } from '@lucide/vue';
-import { isAudioClip, type Clip, type ClipComposition, type MediaAsset } from '~/media/shared/composition-types';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import { isAudioClip, type Clip, type ClipComposition, type MediaAsset } from '@beam/engine/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type { ContextMenuItemOrDivider } from '~/components/ui/context-menu';
 import { getClipCategory, useTimelineClipboard } from './useTimelineClipboard';
 import type { TimelineItemCategory, TimelinePasteTarget } from './timeline-clipboard-types';
 import type { TimelineTracksEmits } from './timeline-tracks-types';
-import { MIN_CLIP_DURATION_MS } from '../../composition/engine/clip-engine';
-import { selectionHasLocks } from '../../composition/timeline-locks';
-import { rippleRangeForSelection } from '../../composition/timeline-edit-operations';
-import { recordingLinkedClipIds } from '../../composition/recording-media-links';
+import { MIN_CLIP_DURATION_MS } from '@beam/engine/commands/clip-engine';
+import { selectionHasLocks } from '@beam/engine/composition/timeline-locks';
+import { rippleRangeForSelection } from '@beam/engine/composition/timeline-edit-operations';
+import { recordingLinkedClipIds } from '@beam/engine/composition/recording-media-links';
 
 export interface TimelineContextMenuState {
   isOpen: boolean;

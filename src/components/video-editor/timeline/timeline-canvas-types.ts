@@ -1,10 +1,10 @@
-import type { Clip, MediaAsset } from '~/media/shared/composition-types';
+import type { Clip, MediaAsset } from '@beam/engine/shared/composition-types';
 import type { TimelineClipProps } from './timeline-clip-types';
 import type { TimelineViewportMetrics } from './composables/timeline-virtualization-types';
-import type { ColorClip, ClipTransition } from '~/media/shared/composition-types';
+import type { ColorClip, ClipTransition } from '@beam/engine/shared/composition-types';
 import type { InjectionKey, ShallowRef } from 'vue';
 import type { TimelineArtworkImages } from './timeline-artwork-images';
-import type { ZoomElement } from '../zoom/zoom-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 
 export interface TimelineCanvasPalette {
   background: string;

@@ -10,9 +10,9 @@ import type {
   ClipComposition,
   MediaAsset,
   VisualClip,
-} from '~/media/shared/composition-types';
-import type { DroppedMediaInspection } from '~/media/shared/media-types';
-import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+} from '@beam/engine/shared/composition-types';
+import type { DroppedMediaInspection } from '@beam/runtime/shared/media-types';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import { normalizeEditorPreferenceDefaults } from '../editor-defaults';
 
 const { capture, getAudioTracks } = vi.hoisted(() => ({

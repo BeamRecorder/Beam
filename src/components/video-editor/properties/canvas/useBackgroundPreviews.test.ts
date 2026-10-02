@@ -2,7 +2,7 @@ import { defineComponent, nextTick } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearBackgroundPreviewCache, useBackgroundPreviews } from './useBackgroundPreviews';
-import type { BackgroundMedia } from '../../composables/backgroundCatalog';
+import type { BackgroundMedia } from '@beam/engine/shared/background-types';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 
 const runtime = vi.hoisted(() => ({
@@ -15,8 +15,8 @@ const runtime = vi.hoisted(() => ({
   })),
 }));
 
-vi.mock('~/media/playback', () => ({ decodeVideoPoster: runtime.decodeVideoPoster }));
-vi.mock('~/media/shared', () => ({ mediaSourceDescriptor: runtime.mediaSourceDescriptor }));
+vi.mock('@beam/runtime/playback/index', () => ({ decodeVideoPoster: runtime.decodeVideoPoster }));
+vi.mock('@beam/runtime/shared/index', () => ({ mediaSourceDescriptor: runtime.mediaSourceDescriptor }));
 
 const workerState = vi.hoisted(() => {
   const instances: Array<{

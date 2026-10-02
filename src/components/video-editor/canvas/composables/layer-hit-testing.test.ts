@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { ShapeClip, VisualClip } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '~/media/shared/shape-layer-style';
+import type { ShapeClip, VisualClip } from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '@beam/engine/shared/shape-layer-style';
 import { topmostClipIdAtPoint } from './layer-hit-testing';
 
 const makeShape = (rotation = 0): ShapeClip => ({

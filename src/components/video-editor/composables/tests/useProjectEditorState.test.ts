@@ -1,23 +1,23 @@
 import { nextTick, reactive, ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import {
   emptyComposition,
   type Clip,
   type ClipComposition,
   type ColorClip,
   type VisualClip,
-} from '~/media/shared/composition-types';
+} from '@beam/engine/shared/composition-types';
 import {
   createDefaultCursorClickEffects,
   createDefaultCursorMotionSettings,
-} from '../../../../api/types/cursor-settings';
+} from '@beam/engine/capture/cursor-settings';
 import type { CaptureProject, ProjectEditorState } from '../../../../api/types/capture-api';
-import type { CursorSelection } from '../../../../api/types/cursor-pack';
-import type { BackgroundMedia, BackgroundValue } from '../backgroundCatalog';
-import { DEFAULT_ZOOM_MOTION_BLUR, type ZoomAutoFollowSettings, type ZoomElement } from '../../zoom/zoom-types';
+import type { CursorSelection } from '@beam/engine/capture/cursor-pack';
+import type { BackgroundMedia, BackgroundValue } from '@beam/engine/shared/background-types';
+import { DEFAULT_ZOOM_MOTION_BLUR, type ZoomAutoFollowSettings, type ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type { EditorPreferenceDefaults } from '../editor-default-types';
-import { createDefaultCursorPresentation } from '../../../../api/types/cursor-presentation';
+import { createDefaultCursorPresentation } from '@beam/engine/capture/cursor-presentation';
 import { normalizeEditorPreferenceDefaults } from '../editor-defaults';
 import { existingZoom, globalCursor, projectCursor } from './useProjectEditorState.test-support';
 import {

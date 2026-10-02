@@ -1,7 +1,7 @@
 import { defineComponent, ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { SnapshotHistory } from '~/media/shared/editor-history-types';
+import type { SnapshotHistory } from '@beam/engine/shared/editor-history-types';
 import { MAX_HISTORY_DEPTH, useEditorUndoRedo } from '../useEditorUndoRedo';
 
 interface Snapshot {

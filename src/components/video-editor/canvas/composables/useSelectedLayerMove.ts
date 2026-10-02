@@ -1,17 +1,17 @@
-import { activeClipsAt } from '~/media/shared';
+import { activeClipsAt } from '@beam/runtime/shared/index';
 import {
   isBlurClip,
   isColorClip,
   isShapeClip,
   isVisualClip,
   type NormalizedTransform,
-} from '~/media/shared/composition-types';
+} from '@beam/engine/shared/composition-types';
 import { onUnmounted, shallowRef, watch } from 'vue';
 import { transformCaptionFollowsCursor, type ClipTransformUpdate, type TransformClip } from '../editor-canvas-types';
 import type { CanvasRect } from './layer-transform-geometry';
 import type { VideoWindowBounds } from './useCameraZoom';
 import { perspectivePointerDelta } from './layer-selection-presentation';
-import { editableVisualClipTransform } from '../../composition/visual-framing';
+import { editableVisualClipTransform } from '@beam/engine/composition/visual-framing';
 import { clampEditedWebcamTransform, editableWebcamTransform } from './webcam-transform-editing';
 import { computeCanvasAlignmentSnapping, type AlignmentGuide } from './canvas-alignment';
 

@@ -1,7 +1,7 @@
-import type { CursorSelection, CursorAssetDescriptor } from '~/api/types/cursor-pack';
-import type { LayerCompositing } from '~/media/shared/layer-compositing-types';
-import type { ShadowDirection } from '../properties/cursor/shadow-types';
-import type { VisualClip } from '~/media/shared/composition-types';
+import type { CursorSelection, CursorAssetDescriptor } from '@beam/engine/capture/cursor-pack';
+import type { LayerCompositing } from '@beam/engine/shared/layer-compositing-types';
+import type { ShadowDirection } from '@beam/runtime/cursor/shadow-types';
+import type { VisualClip } from '@beam/engine/shared/composition-types';
 
 export interface ScreenshotImageLayer extends VisualClip {
   kind: 'image';

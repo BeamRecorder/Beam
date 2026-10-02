@@ -11,14 +11,14 @@ import type {
   MediaAsset,
   ShapeClip,
   VisualClip,
-} from '~/media/shared/composition-types';
-import { createElementText } from '~/media/shared/element-text';
-import type { DrawnElement } from '~/media/shared/element-types';
-import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { DEFAULT_COLOR_FILL } from '~/media/shared/color-fill-types';
-import { normalizeColorLayerStyle } from '~/media/shared/color-layer-style';
-import { normalizeShapeLayerStyle } from '~/media/shared/shape-layer-style';
-import { createComposition } from '../../composition/engine/clip-engine';
+} from '@beam/engine/shared/composition-types';
+import { createElementText } from '@beam/engine/shared/element-text';
+import type { DrawnElement } from '@beam/engine/shared/element-types';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { DEFAULT_COLOR_FILL } from '@beam/engine/shared/color-fill-types';
+import { normalizeColorLayerStyle } from '@beam/engine/shared/color-layer-style';
+import { normalizeShapeLayerStyle } from '@beam/engine/shared/shape-layer-style';
+import { createComposition } from '@beam/engine/commands/clip-engine';
 import type { ElementEditorContext } from '../element-editor-types';
 import { useVideoElements } from '../useVideoElements';
 import { useMixedTimelineSelection } from '../../composables/useMixedTimelineSelection';

@@ -5,9 +5,9 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Button from '~/ui/button/Button.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { mirrorCrop } from '../../canvas/composables/layer-transform-geometry';
-import { changeCropEdge, cropPixels, cropsEqual, FULL_CROP } from '../../composition/crop/crop-pixels';
-import type { CropEdge } from '../../composition/crop/crop-types';
-import type { NormalizedCrop } from '~/media/shared/composition-types';
+import { changeCropEdge, cropPixels, cropsEqual, FULL_CROP } from '@beam/engine/layout/crop/crop-pixels';
+import type { CropEdge } from '@beam/engine/shared/crop-types';
+import type { NormalizedCrop } from '@beam/engine/shared/composition-types';
 import type { SelectedClipProperties } from '../properties-panel-types';
 
 const props = defineProps<{ clip: SelectedClipProperties }>();

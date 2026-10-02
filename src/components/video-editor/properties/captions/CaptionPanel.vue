@@ -7,15 +7,15 @@ import ProgressBar from '~/ui/progressbar/ProgressBar.vue';
 import Select from '~/ui/select/Select.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import Throbber from '~/ui/throbber/Throbber.vue';
-import type { CaptionClip, CaptionSentence, ClipComposition } from '~/media/shared/composition-types';
-import { createComposition } from '../../composition/engine/clip-engine';
+import type { CaptionClip, CaptionSentence, ClipComposition } from '@beam/engine/shared/composition-types';
+import { createComposition } from '@beam/engine/commands/clip-engine';
 import { useWhisperTranscription } from '../../captions/useWhisperTranscription';
 import { whisperModels, type TranscriptionSource, type WhisperModelId } from '../../captions/whisper-types';
 import type { ProjectEditorData } from '../../../../api/types/capture-api';
 import { capture } from '../../../../api/capture';
 import { captionSources } from './caption-sources';
 import { useTranslate } from '~/i18n/useTranslate';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 import { buildBeamTranscriptionReport, formatTranscriptionElapsed } from '../../captions/transcription-diagnostics';
 import TranscriptExport from '../../captions/TranscriptExport.vue';
 

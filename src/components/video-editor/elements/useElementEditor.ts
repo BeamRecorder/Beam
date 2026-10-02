@@ -1,14 +1,14 @@
 import { computed, inject, provide, ref, watch, type InjectionKey } from 'vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import type { ShapeClip } from '~/media/shared/composition-types';
-import { createElementText } from '~/media/shared/element-text';
-import { DEFAULT_DRAWING_SETTINGS } from '~/media/shared/freehand';
+import type { ShapeClip } from '@beam/engine/shared/composition-types';
+import { createElementText } from '@beam/engine/shared/element-text';
+import { DEFAULT_DRAWING_SETTINGS } from '@beam/engine/shared/freehand';
 import {
   DEFAULT_ANNOTATION_SHAPE_STYLE,
   defaultShapePresetFor,
   normalizeShapeLayerStyle,
-} from '~/media/shared/shape-layer-style';
-import type { ShapeLayerFamily } from '~/media/shared/shape-layer-types';
+} from '@beam/engine/shared/shape-layer-style';
+import type { ShapeLayerFamily } from '@beam/engine/shared/shape-layer-types';
 import type { ElementEditorContext, ElementEditorOptions } from './element-editor-types';
 
 export const ELEMENT_EDITOR: InjectionKey<ElementEditorContext> = Symbol('element-editor');

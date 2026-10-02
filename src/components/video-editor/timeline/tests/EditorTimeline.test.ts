@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import EditorTimeline from '../EditorTimeline.vue';
-import type { ClipComposition } from '~/media/shared/composition-types';
+import type { ClipComposition } from '@beam/engine/shared/composition-types';
 import type { TimelineClipboardItem } from '../composables/timeline-clipboard-types';
 
 const copiedItem = { descriptor: { kind: 'item', name: 'recording.mp4' } } as TimelineClipboardItem;

@@ -1,4 +1,4 @@
-import type { BlurClip, ColorClip, ShapeClip, VisualClip } from '~/media/shared/composition-types';
+import type { BlurClip, ColorClip, ShapeClip, VisualClip } from '@beam/engine/shared/composition-types';
 import type { VisualTimelineTrack } from './timeline-tracks-types';
 
 type CompositingClip = VisualClip | ColorClip | ShapeClip | BlurClip;

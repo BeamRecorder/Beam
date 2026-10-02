@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { MediaError } from '~/media/shared';
-import { emptyComposition, type MediaAsset } from '~/media/shared/composition-types';
+import type { MediaError } from '@beam/runtime/shared/index';
+import { emptyComposition, type MediaAsset } from '@beam/engine/shared/composition-types';
 import { playbackErrorDetails, playbackErrorDiagnostic } from './playback-error-diagnostics';
 import type { PlaybackErrorContext } from './playback-error-types';
 

@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { TriangleAlert } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import type { PreviewQuality } from '~/media/playback';
+import type { PreviewQuality } from '@beam/runtime/playback/index';
 import type { PreviewPerformanceSnapshot } from './preview-performance-types';
 
 const props = defineProps<{ snapshot: PreviewPerformanceSnapshot }>();

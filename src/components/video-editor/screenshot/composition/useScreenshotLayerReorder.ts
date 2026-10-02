@@ -1,5 +1,5 @@
 import { onScopeDispose, ref, type Ref } from 'vue';
-import { reorderLayer } from '~/media/shared/layer-compositing';
+import { reorderLayer } from '@beam/runtime/shared/layer-compositing';
 
 export function useScreenshotLayerReorder(
   list: Ref<HTMLElement | null>,

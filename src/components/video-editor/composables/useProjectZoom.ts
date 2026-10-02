@@ -1,6 +1,6 @@
-import type { ClipComposition } from '~/media/shared/composition-types';
-import { generateRecordingZooms } from '../zoom/recording-zoom-generation';
-import { preservesLockedItems, TimelineLockedError } from '../composition/timeline-locks';
+import type { ClipComposition } from '@beam/engine/shared/composition-types';
+import { generateRecordingZooms } from '@beam/engine/zoom/recording-zoom-generation';
+import { preservesLockedItems, TimelineLockedError } from '@beam/engine/composition/timeline-locks';
 import { useLockedState } from './useLockedState';
 import { computed, ref, watch, type Ref } from 'vue';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
@@ -18,10 +18,10 @@ import {
   type ZoomElement,
   type ZoomAutoFollowSettings,
   type ZoomMotionBlurSettings,
-} from '../zoom/zoom-types';
-import { ZOOM_ALGORITHM_VERSION } from '../zoom/zoom-suggestions';
-import { pasteZoomAt } from '../zoom/zoom-paste';
-import { fitZoomPlacement } from '../zoom/zoom-placement';
+} from '@beam/engine/zoom/zoom-types';
+import { ZOOM_ALGORITHM_VERSION } from '@beam/engine/zoom/zoom-suggestions';
+import { pasteZoomAt } from '@beam/engine/zoom/zoom-paste';
+import { fitZoomPlacement } from '@beam/engine/zoom/zoom-placement';
 import type { EditorPreferenceDefaults } from './editor-default-types';
 
 export function useProjectZoom(options: {

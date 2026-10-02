@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CursorAssetDescriptor, CursorPackDescriptor } from '~/api/types/cursor-pack';
-import { loadCursorImage } from '../cursor-image-loader';
+import type { CursorAssetDescriptor, CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
+import { loadCursorImage } from '@beam/runtime/cursor/cursor-image-loader';
 
 type ImageResult = 'load' | 'error' | 'pending' | 'throw';
 interface ImageFixture {

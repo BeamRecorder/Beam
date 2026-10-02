@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { canvasDoubleClick } from './canvas-double-click';
 import type { CanvasDoubleClickOptions } from './canvas-edit-types';
-import { emptyComposition } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { emptyComposition } from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 const setup = (overrides: Partial<CanvasDoubleClickOptions> = {}) => ({
   beginElement: vi.fn(() => false),
   beginCaption: vi.fn(() => false),

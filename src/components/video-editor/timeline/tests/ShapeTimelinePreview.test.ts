@@ -1,15 +1,15 @@
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
-import type { ShapeClip } from '~/media/shared/composition-types';
-import { createElementText } from '~/media/shared/element-text';
-import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
+import type { ShapeClip } from '@beam/engine/shared/composition-types';
+import { createElementText } from '@beam/engine/shared/element-text';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 
 const dependencies = vi.hoisted(() => ({
   loadElementFonts: vi.fn(),
   renderShapeTimelinePreview: vi.fn(),
 }));
-vi.mock('~/media/shared/element-fonts', () => ({ loadElementFonts: dependencies.loadElementFonts }));
+vi.mock('@beam/runtime/shared/element-font-loader', () => ({ loadElementFonts: dependencies.loadElementFonts }));
 vi.mock('../shape-timeline-preview', () => ({
   renderShapeTimelinePreview: dependencies.renderShapeTimelinePreview,
 }));

@@ -1,5 +1,5 @@
 import { ref, watch, type Ref } from 'vue';
-import type { CaptionClip } from '~/media/shared/composition-types';
+import type { CaptionClip } from '@beam/engine/shared/composition-types';
 
 const cloneCaption = (clip: CaptionClip): CaptionClip => ({
   ...clip,

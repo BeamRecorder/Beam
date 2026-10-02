@@ -2,7 +2,7 @@ import { defineComponent, nextTick, ref, type Ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useThumbnails } from '../useThumbnails';
-import type { MediaAsset } from '~/media/shared/composition-types';
+import type { MediaAsset } from '@beam/engine/shared/composition-types';
 
 const workerState = vi.hoisted(() => {
   const instances: Array<{
@@ -23,7 +23,7 @@ const workerState = vi.hoisted(() => {
   return { FakeWorker, instances };
 });
 
-vi.mock('~/media/playback/thumbnail.worker?worker', () => ({
+vi.mock('@beam/runtime/playback/thumbnail.worker?worker', () => ({
   default: workerState.FakeWorker,
 }));
 

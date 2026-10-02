@@ -2,8 +2,8 @@ import { triggerPointer } from '../../../../tests/support/pointer';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import { defineComponent, h } from 'vue';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import type { ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import type { ClipComposition, MediaAsset, VisualClip } from '@beam/engine/shared/composition-types';
 import TimelineGapButtons from './TimelineGapButtons.vue';
 
 vi.mock('~/i18n/useTranslate', () => ({

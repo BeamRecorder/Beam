@@ -14,7 +14,7 @@ import {
   normalizeCursorAutoHideSettings,
   normalizeCursorClickEffects,
   normalizeCursorMotionSettings,
-} from '../types/cursor-settings';
+} from '@beam/engine/capture/cursor-settings';
 
 describe('cursor auto-hide settings', () => {
   it('defaults to disabled with the default delay', () => {

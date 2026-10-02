@@ -1,8 +1,8 @@
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Clip, ShapeClip } from '~/media/shared/composition-types';
-import { defaultShapePresetFor, normalizeShapeLayerStyle } from '~/media/shared/shape-layer-style';
-import type { ShapeLayerFamily } from '~/media/shared/shape-layer-types';
+import type { Clip, ShapeClip } from '@beam/engine/shared/composition-types';
+import { defaultShapePresetFor, normalizeShapeLayerStyle } from '@beam/engine/shared/shape-layer-style';
+import type { ShapeLayerFamily } from '@beam/engine/shared/shape-layer-types';
 import TimelineTrackHeaders from '../TimelineTrackHeaders.vue';
 import type { VisualTimelineTrack } from '../composables/timeline-tracks-types';
 

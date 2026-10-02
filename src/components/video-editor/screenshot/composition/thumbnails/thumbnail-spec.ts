@@ -1,7 +1,7 @@
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { CursorPackDescriptor } from '~/api/types/cursor-pack';
+import type { CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
-import { WATERMARK_LOGO_PATH } from '../../../canvas/watermark-render';
+import { WATERMARK_LOGO_PATH } from '@beam/runtime/rendering/watermark-render';
 import { screenshotLayers } from '../../screenshot-layers';
 import type { ThumbnailSpec } from './thumbnail-types';
 import { screenshotImage } from '../../screenshot-images';

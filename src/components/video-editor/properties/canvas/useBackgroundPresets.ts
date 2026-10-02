@@ -5,9 +5,8 @@ import {
   BACKGROUND_GRADIENTS,
   customColor,
   customGradient,
-  type BackgroundValue,
-  type GradientBackground,
 } from '../../composables/backgroundCatalog';
+import { type BackgroundValue, type GradientBackground } from '@beam/engine/shared/background-types';
 
 type PresetOverride = string | GradientBackground;
 

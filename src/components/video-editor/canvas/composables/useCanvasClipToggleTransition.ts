@@ -1,6 +1,6 @@
 import { onUnmounted, toRaw, watch } from 'vue';
-import type { ClipComposition } from '~/media/shared/composition-types';
-import { timingPreviewFor } from '../../composition/timing-preview';
+import type { ClipComposition } from '@beam/engine/shared/composition-types';
+import { timingPreviewFor } from '@beam/engine/composition/timing-preview';
 
 export const CLIP_TOGGLE_FADE_MS = 160;
 

@@ -1,8 +1,8 @@
 import { defineComponent, h, nextTick, ref, type Ref } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AudioClip, MediaAsset } from '~/media/shared/composition-types';
-import type { WaveformWorkerRequest, WaveformWorkerResponse } from '~/media/playback/waveform-protocol';
+import type { AudioClip, MediaAsset } from '@beam/engine/shared/composition-types';
+import type { WaveformWorkerRequest, WaveformWorkerResponse } from '@beam/runtime/playback/waveform-protocol';
 import { useLinkedClipPreviewWaveform } from '../useLinkedClipPreviewWaveform';
 
 const workerState = vi.hoisted(() => {
@@ -20,7 +20,7 @@ const workerState = vi.hoisted(() => {
   return { FakeWorker, instances };
 });
 
-vi.mock('~/media/playback/waveform.worker?worker', () => ({ default: workerState.FakeWorker }));
+vi.mock('@beam/runtime/playback/waveform.worker?worker', () => ({ default: workerState.FakeWorker }));
 
 const clip: AudioClip = {
   id: 'microphone-clip',

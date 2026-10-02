@@ -1,7 +1,7 @@
 import { DOMWrapper, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
-import { SHAPE_CATALOG } from '~/media/shared/shape-catalog';
+import { SHAPE_CATALOG } from '@beam/engine/shared/shape-catalog';
 import ShapePicker from '../ShapePicker.vue';
 
 vi.mock('~/i18n/useTranslate', () => ({

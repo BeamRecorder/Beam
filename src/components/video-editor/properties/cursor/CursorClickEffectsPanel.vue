@@ -4,7 +4,7 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import ColorInput from '~/ui/input/ColorInput.vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import type { CursorClickButton, CursorClickEffects } from '../../../../api/types/cursor-settings';
+import type { CursorClickButton, CursorClickEffects } from '@beam/engine/capture/cursor-settings';
 
 const { t } = useTranslate('CursorPanel');
 

@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CursorAssetDescriptor, CursorPackDescriptor } from '~/api/types/cursor-pack';
-import type { Canvas2DContext } from '~/types/canvas';
+import type { CursorAssetDescriptor, CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import type { ScreenshotCursorLayer } from '../screenshot-layer-types';
 
 const runtime = vi.hoisted(() => ({ loadCursorImage: vi.fn() }));
-vi.mock('../../properties/cursor/cursor-image-loader', () => ({ loadCursorImage: runtime.loadCursorImage }));
+vi.mock('@beam/runtime/cursor/cursor-image-loader', () => ({ loadCursorImage: runtime.loadCursorImage }));
 
 import {
   createScreenshotCursor,

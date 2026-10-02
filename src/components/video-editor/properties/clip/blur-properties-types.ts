@@ -1,5 +1,5 @@
 import type { Component } from 'vue';
-import type { BlurClip } from '~/media/shared/composition-types';
+import type { BlurClip } from '@beam/engine/shared/composition-types';
 
 export type BlurSettings = Pick<
   BlurClip,

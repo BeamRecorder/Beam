@@ -6,9 +6,9 @@ import {
   type ClipComposition,
   type MediaAsset,
   type VisualClip,
-} from '~/media/shared/composition-types';
-import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import type { ZoomElement } from '../../../zoom/zoom-types';
+} from '@beam/engine/shared/composition-types';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import { pasteTimelineClipboard } from '../paste-timeline-clipboard';
 import { useTimelineClipboard } from '../useTimelineClipboard';
 

@@ -16,8 +16,8 @@ import {
   setTransform,
   splitClip,
   trimClip,
-} from '../../src/components/video-editor/composition/engine/clip-engine';
-import { activeClipsAt, sourceTimeAt } from '../../src/media/shared/timeline-mapping';
+} from '@beam/engine/commands/clip-engine';
+import { activeClipsAt, sourceTimeAt } from '@beam/engine/shared/timeline-mapping';
 import type {
   AudioClip,
   BlurClip,
@@ -25,9 +25,9 @@ import type {
   ClipComposition,
   MediaAsset,
   VisualClip,
-} from '../../src/media/shared/composition-types';
-import { createDefaultClipAppearance } from '../../src/media/shared/composition-defaults';
-import { normalizeClipTransitions } from '../../src/media/shared/clip-transitions';
+} from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { normalizeClipTransitions } from '@beam/engine/shared/clip-transitions';
 
 const asset = (id: string, kind: MediaAsset['kind'] = 'video'): MediaAsset => ({
   id,

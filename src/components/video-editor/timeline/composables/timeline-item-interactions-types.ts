@@ -1,6 +1,6 @@
 import type { ComputedRef } from 'vue';
-import type { Clip } from '~/media/shared/composition-types';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import type { Clip } from '@beam/engine/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type { TimelineItemKind, TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
 
 export interface TimelineItemInteractionsOptions {

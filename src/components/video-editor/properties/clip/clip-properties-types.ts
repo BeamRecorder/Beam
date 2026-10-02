@@ -4,9 +4,9 @@ import type {
   ClipShadowSize,
   NormalizedCrop,
   NormalizedTransform,
-} from '~/media/shared/composition-types';
-import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
-import type { PhoneFrameFill } from '~/media/shared/color-fill-types';
+} from '@beam/engine/shared/composition-types';
+import type { CameraFramingPreset, CameraLayoutPreset } from '@beam/engine/shared/camera-layout-types';
+import type { PhoneFrameFill } from '@beam/engine/shared/color-fill-types';
 export interface ClipPropertiesEmits {
   (e: 'update:crop', crop: NormalizedCrop): void;
   (e: 'preview:crop', crop: NormalizedCrop | null): void;

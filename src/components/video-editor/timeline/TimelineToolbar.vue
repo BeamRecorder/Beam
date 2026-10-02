@@ -7,7 +7,7 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { MAX_TIMELINE_ZOOM, MIN_TIMELINE_ZOOM, zoomTimelineByButton } from './composables/timeline-zoom';
-import type { PreviewQuality } from '~/media/playback';
+import type { PreviewQuality } from '@beam/runtime/playback/index';
 import PreviewQualityPopover from './PreviewQualityPopover.vue';
 import type { PreviewPerformanceSnapshot } from '../performance/preview-performance-types';
 

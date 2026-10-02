@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PreviewQuality } from '~/media/playback/playback-preview';
+import type { PreviewQuality } from '@beam/runtime/playback/playback-preview';
 import { resizeEditorCanvas } from '../canvas-sizing';
 
 const canvas = (width = 0, height = 0) => ({ width, height }) as HTMLCanvasElement;

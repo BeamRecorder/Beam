@@ -1,11 +1,17 @@
+import { createBrowserPlaybackEngine } from '@beam/runtime/browser';
 import { ref, watch, onUnmounted } from 'vue';
-import type { BackgroundMedia, BackgroundValue } from '../../composables/backgroundCatalog';
+import type { BackgroundMedia, BackgroundValue } from '@beam/engine/shared/background-types';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
-import { MediaPlaybackEngine, type PreviewQuality } from '~/media/playback';
-import { inspectMedia, mediaSourceDescriptor, type MediaError, type MediaFrame } from '~/media/shared';
-import { COMPOSITION_SCHEMA_VERSION, type ClipComposition, type MediaAsset } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { renderBackground } from '../../composition/background/render-background';
+import type { MediaPlaybackEngine, PreviewQuality } from '@beam/runtime/playback/index';
+import { inspectMedia, mediaSourceDescriptor, type MediaError, type MediaFrame } from '@beam/runtime/shared/index';
+import {
+  COMPOSITION_SCHEMA_VERSION,
+  type ClipComposition,
+  type MediaAsset,
+} from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { renderBackground } from '@beam/runtime/composition/background/render-background';
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 
 const BACKGROUND_CLIP_ID = 'background-video';
 
@@ -103,7 +109,7 @@ export function useCanvasBackground(
       const inspection = await inspectMedia(descriptor);
       if (loadVersion !== backgroundLoadVersion) return;
       const durationMs = Math.max(1, Math.round(inspection.metadata.durationSeconds * 1_000));
-      const createdEngine = new MediaPlaybackEngine({ previewQuality: previewQuality() });
+      const createdEngine = createBrowserPlaybackEngine({ previewQuality: previewQuality() });
       engine = createdEngine;
       backgroundEngine = createdEngine;
       stopFrameListener = createdEngine.on('frame', ({ clipId }) => {
@@ -215,7 +221,7 @@ export function useCanvasBackground(
   });
 
   const drawSingleBackground = (
-    ctx: CanvasRenderingContext2D,
+    ctx: Canvas2DContext,
     bg: BackgroundValue | null,
     imgSource: HTMLImageElement | null,
     frame: MediaFrame | null,
@@ -239,10 +245,7 @@ export function useCanvasBackground(
     });
   };
 
-  const drawBackground = (
-    ctx: CanvasRenderingContext2D,
-    rect: { x: number; y: number; width: number; height: number },
-  ) => {
+  const drawBackground = (ctx: Canvas2DContext, rect: { x: number; y: number; width: number; height: number }) => {
     let progress = 1;
     if (isTransitioningBackground.value) {
       if (transitionStartTime === null) transitionStartTime = performance.now();

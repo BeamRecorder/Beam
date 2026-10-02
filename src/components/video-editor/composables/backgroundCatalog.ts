@@ -1,15 +1,20 @@
 import wallpapers from 'virtual:public-background-media';
 import { tNamespace } from '~/i18n';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
-import type { ColorGradient, ColorGradientStop } from '~/media/shared/color-fill-types';
+import type {
+  BackgroundMediaKind,
+  GradientBackground,
+  BackgroundEntry,
+  BackgroundValue,
+  BackgroundMedia,
+  BackgroundMediaGroup,
+  GradientStop,
+  ColorBackground,
+  GradientCatalogBackground,
+} from '@beam/engine/shared/background-types';
 
 const $t = tNamespace('backgroundCatalog');
 
-export type BackgroundKind = 'image' | 'video' | 'color' | 'gradient';
-export type BackgroundMediaKind = Extract<BackgroundKind, 'image' | 'video'>;
-
-export type GradientStop = ColorGradientStop;
-export type GradientBackground = ColorGradient;
 const colorWithAlpha = (color: string, alpha: number) => {
   const value = color.slice(1);
   return `rgba(${Number.parseInt(value.slice(0, 2), 16)}, ${Number.parseInt(value.slice(2, 4), 16)}, ${Number.parseInt(value.slice(4, 6), 16)}, ${alpha})`;
@@ -22,34 +27,6 @@ export const gradientCssBackground = (gradient: GradientBackground): string => {
     ? `radial-gradient(circle, ${stops})`
     : `linear-gradient(${gradient.angle}deg, ${stops})`;
 };
-export interface BackgroundMedia {
-  id: string;
-  name: string;
-  path: string;
-  extension: string;
-  kind: BackgroundMediaKind;
-  fileName?: string;
-}
-export interface ColorBackground {
-  id: string;
-  name: string;
-  kind: 'color';
-  color: string;
-}
-export interface GradientCatalogBackground {
-  id: string;
-  name: string;
-  kind: 'gradient';
-  gradient: GradientBackground;
-}
-export type BackgroundEntry = BackgroundMedia | ColorBackground | GradientCatalogBackground;
-export type BackgroundValue = BackgroundMedia | ColorBackground | GradientCatalogBackground;
-export interface BackgroundMediaGroup {
-  kind: BackgroundMediaKind;
-  label: string;
-  items: BackgroundMedia[];
-}
-
 const mediaKinds: Record<string, BackgroundMediaKind> = {
   avif: 'image',
   bmp: 'image',

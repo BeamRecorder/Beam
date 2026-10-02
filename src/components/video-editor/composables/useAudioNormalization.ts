@@ -1,13 +1,13 @@
 import { onBeforeUnmount, reactive, type Ref } from 'vue';
-import AudioNormalizationWorker from '~/media/audio/audio-normalization.worker?worker';
-import { audioAnalysisKey, normalizationFromAnalysis } from '~/media/audio/audio-normalization';
+import AudioNormalizationWorker from '@beam/runtime/audio/audio-normalization.worker?worker';
+import { audioAnalysisKey, normalizationFromAnalysis } from '@beam/runtime/audio/audio-normalization';
 import type {
   AudioNormalizationWorkerRequest,
   AudioNormalizationWorkerResponse,
-} from '~/media/audio/audio-normalization-worker-types';
-import { isAudioClip, mediaSourceDescriptor, type ClipComposition } from '~/media/shared';
-import type { AudioAnalysis } from '~/media/shared/audio-normalization-types';
-import { setAudioNormalization } from '../composition/engine/clip-engine';
+} from '@beam/runtime/audio/audio-normalization-worker-types';
+import { isAudioClip, mediaSourceDescriptor, type ClipComposition } from '@beam/runtime/shared/index';
+import type { AudioAnalysis } from '@beam/engine/shared/audio-normalization-types';
+import { setAudioNormalization } from '@beam/engine/commands/clip-engine';
 
 export type AudioNormalizationStatus = 'analyzing' | 'ready' | 'silent' | 'error';
 

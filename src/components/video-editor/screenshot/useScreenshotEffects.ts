@@ -1,8 +1,8 @@
 import { computed, type Ref } from 'vue';
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { BlurClip } from '~/media/shared/composition-types';
+import type { BlurClip } from '@beam/engine/shared/composition-types';
 import type { BlurPatch } from '../properties/clip/blur-properties-types';
-import { HIGHLIGHT_DEFAULTS } from '~/media/shared/highlight-defaults';
+import { HIGHLIGHT_DEFAULTS } from '@beam/engine/shared/highlight-defaults';
 import { blurDefaultsFor } from '../composables/editor-defaults';
 import { useTranslate } from '~/i18n/useTranslate';
 import { initializeScreenshotComposition, insertScreenshotLayer } from './screenshot-layers';

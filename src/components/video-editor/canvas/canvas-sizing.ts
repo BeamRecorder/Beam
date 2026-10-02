@@ -1,5 +1,5 @@
-import { previewRenderScale } from '~/media/playback';
-import type { PreviewQuality } from '~/media/playback/playback-preview';
+import { previewRenderScale } from '@beam/runtime/playback/index';
+import type { PreviewQuality } from '@beam/runtime/playback/playback-preview';
 
 export function resizeEditorCanvas(
   canvas: HTMLCanvasElement | null,

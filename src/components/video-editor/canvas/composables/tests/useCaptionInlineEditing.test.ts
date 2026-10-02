@@ -1,9 +1,9 @@
 import { defineComponent, h, nextTick, ref, type Ref } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
-import type { CaptionClip, ClipComposition } from '~/media/shared/composition-types';
-import { DEFAULT_OUTPUT_CANVAS } from '../../output-canvas';
+import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
+import type { CaptionClip, ClipComposition } from '@beam/engine/shared/composition-types';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import type { TransformClip } from '../../editor-canvas-types';
 import { useCaptionInlineEditing } from '../useCaptionInlineEditing';
 

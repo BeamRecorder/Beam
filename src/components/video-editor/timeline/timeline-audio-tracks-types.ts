@@ -1,6 +1,6 @@
-import type { AudioClip, Clip, ClipComposition, MediaAsset } from '~/media/shared/composition-types';
-import type { ZoomElement } from '../zoom/zoom-types';
-import type { MediaError } from '~/media/shared';
+import type { AudioClip, Clip, ClipComposition, MediaAsset } from '@beam/engine/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
+import type { MediaError } from '@beam/runtime/shared/index';
 import type { TimelineClipProps } from './timeline-clip-types';
 import type { ImportedAudioTimelineTrack } from './composables/audio-timeline-tracks';
 import type { AudioWaveformSlice, AudioWaveformStatus } from './composables/useCompositionAudioWaveforms';

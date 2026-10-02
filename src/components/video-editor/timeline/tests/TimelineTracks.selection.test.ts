@@ -1,7 +1,7 @@
 import { triggerPointer } from '../../../../../tests/support/pointer';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import type { VisualClip } from '~/media/shared/composition-types';
+import type { VisualClip } from '@beam/engine/shared/composition-types';
 import {
   composition,
   contextMenuButton,

@@ -1,5 +1,5 @@
 import { useTranslate } from '~/i18n/useTranslate';
-import type { TimelineAddableVisualKind } from '../../composition/visual-element-types';
+import type { TimelineAddableVisualKind } from '@beam/engine/composition/visual-element-types';
 
 export function useTimelineVisualLabels() {
   const { t } = useTranslate('TimelineTracks');

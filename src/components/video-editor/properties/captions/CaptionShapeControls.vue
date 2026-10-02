@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { CaptionShapePreset, CaptionShapeStyle } from '~/media/shared/caption-shape-types';
+import type { CaptionShapePreset, CaptionShapeStyle } from '@beam/engine/shared/caption-shape-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Button from '~/ui/button/Button.vue';

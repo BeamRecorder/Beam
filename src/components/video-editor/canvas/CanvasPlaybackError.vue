@@ -3,7 +3,7 @@ import { computed, inject } from 'vue';
 import Beamy from '~/components/brand/Beamy/Beamy.vue';
 import CopyButton from '~/components/ui/button/CopyButton.vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import type { MediaError } from '~/media/shared';
+import type { MediaError } from '@beam/runtime/shared/index';
 import { PLAYBACK_ERROR_REPORT } from '../composables/playback-error-diagnostics';
 
 const props = defineProps<{ error: MediaError }>();

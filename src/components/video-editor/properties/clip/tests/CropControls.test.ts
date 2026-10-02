@@ -1,9 +1,9 @@
 import { defineComponent, nextTick } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import type { NormalizedCrop } from '~/media/shared/composition-types';
+import type { NormalizedCrop } from '@beam/engine/shared/composition-types';
 import type { SelectedClipProperties } from '../../properties-panel-types';
-import { FULL_CROP } from '../../../composition/crop/crop-pixels';
+import { FULL_CROP } from '@beam/engine/layout/crop/crop-pixels';
 import CropControls from '../CropControls.vue';
 
 const BigSlider = defineComponent({

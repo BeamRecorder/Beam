@@ -1,7 +1,7 @@
 import { defineComponent, ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AudioClip, ClipComposition } from '~/media/shared/composition-types';
+import type { AudioClip, ClipComposition } from '@beam/engine/shared/composition-types';
 import {
   audioClip,
   cloneComposition,
@@ -139,7 +139,7 @@ vi.mock('../../properties/cursor/useCursorReplacer', async () => {
     },
   };
 });
-vi.mock('../../../export/composition/snapshot', () => ({
+vi.mock('@beam/runtime/rendering/snapshot', () => ({
   createCompositionSnapshot: (...args: unknown[]) => {
     state.createCompositionSnapshot(...args);
     return { snapshot: true };

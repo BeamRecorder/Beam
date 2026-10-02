@@ -2,7 +2,7 @@ import { triggerPointer } from '../../../../../../tests/support/pointer';
 import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, h, ref } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ColorClip } from '~/media/shared/composition-types';
+import type { ColorClip } from '@beam/engine/shared/composition-types';
 import ColorLayerPropertiesPanel from '../ColorLayerPropertiesPanel.vue';
 import AddTileButton from '../../../../ui/button/AddTileButton.vue';
 

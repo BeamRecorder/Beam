@@ -2,7 +2,12 @@ import { computed, onBeforeUnmount, reactive, ref, type Ref } from 'vue';
 import { capture } from '~/api/capture';
 import { listBrowserMicrophones } from '~/api/microphone-recorder';
 import { ProjectVoiceoverRecorder } from '~/api/project-voiceover-recorder';
-import { inspectMedia, mediaSourceDescriptor, type DroppedMediaInspection, type MediaAsset } from '~/media/shared';
+import {
+  inspectMedia,
+  mediaSourceDescriptor,
+  type DroppedMediaInspection,
+  type MediaAsset,
+} from '@beam/runtime/shared/index';
 import type { VoiceoverDraft, VoiceoverPhase, VoiceoverRecorderState } from './voiceover-types';
 
 const MAX_LIVE_BARS = 2_400;

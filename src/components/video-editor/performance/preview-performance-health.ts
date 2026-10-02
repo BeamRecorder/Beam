@@ -1,4 +1,4 @@
-import type { PreviewQuality } from '~/media/playback';
+import type { PreviewQuality } from '@beam/runtime/playback/index';
 import type {
   PreviewPerformanceChannel,
   PreviewPerformanceHealthState,

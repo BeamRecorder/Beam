@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import WatermarkControls from '../WatermarkControls.vue';
-import { DEFAULT_WATERMARK, type WatermarkSettings } from '../../../canvas/output-canvas';
+import { DEFAULT_WATERMARK, type WatermarkSettings } from '@beam/engine/layout/output-canvas';
 
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: () => ({

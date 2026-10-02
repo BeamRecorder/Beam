@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import Beamy from '~/components/brand/Beamy/Beamy.vue';
-import type { CaptureMode } from '~/api/types/capture-mode';
+import type { CaptureMode } from '@beam/engine/capture/capture-mode';
 import type { EditorLoadingProgress } from '~/api/types/editor-window';
 import Button from '~/components/ui/button/Button.vue';
 import CopyButton from '~/components/ui/button/CopyButton.vue';

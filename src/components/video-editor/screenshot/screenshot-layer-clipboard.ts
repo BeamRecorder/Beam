@@ -1,5 +1,5 @@
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { NormalizedTransform } from '~/media/shared/composition-types';
+import type { NormalizedTransform } from '@beam/engine/shared/composition-types';
 import {
   canRemoveScreenshotLayer,
   initializeScreenshotComposition,

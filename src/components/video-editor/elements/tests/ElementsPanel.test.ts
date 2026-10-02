@@ -1,10 +1,10 @@
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h, nextTick, ref, shallowRef, type PropType } from 'vue';
-import { createComposition } from '../../composition/engine/clip-engine';
-import type { ColorFill } from '~/media/shared/color-fill-types';
-import type { DrawingSettings, DrawnElement } from '~/media/shared/element-types';
-import type { ShapeClip } from '~/media/shared/composition-types';
+import { createComposition } from '@beam/engine/commands/clip-engine';
+import type { ColorFill } from '@beam/engine/shared/color-fill-types';
+import type { DrawingSettings, DrawnElement } from '@beam/engine/shared/element-types';
+import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import ElementsPanel from '../ElementsPanel.vue';
 import { useVideoElements } from '../useVideoElements';
 

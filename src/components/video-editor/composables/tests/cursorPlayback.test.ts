@@ -6,7 +6,7 @@ import {
   cursorAutoHideOpacityAt,
   cursorEventIndexFor,
   cursorStateAt,
-} from '../cursorPlayback';
+} from '@beam/engine/cursor/cursorPlayback';
 import type { CursorEvent, CursorShapeAsset } from '../../../../api/types/capture-api';
 
 const second = (value: number) => value * 1_000_000_000;

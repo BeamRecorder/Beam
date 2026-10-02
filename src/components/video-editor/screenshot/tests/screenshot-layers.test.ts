@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { ScreenshotState } from '~/api/types/screenshot';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { createElementText } from '~/media/shared/element-text';
-import { defaultLayerCompositing } from '~/media/shared/layer-compositing';
-import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { createElementText } from '@beam/engine/shared/element-text';
+import { defaultLayerCompositing } from '@beam/runtime/shared/layer-compositing';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import type { ScreenshotCursorLayer } from '../screenshot-layer-types';
 import {
   initializeScreenshotComposition,

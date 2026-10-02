@@ -1,4 +1,4 @@
-import { OUTPUT_CANVAS_PRESETS, type OutputCanvasSettings } from '../canvas/output-canvas';
+import { OUTPUT_CANVAS_PRESETS, type OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 import type { ScreenshotDimensions } from './screenshot-types';
 
 export function validScreenshotDimensions({ width, height }: ScreenshotDimensions): boolean {

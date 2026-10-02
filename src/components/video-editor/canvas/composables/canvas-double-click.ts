@@ -1,4 +1,4 @@
-import { isVisualClip } from '~/media/shared/composition-types';
+import { isVisualClip } from '@beam/engine/shared/composition-types';
 import type { CanvasDoubleClickOptions } from './canvas-edit-types';
 export function canvasDoubleClick(event: MouseEvent, options: CanvasDoubleClickOptions) {
   if (event.button !== 0 || event.ctrlKey || event.metaKey || options.blocked()) return;

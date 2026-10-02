@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { isReactive } from 'vue';
-import type { CaptionClip, MediaAsset, VisualClip } from '~/media/shared/composition-types';
-import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import type { ZoomElement } from '../../../zoom/zoom-types';
+import type { CaptionClip, MediaAsset, VisualClip } from '@beam/engine/shared/composition-types';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import { getClipCategory, useTimelineClipboard } from '../useTimelineClipboard';
 
 const asset: MediaAsset = {

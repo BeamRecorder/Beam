@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ShapeClip } from '~/media/shared/composition-types';
-import { createElementText } from '~/media/shared/element-text';
-import type { Canvas2DContext } from '~/types/canvas';
+import type { ShapeClip } from '@beam/engine/shared/composition-types';
+import { createElementText } from '@beam/engine/shared/element-text';
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 
 const renderers = vi.hoisted(() => ({ drawShapeClip: vi.fn() }));
-vi.mock('../../composition/shape/render-shape-clip', () => ({ drawShapeClip: renderers.drawShapeClip }));
+vi.mock('@beam/runtime/composition/shape/render-shape-clip', () => ({ drawShapeClip: renderers.drawShapeClip }));
 
 import { renderShapeTimelinePreview } from '../shape-timeline-preview';
 

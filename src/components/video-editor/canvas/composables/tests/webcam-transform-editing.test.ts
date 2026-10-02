@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { ClipComposition, NormalizedTransform, VisualClip } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import type { ClipComposition, NormalizedTransform, VisualClip } from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import type { VideoWindowBounds } from '../useCameraZoom';
 import {
   clampEditedWebcamTransform,

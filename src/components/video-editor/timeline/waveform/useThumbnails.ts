@@ -1,5 +1,5 @@
 import { computed, inject, onUnmounted, shallowRef, watch, type Ref } from 'vue';
-import type { MediaAsset } from '~/media/shared';
+import type { MediaAsset } from '@beam/runtime/shared/index';
 import {
   createMediaProcessingCollector,
   MEDIA_PROCESSING_COLLECTOR,
@@ -7,7 +7,7 @@ import {
 } from '../../performance/media-processing-pressure';
 import { createThumbnailSource, THUMBNAIL_WORKER_COUNT } from './thumbnail-source';
 import type { SharedThumbnailSource } from './thumbnail-source-types';
-import { THUMBNAIL_WIDTH } from '~/media/playback/thumbnail-protocol';
+import { THUMBNAIL_WIDTH } from '@beam/runtime/playback/thumbnail-protocol';
 
 const defaultCollector = createMediaProcessingCollector();
 const pools = new WeakMap<MediaProcessingCollector, Map<string, SharedThumbnailSource>>();

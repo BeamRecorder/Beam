@@ -4,7 +4,7 @@ import { Image, Video } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import type { BackgroundKind } from '../../composables/backgroundCatalog';
+import type { BackgroundKind } from '@beam/engine/shared/background-types';
 const props = defineProps<{ modelValue: BackgroundKind; still?: boolean }>();
 const kinds = computed<BackgroundKind[]>(() =>
   props.still ? ['image', 'color', 'gradient'] : ['image', 'video', 'color', 'gradient'],

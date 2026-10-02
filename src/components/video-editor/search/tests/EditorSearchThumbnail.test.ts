@@ -2,7 +2,7 @@ import { mount, enableAutoUnmount } from '@vue/test-utils';
 import { ref } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Film } from '@lucide/vue';
-import type { MediaAsset, ShapeClip, ColorClip } from '~/media/shared/composition-types';
+import type { MediaAsset, ShapeClip, ColorClip } from '@beam/engine/shared/composition-types';
 import EditorSearchThumbnail from '../EditorSearchThumbnail.vue';
 const data = vi.hoisted(() => ({ request: vi.fn(), error: null as string | null }));
 vi.mock('../../timeline/waveform/useThumbnails', () => ({

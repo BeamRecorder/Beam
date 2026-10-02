@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ShapeClip } from '~/media/shared/composition-types';
+import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import DrawingControls from '~/components/video-editor/elements/DrawingControls.vue';
 import ShapeLayerPropertiesPanel from '../ShapeLayerPropertiesPanel.vue';
 

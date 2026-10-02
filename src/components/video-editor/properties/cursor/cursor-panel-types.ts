@@ -1,11 +1,11 @@
-import type { CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
+import type { CursorPackDescriptor, CursorSelection } from '@beam/engine/capture/cursor-pack';
 import type {
   CursorAutoHideSettings,
   CursorClickEffects,
   CursorMotionSettings,
   CursorRippleStyle,
-} from '~/api/types/cursor-settings';
-import type { ShadowDirection } from './shadow-types';
+} from '@beam/engine/capture/cursor-settings';
+import type { ShadowDirection } from '@beam/runtime/cursor/shadow-types';
 
 export type CursorPanelProps = {
   selection: CursorSelection;

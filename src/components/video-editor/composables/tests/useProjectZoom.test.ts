@@ -1,11 +1,11 @@
 import { ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProjectEditorData } from '../../../../api/types/capture-api';
-import type { ZoomElement } from '../../zoom/zoom-types';
-import { ZOOM_ALGORITHM_VERSION } from '../../zoom/zoom-suggestions';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { createComposition } from '../../composition/engine/clip-engine';
-import type { ClipComposition } from '~/media/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
+import { ZOOM_ALGORITHM_VERSION } from '@beam/engine/zoom/zoom-suggestions';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { createComposition } from '@beam/engine/commands/clip-engine';
+import type { ClipComposition } from '@beam/engine/shared/composition-types';
 import type { EditorPreferenceDefaults } from '../editor-default-types';
 import { normalizeEditorPreferenceDefaults } from '../editor-defaults';
 import { useProjectZoom } from '../useProjectZoom';

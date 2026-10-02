@@ -1,9 +1,9 @@
 import type { ComputedRef, CSSProperties, Ref } from 'vue';
-import type { Clip, CaptionClip, AudioClip } from '~/media/shared/composition-types';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import type { Clip, CaptionClip, AudioClip } from '@beam/engine/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type { SelectionTarget } from './timeline-box-selection-types';
 import type { VisualTimelineTrack } from './timeline-tracks-types';
-import type { TextCaptionLayer } from '../../composition/engine/caption-layer-layout';
+import type { TextCaptionLayer } from '@beam/engine/commands/caption-layer-layout';
 import type { ImportedAudioTimelineTrack } from './audio-timeline-tracks';
 
 export type TimelineRowKind = 'visual' | 'effect' | 'audio';

@@ -1,6 +1,6 @@
 import { computed, shallowRef, type ShallowRef } from 'vue';
-import { preservesLockedItems } from '../composition/timeline-locks';
-import type { LockableTimelineItem } from '../composition/timeline-lock-types';
+import { preservesLockedItems } from '@beam/engine/composition/timeline-locks';
+import type { LockableTimelineItem } from '@beam/engine/composition/timeline-lock-types';
 
 // Ordinary edits cannot change or remove locked content. Project loading and
 // undo/redo use restore explicitly, because they replace the entire saved state.

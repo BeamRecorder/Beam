@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cursorClickSpringScale } from '../cursor-click-spring';
+import { cursorClickSpringScale } from '@beam/engine/cursor/cursor-click-spring';
 
 describe('cursorClickSpringScale', () => {
   it('starts and ends at its resting scale', () => {

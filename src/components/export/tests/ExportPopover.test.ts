@@ -4,12 +4,8 @@ import { nextTick, type Ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { i18n, setCurrentLocale } from '~/i18n';
 import { useToastStore } from '~/ui/toast/toastStore';
-import {
-  ExportValidationError,
-  type CompositionSnapshot,
-  type EditorExportSource,
-  type ExportRequest,
-} from '../export-types';
+import { ExportValidationError, type EditorExportSource, type ExportRequest } from '@beam/encoder/export-types';
+import { type CompositionSnapshot } from '@beam/engine/shared/render-document-types';
 
 const { mockJob, mockCapture } = vi.hoisted(() => ({
   mockJob: {

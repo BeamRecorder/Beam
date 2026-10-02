@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import { env, pipeline } from '@huggingface/transformers';
-import type { CaptionWord } from '~/media/shared/composition-types';
+import type { CaptionWord } from '@beam/engine/shared/composition-types';
 import type { TranscriptionDiagnostics, WhisperGpuInfo } from './whisper-types';
 import type { WhisperTranscribeRequest, WhisperWorkerEvent } from './whisper-worker-protocol';
 

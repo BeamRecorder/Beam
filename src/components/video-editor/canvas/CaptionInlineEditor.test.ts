@@ -1,8 +1,8 @@
 import { nextTick } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CaptionClip } from '~/media/shared/composition-types';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import type { CaptionClip } from '@beam/engine/shared/composition-types';
+import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 import CaptionInlineEditor from './CaptionInlineEditor.vue';
 
 vi.mock('~/i18n/useTranslate', () => ({

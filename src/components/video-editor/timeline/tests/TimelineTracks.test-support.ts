@@ -2,7 +2,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { defineComponent } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, vi } from 'vitest';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import {
   COMPOSITION_SCHEMA_VERSION,
   type AudioClip,
@@ -10,10 +10,10 @@ import {
   type ClipComposition,
   type MediaAsset,
   type VisualClip,
-} from '~/media/shared/composition-types';
-import type { MediaError } from '~/media/shared/media-types';
+} from '@beam/engine/shared/composition-types';
+import type { MediaError } from '@beam/runtime/shared/media-types';
 import TimelineTracks from '../TimelineTracks.vue';
-import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import { useTimelineClipboard } from '../composables/useTimelineClipboard';
 import { timelineClipStyle } from '../timeline-clip-geometry';
 

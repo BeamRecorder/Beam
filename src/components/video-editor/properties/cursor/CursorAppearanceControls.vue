@@ -10,7 +10,7 @@ import AdvancedButton from '~/ui/button/AdvancedButton.vue';
 import RafRevealTransition from '~/ui/transitions/RafRevealTransition.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import ShadowDirectionGroup from './ShadowDirectionGroup.vue';
-import { cursorAssetSupportsTint } from './cursor-packs';
+import { cursorAssetSupportsTint } from '@beam/engine/shared/cursor-assets';
 import { capture } from '~/api/capture';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useToastStore } from '~/ui/toast/toastStore';

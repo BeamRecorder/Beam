@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MediaAsset } from '~/media/shared/composition-types';
+import type { MediaAsset } from '@beam/engine/shared/composition-types';
 import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
 import ScreenshotEditor from '../ScreenshotEditor.vue';
 import {

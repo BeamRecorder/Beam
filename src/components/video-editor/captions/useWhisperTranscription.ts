@@ -1,6 +1,6 @@
 import { onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { CaptionSentence, CaptionWord } from '~/media/shared/composition-types';
+import type { CaptionSentence, CaptionWord } from '@beam/engine/shared/composition-types';
 import { formatTranscriptionElapsed } from './transcription-diagnostics';
 import type { TranscriptionDiagnostics, WhisperModelId, WhisperProgress, WhisperResult } from './whisper-types';
 import type { WhisperTranscribeRequest, WhisperWorkerEvent } from './whisper-worker-protocol';

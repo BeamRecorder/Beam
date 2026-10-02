@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { CircleDot, MoveDown, MoveDownRight, MoveUpLeft } from '@lucide/vue';
-import type { ShadowDirection } from './shadow-types';
+import type { ShadowDirection } from '@beam/runtime/cursor/shadow-types';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('ShadowDirectionGroup');

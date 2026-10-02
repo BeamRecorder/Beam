@@ -1,7 +1,7 @@
 import type { EditorPreset } from './editor-preset';
 import type { ScreenRegion, ScreenRegionBounds } from './screen-region';
 
-export type QuickSnipMode = import('./capture-mode').CaptureMode;
+export type QuickSnipMode = import('@beam/engine/capture/capture-mode').CaptureMode;
 
 export type QuickSnipDeviceKind = 'microphone' | 'camera' | 'systemAudio';
 

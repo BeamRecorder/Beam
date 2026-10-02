@@ -1,7 +1,7 @@
 import { defineComponent, ref, type Ref } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MediaAsset } from '~/media/shared/composition-types';
+import type { MediaAsset } from '@beam/engine/shared/composition-types';
 import { useEditorVoiceover } from './useEditorVoiceover';
 
 const mocks = vi.hoisted(() => ({
@@ -22,7 +22,7 @@ vi.mock('~/api/microphone-recorder', () => ({
 vi.mock('~/api/project-voiceover-recorder', () => ({
   ProjectVoiceoverRecorder: { request: mocks.request },
 }));
-vi.mock('~/media/shared', () => ({
+vi.mock('@beam/runtime/shared/index', () => ({
   inspectMedia: mocks.inspectMedia,
   mediaSourceDescriptor: mocks.mediaSourceDescriptor,
 }));

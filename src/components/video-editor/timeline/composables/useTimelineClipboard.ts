@@ -1,6 +1,6 @@
 import { computed, shallowRef } from 'vue';
-import type { Clip, MediaAsset } from '~/media/shared/composition-types';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import type { Clip, MediaAsset } from '@beam/engine/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type { TimelineClipboardEntry, TimelineClipboardItem } from './timeline-clipboard-types';
 import { describeClipboardClip, describeClipboardZoom } from './timeline-clipboard-label';
 

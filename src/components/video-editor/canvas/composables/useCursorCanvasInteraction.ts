@@ -1,7 +1,7 @@
 import { ref, watch, type Ref } from 'vue';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
 import { clampCursorSize } from '../../properties/cursor/cursor-size';
-import type { CursorCanvasBounds } from '../../properties/cursor/cursor-rendering';
+import type { CursorCanvasBounds } from '@beam/runtime/cursor/cursor-rendering';
 
 interface CursorCanvasInteractionOptions {
   bounds: Ref<CursorCanvasBounds | null>;

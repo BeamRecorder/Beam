@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { MediaAsset } from '~/media/shared/composition-types';
+import type { MediaAsset } from '@beam/engine/shared/composition-types';
 import { prepareWaveform, retainWaveform } from '../audio-waveform-cache';
 import type { StoredWaveformSlice, WaveformRequest } from '../audio-waveform-types';
 

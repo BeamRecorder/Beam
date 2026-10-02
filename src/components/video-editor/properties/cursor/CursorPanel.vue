@@ -10,7 +10,11 @@ import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import AdvancedButton from '~/ui/button/AdvancedButton.vue';
 import RafRevealTransition from '~/ui/transitions/RafRevealTransition.vue';
 import CursorClickEffectsPanel from './CursorClickEffectsPanel.vue';
-import type { CursorAutoHideSettings, CursorMotionPreset, CursorMotionSettings } from '~/api/types/cursor-settings';
+import type {
+  CursorAutoHideSettings,
+  CursorMotionPreset,
+  CursorMotionSettings,
+} from '@beam/engine/capture/cursor-settings';
 import type { CursorPanelProps, CursorPanelEmits, GlobalRippleStyle } from './cursor-panel-types';
 import {
   CURSOR_AUTO_HIDE_DELAY_DEFAULT,
@@ -24,7 +28,7 @@ import {
   createDefaultCursorMotionSettings,
   cursorMotionPreset,
   normalizeCursorAutoHideSettings,
-} from '../../../../api/types/cursor-settings';
+} from '@beam/engine/capture/cursor-settings';
 import { useTranslate } from '~/i18n/useTranslate';
 import { CURSOR_SIZE_DEFAULT } from './cursor-size';
 

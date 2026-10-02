@@ -1,12 +1,18 @@
 import { reactive } from 'vue';
-import { HIGHLIGHT_DEFAULTS } from '~/media/shared/highlight-defaults';
+import { HIGHLIGHT_DEFAULTS } from '@beam/engine/shared/highlight-defaults';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
-import { createDefaultCursorPresentation } from '../../../../api/types/cursor-presentation';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
+import { createDefaultCursorPresentation } from '@beam/engine/capture/cursor-presentation';
 import type { ProjectEditorState } from '../../../../api/types/capture-api';
-import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { COMPOSITION_SCHEMA_VERSION } from '~/media/shared/composition-types';
-import type { AudioClip, BlurClip, CaptionClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { COMPOSITION_SCHEMA_VERSION } from '@beam/engine/shared/composition-types';
+import type {
+  AudioClip,
+  BlurClip,
+  CaptionClip,
+  ClipComposition,
+  VisualClip,
+} from '@beam/engine/shared/composition-types';
 import type { EditorPreferenceDefaults } from '../editor-default-types';
 import {
   applyFreshPresentationDefaults,

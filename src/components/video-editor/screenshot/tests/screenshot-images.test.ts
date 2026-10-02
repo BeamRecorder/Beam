@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { MediaAsset } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
+import type { MediaAsset } from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { createScreenshotImage, screenshotImage, screenshotImageProperties } from '../screenshot-images';
 import { screenshotState } from '../screenshot-state';
 

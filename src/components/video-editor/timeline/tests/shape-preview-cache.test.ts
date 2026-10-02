@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '~/media/shared/shape-layer-style';
-import type { ShapeClip } from '~/media/shared/composition-types';
-import { createElementText } from '~/media/shared/element-text';
+import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '@beam/engine/shared/shape-layer-style';
+import type { ShapeClip } from '@beam/engine/shared/composition-types';
+import { createElementText } from '@beam/engine/shared/element-text';
 import {
   ShapePreviewCache,
   shapePreviewCache,

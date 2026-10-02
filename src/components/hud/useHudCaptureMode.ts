@@ -1,6 +1,6 @@
 import { computed, onBeforeUnmount, ref, watch, type Ref } from 'vue';
 import { capture } from '~/api/capture';
-import type { CaptureMode } from '~/api/types/capture-mode';
+import type { CaptureMode } from '@beam/engine/capture/capture-mode';
 import type { PreferenceSettings } from '~/api/types/capture-api';
 import type { RecordingConfiguration } from './recorder/recording-types';
 

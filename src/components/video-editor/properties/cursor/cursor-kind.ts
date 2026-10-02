@@ -1,4 +1,4 @@
-import type { CursorType } from '../../../../api/types/cursor-presentation';
+import type { CursorType } from '@beam/engine/capture/cursor-presentation';
 
 const CURSOR_TYPES = new Set<string>([
   'default',

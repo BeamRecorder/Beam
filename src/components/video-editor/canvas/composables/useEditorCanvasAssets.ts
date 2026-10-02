@@ -1,6 +1,6 @@
 import { onMounted, onUnmounted, ref, type Ref } from 'vue';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
-import { WATERMARK_LOGO_PATH } from '../watermark-render';
+import { WATERMARK_LOGO_PATH } from '@beam/runtime/rendering/watermark-render';
 
 export function useEditorCanvasAssets(
   container: Ref<HTMLDivElement | null>,

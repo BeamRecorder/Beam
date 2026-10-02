@@ -1,7 +1,7 @@
 import { triggerPointer } from '../../../../../tests/support/pointer';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import type { CaptionClip, TextCaptionData } from '~/media/shared/composition-types';
+import type { CaptionClip, TextCaptionData } from '@beam/engine/shared/composition-types';
 import { composition, keyboardCaption, mountTracks, pointerEvent } from './TimelineTracks.test-support';
 
 type TextCaptionClip = Omit<CaptionClip, 'caption'> & { caption: TextCaptionData };

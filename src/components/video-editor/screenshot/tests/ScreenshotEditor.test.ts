@@ -2,7 +2,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { useToastStore } from '~/ui/toast/toastStore';
 import { flushPromises } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CursorAssetDescriptor, CursorPackDescriptor } from '~/api/types/cursor-pack';
+import type { CursorAssetDescriptor, CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import type { ElementEditorContext } from '../../elements/element-editor-types';
 import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
 import { createScreenshotEditorTestHarness, documentFixture, presetFixture } from './screenshot-editor-test-helpers';

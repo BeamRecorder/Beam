@@ -1,4 +1,4 @@
-import type { AudioClip } from '~/media/shared/composition-types';
+import type { AudioClip } from '@beam/engine/shared/composition-types';
 
 export interface ImportedAudioTimelineTrack {
   id: string;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '~/media/shared/shape-layer-style';
-import type { MediaAsset, ShapeClip, VisualClip } from '~/media/shared/composition-types';
+import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '@beam/engine/shared/shape-layer-style';
+import type { MediaAsset, ShapeClip, VisualClip } from '@beam/engine/shared/composition-types';
 import type { ScreenshotLayerClipboard } from '../screenshot/screenshot-layer-clipboard-types';
 import type { TimelineClipboardItem } from '../timeline/composables/timeline-clipboard-types';
 import { screenshotClipboardPreview, timelineClipboardPreview } from './clipboard-preview';

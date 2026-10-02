@@ -1,9 +1,9 @@
 import { ref, type Ref } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AudioNormalizationWorkerResponse } from '~/media/audio/audio-normalization-worker-types';
-import { AUDIO_ANALYSIS_VERSION, type AudioAnalysis } from '~/media/shared/audio-normalization-types';
-import { createComposition } from '../../composition/engine/clip-engine';
-import type { AudioClip, ClipComposition, MediaAsset } from '~/media/shared/composition-types';
+import type { AudioNormalizationWorkerResponse } from '@beam/runtime/audio/audio-normalization-worker-types';
+import { AUDIO_ANALYSIS_VERSION, type AudioAnalysis } from '@beam/engine/shared/audio-normalization-types';
+import { createComposition } from '@beam/engine/commands/clip-engine';
+import type { AudioClip, ClipComposition, MediaAsset } from '@beam/engine/shared/composition-types';
 
 const workerState = vi.hoisted(() => {
   const instances: FakeWorker[] = [];
@@ -34,7 +34,7 @@ const workerState = vi.hoisted(() => {
   return { FakeWorker, instances };
 });
 
-vi.mock('~/media/audio/audio-normalization.worker?worker', () => ({ default: workerState.FakeWorker }));
+vi.mock('@beam/runtime/audio/audio-normalization.worker?worker', () => ({ default: workerState.FakeWorker }));
 
 const asset = (): MediaAsset => ({
   id: 'asset-1',

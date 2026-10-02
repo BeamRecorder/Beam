@@ -16,7 +16,7 @@ import {
 import Button from '~/components/ui/button/Button.vue';
 import Slider from '~/components/ui/slider/Slider.vue';
 import BlickWaveformCanvas from './timeline/waveform/BlickWaveformCanvas.vue';
-import type { Clip, ClipKind, MediaAsset } from '~/media/shared/composition-types';
+import type { Clip, ClipKind, MediaAsset } from '@beam/engine/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useLinkedClipPreviewWaveform } from './useLinkedClipPreviewWaveform';
 

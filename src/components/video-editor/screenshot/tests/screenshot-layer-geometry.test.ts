@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { CursorAssetDescriptor, CursorPackDescriptor } from '~/api/types/cursor-pack';
+import type { CursorAssetDescriptor, CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import type { ScreenshotState } from '~/api/types/screenshot';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { defaultLayerCompositing } from '~/media/shared/layer-compositing';
-import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { defaultLayerCompositing } from '@beam/runtime/shared/layer-compositing';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { screenshotShape } from '../screenshot-state';
 import { createScreenshotCursor } from '../screenshot-cursors';
 import type { ScreenshotCursorAsset } from '../screenshot-layer-types';

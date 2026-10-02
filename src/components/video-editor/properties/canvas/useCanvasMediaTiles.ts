@@ -1,5 +1,5 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, type ComputedRef, type ComponentPublicInstance } from 'vue';
-import type { BackgroundMedia } from '../../composables/backgroundCatalog';
+import type { BackgroundMedia } from '@beam/engine/shared/background-types';
 import { useBackgroundPreviews } from './useBackgroundPreviews';
 
 export function useCanvasMediaTiles(items: ComputedRef<BackgroundMedia[]>) {

@@ -6,7 +6,7 @@ const { exportWithMediabunny } = vi.hoisted(() => ({
 }));
 vi.mock('../mediabunny/exporter', () => ({ exportWithMediabunny }));
 import { useExportJob } from '../useExportJob';
-import type { ExportRequest } from '../export-types';
+import type { ExportRequest } from '@beam/encoder/export-types';
 
 const request = {
   projectName: 'Demo',

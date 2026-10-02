@@ -1,7 +1,7 @@
 import { defineComponent, h } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MediaInputError, type DroppedMediaInspection, type MediaAsset } from '~/media/shared';
+import { MediaInputError, type DroppedMediaInspection, type MediaAsset } from '@beam/runtime/shared/index';
 import { useEditorMediaDrop } from '../useEditorMediaDrop';
 
 const mocks = vi.hoisted(() => ({
@@ -15,8 +15,8 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('~/media/shared', async () => {
-  const actual = await vi.importActual<typeof import('~/media/shared')>('~/media/shared');
+vi.mock('@beam/runtime/shared/index', async () => {
+  const actual = await vi.importActual<typeof import('@beam/runtime/shared/index')>('@beam/runtime/shared/index');
   return { ...actual, inspectDroppedMedia: mocks.inspectDroppedMedia };
 });
 vi.mock('~/api/capture', () => ({ capture: mocks.capture }));

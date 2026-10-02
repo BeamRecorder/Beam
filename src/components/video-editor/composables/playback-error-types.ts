@@ -1,5 +1,5 @@
-import type { MediaError } from '~/media/shared';
-import type { ClipComposition } from '~/media/shared/composition-types';
+import type { MediaError } from '@beam/runtime/shared/index';
+import type { ClipComposition } from '@beam/engine/shared/composition-types';
 
 export type PlaybackErrorTranslate = (key: string, params?: Record<string, unknown>) => string;
 

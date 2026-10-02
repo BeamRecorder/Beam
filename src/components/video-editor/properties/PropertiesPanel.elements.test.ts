@@ -5,7 +5,7 @@ import {
   createDefaultCursorAutoHideSettings,
   createDefaultCursorClickEffects,
   createDefaultCursorMotionSettings,
-} from '~/api/types/cursor-settings';
+} from '@beam/engine/capture/cursor-settings';
 import type {
   BlurClip,
   CaptionClip,
@@ -14,13 +14,13 @@ import type {
   MediaAsset,
   ShapeClip,
   VisualClip,
-} from '~/media/shared/composition-types';
-import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { DEFAULT_COLOR_FILL } from '~/media/shared/color-fill-types';
-import { normalizeColorLayerStyle } from '~/media/shared/color-layer-style';
-import { createComposition } from '../composition/engine/clip-engine';
-import { DEFAULT_DRAWING_SETTINGS } from '~/media/shared/freehand';
-import { normalizeShapeLayerStyle } from '~/media/shared/shape-layer-style';
+} from '@beam/engine/shared/composition-types';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { DEFAULT_COLOR_FILL } from '@beam/engine/shared/color-fill-types';
+import { normalizeColorLayerStyle } from '@beam/engine/shared/color-layer-style';
+import { createComposition } from '@beam/engine/commands/clip-engine';
+import { DEFAULT_DRAWING_SETTINGS } from '@beam/engine/shared/freehand';
+import { normalizeShapeLayerStyle } from '@beam/engine/shared/shape-layer-style';
 import type { ElementEditorContext } from '../elements/element-editor-types';
 import { ELEMENT_EDITOR } from '../elements/useElementEditor';
 import PropertiesPanel from './PropertiesPanel.vue';

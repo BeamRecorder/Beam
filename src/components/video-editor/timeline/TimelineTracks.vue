@@ -11,8 +11,8 @@ import { computed, watchEffect, type ComponentPublicInstance, type Ref } from 'v
 import TimelineCaptionTracks from './TimelineCaptionTracks.vue';
 import type { TimelineTracksEmits, TimelineTracksProps } from './composables/timeline-tracks-types';
 import TimelineCanvasTransitionTrack from './TimelineCanvasTransitionTrack.vue';
-import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
-import { DEFAULT_OUTPUT_CANVAS } from '../canvas/output-canvas';
+import { EMPTY_CLIP_TRANSITIONS } from '@beam/engine/shared/clip-transitions';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { useTimelineClipboardShortcuts } from './composables/useTimelineClipboardShortcuts';
 import TimelineTrackHeaders from './TimelineTrackHeaders.vue';
 import TimelineZoomTrack from './TimelineZoomTrack.vue';

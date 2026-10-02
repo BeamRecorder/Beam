@@ -7,8 +7,8 @@ import {
   framedMediaRect,
   normalizeOutputCanvas,
   outputPreviewRect,
-} from '../output-canvas';
-import { resolveCanvasTransitionState } from '~/media/shared/clip-transitions';
+} from '@beam/engine/layout/output-canvas';
+import { resolveCanvasTransitionState } from '@beam/engine/shared/clip-transitions';
 
 describe('output canvas geometry', () => {
   it('centers a 16:9 preview in a wide editor', () => {

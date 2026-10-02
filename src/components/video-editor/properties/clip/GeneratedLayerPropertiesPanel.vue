@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { ClipComposition, ColorClip, ShapeClip } from '~/media/shared/composition-types';
-import { setColorFill, setColorLayerStyle, setShapeLayerStyle } from '../../composition/engine/clip-engine';
+import type { ClipComposition, ColorClip, ShapeClip } from '@beam/engine/shared/composition-types';
+import { setColorFill, setColorLayerStyle, setShapeLayerStyle } from '@beam/engine/commands/clip-engine';
 import ColorLayerPropertiesPanel from './ColorLayerPropertiesPanel.vue';
 import ShapeLayerPropertiesPanel from './ShapeLayerPropertiesPanel.vue';
 

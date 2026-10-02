@@ -3,10 +3,10 @@ import {
   isCaptionClip,
   isCompositingClip,
   type ClipComposition,
-} from '~/media/shared/composition-types';
-import { createClipPasteTransaction } from '../../composition/engine/clip-paste';
-import { pasteZoomAt } from '../../zoom/zoom-paste';
-import type { ZoomElement } from '../../zoom/zoom-types';
+} from '@beam/engine/shared/composition-types';
+import { createClipPasteTransaction } from '@beam/engine/commands/clip-paste';
+import { pasteZoomAt } from '@beam/engine/zoom/zoom-paste';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type {
   TimelineClipboardEntry,
   TimelineClipboardItem,

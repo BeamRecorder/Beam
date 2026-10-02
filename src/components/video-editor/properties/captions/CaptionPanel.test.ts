@@ -1,8 +1,8 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CaptionClip, CaptionSentence, ClipComposition } from '~/media/shared/composition-types';
+import type { CaptionClip, CaptionSentence, ClipComposition } from '@beam/engine/shared/composition-types';
 import type { TranscriptionDiagnostics, WhisperResult } from '../../captions/whisper-types';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 
 type MockWhisperProgress = {
   status: 'idle' | 'loading' | 'running' | 'completed' | 'error';
@@ -46,7 +46,7 @@ vi.mock('../../captions/useWhisperTranscription', async () => {
     }),
   };
 });
-vi.mock('../../composition/engine/clip-engine', () => ({ createComposition }));
+vi.mock('@beam/engine/commands/clip-engine', () => ({ createComposition }));
 
 import CaptionPanel from './CaptionPanel.vue';
 

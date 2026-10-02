@@ -1,5 +1,5 @@
-import type { CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
-import type { ShadowDirection } from './shadow-types';
+import type { CursorPackDescriptor, CursorSelection } from '@beam/engine/capture/cursor-pack';
+import type { ShadowDirection } from '@beam/runtime/cursor/shadow-types';
 
 export interface CursorAppearanceProps {
   selection: CursorSelection;

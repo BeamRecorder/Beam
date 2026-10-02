@@ -1,9 +1,9 @@
 import { ref } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { createComposition } from '../../composition/engine/clip-engine';
-import type { ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { createComposition } from '@beam/engine/commands/clip-engine';
+import type { ClipComposition, MediaAsset, VisualClip } from '@beam/engine/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import { useLinkedClipDeletion } from '../useLinkedClipDeletion';
 
 const asset = (id: string): MediaAsset => ({

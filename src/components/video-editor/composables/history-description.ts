@@ -1,5 +1,5 @@
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { Clip } from '~/media/shared/composition-types';
+import type { Clip } from '@beam/engine/shared/composition-types';
 import type { EditorStateSnapshot, HistoryAction } from './editor-history-types';
 import type { HistoryChange, HistoryItem, HistoryOperation, HistoryTarget } from './history-description-types';
 

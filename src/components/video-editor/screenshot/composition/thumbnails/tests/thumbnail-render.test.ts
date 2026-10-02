@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { Canvas2DContext } from '~/types/canvas';
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import { screenshotShape } from '../../../screenshot-state';
 import type { ThumbnailRequest } from '../thumbnail-types';
 

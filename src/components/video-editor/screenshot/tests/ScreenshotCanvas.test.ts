@@ -3,16 +3,16 @@ import { defineComponent, nextTick, reactive } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { propertyInteractionActive, resetPropertyInteractions } from '~/composables/property-interaction';
-import type { CursorAssetDescriptor, CursorPackDescriptor } from '~/api/types/cursor-pack';
+import type { CursorAssetDescriptor, CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import type { EditorPresetSettings } from '~/api/types/editor-preset';
 import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
-import type { BlurClip } from '~/media/shared/composition-types';
+import type { BlurClip } from '@beam/engine/shared/composition-types';
 import type { ScreenshotRenderAssets } from '../screenshot-types';
 import type { ScreenshotCursorAsset } from '../screenshot-layer-types';
 import { createScreenshotCursor, screenshotCursorTransform } from '../screenshot-cursors';
 import { initializeScreenshotComposition } from '../screenshot-layers';
 import { screenshotShape, screenshotState } from '../screenshot-state';
-import { HIGHLIGHT_DEFAULTS } from '~/media/shared/highlight-defaults';
+import { HIGHLIGHT_DEFAULTS } from '@beam/engine/shared/highlight-defaults';
 
 const renderer = vi.hoisted(() => ({
   loadScreenshotAssets: vi.fn(),

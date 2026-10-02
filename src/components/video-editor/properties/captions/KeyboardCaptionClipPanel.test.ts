@@ -1,8 +1,8 @@
 import { triggerPointer } from '../../../../../tests/support/pointer';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CaptionClip } from '~/media/shared/composition-types';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import type { CaptionClip } from '@beam/engine/shared/composition-types';
+import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 
 const capture = vi.hoisted(() => ({
   listImportedFonts: vi.fn(),

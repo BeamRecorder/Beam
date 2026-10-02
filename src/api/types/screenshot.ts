@@ -1,15 +1,15 @@
 import type { EditorOpenOptions } from './editor-window';
-import type { SnapshotHistory } from '~/media/shared/editor-history-types';
+import type { SnapshotHistory } from '@beam/engine/shared/editor-history-types';
 import type { ScreenRegion } from './screen-region';
 import type { EditorPresetSettings } from './editor-preset';
-import type { BlurClip, ShapeClip, VisualClip, MediaAsset } from '~/media/shared/composition-types';
-import type { OutputCanvasSettings } from '~/components/video-editor/canvas/output-canvas';
-import type { BackgroundValue } from '~/components/video-editor/composables/backgroundCatalog';
+import type { BlurClip, ShapeClip, VisualClip, MediaAsset } from '@beam/engine/shared/composition-types';
+import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
+import type { BackgroundValue } from '@beam/engine/shared/background-types';
 import type {
   ScreenshotCursorLayer,
   ScreenshotImageLayer,
 } from '~/components/video-editor/screenshot/screenshot-layer-types';
-import type { LayerCompositing } from '~/media/shared/layer-compositing-types';
+import type { LayerCompositing } from '@beam/engine/shared/layer-compositing-types';
 
 export interface ScreenshotCaptureOptions {
   screenKind: 'display' | 'window';

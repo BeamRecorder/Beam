@@ -1,8 +1,12 @@
 import { ref } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { COMPOSITION_SCHEMA_VERSION, type ClipComposition, type VisualClip } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import {
+  COMPOSITION_SCHEMA_VERSION,
+  type ClipComposition,
+  type VisualClip,
+} from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import { useMixedTimelineSelection } from '../useMixedTimelineSelection';
 
 const clip = (id: string, timelineStartMs: number): VisualClip => ({

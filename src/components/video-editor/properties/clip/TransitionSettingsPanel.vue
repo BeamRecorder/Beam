@@ -5,13 +5,13 @@ import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import TransitionPresetPreview from './TransitionPresetPreview.vue';
-import type { ClipTransition, ClipTransitions, TransitionPreset } from '~/media/shared/composition-types';
+import type { ClipTransition, ClipTransitions, TransitionPreset } from '@beam/engine/shared/composition-types';
 import {
   DEFAULT_TRANSITION_DURATION_MS,
   DEFAULT_TRANSITION_EASING_POWER,
   MAX_TRANSITION_EASING_POWER,
   MIN_TRANSITION_EASING_POWER,
-} from '~/media/shared/clip-transitions';
+} from '@beam/engine/shared/clip-transitions';
 import { useTranslate } from '~/i18n/useTranslate';
 
 type Edge = 'entry' | 'exit';

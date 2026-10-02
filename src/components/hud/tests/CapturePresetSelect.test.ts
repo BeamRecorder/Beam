@@ -1,7 +1,7 @@
 import { defineComponent } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PresetKind } from '~/api/types/capture-mode';
+import type { PresetKind } from '@beam/engine/capture/capture-mode';
 import type { EditorPresetDocument, EditorPresetSettings } from '~/api/types/editor-preset';
 
 const capture = vi.hoisted(() => ({

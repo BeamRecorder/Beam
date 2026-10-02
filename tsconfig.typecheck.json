@@ -6,6 +6,7 @@
     "checkJs": false,
     "types": ["vite/client", "node"],
     "paths": {
+      "@desktop/*": ["./src/*"],
       "~/ui/*": ["./src/components/ui/*"],
       "~/*": ["./src/*"],
       "@website/*": ["./website/src/*"]

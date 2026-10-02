@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue';
 import TimelineTracks from './TimelineTracks.vue';
-import type { ExportProgress } from '../../export/export-types';
-import { DEFAULT_ZOOM_DURATION_MS, type ZoomElement } from '../zoom/zoom-types';
-import type { ClipComposition } from '~/media/shared/composition-types';
-import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '../canvas/output-canvas';
-import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
+import type { ExportProgress } from '@beam/encoder/export-types';
+import { DEFAULT_ZOOM_DURATION_MS, type ZoomElement } from '@beam/engine/zoom/zoom-types';
+import type { ClipComposition } from '@beam/engine/shared/composition-types';
+import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
+import { EMPTY_CLIP_TRANSITIONS } from '@beam/engine/shared/clip-transitions';
 import type {
   TimelineClipboardItem,
   TimelinePasteHighlight,
@@ -20,7 +20,7 @@ import type {
   TrackClipSelection,
   TrackZoomSelection,
 } from './composables/timeline-tracks-types';
-import type { AddVisualElementRequest } from '../composition/visual-element-types';
+import type { AddVisualElementRequest } from '@beam/engine/composition/visual-element-types';
 import type { TimelineElementKind } from './timeline-element-types';
 import type { LiveAudioDraft } from './composables/timeline-tracks-types';
 
@@ -68,8 +68,8 @@ const emit = defineEmits<{
   (event: 'select:track', selection: TrackClipSelection): void;
   (event: 'select:item', selection: TimelineItemSelectionRequest): void;
   (event: 'select:all'): void;
-  (event: 'lock:selection', request: import('../composition/timeline-lock-types').TimelineLockRequest): void;
-  (event: 'remove:gap', gap: import('../composition/timeline-lock-types').TimelineGap): void;
+  (event: 'lock:selection', request: import('@beam/engine/composition/timeline-lock-types').TimelineLockRequest): void;
+  (event: 'remove:gap', gap: import('@beam/engine/composition/timeline-lock-types').TimelineGap): void;
   (event: 'select:box', selection: TimelineSelectionIds): void;
   (event: 'toggle:clip', clipId: string): void;
   (event: 'delete:clips', clipIds: string[]): void;

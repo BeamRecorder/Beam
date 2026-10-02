@@ -2,7 +2,7 @@ import { mount, type VueWrapper } from '@vue/test-utils';
 import { ChevronDown } from '@lucide/vue';
 import { defineComponent, nextTick, ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LayerBlendMode } from '~/media/shared/layer-compositing-types';
+import type { LayerBlendMode } from '@beam/engine/shared/layer-compositing-types';
 import Button from '~/ui/button/Button.vue';
 import type { ScreenshotLayer } from '../screenshot-layer-types';
 

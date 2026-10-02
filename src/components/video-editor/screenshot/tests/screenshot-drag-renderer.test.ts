@@ -1,5 +1,5 @@
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { Canvas2DContext } from '~/types/canvas';
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screenshotShape, screenshotState } from '../screenshot-state';
 import { updateScreenshotLayer } from '../screenshot-layers';
@@ -15,7 +15,7 @@ vi.mock('../screenshot-layer-render', () => ({
   drawScreenshotLayer: render.drawLayer,
 }));
 
-vi.mock('../../composition/render-composited-layer', () => ({
+vi.mock('@beam/runtime/composition/render-composited-layer', () => ({
   renderCompositedLayer: render.compositedLayer,
 }));
 

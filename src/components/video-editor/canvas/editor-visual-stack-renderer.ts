@@ -1,4 +1,4 @@
-import type { CompositionSceneLayers } from '../composition/scene-layers';
+import type { CompositionSceneLayers } from '@beam/engine/composition/scene-layers';
 import type { useCompositionMedia } from './composables/useCompositionMedia';
 import type { RenderedVideoWindow } from './composables/useCameraZoom';
 

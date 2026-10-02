@@ -1,4 +1,4 @@
-import { loadElementFonts } from '~/media/shared/element-fonts';
+import { loadElementFonts } from '@beam/runtime/shared/element-font-loader';
 import type { ScreenshotRenderAssets } from '../../screenshot-types';
 import { createThumbnailImageLoader } from './thumbnail-assets';
 import { renderLayerThumbnail } from './thumbnail-render';

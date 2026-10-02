@@ -1,13 +1,13 @@
 import { defineComponent, h, nextTick, ref } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import {
   COMPOSITION_SCHEMA_VERSION,
   type ClipComposition,
   type MediaAsset,
   type VisualClip,
-} from '~/media/shared/composition-types';
+} from '@beam/engine/shared/composition-types';
 import type { TransformClip } from '../../editor-canvas-types';
 import { useCropSelection } from '../useCropSelection';
 import type { CropDisplayLayout, UseLayerTransformAndCropOptions } from '../layer-transform-and-crop-types';

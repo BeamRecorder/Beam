@@ -6,14 +6,10 @@ import Tooltip from '~/ui/tooltip/Tooltip.vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Popover from '~/ui/popover/Popover.vue';
-import type { ColorFill } from '~/media/shared/color-fill-types';
+import type { ColorFill } from '@beam/engine/shared/color-fill-types';
 import { useTranslate } from '~/i18n/useTranslate';
-import {
-  gradientCssBackground,
-  normalizeGradient,
-  type BackgroundValue,
-  type GradientBackground,
-} from '../composables/backgroundCatalog';
+import { gradientCssBackground, normalizeGradient } from '../composables/backgroundCatalog';
+import { type BackgroundValue, type GradientBackground } from '@beam/engine/shared/background-types';
 import BackgroundPresetComposer from './canvas/BackgroundPresetComposer.vue';
 import { useBackgroundPresets } from './canvas/useBackgroundPresets';
 

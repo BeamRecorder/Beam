@@ -8,8 +8,8 @@ import {
   createDefaultCursorClickEffects,
   createDefaultCursorMotionSettings,
   cursorMotionPreset,
-} from '~/api/types/cursor-settings';
-import type { CursorClickEffects } from '~/api/types/cursor-settings';
+} from '@beam/engine/capture/cursor-settings';
+import type { CursorClickEffects } from '@beam/engine/capture/cursor-settings';
 import { useToastStore } from '~/ui/toast/toastStore';
 import {
   Select,

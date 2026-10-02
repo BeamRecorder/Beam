@@ -1,7 +1,7 @@
 import { computed, inject, onScopeDispose, ref, watch } from 'vue';
-import { sourceTimeAt } from '~/media/shared';
-import { loadElementFonts } from '~/media/shared/element-fonts';
-import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
+import { sourceTimeAt } from '@beam/runtime/shared/index';
+import { loadElementFonts } from '@beam/runtime/shared/element-font-loader';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { timelineCanvasRegistryKey } from '../timeline-canvas-registry';
 import { useThumbnails } from '../waveform/useThumbnails';
 import { thumbnailIsPending, thumbnailUrlFor, timelineThumbnailWidth } from '../timeline-thumbnail-presentation';

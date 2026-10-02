@@ -1,9 +1,9 @@
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { computed, defineComponent, h, nextTick, provide, ref } from 'vue';
-import type { ShapeClip } from '~/media/shared/composition-types';
-import { createElementText } from '~/media/shared/element-text';
-import { normalizeShapeLayerStyle } from '~/media/shared/shape-layer-style';
+import type { ShapeClip } from '@beam/engine/shared/composition-types';
+import { createElementText } from '@beam/engine/shared/element-text';
+import { normalizeShapeLayerStyle } from '@beam/engine/shared/shape-layer-style';
 import type { ElementEditorContext } from '../element-editor-types';
 import { ELEMENT_EDITOR } from '../useElementEditor';
 import { useCanvasElements } from '../useCanvasElements';
@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   loadElementFonts: vi.fn(),
   toastError: vi.fn(),
 }));
-vi.mock('~/media/shared/element-fonts', () => ({ loadElementFonts: mocks.loadElementFonts }));
+vi.mock('@beam/runtime/shared/element-font-loader', () => ({ loadElementFonts: mocks.loadElementFonts }));
 vi.mock('~/ui/toast/toastStore', () => ({ useToastStore: () => ({ error: mocks.toastError }) }));
 
 const makeTextLayer = (id: string, fontAssetId?: string): ShapeClip => {

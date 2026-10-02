@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ImageOff } from '@lucide/vue';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
-import { loadElementFonts } from '~/media/shared/element-fonts';
+import { loadElementFonts } from '@beam/runtime/shared/element-font-loader';
 import { useTranslate } from '~/i18n/useTranslate';
-import { DEFAULT_OUTPUT_CANVAS } from '../canvas/output-canvas';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { renderShapeTimelinePreview } from './shape-timeline-preview';
 import type { ShapeTimelinePreviewProps } from './shape-timeline-preview-types';
 import {

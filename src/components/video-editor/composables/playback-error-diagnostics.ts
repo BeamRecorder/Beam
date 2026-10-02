@@ -1,5 +1,5 @@
 import type { InjectionKey } from 'vue';
-import type { MediaError } from '~/media/shared';
+import type { MediaError } from '@beam/runtime/shared/index';
 import type { PlaybackErrorContext, PlaybackErrorReport } from './playback-error-types';
 
 export const PLAYBACK_ERROR_REPORT: InjectionKey<PlaybackErrorReport> = Symbol('playback-error-report');

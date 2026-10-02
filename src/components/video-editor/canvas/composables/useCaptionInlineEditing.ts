@@ -1,6 +1,6 @@
 import { computed, ref, watch, type CSSProperties, type Ref } from 'vue';
-import { isTextCaptionClip, type ClipComposition } from '~/media/shared/composition-types';
-import { outputPreviewRect, type OutputCanvasSettings } from '../output-canvas';
+import { isTextCaptionClip, type ClipComposition } from '@beam/engine/shared/composition-types';
+import { outputPreviewRect, type OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 import type { TransformClip } from '../editor-canvas-types';
 import type { CaptionInlineTextUpdate } from '../caption-inline-editor-types';
 

@@ -8,7 +8,7 @@ import type { GradientValue } from '~/ui/Gradient/composables/useGradient';
 import Select from '~/ui/select/Select.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Switch from '~/ui/switch/Switch.vue';
-import type { CaptionHighlightStyle } from '~/media/shared/caption-highlight-types';
+import type { CaptionHighlightStyle } from '@beam/engine/shared/caption-highlight-types';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const props = defineProps<{

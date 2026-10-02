@@ -4,8 +4,8 @@ import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Slider from '~/ui/slider/Slider.vue';
 import Switch from '~/ui/switch/Switch.vue';
-import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
-import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
+import type { CameraFramingPreset, CameraLayoutPreset } from '@beam/engine/shared/camera-layout-types';
+import { isSplitCameraLayout } from '@beam/engine/shared/camera-layout-types';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const props = withDefaults(

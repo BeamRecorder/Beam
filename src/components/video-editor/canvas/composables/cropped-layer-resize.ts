@@ -1,6 +1,6 @@
-import type { NormalizedTransform, VisualClip } from '~/media/shared/composition-types';
+import type { NormalizedTransform, VisualClip } from '@beam/engine/shared/composition-types';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
-import { isPhoneFrame } from '../../composition/appearance/phone-frames';
+import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
 import { mirrorCrop } from './layer-transform-geometry';
 
 /** Keep the visible crop edge under the pointer while resizing the full source. */

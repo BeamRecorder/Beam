@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue';
-import type { TransitionPreset } from '~/media/shared/composition-types';
-import { resolveClipTransitionState } from '~/media/shared/clip-transitions';
+import type { TransitionPreset } from '@beam/engine/shared/composition-types';
+import { resolveClipTransitionState } from '@beam/engine/shared/clip-transitions';
 
 const props = defineProps<{ preset: TransitionPreset | null; active: boolean }>();
 const canvas = ref<HTMLCanvasElement | null>(null);

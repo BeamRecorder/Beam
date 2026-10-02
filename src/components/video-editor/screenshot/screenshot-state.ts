@@ -1,16 +1,16 @@
 import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
 import type { EditorPresetSettings } from '~/api/types/editor-preset';
-import type { NormalizedTransform, ShapeClip } from '~/media/shared/composition-types';
-import type { ShapeLayerPreset } from '~/media/shared/shape-layer-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { normalizeShapeLayerStyle } from '~/media/shared/shape-layer-style';
-import { normalizeOutputCanvas } from '../canvas/output-canvas';
+import type { NormalizedTransform, ShapeClip } from '@beam/engine/shared/composition-types';
+import type { ShapeLayerPreset } from '@beam/engine/shared/shape-layer-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { normalizeShapeLayerStyle } from '@beam/engine/shared/shape-layer-style';
+import { normalizeOutputCanvas } from '@beam/engine/layout/output-canvas';
 import {
   BACKGROUND_MEDIA,
   findMatchingBackgroundMedia,
   normalizeBackgroundValue,
 } from '../composables/backgroundCatalog';
-import type { BackgroundMedia } from '../composables/backgroundCatalog';
+import type { BackgroundMedia } from '@beam/engine/shared/background-types';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
 import { initializeScreenshotComposition } from './screenshot-layers';
 

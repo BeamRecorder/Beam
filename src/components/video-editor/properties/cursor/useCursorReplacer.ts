@@ -1,14 +1,14 @@
 import { computed, ref } from 'vue';
-import type { ShadowDirection } from './shadow-types';
+import type { ShadowDirection } from '@beam/runtime/cursor/shadow-types';
 import {
   createDefaultCursorAutoHideSettings,
   createDefaultCursorClickEffects,
   type CursorClickEffects,
-} from '../../../../api/types/cursor-settings';
-import type { CursorAssetDescriptor, CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
+} from '@beam/engine/capture/cursor-settings';
+import type { CursorAssetDescriptor, CursorPackDescriptor, CursorSelection } from '@beam/engine/capture/cursor-pack';
 import { MACOS_CURSOR_PACK, orderedCursorPacks } from './cursor-packs';
 import { CURSOR_SIZE_DEFAULT } from './cursor-size';
-import { loadCursorImage } from './cursor-image-loader';
+import { loadCursorImage } from '@beam/runtime/cursor/cursor-image-loader';
 
 export function useCursorReplacer() {
   const enabled = ref(true);

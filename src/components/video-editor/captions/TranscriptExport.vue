@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { FileJson } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
-import type { ClipComposition } from '~/media/shared/composition-types';
+import type { ClipComposition } from '@beam/engine/shared/composition-types';
 import { capture } from '~/api/capture';
 import { useTranslate } from '~/i18n/useTranslate';
 import { buildCaptionTranscript, hasCaptionTranscript } from './caption-transcript';

@@ -4,10 +4,10 @@ import TimelineCanvasLane from './TimelineCanvasLane.vue';
 import type { TimelineViewportMetrics } from './composables/timeline-virtualization-types';
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { Lock, Sparkles } from '@lucide/vue';
-import type { CaptionClip } from '~/media/shared/composition-types';
+import type { CaptionClip } from '@beam/engine/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { TimelinePasteHighlight } from './composables/timeline-clipboard-types';
-import type { TextCaptionLayer } from '../composition/engine/caption-layer-layout';
+import type { TextCaptionLayer } from '@beam/engine/commands/caption-layer-layout';
 import { useTimelineVirtualWindow, useVirtualTimelineItems } from './composables/useTimelineVirtualization';
 
 const { t } = useTranslate('TimelineTracks');

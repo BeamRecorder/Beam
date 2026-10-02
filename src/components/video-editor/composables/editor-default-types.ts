@@ -5,10 +5,16 @@ import type {
   ClipTransitions,
   NormalizedTransform,
   VisualClip,
-} from '~/media/shared/composition-types';
+} from '@beam/engine/shared/composition-types';
 import type { ProjectEditorPresentation } from '~/api/types/capture-api';
-import type { ZoomDepth, ZoomMode, ZoomMotionBlurSettings, ZoomProjection, ZoomTiltPreset } from '../zoom/zoom-types';
-import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
+import type {
+  ZoomDepth,
+  ZoomMode,
+  ZoomMotionBlurSettings,
+  ZoomProjection,
+  ZoomTiltPreset,
+} from '@beam/engine/zoom/zoom-types';
+import type { CameraFramingPreset, CameraLayoutPreset } from '@beam/engine/shared/camera-layout-types';
 
 export interface VisualClipDefaults {
   transform: NormalizedTransform;

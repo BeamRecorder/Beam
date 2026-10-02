@@ -1,4 +1,4 @@
-import type { CaptureMode } from './capture-mode';
+import type { CaptureMode } from '@beam/engine/capture/capture-mode';
 
 export type HudPanel = 'settings' | 'projects' | 'mascot';
 export interface HudProjectRequest {

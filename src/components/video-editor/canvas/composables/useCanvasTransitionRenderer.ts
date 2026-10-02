@@ -1,7 +1,7 @@
-import { EMPTY_CLIP_TRANSITIONS, resolveCanvasTransitionState } from '~/media/shared/clip-transitions';
-import type { OutputCanvasSettings } from '../output-canvas';
-import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from '../output-canvas';
-import { drawCanvasTransitionFrame } from '../../composition/transitions/render-canvas-transition';
+import { EMPTY_CLIP_TRANSITIONS, resolveCanvasTransitionState } from '@beam/engine/shared/clip-transitions';
+import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
+import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from '@beam/engine/layout/output-canvas';
+import { drawCanvasTransitionFrame } from '@beam/runtime/composition/transitions/render-canvas-transition';
 
 export function useCanvasTransitionRenderer(options: {
   outputCanvas: () => OutputCanvasSettings;

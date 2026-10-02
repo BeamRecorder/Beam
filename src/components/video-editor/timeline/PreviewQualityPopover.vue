@@ -5,7 +5,7 @@ import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import type { PreviewQuality } from '~/media/playback';
+import type { PreviewQuality } from '@beam/runtime/playback/index';
 import BlurRevealTransition from '~/ui/transitions/BlurRevealTransition.vue';
 import type { PreviewPerformanceSnapshot } from '../performance/preview-performance-types';
 

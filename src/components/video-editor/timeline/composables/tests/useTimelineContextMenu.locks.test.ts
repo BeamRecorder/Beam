@@ -1,10 +1,10 @@
 import { defineComponent, h, ref } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AudioClip, Clip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
-import { COMPOSITION_SCHEMA_VERSION } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import type { ZoomElement } from '../../../zoom/zoom-types';
+import type { AudioClip, Clip, ClipComposition, MediaAsset, VisualClip } from '@beam/engine/shared/composition-types';
+import { COMPOSITION_SCHEMA_VERSION } from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type { TimelineTracksEmits } from '../timeline-tracks-types';
 import { useTimelineClipboard } from '../useTimelineClipboard';
 import { useTimelineClipboardShortcuts } from '../useTimelineClipboardShortcuts';

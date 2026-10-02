@@ -4,7 +4,7 @@ import { Crop, Check, ZoomIn, ZoomOut, Grid, Camera } from '@lucide/vue';
 import PopoverMenuButton from '../../ui/popover/PopoverMenuButton.vue';
 import Button from '../../ui/button/Button.vue';
 import Skeleton from '../../ui/skeleton/Skeleton.vue';
-import type { OutputCanvasPreset } from './output-canvas';
+import type { OutputCanvasPreset } from '@beam/engine/layout/output-canvas';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('CanvasToolbar');

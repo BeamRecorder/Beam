@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Clip, VisualClip } from '~/media/shared/composition-types';
+import type { Clip, VisualClip } from '@beam/engine/shared/composition-types';
 import { selectedClipNames } from './clip-selection-names';
 
 const namedClip = (id: string, name: string): Clip => ({ id, name }) as Clip;

@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import Switch from '~/ui/switch/Switch.vue';
-import type { AudioNormalization } from '~/media/shared/audio-normalization-types';
+import type { AudioNormalization } from '@beam/engine/shared/audio-normalization-types';
 
 const { t } = useTranslate('AudioClipPropertiesPanel');
 

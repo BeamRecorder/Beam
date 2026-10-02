@@ -4,7 +4,7 @@ import {
   perspectiveCoverScale,
   projectPerspectivePoint,
   unprojectPerspectivePoint,
-} from '../../zoom/perspective-projection';
+} from '@beam/engine/zoom/perspective-projection';
 import type { CanvasRect } from './layer-transform-geometry';
 import type { VideoWindowBounds } from './useCameraZoom';
 

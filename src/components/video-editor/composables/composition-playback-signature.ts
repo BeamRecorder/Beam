@@ -1,4 +1,4 @@
-import { compositionDurationMs } from '~/media/shared';
+import { compositionDurationMs } from '@beam/runtime/shared/index';
 import {
   isAudioClip,
   isVisualClip,
@@ -6,7 +6,7 @@ import {
   type Clip,
   type ClipComposition,
   type MediaAsset,
-} from '~/media/shared/composition-types';
+} from '@beam/engine/shared/composition-types';
 
 type PlaybackClipSignature = {
   id: string;

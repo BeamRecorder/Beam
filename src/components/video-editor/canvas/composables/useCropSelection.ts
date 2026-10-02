@@ -1,9 +1,9 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { isVisualClip, type NormalizedCrop } from '~/media/shared/composition-types';
+import { isVisualClip, type NormalizedCrop } from '@beam/engine/shared/composition-types';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
 import type { UseLayerTransformAndCropOptions, CropDrag, CropDisplayLayout } from './layer-transform-and-crop-types';
 import { clampNormalizedCrop, mirrorCrop } from './layer-transform-geometry';
-import { cropPixels, cropsEqual, cropSourceDimensions, snapCropToPixels } from '../../composition/crop/crop-pixels';
+import { cropPixels, cropsEqual, cropSourceDimensions, snapCropToPixels } from '@beam/engine/layout/crop/crop-pixels';
 
 export function useCropSelection(options: UseLayerTransformAndCropOptions, displayLayoutFor: CropDisplayLayout) {
   const cropDraft = ref<NormalizedCrop | null>(null);

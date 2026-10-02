@@ -1,4 +1,4 @@
-import { THUMBNAIL_WIDTH, thumbnailWidthFor } from '~/media/playback/thumbnail-protocol';
+import { THUMBNAIL_WIDTH, thumbnailWidthFor } from '@beam/runtime/playback/thumbnail-protocol';
 
 export function timelineThumbnailWidth(
   frames: readonly { durationMs: number }[],

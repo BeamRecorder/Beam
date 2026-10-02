@@ -7,7 +7,7 @@ The later canvas/Gaussian migration must be measured separately.
 
 ## Implemented
 
-The generic `src/media/performance/` collector is independent of Vue and the
+The generic `packages/runtime/src/performance/` collector is independent of Vue and the
 decoder/renderer/export implementations. Bounded rings report medians/p95 and
 lifetime counters; workers validate snapshots. Decode, load, seek, prepare,
 render, gesture, copy/paste, encoder waits, GPU upload, submission and hardware

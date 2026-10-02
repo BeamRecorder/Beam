@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { createTimelineRows } from '../create-timeline-rows';
 import { groupVisualTimelineTracks } from '../visual-timeline-tracks';
 import { groupImportedAudioTimelineTracks } from '../audio-timeline-tracks';
-import { groupTextCaptionLayers } from '../../../composition/engine/caption-layer-layout';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
-import type { CaptionClip, AudioClip } from '~/media/shared/composition-types';
+import { groupTextCaptionLayers } from '@beam/engine/commands/caption-layer-layout';
+import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
+import type { CaptionClip, AudioClip } from '@beam/engine/shared/composition-types';
 import type { TimelineRowsOptions } from '../timeline-virtualization-types';
-import { videoClip } from '~/media/playback/tests/media-playback-engine.fixtures';
+import { videoClip } from '@beam/runtime/playback/tests/media-playback-engine.fixtures';
 
 const empty = (): TimelineRowsOptions => ({
   visualTracks: [],

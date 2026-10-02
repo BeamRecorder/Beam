@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cursorRippleAt } from '../cursor-ripple';
+import { cursorRippleAt } from '@beam/engine/cursor/cursor-ripple';
 
 describe('cursor ripple shapes', () => {
   it('renders one outline ring for the single shape and keeps the legacy default', () => {

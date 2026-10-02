@@ -1,7 +1,7 @@
-import { recordingMoveSelection } from '../../composition/recording-sidecars';
+import { recordingMoveSelection } from '@beam/engine/composition/recording-sidecars';
 import { timelineMovePreviews } from './timeline-composition-preview';
 import { computed, markRaw, ref } from 'vue';
-import { DEFAULT_ZOOM_DURATION_MS, type ZoomElement } from '../../zoom/zoom-types';
+import { DEFAULT_ZOOM_DURATION_MS, type ZoomElement } from '@beam/engine/zoom/zoom-types';
 import {
   isAudioClip,
   isCaptionClip,
@@ -13,26 +13,26 @@ import {
   type AudioClip,
   type Clip,
   type MediaAsset,
-} from '~/media/shared/composition-types';
+} from '@beam/engine/shared/composition-types';
 import { calculateSnapThresholdMs, collectSnapTargets, snapSpan } from './timeline-snap';
 import { createAnimationFrameCoalescer } from './animation-frame-coalescer';
-import { engineMetrics } from '~/media/performance/engine-metrics';
+import { engineMetrics } from '@beam/runtime/performance/engine-metrics';
 import { useTimelineViewport } from './useTimelineViewport';
 import { useTimelineZoomInteractions } from './useTimelineZoomInteractions';
 import type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
 import { timelineMoveScale } from './timeline-coordinate-space';
 import { groupVisualTimelineTracks, previewVisualTrackOrder } from './visual-timeline-tracks';
-import { visualMoveDeltaBounds } from '../../composition/engine/visual-track-layout';
-import { prepareTimelineSelectionMove } from '../../composition/timeline-selection-move';
+import { visualMoveDeltaBounds } from '@beam/engine/commands/visual-track-layout';
+import { prepareTimelineSelectionMove } from '@beam/engine/composition/timeline-selection-move';
 import { useVisualTrackReorder } from './useVisualTrackReorder';
 import { useTimelineClipTrim } from './useTimelineClipTrim';
 import { groupImportedAudioTimelineTracks } from './audio-timeline-tracks';
 import { useCaptionLayerReorder } from './useCaptionLayerReorder';
-import { groupTextCaptionLayers } from '../../composition/engine/caption-layer-layout';
+import { groupTextCaptionLayers } from '@beam/engine/commands/caption-layer-layout';
 import { useTimelineAddPlacement } from './useTimelineAddPlacement';
 export type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
 
-export { DEFAULT_ZOOM_DURATION_MS } from '../../zoom/zoom-types';
+export { DEFAULT_ZOOM_DURATION_MS } from '@beam/engine/zoom/zoom-types';
 export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTracksEmits) {
   const newZoomDurationMs = computed(() =>
     Number.isFinite(props.newZoomDurationMs)

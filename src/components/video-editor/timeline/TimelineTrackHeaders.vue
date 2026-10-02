@@ -25,12 +25,12 @@ import type {
   ShapeClip,
   VisualClip,
   BlurClip,
-} from '~/media/shared/composition-types';
+} from '@beam/engine/shared/composition-types';
 import type { ImportedAudioTimelineTrack } from './composables/audio-timeline-tracks';
 import type { VisualTimelineTrack } from './composables/timeline-tracks-types';
 import { useTranslate } from '~/i18n/useTranslate';
-import type { TextCaptionLayer } from '../composition/engine/caption-layer-layout';
-import type { ZoomElement } from '../zoom/zoom-types';
+import type { TextCaptionLayer } from '@beam/engine/commands/caption-layer-layout';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import { computed } from 'vue';
 import { useTimelineVirtualWindow, useVirtualTimelineItems } from './composables/useTimelineVirtualization';
 

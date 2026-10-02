@@ -1,5 +1,5 @@
-import type { ClipComposition } from '~/media/shared/composition-types';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import type { ClipComposition } from '@beam/engine/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 
 export interface SnapTargetParams {
   composition: ClipComposition;

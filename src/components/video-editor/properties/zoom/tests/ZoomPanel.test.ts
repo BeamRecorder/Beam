@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import ZoomPanel from '../ZoomPanel.vue';
-import type { ZoomAutoFollowSettings, ZoomElement } from '../../../zoom/zoom-types';
+import type { ZoomAutoFollowSettings, ZoomElement } from '@beam/engine/zoom/zoom-types';
 
 const Button = {
   inheritAttrs: true,

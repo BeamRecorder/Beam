@@ -1,6 +1,6 @@
 import type { ProjectEditorState } from '../../../../api/types/capture-api';
-import { createDefaultCursorPresentation } from '../../../../api/types/cursor-presentation';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import { createDefaultCursorPresentation } from '@beam/engine/capture/cursor-presentation';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 
 type CursorPresentation = ProjectEditorState['presentation']['cursor'];
 

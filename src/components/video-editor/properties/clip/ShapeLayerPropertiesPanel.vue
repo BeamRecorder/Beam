@@ -11,11 +11,11 @@ import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import ShadowDirectionGroup from '../cursor/ShadowDirectionGroup.vue';
-import type { ShapeClip } from '~/media/shared/composition-types';
-import { defaultShapePresetFor, normalizeShapeLayerStyle, shapeLayerFill } from '~/media/shared/shape-layer-style';
-import type { ColorFill } from '~/media/shared/color-fill-types';
-import type { ShapeKind } from '~/media/shared/shape-catalog';
-import type { ShapeLayerFamily, ShapeLayerStyle } from '~/media/shared/shape-layer-types';
+import type { ShapeClip } from '@beam/engine/shared/composition-types';
+import { defaultShapePresetFor, normalizeShapeLayerStyle, shapeLayerFill } from '@beam/engine/shared/shape-layer-style';
+import type { ColorFill } from '@beam/engine/shared/color-fill-types';
+import type { ShapeKind } from '@beam/engine/shared/shape-catalog';
+import type { ShapeLayerFamily, ShapeLayerStyle } from '@beam/engine/shared/shape-layer-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import ColorFillPresetControls from '../ColorFillPresetControls.vue';
 

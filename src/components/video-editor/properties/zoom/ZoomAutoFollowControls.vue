@@ -11,7 +11,7 @@ import {
   ZOOM_AUTO_FOLLOW_PRESETS,
   type ZoomAutoFollowPreset,
   type ZoomAutoFollowSettings,
-} from '~/components/video-editor/zoom/zoom-types';
+} from '@beam/engine/zoom/zoom-types';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('ZoomPanel');

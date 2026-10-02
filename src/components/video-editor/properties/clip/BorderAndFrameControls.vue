@@ -7,11 +7,11 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import Input from '~/ui/input/Input.vue';
 import Divider from '~/ui/divider/Divider.vue';
-import type { ClipFrame } from '~/media/shared/composition-types';
+import type { ClipFrame } from '@beam/engine/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
-import { isPhoneFrame } from '~/components/video-editor/composition/appearance/phone-frames';
+import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
 import PhoneFrameFillControls from './PhoneFrameFillControls.vue';
-import type { PhoneFrameFill } from '~/media/shared/color-fill-types';
+import type { PhoneFrameFill } from '@beam/engine/shared/color-fill-types';
 
 const { t } = useTranslate('BorderAndFrameControls');
 

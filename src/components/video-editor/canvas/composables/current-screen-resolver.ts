@@ -1,5 +1,5 @@
-import type { ClipComposition } from '~/media/shared/composition-types';
-import { createCompositionScreenResolver } from '../../composition/scene-layers';
+import type { ClipComposition } from '@beam/engine/shared/composition-types';
+import { createCompositionScreenResolver } from '@beam/engine/composition/scene-layers';
 
 export function createCurrentScreenResolver(composition: () => ClipComposition) {
   let current = composition();

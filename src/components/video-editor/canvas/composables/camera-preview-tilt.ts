@@ -1,4 +1,4 @@
-import { cameraTiltForControls } from '../../zoom/composition-camera';
+import { cameraTiltForControls } from '@beam/engine/zoom/composition-camera';
 import {
   DEFAULT_ZOOM_TILT_HORIZONTAL,
   DEFAULT_ZOOM_TILT_VERTICAL,
@@ -6,7 +6,7 @@ import {
   normalizeZoomTiltAxis,
   normalizeZoomTiltIntensity,
   type ZoomElement,
-} from '../../zoom/zoom-types';
+} from '@beam/engine/zoom/zoom-types';
 
 export function selectedZoomPreviewTilt(selectedZoom: ZoomElement | null, isPlaying: boolean) {
   if (isPlaying || selectedZoom?.mode !== 'manual' || normalizeZoomProjection(selectedZoom.projection) !== '3d')

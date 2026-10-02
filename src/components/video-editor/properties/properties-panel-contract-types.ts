@@ -1,5 +1,5 @@
-import type { CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
-import type { BackgroundMedia, BackgroundMediaGroup, BackgroundValue } from '../composables/backgroundCatalog';
+import type { CursorPackDescriptor, CursorSelection } from '@beam/engine/capture/cursor-pack';
+import type { BackgroundMedia, BackgroundMediaGroup, BackgroundValue } from '@beam/engine/shared/background-types';
 import type {
   BlurEffectMode,
   BlurEffectShape,
@@ -8,22 +8,22 @@ import type {
   ClipComposition,
   NormalizedTransform,
   NormalizedCrop,
-} from '~/media/shared/composition-types';
+} from '@beam/engine/shared/composition-types';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
-import type { OutputCanvasSettings } from '../canvas/output-canvas';
-import type { ShadowDirection } from './cursor/shadow-types';
+import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
+import type { ShadowDirection } from '@beam/runtime/cursor/shadow-types';
 import type {
   CursorAutoHideSettings,
   CursorClickEffects,
   CursorMotionSettings,
-} from '../../../api/types/cursor-settings';
+} from '@beam/engine/capture/cursor-settings';
 import type { SelectedClipProperties } from './properties-panel-types';
-import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
-import type { PhoneFrameFill } from '~/media/shared/color-fill-types';
-import type { ZoomAutoFollowSettings, ZoomElement, ZoomMotionBlurSettings } from '../zoom/zoom-types';
+import type { CameraFramingPreset, CameraLayoutPreset } from '@beam/engine/shared/camera-layout-types';
+import type { PhoneFrameFill } from '@beam/engine/shared/color-fill-types';
+import type { ZoomAutoFollowSettings, ZoomElement, ZoomMotionBlurSettings } from '@beam/engine/zoom/zoom-types';
 
 export interface PropertiesPanelProps {
-  lockedSelection?: import('../composition/timeline-edit-types').TimelineSelectionIds;
+  lockedSelection?: import('@beam/engine/composition/timeline-edit-types').TimelineSelectionIds;
   activeTab: string;
   selectedClip?: SelectedClipProperties | null;
   selectedCaptionClip?: CaptionClip | null;
@@ -140,7 +140,10 @@ export interface PropertiesPanelEmits {
   (event: 'update:camera-split-padding', padding: number): void;
   (event: 'update:webcam-react-to-zoom', enabled: boolean): void;
   (event: 'reset:clip-transform'): void;
-  (event: 'unlink-sidecars', request: import('../composition/recording-sidecar-types').RecordingSidecarUnlink): void;
+  (
+    event: 'unlink-sidecars',
+    request: import('@beam/engine/composition/recording-sidecar-types').RecordingSidecarUnlink,
+  ): void;
   (event: 'delete-clip'): void;
   (event: 'delete:system-audio'): void;
   (event: 'delete:mic-audio'): void;

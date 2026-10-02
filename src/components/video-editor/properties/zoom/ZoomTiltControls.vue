@@ -13,9 +13,9 @@ import {
   normalizeZoomTiltAxis,
   normalizeZoomTiltIntensity,
   type ZoomElement,
-} from '../../zoom/zoom-types';
-import { ZOOM_TILT_PRESETS, activeZoomTiltPreset, applyZoomTiltPreset } from '../../zoom/zoom-tilt-presets';
-import type { ZoomTiltPresetDefinition } from '../../zoom/zoom-tilt-preset-types';
+} from '@beam/engine/zoom/zoom-types';
+import { ZOOM_TILT_PRESETS, activeZoomTiltPreset, applyZoomTiltPreset } from '@beam/engine/zoom/zoom-tilt-presets';
+import type { ZoomTiltPresetDefinition } from '@beam/engine/zoom/zoom-tilt-preset-types';
 import ZoomTiltPreview from '../../zoom/ZoomTiltPreview.vue';
 
 const props = defineProps<{ zoom: ZoomElement }>();

@@ -1,7 +1,7 @@
 import { computed, getCurrentScope, onScopeDispose, ref, toRaw, watch, type Ref } from 'vue';
 import { capture } from '../../../api/capture';
 import type { CaptureProject, ProjectEditorState } from '../../../api/types/capture-api';
-import type { Clip, ClipComposition } from '~/media/shared/composition-types';
+import type { Clip, ClipComposition } from '@beam/engine/shared/composition-types';
 import {
   DEFAULT_ZOOM_MOTION_BLUR,
   DEFAULT_ZOOM_AUTO_FOLLOW,
@@ -10,24 +10,23 @@ import {
   type ZoomElement,
   type ZoomAutoFollowSettings,
   type ZoomMotionBlurSettings,
-} from '../zoom/zoom-types';
+} from '@beam/engine/zoom/zoom-types';
 import {
   BACKGROUND_MEDIA,
   findMatchingBackgroundMedia,
   getRandomBackgroundImage,
   normalizeBackgroundValue,
-  type BackgroundMedia,
-  type BackgroundValue,
 } from './backgroundCatalog';
-import type { OutputCanvasSettings } from '../canvas/output-canvas';
+import { type BackgroundMedia, type BackgroundValue } from '@beam/engine/shared/background-types';
+import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 import {
   type CursorAutoHideSettings,
   type CursorClickEffects,
   type CursorMotionSettings,
   normalizeCursorMotionSettings,
-} from '../../../api/types/cursor-settings';
-import type { CursorShadowDirection } from '../../../api/types/cursor-presentation';
-import type { CursorSelection } from '../../../api/types/cursor-pack';
+} from '@beam/engine/capture/cursor-settings';
+import type { CursorShadowDirection } from '@beam/engine/capture/cursor-presentation';
+import type { CursorSelection } from '@beam/engine/capture/cursor-pack';
 import { propertyInteractionActive } from '../../../composables/property-interaction';
 import type { EditorPreferenceDefaults } from './editor-default-types';
 import { applyFreshPresentationDefaults, applyGlobalCursorDefaults, defaultsFromEditorState } from './editor-defaults';

@@ -1,6 +1,6 @@
-import type { CaptionStyle } from '~/media/shared/composition-types';
-import { applyCanvasCaptionFont } from '~/media/shared/caption-font';
-import { approximateCaptionTextWidth } from '~/media/shared/caption-text-layout';
+import type { CaptionStyle } from '@beam/engine/shared/composition-types';
+import { applyCanvasCaptionFont } from '@beam/runtime/shared/caption-font-render';
+import { approximateCaptionTextWidth } from '@beam/engine/shared/caption-text-layout';
 
 export function measureCanvasCaptionText(
   canvas: HTMLCanvasElement | null,

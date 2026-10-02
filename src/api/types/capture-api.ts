@@ -4,7 +4,7 @@ import type { InputAccessStatus } from './input-access';
 export type { InputAccessStatus } from './input-access';
 import type { ScreenshotApi } from './screenshot';
 import type { TranscriptExportRequest, TranscriptExportResult } from './transcript';
-import type { PresetKind } from './capture-mode';
+import type { PresetKind } from '@beam/engine/capture/capture-mode';
 import type { CaptureConfig, CreateProjectOptions, StartRecordingOptions } from './capture-config';
 import type {
   ScreenRegion,
@@ -13,16 +13,17 @@ import type {
   ScreenRegionSelectionOptions,
   ScreenRegionSelectionResult,
 } from './screen-region';
-import type { CaptureProject, CaptureSession, ProjectEditorData, ProjectZoomState } from './capture-session';
-import type { ClipComposition, MediaAsset } from '~/media/shared/composition-types';
 import type {
-  BackgroundMedia,
-  BackgroundValue,
-  GradientBackground,
-} from '../../components/video-editor/composables/backgroundCatalog';
-import type { OutputCanvasSettings } from '../../components/video-editor/canvas/output-canvas';
-import type { CursorPresentationSettings } from './cursor-presentation';
-import type { CursorPackDescriptor, CursorPackImportResult } from './cursor-pack';
+  CaptureProject,
+  CaptureSession,
+  ProjectEditorData,
+  ProjectZoomState,
+} from '@beam/engine/capture/capture-session';
+import type { ClipComposition, MediaAsset } from '@beam/engine/shared/composition-types';
+import type { BackgroundMedia, BackgroundValue, GradientBackground } from '@beam/engine/shared/background-types';
+import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
+import type { CursorPresentationSettings } from '@beam/engine/capture/cursor-presentation';
+import type { CursorPackDescriptor, CursorPackImportResult } from '@beam/engine/capture/cursor-pack';
 import type {
   TeleprompterDocument,
   TeleprompterViewState,
@@ -48,9 +49,9 @@ import type { QuickSnipApi } from './quick-snip-api';
 
 export type * from './capture-config';
 export type * from './screen-region';
-export type * from './capture-session';
+export type * from '@beam/engine/capture/capture-session';
 export type * from './editor-window';
-export type * from './cursor-pack';
+export type * from '@beam/engine/capture/cursor-pack';
 export type * from '~/types/appearance';
 export type * from './editor-preset';
 export type * from './quick-snip';
@@ -209,9 +210,13 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipA
   onCursorPacksChanged(listener: () => void): () => void;
   openCursorPackDiscovery(): Promise<void>;
   createProject(options?: CreateProjectOptions): Promise<CaptureProject>;
-  renameProject(projectId: string, name: string, mode?: import('./capture-mode').CaptureMode): Promise<CaptureProject>;
-  deleteProject(projectId: string, mode?: import('./capture-mode').CaptureMode): Promise<void>;
-  revealProject(projectId: string, mode?: import('./capture-mode').CaptureMode): Promise<boolean>;
+  renameProject(
+    projectId: string,
+    name: string,
+    mode?: import('@beam/engine/capture/capture-mode').CaptureMode,
+  ): Promise<CaptureProject>;
+  deleteProject(projectId: string, mode?: import('@beam/engine/capture/capture-mode').CaptureMode): Promise<void>;
+  revealProject(projectId: string, mode?: import('@beam/engine/capture/capture-mode').CaptureMode): Promise<boolean>;
   saveProjectThumbnail(projectId: string, dataUrl: string): Promise<string | null>;
   whisperModels(): Promise<
     Array<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>

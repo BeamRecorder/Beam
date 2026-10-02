@@ -7,22 +7,25 @@ import EditorCanvas from '../EditorCanvas.vue';
 import CanvasLoadingSkeleton from '../CanvasLoadingSkeleton.vue';
 import CanvasPlaybackError from '../CanvasPlaybackError.vue';
 import { PLAYBACK_ERROR_REPORT, playbackErrorDiagnostic } from '../../composables/playback-error-diagnostics';
-import { DEFAULT_OUTPUT_CANVAS } from '../output-canvas';
-import type { CaptionClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
-import type { MediaFrame } from '~/media/shared';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
+import type { CaptionClip, ClipComposition, VisualClip } from '@beam/engine/shared/composition-types';
+import type { MediaFrame } from '@beam/runtime/shared/index';
 import {
   createDefaultCursorMotionSettings,
   type CursorAutoHideSettings,
   type CursorClickEffects,
-} from '../../../../api/types/cursor-settings';
+} from '@beam/engine/capture/cursor-settings';
 import ResizeHandle from '../../../ui/ResizeHandle/ResizeHandle.vue';
-import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { resolveCompositionSceneLayers } from '../../composition/scene-layers';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import CanvasMarqueeSurface from '../CanvasMarqueeSurface.vue';
+import type { RuntimePreviewOptions } from '../runtime-preview-types';
 
 const { state } = vi.hoisted(() => ({
   state: {
     drawVideoWindow: vi.fn(),
+    runtimeDraw: vi.fn(),
+    runtimeDispose: vi.fn(),
+    runtimeOptions: undefined as RuntimePreviewOptions | undefined,
     drawInCameraSpace: vi.fn(),
     resetCamera: vi.fn(),
     beginSelectionMove: vi.fn(),
@@ -69,7 +72,7 @@ const { state } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('../../zoom/perspective-scene-compositor', () => ({
+vi.mock('@beam/runtime/zoom/perspective-scene-compositor', () => ({
   PerspectiveSceneCompositor: class {
     render(options: {
       target: CanvasRenderingContext2D;
@@ -120,6 +123,7 @@ vi.mock('../composables/useCompositionMedia', async () => {
   const { ref } = await import('vue');
   return {
     useCompositionMedia: () => ({
+      images: new Map(),
       drawComposition: state.drawComposition,
       drawWebcamClips: state.drawWebcamClips,
       transformDraft: ref(null),
@@ -136,11 +140,19 @@ vi.mock('../composables/useCursorOverlay', async () => {
       return {
         updateAndDrawRipplesAndCursor: state.updateCursor,
         cursorBounds: state.cursorBounds,
+        customCursorImage: ref(null),
         clearCursorBounds: state.clearCursorBounds,
       };
     },
   };
 });
+
+vi.mock('../runtime-preview', () => ({
+  createRuntimePreview: (options: RuntimePreviewOptions) => {
+    state.runtimeOptions = options;
+    return { draw: state.runtimeDraw, dispose: state.runtimeDispose };
+  },
+}));
 
 vi.mock('../composables/useCameraZoom', async () => {
   const { ref } = await import('vue');
@@ -589,12 +601,12 @@ describe('EditorCanvas', () => {
     while (frames.length) runFrame();
 
     expect(state.perspectiveRender).not.toHaveBeenCalled();
-    expect(state.drawComposition.mock.calls.some(([ctx]) => ctx === contextMock)).toBe(true);
+    expect(state.runtimeDraw.mock.calls.some(([ctx]) => ctx === contextMock)).toBe(true);
     mounted.unmount();
     wrapper = undefined;
   });
 
-  it('routes an active 3D zoom through the perspective surface while keeping composition overlays on target', async () => {
+  it('passes an active 3D zoom to the runtime while retaining the preview clipping boundary', async () => {
     const cameraBounds = {
       dx: 0,
       dy: 0,
@@ -623,19 +635,18 @@ describe('EditorCanvas', () => {
     await flushPromises();
     while (frames.length) runFrame();
 
-    expect(state.perspectiveRender).toHaveBeenCalled();
-    expect(state.perspectiveRender).toHaveBeenCalledWith(
-      expect.objectContaining({
-        target: contextMock,
-        bounds: expect.objectContaining({ width: 800, height: 450 }),
-      }),
+    expect(state.runtimeOptions?.props.zoomElements[0]?.projection).toBe('3d');
+    expect(state.runtimeDraw).toHaveBeenCalledWith(
+      contextMock,
+      expect.objectContaining({ width: 800, height: 450 }),
+      expect.anything(),
+      expect.anything(),
     );
-    expect(state.drawComposition).toHaveBeenCalledWith(contextMock, cameraBounds, undefined, expect.anything());
     expect(contextMock.roundRect).toHaveBeenCalledWith(0, 0, 800, 450, 16);
     expect(contextMock.clip).toHaveBeenCalled();
     mounted.unmount();
     wrapper = undefined;
-    expect(state.perspectiveDispose).toHaveBeenCalled();
+    expect(state.runtimeDispose).toHaveBeenCalled();
   });
 
   it('uses a quality-scaled backing canvas while keeping the CSS preview and logical coordinates unchanged', async () => {
@@ -700,9 +711,7 @@ describe('EditorCanvas', () => {
     expect(mounted.find('.editor-canvas').classes()).toContain('is-loading-covered');
     expect(mounted.findComponent(CanvasLoadingSkeleton).props('aspectRatio')).toBe(16 / 9);
     expect(mounted.find('.preview-frame').attributes('style')).toContain('--preview-aspect-ratio: 1.7777777777777777');
-    expect(state.drawBackground).toHaveBeenCalled();
-    expect(state.drawWebcamClips).toHaveBeenCalledWith(expect.anything(), expect.any(Object));
-    expect(state.drawComposition).toHaveBeenCalled();
+    expect(state.runtimeDraw).toHaveBeenCalled();
     expect(mounted.find('.editor-canvas').classes()).toContain('is-selection-editable');
     expect(mounted.find('.zoom-selection-box').classes()).not.toContain('locked');
 
@@ -964,7 +973,7 @@ describe('EditorCanvas', () => {
     await flushPromises();
     runFrame();
 
-    expect(state.drawComposition.mock.calls.some((call) => call[1] === bounds)).toBe(true);
+    expect(state.runtimeDraw).toHaveBeenCalled();
     expect(state.updateCursor).toHaveBeenCalled();
     expect(mounted.find('.webcam-selection').exists()).toBe(true);
     await triggerPointer(mounted.find('.webcam-selection'), 'pointerdown');
@@ -995,9 +1004,9 @@ describe('EditorCanvas', () => {
     expect(mounted.findComponent(ResizeHandle).props('positions')).toEqual(positions);
     expect(mounted.find('.perspective-border polygon').attributes('points')).toBe('8,12 96,4 104,44 12,52');
 
-    state.renderVisualStack?.(contextMock, bounds, vi.fn(), resolveCompositionSceneLayers(composition(), 500));
-    expect(state.drawWebcamClips).toHaveBeenCalledWith(expect.anything(), bounds);
-    expect(state.drawComposition).toHaveBeenCalledWith(contextMock, bounds, 'image');
+    expect(state.runtimeDraw.mock.calls.at(-1)?.[3].visualStack.some((clip: VisualClip) => clip.id === 'image')).toBe(
+      true,
+    );
 
     await mounted.setProps({ isCropping: true });
     await nextTick();
@@ -1043,7 +1052,7 @@ describe('EditorCanvas', () => {
     await nextTick();
 
     const cursorOrder = state.updateCursor.mock.invocationCallOrder[0];
-    const captionOrder = state.drawComposition.mock.invocationCallOrder[0];
+    const captionOrder = state.runtimeDraw.mock.invocationCallOrder[0];
     expect(cursorOrder).toBeDefined();
     expect(captionOrder).toBeDefined();
     expect(captionOrder).toBeGreaterThan(cursorOrder!);
@@ -1162,14 +1171,19 @@ describe('EditorCanvas', () => {
     await flushPromises();
     runFrame();
 
-    expect(state.drawComposition.mock.calls).toContainEqual(expect.arrayContaining([contextMock, cameraBounds]));
+    expect(state.runtimeDraw).toHaveBeenCalledWith(
+      contextMock,
+      expect.objectContaining({ width: 450, height: 450 }),
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   it('renders watermark-only output changes immediately without playback or seeking', async () => {
     const mounted = mountEditor();
     await flushPromises();
     while (frames.length) runFrame();
-    state.drawComposition.mockClear();
+    state.runtimeDraw.mockClear();
     state.syncPlayback.mockClear();
 
     await mounted.setProps({
@@ -1193,8 +1207,8 @@ describe('EditorCanvas', () => {
     expect(mounted.emitted('update:isPlaying')).toBeUndefined();
 
     runFrame();
-    expect(state.drawComposition).toHaveBeenCalled();
-    expect(contextMock.fillText).toHaveBeenCalledWith('Beam', expect.any(Number), expect.any(Number));
+    expect(state.runtimeDraw).toHaveBeenCalled();
+    expect(state.runtimeOptions?.props.outputCanvas.watermark?.text).toBe('beam');
   });
 
   it('passes the sampled camera scale to the viewport-anchored webcam overlay', async () => {
@@ -1213,7 +1227,8 @@ describe('EditorCanvas', () => {
     await flushPromises();
     runFrame();
 
-    expect(state.drawWebcamClips).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ scale: 2 }));
+    expect(state.runtimeDraw).toHaveBeenCalled();
+    expect(state.drawVideoWindow.mock.calls.at(-1)?.at(-1)).toBe(false);
   });
 
   it('reacts to playback, format, duration, and transition watchers', async () => {
@@ -1291,13 +1306,13 @@ describe('EditorCanvas', () => {
 
     runFrame();
     expect(frames).toHaveLength(1);
-    const drawCountAfterTransitionFrame = state.drawComposition.mock.calls.length;
+    const drawCountAfterTransitionFrame = state.runtimeDraw.mock.calls.length;
 
     // The fade's onRenderOnce callback runs from inside this draw. Playback must
     // continue with one pending frame instead of creating a second RAF chain.
     runFrame();
     expect(frames).toHaveLength(1);
-    expect(state.drawComposition.mock.calls.length).toBeGreaterThan(drawCountAfterTransitionFrame);
+    expect(state.runtimeDraw.mock.calls.length).toBeGreaterThan(drawCountAfterTransitionFrame);
   });
 
   it('coalesces a render-once request raised from inside a playback draw', async () => {
@@ -1372,7 +1387,7 @@ describe('EditorCanvas', () => {
     await flushPromises();
     while (frames.length) runFrame();
     const readsAfterInitialRender = unrelatedReadCount;
-    state.drawComposition.mockClear();
+    state.runtimeDraw.mockClear();
 
     await mounted.setProps({ currentTime: 0.75, frameVersion: 1 });
     await nextTick();
@@ -1381,7 +1396,7 @@ describe('EditorCanvas', () => {
     expect(frames).toHaveLength(1);
 
     runFrame();
-    expect(state.drawComposition).toHaveBeenCalledTimes(1);
+    expect(state.runtimeDraw).toHaveBeenCalledTimes(1);
   });
 
   it('observes immutable composition replacements without recursively reading document fields', async () => {

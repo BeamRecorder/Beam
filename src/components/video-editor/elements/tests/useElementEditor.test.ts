@@ -1,12 +1,12 @@
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h, nextTick, ref, shallowRef } from 'vue';
-import type { ShapeClip } from '~/media/shared/composition-types';
-import { createElementText } from '~/media/shared/element-text';
-import type { ShapeLayerStyle } from '~/media/shared/shape-layer-types';
-import { normalizeShapeLayerStyle } from '~/media/shared/shape-layer-style';
-import type { ColorFill } from '~/media/shared/color-fill-types';
-import type { DrawingSettings, DrawnElement } from '~/media/shared/element-types';
+import type { ShapeClip } from '@beam/engine/shared/composition-types';
+import { createElementText } from '@beam/engine/shared/element-text';
+import type { ShapeLayerStyle } from '@beam/engine/shared/shape-layer-types';
+import { normalizeShapeLayerStyle } from '@beam/engine/shared/shape-layer-style';
+import type { ColorFill } from '@beam/engine/shared/color-fill-types';
+import type { DrawingSettings, DrawnElement } from '@beam/engine/shared/element-types';
 import type { ElementEditorContext, ElementEditorOptions } from '../element-editor-types';
 import { provideElementEditor, useElementEditor } from '../useElementEditor';
 

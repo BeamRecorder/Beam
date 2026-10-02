@@ -6,7 +6,7 @@ import Input from '~/ui/input/Input.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
 import { createFuzzySearchEngine } from '~/ui/select/fuzzy-search';
-import { SHAPE_CATALOG, shapeDefinition, shapeDisplayName, type ShapeKind } from '~/media/shared/shape-catalog';
+import { SHAPE_CATALOG, shapeDefinition, shapeDisplayName, type ShapeKind } from '@beam/engine/shared/shape-catalog';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const props = withDefaults(

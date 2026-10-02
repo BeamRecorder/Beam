@@ -1,7 +1,7 @@
 import type { ComputedRef, Ref } from 'vue';
-import type { NormalizedTransform, ShapeClip } from '~/media/shared/composition-types';
-import type { ShapeLayerFamily, ShapeLayerStyle } from '~/media/shared/shape-layer-types';
-import type { DrawingSettings, DrawnElement } from '~/media/shared/element-types';
+import type { NormalizedTransform, ShapeClip } from '@beam/engine/shared/composition-types';
+import type { ShapeLayerFamily, ShapeLayerStyle } from '@beam/engine/shared/shape-layer-types';
+import type { DrawingSettings, DrawnElement } from '@beam/engine/shared/element-types';
 
 export interface ElementEditorOptions {
   layers: () => ShapeClip[];

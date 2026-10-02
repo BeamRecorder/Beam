@@ -2,14 +2,14 @@ import { defineComponent, h, nextTick, ref } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCompositionMedia } from '../useCompositionMedia';
-import type { MediaFrame } from '~/media/shared';
-import type { BlurClip, ClipComposition, CaptionClip, VisualClip } from '~/media/shared/composition-types';
-import { DEFAULT_OUTPUT_CANVAS } from '../../output-canvas';
-import * as mediaShared from '~/media/shared';
-import * as sceneLayers from '../../../composition/scene-layers';
-import { frameContentRect, frameOuterRect } from '../../../composition/appearance/frames';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
-import * as adaptiveShadows from '../../../composition/appearance/adaptive-shadow';
+import type { MediaFrame } from '@beam/runtime/shared/index';
+import type { BlurClip, ClipComposition, CaptionClip, VisualClip } from '@beam/engine/shared/composition-types';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
+import * as mediaShared from '@beam/runtime/shared/index';
+import * as sceneLayers from '@beam/engine/composition/scene-layers';
+import { frameContentRect, frameOuterRect } from '@beam/engine/shared/frame-layout';
+import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
+import * as adaptiveShadows from '@beam/runtime/composition/appearance/adaptive-shadow';
 
 const testCaptionStyle = (fontSize: number) => {
   const style = createDefaultCaptionStyle(fontSize);
@@ -19,16 +19,16 @@ const testCaptionStyle = (fontSize: number) => {
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
 const drawFrameOverlay = vi.hoisted(() => vi.fn());
 const applyBlurEffect = vi.hoisted(() => vi.fn());
-vi.mock('../../../composition/appearance/render-decorated-media', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../../composition/appearance/render-decorated-media')>()),
+vi.mock('@beam/runtime/composition/appearance/render-decorated-media', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@beam/runtime/composition/appearance/render-decorated-media')>()),
   drawDecoratedMedia,
 }));
-vi.mock('../../../composition/appearance/frames', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../../composition/appearance/frames')>()),
+vi.mock('@beam/runtime/composition/appearance/frames', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@beam/runtime/composition/appearance/frames')>()),
   drawFrameOverlay,
 }));
-vi.mock('../../../composition/effects/blur-effect', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../../composition/effects/blur-effect')>()),
+vi.mock('@beam/runtime/composition/effects/blur-effect', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@beam/runtime/composition/effects/blur-effect')>()),
   applyBlurEffect,
 }));
 

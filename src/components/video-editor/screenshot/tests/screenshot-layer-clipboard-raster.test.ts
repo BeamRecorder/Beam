@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScreenshotState } from '~/api/types/screenshot';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { SCREENSHOT_BACKGROUND_ID, SCREENSHOT_WATERMARK_ID } from '../screenshot-layers';
 
 const rendering = vi.hoisted(() => ({ draw: vi.fn(), alphaBounds: vi.fn() }));

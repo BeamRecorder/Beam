@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { ColorClip } from '~/media/shared/composition-types';
+import type { ColorClip } from '@beam/engine/shared/composition-types';
 
 const props = defineProps<{ clip: ColorClip }>();
 const previewStyle = computed(() => {

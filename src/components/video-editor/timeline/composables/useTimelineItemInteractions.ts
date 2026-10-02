@@ -1,10 +1,10 @@
-import { recordingMoveSelection } from '../../composition/recording-sidecars';
-import { selectionHasLocks } from '../../composition/timeline-locks';
+import { recordingMoveSelection } from '@beam/engine/composition/recording-sidecars';
+import { selectionHasLocks } from '@beam/engine/composition/timeline-locks';
 import { computed, onBeforeUnmount } from 'vue';
 import type { TimelineItemKind, TimelineSelectionIntent } from './timeline-tracks-types';
 import type { TimelineItemInteractions, TimelineItemInteractionsOptions } from './timeline-item-interactions-types';
-import type { Clip } from '~/media/shared/composition-types';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import type { Clip } from '@beam/engine/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 export type { TimelineItemInteractions } from './timeline-item-interactions-types';
 
 const selectionIntent = (event: MouseEvent): TimelineSelectionIntent =>

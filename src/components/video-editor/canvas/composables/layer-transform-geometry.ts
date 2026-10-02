@@ -1,5 +1,5 @@
 import type { VideoWindowBounds } from './useCameraZoom';
-import type { NormalizedCrop } from '~/media/shared/composition-types';
+import type { NormalizedCrop } from '@beam/engine/shared/composition-types';
 
 export interface CanvasRect {
   left: number;

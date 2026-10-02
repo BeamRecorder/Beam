@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { ProjectEditorData, SessionTrackAsset, SessionTrackData } from '../../../../api/types/capture-api';
-import type { InputEventSidecar } from '../../../../api/types/capture-session';
-import { COMPOSITION_SCHEMA_VERSION, emptyComposition, type ClipComposition } from '~/media/shared/composition-types';
+import type { InputEventSidecar } from '@beam/engine/capture/capture-session';
+import {
+  COMPOSITION_SCHEMA_VERSION,
+  emptyComposition,
+  type ClipComposition,
+} from '@beam/engine/shared/composition-types';
 import { synchronizeRecordingClips } from '../session-clips';
-import { deleteClip, splitClip } from '../engine/clip-engine';
-import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { sessionTimeAt } from '~/media/shared/timeline-mapping';
-import { removeTimelineGap, timelineGaps } from '../timeline-gaps';
+import { deleteClip, splitClip } from '@beam/engine/commands/clip-engine';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { sessionTimeAt } from '@beam/engine/shared/timeline-mapping';
+import { removeTimelineGap, timelineGaps } from '@beam/engine/composition/timeline-gaps';
 
 const segment = (overrides: Partial<SessionTrackAsset> = {}): SessionTrackAsset => ({
   path: 'segment.webm',

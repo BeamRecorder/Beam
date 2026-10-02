@@ -1,7 +1,11 @@
 import { reactive, ref } from 'vue';
-import ThumbnailWorker from '~/media/playback/thumbnail.worker?worker';
-import { THUMBNAIL_WIDTH, thumbnailWidthFor, type ThumbnailWorkerResponse } from '~/media/playback/thumbnail-protocol';
-import { mediaSourceDescriptor, type MediaAsset } from '~/media/shared';
+import ThumbnailWorker from '@beam/runtime/playback/thumbnail.worker?worker';
+import {
+  THUMBNAIL_WIDTH,
+  thumbnailWidthFor,
+  type ThumbnailWorkerResponse,
+} from '@beam/runtime/playback/thumbnail-protocol';
+import { mediaSourceDescriptor, type MediaAsset } from '@beam/runtime/shared/index';
 import type { MediaProcessingReporter } from '../../performance/media-processing-pressure';
 
 const CACHE_LIMIT = 96;

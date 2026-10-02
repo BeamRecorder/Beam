@@ -3,8 +3,8 @@ import { ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { i18n } from '~/i18n';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import type { AudioClip, MediaAsset, VisualClip } from '~/media/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import type { AudioClip, MediaAsset, VisualClip } from '@beam/engine/shared/composition-types';
 import LinkedClipPreviewPlayer from '../LinkedClipPreviewPlayer.vue';
 
 const waveformState = {

@@ -1,4 +1,4 @@
-import type { MediaAsset } from '~/media/shared/composition-types';
+import type { MediaAsset } from '@beam/engine/shared/composition-types';
 import { capture } from './capture';
 import { MIME_TYPE, requestBrowserMicrophoneSource, type BrowserMicrophoneSource } from './browser-microphone-source';
 

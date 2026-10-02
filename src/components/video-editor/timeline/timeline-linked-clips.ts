@@ -1,5 +1,5 @@
-import type { Clip, ClipComposition } from '~/media/shared/composition-types';
-import { recordingLinkedClipIds } from '../composition/recording-media-links';
+import type { Clip, ClipComposition } from '@beam/engine/shared/composition-types';
+import { recordingLinkedClipIds } from '@beam/engine/composition/recording-media-links';
 
 export const linkedClipNames = (composition: ClipComposition, clip: Clip): string[] => {
   const ids = new Set(recordingLinkedClipIds(composition, [clip.id]));

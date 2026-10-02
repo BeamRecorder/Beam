@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
 import type { EditorPresetSettings } from '~/api/types/editor-preset';
 import type { ProjectEditorPresentation } from '~/api/types/capture-api';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { moveScreenshotLayer, screenshotPresetSettings, screenshotShape, screenshotState } from '../screenshot-state';
 
 const makePreset = (): EditorPresetSettings => ({

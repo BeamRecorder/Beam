@@ -1,5 +1,7 @@
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
+import { drawSceneStack } from '@beam/runtime/rendering/scene-stack';
 import { onUnmounted, watch } from 'vue';
-import { activeClipsAt, type MediaFrame } from '~/media/shared';
+import { activeClipsAt, type MediaFrame } from '@beam/runtime/shared/index';
 import {
   isBlurClip,
   isColorClip,
@@ -12,27 +14,31 @@ import {
   type NormalizedTransform,
   type ShapeClip,
   type VisualClip,
-} from '~/media/shared/composition-types';
-import { captionContentAt } from '~/media/shared/caption-text-layout';
+} from '@beam/engine/shared/composition-types';
+import { captionContentAt } from '@beam/engine/shared/caption-text-layout';
 import {
   drawWebcamOverlay,
   webcamReactsToZoom,
   webcamSettingsForAppearance,
-} from '../../composition/webcam/webcam-zoom';
-import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
-import { primeAdaptiveShadowColors } from '../../composition/appearance/adaptive-shadow';
-import type { AdaptiveShadowRequest, DecoratedMediaOptions } from '../../composition/appearance/appearance-types';
-import { isPhoneFrame } from '../../composition/appearance/phone-frames';
-import { drawFrameOverlay, frameOuterRect } from '../../composition/appearance/frames';
-import { drawCaptionText, type CaptionViewport } from '../../composition/captions/render-caption-text';
-import type { OutputCanvasSettings } from '../output-canvas';
-import { applyBlurEffect } from '../../composition/effects/blur-effect';
-import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '../../composition/scene-layers';
-import { drawWithClipTransition } from '../../composition/transitions/render-transition';
-import { resolveVisualClipFraming } from '../../composition/visual-framing';
-import { drawColorClip } from '../../composition/color/render-color-clip';
-import { drawShapeClip } from '../../composition/shape/render-shape-clip';
-import { createGpuShapeScope } from '../../composition/shape/ordered-gpu-shapes';
+} from '@beam/runtime/composition/webcam/webcam-zoom';
+import { drawDecoratedMedia } from '@beam/runtime/composition/appearance/render-decorated-media';
+import { primeAdaptiveShadowColors } from '@beam/runtime/composition/appearance/adaptive-shadow';
+import type {
+  AdaptiveShadowRequest,
+  DecoratedMediaOptions,
+} from '@beam/runtime/composition/appearance/appearance-types';
+import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
+import { drawFrameOverlay } from '@beam/runtime/composition/appearance/frames';
+import { frameOuterRect } from '@beam/engine/shared/frame-layout';
+import { drawCaptionText, type CaptionViewport } from '@beam/runtime/composition/captions/render-caption-text';
+import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
+import { applyBlurEffect } from '@beam/runtime/composition/effects/blur-effect';
+import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '@beam/engine/composition/scene-layers';
+import { drawWithClipTransition } from '@beam/runtime/composition/transitions/render-transition';
+import { resolveVisualClipFraming } from '@beam/engine/composition/visual-framing';
+import { drawColorClip } from '@beam/runtime/composition/color/render-color-clip';
+import { drawShapeClip } from '@beam/runtime/composition/shape/render-shape-clip';
+import { createGpuShapeScope } from '@beam/runtime/composition/shape/ordered-gpu-shapes';
 
 export interface UseCompositionMediaOptions {
   composition: () => ClipComposition;
@@ -81,7 +87,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     { immediate: true },
   );
 
-  const drawCaption = (ctx: CanvasRenderingContext2D, clip: CaptionClip, timeMs: number) => {
+  const drawCaption = (ctx: Canvas2DContext, clip: CaptionClip, timeMs: number) => {
     const { text, runs, wordHighlight } = captionContentAt(clip, timeMs);
     if (!text) return;
     const transformDraft = transformDraftFor(clip.id);
@@ -145,7 +151,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     return { editingPhoneCrop, layout, options: mediaOptions };
   };
   const drawVisual = (
-    ctx: CanvasRenderingContext2D,
+    ctx: Canvas2DContext,
     clip: VisualClip,
     window: { dx: number; dy: number; dw: number; dh: number },
   ) => {
@@ -169,7 +175,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   };
 
   const drawBlur = (
-    ctx: CanvasRenderingContext2D,
+    ctx: Canvas2DContext,
     clip: BlurClip,
     window: { dx: number; dy: number; dw: number; dh: number },
   ) => {
@@ -183,7 +189,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   };
 
   const drawColor = (
-    ctx: CanvasRenderingContext2D,
+    ctx: Canvas2DContext,
     clip: ColorClip,
     window: { dx: number; dy: number; dw: number; dh: number },
   ) => {
@@ -192,7 +198,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   };
 
   const drawShape = (
-    ctx: CanvasRenderingContext2D,
+    ctx: Canvas2DContext,
     clip: ShapeClip,
     window: { dx: number; dy: number; dw: number; dh: number },
   ) => {
@@ -202,7 +208,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   };
 
   const drawWebcam = (
-    ctx: CanvasRenderingContext2D,
+    ctx: Canvas2DContext,
     clip: VisualClip,
     window: {
       dx: number;
@@ -250,7 +256,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   };
 
   const drawVisualStack = (
-    ctx: CanvasRenderingContext2D,
+    ctx: Canvas2DContext,
     window: { dx: number; dy: number; dw: number; dh: number; scale: number; focusX?: number; focusY?: number },
     drawScreen: () => void,
     resolvedLayers?: CompositionSceneLayers,
@@ -277,40 +283,55 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         });
     }
     primeAdaptiveShadowColors(requests);
-    gpuShapes.render(ctx, (batch) => {
-      for (const clip of layers.visualStack) {
-        if (clip.kind === 'blur' && batch.tryBlur(clip,{x:window.dx,y:window.dy,width:window.dw,height:window.dh},transformDraftFor(clip.id) ?? clip.transform)) continue;
-        if (
-          clip.kind === 'shape' &&
-          batch.tryShape(
-            clip,
-            { x: window.dx, y: window.dy, width: window.dw, height: window.dh },
-            () => drawShape(ctx, clip, window),
-            transformDraftFor(clip.id) ?? clip.transform,
-          )
-        )
-          continue;
-        batch.flush();
-        drawWithClipTransition(
-          ctx,
-          clip,
-          timeMs,
-          { x: window.dx, y: window.dy, width: window.dw, height: window.dh },
-          () => {
-            if (clip.kind === 'screen') drawScreen();
-            else if (clip.kind === 'color') drawColor(ctx, clip, window);
-            else if (clip.kind === 'shape') drawShape(ctx, clip, window);
-            else if (clip.kind === 'blur') drawBlur(ctx, clip, window);
-            else if (clip.kind === 'webcam') drawWebcam(ctx, clip, window);
-            else drawVisual(ctx, clip, window);
-          },
-        );
-      }
-    });
+    drawSceneStack(
+      ctx,
+      layers.visualStack,
+      layers.scene,
+      { x: window.dx, y: window.dy, width: window.dw, height: window.dh },
+      (ctx, clips) =>
+        gpuShapes.render(ctx, (batch) => {
+          for (const clip of clips) {
+            if (
+              clip.kind === 'blur' &&
+              batch.tryBlur(
+                clip,
+                { x: window.dx, y: window.dy, width: window.dw, height: window.dh },
+                transformDraftFor(clip.id) ?? clip.transform,
+              )
+            )
+              continue;
+            if (
+              clip.kind === 'shape' &&
+              batch.tryShape(
+                clip,
+                { x: window.dx, y: window.dy, width: window.dw, height: window.dh },
+                () => drawShape(ctx, clip, window),
+                transformDraftFor(clip.id) ?? clip.transform,
+              )
+            )
+              continue;
+            batch.flush();
+            drawWithClipTransition(
+              ctx,
+              clip,
+              timeMs,
+              { x: window.dx, y: window.dy, width: window.dw, height: window.dh },
+              () => {
+                if (clip.kind === 'screen') drawScreen();
+                else if (clip.kind === 'color') drawColor(ctx, clip, window);
+                else if (clip.kind === 'shape') drawShape(ctx, clip, window);
+                else if (clip.kind === 'blur') drawBlur(ctx, clip, window);
+                else if (clip.kind === 'webcam') drawWebcam(ctx, clip, window);
+                else drawVisual(ctx, clip, window);
+              },
+            );
+          }
+        }),
+    );
   };
 
   const drawComposition = (
-    ctx: CanvasRenderingContext2D,
+    ctx: Canvas2DContext,
     window: { dx: number; dy: number; dw: number; dh: number },
     onlyClipId?: string,
     resolvedLayers?: CompositionSceneLayers,
@@ -337,7 +358,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   };
 
   const drawWebcamClips = (
-    ctx: CanvasRenderingContext2D,
+    ctx: Canvas2DContext,
     window: { dx: number; dy: number; dw: number; dh: number; scale: number },
     onlyClipId?: string,
   ) => {

@@ -1,7 +1,7 @@
-import type { CursorAssetDescriptor, CursorPackDescriptor } from '~/api/types/cursor-pack';
+import type { CursorAssetDescriptor, CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
-import type { NormalizedTransform } from '~/media/shared/composition-types';
-import { createElementText } from '~/media/shared/element-text';
+import type { NormalizedTransform } from '@beam/engine/shared/composition-types';
+import { createElementText } from '@beam/engine/shared/element-text';
 import { describe, expect, it } from 'vitest';
 import { screenshotShape, screenshotState } from '../screenshot-state';
 import { createScreenshotCursor, screenshotCursorTransform } from '../screenshot-cursors';

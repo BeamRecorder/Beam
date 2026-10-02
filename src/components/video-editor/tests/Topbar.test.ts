@@ -1,7 +1,8 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Topbar from '../Topbar.vue';
-import type { CompositionSnapshot, EditorExportSource } from '~/components/export/export-types';
+import type { EditorExportSource } from '@beam/encoder/export-types';
+import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
 import type { PreviewPerformanceSnapshot } from '../performance/preview-performance-types';
 
 const capture = vi.hoisted(() => ({

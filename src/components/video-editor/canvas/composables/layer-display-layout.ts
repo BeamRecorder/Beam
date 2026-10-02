@@ -7,10 +7,10 @@ import {
   type NormalizedTransform,
   type ShapeClip,
   type VisualClip,
-} from '~/media/shared/composition-types';
-import { effectShapeRect } from '../../composition/effects/effect-shape';
-import { visualClipDisplayLayout } from '../../composition/visual-framing';
-import { isPhoneFrame } from '../../composition/appearance/phone-frames';
+} from '@beam/engine/shared/composition-types';
+import { effectShapeRect } from '@beam/runtime/composition/effects/effect-shape';
+import { visualClipDisplayLayout } from '@beam/engine/composition/visual-framing';
+import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
 import { projectCameraRect } from './layer-transform-geometry';
 import { webcamDisplayLayout } from './webcam-transform-editing';
 import type { VideoWindowBounds } from './useCameraZoom';

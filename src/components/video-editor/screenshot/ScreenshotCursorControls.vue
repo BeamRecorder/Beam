@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CursorPackDescriptor } from '~/api/types/cursor-pack';
+import type { CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import type { ScreenshotCursorLayer, ScreenshotCursorUpdate } from './screenshot-layer-types';
 import CursorAppearanceControls from '../properties/cursor/CursorAppearanceControls.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';

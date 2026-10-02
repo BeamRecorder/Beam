@@ -1,4 +1,4 @@
-import { outputPreviewRect, type OutputCanvasSettings } from './output-canvas';
+import { outputPreviewRect, type OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 
 export interface CanvasFrameCapture {
   bytes: ArrayBuffer;

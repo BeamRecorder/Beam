@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import { computed } from 'vue';
-import type { DrawingSettings } from '~/media/shared/element-types';
-import type { ColorFill } from '~/media/shared/color-fill-types';
+import type { DrawingSettings } from '@beam/engine/shared/element-types';
+import type { ColorFill } from '@beam/engine/shared/color-fill-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import ColorFillPresetControls from '../properties/ColorFillPresetControls.vue';
 const props = defineProps<{ modelValue: DrawingSettings; hideColor?: boolean }>();

@@ -1,4 +1,4 @@
-import type { ShapeClip } from '~/media/shared/composition-types';
+import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import type { ShapeTimelinePreviewProps } from './shape-timeline-preview-types';
 import type { ShapePreviewCacheEntry } from './shape-preview-cache-types';
 

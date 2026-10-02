@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import Divider from '~/ui/divider/Divider.vue';
-import type { ColorClip } from '~/media/shared/composition-types';
-import type { ColorFill } from '~/media/shared/color-fill-types';
-import type { ColorLayerStyle } from '~/media/shared/color-layer-style-types';
+import type { ColorClip } from '@beam/engine/shared/composition-types';
+import type { ColorFill } from '@beam/engine/shared/color-fill-types';
+import type { ColorLayerStyle } from '@beam/engine/shared/color-layer-style-types';
 import ColorFillPresetControls from '../ColorFillPresetControls.vue';
 import ColorLayerAppearanceControls from './ColorLayerAppearanceControls.vue';
 

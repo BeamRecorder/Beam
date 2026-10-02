@@ -4,7 +4,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import CaptureModeIcon from '../capture/CaptureModeIcon.vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
-import type { CaptureMode } from '~/api/types/capture-mode';
+import type { CaptureMode } from '@beam/engine/capture/capture-mode';
 
 const { t } = useTranslate('QuickSnipCropBar');
 const { t: tHud } = useTranslate('HUD');

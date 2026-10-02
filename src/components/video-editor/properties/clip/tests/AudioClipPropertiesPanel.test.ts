@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import AudioClipPropertiesPanel from '../AudioClipPropertiesPanel.vue';
-import type { AudioNormalization } from '~/media/shared/audio-normalization-types';
+import type { AudioNormalization } from '@beam/engine/shared/audio-normalization-types';
 
 const BigSlider = {
   emits: ['update:modelValue'],

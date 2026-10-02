@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import PhoneFrameFillControls from '../PhoneFrameFillControls.vue';
-import { DEFAULT_PHONE_FRAME_GRADIENT } from '~/media/shared/color-fill-types';
+import { DEFAULT_PHONE_FRAME_GRADIENT } from '@beam/engine/shared/color-fill-types';
 
 const ColorPicker = {
   props: ['modelValue'],

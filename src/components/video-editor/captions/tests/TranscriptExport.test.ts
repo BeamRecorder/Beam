@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CaptionClip, ClipComposition } from '~/media/shared/composition-types';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import type { CaptionClip, ClipComposition } from '@beam/engine/shared/composition-types';
+import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 import { i18n } from '~/i18n';
 import Button from '~/ui/button/Button.vue';
 

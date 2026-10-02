@@ -1,9 +1,9 @@
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { Clip } from '~/media/shared/composition-types';
-import { emptyComposition } from '~/media/shared/composition-types';
-import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { createElementText } from '~/media/shared/element-text';
-import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
+import type { Clip } from '@beam/engine/shared/composition-types';
+import { emptyComposition } from '@beam/engine/shared/composition-types';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { createElementText } from '@beam/engine/shared/element-text';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { screenshotShape } from '../../screenshot/screenshot-state';
 import type { EditorStateSnapshot } from '../editor-history-types';
 

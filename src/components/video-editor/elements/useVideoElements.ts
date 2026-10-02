@@ -1,7 +1,7 @@
 import { watch } from 'vue';
 import type { Ref } from 'vue';
-import { isShapeClip, type ClipComposition } from '~/media/shared/composition-types';
-import { addClip, deleteClip, setShapeLayerStyle } from '../composition/engine/clip-engine';
+import { isShapeClip, type ClipComposition } from '@beam/engine/shared/composition-types';
+import { addClip, deleteClip, setShapeLayerStyle } from '@beam/engine/commands/clip-engine';
 import { provideElementEditor } from './useElementEditor';
 
 export function useVideoElements(options: {

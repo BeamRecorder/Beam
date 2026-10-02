@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { defineComponent, h } from 'vue';
 import { describe, expect, it } from 'vitest';
-import type { ColorClip } from '~/media/shared/composition-types';
+import type { ColorClip } from '@beam/engine/shared/composition-types';
 import ColorLayerAppearanceControls from '../ColorLayerAppearanceControls.vue';
 
 const Button = {

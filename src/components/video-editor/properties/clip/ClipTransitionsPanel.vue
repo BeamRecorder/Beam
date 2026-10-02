@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import TransitionSettingsPanel from './TransitionSettingsPanel.vue';
-import type { Clip, ClipTransition } from '~/media/shared/composition-types';
+import type { Clip, ClipTransition } from '@beam/engine/shared/composition-types';
 
 const props = defineProps<{ clip: Clip; initialEdge?: 'entry' | 'exit' }>();
 const emit = defineEmits<{

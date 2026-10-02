@@ -1,7 +1,7 @@
 import { defineComponent, h, ref, type Ref } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CursorAssetDescriptor, CursorPackDescriptor } from '~/api/types/cursor-pack';
+import type { CursorAssetDescriptor, CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import type { ScreenshotState } from '~/api/types/screenshot';
 import type { ScreenshotCursorLayer } from '../screenshot-layer-types';
 

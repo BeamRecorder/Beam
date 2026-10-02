@@ -1,6 +1,6 @@
 import { effectScope, nextTick, ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CursorAssetDescriptor, CursorPackDescriptor } from '~/api/types/cursor-pack';
+import type { CursorAssetDescriptor, CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import type { ScreenshotState } from '~/api/types/screenshot';
 import type { ScreenshotLayer } from '../../../screenshot-layer-types';
 import type { LayerThumbnail, ThumbnailReply, ThumbnailSpec } from '../thumbnail-types';
@@ -11,8 +11,8 @@ const cursorRuntime = vi.hoisted(() => ({
   loadCursorImage: vi.fn(),
 }));
 
-vi.mock('../../../../properties/cursor/cursor-packs', () => ({ cursorGeometry: cursorRuntime.cursorGeometry }));
-vi.mock('../../../../properties/cursor/cursor-image-loader', () => ({
+vi.mock('@beam/engine/shared/cursor-assets', () => ({ cursorGeometry: cursorRuntime.cursorGeometry }));
+vi.mock('@beam/runtime/cursor/cursor-image-loader', () => ({
   loadCursorImage: cursorRuntime.loadCursorImage,
 }));
 

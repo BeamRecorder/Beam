@@ -1,5 +1,5 @@
 import { onScopeDispose, readonly, ref, watch } from 'vue';
-import type { AudioPlaybackMetrics, PlaybackMetrics } from '~/media/playback';
+import type { AudioPlaybackMetrics, PlaybackMetrics } from '@beam/runtime/playback/index';
 import {
   clampPerformanceScore,
   idlePreviewPerformanceHealth,

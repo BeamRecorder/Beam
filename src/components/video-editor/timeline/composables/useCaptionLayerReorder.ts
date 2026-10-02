@@ -1,5 +1,5 @@
 import { ref, type ComputedRef, type Ref } from 'vue';
-import type { TextCaptionLayer } from '../../composition/engine/caption-layer-layout';
+import type { TextCaptionLayer } from '@beam/engine/commands/caption-layer-layout';
 import { createAnimationFrameCoalescer } from './animation-frame-coalescer';
 import type { TimelineTracksEmits } from './timeline-tracks-types';
 

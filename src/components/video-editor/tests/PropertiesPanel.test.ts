@@ -6,22 +6,22 @@ import {
   createDefaultCursorClickEffects,
   createDefaultCursorMotionSettings,
   type CursorAutoHideSettings,
-} from '~/api/types/cursor-settings';
+} from '@beam/engine/capture/cursor-settings';
 import { MACOS_CURSOR_PACK } from '../properties/cursor/cursor-packs';
-import type { BackgroundMediaGroup, BackgroundValue } from '../composables/backgroundCatalog';
-import { DEFAULT_WATERMARK, type OutputCanvasSettings } from '../canvas/output-canvas';
-import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import type { BackgroundMediaGroup, BackgroundValue } from '@beam/engine/shared/background-types';
+import { DEFAULT_WATERMARK, type OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import {
   emptyComposition as createEmptyComposition,
   type AudioClip,
   type CaptionClip,
   type ClipComposition,
   type ColorClip,
-} from '~/media/shared/composition-types';
-import type { ZoomElement } from '../zoom/zoom-types';
-import type { ShadowDirection } from '../properties/cursor/shadow-types';
+} from '@beam/engine/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
+import type { ShadowDirection } from '@beam/runtime/cursor/shadow-types';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
-import type { ShapeClip } from '~/media/shared/composition-types';
+import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import type { ElementEditorContext } from '../elements/element-editor-types';
 import { ELEMENT_EDITOR } from '../elements/useElementEditor';
 

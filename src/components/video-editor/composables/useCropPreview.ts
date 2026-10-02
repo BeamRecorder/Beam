@@ -1,5 +1,5 @@
 import { computed, ref, watch } from 'vue';
-import { isVisualClip, type NormalizedCrop } from '~/media/shared/composition-types';
+import { isVisualClip, type NormalizedCrop } from '@beam/engine/shared/composition-types';
 import type { CropPreviewOptions } from '../composition/crop/crop-types';
 
 // Drafts never mutate the saved composition or enter the undo history.

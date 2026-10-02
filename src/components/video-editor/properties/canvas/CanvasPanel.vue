@@ -11,18 +11,16 @@ import Tooltip from '~/ui/tooltip/Tooltip.vue';
 import BackgroundPresetComposer from './BackgroundPresetComposer.vue';
 import RemoveBackgroundControl from './RemoveBackgroundControl.vue';
 import { capture } from '../../../../api/capture';
+import { customColor, customGradient, gradientCssBackground } from '../../composables/backgroundCatalog';
 import {
-  customColor,
-  customGradient,
-  gradientCssBackground,
   type BackgroundMedia,
   type BackgroundMediaGroup,
   type BackgroundValue,
-} from '../../composables/backgroundCatalog';
+} from '@beam/engine/shared/background-types';
 import { useCanvasMediaTiles } from './useCanvasMediaTiles';
 import { useBackgroundPresets } from './useBackgroundPresets';
 import { useTranslate } from '~/i18n/useTranslate';
-import type { WatermarkSettings } from '../../canvas/output-canvas';
+import type { WatermarkSettings } from '@beam/engine/layout/output-canvas';
 import WatermarkControls from './WatermarkControls.vue';
 
 const { t } = useTranslate('CanvasPanel');

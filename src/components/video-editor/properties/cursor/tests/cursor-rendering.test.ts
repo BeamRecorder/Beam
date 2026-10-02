@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { cursorAssetAt, cursorCanvasBounds, cursorGeometryAtSize, cursorPositionAt } from '../cursor-rendering';
-import { containedMediaRect, framedMediaRect } from '../../../canvas/output-canvas';
-import { frameContentRect } from '../../../composition/appearance/frames';
-import { resolvePhoneFrameGeometry } from '../../../composition/appearance/frame-geometry';
-import type { CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
-import type { CursorPlaybackState } from '../../../composables/cursorPlayback';
-import type { VisualClip } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import {
+  cursorAssetAt,
+  cursorCanvasBounds,
+  cursorGeometryAtSize,
+  cursorPositionAt,
+} from '@beam/runtime/cursor/cursor-rendering';
+import { containedMediaRect, framedMediaRect } from '@beam/engine/layout/output-canvas';
+import { frameContentRect } from '@beam/engine/shared/frame-layout';
+import { resolvePhoneFrameGeometry } from '@beam/engine/layout/frame-geometry';
+import type { CursorPackDescriptor, CursorSelection } from '@beam/engine/capture/cursor-pack';
+import type { CursorPlaybackState } from '@beam/engine/cursor/cursorPlayback';
+import type { VisualClip } from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 
 const state = (x: number, y: number, cursorKind: string | null = 'default'): CursorPlaybackState => ({
   x,

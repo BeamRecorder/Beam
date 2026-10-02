@@ -1,8 +1,8 @@
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { WatermarkSettings } from '../canvas/output-canvas';
-import type { BackgroundValue } from '../composables/backgroundCatalog';
-import { defaultLayerCompositing, reorderLayer } from '~/media/shared/layer-compositing';
-import type { LayerCompositing } from '~/media/shared/layer-compositing-types';
+import type { WatermarkSettings } from '@beam/engine/layout/output-canvas';
+import type { BackgroundValue } from '@beam/engine/shared/background-types';
+import { defaultLayerCompositing, reorderLayer } from '@beam/runtime/shared/layer-compositing';
+import type { LayerCompositing } from '@beam/engine/shared/layer-compositing-types';
 import type { ScreenshotLayer } from './screenshot-layer-types';
 
 export const SCREENSHOT_BACKGROUND_ID = '__background__';

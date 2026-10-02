@@ -2,14 +2,17 @@ import { drawScreenshotLayer } from './screenshot-layer-render';
 import { screenshotLayers } from './screenshot-layers';
 import { loadScreenshotCursors } from './screenshot-cursors';
 import { BUILTIN_CURSOR_PACKS } from '../properties/cursor/cursor-packs';
-import type { CursorPackDescriptor } from '~/api/types/cursor-pack';
-import { releaseCompositedLayerSurface, renderCompositedLayer } from '../composition/render-composited-layer';
-import { loadElementFonts } from '~/media/shared/element-fonts';
+import type { CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
+import {
+  releaseCompositedLayerSurface,
+  renderCompositedLayer,
+} from '@beam/runtime/composition/render-composited-layer';
+import { loadElementFonts } from '@beam/runtime/shared/element-font-loader';
 import { i18n } from '~/i18n';
 import { validScreenshotDimensions } from './screenshot-dimensions';
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { Canvas2DContext } from '~/types/canvas';
-import { WATERMARK_LOGO_PATH } from '../canvas/watermark-render';
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
+import { WATERMARK_LOGO_PATH } from '@beam/runtime/rendering/watermark-render';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import type { ScreenshotEncodeOptions, ScreenshotRenderAssets } from './screenshot-types';
 import { createScreenshotImageLoader } from './screenshot-assets';

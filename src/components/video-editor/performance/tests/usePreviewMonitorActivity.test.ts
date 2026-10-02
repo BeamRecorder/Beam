@@ -1,6 +1,11 @@
 import { effectScope, ref, type Ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AudioPlaybackMetrics, PlaybackMetrics, PlaybackState, PreviewQuality } from '~/media/playback';
+import type {
+  AudioPlaybackMetrics,
+  PlaybackMetrics,
+  PlaybackState,
+  PreviewQuality,
+} from '@beam/runtime/playback/index';
 import {
   beginPropertyInteraction,
   endPropertyInteraction,

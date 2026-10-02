@@ -1,4 +1,4 @@
-import type { CropDimensions } from '../composition/crop/crop-types';
+import type { CropDimensions } from '@beam/engine/shared/crop-types';
 import type {
   BlurEffectMode,
   BlurEffectShape,
@@ -6,10 +6,10 @@ import type {
   ClipShadowMode,
   NormalizedCrop,
   NormalizedTransform,
-} from '~/media/shared/composition-types';
-import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
-import type { PhoneFrameFill } from '~/media/shared/color-fill-types';
-import type { AudioNormalization } from '~/media/shared/audio-normalization-types';
+} from '@beam/engine/shared/composition-types';
+import type { CameraFramingPreset, CameraLayoutPreset } from '@beam/engine/shared/camera-layout-types';
+import type { PhoneFrameFill } from '@beam/engine/shared/color-fill-types';
+import type { AudioNormalization } from '@beam/engine/shared/audio-normalization-types';
 
 export interface SelectedClipProperties {
   id: string;

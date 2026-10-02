@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { Canvas2DContext } from '~/types/canvas';
-import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { screenshotShape } from '../screenshot-state';
 
 const renderers = vi.hoisted(() => ({
@@ -13,12 +13,14 @@ const renderers = vi.hoisted(() => ({
 const captureApi = vi.hoisted(() => ({ listCursorPacks: vi.fn() }));
 const cursorLoad = vi.hoisted(() => ({ loadScreenshotCursors: vi.fn() }));
 
-vi.mock('../../composition/background/render-background', () => ({ renderBackground: renderers.renderBackground }));
-vi.mock('../../composition/appearance/render-decorated-media', () => ({
+vi.mock('@beam/runtime/composition/background/render-background', () => ({
+  renderBackground: renderers.renderBackground,
+}));
+vi.mock('@beam/runtime/composition/appearance/render-decorated-media', () => ({
   drawDecoratedMedia: renderers.drawDecoratedMedia,
 }));
-vi.mock('../../composition/shape/render-shape-clip', () => ({ drawShapeClip: renderers.drawShapeClip }));
-vi.mock('../../canvas/watermark-render', () => ({
+vi.mock('@beam/runtime/composition/shape/render-shape-clip', () => ({ drawShapeClip: renderers.drawShapeClip }));
+vi.mock('@beam/runtime/rendering/watermark-render', () => ({
   WATERMARK_LOGO_PATH: './brand/beam.svg',
   drawBeamWatermark: renderers.drawBeamWatermark,
 }));

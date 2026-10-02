@@ -1,7 +1,7 @@
 import { defineComponent, nextTick, reactive } from 'vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import type { ClipComposition, VisualClip } from '@beam/engine/shared/composition-types';
 import { useCanvasClipToggleTransition, CLIP_TOGGLE_FADE_MS } from '../useCanvasClipToggleTransition';
 
 const visual = (id: string, kind: VisualClip['kind'], enabled = true): VisualClip => ({

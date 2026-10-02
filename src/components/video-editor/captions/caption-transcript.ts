@@ -1,4 +1,4 @@
-import { isTextCaptionClip, type ClipComposition } from '~/media/shared/composition-types';
+import { isTextCaptionClip, type ClipComposition } from '@beam/engine/shared/composition-types';
 import type { CaptionTranscript, TranscriptSegment } from '~/api/types/transcript';
 
 function* transcriptSegments(composition: ClipComposition, durationMs: number): Generator<TranscriptSegment> {

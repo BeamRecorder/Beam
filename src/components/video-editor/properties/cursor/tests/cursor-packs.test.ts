@@ -1,9 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { CursorAssetDescriptor, CursorPackDescriptor } from '~/api/types/cursor-pack';
+import type { CursorAssetDescriptor, CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
-import { cursorAssetSupportsTint, MACOS_CURSOR_PACK, orderedCursorPacks, resolveCursorAsset } from '../cursor-packs';
+import { MACOS_CURSOR_PACK, orderedCursorPacks } from '../cursor-packs';
+import { cursorAssetSupportsTint, resolveCursorAsset } from '@beam/engine/shared/cursor-assets';
 
 const BUILTIN_PACKS = [
   ['builtin:macos', 'macOS'],

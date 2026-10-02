@@ -1,9 +1,9 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h, ref } from 'vue';
-import type { ShapeClip } from '~/media/shared/composition-types';
-import type { ElementText } from '~/media/shared/element-types';
-import { createElementText } from '~/media/shared/element-text';
+import type { ShapeClip } from '@beam/engine/shared/composition-types';
+import type { ElementText } from '@beam/engine/shared/element-types';
+import { createElementText } from '@beam/engine/shared/element-text';
 import ElementTextControls from '../ElementTextControls.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 

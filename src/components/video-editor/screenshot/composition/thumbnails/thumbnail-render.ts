@@ -3,7 +3,7 @@ import { screenshotLayerRotation, screenshotLayerTransform } from '../../screens
 import type { ScreenshotRenderAssets } from '../../screenshot-types';
 import { alphaBounds, fitThumbnail } from './thumbnail-pixels';
 import type { ThumbnailRequest } from './thumbnail-types';
-import { shadowBlurForAppearance } from '../../../composition/appearance/render-decorated-media';
+import { shadowBlurForAppearance } from '@beam/runtime/composition/appearance/render-decorated-media';
 
 export async function renderLayerThumbnail(
   request: ThumbnailRequest,

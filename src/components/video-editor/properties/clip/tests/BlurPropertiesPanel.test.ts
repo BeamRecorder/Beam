@@ -1,7 +1,7 @@
 import { defineComponent, h } from 'vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import type { BlurClip } from '~/media/shared/composition-types';
+import type { BlurClip } from '@beam/engine/shared/composition-types';
 import BlurPropertiesPanel from '../BlurPropertiesPanel.vue';
 
 const Button = defineComponent({

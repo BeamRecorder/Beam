@@ -1,4 +1,4 @@
-import type { ClipKind } from '~/media/shared/composition-types';
+import type { ClipKind } from '@beam/engine/shared/composition-types';
 
 type Translate = (key: string) => string;
 

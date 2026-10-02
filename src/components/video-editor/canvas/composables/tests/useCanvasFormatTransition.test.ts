@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { effectScope, nextTick, ref, type EffectScope } from 'vue';
-import type { OutputCanvasSettings } from '../../output-canvas';
-import { DEFAULT_OUTPUT_CANVAS } from '../../output-canvas';
+import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { useCanvasFormatTransition } from '../useCanvasFormatTransition';
 
 const scopes: EffectScope[] = [];

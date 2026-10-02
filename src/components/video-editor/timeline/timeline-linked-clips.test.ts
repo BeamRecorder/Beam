@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import type { AudioClip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import type { AudioClip, ClipComposition, MediaAsset, VisualClip } from '@beam/engine/shared/composition-types';
 import { createTimelineLinkedClipNameResolver, linkedClipNames } from './timeline-linked-clips';
 
 const sessionAsset = (id: string, kind: MediaAsset['kind']): MediaAsset => ({

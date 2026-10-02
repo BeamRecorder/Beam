@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AudioPlaybackMetrics, PlaybackMetrics } from '~/media/playback';
+import type { AudioPlaybackMetrics, PlaybackMetrics } from '@beam/runtime/playback/index';
 import {
   clampPerformanceScore,
   nextPreviewPerformanceHealth,

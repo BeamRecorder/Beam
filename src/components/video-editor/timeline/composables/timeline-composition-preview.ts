@@ -1,8 +1,8 @@
-import type { TimelineSelectionMoveResult } from '../../composition/timeline-edit-types';
-import { clipEndMs, isVisualClip, type Clip, type ClipComposition } from '~/media/shared/composition-types';
-import { visualTrimBounds } from '../../composition/engine/visual-track-layout';
-import { downstreamVisualTrackRippleIds } from '../../composition/engine/visual-track-ripple';
-import { timingPreviewFor } from '../../composition/timing-preview';
+import type { TimelineSelectionMoveResult } from '@beam/engine/composition/timeline-edit-types';
+import { clipEndMs, isVisualClip, type Clip, type ClipComposition } from '@beam/engine/shared/composition-types';
+import { visualTrimBounds } from '@beam/engine/commands/visual-track-layout';
+import { downstreamVisualTrackRippleIds } from '@beam/engine/commands/visual-track-ripple';
+import { timingPreviewFor } from '@beam/engine/composition/timing-preview';
 
 const linkedIds = (composition: ClipComposition, clip: Clip) =>
   new Set(

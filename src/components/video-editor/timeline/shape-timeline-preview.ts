@@ -1,7 +1,7 @@
-import type { ShapeClip } from '~/media/shared/composition-types';
-import { drawShapeClip } from '../composition/shape/render-shape-clip';
+import type { ShapeClip } from '@beam/engine/shared/composition-types';
+import { drawShapeClip } from '@beam/runtime/composition/shape/render-shape-clip';
 import type { ShapeTimelinePreviewProps } from './shape-timeline-preview-types';
-import { disposeBlurEffect } from '../composition/effects/blur-effect';
+import { disposeBlurEffect } from '@beam/runtime/composition/effects/blur-effect';
 
 export function renderShapeTimelinePreview(
   clip: ShapeClip,

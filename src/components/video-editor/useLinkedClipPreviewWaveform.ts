@@ -1,8 +1,8 @@
 import { computed, onUnmounted, shallowRef, watch, type Ref } from 'vue';
-import WaveformWorker from '~/media/playback/waveform.worker?worker';
-import { mediaSourceDescriptor } from '~/media/shared';
-import type { Clip, MediaAsset } from '~/media/shared/composition-types';
-import { assertWaveformWorkerResponse, type WaveformWorkerRequest } from '~/media/playback/waveform-protocol';
+import WaveformWorker from '@beam/runtime/playback/waveform.worker?worker';
+import { mediaSourceDescriptor } from '@beam/runtime/shared/index';
+import type { Clip, MediaAsset } from '@beam/engine/shared/composition-types';
+import { assertWaveformWorkerResponse, type WaveformWorkerRequest } from '@beam/runtime/playback/waveform-protocol';
 
 const MAX_BAR_HEIGHT = 38;
 const MAX_POINTS = 2_048;

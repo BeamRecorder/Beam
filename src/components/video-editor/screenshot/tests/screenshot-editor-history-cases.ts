@@ -1,7 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
-import type { CursorPackDescriptor } from '~/api/types/cursor-pack';
+import type { CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
 import type { ScreenshotEditorTestHarness } from './screenshot-editor-test-helpers';
 import { documentFixture } from './screenshot-editor-test-helpers';

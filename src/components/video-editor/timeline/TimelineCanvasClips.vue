@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { Clip } from '~/media/shared/composition-types';
+import type { Clip } from '@beam/engine/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import TimelineCanvasClip from './TimelineCanvasClip.vue';
 import TimelineCanvasLane from './TimelineCanvasLane.vue';

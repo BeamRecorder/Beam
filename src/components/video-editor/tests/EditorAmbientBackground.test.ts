@@ -1,7 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import EditorAmbientBackground from '../EditorAmbientBackground.vue';
-import type { BackgroundMedia, BackgroundValue } from '../composables/backgroundCatalog';
+import type { BackgroundMedia, BackgroundValue } from '@beam/engine/shared/background-types';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 
 const runtime = vi.hoisted(() => ({
@@ -14,8 +14,8 @@ const runtime = vi.hoisted(() => ({
   })),
 }));
 
-vi.mock('~/media/playback', () => ({ decodeVideoPoster: runtime.decodeVideoPoster }));
-vi.mock('~/media/shared', () => ({ mediaSourceDescriptor: runtime.mediaSourceDescriptor }));
+vi.mock('@beam/runtime/playback/index', () => ({ decodeVideoPoster: runtime.decodeVideoPoster }));
+vi.mock('@beam/runtime/shared/index', () => ({ mediaSourceDescriptor: runtime.mediaSourceDescriptor }));
 
 const color = (value = '#112233'): BackgroundValue => ({
   id: `color:${value}`,

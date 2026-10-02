@@ -7,10 +7,10 @@ import type {
   MediaAsset,
   NormalizedCrop,
   VisualClip,
-} from '~/media/shared/composition-types';
-import type { ZoomElement } from '../zoom/zoom-types';
+} from '@beam/engine/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type { TimelineClipboardItem } from '../timeline/composables/timeline-clipboard-types';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 import {
   capture,
   canvasState,

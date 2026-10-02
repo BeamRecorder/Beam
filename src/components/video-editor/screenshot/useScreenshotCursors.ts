@@ -1,10 +1,10 @@
 import { computed, onMounted, onScopeDispose, ref, type Ref } from 'vue';
 import { capture } from '~/api/capture';
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { CursorPackDescriptor } from '~/api/types/cursor-pack';
+import type { CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import { orderedCursorPacks } from '../properties/cursor/cursor-packs';
 import { createScreenshotCursor, screenshotCursorTransform, transformScreenshotCursor } from './screenshot-cursors';
-import type { NormalizedTransform } from '~/media/shared/composition-types';
+import type { NormalizedTransform } from '@beam/engine/shared/composition-types';
 import { initializeScreenshotComposition, insertScreenshotLayer } from './screenshot-layers';
 import type { ScreenshotCursorUpdate } from './screenshot-layer-types';
 

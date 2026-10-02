@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { CursorAssetDescriptor, CursorPackDescriptor } from '~/api/types/cursor-pack';
-import { DEFAULT_OUTPUT_CANVAS } from '../../../../canvas/output-canvas';
+import type { CursorAssetDescriptor, CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { screenshotLayers } from '../../../screenshot-layers';
 import { screenshotShape } from '../../../screenshot-state';
 import { screenshotThumbnailSpecs } from '../thumbnail-spec';

@@ -10,7 +10,7 @@ import { ArrowLeft } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import type { PreviewPerformanceSnapshot } from './performance/preview-performance-types';
-import type { EditorExportSource } from '../export/export-types';
+import type { EditorExportSource } from '@beam/encoder/export-types';
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
 import EditorPresetControls from './EditorPresetControls.vue';
 import EditorSearchButton from './search/EditorSearchButton.vue';

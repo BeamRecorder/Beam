@@ -1,5 +1,5 @@
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { CursorAssetDescriptor, CursorPackDescriptor } from '~/api/types/cursor-pack';
+import type { CursorAssetDescriptor, CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import type { ScreenshotLayer } from '../../screenshot-layer-types';
 
 export interface ThumbnailSpec {

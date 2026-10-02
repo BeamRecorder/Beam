@@ -6,9 +6,9 @@ import type {
   ColorClip,
   NormalizedTransform,
   VisualClip,
-} from '~/media/shared/composition-types';
-import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { frameContentRect } from '../../../composition/appearance/frames';
+} from '@beam/engine/shared/composition-types';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { frameContentRect } from '@beam/engine/shared/frame-layout';
 import { transformClipDisplayLayout } from '../layer-display-layout';
 import { projectCameraRect } from '../layer-transform-geometry';
 import type { VideoWindowBounds } from '../useCameraZoom';

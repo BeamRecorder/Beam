@@ -8,7 +8,7 @@ import Switch from '~/ui/switch/Switch.vue';
 import Input from '~/ui/input/Input.vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import { DEFAULT_WATERMARK, normalizeWatermark, type WatermarkSettings } from '../../canvas/output-canvas';
+import { DEFAULT_WATERMARK, normalizeWatermark, type WatermarkSettings } from '@beam/engine/layout/output-canvas';
 
 const props = defineProps<{ modelValue?: WatermarkSettings; description?: string }>();
 const emit = defineEmits<{ (event: 'update:modelValue', value: WatermarkSettings): void }>();

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { BlurClip, ClipComposition, ColorClip, ShapeClip } from '~/media/shared/composition-types';
-import { DEFAULT_COLOR_FILL } from '~/media/shared/color-fill-types';
-import { DEFAULT_COLOR_LAYER_STYLE } from '~/media/shared/color-layer-style';
-import { DEFAULT_SHAPE_LAYER_STYLE } from '~/media/shared/shape-layer-style';
+import type { BlurClip, ClipComposition, ColorClip, ShapeClip } from '@beam/engine/shared/composition-types';
+import { DEFAULT_COLOR_FILL } from '@beam/engine/shared/color-fill-types';
+import { DEFAULT_COLOR_LAYER_STYLE } from '@beam/engine/shared/color-layer-style';
+import { DEFAULT_SHAPE_LAYER_STYLE } from '@beam/engine/shared/shape-layer-style';
 import { composition, mountTracks, visual } from './TimelineTracks.test-support';
 
 const baseClip = {

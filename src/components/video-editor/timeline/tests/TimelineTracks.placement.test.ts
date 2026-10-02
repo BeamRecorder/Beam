@@ -1,6 +1,6 @@
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import type { ClipComposition } from '~/media/shared/composition-types';
+import type { ClipComposition } from '@beam/engine/shared/composition-types';
 import { composition, mountTracks, zoom } from './TimelineTracks.test-support';
 
 describe('TimelineTracks', () => {

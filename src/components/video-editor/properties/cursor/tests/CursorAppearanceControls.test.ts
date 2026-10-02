@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CursorAssetDescriptor, CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
+import type { CursorAssetDescriptor, CursorPackDescriptor, CursorSelection } from '@beam/engine/capture/cursor-pack';
 import CursorAppearanceControls from '../CursorAppearanceControls.vue';
 import type { CursorAppearanceProps } from '../cursor-appearance-types';
 
@@ -164,7 +164,7 @@ describe('CursorAppearanceControls', () => {
 
   it('shows saved shadow values immediately on mount and keeps them through off/on changes', async () => {
     const wrapper = mount(CursorAppearanceControls, {
-      props: baseProps({ shadowBlur: 13, shadowColor: '#123456', shadowDirection: 'top-left' }),
+      props: { ...baseProps({ shadowBlur: 13, shadowColor: '#123456', shadowDirection: 'top-left' }) },
       global,
     });
     const expectValues = () => {

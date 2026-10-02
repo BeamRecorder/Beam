@@ -2,11 +2,11 @@ import { defineComponent, h, ref } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCompositionMedia } from '../useCompositionMedia';
-import type { ClipComposition, NormalizedTransform, ShapeClip } from '~/media/shared/composition-types';
-import { DEFAULT_OUTPUT_CANVAS } from '../../output-canvas';
+import type { ClipComposition, NormalizedTransform, ShapeClip } from '@beam/engine/shared/composition-types';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 
 const drawShapeClip = vi.hoisted(() => vi.fn());
-vi.mock('../../../composition/shape/render-shape-clip', () => ({ drawShapeClip }));
+vi.mock('@beam/runtime/composition/shape/render-shape-clip', () => ({ drawShapeClip }));
 
 const shapeClip = (overrides: Partial<ShapeClip> = {}): ShapeClip => ({
   id: 'shape',
@@ -88,7 +88,7 @@ describe('useCompositionMedia shape rendering', () => {
   it('draws an active shape in the visual stack', () => {
     const clip = shapeClip({ id: 'active-shape' });
     mountComposable([clip]);
-    const ctx = {} as CanvasRenderingContext2D;
+    const ctx = { getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }) } as CanvasRenderingContext2D;
     const window = { dx: 10, dy: 20, dw: 800, dh: 400, scale: 1 };
 
     state.drawVisualStack(ctx, window, vi.fn());
@@ -101,7 +101,7 @@ describe('useCompositionMedia shape rendering', () => {
     const clip = shapeClip({ id: 'selected-shape' });
     const draft = { x: 0.4, y: 0.3, width: 0.2, height: 0.25 };
     mountComposable([clip], clip, draft);
-    const ctx = {} as CanvasRenderingContext2D;
+    const ctx = { getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }) } as CanvasRenderingContext2D;
 
     state.drawVisualStack(ctx, { dx: 0, dy: 0, dw: 1_000, dh: 500, scale: 1 }, vi.fn());
 
@@ -111,7 +111,7 @@ describe('useCompositionMedia shape rendering', () => {
   it('draws a shape when drawComposition targets it by id', () => {
     const clip = shapeClip({ id: 'target-shape' });
     mountComposable([clip]);
-    const ctx = {} as CanvasRenderingContext2D;
+    const ctx = { getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }) } as CanvasRenderingContext2D;
 
     state.drawComposition(ctx, { dx: 15, dy: 25, dw: 640, dh: 360 }, 'target-shape');
 

@@ -12,11 +12,11 @@ import Accordion from '~/ui/accordion/Accordion.vue';
 import InfoTooltip from '~/ui/tooltip/InfoTooltip.vue';
 import { useToastStore } from '~/ui/toast/toastStore';
 import { useExportJob } from './useExportJob';
-import { bitrateFor } from './export-presets';
-import type { EditorExportSource, ExportFormat, ExportPreset, ExportRequest } from './export-types';
+import { bitrateFor } from '@beam/encoder/export-presets';
+import type { EditorExportSource, ExportFormat, ExportPreset, ExportRequest } from '@beam/encoder/export-types';
 import { useTranslate } from '~/i18n/useTranslate';
-import { safeExportErrorMessage, technicalExportError } from './mediabunny/export-preflight';
-import { buildBeamExportReport } from './export-diagnostics';
+import { safeExportErrorMessage, technicalExportError } from '@beam/encoder/mediabunny/export-preflight';
+import { buildBeamExportReport } from '@beam/encoder/export-diagnostics';
 
 const { t, locale } = useTranslate('ExportPopover');
 

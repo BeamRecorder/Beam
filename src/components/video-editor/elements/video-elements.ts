@@ -1,4 +1,4 @@
-import type { Clip } from '~/media/shared/composition-types';
+import type { Clip } from '@beam/engine/shared/composition-types';
 
 export function isVideoElementClip(clip: Clip | null | undefined): boolean {
   if (!clip) return false;

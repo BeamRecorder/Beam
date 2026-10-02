@@ -4,8 +4,8 @@ import {
   normalizeWatermark,
   type OutputCanvasSettings,
   type WatermarkSettings,
-} from '../output-canvas';
-import { drawBeamWatermark } from '../watermark-render';
+} from '@beam/engine/layout/output-canvas';
+import { drawBeamWatermark } from '@beam/runtime/rendering/watermark-render';
 
 type TextMetricsOverrides = {
   actualBoundingBoxAscent?: number;

@@ -1,7 +1,7 @@
-import { effectShapeRect } from '../composition/effects/effect-shape';
+import { effectShapeRect } from '@beam/runtime/composition/effects/effect-shape';
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { NormalizedTransform } from '~/media/shared/composition-types';
-import { frameOuterRect } from '../composition/appearance/frames';
+import type { NormalizedTransform } from '@beam/engine/shared/composition-types';
+import { frameOuterRect } from '@beam/engine/shared/frame-layout';
 import { screenshotImageFraming } from './screenshot-geometry';
 import { screenshotCursorTransform } from './screenshot-cursors';
 import { screenshotLayers } from './screenshot-layers';

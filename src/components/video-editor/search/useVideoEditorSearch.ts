@@ -1,7 +1,7 @@
 import { useI18n } from 'vue-i18n';
 import { Film, ZoomIn, Type, Shapes, Volume2, CircleDashed, Palette } from '@lucide/vue';
 import { provideEditorSearch } from './useEditorSearch';
-import { ZOOM_DEPTH_SCALES } from '../zoom/zoom-types';
+import { ZOOM_DEPTH_SCALES } from '@beam/engine/zoom/zoom-types';
 import type { EditorSearchAction, VideoEditorSearchOptions } from './editor-search-types';
 
 export function provideVideoEditorSearch(options: VideoEditorSearchOptions) {

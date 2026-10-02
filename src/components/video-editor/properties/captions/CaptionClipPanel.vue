@@ -3,10 +3,10 @@ import { computed, toRef } from 'vue';
 import { TriangleAlert } from '@lucide/vue';
 import Input from '~/ui/input/Input.vue';
 import Divider from '~/ui/divider/Divider.vue';
-import type { CaptionClip, CaptionStyle } from '~/media/shared/composition-types';
+import type { CaptionClip, CaptionStyle } from '@beam/engine/shared/composition-types';
 import { useCaptionDraft } from './useCaptionDraft';
 import { useTranslate } from '~/i18n/useTranslate';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 import CaptionStyleControls from './CaptionStyleControls.vue';
 
 const { t } = useTranslate('CaptionClipPanel');

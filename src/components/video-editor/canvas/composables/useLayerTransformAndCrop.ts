@@ -1,6 +1,6 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
-import { activeClipsAt, sourceTimeAt } from '~/media/shared';
+import { activeClipsAt, sourceTimeAt } from '@beam/runtime/shared/index';
 import {
   getCaptionTransform,
   isBlurClip,
@@ -9,7 +9,7 @@ import {
   isVisualClip,
   type CaptionClip,
   type NormalizedTransform,
-} from '~/media/shared/composition-types';
+} from '@beam/engine/shared/composition-types';
 import { transformCaptionFollowsCursor, type TransformClip } from '../editor-canvas-types';
 import type { CanvasMarqueeTarget } from '../canvas-marquee-types';
 import {
@@ -17,13 +17,13 @@ import {
   captionTextAt,
   isCaptionWrapEnabled,
   layoutCaptionText,
-} from '~/media/shared/caption-text-layout';
+} from '@beam/engine/shared/caption-text-layout';
 import type { UseLayerTransformAndCropOptions } from './layer-transform-and-crop-types';
 
 import { computeCanvasAlignmentSnapping, type AlignmentGuide } from './canvas-alignment';
 import { useCropSelection } from './useCropSelection';
-import { editableVisualClipTransform, resizePhoneFrameTransform } from '../../composition/visual-framing';
-import { isPhoneFrame } from '../../composition/appearance/phone-frames';
+import { editableVisualClipTransform, resizePhoneFrameTransform } from '@beam/engine/composition/visual-framing';
+import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
 import {
   clampEditedWebcamTransform,
   editableWebcamTransform,

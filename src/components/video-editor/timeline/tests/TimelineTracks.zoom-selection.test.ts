@@ -1,7 +1,7 @@
 import { triggerPointer } from '../../../../../tests/support/pointer';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import type { VisualClip } from '~/media/shared/composition-types';
+import type { VisualClip } from '@beam/engine/shared/composition-types';
 import TimelineZoomTrack from '../TimelineZoomTrack.vue';
 import TimelineCanvasLane from '../TimelineCanvasLane.vue';
 import { composition, mountTracks, pointerEvent, TimelineClipStub, visual, zoom } from './TimelineTracks.test-support';
@@ -51,7 +51,9 @@ describe('TimelineTracks zoom header selection', () => {
     expect(title.element.parentElement).toBe(target.get('.zoom-clip-labels').element);
     expect(target.get('.zoom-projection-badge').text()).toBe('2D');
     expect(target.get('.zoom-mode-badge').text()).toBe('Auto');
-    expect(track.getComponent(TimelineCanvasLane).props('items')).toEqual([expect.objectContaining({ zoom: element, label: '' })]);
+    expect(track.getComponent(TimelineCanvasLane).props('items')).toEqual([
+      expect.objectContaining({ zoom: element, label: '' }),
+    ]);
     expect(target.findAll('.zoom-title')).toHaveLength(1);
   });
 

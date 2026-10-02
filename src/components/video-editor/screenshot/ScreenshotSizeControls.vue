@@ -6,7 +6,7 @@ import Checkbox from '~/ui/checkbox/Checkbox.vue';
 import Input from '~/ui/input/Input.vue';
 import Select from '~/ui/select/Select.vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import { OUTPUT_CANVAS_PRESETS, type OutputCanvasSettings } from '../canvas/output-canvas';
+import { OUTPUT_CANVAS_PRESETS, type OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 import type { ScreenshotDimensions } from './screenshot-types';
 import { resizeScreenshotCanvas, screenshotCanvasPreset } from './screenshot-dimensions';
 

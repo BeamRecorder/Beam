@@ -1,9 +1,9 @@
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
 import type { CanvasRect } from './layer-transform-geometry';
-import type { ClipComposition, NormalizedCrop, NormalizedTransform } from '~/media/shared/composition-types';
-import type { CaptionTextMeasurer } from '~/media/shared/caption-text-layout';
+import type { ClipComposition, NormalizedCrop, NormalizedTransform } from '@beam/engine/shared/composition-types';
+import type { CaptionTextMeasurer } from '@beam/engine/shared/caption-text-layout';
 import type { ClipTransformUpdate, TransformClip } from '../editor-canvas-types';
-import type { OutputCanvasSettings } from '../output-canvas';
+import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 import type { VideoWindowBounds } from './useCameraZoom';
 
 export interface UseLayerTransformAndCropOptions {

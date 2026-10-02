@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CropPixels } from '../composition/crop/crop-types';
+import type { CropPixels } from '@beam/engine/shared/crop-types';
 import { nextTick, onBeforeUnmount, onMounted, ref, watch, type CSSProperties } from 'vue';
 import { Check } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';

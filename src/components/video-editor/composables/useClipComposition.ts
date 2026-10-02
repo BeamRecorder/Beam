@@ -1,10 +1,10 @@
 import { useCompositionClipEditing } from './useCompositionClipEditing';
-import { preservesLockedAssets } from '../composition/timeline-locks';
+import { preservesLockedAssets } from '@beam/engine/composition/timeline-locks';
 import { useLockedState } from './useLockedState';
 import { computed, type Ref } from 'vue';
 import { capture } from '../../../api/capture';
 import type { CaptureProject, ProjectEditorData } from '../../../api/types/capture-api';
-import { inspectMedia, mediaSourceDescriptor, type DroppedMediaInspection } from '~/media/shared';
+import { inspectMedia, mediaSourceDescriptor, type DroppedMediaInspection } from '@beam/runtime/shared/index';
 import {
   emptyComposition,
   isAudioClip,
@@ -20,10 +20,10 @@ import {
   type MediaAsset,
   type ShapeClip,
   type VisualClip,
-} from '~/media/shared/composition-types';
-import { DEFAULT_COLOR_LAYER_STYLE } from '~/media/shared/color-layer-style';
-import { DEFAULT_COLOR_FILL } from '~/media/shared/color-fill-types';
-import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '~/media/shared/shape-layer-style';
+} from '@beam/engine/shared/composition-types';
+import { DEFAULT_COLOR_LAYER_STYLE } from '@beam/engine/shared/color-layer-style';
+import { DEFAULT_COLOR_FILL } from '@beam/engine/shared/color-fill-types';
+import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '@beam/engine/shared/shape-layer-style';
 import type { EditorPreferenceDefaults } from './editor-default-types';
 import {
   audioDefaultsFor,
@@ -32,16 +32,16 @@ import {
   captionDefaultsFor,
   visualClipDefaultProps,
 } from './editor-defaults';
-import { addClip, setClipEnabled } from '../composition/engine/clip-engine';
+import { addClip, setClipEnabled } from '@beam/engine/commands/clip-engine';
 import { synchronizeRecordingClips } from '../composition/session-clips';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useSelectedClips } from './useSelectedClips';
-import { DEFAULT_VISUAL_ELEMENT_DURATION_MS } from '../composition/visual-element-defaults';
+import { DEFAULT_VISUAL_ELEMENT_DURATION_MS } from '@beam/engine/composition/visual-element-defaults';
 import type {
   AddVisualElementRequest,
   ImportedVisualPlacement,
   TimelineAddableVisualKind,
-} from '../composition/visual-element-types';
+} from '@beam/engine/composition/visual-element-types';
 
 export function useClipComposition(options: {
   project: Ref<CaptureProject | null | undefined>;

@@ -1,14 +1,14 @@
 import { ref } from 'vue';
 import { describe, expect, it } from 'vitest';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { createComposition } from '../../composition/engine/clip-engine';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { createComposition } from '@beam/engine/commands/clip-engine';
 import type {
   AudioClip,
   ClipComposition,
   MediaAsset,
   NormalizedCrop,
   VisualClip,
-} from '~/media/shared/composition-types';
+} from '@beam/engine/shared/composition-types';
 import { useCropPreview } from '../useCropPreview';
 
 const previewCrop: NormalizedCrop = { x: 0.1, y: 0.2, width: 0.7, height: 0.6 };

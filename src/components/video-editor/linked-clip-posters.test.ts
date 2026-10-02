@@ -1,12 +1,12 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, nextTick, ref, type Ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AudioClip, MediaAsset, VisualClip } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import type { AudioClip, MediaAsset, VisualClip } from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import { useLinkedClipPosters } from './linked-clip-posters';
 
 const runtime = vi.hoisted(() => ({ decodeVideoPoster: vi.fn() }));
-vi.mock('~/media/playback', () => ({ decodeVideoPoster: runtime.decodeVideoPoster }));
+vi.mock('@beam/runtime/playback/index', () => ({ decodeVideoPoster: runtime.decodeVideoPoster }));
 
 const videoAsset: MediaAsset = {
   id: 'recording',

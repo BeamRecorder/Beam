@@ -2,20 +2,20 @@ import { defineComponent, h, ref } from 'vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import type { CaptureProject, ProjectEditorData } from '../../../../api/types/capture-api';
-import { DEFAULT_COLOR_FILL } from '~/media/shared/color-fill-types';
-import { DEFAULT_COLOR_LAYER_STYLE } from '~/media/shared/color-layer-style';
-import { DEFAULT_SHAPE_LAYER_STYLE } from '~/media/shared/shape-layer-style';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { HIGHLIGHT_DEFAULTS } from '~/media/shared/highlight-defaults';
+import { DEFAULT_COLOR_FILL } from '@beam/engine/shared/color-fill-types';
+import { DEFAULT_COLOR_LAYER_STYLE } from '@beam/engine/shared/color-layer-style';
+import { DEFAULT_SHAPE_LAYER_STYLE } from '@beam/engine/shared/shape-layer-style';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { HIGHLIGHT_DEFAULTS } from '@beam/engine/shared/highlight-defaults';
 import {
   type BlurClip,
   type ColorClip,
   type MediaAsset,
   type ShapeClip,
   type VisualClip,
-} from '~/media/shared/composition-types';
-import { createComposition } from '../../composition/engine/clip-engine';
-import type { AddVisualElementRequest, TimelineAddableVisualKind } from '../../composition/visual-element-types';
+} from '@beam/engine/shared/composition-types';
+import { createComposition } from '@beam/engine/commands/clip-engine';
+import type { AddVisualElementRequest, TimelineAddableVisualKind } from '@beam/engine/composition/visual-element-types';
 import { normalizeEditorPreferenceDefaults } from '../editor-defaults';
 import { useClipComposition } from '../useClipComposition';
 

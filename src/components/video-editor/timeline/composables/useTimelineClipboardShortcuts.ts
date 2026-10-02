@@ -1,5 +1,5 @@
 import { computed, onMounted, onUnmounted } from 'vue';
-import type { ClipComposition } from '~/media/shared/composition-types';
+import type { ClipComposition } from '@beam/engine/shared/composition-types';
 import { clipboardContainsImage, isEditablePasteTarget } from '../../composables/useClipboardImagePaste';
 import { shouldPreferInternalEditorClipboard } from '../../composables/internal-editor-clipboard';
 import { getClipCategory } from './useTimelineClipboard';

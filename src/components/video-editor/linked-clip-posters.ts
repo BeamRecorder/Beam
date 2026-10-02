@@ -1,6 +1,6 @@
 import { onUnmounted, reactive, watch, type Ref } from 'vue';
-import { mediaSourceDescriptor } from '~/media/shared/media-source';
-import type { Clip, MediaAsset } from '~/media/shared/composition-types';
+import { mediaSourceDescriptor } from '@beam/runtime/shared/media-source';
+import type { Clip, MediaAsset } from '@beam/engine/shared/composition-types';
 
 type PosterRequest = { key: string; clip: Clip; asset: MediaAsset };
 const posterKey = (clip: Clip, asset: MediaAsset) =>
@@ -41,7 +41,7 @@ export function useLinkedClipPosters(isOpen: Ref<boolean>) {
         const request = queue.shift()!;
         const requestedGeneration = generation;
         try {
-          const { decodeVideoPoster } = await import('~/media/playback');
+          const { decodeVideoPoster } = await import('@beam/runtime/playback/index');
           if (requestedGeneration !== generation) continue;
           const frame = await decodeVideoPoster(mediaSourceDescriptor(request.asset), {
             timestampSeconds: (request.clip.sourceInMs + Math.min(250, request.clip.sourceDurationMs / 2)) / 1_000,

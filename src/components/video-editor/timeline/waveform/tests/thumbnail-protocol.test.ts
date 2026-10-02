@@ -5,8 +5,8 @@ import {
   isThumbnailWorkerResponse,
   uniqueSortedTimes,
   type ThumbnailWorkerResponse,
-} from '~/media/playback/thumbnail-protocol';
-import type { MediaSourceDescriptor } from '~/media/shared/media-types';
+} from '@beam/runtime/playback/thumbnail-protocol';
+import type { MediaSourceDescriptor } from '@beam/runtime/shared/media-types';
 
 const source = (overrides: Partial<MediaSourceDescriptor> = {}): MediaSourceDescriptor => ({
   assetId: 'video-1',

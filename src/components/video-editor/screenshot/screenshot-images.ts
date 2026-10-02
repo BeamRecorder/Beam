@@ -1,6 +1,6 @@
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { MediaAsset, VisualClip } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import type { MediaAsset, VisualClip } from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import type { ScreenshotImageLayer } from './screenshot-layer-types';
 
 export const screenshotImage = (state: ScreenshotState, id: string | null) =>

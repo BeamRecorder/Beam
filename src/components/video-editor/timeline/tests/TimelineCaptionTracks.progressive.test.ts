@@ -1,9 +1,9 @@
 import { nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { captionLayerKey, type CaptionClip } from '~/media/shared/composition-types';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
-import type { TextCaptionLayer } from '../../composition/engine/caption-layer-layout';
+import { captionLayerKey, type CaptionClip } from '@beam/engine/shared/composition-types';
+import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
+import type { TextCaptionLayer } from '@beam/engine/commands/caption-layer-layout';
 import TimelineCaptionTracks from '../TimelineCaptionTracks.vue';
 
 const createCaption = (

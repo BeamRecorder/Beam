@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { BlurClip, NormalizedTransform } from '~/media/shared/composition-types';
-import { defaultLayerCompositing } from '~/media/shared/layer-compositing';
-import type { Canvas2DContext } from '~/types/canvas';
-import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
+import type { BlurClip, NormalizedTransform } from '@beam/engine/shared/composition-types';
+import { defaultLayerCompositing } from '@beam/runtime/shared/layer-compositing';
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { screenshotLayerAt, screenshotLayerTransform } from '../screenshot-layer-geometry';
 import { removeScreenshotLayer, screenshotLayers, setScreenshotLayerVisible } from '../screenshot-layers';
 import { drawScreenshotLayer } from '../screenshot-layer-render';
@@ -13,7 +13,7 @@ import { screenshotThumbnailSpecs } from '../composition/thumbnails/thumbnail-sp
 
 const effectRenderer = vi.hoisted(() => ({ applyBlurEffect: vi.fn() }));
 
-vi.mock('../../composition/effects/blur-effect', () => ({ applyBlurEffect: effectRenderer.applyBlurEffect }));
+vi.mock('@beam/runtime/composition/effects/blur-effect', () => ({ applyBlurEffect: effectRenderer.applyBlurEffect }));
 
 const makeEffect = (
   id: string,

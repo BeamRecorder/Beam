@@ -11,24 +11,21 @@ import CanvasRecenterButton from './CanvasRecenterButton.vue';
 import CanvasLoadingSkeleton from './CanvasLoadingSkeleton.vue';
 import CanvasPlaybackError from './CanvasPlaybackError.vue';
 import UndoRedoToast from './UndoRedoToast.vue';
-import { type VisualClip } from '~/media/shared/composition-types';
-import { createCompositionSceneLayerResolver } from '../composition/scene-layers';
-import { engineMetrics } from '~/media/performance/engine-metrics';
-import { OUTPUT_FALLBACK_COLOR, OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from './output-canvas';
+import { type VisualClip } from '@beam/engine/shared/composition-types';
+import { createCompositionSceneLayerResolver } from '@beam/engine/composition/scene-layers';
+import { engineMetrics } from '@beam/runtime/performance/engine-metrics';
+import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from '@beam/engine/layout/output-canvas';
 import { useCanvasBackground } from './composables/useCanvasBackground';
 import { useCompositionMedia } from './composables/useCompositionMedia';
 import { createCanvasFrameScheduler } from './composables/canvas-frame-scheduler';
 import { useEditorCanvasCursor } from './composables/useEditorCanvasCursor';
-import { useCameraZoom, type RenderedVideoWindow, type VideoWindowBounds } from './composables/useCameraZoom';
+import { useCameraZoom, type RenderedVideoWindow } from './composables/useCameraZoom';
 import { useLayerTransformAndCrop } from './composables/useLayerTransformAndCrop';
 import { useViewportZoom } from './composables/useViewportZoom';
 import { useTranslate } from '~/i18n/useTranslate';
 import { canvasGuideLines } from './canvas-guides';
-import { type EditorCanvasEmits, type EditorCanvasProps, type DrawVisualStack } from './editor-canvas-types';
-import { DEFAULT_ZOOM_AUTO_FOLLOW, DEFAULT_ZOOM_MOTION_BLUR } from '../zoom/zoom-types';
-import { PerspectivePreviewRenderer } from '../zoom/perspective-preview-renderer';
-import { drawBeamWatermark } from './watermark-render';
-import { useCanvasTransitionRenderer } from './composables/useCanvasTransitionRenderer';
+import { type EditorCanvasEmits, type EditorCanvasProps } from './editor-canvas-types';
+import { DEFAULT_ZOOM_AUTO_FOLLOW, DEFAULT_ZOOM_MOTION_BLUR } from '@beam/engine/zoom/zoom-types';
 import { measureCanvasCaptionText } from './canvas-text-measure';
 import { useCanvasLoadingState } from './composables/useCanvasLoadingState';
 import { useCanvasClipToggleTransition } from './composables/useCanvasClipToggleTransition';
@@ -42,11 +39,10 @@ import { useEditorCanvasInvalidation } from './composables/useEditorCanvasInvali
 import { CaptionInlineEditor, useCaptionInlineEditing } from './caption-inline-editing';
 import EditorCanvasLayerSelection from './EditorCanvasLayerSelection.vue';
 import CanvasCropSelection from './CanvasCropSelection.vue';
-import { drawFallbackPreviewScene } from './fallback-preview-scene';
-import { createEditorVisualStackRenderer } from './editor-visual-stack-renderer';
-import { disposeMediaShadowCache } from '../composition/appearance/media-shadow-cache';
-import { disposeBlurEffect } from '../composition/effects/blur-effect';
+import { disposeMediaShadowCache } from '@beam/runtime/composition/appearance/media-shadow-cache';
+import { disposeBlurEffect } from '@beam/runtime/composition/effects/blur-effect';
 import { captureCanvasFrame } from './canvas-frame-capture';
+import { createRuntimePreview } from './runtime-preview';
 import CanvasMarqueeSurface from './CanvasMarqueeSurface.vue';
 import EditorCanvasGuides from './EditorCanvasGuides.vue';
 import { toggleCanvasClipSelection } from './canvas-clip-selection';
@@ -63,16 +59,6 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const containerRef = ref<HTMLDivElement | null>(null);
 const logicalSize = ref({ width: 0, height: 0 });
 const deviceScale = ref(1);
-const perspectivePreviewRenderer = new PerspectivePreviewRenderer();
-const canvasTransitionRenderer = useCanvasTransitionRenderer({
-  outputCanvas: () => props.outputCanvas,
-  currentTime: () => props.currentTime,
-  duration: () => props.duration ?? 0,
-  logicalSize: () => logicalSize.value,
-  deviceScale: () => deviceScale.value,
-  fallbackColor: OUTPUT_FALLBACK_COLOR,
-});
-let drawVisualStack: DrawVisualStack | null = null;
 const viewportZoom = useViewportZoom();
 let renderComposition = toRaw(props.composition);
 const sceneLayersAt = shallowRef(createCompositionSceneLayerResolver(renderComposition));
@@ -158,7 +144,6 @@ cameraZoom = useCameraZoom({
   screenTransformDraft: () => transformAndCrop.transformDraftFor(liveScreenClip.value?.id ?? ''),
   isCropping: () => props.isCropping,
   drawBackground,
-  renderVisualStack: (ctx, window, drawScreen, layers) => drawVisualStack?.(ctx, window, drawScreen, layers),
   onUpdateZoom: (zoom) => emit('update:zoom', zoom),
   onSelectScreenClip: selectCanvasClip,
   onSelectCanvas: () => emit('select:canvas'),
@@ -225,9 +210,6 @@ const compositionMedia = useCompositionMedia({
   editingCaptionId: () => elements.editingId.value ?? captionEditing.editingCaptionId.value,
   onRenderOnce: renderOnce,
 });
-const visualStackRenderer = createEditorVisualStackRenderer(compositionMedia);
-const drawNonScreenVisuals = visualStackRenderer.drawNonScreenVisuals;
-drawVisualStack = visualStackRenderer.drawVisualStack;
 const cursorOverlay = useEditorCanvasCursor(props, {
   deviceScale: () => deviceScale.value,
   screenClip: () => liveScreenClip.value,
@@ -259,7 +241,18 @@ const resizeCanvas = () => {
 };
 watch(() => props.previewQuality, resizeCanvas);
 const watermarkLogo = useEditorCanvasAssets(containerRef, resizeCanvas, renderOnce);
-const drawCameraScene = (ctx: CanvasRenderingContext2D): VideoWindowBounds => {
+const runtimePreview = createRuntimePreview({
+  props,
+  images: compositionMedia.images,
+  cursorImage: () => cursorOverlay.customCursorImage.value,
+  watermarkImage: () => watermarkLogo.value,
+  cursorEnabled: () => customCursorEnabled.value,
+  draftFor: transformAndCrop.transformDraftFor,
+  editingCaptionId: () => elements.editingId.value ?? captionEditing.editingCaptionId.value,
+  drawBackground,
+});
+const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
+  const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
   const layers = currentSceneLayers.value;
   const window = cameraZoom.drawVideoWindow(
     ctx,
@@ -267,54 +260,26 @@ const drawCameraScene = (ctx: CanvasRenderingContext2D): VideoWindowBounds => {
     logicalSize.value.height,
     screenFrame.value,
     layers,
+    false,
   );
-  if (window) {
-    currentRenderWindow = window;
-    if (!compositionMedia.drawVisualStack) compositionMedia.drawWebcamClips(ctx, window);
+  currentRenderWindow = window;
+  if (window)
     cursorOverlay.updateAndDrawRipplesAndCursor(
       ctx,
       window,
       screenFrame.value?.width ?? 1,
       screenFrame.value?.height ?? 1,
       logicalSize.value.width,
-      (drawContent) => cameraZoom.drawInCameraSpace(ctx, window, drawContent),
+      (draw) => cameraZoom.drawInCameraSpace(ctx, window, draw),
+      false,
     );
-    return window;
-  } else {
-    currentRenderWindow = null;
-    cursorOverlay.clearCursorBounds();
-    const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
-    return drawFallbackPreviewScene({
-      context: ctx,
-      preview,
-      radius: OUTPUT_PREVIEW_RADIUS,
-      drawBackground: () => drawBackground(ctx, preview),
-      drawVisuals: (window) => drawNonScreenVisuals(ctx, window, layers),
-    });
-  }
-};
-const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
-  const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
-  const contentWindow = perspectivePreviewRenderer.render({
-    target: ctx,
-    bounds: preview,
-    pixelScale: deviceScale.value,
-    timeMs: props.currentTime * 1_000,
-    zooms: props.zoomElements,
-    drawScene: drawCameraScene,
-  });
+  else cursorOverlay.clearCursorBounds();
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(preview.x, preview.y, preview.width, preview.height, OUTPUT_PREVIEW_RADIUS);
   ctx.clip();
-  compositionMedia.drawComposition(ctx, contentWindow, undefined, currentSceneLayers.value);
+  runtimePreview.draw(ctx, preview, screenFrame.value, layers);
   ctx.restore();
-  drawBeamWatermark(
-    ctx,
-    props.outputCanvas,
-    { x: preview.x, y: preview.y, width: preview.width, height: preview.height },
-    watermarkLogo.value,
-  );
 };
 const renderCanvas = () => {
   const canvas = canvasRef.value;
@@ -326,7 +291,7 @@ const renderCanvas = () => {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.clearRect(0, 0, logicalSize.value.width, logicalSize.value.height);
-    canvasTransitionRenderer.render(ctx, drawCanvasScene);
+    drawCanvasScene(ctx);
     clipToggleTransition.blendPreviousFrame(ctx, logicalSize.value.width, logicalSize.value.height);
     engineMetrics.count('frames');
   } finally {
@@ -371,7 +336,7 @@ const editCanvasContent = (event: MouseEvent) =>
     },
   });
 onUnmounted(() => frameScheduler.dispose());
-onUnmounted(() => perspectivePreviewRenderer.dispose());
+onUnmounted(() => runtimePreview.dispose());
 onUnmounted(() => {
   const context = canvasRef.value?.getContext('2d') ?? null;
   disposeMediaShadowCache(context);

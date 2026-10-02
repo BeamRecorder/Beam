@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue';
-import type { ClipComposition } from '~/media/shared/composition-types';
-import type { ZoomElement } from '../zoom/zoom-types';
+import type { ClipComposition } from '@beam/engine/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type {
   TimelineItemKind,
   TimelineSelectionIds,

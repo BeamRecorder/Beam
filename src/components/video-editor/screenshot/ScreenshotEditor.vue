@@ -9,7 +9,7 @@ import { ArrowLeft, Copy, Crop, Film, Maximize2, Monitor, RotateCcw, SlidersHori
 import { useTranslate } from '~/i18n/useTranslate';
 import Button from '~/ui/button/Button.vue';
 import Popover from '~/ui/popover/Popover.vue';
-import type { ClipAppearance } from '~/media/shared/composition-types';
+import type { ClipAppearance } from '@beam/engine/shared/composition-types';
 import SidebarPanel from '../sidebar/SidebarPanel.vue';
 import CanvasPanel from '../properties/canvas/CanvasPanel.vue';
 import BlurPropertiesPanel from '../properties/clip/BlurPropertiesPanel.vue';

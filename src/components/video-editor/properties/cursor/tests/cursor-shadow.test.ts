@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cursorShadowOffset } from '../cursor-shadow';
+import { cursorShadowOffset } from '@beam/runtime/cursor/cursor-shadow';
 
 describe('cursorShadowOffset', () => {
   it('centers the around shadow', () => {

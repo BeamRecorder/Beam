@@ -2,7 +2,7 @@ import { defineComponent, h } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setCurrentLocale } from '~/i18n';
-import type { Clip } from '~/media/shared/composition-types';
+import type { Clip } from '@beam/engine/shared/composition-types';
 import type { TimelineClipboardItem } from '../timeline-clipboard-types';
 import { resetInternalEditorClipboardSync } from '../../../composables/internal-editor-clipboard';
 

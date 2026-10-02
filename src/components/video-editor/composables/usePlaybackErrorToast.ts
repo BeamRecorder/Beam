@@ -1,5 +1,5 @@
 import { provide, watch, type Ref } from 'vue';
-import type { MediaError } from '~/media/shared';
+import type { MediaError } from '@beam/runtime/shared/index';
 import { useToastStore } from '~/ui/toast/toastStore';
 import { PLAYBACK_ERROR_REPORT, playbackErrorDiagnostic } from './playback-error-diagnostics';
 import type { PlaybackErrorContext, PlaybackErrorTranslate } from './playback-error-types';

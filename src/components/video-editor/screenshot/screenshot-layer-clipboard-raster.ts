@@ -1,7 +1,7 @@
 import type { ScreenshotState } from '~/api/types/screenshot';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
-import { WATERMARK_LOGO_PATH } from '../canvas/watermark-render';
+import { WATERMARK_LOGO_PATH } from '@beam/runtime/rendering/watermark-render';
 import { alphaBounds } from './composition/thumbnails/thumbnail-pixels';
 import { createScreenshotImageLoader } from './screenshot-assets';
 import { drawScreenshotLayer } from './screenshot-layer-render';

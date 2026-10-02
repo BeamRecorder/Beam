@@ -1,5 +1,5 @@
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
-import type { CaptureMode } from '~/api/types/capture-mode';
+import type { CaptureMode } from '@beam/engine/capture/capture-mode';
 import { captureQuickScreenshot } from './quick-snip-screenshot';
 import { useTranslate } from '~/i18n/useTranslate';
 import { usePreferencesStore } from '~/stores/preferences';

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 import {
   emptyComposition,
   type CaptionClip,
   type CaptionSentence,
   type ClipComposition,
-} from '~/media/shared/composition-types';
+} from '@beam/engine/shared/composition-types';
 import { buildCaptionTranscript, hasCaptionTranscript } from '../caption-transcript';
 
 type TextClipOptions = Partial<Omit<CaptionClip, 'kind' | 'caption'>> & {

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { CursorAssetDescriptor } from '~/api/types/cursor-pack';
+import type { CursorAssetDescriptor } from '@beam/engine/capture/cursor-pack';
 import type { ScreenshotLayer } from '../../../screenshot-layer-types';
 import type { ThumbnailImageAsset, ThumbnailReply, ThumbnailRequest } from '../thumbnail-types';
 
@@ -10,7 +10,7 @@ const dependencies = vi.hoisted(() => ({
   render: vi.fn(),
   createImageLoader: vi.fn(),
 }));
-vi.mock('~/media/shared/element-fonts', () => ({ loadElementFonts: dependencies.loadFonts }));
+vi.mock('@beam/runtime/shared/element-font-loader', () => ({ loadElementFonts: dependencies.loadFonts }));
 vi.mock('../thumbnail-assets', () => ({
   createThumbnailImageLoader: dependencies.createImageLoader,
 }));

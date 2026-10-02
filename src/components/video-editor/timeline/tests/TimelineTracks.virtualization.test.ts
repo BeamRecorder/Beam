@@ -4,7 +4,7 @@ import { isReactive, markRaw, ref } from 'vue';
 import { triggerPointer } from '../../../../../tests/support/pointer';
 import TimelineSelectionBox from '../TimelineSelectionBox.vue';
 import { composition, mountTracks, pointerEvent, visual } from './TimelineTracks.test-support';
-import type { ClipComposition } from '~/media/shared/composition-types';
+import type { ClipComposition } from '@beam/engine/shared/composition-types';
 import type { SelectionTarget } from '../composables/timeline-box-selection-types';
 
 describe('two dimensional timeline virtualization', () => {

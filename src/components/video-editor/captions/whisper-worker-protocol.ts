@@ -1,4 +1,4 @@
-import type { CaptionWord } from '~/media/shared/composition-types';
+import type { CaptionWord } from '@beam/engine/shared/composition-types';
 import type { TranscriptionDiagnostics } from './whisper-types';
 
 export interface WhisperTranscribeRequest {

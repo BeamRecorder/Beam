@@ -1,5 +1,5 @@
-import type { ShapeClip } from '~/media/shared/composition-types';
-import type { OutputCanvasSettings } from '../canvas/output-canvas';
+import type { ShapeClip } from '@beam/engine/shared/composition-types';
+import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 
 export interface ShapeTimelinePreviewProps {
   clip: ShapeClip;

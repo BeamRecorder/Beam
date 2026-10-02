@@ -1,5 +1,5 @@
-import type { Clip, MediaAsset } from '~/media/shared/composition-types';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import type { Clip, MediaAsset } from '@beam/engine/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 
 export type TimelineItemCategory = 'visual' | 'audio' | 'caption' | 'zoom';
 

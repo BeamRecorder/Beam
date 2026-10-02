@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue';
 import ResizeHandle from '~/ui/ResizeHandle/ResizeHandle.vue';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
-import type { CursorCanvasBounds } from '../properties/cursor/cursor-rendering';
+import type { CursorCanvasBounds } from '@beam/runtime/cursor/cursor-rendering';
 
 const props = defineProps<{ bounds: CursorCanvasBounds; resizing: boolean; isAtLimit: boolean }>();
 const emit = defineEmits<{

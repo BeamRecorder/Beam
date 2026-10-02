@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
-import { COMPOSITION_SCHEMA_VERSION, createDefaultClipAppearance } from '~/media/shared';
+import type { ClipComposition, VisualClip } from '@beam/engine/shared/composition-types';
+import { COMPOSITION_SCHEMA_VERSION, createDefaultClipAppearance } from '@beam/runtime/shared/index';
 import { previewClipTrim } from '../timeline-composition-preview';
 
 const videoClip = (id: string, overrides: Partial<VisualClip> = {}): VisualClip => ({

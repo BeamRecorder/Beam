@@ -1,6 +1,6 @@
 import { enableAutoUnmount, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AudioClip } from '~/media/shared/composition-types';
+import type { AudioClip } from '@beam/engine/shared/composition-types';
 import type { TimelineAudioTracksProps } from '../timeline-audio-tracks-types';
 import TimelineAudioTracks from '../TimelineAudioTracks.vue';
 import TimelineCanvasClips from '../TimelineCanvasClips.vue';
@@ -124,14 +124,32 @@ describe('TimelineAudioTracks', () => {
   it('publishes waveform source geometry and pending regions to the canvas group without changing ownership', async () => {
     const { wrapper, props } = harness();
     const clip = props.systemAudioClips[0]!;
-    const bars = [1, 2, 3], bands = new Float32Array([1, 2, 3, 4]);
+    const bars = [1, 2, 3],
+      bands = new Float32Array([1, 2, 3, 4]);
     const loadingSegments = [{ leftPercent: 70, widthPercent: 30 }];
-    await wrapper.setProps({ audioWaveforms: { [clip.id]: { bars, bands, sourceDurationSeconds: 2.75, leftPercent: 20, widthPercent: 60, loadingSegments } }, audioWaveformStatus: { [clip.id]: 'ready' }, isTrimming: true });
+    await wrapper.setProps({
+      audioWaveforms: {
+        [clip.id]: { bars, bands, sourceDurationSeconds: 2.75, leftPercent: 20, widthPercent: 60, loadingSegments },
+      },
+      audioWaveformStatus: { [clip.id]: 'ready' },
+      isTrimming: true,
+    });
     const group = wrapper.findAllComponents(TimelineCanvasClips)[0]!;
-    expect(group.props('audioFor')!(clip.id)).toMatchObject({ waveformBars: bars, waveformBands: bands, waveformSourceDurationSeconds: 2.75, waveformLeftPercent: 20, waveformWidthPercent: 60, waveformLoadingSegments: loadingSegments, waveformStatus: 'ready' });
+    expect((group.props('audioFor') as (id: string) => unknown)(clip.id)).toMatchObject({
+      waveformBars: bars,
+      waveformBands: bands,
+      waveformSourceDurationSeconds: 2.75,
+      waveformLeftPercent: 20,
+      waveformWidthPercent: 60,
+      waveformLoadingSegments: loadingSegments,
+      waveformStatus: 'ready',
+    });
     expect(group.props('viewport')).toEqual(props.viewport);
     expect(group.props('deferMedia')).toBe(true);
-    expect(group.props('audioFor')!('missing')).toMatchObject({ waveformBars: undefined, waveformStatus: undefined });
+    expect((group.props('audioFor') as (id: string) => unknown)('missing')).toMatchObject({
+      waveformBars: undefined,
+      waveformStatus: undefined,
+    });
   });
 
   it('leaves titles to the audio foreground and keeps canvas geometry aligned with the same semantic clip', async () => {

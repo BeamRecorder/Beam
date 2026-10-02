@@ -1,4 +1,4 @@
-import type { Clip } from '~/media/shared/composition-types';
+import type { Clip } from '@beam/engine/shared/composition-types';
 
 export const timelineSpanStyle = (startMs: number, lengthMs: number, durationSeconds: number, timelineWidthPx = 0) => {
   const durationMs = Math.max(1, durationSeconds * 1_000);

@@ -1,21 +1,20 @@
+import { createBrowserPlaybackEngine } from '@beam/runtime/browser';
 import { computed, onScopeDispose, ref, watch } from 'vue';
-import { engineMetrics } from '~/media/performance/engine-metrics';
-import {
+import { engineMetrics } from '@beam/runtime/performance/engine-metrics';
+import type {
   MediaPlaybackEngine,
-  type AudioPlaybackMetrics,
-  type PlaybackMetrics,
-  type PlaybackState,
-  type PreviewQuality,
-} from '~/media/playback';
-import { compositionDurationMs, type ClipComposition, type MediaError } from '~/media/shared';
+  AudioPlaybackMetrics,
+  PlaybackMetrics,
+  PlaybackState,
+  PreviewQuality,
+} from '@beam/runtime/playback/index';
+import { compositionDurationMs, type ClipComposition, type MediaError } from '@beam/runtime/shared/index';
+import { BACKGROUND_MEDIA, getRandomBackgroundImage, groupBackgroundMedia } from './backgroundCatalog';
 import {
-  BACKGROUND_MEDIA,
-  getRandomBackgroundImage,
-  groupBackgroundMedia,
   type BackgroundMedia,
   type BackgroundMediaGroup,
   type BackgroundValue,
-} from './backgroundCatalog';
+} from '@beam/engine/shared/background-types';
 
 export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] = BACKGROUND_MEDIA) {
   const isPlaying = ref(false);
@@ -35,7 +34,7 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   const ensureEngine = () => {
     if (disposed) throw new Error('Video player is disposed.');
     if (engine) return engine;
-    engine = new MediaPlaybackEngine({ previewQuality: previewQuality.value });
+    engine = createBrowserPlaybackEngine({ previewQuality: previewQuality.value });
     engine.on('time', (value) => {
       currentTime.value = value;
     });

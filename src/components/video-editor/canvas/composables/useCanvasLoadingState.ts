@@ -1,6 +1,6 @@
 import { computed, ref, watch, type ComputedRef } from 'vue';
-import type { MediaError, MediaFrame } from '~/media/shared';
-import type { VisualClip } from '~/media/shared/composition-types';
+import type { MediaError, MediaFrame } from '@beam/runtime/shared/index';
+import type { VisualClip } from '@beam/engine/shared/composition-types';
 
 export function useCanvasLoadingState(options: {
   clip: ComputedRef<VisualClip | null>;

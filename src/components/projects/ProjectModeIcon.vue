@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import CaptureModeIcon from '../capture/CaptureModeIcon.vue';
-import type { CaptureMode } from '~/api/types/capture-mode';
+import type { CaptureMode } from '@beam/engine/capture/capture-mode';
 withDefaults(defineProps<{ mode?: CaptureMode }>(), { mode: 'studio' });
 </script>
 <template>

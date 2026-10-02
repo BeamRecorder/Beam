@@ -1,4 +1,4 @@
-import type { ClipComposition } from '~/media/shared/composition-types';
+import type { ClipComposition } from '@beam/engine/shared/composition-types';
 export interface CanvasDoubleClickOptions {
   beginElement: (event: MouseEvent) => boolean;
   beginCaption: (event: MouseEvent) => boolean;

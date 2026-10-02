@@ -1,5 +1,5 @@
-import type { ClipComposition, NormalizedTransform, VisualClip } from '~/media/shared/composition-types';
-import type { CameraFramingPreset } from '~/media/shared/camera-layout-types';
+import type { ClipComposition, NormalizedTransform, VisualClip } from '@beam/engine/shared/composition-types';
+import type { CameraFramingPreset } from '@beam/engine/shared/camera-layout-types';
 import type { VideoWindowBounds } from './useCameraZoom';
 import {
   clampWebcamTransformToVisibleBounds,
@@ -8,9 +8,9 @@ import {
   normalizeWebcamTransformToVisibleFraming,
   webcamReactsToZoom,
   webcamSettingsForAppearance,
-} from '../../composition/webcam/webcam-zoom';
-import { resolveCameraFraming } from '../../composition/camera-layout';
-import { isPhoneFrame } from '../../composition/appearance/phone-frames';
+} from '@beam/runtime/composition/webcam/webcam-zoom';
+import { resolveCameraFraming } from '@beam/engine/composition/camera-layout';
+import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
 
 export function webcamDisplayLayout(
   composition: ClipComposition,

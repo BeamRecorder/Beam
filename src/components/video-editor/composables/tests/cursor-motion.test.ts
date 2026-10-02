@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CursorEvent } from '../../../../api/types/capture-api';
-import { createDefaultCursorMotionSettings, cursorMotionPreset } from '../../../../api/types/cursor-settings';
+import { createDefaultCursorMotionSettings, cursorMotionPreset } from '@beam/engine/capture/cursor-settings';
 import {
   createCursorMotionPlayer,
   cursorMotionBlurTrail,
@@ -9,7 +9,7 @@ import {
   minimumJerk,
   motionBlurTrail,
   stepSpringAxis,
-} from '../cursor-motion';
+} from '@beam/engine/cursor/cursor-motion';
 
 const move = (time: number, x: number, y: number): CursorEvent => ({
   event: 'move',

@@ -3,7 +3,7 @@ import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { EditorPresetSettings } from '~/api/types/editor-preset';
 import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
-import { createElementText } from '~/media/shared/element-text';
+import { createElementText } from '@beam/engine/shared/element-text';
 import { useEditorUndoRedo } from '../../composables/useEditorUndoRedo';
 import {
   endPropertyInteraction,

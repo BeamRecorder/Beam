@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { LockableTimelineItem } from '../../composition/timeline-lock-types';
+import type { LockableTimelineItem } from '@beam/engine/composition/timeline-lock-types';
 import { useLockedState } from '../useLockedState';
 
 interface TestItem extends LockableTimelineItem {

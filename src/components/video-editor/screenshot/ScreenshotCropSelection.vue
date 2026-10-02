@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { beginPropertyInteraction, endPropertyInteraction } from '~/composables/property-interaction';
 import { computed, onBeforeUnmount, ref } from 'vue';
-import type { NormalizedCrop } from '~/media/shared/composition-types';
+import type { NormalizedCrop } from '@beam/engine/shared/composition-types';
 import type { ScreenshotState } from '~/api/types/screenshot';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
 import CanvasCropSelection from '../canvas/CanvasCropSelection.vue';

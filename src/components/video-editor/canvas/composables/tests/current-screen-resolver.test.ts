@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCurrentScreenResolver } from '../current-screen-resolver';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import type { ClipComposition, VisualClip } from '@beam/engine/shared/composition-types';
 
 const screen: VisualClip = {
   kind: 'screen',

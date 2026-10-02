@@ -1,28 +1,24 @@
 import { computed, getCurrentScope, onScopeDispose, ref } from 'vue';
-import { ZOOM_DEPTH_SCALES } from '../../zoom/zoom-types';
-import { createCompositionCameraEvaluator } from '../../zoom/composition-camera';
-import { clampFocusToScale } from '../../zoom/zoom-playback';
-import { createCameraMotionBlurPlan } from '../../zoom/zoom-motion-blur';
+import { ZOOM_DEPTH_SCALES } from '@beam/engine/zoom/zoom-types';
+import { createCompositionCameraEvaluator } from '@beam/engine/zoom/composition-camera';
+import { clampFocusToScale } from '@beam/engine/zoom/zoom-playback';
+import { createCameraMotionBlurPlan } from '@beam/engine/zoom/zoom-motion-blur';
 import {
   compositeIsolatedMotionBlurSample,
   createMotionBlurSurface,
   resizeMotionBlurSurface,
   type MotionBlurSurface,
-} from '../../zoom/zoom-motion-blur-compositor';
-import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from '../output-canvas';
-import { sessionTimeAt, type MediaFrame } from '~/media/shared';
-import type { VisualClip } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
-import {
-  drawFrameOverlay,
-  frameMediaRect,
-  frameOuterRect,
-  transformedFrameOuterRect,
-} from '../../composition/appearance/frames';
-import { isPhoneFrame } from '../../composition/appearance/phone-frames';
-import { mapSourcePointToScreen, resolveScreenRenderGeometry } from '../../composition/camera-layout';
-import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '../../composition/scene-layers';
+} from '@beam/runtime/zoom/zoom-motion-blur-compositor';
+import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from '@beam/engine/layout/output-canvas';
+import { sessionTimeAt, type MediaFrame } from '@beam/runtime/shared/index';
+import type { VisualClip } from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { drawDecoratedMedia } from '@beam/runtime/composition/appearance/render-decorated-media';
+import { drawFrameOverlay } from '@beam/runtime/composition/appearance/frames';
+import { frameMediaRect, frameOuterRect, transformedFrameOuterRect } from '@beam/engine/shared/frame-layout';
+import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
+import { mapSourcePointToScreen, resolveScreenRenderGeometry } from '@beam/engine/composition/camera-layout';
+import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '@beam/engine/composition/scene-layers';
 import { createCurrentScreenResolver } from './current-screen-resolver';
 import type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
 import { selectedZoomPreviewTilt } from './camera-preview-tilt';
@@ -197,6 +193,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     height: number,
     frame: MediaFrame | null,
     resolvedLayers?: CompositionSceneLayers,
+    paint = true,
   ): RenderedVideoWindow | null => {
     const output = options.outputCanvas();
     const preview = outputPreviewRect(width, height, output);
@@ -330,111 +327,113 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       tiltX: camera.tiltX,
       tiltY: camera.tiltY,
     };
-    const drawScreen = (target = ctx) => {
-      if (!screen) return;
-      if (frame) {
-        drawDecoratedMedia(target, {
-          source: frame.bitmap,
-          sourceRect: source,
-          rect: { x: dx + positioned.x, y: dy + positioned.y, width: positioned.width, height: positioned.height },
-          appearance: editingPhoneCrop
-            ? { ...screen.appearance, frame: 'none' }
-            : (screen.appearance ?? createDefaultClipAppearance('screen', output.showBackground)),
-          shadowScale: Math.min(dw / Math.max(1, output.width), dh / Math.max(1, output.height)),
-          title: screen.name,
-          mirrored: screen.isMirrored,
-          mirroredY: screen.isMirroredY,
-          mask: screenGeometry?.mask,
-        });
-        if (cropFrame)
-          drawFrameOverlay(
-            target,
-            {
-              x: dx + cropFrame.x,
-              y: dy + cropFrame.y,
-              width: cropFrame.width,
-              height: cropFrame.height,
-            },
-            screen.appearance.frame,
-            screen.name,
-            screen.appearance.frameColor,
-            {
-              showMenu: screen.appearance.frameShowMenu,
-              showScrollbars: screen.appearance.frameShowScrollbars,
-              chromeScale: screen.appearance.frameChromeScale,
-            },
-          );
-      }
-    };
-    const blurSettings = options.zoomMotionBlur?.();
-    const blurIntensity = blurSettings?.enabled ? blurSettings.intensity : 0;
-    const blurPlan = createCameraMotionBlurPlan({
-      sampleAt: (timeMs) => cameraEvaluator!.sample(timeMs),
-      center: sample,
-      timeMs: currentTime * 1_000,
-      intensity: blurIntensity,
-      sampleCount: options.isPlaying() ? 3 : undefined,
-      viewportWidth: dw,
-      viewportHeight: dh,
-    });
-    const drawSample = (target: CanvasRenderingContext2D, blurSample: (typeof blurPlan)[number]) => {
-      const projectedCamera = {
-        focusX: dx + blurSample.camera.focusX * dw,
-        focusY: dy + blurSample.camera.focusY * dh,
-        scale: blurSample.camera.scale,
-        tiltX: blurSample.camera.tiltX ?? 0,
-        tiltY: blurSample.camera.tiltY ?? 0,
+    if (paint) {
+      const drawScreen = (target = ctx) => {
+        if (!screen) return;
+        if (frame) {
+          drawDecoratedMedia(target, {
+            source: frame.bitmap,
+            sourceRect: source,
+            rect: { x: dx + positioned.x, y: dy + positioned.y, width: positioned.width, height: positioned.height },
+            appearance: editingPhoneCrop
+              ? { ...screen.appearance, frame: 'none' }
+              : (screen.appearance ?? createDefaultClipAppearance('screen', output.showBackground)),
+            shadowScale: Math.min(dw / Math.max(1, output.width), dh / Math.max(1, output.height)),
+            title: screen.name,
+            mirrored: screen.isMirrored,
+            mirroredY: screen.isMirroredY,
+            mask: screenGeometry?.mask,
+          });
+          if (cropFrame)
+            drawFrameOverlay(
+              target,
+              {
+                x: dx + cropFrame.x,
+                y: dy + cropFrame.y,
+                width: cropFrame.width,
+                height: cropFrame.height,
+              },
+              screen.appearance.frame,
+              screen.name,
+              screen.appearance.frameColor,
+              {
+                showMenu: screen.appearance.frameShowMenu,
+                showScrollbars: screen.appearance.frameShowScrollbars,
+                chromeScale: screen.appearance.frameChromeScale,
+              },
+            );
+        }
       };
-      const sampleWindow = { ...renderedWindow, ...projectedCamera };
-      target.save();
-      target.beginPath();
-      target.roundRect(dx, dy, dw, dh, OUTPUT_PREVIEW_RADIUS);
-      target.clip();
-      target.translate(dx + dw / 2, dy + dh / 2);
-      target.scale(projectedCamera.scale, projectedCamera.scale);
-      target.translate(-projectedCamera.focusX, -projectedCamera.focusY);
-      options.drawBackground(target, { x: dx, y: dy, width: dw, height: dh });
-      if (options.renderVisualStack)
-        options.renderVisualStack(target, sampleWindow, () => drawScreen(target), sceneLayers);
-      else drawScreen(target);
-      target.restore();
-    };
-    if (blurPlan.length === 1) {
-      drawSample(ctx, blurPlan[0]!);
-    } else {
-      const canvasPixelScale = Math.max(1, options.canvasRef()?.width ?? width) / Math.max(1, width);
-      const pixelScale = Math.min(1.25, canvasPixelScale);
-      motionBlurSurface ??= createMotionBlurSurface(
-        Math.max(1, Math.round(width * pixelScale)),
-        Math.max(1, Math.round(height * pixelScale)),
-      );
-      if (!motionBlurSurface) {
-        drawSample(ctx, blurPlan[Math.floor(blurPlan.length / 2)]!);
+      const blurSettings = options.zoomMotionBlur?.();
+      const blurIntensity = blurSettings?.enabled ? blurSettings.intensity : 0;
+      const blurPlan = createCameraMotionBlurPlan({
+        sampleAt: (timeMs) => cameraEvaluator!.sample(timeMs),
+        center: sample,
+        timeMs: currentTime * 1_000,
+        intensity: blurIntensity,
+        sampleCount: options.isPlaying() ? 3 : undefined,
+        viewportWidth: dw,
+        viewportHeight: dh,
+      });
+      const drawSample = (target: CanvasRenderingContext2D, blurSample: (typeof blurPlan)[number]) => {
+        const projectedCamera = {
+          focusX: dx + blurSample.camera.focusX * dw,
+          focusY: dy + blurSample.camera.focusY * dh,
+          scale: blurSample.camera.scale,
+          tiltX: blurSample.camera.tiltX ?? 0,
+          tiltY: blurSample.camera.tiltY ?? 0,
+        };
+        const sampleWindow = { ...renderedWindow, ...projectedCamera };
+        target.save();
+        target.beginPath();
+        target.roundRect(dx, dy, dw, dh, OUTPUT_PREVIEW_RADIUS);
+        target.clip();
+        target.translate(dx + dw / 2, dy + dh / 2);
+        target.scale(projectedCamera.scale, projectedCamera.scale);
+        target.translate(-projectedCamera.focusX, -projectedCamera.focusY);
+        options.drawBackground(target, { x: dx, y: dy, width: dw, height: dh });
+        if (options.renderVisualStack)
+          options.renderVisualStack(target, sampleWindow, () => drawScreen(target), sceneLayers);
+        else drawScreen(target);
+        target.restore();
+      };
+      if (blurPlan.length === 1) {
+        drawSample(ctx, blurPlan[0]!);
       } else {
-        resizeMotionBlurSurface(
-          motionBlurSurface,
+        const canvasPixelScale = Math.max(1, options.canvasRef()?.width ?? width) / Math.max(1, width);
+        const pixelScale = Math.min(1.25, canvasPixelScale);
+        motionBlurSurface ??= createMotionBlurSurface(
           Math.max(1, Math.round(width * pixelScale)),
           Math.max(1, Math.round(height * pixelScale)),
         );
-        let accumulatedWeight = 0;
-        let composited = false;
-        for (const blurSample of blurPlan) {
-          const rendered = compositeIsolatedMotionBlurSample({
-            target: ctx,
-            surface: motionBlurSurface,
-            logicalWidth: width,
-            logicalHeight: height,
-            pixelScale,
-            sample: blurSample,
-            accumulatedWeight,
-            draw: (target, sampleToDraw) => drawSample(target as CanvasRenderingContext2D, sampleToDraw),
-          });
-          if (rendered) {
-            composited = true;
-            accumulatedWeight += blurSample.weight;
+        if (!motionBlurSurface) {
+          drawSample(ctx, blurPlan[Math.floor(blurPlan.length / 2)]!);
+        } else {
+          resizeMotionBlurSurface(
+            motionBlurSurface,
+            Math.max(1, Math.round(width * pixelScale)),
+            Math.max(1, Math.round(height * pixelScale)),
+          );
+          let accumulatedWeight = 0;
+          let composited = false;
+          for (const blurSample of blurPlan) {
+            const rendered = compositeIsolatedMotionBlurSample({
+              target: ctx,
+              surface: motionBlurSurface,
+              logicalWidth: width,
+              logicalHeight: height,
+              pixelScale,
+              sample: blurSample,
+              accumulatedWeight,
+              draw: (target, sampleToDraw) => drawSample(target as CanvasRenderingContext2D, sampleToDraw),
+            });
+            if (rendered) {
+              composited = true;
+              accumulatedWeight += blurSample.weight;
+            }
           }
+          if (!composited) drawSample(ctx, blurPlan[Math.floor(blurPlan.length / 2)]!);
         }
-        if (!composited) drawSample(ctx, blurPlan[Math.floor(blurPlan.length / 2)]!);
       }
     }
     ctx.restore();

@@ -1,4 +1,4 @@
-import { recordingMediaOwner } from './recording-media-links';
+import { recordingMediaOwner } from '@beam/engine/composition/recording-media-links';
 import type { ProjectEditorData, SessionTrackAsset, SessionTrackData } from '../../../api/types/capture-api';
 import {
   COMPOSITION_SCHEMA_VERSION,
@@ -9,9 +9,9 @@ import {
   type MediaAsset,
   type VisualClip,
   isVisualClip,
-} from '~/media/shared/composition-types';
-import { createComposition, setCameraLayout, updateClip } from './engine/clip-engine';
-import { keyboardCaptionClipsFromInput } from '~/media/shared/keyboard-captions';
+} from '@beam/engine/shared/composition-types';
+import { createComposition, setCameraLayout, updateClip } from '@beam/engine/commands/clip-engine';
+import { keyboardCaptionClipsFromInput } from '@beam/engine/shared/keyboard-captions';
 import type { EditorPreferenceDefaults } from '../composables/editor-default-types';
 import {
   audioDefaultsFor,
@@ -19,9 +19,9 @@ import {
   normalizeEditorPreferenceDefaults,
   visualClipDefaultProps,
 } from '../composables/editor-defaults';
-import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
-import { cameraScreenPartner } from './camera-screen-link';
-import { cameraLayoutTransform } from './camera-layout';
+import { isSplitCameraLayout } from '@beam/engine/shared/camera-layout-types';
+import { cameraScreenPartner } from '@beam/engine/composition/camera-screen-link';
+import { cameraLayoutTransform } from '@beam/engine/composition/camera-layout';
 
 const milliseconds = (nanoseconds: number | null | undefined) =>
   Math.max(0, Math.round((nanoseconds ?? 0) / 1_000_000));

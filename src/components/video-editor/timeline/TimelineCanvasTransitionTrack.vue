@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue';
 import { PanelsTopLeft } from '@lucide/vue';
-import type { ClipTransition, ClipTransitions } from '~/media/shared/composition-types';
-import { normalizeCanvasTransitions } from '~/media/shared/clip-transitions';
+import type { ClipTransition, ClipTransitions } from '@beam/engine/shared/composition-types';
+import { normalizeCanvasTransitions } from '@beam/engine/shared/clip-transitions';
 import { useTranslate } from '~/i18n/useTranslate';
 import TimelineCanvasLane from './TimelineCanvasLane.vue';
 import type { TimelineViewportMetrics } from './composables/timeline-virtualization-types';

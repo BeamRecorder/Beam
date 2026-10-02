@@ -1,6 +1,6 @@
 import { computed, inject, onMounted, onScopeDispose, provide, ref, type InjectionKey } from 'vue';
-import type { Clip } from '~/media/shared/composition-types';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import type { Clip } from '@beam/engine/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type { TimelineVirtualizationOptions, TimelineVirtualWindow } from './timeline-virtualization-types';
 import { layoutTimelineRows, visibleTimelineRows } from './timeline-virtual-layout';
 import { createTimelineRangeIndex } from './timeline-range-index';

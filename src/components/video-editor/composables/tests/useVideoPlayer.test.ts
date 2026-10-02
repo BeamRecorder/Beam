@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { effectScope, nextTick } from 'vue';
 import { createBackgroundMedia } from '../backgroundCatalog';
 import { useVideoPlayer } from '../useVideoPlayer';
-import type { ClipComposition, VisualClip } from '~/media/shared';
-import { COMPOSITION_SCHEMA_VERSION } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { deleteClip, splitClip } from '../../composition/engine/clip-engine';
+import type { ClipComposition, VisualClip } from '@beam/runtime/shared/index';
+import { COMPOSITION_SCHEMA_VERSION } from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { deleteClip, splitClip } from '@beam/engine/commands/clip-engine';
 
 const playback = vi.hoisted(() => {
   const instances: FakePlayback[] = [];
@@ -48,8 +48,8 @@ const playback = vi.hoisted(() => {
   }
   return { FakePlayback, instances };
 });
-vi.mock('~/media/playback', () => ({
-  MediaPlaybackEngine: playback.FakePlayback,
+vi.mock('@beam/runtime/browser', () => ({
+  createBrowserPlaybackEngine: (options: { previewQuality?: string }) => new playback.FakePlayback(options),
 }));
 
 const backgrounds = createBackgroundMedia(['/built-in.png', '/clip.mp4']);

@@ -1,5 +1,5 @@
 import type { Ref } from 'vue';
-import type { Clip, ClipComposition } from '~/media/shared/composition-types';
+import type { Clip, ClipComposition } from '@beam/engine/shared/composition-types';
 export interface CompositionClipEditingOptions {
   composition: Ref<ClipComposition>;
   selectedClip: Ref<Clip | null | undefined>;

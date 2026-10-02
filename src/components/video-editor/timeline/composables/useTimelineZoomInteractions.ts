@@ -1,11 +1,11 @@
-import { recordingMoveSelection } from '../../composition/recording-sidecars';
+import { recordingMoveSelection } from '@beam/engine/composition/recording-sidecars';
 import { timelineMovePreviews } from './timeline-composition-preview';
 import { markRaw, type Ref } from 'vue';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import { calculateSnapThresholdMs, collectSnapTargets, snapSpan, snapValue } from './timeline-snap';
 import { createAnimationFrameCoalescer } from './animation-frame-coalescer';
 import type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
-import { prepareTimelineSelectionMove } from '../../composition/timeline-selection-move';
+import { prepareTimelineSelectionMove } from '@beam/engine/composition/timeline-selection-move';
 
 type ZoomPreview = Record<string, { startMs: number; endMs: number }>;
 type ClipPreview = Record<string, { startMs: number; durationMs: number }>;

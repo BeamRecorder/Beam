@@ -4,7 +4,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { capture } from '~/api/capture';
 import Select from '~/ui/select/Select.vue';
 import CaptureModeIcon from '../capture/CaptureModeIcon.vue';
-import type { PresetKind } from '~/api/types/capture-mode';
+import type { PresetKind } from '@beam/engine/capture/capture-mode';
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
 
 const { t } = useTranslate('QuickSnipCropBar');

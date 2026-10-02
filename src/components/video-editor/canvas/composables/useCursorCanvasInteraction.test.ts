@@ -1,6 +1,6 @@
 import { nextTick, ref } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
-import type { CursorCanvasBounds } from '../../properties/cursor/cursor-rendering';
+import type { CursorCanvasBounds } from '@beam/runtime/cursor/cursor-rendering';
 import { useCursorCanvasInteraction } from './useCursorCanvasInteraction';
 
 const canvas = (width = 800, height = 450) => {

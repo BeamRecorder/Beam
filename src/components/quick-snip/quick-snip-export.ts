@@ -1,23 +1,24 @@
 import { capture } from '~/api/capture';
 import type { QuickSnipRenderTask } from '~/api/types/quick-snip';
-import type { CursorPackDescriptor } from '~/api/types/cursor-pack';
-import { compositionDurationMs } from '~/media/shared';
+import type { CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
+import { compositionDurationMs } from '@beam/runtime/shared/index';
 import { synchronizeRecordingClips } from '../video-editor/composition/session-clips';
 import {
   applyFreshPresentationDefaults,
   normalizeEditorPreferenceDefaults,
 } from '../video-editor/composables/editor-defaults';
-import { buildAutomaticZoomElements, ZOOM_ALGORITHM_VERSION } from '../video-editor/zoom/zoom-suggestions';
+import { buildAutomaticZoomElements, ZOOM_ALGORITHM_VERSION } from '@beam/engine/zoom/zoom-suggestions';
 import {
   BACKGROUND_MEDIA,
   findMatchingBackgroundMedia,
   normalizeBackgroundValue,
-  type BackgroundMedia,
 } from '../video-editor/composables/backgroundCatalog';
+import { type BackgroundMedia } from '@beam/engine/shared/background-types';
 import { orderedCursorPacks } from '../video-editor/properties/cursor/cursor-packs';
-import { createCompositionSnapshot } from '../export/composition/snapshot';
+import { createCompositionSnapshot } from '@beam/runtime/rendering/snapshot';
+import { projectFontSources } from '../video-editor/text/project-font-sources';
 import { exportWithMediabunny } from '../export/mediabunny/exporter';
-import type { ExportRequest } from '../export/export-types';
+import type { ExportRequest } from '@beam/encoder/export-types';
 
 export function quickSnipExportRequest(
   task: QuickSnipRenderTask,
@@ -76,6 +77,7 @@ export function quickSnipExportRequest(
     zoomMotionBlur: state.zoom.motionBlur,
     zoomAutoFollow: state.zoom.autoFollow,
     composition: state.composition,
+    fontSources: projectFontSources(state.composition),
     cursorSettings: presentation.cursor,
     cursorPack: orderedCursorPacks(packs).find((pack) => pack.id === presentation.cursor.selection.packId) ?? null,
   });

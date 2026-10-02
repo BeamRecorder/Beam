@@ -1,5 +1,5 @@
-import type { MediaRect } from '../composition/appearance/appearance-types';
-import type { NormalizedTransform, NormalizedCrop } from '~/media/shared/composition-types';
+import type { MediaRect } from '@beam/runtime/composition/appearance/appearance-types';
+import type { NormalizedTransform, NormalizedCrop } from '@beam/engine/shared/composition-types';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
 import type { ScreenshotCursorAsset, ScreenshotImageAsset } from './screenshot-layer-types';
 

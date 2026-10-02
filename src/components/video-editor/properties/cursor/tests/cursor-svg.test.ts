@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MACOS_CURSOR_PACK } from '../cursor-packs';
-import { svgAtRasterSize } from '../cursor-svg';
+import { svgAtRasterSize } from '@beam/runtime/cursor/cursor-svg';
 
 const openingTag = (svg: string) => svg.slice(0, svg.indexOf('>') + 1);
 

@@ -1,7 +1,7 @@
 import { onScopeDispose, shallowRef, watch } from 'vue';
-import { cursorGeometry } from '../../../properties/cursor/cursor-packs';
+import { cursorGeometry } from '@beam/engine/shared/cursor-assets';
 import { CURSOR_SIZE_MAX } from '../../../properties/cursor/cursor-size';
-import { loadCursorImage } from '../../../properties/cursor/cursor-image-loader';
+import { loadCursorImage } from '@beam/runtime/cursor/cursor-image-loader';
 import type { LayerThumbnail, ThumbnailReply, ThumbnailRequest, ThumbnailSpec } from './thumbnail-types';
 
 export function useLayerThumbnails(specs: () => ThumbnailSpec[], enabled: () => boolean = () => true) {

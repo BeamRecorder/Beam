@@ -1,11 +1,11 @@
 import { computed, reactive } from 'vue';
 import { useTimelineInsertPreference } from './useTimelineInsertPreference';
-import type { CaptionClip } from '~/media/shared/composition-types';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import type { CaptionClip } from '@beam/engine/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type { TimelineTracksEmits, VisualTimelineTrack } from './timeline-tracks-types';
-import type { TimelineAddableVisualKind } from '../../composition/visual-element-types';
-import { DEFAULT_VISUAL_ELEMENT_DURATION_MS } from '../../composition/visual-element-defaults';
-import { fitZoomPlacement } from '../../zoom/zoom-placement';
+import type { TimelineAddableVisualKind } from '@beam/engine/composition/visual-element-types';
+import { DEFAULT_VISUAL_ELEMENT_DURATION_MS } from '@beam/engine/composition/visual-element-defaults';
+import { fitZoomPlacement } from '@beam/engine/zoom/zoom-placement';
 
 type BasicTarget = 'zoom' | 'caption';
 type Placement = { startMs: number; durationMs: number };

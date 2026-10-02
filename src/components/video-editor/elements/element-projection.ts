@@ -1,6 +1,6 @@
-import type { DrawingPoint } from '~/media/shared/element-types';
+import type { DrawingPoint } from '@beam/engine/shared/element-types';
 import type { ElementCamera, ElementViewport } from './element-editor-types';
-import { projectPerspectivePoint, unprojectPerspectivePoint } from '../zoom/perspective-projection';
+import { projectPerspectivePoint, unprojectPerspectivePoint } from '@beam/engine/zoom/perspective-projection';
 
 export function projectElementPoint(
   p: DrawingPoint,

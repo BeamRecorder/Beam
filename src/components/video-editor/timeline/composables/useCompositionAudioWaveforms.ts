@@ -1,10 +1,15 @@
 import { computed, onUnmounted, ref, watch } from 'vue';
-import WaveformWorker from '~/media/playback/waveform.worker?worker';
-import { isAudioClip, type AudioClip, type ClipComposition, type MediaAsset } from '~/media/shared/composition-types';
-import { MediaInputError, mediaSourceDescriptor, type MediaError } from '~/media/shared';
-import { assertWaveformWorkerResponse, type WaveformWorkerRequest } from '~/media/playback/waveform-protocol';
+import WaveformWorker from '@beam/runtime/playback/waveform.worker?worker';
+import {
+  isAudioClip,
+  type AudioClip,
+  type ClipComposition,
+  type MediaAsset,
+} from '@beam/engine/shared/composition-types';
+import { MediaInputError, mediaSourceDescriptor, type MediaError } from '@beam/runtime/shared/index';
+import { assertWaveformWorkerResponse, type WaveformWorkerRequest } from '@beam/runtime/playback/waveform-protocol';
 import { useMediaProcessingReporter } from '../../performance/media-processing-pressure';
-import { effectiveAudioClipGain } from '~/media/shared/audio-gain';
+import { effectiveAudioClipGain } from '@beam/engine/shared/audio-gain';
 import { prepareWaveform, retainWaveform, waveformSourceKey as sourceKey } from './audio-waveform-cache';
 
 import type {

@@ -1,7 +1,7 @@
 import type { Ref } from 'vue';
-import type { AudioPlaybackMetrics, PlaybackMetrics, PlaybackState } from '~/media/playback';
+import type { AudioPlaybackMetrics, PlaybackMetrics, PlaybackState } from '@beam/runtime/playback/index';
 import type { MediaProcessingMetrics } from './media-processing-pressure';
-import type { PreviewQuality } from '~/media/playback';
+import type { PreviewQuality } from '@beam/runtime/playback/index';
 
 export type PreviewPerformanceChannel = 'ui' | 'worker' | 'audio' | 'media';
 export type PreviewPerformanceStatus = 'idle' | 'good' | 'warning' | 'critical';

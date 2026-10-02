@@ -28,7 +28,7 @@ const probe = {
     };
     if (id.endsWith('/composables/useVideoEditor.ts')) {
       code.prepend(
-        "import { GpuSceneRenderer as ProfileGpuScene } from '~/media/gpu/gpu-scene-renderer';\nimport { EngineMetrics as ProfileEngineMetrics } from '~/media/performance/engine-metrics';\n",
+        "import { GpuSceneRenderer as ProfileGpuScene } from '@beam/runtime/gpu/gpu-scene-renderer';\nimport { EngineMetrics as ProfileEngineMetrics } from '@beam/runtime/performance/engine-metrics';\n",
       );
       replace(
         '  return {\n    activeTab,',

@@ -1,7 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CursorAssetDescriptor, CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
+import type { CursorAssetDescriptor, CursorPackDescriptor, CursorSelection } from '@beam/engine/capture/cursor-pack';
 import CursorAppearanceControls from '../../properties/cursor/CursorAppearanceControls.vue';
 import ScreenshotCursorControls from '../ScreenshotCursorControls.vue';
 import type { ScreenshotCursorLayer } from '../screenshot-layer-types';

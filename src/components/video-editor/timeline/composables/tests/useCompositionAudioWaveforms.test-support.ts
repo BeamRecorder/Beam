@@ -1,6 +1,6 @@
 import type { Mock } from 'vitest';
-import type { ClipComposition } from '~/media/shared/composition-types';
-import type { MediaError, MediaSourceDescriptor } from '~/media/shared/media-types';
+import type { ClipComposition } from '@beam/engine/shared/composition-types';
+import type { MediaError, MediaSourceDescriptor } from '@beam/runtime/shared/media-types';
 
 export type FakeWaveformWorkerInstance = {
   onmessage?: (event: MessageEvent) => void;

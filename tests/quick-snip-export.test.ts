@@ -19,13 +19,13 @@ vi.mock('../src/components/export/mediabunny/exporter', () => exporterMock);
 import { quickSnipExportRequest, renderQuickSnip } from '../src/components/quick-snip/quick-snip-export';
 import type { QuickSnipRenderTask } from '~/api/types/quick-snip';
 import type { ProjectEditorData, SessionTrackData } from '~/api/types/capture-api';
-import { emptyComposition } from '~/media/shared/composition-types';
-import { DEFAULT_OUTPUT_CANVAS } from '../src/components/video-editor/canvas/output-canvas';
+import { emptyComposition } from '@beam/engine/shared/composition-types';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import {
   createDefaultCursorMotionSettings,
   createDefaultCursorAutoHideSettings,
   createDefaultCursorClickEffects,
-} from '~/api/types/cursor-settings';
+} from '@beam/engine/capture/cursor-settings';
 const task = (): QuickSnipRenderTask => {
   const tracks: SessionTrackData[] = (['screen', 'microphone'] as const).map((kind) => ({
     trackId: kind,
@@ -105,6 +105,7 @@ const task = (): QuickSnipRenderTask => {
         selectedBackgroundId: null,
         importedBackgrounds: [],
         cursor: {
+          enabled: true,
           selection: { packId: 'builtin:macos', mode: 'automatic', cursorId: null },
           size: 45,
           color: '#000000',

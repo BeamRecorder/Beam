@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { buildBeamExportReport } from '../export-diagnostics';
-import type { ExportDiagnostics } from '../export-diagnostics-types';
-import type { ExportProgress, ExportRequest } from '../export-types';
-import { EngineMetrics } from '~/media/performance/engine-metrics';
+import { buildBeamExportReport } from '@beam/encoder/export-diagnostics';
+import type { ExportDiagnostics } from '@beam/encoder/export-diagnostics-types';
+import type { ExportProgress, ExportRequest } from '@beam/encoder/export-types';
+import { EngineMetrics } from '@beam/runtime/performance/engine-metrics';
 
 const request = {
   projectName: 'Vivid Horizon',

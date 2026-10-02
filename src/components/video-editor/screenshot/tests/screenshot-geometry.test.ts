@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_OUTPUT_CANVAS, normalizeOutputCanvas } from '../../canvas/output-canvas';
+import { DEFAULT_OUTPUT_CANVAS, normalizeOutputCanvas } from '@beam/engine/layout/output-canvas';
 import { screenshotState } from '../screenshot-state';
 import { screenshotImageFraming, moveScreenshotCrop, resizeScreenshotImage } from '../screenshot-geometry';
 import { resizeScreenshotCanvas, screenshotCanvasPreset, validScreenshotDimensions } from '../screenshot-dimensions';

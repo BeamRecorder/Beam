@@ -14,9 +14,10 @@ import { applyScreenshotTranslation } from './screenshot-selection-transform';
 import type { CaptureProject } from '~/api/types/capture-api';
 import { capture } from '~/api/capture';
 import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
-import type { ClipAppearance, MediaAsset, NormalizedTransform } from '~/media/shared/composition-types';
+import type { ClipAppearance, MediaAsset, NormalizedTransform } from '@beam/engine/shared/composition-types';
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
-import { BACKGROUND_MEDIA, groupBackgroundMedia, type BackgroundMedia } from '../composables/backgroundCatalog';
+import { BACKGROUND_MEDIA, groupBackgroundMedia } from '../composables/backgroundCatalog';
+import { type BackgroundMedia } from '@beam/engine/shared/background-types';
 import { screenshotState, screenshotPresetSettings } from './screenshot-state';
 import { encodeScreenshot } from './screenshot-render';
 import {

@@ -1,4 +1,4 @@
-import type { ZoomElement } from '../zoom/zoom-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type { TimelinePasteHighlight } from './composables/timeline-clipboard-types';
 import type { TimelineViewportMetrics } from './composables/timeline-virtualization-types';
 

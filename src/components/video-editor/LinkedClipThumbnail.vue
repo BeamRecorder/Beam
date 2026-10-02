@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue';
 import { Camera, Captions, Film, Image, Layers, Monitor, Palette, Shapes, Volume2 } from '@lucide/vue';
-import type { Clip, ClipKind, MediaAsset } from '~/media/shared/composition-types';
+import type { Clip, ClipKind, MediaAsset } from '@beam/engine/shared/composition-types';
 
 const props = defineProps<{
   clip: Clip;

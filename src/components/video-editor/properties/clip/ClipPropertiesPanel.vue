@@ -9,10 +9,10 @@ import Button from '~/ui/button/Button.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import TimelineClickEmptyState from '~/components/video-editor/properties/clip/TimelineClickEmptyState.vue';
 import { RotateCcw } from '@lucide/vue';
-import type { NormalizedTransform } from '~/media/shared/composition-types';
+import type { NormalizedTransform } from '@beam/engine/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import CameraLayoutPanel from '../camera/CameraLayoutPanel.vue';
-import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
+import { isSplitCameraLayout } from '@beam/engine/shared/camera-layout-types';
 const { t } = useTranslate('ClipPropertiesPanel');
 const props = defineProps<{
   hideLayout?: boolean;

@@ -1,6 +1,6 @@
 import type { ScreenshotState } from '~/api/types/screenshot';
-import type { Canvas2DContext } from '~/types/canvas';
-import { renderCompositedLayer } from '../composition/render-composited-layer';
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
+import { renderCompositedLayer } from '@beam/runtime/composition/render-composited-layer';
 import { drawScreenshotLayer } from './screenshot-layer-render';
 import { screenshotLayers } from './screenshot-layers';
 import type { ScreenshotRenderAssets } from './screenshot-types';

@@ -13,7 +13,7 @@ import {
   DEFAULT_PHONE_FRAME_GRADIENT,
   type ColorGradient,
   type PhoneFrameFill,
-} from '~/media/shared/color-fill-types';
+} from '@beam/engine/shared/color-fill-types';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('BorderAndFrameControls');

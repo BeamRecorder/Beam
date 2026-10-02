@@ -1,11 +1,11 @@
 import type { Component, ComputedRef, InjectionKey, Ref } from 'vue';
 import type { TimelineElementKind } from '../timeline/timeline-element-types';
 import type { useClipComposition } from '../composables/useClipComposition';
-import type { MediaAsset, ShapeClip, ColorClip } from '~/media/shared/composition-types';
+import type { MediaAsset, ShapeClip, ColorClip } from '@beam/engine/shared/composition-types';
 import type { LayerThumbnail } from '../screenshot/composition/thumbnails/thumbnail-types';
 import type { CommandPaletteItem } from '~/ui/command-palette/command-palette-types';
 import type { ScreenshotState, ScreenshotDocument } from '~/api/types/screenshot';
-import type { CursorPackDescriptor } from '~/api/types/cursor-pack';
+import type { CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import type { useProjectZoom } from '../composables/useProjectZoom';
 
 export type EditorSearchGroup = 'insert' | 'navigation' | 'selection' | 'setting' | 'action';

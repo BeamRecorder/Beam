@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch, type CSSProperties } from 'vue';
 import { TriangleAlert } from '@lucide/vue';
-import type { CaptionClip } from '~/media/shared/composition-types';
+import type { CaptionClip } from '@beam/engine/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const props = defineProps<{

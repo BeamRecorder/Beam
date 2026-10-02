@@ -1,4 +1,4 @@
-import { HIGHLIGHT_DEFAULTS } from '~/media/shared/highlight-defaults';
+import { HIGHLIGHT_DEFAULTS } from '@beam/engine/shared/highlight-defaults';
 import type { ProjectEditorState } from '~/api/types/capture-api';
 import {
   isAudioClip,
@@ -8,11 +8,11 @@ import {
   type CaptionStyle,
   type Clip,
   type VisualClip,
-} from '~/media/shared/composition-types';
-import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { isCameraFramingPreset, isCameraLayoutPreset } from '~/media/shared/camera-layout-types';
-import { normalizeClipTransitions } from '~/media/shared/clip-transitions';
-import { normalizeOutputCanvas } from '../canvas/output-canvas';
+} from '@beam/engine/shared/composition-types';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { isCameraFramingPreset, isCameraLayoutPreset } from '@beam/engine/shared/camera-layout-types';
+import { normalizeClipTransitions } from '@beam/engine/shared/clip-transitions';
+import { normalizeOutputCanvas } from '@beam/engine/layout/output-canvas';
 import {
   normalizeZoomMotionBlur,
   normalizeZoomProjection,
@@ -22,8 +22,8 @@ import {
   DEFAULT_ZOOM_TILT_HORIZONTAL,
   DEFAULT_ZOOM_TILT_VERTICAL,
   type ZoomElement,
-} from '../zoom/zoom-types';
-import { normalizeCursorAutoHideSettings, normalizeCursorMotionSettings } from '~/api/types/cursor-settings';
+} from '@beam/engine/zoom/zoom-types';
+import { normalizeCursorAutoHideSettings, normalizeCursorMotionSettings } from '@beam/engine/capture/cursor-settings';
 import type { EditorPreferenceDefaults, VisualClipDefaults } from './editor-default-types';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;

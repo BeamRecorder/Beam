@@ -1,11 +1,11 @@
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import {
   COMPOSITION_SCHEMA_VERSION,
   type AudioClip,
   type ClipComposition,
   type MediaAsset,
   type VisualClip,
-} from '~/media/shared/composition-types';
+} from '@beam/engine/shared/composition-types';
 
 export const cloneComposition = (value: ClipComposition): ClipComposition =>
   JSON.parse(JSON.stringify(value)) as ClipComposition;

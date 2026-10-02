@@ -2,12 +2,12 @@ import { triggerPointer } from '../../../../../../tests/support/pointer';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { nextTick, reactive } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { BACKGROUND_GRADIENTS } from '../../../composables/backgroundCatalog';
 import {
-  BACKGROUND_GRADIENTS,
   type BackgroundMedia,
   type BackgroundMediaGroup,
   type BackgroundValue,
-} from '../../../composables/backgroundCatalog';
+} from '@beam/engine/shared/background-types';
 import CanvasPanel from '../CanvasPanel.vue';
 import AddTileButton from '../../../../ui/button/AddTileButton.vue';
 import Tooltip from '~/ui/tooltip/Tooltip.vue';

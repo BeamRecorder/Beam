@@ -1,4 +1,4 @@
-import { isVisualClip, type Clip } from '~/media/shared/composition-types';
+import { isVisualClip, type Clip } from '@beam/engine/shared/composition-types';
 
 export function selectedClipNames(clips: readonly Clip[], freezeFrameName: string): string[] {
   return clips

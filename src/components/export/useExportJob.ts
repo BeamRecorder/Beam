@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue';
 import { exportWithMediabunny } from './mediabunny/exporter';
-import type { ExportProgress, ExportRequest, ExportResult } from './export-types';
-import type { ExportDiagnostics } from './export-diagnostics-types';
+import type { ExportProgress, ExportRequest, ExportResult } from '@beam/encoder/export-types';
+import type { ExportDiagnostics } from '@beam/encoder/export-diagnostics-types';
 import { tNamespace } from '../../i18n';
 
 const $t = tNamespace('exporter');

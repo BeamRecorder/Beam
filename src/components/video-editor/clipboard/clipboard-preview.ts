@@ -1,9 +1,9 @@
 import type { ToastPreview } from '~/ui/toast/toastStore';
-import type { ColorFill } from '~/media/shared/color-fill-types';
-import type { CaptionClip, Clip, ShapeClip } from '~/media/shared/composition-types';
+import type { ColorFill } from '@beam/engine/shared/color-fill-types';
+import type { CaptionClip, Clip, ShapeClip } from '@beam/engine/shared/composition-types';
 import type { ScreenshotLayerClipboard } from '../screenshot/screenshot-layer-clipboard-types';
 import type { TimelineClipboardEntry, TimelineClipboardItem } from '../timeline/composables/timeline-clipboard-types';
-import { isShapeKind, shapeDefinition } from '~/media/shared/shape-catalog';
+import { isShapeKind, shapeDefinition } from '@beam/engine/shared/shape-catalog';
 
 const xml = (value: unknown) =>
   String(value)

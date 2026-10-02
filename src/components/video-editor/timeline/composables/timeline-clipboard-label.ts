@@ -1,5 +1,5 @@
-import type { CaptionClip, Clip, MediaAsset } from '~/media/shared/composition-types';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import type { CaptionClip, Clip, MediaAsset } from '@beam/engine/shared/composition-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type { TimelineClipboardDescriptor } from './timeline-clipboard-types';
 
 const MAX_CAPTION_LABEL_LENGTH = 72;

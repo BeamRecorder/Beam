@@ -2,7 +2,7 @@ import { enableAutoUnmount, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import WatermarkControls from '../WatermarkControls.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
-import { DEFAULT_WATERMARK, type WatermarkSettings } from '../../../canvas/output-canvas';
+import { DEFAULT_WATERMARK, type WatermarkSettings } from '@beam/engine/layout/output-canvas';
 
 enableAutoUnmount(afterEach);
 const controls = (value: Partial<WatermarkSettings> = {}) =>

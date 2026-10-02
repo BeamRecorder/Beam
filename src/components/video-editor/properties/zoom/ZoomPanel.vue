@@ -13,7 +13,7 @@ import type {
   ZoomDepth,
   ZoomElement,
   ZoomMotionBlurSettings,
-} from '~/components/video-editor/zoom/zoom-types';
+} from '@beam/engine/zoom/zoom-types';
 import {
   DEFAULT_ZOOM_TILT_HORIZONTAL,
   DEFAULT_ZOOM_TILT_VERTICAL,
@@ -22,7 +22,7 @@ import {
   normalizeZoomTiltAxis,
   normalizeZoomTiltIntensity,
   normalizeZoomTiltPreset,
-} from '~/components/video-editor/zoom/zoom-types';
+} from '@beam/engine/zoom/zoom-types';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('ZoomPanel');

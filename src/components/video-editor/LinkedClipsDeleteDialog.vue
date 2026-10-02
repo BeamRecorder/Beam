@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { Check, Trash2 } from '@lucide/vue';
 import Button from '~/components/ui/button/Button.vue';
 import Dialog from '~/components/ui/dialog/Dialog.vue';
-import type { Clip, ClipKind, MediaAsset } from '~/media/shared/composition-types';
+import type { Clip, ClipKind, MediaAsset } from '@beam/engine/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import LinkedClipPreviewPlayer from './LinkedClipPreviewPlayer.vue';
 import LinkedClipThumbnail from './LinkedClipThumbnail.vue';

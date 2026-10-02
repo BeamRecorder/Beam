@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { cameraTiltForControls } from './composition-camera';
-import { projectPerspectivePoint } from './perspective-projection';
-import type { ZoomTiltPreviewControls } from './zoom-tilt-preset-types';
+import { cameraTiltForControls } from '@beam/engine/zoom/composition-camera';
+import { projectPerspectivePoint } from '@beam/engine/zoom/perspective-projection';
+import type { ZoomTiltPreviewControls } from '@beam/engine/zoom/zoom-tilt-preset-types';
 
 const props = defineProps<{ preset: ZoomTiltPreviewControls; compact?: boolean }>();
 const geometry = computed(() => {

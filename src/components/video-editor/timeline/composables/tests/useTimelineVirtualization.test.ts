@@ -2,9 +2,9 @@ import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h, reactive, ref } from 'vue';
 import { useTimelineVirtualization, useVirtualTimelineItems } from '../useTimelineVirtualization';
-import { videoClip } from '~/media/playback/tests/media-playback-engine.fixtures';
+import { videoClip } from '@beam/runtime/playback/tests/media-playback-engine.fixtures';
 import type { TimelineVirtualRow } from '../timeline-virtualization-types';
-import type { ZoomElement } from '../../../zoom/zoom-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 
 afterEach(() => vi.restoreAllMocks());
 

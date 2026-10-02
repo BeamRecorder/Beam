@@ -10,8 +10,8 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import AdvancedButton from '~/ui/button/AdvancedButton.vue';
 import ZoomTiltControls from '../ZoomTiltControls.vue';
 import ZoomTiltPreview from '../../../zoom/ZoomTiltPreview.vue';
-import { ZOOM_TILT_PRESETS, applyZoomTiltPreset } from '../../../zoom/zoom-tilt-presets';
-import type { ZoomElement } from '../../../zoom/zoom-types';
+import { ZOOM_TILT_PRESETS, applyZoomTiltPreset } from '@beam/engine/zoom/zoom-tilt-presets';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 
 enableAutoUnmount(afterEach);
 const zoom: ZoomElement = {

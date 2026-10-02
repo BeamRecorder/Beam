@@ -37,7 +37,7 @@ const waveformWorkerState = vi.hoisted(() => {
   return { FakeWaveformWorker, instances };
 });
 
-vi.mock('~/media/playback/waveform.worker?worker', () => ({
+vi.mock('@beam/runtime/playback/waveform.worker?worker', () => ({
   default: waveformWorkerState.FakeWaveformWorker,
 }));
 

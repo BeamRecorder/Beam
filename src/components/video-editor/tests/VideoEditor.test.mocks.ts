@@ -1,12 +1,12 @@
 import { vi } from 'vitest';
-import type { CompositionSnapshot } from '~/components/export/export-types';
-import type { ClipComposition, NormalizedCrop, ShapeClip } from '~/media/shared/composition-types';
-import { COMPOSITION_SCHEMA_VERSION, isAudioClip, isVisualClip } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { setCrop, setVolume } from '~/components/video-editor/composition/engine/clip-engine';
-import { DEFAULT_SHAPE_LAYER_STYLE } from '~/media/shared/shape-layer-style';
-import type { AddVisualElementRequest } from '~/components/video-editor/composition/visual-element-types';
-import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
+import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
+import type { ClipComposition, NormalizedCrop, ShapeClip } from '@beam/engine/shared/composition-types';
+import { COMPOSITION_SCHEMA_VERSION, isAudioClip, isVisualClip } from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { setCrop, setVolume } from '@beam/engine/commands/clip-engine';
+import { DEFAULT_SHAPE_LAYER_STYLE } from '@beam/engine/shared/shape-layer-style';
+import type { AddVisualElementRequest } from '@beam/engine/composition/visual-element-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 
 const { editorState } = vi.hoisted(() => ({ editorState: { store: undefined as any, previewInitiallySettled: true } }));
 const capture = vi.hoisted(() => ({
@@ -220,11 +220,14 @@ vi.mock('../composables/useVideoEditor', async () => {
         trimClipEdge: vi.fn(),
         moveClipTo: vi.fn(),
         splitSelectedClip: vi.fn(),
+        holdClip: vi.fn(),
         deleteSelectedClip: vi.fn(),
         reorderVisualClip: vi.fn(),
         reorderCaptionClip: vi.fn(),
         updateSelectedAppearance: vi.fn(),
         updateSelectedTransform: vi.fn(),
+        updateSelectedTransforms: vi.fn(),
+        updateSelectedBlur: vi.fn(),
         previewSelectedTransform: vi.fn(),
         updateSelectedCrop: vi.fn((crop: NormalizedCrop) => {
           let next = composition.value;
@@ -238,6 +241,9 @@ vi.mock('../composables/useVideoEditor', async () => {
         }),
         updateSelectedCameraLayout: vi.fn(),
         updateSelectedCameraFraming: vi.fn(),
+        updateSelectedCameraSplitRatio: vi.fn(),
+        updateSelectedCameraSplitPadding: vi.fn(),
+        updateSelectedWebcamReactToZoom: vi.fn(),
         updateSelectedMirrored: vi.fn(),
         updateSelectedMirroredY: vi.fn(),
         updateSelectedRate: vi.fn(),
@@ -279,6 +285,8 @@ vi.mock('../composables/useVideoEditor', async () => {
         addZoomAtTime: vi.fn(),
         generateZooms: vi.fn(),
         updateZoom: vi.fn(),
+        updateZoomMotionBlur: vi.fn(),
+        updateZoomAutoFollow: vi.fn(),
         trimZoomEdge: vi.fn(),
         moveZoom: vi.fn(),
         pasteZoomAtTime,
@@ -526,8 +534,41 @@ vi.mock('../properties/PropertiesPanel.vue', async () => {
         'preview:clip-crop',
         'reset:clip-transform',
         'unlock:selection',
+        'preview:cursor-selection',
+        'update:blur-percent',
+        'update:zoom-motion-blur',
+        'update:zoom-auto-follow',
+        'delete:system-audio',
+        'delete:mic-audio',
+        'normalize:audio',
+        'reset:audio-normalization',
+        'update:blur',
+        'update:clip-is-mirrored-y',
+        'update:clip-corner-radius',
+        'corner-radius-interaction',
+        'update:clip-shadow',
+        'update:camera-layout',
+        'update:camera-framing',
+        'update:camera-split-ratio',
+        'update:camera-split-padding',
+        'update:webcam-react-to-zoom',
+        'back-to-hud',
+        'update:cursor-selection',
+        'update:cursor-size',
+        'update:cursor-color',
+        'update:enable-shadow',
+        'update:shadow-blur',
+        'update:shadow-color',
+        'update:shadow-direction',
+        'update:click-effects',
+        'update:motion',
+        'update:auto-hide',
+        'update:volume',
+        'update:is-system-audio-enabled',
+        'update:is-mic-audio-enabled',
       ],
-      setup(props, { emit }) {
+      setup(props, { emit, expose }) {
+        expose({ openCanvasTransitions: vi.fn() });
         const compositionWithTransform = (x: number) => {
           const composition = props.composition as ClipComposition;
           return {
@@ -624,6 +665,15 @@ vi.mock('../canvas/EditorCanvas.vue', async () => {
         'deselect:zoom',
         'update:is-playing',
         'update:current-time',
+        'select:cursor',
+        'update:cursor-size',
+        'update:clip-transforms',
+        'preview:shape-rotation',
+        'update:shape-rotation',
+        'request:crop',
+        'update:caption-text',
+        'caption-editing-start',
+        'caption-editing-end',
       ],
       setup(props, { emit, expose }) {
         expose({
@@ -761,6 +811,23 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
         'clipboard:copied',
         'lock:selection',
         'remove:gap',
+        'select:zoom-track',
+        'select:item',
+        'select:box',
+        'select:all',
+        'delete:zoom',
+        'delete:selection',
+        'hold:clip',
+        'preview:zooms',
+        'move:selection',
+        'paste:error',
+        'preview:canvas',
+        'update:canvas',
+        'open:canvas-transition',
+        'normalize:audio',
+        'update:current-time',
+        'update:is-playing',
+        'update:zoom-level',
       ],
       setup(props, { emit }) {
         const composition = props.composition as ClipComposition;

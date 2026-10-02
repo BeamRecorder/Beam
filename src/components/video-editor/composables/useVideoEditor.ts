@@ -9,15 +9,16 @@ import { useVideoPlayer } from './useVideoPlayer';
 import { useCursorReplacer } from '../properties/cursor/useCursorReplacer';
 import { useClipComposition } from './useClipComposition';
 import { useProjectZoom } from './useProjectZoom';
-import { normalizeZoomAutoFollow, normalizeZoomMotionBlur } from '../zoom/zoom-types';
+import { normalizeZoomAutoFollow, normalizeZoomMotionBlur } from '@beam/engine/zoom/zoom-types';
 import { useProjectEditorState } from './useProjectEditorState';
-import type { EditorExportSource } from '../../export/export-types';
-import { createCompositionSnapshot } from '../../export/composition/snapshot';
-import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '../canvas/output-canvas';
-import { compositionDurationMs } from '~/media/shared';
-import { isAudioClip, type AudioClip, type AudioRole } from '~/media/shared/composition-types';
-import { setVolume } from '../composition/engine/clip-engine';
-import { createDefaultCursorMotionSettings } from '../../../api/types/cursor-settings';
+import type { EditorExportSource } from '@beam/encoder/export-types';
+import { createCompositionSnapshot } from '@beam/runtime/rendering/snapshot';
+import { projectFontSources } from '../text/project-font-sources';
+import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
+import { compositionDurationMs } from '@beam/runtime/shared/index';
+import { isAudioClip, type AudioClip, type AudioRole } from '@beam/engine/shared/composition-types';
+import { setVolume } from '@beam/engine/commands/clip-engine';
+import { createDefaultCursorMotionSettings } from '@beam/engine/capture/cursor-settings';
 import { compositionPlaybackSignature } from './composition-playback-signature';
 import { useToastStore } from '~/ui/toast/toastStore';
 import { normalizeEditorPreferenceDefaults } from './editor-defaults';
@@ -168,6 +169,7 @@ export function useVideoEditor(options: {
       zoomMotionBlur: normalizeZoomMotionBlur(zoomState.zoomMotionBlur?.value),
       zoomAutoFollow: normalizeZoomAutoFollow(zoomState.zoomAutoFollow?.value),
       composition: compositionState.composition.value,
+      fontSources: projectFontSources(compositionState.composition.value),
       cursorSettings: {
         enabled: cursor.enabled.value,
         selection: cursor.selection.value,

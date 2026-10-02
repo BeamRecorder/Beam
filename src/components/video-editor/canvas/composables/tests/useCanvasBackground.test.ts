@@ -2,7 +2,7 @@ import { defineComponent, h, nextTick, ref, type Ref } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCanvasBackground } from '../useCanvasBackground';
-import type { BackgroundValue } from '../../../composables/backgroundCatalog';
+import type { BackgroundValue } from '@beam/engine/shared/background-types';
 
 const playback = vi.hoisted(() => {
   const loadCompositionImpl = { current: null as (() => Promise<void>) | null };
@@ -53,8 +53,10 @@ const playback = vi.hoisted(() => {
   return { FakePlaybackEngine, instances, loadCompositionImpl };
 });
 
-vi.mock('~/media/playback', () => ({ MediaPlaybackEngine: playback.FakePlaybackEngine }));
-vi.mock('~/media/shared', () => ({
+vi.mock('@beam/runtime/browser', () => ({
+  createBrowserPlaybackEngine: (options: { previewQuality?: string }) => new playback.FakePlaybackEngine(options),
+}));
+vi.mock('@beam/runtime/shared/index', () => ({
   inspectMedia: vi.fn(async () => ({ metadata: { durationSeconds: 4 } })),
   mediaSourceDescriptor: vi.fn((asset: { id: string; kind: string; name: string; src: string }) => ({
     assetId: asset.id,
@@ -282,7 +284,7 @@ describe('useCanvasBackground', () => {
   });
 
   it('reports decode failures and disposes the playback engine on unmount', async () => {
-    const inspect = await import('~/media/shared');
+    const inspect = await import('@beam/runtime/shared/index');
     vi.mocked(inspect.inspectMedia).mockRejectedValueOnce(new Error('unsupported video'));
     selected.value = video('broken.mp4');
     await flushPromises();

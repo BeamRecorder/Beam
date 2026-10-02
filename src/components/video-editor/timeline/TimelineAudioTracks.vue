@@ -4,7 +4,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import TimelineCanvasClips from './TimelineCanvasClips.vue';
 import TimelineGapButtons from './TimelineGapButtons.vue';
 import WaveformCanvas from './waveform/WaveformCanvas.vue';
-import type { TimelineGap } from '../composition/timeline-lock-types';
+import type { TimelineGap } from '@beam/engine/composition/timeline-lock-types';
 import type { TimelineAudioLane, TimelineAudioTracksProps } from './timeline-audio-tracks-types';
 import { createTimelineLinkedClipNameResolver } from './timeline-linked-clips';
 import { useTimelineVirtualWindow, useVirtualTimelineItems } from './composables/useTimelineVirtualization';

@@ -5,7 +5,7 @@ import {
   type ColorClip,
   type ShapeClip,
   type VisualClip,
-} from '~/media/shared/composition-types';
+} from '@beam/engine/shared/composition-types';
 import { pointInsideEllipse, pointInsideRect, pointInsideSquircle } from './layer-transform-geometry';
 
 type HitTestClip = VisualClip | ColorClip | ShapeClip | BlurClip | CaptionClip;

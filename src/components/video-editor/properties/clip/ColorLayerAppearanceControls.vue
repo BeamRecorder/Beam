@@ -8,14 +8,14 @@ import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import ShadowDirectionGroup from '../cursor/ShadowDirectionGroup.vue';
-import type { ColorClip } from '~/media/shared/composition-types';
-import { normalizeColorLayerStyle } from '~/media/shared/color-layer-style';
+import type { ColorClip } from '@beam/engine/shared/composition-types';
+import { normalizeColorLayerStyle } from '@beam/engine/shared/color-layer-style';
 import type {
   ColorLayerShadowDirection,
   ColorLayerShadowMode,
   ColorLayerShadowSize,
   ColorLayerStyle,
-} from '~/media/shared/color-layer-style-types';
+} from '@beam/engine/shared/color-layer-style-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useClipCornerRadius } from './useClipCornerRadius';
 
