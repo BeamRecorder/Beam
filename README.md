@@ -50,6 +50,8 @@
 - 📦 **Direct Export**
   Export straight to MP4 or WebM, up to 4K, with simple bitrate presets and fast rendering.
 
+See [GPU drivers and WebCodecs export](docs/dev/gpu-drivers.md) for hardware prerequisites, installation guidance and verified platform limits.
+
 Have ideas or feature requests? Open an issue or join the discussion on [Discord](https://discord.gg/6Q6v2xUCB).
 
 ## 🌍 Availability

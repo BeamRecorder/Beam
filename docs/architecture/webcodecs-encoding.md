@@ -16,8 +16,12 @@ Reports expose the selected hardware preference, bitrate mode, hardware check (`
 
 Chromium documents Linux activation in its [VA-API guide](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/docs/gpu/vaapi.md). Its [encoder factory](https://chromium.googlesource.com/chromium/src/+/152.0.7977.130/media/gpu/gpu_video_encode_accelerator_factory.cc) selects the platform backends.
 
+See [GPU driver installation and verification](../dev/gpu-drivers.md) for platform requirements, Linux packages and the distinction between codec discovery and successful frame encoding.
+
 ## Linux verification on 2026-10-02
 
 On Electron 44.5.1 / Chromium 152, Intel Arc MTL, Mesa 26.2.3 and Fedora's Intel media driver 26.2.4, enabling the feature changes Chromium's video encoding status from disabled to enabled. Hardware AVC configuration is unavailable. Hardware VP9 and AV1 accept constant bitrate configuration but fail actual buffer allocation; the probe detects these failures before starting the export. Direct GPU-canvas encoding without that check crashes Chromium in its native-buffer handling.
 
 The resulting software WebCodecs path encoded all 30 test frames at 1920×1080 in both MP4 and WebM without a GPU-process crash. This verifies safe selection on this machine; it does not establish a hardware export speedup or Windows/macOS hardware results.
+
+Further isolated tests used RPM Fusion's full Intel media driver 26.1.5, Chromium 154 and Chromium OS minigbm. The full driver exposes H.264 hardware CBR configuration, and minigbm permits a native NV12 allocation refused by system Mesa, but actual GPU-canvas encoding still fails. These alternatives were not installed system-wide or integrated into Beam; the driver guide records the test conditions and limits.
