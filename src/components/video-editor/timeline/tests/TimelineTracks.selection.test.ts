@@ -274,19 +274,6 @@ describe('TimelineTracks selection', () => {
       right: 1_000,
       bottom: 200,
     } as DOMRect);
-    const setRect = (element: Element, left: number, top: number, width: number, height: number) => {
-      vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({
-        left,
-        top,
-        width,
-        height,
-        right: left + width,
-        bottom: top + height,
-      } as DOMRect);
-    };
-    setRect(mounted!.get('[data-timeline-clip-id="screen-clip"]').element, 100, 20, 120, 30);
-    setRect(mounted!.get('[data-timeline-clip-id="webcam-clip"]').element, 250, 20, 120, 30);
-    setRect(mounted!.get('[data-timeline-zoom-id="zoom-1"]').element, 160, 80, 180, 30);
 
     await triggerPointer(mounted!.get('.timeline-selection-surface'), 'pointerdown', {
       button: 2,
@@ -294,13 +281,14 @@ describe('TimelineTracks selection', () => {
       clientX: 50,
       clientY: 10,
     });
-    window.dispatchEvent(pointerEventWithId('pointermove', 13, 400, 130, 2));
+    // Model geometry, not mounted DOM rectangles: three 56px visual rows, then the zoom lane.
+    window.dispatchEvent(pointerEventWithId('pointermove', 13, 400, 200, 2));
     await flushPromises();
     expect(mounted!.emitted('select:box')).toEqual([
-      [{ clipIds: ['webcam-clip', 'screen-clip'], zoomIds: ['zoom-1'] }],
+      [{ clipIds: ['image-clip', 'webcam-clip', 'screen-clip'], zoomIds: ['zoom-1'] }],
     ]);
 
-    window.dispatchEvent(pointerEventWithId('pointerup', 13, 400, 130, 2));
+    window.dispatchEvent(pointerEventWithId('pointerup', 13, 400, 200, 2));
   });
 
   it('keeps an existing multi-selection when opening a selected clip context menu', async () => {

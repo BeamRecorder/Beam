@@ -6,6 +6,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Export diagnostics include bounded engine measurements with median/p95 timings for decode, rendering, encoder waits and separate GPU submission/execution stages.
 - Double-clicking empty Studio canvas space opens the grouped Add menu, while double-clicking clips still opens text editing or cropping.
 - Video editor Accessibility settings can require double-clicks to add zooms, captions and elements from empty timeline tracks, preventing accidental additions.
 - Recorder and region settings can record the real system cursor on Windows, macOS and Linux while keeping automatic zooms. These recordings start with Beam's custom cursor overlay disabled; a toggle in the Cursor header can enable it again, and the choice is saved with the project and used for exports.
@@ -21,6 +22,15 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Timeline artwork now uses viewport-sized canvas lanes instead of per-clip DOM artwork, while keeping accessible editing controls and GPU audio waveforms.
+- Blur, frost, pixelation and highlight effects share retained GPU filtering in preview and export, with bounded masks and ordered backdrop groups.
+- Scrubbing requests preceding keyframes while moving, then refines to the exact image on release or after a short pause. Timeline drag previews retain sparse timing patches, and history/save observers avoid repeated whole-document serialization and deep traversal.
+- Dense runs of eligible pixel-aligned opaque rectangles batch on the GPU in preview and export, preserving native video/effect ordering and full-resolution output. Complex and fractional shapes retain their original painter.
+- Video-heavy previews and exports batch adaptive shadow color sampling and reuse eligible full-resolution geometric media shadows. Shape effects retain compact blur masks and reusable paths; editor and export teardown releases their GPU surfaces.
+- Virtualized timeline lanes, clips, captions, zooms and ruler ticks in both scroll directions; offscreen audio lanes no longer start waveform decoding. Large selections remain available across scrolling.
+- Large clipboard selections now paste in one validated transaction. Drag previews avoid repeated deep reactivity scans, and fragment collision limits use indexed lane boundaries.
+- Identical video copies share decoded frames in preview and export without merging their visual layers. Full-resolution blurs combine backdrop cropping and filtering, and reuse bounded feathered masks without GPU allocation churn in oversized scenes.
+- Shape-heavy Studio projects share identical element thumbnails and reuse timeline metadata and indexed camera lookups to reduce preview, playback and scrubbing work without lowering preview quality.
 - Editor settings now use clear categories, consistent option typography and aligned category icons. Update actions sit together with a shorter Changelog label; About groups community links and system information, and developer tools no longer sit inside nested boxes.
 - Recorder and editor settings share clearer Light/Dark/System previews, with brighter dark previews and one sliding selection indicator instead of an extra orange checkmark. The redundant language description is removed and Theme replaces Theme Mode.
 - Theme Advanced contains colors and style. Scaling keeps the global UI scale visible and puts per-area overrides behind its own Advanced button.
@@ -65,6 +75,9 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Horizontal timeline scrolling keeps clip artwork, titles, trim handles and audio waveforms aligned; audio titles stay above waveforms and zoom badges retain the theme's text color.
+- VP9/AV1 exports on Linux use buffered software decoding to prevent decoder flush failures. Multi-video scenes retain every current image instead of evicting visible layers when the seek-history cache fills.
+- Imported VP9 videos, timeline thumbnails and video posters use buffered software decoding on Linux to prevent hardware decoder failures during playback and seeking.
 - Shape and zoom selections no longer prevent manual navigation to Clip.
 - Spotlight no longer flashes on each typed letter or scales its text when opening; panel height changes animate smoothly.
 - Tooltips preserve intentional line breaks, including the perspective explanation.

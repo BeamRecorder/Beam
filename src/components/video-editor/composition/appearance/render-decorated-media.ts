@@ -7,6 +7,7 @@ import type { Canvas2DContext } from '~/types/canvas';
 import { resolvePhoneFrameGeometry } from './frame-geometry';
 import { drawPhoneFrameFill } from './phone-frame-fill';
 import { DEFAULT_PHONE_FRAME_FILL } from '~/media/shared/color-fill-types';
+import { drawCachedMediaShadow } from './media-shadow-cache';
 
 export const DEFAULT_CLIP_APPEARANCE: ClipAppearance = {
   cornerRadius: 'sm',
@@ -258,13 +259,33 @@ export function drawDecoratedMedia(ctx: Canvas2DContext, options: DecoratedMedia
       ctx.restore();
       sourceDrawn = true;
     } else {
-      ctx.save();
-      applyClipShadow(ctx, appearance, options.source, options.sourceRect, options.shadowScale);
-      clipOutsideMedia(ctx, outer, outerRadius, mask, shadowBlur);
-      ctx.fillStyle = appearance.frame !== 'none' ? appearance.frameColor : '#000000';
-      mediaPath(ctx, outer, outerRadius, mask);
-      ctx.fill();
-      ctx.restore();
+      const color =
+        appearance.shadowMode === 'adaptive'
+          ? adaptiveShadowColor(options.source, options.sourceRect, appearance.shadowColor)
+          : appearance.shadowColor;
+      const style = { ...appearance, shadowMode: 'solid' as const, shadowColor: color };
+      const fill = appearance.frame !== 'none' ? appearance.frameColor : '#000000';
+      const paint = (target: Canvas2DContext) => {
+        target.save();
+        applyClipShadow(target, style, undefined, undefined, options.shadowScale);
+        clipOutsideMedia(target, outer, outerRadius, mask, shadowBlur);
+        target.fillStyle = fill;
+        mediaPath(target, outer, outerRadius, mask);
+        target.fill();
+        target.restore();
+      };
+      if (
+        // Scaled appearance edge guards interact with subpixel backdrop masks;
+        // keep native painting rather than changing those clip-edge pixels.
+        appearanceScale !== 1 ||
+        !drawCachedMediaShadow(ctx, {
+          rect: outer,
+          bleed: shadowBlur * 4 + 2,
+          identity: JSON.stringify([outerRadius, mask, shadowBlur, color, appearance.shadowDirection, fill]),
+          paint,
+        })
+      )
+        paint(ctx);
     }
   }
   const title = appearance.frameTitle.trim() || options.title;

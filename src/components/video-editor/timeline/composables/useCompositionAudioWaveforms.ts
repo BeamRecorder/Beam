@@ -74,6 +74,7 @@ const visibleRequest = (
 export function useCompositionAudioWaveforms(
   composition: () => ClipComposition,
   viewport: () => AudioWaveformViewport,
+  visibleClipIds: () => ReadonlySet<string> | null = () => null,
 ) {
   const pressure = useMediaProcessingReporter('waveforms', WAVEFORM_WORKER_COUNT);
   const rawSlices = ref<Record<string, StoredWaveformSlice>>({});
@@ -130,8 +131,10 @@ export function useCompositionAudioWaveforms(
 
   const requests = computed(() => {
     const assets = new Map(composition().assets.map((asset) => [asset.id, asset]));
+    const visible = visibleClipIds();
     return composition().clips.flatMap((clip) => {
       if (!isAudioClip(clip) || !clip.enabled) return [];
+      if (visible && !visible.has(clip.id)) return [];
       const request = visibleRequest(clip, assets.get(clip.assetId) ?? null, viewport());
       return request ? [request] : [];
     });

@@ -8,13 +8,13 @@ export function useEditorCanvasInvalidation(options: {
   resetCamera: () => void;
 }) {
   watch(() => options.props.outputCanvas, options.renderOnce, { deep: true });
+  // Studio replaces immutable composition snapshots, including sparse gesture previews.
   watch(
     () => options.props.composition,
     () => {
       options.resetCamera();
       options.renderOnce();
     },
-    { deep: true },
   );
   watch(
     () => [options.props.currentTime, options.props.frameVersion] as const,

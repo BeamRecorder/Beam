@@ -6,6 +6,12 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { DEFAULT_OUTPUT_CANVAS } from '../canvas/output-canvas';
 import { renderShapeTimelinePreview } from './shape-timeline-preview';
 import type { ShapeTimelinePreviewProps } from './shape-timeline-preview-types';
+import {
+  SHAPE_PREVIEW_FIELDS,
+  shapePreviewSignature,
+  shapePreviewCache,
+  retainShapePreviewCache,
+} from './shape-preview-cache';
 
 const props = withDefaults(defineProps<ShapeTimelinePreviewProps>(), {
   canvas: () => DEFAULT_OUTPUT_CANVAS,
@@ -18,6 +24,7 @@ let mounted = false;
 let frame = 0;
 let revision = 0;
 let signature = '';
+const releaseCache = retainShapePreviewCache();
 
 const draw = async () => {
   frame = 0;
@@ -25,9 +32,13 @@ const draw = async () => {
   const clip = props.clip;
   const canvas = props.canvas;
   try {
-    await loadElementFonts([clip]);
+    const value = await shapePreviewCache.get(signature, async (isCurrent) => {
+      await loadElementFonts([clip]);
+      if (!isCurrent()) throw new Error('The element preview was cancelled.');
+      return renderShapeTimelinePreview(clip, canvas);
+    });
     if (!mounted || current !== revision) return;
-    preview.value = renderShapeTimelinePreview(clip, canvas);
+    preview.value = value;
     error.value = '';
   } catch (cause) {
     if (!mounted || current !== revision) return;
@@ -35,13 +46,7 @@ const draw = async () => {
   }
 };
 const schedule = () => {
-  const next = JSON.stringify([
-    ...appearanceFields.map((field) => props.clip[field]),
-    props.clip.transform.width,
-    props.clip.transform.height,
-    props.canvas.width,
-    props.canvas.height,
-  ]);
+  const next = shapePreviewSignature(props.clip, props.canvas);
   // Composition edits clone clips, including otherwise unchanged text and paths.
   if (next === signature) return;
   signature = next;
@@ -49,30 +54,9 @@ const schedule = () => {
   if (mounted && !frame) frame = requestAnimationFrame(() => void draw());
 };
 // Placement, clip timing and timeline zoom do not change the element's artwork.
-const appearanceFields = [
-  'family',
-  'preset',
-  'fill',
-  'fillColor',
-  'borderColor',
-  'borderWidth',
-  'cornerRadius',
-  'arrowThickness',
-  'arrowHeadSize',
-  'rotation',
-  'opacityEnabled',
-  'opacity',
-  'backdropBlur',
-  'shadowEnabled',
-  'shadowColor',
-  'shadowBlur',
-  'shadowDirection',
-  'text',
-  'drawing',
-] as const;
 watch(
   [
-    ...appearanceFields.map((field) => () => props.clip[field]),
+    ...SHAPE_PREVIEW_FIELDS.map((field) => () => props.clip[field]),
     () => props.clip.transform.width,
     () => props.clip.transform.height,
     () => props.canvas.width,
@@ -88,6 +72,7 @@ onUnmounted(() => {
   mounted = false;
   revision += 1;
   cancelAnimationFrame(frame);
+  releaseCache();
 });
 </script>
 

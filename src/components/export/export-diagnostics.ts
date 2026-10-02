@@ -5,6 +5,7 @@ import type {
 } from './export-diagnostics-types';
 import type { ExportProgress, ExportRequest } from './export-types';
 import { bitrateFor } from './export-presets';
+import { formatEngineMetrics } from '~/media/performance/engine-metrics-report';
 
 type ReportStatus = 'running' | 'completed' | 'failed' | 'cancelled';
 
@@ -210,6 +211,7 @@ export function buildBeamExportReport(options: {
     `Video Key Frames: ${runtime?.keyFrameCount ?? 'Unknown'}`,
     `Encoded Video Bytes: ${bytes(runtime?.encodedVideoBytes)}`,
     `Dominant Measured Bottleneck: ${dominantBottleneck(runtime)}`,
+    ...(runtime?.engine ? ['', '--- Engine Stages ---', ...formatEngineMetrics(runtime.engine)] : []),
     ...(cleanedError(options.error) ? ['', '--- Error ---', cleanedError(options.error)!] : []),
     '===================',
   ].join('\n');

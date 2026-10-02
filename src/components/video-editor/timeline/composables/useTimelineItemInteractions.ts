@@ -1,29 +1,11 @@
 import { recordingMoveSelection } from '../../composition/recording-sidecars';
 import { selectionHasLocks } from '../../composition/timeline-locks';
-import { computed, onBeforeUnmount, type ComputedRef } from 'vue';
+import { computed, onBeforeUnmount } from 'vue';
+import type { TimelineItemKind, TimelineSelectionIntent } from './timeline-tracks-types';
+import type { TimelineItemInteractions, TimelineItemInteractionsOptions } from './timeline-item-interactions-types';
 import type { Clip } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../../zoom/zoom-types';
-import type {
-  TimelineItemKind,
-  TimelineSelectionIntent,
-  TimelineTracksEmits,
-  TimelineTracksProps,
-} from './timeline-tracks-types';
-
-interface TimelineItemInteractionsOptions {
-  props: TimelineTracksProps;
-  emit: TimelineTracksEmits;
-  beginClipMove: (event: PointerEvent, clip: Clip) => void;
-  beginZoomMove: (event: PointerEvent, zoom: ZoomElement) => void;
-}
-
-export interface TimelineItemInteractions {
-  selectedClipIdSet: ComputedRef<Set<string>>;
-  selectedZoomIdSet: ComputedRef<Set<string>>;
-  selectItem: (kind: TimelineItemKind, id: string, event: MouseEvent) => void;
-  startClipMove: (event: PointerEvent, clip: Clip) => void;
-  startZoomMove: (event: PointerEvent, zoom: ZoomElement) => void;
-}
+export type { TimelineItemInteractions } from './timeline-item-interactions-types';
 
 const selectionIntent = (event: MouseEvent): TimelineSelectionIntent =>
   event.shiftKey ? 'range' : event.ctrlKey || event.metaKey ? 'toggle' : 'replace';
@@ -49,6 +31,8 @@ export function useTimelineItemInteractions(options: TimelineItemInteractionsOpt
             : [],
       ),
   );
+  const selectedClipList = computed(() => [...selectedClipIdSet.value]);
+  const selectedZoomList = computed(() => [...selectedZoomIdSet.value]);
   let suppressClick = false;
   let stopTracking = () => {};
   const trackDrag = (start: PointerEvent) => {
@@ -125,5 +109,13 @@ export function useTimelineItemInteractions(options: TimelineItemInteractionsOpt
     options.beginZoomMove(event, zoom);
   };
 
-  return { selectedClipIdSet, selectedZoomIdSet, selectItem, startClipMove, startZoomMove };
+  return {
+    selectedClipIdSet,
+    selectedZoomIdSet,
+    selectedClipList,
+    selectedZoomList,
+    selectItem,
+    startClipMove,
+    startZoomMove,
+  };
 }

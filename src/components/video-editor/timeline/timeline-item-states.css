@@ -1,4 +1,8 @@
 /* Imported with component scoping by each timeline renderer. Keep track states here. */
+.canvas-clip-target {
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
 .timeline-clip,
 .visual-content,
 .visual-add-indicator {
@@ -31,10 +35,10 @@
   background: color-mix(in srgb, var(--timeline-track-color) var(--timeline-lane-tint), transparent);
 }
 :is(
-  .timeline-clip,
-  .cursor-zoom-indicator,
-  .annotation-indicator,
-  .canvas-transition-zone,
+  .timeline-clip:not(.canvas-clip-target),
+  .cursor-zoom-indicator:not(.canvas-clip-target),
+  .annotation-indicator:not(.canvas-clip-target),
+  .canvas-transition-zone:not(.canvas-clip-target),
   .visual-add-indicator,
   .voiceover-draft-clip
 ) {
@@ -52,7 +56,7 @@
 :is(.timeline-clip, .cursor-zoom-indicator, .annotation-indicator):active {
   cursor: grabbing;
 }
-:is(.timeline-clip, .cursor-zoom-indicator, .annotation-indicator, .canvas-transition-zone).selected {
+:is(.timeline-clip:not(.canvas-clip-target), .cursor-zoom-indicator:not(.canvas-clip-target), .annotation-indicator:not(.canvas-clip-target), .canvas-transition-zone:not(.canvas-clip-target)).selected {
   border: 2px solid var(--color-timeline-selection);
   outline: none;
 }

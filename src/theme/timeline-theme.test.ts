@@ -10,7 +10,6 @@ const itemStates = readFileSync(resolve(timelineRoot, 'timeline-item-states.css'
 const items = ['timeline-clip', 'cursor-zoom-indicator', 'annotation-indicator', 'canvas-transition-zone'];
 const renderers = [
   'TimelineTracks.vue',
-  'TimelineClip.vue',
   'TimelineAudioTracks.vue',
   'TimelineCaptionTracks.vue',
   'TimelineCanvasTransitionTrack.vue',
@@ -42,6 +41,53 @@ describe('shared timeline appearance', () => {
     expect(compiled.errors).toEqual([]);
     expect(compiled.code).toContain('[data-v-timeline-test]');
     expect(itemStates).not.toMatch(/:deep|::v-deep|!important/);
+  });
+
+  it('keeps canvas semantic controls transparent while preserving token-backed focus and trim limits', () => {
+    const path = resolve(timelineRoot, 'TimelineCanvasClip.vue');
+    const { descriptor } = parse(readFileSync(path, 'utf8'));
+    const compiled = compileStyle({ source: descriptor.styles[0]!.content, filename: path, id: 'data-v-controls', scoped: true });
+    expect(compiled.errors).toEqual([]);
+    expect(compiled.code).toContain('background: transparent');
+    expect(compiled.code).toContain('var(--color-timeline-selection)');
+    expect(compiled.code).toContain('var(--color-error)');
+    expect(compiled.code).toMatch(/\.canvas-clip-target\.disabled[^{}]*\{\s*opacity:\s*var\(--timeline-disabled-opacity\)/);
+    expect(descriptor.styles.every(style => style.scoped)).toBe(true);
+    expect(compiled.code).not.toMatch(/:deep|::v-deep|!important/);
+  });
+
+  it.each(items)('%s canvas controls retain the theme foreground and exact border-box hit geometry', (item) => {
+    const controls = declarationsFor(`${item} canvas-clip-target`);
+    expect(controls.get('color')).toBe('var(--text-primary)');
+    expect(controls.get('box-sizing')).toBe('border-box');
+    expect(controls.has('background')).toBe(false);
+  });
+
+  it('clips waveform pixels inside their semantic clip while painting the audio title as a separate foreground', () => {
+    const path = resolve(timelineRoot, 'TimelineCanvasClip.vue');
+    const { descriptor } = parse(readFileSync(path, 'utf8'));
+    const style = compileStyle({ source: descriptor.styles[0]!.content, filename: path, id: 'data-v-audio', scoped: true });
+    const declarations = (classes: string) => {
+      const element = document.createElement('span');
+      element.className = classes;
+      element.setAttribute('data-v-audio', '');
+      const values = new Map<string, string>();
+      style.rawResult!.root.walkRules(rule => {
+        if (rule.parent?.type === 'atrule' || !element.matches(rule.selector)) return;
+        rule.walkDecls(declaration => {
+          values.set(declaration.prop, declaration.value);
+        });
+      });
+      return values;
+    };
+    expect(declarations('waveform').get('overflow')).toBe('hidden');
+    expect(declarations('waveform').get('inset')).toBe('0');
+    const label = declarations('audio-clip-label');
+    expect(label.get('position')).toBe('absolute');
+    expect(label.get('color')).toBe('var(--color-timeline-media-label-text)');
+    expect(label.get('background')).toBe('var(--color-timeline-media-label)');
+    expect(label.get('overflow')).toBe('hidden');
+    expect(label.get('pointer-events')).toBe('none');
   });
 
   it.each(renderers)('%s imports the same scoped states without local state overrides', (filename) => {

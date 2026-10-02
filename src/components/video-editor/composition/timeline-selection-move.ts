@@ -4,6 +4,7 @@ import { selectionHasLocks } from './timeline-locks';
 import type { ClipComposition } from '~/media/shared/composition-types';
 import { visualMoveDeltaBounds } from './engine/visual-track-layout';
 import type { TimelineSelectionMoveSource, TimelineSelectionMoveResult } from './timeline-edit-types';
+import { prepareTimingPreview } from './timing-preview';
 
 export const expandLinkedClipIds = (composition: ClipComposition, clipIds: readonly string[]): string[] => {
   const ids = new Set(clipIds);
@@ -31,6 +32,8 @@ export const prepareTimelineSelectionMove = (options: TimelineSelectionMoveSourc
     ...options.zoomElements.filter((zoom) => zoomIds.has(zoom.id)).map((zoom) => zoom.startMs),
   ];
   const hasClips = options.composition.clips.some((clip) => clipIds.has(clip.id));
+  const movingClips = options.composition.clips.filter((clip) => clipIds.has(clip.id));
+  const previewClips = prepareTimingPreview(options.composition, clipIds);
   const hasZooms = options.zoomElements.some((zoom) => zoomIds.has(zoom.id));
   const locked = selectionHasLocks(options.composition, options.zoomElements, selection);
   const minimumStart = starts.length ? Math.min(...starts) : 0;
@@ -51,18 +54,13 @@ export const prepareTimelineSelectionMove = (options: TimelineSelectionMoveSourc
     if (deltaMs === 0) return (previous = original);
     previous = {
       composition: hasClips
-        ? {
-            ...options.composition,
-            clips: options.composition.clips.map((clip) =>
-              clipIds.has(clip.id)
-                ? {
-                    ...clip,
-                    ...(mediaOwners.get(clip.id) ? { recordingClipId: mediaOwners.get(clip.id) } : {}),
-                    timelineStartMs: clip.timelineStartMs + deltaMs,
-                  }
-                : clip,
-            ),
-          }
+        ? previewClips(
+            movingClips.map((clip) => ({
+              ...clip,
+              ...(mediaOwners.get(clip.id) ? { recordingClipId: mediaOwners.get(clip.id) } : {}),
+              timelineStartMs: clip.timelineStartMs + deltaMs,
+            })),
+          )
         : options.composition,
       zoomElements: hasZooms
         ? options.zoomElements.map((zoom) =>

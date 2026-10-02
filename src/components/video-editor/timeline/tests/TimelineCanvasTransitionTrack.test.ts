@@ -7,6 +7,7 @@ const transitions: ClipTransitions = {
   entry: { preset: { kind: 'fade' }, durationMs: 200 },
   exit: { preset: { kind: 'blur' }, durationMs: 300 },
 };
+const geometry = { width: 1000, viewport: { left: 0, top: 0, width: 1000, height: 320 } };
 
 const pointerEvent = (type: string, clientX: number) => {
   const event = new Event(type, { bubbles: true, cancelable: true });
@@ -25,7 +26,8 @@ afterEach(() => {
 describe('TimelineCanvasTransitionTrack', () => {
   it('renders accessible entry and exit zones with preset and duration labels', () => {
     wrapper = mount(TimelineCanvasTransitionTrack, {
-      props: { mode: 'track', transitions, durationMs: 1_000 },
+      props: { ...geometry, mode: 'track', transitions, durationMs: 1_000 },
+      global: { stubs: { TimelineCanvasLane: true } },
     });
 
     const entry = wrapper.get('.canvas-transition-zone.entry');
@@ -42,9 +44,10 @@ describe('TimelineCanvasTransitionTrack', () => {
     expect(exit.attributes('style')).toContain('width: 30%');
   });
 
-  it('renders distinct easing curves for each edge and updates the path when easing power changes', async () => {
+  it('publishes independent easing curves to the canvas lane and updates their saved parameters', async () => {
     wrapper = mount(TimelineCanvasTransitionTrack, {
       props: {
+        ...geometry,
         mode: 'track',
         durationMs: 1_000,
         transitions: {
@@ -52,15 +55,11 @@ describe('TimelineCanvasTransitionTrack', () => {
           exit: { preset: { kind: 'fade' }, durationMs: 300, easingPower: 5 },
         },
       },
+      global: { stubs: { TimelineCanvasLane: true } },
     });
-
-    const entryPath = wrapper.get('.canvas-transition-zone.entry svg.timeline-transition-curve path.curve-line');
-    const exitPath = wrapper.get('.canvas-transition-zone.exit svg.timeline-transition-curve path.curve-line');
-    const entryD = entryPath.attributes('d');
-    const exitD = exitPath.attributes('d');
-    expect(entryD).toBeTruthy();
-    expect(exitD).toBeTruthy();
-    expect(entryD).not.toBe(exitD);
+    const lane = wrapper.getComponent({ name: 'TimelineCanvasLane' });
+    expect(lane.props('items')).toMatchObject([{ edge: 'entry', transition: { easingPower: 1 } }, { edge: 'exit', transition: { easingPower: 5 } }]);
+    expect(wrapper.find('svg.timeline-transition-curve').exists()).toBe(false);
 
     await wrapper.setProps({
       transitions: {
@@ -68,12 +67,13 @@ describe('TimelineCanvasTransitionTrack', () => {
         exit: { preset: { kind: 'fade' }, durationMs: 300, easingPower: 5 },
       },
     });
-    expect(entryPath.attributes('d')).not.toBe(entryD);
+    expect(lane.props('items')).toMatchObject([{ edge: 'entry', transition: { easingPower: 5 } }, { edge: 'exit', transition: { easingPower: 5 } }]);
   });
 
   it('previews an entry resize and commits it only on pointerup', async () => {
     wrapper = mount(TimelineCanvasTransitionTrack, {
-      props: { mode: 'track', transitions, durationMs: 1_000 },
+      props: { ...geometry, mode: 'track', transitions, durationMs: 1_000 },
+      global: { stubs: { TimelineCanvasLane: true } },
     });
     const track = wrapper.get('.canvas-track-content').element;
     vi.spyOn(track, 'getBoundingClientRect').mockReturnValue({
@@ -110,7 +110,8 @@ describe('TimelineCanvasTransitionTrack', () => {
 
   it('emits the selected edge when either zone is clicked', async () => {
     wrapper = mount(TimelineCanvasTransitionTrack, {
-      props: { mode: 'track', transitions, durationMs: 1_000 },
+      props: { ...geometry, mode: 'track', transitions, durationMs: 1_000 },
+      global: { stubs: { TimelineCanvasLane: true } },
     });
 
     await wrapper.get('.canvas-transition-zone.entry').trigger('click');

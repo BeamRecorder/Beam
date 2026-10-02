@@ -47,20 +47,23 @@ let state!: ReturnType<typeof useCompositionAudioWaveforms>;
 const mountComposable = (
   value = composition(),
   viewport: AudioWaveformViewport = { startSeconds: 0, endSeconds: 2, pixelsPerSecond: 1_350 },
+  visibility: ReadonlySet<string> | null = null,
 ) => {
   const compositionRef = ref(value);
   const viewportRef = ref<AudioWaveformViewport>(viewport);
+  const visibleClipIds = ref(visibility);
   const Harness = defineComponent({
     setup() {
       state = useCompositionAudioWaveforms(
         () => compositionRef.value,
         () => viewportRef.value,
+        () => visibleClipIds.value,
       );
       return () => h('div');
     },
   });
   wrapper = mount(Harness);
-  return { compositionRef, viewportRef };
+  return { compositionRef, viewportRef, visibleClipIds };
 };
 
 const workerPool = () => {
@@ -81,6 +84,26 @@ afterEach(() => {
 });
 
 describe('useCompositionAudioWaveforms', () => {
+  it('does not start waveform decoding for vertically unmounted audio lanes', async () => {
+    mountComposable(twoAudioClipComposition(), undefined, new Set());
+    await flushPromises();
+    expect(waveformWorkerState.instances).toHaveLength(0);
+  });
+  it('requests only the newly visible audio lane when scrolling vertically', async () => {
+    const { visibleClipIds } = mountComposable(twoAudioClipComposition(), undefined, new Set(['clip']));
+    await flushPromises();
+    expect(extractRequests(workerPool(), 'clip')).toHaveLength(3);
+    expect(extractRequests(workerPool(), 'clip-2')).toHaveLength(0);
+    visibleClipIds.value = new Set(['clip-2']);
+    await flushPromises();
+    await vi.waitFor(() => expect(extractRequests(workerPool(), 'clip-2')).toHaveLength(3));
+  });
+  it('supports standalone waveforms without a row visibility filter', async () => {
+    mountComposable(twoAudioClipComposition());
+    await flushPromises();
+    expect(extractRequests(workerPool(), 'clip')).toHaveLength(3);
+    expect(extractRequests(workerPool(), 'clip-2')).toHaveLength(3);
+  });
   it('dispatches three direct refined segments with contiguous ranges and no coarse preview', async () => {
     mountComposable();
     await flushPromises();

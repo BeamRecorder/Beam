@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import type { ShapeClip } from '~/media/shared/composition-types';
@@ -15,6 +15,7 @@ vi.mock('../shape-timeline-preview', () => ({
 }));
 
 import ShapeTimelinePreview from '../ShapeTimelinePreview.vue';
+enableAutoUnmount(afterEach);
 
 const shapeClip = (overrides: Partial<ShapeClip> = {}): ShapeClip => ({
   id: 'shape-1',
@@ -62,8 +63,7 @@ let nextFrameId = 1;
 let frames = new Map<number, FrameRequestCallback>();
 
 const settle = async () => {
-  await Promise.resolve();
-  await Promise.resolve();
+  await flushPromises();
   await nextTick();
 };
 
@@ -103,6 +103,7 @@ describe('ShapeTimelinePreview', () => {
       .mockImplementationOnce(() => new Promise<void>((resolve) => (resolveLatest = resolve)));
     dependencies.renderShapeTimelinePreview
       .mockReturnValueOnce('data:image/png;base64,first')
+      .mockReturnValueOnce('data:image/png;base64,stale')
       .mockReturnValueOnce('data:image/png;base64,latest');
     const firstClip = shapeClip();
     const wrapper = mount(ShapeTimelinePreview, { props: { clip: firstClip } });
@@ -126,13 +127,14 @@ describe('ShapeTimelinePreview', () => {
     await wrapper.setProps({ clip: latestClip });
     resolveStale();
     await settle();
-    expect(dependencies.renderShapeTimelinePreview).toHaveBeenCalledTimes(1);
+    expect(dependencies.renderShapeTimelinePreview).toHaveBeenCalledTimes(2);
+    expect(wrapper.get('.shape-preview').attributes('style')).toContain('data:image/png;base64,first');
 
     await runFrame();
     expect(dependencies.loadElementFonts).toHaveBeenLastCalledWith([latestClip]);
     resolveLatest();
     await settle();
-    expect(dependencies.renderShapeTimelinePreview).toHaveBeenCalledTimes(2);
+    expect(dependencies.renderShapeTimelinePreview).toHaveBeenCalledTimes(3);
     expect(dependencies.renderShapeTimelinePreview).toHaveBeenLastCalledWith(latestClip, DEFAULT_OUTPUT_CANVAS);
     expect(wrapper.get('.shape-preview').attributes('style')).toContain('data:image/png;base64,latest');
     wrapper.unmount();
@@ -218,6 +220,32 @@ describe('ShapeTimelinePreview', () => {
     expect(wrapper.get('.preview-status').attributes('aria-label')).toBe('Preview unavailable');
     expect(wrapper.get('.preview-status').attributes('title')).toBe('The font could not be loaded.');
     expect(dependencies.renderShapeTimelinePreview).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+  it('shares rendering and font loading between copied clips even when one subscriber unmounts', async () => {
+    let resolveFonts!: () => void;
+    dependencies.loadElementFonts.mockImplementation(() => new Promise<void>((resolve) => (resolveFonts = resolve)));
+    const first = mount(ShapeTimelinePreview, { props: { clip: shapeClip() } });
+    const second = mount(ShapeTimelinePreview, {
+      props: { clip: shapeClip({ id: 'copy', timelineStartMs: 2000, trackId: 'other-track' }) },
+    });
+    await runFrame();
+    await runFrame();
+    expect(dependencies.loadElementFonts).toHaveBeenCalledOnce();
+    first.unmount();
+    resolveFonts();
+    await settle();
+    expect(dependencies.renderShapeTimelinePreview).toHaveBeenCalledOnce();
+    expect(second.get('.shape-preview').attributes('style')).toContain('data:image/png;base64,ready');
+    second.unmount();
+  });
+  it('refreshes the miniature when the fill is enabled or disabled', async () => {
+    const clip = shapeClip({ fillEnabled: false });
+    const wrapper = mount(ShapeTimelinePreview, { props: { clip } });
+    await runFrame();
+    await wrapper.setProps({ clip: { ...clip, fillEnabled: true } });
+    await runFrame();
+    expect(dependencies.renderShapeTimelinePreview).toHaveBeenCalledTimes(2);
     wrapper.unmount();
   });
 });

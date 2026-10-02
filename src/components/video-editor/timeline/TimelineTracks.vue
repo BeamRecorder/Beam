@@ -1,16 +1,13 @@
 <script setup lang="ts">
 import ReorderGroup from '~/ui/transitions/ReorderGroup.vue';
-import TimelineLockOverlay from './TimelineLockOverlay.vue';
-import { Lock } from '@lucide/vue';
 import TimelineGapButtons from './TimelineGapButtons.vue';
-import TimelineClip from './TimelineClip.vue';
-import { timelineSpanStyle } from './timeline-clip-geometry';
+import TimelineCanvasClips from './TimelineCanvasClips.vue';
 import TimelineSelectionBox from './TimelineSelectionBox.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useTimelineTracks } from './composables/useTimelineTracks';
 import { useTimelineContextMenu } from './composables/useTimelineContextMenu';
 import ContextMenu from '~/components/ui/context-menu/ContextMenu.vue';
-import { computed, type ComponentPublicInstance, type Ref } from 'vue';
+import { computed, watchEffect, type ComponentPublicInstance, type Ref } from 'vue';
 import TimelineCaptionTracks from './TimelineCaptionTracks.vue';
 import type { TimelineTracksEmits, TimelineTracksProps } from './composables/timeline-tracks-types';
 import TimelineCanvasTransitionTrack from './TimelineCanvasTransitionTrack.vue';
@@ -18,14 +15,15 @@ import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
 import { DEFAULT_OUTPUT_CANVAS } from '../canvas/output-canvas';
 import { useTimelineClipboardShortcuts } from './composables/useTimelineClipboardShortcuts';
 import TimelineTrackHeaders from './TimelineTrackHeaders.vue';
-import TimelineZoomProjectionBadge from './TimelineZoomProjectionBadge.vue';
+import TimelineZoomTrack from './TimelineZoomTrack.vue';
+import { useTimelineVirtualization } from './composables/useTimelineVirtualization';
+import { createTimelineRows } from './composables/create-timeline-rows';
 import TimelineAddMenu from './TimelineAddMenu.vue';
 import { useTimelineItemInteractions } from './composables/useTimelineItemInteractions';
 import TimelineAudioTracks from './TimelineAudioTracks.vue';
-import { linkedClipNames } from './timeline-linked-clips';
+import { createTimelineLinkedClipNameResolver } from './timeline-linked-clips';
+import { useTimelineVisualLabels } from './composables/useTimelineVisualLabels';
 const { t } = useTranslate('TimelineTracks');
-const { t: tCanvas } = useTranslate('CanvasPanel');
-const { t: tToolbar } = useTranslate('TimelineToolbar');
 const props = withDefaults(defineProps<TimelineTracksProps>(), {
   isSnappingEnabled: true,
   includeAudioInExport: true,
@@ -48,6 +46,7 @@ const {
   importedAudioTracks,
   assetFor,
   audioWaveforms,
+  waveformClipIds,
   audioWaveformErrors,
   audioWaveformStatus,
   tracksScrollRef,
@@ -55,6 +54,7 @@ const {
   tracksViewportRef,
   ticksAreaRef,
   rulerLayoutWidth,
+  timelineViewport,
   tracksWidthStyle,
   playheadStyle,
   rulerSeconds,
@@ -101,28 +101,22 @@ const setSidebarScrollElement = bindDivRef(sidebarScrollRef);
 const setTracksScrollElement = bindDivRef(tracksScrollRef);
 const setTracksViewportElement = bindDivRef(tracksViewportRef);
 const setTicksAreaElement = bindDivRef(ticksAreaRef);
-const { selectedClipIdSet, selectedZoomIdSet, selectItem, startClipMove, startZoomMove } = useTimelineItemInteractions({
+const {
+  selectedClipIdSet,
+  selectedZoomIdSet,
+  selectedClipList,
+  selectedZoomList,
+  selectItem,
+  startClipMove,
+  startZoomMove,
+} = useTimelineItemInteractions({
   props,
   emit,
   beginClipMove,
   beginZoomMove,
 });
-const { t: tHighlight } = useTranslate('Highlight');
-const visualElementLabel = (track: (typeof visualTracks.value)[number]) => {
-  const kind = visualKindFor(track);
-  if (kind === 'highlight') return tHighlight('title');
-  return kind === 'color'
-    ? tCanvas('color')
-    : kind === 'shape'
-      ? tCanvas('shapesAndArrows')
-      : kind === 'blur'
-        ? t('blur')
-        : kind === 'image'
-          ? tCanvas('image')
-          : '';
-};
-const visualAddLabel = (track: (typeof visualTracks.value)[number]) =>
-  `${tToolbar('add')} ${visualElementLabel(track)}`;
+const linkedNames = computed(() => createTimelineLinkedClipNameResolver(props.composition));
+const visualAddLabel = useTimelineVisualLabels();
 const {
   contextMenuState,
   contextMenuItems,
@@ -141,9 +135,9 @@ const {
   composition: computed(() => props.composition),
   zoomElements: computed(() => props.zoomElements),
   selectedClipId: computed(() => props.selectedClipId),
-  selectedClipIds: computed(() => [...selectedClipIdSet.value]),
+  selectedClipIds: selectedClipList,
   selectedZoomId: computed(() => props.selectedZoomId),
-  selectedZoomIds: computed(() => [...selectedZoomIdSet.value]),
+  selectedZoomIds: selectedZoomList,
   assetFor,
   emit,
   t,
@@ -179,22 +173,59 @@ const exportTimelineState = computed(() => {
   };
 });
 const canvasTransitions = computed(() => props.canvas.transitions ?? EMPTY_CLIP_TRANSITIONS);
+const virtual = useTimelineVirtualization({
+  scroll: tracksScrollRef,
+  durationMs: layoutDurationMs,
+  width: rulerLayoutWidth,
+  viewport: timelineViewport,
+  rows: () =>
+    createTimelineRows({
+      visualTracks: visualTracks.value,
+      zooms: props.zoomElements,
+      keyboard: keyboardCaptionClips.value,
+      textLayers: textCaptionLayers.value,
+      system: systemAudioClips.value,
+      microphone: microphoneClips.value,
+      voiceovers: voiceoverClips.value,
+      importedAudio: importedAudioTracks.value,
+      canvasTransition: Boolean(canvasTransitions.value.entry || canvasTransitions.value.exit),
+      voiceoverDraft: Boolean(props.voiceoverDraft),
+    }),
+});
+const visualTrackIndex = computed(() => new Map(visualTracks.value.map((track) => [`visual:${track.id}`, track])));
+watchEffect(() => {
+  waveformClipIds.value = new Set(
+    virtual.rows.value
+      .filter((row) => row.kind === 'audio')
+      .flatMap((row) => virtual.visibleClips(row.clips).map((clip) => clip.id)),
+  );
+});
+const visibleVisualTracks = computed(() =>
+  virtual.rows.value.flatMap((row) => {
+    const track = visualTrackIndex.value.get(row.id);
+    return track ? [track] : [];
+  }),
+);
 const updateCanvasTransitions = (transitions: NonNullable<typeof props.canvas.transitions>) =>
   emit('update:canvas', { ...props.canvas, transitions });
 const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.transitions> | null) =>
   emit('preview:canvas', transitions ? { ...props.canvas, transitions } : null);
 </script>
 <template>
-  <div class="timeline-root" @wheel="handleWheel">
+  <div class="timeline-root" @wheel="handleWheel" @pointerdown.capture="virtual.captureInteraction">
     <div class="timeline-sidebar">
       <div class="sidebar-ruler-spacer">
         <TimelineAddMenu @add:element="emit('add:element', $event)" />
       </div>
       <div :ref="setSidebarScrollElement" class="sidebar-tracks-viewport">
-        <div class="sidebar-tracks-stack">
+        <div class="sidebar-tracks-stack" :style="virtual.stackStyle.value">
           <TimelineCanvasTransitionTrack
-            v-if="canvasTransitions.entry || canvasTransitions.exit"
+            v-if="(canvasTransitions.entry || canvasTransitions.exit) && virtual.visibleIds.value.has('canvas')"
+            data-timeline-row-id="canvas"
+            :style="virtual.rowStyle('canvas')"
             mode="sidebar"
+            :viewport="timelineViewport"
+            :width="rulerLayoutWidth"
             :transitions="canvasTransitions"
             :duration-ms="layoutDurationMs"
             @open="emit('open:canvas-transition', $event)"
@@ -212,8 +243,8 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             :include-audio-in-export="includeAudioInExport"
             :dragged-track-id="draggedTrackId"
             :dragged-caption-id="draggedCaptionId"
-            :selected-clip-ids="[...selectedClipIdSet]"
-            :selected-zoom-ids="[...selectedZoomIdSet]"
+            :selected-clip-ids="selectedClipList"
+            :selected-zoom-ids="selectedZoomList"
             :select-track="selectTrack"
             :select-zoom-track="selectZoomTrack"
             :begin-reorder="beginReorder"
@@ -277,32 +308,40 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
         </div>
         <TimelineSelectionBox
           class="tracks-stack"
-          :selection="{ clipIds: [...selectedClipIdSet], zoomIds: [...selectedZoomIdSet] }"
+          :style="virtual.stackStyle.value"
+          :get-targets="virtual.selectionTargets"
+          :selection="{ clipIds: selectedClipList, zoomIds: selectedZoomList }"
           @start="closeContextMenu"
           @select="emit('select:box', $event)"
         >
           <TimelineCanvasTransitionTrack
-            v-if="canvasTransitions.entry || canvasTransitions.exit"
+            v-if="(canvasTransitions.entry || canvasTransitions.exit) && virtual.visibleIds.value.has('canvas')"
+            data-timeline-row-id="canvas"
+            :style="virtual.rowStyle('canvas')"
             mode="track"
+            :viewport="timelineViewport"
+            :width="rulerLayoutWidth"
             :transitions="canvasTransitions"
             :duration-ms="layoutDurationMs"
             @open="emit('open:canvas-transition', $event)"
             @preview="previewCanvasTransitions"
             @update="updateCanvasTransitions"
           />
-          <ReorderGroup :order="visualTracks.map((track) => track.id)" class="visual-tracks-group">
+          <ReorderGroup :order="visibleVisualTracks.map((track) => track.id)" class="visual-tracks-group">
             <div
-              v-for="track in visualTracks"
+              v-for="track in visibleVisualTracks"
               :key="track.id"
               class="track-row visual-track"
               :data-track-id="track.id"
+              :data-timeline-row-id="`visual:${track.id}`"
+              :style="virtual.rowStyle(`visual:${track.id}`)"
               :class="{ disabled: !track.clips.some((clip) => clip.enabled), dragging: draggedTrackId === track.id }"
               @contextmenu="openTrackContextMenu($event, 'visual', track.id)"
             >
               <div
                 class="track-content visual-content"
                 :class="{ 'addable-content': visualKindFor(track) }"
-                :title="visualKindFor(track) ? visualAddLabel(track) : undefined"
+                :title="visualKindFor(track) ? visualAddLabel(visualKindFor(track)) : undefined"
                 @pointerdown.stop
                 @mousemove="visualKindFor(track) && hoverAt($event, track)"
                 @mouseleave="visualKindFor(track) && leaveTrack(track)"
@@ -320,7 +359,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                     )
                   "
                 >
-                  + {{ visualAddLabel(track) }}
+                  + {{ visualAddLabel(visualKindFor(track)) }}
                 </div>
                 <TimelineGapButtons
                   v-if="track.clips.some((clip) => ['screen', 'video', 'image', 'webcam'].includes(clip.kind))"
@@ -332,106 +371,59 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                   :moving="isMoving || activeTrimState !== null"
                   @remove="emit('remove:gap', $event)"
                 />
-                <TimelineClip
-                  v-for="clip in track.clips"
-                  :key="clip.id"
-                  :clip="displayedClip(clip)"
+                <TimelineCanvasClips
+                  :clips="virtual.visibleClips(track.clips)"
+                  :displayed-clip="displayedClip"
                   :canvas="canvas"
-                  :asset="assetFor(clip)"
-                  :duration="layoutDurationMs / 1000"
-                  :timeline-width-px="rulerLayoutWidth"
+                  :asset-for="assetFor"
+                  :duration-ms="layoutDurationMs"
+                  :width="rulerLayoutWidth"
+                  :viewport="timelineViewport"
                   :thumbnail-slots="thumbnailSlots"
-                  :defer-thumbnail-requests="isWheelZooming || activeTrimState !== null || isMoving"
-                  :defer-waveform-draw="isWheelZooming || isMoving"
-                  :selected="selectedClipIdSet.has(clip.id)"
-                  :linked-clip-names="linkedClipNames(composition, clip)"
-                  :trim-state="trimStateFor(clip.id)"
-                  :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
-                  @select="selectItem('clip', clip.id, $event)"
-                  @contextmenu="openClipContextMenu($event, clip)"
-                  @move="startClipMove($event, clip)"
-                  @trim="beginClipTrim($event.event, clip, $event.edge)"
+                  :defer-media="isWheelZooming || activeTrimState !== null || isMoving"
+                  :selected-ids="selectedClipIdSet"
+                  :linked-names="linkedNames"
+                  :trim-state-for="trimStateFor"
+                  :paste-id="recentPaste?.type === 'clip' ? recentPaste.id : undefined"
+                  @select="(event, clip) => selectItem('clip', clip.id, event)"
+                  @contextmenu="openClipContextMenu"
+                  @move="startClipMove"
+                  @trim="beginClipTrim"
                 />
               </div>
             </div>
           </ReorderGroup>
-          <div class="track-row cursor-track" @contextmenu="openTrackContextMenu($event, 'zoom')">
-            <div
-              class="track-content cursor-content"
-              :title="t('clickToAddZoom')"
-              @pointerdown.stop
-              @mousemove="hoverAt($event, 'zoom')"
-              @mouseleave="leaveTrack('zoom')"
-              @click.stop="addAt($event, 'zoom')"
-              @dblclick.stop="addAt($event, 'zoom')"
-            >
-              <div
-                v-if="hoverZoomTimeMs !== null"
-                class="cursor-zoom-indicator preview-ghost"
-                :style="percentageStyle(hoverZoomTimeMs, hoverZoomDurationMs)"
-              >
-                {{ t('addZoom') }}
-              </div>
-              <button
-                v-for="zoom in zoomElements"
-                :key="zoom.id"
-                type="button"
-                class="cursor-zoom-indicator"
-                :data-timeline-zoom-id="zoom.id"
-                :class="{
-                  selected: selectedZoomIdSet.has(zoom.id),
-                  'paste-arrival': recentPaste?.type === 'zoom' && recentPaste.id === zoom.id,
-                }"
-                :style="
-                  timelineSpanStyle(
-                    displayedZoom(zoom).startMs,
-                    displayedZoom(zoom).endMs - displayedZoom(zoom).startMs,
-                    layoutDurationMs / 1000,
-                    rulerLayoutWidth,
-                  )
-                "
-                @click.stop="selectItem('zoom', zoom.id, $event)"
-                @contextmenu.prevent.stop="openZoomContextMenu($event, zoom)"
-                @pointerdown="startZoomMove($event, zoom)"
-              >
-                <span
-                  class="trim-handle start"
-                  :title="t('trimStart')"
-                  @pointerdown.stop="beginZoomTrim($event, zoom, 'start')"
-                >
-                  <span v-if="trimStateFor(zoom.id)?.edge === 'start'" class="trim-side-badge"
-                    >{{ (trimStateFor(zoom.id)!.durationMs / 1000).toFixed(1) }}s</span
-                  >
-                </span>
-                <TimelineLockOverlay v-if="zoom.locked" />
-                <span class="zoom-clip-labels">
-                  <Lock v-if="zoom.locked" :size="12" :aria-label="t('locked')" />
-                  <TimelineZoomProjectionBadge :zoom="zoom" />
-                  <span class="clip-center-title zoom-title">
-                    {{ t('zoomTitle', { level: zoomScale(zoom.depth).toFixed(2) }) }}
-                  </span>
-                  <span class="zoom-meta-badge zoom-mode-badge">
-                    {{ zoom.mode === 'auto' ? t('zoomModeAuto') : t('zoomModeManual') }}
-                  </span>
-                </span>
-                <span
-                  class="trim-handle end"
-                  :title="t('trimEnd')"
-                  @pointerdown.stop="beginZoomTrim($event, zoom, 'end')"
-                >
-                  <span v-if="trimStateFor(zoom.id)?.edge === 'end'" class="trim-side-badge"
-                    >{{ (trimStateFor(zoom.id)!.durationMs / 1000).toFixed(1) }}s</span
-                  >
-                </span>
-              </button>
-            </div>
-          </div>
+          <TimelineZoomTrack
+            :viewport="timelineViewport"
+            :zoom-elements="zoomElements"
+            :selected-zoom-id-set="selectedZoomIdSet"
+            :recent-paste="recentPaste"
+            :hover-zoom-time-ms="hoverZoomTimeMs"
+            :hover-zoom-duration-ms="hoverZoomDurationMs"
+            :layout-duration-ms="layoutDurationMs"
+            :ruler-layout-width="rulerLayoutWidth"
+            :percentage-style="percentageStyle"
+            :displayed-zoom="displayedZoom"
+            :trim-state-for="trimStateFor"
+            :zoom-scale="zoomScale"
+            :open-track-context-menu="openTrackContextMenu"
+            :hover-at="hoverAt"
+            :leave-track="leaveTrack"
+            :add-at="addAt"
+            :select-item="selectItem"
+            :open-zoom-context-menu="openZoomContextMenu"
+            :start-zoom-move="startZoomMove"
+            :begin-zoom-trim="beginZoomTrim"
+          />
           <TimelineCaptionTracks
+            :viewport="timelineViewport"
+            :duration-ms="layoutDurationMs"
+            :width="rulerLayoutWidth"
             :keyboard-clips="keyboardCaptionClips"
             :text-layers="textCaptionLayers"
             :dragged-caption-id="draggedCaptionId"
             :selected-clip-id="selectedClipId"
-            :selected-clip-ids="[...selectedClipIdSet]"
+            :selected-clip-ids="selectedClipList"
             :hover-caption-time-ms="hoverCaptionTimeMs"
             :hover-caption-duration-ms="hoverCaptionDurationMs"
             :percentage-style="percentageStyle"
@@ -448,6 +440,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             @contextmenu:track="openTrackContextMenu($event, 'caption')"
           />
           <TimelineAudioTracks
+            :viewport="timelineViewport"
             :system-audio-clips="systemAudioClips"
             :microphone-clips="microphoneClips"
             :voiceover-clips="voiceoverClips"

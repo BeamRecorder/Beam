@@ -82,6 +82,10 @@ const openedInput = (track: unknown, duration = 10) => ({
   },
   dispose: vi.fn(),
 });
+const decodableTrack = (codec = 'avc') => ({
+  canDecode: vi.fn().mockResolvedValue(true),
+  getCodec: vi.fn().mockResolvedValue(codec),
+});
 
 beforeEach(() => {
   openMediaInput.mockReset();
@@ -95,7 +99,7 @@ afterEach(() => {
 
 describe('decodeVideoPoster', () => {
   it('decodes the middle poster position with requested dimensions and fit', async () => {
-    const track = { canDecode: vi.fn().mockResolvedValue(true) };
+    const track = decodableTrack();
     const opened = openedInput(track, 10);
     const outputBitmap = bitmap(320, 180);
     openMediaInput.mockResolvedValue(opened);
@@ -132,7 +136,7 @@ describe('decodeVideoPoster', () => {
   });
 
   it('uses an explicit timestamp and transfers ownership of the decoded bitmap', async () => {
-    const opened = openedInput({ canDecode: vi.fn().mockResolvedValue(true) });
+    const opened = openedInput(decodableTrack());
     const outputBitmap = bitmap(640, 360);
     const transferToImageBitmap = vi.fn().mockReturnValue(outputBitmap);
     openMediaInput.mockResolvedValue(opened);
@@ -185,7 +189,7 @@ describe('decodeVideoPoster', () => {
   });
 
   it('reports an absent decoded frame and disposes the input', async () => {
-    const opened = openedInput({ canDecode: vi.fn().mockResolvedValue(true) });
+    const opened = openedInput(decodableTrack());
     openMediaInput.mockResolvedValue(opened);
     sinkGetCanvas.mockResolvedValue(null);
 
@@ -196,11 +200,65 @@ describe('decodeVideoPoster', () => {
   });
 
   it('disposes the input when canvas decoding fails', async () => {
-    const opened = openedInput({ canDecode: vi.fn().mockResolvedValue(true) });
+    const opened = openedInput(decodableTrack());
     openMediaInput.mockResolvedValue(opened);
     sinkGetCanvas.mockRejectedValue(new Error('decoder failed'));
 
     await expect(decodeVideoPoster(descriptor)).rejects.toThrow('decoder failed');
+    expect(opened.dispose).toHaveBeenCalledOnce();
+  });
+
+  it.each(['vp9', 'av1'])('uses the buffered software decoder for Linux %s posters', async (codec) => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (X11; Linux x86_64)');
+    const track = decodableTrack(codec);
+    openMediaInput.mockResolvedValue(openedInput(track));
+    sinkGetCanvas.mockResolvedValue({
+      timestamp: 5,
+      duration: 0.04,
+      canvas: { transferToImageBitmap: () => bitmap() },
+    });
+
+    await decodeVideoPoster(descriptor);
+
+    expect(sinkConstructor).toHaveBeenCalledWith(
+      track,
+      expect.objectContaining({
+        decoderOptions: { hardwareAcceleration: 'prefer-software', optimizeForLatency: false },
+      }),
+    );
+  });
+
+  it('keeps the platform decoder defaults outside Linux and converts HTML canvases', async () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Macintosh)');
+    const track = decodableTrack('vp9');
+    const canvas = document.createElement('canvas');
+    const convert = vi.fn().mockResolvedValue(bitmap());
+    vi.stubGlobal('createImageBitmap', convert);
+    const opened = openedInput(track, 0);
+    openMediaInput.mockResolvedValue(opened);
+    sinkGetCanvas.mockResolvedValue({ timestamp: 0, duration: 0.04, canvas });
+    try {
+      await decodeVideoPoster(descriptor, { timestampSeconds: 30 });
+      expect(sinkConstructor).toHaveBeenCalledWith(track, {
+        width: undefined,
+        height: undefined,
+        fit: undefined,
+        poolSize: 1,
+      });
+      expect(sinkGetCanvas).toHaveBeenCalledWith(0);
+      expect(convert).toHaveBeenCalledWith(canvas);
+      expect(opened.dispose).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('disposes the input when inspecting the decoder codec fails', async () => {
+    const track = decodableTrack();
+    track.getCodec.mockRejectedValue(new Error('codec unavailable'));
+    const opened = openedInput(track);
+    openMediaInput.mockResolvedValue(opened);
+    await expect(decodeVideoPoster(descriptor)).rejects.toThrow('codec unavailable');
     expect(opened.dispose).toHaveBeenCalledOnce();
   });
 });

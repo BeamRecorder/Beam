@@ -13,6 +13,11 @@ import {
   webcamSettingsForAppearance,
 } from '../../video-editor/composition/webcam/webcam-zoom';
 import { drawDecoratedMedia } from '../../video-editor/composition/appearance/render-decorated-media';
+import { primeAdaptiveShadowColors } from '../../video-editor/composition/appearance/adaptive-shadow';
+import {
+  visualAdaptiveShadowRequests,
+  visualMediaOptions,
+} from '../../video-editor/composition/appearance/visual-media-options';
 import { createCursorMotionPlayer } from '../../video-editor/composables/cursor-motion';
 import { cursorStateAt } from '../../video-editor/composables/cursorPlayback';
 import { cursorPositionForKeyboardCaption, drawCursorLayer } from './cursor-render';
@@ -25,6 +30,7 @@ import {
 import { renderBackground } from '../../video-editor/composition/background/render-background';
 import {
   resolveCompositionSceneLayers,
+  createCompositionScreenResolver,
   type CompositionSceneLayers,
 } from '../../video-editor/composition/scene-layers';
 import type { Canvas2DContext } from '~/types/canvas';
@@ -34,37 +40,21 @@ import { drawWithClipTransition } from '../../video-editor/composition/transitio
 import { EMPTY_CLIP_TRANSITIONS, resolveCanvasTransitionState } from '~/media/shared/clip-transitions';
 import { drawCanvasTransitionFrame } from '../../video-editor/composition/transitions/render-canvas-transition';
 import { mapSourcePointToScreen, resolveScreenRenderGeometry } from '../../video-editor/composition/camera-layout';
-import { resolveVisualClipFraming } from '../../video-editor/composition/visual-framing';
 import { OUTPUT_FALLBACK_COLOR } from '../../video-editor/canvas/output-canvas';
 import { createCameraMotionBlurPlan } from '../../video-editor/zoom/zoom-motion-blur';
-import {
-  compositeIsolatedMotionBlurSample,
-  createMotionBlurSurface,
-  resizeMotionBlurSurface,
-  type MotionBlurSurface,
-} from '../../video-editor/zoom/zoom-motion-blur-compositor';
+import { compositeIsolatedMotionBlurSample } from '../../video-editor/zoom/zoom-motion-blur-compositor';
+import { getExportMotionBlurSurface, disposeExportMotionBlurSurface } from './motion-blur-surface';
 import { normalizeZoomMotionBlur } from '../../video-editor/zoom/zoom-types';
 import { sessionTimeAt } from '~/media/shared';
 import { drawExportGeneratedLayer } from './render-generated-layer';
 import { hasPerspectiveTilt } from '../../video-editor/zoom/perspective-projection';
 import { disposePerspectiveRenderer, renderPerspectiveLayers } from './perspective-render';
 import { disposeCanvasTransitionSurface, getCanvasTransitionSurface } from './canvas-transition-surface';
+import { createGpuShapeScope } from '../../video-editor/composition/shape/ordered-gpu-shapes';
 
-export interface RenderableMedia {
-  source: CanvasImageSource;
-  width: number;
-  height: number;
-  preRendered?: boolean;
-}
-
-export type CompositionVisuals = ReadonlyMap<string, RenderableMedia>;
-let zoomMotionBlurSurface: MotionBlurSurface | null = null;
-
-const getZoomMotionBlurSurface = (width: number, height: number) => {
-  zoomMotionBlurSurface ??= createMotionBlurSurface(width, height);
-  if (zoomMotionBlurSurface) resizeMotionBlurSurface(zoomMotionBlurSurface, width, height);
-  return zoomMotionBlurSurface;
-};
+import type { RenderableMedia, CompositionVisuals } from './render-types';
+export type { RenderableMedia, CompositionVisuals } from './render-types';
+const gpuShapes = createGpuShapeScope();
 
 function drawSnapshotBackground(
   ctx: Canvas2DContext,
@@ -113,27 +103,7 @@ function drawVisualClip(
   media: RenderableMedia,
   canvas: { width: number; height: number },
 ) {
-  const target = { x: 0, y: 0, width: canvas.width, height: canvas.height };
-  const { source, width: sourceWidth, height: sourceHeight } = media;
-  const transform = clip.transform;
-  const rect = {
-    x: target.x + transform.x * target.width,
-    y: target.y + transform.y * target.height,
-    width: transform.width * target.width,
-    height: transform.height * target.height,
-  };
-  const framing = resolveVisualClipFraming(clip, rect, sourceWidth, sourceHeight);
-  drawDecoratedMedia(ctx, {
-    source,
-    sourceRect: framing.sourceRect,
-    rect: framing.rect,
-    appearance: clip.appearance,
-    title: clip.name,
-    mirrored: clip.isMirrored,
-    mirroredY: clip.isMirroredY,
-    mask: framing.mask,
-    shadowFollowsSourceAlpha: clip.kind === 'image',
-  });
+  drawDecoratedMedia(ctx, visualMediaOptions(clip, media, canvas));
 }
 
 function drawBlurClip(ctx: Canvas2DContext, clip: BlurClip, canvas: { width: number; height: number }) {
@@ -188,27 +158,39 @@ export function drawCompositionLayers(
 ) {
   const timeMs = time * 1_000;
   const layers = resolveCompositionSceneLayers(snapshot.composition, timeMs);
-  for (const clip of layers.visualStack) {
-    if (clip.kind === 'screen') continue;
-    if (isColorClip(clip) || isShapeClip(clip)) {
-      drawExportGeneratedLayer(ctx, clip, timeMs, snapshot.canvas);
-      continue;
+  primeAdaptiveShadowColors(visualAdaptiveShadowRequests(layers.visualStack, visuals, snapshot.canvas));
+  gpuShapes.render(ctx, (batch) => {
+    for (const clip of layers.visualStack) {
+      if (isBlurClip(clip) && batch.tryBlur(clip, { x: 0, y: 0, ...snapshot.canvas })) continue;
+      if (
+        isShapeClip(clip) &&
+        batch.tryShape(clip, { x: 0, y: 0, ...snapshot.canvas }, () =>
+          drawExportGeneratedLayer(ctx, clip, timeMs, snapshot.canvas),
+        )
+      )
+        continue;
+      batch.flush();
+      if (clip.kind === 'screen') continue;
+      if (isColorClip(clip) || isShapeClip(clip)) {
+        drawExportGeneratedLayer(ctx, clip, timeMs, snapshot.canvas);
+        continue;
+      }
+      if (isBlurClip(clip)) {
+        drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () => drawBlurClip(ctx, clip, snapshot.canvas));
+        continue;
+      }
+      const media = visuals.get(clip.id);
+      if (!media) continue;
+      if (clip.kind === 'webcam') {
+        drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
+          drawWebcamClip(ctx, clip, media, snapshot.canvas),
+        );
+      } else
+        drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
+          drawVisualClip(ctx, clip, media, snapshot.canvas),
+        );
     }
-    if (isBlurClip(clip)) {
-      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () => drawBlurClip(ctx, clip, snapshot.canvas));
-      continue;
-    }
-    const media = visuals.get(clip.id);
-    if (!media) continue;
-    if (clip.kind === 'webcam') {
-      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
-        drawWebcamClip(ctx, clip, media, snapshot.canvas),
-      );
-    } else
-      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
-        drawVisualClip(ctx, clip, media, snapshot.canvas),
-      );
-  }
+  });
   for (const clip of layers.captions)
     drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () => drawCaption(ctx, clip, timeMs, snapshot));
 }
@@ -217,17 +199,18 @@ export const createSnapshotCameraEvaluator = (
   snapshot: CompositionSnapshot,
   sourceWidth: number,
   sourceHeight: number,
-): CompositionCameraEvaluator =>
-  createCompositionCameraEvaluator({
+): CompositionCameraEvaluator => {
+  const screenAt = createCompositionScreenResolver(snapshot.composition);
+  return createCompositionCameraEvaluator({
     zooms: snapshot.zooms,
     telemetry: snapshot.cursor.telemetry,
     autoFollow: snapshot.zoomAutoFollow,
     mapTelemetryTime: (timeMs) => {
-      const screen = resolveCompositionSceneLayers(snapshot.composition, timeMs).screen;
+      const screen = screenAt(timeMs);
       return screen ? (sessionTimeAt(screen, timeMs, snapshot.composition) ?? timeMs) : timeMs;
     },
     mapFocus: (focus, zoom, timeMs) => {
-      const screen = resolveCompositionSceneLayers(snapshot.composition, timeMs).screen;
+      const screen = screenAt(timeMs);
       if (zoom.mode !== 'auto' || !screen) return focus;
       const geometry = resolveScreenRenderGeometry(
         screen,
@@ -247,6 +230,7 @@ export const createSnapshotCameraEvaluator = (
       );
     },
   });
+};
 
 function renderCompositionFrameContent(
   ctx: Canvas2DContext,
@@ -265,6 +249,7 @@ function renderCompositionFrameContent(
   ctx.fillRect(0, 0, width, height);
   const timeMs = time * 1_000;
   const layers = resolvedLayers ?? resolveCompositionSceneLayers(snapshot.composition, timeMs);
+  primeAdaptiveShadowColors(visualAdaptiveShadowRequests(layers.visualStack, visuals, snapshot.canvas));
   const screen = layers.screen;
   const screenTime = screen ? (sessionTimeAt(screen, timeMs, snapshot.composition) ?? timeMs) / 1_000 : time;
   const sourceWidth = video?.width ?? width;
@@ -295,48 +280,59 @@ function renderCompositionFrameContent(
     target.scale(sampleCamera.scale, sampleCamera.scale);
     target.translate(-sampleCamera.focusX * width, -sampleCamera.focusY * height);
     drawSnapshotBackground(target, snapshot, background);
-    for (const clip of layers.visualStack) {
-      if (clip.kind === 'screen') {
-        if (!video || clip.id !== screen?.id || !positionedMedia || !source) continue;
-        drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
-          drawDecoratedMedia(target, {
-            source: video.source,
-            sourceRect: source,
-            rect: positionedMedia,
-            appearance: screen.appearance,
-            title: screen.name,
-            mirrored: screen.isMirrored,
-            mirroredY: screen.isMirroredY,
-            mask: screenGeometry?.mask,
-          }),
-        );
-        continue;
+    gpuShapes.render(target, (batch) => {
+      for (const clip of layers.visualStack) {
+        if (isBlurClip(clip) && batch.tryBlur(clip, { x: 0, y: 0, width, height })) continue;
+        if (
+          isShapeClip(clip) &&
+          batch.tryShape(clip, { x: 0, y: 0, width, height }, () =>
+            drawExportGeneratedLayer(target, clip, timeMs, { width, height }),
+          )
+        )
+          continue;
+        batch.flush();
+        if (clip.kind === 'screen') {
+          if (!video || clip.id !== screen?.id || !positionedMedia || !source) continue;
+          drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
+            drawDecoratedMedia(target, {
+              source: video.source,
+              sourceRect: source,
+              rect: positionedMedia,
+              appearance: screen.appearance,
+              title: screen.name,
+              mirrored: screen.isMirrored,
+              mirroredY: screen.isMirroredY,
+              mask: screenGeometry?.mask,
+            }),
+          );
+          continue;
+        }
+        if (isColorClip(clip) || isShapeClip(clip)) {
+          drawExportGeneratedLayer(target, clip, timeMs, { width, height });
+          continue;
+        }
+        if (isBlurClip(clip)) {
+          drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
+            drawBlurClip(target, clip, snapshot.canvas),
+          );
+          continue;
+        }
+        const sourceVisual = visuals?.get(clip.id);
+        if (!sourceVisual) continue;
+        if (clip.kind === 'webcam')
+          drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
+            drawWebcamClip(target, clip, sourceVisual, snapshot.canvas, {
+              scale: sampleCamera.scale,
+              focusX: sampleCamera.focusX * width,
+              focusY: sampleCamera.focusY * height,
+            }),
+          );
+        else
+          drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
+            drawVisualClip(target, clip, sourceVisual, snapshot.canvas),
+          );
       }
-      if (isColorClip(clip) || isShapeClip(clip)) {
-        drawExportGeneratedLayer(target, clip, timeMs, { width, height });
-        continue;
-      }
-      if (isBlurClip(clip)) {
-        drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
-          drawBlurClip(target, clip, snapshot.canvas),
-        );
-        continue;
-      }
-      const sourceVisual = visuals?.get(clip.id);
-      if (!sourceVisual) continue;
-      if (clip.kind === 'webcam')
-        drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
-          drawWebcamClip(target, clip, sourceVisual, snapshot.canvas, {
-            scale: sampleCamera.scale,
-            focusX: sampleCamera.focusX * width,
-            focusY: sampleCamera.focusY * height,
-          }),
-        );
-      else
-        drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
-          drawVisualClip(target, clip, sourceVisual, snapshot.canvas),
-        );
-    }
+    });
     target.restore();
   };
   const hasRenderableScreen = Boolean(screen && video && positionedMedia && source);
@@ -366,7 +362,7 @@ function renderCompositionFrameContent(
     if (blurPlan.length === 1) {
       drawCameraSample(target, blurPlan[0]!);
     } else {
-      const surface = getZoomMotionBlurSurface(width, height);
+      const surface = getExportMotionBlurSurface(width, height);
       if (!surface) {
         drawCameraSample(target, blurPlan[Math.floor(blurPlan.length / 2)]!);
       } else {
@@ -438,7 +434,8 @@ function renderCompositionFrameContent(
 
 export function disposeCompositionRenderer() {
   disposePerspectiveRenderer();
-  zoomMotionBlurSurface = null;
+  gpuShapes.dispose();
+  disposeExportMotionBlurSurface();
   disposeCanvasTransitionSurface();
 }
 

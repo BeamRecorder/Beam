@@ -131,6 +131,56 @@ const composition = (clips: Clip[], assets: MediaAsset[]): ClipComposition => ({
 const ids = (clips: Clip[]) => clips.map(({ id }) => id);
 
 describe('pasteClipAt', () => {
+  it('rejects malformed positions, unavailable media and missing visual destinations before committing', () => {
+    const copied = visual('copied', 'video', 'media');
+    const original = composition([], [asset('media')]);
+    for (const options of [
+      { timelineStartMs: -1, timelineDurationMs: 2000 },
+      { timelineStartMs: NaN, timelineDurationMs: 2000 },
+      { timelineStartMs: 0, timelineDurationMs: 0 },
+      { timelineStartMs: 0, timelineDurationMs: Infinity },
+    ])
+      expect(() => pasteClipAt(original, copied, options)).toThrow('Invalid paste position');
+    expect(() => pasteClipAt(composition([], []), copied, { timelineStartMs: 0, timelineDurationMs: 2000 })).toThrow(
+      'no longer available',
+    );
+    expect(() =>
+      pasteClipAt(original, { ...copied, trackId: undefined }, { timelineStartMs: 0, timelineDurationMs: 2000 }),
+    ).toThrow('valid destination');
+    expect(original.clips).toEqual([]);
+  });
+  it('overwrites keyboard caption fragments without source offsets and registers the copied session', () => {
+    const target = caption('target', 'keyboard', 0, 3000, { captionLayerId: 'keyboard-layer' });
+    const copied = caption('copied', 'keyboard', 0, 500, { captionLayerId: 'keyboard-layer' });
+    const original = composition([target], []);
+    original.keyboardCaptionSessions = ['target-session'];
+    const result = pasteClipAt(original, copied, { timelineStartMs: 1000, timelineDurationMs: 4000 });
+    expect(result.composition.clips.map((c) => [c.timelineStartMs, c.timelineDurationMs, c.sourceInMs])).toEqual([
+      [0, 1000, 0],
+      [1000, 500, 0],
+      [1500, 1500, 0],
+    ]);
+    expect(result.composition.keyboardCaptionSessions).toContain('copied-session');
+    expect(result.clipId).toMatch(/^[0-9a-f-]{36}$/);
+  });
+  it('preserves held source times in overwrite fragments and removes orphaned groups', () => {
+    const target = visual('target', 'video', 'media', 0, 3000, {
+      trackId: 'lane',
+      freezeFrameSourceMs: 100,
+      groupId: 'group',
+    });
+    const neighbor = visual('neighbor', 'video', 'media', 0, 1000, { groupId: 'group' });
+    const result = pasteClipAt(
+      composition([target, neighbor], [asset('media')]),
+      visual('copied', 'video', 'media', 0, 500),
+      { timelineStartMs: 1000, timelineDurationMs: 4000, targetTrackId: 'lane' },
+    );
+    const fragments = result.composition.clips.filter(
+      (c) => c.id !== result.clipId && 'trackId' in c && c.trackId === 'lane',
+    );
+    expect(fragments.map((c) => c.sourceInMs)).toEqual([100, 100]);
+    expect(result.composition.clips.find((c) => c.id === 'neighbor')?.groupId).toBeUndefined();
+  });
   it('overwrites a visual lane by trimming and splitting, preserving source timing and asset references', () => {
     const target = visual('target', 'video', 'target-asset', 0, 1_200, {
       trackId: 'video-track',

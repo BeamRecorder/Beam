@@ -1,4 +1,7 @@
+import type { EngineMetricsSnapshot } from '~/media/performance/engine-metrics-types';
+
 export interface ExportRuntimeDiagnostics {
+  engine?: EngineMetricsSnapshot;
   elapsedMs: number;
   phase: 'validating_assets' | 'loading_assets' | 'encoding' | 'finalizing';
   validationMs: number | null;

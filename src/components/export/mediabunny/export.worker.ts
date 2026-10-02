@@ -235,6 +235,7 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
     const videoStats = videoResult.value;
     const audioStats = audioResult.value;
     measured.videoPipelineMs = videoStats.elapsedMs;
+    measured.engine = videoStats.engine;
     measured.decodeMs = videoStats.decodeMs;
     measured.renderMs = videoStats.renderMs;
     measured.encoderBackpressureMs = videoStats.encoderBackpressureMs;

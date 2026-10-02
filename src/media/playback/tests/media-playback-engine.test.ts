@@ -497,7 +497,7 @@ describe('MediaPlaybackEngine', () => {
       workerFactory: () => worker,
       audio: audio as unknown as AudioPlaybackScheduler,
     });
-    await load(engine, worker, composition([videoClip('clip-1'), videoClip('clip-2')]));
+    await load(engine, worker, composition([videoClip('clip-1'), videoClip('clip-2', 'asset-1', { sourceInMs: 100 })]));
     const first = new FakeImageBitmap(10, 10);
     const second = new FakeImageBitmap(20, 10);
     const stale = new FakeImageBitmap(8, 8);

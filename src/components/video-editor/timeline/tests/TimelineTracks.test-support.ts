@@ -70,7 +70,7 @@ vi.mock('../composables/useCompositionAudioWaveforms', () => ({
 }));
 
 export const TimelineClipStub = defineComponent({
-  name: 'TimelineClip',
+  name: 'TimelineCanvasClip',
   setup() {
     return { timelineClipStyle };
   },
@@ -78,6 +78,7 @@ export const TimelineClipStub = defineComponent({
     clip: { type: Object, required: true },
     duration: { type: Number, required: true },
     selected: { type: Boolean, default: false },
+    linkedClipNames: { type: Array, default: () => [] },
     trimState: { type: Object, default: null },
     timelineWidthPx: { type: Number, default: 0 },
     thumbnailSlots: { type: Array, default: () => [] },
@@ -354,7 +355,7 @@ const originalResizeObserver = globalThis.ResizeObserver;
 const originalElementFromPoint = (document as Document & { elementFromPoint?: typeof document.elementFromPoint })
   .elementFromPoint;
 
-export const mountTracks = async (overrides: Record<string, unknown> = {}) => {
+export const mountTracks = async (overrides: Record<string, unknown> = {}, initialRulerWidth = 1_000) => {
   setActivePinia(createPinia());
   wrapper = mount(TimelineTracks, {
     props: {
@@ -378,26 +379,27 @@ export const mountTracks = async (overrides: Record<string, unknown> = {}) => {
       projectId: 'project-a',
       ...overrides,
     },
-    global: { stubs: { TimelineClip: TimelineClipStub } },
+    global: { stubs: { TimelineCanvasClip: TimelineClipStub, TimelineCanvasLane: true } },
   });
   const ticks = wrapper.get('.ruler-ticks-area').element;
   vi.spyOn(ticks, 'getBoundingClientRect').mockReturnValue({
     left: 120,
     top: 0,
-    width: 1_000,
+    width: initialRulerWidth,
     height: 28,
-    right: 1_120,
+    right: 120 + initialRulerWidth,
     bottom: 28,
   } as DOMRect);
   Object.defineProperty(ticks, 'clientWidth', {
     configurable: true,
-    value: 1_000,
+    value: initialRulerWidth,
   });
   const scroll = wrapper.get('.timeline-tracks-container').element;
   Object.defineProperty(scroll, 'clientWidth', {
     configurable: true,
     value: 1_000,
   });
+  scroll.dispatchEvent(new Event('scroll'));
   await flushPromises();
   return wrapper;
 };
@@ -474,7 +476,15 @@ export const queueAnimationFrames = () => {
       flushNextFrame();
     }
   };
-  return { pendingFrames, flushNextFrame, flushAllFrames };
+  const flushFrameBatch = () => {
+    // Callbacks scheduled during this batch belong to the next physical frame.
+    const batch = [...pendingFrames];
+    for (const [id, callback] of batch) {
+      if (!pendingFrames.delete(id)) continue;
+      callback(0);
+    }
+  };
+  return { pendingFrames, flushNextFrame, flushAllFrames, flushFrameBatch };
 };
 
 export const pointerEvent = (type: string, clientX: number, clientY = 10) => {

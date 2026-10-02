@@ -1,147 +1,114 @@
 import type { BlurClip } from '~/media/shared/composition-types';
 import type { Canvas2DContext } from '~/types/canvas';
+import type { GpuColor } from '~/media/gpu/gpu-scene-types';
+import { GpuEffectsRenderer } from '~/media/gpu/gpu-effects-renderer';
+import type { EffectRect, BlurEffectOptions, ScratchSurface, GpuEffectPlan, GpuEffectOwner } from './effect-types';
+import { appendEffectShape } from './effect-shape';
+import { planGpuEffect } from './gpu-effect-plan';
+import { BlurMaskCache } from './blur-mask-cache';
 
-import type { EffectRect, BlurEffectOptions, ScratchCanvas, ScratchSurface, ScratchPool } from './effect-types';
-import { effectShapeRect, appendEffectShape } from './effect-shape';
-import { applyHighlightEffect } from './highlight-effect';
+const owners = new WeakMap<Canvas2DContext, GpuEffectOwner>();
 
-const scratchPools = new WeakMap<Canvas2DContext, ScratchPool>();
-
-const createCanvas = (width: number, height: number): ScratchCanvas => {
-  if (typeof OffscreenCanvas !== 'undefined') return new OffscreenCanvas(width, height);
-  if (typeof document !== 'undefined') {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    return canvas;
+const surface = (width: number, height: number): ScratchSurface => {
+  const canvas = new OffscreenCanvas(width, height),
+    context = canvas.getContext('2d');
+  if (!context) {
+    canvas.width = canvas.height = 0;
+    throw new Error('GPU effect geometry context unavailable.');
   }
-  throw new Error('Canvas scratch surface is unavailable.');
-};
-
-const createSurface = (width: number, height: number): ScratchSurface => {
-  const canvas = createCanvas(width, height);
-  const context = canvas.getContext('2d') as Canvas2DContext | null;
-  if (!context) throw new Error('Canvas scratch context is unavailable.');
   return { canvas, context };
 };
-
-const growSurface = (surface: ScratchSurface, width: number, height: number) => {
-  if (surface.canvas.width >= width && surface.canvas.height >= height) return;
-  const nextSize = (value: number) => 2 ** Math.ceil(Math.log2(Math.max(1, value)));
-  surface.canvas.width = Math.max(surface.canvas.width, nextSize(width));
-  surface.canvas.height = Math.max(surface.canvas.height, nextSize(height));
+const prepare = (value: ScratchSurface, width: number, height: number) => {
+  if (value.canvas.width !== width) value.canvas.width = width;
+  if (value.canvas.height !== height) value.canvas.height = height;
+  value.context.setTransform(1, 0, 0, 1, 0, 0);
+  value.context.globalAlpha = 1;
+  value.context.globalCompositeOperation = 'source-over';
+  value.context.filter = 'none';
+  value.context.clearRect(0, 0, width, height);
+};
+const color = (value: string): GpuColor => {
+  if (!/^#[\da-f]{6}([\da-f]{2})?$/i.test(value)) throw new RangeError('Invalid GPU effect color.');
+  return [
+    parseInt(value.slice(1, 3), 16) / 255,
+    parseInt(value.slice(3, 5), 16) / 255,
+    parseInt(value.slice(5, 7), 16) / 255,
+    value.length === 9 ? parseInt(value.slice(7, 9), 16) / 255 : 1,
+  ];
 };
 
-const scratchPoolFor = (ctx: Canvas2DContext): ScratchPool => {
-  let pool = scratchPools.get(ctx);
-  if (!pool) {
-    pool = {
-      source: createSurface(1, 1),
-      effect: createSurface(1, 1),
-      mask: createSurface(1, 1),
-      pixel: createSurface(1, 1),
-    };
-    scratchPools.set(ctx, pool);
+function ownerFor(ctx: Canvas2DContext) {
+  let owner = owners.get(ctx);
+  if (!owner) {
+    const gpu = new GpuEffectsRenderer();
+    let source: ScratchSurface | undefined;
+    try {
+      source = surface(1, 1);
+      owner = { gpu, source, mask: surface(1, 1), cache: new BlurMaskCache(), groupRegion: null };
+      owners.set(ctx, owner);
+    } catch (error) {
+      gpu.dispose();
+      if (source) source.canvas.width = source.canvas.height = 0;
+      throw error;
+    }
   }
-  return pool;
-};
+  return owner;
+}
 
-const deviceRect = (ctx: Canvas2DContext, rect: EffectRect): EffectRect => {
-  const transform = ctx.getTransform();
-  const points = [
-    [rect.x, rect.y],
-    [rect.x + rect.width, rect.y],
-    [rect.x, rect.y + rect.height],
-    [rect.x + rect.width, rect.y + rect.height],
-  ].map(([x, y]) => ({
-    x: transform.a * x + transform.c * y + transform.e,
-    y: transform.b * x + transform.d * y + transform.f,
-  }));
-  const left = Math.round(Math.min(...points.map((point) => point.x)));
-  const top = Math.round(Math.min(...points.map((point) => point.y)));
-  const right = Math.round(Math.max(...points.map((point) => point.x)));
-  const bottom = Math.round(Math.max(...points.map((point) => point.y)));
-  return { x: left, y: top, width: Math.max(1, right - left), height: Math.max(1, bottom - top) };
-};
-
-const prepareSurface = (surface: ScratchSurface) => {
-  surface.context.setTransform(1, 0, 0, 1, 0, 0);
-  surface.context.globalCompositeOperation = 'source-over';
-  surface.context.filter = 'none';
-  surface.context.clearRect(0, 0, surface.canvas.width, surface.canvas.height);
-};
-
-const drawPixelated = (pool: ScratchPool, rect: EffectRect, strength: number) => {
-  const blockSize = Math.max(2, Math.round(2 + (strength / 100) * 48));
-  const smallWidth = Math.max(1, Math.ceil(rect.width / blockSize));
-  const smallHeight = Math.max(1, Math.ceil(rect.height / blockSize));
-  growSurface(pool.pixel, smallWidth, smallHeight);
-  prepareSurface(pool.pixel);
-  pool.pixel.context.imageSmoothingEnabled = false;
-  pool.pixel.context.drawImage(
-    pool.source.canvas,
-    rect.x,
-    rect.y,
-    rect.width,
-    rect.height,
-    0,
-    0,
-    smallWidth,
-    smallHeight,
-  );
-  pool.effect.context.imageSmoothingEnabled = false;
-  pool.effect.context.drawImage(
-    pool.pixel.canvas,
-    0,
-    0,
-    smallWidth,
-    smallHeight,
-    rect.x,
-    rect.y,
-    rect.width,
-    rect.height,
-  );
-  pool.effect.context.imageSmoothingEnabled = true;
-};
-
-const drawFiltered = (pool: ScratchPool, clip: BlurClip, width: number, height: number) => {
-  const radius = Math.max(0, (clip.strength / 100) * 48);
-  pool.effect.context.filter =
-    `${radius > 0 ? `blur(${radius}px)` : ''}${clip.mode === 'frosted' ? ' saturate(1.28)' : ''}`.trim() || 'none';
-  pool.effect.context.drawImage(pool.source.canvas, 0, 0, width, height, 0, 0, width, height);
-  pool.effect.context.filter = 'none';
-};
-
-const applyTint = (pool: ScratchPool, clip: BlurClip, rect: EffectRect) => {
-  if (clip.mode !== 'frosted' || clip.tintOpacity <= 0) return;
-  pool.effect.context.save();
-  pool.effect.context.globalAlpha = clip.tintOpacity / 100;
-  pool.effect.context.fillStyle = clip.color;
-  pool.effect.context.fillRect(rect.x, rect.y, rect.width, rect.height);
-  pool.effect.context.restore();
-};
-
-const applyShapeMask = (
-  pool: ScratchPool,
+/** Cache only immutable geometry; every effect samples the current video's completed backdrop. */
+function maskFor(
+  owner: ReturnType<typeof ownerFor>,
   clip: BlurClip,
-  rect: EffectRect,
-  maskPath?: BlurEffectOptions['maskPath'],
-) => {
-  prepareSurface(pool.mask);
-  const featherPixels = Math.min(48, (Math.min(rect.width, rect.height) * clip.feather) / 500);
-  pool.mask.context.filter = featherPixels > 0 ? `blur(${featherPixels}px)` : 'none';
-  pool.mask.context.fillStyle = '#ffffff';
-  if (maskPath) maskPath(pool.mask.context, rect);
-  else {
-    pool.mask.context.beginPath();
-    appendEffectShape(pool.mask.context, clip, rect);
+  plan: GpuEffectPlan,
+  options: BlurEffectOptions,
+  outside = false,
+): { surface: ScratchSurface; immutable: boolean } {
+  const padding = plan.feather > 0.03 ? Math.ceil(plan.feather * 3) + 2 : 0;
+  const width = plan.region.width + padding * 2,
+    height = plan.region.height + padding * 2,
+    r = plan.maskTarget;
+  const key =
+    !options.maskPath || options.maskCacheKey
+      ? JSON.stringify([
+          outside,
+          width,
+          height,
+          r,
+          clip.shape,
+          clip.cornerRadius ?? 0,
+          plan.matrix && [plan.matrix.a, plan.matrix.b, plan.matrix.c, plan.matrix.d, plan.matrix.e, plan.matrix.f],
+          options.maskCacheKey ?? null,
+        ])
+      : null;
+  const cached = key ? owner.cache.get(key) : null;
+  if (cached) return { surface: cached, immutable: true };
+  const retain = key && owner.cache.canRetain(width, height),
+    mask = retain ? surface(width, height) : owner.mask;
+  try {
+    prepare(mask, width, height);
+    mask.context.fillStyle = '#ffffff';
+    mask.context.beginPath();
+    if (outside) {
+      if (options.maskPath) {
+        mask.context.fillRect(0, 0, width, height);
+        mask.context.globalCompositeOperation = 'destination-out';
+      } else mask.context.rect(0, 0, width, height);
+    }
+    if (plan.matrix) {
+      const m = plan.matrix;
+      mask.context.setTransform(m.a, m.b, m.c, m.d, m.e + padding, m.f + padding);
+    } else mask.context.setTransform(1, 0, 0, 1, padding, padding);
+    if (options.maskPath) options.maskPath(mask.context, r);
+    else appendEffectShape(mask.context, clip, r);
+    if (outside && !options.maskPath) mask.context.fill('evenodd');
+    else mask.context.fill();
+    if (key && retain) owner.cache.set(key, mask);
+    return { surface: mask, immutable: !!retain };
+  } catch (error) {
+    if (retain) mask.canvas.width = mask.canvas.height = 0;
+    throw error;
   }
-  pool.mask.context.fill();
-  pool.mask.context.filter = 'none';
-  pool.effect.context.globalCompositeOperation = 'destination-in';
-  pool.effect.context.drawImage(pool.mask.canvas, 0, 0);
-  pool.effect.context.globalCompositeOperation = 'source-over';
-};
+}
 
 export function applyBlurEffect(
   ctx: Canvas2DContext,
@@ -149,42 +116,122 @@ export function applyBlurEffect(
   rect: EffectRect,
   options: BlurEffectOptions = {},
 ): void {
-  if (!ctx.canvas.width || !ctx.canvas.height || rect.width <= 0 || rect.height <= 0) return;
-  if (clip.mode === 'highlight') return applyHighlightEffect(ctx, clip, rect);
-  if (clip.mode === 'blur' && clip.strength <= 0) return;
-  const target = deviceRect(ctx, effectShapeRect(clip.shape, options.bounds ?? rect));
-  const maskTarget = options.maskPath ? deviceRect(ctx, rect) : target;
-  const radius = clip.mode === 'blur' || clip.mode === 'frosted' ? (clip.strength / 100) * 48 : 0;
-  const feather = Math.min(48, (Math.min(target.width, target.height) * clip.feather) / 500);
-  const expansion = Math.ceil(radius * 2 + feather + 2);
-  const left = Math.max(0, Math.floor(target.x - expansion));
-  const top = Math.max(0, Math.floor(target.y - expansion));
-  const right = Math.min(ctx.canvas.width, Math.ceil(target.x + target.width + expansion));
-  const bottom = Math.min(ctx.canvas.height, Math.ceil(target.y + target.height + expansion));
-  const width = right - left;
-  const height = bottom - top;
-  if (width <= 0 || height <= 0) return;
-
-  const pool = scratchPoolFor(ctx);
-  growSurface(pool.source, width, height);
-  growSurface(pool.effect, width, height);
-  growSurface(pool.mask, width, height);
-  prepareSurface(pool.source);
-  pool.source.context.drawImage(options.source ?? ctx.canvas, left, top, width, height, 0, 0, width, height);
-  prepareSurface(pool.effect);
-
-  const localTarget = { ...target, x: target.x - left, y: target.y - top };
-  const localMaskTarget = { ...maskTarget, x: maskTarget.x - left, y: maskTarget.y - top };
-  if (clip.mode === 'opaque') {
-    pool.effect.context.fillStyle = clip.color;
-    pool.effect.context.fillRect(localTarget.x, localTarget.y, localTarget.width, localTarget.height);
-  } else if (clip.mode === 'pixelated') drawPixelated(pool, localTarget, clip.strength);
-  else drawFiltered(pool, clip, width, height);
-  applyTint(pool, clip, localTarget);
-  applyShapeMask(pool, clip, localMaskTarget, options.maskPath);
-
+  const plan = planGpuEffect(ctx, clip, rect, options);
+  if (!plan) return;
+  const rgba = color(clip.color),
+    highlight = color(clip.highlightColor ?? '#ffffff');
+  const owner = ownerFor(ctx),
+    { width, height, x, y } = plan.region;
+  const mask = maskFor(owner, clip, plan, options);
+  const input = {
+    mask: mask.surface.canvas as OffscreenCanvas,
+    maskImmutable: mask.immutable,
+    maskPadding: plan.feather > 0.03 ? Math.ceil(plan.feather * 3) + 2 : 0,
+    width,
+    height,
+    target: plan.target,
+    sigma: plan.sigma,
+    feather: plan.feather,
+    mode: clip.mode,
+    color: rgba,
+    highlight,
+    strength: clip.strength,
+    tintOpacity: clip.tintOpacity,
+  };
+  if (owner.groupRegion) {
+    if (options.source) throw new Error('GPU blur groups require their live retained backdrop.');
+    owner.gpu.apply(input, { ...plan.region, x: x - owner.groupRegion.x, y: y - owner.groupRegion.y });
+    return;
+  }
+  if (clip.mode !== 'opaque' && clip.mode !== 'highlight') {
+    prepare(owner.source, width, height);
+    // Crop before upload: small effects must not transfer a full 1080p backdrop each time.
+    owner.source.context.drawImage(options.source ?? ctx.canvas, x, y, width, height, 0, 0, width, height);
+  }
   ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.drawImage(pool.effect.canvas, 0, 0, width, height, left, top, width, height);
-  ctx.restore();
+  try {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const paint = (highlightStage?: 'outside' | 'inside') => {
+      const geometry = highlightStage ? maskFor(owner, clip, plan, options, highlightStage === 'outside') : mask;
+      const result = owner.gpu.render({
+        ...input,
+        mask: geometry.surface.canvas as OffscreenCanvas,
+        maskImmutable: geometry.immutable,
+        highlightStage,
+        source: owner.source.canvas as OffscreenCanvas,
+      });
+      ctx.drawImage(result, 0, 0, width, height, x, y, width, height);
+    };
+    // Hard highlights inherit alpha/blend on each layer, not on a pre-flattened pair.
+    if (clip.mode === 'highlight' && plan.feather <= 0.03) {
+      if (clip.strength > 0) paint('outside');
+      if (clip.tintOpacity > 0) paint('inside');
+    } else paint();
+  } finally {
+    ctx.restore();
+  }
+}
+
+/** Caller admits only full-opacity, source-over effects whose complete footprint is inside its clip. */
+export function withGpuBlurGroup(ctx: Canvas2DContext, draw: () => void, region?: EffectRect): void {
+  const owner = ownerFor(ctx);
+  if (owner.groupRegion) throw new Error('Nested GPU blur groups are not supported.');
+  const bounds = region ?? { x: 0, y: 0, width: ctx.canvas.width, height: ctx.canvas.height };
+  if (
+    ![bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isSafeInteger) ||
+    bounds.x < 0 ||
+    bounds.y < 0 ||
+    bounds.width <= 0 ||
+    bounds.height <= 0 ||
+    bounds.x + bounds.width > ctx.canvas.width ||
+    bounds.y + bounds.height > ctx.canvas.height
+  )
+    throw new RangeError('Invalid GPU group bounds.');
+  if (region) {
+    prepare(owner.source, bounds.width, bounds.height);
+    owner.source.context.drawImage(
+      ctx.canvas,
+      bounds.x,
+      bounds.y,
+      bounds.width,
+      bounds.height,
+      0,
+      0,
+      bounds.width,
+      bounds.height,
+    );
+  }
+  owner.gpu.begin((region ? owner.source.canvas : ctx.canvas) as OffscreenCanvas, bounds.width, bounds.height);
+  owner.groupRegion = bounds;
+  try {
+    draw();
+    const result = owner.gpu.present();
+    ctx.save();
+    try {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      // COPY clears outside its source; constrain it to the transferred backdrop region.
+      if (region) {
+        ctx.beginPath();
+        ctx.rect(bounds.x, bounds.y, bounds.width, bounds.height);
+        ctx.clip();
+      }
+      ctx.globalCompositeOperation = 'copy';
+      ctx.drawImage(result, 0, 0, bounds.width, bounds.height, bounds.x, bounds.y, bounds.width, bounds.height);
+    } finally {
+      ctx.restore();
+    }
+  } finally {
+    owner.groupRegion = null;
+    owner.gpu.cancel();
+  }
+}
+
+export function disposeBlurEffect(ctx: Canvas2DContext | null): void {
+  if (!ctx) return;
+  const owner = owners.get(ctx);
+  owners.delete(ctx);
+  if (!owner) return;
+  owner.gpu.dispose();
+  owner.cache.clear();
+  owner.source.canvas.width = owner.source.canvas.height = owner.mask.canvas.width = owner.mask.canvas.height = 0;
 }

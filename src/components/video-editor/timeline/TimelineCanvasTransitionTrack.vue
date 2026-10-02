@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onUnmounted, ref } from 'vue';
 import { PanelsTopLeft } from '@lucide/vue';
 import type { ClipTransition, ClipTransitions } from '~/media/shared/composition-types';
 import { normalizeCanvasTransitions } from '~/media/shared/clip-transitions';
 import { useTranslate } from '~/i18n/useTranslate';
-import TimelineTransitionCurve from './TimelineTransitionCurve.vue';
+import TimelineCanvasLane from './TimelineCanvasLane.vue';
+import type { TimelineViewportMetrics } from './composables/timeline-virtualization-types';
 
 const props = defineProps<{
   mode: 'sidebar' | 'track';
   transitions: ClipTransitions;
   durationMs: number;
+  width: number;
+  viewport: TimelineViewportMetrics;
 }>();
 const emit = defineEmits<{
   (event: 'open', edge: 'entry' | 'exit'): void;
@@ -20,6 +23,14 @@ const track = ref<HTMLElement | null>(null);
 const { t } = useTranslate('TransitionsPanel');
 const displayed = ref<ClipTransitions | null>(null);
 const activeTransitions = computed(() => displayed.value ?? props.transitions);
+const items = computed(() =>
+  (['entry', 'exit'] as const).flatMap((edge) => {
+    const transition = activeTransitions.value[edge];
+    return transition ? [{ transition, edge, label: `${t(edge)} · ${transition.durationMs} ms`, selected: false }] : [];
+  }),
+);
+let cancelResize: (() => void) | null = null;
+onUnmounted(() => cancelResize?.());
 const percent = (transition: ClipTransition | null) =>
   `${Math.min(100, ((transition?.durationMs ?? 0) / Math.max(1, props.durationMs)) * 100)}%`;
 const label = (edge: 'entry' | 'exit', transition: ClipTransition) => {
@@ -31,6 +42,7 @@ const label = (edge: 'entry' | 'exit', transition: ClipTransition) => {
 };
 
 const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
+  cancelResize?.();
   event.preventDefault();
   event.stopPropagation();
   const bounds = track.value?.getBoundingClientRect();
@@ -52,6 +64,8 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
     emit('preview', latest);
   };
   const finish = () => {
+    window.removeEventListener('blur', cancel);
+    cancelResize = null;
     window.removeEventListener('pointermove', move);
     window.removeEventListener('pointerup', finish);
     window.removeEventListener('pointercancel', cancel);
@@ -60,6 +74,8 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
     if (latest !== props.transitions) emit('update', latest);
   };
   const cancel = () => {
+    window.removeEventListener('blur', cancel);
+    cancelResize = null;
     window.removeEventListener('pointermove', move);
     window.removeEventListener('pointerup', finish);
     window.removeEventListener('pointercancel', cancel);
@@ -69,6 +85,8 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
   window.addEventListener('pointermove', move);
   window.addEventListener('pointerup', finish, { once: true });
   window.addEventListener('pointercancel', cancel, { once: true });
+  window.addEventListener('blur', cancel, { once: true });
+  cancelResize = cancel;
 };
 </script>
 
@@ -81,29 +99,26 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
   </div>
   <div v-else class="canvas-track-row">
     <div ref="track" class="canvas-track-content">
+      <TimelineCanvasLane :items="items" :duration-ms="durationMs" :width="width" :viewport="viewport" />
       <button
         v-if="activeTransitions.entry"
         type="button"
-        class="canvas-transition-zone entry"
+        class="canvas-transition-zone canvas-clip-target entry"
         :style="{ width: percent(activeTransitions.entry) }"
         :aria-label="label('entry', activeTransitions.entry)"
         @click.stop="emit('open', 'entry')"
       >
-        <TimelineTransitionCurve edge="entry" :transition="activeTransitions.entry" />
-        <span class="zone-label">{{ t('entry') }} · {{ activeTransitions.entry.durationMs }} ms</span>
         <span class="duration-handle end" @pointerdown="beginResize($event, 'entry')" />
       </button>
       <button
         v-if="activeTransitions.exit"
         type="button"
-        class="canvas-transition-zone exit"
+        class="canvas-transition-zone canvas-clip-target exit"
         :style="{ width: percent(activeTransitions.exit) }"
         :aria-label="label('exit', activeTransitions.exit)"
         @click.stop="emit('open', 'exit')"
       >
-        <TimelineTransitionCurve edge="exit" :transition="activeTransitions.exit" />
         <span class="duration-handle start" @pointerdown="beginResize($event, 'exit')" />
-        <span class="zone-label">{{ t('exit') }} · {{ activeTransitions.exit.durationMs }} ms</span>
       </button>
     </div>
   </div>
@@ -163,6 +178,10 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
   min-width: 18px;
   overflow: hidden;
   cursor: pointer;
+}
+.canvas-transition-zone.canvas-clip-target {
+  background: transparent;
+  border: 0;
 }
 .canvas-transition-zone.entry {
   left: 0;

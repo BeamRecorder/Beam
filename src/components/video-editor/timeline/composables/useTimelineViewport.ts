@@ -1,4 +1,4 @@
-import { computed, onMounted, onUnmounted, ref, watch, type Ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, shallowRef, watch, type Ref } from 'vue';
 import { useCompositionAudioWaveforms } from './useCompositionAudioWaveforms';
 import { calculateSnapThresholdMs, collectSnapTargets, snapValue } from './timeline-snap';
 import { timelinePlaybackScrollDelta, timelineThumbnailSlots } from './timeline-viewport';
@@ -22,6 +22,7 @@ export function useTimelineViewport(
   const ticksAreaRef = ref<HTMLDivElement | null>(null);
   const rulerWidth = ref(0);
   const rulerLayoutWidth = ref(0);
+  const timelineViewport = reactive({ top: 0, left: 0, width: 0, height: 320 });
   const currentDuration = computed(() => {
     const ms = typeof durationMs.value === 'number' && Number.isFinite(durationMs.value) ? durationMs.value : 1_000;
     return Math.max(1, ms / 1_000);
@@ -56,13 +57,22 @@ export function useTimelineViewport(
     if (!Number.isFinite(dur) || dur <= 0 || !Number.isFinite(step) || step <= 0) return [];
     const maxSecond = Math.min(36_000, Math.ceil(dur));
     const result: number[] = [];
-    for (let second = 0; second <= maxSecond; second += step) {
+    const overscan = rulerWidth.value > 0 ? (96 * dur) / rulerWidth.value : 0;
+    const start = viewportReady.value
+      ? Math.max(0, Math.floor((visibleStartSecond.value - overscan) / step) * step)
+      : 0;
+    const end = viewportReady.value
+      ? Math.min(maxSecond, visibleEndSecond.value + overscan)
+      : Math.min(maxSecond, step * 32);
+    for (let second = start; second <= end; second += step) {
       result.push(second);
       if (result.length > 2_000) break;
     }
     return result;
   });
-  const rulerMarkerStyle = (second: number) => ({ left: `${(second / Math.max(1, currentDuration.value)) * 100}%` });
+  const rulerMarkerStyle = (second: number) => ({
+    left: `${(second / Math.max(1, currentDuration.value)) * 100}%`,
+  });
   const isRulerLabel = (second: number) => {
     const step = rulerLabelStep.value;
     return step > 0 && second % step === 0;
@@ -80,6 +90,7 @@ export function useTimelineViewport(
     pixelsPerSecond: rulerWidth.value / Math.max(1, currentDuration.value),
   }));
   const mediaViewport = ref(liveMediaViewport.value);
+  const waveformClipIds = shallowRef<ReadonlySet<string> | null>(null);
   watch(
     [liveMediaViewport, isMediaPreviewFrozen, isWheelZooming],
     ([viewport, frozen, wheelZooming]) => {
@@ -94,6 +105,7 @@ export function useTimelineViewport(
   } = useCompositionAudioWaveforms(
     () => props.composition,
     () => mediaViewport.value,
+    () => waveformClipIds.value,
   );
   const liveThumbnailSlots = computed(() =>
     viewportReady.value
@@ -124,13 +136,24 @@ export function useTimelineViewport(
   let wheelZoomIdleTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingScrubTime: number | null = null;
   let resizeObserver: ResizeObserver | null = null;
+  let syncedScrollTop = NaN;
   const updateVisibleRange = () => {
     const scroll = tracksScrollRef.value;
     const ticks = ticksAreaRef.value;
     if (!scroll || !ticks || currentDuration.value <= 0) return;
+    Object.assign(timelineViewport, {
+      top: scroll.scrollTop,
+      left: scroll.scrollLeft,
+      width: scroll.clientWidth,
+      height: Math.max(0, scroll.clientHeight - 28) || 320,
+    });
     const scrollRect = scroll.getBoundingClientRect();
     const ticksRect = ticks.getBoundingClientRect();
     const timelineWidth = Math.max(1, ticksRect.width || ticks.clientWidth);
+    if (sidebarScrollRef.value && syncedScrollTop !== timelineViewport.top) {
+      syncedScrollTop = timelineViewport.top;
+      sidebarScrollRef.value.scrollTop = syncedScrollTop;
+    }
     rulerWidth.value = timelineWidth;
     rulerLayoutWidth.value = Math.max(0, ticks.offsetWidth || ticks.clientWidth || ticksRect.width);
     const startPixel = Math.max(0, Math.min(timelineWidth, scrollRect.left - ticksRect.left));
@@ -140,9 +163,6 @@ export function useTimelineViewport(
     viewportReady.value = true;
   };
   const onScroll = () => {
-    if (sidebarScrollRef.value && tracksScrollRef.value) {
-      sidebarScrollRef.value.scrollTop = tracksScrollRef.value.scrollTop;
-    }
     if (scrollFrame !== null) return;
     scrollFrame = requestAnimationFrame(() => {
       scrollFrame = null;
@@ -238,6 +258,7 @@ export function useTimelineViewport(
     resizeObserver = new ResizeObserver(onScroll);
     resizeObserver.observe(tracksScrollRef.value);
     if (tracksViewportRef.value) resizeObserver.observe(tracksViewportRef.value);
+    onScroll();
   });
   watch(
     () => [props.duration, props.zoomLevel],
@@ -257,7 +278,10 @@ export function useTimelineViewport(
       requestedZoomLevel = zoomLevel;
     },
   );
-  watch(() => [props.currentTime, props.isPlaying], followPlayback, { flush: 'post' });
+  watch(() => [props.currentTime, props.isPlaying], followPlayback, {
+    flush: 'post',
+  });
+  watch(durationMs, onScroll, { flush: 'post' });
   onUnmounted(() => {
     resizeObserver?.disconnect();
     stopAutoScroll();
@@ -394,6 +418,7 @@ export function useTimelineViewport(
     ticksAreaRef,
     rulerWidth,
     rulerLayoutWidth,
+    timelineViewport,
     tracksWidthStyle,
     scrubPreviewTime,
     displayedPlayheadTime,
@@ -405,6 +430,7 @@ export function useTimelineViewport(
     isRulerLabel,
     formatRulerLabel,
     audioWaveforms,
+    waveformClipIds,
     audioWaveformErrors,
     audioWaveformStatus,
     thumbnailSlots,

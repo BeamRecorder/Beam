@@ -1,6 +1,7 @@
 import type { ShapeClip } from '~/media/shared/composition-types';
 import { drawShapeClip } from '../composition/shape/render-shape-clip';
 import type { ShapeTimelinePreviewProps } from './shape-timeline-preview-types';
+import { disposeBlurEffect } from '../composition/effects/blur-effect';
 
 export function renderShapeTimelinePreview(
   clip: ShapeClip,
@@ -29,8 +30,8 @@ export function renderShapeTimelinePreview(
   const surface = document.createElement('canvas');
   surface.width = Math.min(320, Math.max(1, Math.ceil(rotatedWidth * scale + 16)));
   surface.height = Math.min(96, Math.max(1, Math.ceil(rotatedHeight * scale + 16)));
+  const context = surface.getContext('2d');
   try {
-    const context = surface.getContext('2d');
     if (!context) throw new Error('The element preview canvas is unavailable.');
     context.translate((surface.width - width * scale) / 2, (surface.height - height * scale) / 2);
     drawShapeClip(
@@ -41,6 +42,7 @@ export function renderShapeTimelinePreview(
     );
     return surface.toDataURL('image/png');
   } finally {
+    disposeBlurEffect(context);
     surface.width = surface.height = 1;
   }
 }

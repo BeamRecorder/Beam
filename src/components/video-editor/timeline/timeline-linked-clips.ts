@@ -7,3 +7,14 @@ export const linkedClipNames = (composition: ClipComposition, clip: Clip): strin
     .filter((entry) => entry.id !== clip.id && ids.has(entry.id))
     .map((entry) => `${entry.name} (${(entry.timelineStartMs / 1_000).toFixed(1)}s)`);
 };
+
+export function createTimelineLinkedClipNameResolver(composition: ClipComposition) {
+  const names = new Map<string, string[]>();
+  return (clip: Clip): string[] => {
+    const cached = names.get(clip.id);
+    if (cached) return cached;
+    const value = linkedClipNames(composition, clip);
+    names.set(clip.id, value);
+    return value;
+  };
+}

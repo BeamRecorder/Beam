@@ -4,7 +4,7 @@ import {
   isCompositingClip,
   type ClipComposition,
 } from '~/media/shared/composition-types';
-import { pasteClipAt } from '../../composition/engine/clip-paste';
+import { createClipPasteTransaction } from '../../composition/engine/clip-paste';
 import { pasteZoomAt } from '../../zoom/zoom-paste';
 import type { ZoomElement } from '../../zoom/zoom-types';
 import type {
@@ -63,7 +63,7 @@ export function pasteTimelineClipboard(options: {
   const trackIds = new Map<string, string>();
   const captionLayerIds = new Map<string, string>();
   let targetTrackClaimed = false;
-  let composition = options.composition;
+  const transaction = createClipPasteTransaction(options.composition);
   let zoomElements = options.zoomElements;
   const clipIds: string[] = [];
   const zoomIds: string[] = [];
@@ -98,16 +98,15 @@ export function pasteTimelineClipboard(options: {
   entries.forEach((entry, index) => {
     const timeMs = options.timeMs + entryStartMs(entry) - anchorMs;
     if (entry.type === 'clip') {
-      const pasted = pasteClipAt(composition, copiedClipFor(entry), {
+      const clipId = transaction.paste(copiedClipFor(entry), {
         timelineStartMs: timeMs,
         timelineDurationMs: options.timelineDurationMs,
         targetTrackId: destinationTrackId(entry),
         asset: entry.asset,
         idFactory,
       });
-      composition = pasted.composition;
-      clipIds.push(pasted.clipId);
-      pastedByIndex[index] = { type: 'clip', id: pasted.clipId };
+      clipIds.push(clipId);
+      pastedByIndex[index] = { type: 'clip', id: clipId };
     } else {
       const pasted = pasteZoomAt(zoomElements, entry.zoom, timeMs, options.timelineDurationMs, idFactory);
       zoomElements = pasted.elements;
@@ -117,5 +116,11 @@ export function pasteTimelineClipboard(options: {
   });
 
   const primary = pastedByIndex[Math.max(0, Math.min(primaryIndex, pastedByIndex.length - 1))]!;
-  return { composition, zoomElements, clipIds, zoomIds, primary };
+  return {
+    composition: clipIds.length ? transaction.finish() : options.composition,
+    zoomElements,
+    clipIds,
+    zoomIds,
+    primary,
+  };
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildBeamExportReport } from '../export-diagnostics';
 import type { ExportDiagnostics } from '../export-diagnostics-types';
 import type { ExportProgress, ExportRequest } from '../export-types';
+import { EngineMetrics } from '~/media/performance/engine-metrics';
 
 const request = {
   projectName: 'Vivid Horizon',
@@ -88,6 +89,24 @@ const progress: ExportProgress = {
 };
 
 describe('buildBeamExportReport', () => {
+  it('includes the generic engine measurements from the export worker', () => {
+    const engine = new EngineMetrics({ enabled: true });
+    engine.observe('encode-wait', 5);
+    const report = buildBeamExportReport({
+      request,
+      format: 'webm',
+      preset: 'high',
+      status: 'completed',
+      progress,
+      diagnostics: {
+        ...diagnostics,
+        runtime: { ...diagnostics.runtime!, engine: engine.snapshot() },
+      },
+    });
+    expect(report).toContain('--- Engine Stages ---');
+    expect(report).toContain('encode-wait: 1 operations, total 5.00 ms');
+    expect(report).toContain('not additive frame time');
+  });
   it('includes final export diagnostics while keeping output names and errors private', () => {
     const report = buildBeamExportReport({
       request,

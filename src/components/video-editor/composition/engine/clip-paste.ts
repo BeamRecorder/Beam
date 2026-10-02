@@ -1,31 +1,18 @@
 import {
   captionLayerKey,
   clipEndMs,
-  isAudioClip,
   isCaptionClip,
   isCompositingClip,
   isColorClip,
   isShapeClip,
   type Clip,
   type ClipComposition,
-  type MediaAsset,
 } from '~/media/shared/composition-types';
 import { EMPTY_CLIP_TRANSITIONS, normalizeClipTransitions } from '~/media/shared/clip-transitions';
 import { CompositionEngineError, MIN_CLIP_DURATION_MS, validateComposition } from './clip-composition-validation';
 import { normalizeClipOrders } from './visual-track-layout';
-
-export interface PasteClipOptions {
-  timelineStartMs: number;
-  timelineDurationMs: number;
-  targetTrackId?: string | null;
-  asset?: MediaAsset | null;
-  idFactory?: () => string;
-}
-
-export interface PasteClipResult {
-  composition: ClipComposition;
-  clipId: string;
-}
+import type { ClipPasteLane, PasteClipOptions, PasteClipResult } from './clip-paste-types';
+export type { PasteClipOptions, PasteClipResult } from './clip-paste-types';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const defaultIdFactory = () => crypto.randomUUID();
@@ -38,17 +25,10 @@ const withoutOrphanGroups = (clips: Clip[]): Clip[] => {
   );
 };
 
-const sharesPasteLane = (candidate: Clip, source: Clip, targetTrackId: string | null): boolean => {
-  if (isCompositingClip(source))
-    return isCompositingClip(candidate) && candidate.trackId === (targetTrackId ?? source.trackId);
-  if (isCaptionClip(source)) return isCaptionClip(candidate) && captionLayerKey(candidate) === captionLayerKey(source);
-  if (isAudioClip(source))
-    return (
-      isAudioClip(candidate) &&
-      candidate.role === source.role &&
-      (source.role !== 'imported' || candidate.assetId === source.assetId)
-    );
-  return false;
+const pasteLaneKey = (clip: Clip, targetTrackId?: string | null): string => {
+  if (isCompositingClip(clip)) return `visual:${targetTrackId ?? clip.trackId}`;
+  if (isCaptionClip(clip)) return `caption:${captionLayerKey(clip)}`;
+  return `audio:${clip.role}:${clip.role === 'imported' ? clip.assetId : ''}`;
 };
 
 const transitionEdges = (clip: Clip, entry: boolean, exit: boolean, durationMs: number) =>
@@ -105,64 +85,94 @@ export function pasteClipAt(
   copiedClip: Clip,
   options: PasteClipOptions,
 ): PasteClipResult {
-  const startMs = Math.round(options.timelineStartMs);
-  const durationMs = Math.round(copiedClip.timelineDurationMs);
-  const timelineDurationMs = Math.round(options.timelineDurationMs);
-  if (!Number.isFinite(startMs) || startMs < 0 || !Number.isFinite(timelineDurationMs) || timelineDurationMs <= 0)
-    throw new CompositionEngineError('Invalid paste position.');
-  if (durationMs < MIN_CLIP_DURATION_MS || startMs + durationMs > timelineDurationMs)
-    throw new CompositionEngineError('The copied item does not fit at the playhead.');
+  const transaction = createClipPasteTransaction(composition);
+  const clipId = transaction.paste(copiedClip, options);
+  return { composition: transaction.finish(), clipId };
+}
 
-  const targetTrackId = isCompositingClip(copiedClip)
-    ? options.targetTrackId?.trim() || copiedClip.trackId || null
-    : null;
-  if (isCompositingClip(copiedClip) && !targetTrackId)
-    throw new CompositionEngineError('The copied visual has no valid destination track.');
-
-  const next = clone(composition);
-  if (
-    !isCaptionClip(copiedClip) &&
-    !isColorClip(copiedClip) &&
-    !isShapeClip(copiedClip) &&
-    copiedClip.kind !== 'blur'
-  ) {
-    const existingAsset = next.assets.some((asset) => asset.id === copiedClip.assetId);
-    if (!existingAsset && options.asset?.id === copiedClip.assetId) next.assets.push(clone(options.asset));
-    if (!next.assets.some((asset) => asset.id === copiedClip.assetId))
-      throw new CompositionEngineError('The copied media is no longer available in this project.');
+/** Stage only affected lanes; clone owned clipboard values and canonicalize/validate once at commit. */
+export function createClipPasteTransaction(composition: ClipComposition) {
+  const lanes = new Map<string, ClipPasteLane>();
+  for (const clip of composition.clips) {
+    const key = pasteLaneKey(clip);
+    const lane = lanes.get(key);
+    if (lane) {
+      lane.clips.push(clip);
+      lane.endMs = Math.max(lane.endMs, clipEndMs(clip));
+    } else lanes.set(key, { clips: [clip], endMs: clipEndMs(clip) });
   }
+  const assets = new Map(composition.assets.map((asset) => [asset.id, asset]));
+  const sessions = new Set(composition.keyboardCaptionSessions);
+  const paste = (copiedClip: Clip, options: PasteClipOptions): string => {
+    const startMs = Math.round(options.timelineStartMs);
+    const durationMs = Math.round(copiedClip.timelineDurationMs);
+    const timelineDurationMs = Math.round(options.timelineDurationMs);
+    if (!Number.isFinite(startMs) || startMs < 0 || !Number.isFinite(timelineDurationMs) || timelineDurationMs <= 0)
+      throw new CompositionEngineError('Invalid paste position.');
+    if (durationMs < MIN_CLIP_DURATION_MS || startMs + durationMs > timelineDurationMs)
+      throw new CompositionEngineError('The copied item does not fit at the playhead.');
 
-  const idFactory = options.idFactory ?? defaultIdFactory;
-  const pastedId = idFactory();
-  const endMs = startMs + durationMs;
-  const untouched: Clip[] = [];
-  const laneClips: Clip[] = [];
-  for (const clip of next.clips) {
-    if (sharesPasteLane(clip, copiedClip, targetTrackId))
-      laneClips.push(...overwriteClip(clip, startMs, endMs, idFactory));
-    else untouched.push(clip);
-  }
+    const targetTrackId = isCompositingClip(copiedClip)
+      ? options.targetTrackId?.trim() || copiedClip.trackId || null
+      : null;
+    if (isCompositingClip(copiedClip) && !targetTrackId)
+      throw new CompositionEngineError('The copied visual has no valid destination track.');
 
-  const destinationOrder = isCompositingClip(copiedClip)
-    ? (next.clips.find((clip) => isCompositingClip(clip) && clip.trackId === targetTrackId)?.order ?? copiedClip.order)
-    : copiedClip.order;
-  const pasted: Clip = {
-    ...clone(copiedClip),
-    recordingClipId: null,
-    id: pastedId,
-    groupId: undefined,
-    timelineStartMs: startMs,
-    order: destinationOrder,
-    transitions: normalizeClipTransitions(
-      copiedClip.transitions ?? EMPTY_CLIP_TRANSITIONS,
-      durationMs,
-      copiedClip.kind,
-    ),
-    ...(isCompositingClip(copiedClip) ? { trackId: targetTrackId! } : {}),
+    if (
+      !isCaptionClip(copiedClip) &&
+      !isColorClip(copiedClip) &&
+      !isShapeClip(copiedClip) &&
+      copiedClip.kind !== 'blur'
+    ) {
+      if (!assets.has(copiedClip.assetId) && options.asset?.id === copiedClip.assetId)
+        assets.set(copiedClip.assetId, clone(options.asset));
+      if (!assets.has(copiedClip.assetId))
+        throw new CompositionEngineError('The copied media is no longer available in this project.');
+    }
+
+    const idFactory = options.idFactory ?? defaultIdFactory;
+    const pastedId = idFactory();
+    const endMs = startMs + durationMs;
+    const laneKey = pasteLaneKey(copiedClip, targetTrackId);
+    const lane = lanes.get(laneKey) ?? { clips: [], endMs: 0 };
+    const destinationOrder = isCompositingClip(copiedClip)
+      ? (lane.clips[0]?.order ?? copiedClip.order)
+      : copiedClip.order;
+    // Ordered fragments on a new lane append in O(1), rather than rescanning every earlier paste.
+    if (startMs < lane.endMs) {
+      lane.clips = lane.clips.flatMap((clip) => overwriteClip(clip, startMs, endMs, idFactory));
+      lane.endMs = lane.clips.reduce((end, clip) => Math.max(end, clipEndMs(clip)), 0);
+    }
+
+    const pasted: Clip = {
+      ...clone(copiedClip),
+      recordingClipId: null,
+      id: pastedId,
+      groupId: undefined,
+      timelineStartMs: startMs,
+      order: destinationOrder,
+      transitions: normalizeClipTransitions(
+        copiedClip.transitions ?? EMPTY_CLIP_TRANSITIONS,
+        durationMs,
+        copiedClip.kind,
+      ),
+      ...(isCompositingClip(copiedClip) ? { trackId: targetTrackId! } : {}),
+    };
+    lane.clips.push(pasted);
+    lane.endMs = Math.max(lane.endMs, endMs);
+    lanes.set(laneKey, lane);
+    if (isCaptionClip(pasted) && pasted.caption.type === 'keyboard') sessions.add(pasted.caption.sourceSessionId);
+    return pastedId;
   };
-  next.clips = normalizeClipOrders(withoutOrphanGroups([...untouched, ...laneClips, pasted]));
-  if (isCaptionClip(pasted) && pasted.caption.type === 'keyboard')
-    next.keyboardCaptionSessions = [...new Set([...next.keyboardCaptionSessions, pasted.caption.sourceSessionId])];
-  validateComposition(next);
-  return { composition: next, clipId: pastedId };
+  const finish = (): ClipComposition => {
+    const next = {
+      ...composition,
+      assets: [...assets.values()],
+      keyboardCaptionSessions: [...sessions],
+      clips: normalizeClipOrders(withoutOrphanGroups([...lanes.values()].flatMap((lane) => lane.clips))),
+    };
+    validateComposition(next);
+    return next;
+  };
+  return { paste, finish };
 }

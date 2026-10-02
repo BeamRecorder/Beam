@@ -4,6 +4,7 @@ import { resolveSafariFrameGeometry, resolveWindowsFrameGeometry } from './frame
 import { applyClipShadow, drawDecoratedMedia, shadowBlurForAppearance } from './render-decorated-media';
 import { adaptivePhoneFillColors } from './phone-frame-fill';
 import type { ClipAppearance } from '~/media/shared/composition-types';
+import * as mediaShadows from './media-shadow-cache';
 
 const appearance = (patch: Partial<ClipAppearance> = {}): ClipAppearance => ({
   cornerRadius: 'sm',
@@ -107,6 +108,54 @@ const nonStretchedWindowsFormats = [
 ] as const;
 
 describe('decorated media rendering', () => {
+  it('allows geometric shadow admission at the original appearance scale', () => {
+    const cache = vi.spyOn(mediaShadows, 'drawCachedMediaShadow').mockReturnValue(true);
+    try {
+      drawDecoratedMedia(context(), {
+        source,
+        rect: { x: 2, y: 3, width: 100, height: 60 },
+        appearance: appearance({ shadowSize: 'custom', shadowBlur: 12 }),
+        title: 'Video',
+      });
+      expect(cache).toHaveBeenCalledOnce();
+    } finally {
+      cache.mockRestore();
+    }
+  });
+  it('preserves native subpixel shadow clipping for reduced preview appearances', () => {
+    const cache = vi.spyOn(mediaShadows, 'drawCachedMediaShadow').mockReturnValue(true),
+      ctx = context();
+    try {
+      drawDecoratedMedia(ctx, {
+        source,
+        rect: { x: 2, y: 3, width: 100, height: 60 },
+        shadowScale: 0.35,
+        appearance: appearance({ shadowSize: 'custom', shadowBlur: 12 }),
+        title: 'Video',
+      });
+      expect(cache).not.toHaveBeenCalled();
+      expect(ctx.fill).toHaveBeenCalledOnce();
+    } finally {
+      cache.mockRestore();
+    }
+  });
+  it('keeps magnified appearance clipping native instead of flattening fractional guards', () => {
+    const cache = vi.spyOn(mediaShadows, 'drawCachedMediaShadow').mockReturnValue(true),
+      ctx = context();
+    try {
+      drawDecoratedMedia(ctx, {
+        source,
+        rect: { x: 2, y: 3, width: 100, height: 60 },
+        shadowScale: 1.4,
+        appearance: appearance({ shadowSize: 'custom', shadowBlur: 12 }),
+        title: 'Video',
+      });
+      expect(cache).not.toHaveBeenCalled();
+      expect(ctx.fill).toHaveBeenCalledOnce();
+    } finally {
+      cache.mockRestore();
+    }
+  });
   it('draws a border independently from a shadow', () => {
     const ctx = context();
     drawDecoratedMedia(ctx, {

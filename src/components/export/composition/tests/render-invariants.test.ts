@@ -33,6 +33,7 @@ import { resolveCameraFraming } from '../../../video-editor/composition/camera-l
 import { drawCanvasTransitionFrame } from '../../../video-editor/composition/transitions/render-canvas-transition';
 import type { ColorClip, VisualClip } from '~/media/shared/composition-types';
 import * as decoratedMedia from '../../../video-editor/composition/appearance/render-decorated-media';
+import * as mediaShadows from '../../../video-editor/composition/appearance/media-shadow-cache';
 import { context, screenAppearance as appearance, snapshot } from './render.test-support';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 
@@ -353,9 +354,12 @@ describe('composition rendering invariants', () => {
 
     vi.stubGlobal('document', undefined);
     vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
+    // This recorder checks native sample paint order; cache pixels have separate native coverage.
+    const shadowCache = vi.spyOn(mediaShadows, 'drawCachedMediaShadow').mockReturnValue(false);
     try {
       renderCompositionFrame(target, source, value, 0.5, null, undefined, undefined, undefined, cameraEvaluator);
     } finally {
+      shadowCache.mockRestore();
       vi.unstubAllGlobals();
     }
 

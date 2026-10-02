@@ -2,6 +2,8 @@ import { triggerPointer } from '../../../../../tests/support/pointer';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import type { VisualClip } from '~/media/shared/composition-types';
+import TimelineZoomTrack from '../TimelineZoomTrack.vue';
+import TimelineCanvasLane from '../TimelineCanvasLane.vue';
 import { composition, mountTracks, pointerEvent, TimelineClipStub, visual, zoom } from './TimelineTracks.test-support';
 
 const largeMixedSelection = () => {
@@ -38,6 +40,21 @@ const findClip = (mounted: Awaited<ReturnType<typeof mountTracks>>, id: string) 
 };
 
 describe('TimelineTracks zoom header selection', () => {
+  it('keeps the 2D/Auto badges and real title together above the canvas without a duplicate pinned painter title', async () => {
+    const element = zoom({ id: 'zoom-visible-title', projection: '2d', mode: 'auto', locked: true });
+    const mounted = await mountTracks({ zoomElements: [element], selectedZoomId: element.id });
+    const track = mounted!.getComponent(TimelineZoomTrack);
+    const target = track.get(`[data-timeline-zoom-id="${element.id}"]`);
+    const title = target.get('.zoom-title');
+    expect(title.text()).toBe(target.attributes('aria-label'));
+    expect(title.classes()).not.toContain('canvas-semantic-label');
+    expect(title.element.parentElement).toBe(target.get('.zoom-clip-labels').element);
+    expect(target.get('.zoom-projection-badge').text()).toBe('2D');
+    expect(target.get('.zoom-mode-badge').text()).toBe('Auto');
+    expect(track.getComponent(TimelineCanvasLane).props('items')).toEqual([expect.objectContaining({ zoom: element, label: '' })]);
+    expect(target.findAll('.zoom-title')).toHaveLength(1);
+  });
+
   it('emits every zoom id with the zoom nearest the playhead as primary', async () => {
     const mounted = await mountTracks({
       currentTime: 2,

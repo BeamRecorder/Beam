@@ -7,6 +7,7 @@ import { isShapeKind, shapeDefinition, type ShapeKind } from '~/media/shared/sha
 import { applyBlurEffect } from '../effects/blur-effect';
 import type { EffectRect } from '../effects/effect-types';
 import { backgroundFillStyle } from '../background/render-background';
+import { cachedShapePath } from './shape-path-cache';
 
 const shadowOffset = (direction: ShapeClip['shadowDirection'], scale: number) => {
   const distance = 12 * scale;
@@ -94,25 +95,28 @@ const traceShapeInRect = (ctx: Canvas2DContext, rect: EffectRect, style: ShapeLa
   ctx.restore();
 };
 
-const transformedCatalogPath = (rect: EffectRect, style: ShapeLayerStyle, preset: ShapeKind) => {
-  const definition = shapeDefinition(preset);
-  const transform = new DOMMatrix()
-    .translateSelf(rect.x + rect.width / 2, rect.y + rect.height / 2)
-    .rotateSelf(style.rotation)
-    .translateSelf(-rect.width / 2, -rect.height / 2)
-    .scaleSelf(rect.width / definition.width, rect.height / definition.height);
-  const path = new Path2D();
-  path.addPath(catalogPath(preset), transform);
-  return path;
+const transformedCatalogPath = (clip: ShapeClip, rect: EffectRect, style: ShapeLayerStyle, preset: ShapeKind) => {
+  const key = JSON.stringify([preset, rect.x, rect.y, rect.width, rect.height, style.rotation]);
+  return cachedShapePath(clip, key, () => {
+    const definition = shapeDefinition(preset);
+    const transform = new DOMMatrix()
+      .translateSelf(rect.x + rect.width / 2, rect.y + rect.height / 2)
+      .rotateSelf(style.rotation)
+      .translateSelf(-rect.width / 2, -rect.height / 2)
+      .scaleSelf(rect.width / definition.width, rect.height / definition.height);
+    const path = new Path2D();
+    path.addPath(catalogPath(preset), transform);
+    return path;
+  });
 };
 
-const maskShapeInRect = (ctx: Canvas2DContext, rect: EffectRect, style: ShapeLayerStyle) => {
+const maskShapeInRect = (ctx: Canvas2DContext, clip: ShapeClip, rect: EffectRect, style: ShapeLayerStyle) => {
   if (!usesCatalogPath(style.preset)) {
     traceShapeInRect(ctx, rect, style);
     return;
   }
   const definition = shapeDefinition(style.preset);
-  ctx.fill(transformedCatalogPath(rect, style, style.preset), definition.fillRule ?? 'nonzero');
+  ctx.fill(transformedCatalogPath(clip, rect, style, style.preset), definition.fillRule ?? 'nonzero');
   // applyBlurEffect fills the traced native path after this callback. Leave an empty
   // path behind because catalog paths have already been painted into the mask.
   ctx.beginPath();
@@ -161,7 +165,14 @@ export function drawShapeClip(
     applyBlurEffect(ctx, backdropClip, rect, {
       ...(backdrop ? { source: backdrop } : {}),
       bounds: rotatedBounds(rect, style.rotation),
-      maskPath: (maskContext, maskRect) => maskShapeInRect(maskContext, maskRect, style),
+      maskPath: (maskContext, maskRect) => maskShapeInRect(maskContext, clip, maskRect, style),
+      maskCacheKey: JSON.stringify([
+        style.preset,
+        style.rotation,
+        style.cornerRadius,
+        style.arrowThickness,
+        style.arrowHeadSize,
+      ]),
     });
   }
   ctx.save();
@@ -178,7 +189,7 @@ export function drawShapeClip(
     const fillStyle = backgroundFillStyle(ctx, shapeLayerFill(style), rect);
     if (usesCatalogPath(style.preset)) {
       const definition = shapeDefinition(style.preset);
-      const path = transformedCatalogPath(rect, style, style.preset);
+      const path = transformedCatalogPath(clip, rect, style, style.preset);
       if (style.fillEnabled !== false) {
         ctx.fillStyle = fillStyle;
         ctx.fill(path, definition.fillRule ?? 'nonzero');

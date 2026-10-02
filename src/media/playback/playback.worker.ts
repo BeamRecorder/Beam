@@ -4,6 +4,8 @@ import { MediaInputError, type MediaError } from '../shared';
 import { assertPlaybackWorkerRequest, assertPlaybackWorkerResponse } from './playback-protocol';
 import type { PreviewQuality } from './playback-preview';
 import { loadPlaybackAsset } from './playback-worker-assets';
+import { scrubSourceTime } from './scrub-source-time';
+import { engineMetrics } from '../performance/engine-metrics';
 import { consumerPlaybackOperation, playbackMediaError as mediaError } from './playback-worker-errors';
 import type {
   PlaybackFrameMessage,
@@ -77,7 +79,10 @@ function receive(message: PlaybackWorkerRequest) {
   }
   if (disposed) return;
   generation = Math.max(generation, message.generation);
-  if (message.type === 'load') {
+  if (message.type === 'reset-metrics') {
+    engineMetrics.reset();
+    postMetrics(message.generation, true);
+  } else if (message.type === 'load') {
     const task = load(message);
     loadTasks.add(task);
     void task.finally(() => loadTasks.delete(task));
@@ -233,8 +238,11 @@ async function processTicks() {
       if (request.generation !== generation) continue;
       requestGeneration = request.generation;
       const activeConsumers = consumerWindow.select(request.timelineSeconds, true);
-      await consumerWindow.prepare(activeConsumers, resetWithContext, previewQuality);
+      await engineMetrics.measureAsync('prepare', () =>
+        consumerWindow.prepare(activeConsumers, resetWithContext, previewQuality),
+      );
       if (disposed || request.generation !== generation) continue;
+      const decodeStarted = performance.now();
       const decoded = await Promise.allSettled(
         activeConsumers.map(async (consumer) => {
           const sampleTimelineSeconds = Math.max(request.timelineSeconds, consumer.clip.timelineStartSeconds);
@@ -249,6 +257,7 @@ async function processTicks() {
           };
         }),
       );
+      engineMetrics.observe('decode', performance.now() - decodeStarted);
       const failure = decoded.find((result): result is PromiseRejectedResult => result.status === 'rejected');
       if (failure) {
         for (const result of decoded)
@@ -298,7 +307,11 @@ async function processSeeks() {
       const decoded = await Promise.allSettled(
         activeConsumers.map((consumer) =>
           consumerPlaybackOperation(consumer, 'seek-frame', request.timelineSeconds, async () => {
-            const targetSeconds = sourceTime(consumer.clip, request.timelineSeconds);
+            const targetSeconds = await scrubSourceTime(
+              consumer.asset,
+              sourceTime(consumer.clip, request.timelineSeconds),
+              request.mode,
+            );
             let wrapped = await consumer.sink.getCanvas(targetSeconds);
             if (!wrapped) {
               const iterator = consumer.sink.canvases(targetSeconds)[Symbol.asyncIterator]();
@@ -337,6 +350,7 @@ async function processSeeks() {
       }
       for (const { consumer, frame } of frames) transferFrame(consumer, frame, request.generation, request.requestId);
       const latencyMs = performance.now() - startedAt;
+      engineMetrics.observe('seek', latencyMs);
       metrics.seekLatencyMs.push(latencyMs);
       if (metrics.seekLatencyMs.length > 100) metrics.seekLatencyMs.shift();
       post({
@@ -361,6 +375,7 @@ async function processSeeks() {
 }
 
 function transferFrame(consumer: ClipConsumer, frame: QueuedFrame, frameGeneration: number, requestId?: number) {
+  engineMetrics.count('decoded');
   const message: PlaybackFrameMessage = {
     type: 'frame',
     generation: frameGeneration,
@@ -400,7 +415,7 @@ function postMetrics(messageGeneration: number, force = false) {
   post({
     type: 'metrics',
     generation: messageGeneration,
-    metrics: { ...metrics, seekLatencyMs: [...metrics.seekLatencyMs] },
+    metrics: { ...metrics, seekLatencyMs: [...metrics.seekLatencyMs], engine: engineMetrics.snapshot() },
   });
 }
 

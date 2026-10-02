@@ -23,6 +23,7 @@ import {
 import { isPhoneFrame } from '../../composition/appearance/phone-frames';
 import { mapSourcePointToScreen, resolveScreenRenderGeometry } from '../../composition/camera-layout';
 import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '../../composition/scene-layers';
+import { createCurrentScreenResolver } from './current-screen-resolver';
 import type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
 import { selectedZoomPreviewTilt } from './camera-preview-tilt';
 import { drawInCameraSpace } from './camera-space';
@@ -46,10 +47,12 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   let motionBlurSurface: MotionBlurSurface | null = null;
   const sceneLayersAt = (timeMs: number) =>
     options.sceneLayersAt?.(timeMs) ?? resolveCompositionSceneLayers(options.composition(), timeMs);
-  const screenClip = (): VisualClip | null => sceneLayersAt(options.currentTime() * 1_000).screen;
+  const screens = createCurrentScreenResolver(options.composition);
+  const screenClip = (): VisualClip | null => screens.at(options.currentTime() * 1_000);
   const resetCamera = () => {
     cameraEvaluator = null;
     cameraEvaluatorInputs = null;
+    screens.invalidate();
     options.onRenderOnce?.();
   };
   const resetCameraUnlessDragging = () => {
@@ -281,11 +284,11 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
         telemetry,
         autoFollow: options.zoomAutoFollow?.(),
         mapTelemetryTime: (timeMs) => {
-          const activeScreen = sceneLayersAt(timeMs).screen;
+          const activeScreen = screens.at(timeMs);
           return activeScreen ? (sessionTimeAt(activeScreen, timeMs, composition) ?? timeMs) : timeMs;
         },
         mapFocus: (focus, zoom, timeMs) => {
-          const activeScreen = sceneLayersAt(timeMs).screen;
+          const activeScreen = screens.at(timeMs);
           if (!activeScreen || zoom.mode !== 'auto') return focus;
           const activeGeometry = resolveScreenRenderGeometry(
             activeScreen,

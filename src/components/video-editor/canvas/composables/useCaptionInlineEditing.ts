@@ -25,6 +25,7 @@ export function useCaptionInlineEditing(options: {
   const editingCaptionId = ref<string | null>(null);
   const originalCustomText = ref<string | undefined>(undefined);
   const editingCaption = computed(() => {
+    if (!editingCaptionId.value) return null;
     const clip = options.composition().clips.find((candidate) => candidate.id === editingCaptionId.value);
     return clip && isTextCaptionClip(clip) ? clip : null;
   });
@@ -88,5 +89,14 @@ export function useCaptionInlineEditing(options: {
     if (editingCaptionId.value && !ids.includes(editingCaptionId.value)) finish();
   });
 
-  return { editingCaptionId, editingCaption, renderScale, warningPlacement, begin, update, finish, cancel };
+  return {
+    editingCaptionId,
+    editingCaption,
+    renderScale,
+    warningPlacement,
+    begin,
+    update,
+    finish,
+    cancel,
+  };
 }

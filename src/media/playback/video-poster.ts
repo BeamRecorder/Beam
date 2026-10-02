@@ -6,14 +6,9 @@ import {
   type MediaFrame,
   type MediaSourceDescriptor,
 } from '../shared';
-
-export interface VideoPosterOptions {
-  timestampSeconds?: number;
-  position?: number;
-  width?: number;
-  height?: number;
-  fit?: 'fill' | 'contain' | 'cover';
-}
+import { softwareLinuxDecoderOptions } from './playback-decoder';
+import type { VideoPosterOptions } from './video-poster-types';
+export type { VideoPosterOptions } from './video-poster-types';
 
 const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
 
@@ -65,7 +60,9 @@ export async function decodeVideoPoster(
     const duration = await opened.input.computeDuration([track]);
     const requested = options.timestampSeconds ?? duration * (options.position ?? 0.5);
     const timestamp = clamp(requested, 0, Math.max(0, duration - 0.000_001));
+    const decoderOptions = softwareLinuxDecoderOptions(await track.getCodec(), navigator.userAgent);
     const sink = new CanvasSink(track, {
+      ...(decoderOptions ? { decoderOptions } : {}),
       width: options.width,
       height: options.height,
       fit: options.fit,

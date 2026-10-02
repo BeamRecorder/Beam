@@ -6,6 +6,7 @@ import type {
   HistoryAction,
   SnapshotSource,
   SnapshotOwnership,
+  SerializedSnapshot,
 } from './editor-history-types';
 export type { EditorStateSnapshot, HistoryAction, HistoryActionType } from './editor-history-types';
 
@@ -21,6 +22,7 @@ export function useEditorUndoRedo<T extends object = EditorStateSnapshot>(option
   const pending = ref(false);
   let timer: ReturnType<typeof setTimeout> | null = null;
   let pendingSnapshot: SnapshotSource<T> | null = null;
+  let serializedHead: SerializedSnapshot<T> | null = null;
   const available = () => !restoring.value && !options.disabled?.();
   const canUndo = computed(() => available() && (undoStack.value.length > 1 || pending.value));
   const canRedo = computed(() => available() && redoStack.value.length > 0);
@@ -28,8 +30,14 @@ export function useEditorUndoRedo<T extends object = EditorStateSnapshot>(option
 
   const recordImmediate = (snapshot: T) => {
     if (restoring.value) return;
-    const next = clone(snapshot);
-    if (same(undoStack.value.at(-1), next)) return;
+    const json = JSON.stringify(snapshot);
+    const head = undoStack.value.at(-1);
+    if (head && serializedHead?.snapshot !== head) serializedHead = { snapshot: head, json: JSON.stringify(head) };
+    if (head && serializedHead?.json === json) return;
+    const next = JSON.parse(json) as T;
+    // Only the current history-owned immutable snapshot retains a fingerprint.
+    // Live/IPC/restore values still cross a copy boundary; no source identity cache.
+    serializedHead = { snapshot: next, json };
     undoStack.value = [...undoStack.value, next].slice(-MAX_HISTORY_DEPTH);
     redoStack.value = [];
   };
@@ -58,6 +66,7 @@ export function useEditorUndoRedo<T extends object = EditorStateSnapshot>(option
   // the history. Restoring still clones so live edits never mutate a snapshot.
   const initialize = (snapshot: T, history?: SnapshotHistory<T>, ownership: SnapshotOwnership = 'copy') => {
     cancel();
+    serializedHead = null;
     const valid =
       history?.version === 1 &&
       Array.isArray(history.undo) &&
@@ -93,6 +102,7 @@ export function useEditorUndoRedo<T extends object = EditorStateSnapshot>(option
           after: type === 'undo' ? undo[undo.length - 1]! : snapshot,
         },
       };
+      serializedHead = null;
     } finally {
       restoring.value = false;
     }

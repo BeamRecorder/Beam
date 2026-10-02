@@ -77,8 +77,12 @@ function oldFindOracle(clips: readonly Clip[]) {
 
 describe('createPlaybackClipIndex', () => {
   it('returns empty maps for null and empty compositions', () => {
-    expect(createPlaybackClipIndex(null)).toEqual({ clips: new Map(), previous: new Map() });
-    expect(createPlaybackClipIndex(makeComposition())).toEqual({ clips: new Map(), previous: new Map() });
+    for (const composition of [null, makeComposition()]) {
+      const index = createPlaybackClipIndex(composition);
+      expect(index.clips).toEqual(new Map());
+      expect(index.previous).toEqual(new Map());
+      expect(index.retainedKeys(0, new Map(), new Map())).toEqual(new Set());
+    }
   });
 
   it('matches the original find semantics for visual predecessors, including image clips and ties', () => {

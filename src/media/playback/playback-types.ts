@@ -1,6 +1,7 @@
 import type { MediaError, MediaSourceDescriptor } from '../shared';
 import type { PreviewQuality } from './playback-preview';
 import type { AudioPlaybackMetrics } from './audio-playback-metrics';
+import type { EngineMetricsSnapshot } from '../performance/engine-metrics-types';
 
 export type PlaybackSeekMode = 'seek' | 'scrub';
 export type PlaybackSeekResult = 'presented' | 'superseded';
@@ -29,6 +30,7 @@ export type PlaybackWorkerRequest =
   | { type: 'play'; generation: number; timelineSeconds: number }
   | { type: 'tick'; generation: number; timelineSeconds: number }
   | { type: 'pause'; generation: number }
+  | { type: 'reset-metrics'; generation: number }
   | { type: 'cancel-seek'; generation: number }
   | {
       type: 'seek';
@@ -51,6 +53,7 @@ export interface PlaybackFrameMessage {
 }
 
 export interface PlaybackMetrics {
+  engine?: EngineMetricsSnapshot;
   decodedFrames: number;
   presentedFrames: number;
   droppedFrames: number;

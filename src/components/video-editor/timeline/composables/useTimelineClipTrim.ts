@@ -1,5 +1,5 @@
 import { selectionHasLocks } from '../../composition/timeline-locks';
-import { nextTick, type Ref } from 'vue';
+import { markRaw, nextTick, type Ref } from 'vue';
 import type { Clip, ClipComposition } from '~/media/shared/composition-types';
 import { MIN_CLIP_DURATION_MS } from '../../composition/engine/clip-composition-validation';
 import { clipTrimBounds } from '../../composition/engine/trim-clip';
@@ -103,7 +103,7 @@ export function useTimelineClipTrim(options: {
         endMs,
       );
       options.previewDurationMs.value = previewEndMs;
-      options.emit('preview:composition', previewComposition);
+      options.emit('preview:composition', markRaw(previewComposition));
       options.activeTrimState.value = {
         ids,
         edge,

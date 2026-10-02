@@ -1,6 +1,6 @@
 import { CanvasSink } from 'mediabunny';
 import { openMediaInput, type MediaSourceDescriptor, type OpenedMediaInput } from '../shared';
-import { softwareAv1DecoderOptions } from './playback-decoder';
+import { softwareLinuxDecoderOptions } from './playback-decoder';
 import {
   assertThumbnailWorkerResponse,
   isThumbnailWorkerRequest,
@@ -116,7 +116,7 @@ async function sinkFor(
       candidate.dispose();
       return null;
     }
-    const decoderOptions = softwareAv1DecoderOptions(decoderConfig?.codec ?? null, navigator.userAgent);
+    const decoderOptions = softwareLinuxDecoderOptions(decoderConfig?.codec ?? null, navigator.userAgent);
     const configSupported = decoderConfig
       ? (await VideoDecoder.isConfigSupported({ ...decoderConfig, ...decoderOptions })).supported
       : false;

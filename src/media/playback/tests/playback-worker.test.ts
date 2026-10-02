@@ -30,6 +30,7 @@ const runtime = vi.hoisted(() => {
     MediaInputError: TestMediaInputError,
     CanvasSink: vi.fn(),
     decoderSupport: vi.fn(),
+    keyPacket: vi.fn(),
     sinkInstances: [] as Array<{
       canvases: ReturnType<typeof vi.fn>;
       getCanvas: ReturnType<typeof vi.fn>;
@@ -42,7 +43,14 @@ vi.mock('../../shared', () => ({
   openMediaInput: runtime.openMediaInput,
 }));
 
-vi.mock('mediabunny', () => ({ CanvasSink: runtime.CanvasSink }));
+vi.mock('mediabunny', () => ({
+  CanvasSink: runtime.CanvasSink,
+  EncodedPacketSink: class {
+    getKeyPacket(seconds: number) {
+      return runtime.keyPacket(seconds);
+    }
+  },
+}));
 
 const source = (assetId: string): MediaSourceDescriptor => ({
   assetId,
@@ -113,6 +121,7 @@ beforeEach(async () => {
   runtime.openMediaInput.mockReset();
   runtime.CanvasSink.mockReset();
   runtime.decoderSupport.mockReset().mockResolvedValue({ supported: true });
+  runtime.keyPacket.mockReset().mockImplementation(async (seconds: number) => ({ timestamp: seconds }));
   runtime.sinkInstances.length = 0;
 
   class TestImageBitmap {
@@ -148,17 +157,59 @@ const send = (message: unknown) => workerSelf.onmessage!({ data: message } as Me
 const messages = () => workerSelf.postMessage.mock.calls.map(([message]) => message as PlaybackWorkerResponse);
 
 describe('playback worker', () => {
-  it('selects software AV1 playback on Linux before creating a decoder', async () => {
+  it('decodes only the preceding keyframe while scrubbing, then seeks exactly on release', async () => {
+    runtime.keyPacket.mockResolvedValue({ timestamp: 1 });
+    send({ type: 'load', generation: 1, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
+    await flush();
+    runtime.sinkInstances[0]!.getCanvas.mockImplementation(async (time: number) => wrapped(time));
+    send({ type: 'seek', generation: 2, requestId: 1, timelineSeconds: 1.73, mode: 'scrub' });
+    await flush();
+    expect(runtime.sinkInstances[0]!.getCanvas).toHaveBeenCalledWith(1);
+    expect(messages()).toContainEqual(expect.objectContaining({ type: 'frame', timestampSeconds: 1 }));
+    send({ type: 'seek', generation: 3, requestId: 2, timelineSeconds: 1.73, mode: 'seek' });
+    await flush();
+    expect(runtime.sinkInstances[0]!.getCanvas).toHaveBeenLastCalledWith(1.73);
+    expect(runtime.keyPacket).toHaveBeenCalledOnce();
+  });
+  it('reports keyframe metadata errors instead of silently inventing a scrub frame', async () => {
+    send({ type: 'load', generation: 1, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
+    await flush();
+    runtime.keyPacket.mockRejectedValue(new Error('Unreadable keyframe metadata'));
+    send({ type: 'seek', generation: 2, requestId: 1, timelineSeconds: 1.7, mode: 'scrub' });
+    await flush();
+    expect(runtime.sinkInstances[0]!.getCanvas).not.toHaveBeenCalled();
+    expect(messages()).toContainEqual(
+      expect.objectContaining({
+        type: 'error',
+        requestId: 1,
+        error: expect.objectContaining({ message: expect.stringContaining('metadata') }),
+      }),
+    );
+  });
+  it('resets engine measurements without disposing decoders or advancing playback', async () => {
+    send({ type: 'reset-metrics', generation: 1 });
+    expect(messages()).toContainEqual(
+      expect.objectContaining({
+        type: 'metrics',
+        metrics: expect.objectContaining({ engine: expect.objectContaining({ stages: {}, counters: {} }) }),
+      }),
+    );
+    expect(runtime.openMediaInput).not.toHaveBeenCalled();
+  });
+  it.each([
+    ['av1', 'av01.0.08M.08'],
+    ['vp9', 'vp09.00.40.08'],
+  ])('selects software %s playback on Linux before creating a decoder', async (codec, parameter) => {
     vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Linux');
     const track = videoTrack();
-    track.getCodec.mockResolvedValue('av1');
-    track.getDecoderConfig.mockResolvedValue({ codec: 'av01.0.08M.08', codedWidth: 1920, codedHeight: 1052 });
+    track.getCodec.mockResolvedValue(codec);
+    track.getDecoderConfig.mockResolvedValue({ codec: parameter, codedWidth: 1920, codedHeight: 1052 });
     runtime.openMediaInput.mockResolvedValueOnce(openedVideo(track));
     send({ type: 'load', generation: 1, assets: [source('asset-1')], clips: [clip('clip-a')], previewQuality: 'full' });
     await flush();
     expect(runtime.decoderSupport).toHaveBeenCalledWith(
       expect.objectContaining({
-        codec: 'av01.0.08M.08',
+        codec: parameter,
         hardwareAcceleration: 'prefer-software',
         optimizeForLatency: false,
       }),

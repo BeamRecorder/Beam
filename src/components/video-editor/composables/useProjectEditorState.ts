@@ -32,7 +32,7 @@ import { propertyInteractionActive } from '../../../composables/property-interac
 import type { EditorPreferenceDefaults } from './editor-default-types';
 import { applyFreshPresentationDefaults, applyGlobalCursorDefaults, defaultsFromEditorState } from './editor-defaults';
 
-const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(toRaw(value))) as T;
 
 export function useProjectEditorState(options: {
   project: Ref<CaptureProject | null | undefined>;
@@ -81,8 +81,13 @@ export function useProjectEditorState(options: {
     schemaVersion: 3,
     composition: clone(options.composition.value),
     zoom: {
-      elements: options.zoomElements.value.map((zoom) => ({ ...toRaw(zoom), focus: { ...toRaw(zoom).focus } })),
-      generatedSessions: options.generatedSessions.value.map((session) => ({ ...toRaw(session) })),
+      elements: options.zoomElements.value.map((zoom) => ({
+        ...toRaw(zoom),
+        focus: { ...toRaw(zoom).focus },
+      })),
+      generatedSessions: options.generatedSessions.value.map((session) => ({
+        ...toRaw(session),
+      })),
       motionBlur: clone(zoomMotionBlur.value),
       autoFollow: clone(zoomAutoFollow.value),
     },
@@ -240,7 +245,6 @@ export function useProjectEditorState(options: {
 
   watch(
     [
-      options.composition,
       options.zoomElements,
       options.generatedSessions,
       zoomMotionBlur,
@@ -264,6 +268,9 @@ export function useProjectEditorState(options: {
     () => scheduleSave(),
     { deep: true },
   );
+  // Composition is an immutable shallow state: edits replace the document.
+  // Deep Vue traversal visits every annotation even though none are reactive.
+  watch(options.composition, () => scheduleSave());
 
   watch(
     propertyInteractionActive,

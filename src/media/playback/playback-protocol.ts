@@ -6,6 +6,7 @@ import type {
 } from './playback-types';
 import { isPreviewQuality } from './playback-preview';
 import { isMediaErrorContext } from './playback-error-context';
+import { isEngineMetricsSnapshot } from '../performance/engine-metrics-protocol';
 
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === 'object');
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
@@ -63,7 +64,7 @@ export function isPlaybackWorkerRequest(value: unknown): value is PlaybackWorker
   }
   if (value.type === 'retime') return Array.isArray(value.clips) && value.clips.every(isClip);
   if (value.type === 'configure-preview') return isPreviewQuality(value.previewQuality);
-  if (value.type === 'pause' || value.type === 'cancel-seek') return true;
+  if (value.type === 'pause' || value.type === 'cancel-seek' || value.type === 'reset-metrics') return true;
   if (value.type === 'play' || value.type === 'tick')
     return finite(value.timelineSeconds) && value.timelineSeconds >= 0;
   return (
@@ -78,6 +79,7 @@ export function isPlaybackWorkerRequest(value: unknown): value is PlaybackWorker
 
 function isMetrics(value: unknown): value is PlaybackMetrics {
   if (!record(value) || !Array.isArray(value.seekLatencyMs) || !value.seekLatencyMs.every(finite)) return false;
+  if (value.engine !== undefined && !isEngineMetricsSnapshot(value.engine)) return false;
   return [
     'decodedFrames',
     'presentedFrames',

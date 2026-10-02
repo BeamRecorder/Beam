@@ -8,6 +8,7 @@ export function cachedSeekFrames(
   cache: FrameLruCache,
   targetSeconds: number,
   quality: PreviewQuality,
+  aliases: ReadonlyMap<string, string> = new Map(),
 ) {
   const frames = new Map<string, string>();
   let complete = true;
@@ -21,8 +22,9 @@ export function cachedSeekFrames(
       clip.freezeFrameSourceMs !== undefined
         ? clip.freezeFrameSourceMs / 1_000
         : clip.sourceInMs / 1_000 + (time - start) * clip.playbackRate;
-    const exact = cache.findCoveringKey(clip.id, source, `${quality}:`);
-    const key = exact ?? cache.findMatchingKey(clip.id, source, `${quality}:`);
+    const frameClipId = aliases.get(clip.id) ?? clip.id;
+    const exact = cache.findCoveringKey(frameClipId, source, `${quality}:`);
+    const key = exact ?? cache.findMatchingKey(frameClipId, source, `${quality}:`);
     if (key) {
       cache.get(key); // Keep the displayed frame hot in the LRU.
       frames.set(clip.id, key);

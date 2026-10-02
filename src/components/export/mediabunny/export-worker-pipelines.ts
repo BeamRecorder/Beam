@@ -1,10 +1,17 @@
-import { VideoSampleSink, type InputVideoTrack, type VideoSample } from 'mediabunny';
+import { VideoSampleSink, type VideoSample } from 'mediabunny';
+import { engineMetrics } from '~/media/performance/engine-metrics';
+import type { EngineMetricsSnapshot } from '~/media/performance/engine-metrics-types';
 import { sourceTimeAt } from '~/media/shared';
 import { isVisualClip, type AudioClip, type VisualClip } from '~/media/shared/composition-types';
 import { createProgressiveAudioMixer } from '~/media/export/pcm-mixer';
 import { createCursorMotionPlayer } from '../../video-editor/composables/cursor-motion';
 import { renderBackground } from '../../video-editor/composition/background/render-background';
-import { resolveCompositionSceneLayers } from '../../video-editor/composition/scene-layers';
+import { createCompositionSceneLayerResolver } from '../../video-editor/composition/scene-layers';
+import { softwareLinuxDecoderOptions } from '~/media/playback/playback-decoder';
+import { playbackVideoDecodeKey } from '~/media/playback/shared-video-plan';
+import { disposeMediaShadowCache } from '../../video-editor/composition/appearance/media-shadow-cache';
+import { disposeBlurEffect } from '../../video-editor/composition/effects/blur-effect';
+import { disposeGpuShapes } from '../../video-editor/composition/shape/ordered-gpu-shapes';
 import {
   createSnapshotCameraEvaluator,
   disposeCompositionRenderer,
@@ -17,6 +24,7 @@ import { ExportWorkerOutput } from './export-worker-output';
 import { WATERMARK_LOGO_KEY } from '../../video-editor/canvas/watermark-render';
 
 export type VideoPipelineStats = {
+  engine?: EngineMetricsSnapshot;
   elapsedMs: number;
   decodeMs: number;
   renderMs: number;
@@ -44,8 +52,8 @@ class BackgroundVideoReader {
   private iterator: AsyncIterator<VideoSample | null> | null = null;
   private loop = -1;
 
-  constructor(track: InputVideoTrack, duration: number, totalFrames: number, fps: number) {
-    this.sink = new VideoSampleSink(track);
+  constructor(sink: VideoSampleSink, duration: number, totalFrames: number, fps: number) {
+    this.sink = sink;
     this.duration = duration;
     this.totalFrames = totalFrames;
     this.fps = fps;
@@ -107,6 +115,7 @@ export async function renderExportVideo(
   signal: AbortSignal,
   onFrame: (done: number, stats: Omit<VideoPipelineStats, 'elapsedMs'>) => void | Promise<void>,
 ): Promise<VideoPipelineStats> {
+  engineMetrics.reset();
   const started = performance.now();
   let decodeMs = 0;
   let renderMs = 0;
@@ -114,22 +123,42 @@ export async function renderExportVideo(
   const fps = request.snapshot.render.fps;
   const totalFrames = Math.max(1, Math.ceil(request.snapshot.duration * fps));
   const consumers = new Map<string, AsyncIterator<VideoSample | null>>();
+  const sharedConsumers = new Map<string, AsyncIterator<VideoSample | null>>();
   let backgroundReader: BackgroundVideoReader | null = null;
   try {
     for (const clip of request.snapshot.composition.clips) {
       if (!isVisualClip(clip) || clip.kind === 'image' || !clip.enabled || clip.timelineDurationMs <= 0) continue;
       const track = assets.assets.get(clip.assetId)?.video;
       if (!track) continue;
-      consumers.set(
-        clip.id,
-        new VideoSampleSink(track)
+      const key = playbackVideoDecodeKey({
+        clipId: clip.id,
+        assetId: clip.assetId,
+        timelineStartSeconds: clip.timelineStartMs / 1000,
+        timelineDurationSeconds: clip.timelineDurationMs / 1000,
+        sourceInSeconds: clip.sourceInMs / 1000,
+        playbackRate: clip.playbackRate,
+        freezeFrameSourceSeconds: clip.freezeFrameSourceMs === undefined ? undefined : clip.freezeFrameSourceMs / 1000,
+      });
+      let consumer = sharedConsumers.get(key);
+      if (!consumer) {
+        consumer = new VideoSampleSink(track, softwareLinuxDecoderOptions(await track.getCodec(), navigator.userAgent))
           .samplesAtTimestamps(clipTimestamps(clip, totalFrames, fps), { skipLiveWait: true })
-          [Symbol.asyncIterator](),
-      );
+          [Symbol.asyncIterator]();
+        sharedConsumers.set(key, consumer);
+      }
+      consumers.set(clip.id, consumer);
     }
     const background = assets.assets.get('export-background');
     if (background?.video && background.duration > 0)
-      backgroundReader = new BackgroundVideoReader(background.video, background.duration, totalFrames, fps);
+      backgroundReader = new BackgroundVideoReader(
+        new VideoSampleSink(
+          background.video,
+          softwareLinuxDecoderOptions(await background.video.getCodec(), navigator.userAgent),
+        ),
+        background.duration,
+        totalFrames,
+        fps,
+      );
 
     const staticBackground = prepareStaticBackground(request, images);
     const motion = assets.screenSize
@@ -146,13 +175,15 @@ export async function renderExportVideo(
       assets.screenSize?.height ?? request.snapshot.canvas.height,
     );
 
+    const sceneAt = createCompositionSceneLayerResolver(request.snapshot.composition);
     for (let frame = 0; frame < totalFrames; frame += 1) {
       abortIfNeeded(signal);
       const time = frame / fps;
-      const layers = resolveCompositionSceneLayers(request.snapshot.composition, time * 1_000);
+      const layers = sceneAt(time * 1_000);
       const activeVisuals = [...layers.cameraVisuals, ...layers.webcams];
       const samples: VideoSample[] = [];
       const decoded: Array<{ clip: VisualClip; sample: VideoSample }> = [];
+      const sharedSamples = new Map<AsyncIterator<VideoSample | null>, VideoSample | null>();
       const visuals = new Map<string, RenderableMedia>();
       const watermarkLogo = images.get(WATERMARK_LOGO_KEY);
       if (watermarkLogo) visuals.set(WATERMARK_LOGO_KEY, watermarkLogo);
@@ -165,20 +196,28 @@ export async function renderExportVideo(
             if (image) visuals.set(clip.id, image);
             continue;
           }
-          const result = await consumers.get(clip.id)?.next();
-          const sample = !result || result.done ? null : result.value;
+          const consumer = consumers.get(clip.id);
+          if (!consumer) continue;
+          if (!sharedSamples.has(consumer)) {
+            const result = await consumer.next();
+            const sample = result.done ? null : result.value;
+            sharedSamples.set(consumer, sample);
+            if (sample) samples.push(sample);
+          }
+          const sample = sharedSamples.get(consumer);
           if (!sample) continue;
-          samples.push(sample);
           decoded.push({ clip, sample });
         }
         const dynamicBackground = await backgroundReader?.next(frame);
         if (dynamicBackground) samples.push(dynamicBackground);
+        const renderedSamples = new Map<VideoSample, RenderableMedia>();
         for (const { clip, sample } of decoded) {
-          const media = {
+          const media = renderedSamples.get(sample) ?? {
             source: sample.toCanvasImageSource(),
             width: sample.displayWidth,
             height: sample.displayHeight,
           };
+          renderedSamples.set(sample, media);
           if (clip.kind === 'screen') screen = media;
           else visuals.set(clip.id, media);
         }
@@ -189,7 +228,9 @@ export async function renderExportVideo(
               height: dynamicBackground.displayHeight,
             }
           : staticBackground;
-        decodeMs += performance.now() - decodeStarted;
+        const decodeElapsed = performance.now() - decodeStarted;
+        decodeMs += decodeElapsed;
+        engineMetrics.observe('decode', decodeElapsed);
         const renderStarted = performance.now();
         renderCompositionFrame(
           context,
@@ -203,21 +244,35 @@ export async function renderExportVideo(
           camera,
           layers,
         );
-        renderMs += performance.now() - renderStarted;
+        const renderElapsed = performance.now() - renderStarted;
+        renderMs += renderElapsed;
+        engineMetrics.observe('render', renderElapsed);
       } finally {
         for (const sample of samples) sample.close();
       }
       const encoderStarted = performance.now();
       await mediaOutput.addVideo(time, Math.min(1 / fps, Math.max(0, request.snapshot.duration - time)));
-      encoderBackpressureMs += performance.now() - encoderStarted;
+      const encodeElapsed = performance.now() - encoderStarted;
+      encoderBackpressureMs += encodeElapsed;
+      engineMetrics.observe('encode-wait', encodeElapsed);
+      engineMetrics.count('frames');
       await onFrame(frame + 1, { decodeMs, renderMs, encoderBackpressureMs });
     }
     mediaOutput.closeVideo();
-    return { elapsedMs: performance.now() - started, decodeMs, renderMs, encoderBackpressureMs };
+    return {
+      elapsedMs: performance.now() - started,
+      decodeMs,
+      renderMs,
+      encoderBackpressureMs,
+      engine: engineMetrics.snapshot(),
+    };
   } finally {
+    disposeGpuShapes(context);
+    disposeMediaShadowCache(context);
+    disposeBlurEffect(context);
     disposeCompositionRenderer();
     await Promise.allSettled([
-      ...[...consumers.values()].map((consumer) => consumer.return?.()),
+      ...[...sharedConsumers.values()].map((consumer) => consumer.return?.()),
       backgroundReader?.close(),
     ]);
   }

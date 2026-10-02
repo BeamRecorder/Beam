@@ -260,7 +260,7 @@ describe('MediaPlaybackEngine lifecycle', () => {
     worker.emit({ type: 'disposed', generation: request.generation });
   });
 
-  it('invalidates a current frame key when cache pressure evicts its bitmap', async () => {
+  it('preserves every active scene bitmap even when their total exceeds the history cache budget', async () => {
     const { engine, worker } = createEngine();
     await load(engine, worker, composition([videoClip('large'), videoClip('small', 'unused')]));
     const generation = latestSeekRequest(worker)!.generation;
@@ -269,8 +269,8 @@ describe('MediaPlaybackEngine lifecycle', () => {
     const smallBitmap = new FakeImageBitmap(1, 1);
     worker.emit(frameResponse(generation, 'small', 0, smallBitmap));
 
-    expect(largeBitmap.close).toHaveBeenCalledOnce();
-    expect(engine.frameFor('large')).toBeNull();
+    expect(largeBitmap.close).not.toHaveBeenCalled();
+    expect(engine.frameFor('large')?.bitmap).toBe(largeBitmap);
     expect(engine.frameFor('small')?.bitmap).toBe(smallBitmap);
     acknowledgeDisposal(engine, worker);
   });
@@ -335,13 +335,16 @@ describe('MediaPlaybackEngine lifecycle', () => {
 
   it('drops a removed clip current-frame key when a retime disables and then re-enables it', async () => {
     const { engine, worker } = createEngine();
-    const initial = composition([videoClip('kept'), videoClip('toggle')]);
+    const initial = composition([videoClip('kept'), videoClip('toggle', 'asset-1', { sourceInMs: 100 })]);
     await load(engine, worker, initial);
     const frame = new FakeImageBitmap();
     worker.emit(frameResponse(latestSeekRequest(worker)!.generation, 'toggle', 0.5, frame));
     expect(engine.frameFor('toggle')?.bitmap).toBe(frame);
 
-    const disabled = composition([videoClip('kept'), videoClip('toggle', 'asset-1', { enabled: false })]);
+    const disabled = composition([
+      videoClip('kept'),
+      videoClip('toggle', 'asset-1', { enabled: false, sourceInMs: 100 }),
+    ]);
     await finishRetime(engine, worker, disabled, 0.1);
     expect(engine.frameFor('toggle')).toBeNull();
 

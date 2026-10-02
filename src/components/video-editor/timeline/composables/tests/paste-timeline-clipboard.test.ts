@@ -116,6 +116,51 @@ const queuedIds = (ids: string[]) => () => {
 afterEach(() => useTimelineClipboard().clearClipboard());
 
 describe('pasteTimelineClipboard', () => {
+  it('pastes a single zoom without altering composition or requiring a clip transaction commit', () => {
+    const original = composition([], []),
+      copied = zoom('zoom', 1000, 2000);
+    const item = useTimelineClipboard().copyZoom('project-a', copied, [copied]);
+    const result = pasteTimelineClipboard({
+      composition: original,
+      zoomElements: [],
+      item,
+      timeMs: 2000,
+      timelineDurationMs: 5000,
+    });
+    expect(result.composition).toBe(original);
+    expect(result.zoomElements[0]).toMatchObject({ startMs: 2000, endMs: 3000 });
+    expect(result.primary.type).toBe('zoom');
+  });
+  it('uses the original lane for a single clip and maps later selection lanes to independent destinations', () => {
+    const asset = mediaAsset('screen-asset'),
+      first = visual({ id: 'first', trackId: 'first-lane' }),
+      second = visual({ id: 'second', trackId: 'second-lane' });
+    const original = composition([], [asset]);
+    const single = useTimelineClipboard().copyClip('project-a', first, asset);
+    const one = pasteTimelineClipboard({
+      composition: original,
+      zoomElements: [],
+      item: single,
+      timeMs: 0,
+      timelineDurationMs: 2000,
+      idFactory: () => 'one',
+    });
+    expect(one.composition.clips[0]).toMatchObject({ trackId: 'first-lane' });
+    const selection = copySelection([first, second], [], [asset], first.id);
+    const multi = pasteTimelineClipboard({
+      composition: original,
+      zoomElements: [],
+      item: selection,
+      timeMs: 0,
+      timelineDurationMs: 2000,
+      target: { category: 'visual', trackId: 'target-lane' },
+      idFactory: queuedIds(['first-copy', 'new-layer', 'second-copy']),
+    });
+    expect(multi.composition.clips.map((c) => ('trackId' in c ? c.trackId : null))).toEqual([
+      'target-lane',
+      'new-layer',
+    ]);
+  });
   it('pastes caption fragments together on a new layer without changing source or neighboring layers', () => {
     const sourceCollision = caption('source-at-paste', 'source-caption-layer', 500, 'Source at paste position', 2);
     const firstFragment = caption('source-caption-first', 'source-caption-layer', 1_000, 'First fragment', 2);

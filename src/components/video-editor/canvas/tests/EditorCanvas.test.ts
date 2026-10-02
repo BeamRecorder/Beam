@@ -1384,6 +1384,35 @@ describe('EditorCanvas', () => {
     expect(state.drawComposition).toHaveBeenCalledTimes(1);
   });
 
+  it('observes immutable composition replacements without recursively reading document fields', async () => {
+    let traversals = 0;
+    const document = () => {
+      const value = composition();
+      Object.defineProperty(value, 'unrelatedNestedData', {
+        enumerable: true,
+        get: () => {
+          traversals += 1;
+          return { nested: { value: 1 } };
+        },
+      });
+      return value;
+    };
+    const mounted = mountEditor({ composition: document(), playbackState: 'paused', isPlaying: false });
+    await flushPromises();
+    while (frames.length) runFrame();
+    // Test Utils itself inspects initial props for nested refs once.
+    expect(traversals).toBe(1);
+    traversals = 0;
+    state.resetCamera.mockClear();
+
+    await mounted.setProps({ composition: document() });
+    await nextTick();
+
+    expect(traversals).toBe(0);
+    expect(state.resetCamera).toHaveBeenCalled();
+    expect(frames).toHaveLength(1);
+  });
+
   it('shows floating recenter button when zoomed and resets zoom on click', async () => {
     const mounted = mountEditor();
     expect(mounted.find('.recenter-button').exists()).toBe(false);

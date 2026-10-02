@@ -8,6 +8,8 @@ import { timelineGaps, removeTimelineGap } from '../composition/timeline-gaps';
 import type { TimelineGap } from '../composition/timeline-lock-types';
 import type { ZoomElement } from '../zoom/zoom-types';
 import { timelineSpanStyle } from './timeline-clip-geometry';
+import { useTimelineVirtualWindow } from './composables/useTimelineVirtualization';
+import { createTimelineRangeIndex } from './composables/timeline-range-index';
 const props = defineProps<{
   clips: Clip[];
   composition: ClipComposition;
@@ -18,8 +20,12 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ remove: [gap: TimelineGap] }>();
 const { t } = useTranslate('TimelineTracks');
+const window = useTimelineVirtualWindow();
+const gapsAt = computed(() =>
+  createTimelineRangeIndex(timelineGaps(props.clips), (gap) => ({ start: gap.startMs, end: gap.endMs })),
+);
 const gaps = computed(() =>
-  timelineGaps(props.clips).map((gap) => ({
+  gapsAt.value(window?.timeRange.value.start ?? 0, window?.timeRange.value.end ?? props.durationMs).map((gap) => ({
     gap,
     removable: removeTimelineGap(props.composition, gap, props.zoomElements) !== props.composition,
   })),

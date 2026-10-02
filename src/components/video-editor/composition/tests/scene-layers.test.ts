@@ -10,7 +10,11 @@ import type {
   VisualClip,
 } from '~/media/shared/composition-types';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import { createCompositionSceneLayerResolver, resolveCompositionSceneLayers } from '../scene-layers';
+import {
+  createCompositionScreenResolver,
+  createCompositionSceneLayerResolver,
+  resolveCompositionSceneLayers,
+} from '../scene-layers';
 
 const visual = (kind: VisualClip['kind'], id: string, order: number, enabled = true, trackId = id): VisualClip => ({
   id,
@@ -137,6 +141,55 @@ const composition = (...clips: Clip[]): ClipComposition => ({
   keyboardCaptionSessions: [],
   assets: [],
   clips,
+});
+
+describe('createCompositionScreenResolver', () => {
+  it('matches the full scene across overlapping screens, equal orders, cuts and arbitrary query order', () => {
+    const clips = [
+      visual('screen', 'front', 3),
+      visual('screen', 'equal', 3),
+      visual('screen', 'back', 0),
+      shape(7),
+      caption('caption', 8),
+      visual('screen', 'disabled', 10, false),
+    ];
+    clips[0]!.timelineStartMs = 400;
+    clips[1]!.timelineStartMs = 800;
+    const next = composition(...clips);
+    const resolve = createCompositionScreenResolver(next);
+    const oracle = createCompositionSceneLayerResolver(next);
+    for (const time of [900, 0, 399, 400, 800, 1400, 1800, -1, NaN, Infinity, 799.9999999999999])
+      expect(resolve(time)).toBe(oracle(time).screen);
+  });
+
+  it('handles empty scenes, disabled screens and interval ends', () => {
+    expect(createCompositionScreenResolver(composition(shape(0), audio('audio', 1)))(100)).toBeNull();
+    const exhausted = visual('screen', 'disabled', 10, false);
+    const valid = visual('screen', 'valid', 1);
+    const resolve = createCompositionScreenResolver(composition(exhausted, valid));
+    expect(resolve(199)).toBe(valid);
+    expect(resolve(200)).toBe(valid);
+    expect(resolve(1000)).toBeNull();
+  });
+
+  it('does not read annotation timing or paint order during camera queries', () => {
+    let reads = 0;
+    const shapes = Array.from({ length: 1000 }, () => ({
+      ...shape(0),
+      get timelineStartMs() {
+        reads++;
+        return 0;
+      },
+      get order() {
+        reads++;
+        return 10;
+      },
+    }));
+    const screen = visual('screen', 'screen', 1);
+    const resolve = createCompositionScreenResolver(composition(...shapes, screen));
+    for (let time = 0; time < 1000; time += 5) expect(resolve(time)).toBe(screen);
+    expect(reads).toBe(0);
+  });
 });
 
 describe('resolveCompositionSceneLayers', () => {

@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue';
+import { computed, shallowRef } from 'vue';
 import type { Clip, MediaAsset } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../../zoom/zoom-types';
 import type { TimelineClipboardEntry, TimelineClipboardItem } from './timeline-clipboard-types';
@@ -6,7 +6,8 @@ import { describeClipboardClip, describeClipboardZoom } from './timeline-clipboa
 
 export type { TimelineClipboardItem, TimelineItemCategory } from './timeline-clipboard-types';
 
-const clipboardItem = ref<TimelineClipboardItem | null>(null);
+// Clipboard snapshots are replaced atomically; nested proxies add no useful notifications.
+const clipboardItem = shallowRef<TimelineClipboardItem | null>(null);
 
 export function getClipCategory(clip: Clip): 'visual' | 'audio' | 'caption' {
   if (clip.kind === 'audio') return 'audio';

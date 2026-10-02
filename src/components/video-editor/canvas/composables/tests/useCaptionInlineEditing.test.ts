@@ -119,6 +119,17 @@ afterEach(() => {
 });
 
 describe('useCaptionInlineEditing', () => {
+  it('does not scan an inactive caption editor through a large transient composition', async () => {
+    const mounted = mountEditing();
+    mounted.composition.value = {
+      ...mounted.composition.value,
+      get clips(): ClipComposition['clips'] {
+        throw new Error('No full snapshot');
+      },
+    };
+    await nextTick();
+    expect(mounted.state.editingCaption.value).toBeNull();
+  });
   it('does not begin editing a locked caption', () => {
     const mounted = mountEditing({ clip: caption({ locked: true }) });
 

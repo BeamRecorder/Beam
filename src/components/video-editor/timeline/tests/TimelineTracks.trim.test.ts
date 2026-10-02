@@ -36,6 +36,7 @@ describe('TimelineTracks', () => {
       isSnappingEnabled: false,
     });
     const scroll = setScrubViewportGeometry(mounted!);
+    Object.defineProperty(scroll, 'clientWidth', { configurable: true, value: 2000 });
     scroll.dispatchEvent(new Event('scroll'));
     await flushPromises();
     let browserScrollLeft = 500;

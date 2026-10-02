@@ -20,6 +20,8 @@ import {
   webcamSettingsForAppearance,
 } from '../../composition/webcam/webcam-zoom';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
+import { primeAdaptiveShadowColors } from '../../composition/appearance/adaptive-shadow';
+import type { AdaptiveShadowRequest, DecoratedMediaOptions } from '../../composition/appearance/appearance-types';
 import { isPhoneFrame } from '../../composition/appearance/phone-frames';
 import { drawFrameOverlay, frameOuterRect } from '../../composition/appearance/frames';
 import { drawCaptionText, type CaptionViewport } from '../../composition/captions/render-caption-text';
@@ -30,6 +32,7 @@ import { drawWithClipTransition } from '../../composition/transitions/render-tra
 import { resolveVisualClipFraming } from '../../composition/visual-framing';
 import { drawColorClip } from '../../composition/color/render-color-clip';
 import { drawShapeClip } from '../../composition/shape/render-shape-clip';
+import { createGpuShapeScope } from '../../composition/shape/ordered-gpu-shapes';
 
 export interface UseCompositionMediaOptions {
   composition: () => ClipComposition;
@@ -48,11 +51,13 @@ export interface UseCompositionMediaOptions {
 
 export function useCompositionMedia(options: UseCompositionMediaOptions) {
   const images = new Map<string, HTMLImageElement>();
+  const gpuShapes = createGpuShapeScope();
   const transformDraftFor = (clipId: string) => {
     const selected = options.selectedTransformClip();
     return options.transformDraftFor?.(clipId) ?? (clipId === selected?.id ? options.transformDraft() : null);
   };
   const dispose = () => {
+    gpuShapes.dispose();
     images.clear();
   };
   const reconcile = () => {
@@ -94,11 +99,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     });
   };
 
-  const drawVisual = (
-    ctx: CanvasRenderingContext2D,
-    clip: VisualClip,
-    window: { dx: number; dy: number; dw: number; dh: number },
-  ) => {
+  const prepareVisual = (clip: VisualClip, window: { dx: number; dy: number; dw: number; dh: number }) => {
     const frame = clip.kind === 'image' ? null : options.frameFor(clip.id);
     const image = clip.kind === 'image' ? images.get(clip.assetId) : null;
     if (image && (!image.complete || !image.naturalWidth)) return;
@@ -129,7 +130,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     const shadowScale = output
       ? Math.min(window.dw / Math.max(1, output.width), window.dh / Math.max(1, output.height))
       : 1;
-    drawDecoratedMedia(ctx, {
+    const mediaOptions: DecoratedMediaOptions = {
       source,
       sourceRect: framing.sourceRect,
       rect: framing.rect,
@@ -140,7 +141,18 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       mirroredY: clip.isMirroredY,
       mask: framing.mask,
       shadowFollowsSourceAlpha: clip.kind === 'image',
-    });
+    };
+    return { editingPhoneCrop, layout, options: mediaOptions };
+  };
+  const drawVisual = (
+    ctx: CanvasRenderingContext2D,
+    clip: VisualClip,
+    window: { dx: number; dy: number; dw: number; dh: number },
+  ) => {
+    const prepared = prepareVisual(clip, window);
+    if (!prepared) return;
+    const { editingPhoneCrop, layout } = prepared;
+    drawDecoratedMedia(ctx, prepared.options);
     if (editingPhoneCrop)
       drawFrameOverlay(
         ctx,
@@ -246,22 +258,55 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     const layers =
       resolvedLayers ?? resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000);
     const timeMs = options.currentTime() * 1_000;
+    const requests: AdaptiveShadowRequest[] = [];
     for (const clip of layers.visualStack) {
-      drawWithClipTransition(
-        ctx,
-        clip,
-        timeMs,
-        { x: window.dx, y: window.dy, width: window.dw, height: window.dh },
-        () => {
-          if (clip.kind === 'screen') drawScreen();
-          else if (clip.kind === 'color') drawColor(ctx, clip, window);
-          else if (clip.kind === 'shape') drawShape(ctx, clip, window);
-          else if (clip.kind === 'blur') drawBlur(ctx, clip, window);
-          else if (clip.kind === 'webcam') drawWebcam(ctx, clip, window);
-          else drawVisual(ctx, clip, window);
-        },
-      );
+      if (
+        !isVisualClip(clip) ||
+        clip.kind === 'screen' ||
+        clip.kind === 'webcam' ||
+        clip.appearance.shadowMode !== 'adaptive' ||
+        clip.appearance.shadowSize === 'none'
+      )
+        continue;
+      const prepared = prepareVisual(clip, window);
+      if (prepared)
+        requests.push({
+          source: prepared.options.source,
+          sourceRect: prepared.options.sourceRect,
+          fallbackColor: clip.appearance.shadowColor,
+        });
     }
+    primeAdaptiveShadowColors(requests);
+    gpuShapes.render(ctx, (batch) => {
+      for (const clip of layers.visualStack) {
+        if (clip.kind === 'blur' && batch.tryBlur(clip,{x:window.dx,y:window.dy,width:window.dw,height:window.dh},transformDraftFor(clip.id) ?? clip.transform)) continue;
+        if (
+          clip.kind === 'shape' &&
+          batch.tryShape(
+            clip,
+            { x: window.dx, y: window.dy, width: window.dw, height: window.dh },
+            () => drawShape(ctx, clip, window),
+            transformDraftFor(clip.id) ?? clip.transform,
+          )
+        )
+          continue;
+        batch.flush();
+        drawWithClipTransition(
+          ctx,
+          clip,
+          timeMs,
+          { x: window.dx, y: window.dy, width: window.dw, height: window.dh },
+          () => {
+            if (clip.kind === 'screen') drawScreen();
+            else if (clip.kind === 'color') drawColor(ctx, clip, window);
+            else if (clip.kind === 'shape') drawShape(ctx, clip, window);
+            else if (clip.kind === 'blur') drawBlur(ctx, clip, window);
+            else if (clip.kind === 'webcam') drawWebcam(ctx, clip, window);
+            else drawVisual(ctx, clip, window);
+          },
+        );
+      }
+    });
   };
 
   const drawComposition = (

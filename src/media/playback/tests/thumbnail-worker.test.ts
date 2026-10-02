@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { flushPromises } from '@vue/test-utils';
 import type { ThumbnailWorkerResponse } from '../thumbnail-protocol';
 
 const runtime = vi.hoisted(() => ({
@@ -44,14 +45,13 @@ const openedInput = (codec = 'avc1.640028') => {
     getDecoderConfig: vi.fn().mockResolvedValue({ codec }),
   };
   return {
+    track,
     input: { getPrimaryVideoTrack: vi.fn().mockResolvedValue(track) },
     dispose: vi.fn(),
   };
 };
 
-const flush = async () => {
-  for (let index = 0; index < 12; index += 1) await Promise.resolve();
-};
+const flush = flushPromises;
 
 let workerSelf: {
   onmessage?: (event: MessageEvent<unknown>) => void;
@@ -88,24 +88,179 @@ afterEach(() => {
 const send = (message: unknown) => workerSelf.onmessage?.({ data: message } as MessageEvent<unknown>);
 
 describe('thumbnail worker decoder lifecycle', () => {
-  it('uses the same buffered software AV1 decoder as playback on Linux', async () => {
-    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Linux');
-    const opened = openedInput('av01.0.08M.08');
-    runtime.openMediaInput.mockResolvedValueOnce(opened);
-    send(request(1, 'av1'));
+  it('ignores malformed messages without opening media or replying', async () => {
+    send(null);
+    send({ ...request(1, 'invalid'), width: 0 });
     await flush();
-    expect(VideoDecoder.isConfigSupported).toHaveBeenCalledWith({
-      codec: 'av01.0.08M.08',
-      hardwareAcceleration: 'prefer-software',
-      optimizeForLatency: false,
-    });
-    expect(runtime.CanvasSink).toHaveBeenCalledWith(expect.anything(), {
-      width: 240,
-      poolSize: 2,
-      decoderOptions: { hardwareAcceleration: 'prefer-software', optimizeForLatency: false },
-    });
-    expect(messages()).toContainEqual({ type: 'batch-finished', generation: 1 });
+    expect(runtime.openMediaInput).not.toHaveBeenCalled();
+    expect(messages()).toEqual([]);
   });
+
+  it('reuses an unchanged source sink and releases it exactly once when cleared', async () => {
+    const first = openedInput();
+    const second = openedInput();
+    runtime.openMediaInput.mockResolvedValueOnce(first).mockResolvedValueOnce(second);
+    send(request(1, 'same'));
+    await flush();
+    send(request(2, 'same'));
+    await flush();
+    expect(runtime.CanvasSink).toHaveBeenCalledOnce();
+    send({ type: 'clear', generation: 3 });
+    send({ type: 'clear', generation: 4 });
+    expect(first.dispose).toHaveBeenCalledOnce();
+    send(request(5, 'same'));
+    await flush();
+    expect(runtime.CanvasSink).toHaveBeenCalledTimes(2);
+    expect(second.dispose).not.toHaveBeenCalled();
+  });
+
+  it.each(['track', 'canDecode', 'config', 'support'] as const)(
+    'disposes a candidate cleared while awaiting %s',
+    async (stage) => {
+      const opened = openedInput();
+      const gate = deferred<unknown>();
+      const stages = {
+        track: { method: opened.input.getPrimaryVideoTrack, value: opened.track },
+        canDecode: { method: opened.track.canDecode, value: true },
+        config: { method: opened.track.getDecoderConfig, value: { codec: 'avc1.640028' } },
+        support: { method: vi.mocked(VideoDecoder.isConfigSupported), value: { supported: true } },
+      };
+      if (stage === 'support') {
+        vi.mocked(VideoDecoder.isConfigSupported).mockImplementationOnce(async () => {
+          await gate.promise;
+          return { supported: true };
+        });
+      } else {
+        stages[stage].method.mockReturnValueOnce(gate.promise);
+      }
+      runtime.openMediaInput.mockResolvedValueOnce(opened);
+      send(request(1, 'cancelled'));
+      await flush();
+      send({ type: 'clear', generation: 2 });
+      gate.resolve(stages[stage].value);
+      await flush();
+      expect(opened.dispose).toHaveBeenCalledOnce();
+      expect(runtime.CanvasSink).not.toHaveBeenCalled();
+      expect(messages()).toEqual([{ type: 'batch-started', generation: 1 }]);
+    },
+  );
+
+  it.each(['missing-track', 'unsupported-track', 'missing-webcodecs', 'missing-config'] as const)(
+    'reports %s and releases its input',
+    async (failure) => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const opened = openedInput();
+      if (failure === 'missing-track') opened.input.getPrimaryVideoTrack.mockResolvedValue(null);
+      if (failure === 'unsupported-track') opened.track.canDecode.mockResolvedValue(false);
+      if (failure === 'missing-webcodecs') vi.stubGlobal('VideoDecoder', undefined);
+      if (failure === 'missing-config') opened.track.getDecoderConfig.mockResolvedValue(null);
+      runtime.openMediaInput.mockResolvedValueOnce(opened);
+      send(request(1, 'unsupported'));
+      await flush();
+      expect(opened.dispose).toHaveBeenCalledOnce();
+      expect(runtime.CanvasSink).not.toHaveBeenCalled();
+      expect(messages()).toContainEqual(expect.objectContaining({ type: 'error', generation: 1 }));
+    },
+  );
+
+  it('reports non-Error rejections, but suppresses errors from a cleared source', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    runtime.openMediaInput.mockRejectedValueOnce('unavailable');
+    send(request(1, 'broken'));
+    await flush();
+    expect(messages()).toContainEqual({ type: 'error', generation: 1, message: 'Thumbnail decoding failed.' });
+    const gate = deferred<void>();
+    runtime.openMediaInput.mockReturnValueOnce(
+      gate.promise.then(() => {
+        throw new Error('late failure');
+      }),
+    );
+    send(request(2, 'stale'));
+    await flush();
+    send({ type: 'clear', generation: 3 });
+    gate.resolve();
+    await flush();
+    expect(messages().filter((message) => message.type === 'error')).toHaveLength(1);
+  });
+
+  it('skips unavailable canvases, ignores extra frames and rejects HTML canvas conversion', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const canvas = { convertToBlob: vi.fn().mockResolvedValue(new Blob(['frame'])) };
+    runtime.openMediaInput.mockResolvedValue(openedInput());
+    runtime.CanvasSink.mockImplementationOnce(function () {
+      return {
+        canvasesAtTimestamps: () =>
+          (async function* () {
+            yield null;
+            yield { canvas };
+            yield { canvas };
+          })(),
+      };
+    });
+    send({ ...request(1, 'sparse'), visibleTimes: [0, 1] });
+    await flush();
+    expect(messages().filter((message) => message.type === 'frame-ready')).toHaveLength(1);
+    expect(canvas.convertToBlob).toHaveBeenCalledWith({ type: 'image/jpeg', quality: 0.72 });
+    runtime.CanvasSink.mockImplementationOnce(function () {
+      return {
+        canvasesAtTimestamps: () =>
+          (async function* () {
+            yield { canvas: document.createElement('canvas') };
+          })(),
+      };
+    });
+    send(request(2, 'html'));
+    await flush();
+    expect(messages()).toContainEqual({
+      type: 'error',
+      generation: 2,
+      message: 'Thumbnail worker did not receive an OffscreenCanvas.',
+    });
+  });
+
+  it('does not post a JPEG or later frames after clear during conversion', async () => {
+    const gate = deferred<Blob>();
+    const canvas = { convertToBlob: vi.fn().mockReturnValue(gate.promise) };
+    runtime.openMediaInput.mockResolvedValue(openedInput());
+    runtime.CanvasSink.mockImplementationOnce(function () {
+      return {
+        canvasesAtTimestamps: () =>
+          (async function* () {
+            yield { canvas };
+            yield { canvas };
+          })(),
+      };
+    });
+    send({ ...request(1, 'stale-blob'), visibleTimes: [0, 1] });
+    await flush();
+    send({ type: 'clear', generation: 2 });
+    gate.resolve(new Blob(['late']));
+    await flush();
+    expect(messages()).toEqual([{ type: 'batch-started', generation: 1 }]);
+    expect(canvas.convertToBlob).toHaveBeenCalledOnce();
+  });
+
+  it.each(['av01.0.08M.08', 'vp09.00.40.08'])(
+    'uses the same buffered software decoder as playback on Linux: %s',
+    async (parameter) => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Linux');
+      const opened = openedInput(parameter);
+      runtime.openMediaInput.mockResolvedValueOnce(opened);
+      send(request(1, 'av1'));
+      await flush();
+      expect(VideoDecoder.isConfigSupported).toHaveBeenCalledWith({
+        codec: parameter,
+        hardwareAcceleration: 'prefer-software',
+        optimizeForLatency: false,
+      });
+      expect(runtime.CanvasSink).toHaveBeenCalledWith(expect.anything(), {
+        width: 240,
+        poolSize: 2,
+        decoderOptions: { hardwareAcceleration: 'prefer-software', optimizeForLatency: false },
+      });
+      expect(messages()).toContainEqual({ type: 'batch-finished', generation: 1 });
+    },
+  );
   it('keeps normal AV1 thumbnail decoding on Windows and macOS', async () => {
     vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Macintosh');
     runtime.openMediaInput.mockResolvedValueOnce(openedInput('av01.0.08M.08'));

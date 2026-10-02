@@ -1,5 +1,6 @@
-import { onUnmounted, watch } from 'vue';
+import { onUnmounted, toRaw, watch } from 'vue';
 import type { ClipComposition } from '~/media/shared/composition-types';
+import { timingPreviewFor } from '../../composition/timing-preview';
 
 export const CLIP_TOGGLE_FADE_MS = 160;
 
@@ -12,6 +13,7 @@ interface CanvasClipToggleTransitionOptions {
 }
 
 const visualEnabledStates = (composition: ClipComposition) =>
+  timingPreviewFor(toRaw(composition))?.visualEnabledStates() ??
   new Map(
     composition.clips.flatMap((clip) =>
       clip.kind === 'screen' || clip.kind === 'video' || clip.kind === 'webcam'

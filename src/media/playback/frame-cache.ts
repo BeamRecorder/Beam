@@ -13,7 +13,7 @@ export class FrameLruCache {
     this.limitBytes = limitBytes;
   }
 
-  set(key: string, frame: MediaFrame): string[] {
+  set(key: string, frame: MediaFrame, retainedKeys: ReadonlySet<string> = new Set()): string[] {
     const evicted: string[] = [];
     const existing = this.frames.get(key);
     if (existing) {
@@ -24,7 +24,9 @@ export class FrameLruCache {
     this.frames.set(key, frame);
     this.bytes += frame.byteSize;
     while (this.bytes > this.limitBytes && this.frames.size > 1) {
-      const oldestKey = this.frames.keys().next().value as string | undefined;
+      // Current scene pixels are not disposable history. An active multi-video scene
+      // may exceed the seek-cache budget; evict only unreferenced frames.
+      const oldestKey = [...this.frames.keys()].find((candidate) => !retainedKeys.has(candidate));
       if (oldestKey === undefined) break;
       const oldest = this.frames.get(oldestKey)!;
       this.frames.delete(oldestKey);

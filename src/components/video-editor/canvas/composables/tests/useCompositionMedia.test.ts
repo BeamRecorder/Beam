@@ -9,6 +9,7 @@ import * as mediaShared from '~/media/shared';
 import * as sceneLayers from '../../../composition/scene-layers';
 import { frameContentRect, frameOuterRect } from '../../../composition/appearance/frames';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import * as adaptiveShadows from '../../../composition/appearance/adaptive-shadow';
 
 const testCaptionStyle = (fontSize: number) => {
   const style = createDefaultCaptionStyle(fontSize);
@@ -204,6 +205,7 @@ const mediaFrame = (clipId: string, width: number, height: number): MediaFrame =
 
 const context = () =>
   ({
+    canvas: { width: 1000, height: 600 },
     save: vi.fn(),
     restore: vi.fn(),
     beginPath: vi.fn(),
@@ -225,6 +227,11 @@ const context = () =>
     textBaseline: '',
     lineJoin: '',
     globalAlpha: 1,
+    globalCompositeOperation: 'source-over',
+    filter: 'none',
+    shadowOffsetX: 0,
+    shadowOffsetY: 0,
+    getTransform: vi.fn(() => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 })),
   }) as unknown as CanvasRenderingContext2D;
 
 let wrapper: VueWrapper | undefined;
@@ -285,6 +292,48 @@ afterEach(() => {
 });
 
 describe('useCompositionMedia', () => {
+  it('primes independent adaptive video crops before any scene paint', () => {
+    const prime = vi.spyOn(adaptiveShadows, 'primeAdaptiveShadowColors').mockImplementation(() => {});
+    const base = composition();
+    base.clips = base.clips.map((clip) =>
+      clip.id === 'video' ? { ...clip, appearance: { ...appearance, shadowMode: 'adaptive' as const } } : clip,
+    );
+    const mounted = mountComposable(base);
+    state.drawVisualStack(context(), { dx: 10, dy: 20, dw: 800, dh: 400, scale: 1 }, vi.fn());
+    const requests = prime.mock.calls[0]![0];
+    expect(requests).toHaveLength(1);
+    expect(requests[0]!.source).toBe(mounted.frames.get('video')!.bitmap);
+    expect(requests[0]!.sourceRect).toEqual(
+      drawDecoratedMedia.mock.calls.find((c) => c[1].source === requests[0]!.source)![1].sourceRect,
+    );
+    expect(prime.mock.invocationCallOrder[0]).toBeLessThan(drawDecoratedMedia.mock.invocationCallOrder[0]);
+  });
+  it('does not sample unavailable or fixed-shadow media during the prepaint pass', () => {
+    const prime = vi.spyOn(adaptiveShadows, 'primeAdaptiveShadowColors').mockImplementation(() => {});
+    const base = composition();
+    base.clips = base.clips.map((clip) =>
+      clip.id === 'video' ? { ...clip, appearance: { ...appearance, shadowMode: 'adaptive' as const } } : clip,
+    );
+    const mounted = mountComposable(base);
+    mounted.frames.delete('video');
+    state.drawVisualStack(context(), { dx: 0, dy: 0, dw: 800, dh: 400, scale: 1 }, vi.fn());
+    expect(prime).toHaveBeenCalledWith([]);
+  });
+  it('primes the crop-editing source and draft geometry that will actually be drawn', () => {
+    const prime = vi.spyOn(adaptiveShadows, 'primeAdaptiveShadowColors').mockImplementation(() => {});
+    const base = composition();
+    base.clips = base.clips.map((clip) =>
+      clip.id === 'video' ? { ...clip, appearance: { ...appearance, shadowMode: 'adaptive' as const } } : clip,
+    );
+    const mounted = mountComposable(base, true);
+    mounted.selected.value = mounted.compositionRef.value.clips.find((c) => c.id === 'video') as VisualClip;
+    mounted.draft.value = { x: 0.2, y: 0.1, width: 0.4, height: 0.3 };
+    state.drawVisualStack(context(), { dx: 0, dy: 0, dw: 800, dh: 400, scale: 1 }, vi.fn());
+    expect(prime.mock.calls[0]![0][0]!.sourceRect).toEqual({ x: 0, y: 0, width: 640, height: 360 });
+    expect(
+      drawDecoratedMedia.mock.calls.find((c) => c[1].source === mounted.frames.get('video')!.bitmap)![1].rect,
+    ).toEqual({ x: 160, y: 40, width: 320, height: 120 });
+  });
   it('reconciles only image assets and drops empty image sources', async () => {
     const mounted = mountComposable();
     expect(state.images.has('image-asset')).toBe(true);

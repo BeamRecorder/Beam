@@ -3,6 +3,7 @@ import {
   timelineLayoutToVisualPixels,
   timelineVisualScale,
   timelineVisualToLayoutPixels,
+  timelineMoveScale,
 } from '../timeline-coordinate-space';
 
 const elementWithWidths = (layoutWidth: number, visualWidth: number) => {
@@ -20,6 +21,27 @@ const elementWithWidths = (layoutWidth: number, visualWidth: number) => {
 };
 
 describe('timeline coordinate space', () => {
+  it('uses the measured ruler and output scale for drag timing', () => {
+    expect(timelineMoveScale(10, 750, elementWithWidths(1000, 750), null)).toEqual({
+      baseDurationMs: 10000,
+      width: 750,
+      msPerPx: 10000 / 750,
+      visualScale: 0.75,
+    });
+  });
+  it('measures ticks or scroll when the ruler width is not yet published', () => {
+    expect(timelineMoveScale(10, 0, elementWithWidths(1000, 1000), null).msPerPx).toBe(10);
+    expect(timelineMoveScale(10, 0, null, elementWithWidths(500, 500)).msPerPx).toBe(20);
+  });
+  it('preserves the explicit unmeasured gesture scale without zero divisions', () => {
+    expect(timelineMoveScale(10, 0, null, null)).toEqual({
+      baseDurationMs: 10000,
+      width: 1000,
+      msPerPx: 10,
+      visualScale: 1,
+    });
+    expect(timelineMoveScale(0, 0, null, null).baseDurationMs).toBe(1);
+  });
   it.each([
     [0.75, 1_000, 750],
     [1.25, 1_000, 1_250],

@@ -2,6 +2,7 @@ import type { TimelineSelectionMoveResult } from '../../composition/timeline-edi
 import { clipEndMs, isVisualClip, type Clip, type ClipComposition } from '~/media/shared/composition-types';
 import { visualTrimBounds } from '../../composition/engine/visual-track-layout';
 import { downstreamVisualTrackRippleIds } from '../../composition/engine/visual-track-ripple';
+import { timingPreviewFor } from '../../composition/timing-preview';
 
 const linkedIds = (composition: ClipComposition, clip: Clip) =>
   new Set(
@@ -68,7 +69,7 @@ export const timelineMovePreviews = (
   zoomIds: ReadonlySet<string>,
 ) => ({
   clips: Object.fromEntries(
-    preview.composition.clips
+    [...(timingPreviewFor(preview.composition)?.patches.values() ?? preview.composition.clips)]
       .filter((clip) => clipIds.has(clip.id))
       .map((clip) => [clip.id, { startMs: clip.timelineStartMs, durationMs: clip.timelineDurationMs }]),
   ),

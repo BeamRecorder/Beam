@@ -1,4 +1,5 @@
 import { clipEndMs, isVisualClip, type Clip, type ClipComposition } from '../shared';
+import { createTimelineIntervalIndex } from '../shared/timeline-interval-index';
 
 export function createPlaybackClipIndex(composition: ClipComposition | null) {
   const clips = new Map<string, Clip>();
@@ -19,5 +20,27 @@ export function createPlaybackClipIndex(composition: ClipComposition | null) {
     const predecessor = endings.get(clip.trackId)?.get(clip.assetId)?.get(clip.timelineStartMs);
     if (predecessor !== undefined) previous.set(clip.id, predecessor);
   }
-  return { clips, previous };
+  const activeAt = createTimelineIntervalIndex(
+    [...clips.values()]
+      .filter((clip) => clip.enabled && isVisualClip(clip))
+      .map((clip) => ({ start: clip.timelineStartMs, end: clipEndMs(clip), value: clip })),
+  );
+  const retainedKeys = (
+    timeSeconds: number,
+    keys: ReadonlyMap<string, string>,
+    aliases: ReadonlyMap<string, string>,
+  ) => {
+    const retained = new Set<string>();
+    for (const clip of activeAt(timeSeconds * 1000)) {
+      const key = keys.get(aliases.get(clip.id) ?? clip.id);
+      if (key) retained.add(key);
+      else {
+        const predecessor = previous.get(clip.id);
+        const previousKey = predecessor ? keys.get(aliases.get(predecessor) ?? predecessor) : undefined;
+        if (previousKey) retained.add(previousKey);
+      }
+    }
+    return retained;
+  };
+  return { clips, previous, retainedKeys };
 }

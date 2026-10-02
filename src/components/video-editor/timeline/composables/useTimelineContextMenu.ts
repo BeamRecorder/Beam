@@ -1,4 +1,5 @@
 import { computed, ref, type Ref } from 'vue';
+import { engineMetrics } from '~/media/performance/engine-metrics';
 import { AudioLines, ClipboardPaste, Copy, Lock, Unlock, Pause, Trash2 } from '@lucide/vue';
 import { isAudioClip, type Clip, type ClipComposition, type MediaAsset } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../../zoom/zoom-types';
@@ -166,8 +167,10 @@ export function useTimelineContextMenu(options: {
   ): boolean => {
     const scopeId = options.scopeId.value;
     if (!scopeId) return false;
-    const selectedClips = options.composition.value.clips.filter((clip) => clipIds.includes(clip.id));
-    const selectedZooms = options.zoomElements.value.filter((zoom) => zoomIds.includes(zoom.id));
+    const clipIdSet = new Set(clipIds);
+    const zoomIdSet = new Set(zoomIds);
+    const selectedClips = options.composition.value.clips.filter((clip) => clipIdSet.has(clip.id));
+    const selectedZooms = options.zoomElements.value.filter((zoom) => zoomIdSet.has(zoom.id));
     const item = clipboard.copySelection({
       scopeId,
       clips: selectedClips,
@@ -181,11 +184,12 @@ export function useTimelineContextMenu(options: {
     return true;
   };
 
-  const copySelected = () => {
-    const selected = selectedItem();
-    if (!copySelection(selected.clipIds, selected.zoomIds, selected.zoom ?? selected.clip))
-      options.emit('paste:error', options.t('copyUnavailable'));
-  };
+  const copySelected = () =>
+    engineMetrics.measure('copy', () => {
+      const selected = selectedItem();
+      if (!copySelection(selected.clipIds, selected.zoomIds, selected.zoom ?? selected.clip))
+        options.emit('paste:error', options.t('copyUnavailable'));
+    });
 
   const cutSelected = () => {
     const selected = selectedItem();
@@ -206,11 +210,12 @@ export function useTimelineContextMenu(options: {
     return true;
   };
 
-  const pasteClipboard = (target?: TimelinePasteTarget | null) => {
-    const item = clipboard.getClipboardItem();
-    if (!item) return options.emit('paste:error', options.t('clipboardEmpty'));
-    options.emit('paste:item', { item, timeMs: options.currentTimeMs.value, target });
-  };
+  const pasteClipboard = (target?: TimelinePasteTarget | null) =>
+    engineMetrics.measure('paste', () => {
+      const item = clipboard.getClipboardItem();
+      if (!item) return options.emit('paste:error', options.t('clipboardEmpty'));
+      options.emit('paste:item', { item, timeMs: options.currentTimeMs.value, target });
+    });
   const canPasteClipboard = () => clipboard.canPaste(options.scopeId.value);
 
   const canHoldClip = (clip: Clip | null) =>

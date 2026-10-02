@@ -1,6 +1,6 @@
 import { recordingMoveSelection } from '../../composition/recording-sidecars';
 import { timelineMovePreviews } from './timeline-composition-preview';
-import type { Ref } from 'vue';
+import { markRaw, type Ref } from 'vue';
 import type { ZoomElement } from '../../zoom/zoom-types';
 import { calculateSnapThresholdMs, collectSnapTargets, snapSpan, snapValue } from './timeline-snap';
 import { createAnimationFrameCoalescer } from './animation-frame-coalescer';
@@ -53,8 +53,8 @@ export function useTimelineZoomInteractions(options: {
       selection: { clipIds, zoomIds },
     });
     let lastPreview: ReturnType<typeof previewMove> | null = null;
-    const selectedClips = options.props.composition.clips.filter((clip) => clipIds.includes(clip.id));
-    const selectedZooms = options.props.zoomElements.filter((entry) => zoomIds.includes(entry.id));
+    const selectedClips = options.props.composition.clips.filter((clip) => clipIdSet.has(clip.id));
+    const selectedZooms = options.props.zoomElements.filter((entry) => zoomIdSet.has(entry.id));
     const selectionStartMs = Math.min(
       ...selectedClips.map((clip) => clip.timelineStartMs),
       ...selectedZooms.map((entry) => entry.startMs),
@@ -96,8 +96,8 @@ export function useTimelineZoomInteractions(options: {
       const previews = timelineMovePreviews(preview, clipIdSet, zoomIdSet);
       if (clipIdSet.size) options.clipPreview.value = previews.clips;
       if (zoomIdSet.size) options.zoomPreview.value = previews.zooms;
-      if (clipIdSet.size) options.emit('preview:composition', preview.composition);
-      options.emit('preview:zooms', preview.zoomElements);
+      if (clipIdSet.size) options.emit('preview:composition', markRaw(preview.composition));
+      options.emit('preview:zooms', markRaw(preview.zoomElements));
     };
     const updates = createAnimationFrameCoalescer(applyMove);
     const move = updates.schedule;

@@ -29,6 +29,7 @@ const playback = vi.hoisted(() => {
       return 'presented' as const;
     });
     readonly setVolume = vi.fn();
+    readonly resetEngineMetrics = vi.fn();
     readonly setPreviewQuality = vi.fn(async (_quality: string) => undefined);
     readonly dispose = vi.fn();
     readonly frameFor = vi.fn(() => null);
@@ -47,7 +48,9 @@ const playback = vi.hoisted(() => {
   }
   return { FakePlayback, instances };
 });
-vi.mock('~/media/playback', () => ({ MediaPlaybackEngine: playback.FakePlayback }));
+vi.mock('~/media/playback', () => ({
+  MediaPlaybackEngine: playback.FakePlayback,
+}));
 
 const backgrounds = createBackgroundMedia(['/built-in.png', '/clip.mp4']);
 const composition: ClipComposition = {
@@ -76,6 +79,19 @@ const composition: ClipComposition = {
 };
 
 describe('useVideoPlayer', () => {
+  it('measures load and seek and resets the worker and renderer collectors together', async () => {
+    const scope = effectScope();
+    const player = scope.run(() => useVideoPlayer([]))!;
+    player.resetEngineMetrics();
+    await player.loadComposition(composition);
+    await player.seek(1);
+    expect(player.engineMetrics().stages.load?.count).toBe(1);
+    expect(player.engineMetrics().stages.seek?.count).toBe(1);
+    player.resetEngineMetrics();
+    expect(playback.instances.at(-1)!.resetEngineMetrics).toHaveBeenCalledOnce();
+    expect(player.engineMetrics().stages).toEqual({});
+    scope.stop();
+  });
   it('initializes background selection and explicit playback state', () => {
     const player = useVideoPlayer(backgrounds);
     expect(player.selectedBackground.value).toEqual(backgrounds[0]);
@@ -241,7 +257,14 @@ describe('useVideoPlayer', () => {
     engine.play.mockClear();
     const replacement = {
       ...composition,
-      clips: [{ ...composition.clips[0]!, id: 'reloaded-clip', timelineDurationMs: 1_500, sourceDurationMs: 1_500 }],
+      clips: [
+        {
+          ...composition.clips[0]!,
+          id: 'reloaded-clip',
+          timelineDurationMs: 1_500,
+          sourceDurationMs: 1_500,
+        },
+      ],
     };
 
     await player.loadComposition(replacement);
@@ -369,9 +392,15 @@ describe('useVideoPlayer', () => {
     await expect(player.seek(Number.NaN)).rejects.toThrow('Playback time must be finite.');
     await expect(player.seek(Infinity)).rejects.toThrow('Playback time must be finite.');
     const engine = playback.instances.at(-1)!;
-    engine.listeners.get('error')?.({ kind: 'decode-failure', sourceId: 'asset', message: 'decode failed' } as never);
+    engine.listeners.get('error')?.({
+      kind: 'decode-failure',
+      sourceId: 'asset',
+      message: 'decode failed',
+    } as never);
     expect(player.playbackState.value).toBe('paused');
-    expect(player.playbackError.value).toMatchObject({ kind: 'decode-failure' });
+    expect(player.playbackError.value).toMatchObject({
+      kind: 'decode-failure',
+    });
   });
 
   it('formats whole and fractional times and updates formatted computed values', () => {

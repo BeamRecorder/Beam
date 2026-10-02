@@ -5,7 +5,7 @@ import type { BoxSelectionGesture, SelectionBounds, SelectionTarget } from './co
 import { timelineVisualScale } from './composables/timeline-coordinate-space';
 import { createAnimationFrameCoalescer } from './composables/animation-frame-coalescer';
 
-const props = defineProps<{ selection: TimelineSelectionIds }>();
+const props = defineProps<{ selection: TimelineSelectionIds; getTargets?: () => SelectionTarget[] }>();
 const emit = defineEmits<{ select: [selection: TimelineSelectionIds]; start: [] }>();
 const root = ref<HTMLDivElement | null>(null);
 const bounds = ref<SelectionBounds | null>(null);
@@ -26,6 +26,7 @@ const point = (event: MouseEvent) => {
   return { x: (event.clientX - rect.left) / scale, y: (event.clientY - rect.top) / scale };
 };
 const collectTargets = (): SelectionTarget[] => {
+  if (props.getTargets) return props.getTargets();
   const rect = root.value!.getBoundingClientRect();
   const scale = timelineVisualScale(root.value, rect.width);
   return Array.from(

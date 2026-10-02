@@ -1,6 +1,6 @@
 import { recordingMoveSelection } from '../../composition/recording-sidecars';
 import { timelineMovePreviews } from './timeline-composition-preview';
-import { computed, ref } from 'vue';
+import { computed, markRaw, ref } from 'vue';
 import { DEFAULT_ZOOM_DURATION_MS, type ZoomElement } from '../../zoom/zoom-types';
 import {
   isAudioClip,
@@ -16,10 +16,11 @@ import {
 } from '~/media/shared/composition-types';
 import { calculateSnapThresholdMs, collectSnapTargets, snapSpan } from './timeline-snap';
 import { createAnimationFrameCoalescer } from './animation-frame-coalescer';
+import { engineMetrics } from '~/media/performance/engine-metrics';
 import { useTimelineViewport } from './useTimelineViewport';
 import { useTimelineZoomInteractions } from './useTimelineZoomInteractions';
 import type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
-import { timelineVisualScale } from './timeline-coordinate-space';
+import { timelineMoveScale } from './timeline-coordinate-space';
 import { groupVisualTimelineTracks, previewVisualTrackOrder } from './visual-timeline-tracks';
 import { visualMoveDeltaBounds } from '../../composition/engine/visual-track-layout';
 import { prepareTimelineSelectionMove } from '../../composition/timeline-selection-move';
@@ -101,6 +102,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     ticksAreaRef,
     rulerWidth,
     rulerLayoutWidth,
+    timelineViewport,
     tracksWidthStyle,
     scrubPreviewTime,
     displayedPlayheadTime,
@@ -112,6 +114,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     isRulerLabel,
     formatRulerLabel,
     audioWaveforms,
+    waveformClipIds,
     audioWaveformErrors,
     audioWaveformStatus,
     thumbnailSlots,
@@ -157,19 +160,8 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     clipPreview.value = next;
   };
 
-  const resolveMsPerPx = () => {
-    const ticks = ticksAreaRef.value;
-    const scroll = tracksScrollRef.value;
-    const baseDurationMs = Math.max(1, Math.round(props.duration * 1_000));
-    const width = Math.max(
-      1,
-      rulerWidth.value ||
-        (ticks ? ticks.getBoundingClientRect().width : 0) ||
-        (scroll ? scroll.getBoundingClientRect().width : 0) ||
-        1_000,
-    );
-    return { baseDurationMs, width, msPerPx: baseDurationMs / width, visualScale: timelineVisualScale(ticks) };
-  };
+  const resolveMsPerPx = () =>
+    timelineMoveScale(props.duration, rulerWidth.value, ticksAreaRef.value, tracksScrollRef.value);
 
   const beginClipMove = (event: PointerEvent, clip: Clip) => {
     if ((event.target as HTMLElement).closest('.trim-handle')) return;
@@ -203,8 +195,8 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     const pointerStartX = event.clientX;
     const initialScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
     const { baseDurationMs, width: baseRulerWidth, msPerPx, visualScale } = resolveMsPerPx();
-    const selectedClips = props.composition.clips.filter((entry) => ids.includes(entry.id));
-    const selectedZooms = props.zoomElements.filter((zoom) => zoomIds.includes(zoom.id));
+    const selectedClips = props.composition.clips.filter((entry) => idSet.has(entry.id));
+    const selectedZooms = props.zoomElements.filter((zoom) => zoomIdSet.has(zoom.id));
     const selectionStartMs = Math.min(
       ...selectedClips.map((entry) => entry.timelineStartMs),
       ...selectedZooms.map((zoom) => zoom.startMs),
@@ -262,8 +254,8 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
         const previews = timelineMovePreviews(preview, idSet, zoomIdSet);
         if (idSet.size) clipPreview.value = previews.clips;
         if (zoomIdSet.size) zoomPreview.value = previews.zooms;
-        if (idSet.size) emit('preview:composition', preview.composition);
-        emit('preview:zooms', preview.zoomElements);
+        if (idSet.size) emit('preview:composition', markRaw(preview.composition));
+        emit('preview:zooms', markRaw(preview.zoomElements));
       }
       if (!isMultipleSelection && initialVisualTrack && initialVisualTrackOrder) {
         const row = document.elementFromPoint?.(next.clientX, next.clientY)?.closest<HTMLElement>('.visual-track');
@@ -283,7 +275,9 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
         }
       }
     };
-    const moveUpdates = createAnimationFrameCoalescer(applyMove);
+    const moveUpdates = createAnimationFrameCoalescer((next: PointerEvent) =>
+      engineMetrics.measure('gesture', () => applyMove(next)),
+    );
     const cleanup = () => {
       stopAutoScroll();
       window.removeEventListener('pointermove', moveUpdates.schedule);
@@ -439,6 +433,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     assets,
     assetFor,
     audioWaveforms,
+    waveformClipIds,
     audioWaveformErrors,
     audioWaveformStatus,
     tracksScrollRef,
@@ -447,6 +442,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     ticksAreaRef,
     rulerWidth,
     rulerLayoutWidth,
+    timelineViewport,
     tracksWidthStyle,
     scrubPreviewTime,
     displayedPlayheadTime,

@@ -13,6 +13,7 @@ import CanvasPlaybackError from './CanvasPlaybackError.vue';
 import UndoRedoToast from './UndoRedoToast.vue';
 import { type VisualClip } from '~/media/shared/composition-types';
 import { createCompositionSceneLayerResolver } from '../composition/scene-layers';
+import { engineMetrics } from '~/media/performance/engine-metrics';
 import { OUTPUT_FALLBACK_COLOR, OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from './output-canvas';
 import { useCanvasBackground } from './composables/useCanvasBackground';
 import { useCompositionMedia } from './composables/useCompositionMedia';
@@ -43,6 +44,8 @@ import EditorCanvasLayerSelection from './EditorCanvasLayerSelection.vue';
 import CanvasCropSelection from './CanvasCropSelection.vue';
 import { drawFallbackPreviewScene } from './fallback-preview-scene';
 import { createEditorVisualStackRenderer } from './editor-visual-stack-renderer';
+import { disposeMediaShadowCache } from '../composition/appearance/media-shadow-cache';
+import { disposeBlurEffect } from '../composition/effects/blur-effect';
 import { captureCanvasFrame } from './canvas-frame-capture';
 import CanvasMarqueeSurface from './CanvasMarqueeSurface.vue';
 import EditorCanvasGuides from './EditorCanvasGuides.vue';
@@ -79,7 +82,7 @@ watch(
     renderComposition = toRaw(composition);
     sceneLayersAt.value = createCompositionSceneLayerResolver(renderComposition);
   },
-  { deep: true, flush: 'sync' },
+  { flush: 'sync' },
 );
 const currentSceneLayers = computed(() => sceneLayersAt.value(props.currentTime * 1_000));
 const liveScreenClip = computed<VisualClip | null>(() => currentSceneLayers.value.screen);
@@ -317,12 +320,18 @@ const renderCanvas = () => {
   const canvas = canvasRef.value;
   const ctx = canvas?.getContext('2d');
   if (!canvas || !ctx || !logicalSize.value.width || !logicalSize.value.height) return;
-  ctx.setTransform(deviceScale.value, 0, 0, deviceScale.value, 0, 0);
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.clearRect(0, 0, logicalSize.value.width, logicalSize.value.height);
-  canvasTransitionRenderer.render(ctx, drawCanvasScene);
-  clipToggleTransition.blendPreviousFrame(ctx, logicalSize.value.width, logicalSize.value.height);
+  const endMeasurement = engineMetrics.begin('render');
+  try {
+    ctx.setTransform(deviceScale.value, 0, 0, deviceScale.value, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.clearRect(0, 0, logicalSize.value.width, logicalSize.value.height);
+    canvasTransitionRenderer.render(ctx, drawCanvasScene);
+    clipToggleTransition.blendPreviousFrame(ctx, logicalSize.value.width, logicalSize.value.height);
+    engineMetrics.count('frames');
+  } finally {
+    endMeasurement();
+  }
 };
 const {
   commitCrop,
@@ -363,6 +372,11 @@ const editCanvasContent = (event: MouseEvent) =>
   });
 onUnmounted(() => frameScheduler.dispose());
 onUnmounted(() => perspectivePreviewRenderer.dispose());
+onUnmounted(() => {
+  const context = canvasRef.value?.getContext('2d') ?? null;
+  disposeMediaShadowCache(context);
+  disposeBlurEffect(context);
+});
 const captureCurrentFrame = () => {
   renderCanvas();
   return captureCanvasFrame(canvasRef.value, logicalSize.value, props.outputCanvas);

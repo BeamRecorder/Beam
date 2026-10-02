@@ -1,4 +1,4 @@
-import { releaseHighlightSurface } from './effects/highlight-effect';
+import { disposeBlurEffect } from './effects/blur-effect';
 import type { Canvas2DContext } from '~/types/canvas';
 import type { LayerCompositing } from '~/media/shared/layer-compositing-types';
 
@@ -6,11 +6,11 @@ const surfaces = new WeakMap<Canvas2DContext, OffscreenCanvas>();
 
 /** Release the scratch surface when its owning renderer has finished. */
 export function releaseCompositedLayerSurface(ctx: Canvas2DContext) {
-  releaseHighlightSurface(ctx);
+  disposeBlurEffect(ctx);
   const surface = surfaces.get(ctx);
   if (!surface) return;
   const target = surface.getContext('2d');
-  if (target) releaseHighlightSurface(target);
+  if (target) disposeBlurEffect(target);
   surfaces.delete(ctx);
   surface.width = 0;
   surface.height = 0;

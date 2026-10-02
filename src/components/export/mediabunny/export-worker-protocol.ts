@@ -1,6 +1,7 @@
 import type { ExportProgress, ExportRequest, ExportValidationIssue } from '../export-types';
 import type { ExportRuntimeDiagnostics } from '../export-diagnostics-types';
 import type { PreparedCursorImage } from './export-cursor-images';
+import { isEngineMetricsSnapshot } from '~/media/performance/engine-metrics-protocol';
 
 export type ExportWorkerRequest =
   | { type: 'start'; request: ExportRequest; cursorImages: PreparedCursorImage[] }
@@ -25,6 +26,7 @@ const strings = (value: unknown): value is string[] =>
 const runtimeDiagnostics = (value: unknown): value is ExportRuntimeDiagnostics => {
   if (!record(value)) return false;
   return (
+    (value.engine === undefined || isEngineMetricsSnapshot(value.engine)) &&
     ['validating_assets', 'loading_assets', 'encoding', 'finalizing'].includes(value.phase as string) &&
     finite(value.elapsedMs) &&
     nullableFinite(value.validationMs) &&

@@ -6,6 +6,7 @@ import type { ImportedAudioTimelineTrack } from './composables/audio-timeline-tr
 import type { AudioWaveformSlice, AudioWaveformStatus } from './composables/useCompositionAudioWaveforms';
 import type { LiveAudioDraft, TimelineItemKind } from './composables/timeline-tracks-types';
 import type { TimelinePasteHighlight, TimelineItemCategory } from './composables/timeline-clipboard-types';
+import type { TimelineViewportMetrics } from './composables/timeline-virtualization-types';
 
 export interface TimelineAudioLane {
   id: string;
@@ -26,6 +27,7 @@ export interface TimelineAudioTracksProps {
   includeAudioInExport: boolean;
   layoutDurationMs: number;
   rulerLayoutWidth: number;
+  viewport: TimelineViewportMetrics;
   thumbnailSlots: TimelineClipProps['thumbnailSlots'];
   isWheelZooming: boolean;
   isMoving: boolean;

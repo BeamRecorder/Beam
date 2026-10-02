@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import ReorderGroup from '~/ui/transitions/ReorderGroup.vue';
-import TimelineLockOverlay from './TimelineLockOverlay.vue';
-import { onUnmounted, ref, watch } from 'vue';
+import TimelineCanvasLane from './TimelineCanvasLane.vue';
+import type { TimelineViewportMetrics } from './composables/timeline-virtualization-types';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import { Lock, Sparkles } from '@lucide/vue';
 import type { CaptionClip } from '~/media/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { TimelinePasteHighlight } from './composables/timeline-clipboard-types';
-import { timelineTransitionStyle } from './timeline-clip-geometry';
-import TimelineTransitionCurve from './TimelineTransitionCurve.vue';
 import type { TextCaptionLayer } from '../composition/engine/caption-layer-layout';
+import { useTimelineVirtualWindow, useVirtualTimelineItems } from './composables/useTimelineVirtualization';
 
 const { t } = useTranslate('TimelineTracks');
 const props = defineProps<{
   keyboardClips: CaptionClip[];
+  viewport: TimelineViewportMetrics;
+  durationMs: number;
+  width: number;
   textLayers: TextCaptionLayer[];
   draggedCaptionId?: string | null;
   selectedClipId: string | null;
@@ -36,6 +39,12 @@ const emit = defineEmits<{
   (event: 'contextmenu:clip', payload: { event: MouseEvent; clip: CaptionClip }): void;
   (event: 'contextmenu:track', mouseEvent: MouseEvent): void;
 }>();
+const virtualWindow = useTimelineVirtualWindow();
+const visibleTextLayers = useVirtualTimelineItems(
+  () => props.textLayers,
+  (layer) => `caption:${layer.id}`,
+);
+const isVisible = (id: string) => !virtualWindow || virtualWindow.visibleIds.value.has(id);
 
 const hoveredTextLayerId = ref<string | null>(null);
 const hoverTextLayer = (event: MouseEvent, clipId: string) => {
@@ -75,6 +84,16 @@ const getCaptionText = (clip: CaptionClip): string => {
   return t('keyboardCaptions') || 'Keyboard';
 };
 
+const laneItems = (clips: CaptionClip[]) =>
+  (virtualWindow?.visibleClips(clips) ?? clips).map((clip) => ({
+    clip: { ...clip, ...props.displayedClip(clip) },
+    label: getCaptionText(clip),
+    labelInset: (clip.locked ? 15 : 0) + (clip.isAiGenerated ? 15 : 0),
+    selected: props.selectedClipIds.includes(clip.id) || props.selectedClipId === clip.id,
+    pasteHighlight: props.recentPaste?.type === 'clip' && props.recentPaste.id === clip.id,
+  }));
+const keyboardItems = computed(() => laneItems(props.keyboardClips));
+
 const settlingClipIds = ref<Set<string>>(new Set());
 const settleTimers: Record<string, number> = {};
 const previousTexts: Record<string, string> = {};
@@ -84,7 +103,10 @@ const SETTLE_ANIMATION_MS = 320;
 
 watch(
   () =>
-    [...props.textLayers.flatMap((layer) => layer.clips), ...props.keyboardClips].map((clip) => ({
+    [
+      ...visibleTextLayers.value.flatMap((layer) => virtualWindow?.visibleClips(layer.clips) ?? layer.clips),
+      ...(virtualWindow?.visibleClips(props.keyboardClips) ?? props.keyboardClips),
+    ].map((clip) => ({
       id: clip.id,
       text: getCaptionText(clip),
     })),
@@ -120,53 +142,10 @@ watch(
       previousTexts[item.id] = item.text;
     }
   },
-  { deep: true, immediate: true },
+  { immediate: true },
 );
 
-let marqueeFrame = 0;
-let marqueeTimer = 0;
-
-const stopMarquee = (target?: HTMLElement | null) => {
-  window.cancelAnimationFrame(marqueeFrame);
-  window.clearTimeout(marqueeTimer);
-  marqueeFrame = 0;
-  marqueeTimer = 0;
-  const label = target?.querySelector<HTMLElement>('.caption-label-text');
-  if (label) {
-    label.style.transform = '';
-    label.classList.remove('is-marqueeing');
-  }
-};
-
-const stopMarqueeForEvent = (event: PointerEvent) => stopMarquee(event.currentTarget as HTMLElement | null);
-
-const startMarquee = (event: PointerEvent) => {
-  const target = event.currentTarget as HTMLElement;
-  const container = target.querySelector<HTMLElement>('.clip-center-title');
-  const label = target.querySelector<HTMLElement>('.caption-label-text');
-  if (!container || !label) return;
-  label.classList.add('is-marqueeing');
-  const distance = label.scrollWidth - container.clientWidth;
-  if (distance <= 0) {
-    label.classList.remove('is-marqueeing');
-    return;
-  }
-  stopMarquee(target);
-  label.classList.add('is-marqueeing');
-  marqueeTimer = window.setTimeout(() => {
-    const startedAt = performance.now();
-    const travelMs = Math.max(3_000, (distance / 36) * 1_000);
-    const tick = (now: number) => {
-      const phase = ((now - startedAt) % (travelMs * 2)) / travelMs;
-      label.style.transform = `translateX(${-distance * (phase <= 1 ? phase : 2 - phase)}px)`;
-      marqueeFrame = window.requestAnimationFrame(tick);
-    };
-    marqueeFrame = window.requestAnimationFrame(tick);
-  }, 250);
-};
-
 onUnmounted(() => {
-  stopMarquee();
   for (const timer of Object.values(settleTimers)) {
     window.clearTimeout(timer);
   }
@@ -175,19 +154,28 @@ onUnmounted(() => {
 
 <template>
   <div
-    v-if="keyboardClips.length"
+    v-if="keyboardClips.length && isVisible('keyboard')"
+    data-timeline-row-id="keyboard"
+    :style="virtualWindow?.rowStyle('keyboard')"
     class="track-row annotation-track keyboard-caption-track"
     :class="{ 'motion-reduced': reduceMotion }"
     @contextmenu="emit('contextmenu:track', $event)"
   >
     <div class="track-content annotation-content">
+      <TimelineCanvasLane
+        :items="keyboardItems"
+        :duration-ms="durationMs"
+        :width="width"
+        :viewport="viewport"
+        :reduce-motion="reduceMotion"
+      />
       <TransitionGroup name="caption-item">
         <button
-          v-for="clip in keyboardClips"
+          v-for="clip in virtualWindow?.visibleClips(keyboardClips) ?? keyboardClips"
           :key="clip.id"
           type="button"
           :data-timeline-clip-id="clip.id"
-          class="annotation-indicator"
+          class="annotation-indicator canvas-clip-target"
           :class="{
             selected: selectedClipIds.includes(clip.id) || selectedClipId === clip.id,
             disabled: !clip.enabled,
@@ -197,25 +185,7 @@ onUnmounted(() => {
           @click.stop="emit('select', { id: clip.id, event: $event })"
           @contextmenu.prevent.stop="emit('contextmenu:clip', { event: $event, clip })"
           @pointerdown="beginClipMove($event, clip)"
-          @pointerenter="startMarquee"
-          @pointerleave="stopMarqueeForEvent"
         >
-          <span
-            v-if="clip.transitions?.entry"
-            class="transition-zone entry"
-            :style="timelineTransitionStyle(clip, 'entry')"
-            aria-hidden="true"
-          >
-            <TimelineTransitionCurve edge="entry" :transition="clip.transitions.entry" />
-          </span>
-          <span
-            v-if="clip.transitions?.exit"
-            class="transition-zone exit"
-            :style="timelineTransitionStyle(clip, 'exit')"
-            aria-hidden="true"
-          >
-            <TimelineTransitionCurve edge="exit" :transition="clip.transitions.exit" />
-          </span>
           <span
             class="trim-handle start"
             :title="t('trimStart')"
@@ -225,12 +195,13 @@ onUnmounted(() => {
               {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
             </span>
           </span>
-          <TimelineLockOverlay v-if="clip.locked" />
           <span class="clip-center-title">
             <Lock v-if="clip.locked" :size="12" :aria-label="t('locked')" />
-            <span class="caption-label-text" :class="{ 'caption-settled': settlingClipIds.has(clip.id) }">{{
-              getCaptionText(clip)
-            }}</span>
+            <span
+              class="caption-label-text canvas-semantic-label"
+              :class="{ 'caption-settled': settlingClipIds.has(clip.id) }"
+              >{{ getCaptionText(clip) }}</span
+            >
           </span>
           <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginClipTrim($event, clip, 'end')">
             <span v-if="trimStateFor(clip.id)?.edge === 'end'" class="trim-side-badge">
@@ -244,15 +215,17 @@ onUnmounted(() => {
 
   <ReorderGroup
     v-if="textLayers.length"
-    :order="textLayers.map((layer) => layer.id)"
+    :order="visibleTextLayers.map((layer) => layer.id)"
     item-attribute="data-caption-id"
     class="text-caption-layers-group"
   >
     <div
-      v-for="layer in textLayers"
+      v-for="layer in visibleTextLayers"
       :key="layer.id"
       class="track-row annotation-track text-caption-track text-caption-layer"
       :data-caption-id="layer.id"
+      :data-timeline-row-id="`caption:${layer.id}`"
+      :style="virtualWindow?.rowStyle(`caption:${layer.id}`)"
       :class="{ 'motion-reduced': reduceMotion, dragging: draggedCaptionId === layer.id }"
       @contextmenu="emit('contextmenu:track', $event)"
     >
@@ -272,12 +245,19 @@ onUnmounted(() => {
         >
           {{ t('addCaption') }}
         </div>
+        <TimelineCanvasLane
+          :items="laneItems(layer.clips)"
+          :duration-ms="durationMs"
+          :width="width"
+          :viewport="viewport"
+          :reduce-motion="reduceMotion"
+        />
         <button
-          v-for="clip in layer.clips"
+          v-for="clip in virtualWindow?.visibleClips(layer.clips) ?? layer.clips"
           :key="clip.id"
           type="button"
           :data-timeline-clip-id="clip.id"
-          class="annotation-indicator"
+          class="annotation-indicator canvas-clip-target"
           :class="{
             selected: selectedClipIds.includes(clip.id) || selectedClipId === clip.id,
             disabled: !clip.enabled,
@@ -287,25 +267,7 @@ onUnmounted(() => {
           @click.stop="emit('select', { id: clip.id, event: $event })"
           @contextmenu.prevent.stop="emit('contextmenu:clip', { event: $event, clip })"
           @pointerdown="beginClipMove($event, clip)"
-          @pointerenter="startMarquee"
-          @pointerleave="stopMarqueeForEvent"
         >
-          <span
-            v-if="clip.transitions?.entry"
-            class="transition-zone entry"
-            :style="timelineTransitionStyle(clip, 'entry')"
-            aria-hidden="true"
-          >
-            <TimelineTransitionCurve edge="entry" :transition="clip.transitions.entry" />
-          </span>
-          <span
-            v-if="clip.transitions?.exit"
-            class="transition-zone exit"
-            :style="timelineTransitionStyle(clip, 'exit')"
-            aria-hidden="true"
-          >
-            <TimelineTransitionCurve edge="exit" :transition="clip.transitions.exit" />
-          </span>
           <span
             class="trim-handle start"
             :title="t('trimStart')"
@@ -315,13 +277,14 @@ onUnmounted(() => {
               {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
             </span>
           </span>
-          <TimelineLockOverlay v-if="clip.locked" />
           <span class="clip-center-title">
             <Lock v-if="clip.locked" :size="12" :aria-label="t('locked')" />
             <Sparkles v-if="clip.isAiGenerated" :size="12" class="sparkles-icon" />
-            <span class="caption-label-text" :class="{ 'caption-settled': settlingClipIds.has(clip.id) }">{{
-              getCaptionText(clip)
-            }}</span>
+            <span
+              class="caption-label-text canvas-semantic-label"
+              :class="{ 'caption-settled': settlingClipIds.has(clip.id) }"
+              >{{ getCaptionText(clip) }}</span
+            >
           </span>
           <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginClipTrim($event, clip, 'end')">
             <span v-if="trimStateFor(clip.id)?.edge === 'end'" class="trim-side-badge">
@@ -333,7 +296,9 @@ onUnmounted(() => {
     </div>
   </ReorderGroup>
   <div
-    v-else
+    v-else-if="isVisible('caption:empty')"
+    data-timeline-row-id="caption:empty"
+    :style="virtualWindow?.rowStyle('caption:empty')"
     class="track-row annotation-track text-caption-track"
     :class="{ 'motion-reduced': reduceMotion }"
     @contextmenu="emit('contextmenu:track', $event)"
@@ -360,3 +325,21 @@ onUnmounted(() => {
 
 <style scoped src="./timeline-caption-tracks.css"></style>
 <style scoped src="./timeline-item-states.css"></style>
+
+<style scoped>
+.annotation-indicator.canvas-clip-target {
+  background: transparent;
+  border: 0;
+}
+.canvas-semantic-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.clip-center-title {
+  justify-content: flex-start;
+  padding-left: 8px;
+}
+</style>

@@ -41,6 +41,9 @@ const mountCaptionTracks = (textLayers: TextCaptionLayer[] = [], reduceMotion = 
   mount(TimelineCaptionTracks, {
     props: {
       keyboardClips: [],
+      viewport: { left: 0, top: 0, width: 1000, height: 320 },
+      durationMs: 10000,
+      width: 1000,
       textLayers,
       reduceMotion,
       selectedClipId: null,
@@ -59,6 +62,7 @@ const mountCaptionTracks = (textLayers: TextCaptionLayer[] = [], reduceMotion = 
       leaveTrack: () => undefined,
       addAt: () => undefined,
     },
+    global: { stubs: { TimelineCanvasLane: true } },
   });
 
 describe('TimelineCaptionTracks progressive captions', () => {

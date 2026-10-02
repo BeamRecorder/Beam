@@ -1,4 +1,4 @@
-import { effectScope, nextTick } from 'vue';
+import { effectScope, nextTick, shallowRef } from 'vue';
 import { flushPromises } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createState } from './editor-state-fixture';
@@ -7,6 +7,32 @@ vi.mock('~/api/capture', () => ({ capture }));
 import { useProjectEditorState } from '../useProjectEditorState';
 
 describe('project editor lifecycle', () => {
+  it('observes immutable document replacement without walking all clips at setup', async () => {
+    vi.useFakeTimers();
+    capture.saveProjectEditorState.mockResolvedValue(undefined);
+    const fixture = createState(),
+      read = vi.fn(() => []);
+    const document = {
+      ...fixture.composition.value,
+      get clips() {
+        return read();
+      },
+    };
+    const state = {
+      ...fixture,
+      composition: shallowRef(document),
+      restoreComposition: vi.fn(),
+      restoreZoomElements: vi.fn(),
+    };
+    const scope = effectScope();
+    scope.run(() => useProjectEditorState(state));
+    expect(read).not.toHaveBeenCalled();
+    state.composition.value = { ...document };
+    await nextTick();
+    await vi.advanceTimersByTimeAsync(250);
+    expect(capture.saveProjectEditorState).toHaveBeenCalledOnce();
+    scope.stop();
+  });
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();

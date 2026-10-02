@@ -25,3 +25,7 @@ export interface EditorHistoryOptions<T> {
   disabled?: () => boolean;
 }
 export type SnapshotOwnership = 'copy' | 'transfer';
+export interface SerializedSnapshot<T> {
+  snapshot: T;
+  json: string;
+}

@@ -101,6 +101,24 @@ afterEach(() => {
 });
 
 describe('useTimelineItemInteractions', () => {
+  it('retains selection list identity across playback and refreshes only changed selections', async () => {
+    const harness = track(createHarness({ selectedClipId: 'clip', selectedZoomId: 'zoom' }));
+    const vm = harness.wrapper.vm;
+    const clips = vm.selectedClipList;
+    const zooms = vm.selectedZoomList;
+    expect(clips).toEqual(['clip']);
+    expect(zooms).toEqual(['zoom']);
+    harness.props.currentTime = 5;
+    await nextTick();
+    expect(vm.selectedClipList).toBe(clips);
+    expect(vm.selectedZoomList).toBe(zooms);
+    harness.props.selectedClipIds = ['other', 'clip'];
+    await nextTick();
+    expect(vm.selectedClipList).toEqual(['other', 'clip']);
+    expect(vm.selectedClipList).not.toBe(clips);
+    expect(vm.selectedZoomList).toBe(zooms);
+  });
+
   it('derives array and fallback primary selections and emits every selection intent', async () => {
     const harness = track(
       createHarness({

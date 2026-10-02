@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { isReactive } from 'vue';
 import type { CaptionClip, MediaAsset, VisualClip } from '~/media/shared/composition-types';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import type { ZoomElement } from '../../../zoom/zoom-types';
@@ -90,6 +91,43 @@ afterEach(() => {
 });
 
 describe('useTimelineClipboard', () => {
+  it('stores an owned clip snapshot without nested reactive proxies', () => {
+    const clipboard = useTimelineClipboard(),
+      original = clip();
+    const stored = clipboard.copyClip('project', original, asset);
+    expect(clipboard.clipboardItem.value).toBe(stored);
+    expect(isReactive(clipboard.clipboardItem.value)).toBe(false);
+    original.transform.x = 0.9;
+    expect(stored.type === 'clip' && (stored.clip as VisualClip).transform.x).toBe(0.1);
+  });
+  it('owns zoom focus data while preserving a shallow clipboard snapshot', () => {
+    const clipboard = useTimelineClipboard(),
+      original = zoom();
+    const stored = clipboard.copyZoom('project', original, [original]);
+    original.focus.cx = 0.9;
+    expect(clipboard.clipboardItem.value).toBe(stored);
+    expect(stored.type === 'zoom' && stored.zoom.focus.cx).toBe(0.5);
+  });
+  it('keeps large selections raw and hands a separate owned copy to each paste', () => {
+    const clipboard = useTimelineClipboard();
+    const stored = clipboard.copySelection({
+      scopeId: 'project',
+      clips: Array.from({ length: 1000 }, (_, i) => ({ ...clip(), id: String(i) })),
+      zooms: [],
+      allZooms: [],
+      primaryId: '0',
+      assetFor: () => asset,
+    });
+    expect(clipboard.clipboardItem.value).toBe(stored);
+    expect(isReactive(stored)).toBe(false);
+    const first = clipboard.getClipboardItem(),
+      second = clipboard.getClipboardItem();
+    expect(first).toEqual(second);
+    expect(first).not.toBe(second);
+    if (first?.type !== 'selection' || second?.type !== 'selection') throw new Error('Expected a clipboard selection');
+    expect(first.entries[0]).not.toBe(second.entries[0]);
+    expect(first.entries).toHaveLength(1000);
+  });
   it('classifies every timeline item category, including webcam as visual', () => {
     expect(getClipCategory(clip())).toBe('visual');
     expect(getClipCategory({ ...clip(), kind: 'screen' })).toBe('visual');

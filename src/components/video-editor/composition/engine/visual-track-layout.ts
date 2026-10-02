@@ -66,26 +66,7 @@ export const assertValidVisualTracks = (clips: Clip[], fail: (message: string) =
 const stationarySiblings = (clips: Clip[], clip: CompositingClip, ignoredIds: Set<string>) =>
   visualTrackClips(clips, clip.trackId!).filter((entry) => !ignoredIds.has(entry.id));
 
-export const visualMoveDeltaBounds = (clips: Clip[], movedIds: Set<string>): { min: number; max: number } => {
-  let min = -Infinity;
-  let max = Infinity;
-  for (const clip of clips) {
-    if (!movedIds.has(clip.id) || !isCompositingClip(clip)) continue;
-    min = Math.max(min, -clip.timelineStartMs);
-    const siblings = stationarySiblings(clips, clip, movedIds);
-    const previousEnd = Math.max(
-      0,
-      ...siblings.filter((entry) => clipEndMs(entry) <= clip.timelineStartMs).map(clipEndMs),
-    );
-    const nextStart = Math.min(
-      Infinity,
-      ...siblings.filter((entry) => entry.timelineStartMs >= clipEndMs(clip)).map((entry) => entry.timelineStartMs),
-    );
-    min = Math.max(min, previousEnd - clip.timelineStartMs);
-    max = Math.min(max, nextStart - clipEndMs(clip));
-  }
-  return { min, max };
-};
+export { visualMoveDeltaBounds } from './visual-move-bounds';
 
 export const visualTrimBounds = (
   clips: Clip[],

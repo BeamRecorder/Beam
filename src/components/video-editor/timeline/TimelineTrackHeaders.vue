@@ -31,6 +31,8 @@ import type { VisualTimelineTrack } from './composables/timeline-tracks-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { TextCaptionLayer } from '../composition/engine/caption-layer-layout';
 import type { ZoomElement } from '../zoom/zoom-types';
+import { computed } from 'vue';
+import { useTimelineVirtualWindow, useVirtualTimelineItems } from './composables/useTimelineVirtualization';
 
 const props = defineProps<{
   visualTracks: VisualTimelineTrack[];
@@ -59,6 +61,26 @@ const props = defineProps<{
   ) => void;
 }>();
 const { t } = useTranslate('TimelineTracks');
+const window = useTimelineVirtualWindow();
+const visibleVisualTracks = useVirtualTimelineItems(
+  () => props.visualTracks,
+  (track) => `visual:${track.id}`,
+);
+const visibleTextLayers = useVirtualTimelineItems(
+  () => props.textCaptionLayers,
+  (layer) => `caption:${layer.id}`,
+);
+const visibleVoiceovers = useVirtualTimelineItems(
+  () => props.voiceoverClips,
+  (clip) => `voiceover:${clip.id}`,
+);
+const visibleAudioTracks = useVirtualTimelineItems(
+  () => props.importedAudioTracks,
+  (track) => `imported:${track.id}`,
+);
+const isVisible = (id: string) => !window || window.visibleIds.value.has(id);
+const selectedClips = computed(() => new Set(props.selectedClipIds));
+const selectedZooms = computed(() => new Set(props.selectedZoomIds));
 const { t: tHighlight } = useTranslate('Highlight');
 const { t: tCanvas } = useTranslate('CanvasPanel');
 const { t: tElements } = useTranslate('Elements');
@@ -93,19 +115,20 @@ const labelForVisual = (clip: VisualClip | ColorClip | ShapeClip | BlurClip) =>
             : clip.name;
 const labelForCaption = (clip: CaptionClip) =>
   clip.caption.type === 'text' ? clip.caption.style.customText?.trim() || t('textCaptions') : clip.name;
-const allClipsSelected = (clips: Clip[]) =>
-  clips.length > 0 && clips.every((clip) => props.selectedClipIds.includes(clip.id));
+const allClipsSelected = (clips: Clip[]) => clips.length > 0 && clips.every((clip) => selectedClips.value.has(clip.id));
 const allZoomsSelected = () =>
-  props.zoomElements.length > 0 && props.zoomElements.every((zoom) => props.selectedZoomIds.includes(zoom.id));
+  props.zoomElements.length > 0 && props.zoomElements.every((zoom) => selectedZooms.value.has(zoom.id));
 </script>
 
 <template>
-  <ReorderGroup :order="visualTracks.map((track) => track.id)" class="visual-tracks-group">
+  <ReorderGroup :order="visibleVisualTracks.map((track) => track.id)" class="visual-tracks-group">
     <div
-      v-for="track in visualTracks"
+      v-for="track in visibleVisualTracks"
       :key="track.id"
       class="sidebar-track-item visual-track"
       :data-track-id="track.id"
+      :data-timeline-row-id="`visual:${track.id}`"
+      :style="window?.rowStyle(`visual:${track.id}`)"
       :class="{
         disabled: !track.clips.some((clip) => clip.enabled),
         dragging: draggedTrackId === track.id,
@@ -134,6 +157,9 @@ const allZoomsSelected = () =>
     </div>
   </ReorderGroup>
   <div
+    v-if="isVisible('zoom')"
+    data-timeline-row-id="zoom"
+    :style="window?.rowStyle('zoom')"
     class="sidebar-track-item cursor-track"
     :class="{ selected: allZoomsSelected() }"
     @contextmenu="openTrackContextMenu($event, 'zoom', undefined, [])"
@@ -143,7 +169,9 @@ const allZoomsSelected = () =>
     </button>
   </div>
   <div
-    v-if="keyboardCaptionClips.length"
+    v-if="keyboardCaptionClips.length && isVisible('keyboard')"
+    data-timeline-row-id="keyboard"
+    :style="window?.rowStyle('keyboard')"
     class="sidebar-track-item annotation-track keyboard-caption-track"
     :class="{ selected: allClipsSelected(keyboardCaptionClips) }"
     @contextmenu="openTrackContextMenu($event, 'caption')"
@@ -154,15 +182,17 @@ const allZoomsSelected = () =>
   </div>
   <ReorderGroup
     v-if="textCaptionLayers.length"
-    :order="textCaptionLayers.map((layer) => layer.id)"
+    :order="visibleTextLayers.map((layer) => layer.id)"
     item-attribute="data-caption-id"
     class="text-caption-layers-group"
   >
     <div
-      v-for="layer in textCaptionLayers"
+      v-for="layer in visibleTextLayers"
       :key="layer.id"
       class="sidebar-track-item annotation-track text-caption-track text-caption-layer"
       :data-caption-id="layer.id"
+      :data-timeline-row-id="`caption:${layer.id}`"
+      :style="window?.rowStyle(`caption:${layer.id}`)"
       :class="{
         disabled: !layer.clips.some((clip) => clip.enabled),
         dragging: draggedCaptionId === layer.id,
@@ -189,13 +219,20 @@ const allZoomsSelected = () =>
       </button>
     </div>
   </ReorderGroup>
-  <div v-else class="sidebar-track-item annotation-track text-caption-track">
+  <div
+    v-else-if="isVisible('caption:empty')"
+    class="sidebar-track-item annotation-track text-caption-track"
+    data-timeline-row-id="caption:empty"
+    :style="window?.rowStyle('caption:empty')"
+  >
     <div class="track-info static-info">
       <Type class="track-icon" /><span class="track-title">{{ t('textCaptions') }}</span>
     </div>
   </div>
   <div
-    v-if="systemAudioClips.length"
+    v-if="systemAudioClips.length && isVisible('system')"
+    data-timeline-row-id="system"
+    :style="window?.rowStyle('system')"
     class="sidebar-track-item audio-track"
     :class="{
       disabled: !includeAudioInExport || !systemAudioClips.some((clip) => clip.enabled),
@@ -216,7 +253,9 @@ const allZoomsSelected = () =>
     </button>
   </div>
   <div
-    v-if="microphoneClips.length"
+    v-if="microphoneClips.length && isVisible('microphone')"
+    data-timeline-row-id="microphone"
+    :style="window?.rowStyle('microphone')"
     class="sidebar-track-item audio-track"
     :class="{
       disabled: !includeAudioInExport || !microphoneClips.some((clip) => clip.enabled),
@@ -237,8 +276,10 @@ const allZoomsSelected = () =>
     </button>
   </div>
   <div
-    v-for="(clip, index) in voiceoverClips"
+    v-for="clip in visibleVoiceovers"
     :key="clip.id"
+    :data-timeline-row-id="`voiceover:${clip.id}`"
+    :style="window?.rowStyle(`voiceover:${clip.id}`)"
     class="sidebar-track-item audio-track voiceover-track"
     :class="{
       disabled: !includeAudioInExport || !clip.enabled,
@@ -253,19 +294,32 @@ const allZoomsSelected = () =>
       )
     "
   >
-    <button type="button" class="track-info" @click="selectTrack([clip], `${t('voiceover')} ${index + 1}`, $event)">
-      <Mic class="track-icon" /><span class="track-title">{{ t('voiceover') }} {{ index + 1 }}</span>
+    <button
+      type="button"
+      class="track-info"
+      @click="selectTrack([clip], `${t('voiceover')} ${voiceoverClips.indexOf(clip) + 1}`, $event)"
+    >
+      <Mic class="track-icon" /><span class="track-title"
+        >{{ t('voiceover') }} {{ voiceoverClips.indexOf(clip) + 1 }}</span
+      >
       <span v-if="!includeAudioInExport" class="export-disabled-status">{{ t('audioDisabledFromExport') }}</span>
     </button>
   </div>
-  <div v-if="hasVoiceoverDraft" class="sidebar-track-item audio-track voiceover-track voiceover-draft-track">
+  <div
+    v-if="hasVoiceoverDraft && isVisible('draft')"
+    class="sidebar-track-item audio-track voiceover-track voiceover-draft-track"
+    data-timeline-row-id="draft"
+    :style="window?.rowStyle('draft')"
+  >
     <div class="track-info static-info">
       <Mic class="track-icon" /><span class="track-title">{{ t('voiceover') }} {{ voiceoverClips.length + 1 }}</span>
     </div>
   </div>
   <div
-    v-for="track in importedAudioTracks"
+    v-for="track in visibleAudioTracks"
     :key="track.id"
+    :data-timeline-row-id="`imported:${track.id}`"
+    :style="window?.rowStyle(`imported:${track.id}`)"
     class="sidebar-track-item audio-track"
     :class="{
       disabled: !includeAudioInExport || !track.clips.some((clip) => clip.enabled),

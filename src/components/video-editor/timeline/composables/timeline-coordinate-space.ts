@@ -17,3 +17,17 @@ export const timelineVisualToLayoutPixels = (
   element: HTMLElement | null,
   measuredVisualWidth?: number,
 ) => pixels / timelineVisualScale(element, measuredVisualWidth);
+
+export function timelineMoveScale(
+  durationSeconds: number,
+  rulerWidth: number,
+  ticks: HTMLElement | null,
+  scroll: HTMLElement | null,
+) {
+  const baseDurationMs = Math.max(1, Math.round(durationSeconds * 1_000));
+  const width = Math.max(
+    1,
+    rulerWidth || ticks?.getBoundingClientRect().width || scroll?.getBoundingClientRect().width || 1_000,
+  );
+  return { baseDurationMs, width, msPerPx: baseDurationMs / width, visualScale: timelineVisualScale(ticks) };
+}

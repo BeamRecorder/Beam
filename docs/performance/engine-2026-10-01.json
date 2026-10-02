@@ -1,0 +1,1976 @@
+{
+  "schemaVersion": 1,
+  "measuredAt": "2026-10-01",
+  "baseline": "Working tree frozen at this pass start, including the prior decoder/timeline/native-media optimizations",
+  "environment": {
+    "platform": "linux",
+    "cpu": "Intel(R) Core(TM) Ultra 5 125H",
+    "versions": {
+      "electron": "44.5.1",
+      "chromium": "152.0.7977.130"
+    },
+    "contentSize": [
+      1280,
+      800
+    ],
+    "gpuFeatures": {
+      "2d_canvas": "enabled",
+      "direct_rendering_display_compositor": "disabled_off_ok",
+      "gpu_compositing": "enabled",
+      "multiple_raster_threads": "enabled_on",
+      "opengl": "enabled_on",
+      "rasterization": "enabled",
+      "raw_draw": "disabled_off_ok",
+      "skia_graphite": "disabled_off",
+      "trees_in_viz": "disabled_off",
+      "video_decode": "enabled",
+      "video_encode": "disabled_software",
+      "vulkan": "disabled_off",
+      "webgl": "enabled",
+      "webgpu": "enabled",
+      "webgpu_on_vk_via_gl_interop": "enabled",
+      "webnn": "disabled_off"
+    },
+    "gpu": {
+      "auxAttributes": {
+        "amdSwitchable": false,
+        "canSupportThreadedTextureMailbox": false,
+        "glImplementationParts": "(gl=none,angle=none)",
+        "glResetNotificationStrategy": 0,
+        "hardwareSupportsVulkan": false,
+        "inProcessGpu": true,
+        "initializationTime": 0,
+        "isAsan": false,
+        "isClangCoverage": false,
+        "jpegDecodeAcceleratorSupported": false,
+        "optimus": false,
+        "passthroughCmdDecoder": false,
+        "sandboxed": false,
+        "skiaBackendType": "None",
+        "subpixelFontRendering": true,
+        "targetCpuBits": 64,
+        "visibilityCallbackCallCount": 0
+      },
+      "gpuDevice": [
+        {
+          "active": true,
+          "deviceId": 32085,
+          "gpuPreference": 0,
+          "vendorId": 32902
+        }
+      ]
+    }
+  },
+  "method": {
+    "gpuSamples": 12,
+    "warmups": 2,
+    "order": "paired alternating",
+    "completed": "synchronous full-resolution RGBA readback; not display FPS",
+    "gpuExecution": "EXT_disjoint_timer_query_webgl2, separate from CPU submission",
+    "limitations": [
+      "Other desktop apps remain open, OS caches not cleared",
+      "Timeline and Soft Signal comparisons are single trials with high variance",
+      "The separate soft-frozen-export trial overlapped a local ffprobe decode and is not retained as performance evidence"
+    ]
+  },
+  "shapeBatching": {
+    "results": [
+      {
+        "name": "filled-10000",
+        "samples": 12,
+        "submission": {
+          "native": {
+            "median": 74.8999999910593,
+            "p95": 117.5
+          },
+          "gpu": {
+            "median": 22.799999997019768,
+            "p95": 35.599999994039536
+          }
+        },
+        "completed": {
+          "native": {
+            "median": 119.3999999910593,
+            "p95": 165.8999999910593
+          },
+          "gpu": {
+            "median": 41.1000000089407,
+            "p95": 58.099999994039536
+          }
+        },
+        "quality": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        },
+        "metrics": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "render": {
+              "count": 1,
+              "totalMs": 7.0999999940395355,
+              "latestMs": 7.0999999940395355,
+              "medianMs": 7.0999999940395355,
+              "p95Ms": 7.0999999940395355,
+              "maxMs": 7.0999999940395355,
+              "windowSamples": 1
+            },
+            "gpu-submit": {
+              "count": 14,
+              "totalMs": 178.7000000178814,
+              "latestMs": 2.7000000029802322,
+              "medianMs": 12.600000008940697,
+              "p95Ms": 41.79999999701977,
+              "maxMs": 41.79999999701977,
+              "windowSamples": 14
+            },
+            "gpu-execute": {
+              "count": 13,
+              "totalMs": 47.06670499999999,
+              "latestMs": 1.143905,
+              "medianMs": 3.41927,
+              "p95Ms": 9.411978,
+              "maxMs": 9.411978,
+              "windowSamples": 13
+            }
+          },
+          "counters": {
+            "frames": 1,
+            "draws": 56,
+            "gpu-frames": 14
+          }
+        }
+      },
+      {
+        "name": "outlined-10000",
+        "samples": 12,
+        "submission": {
+          "native": {
+            "median": 90.70000000298023,
+            "p95": 203.20000000298023
+          },
+          "gpu": {
+            "median": 26.19999998807907,
+            "p95": 73.20000000298023
+          }
+        },
+        "completed": {
+          "native": {
+            "median": 141.70000000298023,
+            "p95": 271.6000000089407
+          },
+          "gpu": {
+            "median": 45,
+            "p95": 83.70000000298023
+          }
+        },
+        "quality": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        },
+        "metrics": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "gpu-execute": {
+              "count": 14,
+              "totalMs": 78.59795599999998,
+              "latestMs": 2.562603,
+              "medianMs": 2.560468,
+              "p95Ms": 32.708592,
+              "maxMs": 32.708592,
+              "windowSamples": 14
+            },
+            "gpu-submit": {
+              "count": 14,
+              "totalMs": 227.59999994933605,
+              "latestMs": 29,
+              "medianMs": 13.799999997019768,
+              "p95Ms": 29.899999991059303,
+              "maxMs": 29.899999991059303,
+              "windowSamples": 14
+            }
+          },
+          "counters": {
+            "draws": 154,
+            "gpu-frames": 14
+          }
+        }
+      },
+      {
+        "name": "fractional-10000",
+        "samples": 12,
+        "submission": {
+          "native": {
+            "median": 61.900000005960464,
+            "p95": 210.8999999910593
+          },
+          "gpu": {
+            "median": 73.6000000089407,
+            "p95": 105.5
+          }
+        },
+        "completed": {
+          "native": {
+            "median": 121.20000000298023,
+            "p95": 283.59999999403954
+          },
+          "gpu": {
+            "median": 120.59999999403954,
+            "p95": 167.09999999403954
+          }
+        },
+        "quality": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        },
+        "metrics": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {},
+          "counters": {}
+        }
+      },
+      {
+        "name": "mixed-ordering-8192",
+        "samples": 12,
+        "submission": {
+          "native": {
+            "median": 54.099999994039536,
+            "p95": 91.09999999403954
+          },
+          "gpu": {
+            "median": 9.399999991059303,
+            "p95": 31.299999997019768
+          }
+        },
+        "completed": {
+          "native": {
+            "median": 97.09999999403954,
+            "p95": 143.20000000298023
+          },
+          "gpu": {
+            "median": 23.5,
+            "p95": 42.3999999910593
+          }
+        },
+        "quality": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        },
+        "metrics": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "gpu-execute": {
+              "count": 27,
+              "totalMs": 37.185340999999994,
+              "latestMs": 0.786666,
+              "medianMs": 0.692968,
+              "p95Ms": 1.768749,
+              "maxMs": 17.625728,
+              "windowSamples": 27
+            },
+            "gpu-submit": {
+              "count": 28,
+              "totalMs": 57.80000001192093,
+              "latestMs": 1.6000000089406967,
+              "medianMs": 1.9000000059604645,
+              "p95Ms": 5.5,
+              "maxMs": 7.399999991059303,
+              "windowSamples": 28
+            }
+          },
+          "counters": {
+            "draws": 56,
+            "gpu-frames": 28
+          }
+        }
+      }
+    ]
+  },
+  "gpuPrototype": {
+    "results": [
+      {
+        "name": "retained-videos-128",
+        "commands": 129,
+        "samples": 12,
+        "submission": {
+          "native": {
+            "median": 0.4000000059604645,
+            "p95": 1.7999999970197678
+          },
+          "gpu": {
+            "median": 1,
+            "p95": 3
+          }
+        },
+        "completed": {
+          "native": {
+            "median": 10.299999997019768,
+            "p95": 23.19999998807907
+          },
+          "gpu": {
+            "median": 14.700000002980232,
+            "p95": 24.19999998807907
+          }
+        },
+        "quality": {
+          "differentBytes": 411423,
+          "maxChannelDelta": 1,
+          "meanAbsoluteDelta": 0.049602502893518516
+        },
+        "metrics": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "gpu-upload": {
+              "count": 4,
+              "totalMs": 0.5,
+              "latestMs": 0,
+              "medianMs": 0.20000000298023224,
+              "p95Ms": 0.29999999701976776,
+              "maxMs": 0.29999999701976776,
+              "windowSamples": 4
+            },
+            "gpu-submit": {
+              "count": 14,
+              "totalMs": 22.599999994039536,
+              "latestMs": 0.5,
+              "medianMs": 1,
+              "p95Ms": 5.9000000059604645,
+              "maxMs": 5.9000000059604645,
+              "windowSamples": 14
+            },
+            "gpu-execute": {
+              "count": 14,
+              "totalMs": 12.841915,
+              "latestMs": 0.523072,
+              "medianMs": 0.577447,
+              "p95Ms": 2.941301,
+              "maxMs": 2.941301,
+              "windowSamples": 14
+            }
+          },
+          "counters": {
+            "draws": 42,
+            "uploads": 4,
+            "frames": 14
+          }
+        },
+        "resources": {
+          "textures": 4,
+          "bytes": 316800,
+          "renderTargetBytes": 24883200
+        }
+      },
+      {
+        "name": "solids-10000",
+        "commands": 10001,
+        "samples": 12,
+        "submission": {
+          "native": {
+            "median": 10.599999994039536,
+            "p95": 18.600000008940697
+          },
+          "gpu": {
+            "median": 3.0999999940395355,
+            "p95": 21.400000005960464
+          }
+        },
+        "completed": {
+          "native": {
+            "median": 38.400000005960464,
+            "p95": 45.400000005960464
+          },
+          "gpu": {
+            "median": 23.200000002980232,
+            "p95": 35.900000005960464
+          }
+        },
+        "quality": {
+          "differentBytes": 17984,
+          "maxChannelDelta": 1,
+          "meanAbsoluteDelta": 0.00216820987654321
+        },
+        "metrics": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "gpu-submit": {
+              "count": 14,
+              "totalMs": 83.90000000596046,
+              "latestMs": 3,
+              "medianMs": 3,
+              "p95Ms": 21.299999997019768,
+              "maxMs": 21.299999997019768,
+              "windowSamples": 14
+            },
+            "gpu-execute": {
+              "count": 14,
+              "totalMs": 56.130092000000005,
+              "latestMs": 5.311718,
+              "medianMs": 3.980155,
+              "p95Ms": 6.614531,
+              "maxMs": 6.614531,
+              "windowSamples": 14
+            }
+          },
+          "counters": {
+            "draws": 56,
+            "frames": 14
+          }
+        },
+        "resources": {
+          "textures": 4,
+          "bytes": 316800,
+          "renderTargetBytes": 24883200
+        }
+      },
+      {
+        "name": "mixed-videos-shapes-effects",
+        "commands": 257,
+        "samples": 12,
+        "submission": {
+          "native": {
+            "median": 2.6000000089406967,
+            "p95": 5.700000002980232
+          },
+          "gpu": {
+            "median": 22,
+            "p95": 28.099999994039536
+          }
+        },
+        "completed": {
+          "native": {
+            "median": 40.30000001192093,
+            "p95": 58.5
+          },
+          "gpu": {
+            "median": 32.8999999910593,
+            "p95": 39.5
+          }
+        },
+        "quality": {
+          "differentBytes": 1417364,
+          "maxChannelDelta": 84,
+          "meanAbsoluteDelta": 0.6025204957561728
+        },
+        "metrics": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "gpu-submit": {
+              "count": 14,
+              "totalMs": 290.1000000089407,
+              "latestMs": 28,
+              "medianMs": 21.899999991059303,
+              "p95Ms": 28,
+              "maxMs": 28,
+              "windowSamples": 14
+            },
+            "gpu-execute": {
+              "count": 14,
+              "totalMs": 36.189619,
+              "latestMs": 2.260624,
+              "medianMs": 2.746562,
+              "p95Ms": 4.321249,
+              "maxMs": 4.321249,
+              "windowSamples": 14
+            }
+          },
+          "counters": {
+            "draws": 2744,
+            "frames": 14
+          }
+        },
+        "resources": {
+          "textures": 4,
+          "bytes": 316800,
+          "renderTargetBytes": 24883200
+        }
+      }
+    ],
+    "blurAlgorithm": "five-tap separable GPU prototype; not equivalent to native Canvas blur",
+    "sources": "four real decoded video bitmaps resized once outside timings; aliases are not independent decoders"
+  },
+  "softSignal": {
+    "final": {
+      "presentedMs": 908.3630510000003,
+      "previewSettledMs": 2019.4494790000008,
+      "success": true,
+      "phases": {
+        "playback": {
+          "wallMs": 6100.135069,
+          "rendererCpuMs": 15660,
+          "rafMs": {
+            "median": 43.80000000000109,
+            "p95": 104.39999999999964,
+            "max": 164
+          },
+          "drawMs": {
+            "median": 8.100000008940697,
+            "p95": 25.799999997019768,
+            "total": 1464.3000000715256
+          },
+          "frames": 311,
+          "draws": 123,
+          "engineMetrics": {
+            "schemaVersion": 1,
+            "enabled": true,
+            "capacity": 120,
+            "stages": {
+              "render": {
+                "count": 123,
+                "totalMs": 1463.700000077486,
+                "latestMs": 2.5,
+                "medianMs": 8.100000008940697,
+                "p95Ms": 25.900000005960464,
+                "maxMs": 147.70000000298023,
+                "windowSamples": 120
+              },
+              "seek": {
+                "count": 1,
+                "totalMs": 34.1000000089407,
+                "latestMs": 34.1000000089407,
+                "medianMs": 34.1000000089407,
+                "p95Ms": 34.1000000089407,
+                "maxMs": 34.1000000089407,
+                "windowSamples": 1
+              }
+            },
+            "counters": {
+              "frames": 123
+            }
+          }
+        },
+        "seeking": {
+          "wallMs": 14643.604468000001,
+          "rendererCpuMs": 74610,
+          "rafMs": {
+            "median": 86.60000000000036,
+            "p95": 308.3000000000011,
+            "max": 450.90000000000146
+          },
+          "drawMs": {
+            "median": 5.5,
+            "p95": 13.799999997019768,
+            "total": 599.7999999970198
+          },
+          "frames": 132,
+          "draws": 76,
+          "seekMs": {
+            "median": 370.3999999910593,
+            "p95": 664.9000000059605,
+            "total": 14641.79999999702
+          },
+          "failures": [],
+          "engineMetrics": {
+            "schemaVersion": 1,
+            "enabled": true,
+            "capacity": 120,
+            "stages": {
+              "seek": {
+                "count": 40,
+                "totalMs": 9704.000000089407,
+                "latestMs": 252.3999999910593,
+                "medianMs": 239.90000000596046,
+                "p95Ms": 406.20000000298023,
+                "maxMs": 421.90000000596046,
+                "windowSamples": 40
+              },
+              "render": {
+                "count": 76,
+                "totalMs": 598.8000000268221,
+                "latestMs": 4,
+                "medianMs": 5.5,
+                "p95Ms": 13.900000005960464,
+                "maxMs": 114.30000001192093,
+                "windowSamples": 76
+              }
+            },
+            "counters": {
+              "frames": 76
+            }
+          }
+        },
+        "scrubbing": {
+          "wallMs": 2418.309036999999,
+          "rendererCpuMs": 11170,
+          "rafMs": {
+            "median": 260.2000000000007,
+            "p95": 486.7000000000007,
+            "max": 486.7000000000007
+          },
+          "drawMs": {
+            "median": 6,
+            "p95": 13.299999997019768,
+            "total": 48.70000000298023
+          },
+          "frames": 170,
+          "draws": 8,
+          "engineMetrics": {
+            "schemaVersion": 1,
+            "enabled": true,
+            "capacity": 120,
+            "stages": {
+              "seek": {
+                "count": 121,
+                "totalMs": 4585.299999922514,
+                "latestMs": 332,
+                "medianMs": 21.5,
+                "p95Ms": 77.20000000298023,
+                "maxMs": 332,
+                "windowSamples": 120
+              },
+              "render": {
+                "count": 8,
+                "totalMs": 48.5,
+                "latestMs": 6,
+                "medianMs": 6,
+                "p95Ms": 13.199999988079071,
+                "maxMs": 13.199999988079071,
+                "windowSamples": 8
+              }
+            },
+            "counters": {
+              "frames": 8
+            }
+          }
+        }
+      },
+      "exportRuntime": {
+        "validationMs": 28.599999994039536,
+        "assetLoadingMs": 94.5,
+        "outputSetupMs": 82.59999999403954,
+        "videoPipelineMs": 43430.20000000298,
+        "audioPipelineMs": 1603.800000011921,
+        "muxFinalizationMs": 164.69999998807907,
+        "nativeFinalizationMs": 1.0999999940395355,
+        "decodeMs": 293.7999999523163,
+        "renderMs": 7372.5000000447035,
+        "encoderBackpressureMs": 35541.799999922514,
+        "ipcWriteWaitMs": 78.5,
+        "encodedFps": 10.706835335779436,
+        "audioRealtimeSpeed": 9.664546701511902,
+        "chunkCount": 1,
+        "bytesWritten": 13394368,
+        "videoCodec": "avc",
+        "audioCodec": "aac",
+        "inputVideoCodecs": [
+          "av1",
+          "vp9"
+        ],
+        "inputAudioCodecs": [
+          "pcm-f32"
+        ],
+        "engine": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "decode": {
+              "count": 465,
+              "totalMs": 293.7999999523163,
+              "latestMs": 0,
+              "medianMs": 0,
+              "p95Ms": 0.20000000298023224,
+              "maxMs": 0.30000001192092896,
+              "windowSamples": 120
+            },
+            "render": {
+              "count": 465,
+              "totalMs": 7372.5000000447035,
+              "latestMs": 1.5,
+              "medianMs": 4.799999997019768,
+              "p95Ms": 12.200000002980232,
+              "maxMs": 19.19999998807907,
+              "windowSamples": 120
+            },
+            "encode-wait": {
+              "count": 465,
+              "totalMs": 35541.799999922514,
+              "latestMs": 14.599999994039536,
+              "medianMs": 37.900000005960464,
+              "p95Ms": 68,
+              "maxMs": 79.8999999910593,
+              "windowSamples": 120
+            }
+          },
+          "counters": {
+            "frames": 465
+          }
+        },
+        "audioEncoderImplementation": "mediabunny-aac",
+        "hardwareAcceleration": "no-preference",
+        "encoderCodec": "avc1.640028",
+        "encoderBitrate": 9953280,
+        "encodedPacketCount": 465,
+        "keyFrameCount": 8,
+        "encodedVideoBytes": 13383701,
+        "elapsedMs": 43805.89999999106,
+        "phase": "finalizing"
+      },
+      "exportWallMs": 44530.308135
+    },
+    "earlyScrubComparison": {
+      "before": {
+        "wallMs": 2638.174267000002,
+        "rendererCpuMs": 21290,
+        "rafMs": {
+          "median": 451.09999999999854,
+          "p95": 679.3999999999978,
+          "max": 679.3999999999978
+        },
+        "drawMs": {
+          "median": 9.799999997019768,
+          "p95": 21.700000002980232,
+          "total": 69.20000000298023
+        },
+        "frames": 64,
+        "draws": 6
+      },
+      "after": {
+        "wallMs": 2397.1810960000003,
+        "rendererCpuMs": 10860,
+        "rafMs": {
+          "median": 258.2000000000007,
+          "p95": 538.7000000000007,
+          "max": 538.7000000000007
+        },
+        "drawMs": {
+          "median": 7.700000002980232,
+          "p95": 16,
+          "total": 55.90000003576279
+        },
+        "frames": 175,
+        "draws": 7,
+        "engineMetrics": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "seek": {
+              "count": 121,
+              "totalMs": 4585.399999961257,
+              "latestMs": 324.29999999701977,
+              "medianMs": 22.399999991059303,
+              "p95Ms": 74.5,
+              "maxMs": 324.29999999701977,
+              "windowSamples": 120
+            },
+            "render": {
+              "count": 7,
+              "totalMs": 55.700000047683716,
+              "latestMs": 4.4000000059604645,
+              "medianMs": 7.700000002980232,
+              "p95Ms": 15.900000005960464,
+              "maxMs": 15.900000005960464,
+              "windowSamples": 7
+            }
+          },
+          "counters": {
+            "frames": 7
+          }
+        }
+      }
+    }
+  },
+  "timeline": {
+    "baseline": {
+      "presentedMs": 1217.8708969999998,
+      "previewSettledMs": 3773.787834999999,
+      "phases": {
+        "copy": {
+          "selected": 1000,
+          "handlerMs": 6.800000011920929,
+          "frames": 2,
+          "draws": 2,
+          "drawMs": {
+            "median": 1.7999999970197678,
+            "p95": 1.7999999970197678,
+            "total": 3.2000000029802322
+          },
+          "rafMs": {
+            "median": 16.700000000000728,
+            "p95": 138.29999999999927,
+            "max": 138.29999999999927
+          },
+          "longTasks": [
+            104
+          ],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2,
+            "presentedFrames": 2,
+            "droppedFrames": 0,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 8079360,
+            "disposedBitmaps": 0,
+            "seekLatencyMs": [
+              51.79999999701977,
+              29.799999997019768
+            ]
+          },
+          "audioMetrics": {
+            "schedulePasses": 0,
+            "scheduledBuffers": 0,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "wallMs": 188.84572399999888,
+          "mainCpu": {
+            "user": 720,
+            "system": 1915
+          },
+          "rendererCpuMs": 270
+        },
+        "paste": {
+          "before": 10013,
+          "after": 11013,
+          "handlerMs": 245.09999999403954,
+          "rows": 9,
+          "clips": 9,
+          "frames": 0,
+          "draws": 1,
+          "drawMs": {
+            "median": 4.5,
+            "p95": 4.5,
+            "total": 4.5
+          },
+          "rafMs": {
+            "median": 464.7999999999993,
+            "p95": 464.7999999999993,
+            "max": 464.7999999999993
+          },
+          "longTasks": [
+            458
+          ],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2,
+            "presentedFrames": 2,
+            "droppedFrames": 0,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 8079360,
+            "disposedBitmaps": 0,
+            "seekLatencyMs": [
+              51.79999999701977,
+              29.799999997019768
+            ]
+          },
+          "audioMetrics": {
+            "schedulePasses": 0,
+            "scheduledBuffers": 0,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "wallMs": 480.15525499999967,
+          "mainCpu": {
+            "user": 1616,
+            "system": 0
+          },
+          "rendererCpuMs": 710
+        },
+        "drag": {
+          "updates": 30,
+          "frameMs": {
+            "median": 29.100000008940697,
+            "p95": 208.40000000596046
+          },
+          "frames": 0,
+          "draws": 31,
+          "drawMs": {
+            "median": 1.2999999970197678,
+            "p95": 4.700000002980232,
+            "total": 56.69999998807907
+          },
+          "rafMs": {
+            "median": 33.20000000000073,
+            "p95": 234.40000000000055,
+            "max": 244
+          },
+          "longTasks": [
+            64,
+            218,
+            168,
+            57,
+            60
+          ],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2,
+            "presentedFrames": 2,
+            "droppedFrames": 0,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 8079360,
+            "disposedBitmaps": 0,
+            "seekLatencyMs": [
+              51.79999999701977,
+              29.799999997019768
+            ]
+          },
+          "audioMetrics": {
+            "schedulePasses": 0,
+            "scheduledBuffers": 0,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "wallMs": 1737.9345109999995,
+          "mainCpu": {
+            "user": 1306987,
+            "system": 335784
+          },
+          "rendererCpuMs": 1920
+        },
+        "scroll": {
+          "updates": 20,
+          "maximumRows": 13,
+          "maximumClips": 32,
+          "frameMs": {
+            "median": 61.29999999701977,
+            "p95": 110.70000000298023
+          },
+          "frames": 0,
+          "draws": 0,
+          "drawMs": {
+            "median": null,
+            "p95": null,
+            "total": 0
+          },
+          "rafMs": {
+            "median": 32.399999999999636,
+            "p95": 69.39999999702013,
+            "max": 91
+          },
+          "longTasks": [
+            54,
+            65,
+            98,
+            57,
+            64,
+            67
+          ],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2,
+            "presentedFrames": 2,
+            "droppedFrames": 0,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 8079360,
+            "disposedBitmaps": 0,
+            "seekLatencyMs": [
+              51.79999999701977,
+              29.799999997019768
+            ]
+          },
+          "audioMetrics": {
+            "schedulePasses": 0,
+            "scheduledBuffers": 0,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "wallMs": 1357.78125,
+          "mainCpu": {
+            "user": 42799,
+            "system": 24754
+          },
+          "rendererCpuMs": 1830
+        },
+        "pasteBurst": {
+          "repeats": 3,
+          "before": 11013,
+          "after": 14013,
+          "handlerMs": [
+            470.29999999701977,
+            244.20000000298023,
+            243.20000000298023
+          ],
+          "frames": 0,
+          "draws": 2,
+          "drawMs": {
+            "median": 1,
+            "p95": 1,
+            "total": 1.7999999970197678
+          },
+          "rafMs": {
+            "median": 432.7999999999993,
+            "p95": 1197.300000000001,
+            "max": 1197.300000000001
+          },
+          "longTasks": [
+            707,
+            504,
+            432
+          ],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2,
+            "presentedFrames": 2,
+            "droppedFrames": 0,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 8079360,
+            "disposedBitmaps": 0,
+            "seekLatencyMs": [
+              51.79999999701977,
+              29.799999997019768
+            ]
+          },
+          "audioMetrics": {
+            "schedulePasses": 0,
+            "scheduledBuffers": 0,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "wallMs": 1660.700407999997,
+          "mainCpu": {
+            "user": 0,
+            "system": 1955
+          },
+          "rendererCpuMs": 2110
+        }
+      }
+    },
+    "intermediateAfterHistorySaveViewport": {
+      "presentedMs": 1718.5993829999998,
+      "previewSettledMs": 3968.5379970000004,
+      "phases": {
+        "copy": {
+          "selected": 1000,
+          "handlerMs": 27.100000008940697,
+          "frames": 2,
+          "draws": 2,
+          "drawMs": {
+            "median": 4.200000002980232,
+            "p95": 4.200000002980232,
+            "total": 5.600000008940697
+          },
+          "rafMs": {
+            "median": 20.099999999999454,
+            "p95": 267.3000000000002,
+            "max": 267.3000000000002
+          },
+          "longTasks": [
+            183,
+            113
+          ],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2,
+            "presentedFrames": 2,
+            "droppedFrames": 0,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 8079360,
+            "disposedBitmaps": 0,
+            "seekLatencyMs": [
+              800.5999999940395,
+              40.29999999701977
+            ],
+            "engine": {
+              "schemaVersion": 1,
+              "enabled": true,
+              "capacity": 120,
+              "stages": {
+                "seek": {
+                  "count": 1,
+                  "totalMs": 40.29999999701977,
+                  "latestMs": 40.29999999701977,
+                  "medianMs": 40.29999999701977,
+                  "p95Ms": 40.29999999701977,
+                  "maxMs": 40.29999999701977,
+                  "windowSamples": 1
+                }
+              },
+              "counters": {
+                "decoded": 1
+              }
+            }
+          },
+          "audioMetrics": {
+            "schedulePasses": 0,
+            "scheduledBuffers": 0,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "engineMetrics": {
+            "schemaVersion": 1,
+            "enabled": true,
+            "capacity": 120,
+            "stages": {
+              "render": {
+                "count": 2,
+                "totalMs": 5.600000008940697,
+                "latestMs": 4.200000002980232,
+                "medianMs": 4.200000002980232,
+                "p95Ms": 4.200000002980232,
+                "maxMs": 4.200000002980232,
+                "windowSamples": 2
+              },
+              "seek": {
+                "count": 1,
+                "totalMs": 42.5,
+                "latestMs": 42.5,
+                "medianMs": 42.5,
+                "p95Ms": 42.5,
+                "maxMs": 42.5,
+                "windowSamples": 1
+              },
+              "copy": {
+                "count": 1,
+                "totalMs": 23.400000005960464,
+                "latestMs": 23.400000005960464,
+                "medianMs": 23.400000005960464,
+                "p95Ms": 23.400000005960464,
+                "maxMs": 23.400000005960464,
+                "windowSamples": 1
+              }
+            },
+            "counters": {
+              "frames": 2
+            }
+          },
+          "wallMs": 342.02296000000024,
+          "mainCpu": {
+            "user": 0,
+            "system": 2099
+          },
+          "rendererCpuMs": 410
+        },
+        "paste": {
+          "before": 10013,
+          "after": 11013,
+          "handlerMs": 509.8999999910593,
+          "rows": 9,
+          "clips": 9,
+          "frames": 0,
+          "draws": 1,
+          "drawMs": {
+            "median": 4.899999991059303,
+            "p95": 4.899999991059303,
+            "total": 4.899999991059303
+          },
+          "rafMs": {
+            "median": 871.2000000000007,
+            "p95": 871.2000000000007,
+            "max": 871.2000000000007
+          },
+          "longTasks": [
+            852
+          ],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2,
+            "presentedFrames": 2,
+            "droppedFrames": 0,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 8079360,
+            "disposedBitmaps": 0,
+            "seekLatencyMs": [
+              800.5999999940395,
+              40.29999999701977
+            ],
+            "engine": {
+              "schemaVersion": 1,
+              "enabled": true,
+              "capacity": 120,
+              "stages": {},
+              "counters": {}
+            }
+          },
+          "audioMetrics": {
+            "schedulePasses": 0,
+            "scheduledBuffers": 0,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "engineMetrics": {
+            "schemaVersion": 1,
+            "enabled": true,
+            "capacity": 120,
+            "stages": {
+              "paste": {
+                "count": 1,
+                "totalMs": 509.20000000298023,
+                "latestMs": 509.20000000298023,
+                "medianMs": 509.20000000298023,
+                "p95Ms": 509.20000000298023,
+                "maxMs": 509.20000000298023,
+                "windowSamples": 1
+              },
+              "render": {
+                "count": 1,
+                "totalMs": 4.899999991059303,
+                "latestMs": 4.899999991059303,
+                "medianMs": 4.899999991059303,
+                "p95Ms": 4.899999991059303,
+                "maxMs": 4.899999991059303,
+                "windowSamples": 1
+              }
+            },
+            "counters": {
+              "frames": 1
+            }
+          },
+          "wallMs": 2431.8106370000005,
+          "mainCpu": {
+            "user": 1160135,
+            "system": 309505
+          },
+          "rendererCpuMs": 1910
+        },
+        "drag": {
+          "updates": 30,
+          "frameMs": {
+            "median": 23.700000002980232,
+            "p95": 40
+          },
+          "frames": 0,
+          "draws": 31,
+          "drawMs": {
+            "median": 1.2999999970197678,
+            "p95": 4,
+            "total": 52.2999999076128
+          },
+          "rafMs": {
+            "median": 17.099999999998545,
+            "p95": 127.5,
+            "max": 208.70000000000073
+          },
+          "longTasks": [
+            105,
+            75
+          ],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2,
+            "presentedFrames": 2,
+            "droppedFrames": 0,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 8079360,
+            "disposedBitmaps": 0,
+            "seekLatencyMs": [
+              800.5999999940395,
+              40.29999999701977
+            ],
+            "engine": {
+              "schemaVersion": 1,
+              "enabled": true,
+              "capacity": 120,
+              "stages": {},
+              "counters": {}
+            }
+          },
+          "audioMetrics": {
+            "schedulePasses": 0,
+            "scheduledBuffers": 0,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "engineMetrics": {
+            "schemaVersion": 1,
+            "enabled": true,
+            "capacity": 120,
+            "stages": {
+              "render": {
+                "count": 31,
+                "totalMs": 51.79999993741512,
+                "latestMs": 1.7000000029802322,
+                "medianMs": 1.2999999970197678,
+                "p95Ms": 4,
+                "maxMs": 4.399999991059303,
+                "windowSamples": 31
+              },
+              "gesture": {
+                "count": 30,
+                "totalMs": 50.39999996125698,
+                "latestMs": 1,
+                "medianMs": 1.4000000059604645,
+                "p95Ms": 4,
+                "maxMs": 6,
+                "windowSamples": 30
+              }
+            },
+            "counters": {
+              "frames": 31
+            }
+          },
+          "wallMs": 1036.0198180000007,
+          "mainCpu": {
+            "user": 13769,
+            "system": 4765
+          },
+          "rendererCpuMs": 1280
+        },
+        "scroll": {
+          "updates": 20,
+          "maximumRows": 13,
+          "maximumClips": 32,
+          "frameMs": {
+            "median": 71.30000001192093,
+            "p95": 142.79999999701977
+          },
+          "frames": 0,
+          "draws": 0,
+          "drawMs": {
+            "median": null,
+            "p95": null,
+            "total": 0
+          },
+          "rafMs": {
+            "median": 33.399999999999636,
+            "p95": 109.79999999999927,
+            "max": 212.4999999970205
+          },
+          "longTasks": [
+            67,
+            50,
+            51,
+            125,
+            85,
+            72,
+            55,
+            66,
+            59,
+            56,
+            56,
+            70,
+            72,
+            66
+          ],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2,
+            "presentedFrames": 2,
+            "droppedFrames": 0,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 8079360,
+            "disposedBitmaps": 0,
+            "seekLatencyMs": [
+              800.5999999940395,
+              40.29999999701977
+            ],
+            "engine": {
+              "schemaVersion": 1,
+              "enabled": true,
+              "capacity": 120,
+              "stages": {},
+              "counters": {}
+            }
+          },
+          "audioMetrics": {
+            "schedulePasses": 0,
+            "scheduledBuffers": 0,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "engineMetrics": {
+            "schemaVersion": 1,
+            "enabled": true,
+            "capacity": 120,
+            "stages": {},
+            "counters": {}
+          },
+          "wallMs": 1457.0138250000018,
+          "mainCpu": {
+            "user": 45678,
+            "system": 23490
+          },
+          "rendererCpuMs": 1800
+        },
+        "pasteBurst": {
+          "repeats": 3,
+          "before": 11013,
+          "after": 14013,
+          "handlerMs": [
+            159.90000000596046,
+            177,
+            331.90000000596046
+          ],
+          "frames": 0,
+          "draws": 2,
+          "drawMs": {
+            "median": 4.5999999940395355,
+            "p95": 4.5999999940395355,
+            "total": 5.999999985098839
+          },
+          "rafMs": {
+            "median": 488.2999999999993,
+            "p95": 796.3999999999996,
+            "max": 796.3999999999996
+          },
+          "longTasks": [
+            358,
+            452,
+            501
+          ],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2,
+            "presentedFrames": 2,
+            "droppedFrames": 0,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 8079360,
+            "disposedBitmaps": 0,
+            "seekLatencyMs": [
+              800.5999999940395,
+              40.29999999701977
+            ],
+            "engine": {
+              "schemaVersion": 1,
+              "enabled": true,
+              "capacity": 120,
+              "stages": {},
+              "counters": {}
+            }
+          },
+          "audioMetrics": {
+            "schedulePasses": 0,
+            "scheduledBuffers": 0,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "engineMetrics": {
+            "schemaVersion": 1,
+            "enabled": true,
+            "capacity": 120,
+            "stages": {
+              "paste": {
+                "count": 3,
+                "totalMs": 667.9000000059605,
+                "latestMs": 331.5,
+                "medianMs": 176.79999999701977,
+                "p95Ms": 331.5,
+                "maxMs": 331.5,
+                "windowSamples": 3
+              },
+              "render": {
+                "count": 2,
+                "totalMs": 5.999999985098839,
+                "latestMs": 1.3999999910593033,
+                "medianMs": 4.5999999940395355,
+                "p95Ms": 4.5999999940395355,
+                "maxMs": 4.5999999940395355,
+                "windowSamples": 2
+              }
+            },
+            "counters": {
+              "frames": 2
+            }
+          },
+          "wallMs": 1336.8660510000009,
+          "mainCpu": {
+            "user": 1011,
+            "system": 680
+          },
+          "rendererCpuMs": 1680
+        }
+      }
+    },
+    "optionalCanvas": {
+      "presentedMs": 2229.693335,
+      "previewSettledMs": 4765.9184780000005,
+      "phases": {
+        "copy": {
+          "selected": 1000,
+          "handlerMs": 6.800000011920929,
+          "frames": 2,
+          "draws": 2,
+          "drawMs": {
+            "median": 1.4000000059604645,
+            "p95": 1.4000000059604645,
+            "total": 2.2000000178813934
+          },
+          "rafMs": {
+            "median": 91.59999999403954,
+            "p95": 112.10000000000036,
+            "max": 112.10000000000036
+          },
+          "longTasks": [
+            103
+          ],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2,
+            "presentedFrames": 2,
+            "droppedFrames": 0,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 8079360,
+            "disposedBitmaps": 0,
+            "seekLatencyMs": [
+              55.20000000298023,
+              23.69999998807907
+            ],
+            "engine": {
+              "schemaVersion": 1,
+              "enabled": true,
+              "capacity": 120,
+              "stages": {
+                "seek": {
+                  "count": 1,
+                  "totalMs": 23.69999998807907,
+                  "latestMs": 23.69999998807907,
+                  "medianMs": 23.69999998807907,
+                  "p95Ms": 23.69999998807907,
+                  "maxMs": 23.69999998807907,
+                  "windowSamples": 1
+                }
+              },
+              "counters": {
+                "decoded": 1
+              }
+            }
+          },
+          "audioMetrics": {
+            "schedulePasses": 0,
+            "scheduledBuffers": 0,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "engineMetrics": {
+            "schemaVersion": 1,
+            "enabled": true,
+            "capacity": 120,
+            "stages": {
+              "render": {
+                "count": 2,
+                "totalMs": 2.2000000029802322,
+                "latestMs": 0.7999999970197678,
+                "medianMs": 1.4000000059604645,
+                "p95Ms": 1.4000000059604645,
+                "maxMs": 1.4000000059604645,
+                "windowSamples": 2
+              },
+              "seek": {
+                "count": 1,
+                "totalMs": 26,
+                "latestMs": 26,
+                "medianMs": 26,
+                "p95Ms": 26,
+                "maxMs": 26,
+                "windowSamples": 1
+              },
+              "prepare": {
+                "count": 9,
+                "totalMs": 0.20000000298023224,
+                "latestMs": 0,
+                "medianMs": 0,
+                "p95Ms": 0.10000000894069672,
+                "maxMs": 0.10000000894069672,
+                "windowSamples": 9
+              }
+            },
+            "counters": {
+              "frames": 2
+            }
+          },
+          "wallMs": 158.8966130000008,
+          "mainCpu": {
+            "user": 3387,
+            "system": 1137
+          },
+          "rendererCpuMs": 290
+        },
+        "paste": {
+          "before": 10013,
+          "after": 11013,
+          "handlerMs": 327.20000000298023,
+          "rows": 9,
+          "clips": 9,
+          "frames": 0,
+          "draws": 1,
+          "drawMs": {
+            "median": 3.2999999970197678,
+            "p95": 3.2999999970197678,
+            "total": 3.2999999970197678
+          },
+          "rafMs": {
+            "median": 652.7440000059596,
+            "p95": 652.7440000059596,
+            "max": 652.7440000059596
+          },
+          "longTasks": [
+            565
+          ],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2,
+            "presentedFrames": 2,
+            "droppedFrames": 0,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 8079360,
+            "disposedBitmaps": 0,
+            "seekLatencyMs": [
+              55.20000000298023,
+              23.69999998807907
+            ],
+            "engine": {
+              "schemaVersion": 1,
+              "enabled": true,
+              "capacity": 120,
+              "stages": {},
+              "counters": {}
+            }
+          },
+          "audioMetrics": {
+            "schedulePasses": 0,
+            "scheduledBuffers": 0,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "engineMetrics": {
+            "schemaVersion": 1,
+            "enabled": true,
+            "capacity": 120,
+            "stages": {
+              "render": {
+                "count": 1,
+                "totalMs": 3.199999988079071,
+                "latestMs": 3.199999988079071,
+                "medianMs": 3.199999988079071,
+                "p95Ms": 3.199999988079071,
+                "maxMs": 3.199999988079071,
+                "windowSamples": 1
+              },
+              "prepare": {
+                "count": 9,
+                "totalMs": 3.2000000178813934,
+                "latestMs": 0.4000000059604645,
+                "medianMs": 0.4000000059604645,
+                "p95Ms": 0.7000000029802322,
+                "maxMs": 0.7000000029802322,
+                "windowSamples": 9
+              }
+            },
+            "counters": {
+              "frames": 1
+            }
+          },
+          "wallMs": 615.097914,
+          "mainCpu": {
+            "user": 2288,
+            "system": 163
+          },
+          "rendererCpuMs": 910
+        },
+        "drag": {
+          "updates": 30,
+          "frameMs": {
+            "median": 19.200000002980232,
+            "p95": 184.29999999701977
+          },
+          "frames": 0,
+          "draws": 31,
+          "drawMs": {
+            "median": 1.2999999970197678,
+            "p95": 4.399999991059303,
+            "total": 54.89999996125698
+          },
+          "rafMs": {
+            "median": 16.700000000000728,
+            "p95": 183.5,
+            "max": 559.5
+          },
+          "longTasks": [
+            66,
+            80,
+            523,
+            159,
+            74
+          ],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2,
+            "presentedFrames": 2,
+            "droppedFrames": 0,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 8079360,
+            "disposedBitmaps": 0,
+            "seekLatencyMs": [
+              55.20000000298023,
+              23.69999998807907
+            ],
+            "engine": {
+              "schemaVersion": 1,
+              "enabled": true,
+              "capacity": 120,
+              "stages": {},
+              "counters": {}
+            }
+          },
+          "audioMetrics": {
+            "schedulePasses": 0,
+            "scheduledBuffers": 0,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "engineMetrics": {
+            "schemaVersion": 1,
+            "enabled": true,
+            "capacity": 120,
+            "stages": {
+              "render": {
+                "count": 31,
+                "totalMs": 54.799999967217445,
+                "latestMs": 0.8999999910593033,
+                "medianMs": 1.2999999970197678,
+                "p95Ms": 4.399999991059303,
+                "maxMs": 9.099999994039536,
+                "windowSamples": 31
+              },
+              "prepare": {
+                "count": 279,
+                "totalMs": 6.099999964237213,
+                "latestMs": 0,
+                "medianMs": 0,
+                "p95Ms": 0.10000000894069672,
+                "maxMs": 0.10000000894069672,
+                "windowSamples": 120
+              },
+              "gesture": {
+                "count": 30,
+                "totalMs": 13.89999994635582,
+                "latestMs": 0.4000000059604645,
+                "medianMs": 0.20000000298023224,
+                "p95Ms": 1.2000000029802322,
+                "maxMs": 5.600000008940697,
+                "windowSamples": 30
+              }
+            },
+            "counters": {
+              "frames": 31
+            }
+          },
+          "wallMs": 2028.801954999999,
+          "mainCpu": {
+            "user": 1157120,
+            "system": 297745
+          },
+          "rendererCpuMs": 2080
+        },
+        "scroll": {
+          "updates": 20,
+          "maximumRows": 13,
+          "maximumClips": 32,
+          "frameMs": {
+            "median": 39.1000000089407,
+            "p95": 97.79999999701977
+          },
+          "frames": 0,
+          "draws": 0,
+          "drawMs": {
+            "median": null,
+            "p95": null,
+            "total": 0
+          },
+          "rafMs": {
+            "median": 16.700000000000728,
+            "p95": 88.60000000000036,
+            "max": 97.90000000298096
+          },
+          "longTasks": [
+            80
+          ],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2,
+            "presentedFrames": 2,
+            "droppedFrames": 0,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 8079360,
+            "disposedBitmaps": 0,
+            "seekLatencyMs": [
+              55.20000000298023,
+              23.69999998807907
+            ],
+            "engine": {
+              "schemaVersion": 1,
+              "enabled": true,
+              "capacity": 120,
+              "stages": {},
+              "counters": {}
+            }
+          },
+          "audioMetrics": {
+            "schedulePasses": 0,
+            "scheduledBuffers": 0,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "engineMetrics": {
+            "schemaVersion": 1,
+            "enabled": true,
+            "capacity": 120,
+            "stages": {
+              "prepare": {
+                "count": 238,
+                "totalMs": 45.099999979138374,
+                "latestMs": 0.09999999403953552,
+                "medianMs": 0.10000000894069672,
+                "p95Ms": 0.5999999940395355,
+                "maxMs": 0.7999999970197678,
+                "windowSamples": 120
+              }
+            },
+            "counters": {}
+          },
+          "wallMs": 976.6931320000003,
+          "mainCpu": {
+            "user": 93186,
+            "system": 47632
+          },
+          "rendererCpuMs": 1370
+        },
+        "pasteBurst": {
+          "repeats": 3,
+          "before": 11013,
+          "after": 14013,
+          "handlerMs": [
+            482.29999999701977,
+            487.40000000596046,
+            261.20000000298023
+          ],
+          "frames": 0,
+          "draws": 2,
+          "drawMs": {
+            "median": 1.5,
+            "p95": 1.5,
+            "total": 2.5
+          },
+          "rafMs": {
+            "median": 541,
+            "p95": 1787.1000000000004,
+            "max": 1787.1000000000004
+          },
+          "longTasks": [
+            869,
+            931,
+            532
+          ],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2,
+            "presentedFrames": 2,
+            "droppedFrames": 0,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 8079360,
+            "disposedBitmaps": 0,
+            "seekLatencyMs": [
+              55.20000000298023,
+              23.69999998807907
+            ],
+            "engine": {
+              "schemaVersion": 1,
+              "enabled": true,
+              "capacity": 120,
+              "stages": {},
+              "counters": {}
+            }
+          },
+          "audioMetrics": {
+            "schedulePasses": 0,
+            "scheduledBuffers": 0,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "engineMetrics": {
+            "schemaVersion": 1,
+            "enabled": true,
+            "capacity": 120,
+            "stages": {
+              "prepare": {
+                "count": 16,
+                "totalMs": 1.9999999850988388,
+                "latestMs": 0.20000000298023224,
+                "medianMs": 0.10000000894069672,
+                "p95Ms": 0.20000000298023224,
+                "maxMs": 0.20000000298023224,
+                "windowSamples": 16
+              },
+              "render": {
+                "count": 2,
+                "totalMs": 2.5,
+                "latestMs": 1.5,
+                "medianMs": 1.5,
+                "p95Ms": 1.5,
+                "maxMs": 1.5,
+                "windowSamples": 2
+              }
+            },
+            "counters": {
+              "frames": 2
+            }
+          },
+          "wallMs": 2363.8827520000013,
+          "mainCpu": {
+            "user": 2433,
+            "system": 141
+          },
+          "rendererCpuMs": 2780
+        }
+      }
+    }
+  },
+  "denseFixture": {
+    "name": "Beam Stress — 10,000 rectangles + real videos/effects — 60s",
+    "id": "6fe010ed-8b23-48cf-a57c-b64836dfb21b",
+    "clips": 10893,
+    "shapes": 10000,
+    "videoClips": 816,
+    "blurClips": 64,
+    "durationSeconds": 60,
+    "decoderCaveat": "64 video lanes in four repeated source-time phases, not 64 independent decoders",
+    "validation": "Generator tests pass; native dense-project opening/playback/export not yet measured"
+  }
+}

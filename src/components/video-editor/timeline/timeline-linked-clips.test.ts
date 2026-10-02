@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import type { AudioClip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
-import { linkedClipNames } from './timeline-linked-clips';
+import { createTimelineLinkedClipNameResolver, linkedClipNames } from './timeline-linked-clips';
 
 const sessionAsset = (id: string, kind: MediaAsset['kind']): MediaAsset => ({
   id,
@@ -86,5 +86,43 @@ describe('linkedClipNames', () => {
     const next = composition([owner, detached]);
 
     expect(linkedClipNames(next, owner)).toEqual([]);
+  });
+});
+
+describe('createTimelineLinkedClipNameResolver', () => {
+  it('reuses each linked list during playback without reading the composition again', () => {
+    const owner = screen();
+    const first = microphone('first', 'Microphone', 0, 1);
+    let reads = 0;
+    const value = composition([owner, first]);
+    const next = {
+      ...value,
+      get clips() {
+        reads++;
+        return value.clips;
+      },
+    };
+    const resolve = createTimelineLinkedClipNameResolver(next);
+    const names = resolve(owner);
+    const before = reads;
+    for (let frame = 0; frame < 120; frame++) expect(resolve(owner)).toBe(names);
+    expect(names).toEqual(['Microphone (0.0s)']);
+    expect(reads).toBe(before);
+  });
+  it('caches empty lists for unrelated clips too', () => {
+    const owner = screen();
+    const resolve = createTimelineLinkedClipNameResolver(composition([owner]));
+    expect(resolve(owner)).toEqual([]);
+    expect(resolve(owner)).toBe(resolve(owner));
+  });
+  it('rebuilds names and timing for the replacement composition', () => {
+    const owner = screen();
+    const first = microphone('first', 'Microphone', 0, 1);
+    const before = createTimelineLinkedClipNameResolver(composition([owner, first]));
+    const after = createTimelineLinkedClipNameResolver(
+      composition([owner, { ...first, name: 'Renamed', timelineStartMs: 1000 }]),
+    );
+    expect(before(owner)).toEqual(['Microphone (0.0s)']);
+    expect(after(owner)).toEqual(['Renamed (1.0s)']);
   });
 });

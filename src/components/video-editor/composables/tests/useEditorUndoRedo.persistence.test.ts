@@ -25,6 +25,22 @@ const mountHistory = (onRestoreSnapshot: (value: Snapshot) => void | Promise<voi
 };
 
 describe('useEditorUndoRedo persistence', () => {
+  it('serializes each incoming commit once while retaining duplicate and undo/redo semantics', async () => {
+    const { history, wrapper } = mountHistory(() => {});
+    history.commitNow(snapshot(0));
+    const stringify = vi.spyOn(JSON, 'stringify');
+    history.commitNow(snapshot(1));
+    expect(stringify).toHaveBeenCalledOnce();
+    history.commitNow(snapshot(1));
+    expect(stringify).toHaveBeenCalledTimes(2);
+    expect(history.undoStack.value).toHaveLength(2);
+    stringify.mockRestore();
+    await history.undo();
+    await history.redo();
+    history.commitNow(snapshot(1));
+    expect(history.undoStack.value).toHaveLength(2);
+    wrapper.unmount();
+  });
   afterEach(() => vi.useRealTimers());
 
   it('reopens serialized undo and redo stacks and keeps their ordering', async () => {

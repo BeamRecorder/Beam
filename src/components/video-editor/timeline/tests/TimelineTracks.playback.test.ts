@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { VisualClip } from '~/media/shared/composition-types';
 import {
   TimelineClipStub,
+  composition,
   getWaveformTestState,
   mountTracks,
   pointerEvent,
@@ -19,6 +20,19 @@ const wheelZoomEvent = (deltaY = -100) => {
 };
 
 describe('TimelineTracks', () => {
+  it('keeps linked metadata stable on playback ticks and refreshes it on composition edits', async () => {
+    const initial = composition();
+    const mounted = await mountTracks({ composition: initial });
+    const clips = mounted!.findAllComponents(TimelineClipStub);
+    const links = clips.map((clip) => clip.props('linkedClipNames'));
+    await mounted!.setProps({ currentTime: 2, isPlaying: true });
+    for (let i = 0; i < clips.length; i++) expect(clips[i]!.props('linkedClipNames')).toBe(links[i]);
+    await mounted!.setProps({
+      composition: { ...initial, clips: initial.clips.map((clip) => ({ ...clip, name: 'Renamed' })) },
+    });
+    for (let i = 0; i < clips.length; i++) expect(clips[i]!.props('linkedClipNames')).not.toBe(links[i]);
+  });
+
   it('scrolls the playhead into view when playback crosses the right boundary', async () => {
     const mounted = await mountTracks({ isPlaying: true });
     const scroll = setPlaybackViewportGeometry(mounted!);
@@ -34,6 +48,7 @@ describe('TimelineTracks', () => {
     const ticks = mounted!.get('.ruler-ticks-area').element;
     const scrollRect = vi.mocked(scroll.getBoundingClientRect);
     const ticksRect = vi.mocked(ticks.getBoundingClientRect);
+    ticksRect.mockClear();
     const { pendingFrames, flushNextFrame } = queueAnimationFrames();
 
     await mounted!.setProps({ currentTime: 8 });

@@ -1,0 +1,954 @@
+{
+  "date": "2026-10-01",
+  "baselineCommit": "3fdf4bd9cb778faa9a55f8608818e33cf574de17",
+  "fixture": {
+    "name": "Soft Signal",
+    "clips": 98,
+    "shapes": 61,
+    "captions": 29,
+    "screen": 4,
+    "audio": 3,
+    "importedVideo": 1,
+    "output": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "environment": {
+    "platform": "linux",
+    "cpu": "Intel(R) Core(TM) Ultra 5 125H",
+    "versions": {
+      "electron": "44.5.1",
+      "chromium": "152.0.7977.130"
+    },
+    "windowContentSize": [
+      1280,
+      800
+    ],
+    "gpuFeatures": {
+      "2d_canvas": "enabled",
+      "direct_rendering_display_compositor": "disabled_off_ok",
+      "gpu_compositing": "enabled",
+      "multiple_raster_threads": "enabled_on",
+      "opengl": "enabled_on",
+      "rasterization": "enabled",
+      "raw_draw": "disabled_off_ok",
+      "skia_graphite": "disabled_off",
+      "trees_in_viz": "disabled_off",
+      "video_decode": "enabled",
+      "video_encode": "disabled_software",
+      "vulkan": "disabled_off",
+      "webgl": "enabled",
+      "webgpu": "enabled",
+      "webgpu_on_vk_via_gl_interop": "enabled",
+      "webnn": "disabled_off"
+    }
+  },
+  "sharedDecoderPolicy": {
+    "codecs": [
+      "AV1",
+      "VP9"
+    ],
+    "platform": "Linux",
+    "hardwareAcceleration": "prefer-software",
+    "optimizeForLatency": false
+  },
+  "protocol": {
+    "settleMs": 3000,
+    "playbackMs": 6000,
+    "exactSeeks": 40,
+    "wideScrubRequests": 120,
+    "requestedScrubIntervalMs": 16.666666666666668,
+    "exactSeekRangeSeconds": [
+      0,
+      7.8
+    ],
+    "scrubRangeSeconds": [
+      0,
+      7.933333333333334
+    ],
+    "note": "Wall times include real decoding/rendering and event-loop delay; scrub ends with an exact seek at 4 seconds."
+  },
+  "trials": [
+    {
+      "variant": "before",
+      "trial": 1,
+      "success": true,
+      "visiblePreviewMs": 1771.9403119999997,
+      "nativePresentationMs": 690.9279529999999,
+      "startupLongTasksMs": [
+        113,
+        228,
+        249,
+        224,
+        120
+      ],
+      "shapeThumbnailRenders": 61,
+      "phases": {
+        "playback": {
+          "wallMs": 6136.696858,
+          "rendererCpuMs": 12490,
+          "frameUpdates": 171,
+          "draws": 262,
+          "drawMs": {
+            "median": 3.699999988079071,
+            "p95": 20.30000001192093,
+            "total": 1764.499999806285
+          },
+          "rafMs": {
+            "median": 16.700000000000728,
+            "p95": 48.19999999999982,
+            "max": 160.59999999999945
+          },
+          "playbackError": null,
+          "longTasksMs": [
+            64,
+            66,
+            152,
+            72,
+            162
+          ],
+          "audioMetrics": {
+            "schedulePasses": 57,
+            "scheduledBuffers": 139,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 279,
+            "presentedFrames": 163,
+            "droppedFrames": 106,
+            "supersededRequests": 0,
+            "queueSize": 4,
+            "cacheBytes": 65495040,
+            "disposedBitmaps": 112
+          }
+        },
+        "seeking": {
+          "wallMs": 8172.183341,
+          "rendererCpuMs": 34080,
+          "frameUpdates": 65,
+          "draws": 80,
+          "drawMs": {
+            "median": 5.200000002980232,
+            "p95": 41.900000005960464,
+            "total": 872.8000000566244
+          },
+          "rafMs": {
+            "median": 16.700000000000728,
+            "p95": 23.600000000002183,
+            "max": 108.30000000000109
+          },
+          "seekMs": {
+            "median": 214.90000000596046,
+            "p95": 342.20000000298023,
+            "total": 8132.199999973178
+          },
+          "failures": [],
+          "playbackError": null,
+          "longTasksMs": [
+            111,
+            56,
+            67,
+            82,
+            54
+          ],
+          "audioMetrics": {
+            "schedulePasses": 59,
+            "scheduledBuffers": 145,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 360,
+            "presentedFrames": 238,
+            "droppedFrames": 112,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 65280000,
+            "disposedBitmaps": 122
+          }
+        },
+        "scrubbing": {
+          "wallMs": 5830.048392000001,
+          "rendererCpuMs": 31740,
+          "frameUpdates": 68,
+          "draws": 122,
+          "drawMs": {
+            "median": 6.899999991059303,
+            "p95": 39.400000005960464,
+            "total": 1426.0999998748302
+          },
+          "rafMs": {
+            "median": 16.799999999999272,
+            "p95": 63.79999999999927,
+            "max": 100.20000000000073
+          },
+          "requests": 120,
+          "playbackError": null,
+          "longTasksMs": [
+            52,
+            60,
+            66,
+            73,
+            81,
+            65,
+            61
+          ],
+          "audioMetrics": {
+            "schedulePasses": 59,
+            "scheduledBuffers": 145,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 388,
+            "presentedFrames": 249,
+            "droppedFrames": 129,
+            "supersededRequests": 74,
+            "queueSize": 0,
+            "cacheBytes": 65064960,
+            "disposedBitmaps": 139
+          }
+        }
+      }
+    },
+    {
+      "variant": "before",
+      "trial": 2,
+      "success": true,
+      "visiblePreviewMs": 2150.700617,
+      "nativePresentationMs": 711.2483849999999,
+      "startupLongTasksMs": [
+        99,
+        237,
+        247,
+        261,
+        226,
+        104,
+        68,
+        74,
+        58
+      ],
+      "shapeThumbnailRenders": 61,
+      "phases": {
+        "playback": {
+          "wallMs": 6088.4870169999995,
+          "rendererCpuMs": 12870,
+          "frameUpdates": 170,
+          "draws": 237,
+          "drawMs": {
+            "median": 3.9000000059604645,
+            "p95": 22.200000002980232,
+            "total": 1596.4999998658895
+          },
+          "rafMs": {
+            "median": 16.899999999999636,
+            "p95": 50.20000000000073,
+            "max": 137.40000000000055
+          },
+          "playbackError": null,
+          "longTasksMs": [
+            58,
+            58,
+            50,
+            146,
+            59,
+            81,
+            95,
+            55,
+            60,
+            56,
+            60,
+            58
+          ],
+          "audioMetrics": {
+            "schedulePasses": 59,
+            "scheduledBuffers": 144,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 297,
+            "presentedFrames": 168,
+            "droppedFrames": 119,
+            "supersededRequests": 0,
+            "queueSize": 4,
+            "cacheBytes": 65495040,
+            "disposedBitmaps": 125
+          }
+        },
+        "seeking": {
+          "wallMs": 8067.536844,
+          "rendererCpuMs": 33310,
+          "frameUpdates": 65,
+          "draws": 80,
+          "drawMs": {
+            "median": 5.200000002980232,
+            "p95": 39.70000000298023,
+            "total": 886.0999999791384
+          },
+          "rafMs": {
+            "median": 16.700000000000728,
+            "p95": 25,
+            "max": 144.09999999999854
+          },
+          "seekMs": {
+            "median": 207,
+            "p95": 314.29999999701977,
+            "total": 8066
+          },
+          "failures": [],
+          "playbackError": null,
+          "longTasksMs": [
+            140,
+            50,
+            62
+          ],
+          "audioMetrics": {
+            "schedulePasses": 60,
+            "scheduledBuffers": 145,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 366,
+            "presentedFrames": 235,
+            "droppedFrames": 121,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 65280000,
+            "disposedBitmaps": 131
+          }
+        },
+        "scrubbing": {
+          "wallMs": 6156.023789999999,
+          "rendererCpuMs": 32680,
+          "frameUpdates": 77,
+          "draws": 124,
+          "drawMs": {
+            "median": 8.200000002980232,
+            "p95": 37.20000000298023,
+            "total": 1775.699999973178
+          },
+          "rafMs": {
+            "median": 16.799999999999272,
+            "p95": 78.20000000000073,
+            "max": 116.90000000000146
+          },
+          "requests": 120,
+          "playbackError": null,
+          "longTasksMs": [
+            54,
+            72,
+            93,
+            51,
+            56,
+            67,
+            53,
+            50,
+            82,
+            64,
+            52,
+            59
+          ],
+          "audioMetrics": {
+            "schedulePasses": 60,
+            "scheduledBuffers": 145,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 366,
+            "presentedFrames": 235,
+            "droppedFrames": 121,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 65280000,
+            "disposedBitmaps": 131
+          }
+        }
+      }
+    },
+    {
+      "variant": "before",
+      "trial": 3,
+      "success": true,
+      "visiblePreviewMs": 1885.8744699999997,
+      "nativePresentationMs": 690.444982,
+      "startupLongTasksMs": [
+        70,
+        282,
+        259,
+        198,
+        116,
+        210
+      ],
+      "shapeThumbnailRenders": 61,
+      "phases": {
+        "playback": {
+          "wallMs": 6247.755726,
+          "rendererCpuMs": 14330,
+          "frameUpdates": 171,
+          "draws": 206,
+          "drawMs": {
+            "median": 4.5999999940395355,
+            "p95": 26,
+            "total": 1709.800000011921
+          },
+          "rafMs": {
+            "median": 23.899999999999636,
+            "p95": 66.89999999999964,
+            "max": 164.19999999999982
+          },
+          "playbackError": null,
+          "longTasksMs": [
+            60,
+            59,
+            83,
+            71,
+            52,
+            164,
+            84,
+            101,
+            81,
+            74,
+            120,
+            60,
+            61
+          ],
+          "audioMetrics": {
+            "schedulePasses": 53,
+            "scheduledBuffers": 140,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 284,
+            "presentedFrames": 163,
+            "droppedFrames": 111,
+            "supersededRequests": 0,
+            "queueSize": 4,
+            "cacheBytes": 65495040,
+            "disposedBitmaps": 117
+          }
+        },
+        "seeking": {
+          "wallMs": 8813.6421,
+          "rendererCpuMs": 38340,
+          "frameUpdates": 65,
+          "draws": 80,
+          "drawMs": {
+            "median": 5.5,
+            "p95": 43.1000000089407,
+            "total": 965.3000000268221
+          },
+          "rafMs": {
+            "median": 16.700000000000728,
+            "p95": 33.29999999999927,
+            "max": 166.10000000000036
+          },
+          "seekMs": {
+            "median": 225.59999999403954,
+            "p95": 368.70000000298023,
+            "total": 8765.10000000894
+          },
+          "failures": [],
+          "playbackError": null,
+          "longTasksMs": [
+            165,
+            52
+          ],
+          "audioMetrics": {
+            "schedulePasses": 55,
+            "scheduledBuffers": 146,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 366,
+            "presentedFrames": 238,
+            "droppedFrames": 118,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 65280000,
+            "disposedBitmaps": 128
+          }
+        },
+        "scrubbing": {
+          "wallMs": 5879.298024,
+          "rendererCpuMs": 31760,
+          "frameUpdates": 63,
+          "draws": 123,
+          "drawMs": {
+            "median": 5.899999991059303,
+            "p95": 39,
+            "total": 1447.2999999672174
+          },
+          "rafMs": {
+            "median": 23.900000000001455,
+            "p95": 73.29999999999927,
+            "max": 116.70000000000073
+          },
+          "requests": 120,
+          "playbackError": null,
+          "longTasksMs": [
+            89,
+            50,
+            53,
+            54,
+            80,
+            74,
+            87
+          ],
+          "audioMetrics": {
+            "schedulePasses": 55,
+            "scheduledBuffers": 146,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 385,
+            "presentedFrames": 252,
+            "droppedFrames": 123,
+            "supersededRequests": 50,
+            "queueSize": 0,
+            "cacheBytes": 65280000,
+            "disposedBitmaps": 133
+          }
+        }
+      }
+    },
+    {
+      "variant": "after",
+      "trial": 1,
+      "success": true,
+      "visiblePreviewMs": 2027.9323839999997,
+      "nativePresentationMs": 875.245876,
+      "startupLongTasksMs": [
+        69,
+        405,
+        260,
+        130,
+        152,
+        114
+      ],
+      "shapeThumbnailRenders": 3,
+      "phases": {
+        "playback": {
+          "wallMs": 6086.138815,
+          "rendererCpuMs": 12120,
+          "frameUpdates": 178,
+          "draws": 270,
+          "drawMs": {
+            "median": 3,
+            "p95": 14.199999988079071,
+            "total": 1422.699999988079
+          },
+          "rafMs": {
+            "median": 16.700000000000728,
+            "p95": 47.5,
+            "max": 116.69999999999982
+          },
+          "playbackError": null,
+          "longTasksMs": [
+            50,
+            116,
+            96
+          ],
+          "audioMetrics": {
+            "schedulePasses": 59,
+            "scheduledBuffers": 143,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 303,
+            "presentedFrames": 176,
+            "droppedFrames": 117,
+            "supersededRequests": 0,
+            "queueSize": 4,
+            "cacheBytes": 65495040,
+            "disposedBitmaps": 123
+          }
+        },
+        "seeking": {
+          "wallMs": 7995.453518,
+          "rendererCpuMs": 33060,
+          "frameUpdates": 65,
+          "draws": 80,
+          "drawMs": {
+            "median": 3.199999988079071,
+            "p95": 12.400000005960464,
+            "total": 428.79999992251396
+          },
+          "rafMs": {
+            "median": 16.700000000000728,
+            "p95": 20.900000000001455,
+            "max": 116.79999999999927
+          },
+          "seekMs": {
+            "median": 191.90000000596046,
+            "p95": 349.20000000298023,
+            "total": 7982.5
+          },
+          "failures": [],
+          "playbackError": null,
+          "longTasksMs": [
+            126
+          ],
+          "audioMetrics": {
+            "schedulePasses": 60,
+            "scheduledBuffers": 145,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 372,
+            "presentedFrames": 243,
+            "droppedFrames": 119,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 65280000,
+            "disposedBitmaps": 129
+          }
+        },
+        "scrubbing": {
+          "wallMs": 4350.629687999997,
+          "rendererCpuMs": 23210,
+          "frameUpdates": 62,
+          "draws": 128,
+          "drawMs": {
+            "median": 4.799999997019768,
+            "p95": 15.100000008940697,
+            "total": 772.9000000804663
+          },
+          "rafMs": {
+            "median": 16.700000000000728,
+            "p95": 33.5,
+            "max": 98.49999999404099
+          },
+          "requests": 120,
+          "playbackError": null,
+          "longTasksMs": [],
+          "audioMetrics": {
+            "schedulePasses": 60,
+            "scheduledBuffers": 145,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 393,
+            "presentedFrames": 259,
+            "droppedFrames": 124,
+            "supersededRequests": 65,
+            "queueSize": 0,
+            "cacheBytes": 65280000,
+            "disposedBitmaps": 134
+          }
+        }
+      }
+    },
+    {
+      "variant": "after",
+      "trial": 2,
+      "success": true,
+      "visiblePreviewMs": 2077.7191189999994,
+      "nativePresentationMs": 792.5535959999997,
+      "startupLongTasksMs": [
+        90,
+        321,
+        260,
+        228,
+        177,
+        88,
+        55
+      ],
+      "shapeThumbnailRenders": 3,
+      "phases": {
+        "playback": {
+          "wallMs": 6063.816636,
+          "rendererCpuMs": 12180,
+          "frameUpdates": 174,
+          "draws": 265,
+          "drawMs": {
+            "median": 3.199999988079071,
+            "p95": 14.5,
+            "total": 1760.8999998569489
+          },
+          "rafMs": {
+            "median": 16.700000000000728,
+            "p95": 49.19999999999982,
+            "max": 456.10000000000036
+          },
+          "playbackError": null,
+          "longTasksMs": [
+            76,
+            68,
+            51,
+            50,
+            443,
+            99
+          ],
+          "audioMetrics": {
+            "schedulePasses": 55,
+            "scheduledBuffers": 142,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 296,
+            "presentedFrames": 172,
+            "droppedFrames": 114,
+            "supersededRequests": 0,
+            "queueSize": 4,
+            "cacheBytes": 65495040,
+            "disposedBitmaps": 120
+          }
+        },
+        "seeking": {
+          "wallMs": 7865.920453999999,
+          "rendererCpuMs": 33650,
+          "frameUpdates": 65,
+          "draws": 80,
+          "drawMs": {
+            "median": 3.2000000029802322,
+            "p95": 13.299999997019768,
+            "total": 586.6999999880791
+          },
+          "rafMs": {
+            "median": 16.700000000000728,
+            "p95": 22.100000000000364,
+            "max": 237.89999999999964
+          },
+          "seekMs": {
+            "median": 191.80000001192093,
+            "p95": 345.5,
+            "total": 7863.0999999940395
+          },
+          "failures": [],
+          "playbackError": null,
+          "longTasksMs": [
+            247
+          ],
+          "audioMetrics": {
+            "schedulePasses": 56,
+            "scheduledBuffers": 144,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 364,
+            "presentedFrames": 239,
+            "droppedFrames": 115,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 65280000,
+            "disposedBitmaps": 125
+          }
+        },
+        "scrubbing": {
+          "wallMs": 4022.5202019999997,
+          "rendererCpuMs": 21680,
+          "frameUpdates": 70,
+          "draws": 128,
+          "drawMs": {
+            "median": 3.699999988079071,
+            "p95": 12,
+            "total": 665.0999999642372
+          },
+          "rafMs": {
+            "median": 16.700000000000728,
+            "p95": 30,
+            "max": 95.29999999701977
+          },
+          "requests": 120,
+          "playbackError": null,
+          "longTasksMs": [],
+          "audioMetrics": {
+            "schedulePasses": 56,
+            "scheduledBuffers": 144,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 396,
+            "presentedFrames": 270,
+            "droppedFrames": 116,
+            "supersededRequests": 112,
+            "queueSize": 0,
+            "cacheBytes": 65064960,
+            "disposedBitmaps": 126
+          }
+        }
+      }
+    },
+    {
+      "variant": "after",
+      "trial": 3,
+      "success": true,
+      "visiblePreviewMs": 1675.2189899999998,
+      "nativePresentationMs": 663.4486309999998,
+      "startupLongTasksMs": [
+        63,
+        220,
+        228,
+        148,
+        205,
+        54
+      ],
+      "shapeThumbnailRenders": 3,
+      "phases": {
+        "playback": {
+          "wallMs": 6077.684037999999,
+          "rendererCpuMs": 12930,
+          "frameUpdates": 163,
+          "draws": 240,
+          "drawMs": {
+            "median": 3.9000000059604645,
+            "p95": 13.799999997019768,
+            "total": 1898.300000026822
+          },
+          "rafMs": {
+            "median": 16.700000000000728,
+            "p95": 49.899999999999636,
+            "max": 439.10000000000036
+          },
+          "playbackError": null,
+          "longTasksMs": [
+            448,
+            55,
+            324,
+            52
+          ],
+          "audioMetrics": {
+            "schedulePasses": 54,
+            "scheduledBuffers": 144,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 285,
+            "presentedFrames": 163,
+            "droppedFrames": 112,
+            "supersededRequests": 0,
+            "queueSize": 4,
+            "cacheBytes": 65495040,
+            "disposedBitmaps": 118
+          }
+        },
+        "seeking": {
+          "wallMs": 8136.139207,
+          "rendererCpuMs": 35350,
+          "frameUpdates": 65,
+          "draws": 80,
+          "drawMs": {
+            "median": 3.0999999940395355,
+            "p95": 13.300000011920929,
+            "total": 471.49999998509884
+          },
+          "rafMs": {
+            "median": 16.700000000000728,
+            "p95": 17.5,
+            "max": 134.39999999999964
+          },
+          "seekMs": {
+            "median": 210.3999999910593,
+            "p95": 350.6000000089407,
+            "total": 8125.5
+          },
+          "failures": [],
+          "playbackError": null,
+          "longTasksMs": [
+            139
+          ],
+          "audioMetrics": {
+            "schedulePasses": 54,
+            "scheduledBuffers": 144,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 350,
+            "presentedFrames": 228,
+            "droppedFrames": 112,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 65280000,
+            "disposedBitmaps": 122
+          }
+        },
+        "scrubbing": {
+          "wallMs": 3962.8959890000006,
+          "rendererCpuMs": 23920,
+          "frameUpdates": 50,
+          "draws": 118,
+          "drawMs": {
+            "median": 4.199999988079071,
+            "p95": 15.600000008940697,
+            "total": 707.8999999910593
+          },
+          "rafMs": {
+            "median": 16.700000000000728,
+            "p95": 33.400000000001455,
+            "max": 93.20000000000073
+          },
+          "requests": 120,
+          "playbackError": null,
+          "longTasksMs": [],
+          "audioMetrics": {
+            "schedulePasses": 54,
+            "scheduledBuffers": 144,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "playbackMetrics": {
+            "decodedFrames": 366,
+            "presentedFrames": 239,
+            "droppedFrames": 117,
+            "supersededRequests": 62,
+            "queueSize": 0,
+            "cacheBytes": 65280000,
+            "disposedBitmaps": 127
+          }
+        }
+      }
+    }
+  ]
+}

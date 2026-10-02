@@ -6,6 +6,16 @@ export interface MediaRect {
   width: number;
   height: number;
 }
+export interface AdaptiveShadowRequest {
+  source: CanvasImageSource;
+  sourceRect?: MediaRect;
+  fallbackColor?: string;
+}
+export interface VisualMediaSource {
+  source: CanvasImageSource;
+  width: number;
+  height: number;
+}
 export interface DecoratedMediaOptions {
   /** Intrinsic crop dimensions when the drawable is a reduced raster. */
   sourceSize?: { width: number; height: number };
