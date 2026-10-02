@@ -323,6 +323,8 @@ function initializeApplication() {
       logStartup('Window IPC registered.');
       const exportIpc = registerExportIpc({
         ipcMain: applicationIpc,
+        app,
+        applicationRoot,
         dialog: require('electron').dialog,
         BrowserWindow,
         defaultExportDirectory: app.getPath('videos'),

@@ -32,4 +32,14 @@ describe('concise export labels', () => {
       expect(translation.exportVideoDuration).toBe(label! + suffix);
     },
   );
+  it.each(Object.keys(expected))('translates the experimental GPU export option and explanation in %s', (locale) => {
+    const translation = messages[`../../../i18n/${locale}/core.json`]!.ExportPopover;
+    expect(translation.experimentalFfmpeg).toContain('FFmpeg GPU');
+    expect(translation.experimentalFfmpegDesc).toMatch(/Linux|Linuks/);
+    expect(translation.experimentalFfmpegDesc!.length).toBeGreaterThan(15);
+    if (locale !== 'en')
+      expect(translation.experimentalFfmpegDesc).not.toBe(
+        messages['../../../i18n/en/core.json']!.ExportPopover.experimentalFfmpegDesc,
+      );
+  });
 });

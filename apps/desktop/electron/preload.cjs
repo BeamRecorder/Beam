@@ -382,6 +382,13 @@ contextBridge.exposeInMainWorld(
     writeExportChunk: (payload) => ipcRenderer.invoke('export:write', payload),
     finalizeExport: (jobId) => ipcRenderer.invoke('export:finalize', { jobId }),
     abortExport: (jobId) => ipcRenderer.invoke('export:abort', { jobId }),
+    renderLinuxFfmpegExport: (jobId, request, bitrate) =>
+      ipcRenderer.invoke('export:ffmpeg', { jobId, request, bitrate }),
+    onFfmpegExportProgress: (callback) => {
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on('export:ffmpeg-progress', listener);
+      return () => ipcRenderer.removeListener('export:ffmpeg-progress', listener);
+    },
     openFile: (path) => ipcRenderer.invoke('export:open-file', { path }),
     showItemInFolder: (path) => ipcRenderer.invoke('export:show-in-folder', { path }),
     getUpdateState: () => ipcRenderer.invoke('app-update:get-state'),

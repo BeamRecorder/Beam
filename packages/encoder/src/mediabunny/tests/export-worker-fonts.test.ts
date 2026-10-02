@@ -88,6 +88,26 @@ afterEach(() => {
 });
 
 describe('export worker font loading', () => {
+  it('needs no FontFaceSet for an empty composition or fonts without imported assets', async () => {
+    vi.stubGlobal('self', {});
+    await loadFonts(compositionWithClips([]));
+    await loadFonts(compositionWithClips([captionWithFont('System font', '')]));
+  });
+  it('uses the shared default family when an imported font has no family label', async () => {
+    const faces: string[] = [];
+    vi.stubGlobal('self', { fonts: { add: vi.fn() } });
+    vi.stubGlobal(
+      'FontFace',
+      class {
+        constructor(family: string) {
+          faces.push(family);
+        }
+        async load() {}
+      },
+    );
+    await loadExportFonts(compositionWithFont(''));
+    expect(faces).toEqual(['sans-serif']);
+  });
   it('loads each imported font face and registers it before rendering', async () => {
     const load = vi.fn().mockResolvedValue(undefined);
     const add = vi.fn();
@@ -211,8 +231,22 @@ describe('export worker font loading', () => {
     vi.stubGlobal('self', {});
 
     await expect(loadExportFonts(compositionWithFont())).rejects.toThrow(
-      'Imported fonts are unavailable in the export Worker.',
+      'Imported fonts are unavailable in the export host.',
     );
+  });
+  it('registers imported fonts in the document of a window host', async () => {
+    const add = vi.fn(),
+      load = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('self', { document: { fonts: { add } } });
+    vi.stubGlobal(
+      'FontFace',
+      class {
+        load = load;
+      },
+    );
+    await loadExportFonts(compositionWithFont());
+    expect(add).toHaveBeenCalledOnce();
+    expect(load).toHaveBeenCalledOnce();
   });
   it('rejects a missing host-resolved font source explicitly', async () => {
     vi.stubGlobal('self', { fonts: { add: vi.fn() } });

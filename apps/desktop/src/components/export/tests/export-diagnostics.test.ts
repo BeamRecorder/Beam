@@ -93,6 +93,36 @@ const progress: ExportProgress = {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('buildBeamExportReport', () => {
+  it('reports the native hardware encoder, direct GPU transfer and separate process measurement scope', () => {
+    const native = {
+      ...diagnostics,
+      runtime: {
+        ...diagnostics.runtime!,
+        videoEncoderImplementation: 'ffmpeg-vaapi' as const,
+        frameTransfer: 'dma-buf-direct' as const,
+        audioEncoderImplementation: 'ffmpeg' as const,
+        presentationMs: 200,
+        nativeConversionMs: 120,
+        nativeEncodingMs: 80,
+      },
+    };
+    const report = buildBeamExportReport({
+      request,
+      format: 'mp4',
+      preset: 'medium',
+      diagnostics: native,
+      progress,
+      status: 'completed',
+    });
+    expect(report).toContain('FFmpeg VA-API');
+    expect(report).toContain('DMA-BUF direct');
+    expect(report).toContain('separate FFmpeg encoder process excluded');
+    expect(report).toContain('Audio Encoder: FFmpeg');
+    expect(report).toContain('Chromium Presentation Wait: 200 ms');
+    expect(report).toContain('Native GPU Import / Conversion: 120 ms');
+    expect(report).toContain('Native Encode / Mux: 80 ms');
+    expect(report).not.toContain('Hardware Acceleration Request:');
+  });
   it('includes the generic engine measurements from the export worker', () => {
     const engine = new EngineMetrics({ enabled: true });
     engine.observe('encode-wait', 5);

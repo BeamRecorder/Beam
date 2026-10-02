@@ -3,10 +3,14 @@ import type { ExportRequest } from '@beam/encoder/export-types';
 import type { ExportWorkerResponse } from '@beam/encoder/mediabunny/export-worker-protocol';
 import type { ExportRuntimeDiagnostics } from '@beam/encoder/export-diagnostics-types';
 
-const { prepareExportCursorImages } = vi.hoisted(() => ({
+const { prepareExportCursorImages, environment } = vi.hoisted(() => ({
   prepareExportCursorImages: vi.fn(),
+  environment: vi.fn(),
 }));
+const nativeExport = vi.hoisted(() => vi.fn());
+vi.mock('@desktop/components/export/experimental-exporter', () => ({ exportWithLinuxFfmpeg: nativeExport }));
 vi.mock('@beam/encoder/mediabunny/export-cursor-images', () => ({ prepareExportCursorImages }));
+vi.mock('@desktop/components/export/export-environment', () => ({ collectExportEnvironment: environment }));
 
 import { exportWithMediabunny } from '@desktop/components/export/mediabunny/exporter';
 
@@ -103,6 +107,7 @@ beforeEach(() => {
   FakeWorker.instances = [];
   FakeWorker.startFailure = null;
   prepareExportCursorImages.mockReset().mockResolvedValue([]);
+  environment.mockReset().mockResolvedValue({ platform: 'linux' });
   vi.stubGlobal('Worker', FakeWorker);
   beginExport = vi.fn().mockResolvedValue({ canceled: false, jobId: 'job-1' });
   writeExportChunk = vi.fn().mockResolvedValue(undefined);
@@ -119,6 +124,77 @@ afterEach(() => {
 });
 
 describe('export worker client', () => {
+  it('rejects already-cancelled requests and unavailable workers before preparing resources', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    await expect(exportWithMediabunny(request(), vi.fn(), controller.signal)).rejects.toMatchObject({
+      name: 'AbortError',
+    });
+    vi.stubGlobal('Worker', undefined);
+    await expect(exportWithMediabunny(request(), vi.fn(), new AbortController().signal)).rejects.toThrow(
+      'Web Workers are unavailable',
+    );
+    expect(prepareExportCursorImages).not.toHaveBeenCalled();
+  });
+  it('closes prepared images when cancellation arrives before destination selection', async () => {
+    const controller = new AbortController();
+    const bitmap = { close: vi.fn() } as unknown as ImageBitmap;
+    prepareExportCursorImages.mockImplementationOnce(async () => {
+      controller.abort();
+      return [{ id: 'cursor', bitmap }];
+    });
+    await expect(exportWithMediabunny(request(), vi.fn(), controller.signal)).rejects.toMatchObject({
+      name: 'AbortError',
+    });
+    expect(bitmap.close).toHaveBeenCalledOnce();
+    expect(beginExport).not.toHaveBeenCalled();
+  });
+  it('releases prepared images if the destination dialog fails or the desktop API is absent', async () => {
+    const bitmap = { close: vi.fn() } as unknown as ImageBitmap;
+    prepareExportCursorImages.mockResolvedValue([{ id: 'cursor', bitmap }]);
+    beginExport.mockRejectedValueOnce(new Error('dialog failed'));
+    await expect(exportWithMediabunny(request(), vi.fn(), new AbortController().signal)).rejects.toThrow(
+      'dialog failed',
+    );
+    Object.defineProperty(window, 'capture', { configurable: true, value: undefined });
+    await expect(exportWithMediabunny(request(), vi.fn(), new AbortController().signal)).rejects.toMatchObject({
+      name: 'AbortError',
+    });
+    expect(bitmap.close).toHaveBeenCalledTimes(2);
+    expect(abortExport).not.toHaveBeenCalled();
+  });
+  it.each(['environment', 'started', 'cancel'] as const)(
+    'aborts a reserved destination on %s failure before starting a worker',
+    async (stage) => {
+      const controller = new AbortController();
+      const bitmap = { close: vi.fn() } as unknown as ImageBitmap;
+      prepareExportCursorImages.mockResolvedValue([{ id: 'cursor', bitmap }]);
+      if (stage === 'environment') environment.mockRejectedValueOnce(new Error('environment failed'));
+      const started = () => {
+        if (stage === 'started') throw new Error('started failed');
+        if (stage === 'cancel') controller.abort();
+      };
+      abortExport.mockRejectedValueOnce(new Error('cleanup failed'));
+      await expect(exportWithMediabunny(request(), vi.fn(), controller.signal, started)).rejects.toThrow(
+        stage === 'cancel' ? 'cancelled' : `${stage} failed`,
+      );
+      expect(bitmap.close).toHaveBeenCalledOnce();
+      expect(abortExport).toHaveBeenCalledWith('job-1');
+      expect(FakeWorker.instances).toHaveLength(0);
+    },
+  );
+  it('dispatches an explicit Linux native request before creating any WebCodecs worker', async () => {
+    const value = { ...request(), experimentalLinuxFfmpeg: true };
+    const result = { path: '/tmp/native.mp4' };
+    nativeExport.mockResolvedValueOnce(result);
+    const progress = vi.fn(),
+      started = vi.fn(),
+      signal = new AbortController().signal;
+    expect(await exportWithMediabunny(value, progress, signal, started)).toBe(result);
+    expect(nativeExport).toHaveBeenCalledWith(value, progress, signal, started);
+    expect(FakeWorker.instances).toHaveLength(0);
+    expect(prepareExportCursorImages).not.toHaveBeenCalled();
+  });
   it.each(['webm', 'mp4'] as const)('prepares and transfers cursor bitmaps for %s', async (format) => {
     const defaultBitmap = { width: 144, height: 144, close: vi.fn() } as unknown as ImageBitmap;
     const pointerBitmap = { width: 72, height: 36, close: vi.fn() } as unknown as ImageBitmap;

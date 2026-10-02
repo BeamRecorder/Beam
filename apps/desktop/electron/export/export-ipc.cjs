@@ -18,13 +18,17 @@ function registerExportIpc({
   ipcMain,
   dialog,
   BrowserWindow,
+  app,
+  applicationRoot,
   defaultExportDirectory = null,
   resolveAutomaticDestination = () => null,
   createGpuMonitor,
+  createExperimentalExport = require('./experimental-gpu-export.cjs').createExperimentalGpuExport,
   fsModule = fs,
   pathModule = path,
 }) {
   const jobs = new Map();
+  const experimental = createExperimentalExport({ ipcMain, app, BrowserWindow, applicationRoot });
   const ownerId = (event) => event.sender.id;
   const requireJob = (event, jobId) => {
     const job = jobs.get(jobId);
@@ -33,6 +37,9 @@ function registerExportIpc({
   };
   const cleanup = async (job) => {
     jobs.delete(job.id);
+    job.cancelled = true;
+    job.cancel?.();
+    await job.nativeRun?.catch(() => undefined);
     const gpuUsage = await job.gpuMonitor?.finish();
     await job.queue.catch(() => undefined);
     if (job.handle) await job.handle.close().catch(() => undefined);
@@ -78,6 +85,7 @@ function registerExportIpc({
   });
   ipcMain.handle('export:write', async (event, payload = {}) => {
     const job = requireJob(event, payload.jobId);
+    if (job.nativeRun) throw new Error('Native export does not accept renderer video chunks.');
     if (!Number.isSafeInteger(payload.sequence) || payload.sequence !== job.nextSequence)
       throw new Error('Ordre de chunk d’export invalide.');
     if (!Number.isSafeInteger(payload.position) || payload.position < 0) throw new Error('Position de chunk invalide.');
@@ -98,6 +106,7 @@ function registerExportIpc({
   });
   ipcMain.handle('export:finalize', async (event, payload = {}) => {
     const job = requireJob(event, payload.jobId);
+    if (job.nativeRun) throw new Error('Native export is still running.');
     await job.queue;
     const gpuUsage = await job.gpuMonitor?.finish();
     await job.handle.sync();
@@ -108,6 +117,30 @@ function registerExportIpc({
     return { path: job.targetPath, ...(gpuUsage ? { gpuUsage } : {}) };
   });
   ipcMain.handle('export:abort', (event, payload = {}) => cleanup(requireJob(event, payload.jobId)));
+  ipcMain.handle('export:ffmpeg', async (event, payload = {}) => {
+    const job = requireJob(event, payload.jobId);
+    if (job.nativeRun || job.nextSequence !== 0 || !job.handle) throw new Error('Export job has already started.');
+    if (payload.request?.format !== pathModule.extname(job.targetPath).slice(1))
+      throw new Error('Export format differs from its destination.');
+    if (!Number.isSafeInteger(payload.bitrate) || payload.bitrate < 1000 || payload.bitrate > 1_000_000_000)
+      throw new Error('Invalid native export bitrate.');
+    // Reserve the job before the first await, including staged-handle closure.
+    const task = (async () => {
+      await job.handle.close();
+      job.handle = null;
+      if (job.cancelled) throw new Error('Export was cancelled.');
+      const result = await experimental.run(event.sender, job, { ...payload.request, nativeBitrate: payload.bitrate });
+      if (job.cancelled) throw new Error('Export was cancelled.');
+      job.handle = await fsModule.promises.open(job.temporaryPath, 'r+');
+      return result;
+    })();
+    job.nativeRun = task;
+    try {
+      return await task;
+    } finally {
+      job.nativeRun = null;
+    }
+  });
   ipcMain.handle('export:open-file', (_event, payload = {}) => {
     if (payload.path && typeof payload.path === 'string') {
       const { shell } = require('electron');

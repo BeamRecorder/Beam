@@ -1,6 +1,7 @@
 const { copyFile, rename, chmod, writeFile } = require('node:fs/promises');
 const { join } = require('node:path');
 const { verifyCliCompiler } = require('./cli-compiler.cjs');
+const { installExperimentalFfmpeg } = require('./ffmpeg-export-pack.cjs');
 
 /** CLI dispatch happens before Electron initializes a display, including AppImage invocation. */
 async function installDesktopCli(context) {
@@ -14,6 +15,7 @@ async function installDesktopCli(context) {
       ? join(directory, context.packager.appInfo.productFilename + '.app', 'Contents', 'Resources')
       : join(directory, 'resources');
   await verifyCliCompiler(resources, platform, context.arch);
+  await installExperimentalFfmpeg(root, resources, platform);
   if (platform === 'linux') {
     await rename(join(directory, 'beam'), join(directory, 'beam-bin'));
     await copyFile(join(root, 'build/cli/linux-beam'), join(directory, 'beam'));

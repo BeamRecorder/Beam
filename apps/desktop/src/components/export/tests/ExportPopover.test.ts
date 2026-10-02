@@ -14,6 +14,7 @@ const { mockJob, mockCapture } = vi.hoisted(() => ({
     state: null as Record<string, Ref<unknown>> | null,
   },
   mockCapture: {
+    platform: 'linux',
     getEditorPresets: vi.fn(),
     updateEditorPreset: vi.fn(),
   },
@@ -108,6 +109,7 @@ const deferred = <T>() => {
 };
 
 beforeEach(() => {
+  mockCapture.platform = 'linux';
   setActivePinia(createPinia());
   vi.clearAllMocks();
   mockCapture.getEditorPresets.mockReset().mockResolvedValue({ activePresetId: 'default', presets: [] });
@@ -154,6 +156,33 @@ describe('ExportPopover', () => {
     wrapper
       .findAll('[role="switch"]')
       .find((toggle) => toggle.attributes('aria-label') === i18n.global.t('ExportPopover.exportUntilPlayhead'))!;
+
+  it('opts into experimental GPU export explicitly on Linux', async () => {
+    const wrapper = mountExport();
+    await openMoreOptions(wrapper);
+    const toggle = wrapper
+      .findAll('[role="switch"]')
+      .find((control) => control.attributes('aria-label') === i18n.global.t('ExportPopover.experimentalFfmpeg'))!;
+    expect(toggle.attributes('aria-checked')).toBe('false');
+    await toggle.trigger('click');
+    await exportAction(wrapper).trigger('click');
+    expect(mockJob.start).toHaveBeenCalledWith(expect.objectContaining({ experimentalLinuxFfmpeg: true }));
+  });
+  it.each(['win32', 'darwin'])('hides the experimental Linux backend on %s', async (platform) => {
+    mockCapture.platform = platform;
+    const wrapper = mountExport();
+    await openMoreOptions(wrapper);
+    expect(wrapper.text()).not.toContain(i18n.global.t('ExportPopover.experimentalFfmpeg'));
+    await exportAction(wrapper).trigger('click');
+    expect(mockJob.start.mock.calls[0]![0]).not.toHaveProperty('experimentalLinuxFfmpeg');
+  });
+  it('shows the experimental option in French', async () => {
+    await setCurrentLocale('fr');
+    const wrapper = mountExport();
+    await openMoreOptions(wrapper);
+    expect(wrapper.text()).toContain('FFmpeg GPU (expérimental)');
+    expect(wrapper.text()).toContain('Exporter avec le backend GPU natif Linux.');
+  });
 
   it('keeps the playhead option off by default and exports the full snapshot duration', async () => {
     const wrapper = mountExport(4);
@@ -421,7 +450,7 @@ describe('ExportPopover', () => {
     const wrapper = mountExport();
 
     await wrapper.get('.accordion-trigger').trigger('click');
-    expect(wrapper.get('[role="switch"]').attributes('aria-checked')).toBe('true');
+    expect(wrapper.get('[role="switch"][aria-label="Include audio"]').attributes('aria-checked')).toBe('true');
 
     await wrapper.findAll('.export-popover .button-stub').at(-1)?.trigger('click');
 
@@ -432,11 +461,11 @@ describe('ExportPopover', () => {
     const wrapper = mountExport();
 
     await wrapper.get('.accordion-trigger').trigger('click');
-    await wrapper.get('[role="switch"]').trigger('click');
+    await wrapper.get('[role="switch"][aria-label="Include audio"]').trigger('click');
     expect(wrapper.emitted('update:includeAudio')).toEqual([[false]]);
 
     await wrapper.setProps({ request: { ...request, includeAudio: false } });
-    expect(wrapper.get('[role="switch"]').attributes('aria-checked')).toBe('false');
+    expect(wrapper.get('[role="switch"][aria-label="Include audio"]').attributes('aria-checked')).toBe('false');
     await wrapper.findAll('.export-popover .button-stub').at(-1)?.trigger('click');
 
     expect(mockJob.start).toHaveBeenCalledWith(expect.objectContaining({ includeAudio: false }));

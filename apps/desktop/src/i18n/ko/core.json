@@ -417,6 +417,8 @@
     "recenter": "보기 중앙 정렬"
   },
   "ExportPopover": {
+    "experimentalFfmpeg": "FFmpeg GPU (실험적)",
+    "experimentalFfmpegDesc": "Linux 네이티브 GPU 백엔드로 내보냅니다.",
     "exportVideo": "내보내기",
     "exportVideoDuration": "내보내기 ({seconds}초)",
     "exportUntilPlayhead": "재생 헤드까지 내보내기",

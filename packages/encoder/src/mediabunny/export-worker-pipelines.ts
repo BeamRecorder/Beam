@@ -3,7 +3,8 @@ import { mayBeEnabled } from '@beam/engine/scene/scene-visibility';
 import { createSnapshotCameraEvaluator } from '@beam/runtime/rendering/snapshot-camera';
 import { VideoSampleSink, type VideoSample } from 'mediabunny';
 import { engineMetrics } from '@beam/runtime/performance/engine-metrics';
-import type { VideoPipelineStats, VideoFrameWriter, ExportFrameRange } from './video-pipeline-types';
+import type { VideoPipelineStats, VideoFrameWriter, AudioFrameWriter, ExportFrameRange } from './video-pipeline-types';
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import { sourceTimeAt } from '@beam/runtime/shared/index';
 import { isVisualClip, type AudioClip, type VisualClip } from '@beam/engine/shared/composition-types';
 import { createProgressiveAudioMixer } from '@beam/encoder/audio/pcm-mixer';
@@ -23,7 +24,6 @@ import {
 } from '@beam/runtime/rendering/render';
 import type { ExportRequest } from '@beam/encoder/export-types';
 import type { ExportAssets } from '@beam/encoder/mediabunny/export-worker-assets';
-import { ExportWorkerOutput } from '@beam/encoder/mediabunny/export-worker-output';
 import { WATERMARK_LOGO_KEY } from '@beam/runtime/rendering/watermark-render';
 
 const abortIfNeeded = (signal: AbortSignal) => {
@@ -105,7 +105,7 @@ export async function renderExportVideo(
   assets: ExportAssets,
   images: ReadonlyMap<string, RenderableMedia>,
   cursorImages: ReadonlyMap<string, ImageBitmap>,
-  context: OffscreenCanvasRenderingContext2D,
+  context: Canvas2DContext,
   mediaOutput: VideoFrameWriter,
   signal: AbortSignal,
   onFrame: (done: number, stats: Omit<VideoPipelineStats, 'elapsedMs'>) => void | Promise<void>,
@@ -256,6 +256,7 @@ export async function renderExportVideo(
         const decodeElapsed = performance.now() - decodeStarted;
         decodeMs += decodeElapsed;
         engineMetrics.observe('decode', decodeElapsed);
+        await mediaOutput.prepareVideo?.(frame);
         const renderStarted = performance.now();
         renderCompositionFrame(
           context,
@@ -308,7 +309,7 @@ export async function renderExportAudio(
   request: ExportRequest,
   assets: ExportAssets,
   clips: readonly AudioClip[],
-  mediaOutput: ExportWorkerOutput,
+  mediaOutput: AudioFrameWriter,
   signal: AbortSignal,
   onBlock: (done: number, total: number, stats: { elapsedMs: number; realtimeSpeed: number }) => void,
 ) {

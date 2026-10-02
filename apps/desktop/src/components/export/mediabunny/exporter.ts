@@ -1,19 +1,24 @@
 import { readGpuUsage } from '@beam/system-metrics/gpu-validation';
 import { createBrowserExportWorker } from '@beam/encoder/browser';
 import { encodeWithWorker } from '@beam/encoder/export-job';
-import type { ExportProgress, ExportRequest, ExportResult } from '@beam/encoder/export-types';
+import type { ExportProgress, ExportResult } from '@beam/encoder/export-types';
 import type { ExportDiagnostics } from '@beam/encoder/export-diagnostics-types';
 import { collectExportEnvironment } from '~/components/export/export-environment';
 import { prepareExportCursorImages } from '@beam/encoder/mediabunny/export-cursor-images';
+import type { DesktopExportRequest } from '../experimental-export-types';
 
 const abortError = () => new DOMException('Export cancelled.', 'AbortError');
 
 export async function exportWithMediabunny(
-  request: ExportRequest,
+  request: DesktopExportRequest,
   onProgress: (progress: ExportProgress) => void,
   signal: AbortSignal,
   onStarted?: (diagnostics: ExportDiagnostics) => void,
 ): Promise<ExportResult> {
+  if (request.experimentalLinuxFfmpeg) {
+    const { exportWithLinuxFfmpeg } = await import('../experimental-exporter');
+    return exportWithLinuxFfmpeg(request, onProgress, signal, onStarted);
+  }
   if (signal.aborted) throw abortError();
   if (typeof Worker === 'undefined') throw new Error('Web Workers are unavailable; export cannot run on this device.');
   const cursorImages = await prepareExportCursorImages(request, signal);

@@ -87,13 +87,12 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: fileURLToPath(new URL('./apps/desktop/html/index.html', import.meta.url)),
-        quickSnipStatus: fileURLToPath(
-          new URL('./apps/desktop/html/quick-snip-status.html', import.meta.url),
-        ),
+        quickSnipStatus: fileURLToPath(new URL('./apps/desktop/html/quick-snip-status.html', import.meta.url)),
         regionMarker: fileURLToPath(new URL('./apps/desktop/html/region-marker.html', import.meta.url)),
         screenRegion: fileURLToPath(new URL('./apps/desktop/html/screen-region.html', import.meta.url)),
         countdown: fileURLToPath(new URL('./apps/desktop/html/countdown.html', import.meta.url)),
         editor: fileURLToPath(new URL('./apps/desktop/html/editor.html', import.meta.url)),
+        exportGpu: fileURLToPath(new URL('./apps/desktop/html/export-gpu.html', import.meta.url)),
         teleprompter: fileURLToPath(new URL('./apps/desktop/html/teleprompter.html', import.meta.url)),
         hudPanel: fileURLToPath(new URL('./apps/desktop/html/hud-panel.html', import.meta.url)),
         onboarding: fileURLToPath(new URL('./apps/desktop/html/onboarding.html', import.meta.url)),

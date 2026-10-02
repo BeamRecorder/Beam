@@ -417,6 +417,8 @@
     "recenter": "重新居中"
   },
   "ExportPopover": {
+    "experimentalFfmpeg": "FFmpeg GPU（实验性）",
+    "experimentalFfmpegDesc": "使用 Linux 原生 GPU 后端导出。",
     "exportVideo": "导出",
     "exportVideoDuration": "导出（{seconds} 秒）",
     "exportUntilPlayhead": "导出至播放头",

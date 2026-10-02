@@ -22,7 +22,12 @@ export interface ExportRuntimeDiagnostics {
   bytesWritten: number;
   videoCodec: string | null;
   audioCodec: string | null;
-  audioEncoderImplementation?: 'webcodecs' | 'mediabunny-aac';
+  audioEncoderImplementation?: 'webcodecs' | 'mediabunny-aac' | 'ffmpeg';
+  videoEncoderImplementation?: 'ffmpeg-vaapi';
+  frameTransfer?: 'dma-buf-direct';
+  presentationMs?: number;
+  nativeConversionMs?: number;
+  nativeEncodingMs?: number;
   inputVideoCodecs: string[];
   inputAudioCodecs: string[];
   hardwareAcceleration?: 'no-preference' | 'prefer-hardware' | 'prefer-software';

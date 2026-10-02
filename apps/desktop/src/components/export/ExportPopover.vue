@@ -17,6 +17,7 @@ import type { EditorExportSource, ExportFormat, ExportPreset, ExportRequest } fr
 import { useTranslate } from '~/i18n/useTranslate';
 import { safeExportErrorMessage, technicalExportError } from '@beam/encoder/mediabunny/export-preflight';
 import { buildBeamExportReport } from '@beam/encoder/export-diagnostics';
+import type { DesktopExportRequest } from './experimental-export-types';
 
 const { t, locale } = useTranslate('ExportPopover');
 
@@ -47,6 +48,8 @@ const presets: ExportPreset[] = ['low', 'medium', 'high'];
 const frameRates: ExportFrameRate[] = [24, 30, 60];
 const moreOptionsOpen = ref(false);
 const exportUntilPlayhead = ref(false);
+const isLinux = capture.platform === 'linux';
+const experimentalLinuxFfmpeg = ref(false);
 const includeAudio = computed({
   get: () => props.request.includeAudio !== false,
   set: (value: boolean) => emit('update:includeAudio', value),
@@ -142,7 +145,7 @@ const percentage = computed(() => {
 const displayError = computed(() => availability.value || (error.value ? safeExportErrorMessage(error.value) : null));
 
 const lastRequest = ref<ExportRequest | null>(null);
-const buildRequest = (): ExportRequest => {
+const buildRequest = (): DesktopExportRequest => {
   const { width, height } = activeDimensions.value;
   const snapshot = props.request.createSnapshot();
   return {
@@ -150,6 +153,7 @@ const buildRequest = (): ExportRequest => {
     includeAudio: props.request.includeAudio,
     format: format.value,
     preset: preset.value,
+    ...(isLinux && experimentalLinuxFfmpeg.value ? { experimentalLinuxFfmpeg: true } : {}),
     snapshot: {
       ...snapshot,
       duration: activeExportDuration.value,
@@ -359,6 +363,13 @@ const run = async () => {
 
           <Accordion v-model="moreOptionsOpen" :title="t('moreOptions')" class="more-options">
             <div class="more-options-list">
+              <div v-if="isLinux" class="more-options-content">
+                <div class="more-option-copy">
+                  <span class="more-option-title">{{ t('experimentalFfmpeg') }}</span>
+                  <span class="option-hint">{{ t('experimentalFfmpegDesc') }}</span>
+                </div>
+                <Switch v-model="experimentalLinuxFfmpeg" :aria-label="t('experimentalFfmpeg')" />
+              </div>
               <div class="more-options-content">
                 <div class="more-option-copy">
                   <span class="more-option-title">{{ t('includeAudio') }}</span>

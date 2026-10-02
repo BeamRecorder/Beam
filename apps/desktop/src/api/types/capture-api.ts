@@ -1,4 +1,4 @@
-import type { GpuUsageSummary } from '@beam/system-metrics';
+import type { DesktopExportApi } from './desktop-export';
 import type { HudPanelApi } from './hud-panel';
 import type { SourcePickerApi } from './source-picker';
 import type { InputAccessStatus } from './input-access';
@@ -94,7 +94,8 @@ export interface CaptureApi {
   getSourcePreview(request: CaptureSourcePreviewRequest): Promise<CaptureSourcePreview>;
 }
 
-export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipApi, HudPanelApi, SourcePickerApi {
+export interface DesktopCaptureApi
+  extends CaptureApi, ScreenshotApi, QuickSnipApi, HudPanelApi, SourcePickerApi, DesktopExportApi {
   close(): void;
   quit(): void;
   minimize(): void;
@@ -258,13 +259,6 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipA
   notifyCameraOverlayReady(): void;
   reportCameraRecordingFailure(failure: CameraRecordingFailure): void;
   onCameraRecordingFailure(listener: (failure: CameraRecordingFailure) => void): () => void;
-  beginExport(options: {
-    projectName: string;
-    format: 'webm' | 'mp4';
-  }): Promise<{ canceled: true } | { canceled: false; jobId: string }>;
-  writeExportChunk(payload: { jobId: string; sequence: number; data: Uint8Array; position: number }): Promise<void>;
-  finalizeExport(jobId: string): Promise<{ path: string; gpuUsage?: GpuUsageSummary }>;
-  abortExport(jobId: string): Promise<void | { gpuUsage?: GpuUsageSummary }>;
   openFile(path: string): Promise<void>;
   showItemInFolder(path: string): Promise<void>;
   getUpdateState(): Promise<AppUpdateState>;

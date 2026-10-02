@@ -417,6 +417,8 @@
     "recenter": "Căn giữa góc nhìn"
   },
   "ExportPopover": {
+    "experimentalFfmpeg": "FFmpeg GPU (thử nghiệm)",
+    "experimentalFfmpegDesc": "Xuất bằng backend GPU gốc trên Linux.",
     "exportVideo": "Xuất",
     "exportVideoDuration": "Xuất ({seconds} giây)",
     "exportUntilPlayhead": "Xuất đến đầu phát",

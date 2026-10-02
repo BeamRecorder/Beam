@@ -417,6 +417,8 @@
     "recenter": "Ricentra visuale"
   },
   "ExportPopover": {
+    "experimentalFfmpeg": "FFmpeg GPU (sperimentale)",
+    "experimentalFfmpegDesc": "Esporta con il backend GPU nativo di Linux.",
     "exportVideo": "Esporta",
     "exportVideoDuration": "Esporta ({seconds} s)",
     "exportUntilPlayhead": "Esporta fino alla testina",

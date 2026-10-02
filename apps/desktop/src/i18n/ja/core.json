@@ -417,6 +417,8 @@
     "recenter": "表示をリセット"
   },
   "ExportPopover": {
+    "experimentalFfmpeg": "FFmpeg GPU（実験的）",
+    "experimentalFfmpegDesc": "Linux のネイティブ GPU バックエンドで書き出します。",
     "exportVideo": "書き出す",
     "exportVideoDuration": "書き出す（{seconds}秒）",
     "exportUntilPlayhead": "再生ヘッドまで書き出す",

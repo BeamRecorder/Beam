@@ -25,6 +25,12 @@ const request = {
 } as unknown as ExportRequest;
 
 describe('useExportJob', () => {
+  it('preserves the desktop native backend choice when starting a shared export job', async () => {
+    const value = { ...request, experimentalLinuxFfmpeg: true };
+    exportWithMediabunny.mockResolvedValueOnce({ path: '/tmp/native.mp4', diagnostics: null });
+    await useExportJob().start(value);
+    expect(exportWithMediabunny.mock.calls.at(-1)![0]).toBe(value);
+  });
   beforeEach(() => exportWithMediabunny.mockReset());
   it('publishes preparation, progress and a result', async () => {
     let reported: unknown;

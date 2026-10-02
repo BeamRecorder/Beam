@@ -1,7 +1,8 @@
 import { computed, ref } from 'vue';
 import { exportWithMediabunny } from './mediabunny/exporter';
-import type { ExportProgress, ExportRequest, ExportResult } from '@beam/encoder/export-types';
+import type { ExportProgress, ExportResult } from '@beam/encoder/export-types';
 import type { ExportDiagnostics } from '@beam/encoder/export-diagnostics-types';
+import type { DesktopExportRequest } from './experimental-export-types';
 import { tNamespace } from '../../i18n';
 
 const $t = tNamespace('exporter');
@@ -16,7 +17,7 @@ const isChoosingDestination = ref(false);
 const isExporting = computed(() => controller.value !== null && !isChoosingDestination.value);
 
 export function useExportJob() {
-  const start = async (request: ExportRequest) => {
+  const start = async (request: DesktopExportRequest) => {
     if (controller.value || isChoosingDestination.value) return;
     error.value = null;
     errorContext.value = null;

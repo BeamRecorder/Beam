@@ -73,7 +73,13 @@ const clip = (id: string, sourceInMs = 0): VisualClip => ({
   isMirrored: false,
   isMirroredY: false,
 });
-const run = async (clips: VisualClip[], codec = 'vp9', userAgent = 'Linux', fail = false) => {
+const run = async (
+  clips: VisualClip[],
+  codec = 'vp9',
+  userAgent = 'Linux',
+  fail = false,
+  prepareVideo?: (frame: number) => Promise<void>,
+) => {
   vi.stubGlobal('navigator', { userAgent });
   const request = {
     snapshot: {
@@ -89,7 +95,7 @@ const run = async (clips: VisualClip[], codec = 'vp9', userAgent = 'Linux', fail
   const track = { getCodec: vi.fn().mockResolvedValue(codec) };
   const assets = { assets: new Map([['video', { video: track }]]), screenSize: null } as unknown as ExportAssets;
   const addVideo = fail ? vi.fn().mockRejectedValue(new Error('encoder failed')) : vi.fn().mockResolvedValue(undefined);
-  const output = { addVideo, closeVideo: vi.fn() } as unknown as ExportWorkerOutput;
+  const output = { addVideo, closeVideo: vi.fn(), prepareVideo } as unknown as ExportWorkerOutput;
   await renderExportVideo(
     request,
     assets,
@@ -105,6 +111,21 @@ const run = async (clips: VisualClip[], codec = 'vp9', userAgent = 'Linux', fail
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => vi.unstubAllGlobals());
 describe('export shared video decoding', () => {
+  it('prepares platform frame capture before drawing each requested frame', async () => {
+    const prepare = vi.fn().mockResolvedValue(undefined);
+    await run([clip('one')], 'vp9', 'Linux', false, prepare);
+    expect(prepare.mock.calls).toEqual([[0], [1], [2]]);
+    prepare.mock.invocationCallOrder.forEach((order, frame) =>
+      expect(order).toBeLessThan(runtime.render.mock.invocationCallOrder[frame]!),
+    );
+  });
+  it('releases decoded samples when platform preparation fails', async () => {
+    const prepare = vi.fn().mockRejectedValue(new Error('capture unavailable'));
+    await expect(run([clip('one')], 'vp9', 'Linux', false, prepare)).rejects.toThrow('capture unavailable');
+    expect(runtime.render).not.toHaveBeenCalled();
+    expect(runtime.close).toHaveBeenCalledOnce();
+    expect(runtime.returned).toHaveBeenCalledOnce();
+  });
   it('decodes each exact duplicate once per output frame, renders every layer, and closes samples once', async () => {
     await run([clip('one'), clip('two')]);
     expect(runtime.sinks).toHaveBeenCalledOnce();

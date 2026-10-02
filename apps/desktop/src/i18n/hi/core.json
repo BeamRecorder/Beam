@@ -417,6 +417,8 @@
     "recenter": "दृश्य पुनः केंद्रित करें"
   },
   "ExportPopover": {
+    "experimentalFfmpeg": "FFmpeg GPU (प्रायोगिक)",
+    "experimentalFfmpegDesc": "Linux के नेटिव GPU बैकएंड से एक्सपोर्ट करें।",
     "exportVideo": "निर्यात करें",
     "exportVideoDuration": "निर्यात करें ({seconds} सेकंड)",
     "exportUntilPlayhead": "प्लेहेड तक एक्सपोर्ट करें",

@@ -7,8 +7,10 @@ export async function loadExportFonts(composition: ClipComposition, sources: Rea
     if (!style.fontAssetId) continue;
     requested.set(style.fontAssetId, style.fontFamily || 'sans-serif');
   }
-  const fontSet = (self as typeof self & { fonts?: FontFaceSet }).fonts;
-  if (requested.size && !fontSet) throw new Error('Imported fonts are unavailable in the export Worker.');
+  const fontSet =
+    (self as typeof self & { fonts?: FontFaceSet; document?: Document }).fonts ??
+    (self as typeof self & { document?: Document }).document?.fonts;
+  if (requested.size && !fontSet) throw new Error('Imported fonts are unavailable in the export host.');
   for (const [id, family] of requested) {
     const source = sources[id];
     if (!source) throw new Error(`No font source supplied for "${family}" (${id}).`);

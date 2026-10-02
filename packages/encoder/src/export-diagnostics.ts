@@ -109,7 +109,7 @@ export function buildBeamExportReport(options: {
     `Device Pixel Ratio: ${environment?.devicePixelRatio ?? 'Unknown'}`,
     `WebGL Renderer: ${environment?.webglRenderer ?? 'Unknown'}`,
     `WebGPU Available: ${environment?.webgpuAvailable ?? false}`,
-    `Hardware Acceleration Used: Unknown (not exposed by Chromium/WebCodecs)`,
+    `Hardware Acceleration Used: ${runtime?.videoEncoderImplementation === 'ffmpeg-vaapi' ? 'VA-API video encoding (native backend)' : 'Unknown (not exposed by Chromium/WebCodecs)'}`,
     `OffscreenCanvas: ${environment?.offscreenCanvas ?? typeof OffscreenCanvas !== 'undefined'}`,
     `VideoEncoder / VideoDecoder: ${environment?.videoEncoder ?? typeof VideoEncoder !== 'undefined'} / ${environment?.videoDecoder ?? typeof VideoDecoder !== 'undefined'}`,
     `AudioEncoder / AudioDecoder: ${environment?.audioEncoder ?? typeof AudioEncoder !== 'undefined'} / ${environment?.audioDecoder ?? typeof AudioDecoder !== 'undefined'}`,
@@ -127,20 +127,30 @@ export function buildBeamExportReport(options: {
     `Audio Clips: ${audioClips}`,
     `Output Video Codec: ${runtime?.videoCodec ?? 'Unknown'}`,
     `Encoder Codec String: ${runtime?.encoderCodec ?? 'Unknown'}`,
-    `Hardware Acceleration Request: ${runtime?.hardwareAcceleration ?? 'Unknown'} (actual implementation not exposed)`,
+    ...(runtime?.videoEncoderImplementation === 'ffmpeg-vaapi'
+      ? [
+          'Video Encoder: FFmpeg VA-API (experimental)',
+          'GPU Frame Transfer: DMA-BUF direct import; GPU NV12 conversion',
+          'GPU Counter Scope: Electron GPU processes; separate FFmpeg encoder process excluded',
+        ]
+      : [
+          `Hardware Acceleration Request: ${runtime?.hardwareAcceleration ?? 'Unknown'} (actual implementation not exposed)`,
+        ]),
     `Encoder Bitrate: ${runtime?.encoderBitrate ? `${(runtime.encoderBitrate / 1_000_000).toFixed(2)} Mbps` : 'Unknown'}`,
     `Encoder Bitrate Mode: ${runtime?.encoderBitrateMode ?? 'Unknown'}`,
     `Hardware Encoder Check: ${runtime?.hardwareEncoderCheck ?? 'Unknown'}`,
     ...(runtime?.hardwareEncoderError ? [`Hardware Encoder Error: ${cleanedError(runtime.hardwareEncoderError)}`] : []),
     `Output Audio Codec: ${runtime?.audioCodec ?? (audioClips ? 'Unknown' : 'None')}`,
     `Audio Encoder: ${
-      runtime?.audioEncoderImplementation === 'mediabunny-aac'
-        ? 'Mediabunny AAC-LC (WASM)'
-        : runtime?.audioEncoderImplementation === 'webcodecs'
-          ? 'Native WebCodecs'
-          : audioClips
-            ? 'Unknown'
-            : 'None'
+      runtime?.audioEncoderImplementation === 'ffmpeg'
+        ? 'FFmpeg'
+        : runtime?.audioEncoderImplementation === 'mediabunny-aac'
+          ? 'Mediabunny AAC-LC (WASM)'
+          : runtime?.audioEncoderImplementation === 'webcodecs'
+            ? 'Native WebCodecs'
+            : audioClips
+              ? 'Unknown'
+              : 'None'
     }`,
     `Input Video Codecs: ${runtime?.inputVideoCodecs.join(', ') || 'Unknown'}`,
     `Input Audio Codecs: ${runtime?.inputAudioCodecs.join(', ') || (audioClips ? 'Unknown' : 'None')}`,
@@ -161,6 +171,14 @@ export function buildBeamExportReport(options: {
     `  Decode: ${finite(runtime?.decodeMs)}`,
     `  Canvas Render: ${finite(runtime?.renderMs)}`,
     `  Encoder / Backpressure: ${finite(runtime?.encoderBackpressureMs)}`,
+    ...(runtime?.videoEncoderImplementation === 'ffmpeg-vaapi'
+      ? [
+          `    Chromium Presentation Wait: ${finite(runtime.presentationMs)}`,
+          `    Native GPU Import / Conversion: ${finite(runtime.nativeConversionMs)}`,
+          `    Native Encode / Mux: ${finite(runtime.nativeEncodingMs)}`,
+          '    Native timings include setup and flush; they are not additive pipeline stages.',
+        ]
+      : []),
     `Audio Pipeline: ${finite(runtime?.audioPipelineMs)}`,
     `Mux Finalization: ${finite(runtime?.muxFinalizationMs)}`,
     `Native Finalization (publication / host diagnostics): ${finite(runtime?.nativeFinalizationMs)}`,
