@@ -5,14 +5,14 @@ import {
   Output,
   StreamTarget,
   WebMOutputFormat,
-  canEncodeVideo,
   getFirstEncodableAudioCodec,
-  getFirstEncodableVideoCodec,
   type AudioSample,
 } from 'mediabunny';
 import { bitrateFor } from '@beam/encoder/export-presets';
 import type { ExportRequest } from '@beam/encoder/export-types';
 import type { ExportWorkerResponse } from '@beam/encoder/mediabunny/export-worker-protocol';
+import { selectVideoEncoder } from '@beam/encoder/mediabunny/video-encoder-selection';
+import type { VideoEncoderSelection } from '@beam/encoder/mediabunny/video-encoder-selection-types';
 
 type Ack = { resolve(): void; reject(error: Error): void; sentAt: number };
 type AudioEncoderImplementation = 'webcodecs' | 'mediabunny-aac';
@@ -51,7 +51,10 @@ export class ExportWorkerOutput {
   private readonly videoCodec: string;
   private readonly audioCodec: string | null;
   private readonly audioEncoderImplementation: AudioEncoderImplementation | null;
-  private readonly hardwareAcceleration: 'no-preference' | 'prefer-hardware';
+  private readonly hardwareAcceleration: VideoEncoderSelection['hardwareAcceleration'];
+  private readonly encoderBitrateMode: 'variable' | 'constant';
+  private readonly hardwareEncoderCheck: VideoEncoderSelection['hardwareEncoderCheck'];
+  private readonly hardwareEncoderError: string | null;
   private sequence = 0;
   private chunkCount = 0;
   private bytesWritten = 0;
@@ -66,14 +69,16 @@ export class ExportWorkerOutput {
   private constructor(
     request: ExportRequest,
     canvas: OffscreenCanvas,
-    videoCodec: import('mediabunny').VideoCodec,
+    videoSelection: VideoEncoderSelection,
     audioSelection: AudioEncoderSelection | null,
-    hardwareAcceleration: 'no-preference' | 'prefer-hardware',
   ) {
-    this.videoCodec = videoCodec;
+    this.videoCodec = videoSelection.codec;
     this.audioCodec = audioSelection?.codec ?? null;
     this.audioEncoderImplementation = audioSelection?.implementation ?? null;
-    this.hardwareAcceleration = hardwareAcceleration;
+    this.hardwareAcceleration = videoSelection.hardwareAcceleration;
+    this.encoderBitrateMode = videoSelection.bitrateMode;
+    this.hardwareEncoderCheck = videoSelection.hardwareEncoderCheck;
+    this.hardwareEncoderError = videoSelection.hardwareEncoderError;
     const writable = new WritableStream<{ data: Uint8Array; position: number }>({
       write: ({ data, position }) =>
         new Promise<void>((resolve, reject) => {
@@ -92,9 +97,10 @@ export class ExportWorkerOutput {
       target: new StreamTarget(writable, { chunked: true, chunkSize: 16 * 1024 * 1024 }),
     });
     this.video = new CanvasSource(canvas, {
-      codec: videoCodec,
-      bitrate: bitrateFor(request.preset, canvas.width, canvas.height, request.snapshot.render.fps),
-      ...(hardwareAcceleration === 'prefer-hardware' ? { hardwareAcceleration } : {}),
+      codec: videoSelection.codec,
+      quality: videoSelection.quality,
+      hardwareAcceleration: videoSelection.hardwareAcceleration,
+      latencyMode: 'quality',
       onEncoderConfig: (config) => {
         this.encoderCodec = config.codec;
         this.encoderBitrate = config.bitrate ?? null;
@@ -113,24 +119,15 @@ export class ExportWorkerOutput {
   }
 
   static async create(request: ExportRequest, canvas: OffscreenCanvas, withAudio: boolean) {
-    const videoOptions = {
+    const videoSelection = await selectVideoEncoder({
+      format: request.format,
       width: canvas.width,
       height: canvas.height,
+      frameRate: request.snapshot.render.fps,
       bitrate: bitrateFor(request.preset, canvas.width, canvas.height, request.snapshot.render.fps),
-    };
-    const codecs: import('mediabunny').VideoCodec[] = request.format === 'webm' ? ['vp9', 'vp8', 'av1'] : ['avc'];
-    const videoCodec = await getFirstEncodableVideoCodec(codecs, videoOptions);
-    if (!videoCodec) throw new Error(`${request.format.toUpperCase()} video is not encodable on this device.`);
-    const hardwareAcceleration =
-      request.format === 'webm' &&
-      (await canEncodeVideo(videoCodec, {
-        ...videoOptions,
-        hardwareAcceleration: 'prefer-hardware',
-      }))
-        ? 'prefer-hardware'
-        : 'no-preference';
+    });
     const audioSelection = await selectAudioEncoder(request, withAudio);
-    return new ExportWorkerOutput(request, canvas, videoCodec, audioSelection, hardwareAcceleration);
+    return new ExportWorkerOutput(request, canvas, videoSelection, audioSelection);
   }
 
   start() {
@@ -183,6 +180,9 @@ export class ExportWorkerOutput {
       hardwareAcceleration: this.hardwareAcceleration,
       encoderCodec: this.encoderCodec,
       encoderBitrate: this.encoderBitrate,
+      encoderBitrateMode: this.encoderBitrateMode,
+      hardwareEncoderCheck: this.hardwareEncoderCheck,
+      hardwareEncoderError: this.hardwareEncoderError,
       encodedPacketCount: this.encodedPacketCount,
       keyFrameCount: this.keyFrameCount,
       encodedVideoBytes: this.encodedVideoBytes,

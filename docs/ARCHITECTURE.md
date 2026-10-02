@@ -28,6 +28,8 @@ The installed Linux executable accepts `beam --cli …`; `beam-cli` is also inst
 
 Run `bun run check:boundaries` and `bun run typecheck:packages` when changing package ownership. The first rejects reverse dependencies, escaped relative imports and production files above 500 lines. Test-only fixtures live with tests. Package dependencies must be declared in their manifests, including when the workspace already has that dependency installed.
 
+Video encoder selection belongs to `packages/encoder`, shared by desktop and CLI. It probes WebCodecs hardware variable/constant bitrate modes at the job's actual dimensions, frame rate and bitrate, then verifies buffer allocation with one encoded test image. Rejected hardware paths select explicit software WebCodecs encoding; offline export retains quality latency and every frame. Desktop enables Chromium's Linux VA-API feature before app readiness; Windows/macOS retain their default hardware backends. CLI enables the Linux feature only for its explicitly selected hardware backend. See [WebCodecs encoding](architecture/webcodecs-encoding.md) for diagnostics and platform limits.
+
 ### Documents, commands and Vue
 
 `createDocumentSession<T>` accepts a document validator and a typed command registry. A command parses its payload and returns a new document without mutating its input. A transaction publishes one revision and one undo step after all commands and final validation succeed. A failed transaction leaves the document and history unchanged. Extensions are trusted application code, not executable document content; unknown command names fail explicitly.

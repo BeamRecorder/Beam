@@ -129,6 +129,9 @@ export function buildBeamExportReport(options: {
     `Encoder Codec String: ${runtime?.encoderCodec ?? 'Unknown'}`,
     `Hardware Acceleration Request: ${runtime?.hardwareAcceleration ?? 'Unknown'} (actual implementation not exposed)`,
     `Encoder Bitrate: ${runtime?.encoderBitrate ? `${(runtime.encoderBitrate / 1_000_000).toFixed(2)} Mbps` : 'Unknown'}`,
+    `Encoder Bitrate Mode: ${runtime?.encoderBitrateMode ?? 'Unknown'}`,
+    `Hardware Encoder Check: ${runtime?.hardwareEncoderCheck ?? 'Unknown'}`,
+    ...(runtime?.hardwareEncoderError ? [`Hardware Encoder Error: ${cleanedError(runtime.hardwareEncoderError)}`] : []),
     `Output Audio Codec: ${runtime?.audioCodec ?? (audioClips ? 'Unknown' : 'None')}`,
     `Audio Encoder: ${
       runtime?.audioEncoderImplementation === 'mediabunny-aac'

@@ -86,10 +86,7 @@ const logStartup = (step) => {
 
 const applicationRoot = path.resolve(__dirname, '../../..');
 configureDevelopmentProfile(app);
-if (process.platform === 'linux') {
-  // Use Chromium's XDG GlobalShortcuts portal on desktops that provide it.
-  app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal');
-}
+require('./lifecycle/chromium-features.cjs').configureChromiumFeatures(app);
 const controllers = new WeakMap();
 let captureEngine = null;
 let coordinator = null;

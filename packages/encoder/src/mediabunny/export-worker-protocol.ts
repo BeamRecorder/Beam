@@ -53,9 +53,20 @@ const runtimeDiagnostics = (value: unknown): value is ExportRuntimeDiagnostics =
     strings(value.inputAudioCodecs) &&
     (value.hardwareAcceleration === undefined ||
       value.hardwareAcceleration === 'no-preference' ||
-      value.hardwareAcceleration === 'prefer-hardware') &&
+      value.hardwareAcceleration === 'prefer-hardware' ||
+      value.hardwareAcceleration === 'prefer-software') &&
     (value.encoderCodec === undefined || value.encoderCodec === null || typeof value.encoderCodec === 'string') &&
     (value.encoderBitrate === undefined || nullableFinite(value.encoderBitrate)) &&
+    (value.encoderBitrateMode === undefined ||
+      value.encoderBitrateMode === 'variable' ||
+      value.encoderBitrateMode === 'constant') &&
+    (value.hardwareEncoderCheck === undefined ||
+      value.hardwareEncoderCheck === 'passed' ||
+      value.hardwareEncoderCheck === 'unsupported' ||
+      value.hardwareEncoderCheck === 'failed') &&
+    (value.hardwareEncoderError === undefined ||
+      value.hardwareEncoderError === null ||
+      (typeof value.hardwareEncoderError === 'string' && value.hardwareEncoderError.length <= 600)) &&
     (value.encodedPacketCount === undefined || sequence(value.encodedPacketCount)) &&
     (value.keyFrameCount === undefined || sequence(value.keyFrameCount)) &&
     (value.encodedVideoBytes === undefined || sequence(value.encodedVideoBytes))

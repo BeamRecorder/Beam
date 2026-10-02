@@ -3,7 +3,7 @@ import type { ExportRequest } from '@beam/encoder/export-types';
 import { isExportWorkerResponse } from '@beam/encoder/mediabunny/export-worker-protocol';
 
 const runtime = vi.hoisted(() => ({
-  videoCodec: vi.fn(),
+  probe: vi.fn(),
   canEncodeVideo: vi.fn(),
   audioCodec: vi.fn(),
   registerAacEncoder: vi.fn(),
@@ -92,7 +92,6 @@ vi.mock('mediabunny', async (importOriginal) => {
 
   return {
     ...actual,
-    getFirstEncodableVideoCodec: runtime.videoCodec,
     getFirstEncodableAudioCodec: runtime.audioCodec,
     canEncodeVideo: runtime.canEncodeVideo,
     StreamTarget: FakeStreamTarget,
@@ -105,6 +104,7 @@ vi.mock('mediabunny', async (importOriginal) => {
 });
 
 vi.mock('@mediabunny/aac-encoder', () => ({ registerAacEncoder: runtime.registerAacEncoder }));
+vi.mock('@beam/encoder/mediabunny/video-encoder-probe', () => ({ probeHardwareVideoEncoder: runtime.probe }));
 
 const request = (format: ExportRequest['format'] = 'webm') =>
   ({
@@ -126,7 +126,7 @@ const flush = async () => {
 
 describe('ExportWorkerOutput diagnostics and IPC backpressure', () => {
   beforeEach(() => {
-    runtime.videoCodec.mockReset().mockResolvedValue('vp9');
+    runtime.probe.mockReset().mockResolvedValue(null);
     runtime.canEncodeVideo.mockReset().mockResolvedValue(true);
     runtime.audioCodec.mockReset().mockResolvedValue('opus');
     runtime.registerAacEncoder.mockReset().mockImplementation(() => {
@@ -163,26 +163,27 @@ describe('ExportWorkerOutput diagnostics and IPC backpressure', () => {
 
   it.each([
     { supported: true, expected: 'prefer-hardware' as const },
-    { supported: false, expected: 'no-preference' as const },
+    { supported: false, expected: 'prefer-software' as const },
   ])('selects $expected for WebM when hardware encoding support is $supported', async ({ supported, expected }) => {
-    runtime.canEncodeVideo.mockResolvedValueOnce(supported);
+    runtime.canEncodeVideo.mockImplementation(
+      async (_, options) => supported || options.hardwareAcceleration === 'prefer-software',
+    );
     const { ExportWorkerOutput } = await import('@beam/encoder/mediabunny/export-worker-output');
     let now = 100;
     vi.spyOn(performance, 'now').mockImplementation(() => now);
 
     const output = await ExportWorkerOutput.create(request(), { width: 16, height: 16 } as OffscreenCanvas, true);
 
-    expect(runtime.videoCodec).toHaveBeenCalledOnce();
     expect(runtime.canEncodeVideo).toHaveBeenCalledWith(
       'vp9',
       expect.objectContaining({ hardwareAcceleration: 'prefer-hardware' }),
     );
     expect(runtime.audioCodec).toHaveBeenCalledOnce();
     expect(runtime.videoOptions).toMatchObject({ codec: 'vp9' });
-    expect(runtime.videoOptions).not.toHaveProperty('latencyMode');
+    expect(runtime.videoOptions).toHaveProperty('latencyMode', 'quality');
     expect(runtime.videoOptions).not.toHaveProperty('contentHint');
-    if (supported) expect(runtime.videoOptions).toHaveProperty('hardwareAcceleration', 'prefer-hardware');
-    else expect(runtime.videoOptions).not.toHaveProperty('hardwareAcceleration');
+    expect(runtime.videoOptions).toHaveProperty('hardwareAcceleration', expected);
+    expect(runtime.videoOptions?.quality).toBe(runtime.canEncodeVideo.mock.calls.at(-1)?.[1].quality);
     expect(runtime.audioOptions).toMatchObject({ codec: 'opus' });
     expect(runtime.targetOptions).toEqual({ chunked: true, chunkSize: 16 * 1024 * 1024 });
     expect(runtime.stream).not.toBeNull();
@@ -234,6 +235,9 @@ describe('ExportWorkerOutput diagnostics and IPC backpressure', () => {
       hardwareAcceleration: expected,
       encoderCodec: 'vp9',
       encoderBitrate: 5_500_000,
+      encoderBitrateMode: 'variable',
+      hardwareEncoderCheck: supported ? 'passed' : 'unsupported',
+      hardwareEncoderError: null,
       encodedPacketCount: 2,
       keyFrameCount: 1,
       encodedVideoBytes: 200,
@@ -323,13 +327,13 @@ describe('ExportWorkerOutput diagnostics and IPC backpressure', () => {
   });
 
   it('reports when no video codec is available', async () => {
-    runtime.videoCodec.mockResolvedValueOnce(null);
+    runtime.canEncodeVideo.mockResolvedValue(false);
     const { ExportWorkerOutput } = await import('@beam/encoder/mediabunny/export-worker-output');
 
     await expect(
       ExportWorkerOutput.create(request(), { width: 16, height: 16 } as OffscreenCanvas, false),
     ).rejects.toThrow('WEBM video is not encodable on this device.');
-    expect(runtime.canEncodeVideo).not.toHaveBeenCalled();
+    expect(runtime.canEncodeVideo).toHaveBeenCalledTimes(12);
   });
 
   it('reports unavailable WebM audio without attempting the AAC extension fallback', async () => {
@@ -372,18 +376,24 @@ describe('ExportWorkerOutput diagnostics and IPC backpressure', () => {
     await writer.releaseLock();
   });
 
-  it('keeps MP4 AVC on the default hardware preference', async () => {
-    runtime.videoCodec.mockResolvedValueOnce('avc');
+  it('selects hardware AVC for MP4 with the same settings as the capability probe', async () => {
     const { ExportWorkerOutput } = await import('@beam/encoder/mediabunny/export-worker-output');
 
     const output = await ExportWorkerOutput.create(request('mp4'), { width: 16, height: 16 } as OffscreenCanvas, false);
 
-    expect(runtime.canEncodeVideo).not.toHaveBeenCalled();
-    expect(runtime.videoOptions).toMatchObject({ codec: 'avc' });
-    expect(runtime.videoOptions).not.toHaveProperty('hardwareAcceleration');
+    expect(runtime.canEncodeVideo).toHaveBeenCalledWith(
+      'avc',
+      expect.objectContaining({ hardwareAcceleration: 'prefer-hardware', frameRate: 30 }),
+    );
+    expect(runtime.videoOptions).toMatchObject({
+      codec: 'avc',
+      hardwareAcceleration: 'prefer-hardware',
+      latencyMode: 'quality',
+    });
     expect(output.diagnostics()).toMatchObject({
       videoCodec: 'avc',
-      hardwareAcceleration: 'no-preference',
+      hardwareAcceleration: 'prefer-hardware',
+      encoderBitrateMode: 'variable',
     });
   });
 

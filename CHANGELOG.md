@@ -31,6 +31,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- MP4 and WebM exports select a working WebCodecs encoder at the requested resolution, frame rate and bitrate, checking hardware variable and constant bitrate modes before software encoding. Linux desktop and hardware CLI backends enable accelerated video encoding; reports show the selected bitrate mode and hardware frame-check failures.
 - Preview and export reuse unchanged active clip order and text layout; Studio retains fixed background pixels, and export progress thumbnails convert without pausing video encoding.
 - Dense previews evaluate canvas selection geometry only when needed, reuse shape paint styles and skip rectangles fully outside the rendered image during zooms. Preview and export share the same visibility checks without reducing image quality.
 - Timeline playback moves the playhead with a composited 3D transform and reuses unchanged visible clip lists instead of repainting static artwork on every tick.

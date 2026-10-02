@@ -25,9 +25,12 @@ export interface ExportRuntimeDiagnostics {
   audioEncoderImplementation?: 'webcodecs' | 'mediabunny-aac';
   inputVideoCodecs: string[];
   inputAudioCodecs: string[];
-  hardwareAcceleration?: 'no-preference' | 'prefer-hardware';
+  hardwareAcceleration?: 'no-preference' | 'prefer-hardware' | 'prefer-software';
   encoderCodec?: string | null;
   encoderBitrate?: number | null;
+  encoderBitrateMode?: 'variable' | 'constant';
+  hardwareEncoderCheck?: 'passed' | 'unsupported' | 'failed';
+  hardwareEncoderError?: string | null;
   encodedPacketCount?: number;
   keyFrameCount?: number;
   encodedVideoBytes?: number;
