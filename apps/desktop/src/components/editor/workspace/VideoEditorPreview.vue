@@ -67,8 +67,8 @@ const {
   commitSelectedTransform,
   commitSelectedTransforms,
   commitSelectedCrop,
-  previewSelectedShapeRotation,
-  commitSelectedShapeRotation,
+  previewSelectedRotation,
+  commitSelectedRotation,
   commitZoom,
   isCropping,
   isGridVisible,
@@ -177,8 +177,8 @@ const { editorData } = toRefs(workspace.props);
         @update:clip-transforms="commitSelectedTransforms"
         @update:clip-crop="commitSelectedCrop"
         @preview:clip-crop="previewCrop"
-        @preview:shape-rotation="previewSelectedShapeRotation"
-        @update:shape-rotation="commitSelectedShapeRotation"
+        @preview:clip-rotation="previewSelectedRotation"
+        @update:clip-rotation="commitSelectedRotation"
         @request:crop="startCrop"
         @update:caption-text="updateInlineCaptionText"
         @caption-editing-start="beginInlineCaptionEditing"

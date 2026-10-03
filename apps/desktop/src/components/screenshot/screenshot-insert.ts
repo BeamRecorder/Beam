@@ -16,6 +16,9 @@ export function screenshotInserter(options: ScreenshotInsertOptions): Screenshot
       case 'cursor':
         options.cursor();
         break;
+      case 'zoom':
+        options.zoom();
+        break;
       case 'blur':
       case 'highlight':
         options.effect(kind);

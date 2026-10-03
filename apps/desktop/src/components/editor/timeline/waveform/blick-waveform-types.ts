@@ -17,6 +17,7 @@ export interface BlickWaveformPresentation {
 }
 
 export interface BlickWaveformCanvasProps extends BlickWaveformData {
+  geometryKey?: number;
   deferDraw?: boolean;
   leftPercent?: number;
   widthPercent?: number;

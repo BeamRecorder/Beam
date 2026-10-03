@@ -50,7 +50,6 @@ const items = computed(() =>
     :timeline-width-px="width"
     :thumbnail-slots="thumbnailSlots"
     :defer-thumbnail-requests="deferMedia"
-    :defer-waveform-draw="deferMedia"
     :selected="selectedIds.has(clip.id)"
     :linked-clip-names="linkedNames(clip)"
     :trim-state="trimStateFor(clip.id)"

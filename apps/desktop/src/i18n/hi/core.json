@@ -312,6 +312,24 @@
     "transcriptSaved": "ट्रांसक्रिप्ट निर्यात हो गई।",
     "transcriptExportFailed": "ट्रांसक्रिप्ट निर्यात नहीं हो सकी।"
   },
+  "TransformControls": {
+    "position": "स्थिति",
+    "alignment": "संरेखण",
+    "left": "बाएँ",
+    "center": "केंद्र",
+    "right": "दाएँ",
+    "top": "ऊपर",
+    "middle": "बीच",
+    "bottom": "नीचे",
+    "width": "चौड़ाई",
+    "height": "ऊँचाई",
+    "lockAspectRatio": "अनुपात लॉक करें",
+    "orientation": "दिशा",
+    "rotateLeft": "90° बाईं ओर घुमाएँ",
+    "rotateRight": "90° दाईं ओर घुमाएँ",
+    "unit": "इकाई",
+    "rotation": "घुमाव"
+  },
   "ClipPropertiesPanel": {
     "noClipSelected": "कोई क्लिप चयनित नहीं है",
     "noClipSelectedDesc": "क्लिप के गुण देखने और एडिट करने के लिए टाइमलाइन में उसे चुनें।",
@@ -334,6 +352,7 @@
     "solid": "सॉलिड",
     "adaptive": "अडैप्टिव",
     "adaptiveShadowDescription": "क्लिप के रंग निकालकर हल्की एम्बिएंट ग्लो बनाएँ।",
+    "shadowStyleDescription": "सॉलिड: छाया के लिए चुने हुए रंग का उपयोग करता है।\nअडैप्टिव: क्लिप के रंगों से परिवेशी चमक बनाता है।",
     "direction": "दिशा",
     "mirroring": "मिररिंग",
     "mirrorHorizontally": "क्षैतिज रूप से फ़्लिप करें",
@@ -1083,7 +1102,8 @@
     "image": "इमेज",
     "watermark": "वॉटरमार्क",
     "previewLoading": "पूर्वावलोकन बनाया जा रहा है…",
-    "previewError": "पूर्वावलोकन उपलब्ध नहीं है"
+    "previewError": "पूर्वावलोकन उपलब्ध नहीं है",
+    "zoom": "ज़ूम"
   },
   "Highlight": {
     "title": "हाइलाइट",
@@ -1117,5 +1137,25 @@
     "description": "सिस्टम कर्सर को सीधे वीडियो में रिकॉर्ड करता है। स्वचालित ज़ूम उसका अनुसरण करते रहते हैं। Beam कर्सर शुरू में बंद रहता है; कर्सर सेटिंग में इसे ऊपर दिखा सकते हैं। रिकॉर्ड किए गए कर्सर को हटाया नहीं जा सकता।",
     "customCursor": "कस्टम कर्सर",
     "overlayDescription": "वीडियो पर Beam कर्सर दिखाएँ। रिकॉर्डिंग में सिस्टम कर्सर पहले से मौजूद हो तो इसे बंद करें।"
+  },
+  "Gradient": {
+    "type": "प्रकार",
+    "linear": "रेखीय",
+    "radial": "रेडियल",
+    "angle": "कोण",
+    "rotate": "90° घुमाएँ",
+    "stops": "रंग बिंदु",
+    "presets": "प्रीसेट",
+    "reverse": "ग्रेडिएंट उलटें",
+    "addStop": "रंग बिंदु जोड़ें",
+    "removeStop": "रंग बिंदु हटाएँ",
+    "color": "रंग",
+    "position": "स्थिति",
+    "opacity": "अपारदर्शिता",
+    "stop": "रंग बिंदु {number}",
+    "stopColor": "बिंदु {number} का रंग",
+    "stopPosition": "बिंदु {number} की स्थिति",
+    "stopOpacity": "बिंदु {number} की अपारदर्शिता",
+    "addAtPosition": "रंग बिंदु जोड़ने के लिए क्लिक करें"
   }
 }

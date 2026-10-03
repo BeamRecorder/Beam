@@ -242,7 +242,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
         :name="lockedSelectionName"
         @unlock="emit('unlock:selection')"
       >
-        <ScrollShadow class="panel-scroll-shadow" :class="{ 'has-footer': isDeletable }">
+        <ScrollShadow class="panel-scroll-shadow" :class="{ 'has-footer': isDeletable }" stable-scrollbar>
           <Transition :name="panelTransitionName" mode="out-in">
             <div
               :key="transitionsOpen ? 'transitions' : 'properties'"
@@ -339,6 +339,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
                 @delete="emit('delete-clip')"
               />
               <ClipPropertiesPanel
+                :canvas-size="canvas"
                 v-else-if="
                   showsSelectedProperties && (activeTab === 'clip' || normalizedSelectedClip?.kind === 'image')
                 "
@@ -346,6 +347,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
                 @update:playback-rate="emit('update:clip-rate', $event)"
                 @update:is-mirrored="emit('update:clip-is-mirrored', $event)"
                 @update:is-mirrored-y="emit('update:clip-is-mirrored-y', $event)"
+                @update:rotation="emit('update:clip-rotation', $event)"
                 @update:corner-radius="emit('update:clip-corner-radius', $event)"
                 @corner-radius-interaction="emit('corner-radius-interaction', $event)"
                 @update:shadow="emit('update:clip-shadow', $event)"
@@ -431,6 +433,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               <ZoomPanel
                 v-else-if="activeTab === 'zoom'"
                 :selected-zoom="selectedZoom"
+                :canvas-size="canvas"
                 :can-generate="canGenerateZooms"
                 :has-automatic-zooms="hasAutomaticZooms"
                 :motion-blur="zoomMotionBlur"
@@ -439,7 +442,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
                 @update:motion-blur="emit('update:zoomMotionBlur', $event)"
                 @update:auto-follow="emit('update:zoomAutoFollow', $event)"
                 @delete="emit('delete:zoom')"
-                @generate="emit('generate:zooms')"
+                @generate="emit('generate:zooms', $event)"
               />
               <SettingsPanel v-else-if="activeTab === 'settings'" />
               <CaptionPanel

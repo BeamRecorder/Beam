@@ -8,6 +8,7 @@ let time = 0;
 let reduced = false;
 let nextId = 0;
 const frames = new Map<number, FrameRequestCallback>();
+let panelStyles: HTMLStyleElement;
 const step = (elapsed: number) => {
   time += elapsed;
   const pending = [...frames.values()];
@@ -15,6 +16,9 @@ const step = (elapsed: number) => {
   pending.forEach((frame) => frame(time));
 };
 beforeEach(() => {
+  panelStyles = document.createElement('style');
+  panelStyles.textContent = '.panel {height:100px;width:300px;box-sizing:border-box}';
+  document.head.append(panelStyles);
   time = nextId = 0;
   reduced = false;
   frames.clear();
@@ -41,6 +45,7 @@ beforeEach(() => {
   });
 });
 afterEach(() => {
+  panelStyles.remove();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
@@ -52,7 +57,7 @@ const create = () =>
         return h(RafRevealTransition, {}, () => (this.open ? h('div', { class: 'panel' }, 'Advanced controls') : null));
       },
     }),
-    { global: { stubs: { transition: false } } },
+    { attachTo: document.body, global: { stubs: { transition: false } } },
   );
 
 it('runs the Vue enter and leave hooks without scaling content or leaving styles behind', async () => {
@@ -107,7 +112,7 @@ it('animates a mounted horizontal inspector and reverses closing without remount
         );
       },
     }),
-    { global: { stubs: { transition: false } } },
+    { attachTo: document.body, global: { stubs: { transition: false } } },
   );
   const panel = wrapper.get('.panel').element as HTMLElement;
   const input = wrapper.get('input').element as HTMLInputElement;

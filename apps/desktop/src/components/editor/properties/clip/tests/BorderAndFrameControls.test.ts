@@ -41,6 +41,21 @@ const global = {
 };
 
 describe('BorderAndFrameControls', () => {
+  it('keeps enabled border and frame controls collapsed until requested without changing their values', async () => {
+    const wrapper = mount(BorderAndFrameControls, {
+      props: { borderEnabled: true, frame: 'safari', frameTitle: 'Saved title' },
+      global,
+    });
+    for (const trigger of wrapper.findAll('.accordion-trigger')) {
+      expect(trigger.attributes('aria-expanded')).toBe('false');
+      await trigger.trigger('click');
+      expect(trigger.attributes('aria-expanded')).toBe('true');
+      await trigger.trigger('click');
+    }
+    expect(wrapper.get<HTMLInputElement>('#frame-title').element.value).toBe('Saved title');
+    expect(wrapper.emitted('update')).toBeUndefined();
+    wrapper.unmount();
+  });
   it('renders the translated border color label', () => {
     const wrapper = mount(BorderAndFrameControls, {
       props: { borderEnabled: true },

@@ -139,6 +139,11 @@ export function drawCaptionText(
   const transform = layout.transform;
   const centerX = options.viewport.x + (transform.x + transform.width / 2) * options.viewport.width;
   const centerY = options.viewport.y + (transform.y + transform.height / 2) * options.viewport.height;
+  if (options.clip.rotation) {
+    ctx.translate(centerX, centerY);
+    ctx.rotate((options.clip.rotation * Math.PI) / 180);
+    ctx.translate(-centerX, -centerY);
+  }
   const fontSize = layout.fontSize * scale;
   const lineHeight = layout.lineHeight * scale;
   const maxTextWidth = layout.maxTextWidth * scale;

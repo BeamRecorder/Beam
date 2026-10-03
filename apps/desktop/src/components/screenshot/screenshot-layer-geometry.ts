@@ -51,6 +51,7 @@ export function screenshotLayerTransform(
 }
 export function screenshotLayerRotation(state: ScreenshotState, id: string) {
   return (
+    screenshotImage(state, id)?.rotation ??
     state.shapes.find((shape) => shape.id === id)?.rotation ??
     state.cursors?.find((cursor) => cursor.id === id)?.rotation ??
     0

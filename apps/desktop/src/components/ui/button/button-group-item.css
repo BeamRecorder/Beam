@@ -15,6 +15,13 @@
   border-radius: var(--button-group-inner-radius);
 }
 
+/* Expanded groups give every item the full slot, including icon-only choices. */
+.btn-group.full-width.size-xs .btn.btn-icon-only,
+.btn-group.column-layout.size-xs .btn.btn-icon-only {
+  width: 100%;
+  height: calc(var(--control-height) - 4px);
+}
+
 .btn-group.size-xs .btn-icon {
   width: 13px;
   height: 13px;

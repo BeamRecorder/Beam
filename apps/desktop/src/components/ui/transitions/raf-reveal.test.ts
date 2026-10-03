@@ -26,7 +26,7 @@ const harness = (gap = 12, axis: RevealAxis = 'vertical') => {
   parent.style.cssText = `display:grid;row-gap:${gap}px;column-gap:${gap}px`;
   const node = document.createElement('div');
   node.style.cssText =
-    'height:100px;width:300px;padding:8px 4px;border:1px solid;opacity:1;margin:2px 0;overflow:visible';
+    'height:100px;width:300px;padding:8px 4px;border:1px solid;opacity:1;margin:2px 0;overflow:visible;box-sizing:border-box';
   parent.append(node);
   document.body.append(parent);
   vi.spyOn(node, 'getBoundingClientRect').mockImplementation(
@@ -137,7 +137,7 @@ it('reverses horizontal changes at their current width and honors reduced motion
   const width = h.node.style.width;
   const done = vi.fn();
   h.reveal.enter(h.node, done);
-  expect(h.node.style.width).toBe(width);
+  expect(Number.parseFloat(h.node.style.width)).toBeCloseTo(Number.parseFloat(width));
   expect(h.frames.size).toBe(1);
   h.step(50);
   expect(Number.parseFloat(h.node.style.width)).toBeGreaterThan(Number.parseFloat(width));
@@ -253,4 +253,36 @@ it('continues a forced Vue v-if replacement at the interrupted height and releas
   h.step(200);
   expect(done).toHaveBeenCalledOnce();
   expect(replacement.style.height).toBe('120px');
+});
+it.each(['vertical', 'horizontal'] as const)(
+  'uses layout %s dimensions even when screen rectangles are scaled',
+  (axis) => {
+    const h = harness(0, axis),
+      key = axis === 'vertical' ? 'height' : 'width',
+      expected = axis === 'vertical' ? 100 : 300;
+    vi.mocked(h.node.getBoundingClientRect).mockReturnValue({ width: 375, height: 125 } as DOMRect);
+    h.reveal.enter(h.node, vi.fn());
+    h.step(100);
+    expect(Number.parseFloat(h.node.style[key])).toBe(expected / 2);
+    h.step(100);
+    h.reveal.leave(h.node, vi.fn());
+    h.step(100);
+    expect(Number.parseFloat(h.node.style[key])).toBe(expected / 2);
+    h.reveal.dispose();
+  },
+);
+it.each(['vertical', 'horizontal'] as const)('includes padding and borders once for content-box %s panels', (axis) => {
+  const h = harness(0, axis),
+    key = axis === 'vertical' ? 'height' : 'width',
+    expected = axis === 'vertical' ? 118 : 310;
+  h.node.style.boxSizing = 'content-box';
+  h.reveal.enter(h.node, vi.fn());
+  h.step(100);
+  expect(Number.parseFloat(h.node.style[key])).toBe(expected / 2);
+  h.step(100);
+  expect(h.node.style.boxSizing).toBe('content-box');
+  h.reveal.leave(h.node, vi.fn());
+  h.step(100);
+  expect(Number.parseFloat(h.node.style[key])).toBe(expected / 2);
+  h.reveal.dispose();
 });

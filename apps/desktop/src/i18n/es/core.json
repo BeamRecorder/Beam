@@ -312,6 +312,24 @@
     "transcriptSaved": "Transcripción exportada.",
     "transcriptExportFailed": "No se pudo exportar la transcripción."
   },
+  "TransformControls": {
+    "position": "Posición",
+    "alignment": "Alineación",
+    "left": "Izquierda",
+    "center": "Centro",
+    "right": "Derecha",
+    "top": "Arriba",
+    "middle": "Medio",
+    "bottom": "Abajo",
+    "width": "Anchura",
+    "height": "Altura",
+    "lockAspectRatio": "Bloquear proporciones",
+    "orientation": "Orientación",
+    "rotateLeft": "Girar 90° a la izquierda",
+    "rotateRight": "Girar 90° a la derecha",
+    "unit": "Unidad",
+    "rotation": "Rotación"
+  },
   "ClipPropertiesPanel": {
     "noClipSelected": "No hay ningún clip seleccionado",
     "noClipSelectedDesc": "Haz clic en un clip de la línea de tiempo para consultar y editar sus propiedades.",
@@ -334,6 +352,7 @@
     "solid": "Sólida",
     "adaptive": "Adaptativa",
     "adaptiveShadowDescription": "Muestrea los colores del clip para crear un brillo ambiental sutil.",
+    "shadowStyleDescription": "Sólida: usa el color elegido para la sombra.\nAdaptativa: usa los colores del clip para crear un resplandor ambiental.",
     "direction": "Dirección",
     "mirroring": "Espejo",
     "mirrorHorizontally": "Reflejar horizontalmente",
@@ -1083,7 +1102,8 @@
     "image": "Imagen",
     "watermark": "Marca de agua",
     "previewLoading": "Generando vista previa…",
-    "previewError": "Vista previa no disponible"
+    "previewError": "Vista previa no disponible",
+    "zoom": "Zoom"
   },
   "Highlight": {
     "title": "Resaltado",
@@ -1117,5 +1137,25 @@
     "description": "Graba el cursor del sistema directamente en el vídeo. Los zooms automáticos siguen siguiéndolo. El cursor de Beam empieza desactivado; puedes superponerlo en los ajustes de Cursor. El cursor grabado no se puede eliminar.",
     "customCursor": "Cursor personalizado",
     "overlayDescription": "Superpone el cursor de Beam al vídeo. Desactívalo si la grabación ya incluye el cursor del sistema."
+  },
+  "Gradient": {
+    "type": "Tipo",
+    "linear": "Lineal",
+    "radial": "Radial",
+    "angle": "Ángulo",
+    "rotate": "Girar 90°",
+    "stops": "Puntos de color",
+    "presets": "Preajustes",
+    "reverse": "Invertir degradado",
+    "addStop": "Añadir punto de color",
+    "removeStop": "Eliminar punto de color",
+    "color": "Color",
+    "position": "Posición",
+    "opacity": "Opacidad",
+    "stop": "Punto de color {number}",
+    "stopColor": "Color del punto {number}",
+    "stopPosition": "Posición del punto {number}",
+    "stopOpacity": "Opacidad del punto {number}",
+    "addAtPosition": "Haz clic para añadir un punto de color"
   }
 }

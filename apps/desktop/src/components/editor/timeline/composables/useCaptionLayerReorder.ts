@@ -1,6 +1,7 @@
 import { ref, type ComputedRef, type Ref } from 'vue';
 import type { TextCaptionLayer } from '@beam/engine/commands/caption-layer-layout';
 import { createAnimationFrameCoalescer } from './animation-frame-coalescer';
+import { createTimelineRowReorder } from './timeline-row-reorder';
 import type { TimelineTracksEmits } from './timeline-tracks-types';
 
 interface CaptionLayerReorderOptions {
@@ -17,11 +18,11 @@ export function useCaptionLayerReorder(options: CaptionLayerReorderOptions) {
     if (options.layers.value.find((layer) => layer.id === layerId)?.clips.some((clip) => clip.locked)) return;
     const startX = event.clientX ?? 0;
     const startY = event.clientY ?? 0;
+    const reorder = createTimelineRowReorder(options.layers.value);
     const initialOrder = options.layers.value.map((layer) => layer.id);
     const initialIndex = initialOrder.indexOf(layerId);
     if (initialIndex < 0) return;
     let isDragging = false;
-    let lastSwapTime = 0;
 
     const applyMove = (next: PointerEvent) => {
       if (!isDragging) {
@@ -35,24 +36,10 @@ export function useCaptionLayerReorder(options: CaptionLayerReorderOptions) {
       const row = document.elementFromPoint?.(next.clientX, next.clientY)?.closest<HTMLElement>('.text-caption-layer');
       const targetId = row?.dataset.captionId;
       if (!targetId || targetId === layerId) return;
-      const order = [...(options.orderPreview.value ?? initialOrder)];
-      const from = order.indexOf(layerId);
-      const to = order.indexOf(targetId);
-      if (from < 0 || to < 0 || from === to || Date.now() - lastSwapTime < 150) return;
-
-      const crossed = new Set(order.slice(Math.min(from, to), Math.max(from, to) + 1));
-      if (options.layers.value.some((track) => crossed.has(track.id) && track.clips.some((clip) => clip.locked)))
-        return;
-
-      const rect = row.getBoundingClientRect?.();
-      if (rect && rect.height > 0) {
-        const relativeY = (next.clientY - rect.top) / rect.height;
-        if ((from < to && relativeY < 0.35) || (from > to && relativeY > 0.65)) return;
-      }
-      order.splice(from, 1);
-      order.splice(to, 0, layerId);
-      options.orderPreview.value = order;
-      lastSwapTime = Date.now();
+      const rect = row.getBoundingClientRect();
+      const relativeY = rect.height > 0 ? (next.clientY - rect.top) / rect.height : undefined;
+      const order = reorder(options.orderPreview.value ?? initialOrder, layerId, targetId, relativeY);
+      if (order) options.orderPreview.value = order;
     };
     const moveUpdates = createAnimationFrameCoalescer(applyMove);
     const move = moveUpdates.schedule;

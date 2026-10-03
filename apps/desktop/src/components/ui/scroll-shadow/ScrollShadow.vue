@@ -11,6 +11,7 @@ const props = withDefaults(
     size?: number | string;
     viewportClass?: any;
     hideScrollbar?: boolean;
+    stableScrollbar?: boolean;
     isEnabled?: boolean;
   }>(),
   {
@@ -20,6 +21,7 @@ const props = withDefaults(
     size: '24px',
     viewportClass: '',
     hideScrollbar: false,
+    stableScrollbar: false,
     isEnabled: true,
   },
 );
@@ -99,6 +101,7 @@ defineExpose({
         viewportClass,
         {
           'hide-scrollbar': hideScrollbar,
+          'reserve-scrollbar': stableScrollbar && !hideScrollbar && orientation !== 'horizontal',
           'is-horizontal': orientation === 'horizontal',
           'is-both': orientation === 'both',
         },
@@ -135,6 +138,10 @@ defineExpose({
 .scroll-shadow-viewport.hide-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+.scroll-shadow-viewport.reserve-scrollbar {
+  scrollbar-gutter: stable;
 }
 
 .scroll-shadow-viewport.is-horizontal {

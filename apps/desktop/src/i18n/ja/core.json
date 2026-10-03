@@ -312,6 +312,24 @@
     "transcriptSaved": "文字起こしをエクスポートしました。",
     "transcriptExportFailed": "文字起こしをエクスポートできませんでした。"
   },
+  "TransformControls": {
+    "position": "位置",
+    "alignment": "整列",
+    "left": "左",
+    "center": "中央",
+    "right": "右",
+    "top": "上",
+    "middle": "中央",
+    "bottom": "下",
+    "width": "幅",
+    "height": "高さ",
+    "lockAspectRatio": "縦横比を固定",
+    "orientation": "向き",
+    "rotateLeft": "左に90°回転",
+    "rotateRight": "右に90°回転",
+    "unit": "単位",
+    "rotation": "回転"
+  },
   "ClipPropertiesPanel": {
     "noClipSelected": "クリップが選択されていません",
     "noClipSelectedDesc": "タイムラインのクリップをクリックしてプロパティを確認・編集してください。",
@@ -334,6 +352,7 @@
     "solid": "単色",
     "adaptive": "適応",
     "adaptiveShadowDescription": "クリップの色を使って控えめな環境光を作ります。",
+    "shadowStyleDescription": "単色：選択した色で影を描画します。\n適応：クリップの色を使って周囲に光を作ります。",
     "direction": "方向",
     "mirroring": "ミラーリング",
     "mirrorHorizontally": "水平方向に反転",
@@ -1083,7 +1102,8 @@
     "image": "画像",
     "watermark": "ウォーターマーク",
     "previewLoading": "プレビューを生成中…",
-    "previewError": "プレビューを表示できません"
+    "previewError": "プレビューを表示できません",
+    "zoom": "ズーム"
   },
   "Highlight": {
     "title": "ハイライト",
@@ -1117,5 +1137,25 @@
     "description": "システムカーソルを動画に直接記録します。自動ズームは引き続きカーソルを追従します。Beamカーソルは最初は無効ですが、カーソル設定で重ねて表示できます。記録されたカーソルは削除できません。",
     "customCursor": "カスタムカーソル",
     "overlayDescription": "動画にBeamカーソルを重ねて表示します。録画にシステムカーソルが含まれている場合は無効にしてください。"
+  },
+  "Gradient": {
+    "type": "種類",
+    "linear": "線形",
+    "radial": "放射状",
+    "angle": "角度",
+    "rotate": "90°回転",
+    "stops": "カラーストップ",
+    "presets": "プリセット",
+    "reverse": "グラデーションを反転",
+    "addStop": "カラーストップを追加",
+    "removeStop": "カラーストップを削除",
+    "color": "色",
+    "position": "位置",
+    "opacity": "不透明度",
+    "stop": "カラーストップ {number}",
+    "stopColor": "ストップ {number} の色",
+    "stopPosition": "ストップ {number} の位置",
+    "stopOpacity": "ストップ {number} の不透明度",
+    "addAtPosition": "クリックしてカラーストップを追加"
   }
 }

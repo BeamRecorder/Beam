@@ -4,14 +4,24 @@ import type { ReorderGroupProps } from './reorder-types';
 
 const props = withDefaults(defineProps<ReorderGroupProps>(), {
   itemAttribute: 'data-track-id',
+  animateMembership: true,
 });
+const emit = defineEmits<{ moving: [active: boolean] }>();
 const root = ref<HTMLElement | null>(null);
 let previousOrder = [...props.order];
 let positions: Map<string, DOMRect> | null = null;
 const animations = new Map<HTMLElement, Animation>();
+let moving = false;
+const reportMoving = () => {
+  const active = animations.size > 0;
+  if (active === moving) return;
+  moving = active;
+  emit('moving', active);
+};
 const cancelAnimations = () => {
   for (const animation of animations.values()) animation.cancel();
   animations.clear();
+  reportMoving();
 };
 const children = () =>
   Array.from(root.value?.children ?? []).filter((child): child is HTMLElement => child instanceof HTMLElement);
@@ -19,9 +29,11 @@ const children = () =>
 onBeforeUpdate(() => {
   if (props.order.length === previousOrder.length && props.order.every((id, index) => id === previousOrder[index]))
     return;
+  const previousIds = new Set(previousOrder);
+  const sameMembers = props.order.length === previousOrder.length && props.order.every((id) => previousIds.has(id));
   previousOrder = [...props.order];
   positions = null;
-  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if ((props.animateMembership || sameMembers) && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     positions = new Map(
       children().map((child) => [child.getAttribute(props.itemAttribute) ?? '', child.getBoundingClientRect()]),
     );
@@ -52,9 +64,13 @@ onUpdated(() => {
     );
     animations.set(child, animation);
     animation.onfinish = () => {
-      if (animations.get(child) === animation) animations.delete(child);
+      if (animations.get(child) === animation) {
+        animations.delete(child);
+        reportMoving();
+      }
     };
   }
+  reportMoving();
 });
 onBeforeUnmount(cancelAnimations);
 </script>

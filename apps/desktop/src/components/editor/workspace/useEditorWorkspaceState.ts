@@ -129,6 +129,7 @@ export function useEditorWorkspaceState(props: EditorWorkspaceProps, emit: Edito
     updateSelectedWebcamReactToZoom,
     updateSelectedMirrored,
     updateSelectedMirroredY,
+    updateSelectedRotation,
     updateSelectedRate,
     updateSelectedVolume,
     updateSelectedEnabled,
@@ -168,7 +169,7 @@ export function useEditorWorkspaceState(props: EditorWorkspaceProps, emit: Edito
   });
   const timelineCanvasPreview = ref<OutputCanvasSettings | null>(null);
   const captionCompositionPreview = ref<typeof composition.value | null>(null);
-  const shapeCompositionPreview = ref<typeof composition.value | null>(null);
+  const layerCompositionPreview = ref<typeof composition.value | null>(null);
   const cursorPreview = ref<CursorSelection | null>(null);
   const transformHandlesMuted = ref(false);
   const isInlineCaptionEditing = ref(false);
@@ -180,7 +181,7 @@ export function useEditorWorkspaceState(props: EditorWorkspaceProps, emit: Edito
     () =>
       cropCompositionPreview.value ??
       captionCompositionPreview.value ??
-      shapeCompositionPreview.value ??
+      layerCompositionPreview.value ??
       timelineCompositionPreview.value ??
       composition.value,
   );
@@ -199,7 +200,7 @@ export function useEditorWorkspaceState(props: EditorWorkspaceProps, emit: Edito
     if (selectedClipIds.value.length !== 1) return null;
     const clip =
       cropCompositionPreview.value?.clips.find((item) => item.id === selectedClipId.value) ??
-      shapeCompositionPreview.value?.clips.find((item) => item.id === selectedClipId.value) ??
+      layerCompositionPreview.value?.clips.find((item) => item.id === selectedClipId.value) ??
       selectedClip.value;
     return clip &&
       (isVisualClip(clip) || isColorClip(clip) || isShapeClip(clip) || isBlurClip(clip) || isCaptionClip(clip))
@@ -293,6 +294,7 @@ export function useEditorWorkspaceState(props: EditorWorkspaceProps, emit: Edito
     updateSelectedWebcamReactToZoom,
     updateSelectedMirrored,
     updateSelectedMirroredY,
+    updateSelectedRotation,
     updateSelectedRate,
     updateSelectedVolume,
     updateSelectedEnabled,
@@ -319,7 +321,7 @@ export function useEditorWorkspaceState(props: EditorWorkspaceProps, emit: Edito
     timelinePreviewDuration,
     timelineCanvasPreview,
     captionCompositionPreview,
-    shapeCompositionPreview,
+    layerCompositionPreview,
     cursorPreview,
     transformHandlesMuted,
     isInlineCaptionEditing,

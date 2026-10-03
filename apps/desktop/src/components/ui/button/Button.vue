@@ -258,11 +258,11 @@ const handleClick = (event: MouseEvent) => {
 
 .btn-danger {
   background-color: var(--color-error);
-  color: white;
+  color: var(--text-on-error);
 }
 
 .btn-danger:hover:not(:disabled) {
-  background-color: #dc2626;
+  background-color: var(--color-error);
   transform: translateY(-1px);
 }
 .btn-secondary:active:not(:disabled) {
@@ -383,6 +383,11 @@ const handleClick = (event: MouseEvent) => {
   padding: 0;
   gap: 0;
   justify-content: center;
+}
+
+.btn-icon-only.btn-sm {
+  width: 2.25rem;
+  height: 2.25rem;
 }
 
 .btn-icon-only.btn-xs {

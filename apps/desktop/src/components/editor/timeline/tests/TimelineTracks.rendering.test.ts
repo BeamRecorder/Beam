@@ -50,12 +50,14 @@ describe('TimelineTracks', () => {
     const progressBar = mounted!.get('.ruler-export-progress-bar');
     const limit = mounted!.get('.timeline-export-limit');
     expect(progressBar.attributes('style')).toContain('width: 10%;');
-    expect(limit.attributes('style')).toContain('left: 40%;');
+    expect((limit.element as HTMLElement).style.transform).toBe('translate3d(400px, 0, 0)');
     expect(limit.get('.timeline-export-limit-badge').text()).toBe('4.00s');
 
     await mounted!.setProps({ zoomLevel: 3_200 });
     expect(mounted!.get('.ruler-export-progress-bar').attributes('style')).toContain('width: 10%;');
-    expect(mounted!.get('.timeline-export-limit').attributes('style')).toContain('left: 40%;');
+    expect((mounted!.get('.timeline-export-limit').element as HTMLElement).style.transform).toBe(
+      'translate3d(400px, 0, 0)',
+    );
     expect(mounted!.get('.timeline-export-limit-badge').text()).toBe('4.00s');
 
     await mounted!.setProps({ exportProgress: null });
@@ -745,9 +747,9 @@ describe('TimelineTracks', () => {
     if (!draftHeader || draftTrackIndex < 0) throw new Error('Expected the live voice-over row and header.');
 
     expect(draftHeader.get('.track-title').text()).toBeTruthy();
-    expect(draftRow.get('.voiceover-draft-clip').attributes('style')).toEqual(
-      expect.stringContaining('left: 35%; width: 15%;'),
-    );
+    const draft = draftRow.get('.voiceover-draft-clip').element as HTMLElement;
+    expect(draft.style.width).toBe('15%');
+    expect(draft.style.transform).toBe('translate3d(350px, 0, 0)');
     expect(draftRow.find('.waveform-canvas').exists()).toBe(true);
     expect(draftHeader.find('.track-info.static-info').exists()).toBe(true);
     expect(mounted!.emitted('select:track')).toBeUndefined();

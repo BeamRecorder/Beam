@@ -312,6 +312,24 @@
     "transcriptSaved": "Transkript exportiert.",
     "transcriptExportFailed": "Das Transkript konnte nicht exportiert werden."
   },
+  "TransformControls": {
+    "position": "Position",
+    "alignment": "Ausrichtung",
+    "left": "Links",
+    "center": "Zentriert",
+    "right": "Rechts",
+    "top": "Oben",
+    "middle": "Mitte",
+    "bottom": "Unten",
+    "width": "Breite",
+    "height": "Höhe",
+    "lockAspectRatio": "Seitenverhältnis sperren",
+    "orientation": "Ausrichtung",
+    "rotateLeft": "90° nach links drehen",
+    "rotateRight": "90° nach rechts drehen",
+    "unit": "Einheit",
+    "rotation": "Drehung"
+  },
   "ClipPropertiesPanel": {
     "noClipSelected": "Kein Clip ausgewählt",
     "noClipSelectedDesc": "Klicke auf einen Clip in der Zeitleiste, um seine Eigenschaften anzuzeigen und zu bearbeiten.",
@@ -334,6 +352,7 @@
     "solid": "Einfarbig",
     "adaptive": "Adaptiv",
     "adaptiveShadowDescription": "Nimmt die Clipfarben auf, um ein dezentes Umgebungsleuchten zu erzeugen.",
+    "shadowStyleDescription": "Einfarbig: Verwendet die gewählte Farbe für den Schatten.\nAdaptiv: Nutzt die Farben des Clips für einen Umgebungsleuchteffekt.",
     "direction": "Richtung",
     "mirroring": "Spiegelung",
     "mirrorHorizontally": "Horizontal spiegeln",
@@ -1083,7 +1102,8 @@
     "image": "Bild",
     "watermark": "Wasserzeichen",
     "previewLoading": "Vorschau wird erstellt…",
-    "previewError": "Vorschau nicht verfügbar"
+    "previewError": "Vorschau nicht verfügbar",
+    "zoom": "Zoom"
   },
   "Highlight": {
     "title": "Hervorhebung",
@@ -1117,5 +1137,25 @@
     "description": "Zeichnet den Systemcursor direkt im Video auf. Automatische Zooms folgen ihm weiterhin. Der Beam-Cursor ist anfangs deaktiviert und kann in den Cursor-Einstellungen eingeblendet werden. Der aufgezeichnete Cursor lässt sich nicht entfernen.",
     "customCursor": "Eigener Cursor",
     "overlayDescription": "Blendet den Beam-Cursor im Video ein. Deaktiviere ihn, wenn die Aufnahme bereits den Systemcursor enthält."
+  },
+  "Gradient": {
+    "type": "Typ",
+    "linear": "Linear",
+    "radial": "Radial",
+    "angle": "Winkel",
+    "rotate": "Um 90° drehen",
+    "stops": "Farbstopps",
+    "presets": "Vorlagen",
+    "reverse": "Verlauf umkehren",
+    "addStop": "Farbstopp hinzufügen",
+    "removeStop": "Farbstopp entfernen",
+    "color": "Farbe",
+    "position": "Position",
+    "opacity": "Deckkraft",
+    "stop": "Farbstopp {number}",
+    "stopColor": "Farbe von Stopp {number}",
+    "stopPosition": "Position von Stopp {number}",
+    "stopOpacity": "Deckkraft von Stopp {number}",
+    "addAtPosition": "Klicken, um einen Farbstopp hinzuzufügen"
   }
 }

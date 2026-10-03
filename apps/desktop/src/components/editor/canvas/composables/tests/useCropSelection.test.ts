@@ -477,3 +477,12 @@ describe('useCropSelection', () => {
     expect(onUpdateCrop).toHaveBeenCalledTimes(1);
   });
 });
+
+it('rotates crop handles and projects movement into local image axes', () => {
+  const mounted = mountCropSelection({ rotation: 90, crop: { x: 0.2, y: 0.2, width: 0.5, height: 0.5 } });
+  expect(mounted.state.cropContainerStyle.value.transform).toContain('rotate(90deg)');
+  mounted.state.beginCropDrag(pointer(mounted.target), 'move');
+  mounted.state.moveCropDrag(pointer(mounted.target, { clientX: 0, clientY: 10 }));
+  expect(mounted.state.cropDraft.value?.x).toBeCloseTo(0.3);
+  expect(mounted.state.cropDraft.value?.y).toBeCloseTo(0.2);
+});

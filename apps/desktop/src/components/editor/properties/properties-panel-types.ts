@@ -41,6 +41,7 @@ export interface SelectedClipProperties {
   clipTransform?: NormalizedTransform;
   isMirrored?: boolean;
   isMirroredY?: boolean;
+  rotation?: number;
   cameraLayoutPreset?: CameraLayoutPreset;
   cameraFramingPreset?: CameraFramingPreset;
   cameraSplitRatio?: number;

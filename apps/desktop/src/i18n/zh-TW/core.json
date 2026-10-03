@@ -312,6 +312,24 @@
     "transcriptSaved": "逐字稿已匯出。",
     "transcriptExportFailed": "無法匯出逐字稿。"
   },
+  "TransformControls": {
+    "position": "位置",
+    "alignment": "對齊",
+    "left": "左",
+    "center": "水平置中",
+    "right": "右",
+    "top": "上",
+    "middle": "垂直置中",
+    "bottom": "下",
+    "width": "寬度",
+    "height": "高度",
+    "lockAspectRatio": "鎖定長寬比",
+    "orientation": "方向",
+    "rotateLeft": "向左旋轉90°",
+    "rotateRight": "向右旋轉90°",
+    "unit": "單位",
+    "rotation": "旋轉"
+  },
   "ClipPropertiesPanel": {
     "noClipSelected": "未選取片段",
     "noClipSelectedDesc": "點擊時間軸上的片段以檢視和編輯其屬性。",
@@ -334,6 +352,7 @@
     "solid": "實心",
     "adaptive": "自適應",
     "adaptiveShadowDescription": "擷取片段色彩，產生細微的環境光暈。",
+    "shadowStyleDescription": "實心：使用所選顏色繪製陰影。\n自適應：使用片段的顏色建立環境光暈。",
     "direction": "方向",
     "mirroring": "鏡像",
     "mirrorHorizontally": "水平翻轉",
@@ -1083,7 +1102,8 @@
     "image": "圖片",
     "watermark": "浮水印",
     "previewLoading": "正在產生預覽…",
-    "previewError": "無法顯示預覽"
+    "previewError": "無法顯示預覽",
+    "zoom": "縮放"
   },
   "Highlight": {
     "title": "區域突顯",
@@ -1117,5 +1137,25 @@
     "description": "將系統游標直接錄入影片。自動縮放仍會跟隨游標。Beam 游標預設關閉；可在游標設定中疊加顯示。已錄入的游標無法移除。",
     "customCursor": "自訂游標",
     "overlayDescription": "在影片上疊加 Beam 游標。如果錄製內容已包含系統游標，請關閉此選項。"
+  },
+  "Gradient": {
+    "type": "類型",
+    "linear": "線性",
+    "radial": "放射狀",
+    "angle": "角度",
+    "rotate": "旋轉 90°",
+    "stops": "顏色節點",
+    "presets": "預設",
+    "reverse": "反轉漸層",
+    "addStop": "新增顏色節點",
+    "removeStop": "刪除顏色節點",
+    "color": "顏色",
+    "position": "位置",
+    "opacity": "不透明度",
+    "stop": "顏色節點 {number}",
+    "stopColor": "節點 {number} 的顏色",
+    "stopPosition": "節點 {number} 的位置",
+    "stopOpacity": "節點 {number} 的不透明度",
+    "addAtPosition": "點擊新增顏色節點"
   }
 }

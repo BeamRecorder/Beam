@@ -74,6 +74,7 @@ export function useVideoEditor(options: {
     activeTab,
     editorDefaults,
     composition: compositionState.composition,
+    canvas: outputCanvas,
   });
   const editorState = useProjectEditorState({
     project,
@@ -270,6 +271,12 @@ export function useVideoEditor(options: {
     { immediate: true, flush: 'post' },
   );
   const addEditorElement = async (kind: Exclude<TimelineElementKind, 'voiceover'>) => {
+    if (kind === 'zoom') {
+      if (player.isPlaying.value) await player.setPlaying(false);
+      compositionState.selectClips([]);
+      zoomState.addZoomAtTime(player.currentTime.value * 1000);
+      return;
+    }
     if (kind === 'shape' || kind === 'arrow' || kind === 'text' || kind === 'drawing') {
       if (player.isPlaying.value) await player.setPlaying(false);
       compositionState.selectClips([]);

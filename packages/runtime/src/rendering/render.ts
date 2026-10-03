@@ -30,6 +30,7 @@ import type { CompositionCameraEvaluator } from '@beam/engine/zoom/composition-c
 import { renderBackground } from '@beam/runtime/composition/background/render-background';
 import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '@beam/engine/composition/scene-layers';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
+import { renderGlassHighlights, disposeGlassHighlights } from './glass-highlight-render';
 import { applyBlurEffect } from '@beam/runtime/composition/effects/blur-effect';
 import { drawBeamWatermark, WATERMARK_LOGO_KEY } from '@beam/runtime/rendering/watermark-render';
 import { drawWithClipTransition } from '@beam/runtime/composition/transitions/render-transition';
@@ -140,6 +141,7 @@ function drawWebcamClip(
     scale,
     {
       ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+      rotation: clip.rotation,
       reactToZoom: webcamReactsToZoom(clip),
     },
     clip.transform,
@@ -403,6 +405,7 @@ function renderCompositionFrameContent(
         drawCaption(ctx, clip, timeMs, snapshot, keyboardCursorPosition),
       );
   });
+  renderGlassHighlights(ctx, snapshot, timeMs);
   drawBeamWatermark(
     ctx,
     snapshot.canvas,
@@ -412,6 +415,7 @@ function renderCompositionFrameContent(
 }
 
 export function disposeCompositionRenderer() {
+  disposeGlassHighlights();
   disposePerspectiveRenderer();
   gpuShapes.dispose();
   disposeExportMotionBlurSurface();

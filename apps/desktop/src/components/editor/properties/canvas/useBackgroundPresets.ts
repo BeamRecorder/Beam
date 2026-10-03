@@ -8,7 +8,7 @@ import {
 } from '../../composables/backgroundCatalog';
 import { type BackgroundValue, type GradientBackground } from '@beam/engine/shared/background-types';
 
-type PresetOverride = string | GradientBackground;
+import type { PresetOverride } from './background-preset-types';
 
 const plainClone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const randomColor = () =>
@@ -69,6 +69,10 @@ export function useBackgroundPresets(select: (value: BackgroundValue) => void) {
   };
   const save = async (colors: string[], gradients: GradientBackground[], nextOverrides = overrides.value) => {
     const extras = plainClone(savedExtras.value);
+    // These keys are managed atomically by the catalogue IPC, independently of
+    // a picker draft or another window's preference snapshot.
+    delete extras.hiddenBackgroundIds;
+    delete extras.backgroundCatalogHistory;
     sync(
       await capture.updatePreferences({
         backgroundPresets: plainClone({ colors, gradients }),
@@ -116,15 +120,23 @@ export function useBackgroundPresets(select: (value: BackgroundValue) => void) {
       ...overrides.value,
       ...(builtIn && editing ? { [editing]: normalized } : {}),
     });
-    select(builtIn ? { ...builtIn, color: normalized } : customColor(normalized));
+    const selected = builtIn ? { ...builtIn, color: normalized } : customColor(normalized);
+    if (
+      Array.isArray(savedExtras.value.hiddenBackgroundIds) &&
+      savedExtras.value.hiddenBackgroundIds.includes(selected.id)
+    )
+      sync(await capture.updateBackgroundCatalog({ operation: 'restore', id: selected.id }));
+    select(selected);
     close();
   };
   const saveGradient = async (gradient: GradientBackground) => {
     const editing = editingPresetId.value;
     const builtIn = BACKGROUND_GRADIENTS.find((item) => item.id === editing);
     const index = editing?.startsWith('gradient:custom:') ? Number(editing.slice(16)) : -1;
-    const gradients =
-      Number.isInteger(index) && index >= 0
+    const existingIndex = Number.isInteger(index) && index >= 0 && index < savedGradients.value.length;
+    const gradients = builtIn
+      ? savedGradients.value.map(cloneGradient)
+      : existingIndex
         ? savedGradients.value.map((item, position) =>
             position === index ? cloneGradient(gradient) : cloneGradient(item),
           )
@@ -133,7 +145,14 @@ export function useBackgroundPresets(select: (value: BackgroundValue) => void) {
       ...overrides.value,
       ...(builtIn && editing ? { [editing]: cloneGradient(gradient) } : {}),
     });
-    select(builtIn ? { ...builtIn, gradient: cloneGradient(gradient) } : customGradient(gradient));
+    select(
+      builtIn
+        ? { ...builtIn, gradient: cloneGradient(gradient) }
+        : {
+            ...customGradient(cloneGradient(gradient)),
+            id: `gradient:custom:${existingIndex ? index : gradients.length - 1}`,
+          },
+    );
     close();
   };
 

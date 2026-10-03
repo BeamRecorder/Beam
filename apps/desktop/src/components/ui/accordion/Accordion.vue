@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ChevronDown } from '@lucide/vue';
-import { useMotion, type Variant } from '@vueuse/motion';
-import { nextTick, ref, useId, watch } from 'vue';
+import { useId } from 'vue';
+import RafRevealTransition from '../transitions/RafRevealTransition.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -9,12 +9,14 @@ const props = withDefaults(
     title?: string;
     disabled?: boolean;
     bordered?: boolean;
+    appearance?: 'default' | 'inspector';
   }>(),
   {
     title: '',
     disabled: false,
     modelValue: false,
     bordered: true,
+    appearance: 'default',
   },
 );
 
@@ -23,38 +25,6 @@ const emit = defineEmits<{
 }>();
 
 const contentId = `accordion-content-${useId()}`;
-const displayContent = ref(props.modelValue);
-const contentRef = ref<HTMLElement | null>(null);
-const motion = useMotion(contentRef, {}, { lifeCycleHooks: false, syncVariants: false });
-let transition = 0;
-
-const hidden = { opacity: 0, y: -6 } satisfies Variant;
-const visible = {
-  opacity: 1,
-  y: 0,
-  transition: { type: 'tween', duration: 160, ease: [0.22, 1, 0.36, 1] },
-} satisfies Variant;
-
-watch(
-  () => props.modelValue,
-  async (open) => {
-    const request = ++transition;
-    if (open) {
-      displayContent.value = true;
-      await nextTick();
-      if (request !== transition || !contentRef.value) return;
-      motion.set(hidden);
-      await motion.apply(visible);
-      return;
-    }
-    if (!displayContent.value || !contentRef.value) return;
-    await motion.apply({
-      ...hidden,
-      transition: { type: 'tween', duration: 110 },
-    });
-    if (request === transition) displayContent.value = false;
-  },
-);
 </script>
 
 <template>
@@ -64,24 +34,30 @@ watch(
       'is-open': modelValue,
       'is-disabled': disabled,
       'is-borderless': !bordered,
+      'accordion-inspector': appearance === 'inspector',
     }"
   >
-    <button
-      type="button"
-      class="accordion-trigger"
-      :aria-expanded="modelValue"
-      :aria-controls="contentId"
-      :disabled="disabled"
-      @click="emit('update:modelValue', !modelValue)"
-    >
-      <span class="accordion-title"
-        ><slot name="title">{{ title }}</slot></span
+    <div class="accordion-heading">
+      <button
+        type="button"
+        class="accordion-trigger"
+        :aria-expanded="modelValue"
+        :aria-controls="contentId"
+        :disabled="disabled"
+        @click="!disabled && emit('update:modelValue', !modelValue)"
       >
-      <ChevronDown class="accordion-chevron" aria-hidden="true" />
-    </button>
-    <div v-show="displayContent" :id="contentId" ref="contentRef" class="accordion-content">
-      <slot />
+        <span class="accordion-title"
+          ><slot name="title">{{ title }}</slot></span
+        >
+        <ChevronDown class="accordion-chevron" aria-hidden="true" />
+      </button>
+      <div v-if="$slots.actions" class="accordion-actions"><slot name="actions" /></div>
     </div>
+    <RafRevealTransition>
+      <div v-show="modelValue" :id="contentId" class="accordion-content" :inert="!modelValue || undefined">
+        <slot />
+      </div>
+    </RafRevealTransition>
   </section>
 </template>
 
@@ -117,13 +93,25 @@ watch(
   text-align: left;
 }
 
+.accordion-heading {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.accordion-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding-right: 8px;
+}
+
 .accordion-trigger:hover:not(:disabled) {
   background: var(--color-bg-surface-hover);
   color: var(--text-primary);
 }
 
 .accordion-trigger:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--text-secondary);
   outline-offset: 2px;
 }
 
@@ -154,5 +142,45 @@ watch(
 
 .accordion-content {
   padding: 10px;
+}
+
+.accordion-inspector {
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+.accordion-inspector .accordion-trigger {
+  min-height: 44px;
+  padding: 12px 0;
+  border-radius: var(--radius-sm);
+}
+.accordion-inspector .accordion-trigger:hover:not(:disabled) {
+  background: transparent;
+}
+.accordion-inspector .accordion-chevron {
+  width: 13px;
+  height: 13px;
+  color: var(--text-muted);
+}
+.accordion-inspector .accordion-trigger:hover:not(:disabled) .accordion-chevron {
+  color: var(--text-secondary);
+}
+.accordion-inspector .accordion-title {
+  color: var(--text-primary);
+  font-weight: var(--weight-title);
+}
+.accordion-inspector .accordion-content {
+  padding: 4px 0 14px;
+}
+.accordion-inspector .accordion-actions {
+  padding-right: 0;
+  padding-left: 6px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .accordion-chevron {
+    transition: none;
+  }
 }
 </style>

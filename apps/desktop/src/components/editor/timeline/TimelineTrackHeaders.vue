@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ReorderGroup from '~/ui/transitions/ReorderGroup.vue';
+import TimelineReorderGroup from './TimelineReorderGroup.vue';
 import {
   Camera,
   ArrowRight,
@@ -126,7 +126,7 @@ const allZoomsSelected = () =>
 </script>
 
 <template>
-  <ReorderGroup :order="visibleVisualTracks.map((track) => track.id)" class="visual-tracks-group">
+  <TimelineReorderGroup :order="visibleVisualTracks.map((track) => track.id)" class="visual-tracks-group">
     <div
       v-for="track in visibleVisualTracks"
       :key="track.id"
@@ -160,7 +160,7 @@ const allZoomsSelected = () =>
         <span class="track-title">{{ labelForVisual(track.representative) }}</span>
       </button>
     </div>
-  </ReorderGroup>
+  </TimelineReorderGroup>
   <div
     v-if="isVisible('zoom')"
     data-timeline-row-id="zoom"
@@ -185,7 +185,7 @@ const allZoomsSelected = () =>
       <Keyboard class="track-icon" /><span class="track-title">{{ t('keyboardCaptions') }}</span>
     </button>
   </div>
-  <ReorderGroup
+  <TimelineReorderGroup
     v-if="textCaptionLayers.length"
     :order="visibleTextLayers.map((layer) => layer.id)"
     item-attribute="data-caption-id"
@@ -223,7 +223,7 @@ const allZoomsSelected = () =>
         <Type class="track-icon" /><span class="track-title">{{ labelForCaption(layer.representative) }}</span>
       </button>
     </div>
-  </ReorderGroup>
+  </TimelineReorderGroup>
   <div
     v-else-if="isVisible('caption:empty')"
     class="sidebar-track-item annotation-track text-caption-track"

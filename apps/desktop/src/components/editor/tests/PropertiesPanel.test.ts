@@ -358,7 +358,7 @@ const layoutClip = (kind: 'screen' | 'video' | 'image' | 'webcam', overrides: Re
 
 const mountRealClipPropertiesPanel = (selectedClip: ReturnType<typeof layoutClip>) =>
   mount(RealClipPropertiesPanel, {
-    props: { selectedClip },
+    props: { selectedClip, canvasSize: { width: 1920, height: 1080 } },
     global: {
       stubs: {
         BigSlider: true,
@@ -983,7 +983,7 @@ describe('PropertiesPanel', () => {
 
   it('renders a ScrollShadow container for panel content', () => {
     const wrapper = mount(PropertiesPanel, { props: baseProps, global });
-    expect(wrapper.findComponent({ name: 'ScrollShadow' }).exists()).toBe(true);
+    expect(wrapper.findComponent({ name: 'ScrollShadow' }).props('stableScrollbar')).toBe(true);
     expect(wrapper.find('.panel-body').exists()).toBe(true);
   });
 

@@ -10,6 +10,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 
 const props = withDefaults(
   defineProps<{
+    hideHeading?: boolean;
     layout: CameraLayoutPreset;
     framing: CameraFramingPreset;
     hasLinkedScreen: boolean;
@@ -18,7 +19,7 @@ const props = withDefaults(
     reactToZoom?: boolean;
     supportsSplitLayouts?: boolean;
   }>(),
-  { supportsSplitLayouts: true },
+  { supportsSplitLayouts: true, reactToZoom: true },
 );
 
 const emit = defineEmits<{
@@ -71,8 +72,8 @@ const splitUnavailable = computed(() => props.supportsSplitLayouts !== false && 
 </script>
 
 <template>
-  <section class="camera-layout-panel" aria-labelledby="camera-layout-title">
-    <div class="section-header">
+  <section class="camera-layout-panel" :aria-label="t(supportsSplitLayouts === false ? 'visualTitle' : 'title')">
+    <div v-if="!hideHeading" class="section-header">
       <span id="camera-layout-title" class="section-title">{{
         t(supportsSplitLayouts === false ? 'visualTitle' : 'title')
       }}</span>
@@ -140,7 +141,7 @@ const splitUnavailable = computed(() => props.supportsSplitLayouts !== false && 
       <span class="section-title">{{ t('framing') }}</span>
       <span v-if="framing === 'custom'" class="custom-status">{{ t('custom') }}</span>
     </div>
-    <ButtonGroup full>
+    <ButtonGroup full :columns="4" variant="neutral" size="xs">
       <Button
         v-for="item in framings"
         :key="item.id"

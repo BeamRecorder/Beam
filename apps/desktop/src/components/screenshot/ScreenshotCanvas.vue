@@ -7,16 +7,19 @@ import {
 import { createCanvasFrameScheduler } from '../editor/canvas/composables/canvas-frame-scheduler';
 import { createScreenshotDragRenderer } from './screenshot-drag-renderer';
 import { screenshotImage } from '@beam/engine/screenshot/screenshot-images';
+import { anchorScreenshotResize } from './screenshot-media-resize';
 import { withScreenshotTransform } from './screenshot-transform';
 import ElementCanvasOverlay from '../editor/elements/ElementCanvasOverlay.vue';
 import { useElementEditor } from '../editor/elements/useElementEditor';
 import { useTranslate } from '~/i18n/useTranslate';
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
-import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
-import type { CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
-import type { NormalizedTransform, NormalizedCrop } from '@beam/engine/shared/composition-types';
+import type { ScreenshotCanvasProps, ScreenshotCanvasEmits } from './screenshot-canvas-contract-types';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
+import StillZoomSelection from './StillZoomSelection.vue';
+import type { NormalizedTransform } from '@beam/engine/shared/composition-types';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
 import ScreenshotCropSelection from './ScreenshotCropSelection.vue';
+import { rotateMediaVector } from '@beam/engine/layout/media-rotation';
 import { screenshotImageFraming, resizeScreenshotImage } from '@beam/engine/screenshot/screenshot-geometry';
 import CanvasLayerSelection from '../editor/canvas/CanvasLayerSelection.vue';
 import { loadScreenshotAssets } from './screenshot-render';
@@ -24,7 +27,7 @@ import { drawScreenshot } from '@beam/runtime/screenshot/screenshot-render';
 import CanvasRecenterButton from '../editor/canvas/CanvasRecenterButton.vue';
 import EditorLoadingFrame from '../editor/layout/EditorLoadingFrame.vue';
 import { moveScreenshotLayer } from './screenshot-state';
-import type { ScreenshotDrag, ScreenshotSelectionMode, ScreenshotTranslation } from './screenshot-types';
+import type { ScreenshotDrag, ScreenshotTranslation } from './screenshot-types';
 import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot-types';
 import {
   movableScreenshotSelection,
@@ -35,7 +38,7 @@ import { screenshotLayerAt, screenshotLayerTransform, screenshotLayerRotation } 
 import { screenshotLayers } from '@beam/engine/screenshot/screenshot-layers';
 import { createScreenshotImageLoader } from '@beam/runtime/screenshot/screenshot-image-loader';
 import CanvasMarqueeSurface from '../editor/canvas/CanvasMarqueeSurface.vue';
-import type { CanvasMarqueeSelection, CanvasMarqueeTarget } from '../editor/canvas/canvas-marquee-types';
+import type { CanvasMarqueeTarget } from '../editor/canvas/canvas-marquee-types';
 import ScreenshotAlignmentGuides from './ScreenshotAlignmentGuides.vue';
 import { screenshotPreviewSize } from './screenshot-preview-resolution';
 import { useScreenshotViewport } from './useScreenshotViewport';
@@ -43,33 +46,15 @@ import { useScreenshotViewport } from './useScreenshotViewport';
 const { t } = useTranslate('ScreenshotEditor');
 const { t: canvasText } = useTranslate('CanvasPanel');
 const elements = useElementEditor();
-const props = withDefaults(
-  defineProps<{
-    source: string;
-    state: ScreenshotState;
-    selectedId: string | null;
-    selectedIds: string[];
-    disabled?: boolean;
-    cropping?: boolean;
-    cursorPacks?: CursorPackDescriptor[];
-    cursorPacksReady?: boolean;
-    handlesMuted?: boolean;
-    zoomDisabled?: boolean;
-  }>(),
-  { zoomDisabled: undefined },
-);
-const emit = defineEmits<{
-  select: [id: string | null, mode?: ScreenshotSelectionMode];
-  selectMany: [selection: CanvasMarqueeSelection];
-  transform: [value: NormalizedTransform];
-  translate: [value: ScreenshotTranslation];
-  error: [message: string];
-  ready: [];
-  crop: [value: NormalizedCrop];
-  cropDone: [];
-  cropRequest: [id: string];
-  rotate: [value: number];
-}>();
+const props = withDefaults(defineProps<ScreenshotCanvasProps>(), { zoomDisabled: undefined });
+const emit = defineEmits<ScreenshotCanvasEmits>();
+const zoomDraft = shallowRef<ZoomElement | null>(null);
+const selectedZoom = computed(() => {
+  const zoom = props.state.zooms?.find((zoom) => zoom.id === props.selectedId);
+  return zoom
+    ? { ...zoom, locked: props.state.composition?.find((layer) => layer.id === zoom.id)?.locked ?? false }
+    : null;
+});
 const stage = ref<HTMLElement | null>(null);
 const viewport = useScreenshotViewport(
   stage,
@@ -122,12 +107,12 @@ const selections = computed(() => {
   return props.selectedIds.flatMap((id) => {
     const layer = layers.get(id);
     const t = screenshotLayerTransform(previewState.value, assets.value, id);
-    return layer?.visible && !layer.locked && t && id !== elements?.editing.value?.id
+    return layer?.kind !== 'zoom' && layer?.visible && !layer.locked && t && id !== elements?.editing.value?.id
       ? [
           {
             id,
             rotation: screenshotLayerRotation(props.state, id),
-            rotatable: ['shape', 'arrow', 'text', 'drawing', 'cursor'].includes(layer.kind),
+            rotatable: ['image', 'shape', 'arrow', 'text', 'drawing', 'cursor'].includes(layer.kind),
             style: {
               left: '0',
               top: '0',
@@ -168,7 +153,14 @@ const paint = () => {
   if (canvas.value.width !== width) canvas.value.width = width;
   if (canvas.value.height !== height) canvas.value.height = height;
   try {
-    const state = previewState.value;
+    const state = zoomDraft.value
+      ? {
+          ...previewState.value,
+          zooms: previewState.value.zooms?.map((zoom) =>
+            zoom.id === zoomDraft.value!.id ? { ...zoom, ...zoomDraft.value!, mode: 'manual' as const } : zoom,
+          ),
+        }
+      : previewState.value;
     const preview = props.cropping
       ? {
           ...state,
@@ -353,8 +345,14 @@ const start = (event: PointerEvent, corner?: ResizeCorner, selectionId?: string)
 };
 const move = (event: PointerEvent) => {
   if (!drag || !canvas.value) return;
-  const dx = (event.clientX - drag.x) / drag.width,
-    dy = (event.clientY - drag.y) / drag.height;
+  const delta = { x: (event.clientX - drag.x) / drag.width, y: (event.clientY - drag.y) / drag.height };
+  const rotation = drag.corner && drag.targetId ? screenshotLayerRotation(props.state, drag.targetId) : 0;
+  const local = rotateMediaVector(
+    { x: delta.x * props.state.canvas.width, y: delta.y * props.state.canvas.height },
+    -rotation,
+  );
+  const dx = local.x / props.state.canvas.width,
+    dy = local.y / props.state.canvas.height;
   if (drag.selection) {
     if (!translationDraft.value && !pendingTranslation && Math.hypot(dx * drag.width, dy * drag.height) < 4) return;
     const snapped = snapScreenshotTranslation(props.state, drag.selection, { x: dx, y: dy }, assets.value);
@@ -369,6 +367,8 @@ const move = (event: PointerEvent) => {
     proportionalFrame && drag.corner
       ? resizeScreenshotImage(drag.initial, proportionalFrame, dx, dy, drag.corner)
       : moveScreenshotLayer(drag.initial, dx, dy, drag.corner);
+  if (rotation && pendingTransform && drag.targetId)
+    pendingTransform = anchorScreenshotResize(props.state, drag.targetId, pendingTransform, assets.value);
   frames.requestRender();
 };
 const endDrag = () => {
@@ -426,11 +426,29 @@ onBeforeUnmount(() => {
         :style="stageStyle"
         :targets="() => marqueeTargets"
         :selection="selectedIds"
-        :disabled="disabled || cropping || Boolean(elements?.editing.value) || elements?.drawingMode.value"
+        :disabled="
+          disabled ||
+          cropping ||
+          Boolean(selectedZoom) ||
+          Boolean(elements?.editing.value) ||
+          elements?.drawingMode.value
+        "
         @select="emit('selectMany', $event)"
         @dblclick="editLayer"
       >
         <canvas ref="canvas" :aria-label="t('preview')" @pointerdown="select" />
+        <StillZoomSelection
+          v-if="selectedZoom && !disabled && !cropping"
+          :zoom="selectedZoom"
+          :canvas-size="state.canvas"
+          :size="stageSize"
+          :panning="viewport.viewport.isPanning.value || viewport.viewport.isSpacePressed.value"
+          @update="emit('updateZoom', $event)"
+          @preview="
+            zoomDraft = $event;
+            frames.requestRender();
+          "
+        />
         <ScreenshotAlignmentGuides :guides="dragging && translationDraft ? activeGuideLines : []" />
         <CanvasLayerSelection
           v-for="selection in cropping ? [] : selections"

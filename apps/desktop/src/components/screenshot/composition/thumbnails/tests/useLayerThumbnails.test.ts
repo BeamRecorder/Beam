@@ -124,13 +124,15 @@ const flushMicrotasks = async () => {
 };
 
 const scopes: Array<ReturnType<typeof effectScope>> = [];
-const mountClient = (initial: ThumbnailSpec[], initialEnabled?: boolean) => {
+const mountClient = (initial: ThumbnailSpec[], initialEnabled?: boolean, allIds?: () => ReadonlySet<string>) => {
   const specs = ref(initial);
   const enabled = ref(initialEnabled ?? true);
   const scope = effectScope();
   scopes.push(scope);
   const enabledGetter = initialEnabled === undefined ? undefined : () => enabled.value;
-  const thumbnails = scope.run(() => useLayerThumbnails(() => specs.value, enabledGetter))!;
+  const thumbnails = scope.run(() =>
+    useLayerThumbnails(() => specs.value, enabledGetter, allIds ? { allIds } : undefined),
+  )!;
   return { specs, enabled, thumbnails, scope };
 };
 
@@ -163,6 +165,49 @@ afterEach(() => {
 });
 
 describe('useLayerThumbnails', () => {
+  it('retains offscreen ready thumbnails and cancels invisible requests before drawing', async () => {
+    const allIds = ref(new Set(['a', 'b']));
+    const client = mountClient([makeSpec('a', 'a')], true, () => allIds.value);
+    await vi.advanceTimersByTimeAsync(8);
+    const worker = workerAt();
+    worker.reply(makeReply('a', client.thumbnails.value.a!.revision));
+    const url = client.thumbnails.value.a!.url;
+    client.specs.value = [makeSpec('b', 'b')];
+    await nextTick();
+    expect(worker.postMessage).toHaveBeenLastCalledWith({ type: 'retain', ids: ['b'] });
+    client.specs.value = [makeSpec('a', 'a')];
+    await nextTick();
+    await vi.advanceTimersByTimeAsync(8);
+    expect(client.thumbnails.value.a).toMatchObject({ status: 'ready', url });
+    expect(client.thumbnails.value.b).toBeUndefined();
+    expect(worker.postMessage.mock.calls.filter(([message]) => !('type' in message))).toHaveLength(1);
+    allIds.value = new Set();
+    client.specs.value = [];
+    await nextTick();
+    expect(client.thumbnails.value.a).toBeUndefined();
+    expect(revokeObjectURL).toHaveBeenCalledWith(url);
+  });
+  it('ignores stale offscreen worker replies and limits the cache to 128 visited layers', async () => {
+    const ids = new Set(Array.from({ length: 130 }, (_, i) => String(i)));
+    const client = mountClient([makeSpec('0', '0')], true, () => ids);
+    await vi.advanceTimersByTimeAsync(8);
+    const worker = workerAt();
+    const old = client.thumbnails.value['0']!.revision;
+    client.specs.value = [makeSpec('1', '1')];
+    await nextTick();
+    worker.reply(makeReply('0', old));
+    expect(createObjectURL).not.toHaveBeenCalled();
+    for (let i = 1; i < 130; i++) {
+      client.specs.value = [makeSpec(String(i), String(i))];
+      await nextTick();
+      await vi.advanceTimersByTimeAsync(8);
+      worker.reply(makeReply(String(i), client.thumbnails.value[String(i)]!.revision));
+    }
+    expect(Object.keys(client.thumbnails.value)).toHaveLength(128);
+    expect(client.thumbnails.value['1']).toBeUndefined();
+    expect(client.thumbnails.value['129']!.status).toBe('ready');
+    expect(revokeObjectURL).toHaveBeenCalledOnce();
+  });
   it('debounces requests for 80ms and sends only the latest pending version of a layer', async () => {
     const client = mountClient([makeSpec('shape-1', 'first', { sourceUrl: 'asset://first' })]);
 

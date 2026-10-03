@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { frameContentRect, frameMediaRect } from '@beam/engine/shared/frame-layout';
+import { frameContentRect, frameMediaRect, frameOuterRect } from '@beam/engine/shared/frame-layout';
 import { resolveSafariFrameGeometry, resolveWindowsFrameGeometry } from '@beam/engine/layout/frame-geometry';
 import {
   applyClipShadow,
@@ -60,6 +60,7 @@ const context = () => {
     arc: vi.fn(),
     translate: vi.fn(),
     scale: vi.fn(),
+    rotate: vi.fn(),
     strokeRect: vi.fn(),
     moveTo: vi.fn(),
     lineTo: vi.fn(),
@@ -744,5 +745,71 @@ describe('decorated media rendering', () => {
     expect(ctx.shadowBlur).toBe(8);
     expect(ctx.shadowOffsetX).toBe(4);
     expect(ctx.shadowOffsetY).toBe(4);
+  });
+});
+
+describe('media orientation', () => {
+  it.each([90, -90, 180, 270])('rotates the decorated layer by %s degrees before painting its source', (rotation) => {
+    const ctx = context();
+    drawDecoratedMedia(ctx, {
+      source: {} as CanvasImageSource,
+      rect: { x: 10, y: 20, width: 80, height: 40 },
+      appearance: appearance(),
+      title: 'Picture',
+      rotation,
+      mirrored: true,
+      mirroredY: true,
+    });
+    expect(ctx.rotate).toHaveBeenCalledWith((rotation * Math.PI) / 180);
+    expect(ctx.translate.mock.calls.slice(0, 2)).toEqual([
+      [50, 40],
+      [-50, -40],
+    ]);
+    expect(ctx.scale).toHaveBeenCalledWith(-1, -1);
+    expect(ctx.rotate.mock.invocationCallOrder[0]).toBeLessThan(ctx.drawImage.mock.invocationCallOrder[0]!);
+    expect(ctx.save.mock.calls).toHaveLength(ctx.restore.mock.calls.length);
+  });
+  it('uses the framed outer center and rotates its chrome and border together', () => {
+    const ctx = context();
+    const rect = { x: 10, y: 20, width: 80, height: 40 };
+    const style = appearance({ frame: 'safari', borderEnabled: true });
+    const outer = frameOuterRect(rect, style.frame);
+    drawDecoratedMedia(ctx, {
+      source: {} as CanvasImageSource,
+      rect,
+      appearance: style,
+      title: 'Picture',
+      rotation: 90,
+    });
+    expect(ctx.translate.mock.calls[0]).toEqual([outer.x + outer.width / 2, outer.y + outer.height / 2]);
+    expect(ctx.stroke).toHaveBeenCalled();
+    expect(ctx.save.mock.calls).toHaveLength(ctx.restore.mock.calls.length);
+  });
+  it.each([undefined, 0, 360, -360])('keeps the original unrotated render path for %s', (rotation) => {
+    const ctx = context();
+    drawDecoratedMedia(ctx, {
+      source: {} as CanvasImageSource,
+      rect: { x: 0, y: 0, width: 80, height: 40 },
+      title: '',
+      appearance: appearance(),
+      rotation,
+    });
+    expect(ctx.rotate).not.toHaveBeenCalled();
+    expect(ctx.drawImage).toHaveBeenCalledTimes(1);
+  });
+  it('restores the layer state if applying its orientation fails', () => {
+    const ctx = context();
+    ctx.rotate.mockImplementationOnce(() => {
+      throw new Error('context lost');
+    });
+    expect(() =>
+      drawDecoratedMedia(ctx, {
+        source: {} as CanvasImageSource,
+        rect: { x: 0, y: 0, width: 10, height: 10 },
+        title: '',
+        rotation: 90,
+      }),
+    ).toThrow('context lost');
+    expect(ctx.restore).toHaveBeenCalledTimes(1);
   });
 });

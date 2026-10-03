@@ -16,7 +16,7 @@ export interface ScreenshotDrag {
   targetId?: string;
 }
 
-export type ScreenshotPanel = 'canvas' | 'image' | 'shapes' | 'cursor' | 'settings';
+export type ScreenshotPanel = 'canvas' | 'image' | 'shapes' | 'cursor' | 'settings' | 'zoom';
 export type ScreenshotSelectionMode = 'replace' | 'toggle';
 export interface ScreenshotTranslation {
   x: number;

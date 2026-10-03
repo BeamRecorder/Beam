@@ -13,7 +13,8 @@
   --text-muted: #86868c;
   --text-light: #ffffff;
   --color-success: #248a3d;
-  --color-error: #d70015;
+  --color-error: #c44950;
+  --text-on-error: #ffffff;
   --radius-xs: 3px;
   --font-size-xs: 10px;
   --font-size-sm: 11px;
@@ -34,5 +35,6 @@
   --text-secondary: #a1a1a6;
   --text-muted: #6e6e73;
   --color-success: #30d158;
-  --color-error: #ff453a;
+  --color-error: #c64d48;
+  --text-on-error: #ffffff;
 }

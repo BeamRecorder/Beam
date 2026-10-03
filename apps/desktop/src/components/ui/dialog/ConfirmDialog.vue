@@ -27,8 +27,11 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <Dialog :is-open="isOpen" :title="title" size="sm" :close-on-overlay-click="!busy" @close="emit('close')">
+  <Dialog :is-open="isOpen" :title="title" size="sm" :close-on-overlay-click="!busy" @close="!busy && emit('close')">
+    <slot name="preview" />
     <p class="confirm-description">{{ description }}</p>
+
+    <slot />
 
     <template #footer>
       <div class="dialog-actions">

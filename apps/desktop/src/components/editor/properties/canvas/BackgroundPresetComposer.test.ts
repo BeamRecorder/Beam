@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import BackgroundPresetComposer from './BackgroundPresetComposer.vue';
 
 const gradient = {
@@ -14,7 +14,7 @@ const Button = {
   template: '<button @click="$emit(\'click\')"><slot /></button>',
 };
 const ColorPicker = {
-  props: ['modelValue'],
+  props: ['modelValue', 'inline', 'hideHeader', 'type'],
   template: '<button class="color" @click="$emit(\'update:modelValue\', \'#123456\')" />',
 };
 const Gradient = {
@@ -83,4 +83,52 @@ describe('BackgroundPresetComposer', () => {
       angle: 77,
     });
   });
+});
+
+it('shows the same full standard picker surface as gradient stops, without an extra frame or header', () => {
+  const wrapper = mountComposer('color');
+  expect(wrapper.classes()).toContain('composer--color');
+  expect(wrapper.findComponent(ColorPicker).props()).toMatchObject({
+    inline: '',
+    hideHeader: '',
+    type: 'standard',
+  });
+  wrapper.unmount();
+});
+it('batches live edits once per frame and cancels pending work on disposal', async () => {
+  let nextId = 0;
+  const frames = new Map<number, FrameRequestCallback>();
+  const request = vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((callback) => {
+    frames.set(++nextId, callback);
+    return nextId;
+  });
+  const cancel = vi.spyOn(globalThis, 'cancelAnimationFrame').mockImplementation((id) => {
+    frames.delete(id);
+  });
+  const wrapper = mountComposer('color');
+  try {
+    await wrapper.get('.color').trigger('click');
+    await wrapper.setProps({ color: '#fedcba' });
+    expect(frames.size).toBe(1);
+    frames.values().next().value!(0);
+    frames.clear();
+    expect(wrapper.emitted('update-color')?.at(-1)).toEqual(['#fedcba']);
+    await wrapper.setProps({ kind: 'gradient' });
+    await wrapper.get('.gradient').trigger('click');
+    await wrapper.setProps({ gradient: { ...gradient, angle: 51 } });
+    expect(frames.size).toBe(1);
+    frames.values().next().value!(0);
+    frames.clear();
+    expect(wrapper.emitted('update-gradient')?.at(-1)?.[0]).toMatchObject({ angle: 51 });
+    await wrapper.get('.gradient').trigger('click');
+    await wrapper.setProps({ kind: 'color' });
+    await wrapper.get('.color').trigger('click');
+    expect(frames.size).toBe(2);
+    wrapper.unmount();
+    expect(frames.size).toBe(0);
+  } finally {
+    wrapper.unmount();
+    request.mockRestore();
+    cancel.mockRestore();
+  }
 });

@@ -6,9 +6,12 @@ import type { ColorGradient } from '@beam/engine/shared/color-fill-types';
 const palette: TimelineCanvasPalette = {
   background: '#000',
   text: '#fff',
+  itemText: '#def',
   border: '#777',
   selected: '#0ff',
   video: '#00f',
+  image: '#a50',
+  shape: '#a30',
   annotation: '#f0f',
   blur: '#f00',
   highlight: '#fa0',
@@ -20,8 +23,6 @@ const palette: TimelineCanvasPalette = {
   radius: 6,
   tint: 0.36,
   disabledOpacity: 0.3,
-  effectInset: 6,
-  effectHeight: 36,
 };
 const rect = { x: 0, y: 2, width: 100, height: 28 };
 const image = (width = 100, height = 100) => ({ naturalWidth: width, naturalHeight: height }) as HTMLImageElement;

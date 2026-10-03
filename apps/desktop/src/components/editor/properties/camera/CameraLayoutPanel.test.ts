@@ -11,12 +11,20 @@ const baseProps = {
 };
 
 describe('CameraLayoutPanel', () => {
+  it('can share a disclosure heading while retaining its own accessible section name', () => {
+    const wrapper = mount(CameraLayoutPanel, { props: { ...baseProps, hideHeading: true } });
+    expect(wrapper.find('#camera-layout-title').exists()).toBe(false);
+    expect(wrapper.get('section').attributes('aria-label')).toBe('Camera Layout');
+    expect(wrapper.findAll('button.layout-button')).toHaveLength(10);
+    wrapper.unmount();
+  });
   it('renders the ten camera layouts and seven framing presets', () => {
     const wrapper = mount(CameraLayoutPanel, { props: baseProps });
 
     expect(wrapper.findAll('button.layout-button')).toHaveLength(10);
     expect(wrapper.findAll('.layout-preview')).toHaveLength(10);
     expect(wrapper.findAll('.btn-group button')).toHaveLength(7);
+    expect(wrapper.get('.btn-group').classes()).toContain('column-layout');
   });
 
   it('disables every split layout and explains why when no screen is linked', async () => {
@@ -40,6 +48,8 @@ describe('CameraLayoutPanel', () => {
     });
     const layoutButtons = wrapper.findAll('button.layout-button');
     const framingButtons = wrapper.findAll('.btn-group button');
+    await wrapper.get('button[role="switch"]').trigger('click');
+    expect(wrapper.emitted('update:reactToZoom')).toEqual([[false]]);
 
     await layoutButtons[0]!.trigger('click');
     await layoutButtons[9]!.trigger('click');

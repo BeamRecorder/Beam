@@ -9,6 +9,7 @@ import { initializeScreenshotComposition } from './screenshot-layers';
 import { validateCanvas, validateBackground } from '../document/presentation-validation';
 import { LAYER_BLEND_MODES } from '../shared/layer-compositing';
 import { assertJsonValue } from '../document/json-value';
+import { validateStillZoom } from '../zoom/zoom-schema.js';
 
 export function createStillDocument(id: string, source: string, width: number, height: number): StillDocument {
   const state: ScreenshotState = {
@@ -114,6 +115,13 @@ export function validateScreenshotState(state: ScreenshotState) {
     })),
   });
   const ids = new Set(clips.map((clip) => clip.id));
+  if (state.zooms !== undefined && !Array.isArray(state.zooms)) throw new TypeError('Invalid still zoom layers.');
+  for (const zoom of state.zooms ?? []) {
+    validateStillZoom(zoom);
+    if (ids.has(zoom.id) || ['__background__', '__watermark__'].includes(zoom.id))
+      throw new TypeError('Duplicate still zoom id.');
+    ids.add(zoom.id);
+  }
   for (const cursor of state.cursors ?? []) {
     if (
       typeof cursor.id !== 'string' ||

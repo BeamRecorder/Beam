@@ -10,4 +10,5 @@ export type TimelineElementKind =
   | 'text'
   | 'drawing'
   | 'blur'
+  | 'zoom'
   | 'highlight';

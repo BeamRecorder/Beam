@@ -6,7 +6,12 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Video and Screenshot share manual 2D, 3D and GPU glass zooms, with circular or freehand lenses, pixel-based focus/diameter controls and grouped appearance settings in all 15 languages. New lenses use a larger 60% diameter and restrained glass defaults.
+- Automatic glass lenses group nearby recorded clicks, adapt magnification and diameter to the clicked region, respect reserved timeline intervals and remain manually editable. Focus follows trimmed, retimed, mirrored, rotated and framed recordings and scene transforms.
+- Background library items can be removed with an exact-item preview and destructive confirmation in all 15 languages. Imported images/videos have a Delete action above Show more; colors/gradients pair editing with a compact trash button. The last deletion supports persisted undo/redo while existing projects and source files remain intact.
+- Media orientation controls provide horizontal/vertical mirrors and 90° turns; media and text share precise angle editing and a canvas rotation handle in preview and export, translated into all 15 languages.
 - Recorder General settings can launch Beam at login, enabled by default for installed applications, with Linux XDG autostart and Windows/macOS login items. The setting is translated into all 15 languages.
+- Video and image clip inspectors have compact numeric placement controls, a nine-point alignment pad and a proportional size lock, with positioning calculated by the shared engine and controls translated into all 15 languages. Numeric typing commits on blur or Enter; mouse drags update immediately.
 - CLI video exports can select WebCodecs or experimental Linux FFmpeg VA-API encoding, using the same Beam renderer and GPU transport as desktop. Exports return JSON diagnostics and protect destinations on failure or cancellation; the FFmpeg backend requires an X11/XWayland display and compatible native dependencies.
 - The Chromium CLI host can select software video decoding independently of GPU rendering to work around failing accelerated decoders.
 - Linux desktop has an opt-in experimental FFmpeg GPU exporter for MP4 and WebM, with direct DMA-BUF transfer to VA-API and audio support. Its export option is translated into all 15 languages; native build and driver requirements are documented.
@@ -39,6 +44,17 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Screenshot Composition requests thumbnails only for visible rows plus a scroll margin, cancels queued offscreen work and keeps a bounded cache for immediate reuse when returning to a layer.
+- Timeline scrolling retains unchanged virtual row and item lists, reducing repeated updates of clip controls, icons and shared handles.
+- Timeline clips share modern type colors, rose zooms and gold captions in both themes, with equal track heights, full-height blocks and matching rounded trim handles revealed on track hover or keyboard focus.
+- Gradients use a compact preview, draggable keyboard-accessible stops, precise position/opacity fields and shared color controls, with all labels translated into 15 languages. Color and gradient stops share the full picker surface without a redundant header or extra frame.
+- Background images, videos, colors and gradients share the same active border and focus treatment, with the selection ring kept visible above media pixels.
+- Destructive actions use a calmer shared theme red with white text/icons; small trash buttons match the height of their adjacent labelled actions.
+- Shadow direction uses the shared neutral preset controls, and a help tooltip explains solid and adaptive shadows in all 15 languages.
+- Popovers and nested menus use a stronger shared 12 px backdrop blur in both themes; numeric unit menus show clear hover feedback and compact affix spacing.
+- Clip dimensions default to canvas pixels with a clickable px/% unit selector that preserves document placement, and the compact rotation row shows at most two decimal places with the same controls for text and media.
+- The placement reset appears inside the expanded clip controls, keeping inspector section headings consistent.
+- Clip properties are grouped into animated accordions with neutral surfaces and consistent spacing; property search opens the matching section. Video and screenshot inspectors are slightly wider and reserve scrollbar space to prevent field shifts when sections expand.
 - The experimental Linux FFmpeg GPU export choice is now saved across restarts, shared with General preferences, and applied to Quick Snip video exports.
 - Experimental Linux GPU exports overlap rendering and native transfer through a bounded GPU texture queue, use one frame IPC and wait one presentation boundary per frame. Reports separate capture, transfer and queue waits; the dedicated CLI process also removes display frame-rate throttling while retaining every authored frame. Local before/after results are documented; gains vary by container and workload.
 - Experimental Linux GPU exports send DMA-BUF descriptors through an asynchronous native bridge instead of launching a process for every frame. Reports separate Chromium presentation waits, GPU import/conversion and native encoding timings.
@@ -108,6 +124,12 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Audio waveforms now redraw during timeline zoom without waiting for thumbnail work or an obsolete crossfade; rapid changes keep only the latest pending draw.
+- AI caption icons reserve their own space before the timeline label, including locked captions.
+- Add and canvas insertion submenus now blur the content behind them instead of showing it sharply through a transparent background; context menus share the same frosted surface in both themes.
+- Adding a timeline element no longer temporarily clears other clips. Canvas artwork follows animated row reordering, and successive drag swaps use spatial hysteresis instead of a 150 ms pause; clip, caption and row positions use `translate3d`.
+- Custom radius and shadow choices fill their entire preset slot, matching the click target and highlighted area of adjacent choices.
+- Inspector accordions keep their final height during animation at every interface scale, and compact input labels and units stay centered with intact rounded borders.
 - The loading mascot’s brief triangle phase now visibly looks around and blinks, in both the startup shell and application loading views, while respecting reduced motion.
 
 - Recorder Settings and Projects open above an always-on-top recorder and follow its topmost preference. Their prepared native windows reopen without reloading the renderer; hidden feature content is unmounted and app shutdown releases the cache.

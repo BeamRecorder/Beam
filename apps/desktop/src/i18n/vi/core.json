@@ -312,6 +312,24 @@
     "transcriptSaved": "Đã xuất bản chép lời.",
     "transcriptExportFailed": "Không thể xuất bản chép lời."
   },
+  "TransformControls": {
+    "position": "Vị trí",
+    "alignment": "Căn chỉnh",
+    "left": "Trái",
+    "center": "Giữa",
+    "right": "Phải",
+    "top": "Trên",
+    "middle": "Giữa",
+    "bottom": "Dưới",
+    "width": "Chiều rộng",
+    "height": "Chiều cao",
+    "lockAspectRatio": "Khóa tỷ lệ",
+    "orientation": "Hướng",
+    "rotateLeft": "Xoay 90° sang trái",
+    "rotateRight": "Xoay 90° sang phải",
+    "unit": "Đơn vị",
+    "rotation": "Góc xoay"
+  },
   "ClipPropertiesPanel": {
     "noClipSelected": "Chưa chọn đoạn nào",
     "noClipSelectedDesc": "Nhấp vào một đoạn trên dòng thời gian để kiểm tra và chỉnh sửa thuộc tính.",
@@ -334,6 +352,7 @@
     "solid": "Màu đặc",
     "adaptive": "Thích ứng",
     "adaptiveShadowDescription": "Lấy mẫu màu từ video để tạo hiệu ứng phát sáng môi trường tinh tế.",
+    "shadowStyleDescription": "Màu đặc: dùng màu đã chọn cho bóng đổ.\nThích ứng: dùng màu của clip để tạo ánh sáng xung quanh.",
     "direction": "Hướng",
     "mirroring": "Lật hình",
     "mirrorHorizontally": "Lật ngang",
@@ -1068,7 +1087,8 @@
     "image": "Hình ảnh",
     "watermark": "Hình mờ",
     "previewLoading": "Đang tạo bản xem trước…",
-    "previewError": "Không có bản xem trước"
+    "previewError": "Không có bản xem trước",
+    "zoom": "Thu phóng"
   },
   "Highlight": {
     "title": "Làm nổi bật",
@@ -1102,5 +1122,25 @@
     "description": "Ghi con trỏ hệ thống trực tiếp vào video. Thu phóng tự động vẫn theo dõi con trỏ. Con trỏ Beam ban đầu bị tắt; bạn có thể phủ nó trong cài đặt Con trỏ. Không thể xóa con trỏ đã ghi.",
     "customCursor": "Con trỏ tùy chỉnh",
     "overlayDescription": "Phủ con trỏ Beam lên video. Tắt nếu bản ghi đã có con trỏ hệ thống."
+  },
+  "Gradient": {
+    "type": "Loại",
+    "linear": "Tuyến tính",
+    "radial": "Tỏa tròn",
+    "angle": "Góc",
+    "rotate": "Xoay 90°",
+    "stops": "Điểm màu",
+    "presets": "Mẫu có sẵn",
+    "reverse": "Đảo gradient",
+    "addStop": "Thêm điểm màu",
+    "removeStop": "Xóa điểm màu",
+    "color": "Màu",
+    "position": "Vị trí",
+    "opacity": "Độ mờ đục",
+    "stop": "Điểm màu {number}",
+    "stopColor": "Màu của điểm {number}",
+    "stopPosition": "Vị trí điểm {number}",
+    "stopOpacity": "Độ mờ đục của điểm {number}",
+    "addAtPosition": "Nhấp để thêm điểm màu"
   }
 }

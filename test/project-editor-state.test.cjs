@@ -705,3 +705,12 @@ test('persists the custom cursor toggle and preserves enabled cursors from older
   for (const enabled of ['false', 1, null])
     assert.throws(() => presentationState({ ...state, cursor: { ...state.cursor, enabled } }), /cursor enabled/);
 });
+
+test('preserves glass settings and automatic provenance through desktop JSON storage', () => {
+  const { DEFAULT_GLASS_HIGHLIGHT } = require('../packages/engine/src/zoom/glass-highlight-schema.js');
+  const lens = { id: 'lens', sessionId: 'recording', startMs: 0, endMs: 2000, depth: 4, mode: 'manual', effect: 'glass', generation: 'automatic', focus: { cx: .5, cy: .5 }, glass: { ...DEFAULT_GLASS_HIGHLIGHT, shape: 'freehand', path: [{ x: -1, y: -1 }, { x: 1, y: -1 }, { x: 0, y: 1 }] } };
+  const saved = zoomState({ elements: [lens], generatedSessions: [] }).elements[0];
+  assert.deepEqual(saved.glass, lens.glass); assert.equal(saved.generation, 'automatic');
+  assert.notEqual(saved.glass.path, lens.glass.path);
+  for (const patch of [{ generation: 'bad' }, { mode: 'auto' }, { glass: { ...lens.glass, size: 0 } }]) assert.throws(() => zoomState({ elements: [{ ...lens, ...patch }], generatedSessions: [] }));
+});

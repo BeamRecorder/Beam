@@ -13,6 +13,7 @@ export interface TimelineSurface {
   canvas: Ref<HTMLCanvasElement | null>;
   context(): CanvasRenderingContext2D | null;
   invalidate(): void;
+  followMoves(owner: symbol, moving: boolean): void;
   register(lane: TimelineSurfaceLane): () => void;
 }
 export const TIMELINE_SURFACE_KEY: InjectionKey<TimelineSurface> = Symbol('timeline-surface');

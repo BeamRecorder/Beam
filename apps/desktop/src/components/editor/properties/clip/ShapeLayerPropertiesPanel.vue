@@ -2,6 +2,7 @@
 import { useElementEditor } from '../../elements/useElementEditor';
 import ElementTextControls from '../../elements/ElementTextControls.vue';
 import DrawingControls from '../../elements/DrawingControls.vue';
+import MediaOrientationControls from '../shared/MediaOrientationControls.vue';
 import ShapePicker from '../../elements/ShapePicker.vue';
 import { computed, ref, watch } from 'vue';
 import Button from '~/ui/button/Button.vue';
@@ -42,7 +43,6 @@ const updateFill = (value: ColorFill) =>
     ...(value.kind === 'color' ? { fillColor: value.color } : {}),
   });
 const selectFamily = (family: ShapeLayerFamily) => update({ family, preset: defaultShapePresetFor(family) });
-const rotationPresets = [0, 90, 180, 270] as const;
 </script>
 
 <template>
@@ -63,6 +63,14 @@ const rotationPresets = [0, 90, 180, 270] as const;
         >{{ elementText('text') }}</Button
       >
     </ButtonGroup>
+    <div class="rotation-row">
+      <span class="rotation-label">{{ t('shapeRotation') }}</span>
+      <MediaOrientationControls
+        :rotation="style.rotation"
+        :show-mirroring="false"
+        @update:rotation="update({ rotation: $event })"
+      />
+    </div>
     <ElementTextControls v-if="showText" :clip="clip" @update="update({ text: $event })" />
     <template v-else>
       <ButtonGroup
@@ -94,30 +102,6 @@ const rotationPresets = [0, 90, 180, 270] as const;
         v-if="style.family === 'shape'"
         :model-value="shapePreset"
         @update:model-value="update({ preset: $event })"
-      />
-
-      <ButtonGroup full size="xs" :aria-label="t('shapeRotation')">
-        <Button
-          v-for="rotation in rotationPresets"
-          :key="rotation"
-          block
-          size="xs"
-          :variant="style.rotation === rotation ? 'selected' : 'secondary'"
-          @click="update({ rotation })"
-        >
-          {{ rotation }}°
-        </Button>
-      </ButtonGroup>
-
-      <BigSlider
-        :model-value="style.rotation"
-        :min="0"
-        :max="360"
-        :step="1"
-        :default-value="0"
-        :label="t('shapeRotation')"
-        :format-value="(value) => `${Math.round(value)}°`"
-        @update:model-value="update({ rotation: $event })"
       />
 
       <BigSlider
@@ -264,6 +248,16 @@ const rotationPresets = [0, 90, 180, 270] as const;
 </template>
 
 <style scoped>
+.rotation-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+.rotation-label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body);
+}
 .shape-panel {
   display: flex;
   flex-direction: column;

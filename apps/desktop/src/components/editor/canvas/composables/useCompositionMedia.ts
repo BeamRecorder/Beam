@@ -145,6 +145,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       title: clip.name,
       mirrored: clip.isMirrored,
       mirroredY: clip.isMirroredY,
+      rotation: clip.rotation,
       mask: framing.mask,
       shadowFollowsSourceAlpha: clip.kind === 'image',
     };
@@ -243,6 +244,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       scale,
       {
         ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+        rotation: clip.rotation,
         reactToZoom: webcamReactsToZoom(clip),
       },
       transformDraftFor(clip.id) ?? clip.transform,
@@ -401,6 +403,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         window.scale,
         {
           ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+          rotation: clip.rotation,
           reactToZoom: webcamReactsToZoom(clip),
         },
         transformDraftFor(clip.id) ?? clip.transform,

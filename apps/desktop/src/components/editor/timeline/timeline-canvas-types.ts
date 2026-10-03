@@ -22,7 +22,7 @@ export interface TimelineCanvasLaneProps {
 }
 export interface TimelineVisualClipsProps {
   clips: readonly Clip[];
-  canvas: TimelineClipProps['canvas'];
+  canvas?: TimelineClipProps['canvas'];
   durationMs: number;
   width: number;
   viewport: TimelineViewportMetrics;

@@ -57,3 +57,24 @@ describe('ConfirmDialog', () => {
     expect(wrapper.emitted('close')).toBeUndefined();
   });
 });
+
+it('renders a preview slot and blocks Escape and the close button during a destructive write', async () => {
+  const wrapper = mount(ConfirmDialog, {
+    attachTo: document.body,
+    props: { isOpen: true, title: 'Delete?', description: 'Remove from library', busy: true },
+    slots: {
+      preview: '<img class="preview" src="actual-preview.png" alt="Selected image" />',
+      default: '<p role="alert">Write error</p>',
+    },
+  });
+  mountedWrappers.push(wrapper);
+  await nextTick();
+  expect(document.body.querySelector('.preview')).not.toBeNull();
+  expect(document.body.querySelector('[role="alert"]')?.textContent).toBe('Write error');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  document.body.querySelector<HTMLButtonElement>('.dialog-close')?.click();
+  expect(wrapper.emitted('close')).toBeUndefined();
+  await wrapper.setProps({ busy: false });
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  expect(wrapper.emitted('close')).toHaveLength(1);
+});

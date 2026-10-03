@@ -79,6 +79,22 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('thumbnail worker queue', () => {
+  it('drops queued offscreen bitmaps while keeping the visible request behind an active decode', async () => {
+    const decoding = deferred<ThumbnailImageAsset>();
+    dependencies.loadImage.mockReturnValueOnce(decoding.promise);
+    const replies: ThumbnailReply[] = [],
+      worker = createThumbnailWorker((reply) => replies.push(reply));
+    worker(request({ id: 'active', sourceUrl: 'active.png' }));
+    const dropped = bitmap();
+    worker(request({ id: 'offscreen', bitmap: dropped }));
+    worker(request({ id: 'visible' }));
+    worker({ type: 'retain', ids: ['visible'] });
+    expect(dropped.close).toHaveBeenCalledOnce();
+    decoding.resolve(loadedImage(800, 450));
+    await vi.waitFor(() => expect(replies).toHaveLength(2));
+    expect(replies.map((reply) => reply.id)).toEqual(['active', 'visible']);
+    expect(dependencies.render).toHaveBeenCalledTimes(2);
+  });
   it('loads a capture bitmap once for the request, waits for fonts, and posts a rendered blob', async () => {
     const replies: ThumbnailReply[] = [];
     const worker = createThumbnailWorker((reply) => replies.push(reply));

@@ -5,6 +5,7 @@ import { captionLayerKey, type CaptionClip } from '@beam/engine/shared/compositi
 import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 import type { TextCaptionLayer } from '@beam/engine/commands/caption-layer-layout';
 import TimelineCaptionTracks from '../TimelineCaptionTracks.vue';
+import { TIMELINE_SURFACE_KEY } from '../timeline-surface-types';
 
 const createCaption = (
   id: string,
@@ -62,7 +63,10 @@ const mountCaptionTracks = (textLayers: TextCaptionLayer[] = [], reduceMotion = 
       leaveTrack: () => undefined,
       addAt: () => undefined,
     },
-    global: { stubs: { TimelineCanvasLane: true } },
+    global: {
+      stubs: { TimelineCanvasLane: true },
+      provide: { [TIMELINE_SURFACE_KEY as symbol]: { followMoves: vi.fn() } },
+    },
   });
 
 describe('TimelineCaptionTracks progressive captions', () => {

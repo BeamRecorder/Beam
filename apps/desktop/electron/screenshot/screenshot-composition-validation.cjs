@@ -28,7 +28,13 @@ function validateScreenshotComposition(state) {
   if (state.canvas.showBackground) requiredIds.add('__background__');
   if (state.canvas.watermark?.enabled) requiredIds.add('__watermark__');
   if (state.image.enabled) requiredIds.add(state.image.id);
-  for (const item of [state.image, ...state.shapes, ...(state.effects ?? []), ...(state.images ?? [])]) {
+  for (const item of [
+    state.image,
+    ...state.shapes,
+    ...(state.effects ?? []),
+    ...(state.images ?? []),
+    ...(state.zooms ?? []),
+  ]) {
     if (ids.has(item.id)) throw new Error('Duplicate screenshot layer identifier.');
     ids.add(item.id);
     if (item !== state.image) requiredIds.add(item.id);

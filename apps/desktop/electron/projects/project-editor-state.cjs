@@ -1,3 +1,4 @@
+const { validateGlassHighlight } = require('../../../../packages/engine/src/zoom/glass-highlight-schema.js');
 const CURSOR_TYPES = new Set([
   'automatic',
   'default',
@@ -175,6 +176,7 @@ const zoomState = (value) => {
     )
       throw new Error('Propriétés de zoom invalides');
     ids.add(element.id);
+    validateGlassHighlight(element);
     const tiltIntensity = clamp(element.tiltIntensity === undefined ? 0.6 : element.tiltIntensity, 0, 1);
     const inferredTiltPreset =
       Math.abs(tiltIntensity - 0.3) < 1e-6
@@ -195,6 +197,11 @@ const zoomState = (value) => {
       depth: element.depth,
       mode: element.mode,
       enabled: element.enabled !== false,
+      ...(element.generation === undefined ? {} : { generation: element.generation }),
+      ...(element.effect === undefined ? {} : { effect: element.effect }),
+      ...(element.glass === undefined
+        ? {}
+        : { glass: { ...element.glass, path: element.glass.path.map((point) => ({ x: point.x, y: point.y })) } }),
       projection: element.projection === '3d' ? '3d' : '2d',
       tiltIntensity,
       tiltHorizontal: clamp(element.tiltHorizontal === undefined ? 0.65 : element.tiltHorizontal, -1, 1),

@@ -2,7 +2,12 @@ import { createCommandRegistry } from '../commands/command-registry';
 import { LAYER_BLEND_MODES } from '../shared/layer-compositing';
 import { jsonObject } from '../document/json-value';
 import type { StillDocument } from './still-document-types';
-import type { ScreenshotState, ScreenshotCursorLayer, ScreenshotImageLayer } from './screenshot-types';
+import type {
+  ScreenshotState,
+  ScreenshotCursorLayer,
+  ScreenshotImageLayer,
+  ScreenshotZoomLayer,
+} from './screenshot-types';
 import type { ShapeClip, BlurClip } from '../shared/composition-types';
 import {
   insertScreenshotLayer,
@@ -34,6 +39,7 @@ const mutableState = (state: ScreenshotState, targetId?: string): ScreenshotStat
   ...(state.images ? { images: state.images.map((layer) => (layer.id === targetId ? { ...layer } : layer)) } : {}),
   ...(state.effects ? { effects: state.effects.map((layer) => (layer.id === targetId ? { ...layer } : layer)) } : {}),
   ...(state.cursors ? { cursors: state.cursors.map((layer) => (layer.id === targetId ? { ...layer } : layer)) } : {}),
+  ...(state.zooms ? { zooms: state.zooms.map((layer) => (layer.id === targetId ? { ...layer } : layer)) } : {}),
 });
 
 export function createStillCommands() {
@@ -50,6 +56,7 @@ export function createStillCommands() {
       else if (input.kind === 'cursor')
         state.cursors = [...(state.cursors ?? []), input as unknown as ScreenshotCursorLayer];
       else if (input.kind === 'shape') state.shapes = [...state.shapes, input as unknown as ShapeClip];
+      else if (input.kind === 'zoom') state.zooms = [...(state.zooms ?? []), input as unknown as ScreenshotZoomLayer];
       else throw new TypeError('Unsupported still layer kind.');
       insertScreenshotLayer(state, input.id);
       return { ...document, state };
@@ -65,6 +72,9 @@ export function createStillCommands() {
           'id',
           'kind',
           'animations',
+          'keyframes',
+          'startMs',
+          'endMs',
           'timelineStartMs',
           'timelineDurationMs',
           'sourceInMs',
@@ -85,6 +95,7 @@ export function createStillCommands() {
         ...(state.images ?? []),
         ...(state.effects ?? []),
         ...(state.cursors ?? []),
+        ...(state.zooms ?? []),
       ].find((layer) => layer.id === id);
       if (!layer) throw new Error('This layer has separate canvas settings.');
       Object.assign(layer, patch);

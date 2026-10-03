@@ -1,6 +1,8 @@
-import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { enableAutoUnmount, mount } from '@vue/test-utils';
+import { afterEach, describe, expect, it } from 'vitest';
 import Accordion from './Accordion.vue';
+import { defineComponent, h, ref } from 'vue';
+enableAutoUnmount(afterEach);
 
 describe('Accordion', () => {
   it('defaults to a collapsed, accessible native button', () => {
@@ -53,5 +55,39 @@ describe('Accordion', () => {
     await wrapper.setProps({ modelValue: true });
     await trigger.trigger('click');
     expect(wrapper.emitted('update:modelValue')).toEqual([[true], [false]]);
+  });
+  it('keeps collapsed controls inert and retains their state across reopening', async () => {
+    const DraftField = defineComponent({
+      setup() {
+        return { draft: ref('draft') };
+      },
+      template: '<input v-model="draft">',
+    });
+    const wrapper = mount(Accordion, {
+      props: { modelValue: true, appearance: 'inspector', bordered: false },
+      slots: { default: () => h(DraftField) },
+    });
+    const field = wrapper.get('input');
+    await field.setValue('retained');
+    await wrapper.setProps({ modelValue: false });
+    expect(wrapper.get('.accordion-content').attributes('inert')).toBeDefined();
+    expect(wrapper.get('input').element.value).toBe('retained');
+    await wrapper.setProps({ modelValue: true });
+    expect(wrapper.get('.accordion-content').attributes('inert')).toBeUndefined();
+    expect(wrapper.get('input').element.value).toBe('retained');
+    expect(wrapper.classes()).toContain('accordion-inspector');
+    expect(wrapper.classes()).toContain('is-borderless');
+  });
+  it('keeps header actions outside the disclosure button', async () => {
+    const wrapper = mount(Accordion, { slots: { actions: '<button class="reset">Reset</button>' } });
+    expect(wrapper.get('.accordion-trigger').find('.reset').exists()).toBe(false);
+    await wrapper.get('.reset').trigger('click');
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+  });
+  it('ignores toggles while disabled', async () => {
+    const wrapper = mount(Accordion, { props: { disabled: true, title: 'Unavailable' } });
+    await wrapper.get('.accordion-trigger').trigger('click');
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+    expect(wrapper.classes()).toContain('is-disabled');
   });
 });

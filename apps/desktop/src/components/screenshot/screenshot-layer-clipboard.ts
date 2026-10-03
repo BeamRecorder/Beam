@@ -49,6 +49,8 @@ const clipboardLayer = (
   if (effect) return { type: 'effect', value: clone(effect) };
   const cursor = state.cursors?.find((layer) => layer.id === id);
   if (cursor) return { type: 'cursor', value: clone(cursor) };
+  const zoom = state.zooms?.find((layer) => layer.id === id);
+  if (zoom) return { type: 'zoom', value: clone(zoom) };
   const image = state.images?.find((layer) => layer.id === id);
   return image ? { type: 'image', value: clone(image) } : null;
 };
@@ -112,6 +114,7 @@ export function pasteScreenshotLayerSelection(
     effects: state.effects ? [...state.effects] : undefined,
     cursors: state.cursors ? [...state.cursors] : undefined,
     images: state.images ? [...state.images] : undefined,
+    zooms: state.zooms ? [...state.zooms] : undefined,
     composition: state.composition ? [...state.composition] : undefined,
     layerNames: state.layerNames ? { ...state.layerNames } : undefined,
   };
@@ -126,6 +129,13 @@ export function pasteScreenshotLayerSelection(
         y: Math.min(0.99, value.position.y + 24 / Math.max(1, next.canvas.height)),
       };
       next.cursors!.push(value);
+    } else if (entry.layer.type === 'zoom') {
+      const value = { ...clone(entry.layer.value), id };
+      value.focus = {
+        cx: Math.min(1, value.focus.cx + 24 / next.canvas.width),
+        cy: Math.min(1, value.focus.cy + 24 / next.canvas.height),
+      };
+      (next.zooms ??= []).push(value);
     } else if (entry.layer.type === 'shape') {
       const value = { ...clone(entry.layer.value), id, trackId: id };
       value.transform = offsetTransform(value.transform, next.canvas);
@@ -151,13 +161,18 @@ export function pasteScreenshotLayerSelection(
     names.push(entry.name);
   });
   const overlayCount =
-    next.shapes.length + (next.effects?.length ?? 0) + (next.cursors?.length ?? 0) + (next.images?.length ?? 0);
+    next.shapes.length +
+    (next.effects?.length ?? 0) +
+    (next.cursors?.length ?? 0) +
+    (next.images?.length ?? 0) +
+    (next.zooms?.length ?? 0);
   if (overlayCount > MAX_SCREENSHOT_OVERLAY_LAYERS || JSON.stringify(next).length > MAX_SCREENSHOT_STATE_CHARACTERS)
     throw new Error('The screenshot has reached its layer or document size limit.');
   state.shapes = next.shapes;
   state.effects = next.effects;
   state.cursors = next.cursors;
   state.images = next.images;
+  state.zooms = next.zooms;
   state.composition = next.composition;
   state.layerNames = next.layerNames;
   return {

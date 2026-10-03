@@ -32,7 +32,7 @@ describe('TimelineTracks', () => {
     const cursor = mounted!.get('.cursor-content');
     await cursor.trigger('mousemove', { clientX: 120 + visualWidth * 0.6 });
     const ghost = mounted!.get('.cursor-zoom-indicator.preview-ghost');
-    expect(ghost.attributes('style')).toContain('left: 54%');
+    expect((ghost.element as HTMLElement).style.transform).toBe('translate3d(540px, 0, 0)');
     expect(ghost.attributes('style')).toContain('width: 12%');
 
     await cursor.trigger('click', { clientX: 120 + visualWidth * 0.6 });
@@ -77,7 +77,7 @@ describe('TimelineTracks', () => {
     await cursor.trigger('mousemove', { clientX: 700 });
 
     const ghost = mounted!.get('.cursor-zoom-indicator.preview-ghost');
-    expect((ghost.element as HTMLElement).style.left).toBe('33%');
+    expect((ghost.element as HTMLElement).style.transform).toBe('translate3d(330px, 0, 0)');
     expect((ghost.element as HTMLElement).style.width).toBe('50%');
   });
 
@@ -87,7 +87,7 @@ describe('TimelineTracks', () => {
 
     await cursor.trigger('mousemove', { clientX: 700 });
     const ghost = mounted!.get('.cursor-zoom-indicator.preview-ghost');
-    expect((ghost.element as HTMLElement).style.left).toBe('35%');
+    expect((ghost.element as HTMLElement).style.transform).toBe('translate3d(350px, 0, 0)');
     expect((ghost.element as HTMLElement).style.width).toBe('50%');
     await cursor.trigger('click', { clientX: 700 });
     expect(mounted!.emitted('add:zoom')).toContainEqual([{ startMs: 3_500, durationMs: 5_000 }]);
@@ -114,7 +114,7 @@ describe('TimelineTracks', () => {
 
     await cursor.trigger('mousemove', { clientX: 1_020 });
     const ghost = mounted!.get('.cursor-zoom-indicator.preview-ghost');
-    expect(ghost.attributes('style')).toContain('left: 80%');
+    expect((ghost.element as HTMLElement).style.transform).toBe('translate3d(800px, 0, 0)');
     expect(ghost.attributes('style')).toContain('width: 20%');
 
     await cursor.trigger('click', { clientX: 1_020 });

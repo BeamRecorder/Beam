@@ -7,6 +7,23 @@ export function createRafReveal(runtime: RevealRuntime, axis: RevealAxis = 'vert
   const dimension = horizontal ? 'width' : 'height';
   const minimum = horizontal ? 'minWidth' : 'minHeight';
   const endMargin = horizontal ? 'marginRight' : 'marginBottom';
+  // DOM rectangles include CSS zoom/transforms; animation styles use layout pixels.
+  const layoutSize = (style: CSSStyleDeclaration) => {
+    const content = pixels(style[dimension]);
+    if (style.boxSizing === 'border-box') return content;
+    return (
+      content +
+      (horizontal
+        ? pixels(style.paddingLeft) +
+          pixels(style.paddingRight) +
+          pixels(style.borderLeftWidth) +
+          pixels(style.borderRightWidth)
+        : pixels(style.paddingTop) +
+          pixels(style.paddingBottom) +
+          pixels(style.borderTopWidth) +
+          pixels(style.borderBottomWidth))
+    );
+  };
   const properties: RevealProperty[] = horizontal
     ? [
         'width',
@@ -55,11 +72,7 @@ export function createRafReveal(runtime: RevealRuntime, axis: RevealAxis = 'vert
       target: Object.fromEntries(
         properties.map((property) => [
           property,
-          property === dimension
-            ? element.getBoundingClientRect()[dimension]
-            : property === 'opacity'
-              ? 1
-              : pixels(style[property]),
+          property === dimension ? layoutSize(style) : property === 'opacity' ? 1 : pixels(style[property]),
         ]),
       ) as Record<RevealProperty, number>,
       gap,
@@ -83,7 +96,7 @@ export function createRafReveal(runtime: RevealRuntime, axis: RevealAxis = 'vert
           ? (Object.fromEntries(
               properties.map((property) => [
                 property,
-                property === dimension ? node.getBoundingClientRect()[dimension] : pixels(current[property]),
+                property === dimension ? layoutSize(current) : pixels(current[property]),
               ]),
             ) as Record<RevealProperty, number>)
           : closed;

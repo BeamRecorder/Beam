@@ -1,184 +1,157 @@
 <script setup lang="ts">
 import type { ClipPropertiesEmits } from './clip-properties-types';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import CropControls from './CropControls.vue';
 import ClipAppearanceControls from './ClipAppearanceControls.vue';
+import TransformControls from '../shared/TransformControls.vue';
 import type { SelectedClipProperties } from '../properties-panel-types';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Button from '~/ui/button/Button.vue';
-import Divider from '~/ui/divider/Divider.vue';
-import TimelineClickEmptyState from '~/components/editor/properties/clip/TimelineClickEmptyState.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
+import Accordion from '~/ui/accordion/Accordion.vue';
+import TimelineClickEmptyState from './TimelineClickEmptyState.vue';
 import { RotateCcw } from '@lucide/vue';
-import type { NormalizedTransform } from '@beam/engine/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import CameraLayoutPanel from '../camera/CameraLayoutPanel.vue';
 import { isSplitCameraLayout } from '@beam/engine/shared/camera-layout-types';
 const { t } = useTranslate('ClipPropertiesPanel');
+const { t: layoutText } = useTranslate('CameraLayoutPanel');
 const props = defineProps<{
+  canvasSize: { width: number; height: number };
   hideLayout?: boolean;
   hideCrop?: boolean;
   selectedClip: SelectedClipProperties | null;
 }>();
 const emit = defineEmits<ClipPropertiesEmits>();
+const sections = ref({ placement: true, layout: false, crop: false, speed: false });
 const isVisual = computed(
   () => !!props.selectedClip && ['screen', 'video', 'image', 'webcam'].includes(props.selectedClip.kind),
 );
-const speedPresets = [0.5, 1.0, 1.5, 2.0, 3.0];
-
-const currentPlaybackRate = computed(() => {
-  return Math.round((props.selectedClip?.playbackRate ?? 1.0) * 100) / 100;
-});
-const clipTransform = computed(() => props.selectedClip?.clipTransform);
-const updatePlacement = (patch: Partial<NormalizedTransform>) => {
-  const current = clipTransform.value;
-  if (!current) return;
-  const width = Math.min(4, Math.max(0.02, patch.width ?? current.width));
-  let height = Math.min(4, Math.max(0.02, patch.height ?? current.height));
-  if (patch.width !== undefined && patch.height === undefined && current.width > 0) {
-    height = Math.min(4, Math.max(0.02, (current.height * width) / current.width));
-  }
-  emit('update:clipTransform', {
-    x: Math.min(3, Math.max(-3, patch.x ?? current.x)),
-    y: Math.min(3, Math.max(-3, patch.y ?? current.y)),
-    width,
-    height,
-  });
-};
+const hasPlacement = computed(
+  () => !!props.selectedClip?.clipTransform && !isSplitCameraLayout(props.selectedClip.cameraLayoutPreset ?? 'custom'),
+);
+const speedPresets = [0.5, 1, 1.5, 2, 3];
+const currentPlaybackRate = computed(() => Math.round((props.selectedClip?.playbackRate ?? 1) * 100) / 100);
 </script>
 
 <template>
   <div class="clip-properties">
     <TimelineClickEmptyState v-if="!selectedClip" />
-
     <div v-else class="options-group">
-      <CameraLayoutPanel
-        v-if="!hideLayout && ['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)"
-        :layout="selectedClip.cameraLayoutPreset ?? 'custom'"
-        :framing="selectedClip.cameraFramingPreset ?? 'custom'"
-        :has-linked-screen="selectedClip.hasLinkedScreen ?? false"
-        :split-ratio="selectedClip.cameraSplitRatio ?? 0.5"
-        :split-padding="selectedClip.cameraSplitPadding ?? 0"
-        :react-to-zoom="selectedClip.reactToZoom ?? true"
-        :supports-split-layouts="selectedClip.kind === 'webcam'"
-        @update:layout="emit('update:cameraLayout', $event)"
-        @update:framing="emit('update:cameraFraming', $event)"
-        @update:split-ratio="emit('update:cameraSplitRatio', $event)"
-        @update:split-padding="emit('update:cameraSplitPadding', $event)"
-        @update:react-to-zoom="emit('update:reactToZoom', $event)"
-      />
-      <Divider v-if="!hideLayout && ['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)" spacing="xs" />
-
-      <!-- Placement Section -->
-      <div
-        v-if="clipTransform && !isSplitCameraLayout(selectedClip.cameraLayoutPreset ?? 'custom')"
-        class="section-block"
+      <Accordion
+        v-if="hasPlacement && selectedClip.clipTransform"
+        v-model="sections.placement"
+        appearance="inspector"
+        :title="t('placement')"
+        data-clip-section="placement"
       >
-        <div class="section-header">
-          <span class="section-title">{{ t('placement') }}</span>
-          <Button
-            variant="ghost"
-            size="xs"
-            :icon="RotateCcw"
-            :aria-label="t('resetClipPlacement')"
-            @click="emit('reset:clipTransform')"
-            >{{ t('reset') }}</Button
-          >
-        </div>
-        <div class="sliders-stack">
-          <BigSlider
-            :model-value="clipTransform.x * 100"
-            :min="-300"
-            :max="300"
-            :step="1"
-            :label="t('horizontal')"
-            :format-value="(value) => `${Math.round(value)}%`"
-            @update:modelValue="updatePlacement({ x: $event / 100 })"
+        <div class="section-block">
+          <TransformControls
+            :model-value="selectedClip.clipTransform"
+            :canvas-size="canvasSize"
+            :mirrored="selectedClip.isMirrored"
+            :mirrored-y="selectedClip.isMirroredY"
+            :rotation="selectedClip.rotation"
+            :show-mirroring="isVisual"
+            @update:model-value="emit('update:clipTransform', $event)"
+            @update:mirrored="emit('update:isMirrored', $event)"
+            @update:mirrored-y="emit('update:isMirroredY', $event)"
+            @update:rotation="emit('update:rotation', $event)"
           />
-          <BigSlider
-            :model-value="clipTransform.y * 100"
-            :min="-300"
-            :max="300"
-            :step="1"
-            :label="t('vertical')"
-            :format-value="(value) => `${Math.round(value)}%`"
-            @update:modelValue="updatePlacement({ y: $event / 100 })"
-          />
-          <BigSlider
-            :model-value="clipTransform.width * 100"
-            :min="2"
-            :max="400"
-            :step="1"
-            :label="t('size')"
-            :format-value="(value) => `${Math.round(value)}%`"
-            @update:modelValue="updatePlacement({ width: $event / 100 })"
-          />
+          <div class="section-actions">
+            <Button
+              variant="ghost"
+              size="xs"
+              :icon="RotateCcw"
+              :aria-label="t('resetClipPlacement')"
+              @click="emit('reset:clipTransform')"
+              >{{ t('reset') }}</Button
+            >
+          </div>
         </div>
-      </div>
-
-      <!-- Divider -->
-      <Divider
-        v-if="clipTransform && ['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)"
-        spacing="xs"
-      />
-
-      <div v-if="isVisual && !hideCrop" class="section-block">
-        <div class="section-header">
-          <span class="section-title">{{ t('crop') }}</span>
-        </div>
+      </Accordion>
+      <Accordion
+        v-if="isVisual && !hideLayout"
+        v-model="sections.layout"
+        appearance="inspector"
+        :title="layoutText(selectedClip.kind === 'webcam' ? 'title' : 'visualTitle')"
+        data-clip-section="layout"
+      >
+        <CameraLayoutPanel
+          hide-heading
+          :layout="selectedClip.cameraLayoutPreset ?? 'custom'"
+          :framing="selectedClip.cameraFramingPreset ?? 'custom'"
+          :has-linked-screen="selectedClip.hasLinkedScreen ?? false"
+          :split-ratio="selectedClip.cameraSplitRatio ?? 0.5"
+          :split-padding="selectedClip.cameraSplitPadding ?? 0"
+          :react-to-zoom="selectedClip.reactToZoom ?? true"
+          :supports-split-layouts="selectedClip.kind === 'webcam'"
+          @update:layout="emit('update:cameraLayout', $event)"
+          @update:framing="emit('update:cameraFraming', $event)"
+          @update:split-ratio="emit('update:cameraSplitRatio', $event)"
+          @update:split-padding="emit('update:cameraSplitPadding', $event)"
+          @update:react-to-zoom="emit('update:reactToZoom', $event)"
+        />
+      </Accordion>
+      <Accordion
+        v-if="isVisual && !hideCrop"
+        v-model="sections.crop"
+        appearance="inspector"
+        :title="t('crop')"
+        data-clip-section="crop"
+      >
         <CropControls
           :key="selectedClip.id"
           :clip="selectedClip"
           @update="emit('update:crop', $event)"
           @preview="emit('preview:crop', $event)"
         />
-      </div>
-      <Divider v-if="isVisual && !hideCrop" spacing="xs" />
+      </Accordion>
       <ClipAppearanceControls
         v-if="isVisual"
         :selected-clip="selectedClip"
+        :hide-mirroring="hasPlacement"
         @update:is-mirrored="emit('update:isMirrored', $event)"
         @update:is-mirrored-y="emit('update:isMirroredY', $event)"
+        @update:rotation="emit('update:rotation', $event)"
         @update:corner-radius="emit('update:cornerRadius', $event)"
         @corner-radius-interaction="emit('corner-radius-interaction', $event)"
         @update:shadow="emit('update:shadow', $event)"
         @update:appearance="emit('update:appearance', $event)"
       />
-
-      <!-- Divider -->
-      <Divider v-if="['screen', 'video', 'webcam'].includes(selectedClip.kind)" spacing="xs" />
-
-      <!-- Speed Boost / Rate Controls -->
-      <div v-if="['screen', 'video', 'webcam'].includes(selectedClip.kind)" class="section-block">
-        <div class="section-header">
-          <span class="section-title">{{ t('speedBoost') }}</span>
+      <Accordion
+        v-if="['screen', 'video', 'webcam'].includes(selectedClip.kind)"
+        v-model="sections.speed"
+        appearance="inspector"
+        :title="t('playbackSpeed')"
+        data-clip-section="speed"
+      >
+        <div class="section-block">
+          <BigSlider
+            :model-value="currentPlaybackRate"
+            :default-value="1"
+            :min="0.25"
+            :max="4"
+            :step="0.05"
+            :label="t('playbackSpeed')"
+            :format-value="(value) => `${value.toFixed(2)}×`"
+            @update:model-value="emit('update:playbackRate', $event)"
+          />
+          <ButtonGroup full variant="neutral" size="xs">
+            <Button
+              v-for="preset in speedPresets"
+              :key="preset"
+              class="preset-pill"
+              :variant="Math.abs(currentPlaybackRate - preset) < 0.04 ? 'selected' : 'ghost'"
+              size="xs"
+              @click="emit('update:playbackRate', preset)"
+              >{{ preset }}×</Button
+            >
+          </ButtonGroup>
         </div>
-        <BigSlider
-          :model-value="currentPlaybackRate"
-          :default-value="1.0"
-          :min="0.25"
-          :max="4.0"
-          :step="0.05"
-          :label="t('playbackSpeed')"
-          :format-value="(val) => `${val.toFixed(2)}×`"
-          @update:modelValue="emit('update:playbackRate', $event)"
-        />
-        <div class="preset-pills">
-          <button
-            v-for="preset in speedPresets"
-            :key="preset"
-            type="button"
-            class="preset-pill"
-            :class="{ active: Math.abs(currentPlaybackRate - preset) < 0.04 }"
-            @click="emit('update:playbackRate', preset)"
-          >
-            {{ preset }}×
-          </button>
-        </div>
-      </div>
-
+      </Accordion>
       <slot name="sidecars" />
     </div>
   </div>
 </template>
-
 <style scoped src="./ClipPropertiesPanel.css"></style>

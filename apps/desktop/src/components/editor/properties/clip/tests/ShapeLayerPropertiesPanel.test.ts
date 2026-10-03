@@ -150,7 +150,6 @@ describe('ShapeLayerPropertiesPanel', () => {
       await wrapper.get('[data-editor-property-section="appearance"]').trigger('click');
       for (const control of wrapper.findAllComponents(BigSliderStub)) {
         control.vm.$emit('update:modelValue', 20);
-        if (control.props('label') === 'Rotation') expect(control.props('formatValue')(21.8)).toBe('22°');
       }
       for (const picker of wrapper.findAllComponents(ColorPickerStub)) picker.vm.$emit('update:modelValue', '#112233');
       wrapper
@@ -159,7 +158,6 @@ describe('ShapeLayerPropertiesPanel', () => {
       wrapper.findComponent(ShadowDirectionGroup).vm.$emit('update:modelValue', 'all');
       for (const toggle of wrapper.findAll('.switch-stub')) await toggle.trigger('click');
       for (const patch of [
-        { rotation: 20 },
         { cornerRadius: 20 },
         { borderWidth: 20 },
         { opacity: 20 },
@@ -217,20 +215,22 @@ describe('ShapeLayerPropertiesPanel', () => {
     expect(wrapper.find('.direction-stub').exists()).toBe(true);
   });
 
-  it('offers full-width shortcuts for common rotations', async () => {
-    const wrapper = mount(ShapeLayerPropertiesPanel, {
-      props: { clip: clip() },
-      global: { stubs },
-    });
-    const rotationButtons = wrapper
-      .findAll('button')
-      .filter((button) => ['0°', '90°', '180°', '270°'].includes(button.text()));
-
-    expect(rotationButtons).toHaveLength(4);
-    expect(rotationButtons.every((button) => button.attributes('data-block') === 'true')).toBe(true);
-    await rotationButtons[2]!.trigger('click');
-    expect(wrapper.emitted('update')).toContainEqual([{ rotation: 180 }]);
-  });
+  it.each(['shape', 'text'] as const)(
+    'offers one precise rotation row for %s elements in either tab',
+    async (family) => {
+      const wrapper = mount(ShapeLayerPropertiesPanel, {
+        props: { clip: clip({ family, rotation: 32.75 }) },
+        global: { stubs },
+      });
+      const controls = wrapper.findComponent({ name: 'MediaOrientationControls' });
+      expect(controls.exists()).toBe(true);
+      expect(controls.props('showMirroring')).toBe(false);
+      expect(controls.props('rotation')).toBe(32.75);
+      controls.vm.$emit('update:rotation', 18.25);
+      expect(wrapper.emitted('update')).toContainEqual([{ rotation: 18.25 }]);
+      expect(wrapper.findAll('.rotation-row')).toHaveLength(1);
+    },
+  );
 
   it('does not expose filter controls', () => {
     const wrapper = mount(ShapeLayerPropertiesPanel, {

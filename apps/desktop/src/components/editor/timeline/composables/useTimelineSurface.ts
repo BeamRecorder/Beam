@@ -14,6 +14,7 @@ export function useTimelineSurface(
 ): TimelineSurface {
   const canvas = ref<HTMLCanvasElement | null>(null);
   const lanes = new Set<TimelineSurfaceLane>();
+  const moves = new Set<symbol>();
   let disposed = false;
   let frame: number | null = null,
     resize: ResizeObserver | null = null,
@@ -38,7 +39,27 @@ export function useTimelineSurface(
     ctx.clearRect(0, 0, width, height);
     palette ??= timelineSurfacePalette(element);
     engineMetrics.measure('prepare', () => {
-      for (const lane of lanes) {
+      // FLIP moves overlap rows. Their bitmap order must follow the DOM stacking order.
+      const paintedLanes = moves.size
+        ? [...lanes]
+            .map((lane) => ({
+              lane,
+              zIndex:
+                Number.parseInt(
+                  getComputedStyle(lane.element.closest('[data-timeline-row-id]') ?? lane.element).zIndex,
+                  10,
+                ) || 0,
+            }))
+            .sort((a, b) => {
+              const position = a.lane.element.compareDocumentPosition(b.lane.element);
+              return (
+                a.zIndex - b.zIndex ||
+                (position & Node.DOCUMENT_POSITION_PRECEDING) - (position & Node.DOCUMENT_POSITION_FOLLOWING)
+              );
+            })
+            .map(({ lane }) => lane)
+        : lanes;
+      for (const lane of paintedLanes) {
         const rect = lane.element.getBoundingClientRect();
         const x = (rect.left - bounds.left) / scale,
           y = (rect.top - bounds.top) / scale;
@@ -72,6 +93,7 @@ export function useTimelineSurface(
     // Native sticky placement retains coverage during compositor scrolling, before the next JS paint.
     element.style.width = `${width}px`;
     element.style.height = `${height}px`;
+    if (moves.size) invalidate();
   };
   const invalidate = () => {
     if (!disposed && frame === null) frame = frameQueue.request('paint', draw);
@@ -81,6 +103,11 @@ export function useTimelineSurface(
     canvas,
     context,
     invalidate,
+    followMoves(owner, moving) {
+      if (moving) moves.add(owner);
+      else moves.delete(owner);
+      invalidate();
+    },
     register(lane) {
       lanes.add(lane);
       resize?.observe(lane.element);
@@ -116,6 +143,7 @@ export function useTimelineSurface(
     scroll.value?.removeEventListener('scroll', invalidate);
     window.removeEventListener('resize', invalidate);
     lanes.clear();
+    moves.clear();
   });
   return surface;
 }

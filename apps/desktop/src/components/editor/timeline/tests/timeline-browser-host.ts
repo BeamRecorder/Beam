@@ -5,6 +5,7 @@ import { createPinia } from 'pinia';
 import { i18n } from '../../../../i18n';
 import Timeline from '../TimelineTracks.vue';
 import type { ClipComposition } from '@beam/engine';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 
 let active: ReturnType<typeof createApp> | undefined;
 export function unmountTimeline() {
@@ -12,7 +13,12 @@ export function unmountTimeline() {
   active = undefined;
 }
 
-export async function mountTimeline(composition: ClipComposition, duration: number, zoomLevel: number) {
+export async function mountTimeline(
+  composition: ClipComposition,
+  duration: number,
+  zoomLevel: number,
+  zoomElements: readonly ZoomElement[] = [],
+) {
   unmountTimeline();
   document.body.innerHTML = '<div id="test" style="width:1000px;height:300px"></div>';
   const state = reactive({
@@ -20,7 +26,7 @@ export async function mountTimeline(composition: ClipComposition, duration: numb
     duration,
     zoomLevel,
     isPlaying: false,
-    zoomElements: [],
+    zoomElements: [...zoomElements],
     selectedZoomId: null,
     selectedClipId: null,
     composition: markRaw(composition),

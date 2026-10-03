@@ -94,7 +94,7 @@ const handleKeydown = (event: KeyboardEvent, item: PopoverMenuItem) => {
 </script>
 
 <template>
-  <div class="menu-content" role="menu" @mouseleave="openItemId = null">
+  <div class="menu-content" :class="{ 'floating-surface': level > 0 }" role="menu" @mouseleave="openItemId = null">
     <div v-for="item in items" :key="item.id" class="menu-entry">
       <button
         :ref="(element) => setItemElement(item.id, element as Element | null)"
@@ -135,6 +135,7 @@ const handleKeydown = (event: KeyboardEvent, item: PopoverMenuItem) => {
   </div>
 </template>
 
+<style scoped src="../floating-surface.css"></style>
 <style scoped>
 .menu-content {
   display: flex;
@@ -143,7 +144,7 @@ const handleKeydown = (event: KeyboardEvent, item: PopoverMenuItem) => {
   width: max-content;
   max-width: min(280px, calc(100vw - 16px));
   padding: 4px;
-  background: var(--color-bg-element);
+  background: transparent;
   border-radius: var(--radius-md);
   box-sizing: border-box;
 }

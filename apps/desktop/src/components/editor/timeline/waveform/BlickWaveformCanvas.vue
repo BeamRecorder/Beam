@@ -24,6 +24,9 @@ let resizeObserver: ResizeObserver | undefined;
 let animationFrame = 0;
 let mounted = false;
 let hasPainted = false;
+let drawing = false;
+let paintedWidth = 0;
+let paintedHeight = 0;
 let queuedDraw = false;
 let animations: Animation[] = [];
 let motionQuery: MediaQueryList | undefined;
@@ -55,7 +58,7 @@ const draw = async () => {
   animationFrame = 0;
   if (!mounted || !container.value || props.deferDraw) return;
   // Finish the visible blend before committing the latest queued refinement.
-  if (animations.length) {
+  if (drawing || animations.length) {
     queuedDraw = true;
     return;
   }
@@ -68,7 +71,8 @@ const draw = async () => {
   const width = (bounds.width * widthPercent) / 100;
   const height = bounds.height;
   if (width <= 0 || height <= 0) return;
-  const generation = ++drawGeneration;
+  const generation = drawGeneration;
+  drawing = true;
   const presentation = {
     leftPercent: props.leftPercent ?? 0,
     widthPercent,
@@ -80,6 +84,10 @@ const draw = async () => {
     if (!mounted || generation !== drawGeneration || props.deferDraw) return;
     const crossfade =
       hasPainted &&
+      width === paintedWidth &&
+      height === paintedHeight &&
+      presentation.leftPercent === painted.value[previous]!.leftPercent &&
+      widthPercent === painted.value[previous]!.widthPercent &&
       props.bars.length > 0 &&
       !motionQuery?.matches &&
       !painted.value[previous]!.loadingSegments.length &&
@@ -87,6 +95,8 @@ const draw = async () => {
     // Publish geometry and pending regions only after the hidden bitmap is ready.
     painted.value[next] = presentation;
     current.value = next;
+    paintedWidth = width;
+    paintedHeight = height;
     hasPainted = props.bars.length > 0;
     error.value = '';
     if (crossfade) {
@@ -105,32 +115,39 @@ const draw = async () => {
     if (!mounted || generation !== drawGeneration) return;
     error.value = cause instanceof Error ? cause.message : 'The audio waveform could not be rendered.';
     console.error('[Beam media:waveform]', cause);
+  } finally {
+    drawing = false;
+    if (queuedDraw) {
+      queuedDraw = false;
+      scheduleDraw();
+    }
   }
 };
 
 const scheduleDraw = () => {
+  ++drawGeneration;
   if (!mounted || props.deferDraw || animationFrame) return;
-  if (animations.length) {
+  if (drawing || animations.length) {
     queuedDraw = true;
     return;
   }
   animationFrame = requestAnimationFrame(draw);
 };
+const scheduleGeometry = () => {
+  // Zoom and pan replace geometry immediately; only data refinements may blend.
+  finishTransition();
+  scheduleDraw();
+};
 watch(
-  [
-    () => props.bars,
-    () => props.bands,
-    () => props.sourceDurationSeconds,
-    () => props.loadingSegments,
-    () => props.leftPercent,
-    () => props.widthPercent,
-  ],
+  [() => props.bars, () => props.bands, () => props.sourceDurationSeconds, () => props.loadingSegments],
   scheduleDraw,
 );
+watch([() => props.leftPercent, () => props.widthPercent, () => props.geometryKey], scheduleGeometry);
 watch(
   () => props.deferDraw,
   (deferred) => {
     if (deferred) {
+      ++drawGeneration;
       cancelAnimationFrame(animationFrame);
       animationFrame = 0;
     } else scheduleDraw();
@@ -140,7 +157,7 @@ onMounted(() => {
   mounted = true;
   motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
   motionQuery.addEventListener('change', onMotionChange);
-  resizeObserver = new ResizeObserver(scheduleDraw);
+  resizeObserver = new ResizeObserver(scheduleGeometry);
   resizeObserver.observe(container.value!);
   scheduleDraw();
 });

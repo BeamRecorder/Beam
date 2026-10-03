@@ -72,6 +72,8 @@ describe('two dimensional timeline virtualization', () => {
       const id = (track.element as HTMLElement).dataset.timelineRowId;
       const header = mounted!.get(`.sidebar-tracks-stack [data-timeline-row-id="${id}"]`);
       expect((header.element as HTMLElement).style.top).toBe((track.element as HTMLElement).style.top);
+      expect((header.element as HTMLElement).style.transform).toBe((track.element as HTMLElement).style.transform);
+      expect((track.element as HTMLElement).style.transform).toMatch(/^translate3d\(/);
       expect((header.element as HTMLElement).style.height).toBe((track.element as HTMLElement).style.height);
     }
     const getTargets = mounted!.getComponent(TimelineSelectionBox).props('getTargets') as () => SelectionTarget[];

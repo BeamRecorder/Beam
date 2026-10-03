@@ -74,7 +74,7 @@ export function paintTimelineArtwork(
       ctx.drawImage(image, start + i * tileWidth, top, tileWidth, tileHeight);
   }
   if (artwork.loading || artwork.error) {
-    ctx.fillStyle = palette.text;
+    ctx.fillStyle = palette.itemText;
     ctx.font = '500 9px system-ui';
     ctx.fillText(artwork.error ? '!' : '…', Math.max(8, x + width / 2), y + height / 2, Math.max(1, width - 16));
   }

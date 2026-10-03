@@ -116,19 +116,17 @@ const genericClipSvg = (clip: Clip) => {
   );
 };
 
+const zoomSvg = () =>
+  dataSvg(
+    '<circle cx="41" cy="29" r="17" fill="none" stroke="#ff6b35" stroke-width="4"/><path d="M54 42 L75 55" stroke="#ff6b35" stroke-width="6" stroke-linecap="round"/><path d="M41 20 V38 M32 29 H50" stroke="#fff" stroke-width="3" stroke-linecap="round"/>',
+  );
+
 const timelineEntryPreview = (entry: TimelineClipboardEntry, count: number): ToastPreview => {
   const alt =
     entry.type === 'zoom'
       ? `Zoom ${entry.descriptor.number}`
       : entry.clip.name || (entry.descriptor.kind === 'caption' ? entry.descriptor.text : entry.descriptor.name);
-  if (entry.type === 'zoom')
-    return preview(
-      dataSvg(
-        '<circle cx="41" cy="29" r="17" fill="none" stroke="#ff6b35" stroke-width="4"/><path d="M54 42 L75 55" stroke="#ff6b35" stroke-width="6" stroke-linecap="round"/><path d="M41 20 V38 M32 29 H50" stroke="#fff" stroke-width="3" stroke-linecap="round"/>',
-      ),
-      alt,
-      count,
-    );
+  if (entry.type === 'zoom') return preview(zoomSvg(), alt, count);
   if (entry.asset?.src && entry.asset.kind === 'image') return preview(entry.asset.src, alt, count);
   if (entry.asset?.src && entry.asset.kind === 'video' && entry.clip.kind !== 'audio')
     return preview(entry.asset.src, alt, count, 'video');
@@ -147,6 +145,7 @@ export const screenshotClipboardPreview = (item: ScreenshotLayerClipboard): Toas
   if (entry.layer.type === 'image') return preview(entry.layer.value.source, entry.name, count);
   if (entry.layer.type === 'shape') return preview(shapeSvg(entry.layer.value), entry.name, count);
   if (entry.layer.type === 'effect') return preview(genericClipSvg(entry.layer.value), entry.name, count);
+  if (entry.layer.type === 'zoom') return preview(zoomSvg(), entry.name, count);
   return preview(
     dataSvg(
       `<path d="M19 9 L70 37 49 41 61 56 51 61 40 45 27 58 Z" fill="${xml(entry.layer.value.color)}" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>`,

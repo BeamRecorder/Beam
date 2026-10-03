@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Lock } from '@lucide/vue';
 import { computed } from 'vue';
+import TimelineTrimHandle from './TimelineTrimHandle.vue';
 import TimelineCanvasLane from './TimelineCanvasLane.vue';
 import TimelineZoomProjectionBadge from './TimelineZoomProjectionBadge.vue';
 import { timelineSpanStyle } from './timeline-clip-geometry';
@@ -73,15 +74,12 @@ const items = computed(() =>
         @contextmenu.prevent.stop="openZoomContextMenu($event, zoom)"
         @pointerdown="startZoomMove($event, zoom)"
       >
-        <span
-          class="trim-handle start"
+        <TimelineTrimHandle
+          edge="start"
+          :state="trimStateFor(zoom.id)"
           :title="t('trimStart')"
-          @pointerdown.stop="beginZoomTrim($event, zoom, 'start')"
-        >
-          <span v-if="trimStateFor(zoom.id)?.edge === 'start'" class="trim-side-badge"
-            >{{ (trimStateFor(zoom.id)!.durationMs / 1000).toFixed(1) }}s</span
-          >
-        </span>
+          @start="beginZoomTrim($event, zoom, 'start')"
+        />
         <span class="zoom-clip-labels" :class="{ 'has-lock': zoom.locked }">
           <Lock v-if="zoom.locked" :size="12" :aria-label="t('locked')" />
           <TimelineZoomProjectionBadge :zoom="zoom" />
@@ -92,11 +90,12 @@ const items = computed(() =>
             zoom.mode === 'auto' ? t('zoomModeAuto') : t('zoomModeManual')
           }}</span>
         </span>
-        <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginZoomTrim($event, zoom, 'end')">
-          <span v-if="trimStateFor(zoom.id)?.edge === 'end'" class="trim-side-badge"
-            >{{ (trimStateFor(zoom.id)!.durationMs / 1000).toFixed(1) }}s</span
-          >
-        </span>
+        <TimelineTrimHandle
+          edge="end"
+          :state="trimStateFor(zoom.id)"
+          :title="t('trimEnd')"
+          @start="beginZoomTrim($event, zoom, 'end')"
+        />
       </button>
     </div>
   </div>

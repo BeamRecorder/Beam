@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, toRef } from 'vue';
+import MediaOrientationControls from '../shared/MediaOrientationControls.vue';
 import Input from '~/ui/input/Input.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import Divider from '~/ui/divider/Divider.vue';
@@ -12,6 +13,7 @@ import CaptionStyleControls from './CaptionStyleControls.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('CaptionClipPanel');
+const { t: transformText } = useTranslate('TransformControls');
 const props = defineProps<{ clip: CaptionClip | null }>();
 const emit = defineEmits<{
   (event: 'update', clip: CaptionClip): void;
@@ -82,6 +84,14 @@ const previewStyle = (patch: Partial<CaptionStyle> | null) => {
           />
         </div>
       </div>
+      <div class="rotation-row">
+        <span class="rotation-label">{{ transformText('rotation') }}</span>
+        <MediaOrientationControls
+          :rotation="keyboardDraft.rotation"
+          :show-mirroring="false"
+          @update:rotation="update((clip) => ({ ...clip, rotation: $event }))"
+        />
+      </div>
       <Divider spacing="xs" />
       <CaptionStyleControls
         :style="style"
@@ -95,6 +105,16 @@ const previewStyle = (patch: Partial<CaptionStyle> | null) => {
 </template>
 
 <style scoped>
+.rotation-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+.rotation-label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body);
+}
 .keyboard-caption-panel {
   display: flex;
   flex-direction: column;

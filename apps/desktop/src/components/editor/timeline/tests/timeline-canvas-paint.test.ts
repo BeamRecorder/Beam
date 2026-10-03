@@ -14,9 +14,12 @@ vi.mock('@beam/runtime/timeline/timeline-canvas-transition', () => ({
 const palette: TimelineCanvasPalette = {
   background: '#000',
   text: '#fff',
+  itemText: '#def',
   border: '#777',
   selected: '#0ff',
   video: '#00f',
+  image: '#a50',
+  shape: '#a30',
   annotation: '#f0f',
   blur: '#f00',
   highlight: '#fa0',
@@ -28,8 +31,6 @@ const palette: TimelineCanvasPalette = {
   radius: 6,
   tint: 0.36,
   disabledOpacity: 0.3,
-  effectInset: 6,
-  effectHeight: 36,
 };
 const geometry = {
   durationMs: 60000,
@@ -118,11 +119,11 @@ describe('canvas timeline painter', () => {
     );
     expect(ctx.clearRect).toHaveBeenCalledWith(0, 0, 1000, 32);
     expect(ctx.roundRect).toHaveBeenCalledTimes(2);
-    expect(ctx.roundRect).toHaveBeenCalledWith(0, 2, 100, 28, 6);
+    expect(ctx.roundRect).toHaveBeenCalledWith(0, 0, 100, 32, 6);
     expect(ctx.fillText).toHaveBeenCalledWith('Screen capture', 8, 16);
     expect(ctx.lineWidth).toBe(2);
     expect(ctx.strokeStyle).toBe('#0ff');
-    expect(ctx.rect).toHaveBeenCalledWith(8, 2, 84, 28);
+    expect(ctx.rect).toHaveBeenCalledWith(8, 0, 84, 32);
     expect(helpers.artwork).not.toHaveBeenCalled();
   });
   it('uses audio/zoom/highlight track colors and honors single disabled opacity with theme tint', () => {
@@ -159,7 +160,7 @@ describe('canvas timeline painter', () => {
     expect(fills.filter((_fill, index) => index % 2 === 1).map((fill) => fill.style)).toEqual(['#0f0', '#ff0', '#fa0']);
     expect(fills[4]!.alpha).toBe(0.3);
     expect(fills[5]!.alpha).toBeCloseTo(0.3 * 0.36);
-    expect(ctx.fillText).toHaveBeenCalledWith('Zoom 1.5×', 208, 24);
+    expect(ctx.fillText).toHaveBeenCalledWith('Zoom 1.5×', 208, 16);
   });
   it('preserves shape text, explicit labels, blur tint and an empty viewport', () => {
     const { ctx, fills } = context();
@@ -183,7 +184,7 @@ describe('canvas timeline painter', () => {
     );
     expect(ctx.fillText).toHaveBeenCalledWith('Text', 8, 16);
     expect(ctx.fillText).toHaveBeenCalledWith('Explicit', 223, 16);
-    expect(fills[1]!.style).toBe(palette.annotation);
+    expect(fills[1]!.style).toBe(palette.shape);
     expect(fills[3]!.style).toBe(palette.blur);
     paintTimelineCanvas(ctx, [], geometry, palette);
     expect(ctx.clearRect).toHaveBeenCalledTimes(2);
@@ -200,7 +201,7 @@ describe('canvas timeline painter', () => {
     expect(helpers.artwork).toHaveBeenCalledWith(
       ctx,
       artwork,
-      { x: 0, y: 2, width: 100, height: 28 },
+      { x: 0, y: 0, width: 100, height: 32 },
       1000,
       palette,
       1000,
@@ -248,10 +249,10 @@ describe('canvas timeline painter', () => {
       palette.curve,
     ]);
     expect(vi.mocked(ctx.roundRect).mock.calls).toEqual([
-      [0, 3, 100, 26, 6],
-      [0, 3, 100, 26, 6],
-      [5900, 3, 100, 26, 6],
-      [5900, 3, 100, 26, 6],
+      [0, 0, 100, 32, 6],
+      [0.5, 0.5, 99, 31, 5.5],
+      [5900, 0, 100, 32, 6],
+      [5900.5, 0.5, 99, 31, 5.5],
     ]);
   });
   it('keeps locked hatching bounded, offsets labels for icons and paints paste feedback without thickening selection', () => {
@@ -275,7 +276,7 @@ describe('canvas timeline painter', () => {
     expect(ctx.fillText).toHaveBeenCalledWith('Screen capture', 18, 16);
     expect(ctx.strokeStyle).toBe(palette.selected);
     expect(ctx.lineWidth).toBe(1);
-    expect(ctx.rect).toHaveBeenCalledWith(38, 2, 54, 28);
+    expect(ctx.rect).toHaveBeenCalledWith(38, 0, 54, 32);
   });
   it('does not apply another item’s hover offset or draw an offscreen artwork', () => {
     const { ctx } = context(),
@@ -310,13 +311,13 @@ describe('canvas timeline painter', () => {
       locked: true,
     });
     paintTimelineCanvas(ctx, [{ clip, labelInset: 30, selected: false }], geometry, palette);
-    expect(ctx.roundRect).toHaveBeenCalledWith(-100, 2, 400, 28, palette.radius);
+    expect(ctx.roundRect).toHaveBeenCalledWith(-100, 0, 400, 32, palette.radius);
     expect(ctx.fillText).toHaveBeenCalledWith('Screen capture', -62, 16);
     expect(vi.mocked(ctx.fillText).mock.calls[0]?.[1]).not.toBe(8);
   });
 
   it.each(['zoom', 'caption'] as const)(
-    'matches the %s semantic handle inset/height for body, title clipping and selected border',
+    'fills the %s lane and keeps the selected border fully inside the body',
     (kind) => {
       const { ctx } = context();
       const item =
@@ -333,35 +334,48 @@ describe('canvas timeline painter', () => {
             };
       paintTimelineCanvas(ctx, [item], { ...geometry, height: 48 }, palette);
       expect(vi.mocked(ctx.roundRect).mock.calls).toEqual([
-        [0, 6, 100, 36, 6],
-        [0, 6, 100, 36, 6],
+        [0, 0, 100, 48, 6],
+        [1, 1, 98, 46, 5],
       ]);
-      expect(ctx.rect).toHaveBeenCalledWith(8, 6, 84, 36);
+      expect(ctx.rect).toHaveBeenCalledWith(8, 0, 84, 48);
       expect(ctx.fillText).toHaveBeenCalledWith('Effect title', 8, 24);
       expect(ctx.strokeStyle).toBe(palette.selected);
       expect(ctx.lineWidth).toBe(2);
     },
   );
 
-  it('uses effect geometry from the active theme rather than hardcoded values or the full row height', () => {
+  it.each([32, 40, 56])('uses the same full %s px lane geometry for media, audio, zoom and captions', (height) => {
     const { ctx } = context();
+    const items = [
+      { clip: visual({ timelineStartMs: 10000, timelineDurationMs: 1000 }), selected: false },
+      { clip: importedAudio({ timelineStartMs: 10000, timelineDurationMs: 1000 }), selected: false },
+      { clip: { ...keyboardCaption(), timelineStartMs: 10000 }, selected: false },
+      { zoom: zoom({ startMs: 10000, endMs: 11000 }), label: 'Zoom', selected: false },
+    ];
+    paintTimelineCanvas(ctx, items, { ...geometry, height }, palette);
+    for (let index = 0; index < items.length; index++) {
+      expect(vi.mocked(ctx.roundRect).mock.calls[index * 2]).toEqual([0, 0, 100, height, 6]);
+      expect(vi.mocked(ctx.roundRect).mock.calls[index * 2 + 1]).toEqual([0.5, 0.5, 99, height - 1, 5.5]);
+      expect(vi.mocked(ctx.rect).mock.calls[index]).toEqual([8, 0, 84, height]);
+    }
+    expect(ctx.fillStyle).toBe(palette.itemText);
+  });
+
+  it('uses the image color while its genuine artwork is pending and keeps captions distinct from shapes', () => {
+    const { ctx, fills } = context();
+    const image = visual({ id: 'image', timelineStartMs: 10000, timelineDurationMs: 1000 });
     paintTimelineCanvas(
       ctx,
       [
-        {
-          zoom: zoom({ startMs: 10000, endMs: 11000 }),
-          label: 'Themed zoom',
-          selected: false,
-        },
+        { clip: image, selected: false },
+        { clip: { ...keyboardCaption(), timelineStartMs: 10000 }, selected: false },
       ],
-      { ...geometry, height: 64 },
-      { ...palette, effectInset: 4, effectHeight: 28 },
+      geometry,
+      palette,
+      new Map([['image', { kind: 'image', loading: true }]]),
     );
-    expect(vi.mocked(ctx.roundRect).mock.calls).toEqual([
-      [0, 4, 100, 28, 6],
-      [0, 4, 100, 28, 6],
-    ]);
-    expect(ctx.rect).toHaveBeenCalledWith(8, 4, 84, 28);
-    expect(ctx.fillText).toHaveBeenCalledWith('Themed zoom', 8, 18);
+    expect(fills[1]!.style).toBe(palette.image);
+    expect(fills[3]!.style).toBe(palette.annotation);
+    expect(ctx.fillStyle).toBe(palette.itemText);
   });
 });

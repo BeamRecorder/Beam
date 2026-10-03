@@ -55,7 +55,7 @@ describe('shared timeline appearance', () => {
     expect(compiled.errors).toEqual([]);
     expect(compiled.code).toContain('background: transparent');
     expect(compiled.code).toContain('var(--color-timeline-selection)');
-    expect(compiled.code).toContain('var(--color-error)');
+    expect(readFileSync(resolve(timelineRoot, 'TimelineTrimHandle.vue'), 'utf8')).toContain('var(--color-error)');
     expect(compiled.code).toMatch(
       /\.canvas-clip-target\.disabled[^{}]*\{\s*opacity:\s*var\(--timeline-disabled-opacity\)/,
     );
@@ -65,7 +65,9 @@ describe('shared timeline appearance', () => {
 
   it.each(items)('%s canvas controls retain the theme foreground and exact border-box hit geometry', (item) => {
     const controls = declarationsFor(`${item} canvas-clip-target`);
-    expect(controls.get('color')).toBe('var(--text-primary)');
+    expect(controls.get('color')).toBe(
+      item === 'canvas-transition-zone' ? 'var(--text-primary)' : 'var(--color-timeline-item-text)',
+    );
     expect(controls.get('box-sizing')).toBe('border-box');
     expect(controls.has('background')).toBe(false);
   });
@@ -159,10 +161,12 @@ describe('shared timeline appearance', () => {
 
   it('keeps a trim limit visible when the clip is selected', () => {
     expect(declarationsFor('timeline-clip selected trim-at-limit').get('border-color')).toBe('var(--color-error)');
-    expect(declarationsFor('trim-handle at-limit').get('background')).toBe('var(--color-error)');
+    expect(readFileSync(resolve(timelineRoot, 'TimelineTrimHandle.vue'), 'utf8')).toMatch(
+      /\.trim-handle\.at-limit\s*\{\s*background: var\(--color-error\)/,
+    );
   });
 
-  it('centralizes both palettes with much less tint behind the colored items', () => {
+  it('centralizes readable type colors in both palettes', () => {
     const theme = compileStyle({
       source: timelineTheme,
       filename: 'timeline.css',
@@ -182,11 +186,58 @@ describe('shared timeline appearance', () => {
       for (const role of ['video', 'audio', 'cursor', 'annotation', 'blur']) {
         expect(palette.has(`--color-track-${role}`)).toBe(true);
       }
-      expect(parseFloat(palette.get('--timeline-lane-tint')!)).toBeLessThanOrEqual(5);
+      for (const role of ['video', 'image', 'audio', 'zoom', 'caption', 'shape', 'blur', 'highlight']) {
+        const background = palette.get(`--color-timeline-${role}`)!;
+        expect(background).toMatch(/^#[\da-f]{6}$/i);
+        const luminance = (hex: string) => {
+          const rgb = hex
+            .slice(1)
+            .match(/../g)!
+            .map((channel) => parseInt(channel, 16) / 255)
+            .map((channel) => (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4));
+          return rgb[0]! * 0.2126 + rgb[1]! * 0.7152 + rgb[2]! * 0.0722;
+        };
+        const foreground = palettes.get(':root')!.get('--color-timeline-item-text')!;
+        expect(
+          (luminance(foreground) + 0.05) / (luminance(background) + 0.05),
+          `${selector} ${role}`,
+        ).toBeGreaterThanOrEqual(4.5);
+      }
     }
     const light = palettes.get(':root')!;
     expect(parseFloat(light.get('--timeline-item-tint')!)).toBeGreaterThanOrEqual(30);
     expect(light.get('--color-timeline-selection')).toBe('var(--text-primary)');
     expect(timelineTheme).not.toContain('--color-primary');
+  });
+
+  it('keeps transformed semantic rows above the bitmap without obscuring its artwork', () => {
+    for (const type of ['track-row', 'canvas-track-row']) {
+      const row = declarationsFor(type);
+      expect(row.get('z-index')).toBe('2');
+      expect(row.get('background')).toBe('transparent');
+    }
+    expect(readFileSync(resolve(timelineRoot, 'timeline-tracks.css'), 'utf8')).toContain('repeating-linear-gradient');
+  });
+
+  it('uses one row height contract and full-height controls across media, captions and zooms', () => {
+    const styles = [
+      'timeline-tracks.css',
+      'timeline-caption-tracks.css',
+      'timeline-track-headers.css',
+      'timeline-indicators.css',
+    ]
+      .map((file) => readFileSync(resolve(timelineRoot, file), 'utf8'))
+      .join('\n');
+    expect(styles + timelineTheme).not.toMatch(
+      /--timeline-(?:effect|audio)-(?:track|item)-(?:min-|max-)?(?:height|inset)/,
+    );
+    for (const file of ['timeline-indicators.css', 'timeline-caption-tracks.css']) {
+      const style = readFileSync(resolve(timelineRoot, file), 'utf8');
+      expect(style).toMatch(/\.annotation-indicator\s*\{[^}]*inset-block:\s*0;/);
+      expect(style).not.toMatch(/\.annotation-indicator\s*\{[^}]*\bheight:/);
+    }
+    expect(readFileSync(resolve(timelineRoot, 'TimelineCanvasClip.vue'), 'utf8')).toMatch(
+      /\.timeline-clip\.canvas-clip-target\s*\{[^}]*inset-block:\s*0;/,
+    );
   });
 });

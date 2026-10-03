@@ -137,6 +137,7 @@ contextBridge.exposeInMainWorld(
     cancelScreenRegion: () => ipcRenderer.send('screen-region:cancel'),
     getWindowBounds: () => ipcRenderer.invoke('window:bounds'),
     getPreferences: () => ipcRenderer.invoke('preferences:get'),
+    updateBackgroundCatalog: (request) => ipcRenderer.invoke('preferences:background-catalog', request),
     updatePreferences: (patch) => ipcRenderer.invoke('preferences:update', patch),
     updatePreferencesBatch: (patches) => ipcRenderer.invoke('preferences:update-batch', patches),
     resetPreferences: (keys) => ipcRenderer.invoke('preferences:reset', keys),

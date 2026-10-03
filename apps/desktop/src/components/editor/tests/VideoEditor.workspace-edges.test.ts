@@ -81,9 +81,9 @@ describe('VideoEditor workspace interaction boundaries', () => {
     const mounted = mountEditor();
     const workspace = workspaceOf(mounted);
     const canvas = mounted.findComponent({ name: 'MockEditorCanvas' });
-    canvas.vm.$emit('preview:shape-rotation', 25);
-    canvas.vm.$emit('update:shape-rotation', 25);
-    expect(workspace.shapeCompositionPreview.value).toBeNull();
+    canvas.vm.$emit('preview:clip-rotation', 25);
+    canvas.vm.$emit('update:clip-rotation', 25);
+    expect(workspace.layerCompositionPreview.value).toBeNull();
     await workspace.addVisualElementAtTime({
       kind: 'shape',
       trackId: 'shape-track',
@@ -92,15 +92,15 @@ describe('VideoEditor workspace interaction boundaries', () => {
     });
     await nextTick();
     const before = workspace.composition.value;
-    canvas.vm.$emit('preview:shape-rotation', 35);
+    canvas.vm.$emit('preview:clip-rotation', 35);
     await nextTick();
     expect(workspace.composition.value).toBe(before);
-    expect(workspace.shapeCompositionPreview.value?.clips.find((clip) => clip.id === 'shape-1')).toMatchObject({
+    expect(workspace.layerCompositionPreview.value?.clips.find((clip) => clip.id === 'shape-1')).toMatchObject({
       rotation: 35,
     });
-    canvas.vm.$emit('preview:shape-rotation', null);
-    expect(workspace.shapeCompositionPreview.value).toBeNull();
-    canvas.vm.$emit('update:shape-rotation', 35);
+    canvas.vm.$emit('preview:clip-rotation', null);
+    expect(workspace.layerCompositionPreview.value).toBeNull();
+    canvas.vm.$emit('update:clip-rotation', 35);
     await nextTick();
     expect(workspace.composition.value.clips.find((clip) => clip.id === 'shape-1')).toMatchObject({
       rotation: 35,
@@ -258,4 +258,50 @@ describe('VideoEditor workspace interaction boundaries', () => {
     await nextTick();
     expect(workspace.composition.value.clips).toHaveLength(0);
   });
+});
+
+it('previews a precise media rotation without mutating the document and commits it once', async () => {
+  const mounted = mountEditor();
+  const workspace = workspaceOf(mounted);
+  workspace.selectEditorClip('screen');
+  await nextTick();
+  const before = workspace.composition.value;
+  const canvas = mounted.findComponent({ name: 'MockEditorCanvas' });
+  canvas.vm.$emit('preview:clip-rotation', 32.75);
+  await nextTick();
+  expect(workspace.composition.value).toBe(before);
+  expect(workspace.layerCompositionPreview.value?.clips.find((clip) => clip.id === 'screen')).toMatchObject({
+    rotation: 32.75,
+  });
+  expect(workspace.selectedTransformClip.value).toMatchObject({ rotation: 32.75 });
+  canvas.vm.$emit('update:clip-rotation', 32.75);
+  await nextTick();
+  expect(workspace.layerCompositionPreview.value).toBeNull();
+  expect(workspace.composition.value.clips.find((clip) => clip.id === 'screen')).toMatchObject({ rotation: 32.75 });
+  expect(workspace.editorState.scheduleSave).toHaveBeenCalled();
+});
+it('clears media rotation drafts on selection changes and rejects locked or unsupported layers', async () => {
+  const mounted = mountEditor();
+  const workspace = workspaceOf(mounted);
+  workspace.selectEditorClip('screen');
+  await nextTick();
+  workspace.previewSelectedRotation(45);
+  expect(workspace.layerCompositionPreview.value).not.toBeNull();
+  workspace.selectEditorClip('audio');
+  await nextTick();
+  expect(workspace.layerCompositionPreview.value).toBeNull();
+  const before = workspace.composition.value;
+  workspace.commitSelectedRotation(20);
+  expect(workspace.composition.value).toBe(before);
+  workspace.selectEditorClip('screen');
+  workspace.composition.value = {
+    ...before,
+    clips: before.clips.map((clip) => (clip.id === 'screen' ? { ...clip, locked: true } : clip)),
+  };
+  await nextTick();
+  const locked = workspace.composition.value;
+  workspace.previewSelectedRotation(20);
+  workspace.commitSelectedRotation(20);
+  expect(workspace.layerCompositionPreview.value).toBeNull();
+  expect(workspace.composition.value).toBe(locked);
 });

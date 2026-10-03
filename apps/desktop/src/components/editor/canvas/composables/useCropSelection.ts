@@ -1,3 +1,4 @@
+import { rotateMediaVector } from '@beam/engine/layout/media-rotation';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { isVisualClip, type NormalizedCrop } from '@beam/engine/shared/composition-types';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
@@ -57,6 +58,10 @@ export function useCropSelection(options: UseLayerTransformAndCropOptions, displ
     );
   };
   const sourceCrop = displayCrop;
+  const rotation = () => {
+    const clip = options.selectedTransformClip();
+    return clip && isVisualClip(clip) ? (clip.rotation ?? 0) : 0;
+  };
   const visualLayout = () => {
     const clip = options.selectedTransformClip();
     if (!clip || clip.kind === 'caption') return null;
@@ -69,7 +74,7 @@ export function useCropSelection(options: UseLayerTransformAndCropOptions, displ
     return {
       left: '0px',
       top: '0px',
-      transform: `translate3d(${layout.left}px, ${layout.top}px, 0)`,
+      transform: `translate3d(${layout.left}px, ${layout.top}px, 0)${rotation() ? ` rotate(${rotation()}deg)` : ''}`,
       width: `${layout.width}px`,
       height: `${layout.height}px`,
     };
@@ -110,8 +115,12 @@ export function useCropSelection(options: UseLayerTransformAndCropOptions, displ
     const layout = visualLayout();
     if (!layout) return;
     const vScale = options.zoomScale?.() ?? 1;
-    const dx = (event.clientX - cropDrag.startX) / Math.max(1, layout.width * vScale);
-    const dy = (event.clientY - cropDrag.startY) / Math.max(1, layout.height * vScale);
+    const delta = rotateMediaVector(
+      { x: event.clientX - cropDrag.startX, y: event.clientY - cropDrag.startY },
+      -rotation(),
+    );
+    const dx = delta.x / Math.max(1, layout.width * vScale);
+    const dy = delta.y / Math.max(1, layout.height * vScale);
     if (cropDrag.kind === 'move') {
       previewDraft(
         sourceCrop({

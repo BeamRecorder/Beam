@@ -18,7 +18,7 @@ describe('timeline row virtualization', () => {
     expect(visible[0]!.id).toBe('row-4996');
     expect(visible.at(-1)!.id).toBe('row-5015');
   });
-  it('shares deterministic variable heights between headers and every category', () => {
+  it('gives headers and every category the same height', () => {
     const layout = layoutTimelineRows(
       [
         { id: 'video', kind: 'visual', clips: [] },
@@ -27,17 +27,17 @@ describe('timeline row virtualization', () => {
       ],
       150,
     );
-    expect(layout[0]!.height).toBe(47);
-    expect(layout[1]!.height).toBe(63);
-    expect(layout[2]!.top).toBe(110);
-    expect(layout[2]!.height).toBe(40);
+    expect(layout[0]!.height).toBe(50);
+    expect(layout[1]!.height).toBe(50);
+    expect(layout[2]!.top).toBe(100);
+    expect(layout[2]!.height).toBe(50);
     expect(layoutTimelineRows(rows(1), 1000)[0]!.height).toBe(56);
   });
   it('keeps minimum heights in undersized viewports and handles empty and fully capped stacks', () => {
     expect(layoutTimelineRows([], 1000)).toEqual([]);
     expect(layoutTimelineRows(rows(2), -100).map((row) => row.height)).toEqual([32, 32]);
-    expect(layoutTimelineRows([{ id: 'audio', kind: 'audio', clips: [] }], 1000)[0]!.height).toBe(40);
-    expect(layoutTimelineRows([{ id: 'effect', kind: 'effect', clips: [] }], 1000)[0]!.height).toBe(64);
+    expect(layoutTimelineRows([{ id: 'audio', kind: 'audio', clips: [] }], 1000)[0]!.height).toBe(56);
+    expect(layoutTimelineRows([{ id: 'effect', kind: 'effect', clips: [] }], 1000)[0]!.height).toBe(56);
   });
   it('pins only the active gesture row, not an arbitrarily large selection', () => {
     const layout = layoutTimelineRows(rows(10000), 400);

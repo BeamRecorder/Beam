@@ -312,6 +312,24 @@
     "transcriptSaved": "转录文本已导出。",
     "transcriptExportFailed": "无法导出转录文本。"
   },
+  "TransformControls": {
+    "position": "位置",
+    "alignment": "对齐",
+    "left": "左",
+    "center": "水平居中",
+    "right": "右",
+    "top": "上",
+    "middle": "垂直居中",
+    "bottom": "下",
+    "width": "宽度",
+    "height": "高度",
+    "lockAspectRatio": "锁定宽高比",
+    "orientation": "方向",
+    "rotateLeft": "向左旋转90°",
+    "rotateRight": "向右旋转90°",
+    "unit": "单位",
+    "rotation": "旋转"
+  },
   "ClipPropertiesPanel": {
     "noClipSelected": "未选择片段",
     "noClipSelectedDesc": "点击时间线上的片段以查看和编辑其属性。",
@@ -334,6 +352,7 @@
     "solid": "纯色",
     "adaptive": "自适应",
     "adaptiveShadowDescription": "提取片段颜色，生成细微的环境光晕。",
+    "shadowStyleDescription": "纯色：使用所选颜色绘制阴影。\n自适应：使用片段的颜色创建环境光晕。",
     "direction": "方向",
     "mirroring": "镜像",
     "mirrorHorizontally": "水平镜像",
@@ -1083,7 +1102,8 @@
     "image": "图片",
     "watermark": "水印",
     "previewLoading": "正在生成预览…",
-    "previewError": "预览不可用"
+    "previewError": "预览不可用",
+    "zoom": "缩放"
   },
   "Highlight": {
     "title": "区域高亮",
@@ -1117,5 +1137,25 @@
     "description": "将系统光标直接录入视频。自动缩放仍会跟随光标。Beam 光标默认关闭；可在光标设置中叠加显示。已录入的光标无法移除。",
     "customCursor": "自定义光标",
     "overlayDescription": "在视频上叠加 Beam 光标。如果录制内容已包含系统光标，请关闭此选项。"
+  },
+  "Gradient": {
+    "type": "类型",
+    "linear": "线性",
+    "radial": "径向",
+    "angle": "角度",
+    "rotate": "旋转 90°",
+    "stops": "颜色节点",
+    "presets": "预设",
+    "reverse": "反转渐变",
+    "addStop": "添加颜色节点",
+    "removeStop": "删除颜色节点",
+    "color": "颜色",
+    "position": "位置",
+    "opacity": "不透明度",
+    "stop": "颜色节点 {number}",
+    "stopColor": "节点 {number} 的颜色",
+    "stopPosition": "节点 {number} 的位置",
+    "stopOpacity": "节点 {number} 的不透明度",
+    "addAtPosition": "点击添加颜色节点"
   }
 }

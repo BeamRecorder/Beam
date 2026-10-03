@@ -4,9 +4,12 @@ import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 export interface TimelineCanvasPalette {
   background: string;
   text: string;
+  itemText: string;
   border: string;
   selected: string;
   video: string;
+  image: string;
+  shape: string;
   annotation: string;
   blur: string;
   audio: string;
@@ -16,8 +19,6 @@ export interface TimelineCanvasPalette {
   labelText: string;
   curve: string;
   radius: number;
-  effectInset: number;
-  effectHeight: number;
   tint: number;
   disabledOpacity: number;
 }

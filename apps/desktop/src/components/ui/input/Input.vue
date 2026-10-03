@@ -1,48 +1,44 @@
 <script setup lang="ts">
-import { ref, useAttrs, onMounted } from 'vue';
+import { ref, useAttrs, onMounted, watch } from 'vue';
+import InputUnitSelect from './InputUnitSelect.vue';
+import type { InputProps } from './input-types';
 import { beginPropertyInteraction, endPropertyInteraction } from '~/composables/property-interaction';
 
 defineOptions({ inheritAttrs: false });
 
 const attrs = useAttrs();
 
-const props = withDefaults(
-  defineProps<{
-    modelValue: string | number;
-    type?: string;
-    placeholder?: string;
-    disabled?: boolean;
-    error?: boolean | string;
-    id?: string;
-    size?: 'xs' | 'sm' | 'md';
-    width?: string;
-    min?: number;
-    max?: number;
-    step?: number;
-    autofocus?: boolean;
-    selectOnFocus?: boolean;
-    debounce?: number;
-    appearance?: 'default' | 'neutral';
-  }>(),
-  {
-    type: 'text',
-    step: 1,
-    autofocus: false,
-    selectOnFocus: false,
-    debounce: 0,
-    appearance: 'default',
-  },
-);
+const props = withDefaults(defineProps<InputProps>(), {
+  type: 'text',
+  step: 1,
+  autofocus: false,
+  selectOnFocus: false,
+  debounce: 0,
+  commitOnBlur: false,
+  appearance: 'default',
+});
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string | number): void;
   (e: 'blur', event: FocusEvent): void;
+  (e: 'update:unit', value: string): void;
 }>();
 
 const inputRef = ref<HTMLInputElement | null>(null);
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingValue: string | number | null = null;
 let isDirty = false;
+const draft = ref(props.modelValue);
+watch(
+  () => [props.modelValue, props.unit] as const,
+  ([value]) => {
+    draft.value = value;
+    if (props.commitOnBlur) {
+      pendingValue = null;
+      isDirty = false;
+    }
+  },
+);
 
 const flushDebounce = () => {
   if (debounceTimer) {
@@ -54,10 +50,17 @@ const flushDebounce = () => {
     emit('update:modelValue', pendingValue);
     pendingValue = null;
   }
+  if (props.commitOnBlur) draft.value = props.modelValue;
 };
 
 const handleInput = (event: Event) => {
   const val = (event.target as HTMLInputElement).value;
+  if (props.commitOnBlur) {
+    draft.value = val;
+    pendingValue = val;
+    isDirty = true;
+    return;
+  }
   if (!props.debounce || props.debounce <= 0) {
     emit('update:modelValue', val);
     return;
@@ -110,7 +113,7 @@ const handleMouseDown = (e: MouseEvent) => {
   if (e.button !== 0) return;
 
   const startX = e.clientX;
-  const startValue = parseFloat(String(props.modelValue)) || 0;
+  const startValue = parseFloat(String(props.commitOnBlur ? draft.value : props.modelValue)) || 0;
   let hasDragged = false;
 
   const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -124,6 +127,10 @@ const handleMouseDown = (e: MouseEvent) => {
     }
 
     if (hasDragged) {
+      if (props.commitOnBlur) {
+        pendingValue = null;
+        isDirty = false;
+      }
       moveEvent.preventDefault();
       const multiplier = moveEvent.shiftKey ? 10 : 1;
       const stepVal = props.step ?? 1;
@@ -143,6 +150,7 @@ const handleMouseDown = (e: MouseEvent) => {
         newValue = props.max;
       }
 
+      draft.value = newValue;
       emit('update:modelValue', newValue);
     }
   };
@@ -203,7 +211,7 @@ const handleMouseDown = (e: MouseEvent) => {
       v-bind="attrs"
       :id="id"
       :type="type || 'text'"
-      :value="modelValue"
+      :value="commitOnBlur ? draft : modelValue"
       :placeholder="placeholder"
       :disabled="disabled"
       :min="min"
@@ -215,8 +223,18 @@ const handleMouseDown = (e: MouseEvent) => {
       @keydown="handleKeyDown"
       @mousedown="handleMouseDown"
     />
-    <div v-if="$slots.suffix" class="input-suffix">
-      <slot name="suffix" />
+    <div v-if="unitOptions?.length && unit !== undefined" class="input-suffix">
+      <InputUnitSelect
+        :model-value="unit"
+        :options="unitOptions"
+        :label="unitLabel ?? String(attrs['aria-label'] ?? '')"
+        :disabled="disabled"
+        @open="flushDebounce"
+        @update:model-value="emit('update:unit', $event)"
+      />
+    </div>
+    <div v-else-if="unit || $slots.suffix" class="input-suffix">
+      <slot name="suffix">{{ unit }}</slot>
     </div>
   </div>
   <span v-if="typeof error === 'string' && error" class="input-error-msg">
@@ -269,7 +287,7 @@ const handleMouseDown = (e: MouseEvent) => {
   height: calc(var(--control-height) - 4px);
   min-width: 0;
   flex-shrink: 0;
-  padding: 0 6px;
+  padding: 0;
   border-radius: var(--radius-sm);
   background: var(--color-bg-element);
   border-color: var(--color-border-strong);
@@ -282,8 +300,23 @@ const handleMouseDown = (e: MouseEvent) => {
 
 .input-wrapper.input-xs .input-element {
   min-width: 0;
+  padding: 0 4px;
   font-size: var(--font-size-body);
   font-variant-numeric: tabular-nums;
+}
+
+.input-wrapper.input-xs .input-prefix,
+.input-wrapper.input-xs .input-suffix {
+  font-size: var(--font-size-body);
+  flex: 0 0 24px;
+  width: 24px;
+  margin: 0;
+}
+.input-wrapper.input-xs .input-prefix {
+  margin-right: 0;
+}
+.input-wrapper.input-xs .input-suffix {
+  margin-left: 0;
 }
 
 .input-wrapper.input-xs.is-number .input-element {
@@ -333,6 +366,10 @@ const handleMouseDown = (e: MouseEvent) => {
   color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  line-height: 1;
+  flex-shrink: 0;
   user-select: none;
 }
 
@@ -341,11 +378,26 @@ const handleMouseDown = (e: MouseEvent) => {
   color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  line-height: 1;
+  flex-shrink: 0;
   user-select: none;
 }
 
 .input-wrapper.is-error {
   border-color: var(--color-error);
+}
+
+.input-wrapper.input-neutral:not(.is-error) {
+  background: var(--color-bg-field);
+  border-color: transparent;
+}
+.input-wrapper.input-neutral:hover:not(.is-disabled, .is-error) {
+  border-color: var(--color-border-strong);
+}
+.input-wrapper.input-neutral .input-element {
+  background: transparent;
 }
 
 .input-wrapper.is-error:focus-within {

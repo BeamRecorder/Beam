@@ -1130,6 +1130,7 @@ describe('useClipComposition', () => {
       height: 0.8,
     });
     mounted.state.updateSelectedMirrored(true);
+    mounted.state.updateSelectedRotation(-90);
     mounted.state.updateSelectedRate(2);
     expect(() => mounted.state.updateSelectedVolume(150)).not.toThrow();
     mounted.state.updateSelectedEnabled(false);
@@ -1137,6 +1138,7 @@ describe('useClipComposition', () => {
       borderEnabled: true,
       frame: 'safari',
       isMirrored: true,
+      rotation: 270,
       playbackRate: 2,
       enabled: false,
     });
@@ -1159,6 +1161,7 @@ describe('useClipComposition', () => {
     mounted.state.updateSelectedTransform({ x: 0, y: 0, width: 1, height: 1 });
     mounted.state.updateSelectedCrop({ x: 0, y: 0, width: 1, height: 1 });
     mounted.state.updateSelectedMirrored(false);
+    mounted.state.updateSelectedRotation(90);
     mounted.state.updateSelectedRate(1);
     expect(() => mounted.state.updateSelectedVolume(100)).not.toThrow();
     mounted.state.updateSelectedEnabled(true);

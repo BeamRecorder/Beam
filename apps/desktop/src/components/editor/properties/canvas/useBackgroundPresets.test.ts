@@ -8,6 +8,7 @@ const { capture } = vi.hoisted(() => ({
   capture: {
     getPreferences: vi.fn(),
     updatePreferences: vi.fn(),
+    updateBackgroundCatalog: vi.fn(),
     onPreferencesChanged: vi.fn(),
   },
 }));
@@ -266,4 +267,46 @@ describe('background presets', () => {
     });
     expect(selected).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'gradient:custom' }));
   });
+});
+
+it('keeps a built-in gradient edit out of the custom array and selects stable identities for added and edited gradients', async () => {
+  const wrapper = await mountPresets();
+  const api = wrapper.vm.presets;
+  const builtIn = api.gradientPresets.value[0]!;
+  api.editGradient(builtIn);
+  api.updateLiveGradient({ ...builtIn.gradient, angle: 52 });
+  await api.saveGradient(api.customGradientValue.value);
+  expect(capture.updatePreferences.mock.calls.at(-1)![0].backgroundPresets.gradients).toHaveLength(1);
+  expect(selected).toHaveBeenLastCalledWith(
+    expect.objectContaining({ id: builtIn.id, gradient: expect.objectContaining({ angle: 52 }) }),
+  );
+  const custom = api.gradientPresets.value.at(-1)!;
+  api.editGradient(custom);
+  await api.saveGradient(custom.gradient);
+  expect(selected).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'gradient:custom:0' }));
+  api.beginAdd('gradient');
+  await api.saveGradient(custom.gradient);
+  expect(selected).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'gradient:custom:1' }));
+});
+it('does not overwrite atomic catalogue metadata from a picker draft and restores a saved hidden color', async () => {
+  const loaded = {
+    ...preferences(),
+    extras: {
+      hiddenBackgroundIds: ['color:custom:#abcdef'],
+      backgroundCatalogHistory: { version: 1, id: 'color:custom:#abcdef', deleted: true },
+    },
+  };
+  capture.getPreferences.mockResolvedValue(loaded);
+  capture.updatePreferences.mockResolvedValue(loaded);
+  capture.updateBackgroundCatalog.mockResolvedValue({ ...loaded, extras: { hiddenBackgroundIds: [] } });
+  const wrapper = await mountPresets();
+  await wrapper.vm.presets.saveColor('#ABCDEF');
+  const patch = capture.updatePreferences.mock.calls.at(-1)![0];
+  expect(patch.extras.hiddenBackgroundIds).toBeUndefined();
+  expect(patch.extras.backgroundCatalogHistory).toBeUndefined();
+  expect(capture.updateBackgroundCatalog).toHaveBeenLastCalledWith({
+    operation: 'restore',
+    id: 'color:custom:#abcdef',
+  });
+  expect(selected).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'color:custom:#abcdef' }));
 });

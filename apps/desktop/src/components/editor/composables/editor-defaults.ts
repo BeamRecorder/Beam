@@ -87,6 +87,9 @@ const visualDefaults = (kind: VisualClip['kind'], value: unknown): VisualClipDef
     },
     isMirrored: input.isMirrored === true,
     isMirroredY: input.isMirroredY === true,
+    ...(input.rotation === undefined
+      ? {}
+      : { rotation: Number.isFinite(input.rotation) ? (input.rotation as number) : 0 }),
     playbackRate: Math.min(4, Math.max(0.25, finite(input.playbackRate, 1))),
     transitions:
       input.transitions && typeof input.transitions === 'object'
@@ -260,6 +263,7 @@ export const visualClipDefaultProps = (
     appearance: clone(value.appearance),
     isMirrored: value.isMirrored,
     isMirroredY: value.isMirroredY,
+    ...(value.rotation === undefined ? {} : { rotation: value.rotation }),
     playbackRate: value.playbackRate,
     transitions: normalizeClipTransitions(value.transitions, durationMs / value.playbackRate, kind),
     cameraLayoutPreset: value.cameraLayoutPreset,

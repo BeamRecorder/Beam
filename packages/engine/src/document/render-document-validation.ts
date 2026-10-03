@@ -2,6 +2,7 @@ import type { CompositionSnapshot } from '../shared/render-document-types';
 import { validateComposition } from '../commands/clip-composition-validation';
 import { validateCanvas, validateBackground } from './presentation-validation';
 import { assertJsonValue } from './json-value';
+import { validateGlassHighlight } from '../zoom/glass-highlight-schema.js';
 
 export function validateRenderDocument(snapshot: CompositionSnapshot) {
   assertJsonValue(snapshot);
@@ -46,6 +47,7 @@ export function validateRenderDocument(snapshot: CompositionSnapshot) {
     )
       throw new TypeError('Invalid zoom.');
     ids.add(zoom.id);
+    validateGlassHighlight(zoom);
   }
   if (
     snapshot.fontSources !== undefined &&

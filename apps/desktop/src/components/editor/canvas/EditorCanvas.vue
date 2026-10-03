@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { inject } from 'vue';
 import { customCursorKey } from '../properties/cursor/custom-cursor-context';
 import CanvasAddMenu from '../search/CanvasAddMenu.vue';
 import { canvasDoubleClick } from './composables/canvas-double-click';
 import ElementCanvasOverlay from '../elements/ElementCanvasOverlay.vue';
 import { useCanvasElements } from '../elements/useCanvasElements';
 import { useCanvasFormatTransition } from './composables/useCanvasFormatTransition';
-import { computed, onUnmounted, ref, shallowRef, toRaw, watch } from 'vue';
+import { computed, inject, onUnmounted, ref, shallowRef, toRaw, watch } from 'vue';
 import CanvasRecenterButton from './CanvasRecenterButton.vue';
 import CanvasLoadingSkeleton from './CanvasLoadingSkeleton.vue';
 import CanvasPlaybackError from './CanvasPlaybackError.vue';
@@ -44,6 +43,7 @@ import { disposeBlurEffect } from '@beam/runtime/composition/effects/blur-effect
 import { captureCanvasFrame } from './canvas-frame-capture';
 import { createRuntimePreview } from './runtime-preview';
 import CanvasMarqueeSurface from './CanvasMarqueeSurface.vue';
+import GlassHighlightSelection from './GlassHighlightSelection.vue';
 import EditorCanvasGuides from './EditorCanvasGuides.vue';
 import { toggleCanvasClipSelection } from './canvas-clip-selection';
 const { t } = useTranslate('EditorCanvas'),
@@ -59,6 +59,7 @@ const selectCanvasClip = (clipId: string, event?: PointerEvent) => {
   else emit('select:clip', clipId);
 };
 const canvasRef = ref<HTMLCanvasElement | null>(null);
+const glassSelection = ref<InstanceType<typeof GlassHighlightSelection> | null>(null);
 const containerRef = ref<HTMLDivElement | null>(null);
 const logicalSize = ref({ width: 0, height: 0 });
 const deviceScale = ref(1);
@@ -262,6 +263,7 @@ watch(() => props.previewQuality, resizeCanvas);
 const watermarkLogo = useEditorCanvasAssets(containerRef, resizeCanvas, renderOnce);
 const runtimePreview = createRuntimePreview({
   props,
+  zoomDraft: () => glassSelection.value?.draft ?? null,
   images: compositionMedia.images,
   cursorImage: () => cursorOverlay.customCursorImage.value,
   watermarkImage: () => watermarkLogo.value,
@@ -423,6 +425,16 @@ defineExpose({ viewportZoom, captureCurrentFrame });
         }"
       ></canvas>
       <EditorCanvasGuides :grid-visible="isGridVisible" :grid-style="previewFrameStyle" :guides="renderGuideLines" />
+      <GlassHighlightSelection
+        v-if="selectedZoom?.effect === 'glass' && selectedZoom.glass && !isPlaying && !isCropping"
+        ref="glassSelection"
+        :zoom="selectedZoom"
+        :canvas-size="outputCanvas"
+        :viewport-style="previewFrameStyle"
+        :panning="viewportZoom.isSpacePressed.value || viewportZoom.isPanning.value"
+        @preview="renderOnce"
+        @update="emit('update:zoom', $event)"
+      />
       <CanvasLoadingSkeleton
         :visible="showLoadingSkeleton"
         :label="t('videoPreviewLoading')"
@@ -463,8 +475,8 @@ defineExpose({ viewportZoom, captureCurrentFrame });
         :interaction="transformAndCrop"
         :rotate-label="canvasText('shapeRotation')"
         @pointer-down="handleTransformPointerDown"
-        @rotate="emit('preview:shape-rotation', $event)"
-        @rotate-end="emit('update:shape-rotation', $event)"
+        @rotate="emit('preview:clip-rotation', $event)"
+        @rotate-end="emit('update:clip-rotation', $event)"
       />
       <CanvasCropSelection
         v-if="isCropping && selectedTransformClip"

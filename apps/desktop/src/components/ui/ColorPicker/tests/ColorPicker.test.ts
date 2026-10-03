@@ -58,12 +58,12 @@ describe('ColorPicker', () => {
         stubs: {
           Popover,
           ColorPickerCustom: {
-            template: '<button @click="$emit(\'update:alpha\', .5)" />',
+            template: '<button class="alpha-custom" @click="$emit(\'update:alpha\', .5)" />',
           },
         },
       },
     });
-    await wrapper.get('button').trigger('click');
+    await wrapper.get('.alpha-custom').trigger('click');
     expect(wrapper.get('input').element.value).toBe('#AABBCC');
     expect(wrapper.emitted('update:alpha')).toEqual([[0.5]]);
   });

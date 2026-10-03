@@ -8,7 +8,7 @@ import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 
 afterEach(() => vi.restoreAllMocks());
 
-const createHarness = (initial: TimelineVirtualRow[] = []) => {
+const createHarness = (initial: TimelineVirtualRow[] = [], consumer?: ReturnType<typeof defineComponent>) => {
   const rows = ref(initial),
     scroll = ref<HTMLDivElement | null>(null),
     width = ref(1000);
@@ -26,6 +26,7 @@ const createHarness = (initial: TimelineVirtualRow[] = []) => {
         });
         return () =>
           h('div', { ref: scroll, onPointerdown: state.captureInteraction }, [
+            ...(consumer ? [h(consumer)] : []),
             h(
               'button',
               {
@@ -124,8 +125,8 @@ describe('timeline virtualization ownership and edge windows', () => {
     expect(state.visibleZooms([zoom])).toEqual([]);
     const targets = state.selectionTargets();
     expect(targets.map((target) => target.id)).toEqual(['clip', 'zoom']);
-    expect(targets[0]).toMatchObject({ x: 80, y: 2, width: 100 });
-    expect(targets[1]).toMatchObject({ x: 580, y: 48, width: 100, height: 36 });
+    expect(targets[0]).toMatchObject({ x: 80, y: 0, width: 100, height: 49 });
+    expect(targets[1]).toMatchObject({ x: 580, y: 50, width: 100, height: 49 });
     wrapper.unmount();
   });
   it('handles an empty model, missing row styles and the first unmeasured horizontal viewport', () => {
@@ -214,6 +215,37 @@ describe('timeline virtualization ownership and edge windows', () => {
       }),
     );
     expect(visible.value.map((item) => item.id)).toEqual(['one', 'two']);
+    wrapper.unmount();
+  });
+  it('uses translated row positions and returns only matching items for a provided viewport', () => {
+    let visible!: ReturnType<typeof useVirtualTimelineItems<{ id: string }>>;
+    const consumer = defineComponent({
+      setup() {
+        visible = useVirtualTimelineItems(
+          () => [{ id: 'first' }, { id: 'last' }],
+          (item) => item.id,
+        );
+        return () => h('span');
+      },
+    });
+    const { wrapper, state, rows, viewport } = createHarness(
+      [
+        { id: 'first', kind: 'visual', clips: [] },
+        { id: 'other', kind: 'effect', clips: [] },
+        { id: 'last', kind: 'audio', clips: [] },
+      ],
+      consumer,
+    );
+    expect(visible.value.map((item) => item.id)).toEqual(['first', 'last']);
+    expect(state.rowStyle('last')).toMatchObject({
+      top: '0',
+      transform: `translate3d(0, ${200 / 3}px, 0)`,
+      height: `${100 / 3}px`,
+    });
+    viewport.top = 10000;
+    expect(visible.value).toEqual([]);
+    rows.value = [];
+    expect(visible.value).toEqual([]);
     wrapper.unmount();
   });
   it('releases the focused item when focus moves to a row control without a clip', () => {

@@ -110,6 +110,8 @@
       "dist/**/*",
       "apps/desktop/electron/**/*",
       "packages/engine/src/scene/scene-schema.js",
+      "packages/engine/src/zoom/glass-highlight-schema.js",
+      "packages/engine/src/zoom/zoom-schema.js",
       "packages/storage/src/node/*.cjs",
       "packages/native-client/src/*.cjs",
       "packages/system-metrics/src/node/*.cjs",

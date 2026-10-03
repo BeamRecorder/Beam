@@ -11,6 +11,7 @@ import {
   Type,
   Video,
   Volume2,
+  ZoomIn,
 } from '@lucide/vue';
 import type { PopoverMenuItem } from '~/ui/popover/popover-menu-types';
 import type { EditorInsertKind } from './editor-search-types';
@@ -23,6 +24,7 @@ const definitions = [
   { id: 'image', key: 'Elements.image', icon: Image },
   { id: 'highlight', key: 'Highlight.title', icon: Focus },
   { id: 'blur', key: 'TimelineToolbar.blur', icon: CircleDashed },
+  { id: 'zoom', key: 'SidebarPanel.zoom', icon: ZoomIn },
   { id: 'color', key: 'CanvasPanel.color', icon: Palette },
   { id: 'video', key: 'TimelineToolbar.video', icon: Video },
   { id: 'sound', key: 'TimelineToolbar.sound', icon: Volume2 },

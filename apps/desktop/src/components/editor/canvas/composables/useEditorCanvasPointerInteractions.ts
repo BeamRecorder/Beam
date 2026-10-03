@@ -16,7 +16,7 @@ export function useEditorCanvasPointerInteractions(options: EditorCanvasPointerO
     if (
       options.isCropping() ||
       (event.target as Element | null)?.closest(
-        '.cursor-canvas-selection, .caption-text-editor, .canvas-recenter-float, .element-overlay, .canvas-playback-error',
+        '.cursor-canvas-selection, .caption-text-editor, .canvas-recenter-float, .element-overlay, .glass-highlight-selection, .canvas-playback-error',
       )
     )
       return;

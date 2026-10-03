@@ -1,3 +1,5 @@
+import { setCurrentLocale } from '~/i18n';
+import { SUPPORTED_LOCALES } from '~/i18n/locales';
 import { defineComponent, h, nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -278,7 +280,7 @@ describe('ClipAppearanceControls', () => {
         direction: 'all',
       },
     ]);
-    expect(wrapper.find('.shadow-hint').exists()).toBe(true);
+    expect(wrapper.findComponent({ name: 'InfoTooltip' }).props('content')).toContain('Adaptive:');
     expect(wrapper.find('.color-picker-stub').exists()).toBe(false);
 
     await buttonWithText(wrapper, 'solid')!.trigger('click');
@@ -368,7 +370,7 @@ describe('ClipAppearanceControls', () => {
     await nextTick();
     expect(wrapper.findAll('.big-slider-stub')).toHaveLength(1);
     expect(wrapper.find('.big-slider-value').text()).toBe('12px');
-    expect(wrapper.find('.shadow-hint').exists()).toBe(true);
+    expect(wrapper.findComponent({ name: 'InfoTooltip' }).props('content')).toContain('Adaptive:');
     expect(wrapper.get('.direction-button[data-direction="top-left"]').classes()).toContain('active');
   });
 
@@ -389,8 +391,8 @@ describe('ClipAppearanceControls', () => {
       }),
     );
 
-    const horizontal = buttonWithText(wrapper, 'horizontal')!;
-    const vertical = buttonWithText(wrapper, 'vertical')!;
+    const horizontal = wrapper.get('[aria-label="Mirror horizontally"]');
+    const vertical = wrapper.get('[aria-label="Mirror vertically"]');
     expect(horizontal.attributes('data-variant')).toBe('ghost');
     expect(vertical.attributes('data-variant')).toBe('selected');
 
@@ -434,7 +436,25 @@ describe('ClipAppearanceControls', () => {
       }),
     });
     await nextTick();
-    expect(buttonWithText(wrapper, 'horizontal')!.attributes('data-variant')).toBe('selected');
-    expect(buttonWithText(wrapper, 'vertical')!.attributes('data-variant')).toBe('ghost');
+    expect(wrapper.get('[aria-label="Mirror horizontally"]').attributes('data-variant')).toBe('selected');
+    expect(wrapper.get('[aria-label="Mirror vertically"]').attributes('data-variant')).toBe('ghost');
   });
+});
+
+it('explains both shadow modes in the shared multiline tooltip', () => {
+  const wrapper = mountAppearance();
+  const help = wrapper.findComponent({ name: 'InfoTooltip' });
+  expect(help.exists()).toBe(true);
+  expect(help.props('content')).toMatch(/^Solid: .+\nAdaptive: .+$/);
+  expect(wrapper.find('.shadow-hint').exists()).toBe(false);
+});
+
+it.each(SUPPORTED_LOCALES)('explains both shadow modes on separate lines in %s', async (locale) => {
+  await setCurrentLocale(locale);
+  const wrapper = mountAppearance();
+  const text = wrapper.findComponent({ name: 'InfoTooltip' }).props('content') as string;
+  expect(text.split('\n')).toHaveLength(2);
+  expect(text).not.toContain('ClipPropertiesPanel.');
+  expect(text.split('\n').every((line) => line.trim().length > 0)).toBe(true);
+  wrapper.unmount();
 });

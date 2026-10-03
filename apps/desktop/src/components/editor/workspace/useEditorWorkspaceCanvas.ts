@@ -4,6 +4,7 @@ import { useTimelineZoom } from '~/components/editor/timeline/composables/useTim
 import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset } from '@beam/engine/layout/output-canvas';
 import {
   isShapeClip,
+  isCaptionClip,
   isVisualClip,
   type NormalizedCrop,
   type NormalizedTransform,
@@ -11,6 +12,7 @@ import {
 import { type ZoomElement } from '@beam/engine/zoom/zoom-types';
 import { EMPTY_CLIP_TRANSITIONS } from '@beam/engine/shared/clip-transitions';
 import { useElementFullscreen } from '../canvas/composables/useElementFullscreen';
+import { setClipRotation } from '@beam/engine/commands/clip-rotation';
 import { setShapeLayerStyle } from '@beam/engine/commands/clip-engine';
 import type { EditorWorkspaceState, EditorWorkspaceHistory, EditorCanvasHandle } from './workspace-types';
 export function useEditorWorkspaceCanvas(
@@ -28,7 +30,7 @@ export function useEditorWorkspaceCanvas(
     updateSelectedTransforms,
     updateSelectedCrop,
     updateZoom,
-    shapeCompositionPreview,
+    layerCompositionPreview,
     cropPreview,
     previewCrop,
     selectedTransformClip,
@@ -50,20 +52,24 @@ export function useEditorWorkspaceCanvas(
     previewCrop(null);
     commitNow(createEditorSnapshot());
   };
-  const previewSelectedShapeRotation = (rotation: number | null) => {
+  const previewSelectedRotation = (rotation: number | null) => {
     const clip = selectedTransformClip.value;
-    shapeCompositionPreview.value =
-      rotation === null || !clip || !isShapeClip(clip)
+    layerCompositionPreview.value =
+      rotation === null || !clip || clip.locked
         ? null
-        : setShapeLayerStyle(composition.value, clip.id, { rotation });
+        : isShapeClip(clip)
+          ? setShapeLayerStyle(composition.value, clip.id, { rotation })
+          : isVisualClip(clip) || isCaptionClip(clip)
+            ? setClipRotation(composition.value, clip.id, rotation)
+            : null;
   };
-  const commitSelectedShapeRotation = (rotation: number) => {
+  const commitSelectedRotation = (rotation: number) => {
     const clip = selectedTransformClip.value;
-    if (!clip || !isShapeClip(clip)) return;
-    shapeCompositionPreview.value = null;
-    composition.value = setShapeLayerStyle(composition.value, clip.id, {
-      rotation,
-    });
+    if (!clip || clip.locked || !(isShapeClip(clip) || isVisualClip(clip) || isCaptionClip(clip))) return;
+    layerCompositionPreview.value = null;
+    composition.value = isShapeClip(clip)
+      ? setShapeLayerStyle(composition.value, clip.id, { rotation })
+      : setClipRotation(composition.value, clip.id, rotation);
     commitNow(createEditorSnapshot());
     editorState.scheduleSave();
   };
@@ -91,7 +97,7 @@ export function useEditorWorkspaceCanvas(
     [selectedClipId, () => selectedClipIds.value.join('\0')],
     () => {
       isCropping.value = false;
-      shapeCompositionPreview.value = null;
+      layerCompositionPreview.value = null;
     },
     { flush: 'sync' },
   );
@@ -117,8 +123,8 @@ export function useEditorWorkspaceCanvas(
     commitSelectedTransform,
     commitSelectedTransforms,
     commitSelectedCrop,
-    previewSelectedShapeRotation,
-    commitSelectedShapeRotation,
+    previewSelectedRotation,
+    commitSelectedRotation,
     commitZoom,
     isCropping,
     isGridVisible,

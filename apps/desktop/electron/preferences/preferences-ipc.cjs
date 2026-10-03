@@ -1,4 +1,5 @@
 const { isDeepStrictEqual } = require('node:util');
+const { backgroundCatalogPatch } = require('./background-catalog.cjs');
 
 function registerPreferencesIpc({
   ipcMain,
@@ -87,6 +88,9 @@ function registerPreferencesIpc({
   ipcMain.handle('preferences:update', (_event, patch) => updateBatch([patch]));
   ipcMain.handle('preferences:update-batch', (_event, patches) => updateBatch(patches));
   ipcMain.handle('preferences:reset', reset);
+  ipcMain.handle('preferences:background-catalog', (_event, request) =>
+    updateBatch([backgroundCatalogPatch(store.read(), request)]),
+  );
   void registerShortcuts(store.read());
 
   return async () => {

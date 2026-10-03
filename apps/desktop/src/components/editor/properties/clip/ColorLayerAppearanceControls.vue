@@ -4,6 +4,7 @@ import { SlidersHorizontal } from '@lucide/vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
+import InfoTooltip from '~/ui/tooltip/InfoTooltip.vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import Switch from '~/ui/switch/Switch.vue';
@@ -122,7 +123,9 @@ const updateShadowDirection = (shadowDirection: ColorLayerShadowDirection) => em
       </ButtonGroup>
       <template v-if="style.shadowSize !== 'none'">
         <div class="sub-group">
-          <span class="sub-label">{{ t('shadowStyle') }}</span>
+          <span class="sub-label shadow-style-label"
+            >{{ t('shadowStyle') }}<InfoTooltip :content="t('shadowStyleDescription')"
+          /></span>
           <ButtonGroup full>
             <Button
               size="xs"
@@ -139,7 +142,6 @@ const updateShadowDirection = (shadowDirection: ColorLayerShadowDirection) => em
               {{ t('adaptive') }}
             </Button>
           </ButtonGroup>
-          <span v-if="style.shadowMode === 'adaptive'" class="hint">{{ t('adaptiveShadowDescription') }}</span>
         </div>
         <BigSlider
           v-if="style.shadowSize === 'custom'"
@@ -218,6 +220,11 @@ const updateShadowDirection = (shadowDirection: ColorLayerShadowDirection) => em
 </template>
 
 <style scoped>
+.shadow-style-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 .appearance-controls,
 .section-block,
 .toggle-control,

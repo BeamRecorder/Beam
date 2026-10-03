@@ -7,6 +7,7 @@ const fixture = (canInsert = true) => {
     shape: vi.fn(),
     image: vi.fn(async () => {}),
     cursor: vi.fn(),
+    zoom: vi.fn(),
     effect: vi.fn(),
   };
   return { options, insert: screenshotInserter(options) };
@@ -23,6 +24,8 @@ describe('screenshot single Add actor', () => {
     expect(f.options.image).toHaveBeenCalledOnce();
     await f.insert('cursor');
     expect(f.options.cursor).toHaveBeenCalledOnce();
+    await f.insert('zoom');
+    expect(f.options.zoom).toHaveBeenCalledOnce();
     await f.insert('blur');
     await f.insert('highlight');
     expect(f.options.effect.mock.calls).toEqual([['blur'], ['highlight']]);

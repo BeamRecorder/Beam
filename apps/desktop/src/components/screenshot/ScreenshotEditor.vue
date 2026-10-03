@@ -27,6 +27,8 @@ import EditorWorkspace from '../editor/layout/EditorWorkspace.vue';
 import EditorProjectLoadingOverlay from '../editor/EditorProjectLoadingOverlay.vue';
 import { useScreenshotEditor } from './useScreenshotEditor';
 import ScreenshotCursorControls from './ScreenshotCursorControls.vue';
+import ZoomPanel from '../editor/properties/zoom/ZoomPanel.vue';
+import { DEFAULT_ZOOM_MOTION_BLUR } from '@beam/engine/zoom/zoom-types';
 import ScreenshotComposition from './composition/ScreenshotComposition.vue';
 import {
   screenshotLayers,
@@ -100,6 +102,7 @@ const {
   deleteProject,
   cursors,
   effects,
+  zooms,
   selectedLayer,
   history,
   elements,
@@ -296,6 +299,16 @@ const navigateSearch = (tab: string) => {
           </div>
         </template>
         <fieldset class="layer-properties" :disabled="selectedLayer?.locked && panel !== 'settings'">
+          <ZoomPanel
+            v-if="panel === 'zoom' && zooms.selected.value"
+            still
+            :selected-zoom="zooms.selected.value"
+            :canvas-size="state.canvas"
+            :can-generate="false"
+            :has-automatic-zooms="false"
+            :motion-blur="DEFAULT_ZOOM_MOTION_BLUR"
+            @update="zooms.update"
+          />
           <ElementClipControls v-if="panel === 'shapes' || panel === 'cursor'" />
           <div v-if="panel === 'shapes' && effects.selected.value" class="effect-properties">
             <BlurPropertiesPanel
@@ -307,6 +320,7 @@ const navigateSearch = (tab: string) => {
             />
           </div>
           <ClipPropertiesPanel
+            :canvas-size="state.canvas"
             v-if="selectedImage && image && (panel === 'image' || panel === 'shapes')"
             hide-layout
             hide-crop
@@ -329,6 +343,7 @@ const navigateSearch = (tab: string) => {
             "
             @update:is-mirrored="image.isMirrored = $event"
             @update:is-mirrored-y="image.isMirroredY = $event"
+            @update:rotation="rotate"
             @update:clip-transform="transform"
             @reset:clip-transform="image.transform = { x: 0.06, y: 0.06, width: 0.88, height: 0.88 }"
           />
@@ -403,6 +418,7 @@ const navigateSearch = (tab: string) => {
           "
           @transform="transform"
           @rotate="rotate"
+          @update-zoom="zooms.update"
           @translate="translate"
           @crop="image && (image.crop = $event)"
           @crop-done="cropping = false"

@@ -215,8 +215,8 @@ describe('BlickWaveformCanvas replacement animation', () => {
 
     await wrapper.setProps({
       bars: [3, 8, 13],
-      leftPercent: 40,
-      widthPercent: 30,
+      leftPercent: 10,
+      widthPercent: 70,
     });
     await flushAnimationFrames();
     await nextTick();
@@ -234,8 +234,8 @@ describe('BlickWaveformCanvas replacement animation', () => {
     expect(animationCalls[1]?.element).toBe(outgoingLayer.element);
     expect(animationCalls[0]?.keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
     expect(animationCalls[1]?.keyframes).toEqual([{ opacity: 1 }, { opacity: 0 }]);
-    expect(currentLayer.attributes('style')).toContain('left: 40%');
-    expect(currentLayer.attributes('style')).toContain('width: 30%');
+    expect(currentLayer.attributes('style')).toContain('left: 10%');
+    expect(currentLayer.attributes('style')).toContain('width: 70%');
     expect(outgoingLayer.attributes('style')).toContain('left: 10%');
     expect(outgoingLayer.attributes('style')).toContain('width: 70%');
 
@@ -256,19 +256,17 @@ describe('BlickWaveformCanvas replacement animation', () => {
     const wrapper = mount(BlickWaveformCanvas, { props: { ...makeData() } });
     await flushAnimationFrames();
     await nextTick();
-    await wrapper.setProps({ bars: [3, 4], leftPercent: 20, widthPercent: 60 });
+    await wrapper.setProps({ bars: [3, 4] });
     await flushAnimationFrames();
     await nextTick();
     expect(renderer.draw).toHaveBeenCalledTimes(2);
     expect(animateMock).toHaveBeenCalledTimes(2);
 
-    await wrapper.setProps({ bars: [5], leftPercent: 35, widthPercent: 45 });
+    await wrapper.setProps({ bars: [5] });
     await wrapper.setProps({
       bars: [8, 13, 21],
       bands: new Float32Array(12),
       sourceDurationSeconds: 7,
-      leftPercent: 55,
-      widthPercent: 25,
     });
     expect(renderer.draw).toHaveBeenCalledTimes(2);
     expect(pendingFrames.size).toBe(0);
@@ -282,11 +280,11 @@ describe('BlickWaveformCanvas replacement animation', () => {
     expect(renderer.draw).toHaveBeenLastCalledWith(
       wrapper.get('.blick-waveform-current').get('.blick-waveform-canvas').element,
       expect.objectContaining({ bars: [8, 13, 21], sourceDurationSeconds: 7 }),
-      30,
+      120,
       40,
     );
-    expect(wrapper.get('.blick-waveform-current').attributes('style')).toContain('left: 55%');
-    expect(wrapper.get('.blick-waveform-current').attributes('style')).toContain('width: 25%');
+    expect(wrapper.get('.blick-waveform-current').attributes('style')).toContain('left: 0%');
+    expect(wrapper.get('.blick-waveform-current').attributes('style')).toContain('width: 100%');
     expect(animateMock).toHaveBeenCalledTimes(4);
     animationStubs[3]!.finish();
     wrapper.unmount();
@@ -299,13 +297,11 @@ describe('BlickWaveformCanvas replacement animation', () => {
     const wrapper = mount(BlickWaveformCanvas, { props: { ...makeData() } });
     await flushAnimationFrames();
     await nextTick();
-    await wrapper.setProps({ bars: [3, 5, 8], leftPercent: 20 });
+    await wrapper.setProps({ bars: [3, 5, 8] });
     await flushAnimationFrames();
     await nextTick();
     await wrapper.setProps({
       bars: [11, 13, 17],
-      leftPercent: 45,
-      widthPercent: 40,
     });
     expect(renderer.draw).toHaveBeenCalledTimes(2);
     expect(pendingFrames.size).toBe(0);
@@ -321,10 +317,33 @@ describe('BlickWaveformCanvas replacement animation', () => {
     expect(renderer.draw).toHaveBeenLastCalledWith(
       wrapper.get('.blick-waveform-current').get('.blick-waveform-canvas').element,
       expect.objectContaining({ bars: [11, 13, 17] }),
-      48,
+      120,
       40,
     );
-    expect(wrapper.get('.blick-waveform-current').attributes('style')).toContain('left: 45%');
+    expect(wrapper.get('.blick-waveform-current').attributes('style')).toContain('left: 0%');
+    expect(animateMock).toHaveBeenCalledTimes(2);
+    wrapper.unmount();
+  });
+
+  it('interrupts a refinement fade and redraws new zoom geometry without waiting 160ms', async () => {
+    setReducedMotion(false);
+    const renderer = makeRenderer();
+    acquireRenderer.mockReturnValue(renderer);
+    const wrapper = mount(BlickWaveformCanvas, { props: makeData() });
+    await flushAnimationFrames();
+    await wrapper.setProps({ bars: [3, 5, 8] });
+    await flushAnimationFrames();
+    expect(animateMock).toHaveBeenCalledTimes(2);
+    bounds = { width: 240, height: 40 };
+    await wrapper.setProps({ geometryKey: 2000 });
+    expect(animationStubs.every((animation) => animation.cancel.mock.calls.length === 1)).toBe(true);
+    await flushAnimationFrames();
+    expect(renderer.draw).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 240, 40);
+    expect(animateMock).toHaveBeenCalledTimes(2);
+    bounds = { width: 60, height: 40 };
+    await wrapper.setProps({ geometryKey: 500, leftPercent: 20, widthPercent: 50 });
+    await flushAnimationFrames();
+    expect(renderer.draw).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 30, 40);
     expect(animateMock).toHaveBeenCalledTimes(2);
     wrapper.unmount();
   });

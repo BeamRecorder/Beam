@@ -17,6 +17,7 @@ import {
 } from '@beam/engine/shared/composition-types';
 import { calculateSnapThresholdMs, collectSnapTargets, snapSpan } from './timeline-snap';
 import { createAnimationFrameCoalescer } from './animation-frame-coalescer';
+import { createTimelineRowReorder } from './timeline-row-reorder';
 import { engineMetrics } from '@beam/runtime/performance/engine-metrics';
 import { useTimelineViewport } from './useTimelineViewport';
 import { useTimelineZoomInteractions } from './useTimelineZoomInteractions';
@@ -222,7 +223,7 @@ export function useTimelineTracks(
     const snapThresholdMs = calculateSnapThresholdMs(baseDurationMs, baseRulerWidth);
 
     let finalDeltaMs = 0;
-    let lastVisualSwapTime = 0;
+    const reorder = createTimelineRowReorder(baseVisualTracks.value);
     const applyMove = (next: PointerEvent) => {
       updateAutoScroll(next.clientX);
       const currentScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
@@ -264,16 +265,16 @@ export function useTimelineTracks(
         const row = document.elementFromPoint?.(next.clientX, next.clientY)?.closest<HTMLElement>('.visual-track');
         const targetTrackId = row?.dataset.trackId;
         if (targetTrackId && targetTrackId !== initialVisualTrack.id) {
-          const order = [...(visualOrderPreview.value ?? initialVisualTrackOrder)];
-          const from = order.indexOf(initialVisualTrack.id);
-          const to = order.indexOf(targetTrackId);
-          const now = Date.now();
-          if (from >= 0 && to >= 0 && from !== to && now - lastVisualSwapTime >= 150) {
-            order.splice(from, 1);
-            order.splice(to, 0, initialVisualTrack.id);
+          const rect = row.getBoundingClientRect();
+          const order = reorder(
+            visualOrderPreview.value ?? initialVisualTrackOrder,
+            initialVisualTrack.id,
+            targetTrackId,
+            rect.height > 0 ? (next.clientY - rect.top) / rect.height : undefined,
+          );
+          if (order) {
             visualOrderPreview.value = order;
             draggedTrackId.value = initialVisualTrack.id;
-            lastVisualSwapTime = now;
           }
         }
       }

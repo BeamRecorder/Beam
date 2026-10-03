@@ -23,6 +23,7 @@ export function applyCaptionSelectionUpdate(
 
   const selected = new Set(selectedClipIds);
   const stylePatch = changedSharedStyle(currentPrimary.caption.style, updatedPrimary.caption.style);
+  const rotationChanged = (currentPrimary.rotation ?? 0) !== (updatedPrimary.rotation ?? 0);
   const transformChanged = !same(currentPrimary.transform, updatedPrimary.transform);
   let next = updateClip(composition, updatedPrimary.id, () => clone(updatedPrimary));
 
@@ -41,6 +42,7 @@ export function applyCaptionSelectionUpdate(
           style: { ...target.caption.style, ...clone(stylePatch) },
         },
       } satisfies CaptionClip;
+      if (rotationChanged) updated.rotation = updatedPrimary.rotation ?? 0;
       if (!transformChanged) return updated;
       if (updatedPrimary.transform) return { ...updated, transform: clone(updatedPrimary.transform) };
       const { transform: _transform, ...withoutTransform } = updated;

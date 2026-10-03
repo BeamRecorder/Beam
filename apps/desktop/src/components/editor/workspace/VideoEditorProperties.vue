@@ -45,6 +45,7 @@ const {
   updateSelectedWebcamReactToZoom,
   updateSelectedMirrored,
   updateSelectedMirroredY,
+  updateSelectedRotation,
   updateSelectedRate,
   updateSelectedVolume,
   updateSelectedEnabled,
@@ -134,7 +135,7 @@ const { project, editorData } = toRefs(workspace.props);
     @update:zoom-motion-blur="zoomState.updateZoomMotionBlur"
     @update:zoom-auto-follow="zoomState.updateZoomAutoFollow"
     @delete:zoom="deleteSelectedTimelineZooms"
-    @generate:zooms="generateZooms()"
+    @generate:zooms="generateZooms(false, $event)"
     @update:caption="commitCaption"
     @update:composition="replaceComposition"
     @preview:composition="previewComposition"
@@ -154,6 +155,7 @@ const { project, editorData } = toRefs(workspace.props);
     @unlink-sidecars="unlinkSidecars"
     @update:clip-is-mirrored="updateSelectedMirrored"
     @update:clip-is-mirrored-y="updateSelectedMirroredY"
+    @update:clip-rotation="updateSelectedRotation"
     @update:clip-corner-radius="
       updateSelectedAppearance({
         cornerRadius: ['none', 'sm', 'md', 'lg', 'full'].includes($event)

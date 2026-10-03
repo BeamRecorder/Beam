@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { SlidersHorizontal, Video } from '@lucide/vue';
+import { SlidersHorizontal, Video, Trash2, Undo2, Redo2 } from '@lucide/vue';
 import AddTileButton from '~/ui/button/AddTileButton.vue';
 import Button from '~/ui/button/Button.vue';
 import CanvasPanelLayout from './CanvasPanelLayout.vue';
@@ -8,6 +8,8 @@ import Popover from '~/ui/popover/Popover.vue';
 import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import Tooltip from '~/ui/tooltip/Tooltip.vue';
 import BackgroundPresetComposer from './BackgroundPresetComposer.vue';
+import BackgroundDeleteDialog from './BackgroundDeleteDialog.vue';
+import { useBackgroundDeletion } from './useBackgroundDeletion';
 import { capture } from '../../../../api/capture';
 import { customColor, customGradient, gradientCssBackground } from '../../composables/backgroundCatalog';
 import {
@@ -21,6 +23,9 @@ import { useTranslate } from '~/i18n/useTranslate';
 import type { WatermarkSettings } from '@beam/engine/layout/output-canvas';
 
 const { t } = useTranslate('CanvasPanel');
+const { t: deletionText } = useTranslate('BackgroundDeletion');
+const deletion = useBackgroundDeletion();
+const { target, busy, error, hasHistory, canUndo, canRedo } = deletion;
 
 const props = defineProps<{
   still?: boolean;
@@ -54,8 +59,8 @@ const updateBlur = (value: number) => {
 
 const activeKind = ref<'image' | 'video' | 'color' | 'gradient'>('image');
 const {
-  colorPresets,
-  gradientPresets,
+  colorPresets: allColorPresets,
+  gradientPresets: allGradientPresets,
   customColorValue,
   customGradientValue,
   toggleColor,
@@ -69,7 +74,16 @@ const {
   updateLiveGradient,
 } = useBackgroundPresets((value) => emit('update:selectedBackground', value));
 
-const items = computed(() => props.backgroundGroups.find((group) => group.kind === activeKind.value)?.items ?? []);
+const colorPresets = computed(() => allColorPresets.value.filter((item) => !deletion.isHidden(item.id)));
+const gradientPresets = computed(() => allGradientPresets.value.filter((item) => !deletion.isHidden(item.id)));
+const items = computed(() =>
+  (props.backgroundGroups.find((group) => group.kind === activeKind.value)?.items ?? []).filter(
+    (item) => !deletion.isHidden(item.id),
+  ),
+);
+const selectedImportedMedia = computed(
+  () => items.value.find((item) => item.id === props.selectedBackground?.id && deletion.canDelete(item)) ?? null,
+);
 
 const { gridRef, previews, failed, visibleItems, hasMore, isLoadingMore, mediaTileRef, cancelLoadMore, loadMore } =
   useCanvasMediaTiles(items);
@@ -137,6 +151,7 @@ const importLabel = computed(() =>
           active: isSelected(item),
         }"
         :aria-label="item.name"
+        :aria-pressed="isSelected(item)"
         :aria-busy="!previews[item.id] && !failed[item.id]"
         draggable="false"
         @dragstart.prevent
@@ -167,6 +182,17 @@ const importLabel = computed(() =>
         </span>
         <Skeleton v-else class="media-loading-skeleton" width="100%" height="100%" radius="inherit" />
       </button>
+      <div v-if="selectedImportedMedia" class="load-more">
+        <Button
+          variant="danger"
+          size="sm"
+          block
+          :icon="Trash2"
+          :disabled="busy"
+          @click="deletion.request(selectedImportedMedia)"
+          >{{ deletionText('delete') }}</Button
+        >
+      </div>
       <div v-if="hasMore" class="load-more">
         <Button variant="secondary" size="sm" block :disabled="isLoadingMore" @click="loadMore">
           {{ t('showMore') }}
@@ -224,53 +250,66 @@ const importLabel = computed(() =>
           :class="{ active: isSelected(item), editing: isEditing(item.id) }"
           :style="{ backgroundColor: item.color }"
           :aria-label="item.name"
+          :aria-pressed="isSelected(item)"
           @click="emit('update:selectedBackground', item)"
         />
       </div>
-      <Popover
-        v-if="selectedColorPreset"
-        block
-        :match-trigger-width="false"
-        flush
-        @toggle="
-          (open) => {
-            if (!open) closeCustomEditor();
-          }
-        "
-      >
-        <template #trigger>
-          <Button
-            variant="secondary"
-            size="sm"
-            block
-            :icon="SlidersHorizontal"
-            :aria-pressed="isEditing(selectedColorPreset.id)"
-            class="edit-selected-preset"
-            @click="toggleColor(selectedColorPreset)"
-            >{{ isEditing(selectedColorPreset.id) ? t('closeEditing') : t('edit') }}</Button
-          >
-        </template>
-        <template #default="{ close }">
-          <BackgroundPresetComposer
-            kind="color"
-            :color="selectedColorPreset?.color ?? customColorValue"
-            :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
-            @add-color="
-              (val) => {
-                addColorPreset(val);
-                close();
-              }
-            "
-            @update-color="updateLiveColor"
-            @close="
-              () => {
-                closeCustomEditor();
-                close();
-              }
-            "
-          />
-        </template>
-      </Popover>
+      <div v-if="selectedColorPreset" class="selected-preset-actions">
+        <Popover
+          v-if="selectedColorPreset"
+          block
+          :match-trigger-width="false"
+          flush
+          @toggle="
+            (open) => {
+              if (!open) closeCustomEditor();
+            }
+          "
+        >
+          <template #trigger>
+            <Button
+              variant="secondary"
+              size="sm"
+              block
+              :icon="SlidersHorizontal"
+              :aria-pressed="isEditing(selectedColorPreset.id)"
+              class="edit-selected-preset"
+              @click="toggleColor(selectedColorPreset)"
+              >{{ isEditing(selectedColorPreset.id) ? t('closeEditing') : t('edit') }}</Button
+            >
+          </template>
+          <template #default="{ close }">
+            <BackgroundPresetComposer
+              kind="color"
+              :color="selectedColorPreset?.color ?? customColorValue"
+              :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
+              @add-color="
+                (val) => {
+                  addColorPreset(val);
+                  close();
+                }
+              "
+              @update-color="updateLiveColor"
+              @close="
+                () => {
+                  closeCustomEditor();
+                  close();
+                }
+              "
+            />
+          </template>
+        </Popover>
+        <Button
+          variant="danger"
+          class="preset-delete"
+          size="sm"
+          icon-only
+          :icon="Trash2"
+          :disabled="busy"
+          :aria-label="deletionText('delete')"
+          @click="deletion.request(selectedColorPreset)"
+        />
+      </div>
     </div>
 
     <div v-show="activeKind === 'gradient'" class="gradients-section">
@@ -329,54 +368,84 @@ const importLabel = computed(() =>
             backgroundImage: gradientCssBackground(item.gradient),
           }"
           :aria-label="item.name"
+          :aria-pressed="isSelected(item)"
           @click="emit('update:selectedBackground', item)"
         />
       </div>
-      <Popover
-        v-if="selectedGradientPreset"
-        block
-        :match-trigger-width="false"
-        flush
-        @toggle="
-          (open) => {
-            if (!open) closeCustomEditor();
-          }
-        "
-      >
-        <template #trigger>
-          <Button
-            variant="secondary"
-            size="sm"
-            block
-            :icon="SlidersHorizontal"
-            :aria-pressed="isEditing(selectedGradientPreset.id)"
-            class="edit-selected-preset"
-            @click="toggleGradient(selectedGradientPreset)"
-            >{{ isEditing(selectedGradientPreset.id) ? t('closeEditing') : t('edit') }}</Button
-          >
-        </template>
-        <template #default="{ close }">
-          <BackgroundPresetComposer
-            kind="gradient"
-            :color="selectedColorPreset?.color ?? customColorValue"
-            :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
-            @add-gradient="
-              (val) => {
-                addGradientPreset(val);
-                close();
-              }
-            "
-            @update-gradient="updateLiveGradient"
-            @close="
-              () => {
-                closeCustomEditor();
-                close();
-              }
-            "
-          />
-        </template>
-      </Popover>
+      <div v-if="selectedGradientPreset" class="selected-preset-actions">
+        <Popover
+          v-if="selectedGradientPreset"
+          block
+          :match-trigger-width="false"
+          flush
+          @toggle="
+            (open) => {
+              if (!open) closeCustomEditor();
+            }
+          "
+        >
+          <template #trigger>
+            <Button
+              variant="secondary"
+              size="sm"
+              block
+              :icon="SlidersHorizontal"
+              :aria-pressed="isEditing(selectedGradientPreset.id)"
+              class="edit-selected-preset"
+              @click="toggleGradient(selectedGradientPreset)"
+              >{{ isEditing(selectedGradientPreset.id) ? t('closeEditing') : t('edit') }}</Button
+            >
+          </template>
+          <template #default="{ close }">
+            <BackgroundPresetComposer
+              kind="gradient"
+              :color="selectedColorPreset?.color ?? customColorValue"
+              :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
+              @add-gradient="
+                (val) => {
+                  addGradientPreset(val);
+                  close();
+                }
+              "
+              @update-gradient="updateLiveGradient"
+              @close="
+                () => {
+                  closeCustomEditor();
+                  close();
+                }
+              "
+            />
+          </template>
+        </Popover>
+        <Button
+          variant="danger"
+          class="preset-delete"
+          size="sm"
+          icon-only
+          :icon="Trash2"
+          :disabled="busy"
+          :aria-label="deletionText('delete')"
+          @click="deletion.request(selectedGradientPreset)"
+        />
+      </div>
     </div>
+    <div v-if="hasHistory" class="deletion-history">
+      <Button variant="ghost" size="xs" :icon="Undo2" :disabled="busy || !canUndo" @click="deletion.undo">{{
+        deletionText('undo')
+      }}</Button>
+      <Button variant="ghost" size="xs" :icon="Redo2" :disabled="busy || !canRedo" @click="deletion.redo">{{
+        deletionText('redo')
+      }}</Button>
+    </div>
+    <p v-if="error && !target" class="deletion-error" role="alert">{{ error }}</p>
+    <BackgroundDeleteDialog
+      :target="target"
+      :preview="target ? previews[target.id] : undefined"
+      :busy="busy"
+      :error="error"
+      @close="deletion.cancel"
+      @confirm="deletion.confirm"
+    />
   </CanvasPanelLayout>
 </template>
 

@@ -3,9 +3,11 @@ import type { ScreenshotPanelOptions } from './screenshot-panel-types';
 export function useScreenshotPanel(options: ScreenshotPanelOptions) {
   const { state, panel, cropping, selectedId } = options;
   const showSelection = (id: string | null) => {
-    if (state.value?.effects?.some((effect) => effect.id === id)) options.finishDrawing();
-    panel.value =
-      id === state.value?.image.id
+    if (state.value?.effects?.some((effect) => effect.id === id) || state.value?.zooms?.some((zoom) => zoom.id === id))
+      options.finishDrawing();
+    panel.value = state.value?.zooms?.some((zoom) => zoom.id === id)
+      ? 'zoom'
+      : id === state.value?.image.id
         ? 'image'
         : state.value?.cursors?.some((cursor) => cursor.id === id)
           ? 'cursor'

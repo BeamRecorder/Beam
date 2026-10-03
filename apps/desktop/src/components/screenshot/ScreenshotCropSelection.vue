@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { rotateMediaVector } from '@beam/engine/layout/media-rotation';
 import { beginPropertyInteraction, endPropertyInteraction } from '~/composables/property-interaction';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import type { NormalizedCrop } from '@beam/engine/shared/composition-types';
@@ -26,6 +27,7 @@ const containerStyle = computed(() => ({
   top: `${(full.value.y / props.state.canvas.height) * 100}%`,
   width: `${(full.value.width / props.state.canvas.width) * 100}%`,
   height: `${(full.value.height / props.state.canvas.height) * 100}%`,
+  transform: `rotate(${props.state.image.rotation ?? 0}deg)`,
 }));
 const overlayStyle = computed(() => ({
   left: `${crop.value.x * 100}%`,
@@ -48,13 +50,19 @@ const start = (event: PointerEvent, corner?: ResizeCorner) => {
 const move = (event: PointerEvent) => {
   const bounds = container.value?.getBoundingClientRect();
   if (!drag || !bounds?.width || !bounds.height) return;
+  const rotation = props.state.image.rotation ?? 0;
+  const radians = (rotation * Math.PI) / 180;
+  const projectedWidth =
+    full.value.width * Math.abs(Math.cos(radians)) + full.value.height * Math.abs(Math.sin(radians));
+  const scale = bounds.width / projectedWidth;
+  const delta = rotateMediaVector({ x: event.clientX - drag.x, y: event.clientY - drag.y }, -rotation);
   emit(
     'crop',
     mirror(
       moveScreenshotCrop(
         drag.initial,
-        (event.clientX - drag.x) / bounds.width,
-        (event.clientY - drag.y) / bounds.height,
+        delta.x / (full.value.width * scale),
+        delta.y / (full.value.height * scale),
         drag.corner,
       ),
     ),

@@ -6,17 +6,6 @@
   align-items: center;
   border-bottom: 1px solid var(--color-border);
 }
-.sidebar-track-item.audio-track {
-  flex-basis: var(--timeline-audio-track-min-height);
-  min-height: var(--timeline-audio-track-min-height);
-  max-height: var(--timeline-audio-track-max-height);
-}
-.sidebar-track-item.cursor-track,
-.sidebar-track-item.annotation-track {
-  flex-basis: var(--timeline-effect-track-min-height);
-  min-height: var(--timeline-effect-track-min-height);
-  max-height: var(--timeline-effect-track-max-height);
-}
 .visual-tracks-group {
   display: contents;
 }

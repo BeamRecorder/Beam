@@ -1,9 +1,58 @@
-import { describe, it, expect } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { afterEach, describe, it, expect } from 'vitest';
+import { enableAutoUnmount, mount } from '@vue/test-utils';
 import { nextTick, type VNode, type CSSProperties } from 'vue';
 import ScrollShadow from './ScrollShadow.vue';
+enableAutoUnmount(afterEach);
 
 describe('ScrollShadow.vue', () => {
+  it.each(['vertical', 'horizontal', 'both'] as const)(
+    'fades both ends while scrolling within the %s content',
+    async (orientation) => {
+      const wrapper = mount(ScrollShadow, { props: { orientation, size: '16px' } });
+      const viewport = wrapper.get('.scroll-shadow-viewport').element;
+      Object.defineProperties(viewport, {
+        clientWidth: { value: 100 },
+        clientHeight: { value: 100 },
+        scrollWidth: { value: 300 },
+        scrollHeight: { value: 300 },
+        scrollLeft: { value: 100, writable: true },
+        scrollTop: { value: 100, writable: true },
+      });
+      wrapper.vm.updateShadows();
+      await nextTick();
+      const style = () => (wrapper.vm.$.subTree.children as VNode[])[0]!.props!.style as CSSProperties;
+      expect(style().maskImage).toContain('transparent 0%');
+      expect(style().maskImage).toContain('transparent 100%');
+      if (orientation !== 'horizontal') expect(style().maskImage).toContain('to bottom');
+      if (orientation !== 'vertical') expect(style().maskImage).toContain('to right');
+      viewport.scrollLeft = 0;
+      viewport.scrollTop = 0;
+      wrapper.vm.updateShadows();
+      await nextTick();
+      expect(style().maskImage).not.toContain('transparent 0%');
+      expect(style().maskImage).toContain('transparent 100%');
+      viewport.scrollLeft = 200;
+      viewport.scrollTop = 200;
+      wrapper.vm.updateShadows();
+      await nextTick();
+      expect(style().maskImage).toContain('transparent 0%');
+      expect(style().maskImage).not.toContain('transparent 100%');
+    },
+  );
+  it('reserves scrollbar space only when requested for a visible vertical scrollbar', async () => {
+    const wrapper = mount(ScrollShadow);
+    const viewport = wrapper.get('.scroll-shadow-viewport');
+    expect(viewport.classes()).not.toContain('reserve-scrollbar');
+    await wrapper.setProps({ stableScrollbar: true });
+    expect(viewport.classes()).toContain('reserve-scrollbar');
+    await wrapper.setProps({ orientation: 'horizontal' });
+    expect(viewport.classes()).not.toContain('reserve-scrollbar');
+    await wrapper.setProps({ orientation: 'both' });
+    expect(viewport.classes()).toContain('reserve-scrollbar');
+    await wrapper.setProps({ hideScrollbar: true });
+    expect(viewport.classes()).not.toContain('reserve-scrollbar');
+    wrapper.unmount();
+  });
   it.each(['vertical', 'horizontal', 'both'] as const)('selects the scrollable axes for %s', (orientation) => {
     const wrapper = mount(ScrollShadow, { props: { orientation } });
     expect(wrapper.get('.scroll-shadow-viewport').classes().includes('is-horizontal')).toBe(

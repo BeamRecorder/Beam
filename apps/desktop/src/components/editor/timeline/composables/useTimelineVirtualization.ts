@@ -1,7 +1,11 @@
 import { computed, inject, onMounted, onScopeDispose, provide, ref, type ComputedRef, type InjectionKey } from 'vue';
 import type { Clip } from '@beam/engine/shared/composition-types';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
-import type { TimelineVirtualizationOptions, TimelineVirtualWindow } from './timeline-virtualization-types';
+import type {
+  TimelinePositionedRow,
+  TimelineVirtualizationOptions,
+  TimelineVirtualWindow,
+} from './timeline-virtualization-types';
 import { layoutTimelineRows, visibleTimelineRows } from './timeline-virtual-layout';
 import { createTimelineRangeIndex } from './timeline-range-index';
 
@@ -50,13 +54,20 @@ export function useTimelineVirtualization(options: TimelineVirtualizationOptions
   });
   const layout = computed(() => layoutTimelineRows(options.rows(), viewport.height));
   const byId = computed(() => new Map(layout.value.map((row) => [row.id, row])));
-  const rows = computed(() =>
-    visibleTimelineRows(layout.value, viewport.top, viewport.height, pinnedRow.value ?? focusedRow.value),
-  );
+  const rows = computed((previous: TimelinePositionedRow[] | undefined) => {
+    const result = visibleTimelineRows(
+      layout.value,
+      viewport.top,
+      viewport.height,
+      pinnedRow.value ?? focusedRow.value,
+    );
+    return previous?.length === result.length && result.every((row, i) => row === previous[i]) ? previous : result;
+  });
   const visibleIds = computed(() => new Set(rows.value.map((row) => row.id)));
   const stackStyle = computed(() => ({
     position: 'relative' as const,
     flex: 'none',
+    '--timeline-row-height': `${layout.value[0]?.height ?? 32}px`,
     height: `${layout.value.at(-1) ? layout.value.at(-1)!.top + layout.value.at(-1)!.height : 0}px`,
   }));
   const rowStyle: TimelineVirtualWindow['rowStyle'] = (id) => {
@@ -64,7 +75,8 @@ export function useTimelineVirtualization(options: TimelineVirtualizationOptions
     return row
       ? {
           position: 'absolute',
-          top: `${row.top}px`,
+          top: '0',
+          transform: `translate3d(0, ${row.top}px, 0)`,
           left: '0',
           right: '0',
           height: `${row.height}px`,
@@ -126,9 +138,9 @@ export function useTimelineVirtualization(options: TimelineVirtualizationOptions
     layout.value.flatMap((row) => {
       const geometry = (start: number, duration: number) => ({
         x: 80 + (start / options.durationMs.value) * options.width.value,
-        y: row.top + (row.kind === 'effect' ? 6 : 2),
-        width: Math.max(row.kind === 'effect' ? 0 : 14, (duration / options.durationMs.value) * options.width.value),
-        height: row.kind === 'effect' ? 36 : row.height - 5,
+        y: row.top,
+        width: Math.max(14, (duration / options.durationMs.value) * options.width.value),
+        height: row.height - 1,
       });
       return [
         ...row.clips.map((clip) => ({
@@ -169,12 +181,13 @@ export function useTimelineVirtualization(options: TimelineVirtualizationOptions
 export function useVirtualTimelineItems<T>(items: () => readonly T[], id: (item: T) => string) {
   const window = useTimelineVirtualWindow();
   const index = computed(() => new Map(items().map((item) => [id(item), item])));
-  return computed(() =>
-    window
+  return computed((previous: T[] | undefined) => {
+    const result = window
       ? window.rows.value.flatMap((row) => {
           const item = index.value.get(row.id);
           return item ? [item] : [];
         })
-      : [...items()],
-  );
+      : [...items()];
+    return previous?.length === result.length && result.every((item, i) => item === previous[i]) ? previous : result;
+  });
 }

@@ -58,7 +58,8 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   const focusTargetStyle = computed(() => {
     const bounds = overlayWindowBounds.value;
     const selected = options.selectedZoom();
-    if (!selected || selected.mode !== 'manual' || options.isPlaying() || !bounds) return { display: 'none' };
+    if (!selected || selected.effect === 'glass' || selected.mode !== 'manual' || options.isPlaying() || !bounds)
+      return { display: 'none' };
     const selectionScale = ZOOM_DEPTH_SCALES[selected.depth];
     const scale = bounds.scale || 1;
     const centerX = bounds.dx + bounds.dw / 2;
@@ -130,7 +131,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   const beginSelectionMove = (event: PointerEvent) => {
     if (event.button !== 0) return;
     const selectedZoom = options.selectedZoom();
-    const isManualZoom = selectedZoom?.mode === 'manual';
+    const isManualZoom = selectedZoom?.mode === 'manual' && selectedZoom.effect !== 'glass';
     if (isManualZoom) {
       zoomDragGeometry = createZoomDragGeometry();
       if (!zoomDragGeometry) return;
@@ -273,7 +274,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     if (!cameraEvaluator || !cameraEvaluatorInputs || inputsChanged) {
       cameraEvaluatorInputs = evaluatorInputs;
       const previewZooms =
-        !options.isPlaying() && selectedZoom?.mode === 'manual'
+        !options.isPlaying() && selectedZoom?.mode === 'manual' && selectedZoom.effect !== 'glass'
           ? zooms.filter((zoom) => zoom.id !== selectedZoom.id)
           : zooms;
       cameraEvaluator = createCompositionCameraEvaluator({
@@ -342,6 +343,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
             title: screen.name,
             mirrored: screen.isMirrored,
             mirroredY: screen.isMirroredY,
+            rotation: screen.rotation,
             mask: screenGeometry?.mask,
           });
           if (cropFrame)

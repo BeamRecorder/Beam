@@ -47,6 +47,63 @@ const balancedAutoFollow: ZoomAutoFollowSettings = {
 };
 
 describe('ZoomPanel', () => {
+  it('can generate glass lenses directly from an empty zoom inspector', async () => {
+    const wrapper = mount(ZoomPanel, {
+      props: {
+        selectedZoom: null,
+        canGenerate: true,
+        hasAutomaticZooms: false,
+        motionBlur: { enabled: false, intensity: 0.55 },
+      },
+      global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
+    });
+    await wrapper.findAll('.zoom-projection-options button')[2]!.trigger('click');
+    expect(wrapper.emitted('update')).toBeUndefined();
+    await wrapper.get('.header-action button').trigger('click');
+    expect(wrapper.emitted('generate')).toEqual([['glass']]);
+    wrapper.unmount();
+  });
+  it('switches to a larger manual glass lens while retaining existing lens drafts and respecting locks', async () => {
+    const wrapper = mount(ZoomPanel, {
+      props: {
+        selectedZoom,
+        canGenerate: true,
+        hasAutomaticZooms: false,
+        motionBlur: { enabled: false, intensity: 0.55 },
+      },
+      global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
+    });
+    await wrapper.findAll('.zoom-projection-options button')[2]!.trigger('click');
+    const lens = wrapper.emitted('update')![0]![0] as ZoomElement;
+    expect(lens).toMatchObject({ effect: 'glass', mode: 'manual', depth: 4, glass: { size: 0.6 } });
+    await wrapper.setProps({ selectedZoom: lens });
+    expect(wrapper.find('.glass-controls').exists()).toBe(true);
+    expect(wrapper.find('.zoom-mode-options').exists()).toBe(false);
+    await wrapper.get('.header-action button').trigger('click');
+    expect(wrapper.emitted('generate')).toEqual([['glass']]);
+    await wrapper.setProps({ selectedZoom: { ...lens, locked: true } });
+    await wrapper.findAll('.zoom-projection-options button')[0]!.trigger('click');
+    expect(wrapper.emitted('update')).toHaveLength(1);
+    wrapper.unmount();
+  });
+  it('offers the same 2D, 3D and glass controls for stills without time or automatic generation', () => {
+    const wrapper = mount(ZoomPanel, {
+      props: {
+        selectedZoom: { ...selectedZoom, mode: 'manual' },
+        still: true,
+        canGenerate: false,
+        hasAutomaticZooms: false,
+        canvasSize: { width: 1920, height: 1080 },
+        motionBlur: { enabled: false, intensity: 0.55 },
+      },
+      global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
+    });
+    expect(wrapper.findAll('.zoom-projection-options button')).toHaveLength(3);
+    expect(wrapper.find('.header-action').exists()).toBe(false);
+    expect(wrapper.find('.zoom-mode-options').exists()).toBe(false);
+    expect(wrapper.find('.motion-blur-settings').exists()).toBe(false);
+    wrapper.unmount();
+  });
   it('moves perspective help into a compact Info control', () => {
     const wrapper = mount(ZoomPanel, {
       props: {

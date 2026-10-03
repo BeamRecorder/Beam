@@ -547,3 +547,23 @@ test('screenshot image discard IPC enforces sender trust before removing scoped 
     fx.cleanup();
   }
 });
+
+test('persists imported image rotation with fractional angles and validates restored data', () => {
+  const fx = fixture();
+  try {
+    const asset = fx.store.importImage(fx.document.id, fx.source);
+    for (const rotation of [0, 32.75, 270]) {
+      fx.store.save(fx.document.id, screenshotState([importedLayer(asset, { rotation })]));
+      assert.equal(fx.store.read(fx.document.id).state.images[0].rotation, rotation);
+    }
+    for (const rotation of ['90', null, Infinity, NaN]) {
+      assert.throws(
+        () => fx.store.save(fx.document.id, screenshotState([importedLayer(asset, { rotation })])),
+        /Invalid screenshot image/,
+      );
+      assert.equal(fx.store.read(fx.document.id).state.images[0].rotation, 270);
+    }
+  } finally {
+    fx.cleanup();
+  }
+});

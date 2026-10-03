@@ -10,13 +10,13 @@
   display: grid;
   gap: 12px;
 }
+
 .section-heading {
   color: var(--text-primary);
   font-size: var(--font-size-body);
   font-weight: var(--weight-title);
 }
 
-/* Content Panel */
 .tab-content-panel {
   display: flex;
   flex-direction: column;
@@ -24,7 +24,6 @@
   width: 100%;
 }
 
-/* Two rows keep the background library secondary to the preview. */
 .media-scroll-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -34,39 +33,59 @@
   contain: layout style paint;
 }
 
-/* Media Tile Element with Dashed Hover Border */
-.media-tile {
+/* Shared geometry and selection surface for every catalogue tile. */
+.media-tile,
+.swatch-tile {
   position: relative;
   width: 100%;
   aspect-ratio: 1;
   padding: 0;
   border-radius: var(--radius-sm);
-  border: 1px solid transparent;
-  background: var(--color-bg-element, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--color-border);
   cursor: pointer;
   overflow: hidden;
   box-sizing: border-box;
+  transition: border-color var(--fast) ease;
+}
+
+.media-tile {
+  background: var(--color-bg-element);
   user-select: none;
   -webkit-user-drag: none;
-  transition:
-    border-color var(--fast) ease,
-    box-shadow var(--fast) ease;
   contain: strict;
+}
+
+.media-tile:hover:not(.active),
+.swatch-tile:hover:not(.active) {
+  border-color: var(--text-muted);
+}
+
+.media-tile.active,
+.swatch-tile.active {
+  border-color: var(--text-secondary);
+}
+
+/* Draw the inner ring above media pixels, so images cannot cover it. */
+.media-tile.active::after,
+.swatch-tile.active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--text-secondary);
+  border-radius: calc(var(--radius-sm) - 1px);
+  pointer-events: none;
+}
+
+.media-tile:focus-visible,
+.swatch-tile:focus-visible {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 2px;
 }
 
 .media-loading-skeleton {
   position: absolute;
   inset: 0;
   pointer-events: none;
-}
-
-.media-tile:hover:not(.active) {
-  border-color: var(--text-muted);
-}
-
-.media-tile.active {
-  border-color: var(--text-secondary);
-  box-shadow: inset 0 0 0 1px var(--text-secondary);
 }
 
 .media-content {
@@ -80,18 +99,14 @@
   pointer-events: none;
 }
 
-img.media-content {
-  opacity: 1;
-}
-
 .video-placeholder {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted, #9ca3af);
-  background: rgba(0, 0, 0, 0.3);
+  color: var(--text-muted);
+  background: var(--color-bg-well);
   border-radius: inherit;
 }
 
@@ -108,12 +123,11 @@ img.media-content {
   align-items: center;
   gap: 10px;
   padding: 20px 12px;
-  color: var(--text-secondary, #9ca3af);
-  font-size: 12px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-body);
   text-align: center;
 }
 
-/* Color & Gradient Swatches Grid */
 .swatches-section,
 .gradients-section {
   display: flex;
@@ -129,21 +143,10 @@ img.media-content {
 }
 
 .swatch-tile {
-  width: 100%;
-  aspect-ratio: 1;
-  padding: 0;
-  border-radius: var(--radius-sm);
-  border: 1.5px solid var(--color-border, rgba(255, 255, 255, 0.15));
   /* Paint one gradient through the border, without wrapping its edges. */
   background-origin: border-box;
   background-clip: border-box;
   background-repeat: no-repeat;
-  cursor: pointer;
-  box-sizing: border-box;
-  transition:
-    transform 0.12s ease,
-    border 0.15s ease,
-    box-shadow 0.15s ease;
 }
 
 .edit-selected-preset {
@@ -151,61 +154,42 @@ img.media-content {
   animation: edit-action-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.swatch-tile:hover:not(.active) {
-  border-color: var(--text-muted);
-}
-
-.swatch-tile.active {
-  border: 2px solid var(--text-secondary);
-  box-shadow: inset 0 0 0 1px var(--text-secondary);
-}
-
-.swatch-tile.editing {
-  outline: 1px solid var(--text-secondary);
-  outline-offset: 2px;
-}
-.media-tile:focus-visible,
-.swatch-tile:focus-visible {
-  outline: 2px solid var(--text-secondary);
-  outline-offset: 2px;
-}
-
-.custom-editor-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--text-secondary, #9ca3af);
-  font-size: 12px;
-  padding-top: 4px;
-}
-
-.custom-editor-box {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.apply-btn {
-  align-self: flex-end;
-}
-
 .slider-row {
   width: 100%;
+}
+
+.selected-preset-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  gap: 6px;
+}
+
+.deletion-history {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.deletion-error {
+  color: var(--color-error);
+  font-size: var(--font-size-body);
+  margin: 0;
 }
 
 @keyframes edit-action-in {
   from {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translate3d(0, -4px, 0);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .edit-selected-preset,
+  .media-tile,
   .swatch-tile {
     animation: none;
     transition: none;

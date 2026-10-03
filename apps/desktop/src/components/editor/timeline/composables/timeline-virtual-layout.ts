@@ -1,35 +1,15 @@
 import type { TimelineVirtualRow, TimelinePositionedRow } from './timeline-virtualization-types';
 
-const minimum = { visual: 32, effect: 48, audio: 32 };
-const maximum = { visual: 56, effect: 64, audio: 40 };
+const minimumHeight = 32;
+const maximumHeight = 56;
 
 export function layoutTimelineRows(
   rows: readonly TimelineVirtualRow[],
   viewportHeight: number,
 ): TimelinePositionedRow[] {
-  const minimumHeight = rows.reduce((sum, row) => sum + minimum[row.kind], 0);
-  let remaining = Math.max(0, viewportHeight - minimumHeight);
-  let active = rows.length;
-  let extra = 0;
-  // Match flex-grow: redistribute space when audio/effect rows reach their maximum.
-  for (const capacity of [8, 16, 24]) {
-    if (!active) break;
-    const available = (capacity - extra) * active;
-    if (remaining <= available) {
-      extra += remaining / active;
-      break;
-    }
-    remaining -= available;
-    extra = capacity;
-    active -= rows.filter((row) => maximum[row.kind] - minimum[row.kind] === capacity).length;
-  }
-  let top = 0;
-  return rows.map((row) => {
-    const height = Math.min(maximum[row.kind], minimum[row.kind] + extra);
-    const positioned = { ...row, top, height };
-    top += height;
-    return positioned;
-  });
+  if (!rows.length) return [];
+  const height = Math.min(maximumHeight, Math.max(minimumHeight, viewportHeight / rows.length));
+  return rows.map((row, index) => ({ ...row, top: index * height, height }));
 }
 
 export function visibleTimelineRows(

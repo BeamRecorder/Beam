@@ -129,3 +129,40 @@ it('keeps generated IDs unique across recording copies and retained detached zoo
   expect(new Set([reserved, ...generated].map((zoom) => zoom.id)).size).toBe(3);
   expect(generated.map((zoom) => zoom.linkedClipId)).toEqual(['one', 'two']);
 });
+
+it('maps automatic lenses to the output canvas and preserves trim/rate/linking', () => {
+  const comp = composition(
+    [
+      screen('lens', 'asset', {
+        sourceInMs: 1000,
+        timelineStartMs: 3000,
+        playbackRate: 2,
+        sourceDurationMs: 5000,
+        timelineDurationMs: 2500,
+        transform: { x: 0.2, y: 0.3, width: 0.5, height: 0.4 },
+      }),
+    ],
+    [asset('asset', 'session')],
+  );
+  const result = generateRecordingZooms(comp, 'session', [click(3000, 0.5, 0.5)], [], {
+    style: 'glass',
+    canvas: { width: 1920, height: 1080, showBackground: false },
+  });
+  expect(result[0]).toMatchObject({
+    effect: 'glass',
+    mode: 'manual',
+    generation: 'automatic',
+    linkedClipId: 'lens',
+    focus: { cx: 0.45, cy: 0.5 },
+  });
+  expect(result[0]!.startMs).toBeGreaterThanOrEqual(3000);
+  expect(result[0]!.endMs).toBeLessThanOrEqual(5500);
+  expect(
+    generateRecordingZooms(comp, 'session', [click(3000)], [], {
+      style: '3d',
+      canvas: { width: 1920, height: 1080, showBackground: false },
+    })[0]!.projection,
+  ).toBe('3d');
+  comp.clips[0]!.enabled = false;
+  expect(generateRecordingZooms(comp, 'session', [click(3000)], [])).toEqual([]);
+});

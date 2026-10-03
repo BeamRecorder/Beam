@@ -2,6 +2,7 @@ const { normalizeEffectSettings } = require('../projects/composition-effect.cjs'
 const { normalizeShapeLayerStyle } = require('../projects/composition-shape-layer.cjs');
 const { normalizeAppearance } = require('../projects/composition-appearance.cjs');
 const { validateScreenshotComposition } = require('./screenshot-composition-validation.cjs');
+const { validateStillZoom } = require('../../../../packages/engine/src/zoom/zoom-schema.js');
 
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const transform = (value) =>
@@ -46,11 +47,25 @@ function validateScreenshotState(state, projectId) {
     typeof state.image.id !== 'string' ||
     !transform(state.image.transform) ||
     !validCrop(state.image.crop) ||
+    (state.image.rotation !== undefined && !finite(state.image.rotation)) ||
     !Array.isArray(state.shapes) ||
     state.shapes.length > 500
   )
     throw new Error('Invalid screenshot settings.');
   normalizeAppearance(state.image.appearance);
+  if (state.zooms !== undefined) {
+    if (
+      !Array.isArray(state.zooms) ||
+      state.zooms.length +
+        state.shapes.length +
+        (state.images?.length ?? 0) +
+        (state.effects?.length ?? 0) +
+        (state.cursors?.length ?? 0) >
+        500
+    )
+      throw new Error('Invalid screenshot zoom layers.');
+    state.zooms.forEach(validateStillZoom);
+  }
   if (state.image.enabled !== undefined && typeof state.image.enabled !== 'boolean')
     throw new Error('Invalid screenshot visibility.');
   state.image.enabled ??= true;
@@ -75,6 +90,7 @@ function validateScreenshotState(state, projectId) {
         !dimensions(image.width, image.height) ||
         !transform(image.transform) ||
         !validCrop(image.crop) ||
+        (image.rotation !== undefined && !finite(image.rotation)) ||
         typeof image.enabled !== 'boolean' ||
         typeof image.isMirrored !== 'boolean' ||
         typeof image.isMirroredY !== 'boolean'

@@ -22,6 +22,7 @@ export interface WebcamOverlaySettings {
   reactToZoom: boolean;
   mirror: boolean;
   mirrorY: boolean;
+  rotation?: number;
   cornerRadius: number;
   shadowOpacity: number;
   shadowColor: string;
@@ -214,6 +215,7 @@ export function drawWebcamOverlay(
     title,
     mirrored: settings.mirror,
     mirroredY: settings.mirrorY,
+    rotation: settings.rotation,
     mask: framing.mask,
   });
 }

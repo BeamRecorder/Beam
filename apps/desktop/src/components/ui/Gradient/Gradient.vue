@@ -1,201 +1,167 @@
 <script setup lang="ts">
-import { Trash2 } from '@lucide/vue';
+import { ArrowLeftRight, Plus, RotateCw, SwatchBook } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
-import BigSlider from '~/ui/slider/BigSlider.vue';
-import ColorInput from '~/ui/input/ColorInput.vue';
-import Select from '~/ui/select/Select.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
+import Input from '~/ui/input/Input.vue';
+import Popover from '~/ui/popover/Popover.vue';
+import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
+import { useTranslate } from '~/i18n/useTranslate';
+import GradientStops from './GradientStops.vue';
+import GradientStopRow from './GradientStopRow.vue';
 import { useGradient } from './composables/useGradient';
-import type { GradientValue, GradientPreset } from '~/components/ui/Gradient/gradient-types';
+import { gradientCss } from './gradient-stops';
+import type { GradientProps, GradientValue } from './gradient-types';
 
-const uiText = {
-  editStop: 'Edit Stop',
-  color: 'Color',
-  opacity: 'Opacity',
-  position: 'Position',
-  presets: 'Presets',
-  type: 'Type',
-  angle: 'Angle',
-  removeStop: 'Remove Stop',
-  dragUpToDelete: 'Drag up to delete',
-  dragDownToDelete: 'Drag down to delete',
-};
-
-const props = withDefaults(
-  defineProps<{
-    modelValue: GradientValue | null | undefined;
-    presets?: GradientPreset[];
-    minStops?: number;
-    maxStops?: number;
-    showAngle?: boolean;
-  }>(),
-  {
-    showAngle: false,
-  },
-);
-
-const emit = defineEmits<{
-  (e: 'update:modelValue', value: GradientValue): void;
-}>();
-
+const props = withDefaults(defineProps<GradientProps>(), { showAngle: false, disabled: false });
+const emit = defineEmits<{ (event: 'update:modelValue', value: GradientValue): void }>();
+const { t } = useTranslate('Gradient');
 const {
-  stops,
-  selectedStop,
+  value,
   selectedStopId,
-  draggingStopId,
-  dragDeleteDirection,
-  isOverTrash,
-  isPopoverOpen,
-  gradientPreviewStyle,
-  gradientType,
-  gradientAngle,
-  trackRef,
+  preview,
   effectiveMinStops,
+  canAdd,
+  selectStop,
   addStop,
   removeStop,
   updateStop,
-  onTrackClick,
-  startDragging,
-  handleStopClick,
   updateGradientType,
   updateGradientAngle,
-  updateSelectedStopAlpha,
-  updateSelectedStopPosition,
-  hexToRgb,
-  effectiveMaxStops,
+  reverseStops,
+  applyPreset,
 } = useGradient(props, emit);
-void trackRef;
-void addStop;
-
-const gradientTypeOptions = [
-  { label: 'Linear', value: 'linear' },
-  { label: 'Radial', value: 'radial' },
-];
 </script>
 
 <template>
   <div class="gradient-editor">
-    <div v-if="showAngle" class="gradient-options">
-      <div class="option-row">
-        <label>{{ uiText.type }}</label>
-        <Select :model-value="gradientType" :options="gradientTypeOptions" @update:model-value="updateGradientType" />
-      </div>
-      <div v-if="gradientType === 'linear'" class="angle-row">
-        <BigSlider
-          label="Angle"
-          :model-value="gradientAngle"
-          :min="0"
-          :max="360"
-          :step="1"
-          :format-value="(val: number) => `${val}°`"
-          @update:model-value="updateGradientAngle"
-        />
-      </div>
-    </div>
-    <div class="gradient-visual-container">
-      <div
-        class="delete-zone delete-zone--top"
-        :class="{
-          'is-visible': isOverTrash && dragDeleteDirection === 'top',
-          'is-active': isOverTrash && dragDeleteDirection === 'top',
-        }"
-      >
-        <Trash2 :size="12" />
-        <span>{{ uiText.dragUpToDelete }}</span>
-      </div>
-      <div
-        ref="trackRef"
-        class="gradient-track"
-        :class="{ 'is-locked': stops.length >= effectiveMaxStops }"
-        @pointerdown="onTrackClick"
-      >
-        <!-- Checkerboard background for alpha visibility -->
-        <div class="checkerboard"></div>
-        <!-- Gradient preview -->
-        <div class="gradient-fill" :style="gradientPreviewStyle"></div>
-
-        <!-- Interaction markers -->
-        <div
-          v-for="stop in stops"
-          :key="stop.id"
-          class="stop-handle"
-          :class="{
-            active: selectedStopId === stop.id,
-            dragging: draggingStopId === stop.id,
-            'over-trash': draggingStopId === stop.id && isOverTrash,
-          }"
-          :style="{ left: `${stop.position * 100}%` }"
-          @pointerdown="startDragging($event, stop.id)"
-          @click="handleStopClick($event, stop.id)"
+    <div v-if="showAngle" class="gradient-toolbar">
+      <ButtonGroup full size="xs" variant="neutral" :columns="2" role="group" :aria-label="t('type')">
+        <Button
+          v-for="type in ['linear', 'radial']"
+          :key="type"
+          size="xs"
+          :variant="value.type === type ? 'selected' : 'ghost'"
+          :aria-pressed="value.type === type"
+          :disabled="disabled"
+          @click="updateGradientType(type)"
+          >{{ t(type) }}</Button
         >
-          <div
-            class="stop-marker"
-            :style="{
-              backgroundColor: `rgba(${hexToRgb(stop.color).r}, ${hexToRgb(stop.color).g}, ${hexToRgb(stop.color).b}, ${stop.alpha ?? 1})`,
-            }"
-          ></div>
-          <div v-if="draggingStopId === stop.id && isOverTrash" class="trash-indicator">
-            <Trash2 :size="14" />
-          </div>
-        </div>
-      </div>
-      <div
-        class="delete-zone delete-zone--bottom"
-        :class="{
-          'is-visible': isOverTrash && dragDeleteDirection === 'bottom',
-          'is-active': isOverTrash && dragDeleteDirection === 'bottom',
-        }"
-      >
-        <Trash2 :size="12" />
-        <span>{{ uiText.dragDownToDelete }}</span>
+      </ButtonGroup>
+      <Input
+        v-if="value.type === 'linear'"
+        type="number"
+        size="xs"
+        appearance="neutral"
+        commit-on-blur
+        :model-value="Number(value.angle!.toFixed(2))"
+        :step="1"
+        unit="°"
+        :aria-label="t('angle')"
+        :disabled="disabled"
+        @update:model-value="updateGradientAngle"
+      />
+      <Button
+        v-if="value.type === 'linear'"
+        variant="ghost"
+        size="xs"
+        icon-only
+        :icon="RotateCw"
+        :disabled="disabled"
+        :tooltip="t('rotate')"
+        :aria-label="t('rotate')"
+        @click="updateGradientAngle(value.angle! + 90)"
+      />
+    </div>
+    <div class="gradient-preview transparency-grid" aria-hidden="true"><div :style="{ background: preview }" /></div>
+    <GradientStops
+      :stops="value.stops"
+      :selected-id="selectedStopId"
+      :can-add="canAdd"
+      :disabled="disabled"
+      @select="selectStop"
+      @add="addStop"
+      @move="(id, position) => updateStop(id, { position })"
+      @remove="removeStop"
+    />
+    <div class="gradient-list-header">
+      <span>{{ t('stops') }}</span>
+      <div class="gradient-actions">
+        <Popover v-if="presets?.length" :match-trigger-width="false" align="right">
+          <template #trigger
+            ><Button
+              variant="ghost"
+              size="xs"
+              icon-only
+              :icon="SwatchBook"
+              :disabled="disabled"
+              :tooltip="t('presets')"
+              :aria-label="t('presets')"
+          /></template>
+          <template #default="{ close }"
+            ><div class="gradient-presets">
+              <Button
+                v-for="preset in presets"
+                :key="preset.id"
+                variant="secondary"
+                size="xs"
+                :disabled="
+                  disabled || preset.stops.length < effectiveMinStops || preset.stops.length > (maxStops ?? Infinity)
+                "
+                @click="
+                  applyPreset(preset);
+                  close();
+                "
+                ><template #icon
+                  ><span
+                    class="preset-swatch"
+                    :style="{ background: gradientCss({ stops: preset.stops }, true) }" /></template
+                >{{ preset.id }}</Button
+              >
+            </div></template
+          >
+        </Popover>
+        <Button
+          variant="ghost"
+          size="xs"
+          icon-only
+          :icon="ArrowLeftRight"
+          :disabled="disabled"
+          :tooltip="t('reverse')"
+          :aria-label="t('reverse')"
+          @click="reverseStops"
+        />
+        <Button
+          variant="ghost"
+          size="xs"
+          icon-only
+          :icon="Plus"
+          :disabled="!canAdd"
+          :tooltip="t('addStop')"
+          :aria-label="t('addStop')"
+          @click="addStop()"
+        />
       </div>
     </div>
-
-    <!-- Stop Editor Inline Panel -->
-    <Transition name="slide-fade">
-      <div v-if="selectedStop && isPopoverOpen" class="stop-edit-form">
-        <div class="form-header">
-          <span class="form-title">{{ uiText.editStop }}</span>
-          <Button
-            variant="danger"
-            size="sm"
-            icon-only
-            tooltip="Remove Stop"
-            :disabled="stops.length <= effectiveMinStops"
-            @click="removeStop(selectedStop!.id)"
-          >
-            <Trash2 :size="14" />
-          </Button>
-        </div>
-
-        <ColorInput
-          :label="uiText.color"
-          :model-value="selectedStop.color"
-          @update:model-value="updateStop(selectedStop.id, { color: $event })"
-        />
-
-        <BigSlider
-          label="Opacity"
-          suffix="%"
-          :model-value="Math.round((selectedStop.alpha ?? 1) * 100)"
-          :min="0"
-          :max="100"
-          :step="1"
-          :format-value="(val: number) => `${val}%`"
-          @update:model-value="updateSelectedStopAlpha($event / 100)"
-        />
-
-        <BigSlider
-          label="Position"
-          suffix="%"
-          :model-value="Math.round(selectedStop.position * 100)"
-          :min="0"
-          :max="100"
-          :step="1"
-          :format-value="(val: number) => `${val}%`"
-          @update:model-value="updateSelectedStopPosition($event / 100)"
-        />
-      </div>
-    </Transition>
+    <div class="gradient-column-labels" aria-hidden="true">
+      <span>{{ t('color') }}</span
+      ><span>{{ t('position') }}</span
+      ><span>{{ t('opacity') }}</span
+      ><span />
+    </div>
+    <ScrollShadow class="gradient-stop-list" :size="12">
+      <GradientStopRow
+        v-for="(stop, index) in value.stops"
+        :key="stop.id"
+        :stop="stop"
+        :index="index"
+        :selected="stop.id === selectedStopId"
+        :removable="value.stops.length > effectiveMinStops"
+        :disabled="disabled"
+        @select="selectStop(stop.id)"
+        @update="updateStop(stop.id, $event)"
+        @remove="removeStop(stop.id)"
+      />
+    </ScrollShadow>
   </div>
 </template>
 

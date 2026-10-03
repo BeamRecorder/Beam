@@ -11,6 +11,7 @@ import {
   Type,
   ArrowRight,
   Pencil,
+  ZoomIn,
 } from '@lucide/vue';
 import { screenshotSearchPropertyAvailable } from './screenshot-search-properties';
 import { screenshotLayers } from '@beam/engine/screenshot/screenshot-layers';
@@ -29,14 +30,18 @@ const layerIcons = {
   background: Paintbrush,
   watermark: Stamp,
   effect: CircleDashed,
+  zoom: ZoomIn,
 };
 export function provideScreenshotEditorSearch(options: ScreenshotEditorSearchOptions) {
   const { t } = useI18n();
   const visible = ref<string[]>([]);
   const thumbnails = useLayerThumbnails(() =>
     options.state.value && options.document.value && visible.value.length
-      ? screenshotThumbnailSpecs(options.state.value, options.document.value.source, options.packs()).filter((spec) =>
-          visible.value.includes(`clip:${spec.id}`),
+      ? screenshotThumbnailSpecs(
+          options.state.value,
+          options.document.value.source,
+          options.packs(),
+          new Set(visible.value.map((id) => id.replace(/^clip:/, ''))),
         )
       : [],
   );
@@ -86,7 +91,9 @@ export function provideScreenshotEditorSearch(options: ScreenshotEditorSearchOpt
                       ? options.state.value?.effects?.find((effect) => effect.id === layer.id)?.mode === 'highlight'
                         ? 'Highlight.title'
                         : 'TimelineTracks.blur'
-                      : `Elements.${layer.kind}`,
+                      : layer.kind === 'zoom'
+                        ? 'SidebarPanel.zoom'
+                        : `Elements.${layer.kind}`,
               ),
             icon:
               layer.kind === 'effect' &&

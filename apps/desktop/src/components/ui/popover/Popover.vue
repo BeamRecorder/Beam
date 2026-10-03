@@ -364,7 +364,7 @@ defineExpose({
           v-if="isOpen || (keepMounted && hasOpened)"
           v-show="isOpen"
           ref="contentRef"
-          class="popover-content"
+          class="popover-content floating-surface"
           :data-popover-id="popoverId"
           :inert="!isOpen || undefined"
           :data-popover-owner="parentPopoverId"
@@ -391,4 +391,5 @@ defineExpose({
   </div>
 </template>
 
+<style scoped src="../floating-surface.css"></style>
 <style scoped src="./popover.css"></style>

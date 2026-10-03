@@ -23,7 +23,6 @@
 
 .popover-content {
   position: absolute;
-  background-color: var(--color-bg-element);
   color: var(--text-primary);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
@@ -41,8 +40,8 @@
 }
 
 .popover-content.popover-flush {
+  --floating-surface-background: var(--color-bg-popover-surface);
   padding: 0;
-  background: var(--color-bg-surface);
 }
 
 .popover-content.popover-attached {

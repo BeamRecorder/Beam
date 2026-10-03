@@ -79,3 +79,13 @@ describe('adaptive shadow request planning', () => {
     expect(visualAdaptiveShadowRequests(clips, new Map([['video', media]]), canvas)).toEqual([]);
   });
 });
+
+it.each(['video', 'image'] as const)('preserves %s rotation independently of framing, crop and mirrors', (kind) => {
+  const clip = video({ kind, rotation: 270, crop: { x: 0.1, y: 0.2, width: 0.5, height: 0.5 } });
+  expect(visualMediaOptions(clip, media, canvas)).toMatchObject({
+    rotation: 270,
+    mirrored: true,
+    mirroredY: false,
+    sourceRect: { x: 100, y: 100, width: 500, height: 250 },
+  });
+});

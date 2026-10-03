@@ -67,6 +67,7 @@ const visual = (kind: 'image' | 'video' | 'webcam', id: string, assetId: string,
   appearance,
   isMirrored: true,
   isMirroredY: true,
+  rotation: 32.5,
 });
 
 const caption = (): CaptionClip => ({
@@ -393,6 +394,7 @@ describe('useCompositionMedia', () => {
         sourceRect: { x: 64, y: 36, width: 512, height: 288 },
         mirrored: true,
         mirroredY: true,
+        rotation: 32.5,
       }),
     );
     expect(drawDecoratedMedia).toHaveBeenCalledWith(
@@ -402,6 +404,7 @@ describe('useCompositionMedia', () => {
         sourceRect: { x: 32, y: 24, width: 256, height: 192 },
         mirrored: true,
         mirroredY: true,
+        rotation: 32.5,
       }),
     );
   });

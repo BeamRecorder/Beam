@@ -396,3 +396,15 @@ describe('CaptionClipPanel', () => {
     );
   });
 });
+
+it('exposes a compact precise angle field without mirrors for text clips', () => {
+  const wrapper = mount(CaptionClipPanel, {
+    props: { clip: { ...clip, rotation: 32.75 } as CaptionClip },
+    global: { stubs: { Input, ColorPicker, BigSlider, Select, Switch, Button, ButtonGroup, Divider } },
+  });
+  const controls = wrapper.findComponent({ name: 'MediaOrientationControls' });
+  expect(controls.props('rotation')).toBe(32.75);
+  expect(controls.props('showMirroring')).toBe(false);
+  controls.vm.$emit('update:rotation', 12.5);
+  expect(wrapper.emitted('update')!.at(-1)![0]).toMatchObject({ rotation: 12.5, caption: clip.caption });
+});

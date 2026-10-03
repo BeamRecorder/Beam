@@ -1,3 +1,4 @@
+import { setClipRotation } from '@beam/engine/commands/clip-rotation';
 import { cropSourceDimensions } from '@beam/engine/layout/crop/crop-pixels';
 import { computed, ref, watch, type Ref } from 'vue';
 import {
@@ -118,6 +119,7 @@ export function useSelectedClips(options: { composition: Ref<ClipComposition>; a
             cropDimensions: cropSourceDimensions(options.composition.value, clip),
             isMirrored: clip.isMirrored,
             isMirroredY: clip.isMirroredY,
+            rotation: clip.rotation ?? 0,
             clipTransform: clip.transform,
             ...clip.appearance,
             cameraLayoutPreset: clip.cameraLayoutPreset ?? 'custom',
@@ -209,6 +211,8 @@ export function useSelectedClips(options: { composition: Ref<ClipComposition>; a
     updateCompositionEach(isVisualClip, (next, id) => setMirrored(next, id, mirrored));
   const updateSelectedMirroredY = (mirroredY: boolean) =>
     updateCompositionEach(isVisualClip, (next, id) => setMirroredY(next, id, mirroredY));
+  const updateSelectedRotation = (degrees: number) =>
+    updateCompositionEach(isVisualClip, (next, id) => setClipRotation(next, id, degrees));
   const updateSelectedRate = (rate: number) =>
     updateCompositionEach(
       (clip) => !isCaptionClip(clip) && !isColorClip(clip) && !isShapeClip(clip) && !isBlurClip(clip),
@@ -251,6 +255,7 @@ export function useSelectedClips(options: { composition: Ref<ClipComposition>; a
     updateSelectedWebcamReactToZoom,
     updateSelectedMirrored,
     updateSelectedMirroredY,
+    updateSelectedRotation,
     updateSelectedRate,
     updateSelectedVolume,
     updateSelectedEnabled,

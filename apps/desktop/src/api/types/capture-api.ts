@@ -1,3 +1,4 @@
+import type { BackgroundCatalogRequest } from './background-catalog';
 import type { DesktopExportApi } from './desktop-export';
 import type { HudPanelApi } from './hud-panel';
 import type { SourcePickerApi } from './source-picker';
@@ -158,6 +159,7 @@ export interface DesktopCaptureApi
   cancelScreenRegion(): void;
   getWindowBounds(): Promise<{ x: number; y: number; width: number; height: number } | null>;
   getPreferences(): Promise<PreferenceSettings>;
+  updateBackgroundCatalog(request: BackgroundCatalogRequest): Promise<PreferenceSettings>;
   updatePreferences(patch: PreferencePatch): Promise<PreferenceSettings>;
   updatePreferencesBatch(patches: PreferencePatch[]): Promise<PreferenceSettings>;
   resetPreferences(keys?: Array<keyof PreferenceSettings>): Promise<PreferenceSettings>;

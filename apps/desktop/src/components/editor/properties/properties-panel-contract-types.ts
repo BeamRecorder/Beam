@@ -90,7 +90,7 @@ export interface PropertiesPanelEmits {
   (event: 'update:zoomAutoFollow', value: ZoomAutoFollowSettings): void;
   (event: 'update:zoomMotionBlur', value: ZoomMotionBlurSettings): void;
   (event: 'delete:zoom'): void;
-  (event: 'generate:zooms'): void;
+  (event: 'generate:zooms', style: import('@beam/engine/zoom/zoom-types').ZoomStyle): void;
   (event: 'update:caption', value: CaptionClip): void;
   (event: 'update:composition', value: ClipComposition): void;
   (event: 'preview:composition', value: ClipComposition | null): void;
@@ -113,6 +113,7 @@ export interface PropertiesPanelEmits {
   ): void;
   (event: 'update:clip-is-mirrored', isMirrored: boolean): void;
   (event: 'update:clip-is-mirrored-y', isMirroredY: boolean): void;
+  (e: 'update:clip-rotation', degrees: number): void;
   (event: 'update:clip-corner-radius', radius: string): void;
   (event: 'corner-radius-interaction', interacting: boolean): void;
   (event: 'update:clip-shadow', shadow: { size: string; color?: string; direction?: string }): void;

@@ -133,6 +133,8 @@ export function validateComposition(composition: ClipComposition): void {
     ) {
       throw new CompositionEngineError('Invalid visual transform.');
     }
+    if ((isVisualClip(clip) || isCaptionClip(clip)) && clip.rotation !== undefined && !finite(clip.rotation))
+      throw new CompositionEngineError('Invalid media rotation.');
     if (
       isVisualClip(clip) &&
       ((clip.freezeFrameSourceMs !== undefined &&

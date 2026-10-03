@@ -26,6 +26,7 @@ export function drawScreenMedia(
     title: clip.name,
     mirrored: clip.isMirrored,
     mirroredY: clip.isMirroredY,
+    rotation: clip.rotation,
     mask: geometry.mask,
   });
 }

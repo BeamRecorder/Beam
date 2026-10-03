@@ -36,3 +36,10 @@ export type { DocumentRequest, DocumentResponse } from './document/endpoint-type
 
 export * from './document/authoring-session';
 export type { DocumentEvent, DocumentHistoryEvent } from './document/endpoint-types';
+export * from './zoom/zoom-types';
+export * from './zoom/glass-highlight-types';
+export * from './zoom/glass-generation-types';
+export * from './zoom/glass-highlight';
+export * from './zoom/glass-generation';
+export * from './zoom/manual-zoom';
+export * from './zoom/recording-zoom-generation';

@@ -15,6 +15,7 @@ const visualSignature = (clip) =>
     appearance: clip.appearance,
     isMirrored: clip.isMirrored,
     isMirroredY: clip.isMirroredY,
+    rotation: clip.rotation,
     shapeStyle:
       clip.kind === 'shape'
         ? {

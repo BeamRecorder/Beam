@@ -4,7 +4,7 @@ import { createBrowserTimelineFrameQueue } from '@beam/runtime/timeline/browser-
 import { bindElementRef } from '~/utils/element-ref';
 import { useTimelineSurface } from './composables/useTimelineSurface';
 import TimelineSurfaceCanvas from './TimelineSurfaceCanvas.vue';
-import ReorderGroup from '~/ui/transitions/ReorderGroup.vue';
+import TimelineReorderGroup from './TimelineReorderGroup.vue';
 import TimelineGapButtons from './TimelineGapButtons.vue';
 import TimelineCanvasClips from './TimelineCanvasClips.vue';
 import TimelineSelectionBox from './TimelineSelectionBox.vue';
@@ -172,7 +172,7 @@ const exportTimelineState = computed(() => {
     : 0;
   return {
     progressStyle: percentageStyle(0, currentMs),
-    limitStyle: { left: percentageStyle(limitMs, 0).left },
+    limitStyle: { left: '0', transform: percentageStyle(limitMs, 0).transform },
     limitLabel: formatExportLimit(limitMs),
     isAtEnd: limitMs >= layoutDurationMs.value,
   };
@@ -307,7 +307,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
           <div
             v-if="activeSnapTimeMs !== null"
             class="timeline-snap-guide"
-            :style="{ left: percentageStyle(activeSnapTimeMs, 0).left }"
+            :style="percentageStyle(activeSnapTimeMs, 0)"
           >
             <span class="snap-guide-badge">{{ (activeSnapTimeMs / 1000).toFixed(2) }}s</span>
           </div>
@@ -333,7 +333,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
             @preview="previewCanvasTransitions"
             @update="updateCanvasTransitions"
           />
-          <ReorderGroup :order="visibleVisualTracks.map((track) => track.id)" class="visual-tracks-group">
+          <TimelineReorderGroup :order="visibleVisualTracks.map((track) => track.id)" class="visual-tracks-group">
             <div
               v-for="track in visibleVisualTracks"
               :key="track.id"
@@ -398,7 +398,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
                 />
               </div>
             </div>
-          </ReorderGroup>
+          </TimelineReorderGroup>
           <TimelineZoomTrack
             :viewport="timelineViewport"
             :zoom-elements="zoomElements"

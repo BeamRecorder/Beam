@@ -39,7 +39,11 @@ export function topmostClipIdAtPoint(
   for (const clip of clips) {
     const layout = layoutFor(clip);
     if (!layout) continue;
-    const testPoint = clip.kind === 'shape' ? unrotatePoint(point, layout, clip.rotation) : point;
+    const testPoint = unrotatePoint(
+      point,
+      layout,
+      clip.kind === 'shape' || clip.kind === 'caption' || isVisualClip(clip) ? (clip.rotation ?? 0) : 0,
+    );
     const insideShape =
       isVisualClip(clip) && clip.cameraFramingPreset === 'squircle'
         ? pointInsideSquircle(testPoint.x, testPoint.y, layout, RAYCAST_SLOP_PX)

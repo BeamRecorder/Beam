@@ -6,7 +6,7 @@ import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import Input from '~/ui/input/Input.vue';
-import Divider from '~/ui/divider/Divider.vue';
+import Accordion from '~/ui/accordion/Accordion.vue';
 import type { ClipFrame } from '@beam/engine/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
@@ -44,6 +44,7 @@ const emit = defineEmits<{
     },
   ): void;
 }>();
+const sections = ref({ border: false, frame: false });
 const activeFrame = computed(() => props.frame ?? 'none');
 const frameEnabled = computed(() => activeFrame.value !== 'none');
 const activeFrameType = computed(() => (isPhoneFrame(activeFrame.value) ? 'phone' : 'desktop'));
@@ -67,104 +68,113 @@ const selectFrameType = (type: 'desktop' | 'phone') =>
 
 <template>
   <div class="appearance-controls">
-    <div class="section-header">
-      <span class="section-title">{{ t('border') }}</span>
-    </div>
-    <div class="prop-row">
-      <span class="prop-label">{{ t('showBorder') }}</span>
-      <Switch :model-value="borderEnabled ?? false" @update:modelValue="emit('update', { borderEnabled: $event })" />
-    </div>
-    <div v-if="borderEnabled" class="sub-group margin-top-sm">
-      <span class="sub-label">{{ t('borderColor') }}</span>
-      <ColorPicker
-        :model-value="borderColor ?? '#000000'"
-        :show-label="false"
-        @update:modelValue="emit('update', { borderColor: $event })"
-      />
-      <BigSlider
-        :model-value="borderWidth ?? 1"
-        :min="1"
-        :max="32"
-        :step="1"
-        :label="t('width')"
-        :format-value="(value) => `${Math.round(value)}px`"
-        @update:modelValue="emit('update', { borderWidth: $event })"
-      />
-    </div>
-    <Divider spacing="sm" />
-    <div class="prop-row">
-      <span class="prop-label">{{ t('frame') }}</span>
-      <Switch :model-value="frameEnabled" :aria-label="t('frame')" @update:modelValue="toggleFrame" />
-    </div>
-    <div v-if="frameEnabled" class="sub-group margin-top-sm">
-      <span class="sub-label">{{ t('frameType') }}</span>
-      <ButtonGroup full>
-        <Button
-          v-for="type in ['desktop', 'phone'] as const"
-          :key="type"
-          :variant="activeFrameType === type ? 'selected' : 'ghost'"
-          size="xs"
-          @click="selectFrameType(type)"
-          >{{ t(type) }}</Button
-        >
-      </ButtonGroup>
-      <span class="sub-label">{{ t('frameModel') }}</span>
-      <ButtonGroup full>
-        <Button
-          v-for="item in frames"
-          :key="item.id"
-          :variant="activeFrame === item.id ? 'selected' : 'ghost'"
-          size="xs"
-          @click="emit('update', { frame: item.id })"
-          >{{ item.label }}</Button
-        >
-      </ButtonGroup>
-      <span class="sub-label">{{ t('frameColor') }}</span>
-      <ColorPicker
-        :model-value="frameColor ?? '#c0c0c0'"
-        :show-label="false"
-        @update:modelValue="emit('update', { frameColor: $event })"
-      />
-      <template v-if="activeFrameType === 'desktop'">
-        <label class="sub-label" for="frame-title">{{ t('windowTitle') }}</label>
-        <Input
-          id="frame-title"
-          :model-value="frameTitle ?? ''"
-          :placeholder="t('screenRecording')"
-          @update:modelValue="emit('update', { frameTitle: String($event) })"
-        />
-        <BigSlider
-          :model-value="(frameChromeScale ?? 1) * 100"
-          :min="50"
-          :max="200"
-          :step="5"
-          :label="t('windowSize')"
-          :format-value="(value) => `${Math.round(value)}%`"
-          @update:modelValue="emit('update', { frameChromeScale: $event / 100 })"
-        />
-      </template>
-      <PhoneFrameFillControls
-        v-else
-        :model-value="phoneFrameFill"
-        @update:modelValue="emit('update', { phoneFrameFill: $event })"
-      />
-      <template v-if="activeFrame === 'windows-95'">
+    <Accordion v-model="sections.border" appearance="inspector" :title="t('border')" data-clip-section="border">
+      <div class="section-block">
         <div class="prop-row">
-          <span class="prop-label">{{ t('menuBar') }}</span
-          ><Switch
-            :model-value="frameShowMenu ?? true"
-            @update:modelValue="emit('update', { frameShowMenu: $event })"
+          <span class="prop-label">{{ t('showBorder') }}</span>
+          <Switch
+            :model-value="borderEnabled ?? false"
+            @update:modelValue="emit('update', { borderEnabled: $event })"
           />
         </div>
-        <div class="prop-row">
-          <span class="prop-label">{{ t('scrollbars') }}</span
-          ><Switch
-            :model-value="frameShowScrollbars ?? true"
-            @update:modelValue="emit('update', { frameShowScrollbars: $event })"
+        <div v-if="borderEnabled" class="sub-group margin-top-sm">
+          <span class="sub-label">{{ t('borderColor') }}</span>
+          <ColorPicker
+            :model-value="borderColor ?? '#000000'"
+            :show-label="false"
+            @update:modelValue="emit('update', { borderColor: $event })"
+          />
+          <BigSlider
+            :model-value="borderWidth ?? 1"
+            :min="1"
+            :max="32"
+            :step="1"
+            :label="t('width')"
+            :format-value="(value) => `${Math.round(value)}px`"
+            @update:modelValue="emit('update', { borderWidth: $event })"
           />
         </div>
-      </template>
-    </div>
+      </div>
+    </Accordion>
+    <Accordion v-model="sections.frame" appearance="inspector" :title="t('frame')" data-clip-section="frame">
+      <div class="section-block">
+        <div class="prop-row">
+          <span class="prop-label">{{ t('frame') }}</span>
+          <Switch :model-value="frameEnabled" :aria-label="t('frame')" @update:modelValue="toggleFrame" />
+        </div>
+        <div v-if="frameEnabled" class="sub-group margin-top-sm">
+          <span class="sub-label">{{ t('frameType') }}</span>
+          <ButtonGroup full variant="neutral" size="xs">
+            <Button
+              v-for="type in ['desktop', 'phone'] as const"
+              :key="type"
+              :variant="activeFrameType === type ? 'selected' : 'ghost'"
+              size="xs"
+              @click="selectFrameType(type)"
+              >{{ t(type) }}</Button
+            >
+          </ButtonGroup>
+          <span class="sub-label">{{ t('frameModel') }}</span>
+          <ButtonGroup full variant="neutral" size="xs">
+            <Button
+              v-for="item in frames"
+              :key="item.id"
+              :variant="activeFrame === item.id ? 'selected' : 'ghost'"
+              size="xs"
+              @click="emit('update', { frame: item.id })"
+              >{{ item.label }}</Button
+            >
+          </ButtonGroup>
+          <span class="sub-label">{{ t('frameColor') }}</span>
+          <ColorPicker
+            :model-value="frameColor ?? '#c0c0c0'"
+            :show-label="false"
+            @update:modelValue="emit('update', { frameColor: $event })"
+          />
+          <template v-if="activeFrameType === 'desktop'">
+            <label class="sub-label" for="frame-title">{{ t('windowTitle') }}</label>
+            <Input
+              id="frame-title"
+              appearance="neutral"
+              size="sm"
+              :model-value="frameTitle ?? ''"
+              :placeholder="t('screenRecording')"
+              @update:modelValue="emit('update', { frameTitle: String($event) })"
+            />
+            <BigSlider
+              :model-value="(frameChromeScale ?? 1) * 100"
+              :min="50"
+              :max="200"
+              :step="5"
+              :label="t('windowSize')"
+              :format-value="(value) => `${Math.round(value)}%`"
+              @update:modelValue="emit('update', { frameChromeScale: $event / 100 })"
+            />
+          </template>
+          <PhoneFrameFillControls
+            v-else
+            :model-value="phoneFrameFill"
+            @update:modelValue="emit('update', { phoneFrameFill: $event })"
+          />
+          <template v-if="activeFrame === 'windows-95'">
+            <div class="prop-row">
+              <span class="prop-label">{{ t('menuBar') }}</span
+              ><Switch
+                :model-value="frameShowMenu ?? true"
+                @update:modelValue="emit('update', { frameShowMenu: $event })"
+              />
+            </div>
+            <div class="prop-row">
+              <span class="prop-label">{{ t('scrollbars') }}</span
+              ><Switch
+                :model-value="frameShowScrollbars ?? true"
+                @update:modelValue="emit('update', { frameShowScrollbars: $event })"
+              />
+            </div>
+          </template>
+        </div>
+      </div>
+    </Accordion>
   </div>
 </template>
 
@@ -172,8 +182,12 @@ const selectFrameType = (type: 'desktop' | 'phone') =>
 .appearance-controls {
   display: flex;
   flex-direction: column;
+  gap: 0;
+}
+.section-block {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  margin-top: 8px;
 }
 .section-header {
   display: flex;

@@ -100,7 +100,7 @@ const cursorPack: CursorPackDescriptor = {
 
 const SelectionStub = defineComponent({
   name: 'CanvasLayerSelection',
-  props: { handleStyle: Object, viewportStyle: Object, resizeCorners: Array },
+  props: { handleStyle: Object, viewportStyle: Object, resizeCorners: Array, rotation: Number, rotatable: Boolean },
   emits: [
     'pointer-down',
     'pointer-move',
@@ -1162,4 +1162,17 @@ describe('ScreenshotCanvas', () => {
 
     expect(wrapper.emitted('error')).toBeUndefined();
   });
+});
+
+it('exposes the rotation handle above the selected screenshot image and keeps its precise angle', async () => {
+  const state = stateFixture();
+  state.image.rotation = 32.5;
+  const wrapper = mountCanvas(state, state.image.id);
+  measurement.set?.(800, 600);
+  await flushPromises();
+  const selection = wrapper.findComponent(SelectionStub);
+  expect(selection.props('rotatable')).toBe(true);
+  expect(selection.props('rotation')).toBe(32.5);
+  expect(selection.props('handleStyle')?.transform).toContain('rotate(32.5deg)');
+  wrapper.unmount();
 });

@@ -312,6 +312,24 @@
     "transcriptSaved": "Transkrypcja została wyeksportowana.",
     "transcriptExportFailed": "Nie udało się wyeksportować transkrypcji."
   },
+  "TransformControls": {
+    "position": "Pozycja",
+    "alignment": "Wyrównanie",
+    "left": "Lewo",
+    "center": "Środek",
+    "right": "Prawo",
+    "top": "Góra",
+    "middle": "Środek",
+    "bottom": "Dół",
+    "width": "Szerokość",
+    "height": "Wysokość",
+    "lockAspectRatio": "Zablokuj proporcje",
+    "orientation": "Orientacja",
+    "rotateLeft": "Obróć o 90° w lewo",
+    "rotateRight": "Obróć o 90° w prawo",
+    "unit": "Jednostka",
+    "rotation": "Obrót"
+  },
   "ClipPropertiesPanel": {
     "noClipSelected": "Nie wybrano klipu",
     "noClipSelectedDesc": "Kliknij klip na osi czasu, aby wyświetlić i edytować jego właściwości.",
@@ -334,6 +352,7 @@
     "solid": "Jednolity",
     "adaptive": "Adaptacyjny",
     "adaptiveShadowDescription": "Próbkuje kolory klipu, aby utworzyć subtelny blask otoczenia.",
+    "shadowStyleDescription": "Jednolity: używa wybranego koloru cienia.\nAdaptacyjny: używa kolorów klipu do tworzenia otaczającej poświaty.",
     "direction": "Kierunek",
     "mirroring": "Odbicie lustrzane",
     "mirrorHorizontally": "Odbij poziomo",
@@ -1083,7 +1102,8 @@
     "image": "Obraz",
     "watermark": "Znak wodny",
     "previewLoading": "Generowanie podglądu…",
-    "previewError": "Podgląd niedostępny"
+    "previewError": "Podgląd niedostępny",
+    "zoom": "Powiększenie"
   },
   "Highlight": {
     "title": "Wyróżnienie",
@@ -1117,5 +1137,25 @@
     "description": "Nagrywa kursor systemowy bezpośrednio w filmie. Automatyczne zbliżenia nadal go śledzą. Kursor Beam jest początkowo wyłączony; możesz go nałożyć w ustawieniach kursora. Nagranego kursora nie można usunąć.",
     "customCursor": "Własny kursor",
     "overlayDescription": "Nakłada kursor Beam na film. Wyłącz go, jeśli nagranie zawiera już kursor systemowy."
+  },
+  "Gradient": {
+    "type": "Typ",
+    "linear": "Liniowy",
+    "radial": "Radialny",
+    "angle": "Kąt",
+    "rotate": "Obróć o 90°",
+    "stops": "Punkty koloru",
+    "presets": "Ustawienia wstępne",
+    "reverse": "Odwróć gradient",
+    "addStop": "Dodaj punkt koloru",
+    "removeStop": "Usuń punkt koloru",
+    "color": "Kolor",
+    "position": "Pozycja",
+    "opacity": "Krycie",
+    "stop": "Punkt koloru {number}",
+    "stopColor": "Kolor punktu {number}",
+    "stopPosition": "Pozycja punktu {number}",
+    "stopOpacity": "Krycie punktu {number}",
+    "addAtPosition": "Kliknij, aby dodać punkt koloru"
   }
 }

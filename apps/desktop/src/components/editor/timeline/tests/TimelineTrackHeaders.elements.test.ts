@@ -5,6 +5,7 @@ import { defaultShapePresetFor, normalizeShapeLayerStyle } from '@beam/engine/sh
 import type { ShapeLayerFamily } from '@beam/engine/shared/shape-layer-types';
 import TimelineTrackHeaders from '../TimelineTrackHeaders.vue';
 import type { VisualTimelineTrack } from '../composables/timeline-tracks-types';
+import { TIMELINE_SURFACE_KEY } from '../timeline-surface-types';
 
 const wrappers: VueWrapper[] = [];
 
@@ -41,6 +42,7 @@ const mountHeader = (clip: ShapeClip) => {
   };
   const selectTrack = vi.fn((_clips: Clip[], _trackName: string, _event?: MouseEvent) => undefined);
   const wrapper = mount(TimelineTrackHeaders, {
+    global: { provide: { [TIMELINE_SURFACE_KEY as symbol]: { followMoves: vi.fn() } } },
     props: {
       visualTracks: [track],
       keyboardCaptionClips: [],

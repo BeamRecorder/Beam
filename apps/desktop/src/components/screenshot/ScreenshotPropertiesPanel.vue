@@ -41,6 +41,7 @@ const { t } = useI18n();
           class="panel-scroll-shadow"
           :class="{ 'has-footer': $slots.footer }"
           viewport-class="panel-content"
+          stable-scrollbar
         >
           <div class="panel-body"><slot /></div>
         </ScrollShadow>

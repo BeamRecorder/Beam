@@ -30,5 +30,6 @@ export interface DecoratedMediaOptions {
   title: string;
   mirrored?: boolean;
   mirroredY?: boolean;
+  rotation?: number;
   mask?: 'circle' | 'squircle';
 }

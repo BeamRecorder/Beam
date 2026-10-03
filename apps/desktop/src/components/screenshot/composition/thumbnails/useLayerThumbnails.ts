@@ -2,9 +2,19 @@ import { onScopeDispose, shallowRef, watch } from 'vue';
 import { cursorGeometry } from '@beam/engine/shared/cursor-assets';
 import { CURSOR_SIZE_MAX } from '@beam/engine/cursor/cursor-size';
 import { loadCursorImage } from '@beam/runtime/cursor/cursor-image-loader';
-import type { LayerThumbnail, ThumbnailReply, ThumbnailRequest, ThumbnailSpec } from './thumbnail-types';
+import type {
+  LayerThumbnail,
+  ThumbnailReply,
+  ThumbnailRequest,
+  ThumbnailSpec,
+  ThumbnailViewportOptions,
+} from './thumbnail-types';
 
-export function useLayerThumbnails(specs: () => ThumbnailSpec[], enabled: () => boolean = () => true) {
+export function useLayerThumbnails(
+  specs: () => ThumbnailSpec[],
+  enabled: () => boolean = () => true,
+  viewport?: ThumbnailViewportOptions,
+) {
   const thumbnails = shallowRef<Record<string, LayerThumbnail>>({});
   const keys = new Map<string, string>();
   const pending = new Map<string, ThumbnailSpec>();
@@ -13,6 +23,8 @@ export function useLayerThumbnails(specs: () => ThumbnailSpec[], enabled: () => 
     disposed = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let worker: Worker | undefined;
+  let activeIds = new Set<string>();
+  const recent = new Map<string, true>();
   const update = (id: string, value: LayerThumbnail) => {
     thumbnails.value = { ...thumbnails.value, [id]: value };
   };
@@ -73,7 +85,12 @@ export function useLayerThumbnails(specs: () => ThumbnailSpec[], enabled: () => 
           resizeQuality: 'high',
         });
       }
-      if (disposed || batch !== generation || thumbnails.value[spec.id]?.revision !== version) {
+      if (
+        disposed ||
+        batch !== generation ||
+        thumbnails.value[spec.id]?.revision !== version ||
+        (viewport && !activeIds.has(spec.id))
+      ) {
         bitmap?.close();
         return;
       }
@@ -106,14 +123,26 @@ export function useLayerThumbnails(specs: () => ThumbnailSpec[], enabled: () => 
       }
       let changed = false;
       const ids = new Set(next.map((item) => item.id));
+      activeIds = ids;
+      if (viewport) worker?.postMessage({ type: 'retain', ids: [...ids] });
+      const existingIds = viewport?.allIds() ?? ids;
+      for (const id of ids) {
+        recent.delete(id);
+        recent.set(id, true);
+      }
       const values = { ...thumbnails.value };
       for (const [id, value] of Object.entries(values))
-        if (!ids.has(id)) {
+        if (
+          !existingIds.has(id) ||
+          (!ids.has(id) &&
+            (value.status === 'loading' || (viewport && recent.size > 128 && recent.keys().next().value === id)))
+        ) {
           changed = true;
           if (value.url) URL.revokeObjectURL(value.url);
           delete values[id];
           keys.delete(id);
           pending.delete(id);
+          recent.delete(id);
         }
       for (const spec of next) {
         if (keys.get(spec.id) === spec.key) continue;
@@ -123,15 +152,30 @@ export function useLayerThumbnails(specs: () => ThumbnailSpec[], enabled: () => 
         values[spec.id] = { status: 'loading', revision: ++revision };
         pending.set(spec.id, spec);
       }
+      if (viewport)
+        for (const id of recent.keys()) {
+          if (recent.size <= 128) break;
+          if (ids.has(id)) continue;
+          const value = values[id];
+          if (value?.url) URL.revokeObjectURL(value.url);
+          delete values[id];
+          keys.delete(id);
+          pending.delete(id);
+          recent.delete(id);
+          changed = true;
+        }
       if (!changed) return;
       thumbnails.value = values;
       if (pending.size) {
         clearTimeout(timer);
-        timer = setTimeout(() => {
-          const requests = [...pending.values()];
-          pending.clear();
-          for (const spec of requests) void send(spec, thumbnails.value[spec.id]!.revision);
-        }, 80);
+        timer = setTimeout(
+          () => {
+            const requests = [...pending.values()];
+            pending.clear();
+            for (const spec of requests) void send(spec, thumbnails.value[spec.id]!.revision);
+          },
+          viewport ? 8 : 80,
+        );
       }
     },
     { immediate: true },

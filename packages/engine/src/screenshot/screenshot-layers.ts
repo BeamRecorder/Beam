@@ -44,6 +44,12 @@ export function screenshotLayers(state: ScreenshotState): ScreenshotLayer[] {
       name: layer.name,
       visible: layer.enabled,
     })),
+    ...(state.zooms ?? []).map((layer) => ({
+      id: layer.id,
+      kind: 'zoom' as const,
+      name: layer.name,
+      visible: layer.enabled,
+    })),
     ...(state.cursors ?? []).map((layer) => ({
       id: layer.id,
       kind: 'cursor' as const,
@@ -131,9 +137,13 @@ export function setScreenshotLayerVisible(state: ScreenshotState, id: string, vi
     const layer =
       id === state.image.id
         ? state.image
-        : [...state.shapes, ...(state.effects ?? []), ...(state.cursors ?? []), ...(state.images ?? [])].find(
-            (layer) => layer.id === id,
-          );
+        : [
+            ...state.shapes,
+            ...(state.effects ?? []),
+            ...(state.cursors ?? []),
+            ...(state.images ?? []),
+            ...(state.zooms ?? []),
+          ].find((layer) => layer.id === id);
     if (layer) layer.enabled = visible;
   }
 }
@@ -150,6 +160,7 @@ export function removeScreenshotLayer(state: ScreenshotState, id: string) {
     if (state.cursors) state.cursors = state.cursors.filter((layer) => layer.id !== id);
     if (state.effects) state.effects = state.effects.filter((layer) => layer.id !== id);
     if (state.images) state.images = state.images.filter((layer) => layer.id !== id);
+    if (state.zooms) state.zooms = state.zooms.filter((layer) => layer.id !== id);
   }
   if (state.composition) state.composition = state.composition.filter((layer) => layer.id !== id);
 }

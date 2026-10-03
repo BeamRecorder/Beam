@@ -21,6 +21,23 @@ export function focusEditorProperty(
       revealed.add(sectionButton);
       sectionButton.click();
     }
+    // Open only disclosures containing this property; their retained controls
+    // are intentionally inert while collapsed.
+    const candidates = [...panel.querySelectorAll<HTMLElement>('[aria-label],label,span,h3,h4')].filter(
+      (item) => normalize(item.getAttribute('aria-label') ?? item.textContent ?? '') === normalize(label),
+    );
+    for (const candidate of candidates) {
+      let accordion = candidate.closest<HTMLElement>('.accordion');
+      while (accordion) {
+        const trigger = accordion.querySelector<HTMLButtonElement>('.accordion-heading > .accordion-trigger');
+        if (trigger?.getAttribute('aria-expanded') === 'false' && available(trigger) && !revealed.has(trigger)) {
+          revealed.add(trigger);
+          trigger.click();
+          return false;
+        }
+        accordion = accordion.parentElement?.closest<HTMLElement>('.accordion') ?? null;
+      }
+    }
     const named = [...panel.querySelectorAll<HTMLElement>('[aria-label]')].find(
       (item) => available(item) && normalize(item.getAttribute('aria-label') ?? '') === normalize(label),
     );
@@ -29,7 +46,9 @@ export function focusEditorProperty(
     );
     const block =
       named ??
-      text?.closest<HTMLElement>('label,.big-slider-container,.option,.prop-row,.section-block,.control-group') ??
+      text?.closest<HTMLElement>(
+        'label,.big-slider-container,.option,.prop-row,.property-row,.section-block,.control-group,.accordion-heading',
+      ) ??
       text;
     if (block && available(block)) {
       if (block.hasAttribute('data-editor-property-edit')) {

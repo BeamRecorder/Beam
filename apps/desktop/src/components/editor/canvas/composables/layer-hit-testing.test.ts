@@ -61,3 +61,13 @@ describe('topmostClipIdAtPoint', () => {
     expect(topmostClipIdAtPoint([screen], point, layoutFor, true)).toBe('screen');
   });
 });
+
+it.each(['video', 'image', 'webcam', 'screen'] as const)(
+  'selects the painted quarter-turn bounds of a %s clip',
+  (kind) => {
+    const clip = { ...makeScreen(), kind, rotation: 90 };
+    const layoutFor = () => ({ left: 0, top: 0, width: 100, height: 40 });
+    expect(topmostClipIdAtPoint([clip], { x: 50, y: 60 }, layoutFor, true)).toBe(clip.id);
+    expect(topmostClipIdAtPoint([clip], { x: 10, y: 20 }, layoutFor, true)).toBeNull();
+  },
+);

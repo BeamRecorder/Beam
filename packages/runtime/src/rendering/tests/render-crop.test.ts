@@ -67,6 +67,7 @@ describe('composition crop rendering', () => {
     screen.crop = { x: 0.1, y: 0.25, width: 0.5, height: 0.25 };
     screen.isMirrored = true;
     screen.isMirroredY = true;
+    screen.rotation = 90;
 
     const cropped = drawCall(value);
 
@@ -75,6 +76,7 @@ describe('composition crop rendering', () => {
       rect: { x: 40, y: 25, width: 50, height: 12.5 },
       mirrored: true,
       mirroredY: true,
+      rotation: 90,
     });
   });
 

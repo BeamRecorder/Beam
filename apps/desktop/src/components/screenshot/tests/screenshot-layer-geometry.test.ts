@@ -252,3 +252,13 @@ describe('screenshot layer geometry', () => {
     expect(screenshotLayerAt(state, makeAssets(), 0.45, 0.45)).toBe('__background__');
   });
 });
+
+it('hit-tests rotated screenshot images in pixel space on a non-square canvas', () => {
+  const state = makeState();
+  state.image.transform = { x: 0.3, y: 0.4, width: 0.4, height: 0.1 };
+  state.image.rotation = 90;
+  layers(state);
+  expect(screenshotLayerRotation(state, state.image.id)).toBe(90);
+  expect(screenshotLayerAt(state, null, 0.5, 0.6)).toBe(state.image.id);
+  expect(screenshotLayerAt(state, null, 0.65, 0.45)).not.toBe(state.image.id);
+});

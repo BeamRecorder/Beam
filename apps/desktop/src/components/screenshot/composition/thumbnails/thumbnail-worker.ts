@@ -3,7 +3,7 @@ import { loadElementFonts } from '@beam/runtime/shared/element-font-loader';
 import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot-types';
 import { createThumbnailImageLoader } from './thumbnail-assets';
 import { renderLayerThumbnail } from './thumbnail-render';
-import type { ThumbnailRequest, ThumbnailReply } from './thumbnail-types';
+import type { ThumbnailRequest, ThumbnailReply, ThumbnailWorkerMessage } from './thumbnail-types';
 
 export function createThumbnailWorker(post: (reply: ThumbnailReply) => void) {
   const loadImage = createThumbnailImageLoader();
@@ -44,7 +44,16 @@ export function createThumbnailWorker(post: (reply: ThumbnailReply) => void) {
     }
     running = false;
   };
-  return (request: ThumbnailRequest) => {
+  return (request: ThumbnailWorkerMessage) => {
+    if ('type' in request) {
+      const keep = new Set(request.ids);
+      for (const [id, queued] of pending)
+        if (!keep.has(id)) {
+          queued.bitmap?.close();
+          pending.delete(id);
+        }
+      return;
+    }
     pending.get(request.id)?.bitmap?.close();
     pending.set(request.id, request);
     if (!running) void drain();

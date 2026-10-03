@@ -5,6 +5,64 @@ afterEach(() => {
   vi.useRealTimers();
 });
 describe('focus editor property', () => {
+  it('reveals nested accordions from the outer section to the requested field', async () => {
+    document.body.innerHTML =
+      '<section class="properties-island"><section class="accordion"><div class="accordion-heading"><button class="accordion-trigger" aria-expanded="false">Appearance</button></div><div class="accordion-content" inert><section class="accordion"><div class="accordion-heading"><button class="accordion-trigger" aria-expanded="false">Shadow</button></div><div class="accordion-content" inert><input aria-label="Shadow blur"></div></section></div></section></section>';
+    const order: string[] = [];
+    for (const trigger of document.querySelectorAll<HTMLButtonElement>('.accordion-trigger')) {
+      trigger.addEventListener('click', () => {
+        order.push(trigger.textContent!);
+        trigger.setAttribute('aria-expanded', 'true');
+        trigger.parentElement!.nextElementSibling!.removeAttribute('inert');
+      });
+    }
+    expect(await focusEditorProperty('Shadow blur')).toBe(true);
+    expect(order).toEqual(['Appearance', 'Shadow']);
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Shadow blur');
+  });
+
+  it('reveals a section selected by its heading and focuses its disclosure button', async () => {
+    document.body.innerHTML =
+      '<section class="properties-island"><section class="accordion"><div class="accordion-heading"><button class="accordion-trigger" aria-expanded="false"><span>Crop</span></button></div><div inert></div></section></section>';
+    const trigger = document.querySelector<HTMLButtonElement>('button')!;
+    trigger.addEventListener('click', () => {
+      trigger.setAttribute('aria-expanded', 'true');
+      trigger.parentElement!.nextElementSibling!.removeAttribute('inert');
+    });
+    expect(await focusEditorProperty('Crop')).toBe(true);
+    expect(document.activeElement).toBe(trigger);
+  });
+  it('reveals only the accordion containing a requested retained field', async () => {
+    document.body.innerHTML =
+      '<section class="properties-island"><section class="accordion"><div class="accordion-heading"><button class="accordion-trigger" aria-expanded="false">Shadow</button></div><div class="accordion-content" inert><input aria-label="Shadow blur"></div></section><section class="accordion"><div class="accordion-heading"><button class="accordion-trigger" aria-expanded="false">Crop</button></div></section></section>';
+    const trigger = document.querySelector<HTMLButtonElement>('.accordion-trigger')!;
+    const click = vi.fn(() => {
+      trigger.setAttribute('aria-expanded', 'true');
+      document.querySelector('.accordion-content')!.removeAttribute('inert');
+    });
+    trigger.addEventListener('click', click);
+    expect(await focusEditorProperty('Shadow blur')).toBe(true);
+    expect(click).toHaveBeenCalledOnce();
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Shadow blur');
+    expect(document.querySelectorAll('.accordion-trigger')[1]!.getAttribute('aria-expanded')).toBe('false');
+  });
+  it('does not reopen a disabled accordion or escape a locked parent', async () => {
+    vi.useFakeTimers();
+    document.body.innerHTML =
+      '<section class="properties-island"><fieldset disabled><section class="accordion"><div class="accordion-heading"><button class="accordion-trigger" aria-expanded="false">Crop</button></div><div inert><input aria-label="Crop edge"></div></section></fieldset></section>';
+    const click = vi.fn();
+    document.querySelector('button')!.addEventListener('click', click);
+    const pending = focusEditorProperty('Crop edge');
+    await vi.advanceTimersByTimeAsync(800);
+    expect(await pending).toBe(false);
+    expect(click).not.toHaveBeenCalled();
+  });
+  it('focuses the first numeric control when a compact property row is selected', async () => {
+    document.body.innerHTML =
+      '<section class="properties-island"><div class="property-row"><span>Size</span><input aria-label="Width"><input aria-label="Height"></div></section>';
+    expect(await focusEditorProperty('Size')).toBe(true);
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Width');
+  });
   it('activates a single-click editable title and focuses its input after Vue replaces the button', async () => {
     document.body.innerHTML =
       '<section class="properties-island"><button aria-label="Layer name" data-editor-property-edit>Callout</button></section>';

@@ -2,8 +2,9 @@
 import { computed } from 'vue';
 import { CircleDashed, Focus, ImageOff, Link2, Lock } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
+import TimelineTrimHandle from './TimelineTrimHandle.vue';
 import BlickWaveformCanvas from './waveform/BlickWaveformCanvas.vue';
-import { formatTimelineTrimTime, timelineClipStyle } from './timeline-clip-geometry';
+import { timelineClipStyle } from './timeline-clip-geometry';
 import type { TimelineClipProps } from './timeline-clip-types';
 import { useTimelineCanvasArtwork } from './composables/useTimelineCanvasArtwork';
 
@@ -56,6 +57,7 @@ const labelInset = computed(() => (props.clip.locked ? 15 : 0) + (props.linkedCl
         :source-duration-seconds="waveformSourceDurationSeconds ?? 0"
         :loading-segments="waveformLoadingSegments ?? []"
         :defer-draw="deferWaveformDraw"
+        :geometry-key="timelineWidthPx"
       />
       <span v-else-if="waveformStatus === 'loading'" class="waveform-status">{{ mediaText('previewLoading') }}</span>
       <span v-else-if="waveformStatus === 'error'" class="waveform-status" :title="waveformError?.message">{{
@@ -79,26 +81,21 @@ const labelInset = computed(() => (props.clip.locked ? 15 : 0) + (props.linkedCl
       <ImageOff v-if="error" :size="12" :title="error" />
     </span>
     <span v-if="Math.abs(clip.playbackRate - 1) > 0.01" class="speed-badge">{{ clip.playbackRate.toFixed(2) }}×</span>
-    <span
+    <TimelineTrimHandle
       v-for="edge in ['start', 'end'] as const"
       :key="edge"
-      class="trim-handle"
-      :class="[edge, { 'at-limit': trimState?.edge === edge && trimState?.atLimit }]"
+      :edge="edge"
+      :state="trimState"
       :title="edge === 'start' ? t('trimStart') : t('trimEnd')"
-      @pointerdown.stop="emit('trim', { event: $event, edge })"
-    >
-      <span v-if="trimState?.edge === edge" class="trim-side-badge" :class="{ 'at-limit': trimState.atLimit }">{{
-        formatTimelineTrimTime(trimState.durationMs)
-      }}</span>
-    </span>
+      @start="emit('trim', { event: $event, edge })"
+    />
   </button>
 </template>
 <style scoped>
 .timeline-clip.canvas-clip-target {
   position: absolute;
   z-index: 2;
-  top: 2px;
-  bottom: 2px;
+  inset-block: 0;
   min-width: 14px;
   padding: 0;
   border: 0;
@@ -148,7 +145,7 @@ const labelInset = computed(() => (props.clip.locked ? 15 : 0) + (props.linkedCl
   inset: 0;
   display: grid;
   place-items: center;
-  color: var(--text-muted);
+  color: var(--color-timeline-item-text);
   font-size: 9px;
 }
 .audio-clip-label {
@@ -165,47 +162,5 @@ const labelInset = computed(() => (props.clip.locked ? 15 : 0) + (props.linkedCl
   background: var(--color-timeline-media-label);
   pointer-events: none;
 }
-.trim-handle {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  z-index: 40;
-  width: var(--timeline-trim-width);
-  max-width: 28%;
-  cursor: col-resize;
-}
-.trim-handle:hover {
-  background: var(--color-timeline-trim-hover);
-}
-.trim-handle.at-limit {
-  background: var(--color-error);
-}
-.start {
-  left: 0;
-}
-.end {
-  right: 0;
-}
-.trim-side-badge {
-  position: absolute;
-  top: 50%;
-  transform: translate3d(0, -50%, 0);
-  padding: 1px 5px;
-  border-radius: var(--radius-sm);
-  font-size: 9px;
-  font-weight: 800;
-  font-family: monospace;
-  white-space: nowrap;
-  color: var(--color-timeline-media-label-text);
-  background: var(--color-timeline-media-label);
-}
-.start .trim-side-badge {
-  left: 8px;
-}
-.end .trim-side-badge {
-  right: 8px;
-}
-.trim-side-badge.at-limit {
-  color: var(--color-error);
-}
 </style>
+<style scoped src="./timeline-item-states.css"></style>

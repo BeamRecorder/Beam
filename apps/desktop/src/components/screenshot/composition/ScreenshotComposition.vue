@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { useMediaQuery } from '@vueuse/core';
-import { ChevronDown, Eye, EyeOff, Layers, LockKeyhole, Trash2, UnlockKeyhole } from '@lucide/vue';
+import { ChevronDown, Eye, EyeOff, Layers, LockKeyhole, Trash2, UnlockKeyhole, ZoomIn } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Badge from '~/ui/badge/Badge.vue';
 import ScreenshotLayerControls from './ScreenshotLayerControls.vue';
@@ -20,6 +20,7 @@ import LayerThumbnail from './thumbnails/LayerThumbnail.vue';
 import ScreenshotLayerName from '../ScreenshotLayerName.vue';
 import { screenshotThumbnailSpecs } from './thumbnails/thumbnail-spec';
 import { useLayerThumbnails } from './thumbnails/useLayerThumbnails';
+import { useVisibleThumbnailIds } from './thumbnails/useVisibleThumbnailIds';
 const props = defineProps<{
   layers: ScreenshotLayer[];
   selectedId: string | null;
@@ -62,6 +63,7 @@ watch(compact, (value) => {
   if (value) collapsed.value = true;
 });
 const list = ref<HTMLElement | null>(null);
+const visibleThumbnailIds = useVisibleThumbnailIds(list, () => props.layers.map((layer) => layer.id));
 const editingId = ref<string | null>(null);
 const rename = (id: string) => {
   if (props.disabled || props.layers.find((layer) => layer.id === id)?.locked) return;
@@ -89,9 +91,14 @@ watch(
   { deep: true },
 );
 const thumbnails = useLayerThumbnails(
-  () => (props.state ? screenshotThumbnailSpecs(props.state, props.source, props.cursorPacks ?? []) : []),
+  () =>
+    props.state
+      ? screenshotThumbnailSpecs(props.state, props.source, props.cursorPacks ?? [], visibleThumbnailIds.value)
+      : [],
   () => !collapsed.value,
+  { allIds: () => new Set(props.layers.map((layer) => layer.id)) },
 );
+const selectedSet = computed(() => new Set(props.selectedIds));
 const front = computed(() => [...props.layers].reverse());
 const { preview, dragging, begin, consumeClick } = useScreenshotLayerReorder(
   list,
@@ -126,8 +133,8 @@ const canRemove = computed(
     menuLayer.value &&
     props.layers.some(
       (layer) =>
-        (props.selectedIds.includes(menuLayer.value!.id)
-          ? props.selectedIds.includes(layer.id)
+        (selectedSet.value.has(menuLayer.value!.id)
+          ? selectedSet.value.has(layer.id)
           : layer.id === menuLayer.value!.id) && canRemoveScreenshotLayer(layer),
     ),
 );
@@ -146,7 +153,7 @@ const openMenu = async (event: MouseEvent | KeyboardEvent, id: string) => {
       ? { x: event.clientX, y: event.clientY }
       : { x: rect.left + 16, y: rect.bottom };
   menuId.value = id;
-  if (!props.selectedIds.includes(id)) emit('select', id);
+  if (!selectedSet.value.has(id)) emit('select', id);
   await nextTick();
   const action = menuDelete.value?.$el as HTMLButtonElement | undefined;
   (action?.disabled ? action.closest<HTMLElement>('[role="menu"]') : action)?.focus();
@@ -252,18 +259,21 @@ const keyboard = (event: KeyboardEvent, id: string) => {
           :aria-disabled="disabled"
         >
           <!-- Export disables the list once, without updating every row or remeasuring its buttons. -->
-          <TransitionGroup
-            v-memo="[ordered, selectedIds, dragging, editingId, thumbnails, locale]"
-            tag="div"
-            name="layer"
-            class="layer-rows"
-          >
+          <TransitionGroup tag="div" name="layer" class="layer-rows">
             <div
               v-for="layer in ordered"
+              v-memo="[
+                layer,
+                selectedSet.has(layer.id),
+                dragging === layer.id,
+                editingId === layer.id,
+                thumbnails[layer.id],
+                locale,
+              ]"
               :key="layer.id"
               class="layer-row"
               :class="{
-                selected: selectedIds.includes(layer.id),
+                selected: selectedSet.has(layer.id),
                 hidden: !layer.visible,
                 dragging: dragging === layer.id,
               }"
@@ -276,12 +286,13 @@ const keyboard = (event: KeyboardEvent, id: string) => {
                 v-if="editingId !== layer.id"
                 class="layer-select"
                 :title="t('rename')"
-                :aria-pressed="selectedIds.includes(layer.id)"
+                :aria-pressed="selectedSet.has(layer.id)"
                 @pointerdown="!disabled && begin($event, layer.id)"
                 @click="selectLayer($event, layer.id)"
                 @dblclick.stop="rename(layer.id)"
               >
-                <LayerThumbnail :value="thumbnails[layer.id]" />
+                <ZoomIn v-if="layer.kind === 'zoom'" :size="24" aria-hidden="true" />
+                <LayerThumbnail v-else :value="thumbnails[layer.id]" />
                 <span class="layer-name" :title="label(layer)">{{ label(layer) }}</span>
               </button>
               <ScreenshotLayerName

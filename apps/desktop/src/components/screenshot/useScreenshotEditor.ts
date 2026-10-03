@@ -4,6 +4,7 @@ import { useScreenshotPanel } from './useScreenshotPanel';
 import { provideScreenshotEditorSearch } from '../editor/search/useScreenshotEditorSearch';
 import { screenshotInserter } from './screenshot-insert';
 import { useScreenshotEffects } from './useScreenshotEffects';
+import { useScreenshotZooms } from './useScreenshotZooms';
 import { editorTitle } from '../editor/editor-window-title';
 import { provideElementEditor } from '../editor/elements/useElementEditor';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -48,6 +49,7 @@ import {
 export function useScreenshotEditor(id: () => string, ready: () => void, previewFullscreen: () => boolean) {
   const { t } = useTranslate('ScreenshotEditor');
   const { t: elementsText } = useTranslate('Elements');
+  const { t: zoomText } = useTranslate('SidebarPanel');
   const toast = useToastStore();
   const encodeScreenshot = useScreenshotEncoder();
   const document = ref<ScreenshotDocument | null>(null);
@@ -145,6 +147,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     if (selectedLayer.value?.locked) return;
     if (cursors.selected.value) cursors.update({ rotation: value });
     else if (selectedShape.value) selectedShape.value.rotation = value;
+    else if (image.value) image.value.rotation = value;
   };
   const startCrop = (targetId: string) => {
     if (!state.value || busy.value) return;
@@ -229,12 +232,23 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     canInteract: () => !busy.value && !cropping.value && !previewFullscreen() && !selectedLayer.value?.locked,
   });
   const cursors = useScreenshotCursors(state, selectedId, select, fail);
+  const zooms = useScreenshotZooms(
+    state,
+    selectedId,
+    select,
+    () => !busy.value && !cropping.value && !previewFullscreen(),
+  );
   const addElement = screenshotInserter({
     canInsert: () => Boolean(state.value && !busy.value && !cropping.value && !previewFullscreen()),
     selectClip: () => selectPanel('clip'),
     shape: elements.add,
     image: addImage,
     cursor: () => cursors.add(elementsText('cursor')),
+    zoom: () => {
+      elements.finishText();
+      elements.drawingMode.value = false;
+      zooms.add(zoomText('zoom'));
+    },
     effect: (kind) => {
       elements.finishText();
       elements.drawingMode.value = false;
@@ -429,6 +443,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     deleteProject,
     cursors,
     effects,
+    zooms,
     selectedLayer,
     history,
     elements,

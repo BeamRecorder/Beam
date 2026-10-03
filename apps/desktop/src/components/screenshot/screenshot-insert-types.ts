@@ -6,5 +6,6 @@ export interface ScreenshotInsertOptions {
   image: () => Promise<void>;
   cursor: () => void;
   effect: (kind: 'blur' | 'highlight') => void;
+  zoom: () => void;
 }
 export type ScreenshotInserter = (kind: EditorInsertKind) => Promise<void>;

@@ -4,6 +4,8 @@ import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ClipPropertiesPanel from '../ClipPropertiesPanel.vue';
 import CameraLayoutPanel from '../../camera/CameraLayoutPanel.vue';
+import Input from '~/ui/input/Input.vue';
+import TransformControls from '../../shared/TransformControls.vue';
 
 const BigSliderStub = defineComponent({
   name: 'BigSlider',
@@ -114,7 +116,7 @@ const clip = (overrides: Record<string, unknown> = {}) => ({
 
 const mountPanel = (selectedClip: ReturnType<typeof clip> | null = clip(), includeSidecars = false) =>
   mount(ClipPropertiesPanel, {
-    props: { selectedClip },
+    props: { selectedClip, canvasSize: { width: 1920, height: 1080 } },
     slots: includeSidecars ? { sidecars: () => h('button', { class: 'sidecar-slot' }, 'Sidecars') } : undefined,
     global: {
       stubs: {
@@ -132,13 +134,84 @@ afterEach(() => {
 });
 
 describe('ClipPropertiesPanel', () => {
+  it.each(['video', 'image'])('keeps the %s placement reset inside its expanded controls', async (kind) => {
+    const wrapper = mountPanel(clip({ kind }));
+    const placement = wrapper.get('[data-clip-section="placement"]');
+    const trigger = placement.get('.accordion-trigger');
+    const reset = placement.get('[aria-label="Reset clip placement"]');
+    expect(placement.get('.accordion-heading').find('[aria-label="Reset clip placement"]').exists()).toBe(false);
+    expect(placement.find('.accordion-actions').exists()).toBe(false);
+    expect(reset.text()).toBe('Reset');
+    expect(reset.element.closest('.accordion-content')).toBe(placement.get('.accordion-content').element);
+    expect(reset.isVisible()).toBe(true);
+    await trigger.trigger('click');
+    expect(trigger.attributes('aria-expanded')).toBe('false');
+    expect(placement.get('.accordion-content').attributes('inert')).toBeDefined();
+    await trigger.trigger('click');
+    await reset.trigger('click');
+    expect(trigger.attributes('aria-expanded')).toBe('true');
+    expect(wrapper.emitted('reset:clipTransform')).toEqual([[]]);
+    expect(wrapper.emitted('update:clipTransform')).toBeUndefined();
+    wrapper.unmount();
+  });
+  it('opens placement and collapses secondary sections without modifying the document', async () => {
+    const wrapper = mountPanel();
+    for (const section of ['placement', 'layout', 'crop', 'radius', 'shadow', 'speed']) {
+      expect(wrapper.get(`[data-clip-section="${section}"] .accordion-trigger`).attributes('aria-expanded')).toBe(
+        String(section === 'placement'),
+      );
+      if (section !== 'crop') {
+        const trigger = wrapper.get(`[data-clip-section="${section}"] .accordion-trigger`);
+        await trigger.trigger('click');
+        await trigger.trigger('click');
+      }
+    }
+    const cropTrigger = wrapper.get('[data-clip-section="crop"] .accordion-trigger');
+    await cropTrigger.trigger('click');
+    await wrapper.setProps({ selectedClip: clip({ id: 'clip-2' }) });
+    expect(cropTrigger.attributes('aria-expanded')).toBe('true');
+    expect(wrapper.emitted('update:crop')).toBeUndefined();
+    expect(wrapper.emitted('update:clipTransform')).toBeUndefined();
+  });
+
+  it('hides manual placement for split camera layouts and preserves the independent mirror controls', async () => {
+    const wrapper = mountPanel(clip({ kind: 'webcam', cameraLayoutPreset: 'split-left' }));
+    expect(wrapper.findComponent(TransformControls).exists()).toBe(false);
+    const mirror = wrapper.get('[data-clip-section="mirroring"]');
+    await mirror.get('.accordion-trigger').trigger('click');
+    await mirror.get('[aria-label="Mirror horizontally"]').trigger('click');
+    await mirror.get('[aria-label="Mirror vertically"]').trigger('click');
+    expect(wrapper.emitted('update:isMirrored')).toEqual([[true]]);
+    expect(wrapper.emitted('update:isMirroredY')).toEqual([[true]]);
+  });
+
+  it('keeps all layout operations connected inside the collapsed layout section', () => {
+    const wrapper = mountPanel();
+    const layout = wrapper.findComponent(CameraLayoutPanel);
+    layout.vm.$emit('update:layout', 'center');
+    layout.vm.$emit('update:split-ratio', 0.7);
+    layout.vm.$emit('update:split-padding', 12);
+    expect(wrapper.emitted('update:cameraLayout')).toEqual([['center']]);
+    expect(wrapper.emitted('update:cameraSplitRatio')).toEqual([[0.7]]);
+    expect(wrapper.emitted('update:cameraSplitPadding')).toEqual([[12]]);
+  });
+
+  it('removes screenshot crop and layout disclosures while retaining the reusable placement controls', async () => {
+    const wrapper = mountPanel(clip({ kind: 'image' }));
+    await wrapper.setProps({ hideLayout: true, hideCrop: true });
+    expect(wrapper.find('[data-clip-section="layout"]').exists()).toBe(false);
+    expect(wrapper.find('[data-clip-section="crop"]').exists()).toBe(false);
+    expect(wrapper.find('[data-clip-section="speed"]').exists()).toBe(false);
+    expect(wrapper.findComponent(TransformControls).exists()).toBe(true);
+  });
+
   it('hides screenshot layout while preserving placement, appearance, shadows, borders and mirroring', async () => {
     const wrapper = mountPanel(clip({ kind: 'image', isLinked: false }));
     await wrapper.setProps({ hideLayout: true });
     expect(wrapper.findComponent({ name: 'CameraLayoutPanel' }).exists()).toBe(false);
     expect(wrapper.find('.frame-stub').exists()).toBe(true);
     expect(wrapper.findComponent(ShadowDirectionStub).exists()).toBe(true);
-    expect(wrapper.findAllComponents(BigSliderStub).length).toBeGreaterThan(0);
+    expect(wrapper.findComponent(TransformControls).findAll('input')).toHaveLength(5);
     expect(wrapper.text()).not.toContain('Playback Speed');
     await wrapper.get('.frame-stub').trigger('click');
     expect(wrapper.emitted('update:appearance')).toEqual([[{ borderEnabled: true, frame: 'safari' }]]);
@@ -153,18 +226,18 @@ describe('ClipPropertiesPanel', () => {
 
   it('updates placement, radius, shadow, mirror, frame, speed and destructive actions', async () => {
     const wrapper = mountPanel(clip(), true);
-    expect(wrapper.findAll('.slider-stub')).toHaveLength(4);
-    await wrapper.findAll('.slider-stub')[0].trigger('click');
-    await wrapper.findAll('.slider-stub')[1].trigger('click');
-    await wrapper.findAll('.slider-stub')[2].trigger('click');
+    expect(wrapper.findAll('.slider-stub')).toHaveLength(1);
+    const placementInputs = wrapper.findComponent(TransformControls).findAllComponents(Input);
+    placementInputs[0]!.vm.$emit('update:modelValue', 10);
+    placementInputs[1]!.vm.$emit('update:modelValue', 10);
+    placementInputs[3]!.vm.$emit('update:modelValue', 2112);
     expect(wrapper.emitted('update:clipTransform')).toEqual([
       [{ x: 0.1, y: 0, width: 1, height: 0.5 }],
       [{ x: 0, y: 0.1, width: 1, height: 0.5 }],
       [{ x: 0, y: 0, width: 1.1, height: 0.55 }],
     ]);
 
-    const reset = wrapper.findAll('button').find((button) => button.text().toLowerCase().includes('reset'));
-    await reset!.trigger('click');
+    await wrapper.get('[aria-label="Reset clip placement"]').trigger('click');
     expect(wrapper.emitted('reset:clipTransform')).toHaveLength(1);
 
     const custom = wrapper
@@ -206,16 +279,13 @@ describe('ClipPropertiesPanel', () => {
       },
     ]);
 
-    const horizBtn = wrapper
-      .findAll('button')
-      .find((button) => button.text().toLowerCase() === 'horizontal' && !button.classes('slider-stub'));
-    await horizBtn!.trigger('click');
+    await wrapper.get('[aria-label="Mirror horizontally"]').trigger('click');
     expect(wrapper.emitted('update:isMirrored')).toContainEqual([true]);
 
-    const vertBtn = wrapper
-      .findAll('button')
-      .find((button) => button.text().toLowerCase() === 'vertical' && !button.classes('slider-stub'));
-    await vertBtn!.trigger('click');
+    await wrapper.get('[aria-label="Mirror vertically"]').trigger('click');
+    await wrapper.get('[aria-label="Rotate 90° left"]').trigger('click');
+    await wrapper.get('[aria-label="Rotate 90° right"]').trigger('click');
+    expect(wrapper.emitted('update:rotation')).toEqual([[270], [90]]);
     expect(wrapper.emitted('update:isMirroredY')).toContainEqual([true]);
     await wrapper.get('.frame-stub').trigger('click');
     expect(wrapper.emitted('update:appearance')).toContainEqual([{ borderEnabled: true, frame: 'safari' }]);
@@ -255,7 +325,10 @@ describe('ClipPropertiesPanel', () => {
     'forwards crop preview and commit events for %s',
     async (kind) => {
       const wrapper = mountPanel(clip({ kind }));
-      expect(wrapper.find('.accordion-trigger').exists()).toBe(false);
+      const cropSection = wrapper.get('[data-clip-section="crop"]');
+      expect(cropSection.get('.accordion-trigger').attributes('aria-expanded')).toBe('false');
+      await cropSection.get('.accordion-trigger').trigger('click');
+      expect(cropSection.get('.accordion-trigger').attributes('aria-expanded')).toBe('true');
       expect(wrapper.find('.crop-controls-stub').exists()).toBe(true);
 
       await wrapper.get('.crop-preview').trigger('click');
@@ -288,9 +361,13 @@ describe('ClipPropertiesPanel', () => {
     });
 
     const sliders = wrapper.findAll('.slider-stub');
-    expect(sliders[0]!.find('.slider-value').text()).toBe('13%');
-    expect(sliders[1]!.find('.slider-value').text()).toBe('-25%');
-    expect(sliders[2]!.find('.slider-value').text()).toBe('150%');
+    expect(
+      wrapper
+        .findComponent(TransformControls)
+        .findAll('input')
+        .map((input) => input.element.value),
+    ).toEqual(['12.5', '-25', '0', '2880', '810']);
+    expect(cameraPanel.props('hideHeading')).toBe(true);
     const playbackSlider = sliders.find((slider) =>
       slider.attributes('data-label')?.toLowerCase().includes('playback'),
     );
@@ -337,15 +414,16 @@ describe('ClipPropertiesPanel', () => {
     expect(wrapper.emitted('corner-radius-interaction')).toEqual([[true], [false]]);
   });
 
-  it('clamps placement values and ignores placement events without a transform', async () => {
+  it('bounds placement edits and removes placement controls when the clip has no transform', async () => {
     const wrapper = mountPanel(clip({ clipTransform: { x: 0, y: 0, width: 3.9, height: 3.9 } }));
-    await wrapper.get('.slider-stub').trigger('click');
-    expect(wrapper.emitted('update:clipTransform')?.[0]).toEqual([{ x: 0.1, y: 0, width: 3.9, height: 3.9 }]);
+    wrapper.findComponent(TransformControls).findAllComponents(Input)[0]!.vm.$emit('update:modelValue', 900);
+    expect(wrapper.emitted('update:clipTransform')?.[0]).toEqual([{ x: 3, y: 0, width: 3.9, height: 3.9 }]);
 
     await wrapper.setProps({
       selectedClip: clip({ clipTransform: undefined }),
     });
     await nextTick();
     expect(wrapper.findAll('.slider-stub')).toHaveLength(1);
+    expect(wrapper.findComponent(TransformControls).exists()).toBe(false);
   });
 });

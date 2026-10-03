@@ -198,7 +198,7 @@ defineExpose({
       <div
         v-if="activeIsOpen"
         ref="menuRef"
-        class="context-menu-surface"
+        class="context-menu-surface floating-surface"
         :class="{
           'context-menu-flush': flush,
           'context-menu-allow-overflow': allowOverflow,
@@ -229,11 +229,11 @@ defineExpose({
   </Teleport>
 </template>
 
+<style scoped src="../floating-surface.css"></style>
 <style scoped>
 .context-menu-surface {
   display: flex;
   flex-direction: column;
-  background-color: var(--color-bg-element, #1c1c1f);
   color: var(--text-primary);
   border: 1px solid color-mix(in srgb, var(--color-border-strong) 84%, var(--color-bg-element));
   border-radius: var(--radius-md, 8px);
@@ -244,11 +244,10 @@ defineExpose({
   box-sizing: border-box;
   overflow: hidden;
   user-select: none;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 .context-menu-flush {
+  --floating-surface-background: var(--color-bg-popover-surface);
   padding: 0;
 }
 .context-menu-allow-overflow {

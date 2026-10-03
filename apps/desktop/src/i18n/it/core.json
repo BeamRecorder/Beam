@@ -312,6 +312,24 @@
     "transcriptSaved": "Trascrizione esportata.",
     "transcriptExportFailed": "Impossibile esportare la trascrizione."
   },
+  "TransformControls": {
+    "position": "Posizione",
+    "alignment": "Allineamento",
+    "left": "Sinistra",
+    "center": "Centro",
+    "right": "Destra",
+    "top": "Alto",
+    "middle": "Mezzo",
+    "bottom": "Basso",
+    "width": "Larghezza",
+    "height": "Altezza",
+    "lockAspectRatio": "Blocca proporzioni",
+    "orientation": "Orientamento",
+    "rotateLeft": "Ruota di 90° a sinistra",
+    "rotateRight": "Ruota di 90° a destra",
+    "unit": "Unità",
+    "rotation": "Rotazione"
+  },
   "ClipPropertiesPanel": {
     "noClipSelected": "Nessuna clip selezionata",
     "noClipSelectedDesc": "Fai clic su una clip nella timeline per visualizzarne e modificarne le proprietà.",
@@ -334,6 +352,7 @@
     "solid": "Piena",
     "adaptive": "Adattiva",
     "adaptiveShadowDescription": "Campiona i colori della clip per creare un bagliore ambientale discreto.",
+    "shadowStyleDescription": "Piena: usa il colore scelto per l’ombra.\nAdattiva: usa i colori della clip per creare un bagliore ambientale.",
     "direction": "Direzione",
     "mirroring": "Specchiatura",
     "mirrorHorizontally": "Specchia orizzontalmente",
@@ -1083,7 +1102,8 @@
     "image": "Immagine",
     "watermark": "Filigrana",
     "previewLoading": "Creazione anteprima…",
-    "previewError": "Anteprima non disponibile"
+    "previewError": "Anteprima non disponibile",
+    "zoom": "Zoom"
   },
   "Highlight": {
     "title": "Evidenziazione",
@@ -1117,5 +1137,25 @@
     "description": "Registra il cursore di sistema direttamente nel video. Gli zoom automatici continuano a seguirlo. Il cursore Beam è inizialmente disattivato; puoi sovrapporlo nelle impostazioni Cursore. Il cursore registrato non può essere rimosso.",
     "customCursor": "Cursore personalizzato",
     "overlayDescription": "Sovrapponi il cursore Beam al video. Disattivalo se la registrazione include già il cursore di sistema."
+  },
+  "Gradient": {
+    "type": "Tipo",
+    "linear": "Lineare",
+    "radial": "Radiale",
+    "angle": "Angolo",
+    "rotate": "Ruota di 90°",
+    "stops": "Punti colore",
+    "presets": "Preimpostazioni",
+    "reverse": "Inverti gradiente",
+    "addStop": "Aggiungi punto colore",
+    "removeStop": "Rimuovi punto colore",
+    "color": "Colore",
+    "position": "Posizione",
+    "opacity": "Opacità",
+    "stop": "Punto colore {number}",
+    "stopColor": "Colore del punto {number}",
+    "stopPosition": "Posizione del punto {number}",
+    "stopOpacity": "Opacità del punto {number}",
+    "addAtPosition": "Fai clic per aggiungere un punto colore"
   }
 }

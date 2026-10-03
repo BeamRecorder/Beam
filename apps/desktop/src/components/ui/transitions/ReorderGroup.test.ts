@@ -87,6 +87,7 @@ describe('ReorderGroup', () => {
     initialOrder: string[] = ['a', 'b', 'c'],
     itemAttribute = 'data-track-id',
     includeItemAttribute = true,
+    animateMembership = true,
   ) => {
     const order = ref([...initialOrder]);
     const label = ref('initial');
@@ -96,6 +97,7 @@ describe('ReorderGroup', () => {
           ReorderGroup,
           {
             order: order.value,
+            animateMembership,
             ...(itemAttribute === 'data-track-id' ? {} : { itemAttribute }),
           },
           {
@@ -150,6 +152,39 @@ describe('ReorderGroup', () => {
 
     expect(animations.map(({ itemId }) => itemId).sort()).toEqual(['one', 'two']);
     expect(wrapper.find('[data-layer-id="one"]').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('skips insertion/removal and virtual-window shifts while retaining actual reorder animations', async () => {
+    const { wrapper, order } = mountGroup(['a', 'b'], 'data-track-id', true, false);
+    order.value = ['new', 'a', 'b'];
+    await nextTick();
+    expect(rectReads).toEqual([]);
+    expect(animations).toEqual([]);
+    order.value = ['b', 'a', 'new'];
+    await nextTick();
+    expect(animations.length).toBeGreaterThan(0);
+    expect(wrapper.getComponent(ReorderGroup).emitted('moving')).toEqual([[true]]);
+    order.value = ['b', 'a'];
+    await nextTick();
+    expect(wrapper.getComponent(ReorderGroup).emitted('moving')).toEqual([[true], [false]]);
+    const readCount = rectReads.length;
+    order.value = ['later', 'last'];
+    await nextTick();
+    expect(rectReads).toHaveLength(readCount);
+    wrapper.unmount();
+  });
+
+  it('reports idle once the last owned animation finishes', async () => {
+    const { wrapper, order } = mountGroup(['a', 'b']);
+    order.value = ['b', 'a'];
+    await nextTick();
+    const group = wrapper.getComponent(ReorderGroup);
+    expect(group.emitted('moving')).toEqual([[true]]);
+    animations[0]!.animation.onfinish?.({} as AnimationPlaybackEvent);
+    expect(group.emitted('moving')).toEqual([[true]]);
+    animations[1]!.animation.onfinish?.({} as AnimationPlaybackEvent);
+    expect(group.emitted('moving')).toEqual([[true], [false]]);
     wrapper.unmount();
   });
 

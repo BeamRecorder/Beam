@@ -9,6 +9,7 @@ import {
   type BackgroundValue,
 } from '@beam/engine/shared/background-types';
 import CanvasPanel from '../CanvasPanel.vue';
+import BackgroundDeleteDialog from '../BackgroundDeleteDialog.vue';
 import AddTileButton from '../../../../ui/button/AddTileButton.vue';
 import Tooltip from '~/ui/tooltip/Tooltip.vue';
 import Popover from '~/ui/popover/Popover.vue';
@@ -20,6 +21,7 @@ const { capture, previewState } = vi.hoisted(() => ({
   capture: {
     getPreferences: vi.fn(),
     updatePreferences: vi.fn(),
+    updateBackgroundCatalog: vi.fn(),
     onPreferencesChanged: vi.fn(),
     pickBackgroundLibraryMedia: vi.fn(),
   },
@@ -553,5 +555,88 @@ describe('CanvasPanel', () => {
     await triggerPointer(slider, 'pointerdown');
     await slider.trigger('change');
     expect(mounted!.emitted('update:blurPercent')?.at(-1)).toEqual([55]);
+  });
+});
+
+describe('catalogue deletion actions', () => {
+  it('shows deletion only for imported media, directly above Show more, and preserves the selected project background', async () => {
+    const imported = media('user-wallpaper:image:import.png', 'image');
+    const catalogue = [{ kind: 'image' as const, label: 'Images', items: [imported, ...imageItems] }];
+    const mounted = await mountPanel(imported, catalogue, true);
+    const actions = mounted.findAll('.load-more');
+    expect(actions[0]!.get('button').classes()).toContain('btn-danger');
+    expect(actions[0]!.text()).toContain('Delete');
+    expect(actions[1]!.text()).toContain('Show more');
+    await actions[0]!.get('button').trigger('click');
+    const confirmation = mounted.findComponent(BackgroundDeleteDialog);
+    expect(confirmation.props('target')).toEqual(imported);
+    confirmation.vm.$emit('close');
+    await nextTick();
+    expect(capture.updateBackgroundCatalog).not.toHaveBeenCalled();
+    await actions[0]!.get('button').trigger('click');
+    capture.updateBackgroundCatalog.mockResolvedValue({
+      extras: {
+        hiddenBackgroundIds: [imported.id],
+        backgroundCatalogHistory: { version: 1, id: imported.id, deleted: true },
+      },
+    });
+    confirmation.vm.$emit('confirm');
+    await flushPromises();
+    await drainFrames();
+    expect(mounted.find('.media-tile[aria-label="' + imported.name + '"]').exists()).toBe(false);
+    expect(mounted.emitted('update:selectedBackground')).toBeUndefined();
+    expect(mounted.get('.deletion-history').text()).toContain('Undo deletion');
+    expect(capture.updateBackgroundCatalog).toHaveBeenLastCalledWith({ operation: 'remove', id: imported.id });
+    await mounted.setProps({ selectedBackground: imageItems[0] });
+    expect(mounted.findAll('.load-more')).toHaveLength(1);
+  });
+  it.each(['color', 'gradient'] as const)('pairs selected %s editing with a compact red trash button', async (kind) => {
+    const item =
+      kind === 'color'
+        ? { kind: 'color' as const, id: 'color:#111827', name: 'Slate', color: '#111827' }
+        : BACKGROUND_GRADIENTS[0]!;
+    const mounted = await mountPanel(item, groups, true);
+    await mounted.findAll('.kind-group button')[kind === 'color' ? 2 : 3]!.trigger('click');
+    const actions = mounted.get('.selected-preset-actions');
+    expect(actions.find('.edit-selected-preset').exists()).toBe(true);
+    const trash = actions.get('.preset-delete');
+    expect(trash.classes()).toContain('btn-danger');
+    expect(trash.attributes('aria-label')).toBe('Delete');
+    await trash.trigger('click');
+    expect(mounted.findComponent(BackgroundDeleteDialog).props('target')).toMatchObject({
+      id: item.id,
+      kind: item.kind,
+    });
+  });
+  it('keeps a failed history operation visible, then restores and removes an imported video through undo and redo', async () => {
+    const imported = media('user-wallpaper:video:import.mp4', 'video');
+    const deleted = {
+      extras: {
+        hiddenBackgroundIds: [imported.id],
+        backgroundCatalogHistory: { version: 1, id: imported.id, deleted: true },
+      },
+      backgroundPresets: { colors: [], gradients: [] },
+    };
+    const restored = {
+      ...deleted,
+      extras: { hiddenBackgroundIds: [], backgroundCatalogHistory: { version: 1, id: imported.id, deleted: false } },
+    };
+    capture.getPreferences.mockResolvedValue(deleted);
+    const mounted = await mountPanel(imported, [{ kind: 'video', label: 'Videos', items: [imported] }], true);
+    await mounted.findAll('.kind-group button')[1]!.trigger('click');
+    expect(mounted.findAll('.media-tile')).toHaveLength(0);
+    capture.updateBackgroundCatalog.mockRejectedValueOnce(new Error('stale history'));
+    await mounted.get('.deletion-history button').trigger('click');
+    await flushPromises();
+    expect(mounted.get('.deletion-error').text()).toContain('Could not');
+    capture.updateBackgroundCatalog.mockResolvedValueOnce(restored).mockResolvedValueOnce(deleted);
+    await mounted.get('.deletion-history button').trigger('click');
+    await flushPromises();
+    await drainFrames();
+    expect(mounted.findAll('.media-tile')).toHaveLength(1);
+    await mounted.findAll('.deletion-history button')[1]!.trigger('click');
+    await flushPromises();
+    await drainFrames();
+    expect(mounted.findAll('.media-tile')).toHaveLength(0);
   });
 });

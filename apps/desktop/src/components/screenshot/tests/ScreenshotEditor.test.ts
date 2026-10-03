@@ -1561,3 +1561,15 @@ describe('ScreenshotEditor', () => {
 
   registerScreenshotEditorHistoryAndFooterTests(capture, editorHarness);
 });
+
+it('edits a screenshot image angle through canvas rotation and commits it to the shared image document', async () => {
+  const wrapper = mountEditor();
+  await flushPromises();
+  const canvas = wrapper.findComponent(ScreenshotCanvasStub);
+  canvas.vm.$emit('select', 'screenshot');
+  await wrapper.vm.$nextTick();
+  canvas.vm.$emit('rotate', 32.75);
+  await wrapper.vm.$nextTick();
+  expect((canvas.props('state') as ScreenshotState).image.rotation).toBe(32.75);
+  wrapper.unmount();
+});

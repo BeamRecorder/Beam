@@ -312,6 +312,24 @@
     "transcriptSaved": "Transcription exportée.",
     "transcriptExportFailed": "Impossible d’exporter la transcription."
   },
+  "TransformControls": {
+    "position": "Position",
+    "alignment": "Alignement",
+    "left": "Gauche",
+    "center": "Centre",
+    "right": "Droite",
+    "top": "Haut",
+    "middle": "Milieu",
+    "bottom": "Bas",
+    "width": "Largeur",
+    "height": "Hauteur",
+    "lockAspectRatio": "Verrouiller les proportions",
+    "orientation": "Orientation",
+    "rotateLeft": "Tourner de 90° à gauche",
+    "rotateRight": "Tourner de 90° à droite",
+    "unit": "Unité",
+    "rotation": "Rotation"
+  },
   "ClipPropertiesPanel": {
     "noClipSelected": "Aucun clip sélectionné",
     "noClipSelectedDesc": "Cliquez sur un clip dans la timeline pour inspecter et modifier ses propriétés.",
@@ -334,6 +352,7 @@
     "solid": "Unie",
     "adaptive": "Adaptative",
     "adaptiveShadowDescription": "Utilise les couleurs du clip pour créer une lueur ambiante.",
+    "shadowStyleDescription": "Unie : utilise la couleur choisie pour l’ombre.\nAdaptative : utilise les couleurs du clip pour créer une lueur ambiante.",
     "direction": "Direction",
     "mirroring": "Miroir",
     "mirrorHorizontally": "Miroir horizontal",
@@ -1080,7 +1099,8 @@
     "image": "Image",
     "watermark": "Filigrane",
     "previewLoading": "Calcul de l’aperçu…",
-    "previewError": "Aperçu indisponible"
+    "previewError": "Aperçu indisponible",
+    "zoom": "Zoom"
   },
   "Highlight": {
     "title": "Mise en évidence",
@@ -1114,5 +1134,25 @@
     "description": "Enregistre le curseur système directement dans la vidéo. Les zooms automatiques continuent de le suivre. Le curseur Beam est désactivé au départ ; vous pouvez le superposer dans les paramètres Curseur. Le curseur enregistré ne peut pas être retiré.",
     "customCursor": "Curseur personnalisé",
     "overlayDescription": "Superpose le curseur Beam à la vidéo. Désactivez-le si la vidéo contient déjà le curseur système."
+  },
+  "Gradient": {
+    "type": "Type",
+    "linear": "Linéaire",
+    "radial": "Radial",
+    "angle": "Angle",
+    "rotate": "Tourner de 90°",
+    "stops": "Points de couleur",
+    "presets": "Préréglages",
+    "reverse": "Inverser le dégradé",
+    "addStop": "Ajouter un point de couleur",
+    "removeStop": "Supprimer le point de couleur",
+    "color": "Couleur",
+    "position": "Position",
+    "opacity": "Opacité",
+    "stop": "Point de couleur {number}",
+    "stopColor": "Couleur du point {number}",
+    "stopPosition": "Position du point {number}",
+    "stopOpacity": "Opacité du point {number}",
+    "addAtPosition": "Cliquer pour ajouter un point de couleur"
   }
 }

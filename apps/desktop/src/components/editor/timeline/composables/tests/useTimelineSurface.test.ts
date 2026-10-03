@@ -63,12 +63,14 @@ function setup(count = 2) {
     '--radius-sm': '6px',
     '--timeline-item-tint': '30%',
     '--timeline-disabled-opacity': '0.3',
-    '--timeline-effect-item-inset': '6px',
-    '--timeline-effect-item-height': '36px',
   };
-  vi.spyOn(window, 'getComputedStyle').mockReturnValue({
-    getPropertyValue: (key: string) => tokens[key] ?? '#111',
-  } as CSSStyleDeclaration);
+  vi.spyOn(window, 'getComputedStyle').mockImplementation(
+    (element) =>
+      ({
+        zIndex: (element as HTMLElement).style.zIndex || 'auto',
+        getPropertyValue: (key: string) => tokens[key] ?? '#111',
+      }) as CSSStyleDeclaration,
+  );
   vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(900);
   vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(320);
   vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(900);
@@ -154,6 +156,57 @@ it('uses one viewport-sized bitmap and redraw clock for all registered tracks', 
   state.wrapper.unmount();
   expect(state.frames.size).toBe(0);
   expect(state.unobserve).toHaveBeenCalledTimes(40);
+});
+it('follows transformed lane geometry until all reorder owners finish, then becomes idle', () => {
+  const state = setup(1),
+    first = Symbol('first'),
+    second = Symbol('second');
+  state.flush();
+  state.owner().followMoves(first, true);
+  state.owner().followMoves(second, true);
+  expect(state.frames.size).toBe(1);
+  state.flush();
+  expect(state.frames.size).toBe(1);
+  state.owner().followMoves(first, false);
+  state.flush();
+  expect(state.frames.size).toBe(1);
+  state.owner().followMoves(second, false);
+  state.flush();
+  expect(state.frames.size).toBe(0);
+  state.wrapper.unmount();
+});
+it.each(['dom', 'dragged', 'idle'])('paints overlapping rows in %s order without sorting idle lanes', (mode) => {
+  const state = setup(0);
+  const first = document.createElement('div'),
+    second = document.createElement('div');
+  first.className = second.className = 'timeline-canvas-lane';
+  first.dataset.timelineRowId = 'first';
+  state.wrapper.element.append(second, first);
+  const firstProps = { ...state.props, items: [] },
+    secondProps = { ...state.props, items: [] };
+  state.owner().register({ element: first, props: firstProps, marquee: () => undefined });
+  state.owner().register({ element: second, props: secondProps, marquee: () => undefined });
+  if (mode === 'dragged') second.style.zIndex = '10';
+  if (mode !== 'idle') state.owner().followMoves(Symbol('move'), true);
+  state.flush();
+  const expected = mode === 'dom' ? [secondProps.items, firstProps.items] : [firstProps.items, secondProps.items];
+  expect(paint.mock.calls[0]![1]).toBe(expected[0]);
+  expect(paint.mock.calls[1]![1]).toBe(expected[1]);
+  state.wrapper.unmount();
+});
+it('coalesces interrupted reorder ownership and cancels its frame on disposal', () => {
+  const state = setup(1),
+    owner = Symbol('move');
+  state.flush();
+  state.owner().followMoves(owner, true);
+  state.owner().followMoves(owner, true);
+  state.owner().followMoves(owner, false);
+  state.owner().followMoves(owner, true);
+  expect(state.frames.size).toBe(1);
+  state.wrapper.unmount();
+  expect(state.frames.size).toBe(0);
+  state.owner().followMoves(owner, false);
+  expect(state.frames.size).toBe(0);
 });
 it('does not allocate or paint empty and detached viewports, and cancels pending work on unmount', () => {
   const state = setup(1);

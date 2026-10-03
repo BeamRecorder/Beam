@@ -1,3 +1,4 @@
+import { keepMediaResizeAnchor, rotateMediaVector } from '@beam/engine/layout/media-rotation';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
 import { activeClipsAt, sourceTimeAt } from '@beam/runtime/shared/index';
@@ -148,7 +149,8 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
               y: layout.top,
               width: layout.width,
               height: layout.height,
-              rotation: clip.kind === 'shape' ? clip.rotation : 0,
+              rotation:
+                clip.kind === 'shape' || clip.kind === 'caption' || isVisualClip(clip) ? (clip.rotation ?? 0) : 0,
               backdrop: clip.kind === 'screen',
             },
           ]
@@ -184,8 +186,16 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       height: `${selection.viewport.dh}px`,
     };
   });
+  const selectedRotation = () => {
+    const clip = options.selectedTransformClip();
+    return clip && (clip.kind === 'shape' || clip.kind === 'caption' || isVisualClip(clip)) ? (clip.rotation ?? 0) : 0;
+  };
   const transformSelectionPresentation = computed(() =>
-    layerSelectionPresentation(transformSelection.value, options.selectedTransformClip()?.kind !== 'caption'),
+    layerSelectionPresentation(
+      transformSelection.value,
+      options.selectedTransformClip()?.kind !== 'caption',
+      selectedRotation(),
+    ),
   );
   const transformHandleStyle = computed(() => transformSelectionPresentation.value.handleStyle);
   const transformHandlePositions = computed(() => transformSelectionPresentation.value.handlePositions);
@@ -250,9 +260,24 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
             projectionBounds,
             transformDrag.kind === 'resize' ? transformDrag.corner : undefined,
             screenDelta,
+            selectedRotation(),
           );
-    const dx = pointerDelta.x / Math.max(1, bounds.dw * scale);
-    const dy = pointerDelta.y / Math.max(1, bounds.dh * scale);
+    const localDelta =
+      transformDrag.kind === 'resize' ? rotateMediaVector(pointerDelta, -selectedRotation()) : pointerDelta;
+    const dx = localDelta.x / Math.max(1, bounds.dw * scale);
+    const dy = localDelta.y / Math.max(1, bounds.dh * scale);
+    const anchorResize = (resized: NormalizedTransform) => {
+      const before = displayLayoutFor(clip, initial);
+      const after = displayLayoutFor(clip, resized);
+      if (!before || !after) return resized;
+      return keepMediaResizeAnchor(
+        resized,
+        { x: before.left + before.width / 2, y: before.top + before.height / 2 },
+        { x: after.left + after.width / 2, y: after.top + after.height / 2 },
+        selectedRotation(),
+        { width: bounds.dw * scale, height: bounds.dh * scale },
+      );
+    };
     if (transformDrag.kind === 'move') {
       let moved = {
         ...initial,
@@ -282,13 +307,8 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       return;
     }
     if (isVisualClip(clip) && isPhoneFrame(clip.appearance.frame))
-      return void (transformDraft.value = resizePhoneFrameTransform(
-        options.composition(),
-        clip,
-        initial,
-        bounds,
-        { x: dx, y: dy },
-        transformDrag.corner,
+      return void (transformDraft.value = anchorResize(
+        resizePhoneFrameTransform(options.composition(), clip, initial, bounds, { x: dx, y: dy }, transformDrag.corner),
       ));
     const left = transformDrag.corner?.includes('left');
     const top = transformDrag.corner?.includes('top');
@@ -299,12 +319,14 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     if (clip.kind === 'caption' && isCaptionWrapEnabled(clip.caption.style)) {
       if (!horizontal) return;
       const width = Math.min(SIZE_MAX, Math.max(0.02, rawWidth));
-      transformDraft.value = captionTransformFor(clip, {
-        x: Math.min(TRANSFORM_MAX, Math.max(TRANSFORM_MIN, left ? initial.x + initial.width - width : initial.x)),
-        y: initial.y,
-        width,
-        height: initial.height,
-      });
+      transformDraft.value = anchorResize(
+        captionTransformFor(clip, {
+          x: Math.min(TRANSFORM_MAX, Math.max(TRANSFORM_MIN, left ? initial.x + initial.width - width : initial.x)),
+          y: initial.y,
+          width,
+          height: initial.height,
+        }),
+      );
       return;
     }
     const lockedAspect = clip.kind === 'blur' && (clip.shape === 'square' || clip.shape === 'circle');
@@ -328,7 +350,8 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     const cropped = isVisualClip(clip)
       ? resizeCroppedLayer(clip, initial, resized, transformDrag.corner, corner && preserveAspect)
       : resized;
-    transformDraft.value = clip.kind === 'webcam' ? clampEditedWebcamTransform(clip, cropped, bounds.scale) : cropped;
+    const anchored = anchorResize(cropped);
+    transformDraft.value = clip.kind === 'webcam' ? clampEditedWebcamTransform(clip, anchored, bounds.scale) : anchored;
   };
 
   const moveTransformDrag = (event: PointerEvent) => {

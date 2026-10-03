@@ -200,7 +200,7 @@ export function createZoomTimeEvaluator(
   mapFocus?: ZoomFocusMapper,
 ) {
   const sortedElements = elements
-    .filter((element) => element.enabled !== false)
+    .filter((element) => element.enabled !== false && element.effect !== 'glass')
     .sort((left, right) => left.startMs - right.startMs);
   return (timeMs: number) => zoomAtSortedTime(sortedElements, timeMs, mapFocus);
 }

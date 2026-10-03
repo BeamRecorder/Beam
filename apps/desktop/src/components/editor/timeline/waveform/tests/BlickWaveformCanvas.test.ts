@@ -133,6 +133,19 @@ describe('BlickWaveformCanvas', () => {
     expect(consoleError).not.toHaveBeenCalled();
     expect(renderer.dispose).toHaveBeenCalledOnce();
   });
+  it('keeps one worker request in flight, ignores obsolete geometry and redraws only the newest zoom', async () => {
+    const renderer = makeRenderer(); let resolve!: (value: boolean) => void;
+    vi.mocked(renderer.draw).mockReturnValueOnce(new Promise<boolean>(done => resolve = done));
+    acquireRenderer.mockReturnValue(renderer);
+    const wrapper = mount(BlickWaveformCanvas, { props: makeData() });
+    await flushAnimationFrames();
+    for (const width of [200, 300, 450]) { bounds = { width, height: 40 }; await wrapper.setProps({ geometryKey: width }); await flushAnimationFrames(); }
+    expect(renderer.draw).toHaveBeenCalledOnce(); resolve(true); await flushPromises();
+    expect(pendingFrames.size).toBe(1); await flushAnimationFrames();
+    expect(renderer.draw).toHaveBeenCalledTimes(2);
+    expect(renderer.draw).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 450, 40);
+    wrapper.unmount();
+  });
   it('coalesces prop changes into one frame and draws the latest data', async () => {
     const renderer = makeRenderer();
     acquireRenderer.mockReturnValue(renderer);

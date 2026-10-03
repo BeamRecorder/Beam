@@ -446,3 +446,24 @@ test('accepts legacy screenshot states without composition metadata without synt
   assert.doesNotThrow(() => validateScreenshotState(state));
   assert.equal('composition' in state, false);
 });
+
+test('screenshot media rotation accepts legacy omission and precise finite angles', () => {
+  for (const rotation of [undefined, 0, 32.75, 270]) {
+    const state = screenshotState({ image: { ...(rotation === undefined ? {} : { rotation }) } });
+    validateScreenshotState(state);
+    assert.equal(state.image.rotation, rotation);
+  }
+  for (const rotation of ['90', null, NaN, Infinity]) {
+    assert.throws(() => validateScreenshotState(screenshotState({ image: { rotation } })), /Invalid screenshot/);
+  }
+});
+
+test('validates persisted still lenses, static timing and required composition references', () => {
+  const { DEFAULT_GLASS_HIGHLIGHT } = require('../packages/engine/src/zoom/glass-highlight-schema.js');
+  const lens = { id: 'lens', kind: 'zoom', name: 'Lens', sessionId: 'manual', startMs: 0, endMs: 1, focus: { cx: .5, cy: .5 }, depth: 4, mode: 'manual', enabled: true, effect: 'glass', glass: { ...DEFAULT_GLASS_HIGHLIGHT, path: [] } };
+  const state = withComposition(screenshotState()); state.zooms = [lens];
+  state.composition.push({ id: lens.id, opacity: 100, blendMode: 'source-over', locked: false });
+  assert.doesNotThrow(() => validateScreenshotState(state));
+  for (const patch of [{ mode: 'auto' }, { endMs: 1000 }, { animations: [] }, { glass: { ...lens.glass, size: 5 } }, { id: state.image.id }]) assert.throws(() => validateScreenshotState({ ...state, zooms: [{ ...lens, ...patch }] }));
+  assert.throws(() => validateScreenshotState({ ...state, composition: state.composition.filter(layer => layer.id !== lens.id) }));
+});

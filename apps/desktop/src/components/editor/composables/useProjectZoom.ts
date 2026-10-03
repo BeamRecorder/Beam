@@ -1,4 +1,6 @@
 import type { ClipComposition } from '@beam/engine/shared/composition-types';
+import { isAutomaticZoom } from '@beam/engine/zoom/glass-generation';
+import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 import { generateRecordingZooms } from '@beam/engine/zoom/recording-zoom-generation';
 import { preservesLockedItems, TimelineLockedError } from '@beam/engine/composition/timeline-locks';
 import { useLockedState } from './useLockedState';
@@ -16,6 +18,7 @@ import {
   normalizeZoomAutoFollow,
   normalizeZoomMotionBlur,
   type ZoomElement,
+  type ZoomStyle,
   type ZoomAutoFollowSettings,
   type ZoomMotionBlurSettings,
 } from '@beam/engine/zoom/zoom-types';
@@ -30,6 +33,7 @@ export function useProjectZoom(options: {
   composition: Ref<ClipComposition>;
   activeTab: Ref<string>;
   editorDefaults: Ref<EditorPreferenceDefaults>;
+  canvas?: Ref<OutputCanvasSettings>;
 }) {
   const { editorData, durationMs, activeTab } = options;
   const { state: zoomElements, restore: restoreZoomElements } = useLockedState<ZoomElement[]>([], (value) => value);
@@ -46,7 +50,7 @@ export function useProjectZoom(options: {
     () => zoomElements.value.find((element) => element.id === selectedZoomId.value) ?? null,
   );
   const canGenerateZooms = computed(() => Boolean(editorData.value?.cursor.available && editorData.value.sessionId));
-  const hasAutomaticZooms = computed(() => zoomElements.value.some((element) => element.mode === 'auto'));
+  const hasAutomaticZooms = computed(() => zoomElements.value.some(isAutomaticZoom));
 
   watch(
     selectedZoomId,
@@ -108,22 +112,24 @@ export function useProjectZoom(options: {
     selectZooms([zoom.id], zoom.id);
   };
 
-  const generateZooms = (selectPanel = false) => {
+  const generateZooms = (selectPanel = false, style: ZoomStyle = '2d') => {
     const data = editorData.value;
     if (!data?.cursor.available) return;
     const generationDurationMs = Math.min(durationMs.value, data.manifest.durationNs / 1_000_000);
     if (generationDurationMs <= 0) return;
+    if (style === 'glass' && !options.canvas) throw new Error('Automatic lenses require an output canvas.');
     const generated = generateRecordingZooms(
       options.composition.value,
       data.sessionId,
       data.cursor.telemetry,
       zoomElements.value.filter(
         (element) =>
-          element.mode === 'manual' ||
+          !isAutomaticZoom(element) ||
           element.locked ||
           element.linkedClipId === null ||
           element.sessionId !== data.sessionId,
       ),
+      options.canvas ? { style, canvas: options.canvas.value } : undefined,
     );
     zoomElements.value = [
       ...zoomElements.value.filter(
@@ -131,7 +137,7 @@ export function useProjectZoom(options: {
           element.locked ||
           element.linkedClipId === null ||
           element.sessionId !== data.sessionId ||
-          element.mode !== 'auto',
+          !isAutomaticZoom(element),
       ),
       ...generated,
     ];

@@ -17,3 +17,35 @@ export type GradientPreset = {
   id: string;
   stops: GradientStop[];
 };
+
+export interface GradientProps {
+  modelValue: GradientValue | null | undefined;
+  presets?: GradientPreset[];
+  minStops?: number;
+  maxStops?: number;
+  showAngle?: boolean;
+  disabled?: boolean;
+}
+
+export interface GradientDrag {
+  id: string;
+  pointerId: number;
+  originalPosition: number;
+  position: number;
+  pointerOffset: number;
+}
+
+export interface GradientStopsProps {
+  stops: GradientStop[];
+  selectedId: string | null;
+  canAdd: boolean;
+  disabled?: boolean;
+}
+
+export interface GradientStopRowProps {
+  stop: GradientStop;
+  index: number;
+  selected: boolean;
+  removable: boolean;
+  disabled?: boolean;
+}

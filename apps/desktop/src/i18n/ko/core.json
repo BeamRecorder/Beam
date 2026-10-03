@@ -312,6 +312,24 @@
     "transcriptSaved": "스크립트를 내보냈습니다.",
     "transcriptExportFailed": "스크립트를 내보낼 수 없습니다."
   },
+  "TransformControls": {
+    "position": "위치",
+    "alignment": "정렬",
+    "left": "왼쪽",
+    "center": "가운데",
+    "right": "오른쪽",
+    "top": "위",
+    "middle": "중간",
+    "bottom": "아래",
+    "width": "너비",
+    "height": "높이",
+    "lockAspectRatio": "비율 고정",
+    "orientation": "방향",
+    "rotateLeft": "왼쪽으로 90° 회전",
+    "rotateRight": "오른쪽으로 90° 회전",
+    "unit": "단위",
+    "rotation": "회전"
+  },
   "ClipPropertiesPanel": {
     "noClipSelected": "선택한 클립이 없습니다",
     "noClipSelectedDesc": "타임라인에서 클립을 클릭하여 속성을 확인하고 편집하세요.",
@@ -334,6 +352,7 @@
     "solid": "단색",
     "adaptive": "자동 조정",
     "adaptiveShadowDescription": "클립 색상을 추출하여 은은한 주변광을 만듭니다.",
+    "shadowStyleDescription": "단색: 선택한 색상으로 그림자를 만듭니다.\n자동 조정: 클립의 색상으로 주변 광채를 만듭니다.",
     "direction": "방향",
     "mirroring": "미러링",
     "mirrorHorizontally": "가로로 뒤집기",
@@ -1083,7 +1102,8 @@
     "image": "이미지",
     "watermark": "워터마크",
     "previewLoading": "미리보기 생성 중…",
-    "previewError": "미리보기를 사용할 수 없습니다"
+    "previewError": "미리보기를 사용할 수 없습니다",
+    "zoom": "확대/축소"
   },
   "Highlight": {
     "title": "강조",
@@ -1117,5 +1137,25 @@
     "description": "시스템 커서를 동영상에 직접 녹화합니다. 자동 줌은 계속 커서를 따라갑니다. Beam 커서는 처음에 꺼져 있으며 커서 설정에서 겹쳐 표시할 수 있습니다. 녹화된 커서는 제거할 수 없습니다.",
     "customCursor": "사용자 지정 커서",
     "overlayDescription": "동영상에 Beam 커서를 겹쳐 표시합니다. 녹화에 시스템 커서가 이미 포함되어 있다면 끄세요."
+  },
+  "Gradient": {
+    "type": "유형",
+    "linear": "선형",
+    "radial": "방사형",
+    "angle": "각도",
+    "rotate": "90° 회전",
+    "stops": "색상 지점",
+    "presets": "프리셋",
+    "reverse": "그라디언트 반전",
+    "addStop": "색상 지점 추가",
+    "removeStop": "색상 지점 삭제",
+    "color": "색상",
+    "position": "위치",
+    "opacity": "불투명도",
+    "stop": "색상 지점 {number}",
+    "stopColor": "지점 {number} 색상",
+    "stopPosition": "지점 {number} 위치",
+    "stopOpacity": "지점 {number} 불투명도",
+    "addAtPosition": "클릭하여 색상 지점 추가"
   }
 }

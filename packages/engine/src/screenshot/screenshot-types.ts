@@ -4,6 +4,7 @@ import type { BackgroundValue } from '../shared/background-types';
 import type { LayerCompositing } from '../shared/layer-compositing-types';
 import type { CursorSelection } from '../capture/cursor-pack';
 import type { CursorShadowDirection as ShadowDirection } from '../capture/cursor-presentation';
+import type { ZoomElement } from '../zoom/zoom-types';
 
 export interface ScreenshotState {
   canvas: OutputCanvasSettings;
@@ -12,6 +13,7 @@ export interface ScreenshotState {
   image: VisualClip;
   shapes: ShapeClip[];
   effects?: BlurClip[];
+  zooms?: ScreenshotZoomLayer[];
   cursors?: ScreenshotCursorLayer[];
   images?: ScreenshotImageLayer[];
   composition?: LayerCompositing[];
@@ -20,6 +22,12 @@ export interface ScreenshotState {
   quality: number;
 }
 
+export interface ScreenshotZoomLayer extends ZoomElement {
+  kind: 'zoom';
+  name: string;
+  mode: 'manual';
+  enabled: boolean;
+}
 export interface ScreenshotImageLayer extends VisualClip {
   kind: 'image';
   source: string;
@@ -41,7 +49,7 @@ export interface ScreenshotCursorLayer {
   shadowDirection: ShadowDirection;
 }
 export interface ScreenshotLayer extends LayerCompositing {
-  kind: 'background' | 'image' | 'shape' | 'arrow' | 'text' | 'drawing' | 'cursor' | 'watermark' | 'effect';
+  kind: 'background' | 'image' | 'shape' | 'arrow' | 'text' | 'drawing' | 'cursor' | 'watermark' | 'effect' | 'zoom';
   name: string;
   visible: boolean;
 }

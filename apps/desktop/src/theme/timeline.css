@@ -10,6 +10,15 @@
   --color-track-annotation-light: #f4e8d1;
   --color-track-blur: #5a4fd1;
   --color-track-blur-highlight: #6d63e8;
+  --color-timeline-video: #174995;
+  --color-timeline-image: #a55912;
+  --color-timeline-audio: #006148;
+  --color-timeline-zoom: #8d2467;
+  --color-timeline-caption: #8b651e;
+  --color-timeline-shape: #a53a2c;
+  --color-timeline-blur: #5732b4;
+  --color-timeline-highlight: #a55912;
+  --color-timeline-item-text: #edf2f8;
   --color-timeline-lane: #e9e9ed;
   --color-timeline-lane-alt: #e2e2e6;
   --color-timeline-ruler: #f7f7f8;
@@ -24,24 +33,19 @@
   /* Media labels must remain readable over the source image in either theme. */
   --color-timeline-media-label: #00000099;
   --color-timeline-media-label-text: var(--text-light);
-  --timeline-lane-tint: 2%;
-  --timeline-item-tint: 40%;
+  --timeline-item-tint: 100%;
   --timeline-disabled-opacity: 0.45;
   --timeline-drag-opacity: 0.65;
   --timeline-ghost-opacity: 0.55;
   --timeline-pending-opacity: 0.45;
   --timeline-pending-overlay-opacity: 0.18;
   --timeline-pending-overlay-active-opacity: 0.32;
-  --timeline-waveform-filter: invert(1);
+  --timeline-waveform-filter: none;
   --timeline-track-min-height: 32px;
   --timeline-track-max-height: 56px;
-  --timeline-effect-track-min-height: 48px;
-  --timeline-effect-track-max-height: 64px;
-  --timeline-audio-track-min-height: 32px;
-  --timeline-audio-track-max-height: 40px;
-  --timeline-effect-item-height: 36px;
-  --timeline-effect-item-inset: 6px;
   --timeline-trim-width: 10px;
+  --timeline-trim-opacity: 0;
+  --timeline-trim-pointer-events: none;
 }
 :root.dark {
   --color-track-video: #3373d1;
@@ -54,9 +58,16 @@
   --color-track-annotation-light: #3f3023;
   --color-track-blur: #6d63e8;
   --color-track-blur-highlight: #8b82f3;
-  --color-timeline-lane: #1a1a1c;
-  --color-timeline-lane-alt: #1e1e20;
-  --color-timeline-ruler: #171719;
-  --timeline-lane-tint: 3%;
+  --color-timeline-video: #0f3c8a;
+  --color-timeline-image: #a55912;
+  --color-timeline-audio: #004732;
+  --color-timeline-zoom: #7b1e5a;
+  --color-timeline-caption: #795718;
+  --color-timeline-shape: #933325;
+  --color-timeline-blur: #4827b0;
+  --color-timeline-highlight: #a55912;
+  --color-timeline-lane: #1c1c1c;
+  --color-timeline-lane-alt: #222223;
+  --color-timeline-ruler: #191919;
   --timeline-waveform-filter: none;
 }

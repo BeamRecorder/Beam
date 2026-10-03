@@ -80,9 +80,11 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
         background: null,
         blurPercent: 0,
         zooms:
-          !props.isPlaying && props.selectedZoom?.mode === 'manual'
+          !props.isPlaying && props.selectedZoom?.mode === 'manual' && props.selectedZoom.effect !== 'glass'
             ? props.zoomElements.filter((zoom) => zoom.id !== props.selectedZoom!.id)
-            : props.zoomElements,
+            : options.zoomDraft?.()
+              ? props.zoomElements.map((zoom) => (zoom.id === props.selectedZoom?.id ? options.zoomDraft!()! : zoom))
+              : props.zoomElements,
         zoomMotionBlur: props.zoomMotionBlur,
         zoomAutoFollow: props.zoomAutoFollow,
         cursor,

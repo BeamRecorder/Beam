@@ -1,4 +1,5 @@
 import type { ZoomTiltDirectionPreset } from '@beam/engine/zoom/zoom-tilt-preset-types';
+import type { GlassHighlightSettings } from './glass-highlight-types';
 
 export interface ZoomFocus {
   cx: number;
@@ -8,6 +9,7 @@ export interface ZoomFocus {
 export type ZoomDepth = 1 | 2 | 3 | 4 | 5 | 6;
 export type ZoomMode = 'auto' | 'manual';
 export type ZoomProjection = '2d' | '3d';
+export type ZoomStyle = ZoomProjection | 'glass';
 export type ZoomTiltPreset = 'small' | 'medium' | 'large' | 'custom' | ZoomTiltDirectionPreset;
 
 export const ZOOM_DEPTH_SCALES: Record<ZoomDepth, number> = {
@@ -31,6 +33,11 @@ export interface ZoomElement {
   depth: ZoomDepth;
   mode: ZoomMode;
   enabled?: boolean;
+  /** Missing in legacy documents means the full-scene camera zoom. */
+  effect?: 'camera' | 'glass';
+  /** Provenance only: generated lenses are edited with the same manual controls. */
+  generation?: 'automatic';
+  glass?: GlassHighlightSettings;
   /** Missing only in projects saved before perspective zooms were introduced. */
   projection?: ZoomProjection;
   /** Normalized perspective strength. Missing values use the product default. */

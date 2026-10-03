@@ -27,6 +27,7 @@ export function visualMediaOptions(
     title: clip.name,
     mirrored: clip.isMirrored,
     mirroredY: clip.isMirroredY,
+    rotation: clip.rotation,
     mask: framing.mask,
     shadowFollowsSourceAlpha: clip.kind === 'image',
   };

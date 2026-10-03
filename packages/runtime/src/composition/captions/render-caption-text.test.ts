@@ -97,6 +97,8 @@ const context = () => {
     canvas: { width: 1_000, height: 500 },
     filter: 'none',
     save: vi.fn(),
+    rotate: vi.fn(),
+    translate: vi.fn(),
     restore: vi.fn(),
     measureText: vi.fn((text: string) => ({ width: text.length * 20 })),
     strokeText: vi.fn(),
@@ -628,4 +630,21 @@ describe('caption backdrop blur', () => {
     expect(ctx.value.fill).toHaveBeenCalled();
     expect(ctx.value.fillText).not.toHaveBeenCalled();
   });
+});
+
+it.each([32.75, 90, 270])('rotates caption drawing at the precise angle %s around its text center', (rotation) => {
+  const ctx = context().value;
+  const clip = { ...caption(), rotation, transform: { x: 0.1, y: 0.2, width: 0.5, height: 0.3 } };
+  drawCaptionText(ctx, {
+    clip,
+    text: 'Rotated text',
+    canvas: { width: 1000, height: 500 },
+    viewport: { x: 10, y: 20, width: 1000, height: 500 },
+  });
+  expect(ctx.rotate).toHaveBeenCalledWith((rotation * Math.PI) / 180);
+  expect(vi.mocked(ctx.translate).mock.calls[1]).toEqual(
+    vi.mocked(ctx.translate).mock.calls[0]!.map((value) => -value),
+  );
+  expect(ctx.fillText).toHaveBeenCalled();
+  expect(vi.mocked(ctx.save).mock.calls).toHaveLength(vi.mocked(ctx.restore).mock.calls.length);
 });

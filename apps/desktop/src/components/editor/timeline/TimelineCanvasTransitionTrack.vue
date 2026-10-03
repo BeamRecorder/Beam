@@ -4,6 +4,7 @@ import { PanelsTopLeft } from '@lucide/vue';
 import type { ClipTransition, ClipTransitions } from '@beam/engine/shared/composition-types';
 import { normalizeCanvasTransitions } from '@beam/engine/shared/clip-transitions';
 import { useTranslate } from '~/i18n/useTranslate';
+import TimelineTrimHandle from './TimelineTrimHandle.vue';
 import TimelineCanvasLane from './TimelineCanvasLane.vue';
 import type { TimelineViewportMetrics } from './composables/timeline-virtualization-types';
 
@@ -22,6 +23,7 @@ const emit = defineEmits<{
 const track = ref<HTMLElement | null>(null);
 const { t } = useTranslate('TransitionsPanel');
 const displayed = ref<ClipTransitions | null>(null);
+const resizing = ref<'entry' | 'exit' | null>(null);
 const activeTransitions = computed(() => displayed.value ?? props.transitions);
 const items = computed(() =>
   (['entry', 'exit'] as const).flatMap((edge) => {
@@ -40,8 +42,8 @@ const items = computed(() =>
 );
 let cancelResize: (() => void) | null = null;
 onUnmounted(() => cancelResize?.());
-const percent = (transition: ClipTransition | null) =>
-  `${Math.min(100, ((transition?.durationMs ?? 0) / Math.max(1, props.durationMs)) * 100)}%`;
+const percent = (transition: ClipTransition) =>
+  `${Math.min(100, (transition.durationMs / Math.max(1, props.durationMs)) * 100)}%`;
 const label = (edge: 'entry' | 'exit', transition: ClipTransition) => {
   const preset =
     transition.preset.kind === 'slide' || transition.preset.kind === 'zoom'
@@ -56,6 +58,7 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
   event.stopPropagation();
   const bounds = track.value?.getBoundingClientRect();
   if (!bounds?.width) return;
+  resizing.value = edge;
   let latest = props.transitions;
   const move = (next: PointerEvent) => {
     const position = Math.max(0, Math.min(bounds.width, next.clientX - bounds.left));
@@ -79,6 +82,7 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
     window.removeEventListener('pointerup', finish);
     window.removeEventListener('pointercancel', cancel);
     displayed.value = null;
+    resizing.value = null;
     emit('preview', null);
     if (latest !== props.transitions) emit('update', latest);
   };
@@ -89,6 +93,7 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
     window.removeEventListener('pointerup', finish);
     window.removeEventListener('pointercancel', cancel);
     displayed.value = null;
+    resizing.value = null;
     emit('preview', null);
   };
   window.addEventListener('pointermove', move);
@@ -117,7 +122,13 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
         :aria-label="label('entry', activeTransitions.entry)"
         @click.stop="emit('open', 'entry')"
       >
-        <span class="duration-handle end" @pointerdown="beginResize($event, 'entry')" />
+        <TimelineTrimHandle
+          class="duration-handle"
+          edge="end"
+          :title="label('entry', activeTransitions.entry)"
+          :state="resizing === 'entry' ? { edge: 'end', durationMs: activeTransitions.entry.durationMs } : null"
+          @start="beginResize($event, 'entry')"
+        />
       </button>
       <button
         v-if="activeTransitions.exit"
@@ -127,7 +138,13 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
         :aria-label="label('exit', activeTransitions.exit)"
         @click.stop="emit('open', 'exit')"
       >
-        <span class="duration-handle start" @pointerdown="beginResize($event, 'exit')" />
+        <TimelineTrimHandle
+          class="duration-handle"
+          edge="start"
+          :title="label('exit', activeTransitions.exit)"
+          :state="resizing === 'exit' ? { edge: 'start', durationMs: activeTransitions.exit.durationMs } : null"
+          @start="beginResize($event, 'exit')"
+        />
       </button>
     </div>
   </div>
@@ -145,9 +162,6 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
 }
 .canvas-sidebar-row {
   background: var(--color-bg-surface);
-}
-.canvas-track-row {
-  background: var(--color-timeline-lane);
 }
 .canvas-track-info {
   display: flex;
@@ -177,14 +191,13 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
   position: relative;
   flex: 1;
   height: 100%;
-  min-height: var(--timeline-track-min-height);
   margin-inline: 80px 150px;
   overflow: hidden;
 }
 .canvas-transition-zone {
   position: absolute;
-  inset-block: 3px;
-  min-width: 18px;
+  inset-block: 0;
+  min-width: 14px;
   overflow: hidden;
   cursor: pointer;
 }
@@ -206,17 +219,6 @@ const beginResize = (event: PointerEvent, edge: 'entry' | 'exit') => {
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-}
-.duration-handle {
-  position: absolute;
-  inset-block: 0;
-  cursor: col-resize;
-}
-.duration-handle.start {
-  left: 0;
-}
-.duration-handle.end {
-  right: 0;
 }
 @media (prefers-reduced-motion: reduce) {
   .canvas-transition-zone {

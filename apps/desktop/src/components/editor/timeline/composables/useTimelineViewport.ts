@@ -7,6 +7,7 @@ import { zoomTimelineByWheel } from './timeline-zoom';
 import { timelineWheelPixels, timelineTimeAt, timelineOffsetAtAnchor } from '@beam/engine/shared/timeline-viewport';
 import type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
 import { timelineLayoutToVisualPixels, timelineVisualToLayoutPixels } from './timeline-coordinate-space';
+import { timelineSpanStyle } from '../timeline-clip-geometry';
 
 const MAX_WHEEL_EVENT_AGE_MS = 200;
 const WHEEL_ZOOM_IDLE_MS = 120;
@@ -74,7 +75,8 @@ export function useTimelineViewport(
     return result;
   });
   const rulerMarkerStyle = (second: number) => ({
-    left: `${(second / Math.max(1, currentDuration.value)) * 100}%`,
+    left: '0',
+    transform: `translate3d(${(second / Math.max(1, currentDuration.value)) * rulerLayoutWidth.value}px, 0, 0)`,
   });
   const isRulerLabel = (second: number) => {
     const step = rulerLabelStep.value;
@@ -314,10 +316,8 @@ export function useTimelineViewport(
     unacknowledgedZoomLevels.clear();
   });
 
-  const percentageStyle = (startMs: number, lengthMs: number) => ({
-    left: `${(startMs / durationMs.value) * 100}%`,
-    width: `${(lengthMs / durationMs.value) * 100}%`,
-  });
+  const percentageStyle = (startMs: number, lengthMs: number) =>
+    timelineSpanStyle(startMs, lengthMs, durationMs.value / 1000, rulerLayoutWidth.value);
   const timeAt = (clientX: number) => {
     const target = ticksAreaRef.value;
     if (!target) return 0;

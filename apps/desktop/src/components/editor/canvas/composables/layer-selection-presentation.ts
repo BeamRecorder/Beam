@@ -1,3 +1,4 @@
+import { rotateMediaVector } from '@beam/engine/layout/media-rotation';
 import type { ResizeCorner, ResizeHandlePosition, ResizeHandlePositions } from '~/ui/ResizeHandle/types';
 import {
   hasPerspectiveTilt,
@@ -20,18 +21,17 @@ export interface LayerSelectionPresentation {
   perspectiveCorners?: [ResizeHandlePosition, ResizeHandlePosition, ResizeHandlePosition, ResizeHandlePosition];
 }
 
-const anchorPoint = (rect: CanvasRect, anchor: ResizeCorner): ResizeHandlePosition => {
+const anchorPoint = (rect: CanvasRect, anchor: ResizeCorner, rotation = 0): ResizeHandlePosition => {
   const horizontal = anchor.includes('left') ? 0 : anchor.includes('right') ? 1 : 0.5;
   const vertical = anchor.includes('top') ? 0 : anchor.includes('bottom') ? 1 : 0.5;
-  return {
-    x: rect.left + rect.width * horizontal,
-    y: rect.top + rect.height * vertical,
-  };
+  const offset = rotateMediaVector({ x: rect.width * (horizontal - 0.5), y: rect.height * (vertical - 0.5) }, rotation);
+  return { x: rect.left + rect.width / 2 + offset.x, y: rect.top + rect.height / 2 + offset.y };
 };
 
 export const layerSelectionPresentation = (
   selection: { layout: CanvasRect; viewport: VideoWindowBounds } | null,
   projectPerspective: boolean,
+  rotation = 0,
 ): LayerSelectionPresentation => {
   if (!selection) return { handleStyle: { display: 'none' } };
   const { layout, viewport } = selection;
@@ -66,7 +66,7 @@ export const layerSelectionPresentation = (
   const projected = Object.fromEntries(
     anchors.map((anchor) => [
       anchor,
-      projectPerspectivePoint(anchorPoint(layout, anchor), bounds, transform, coverScale),
+      projectPerspectivePoint(anchorPoint(layout, anchor, rotation), bounds, transform, coverScale),
     ]),
   ) as Record<ResizeCorner, ResizeHandlePosition>;
   const cornerPoints = [
@@ -100,6 +100,7 @@ export const perspectivePointerDelta = (
   viewport: VideoWindowBounds,
   anchor: ResizeCorner | undefined,
   screenDelta: ResizeHandlePosition,
+  rotation = 0,
 ): ResizeHandlePosition => {
   rect ??= {
     left: viewport.dx,
@@ -116,7 +117,9 @@ export const perspectivePointerDelta = (
     height: viewport.dh,
   };
   const coverScale = perspectiveCoverScale(bounds.width, bounds.height, transform);
-  const source = anchor ? anchorPoint(rect, anchor) : { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  const source = anchor
+    ? anchorPoint(rect, anchor, rotation)
+    : { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
   const projected = projectPerspectivePoint(source, bounds, transform, coverScale);
   const target = unprojectPerspectivePoint(
     { x: projected.x + screenDelta.x, y: projected.y + screenDelta.y },

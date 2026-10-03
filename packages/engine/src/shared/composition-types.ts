@@ -186,6 +186,8 @@ export interface ClipBase {
 }
 
 export interface VisualClip extends ClipBase {
+  /** Clockwise degrees around the framed media center. Missing values mean zero. */
+  rotation?: number;
   kind: 'screen' | 'video' | 'image' | 'webcam';
   assetId: string;
   transform: NormalizedTransform;
@@ -258,6 +260,8 @@ export interface AudioClip extends ClipBase {
 }
 
 export interface CaptionClip extends ClipBase {
+  /** Clockwise degrees around the laid-out text center; absent values mean zero. */
+  rotation?: number;
   kind: 'caption';
   caption: CaptionData;
   /** Captions sharing this identity render and reorder on one logical text layer. */

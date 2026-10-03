@@ -21,6 +21,7 @@ export interface VisualClipDefaults {
   appearance: ClipAppearance;
   isMirrored: boolean;
   isMirroredY: boolean;
+  rotation?: number;
   playbackRate: number;
   transitions: ClipTransitions;
   cameraLayoutPreset: CameraLayoutPreset;

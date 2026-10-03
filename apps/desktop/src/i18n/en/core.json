@@ -312,6 +312,24 @@
     "transcriptSaved": "Transcript exported.",
     "transcriptExportFailed": "Could not export the transcript."
   },
+  "TransformControls": {
+    "position": "Position",
+    "alignment": "Alignment",
+    "left": "Left",
+    "center": "Center",
+    "right": "Right",
+    "top": "Top",
+    "middle": "Middle",
+    "bottom": "Bottom",
+    "width": "Width",
+    "height": "Height",
+    "lockAspectRatio": "Lock aspect ratio",
+    "orientation": "Orientation",
+    "rotateLeft": "Rotate 90° left",
+    "rotateRight": "Rotate 90° right",
+    "unit": "Unit",
+    "rotation": "Rotation"
+  },
   "ClipPropertiesPanel": {
     "noClipSelected": "No clip selected",
     "noClipSelectedDesc": "Click a clip on the timeline to inspect and edit its properties.",
@@ -334,6 +352,7 @@
     "solid": "Solid",
     "adaptive": "Adaptive",
     "adaptiveShadowDescription": "Samples the clip colors for a subtle ambient glow.",
+    "shadowStyleDescription": "Solid: Uses the chosen color for the shadow.\nAdaptive: Samples the clip colors to create an ambient glow.",
     "direction": "Direction",
     "mirroring": "Mirroring",
     "mirrorHorizontally": "Mirror horizontally",
@@ -1080,7 +1099,8 @@
     "image": "Image",
     "watermark": "Watermark",
     "previewLoading": "Rendering preview…",
-    "previewError": "Preview unavailable"
+    "previewError": "Preview unavailable",
+    "zoom": "Zoom"
   },
   "Highlight": {
     "title": "Highlight",
@@ -1114,5 +1134,25 @@
     "description": "Records the system cursor directly in the video. Automatic zooms still follow it. The Beam cursor starts disabled; you can overlay it in Cursor settings. The recorded cursor cannot be removed.",
     "customCursor": "Custom cursor",
     "overlayDescription": "Overlay the Beam cursor on the video. Turn it off when the recording already includes the system cursor."
+  },
+  "Gradient": {
+    "type": "Type",
+    "linear": "Linear",
+    "radial": "Radial",
+    "angle": "Angle",
+    "rotate": "Rotate 90°",
+    "stops": "Color stops",
+    "presets": "Presets",
+    "reverse": "Reverse gradient",
+    "addStop": "Add color stop",
+    "removeStop": "Remove color stop",
+    "color": "Color",
+    "position": "Position",
+    "opacity": "Opacity",
+    "stop": "Color stop {number}",
+    "stopColor": "Stop {number} color",
+    "stopPosition": "Stop {number} position",
+    "stopOpacity": "Stop {number} opacity",
+    "addAtPosition": "Click to add a color stop"
   }
 }

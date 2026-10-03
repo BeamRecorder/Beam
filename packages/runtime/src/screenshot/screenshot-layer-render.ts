@@ -11,6 +11,7 @@ import type { ScreenshotLayer } from '@beam/engine/screenshot/screenshot-types';
 import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot-types';
 import { screenshotImage } from '@beam/engine/screenshot/screenshot-images';
 import { screenshotImageRaster } from './screenshot-image-raster';
+import { drawScreenshotZoom } from './screenshot-zoom-render';
 
 export function drawScreenshotLayer(
   target: Canvas2DContext,
@@ -48,7 +49,12 @@ export function drawScreenshotLayer(
       shadowScale: Math.min(width / state.canvas.width, height / state.canvas.height),
       mirrored: image.isMirrored,
       mirroredY: image.isMirroredY,
+      rotation: image.rotation,
     });
+  } else if (layer.kind === 'zoom') {
+    const zoom = state.zooms?.find((item) => item.id === layer.id);
+    if (!zoom) throw new Error(`Screenshot zoom unavailable: ${layer.id}`);
+    drawScreenshotZoom(target, zoom, state.canvas, width, height, backdrop ?? target.canvas);
   } else if (layer.kind === 'effect') {
     const effect = state.effects?.find((item) => item.id === layer.id);
     if (!effect) throw new Error(`Screenshot effect unavailable: ${layer.id}`);

@@ -49,9 +49,9 @@ export function paintTimelineCanvas(
       id = clip?.id ?? zoom?.id ?? `canvas-${canvasTransition!.edge}`;
     const span = timelineCanvasSpan(start, duration, geometry.durationMs, geometry.width, geometry.left);
     if (span.x + span.width < 0 || span.x > geometry.viewportWidth) continue;
-    const effect = kind === 'zoom' || kind === 'caption';
-    const y = effect ? palette.effectInset : canvasTransition ? 3 : 2;
-    const height = effect ? palette.effectHeight : geometry.height - y * 2;
+    const y = 0,
+      height = geometry.height;
+    const artwork = artworks.get(id);
     ctx.save();
     ctx.globalAlpha = enabled ? 1 : palette.disabledOpacity;
     ctx.beginPath();
@@ -69,19 +69,22 @@ export function paintTimelineCanvas(
             ? palette.audio
             : kind === 'zoom'
               ? palette.zoom
-              : ['shape', 'caption'].includes(kind)
+              : kind === 'caption'
                 ? palette.annotation
-                : palette.video;
+                : kind === 'shape'
+                  ? palette.shape
+                  : artwork?.kind === 'image'
+                    ? palette.image
+                    : palette.video;
     ctx.globalAlpha *= palette.tint;
     ctx.fill();
     ctx.globalAlpha = enabled ? 1 : palette.disabledOpacity;
     ctx.clip();
-    const artwork = artworks.get(id);
     if (artwork) paintTimelineArtwork(ctx, artwork, { ...span, y, height }, duration, palette, geometry.viewportWidth);
     if (clip?.locked || zoom?.locked) {
       ctx.save();
       ctx.globalAlpha *= 0.1;
-      ctx.strokeStyle = palette.text;
+      ctx.strokeStyle = palette.itemText;
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (
@@ -127,7 +130,7 @@ export function paintTimelineCanvas(
       ctx.fillStyle = palette.labelBackground;
       ctx.fillRect(labelX - 3, 3, Math.min(labelWidth + 6, ctx.measureText(label).width + 8), 13);
     }
-    ctx.fillStyle = artwork ? palette.labelText : palette.text;
+    ctx.fillStyle = artwork ? palette.labelText : canvasTransition ? palette.text : palette.itemText;
     ctx.save();
     ctx.beginPath();
     ctx.rect(labelX, y, labelWidth, height);
@@ -135,9 +138,18 @@ export function paintTimelineCanvas(
     ctx.fillText(label, labelX - (marquee?.id === id ? marquee.offset : 0), artwork ? 9 : y + height / 2);
     ctx.restore();
     ctx.beginPath();
-    ctx.roundRect(span.x, y, span.width, height, palette.radius);
+    const lineWidth = item.selected ? 2 : 1;
+    const inset = lineWidth / 2;
+    // Stroke inside the body so full-height clips retain their top and bottom borders.
+    ctx.roundRect(
+      span.x + inset,
+      y + inset,
+      span.width - lineWidth,
+      height - lineWidth,
+      Math.max(0, palette.radius - inset),
+    );
     ctx.strokeStyle = item.selected || item.pasteHighlight ? palette.selected : palette.border;
-    ctx.lineWidth = item.selected ? 2 : 1;
+    ctx.lineWidth = lineWidth;
     ctx.stroke();
     ctx.restore();
   }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import ReorderGroup from '~/ui/transitions/ReorderGroup.vue';
+import TimelineReorderGroup from './TimelineReorderGroup.vue';
+import TimelineTrimHandle from './TimelineTrimHandle.vue';
 import TimelineCanvasLane from './TimelineCanvasLane.vue';
 import type { TimelineViewportMetrics } from './composables/timeline-virtualization-types';
 import { computed, onUnmounted, ref, watch } from 'vue';
@@ -186,34 +187,33 @@ onUnmounted(() => {
           @contextmenu.prevent.stop="emit('contextmenu:clip', { event: $event, clip })"
           @pointerdown="beginClipMove($event, clip)"
         >
-          <span
-            class="trim-handle start"
+          <TimelineTrimHandle
+            edge="start"
+            :state="trimStateFor(clip.id)"
             :title="t('trimStart')"
-            @pointerdown.stop="beginClipTrim($event, clip, 'start')"
-          >
-            <span v-if="trimStateFor(clip.id)?.edge === 'start'" class="trim-side-badge">
-              {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
-            </span>
-          </span>
+            @start="beginClipTrim($event, clip, 'start')"
+          />
           <span class="clip-center-title">
             <Lock v-if="clip.locked" :size="12" :aria-label="t('locked')" />
+            <Sparkles v-if="clip.isAiGenerated" :size="12" class="sparkles-icon" />
             <span
               class="caption-label-text canvas-semantic-label"
               :class="{ 'caption-settled': settlingClipIds.has(clip.id) }"
               >{{ getCaptionText(clip) }}</span
             >
           </span>
-          <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginClipTrim($event, clip, 'end')">
-            <span v-if="trimStateFor(clip.id)?.edge === 'end'" class="trim-side-badge">
-              {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
-            </span>
-          </span>
+          <TimelineTrimHandle
+            edge="end"
+            :state="trimStateFor(clip.id)"
+            :title="t('trimEnd')"
+            @start="beginClipTrim($event, clip, 'end')"
+          />
         </button>
       </TransitionGroup>
     </div>
   </div>
 
-  <ReorderGroup
+  <TimelineReorderGroup
     v-if="textLayers.length"
     :order="visibleTextLayers.map((layer) => layer.id)"
     item-attribute="data-caption-id"
@@ -271,15 +271,12 @@ onUnmounted(() => {
           @contextmenu.prevent.stop="emit('contextmenu:clip', { event: $event, clip })"
           @pointerdown="beginClipMove($event, clip)"
         >
-          <span
-            class="trim-handle start"
+          <TimelineTrimHandle
+            edge="start"
+            :state="trimStateFor(clip.id)"
             :title="t('trimStart')"
-            @pointerdown.stop="beginClipTrim($event, clip, 'start')"
-          >
-            <span v-if="trimStateFor(clip.id)?.edge === 'start'" class="trim-side-badge">
-              {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
-            </span>
-          </span>
+            @start="beginClipTrim($event, clip, 'start')"
+          />
           <span class="clip-center-title">
             <Lock v-if="clip.locked" :size="12" :aria-label="t('locked')" />
             <Sparkles v-if="clip.isAiGenerated" :size="12" class="sparkles-icon" />
@@ -289,15 +286,16 @@ onUnmounted(() => {
               >{{ getCaptionText(clip) }}</span
             >
           </span>
-          <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginClipTrim($event, clip, 'end')">
-            <span v-if="trimStateFor(clip.id)?.edge === 'end'" class="trim-side-badge">
-              {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
-            </span>
-          </span>
+          <TimelineTrimHandle
+            edge="end"
+            :state="trimStateFor(clip.id)"
+            :title="t('trimEnd')"
+            @start="beginClipTrim($event, clip, 'end')"
+          />
         </button>
       </div>
     </div>
-  </ReorderGroup>
+  </TimelineReorderGroup>
   <div
     v-else-if="isVisible('caption:empty')"
     data-timeline-row-id="caption:empty"
@@ -342,7 +340,13 @@ onUnmounted(() => {
   clip-path: inset(50%);
 }
 .clip-center-title {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translate3d(0, -50%, 0);
+  width: auto;
   justify-content: flex-start;
-  padding-left: 8px;
+  padding: 0;
+  gap: 3px;
 }
 </style>

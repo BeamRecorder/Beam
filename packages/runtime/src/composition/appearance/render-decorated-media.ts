@@ -227,6 +227,23 @@ const alphaShadowSurface = (options: DecoratedMediaOptions, radius: number): Alp
 };
 
 export function drawDecoratedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions) {
+  const rotation = options.rotation ?? 0;
+  if (rotation % 360 === 0) return drawOrientedMedia(ctx, options);
+  const outer = frameOuterRect(options.rect, options.appearance?.frame ?? DEFAULT_CLIP_APPEARANCE.frame);
+  const x = outer.x + outer.width / 2;
+  const y = outer.y + outer.height / 2;
+  ctx.save();
+  try {
+    ctx.translate(x, y);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.translate(-x, -y);
+    drawOrientedMedia(ctx, options);
+  } finally {
+    ctx.restore();
+  }
+}
+
+function drawOrientedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions) {
   const appearance = { ...DEFAULT_CLIP_APPEARANCE, ...options.appearance };
   const appearanceScale = Math.max(0, options.shadowScale ?? 1);
   const windowsOptions = {

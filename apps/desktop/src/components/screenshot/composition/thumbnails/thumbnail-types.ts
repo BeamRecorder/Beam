@@ -20,6 +20,11 @@ export interface ThumbnailRequest {
   cursorAsset?: CursorAssetDescriptor;
   bitmap?: ImageBitmap;
 }
+export type ThumbnailWorkerMessage = ThumbnailRequest | { type: 'retain'; ids: string[] };
+export interface ThumbnailViewportOptions {
+  /** All existing layers distinguish scrolling away from document deletion. */
+  allIds: () => ReadonlySet<string>;
+}
 export type ThumbnailReply =
   | { id: string; revision: number; blob: Blob; error?: never }
   | { id: string; revision: number; error: string; blob?: never };

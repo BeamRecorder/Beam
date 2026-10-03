@@ -3374,3 +3374,50 @@ test('does not mark existing or migrated projects without the marker as fresh', 
 
   assert.equal(store.editorState(migrated.id).isFresh, false);
 });
+
+test('media rotation survives native normalization and materialization without losing decimals', () => {
+  const asset = {
+    id: 'asset-video',
+    kind: 'video',
+    name: 'Video',
+    fileName: 'video.mp4',
+    durationMs: 2000,
+    width: 1920,
+    height: 1080,
+    origin: 'project',
+  };
+  for (const rotation of [undefined, 0, 90, 32.75, -90]) {
+    const document = {
+      ...emptyComposition(),
+      assets: [asset],
+      clips: [visualClip(asset.id, { ...(rotation === undefined ? {} : { rotation }) })],
+    };
+    const result = normalizeComposition(document);
+    assert.equal(result.clips[0].rotation, rotation);
+    assert.equal(normalizeComposition(JSON.parse(JSON.stringify(result))).clips[0].rotation, rotation);
+  }
+  for (const rotation of ['90', null, NaN, Infinity]) {
+    assert.throws(
+      () =>
+        normalizeComposition({ ...emptyComposition(), assets: [asset], clips: [visualClip(asset.id, { rotation })] }),
+      /Rotation/,
+    );
+  }
+});
+
+test('text rotation survives native normalization while malformed angles are rejected', () => {
+  for (const rotation of [undefined, 0, 32.75, 270]) {
+    const clip = captionClip(
+      textCaption({ style: canonicalCaptionStyle() }),
+      rotation === undefined ? {} : { rotation },
+    );
+    const result = normalizeComposition({ ...emptyComposition(), clips: [clip] });
+    assert.equal(result.clips[0].rotation, rotation);
+    assert.equal(normalizeComposition(JSON.parse(JSON.stringify(result))).clips[0].rotation, rotation);
+  }
+  for (const rotation of [null, '90', Infinity, NaN])
+    assert.throws(
+      () => normalizeComposition({ ...emptyComposition(), clips: [captionClip(textCaption(), { rotation })] }),
+      /Rotation/,
+    );
+});

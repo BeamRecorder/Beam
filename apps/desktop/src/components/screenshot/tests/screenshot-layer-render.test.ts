@@ -40,6 +40,7 @@ const defaultImage = {
   appearance: { frame: 'none' },
   isMirrored: true,
   isMirroredY: false,
+  rotation: 32.5,
 } as ScreenshotState['image'];
 
 const makeState = (overrides: Partial<ScreenshotState> = {}): ScreenshotState => {
@@ -191,6 +192,7 @@ describe('drawScreenshotLayer', () => {
         shadowScale: 0.5,
         mirrored: true,
         mirroredY: false,
+        rotation: 32.5,
       }),
     );
   });

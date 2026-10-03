@@ -1,12 +1,17 @@
 import type { BlurClip, ShapeClip } from '@beam/engine/shared/composition-types';
 import type { LayerBlendMode } from '@beam/engine/shared/layer-compositing-types';
-import type { ScreenshotCursorLayer, ScreenshotImageLayer } from '@beam/engine/screenshot/screenshot-types';
+import type {
+  ScreenshotCursorLayer,
+  ScreenshotImageLayer,
+  ScreenshotZoomLayer,
+} from '@beam/engine/screenshot/screenshot-types';
 
 export type ScreenshotClipboardLayer =
   | { type: 'shape'; value: ShapeClip }
   | { type: 'effect'; value: BlurClip }
   | { type: 'cursor'; value: ScreenshotCursorLayer }
-  | { type: 'image'; value: ScreenshotImageLayer };
+  | { type: 'image'; value: ScreenshotImageLayer }
+  | { type: 'zoom'; value: ScreenshotZoomLayer };
 
 export interface ScreenshotClipboardEntry {
   layer: ScreenshotClipboardLayer;

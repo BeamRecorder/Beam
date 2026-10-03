@@ -176,14 +176,17 @@ function normalizeComposition(value) {
       if (groups.has(common.groupId) && groups.get(common.groupId) !== key) throw new Error('Groupe de clips invalide');
       groups.set(common.groupId, key);
     }
-    if (clip.kind === 'caption')
+    if (clip.kind === 'caption') {
+      if (clip.rotation !== undefined && !finite(clip.rotation)) throw new Error('Rotation de texte invalide');
       return {
         ...common,
         caption: normalizeCaption(clip.caption),
+        ...(clip.rotation === undefined ? {} : { rotation: clip.rotation }),
         ...(id(clip.captionLayerId) ? { captionLayerId: clip.captionLayerId } : {}),
         ...(clip.transform ? { transform: rectangle(clip.transform, 'Transformation') } : {}),
         ...(typeof clip.isAiGenerated === 'boolean' ? { isAiGenerated: clip.isAiGenerated } : {}),
       };
+    }
     if (clip.kind === 'color') {
       if (!id(clip.trackId)) throw new Error('Identifiant de piste visuelle invalide');
       return {
@@ -233,6 +236,12 @@ function normalizeComposition(value) {
         assets.find((asset) => asset.id === clip.assetId)?.kind !== 'video')
     )
       throw new Error('Image figée invalide');
+    if (
+      ['screen', 'video', 'image', 'webcam'].includes(clip.kind) &&
+      clip.rotation !== undefined &&
+      !finite(clip.rotation)
+    )
+      throw new Error('Rotation de média invalide');
     const cameraPresets = ['screen', 'video', 'image', 'webcam'].includes(clip.kind)
       ? (() => {
           const cameraLayoutPreset = clip.cameraLayoutPreset === undefined ? 'custom' : clip.cameraLayoutPreset;
@@ -269,6 +278,7 @@ function normalizeComposition(value) {
       appearance: normalizeAppearance(clip.appearance),
       ...(clip.freezeFrameSourceMs !== undefined ? { freezeFrameSourceMs: Math.round(clip.freezeFrameSourceMs) } : {}),
       ...cameraPresets,
+      ...(clip.rotation === undefined ? {} : { rotation: clip.rotation }),
       ...(typeof clip.isMirrored === 'boolean' && typeof clip.isMirroredY === 'boolean'
         ? { isMirrored: clip.isMirrored, isMirroredY: clip.isMirroredY }
         : (() => {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isVisualClip } from '@beam/engine/shared/composition-types';
 import { computed } from 'vue';
 import type { TransformClip } from './editor-canvas-types';
 import type { useLayerTransformAndCrop } from './composables/useLayerTransformAndCrop';
@@ -28,8 +29,10 @@ const visible = computed(
 );
 const handleStyle = computed(() => ({
   ...props.interaction.transformHandleStyle.value,
-  ...(props.clip?.kind === 'shape' && !props.interaction.transformPerspectiveCorners.value
-    ? { transform: `rotate(${props.clip.rotation}deg)` }
+  ...(props.clip &&
+  (props.clip.kind === 'shape' || props.clip.kind === 'caption' || isVisualClip(props.clip)) &&
+  !props.interaction.transformPerspectiveCorners.value
+    ? { transform: `rotate(${props.clip.rotation ?? 0}deg)` }
     : {}),
 }));
 </script>
@@ -43,8 +46,11 @@ const handleStyle = computed(() => ({
     :resize-corners="interaction.transformResizeCorners.value"
     :resize-handle-positions="interaction.transformHandlePositions.value"
     :perspective-corners="interaction.transformPerspectiveCorners.value"
-    :rotation="clip.kind === 'shape' ? clip.rotation : 0"
-    :rotatable="clip.kind === 'shape' && !interaction.transformPerspectiveCorners.value"
+    :rotation="clip.kind === 'shape' || clip.kind === 'caption' || isVisualClip(clip) ? (clip.rotation ?? 0) : 0"
+    :rotatable="
+      (clip.kind === 'shape' || clip.kind === 'caption' || isVisualClip(clip)) &&
+      !interaction.transformPerspectiveCorners.value
+    "
     :rotate-label="rotateLabel"
     @pointer-down="emit('pointer-down', $event)"
     @pointer-move="interaction.moveTransformDrag"

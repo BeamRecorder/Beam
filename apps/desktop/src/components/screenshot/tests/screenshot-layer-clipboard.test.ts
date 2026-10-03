@@ -506,3 +506,18 @@ describe('screenshot layer clipboard', () => {
     expect(JSON.stringify(state)).toBe(serializedBeforePaste);
   });
 });
+
+it('copies and pastes a static lens with independent contour data and composition settings', async () => {
+  const { createManualZoom } = await import('@beam/engine/zoom/manual-zoom');
+  const { createGlassHighlight } = await import('@beam/engine/zoom/glass-highlight');
+  const { insertScreenshotLayer } = await import('@beam/engine/screenshot/screenshot-layers');
+  const state = makeState(); state.zooms = [{ ...createManualZoom('lens', 0, 1), kind: 'zoom', name: 'Lens', mode: 'manual', enabled: true, effect: 'glass', glass: { ...createGlassHighlight(), shape: 'freehand', path: [{ x: -1, y: -1 }, { x: 1, y: -1 }, { x: 0, y: 1 }] } }];
+  insertScreenshotLayer(state, 'lens');
+  const copied = copyScreenshotLayerSelection(state, ['lens'], 'lens')!;
+  expect(copied.entries[0]!.layer.type).toBe('zoom');
+  pasteScreenshotLayerSelection(state, copied, () => 'duplicate-lens');
+  expect(state.zooms).toHaveLength(2); expect(state.zooms[1]).toMatchObject({ id: 'duplicate-lens', startMs: 0, endMs: 1, effect: 'glass', mode: 'manual' });
+  expect(state.zooms[1]!.glass!.path).toEqual(state.zooms[0]!.glass!.path);
+  expect(state.zooms[1]!.glass!.path).not.toBe(state.zooms[0]!.glass!.path);
+  expect(screenshotLayers(state).find(layer => layer.id === 'duplicate-lens')!.kind).toBe('zoom');
+});

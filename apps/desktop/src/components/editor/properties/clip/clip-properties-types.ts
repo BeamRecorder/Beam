@@ -13,6 +13,7 @@ export interface ClipPropertiesEmits {
   (e: 'update:playbackRate', rate: number): void;
   (e: 'update:isMirrored', isMirrored: boolean): void;
   (e: 'update:isMirroredY', isMirroredY: boolean): void;
+  (e: 'update:rotation', degrees: number): void;
   (e: 'update:cornerRadius', radius: string): void;
   (e: 'corner-radius-interaction', interacting: boolean): void;
   (
@@ -54,6 +55,7 @@ export interface ClipPropertiesEmits {
 export interface ClipAppearanceEmits {
   (e: 'update:isMirrored', isMirrored: boolean): void;
   (e: 'update:isMirroredY', isMirroredY: boolean): void;
+  (e: 'update:rotation', degrees: number): void;
   (e: 'update:cornerRadius', radius: string): void;
   (e: 'corner-radius-interaction', interacting: boolean): void;
   (

@@ -142,6 +142,7 @@ export const context = () =>
     setTransform: vi.fn(),
     translate: vi.fn(),
     scale: vi.fn(),
+    rotate: vi.fn(),
     globalCompositeOperation: 'source-over',
     restore: vi.fn(),
     beginPath: vi.fn(),

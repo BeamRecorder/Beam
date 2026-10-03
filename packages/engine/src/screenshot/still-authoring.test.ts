@@ -4,6 +4,8 @@ import { createAuthoringSession } from '../document/authoring-session';
 import { createStillDocument, validateStillDocument } from './still-document';
 import type { StillDocument } from './still-document-types';
 import { colorClip } from '../scene/tests/scene-fixtures';
+import { createManualZoom } from '../zoom/manual-zoom';
+import { createGlassHighlight } from '../zoom/glass-highlight';
 const source = () => createStillDocument('picture', 'source.png', 64, 64);
 const cursor = () => ({
   id: 'cursor',
@@ -32,6 +34,67 @@ const effect = () => ({
   color: '#000000',
 });
 const image = () => ({ ...source().state.image, id: 'second-image', source: 'other.png', width: 64, height: 64 });
+const lens = () => ({
+  ...createManualZoom('lens', 0, 1),
+  kind: 'zoom',
+  name: 'Detail',
+  enabled: true,
+  effect: 'glass',
+  depth: 4,
+  glass: createGlassHighlight(),
+});
+it('authors a static lens with the shared JSON commands, structural sharing and undo/redo', async () => {
+  const session = createAuthoringSession(source());
+  session.execute({ type: 'still.layer.add', payload: JSON.parse(JSON.stringify(lens())) });
+  const before = session.document;
+  session.execute({
+    type: 'still.layer.patch',
+    payload: { layerId: 'lens', patch: { glass: { ...createGlassHighlight(), size: 0.8 } } },
+  });
+  expect(session.document.state.zooms![0]!.glass!.size).toBe(0.8);
+  expect(session.document.state.image).toBe(before.state.image);
+  expect(session.document.state.composition!.at(-1)!.id).toBe('lens');
+  await session.undo();
+  expect(session.document.state.zooms![0]!.glass!.size).toBe(0.6);
+  await session.redo();
+  expect(session.document.state.zooms![0]!.glass!.size).toBe(0.8);
+  session.execute({ type: 'still.layer.delete', payload: { layerId: 'lens' } });
+  expect(session.document.state.zooms).toEqual([]);
+});
+it('rejects animated, malformed and duplicate lenses atomically through JSON authoring', () => {
+  const session = createAuthoringSession(source());
+  session.execute({ type: 'still.layer.add', payload: lens() });
+  const before = session.document,
+    revision = session.revision;
+  for (const patch of [
+    { mode: 'auto' },
+    { startMs: 99 },
+    { endMs: 2 },
+    { animations: {} },
+    { keyframes: [] },
+    { transitions: [] },
+    { effect: 'unknown' },
+    { glass: { ...createGlassHighlight(), size: 0 } },
+  ]) {
+    expect(() => session.execute({ type: 'still.layer.patch', payload: { layerId: 'lens', patch } })).toThrow();
+    expect(session.document).toBe(before);
+    expect(session.revision).toBe(revision);
+  }
+  expect(() => session.execute({ type: 'still.layer.add', payload: lens() })).toThrow();
+});
+it('retains a lens through visibility, ordering and compositing commands', () => {
+  const session = createAuthoringSession(source());
+  session.execute({ type: 'still.layer.add', payload: lens() });
+  session.execute({ type: 'still.layer.enable', payload: { layerId: 'lens', enabled: false } });
+  expect(session.document.state.zooms![0]!.enabled).toBe(false);
+  session.execute({ type: 'still.layer.reorder', payload: { layerId: 'lens', index: 0 } });
+  expect(session.document.state.composition!.at(-1)!.id).toBe('lens');
+  session.execute({
+    type: 'still.layer.compositing',
+    payload: { layerId: 'lens', patch: { opacity: 50, locked: true } },
+  });
+  expect(session.document.state.composition!.at(-1)).toMatchObject({ id: 'lens', opacity: 50, locked: true });
+});
 it('authors additional images, effect clips and static cursors with independent ownership', () => {
   const session = createAuthoringSession(source());
   session.transaction([image(), effect(), cursor()].map((payload) => ({ type: 'still.layer.add', payload })));

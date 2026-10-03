@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, toRef } from 'vue';
 import { TriangleAlert } from '@lucide/vue';
+import MediaOrientationControls from '../shared/MediaOrientationControls.vue';
 import Input from '~/ui/input/Input.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import type { CaptionClip, CaptionStyle } from '@beam/engine/shared/composition-types';
@@ -10,6 +11,7 @@ import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defau
 import CaptionStyleControls from './CaptionStyleControls.vue';
 
 const { t } = useTranslate('CaptionClipPanel');
+const { t: transformText } = useTranslate('TransformControls');
 const props = defineProps<{ clip: CaptionClip | null }>();
 const emit = defineEmits<{
   (event: 'update', clip: CaptionClip): void;
@@ -75,6 +77,14 @@ const previewStyle = (patch: Partial<CaptionStyle> | null) => {
         </div>
       </div>
 
+      <div class="rotation-row">
+        <span class="rotation-label">{{ transformText('rotation') }}</span>
+        <MediaOrientationControls
+          :rotation="draft.rotation"
+          :show-mirroring="false"
+          @update:rotation="update((clip) => ({ ...clip, rotation: $event }))"
+        />
+      </div>
       <Divider spacing="xs" />
       <CaptionStyleControls
         :style="captionStyle"
@@ -90,6 +100,16 @@ const previewStyle = (patch: Partial<CaptionStyle> | null) => {
 </template>
 
 <style scoped>
+.rotation-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+.rotation-label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body);
+}
 .caption-clip-panel {
   display: flex;
   flex-direction: column;
