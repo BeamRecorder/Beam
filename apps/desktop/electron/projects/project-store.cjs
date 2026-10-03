@@ -14,6 +14,7 @@ const {
 } = require('./project-editor-state.cjs');
 const { createProjectEditorAccess } = require('./project-editor-access.cjs');
 const { createProjectSummary } = require('./project-summary.cjs');
+const { createProjectPreview } = require('./project-preview.cjs');
 const { createProjectFeatureDetector } = require('./project-feature-detection.cjs');
 function createProjectStore(root, { mediaHost = 'asset', category = null } = {}) {
   const safePath = (directory, relativePath) => {
@@ -131,37 +132,7 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
     const file = safePath(root, relativePath);
     return file ? existingFileWithin(root, file) : null;
   };
-  const previewFor = (directory, manifest, sessions) => {
-    if (typeof manifest.previewSrc === 'string' && manifest.previewSrc) {
-      let file;
-      try {
-        file = fileURLToPath(manifest.previewSrc);
-      } catch {
-        file = null;
-      }
-      if (file && fs.existsSync(file)) return mediaUrlFor(manifest.previewSrc);
-    }
-    for (const session of [...sessions].reverse()) {
-      const sessionDirectory = safePath(directory, session.relativePath);
-      const screenDirectory = sessionDirectory && path.join(sessionDirectory, 'screen');
-      const video =
-        screenDirectory &&
-        fs.existsSync(screenDirectory) &&
-        fs
-          .readdirSync(screenDirectory)
-          .filter((name) => /\.mp4$/i.test(name))
-          .sort()[0];
-      if (video) {
-        const url = pathToFileURL(path.join(screenDirectory, video)).href;
-        manifest.previewSrc = url;
-        try {
-          writeManifest(directory, manifest);
-        } catch {}
-        return mediaUrlFor(url);
-      }
-    }
-    return null;
-  };
+  const previewFor = createProjectPreview({ safePath, sessionFileFor, mediaUrlFor, writeManifest });
   const detectProjectFeatures = createProjectFeatureDetector({ safePath, sessionFileFor });
   const summary = createProjectSummary({ root, category, detectProjectFeatures, previewFor, thumbnailFor });
   const readJsonArray = (file) => {
