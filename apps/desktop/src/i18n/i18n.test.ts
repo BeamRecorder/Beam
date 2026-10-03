@@ -475,10 +475,10 @@ describe('internationalization', () => {
     }
   });
 
-  it('registers every live-HUD onboarding instruction in every supported locale', async () => {
+  it('registers the welcome and permission instructions in every supported locale', async () => {
     for (const locale of SUPPORTED_LOCALES) {
       await setCurrentLocale(locale);
-      for (const key of ['tourSubtitle', 'emptyStateDesc']) {
+      for (const key of ['headlineFirst', 'headlineSecond', 'quickDescription', 'accessDescription']) {
         expect(i18n.global.te(`Onboarding.${key}`, locale), `${locale}: missing Onboarding.${key}`).toBe(true);
         expect(i18n.global.t(`Onboarding.${key}`), `${locale}: unresolved Onboarding.${key}`).not.toBe(
           `Onboarding.${key}`,

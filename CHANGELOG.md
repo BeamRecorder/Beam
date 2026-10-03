@@ -66,6 +66,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Beam's onboarding has a taller, centered welcome inspired by the website, with offline landscape photography, interactive Recorder and Quick Snip introductions, video and screenshot feature previews, clickable step navigation, shared theme and language controls, and a project-folder choice in all 15 languages. Interaction permissions remain optional and show their actual status.
+
 - Screenshot and video editors reuse background/cursor catalogues, presets and decoded images when switching projects in the same window, while keeping document state and media decoders separate.
 - Video undo/redo controls sit next to timeline snapping; editor search stays in the titlebar.
 

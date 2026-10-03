@@ -2,15 +2,14 @@ const { BrowserWindow } = require('electron');
 const path = require('path');
 const { developmentRendererUrl } = require('../lifecycle/development-session.cjs');
 
-const ONBOARDING_DEFAULT_SIZE = { width: 920, height: 620 };
-const ONBOARDING_MIN_SIZE = { width: 800, height: 520 };
-const TITLEBAR_HEIGHT = 40;
-const TITLEBAR_SYMBOL_COLOR = '#7a7a7a';
+const ONBOARDING_DEFAULT_SIZE = { width: 920, height: 720 };
+const ONBOARDING_MIN_SIZE = { width: 800, height: 600 };
 
 class OnboardingWindowController {
-  constructor(window, showHud) {
+  constructor(window, showHud, present) {
     this.window = window;
     this.showHudWindow = showHud;
+    this.present = present;
   }
 
   showHud() {
@@ -19,9 +18,7 @@ class OnboardingWindowController {
 
   setVisible(visible) {
     if (visible) {
-      if (this.window.isMinimized()) this.window.restore();
-      this.window.show();
-      this.window.focus();
+      this.present();
     } else {
       this.window.hide();
     }
@@ -45,16 +42,18 @@ function createOnboardingWindowManager({
   let window = null;
   let controller = null;
   let returningToHud = false;
-
-  const overlayOptions = () => ({
-    color: '#00000000',
-    symbolColor: TITLEBAR_SYMBOL_COLOR,
-    height: TITLEBAR_HEIGHT,
-  });
+  let readyWindow = null;
 
   const load = (target) => {
-    if (isPackaged) target.loadFile(path.join(applicationRoot, 'dist/html/onboarding.html'));
-    else target.loadURL(developmentRendererUrl('onboarding.html'));
+    if (isPackaged) return target.loadFile(path.join(applicationRoot, 'dist/html/onboarding.html'));
+    return target.loadURL(developmentRendererUrl('onboarding.html'));
+  };
+
+  const present = () => {
+    if (!window || window.isDestroyed() || readyWindow !== window) return;
+    if (window.isMinimized()) window.restore();
+    window.show();
+    window.focus();
   };
 
   const showHud = () => {
@@ -87,7 +86,7 @@ function createOnboardingWindowManager({
       icon: appIconPath,
       frame: true,
       transparent: false,
-      backgroundColor: dark ? '#141310' : '#f7f5f0',
+      backgroundColor: dark ? '#111114' : '#faf9f6',
       titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'hidden',
       titleBarOverlay: false,
       ...(process.platform === 'darwin' ? { trafficLightPosition: { x: 12, y: 12 } } : {}),
@@ -106,15 +105,14 @@ function createOnboardingWindowManager({
       },
     });
 
-    controller = new OnboardingWindowController(window, showHud);
+    const target = window;
+    controller = new OnboardingWindowController(window, showHud, present);
     registerController?.(window, controller);
 
-    load(window);
-
-    window.once('ready-to-show', () => {
-      if (!window || window.isDestroyed()) return;
-      window.show();
-      window.focus();
+    target.once('ready-to-show', () => {
+      if (window !== target || target.isDestroyed()) return;
+      readyWindow = target;
+      present();
     });
 
     window.on('close', () => {
@@ -127,11 +125,18 @@ function createOnboardingWindowManager({
     });
 
     window.on('closed', () => {
+      if (window !== target) return;
       window = null;
+      readyWindow = null;
       controller = null;
       if (!returningToHud) {
         showHud();
       }
+    });
+
+    void load(target).catch((error) => {
+      console.error('[Onboarding] Renderer loading failed:', error);
+      if (window === target && !target.isDestroyed()) target.destroy();
     });
 
     return window;
@@ -139,24 +144,16 @@ function createOnboardingWindowManager({
 
   const open = () => {
     ensure();
-    if (window && !window.isDestroyed()) {
-      if (window.isMinimized()) window.restore();
-      window.show();
-      window.focus();
-    }
+    present();
   };
 
   const close = () => {
-    try {
-      preferencesStore?.patch({ onboardingCompleted: true });
-    } catch {}
+    preferencesStore.patch({ onboardingCompleted: true });
     showHud();
   };
 
   const complete = () => {
-    try {
-      preferencesStore?.patch({ onboardingCompleted: true });
-    } catch {}
+    preferencesStore.patch({ onboardingCompleted: true });
     showHud();
   };
 
