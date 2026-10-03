@@ -1,0 +1,40 @@
+import {
+  clipEndMs,
+  isColorClip,
+  isShapeClip,
+  type Clip,
+  type ClipComposition,
+} from '@beam/engine/shared/composition-types';
+import { snapTimeToBoundary } from '@beam/engine/shared/time-boundary';
+import { compileSceneComposition } from '../scene/scene-clock';
+
+export const compositionDurationMs = (composition: ClipComposition) =>
+  compileSceneComposition(composition).clips.reduce((duration, clip) => Math.max(duration, clipEndMs(clip)), 0);
+
+export const assetForClip = (composition: ClipComposition, clip: Clip) =>
+  clip.kind === 'caption' || isColorClip(clip) || isShapeClip(clip) || clip.kind === 'blur'
+    ? null
+    : (composition.assets.find((asset) => asset.id === clip.assetId) ?? null);
+
+export function sourceTimeAt(clip: Clip, timelineTimeMs: number): number | null {
+  const endMs = clipEndMs(clip);
+  const timeMs = snapTimeToBoundary(timelineTimeMs, clip.timelineStartMs, endMs);
+  if (!Number.isFinite(timeMs) || timeMs < clip.timelineStartMs || timeMs >= endMs) {
+    return null;
+  }
+  if ('freezeFrameSourceMs' in clip && clip.freezeFrameSourceMs !== undefined) return clip.freezeFrameSourceMs;
+  return Math.round(clip.sourceInMs + (timeMs - clip.timelineStartMs) * clip.playbackRate);
+}
+
+/** Maps a screen clip's local media time to its recorded cursor/telemetry clock. */
+export function sessionTimeAt(clip: Clip, timelineTimeMs: number, composition: ClipComposition): number | null {
+  const sourceMs = sourceTimeAt(clip, timelineTimeMs);
+  if (sourceMs === null) return null;
+  const asset = assetForClip(composition, clip);
+  return sourceMs + (asset?.origin === 'session' ? (asset.sessionStartMs ?? 0) : 0);
+}
+
+export const activeClipsAt = (composition: ClipComposition, timelineTimeMs: number) =>
+  composition.clips
+    .filter((clip) => clip.enabled && sourceTimeAt(clip, timelineTimeMs) !== null)
+    .sort((left, right) => left.order - right.order);

@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { registerCaptureWindowIpc } = require('../electron/lifecycle/capture-window-ipc.cjs');
+const { registerCaptureWindowIpc } = require('../apps/desktop/electron/lifecycle/capture-window-ipc.cjs');
 function harness() {
   const events = new Map();
   const handlers = new Map();

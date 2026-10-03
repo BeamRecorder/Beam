@@ -4,11 +4,11 @@ const fsp = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { createProjectStore } = require('../electron/projects/project-store.cjs');
-const { createScreenshotStore } = require('../electron/screenshot/screenshot-store.cjs');
-const { createProjectCatalogIndex } = require('../electron/projects/project-catalog-index.cjs');
-const { createProjectCatalogClient } = require('../electron/projects/project-catalog-client.cjs');
-const { registerProjectIpc } = require('../electron/projects/project-ipc.cjs');
+const { createProjectStore } = require('../apps/desktop/electron/projects/project-store.cjs');
+const { createScreenshotStore } = require('../apps/desktop/electron/screenshot/screenshot-store.cjs');
+const { createProjectCatalogIndex } = require('../apps/desktop/electron/projects/project-catalog-index.cjs');
+const { createProjectCatalogClient } = require('../apps/desktop/electron/projects/project-catalog-client.cjs');
+const { registerProjectIpc } = require('../apps/desktop/electron/projects/project-ipc.cjs');
 
 function fixture(t, count = 6) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-catalog-index-'));

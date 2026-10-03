@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { createFontLibrary, MAX_FONT_BYTES, mimeTypes } = require('../electron/fonts/font-library.cjs');
+const { createFontLibrary, MAX_FONT_BYTES, mimeTypes } = require('../apps/desktop/electron/fonts/font-library.cjs');
 
 const repositoryRoot = path.resolve(__dirname, '..');
 const fontRoots = [

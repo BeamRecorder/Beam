@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { QuickSnipConfiguration } from '~/api/types/quick-snip';
-import type { ScreenshotEncodeOptions } from '~/components/video-editor/screenshot/screenshot-types';
+import type { ScreenshotEncodeOptions } from '~/components/screenshot/screenshot-types';
 const mocks = vi.hoisted(() => ({
   capture: {
     prepareRecordingSurface: vi.fn(),
@@ -15,8 +15,10 @@ const mocks = vi.hoisted(() => ({
   screenshotPreview: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture: mocks.capture }));
-vi.mock('~/components/video-editor/screenshot/screenshot-state', () => ({ screenshotState: mocks.screenshotState }));
-vi.mock('~/components/video-editor/screenshot/screenshot-render', () => ({
+vi.mock('~/components/screenshot/screenshot-state', () => ({
+  screenshotState: mocks.screenshotState,
+}));
+vi.mock('~/components/screenshot/screenshot-render', () => ({
   encodeScreenshot: mocks.encodeScreenshot,
   screenshotPreview: mocks.screenshotPreview,
 }));
@@ -30,7 +32,10 @@ const configuration = {
   region: { x: 0.1, y: 0.1, width: 0.5, height: 0.5 },
   excludedWindowHandle: 'abc',
 } as QuickSnipConfiguration;
-const document = { id: 'still-1', source: 'project-media://screenshot/still-1/source.png' };
+const document = {
+  id: 'still-1',
+  source: 'project-media://screenshot/still-1/source.png',
+};
 const state = { format: 'webp', canvas: { width: 1920, height: 1080 } };
 const rendered = {} as OffscreenCanvas;
 const bytes = new ArrayBuffer(4);
@@ -57,9 +62,21 @@ describe('Quick screenshot pipeline', () => {
       excludedWindowHandles: ['abc'],
     });
     expect(mocks.capture.reportQuickSnip.mock.calls.map(([event]) => event)).toEqual([
-      { type: 'screenshot-captured', name: configuration.name, screenshotId: document.id },
-      { type: 'screenshot-rendered', name: configuration.name, preview: 'data:image/jpeg;base64,AA==' },
-      { type: 'screenshot', name: configuration.name, screenshotId: document.id },
+      {
+        type: 'screenshot-captured',
+        name: configuration.name,
+        screenshotId: document.id,
+      },
+      {
+        type: 'screenshot-rendered',
+        name: configuration.name,
+        preview: 'data:image/jpeg;base64,AA==',
+      },
+      {
+        type: 'screenshot',
+        name: configuration.name,
+        screenshotId: document.id,
+      },
     ]);
     expect(mocks.encodeScreenshot).toHaveBeenCalledWith(
       document.source,
@@ -78,7 +95,10 @@ describe('Quick screenshot pipeline', () => {
 
   it('returns Portal cancellation to the bar without processing or copying', async () => {
     mocks.capture.captureScreenshot.mockResolvedValue(null);
-    await captureQuickScreenshot({ ...configuration, region: null, excludedWindowHandle: undefined }, () => true);
+    await captureQuickScreenshot(
+      { ...configuration, region: null, excludedWindowHandle: undefined },
+      () => true,
+    );
     expect(mocks.capture.captureScreenshot).toHaveBeenCalledWith(
       expect.objectContaining({ region: null, excludedWindowHandles: [] }),
     );
@@ -100,19 +120,23 @@ describe('Quick screenshot pipeline', () => {
     expect(mocks.capture.exportScreenshot).not.toHaveBeenCalled();
   });
 
-  it.each(['prepareRecordingSurface', 'captureScreenshot', 'listBackgroundLibrary', 'saveScreenshot'] as const)(
-    'stops after cancellation during %s',
-    async (operation) => {
-      let current = true;
-      mocks.capture[operation].mockImplementationOnce(async () => {
-        current = false;
-        return document;
-      });
-      await captureQuickScreenshot(configuration, () => current);
-      expect(mocks.capture.exportScreenshot).not.toHaveBeenCalled();
-      expect(mocks.capture.reportQuickSnip.mock.calls.some(([event]) => event.type === 'screenshot')).toBe(false);
-    },
-  );
+  it.each([
+    'prepareRecordingSurface',
+    'captureScreenshot',
+    'listBackgroundLibrary',
+    'saveScreenshot',
+  ] as const)('stops after cancellation during %s', async (operation) => {
+    let current = true;
+    mocks.capture[operation].mockImplementationOnce(async () => {
+      current = false;
+      return document;
+    });
+    await captureQuickScreenshot(configuration, () => current);
+    expect(mocks.capture.exportScreenshot).not.toHaveBeenCalled();
+    expect(mocks.capture.reportQuickSnip.mock.calls.some(([event]) => event.type === 'screenshot')).toBe(
+      false,
+    );
+  });
 
   it('discards a late thumbnail and encoded result after cancellation', async () => {
     let current = true;

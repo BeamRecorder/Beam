@@ -3,8 +3,8 @@ const Module = require('node:module');
 const path = require('node:path');
 const { EventEmitter } = require('node:events');
 const test = require('node:test');
-const { createRendererSetup } = require('../electron/lifecycle/renderer-setup.cjs');
-const { HUD_SIZE, WindowController } = require('../electron/window/window-controller.cjs');
+const { createRendererSetup } = require('../apps/desktop/electron/lifecycle/renderer-setup.cjs');
+const { HUD_SIZE, WindowController } = require('../apps/desktop/electron/window/window-controller.cjs');
 
 function createFixture({ onboardingCompleted = true, environment = {} } = {}) {
   const calls = [];
@@ -29,7 +29,12 @@ function createFixture({ onboardingCompleted = true, environment = {} } = {}) {
     constructor(options) {
       super();
       this.options = options;
-      this.bounds = { x: 100, y: 100, width: options.width, height: options.height };
+      this.bounds = {
+        x: 100,
+        y: 100,
+        width: options.width,
+        height: options.height,
+      };
       this.webContents = new EventEmitter();
       this.webContents.openDevTools = (options) => calls.push(['openDevTools', options]);
       calls.push(['constructor', options]);
@@ -108,7 +113,9 @@ function createFixture({ onboardingCompleted = true, environment = {} } = {}) {
   }
 
   const controllers = new Map();
-  const preferencesStore = { read: () => ({ onboardingCompleted, extras: {} }) };
+  const preferencesStore = {
+    read: () => ({ onboardingCompleted, extras: {} }),
+  };
   try {
     const setup = createRendererSetup({
       app: { isPackaged: false },
@@ -146,7 +153,7 @@ test('creates the HUD at the canonical native size with isolated renderer settin
   assert.equal(options.height, HUD_SIZE.height);
 
   assert.equal(options.show, false);
-  assert.equal(options.webPreferences.preload, path.join(fixture.applicationRoot, 'electron/preload.cjs'));
+  assert.equal(options.webPreferences.preload, path.join(fixture.applicationRoot, 'apps/desktop/electron/preload.cjs'));
   assert.equal(options.webPreferences.nodeIntegration, false);
   assert.equal(options.webPreferences.contextIsolation, true);
   assert.equal(fixture.controllers.get(fixture.window) instanceof WindowController, true);
@@ -185,7 +192,10 @@ test('preference changes update only the transparent HUD controller', () => {
   fixture.controller.applyModePolicy = () => calls.push(['policy']);
   fixture.setup.applyHudPreferences({ alwaysOnTop: false });
   fixture.setup.applyHudPreferences({ alwaysOnTop: true });
-  assert.deepEqual(calls, [['topmost', false], ['policy'], ['topmost', true], ['policy']]);
+  assert.deepEqual(calls, [
+    ['topmost', false],
+    ['topmost', true],
+  ]);
 });
 
 test('preference changes before a HUD exists leave onboarding controllers usable', () => {

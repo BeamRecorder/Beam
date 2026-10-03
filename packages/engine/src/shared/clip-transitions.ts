@@ -1,0 +1,171 @@
+import type {
+  Clip,
+  ClipKind,
+  ClipTransition,
+  ClipTransitions,
+  TransitionPreset,
+} from '@beam/engine/shared/composition-types';
+import { snapTimeToBoundary } from '@beam/engine/shared/time-boundary';
+
+export const DEFAULT_TRANSITION_DURATION_MS = 500;
+export const MAX_TRANSITION_DURATION_MS = 5_000;
+export const DEFAULT_TRANSITION_EASING_POWER = 3;
+export const MIN_TRANSITION_EASING_POWER = 1;
+export const MAX_TRANSITION_EASING_POWER = 5;
+export const EMPTY_CLIP_TRANSITIONS: ClipTransitions = Object.freeze({ entry: null, exit: null });
+
+export interface ClipTransitionState {
+  opacity: number;
+  translateX: number;
+  translateY: number;
+  scale: number;
+  blur: number;
+}
+
+export interface TransitionDefinition {
+  kind: TransitionPreset['kind'];
+  domains: readonly ['visual'] | readonly ['visual', 'audio'];
+  labelKey: string;
+  defaultDurationMs: number;
+}
+
+export const TRANSITION_DEFINITIONS = {
+  fade: { kind: 'fade', domains: ['visual', 'audio'], labelKey: 'fade', defaultDurationMs: 500 },
+  slide: { kind: 'slide', domains: ['visual'], labelKey: 'slide', defaultDurationMs: 500 },
+  zoom: { kind: 'zoom', domains: ['visual'], labelKey: 'zoom', defaultDurationMs: 500 },
+  blur: { kind: 'blur', domains: ['visual'], labelKey: 'blur', defaultDurationMs: 500 },
+} as const satisfies Record<TransitionPreset['kind'], TransitionDefinition>;
+
+const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+const visualKind = (kind: ClipKind) => kind !== 'audio';
+
+const presetAllowed = (kind: ClipKind, preset: TransitionPreset) =>
+  (visualKind(kind) || preset.kind === 'fade') &&
+  (preset.kind === 'fade' ||
+    preset.kind === 'blur' ||
+    (preset.kind === 'slide' && ['left', 'right', 'up', 'down'].includes(preset.direction)) ||
+    (preset.kind === 'zoom' && ['in', 'out'].includes(preset.direction)));
+
+export function normalizeClipTransitions(
+  transitions: ClipTransitions,
+  timelineDurationMs: number,
+  kind: ClipKind,
+): ClipTransitions {
+  const normalize = (transition: ClipTransition | null): ClipTransition | null => {
+    if (!transition || !transition.preset || !presetAllowed(kind, transition.preset)) return null;
+    const durationMs = Number.isFinite(transition.durationMs)
+      ? Math.max(0, Math.min(MAX_TRANSITION_DURATION_MS, Math.round(transition.durationMs)))
+      : 0;
+    if (durationMs <= 0) return null;
+    const requestedEasingPower = transition.easingPower;
+    const easingPower =
+      typeof requestedEasingPower === 'number' && Number.isFinite(requestedEasingPower)
+        ? Math.max(MIN_TRANSITION_EASING_POWER, Math.min(MAX_TRANSITION_EASING_POWER, Math.round(requestedEasingPower)))
+        : undefined;
+    return {
+      preset: { ...transition.preset },
+      durationMs,
+      ...(easingPower === undefined ? {} : { easingPower }),
+    };
+  };
+  const next = { entry: normalize(transitions.entry), exit: normalize(transitions.exit) };
+  const total = (next.entry?.durationMs ?? 0) + (next.exit?.durationMs ?? 0);
+  const available = Math.max(0, Math.round(timelineDurationMs));
+  if (total <= available || total === 0) return next;
+  const ratio = available / total;
+  const both = Boolean(next.entry && next.exit && available >= 2);
+  const entryDuration = next.entry
+    ? both
+      ? Math.max(1, Math.min(available - 1, Math.floor(next.entry.durationMs * ratio)))
+      : Math.round(next.entry.durationMs * ratio)
+    : 0;
+  const exitDuration = available - entryDuration;
+  return {
+    entry: next.entry && entryDuration > 0 ? { ...next.entry, durationMs: entryDuration } : null,
+    exit: next.exit && exitDuration > 0 ? { ...next.exit, durationMs: exitDuration } : null,
+  };
+}
+
+export function normalizeCanvasTransitions(transitions: ClipTransitions, timelineDurationMs: number): ClipTransitions {
+  return normalizeClipTransitions(transitions, timelineDurationMs, 'screen');
+}
+
+const identity = (): ClipTransitionState => ({ opacity: 1, translateX: 0, translateY: 0, scale: 1, blur: 0 });
+
+function evaluatePreset(preset: TransitionPreset, progress: number, edge: 'entry' | 'exit'): ClipTransitionState {
+  const state = identity();
+  state.opacity = progress;
+  const remaining = 1 - progress;
+  const arrival = edge === 'entry' ? 1 : -1;
+  if (preset.kind === 'slide') {
+    if (preset.direction === 'left') state.translateX = arrival * 0.08 * remaining;
+    if (preset.direction === 'right') state.translateX = -arrival * 0.08 * remaining;
+    if (preset.direction === 'up') state.translateY = arrival * 0.08 * remaining;
+    if (preset.direction === 'down') state.translateY = -arrival * 0.08 * remaining;
+  } else if (preset.kind === 'zoom') {
+    state.scale = 1 + (preset.direction === 'in' ? -arrival : arrival) * 0.1 * remaining;
+  } else if (preset.kind === 'blur') state.blur = 12 * remaining;
+  return state;
+}
+
+export function resolveClipTransitionState(
+  clip: Pick<Clip, 'timelineStartMs' | 'timelineDurationMs' | 'transitions'>,
+  timeMs: number,
+) {
+  const endMs = clip.timelineStartMs + clip.timelineDurationMs;
+  const normalizedTimeMs = snapTimeToBoundary(timeMs, clip.timelineStartMs, endMs);
+  return resolveTransitionState(
+    clip.transitions ?? EMPTY_CLIP_TRANSITIONS,
+    normalizedTimeMs - clip.timelineStartMs,
+    clip.timelineDurationMs,
+  );
+}
+
+export function resolveTransitionState(
+  transitions: ClipTransitions,
+  localTimeMs: number,
+  timelineDurationMs: number,
+): ClipTransitionState {
+  const timeMs = snapTimeToBoundary(localTimeMs, 0, timelineDurationMs);
+  if (timeMs < 0 || timeMs > timelineDurationMs) return identity();
+  if (transitions.entry && timeMs < transitions.entry.durationMs) {
+    const linear = clamp01(timeMs / transitions.entry.durationMs);
+    const power = transitions.entry.easingPower ?? DEFAULT_TRANSITION_EASING_POWER;
+    return evaluatePreset(transitions.entry.preset, 1 - (1 - linear) ** power, 'entry');
+  }
+  const remaining = timelineDurationMs - timeMs;
+  if (transitions.exit && remaining < transitions.exit.durationMs) {
+    const linear = clamp01(remaining / transitions.exit.durationMs);
+    const power = transitions.exit.easingPower ?? DEFAULT_TRANSITION_EASING_POWER;
+    return evaluatePreset(transitions.exit.preset, linear ** power, 'exit');
+  }
+  return identity();
+}
+
+export function resolveCanvasTransitionState(
+  transitions: ClipTransitions,
+  timeMs: number,
+  timelineDurationMs: number,
+): ClipTransitionState | null {
+  const normalized = normalizeCanvasTransitions(transitions, timelineDurationMs);
+  const localTimeMs = snapTimeToBoundary(timeMs, 0, timelineDurationMs);
+  const remaining = timelineDurationMs - localTimeMs;
+  const active =
+    (normalized.entry && localTimeMs >= 0 && localTimeMs < normalized.entry.durationMs) ||
+    (normalized.exit && remaining >= 0 && remaining < normalized.exit.durationMs);
+  return active ? resolveTransitionState(normalized, localTimeMs, timelineDurationMs) : null;
+}
+
+export function audioTransitionGainAt(
+  clip: Pick<Clip, 'timelineStartMs' | 'timelineDurationMs' | 'transitions'>,
+  timeMs: number,
+) {
+  const endMs = clip.timelineStartMs + clip.timelineDurationMs;
+  const local = snapTimeToBoundary(timeMs, clip.timelineStartMs, endMs) - clip.timelineStartMs;
+  if (local < 0 || local > clip.timelineDurationMs) return 0;
+  const entry = clip.transitions?.entry;
+  const exit = clip.transitions?.exit;
+  const entryGain = entry ? clamp01(local / entry.durationMs) : 1;
+  const exitGain = exit ? clamp01((clip.timelineDurationMs - local) / exit.durationMs) : 1;
+  return Math.min(entryGain, exitGain);
+}

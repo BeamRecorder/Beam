@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { resizeHudPopover } = require('../electron/window/hud-popover-size.cjs');
+const { resizeHudPopover } = require('../apps/desktop/electron/window/hud-popover-size.cjs');
 function fixture(y = 20, height = 268) {
   const calls = [];
   const win = {
@@ -8,7 +8,9 @@ function fixture(y = 20, height = 268) {
     getBounds: () => ({ x: 20, y, width: 672, height }),
     setSize: (...args) => calls.push(args),
   };
-  const screen = { getDisplayMatching: () => ({ workArea: { y: 0, height: 800 } }) };
+  const screen = {
+    getDisplayMatching: () => ({ workArea: { y: 0, height: 800 } }),
+  };
   return { win, screen, calls };
 }
 test('expands only height and restores compact bounds without persisting menu size', () => {

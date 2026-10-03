@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const json = require('../electron/storage/json-file.cjs');
+const json = require('@beam/storage/node/json-file');
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-json-'));
@@ -49,7 +49,9 @@ for (const asyncMode of [false, true]) {
       async () => read(file),
       (error) => error instanceof SyntaxError && error.message.includes(file),
     );
-    await assert.rejects(async () => read(path.join(root, 'missing.json')), { code: 'ENOENT' });
+    await assert.rejects(async () => read(path.join(root, 'missing.json')), {
+      code: 'ENOENT',
+    });
     const failed = instrument(asyncMode, {
       readFile: () => {
         throw Object.assign(new Error('denied'), { code: 'EACCES' });
@@ -65,7 +67,9 @@ for (const asyncMode of [false, true]) {
     fs.writeFileSync(`${file}.tmp`, 'foreign');
     const observed = instrument(asyncMode, {
       rename: (original, source, destination) => {
-        assert.deepEqual(JSON.parse(fs.readFileSync(destination)), { old: true });
+        assert.deepEqual(JSON.parse(fs.readFileSync(destination)), {
+          old: true,
+        });
         assert.deepEqual(JSON.parse(fs.readFileSync(source)), { next: true });
         return original(source, destination);
       },
@@ -84,7 +88,11 @@ for (const asyncMode of [false, true]) {
       [
         { file, value: { ignored: true } },
         { file: other, value: [1, 2], pretty: false },
-        { file: path.join(root, '.', 'document.json'), value: { final: true }, pretty: true },
+        {
+          file: path.join(root, '.', 'document.json'),
+          value: { final: true },
+          pretty: true,
+        },
       ],
       { fsModule: observed.module, pretty: false },
     );
@@ -266,7 +274,10 @@ test('async JSON bounds staging concurrency and waits for in-flight failures bef
     },
   });
   await json.writeJsonBatch(
-    Array.from({ length: 25 }, (_, i) => ({ file: path.join(root, `${i}.json`), value: i })),
+    Array.from({ length: 25 }, (_, i) => ({
+      file: path.join(root, `${i}.json`),
+      value: i,
+    })),
     { fsModule: observed.module },
   );
   assert.equal(writes, 25);
@@ -290,7 +301,10 @@ test('async JSON bounds staging concurrency and waits for in-flight failures bef
   });
   await assert.rejects(
     json.writeJsonBatch(
-      Array.from({ length: 4 }, (_, i) => ({ file: path.join(root, `${i}.json`), value: 'new' })),
+      Array.from({ length: 4 }, (_, i) => ({
+        file: path.join(root, `${i}.json`),
+        value: 'new',
+      })),
       { fsModule: failure.module },
     ),
     AggregateError,

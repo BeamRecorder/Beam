@@ -39,3 +39,6 @@ packages/native-recorder/linux/*/capture-engine-*
 packages/native-recorder/linux/*/beam-input-helper-*
 
 coverage/*
+
+# Compiled command-line host and its browser backend
+apps/cli/dist/

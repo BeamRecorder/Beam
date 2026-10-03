@@ -1,0 +1,140 @@
+{
+  "fixture": "project-beam-stress-10000-rectangles",
+  "environment": {
+    "cpu": "Intel(R) Core(TM) Ultra 5 125H",
+    "versions": {
+      "electron": "44.5.1",
+      "chromium": "152.0.7977.130"
+    },
+    "contentSize": [
+      1280,
+      800
+    ],
+    "gpuFeatures": {
+      "2d_canvas": "enabled",
+      "direct_rendering_display_compositor": "disabled_off_ok",
+      "gpu_compositing": "enabled",
+      "multiple_raster_threads": "enabled_on",
+      "opengl": "enabled_on",
+      "rasterization": "enabled",
+      "raw_draw": "disabled_off_ok",
+      "skia_graphite": "disabled_off",
+      "trees_in_viz": "disabled_off",
+      "video_decode": "enabled",
+      "video_encode": "disabled_software",
+      "vulkan": "disabled_off",
+      "webgl": "enabled",
+      "webgpu": "enabled",
+      "webgpu_on_vk_via_gl_interop": "enabled",
+      "webnn": "disabled_off"
+    }
+  },
+  "hidden": true,
+  "method": "Alternating culling enabled/disabled in one process, 2 warmups + 10 samples per mode, frozen decoded frames at fixed times. Completed measurements include RGBA readback; excludes decode, Vue updates and onscreen presentation.",
+  "results": [
+    {
+      "time": 0,
+      "samples": 10,
+      "modes": {
+        "all": {
+          "submission": {
+            "median": 63.5,
+            "p95": 173.7000000178814
+          },
+          "completed": {
+            "median": 198.2999999821186,
+            "p95": 356.90000000596046
+          }
+        },
+        "visible": {
+          "submission": {
+            "median": 54.20000001788139,
+            "p95": 150.5
+          },
+          "completed": {
+            "median": 203.5,
+            "p95": 301.30000001192093
+          }
+        }
+      }
+    },
+    {
+      "time": 0.75,
+      "samples": 10,
+      "modes": {
+        "all": {
+          "submission": {
+            "median": 34.599999994039536,
+            "p95": 46.39999997615814
+          },
+          "completed": {
+            "median": 113,
+            "p95": 255.39999997615814
+          }
+        },
+        "visible": {
+          "submission": {
+            "median": 37.900000005960464,
+            "p95": 63
+          },
+          "completed": {
+            "median": 106,
+            "p95": 236.40000000596046
+          }
+        }
+      }
+    },
+    {
+      "time": 1.5,
+      "samples": 10,
+      "modes": {
+        "all": {
+          "submission": {
+            "median": 46.599999994039536,
+            "p95": 112.5
+          },
+          "completed": {
+            "median": 134.7999999821186,
+            "p95": 260.2999999821186
+          }
+        },
+        "visible": {
+          "submission": {
+            "median": 32.70000001788139,
+            "p95": 51.30000001192093
+          },
+          "completed": {
+            "median": 224.90000000596046,
+            "p95": 266
+          }
+        }
+      }
+    },
+    {
+      "time": 4,
+      "samples": 10,
+      "modes": {
+        "all": {
+          "submission": {
+            "median": 41.5,
+            "p95": 56.900000005960464
+          },
+          "completed": {
+            "median": 108.40000000596046,
+            "p95": 252.7999999821186
+          }
+        },
+        "visible": {
+          "submission": {
+            "median": 45.19999998807907,
+            "p95": 69.5
+          },
+          "completed": {
+            "median": 115.30000001192093,
+            "p95": 219
+          }
+        }
+      }
+    }
+  ]
+}

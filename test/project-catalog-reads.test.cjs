@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { createProjectStore } = require('../electron/projects/project-store.cjs');
+const { createProjectStore } = require('../apps/desktop/electron/projects/project-store.cjs');
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-catalog-reads-'));

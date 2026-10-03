@@ -5,7 +5,7 @@ const path = require('node:path');
 const { EventEmitter } = require('node:events');
 const test = require('node:test');
 
-const { registerCaptureIpc } = require('../electron/capture/capture-ipc.cjs');
+const { registerCaptureIpc } = require('../apps/desktop/electron/capture/capture-ipc.cjs');
 
 test('stops native capture before completing sidecar tracks', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-capture-ipc-'));

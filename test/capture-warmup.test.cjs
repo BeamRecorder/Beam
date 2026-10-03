@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { prewarmCaptureCapabilities } = require('../electron/lifecycle/capture-warmup.cjs');
+const { prewarmCaptureCapabilities } = require('../apps/desktop/electron/lifecycle/capture-warmup.cjs');
 
 test('warms Linux capabilities without selecting a source or starting capture', async () => {
   const commands = [];

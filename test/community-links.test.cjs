@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { registerCommunityLinks } = require('../electron/community-links.cjs');
+const { registerCommunityLinks } = require('../apps/desktop/electron/community-links.cjs');
 
 function setup(openExternal) {
   const handlers = new Map();

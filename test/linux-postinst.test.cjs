@@ -105,7 +105,9 @@ test('after-install fails when no input helper is packaged', { skip: process.pla
 
 test('after-install makes chrome-sandbox root-owned with the SUID bit', { skip: process.platform === 'win32' }, () => {
   withTempDirectory((directory) => {
-    const result = runAfterInstall(directory, ['1.2.3'], { withSandbox: true });
+    const result = runAfterInstall(directory, ['1.2.3'], {
+      withSandbox: true,
+    });
 
     const sandbox = path.join(directory, '/opt/Beam/chrome-sandbox');
 

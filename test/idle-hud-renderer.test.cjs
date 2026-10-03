@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const { EventEmitter } = require('node:events');
-const { createIdleHudRenderer, STANDBY_URL } = require('../electron/lifecycle/idle-hud-renderer.cjs');
+const { createIdleHudRenderer, STANDBY_URL } = require('../apps/desktop/electron/lifecycle/idle-hud-renderer.cjs');
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 function fixture(t, overrides = {}) {
   t.mock.timers.enable({ apis: ['setTimeout'] });

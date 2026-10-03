@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const { createShutdownCoordinator } = require('../electron/lifecycle/shutdown-coordinator.cjs');
+const { createShutdownCoordinator } = require('../apps/desktop/electron/lifecycle/shutdown-coordinator.cjs');
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -20,8 +20,14 @@ test('shutdown is idempotent, gates concurrent requests, and runs each cleanup o
       forceCalls += 1;
     },
   };
-  const coordinator = createShutdownCoordinator({ captureEngine, gracefulDeadlineMs: 1000 });
-  coordinator.registerCleanup({ id: 'window', cleanup: () => (cleanupCalls += 1) });
+  const coordinator = createShutdownCoordinator({
+    captureEngine,
+    gracefulDeadlineMs: 1000,
+  });
+  coordinator.registerCleanup({
+    id: 'window',
+    cleanup: () => (cleanupCalls += 1),
+  });
 
   const first = coordinator.requestShutdown('before-quit');
   const second = coordinator.requestShutdown('renderer-crash');
@@ -54,7 +60,10 @@ test('the coordinator enforces a global shutdown deadline over a hung native sto
     cleanupDeadlineMs: 200,
     shutdownDeadlineMs: 40,
   });
-  coordinator.registerCleanup({ id: 'countdown', cleanup: () => (cleanupCalls += 1) });
+  coordinator.registerCleanup({
+    id: 'countdown',
+    cleanup: () => (cleanupCalls += 1),
+  });
 
   const startedAt = Date.now();
   const result = await coordinator.requestShutdown('fatal');
@@ -73,7 +82,10 @@ test('cleanup errors are recorded while other resources continue to be cleaned u
     shutdown: async () => {},
     forceShutdown: async () => {},
   };
-  const coordinator = createShutdownCoordinator({ captureEngine, cleanupDeadlineMs: 20 });
+  const coordinator = createShutdownCoordinator({
+    captureEngine,
+    cleanupDeadlineMs: 20,
+  });
   coordinator.registerCleanup({
     id: 'broken-window',
     cleanup: async () => {
@@ -81,7 +93,10 @@ test('cleanup errors are recorded while other resources continue to be cleaned u
       throw new Error('destroy failed');
     },
   });
-  coordinator.registerCleanup({ id: 'tray', cleanup: () => cleaned.push('tray') });
+  coordinator.registerCleanup({
+    id: 'tray',
+    cleanup: () => cleaned.push('tray'),
+  });
 
   const result = await coordinator.requestShutdown('window-all-closed');
 

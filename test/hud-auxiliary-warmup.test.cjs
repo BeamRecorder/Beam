@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
-const { scheduleHudAuxiliaryWarmup } = require('../electron/window/hud-auxiliary-warmup.cjs');
+const { scheduleHudAuxiliaryWarmup } = require('../apps/desktop/electron/window/hud-auxiliary-warmup.cjs');
 
 function fixture(visible = false) {
   const window = new EventEmitter();
@@ -12,7 +12,11 @@ function fixture(visible = false) {
   window.isDestroyed = () => destroyed;
   return {
     window,
-    options: { hudWindow: window, canAcceptWork: () => accepting, prepare: () => calls++ },
+    options: {
+      hudWindow: window,
+      canAcceptWork: () => accepting,
+      prepare: () => calls++,
+    },
     calls: () => calls,
     show() {
       visible = true;
@@ -86,7 +90,10 @@ test('records a rejected preparation signal and allows disposal', async (context
   const item = fixture(true);
   const error = new Error('capture warmup failed');
   const log = context.mock.method(console, 'error', () => {});
-  const cancel = scheduleHudAuxiliaryWarmup({ ...item.options, readiness: Promise.reject(error) });
+  const cancel = scheduleHudAuxiliaryWarmup({
+    ...item.options,
+    readiness: Promise.reject(error),
+  });
   await settle();
   assert.equal(item.calls(), 0);
   assert.deepEqual(log.mock.calls[0].arguments, ['[HUD auxiliary warmup]', error]);

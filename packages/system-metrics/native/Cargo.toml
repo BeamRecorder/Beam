@@ -1,0 +1,19 @@
+[package]
+name = "beam-system-metrics"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = ["Win32_System_Performance"] }
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+[lints.clippy]
+all = "deny"
+unwrap_used = "deny"
+expect_used = "deny"

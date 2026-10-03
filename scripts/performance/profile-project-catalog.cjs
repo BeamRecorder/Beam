@@ -4,10 +4,10 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
-const { createProjectStore } = require('../../electron/projects/project-store.cjs');
-const { createScreenshotStore } = require('../../electron/screenshot/screenshot-store.cjs');
-const { createProjectLibrary } = require('../../electron/projects/project-library.cjs');
-const { createProjectCatalogClient } = require('../../electron/projects/project-catalog-client.cjs');
+const { createProjectStore } = require('../../apps/desktop/electron/projects/project-store.cjs');
+const { createScreenshotStore } = require('../../apps/desktop/electron/screenshot/screenshot-store.cjs');
+const { createProjectLibrary } = require('../../apps/desktop/electron/projects/project-library.cjs');
+const { createProjectCatalogClient } = require('../../apps/desktop/electron/projects/project-catalog-client.cjs');
 
 const option = (name, defaultValue) => {
   const index = process.argv.indexOf(name);

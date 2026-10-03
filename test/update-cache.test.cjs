@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { createUpdateCache, updaterCacheDirectory } = require('../electron/updates/update-cache.cjs');
+const { createUpdateCache, updaterCacheDirectory } = require('../apps/desktop/electron/updates/update-cache.cjs');
 
 function temporaryUpdateCache() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-update-cache-'));
@@ -42,7 +42,11 @@ test('resolves Windows, macOS, Linux XDG, and Linux fallback updater cache paths
     path.join('/tmp/local-app-data', 'beam-updater'),
   );
   assert.equal(
-    updaterCacheDirectory({ platform: 'darwin', environment: {}, homeDirectory: '/Users/tester' }),
+    updaterCacheDirectory({
+      platform: 'darwin',
+      environment: {},
+      homeDirectory: '/Users/tester',
+    }),
     path.join('/Users/tester', 'Library', 'Caches', 'beam-updater'),
   );
   assert.equal(
@@ -54,7 +58,11 @@ test('resolves Windows, macOS, Linux XDG, and Linux fallback updater cache paths
     path.join('/tmp/xdg-cache', 'beam-updater'),
   );
   assert.equal(
-    updaterCacheDirectory({ platform: 'linux', environment: {}, homeDirectory: '/home/tester' }),
+    updaterCacheDirectory({
+      platform: 'linux',
+      environment: {},
+      homeDirectory: '/home/tester',
+    }),
     path.join('/home/tester', '.cache', 'beam-updater'),
   );
 });
@@ -79,7 +87,11 @@ test('cleans a legacy cache on first launch and writes current state', () => {
 test('preserves the cache when the current version has a newer pending update', () => {
   const fixture = temporaryUpdateCache();
   try {
-    writeState(fixture.stateFile, { schemaVersion: 1, lastSeenVersion: '1.2.3', pendingVersion: '1.3.0' });
+    writeState(fixture.stateFile, {
+      schemaVersion: 1,
+      lastSeenVersion: '1.2.3',
+      pendingVersion: '1.3.0',
+    });
     writeCacheArtifact(fixture.cacheDirectory, 'pending/differential-update.blockmap');
 
     assert.equal(fixture.cache.cleanupForVersion('1.2.3'), false);
@@ -97,7 +109,11 @@ test('preserves the cache when the current version has a newer pending update', 
 test('removes cache artifacts when no update is awaiting installation', () => {
   const fixture = temporaryUpdateCache();
   try {
-    writeState(fixture.stateFile, { schemaVersion: 1, lastSeenVersion: '1.2.3', pendingVersion: null });
+    writeState(fixture.stateFile, {
+      schemaVersion: 1,
+      lastSeenVersion: '1.2.3',
+      pendingVersion: null,
+    });
     writeCacheArtifact(fixture.cacheDirectory, 'installer.exe');
 
     assert.equal(fixture.cache.cleanupForVersion('1.2.3'), true);
@@ -115,7 +131,11 @@ test('removes cache artifacts when no update is awaiting installation', () => {
 test('removes the entire updater cache on version change and clears pending state', () => {
   const fixture = temporaryUpdateCache();
   try {
-    writeState(fixture.stateFile, { schemaVersion: 1, lastSeenVersion: '1.2.3', pendingVersion: '1.3.0' });
+    writeState(fixture.stateFile, {
+      schemaVersion: 1,
+      lastSeenVersion: '1.2.3',
+      pendingVersion: '1.3.0',
+    });
     writeCacheArtifact(fixture.cacheDirectory, 'download/update.zip');
     writeCacheArtifact(fixture.cacheDirectory, 'download/update.zip.blockmap');
     writeCacheArtifact(fixture.cacheDirectory, 'differential/patch.bin');
@@ -135,7 +155,11 @@ test('removes the entire updater cache on version change and clears pending stat
 test('cleans the cache after a pending update has become the current version', () => {
   const fixture = temporaryUpdateCache();
   try {
-    writeState(fixture.stateFile, { schemaVersion: 1, lastSeenVersion: '1.2.3', pendingVersion: '1.2.3' });
+    writeState(fixture.stateFile, {
+      schemaVersion: 1,
+      lastSeenVersion: '1.2.3',
+      pendingVersion: '1.2.3',
+    });
     writeCacheArtifact(fixture.cacheDirectory, 'installed/update.zip');
 
     assert.equal(fixture.cache.cleanupForVersion('1.2.3'), true);

@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const test = require('node:test');
-const { createProjectCatalogClient } = require('../electron/projects/project-catalog-client.cjs');
+const { createProjectCatalogClient } = require('../apps/desktop/electron/projects/project-catalog-client.cjs');
 
 function fixture(t) {
   t.mock.timers.enable({ apis: ['setTimeout'] });

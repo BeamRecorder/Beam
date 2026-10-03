@@ -7,7 +7,7 @@ const path = require('node:path');
 const os = require('node:os');
 const root = process.env.BEAM_WINDOW_PROFILE_ROOT || path.resolve(__dirname, '../..');
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-window-profile-'));
-const { defaults } = require(path.join(root, 'electron/preferences/preferences-store.cjs'));
+const { defaults } = require(path.join(root, 'apps/desktop/electron/preferences/preferences-store.cjs'));
 const preferences = defaults();
 preferences.onboardingCompleted = true;
 preferences.devices = { cameraId: 'off', micId: 'no-audio', systemAudioMode: 'off' };
@@ -18,7 +18,9 @@ app.setPath('videos', `${profile}/videos`);
 Object.defineProperty(app, 'isPackaged', { value: true });
 app.getVersion = () => require(path.join(root, 'package.json')).version;
 if (!process.env.BEAM_CAPTURE_ENGINE) {
-  const { resolveCargoTargetDirectory } = require(path.join(root, 'electron/capture/cargo-build-paths.cjs'));
+  const { resolveCargoTargetDirectory } = require(
+    path.join(root, 'apps/desktop/electron/capture/cargo-build-paths.cjs'),
+  );
   const target = resolveCargoTargetDirectory(root);
   const binary = process.platform === 'win32' ? 'capture-engine.exe' : 'capture-engine';
   process.env.BEAM_CAPTURE_ENGINE = path.join(target, 'debug', binary);
@@ -51,7 +53,7 @@ ipcMain.handle = (channel, fn) =>
       });
     }
   });
-const { CaptureEngine } = require(`${root}/electron/capture/capture-engine.cjs`);
+const { CaptureEngine } = require(`${root}/apps/desktop/electron/capture/capture-engine.cjs`);
 const request = CaptureEngine.prototype.request;
 CaptureEngine.prototype.request = async function (command, ...args) {
   const start = performance.now();
@@ -160,9 +162,9 @@ app.on('browser-window-created', (_, win) => {
   });
 });
 entry = performance.now();
-require(`${root}/electron/main.cjs`);
+require(`${root}/apps/desktop/electron/main.cjs`);
 result.mainModules = performance.now() - entry;
-const { createProjectStore } = require(`${root}/electron/projects/project-store.cjs`);
+const { createProjectStore } = require(`${root}/apps/desktop/electron/projects/project-store.cjs`);
 fixtureProject = createProjectStore(`${profile}/videos/Beam/user/projects`, { category: 'studio' }).create({
   name: 'Performance fixture',
 });

@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { createQuickSnipWindow } = require('../electron/quick-snip/quick-snip-window.cjs');
+const { createQuickSnipWindow } = require('../apps/desktop/electron/quick-snip/quick-snip-window.cjs');
 
 const display = {
   id: 2,
@@ -36,7 +36,10 @@ function createFixture(
     patch: ({ extras }) => {
       preferenceWrites.push(extras);
       for (const [key, value] of Object.entries(extras ?? {})) {
-        preferenceState.extras[key] = { ...(preferenceState.extras[key] ?? {}), ...value };
+        preferenceState.extras[key] = {
+          ...(preferenceState.extras[key] ?? {}),
+          ...value,
+        };
       }
     },
   };
@@ -186,7 +189,12 @@ test('switches capture to a bottom-centered horizontal recorder before starting,
   f.crop.show(linuxWindowConfiguration(), display);
   f.crop.command('start');
   const target = f.windows[0];
-  assert.deepEqual(target.getBounds(), { x: 784, y: 976, width: 352, height: 88 });
+  assert.deepEqual(target.getBounds(), {
+    x: 784,
+    y: 976,
+    width: 352,
+    height: 88,
+  });
   const placements = f.calls.filter((call) => call[0] === 'setBounds').length;
   f.crop.setRecording();
   f.crop.setRecording();
@@ -203,7 +211,9 @@ test('saves recorder moves under the shared recorder key and flushes them before
   target.setBounds({ x: 700, y: 800 });
   target.emit('move');
   f.crop.command('start');
-  assert.deepEqual(f.preferenceState.extras.quickSnipBarPositions, { 2: { x: 700, y: 800 } });
+  assert.deepEqual(f.preferenceState.extras.quickSnipBarPositions, {
+    2: { x: 700, y: 800 },
+  });
   target.emit('move');
   target.emit('moved');
   assert.equal(f.preferenceWrites.length, 1);
@@ -214,18 +224,30 @@ test('saves recorder moves under the shared recorder key and flushes them before
   assert.deepEqual(f.preferenceState.extras.recorderPositions, { 2: { x: 500, y: 900 } });
   assert.deepEqual(target.getBounds(), { x: 700, y: 800, width: 616, height: 76 });
   f.crop.command('start');
-  assert.deepEqual(target.getBounds(), { x: 500, y: 900, width: 352, height: 88 });
+  assert.deepEqual(target.getBounds(), {
+    x: 500,
+    y: 900,
+    width: 352,
+    height: 88,
+  });
   assert.equal(f.preferenceWrites.length, 2);
 });
 
 test('restores a moved recording bar independently of the selection bar and returns to selection after cancellation', () => {
   const f = createFixture(display, 'linux', {
-    preferenceState: { extras: { recorderPositions: { 2: { x: 100, y: 200 } } } },
+    preferenceState: {
+      extras: { recorderPositions: { 2: { x: 100, y: 200 } } },
+    },
   });
   f.crop.show(linuxWindowConfiguration(), display);
   const selection = f.windows[0].getBounds();
   f.crop.command('start');
-  assert.deepEqual(f.windows[0].getBounds(), { x: 100, y: 200, width: 352, height: 88 });
+  assert.deepEqual(f.windows[0].getBounds(), {
+    x: 100,
+    y: 200,
+    width: 352,
+    height: 88,
+  });
   f.crop.showExisting();
   assert.deepEqual(f.windows[0].getBounds(), selection);
 });
@@ -298,7 +320,12 @@ test('places a Linux window capture bar centered at the bottom without a parent'
 for (const platform of ['linux', 'win32', 'darwin']) {
   test(`${platform} places an uncropped display capture bar without region geometry`, () => {
     const fixture = createFixture(display, platform);
-    const selected = { ...configuration(), screenKind: 'display', screenId: 'portal:monitor', region: null };
+    const selected = {
+      ...configuration(),
+      screenKind: 'display',
+      screenId: 'portal:monitor',
+      region: null,
+    };
 
     assert.doesNotThrow(() => fixture.crop.show(selected, display));
     const window = fixture.windows[0];
@@ -625,7 +652,9 @@ test('commits a dragged position, restores it per display, and preserves it thro
   firstWindow.emit('move');
   assert.equal(fixture.preferenceWrites.length, 0);
   firstWindow.emit('moved');
-  assert.deepEqual(fixture.preferenceState.extras.quickSnipBarPositions, { 2: { x: 640, y: 430 } });
+  assert.deepEqual(fixture.preferenceState.extras.quickSnipBarPositions, {
+    2: { x: 640, y: 430 },
+  });
 
   fixture.crop.hide();
   fixture.crop.destroy();
@@ -658,7 +687,9 @@ test('debounces Linux and macOS Crop Bar moves until the trailing 350ms commit',
     const [timer] = fixture.timers.values();
     assert.equal(timer.delay, 350);
     timer.callback();
-    assert.deepEqual(fixture.preferenceState.extras.quickSnipBarPositions, { 2: { x: 660, y: 450 } });
+    assert.deepEqual(fixture.preferenceState.extras.quickSnipBarPositions, {
+      2: { x: 660, y: 450 },
+    });
     assert.equal(fixture.preferenceWrites.length, 1);
   }
 });
@@ -679,13 +710,17 @@ test('flushes a pending Crop Bar position before hide or destroy', () => {
     fixture.crop[lifecycle]();
 
     assert.equal(fixture.timers.size, 0);
-    assert.deepEqual(fixture.preferenceState.extras.quickSnipBarPositions, { 2: { x: 600, y: 410 } });
+    assert.deepEqual(fixture.preferenceState.extras.quickSnipBarPositions, {
+      2: { x: 600, y: 410 },
+    });
     assert.equal(fixture.preferenceWrites.length, 1);
   }
 });
 
 test('persists the X11 zero origin in a Wayland host session', () => {
-  const fixture = createFixture(display, 'linux', { environment: { WAYLAND_DISPLAY: 'wayland-0' } });
+  const fixture = createFixture(display, 'linux', {
+    environment: { WAYLAND_DISPLAY: 'wayland-0' },
+  });
   fixture.crop.show(configuration(), display);
   const window = fixture.windows[0];
   window.emit('ready-to-show');

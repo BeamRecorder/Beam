@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const captureMock = vi.hoisted(() => ({
+  platform: 'linux',
+  getPreferences: vi.fn(async () => ({ extras: {} as Record<string, unknown> })),
   listBackgroundLibrary: vi.fn(async () => []),
   listCursorPacks: vi.fn(async () => []),
   saveQuickSnipRenderState: vi.fn(async () => undefined),
@@ -15,17 +17,17 @@ const exporterMock = vi.hoisted(() => ({
   ),
 }));
 vi.mock('~/api/capture', () => ({ capture: captureMock }));
-vi.mock('../src/components/export/mediabunny/exporter', () => exporterMock);
-import { quickSnipExportRequest, renderQuickSnip } from '../src/components/quick-snip/quick-snip-export';
+vi.mock('../apps/desktop/src/components/export/mediabunny/exporter', () => exporterMock);
+import { quickSnipExportRequest, renderQuickSnip } from '../apps/desktop/src/components/quick-snip/quick-snip-export';
 import type { QuickSnipRenderTask } from '~/api/types/quick-snip';
 import type { ProjectEditorData, SessionTrackData } from '~/api/types/capture-api';
-import { emptyComposition } from '~/media/shared/composition-types';
-import { DEFAULT_OUTPUT_CANVAS } from '../src/components/video-editor/canvas/output-canvas';
+import { emptyComposition } from '@beam/engine/shared/composition-types';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import {
   createDefaultCursorMotionSettings,
   createDefaultCursorAutoHideSettings,
   createDefaultCursorClickEffects,
-} from '~/api/types/cursor-settings';
+} from '@beam/engine/capture/cursor-settings';
 const task = (): QuickSnipRenderTask => {
   const tracks: SessionTrackData[] = (['screen', 'microphone'] as const).map((kind) => ({
     trackId: kind,
@@ -66,7 +68,14 @@ const task = (): QuickSnipRenderTask => {
       completed: true,
     },
     tracks,
-    cursor: { available: false, events: [], telemetry: [], shapes: {}, catalog: {}, missing: [] },
+    cursor: {
+      available: false,
+      events: [],
+      telemetry: [],
+      shapes: {},
+      catalog: {},
+      missing: [],
+    },
     recordedPlatform: 'windows',
     zoom: { elements: [], generatedSessions: [] },
   };
@@ -90,7 +99,13 @@ const task = (): QuickSnipRenderTask => {
         settings: {
           editor: { schemaVersion: 1 },
           devices: {},
-          export: { format: 'webm', preset: 'high', frameRate: 60, resolution: '720p', includeAudio: true },
+          export: {
+            format: 'webm',
+            preset: 'high',
+            frameRate: 60,
+            resolution: '720p',
+            includeAudio: true,
+          },
           quickSnip: { automaticZoom: false },
         },
       },
@@ -109,7 +124,12 @@ const task = (): QuickSnipRenderTask => {
           selection: { packId: 'builtin:macos', mode: 'automatic', cursorId: null },
           size: 45,
           color: '#000000',
-          shadow: { enabled: false, blur: 0, color: '#000000', direction: 'bottom' },
+          shadow: {
+            enabled: false,
+            blur: 0,
+            color: '#000000',
+            direction: 'bottom',
+          },
           motion: createDefaultCursorMotionSettings(),
           autoHide: createDefaultCursorAutoHideSettings(),
           clickEffects: createDefaultCursorClickEffects(),
@@ -192,6 +212,8 @@ const unusableScreenAsset = (patch: Partial<QuickSnipRenderTask['editorData']['t
 describe('Quick Snip composition export', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    captureMock.platform = 'linux';
+    captureMock.getPreferences.mockReset().mockResolvedValue({ extras: {} });
   });
 
   it('builds video and microphone clips and honors format, quality, fps and resolution', () => {
@@ -212,11 +234,19 @@ describe('Quick Snip composition export', () => {
     input.configuration.preset.settings.editor.presentation = {
       ...input.editorState.presentation,
       canvas: { ...DEFAULT_OUTPUT_CANVAS, showBackground: true },
-      background: { id: 'color', name: 'Blue', kind: 'color', color: '#123456' },
+      background: {
+        id: 'color',
+        name: 'Blue',
+        kind: 'color',
+        color: '#123456',
+      },
     };
     const before = structuredClone(input);
     const { request } = quickSnipExportRequest(input, [], []);
-    expect(request.snapshot.background).toEqual({ kind: 'color', color: '#123456' });
+    expect(request.snapshot.background).toEqual({
+      kind: 'color',
+      color: '#123456',
+    });
     expect(input).toEqual(before);
   });
   it.each([
@@ -365,7 +395,11 @@ describe('Quick Snip composition export', () => {
     };
     exporterMock.exportWithMediabunny.mockImplementationOnce(async (_request, onProgress) => {
       onProgress(progress);
-      return { path: '/tmp/quick-snip.webm', format: 'webm', diagnostics: {} as never };
+      return {
+        path: '/tmp/quick-snip.webm',
+        format: 'webm',
+        diagnostics: {} as never,
+      };
     });
     captureMock.reportQuickSnipRender.mockRejectedValueOnce(new Error('status window closed'));
 
@@ -395,6 +429,68 @@ describe('Quick Snip composition export', () => {
     expect(captureMock.listBackgroundLibrary).toHaveBeenCalledOnce();
     expect(captureMock.listCursorPacks).toHaveBeenCalledOnce();
     expect(captureMock.saveQuickSnipRenderState).not.toHaveBeenCalled();
+    expect(exporterMock.exportWithMediabunny).not.toHaveBeenCalled();
+    expect(captureMock.reportQuickSnipRender).not.toHaveBeenCalled();
+  });
+
+  it.each(['mp4', 'webm'] as const)(
+    'applies the saved Linux FFmpeg backend to %s Quick Snip videos',
+    async (format) => {
+      const input = task();
+      input.configuration.format = format;
+      captureMock.getPreferences.mockResolvedValue({ extras: { videoExportBackend: 'ffmpeg-vaapi' } });
+      await renderQuickSnip(input, new AbortController().signal);
+      expect(exporterMock.exportWithMediabunny).toHaveBeenCalledWith(
+        expect.objectContaining({ format, experimentalLinuxFfmpeg: true }),
+        expect.any(Function),
+        expect.any(AbortSignal),
+      );
+    },
+  );
+
+  it.each([undefined, 'webcodecs', 'invalid'])('keeps WebCodecs when the saved backend is %s', async (backend) => {
+    captureMock.getPreferences.mockResolvedValue({ extras: { videoExportBackend: backend } });
+    await renderQuickSnip(task(), new AbortController().signal);
+    expect(exporterMock.exportWithMediabunny.mock.calls[0]![0]).not.toHaveProperty('experimentalLinuxFfmpeg');
+  });
+
+  it.each(['win32', 'darwin'])('keeps Quick Snip on WebCodecs on %s', async (platform) => {
+    captureMock.platform = platform;
+    captureMock.getPreferences.mockResolvedValue({ extras: { videoExportBackend: 'ffmpeg-vaapi' } });
+    await renderQuickSnip(task(), new AbortController().signal);
+    expect(captureMock.getPreferences).not.toHaveBeenCalled();
+    expect(exporterMock.exportWithMediabunny.mock.calls[0]![0]).not.toHaveProperty('experimentalLinuxFfmpeg');
+  });
+
+  it('reports a preference read failure without selecting another backend silently', async () => {
+    captureMock.getPreferences.mockRejectedValue(new Error('preferences unavailable'));
+    await expect(renderQuickSnip(task(), new AbortController().signal)).rejects.toThrow('preferences unavailable');
+    expect(captureMock.saveQuickSnipRenderState).not.toHaveBeenCalled();
+    expect(exporterMock.exportWithMediabunny).not.toHaveBeenCalled();
+  });
+
+  it('does not start an export after cancellation while loading preferences', async () => {
+    const controller = new AbortController();
+    let resolve!: (value: { extras: Record<string, unknown> }) => void;
+    captureMock.getPreferences.mockReturnValue(
+      new Promise((done) => {
+        resolve = done;
+      }),
+    );
+    const pending = renderQuickSnip(task(), controller.signal);
+    controller.abort();
+    resolve({ extras: { videoExportBackend: 'ffmpeg-vaapi' } });
+    await pending;
+    expect(captureMock.saveQuickSnipRenderState).not.toHaveBeenCalled();
+    expect(exporterMock.exportWithMediabunny).not.toHaveBeenCalled();
+  });
+
+  it('does not start an export after cancellation while saving render state', async () => {
+    const controller = new AbortController();
+    captureMock.saveQuickSnipRenderState.mockImplementationOnce(async () => {
+      controller.abort();
+    });
+    await renderQuickSnip(task(), controller.signal);
     expect(exporterMock.exportWithMediabunny).not.toHaveBeenCalled();
     expect(captureMock.reportQuickSnipRender).not.toHaveBeenCalled();
   });

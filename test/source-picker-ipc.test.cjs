@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const Module = require('node:module');
 const test = require('node:test');
-const { isHudSourcePickerOwner } = require('../electron/source-picker/source-picker-ipc.cjs');
+const { isHudSourcePickerOwner } = require('../apps/desktop/electron/source-picker/source-picker-ipc.cjs');
 
 test('only the current session port can own the development source picker', () => {
   const environment = { BEAM_DEV_SERVER_URL: 'http://localhost:6508' };
@@ -47,7 +47,7 @@ function fixture({ platform = 'win32', isPackaged = false, accepting = true, sta
     destroy: () => calls.push(['destroy']),
   };
   const originalLoad = Module._load;
-  const file = require.resolve('../electron/source-picker/source-picker-ipc.cjs');
+  const file = require.resolve('../apps/desktop/electron/source-picker/source-picker-ipc.cjs');
   delete require.cache[file];
   Module._load = function (request, parent, isMain) {
     if (request === './source-picker-controller.cjs') return { createSourcePickerController: () => manager };

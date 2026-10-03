@@ -3,7 +3,7 @@ const test = require('node:test');
 const {
   createTeleprompterCheckpoint,
   validateTeleprompterViewState,
-} = require('../electron/teleprompter/teleprompter-checkpoint.cjs');
+} = require('../apps/desktop/electron/teleprompter/teleprompter-checkpoint.cjs');
 
 const context = {
   projectId: '11111111-1111-4111-8111-111111111111',
@@ -55,7 +55,10 @@ test('normalizes a valid checkpoint and bounds the document values', () => {
 test('rejects invalid checkpoint identities, positions and view-state fields', () => {
   const invalidStates = [
     null,
-    { ...viewState, session: { projectId: 'bad', sessionId: context.sessionId } },
+    {
+      ...viewState,
+      session: { projectId: 'bad', sessionId: context.sessionId },
+    },
     { ...viewState, activeLine: -1 },
     { ...viewState, activeLine: 1.5 },
     { ...viewState, activeLine: 1_000_001 },
@@ -114,7 +117,13 @@ test('rejects malformed acknowledgements instead of returning an unchecked snaps
   const pending = checkpoint.request(owner);
   const [, requestId] = owner.webContents.sent[0];
 
-  assert.equal(checkpoint.acknowledge(owner.webContents, requestId, { ...viewState, scrollTop: -1 }), true);
+  assert.equal(
+    checkpoint.acknowledge(owner.webContents, requestId, {
+      ...viewState,
+      scrollTop: -1,
+    }),
+    true,
+  );
   await assert.rejects(pending, /Invalid teleprompter checkpoint state/);
 });
 

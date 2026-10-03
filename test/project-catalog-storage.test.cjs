@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { openCatalogDatabase } = require('../electron/projects/project-catalog-storage.cjs');
+const { openCatalogDatabase } = require('../apps/desktop/electron/projects/project-catalog-storage.cjs');
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-catalog-storage-'));

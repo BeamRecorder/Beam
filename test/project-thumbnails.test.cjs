@@ -3,8 +3,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { createProjectStore } = require('../electron/projects/project-store.cjs');
-const { createProjectMediaHandler } = require('../electron/projects/project-media-protocol.cjs');
+const { createProjectStore } = require('../apps/desktop/electron/projects/project-store.cjs');
+const { createProjectMediaHandler } = require('../apps/desktop/electron/projects/project-media-protocol.cjs');
 
 function fixture(t, options = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-thumbnails-'));
@@ -63,7 +63,10 @@ test('an in-root thumbnail symlink is resolved through the existing path validat
 });
 
 test('instant projects and a custom media host retain valid thumbnail URLs', (t) => {
-  const { store, project, directory } = fixture(t, { category: 'instant', mediaHost: 'fixture' });
+  const { store, project, directory } = fixture(t, {
+    category: 'instant',
+    mediaHost: 'fixture',
+  });
   fs.writeFileSync(path.join(directory, 'thumbnail.png'), 'image');
   const listed = store.list().find((item) => item.id === project.id);
   assert.equal(listed.mode, 'instant');

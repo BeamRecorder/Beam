@@ -1,20 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const { registerProjectIpc, CURSOR_PACK_DISCOVERY_URL } = require('../electron/projects/project-ipc.cjs') as {
-  CURSOR_PACK_DISCOVERY_URL: string;
-  registerProjectIpc: (
-    ipcMain: { handle: (channel: string, handler: Function) => void },
-    projectStore: object,
-    backgroundLibrary: object,
-    fontLibrary: object,
-    dialog: object,
-    BrowserWindow: object,
-    trustedRenderer: (url: string) => boolean,
-    cursorLibrary?: object,
-    screenshotStore?: object,
-    clipboard?: object,
-  ) => void;
-};
+const { registerProjectIpc, CURSOR_PACK_DISCOVERY_URL } =
+  require('../apps/desktop/electron/projects/project-ipc.cjs') as {
+    CURSOR_PACK_DISCOVERY_URL: string;
+    registerProjectIpc: (
+      ipcMain: { handle: (channel: string, handler: Function) => void },
+      projectStore: object,
+      backgroundLibrary: object,
+      fontLibrary: object,
+      dialog: object,
+      BrowserWindow: object,
+      trustedRenderer: (url: string) => boolean,
+      cursorLibrary?: object,
+      screenshotStore?: object,
+      clipboard?: object,
+    ) => void;
+  };
 
 const importedFont = {
   id: 'a'.repeat(64),
@@ -24,25 +25,51 @@ const importedFont = {
   url: 'project-media://font/' + 'a'.repeat(64),
 };
 
-const setup = (options: { trusted?: boolean; rendererUrl?: string; clipboardPng?: Uint8Array } = {}) => {
+const setup = (
+  options: {
+    trusted?: boolean;
+    rendererUrl?: string;
+    clipboardPng?: Uint8Array;
+  } = {},
+) => {
   const handlers = new Map<string, Function>();
-  const ipcMain = { handle: (channel: string, handler: Function) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel: string, handler: Function) => handlers.set(channel, handler),
+  };
   const importFile = vi.fn((source) => ({ source }));
   const fontImportFile = vi.fn(() => importedFont);
   const fontList = vi.fn(() => [importedFont]);
-  const dialog = { showOpenDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['C:/wallpaper.png'] }) };
+  const dialog = {
+    showOpenDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['C:/wallpaper.png'] }),
+  };
   const window = { webContents: { send: vi.fn() } };
   const windows = { getAllWindows: () => [window] };
-  const event = { sender: { getURL: vi.fn(() => options.rendererUrl ?? 'file:///editor.html') } };
+  const event = {
+    sender: {
+      getURL: vi.fn(() => options.rendererUrl ?? 'file:///editor.html'),
+    },
+  };
   const trustedRenderer = vi.fn(() => options.trusted ?? true);
   const read = vi.fn(async () =>
     options.clipboardPng
-      ? [{ types: ['image/png'], getType: async () => new Blob([Uint8Array.from(options.clipboardPng!)]) }]
+      ? [
+          {
+            types: ['image/png'],
+            getType: async () => new Blob([Uint8Array.from(options.clipboardPng!)]),
+          },
+        ]
       : [],
   );
   const projectStore = {
-    importDroppedProjectMedia: vi.fn((projectId, input) => ({ projectId, ...input })),
-    importClipboardImage: vi.fn((projectId, input) => ({ projectId, kind: 'image', ...input })),
+    importDroppedProjectMedia: vi.fn((projectId, input) => ({
+      projectId,
+      ...input,
+    })),
+    importClipboardImage: vi.fn((projectId, input) => ({
+      projectId,
+      kind: 'image',
+      ...input,
+    })),
   };
   const backgroundLibrary = { importFile, list: vi.fn() };
   const fontLibrary = { importFile: fontImportFile, list: fontList };
@@ -93,7 +120,12 @@ describe('background import IPC', () => {
     await handler({}, { projectId: 'project', kind: 'image' });
     expect(dialog.showOpenDialog).toHaveBeenCalledWith(
       expect.objectContaining({
-        filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'avif', 'bmp'] }],
+        filters: [
+          {
+            name: 'Images',
+            extensions: ['png', 'jpg', 'jpeg', 'webp', 'avif', 'bmp'],
+          },
+        ],
       }),
     );
   });
@@ -102,7 +134,9 @@ describe('background import IPC', () => {
     const { handler, dialog } = setup();
     await handler({}, { projectId: 'project', kind: 'video' });
     expect(dialog.showOpenDialog).toHaveBeenCalledWith(
-      expect.objectContaining({ filters: [{ name: 'Vidéos', extensions: ['mp4', 'webm', 'mov', 'm4v', 'ogv'] }] }),
+      expect.objectContaining({
+        filters: [{ name: 'Vidéos', extensions: ['mp4', 'webm', 'mov', 'm4v', 'ogv'] }],
+      }),
     );
   });
 
@@ -112,7 +146,10 @@ describe('background import IPC', () => {
     expect(dialog.showOpenDialog).toHaveBeenCalledWith(
       expect.objectContaining({
         filters: [
-          expect.objectContaining({ name: 'Fonds personnalisés', extensions: expect.arrayContaining(['png', 'mp4']) }),
+          expect.objectContaining({
+            name: 'Fonds personnalisés',
+            extensions: expect.arrayContaining(['png', 'mp4']),
+          }),
         ],
       }),
     );
@@ -140,7 +177,10 @@ describe('background import IPC', () => {
       kind: 'video',
     });
     expect(projectStore.importDroppedProjectMedia).toHaveBeenCalledOnce();
-    expect(projectStore.importDroppedProjectMedia).toHaveBeenCalledWith('project-42', { source, kind: 'video' });
+    expect(projectStore.importDroppedProjectMedia).toHaveBeenCalledWith('project-42', {
+      source,
+      kind: 'video',
+    });
   });
 
   it('returns null for an empty clipboard without importing an image', async () => {
@@ -185,7 +225,9 @@ describe('background import IPC', () => {
   });
 
   it('lists imported fonts for a trusted renderer', async () => {
-    const { fontListHandler, fontList, event, trustedRenderer } = setup({ rendererUrl: 'file:///editor.html' });
+    const { fontListHandler, fontList, event, trustedRenderer } = setup({
+      rendererUrl: 'file:///editor.html',
+    });
 
     expect(fontListHandler(event)).toEqual([importedFont]);
     expect(fontList).toHaveBeenCalledOnce();
@@ -196,7 +238,10 @@ describe('background import IPC', () => {
     const { fontImportHandler, fontImportFile, dialog, event, window, trustedRenderer } = setup({
       rendererUrl: 'http://localhost:6500/html/editor.html',
     });
-    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['C:/fonts/ImportedSans.ttf'] });
+    dialog.showOpenDialog.mockResolvedValue({
+      canceled: false,
+      filePaths: ['C:/fonts/ImportedSans.ttf'],
+    });
 
     await expect(fontImportHandler(event)).resolves.toEqual(importedFont);
     expect(trustedRenderer).toHaveBeenCalledWith('http://localhost:6500/html/editor.html');
@@ -211,10 +256,11 @@ describe('background import IPC', () => {
   it.each(['font-library:list', 'font-library:pick-import'])(
     'rejects %s for an untrusted renderer',
     async (channel) => {
-      const { fontListHandler, fontImportHandler, fontList, fontImportFile, dialog, event, trustedRenderer } = setup({
-        trusted: false,
-        rendererUrl: 'https://example.invalid/evil.html',
-      });
+      const { fontListHandler, fontImportHandler, fontList, fontImportFile, dialog, event, trustedRenderer } =
+        setup({
+          trusted: false,
+          rendererUrl: 'https://example.invalid/evil.html',
+        });
       const handler = channel === 'font-library:list' ? fontListHandler : fontImportHandler;
 
       if (channel === 'font-library:list') expect(() => handler(event)).toThrow('Renderer non autorisé');
@@ -234,9 +280,16 @@ describe('cursor pack IPC', () => {
 
   it('picks only a directory, imports it globally and notifies renderers', async () => {
     const { cursorImportHandler, cursorLibrary, dialog, event, window } = setup();
-    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['C:/theme'] });
-    await expect(cursorImportHandler(event)).resolves.toMatchObject({ importedCount: 1 });
-    expect(dialog.showOpenDialog).toHaveBeenCalledWith({ properties: ['openDirectory'] });
+    dialog.showOpenDialog.mockResolvedValue({
+      canceled: false,
+      filePaths: ['C:/theme'],
+    });
+    await expect(cursorImportHandler(event)).resolves.toMatchObject({
+      importedCount: 1,
+    });
+    expect(dialog.showOpenDialog).toHaveBeenCalledWith({
+      properties: ['openDirectory'],
+    });
     expect(cursorLibrary.importDirectory).toHaveBeenCalledWith('C:/theme');
     expect(window.webContents.send).toHaveBeenCalledWith('cursor-packs:changed');
   });

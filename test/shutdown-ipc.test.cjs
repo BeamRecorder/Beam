@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const { createShutdownAwareIpc } = require('../electron/lifecycle/shutdown-ipc.cjs');
+const { createShutdownAwareIpc } = require('../apps/desktop/electron/lifecycle/shutdown-ipc.cjs');
 
 test('new invoke and send IPC work is rejected as soon as shutdown begins', async () => {
   const handlers = new Map();

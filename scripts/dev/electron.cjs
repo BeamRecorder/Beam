@@ -4,9 +4,9 @@ const readline = require('node:readline');
 const { spawn } = require('node:child_process');
 const { buildCaptureEngine, cargoAvailable, cargoBuildArguments, runCommand } = require('../native/artifacts.cjs');
 const { downloadNativeFiles, requiredNativeFiles } = require('../native/download.cjs');
-const { x11LaunchArguments } = require('../../electron/lifecycle/linux-display-backend.cjs');
-const { developmentSessionId } = require('../../electron/lifecycle/development-session.cjs');
-const { resolveCargoTargetDirectory } = require('../../electron/capture/cargo-build-paths.cjs');
+const { x11LaunchArguments } = require('../../apps/desktop/electron/lifecycle/linux-display-backend.cjs');
+const { developmentSessionId } = require('../../apps/desktop/electron/lifecycle/development-session.cjs');
+const { resolveCargoTargetDirectory } = require('../../packages/native-client/src/cargo-build-paths.cjs');
 const { withDevelopmentRuntime } = require('./native-runtime.cjs');
 
 const applicationRoot = path.join(__dirname, '../..');

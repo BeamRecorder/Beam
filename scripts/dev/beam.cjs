@@ -1,6 +1,6 @@
 const path = require('node:path');
 const { parseDevelopmentArguments, resolveDevelopmentEngine, startElectron } = require('./electron.cjs');
-const { developmentSessionId } = require('../../electron/lifecycle/development-session.cjs');
+const { developmentSessionId } = require('../../apps/desktop/electron/lifecycle/development-session.cjs');
 
 const applicationRoot = path.join(__dirname, '../..');
 

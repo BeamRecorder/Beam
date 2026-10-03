@@ -4,7 +4,7 @@ const {
   MAX_CLIPBOARD_IMAGE_BYTES,
   MAX_CLIPBOARD_IMAGE_DIMENSION,
   readClipboardPng,
-} = require('../electron/clipboard/image-clipboard.cjs');
+} = require('../apps/desktop/electron/clipboard/image-clipboard.cjs');
 
 const pngBytesFor = (width, height) => {
   const buffer = Buffer.alloc(24);
@@ -23,7 +23,10 @@ const clipboardFor = ({ empty = false, width = 640, height = 360, buffer } = {})
       : [
           {
             types: ['image/png'],
-            getType: async () => new Blob([buffer ?? pngBytesFor(width, height)], { type: 'image/png' }),
+            getType: async () =>
+              new Blob([buffer ?? pngBytesFor(width, height)], {
+                type: 'image/png',
+              }),
           },
         ],
 });

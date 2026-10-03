@@ -25,7 +25,9 @@ function createElectronFixture(savedBounds = null, loadResultForWindow = () => u
     workArea: { x: 0, y: 0, width: 1920, height: 1080 },
     bounds: { x: 0, y: 0, width: 1920, height: 1080 },
   };
-  const preferenceState = { extras: savedBounds ? { teleprompterWindow: savedBounds } : {} };
+  const preferenceState = {
+    extras: savedBounds ? { teleprompterWindow: savedBounds } : {},
+  };
   const patches = [];
 
   class FakeWindow {
@@ -152,7 +154,10 @@ function createElectronFixture(savedBounds = null, loadResultForWindow = () => u
     read: () => structuredClone(preferenceState),
     patch: (patch) => {
       patches.push(structuredClone(patch));
-      preferenceState.extras = { ...preferenceState.extras, ...(patch.extras || {}) };
+      preferenceState.extras = {
+        ...preferenceState.extras,
+        ...(patch.extras || {}),
+      };
       return structuredClone(preferenceState);
     },
   };
@@ -168,7 +173,7 @@ function createElectronFixture(savedBounds = null, loadResultForWindow = () => u
 }
 
 function loadTeleprompterWindow() {
-  const modulePath = require.resolve('../electron/teleprompter/teleprompter-window.cjs');
+  const modulePath = require.resolve('../apps/desktop/electron/teleprompter/teleprompter-window.cjs');
   delete require.cache[modulePath];
   return require(modulePath);
 }
@@ -207,7 +212,12 @@ test('persists teleprompter bounds after native move and resize events', () => {
 });
 
 test('restores persisted teleprompter x/y and dimensions on the next window', async () => {
-  const fixture = createElectronFixture({ x: 355, y: 277, width: 800, height: 500 });
+  const fixture = createElectronFixture({
+    x: 355,
+    y: 277,
+    width: 800,
+    height: 500,
+  });
   try {
     const { createTeleprompterWindow } = loadTeleprompterWindow();
     const teleprompter = createTeleprompterWindow({
@@ -239,7 +249,12 @@ test('restores persisted teleprompter x/y and dimensions on the next window', as
 });
 
 test('checkpoints the live teleprompter before suspend and restores it only for its matching session', async () => {
-  const fixture = createElectronFixture({ x: 355, y: 277, width: 800, height: 500 });
+  const fixture = createElectronFixture({
+    x: 355,
+    y: 277,
+    width: 800,
+    height: 500,
+  });
   try {
     const { createTeleprompterWindow } = loadTeleprompterWindow();
     const teleprompter = createTeleprompterWindow({
@@ -326,7 +341,10 @@ test('checkpoints the live teleprompter before suspend and restores it only for 
       'the session event must not overwrite the checkpoint restored before renderer readiness',
     );
 
-    teleprompter.setSession({ projectId, sessionId: '33333333-3333-4333-8333-333333333333' });
+    teleprompter.setSession({
+      projectId,
+      sessionId: '33333333-3333-4333-8333-333333333333',
+    });
     assert.equal(
       teleprompter.resumeState(secondWindow.webContents),
       null,
@@ -342,7 +360,10 @@ test('ignores aborted and subframe failures, then retries after a main-frame loa
   const fixture = createElectronFixture();
   try {
     const { createTeleprompterWindow } = loadTeleprompterWindow();
-    const teleprompter = createTeleprompterWindow({ applicationRoot: '/app', isPackaged: false });
+    const teleprompter = createTeleprompterWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+    });
     const failedPreparation = teleprompter.prepare();
     const firstWindow = fixture.windows[0];
 
@@ -383,7 +404,10 @@ test('a retry prepares after the native load promise rejects', async () => {
   );
   try {
     const { createTeleprompterWindow } = loadTeleprompterWindow();
-    const teleprompter = createTeleprompterWindow({ applicationRoot: '/app', isPackaged: false });
+    const teleprompter = createTeleprompterWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+    });
     const failedPreparation = teleprompter.prepare();
     const firstWindow = fixture.windows[0];
     assert.equal(await failedPreparation, false);
@@ -404,7 +428,10 @@ test('destroy resolves an in-progress preparation as unavailable', async () => {
   const fixture = createElectronFixture();
   try {
     const { createTeleprompterWindow } = loadTeleprompterWindow();
-    const teleprompter = createTeleprompterWindow({ applicationRoot: '/app', isPackaged: false });
+    const teleprompter = createTeleprompterWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+    });
     const preparing = teleprompter.prepare();
     const window = fixture.windows[0];
 
@@ -421,7 +448,10 @@ test('a rapid HUD return cancels the old checkpoint and takes a fresh draft befo
   const fixture = createElectronFixture();
   try {
     const { createTeleprompterWindow } = loadTeleprompterWindow();
-    const teleprompter = createTeleprompterWindow({ applicationRoot: '/app', isPackaged: false });
+    const teleprompter = createTeleprompterWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+    });
     const context = { projectId, sessionId };
     teleprompter.setSession(context);
     const ready = teleprompter.prepare();
@@ -485,7 +515,10 @@ test('show and showInactive cancel an outstanding checkpoint before revealing th
     const fixture = createElectronFixture();
     try {
       const { createTeleprompterWindow } = loadTeleprompterWindow();
-      const teleprompter = createTeleprompterWindow({ applicationRoot: '/app', isPackaged: false });
+      const teleprompter = createTeleprompterWindow({
+        applicationRoot: '/app',
+        isPackaged: false,
+      });
       teleprompter.setSession({ projectId, sessionId });
       const ready = teleprompter.prepare();
       const window = fixture.windows[0];
@@ -524,7 +557,10 @@ test('a rejected checkpoint keeps the hidden renderer intact for an immediate HU
   const fixture = createElectronFixture();
   try {
     const { createTeleprompterWindow } = loadTeleprompterWindow();
-    const teleprompter = createTeleprompterWindow({ applicationRoot: '/app', isPackaged: false });
+    const teleprompter = createTeleprompterWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+    });
     teleprompter.setSession({ projectId, sessionId });
     const ready = teleprompter.prepare();
     const window = fixture.windows[0];
@@ -575,11 +611,26 @@ test('creates a transparent teleprompter and clamps owned resize requests before
     assert.equal(window.options.transparent, true);
     assert.equal(window.options.backgroundColor, '#00000000');
     teleprompter.resize(window.webContents, { width: 20, height: 30 });
-    assert.deepEqual(window.getBounds(), { x: 640, y: 340, width: 240, height: 140 });
+    assert.deepEqual(window.getBounds(), {
+      x: 640,
+      y: 340,
+      width: 240,
+      height: 140,
+    });
     teleprompter.resize(window.webContents, { width: 4000, height: 4000 });
-    assert.deepEqual(window.getBounds(), { x: 0, y: 0, width: 1920, height: 1080 });
+    assert.deepEqual(window.getBounds(), {
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+    });
     teleprompter.destroy();
-    assert.deepEqual(fixture.patches.at(-1).extras.teleprompterWindow, { x: 0, y: 0, width: 1920, height: 1080 });
+    assert.deepEqual(fixture.patches.at(-1).extras.teleprompterWindow, {
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+    });
   } finally {
     fixture.restore();
   }
@@ -643,7 +694,12 @@ test(
         bounds.x + bounds.width <= 464 || bounds.x >= 1456 || bounds.y + bounds.height <= 200 || bounds.y >= 880,
       );
       teleprompter.clearRegionConstraint();
-      assert.deepEqual(window.getBounds(), { x: 640, y: 340, width: 640, height: 400 });
+      assert.deepEqual(window.getBounds(), {
+        x: 640,
+        y: 340,
+        width: 640,
+        height: 400,
+      });
       teleprompter.destroy();
     } finally {
       fixture.restore();

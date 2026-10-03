@@ -1,13 +1,18 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { createQuickSnipController } = require('../electron/quick-snip/quick-snip-controller.cjs');
+const { createQuickSnipController } = require('../apps/desktop/electron/quick-snip/quick-snip-controller.cjs');
 
 const region = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
 const bounds = { x: 0, y: 0, width: 1920, height: 1080 };
 const preset = {
   id: 'default',
   name: 'Default',
-  settings: { editor: {}, devices: {}, export: { format: 'mp4' }, quickSnip: { automaticZoom: true } },
+  settings: {
+    editor: {},
+    devices: {},
+    export: { format: 'mp4' },
+    quickSnip: { automaticZoom: true },
+  },
 };
 
 function deferred() {
@@ -89,18 +94,31 @@ function harness({
   const finalizeCalls = [];
   const editorCalls = [];
   const screenshotCalls = [];
-  const paths = userPaths ?? { instantProjects: '/instant-projects', studioProjects: '/studio-projects' };
+  const paths = userPaths ?? {
+    instantProjects: '/instant-projects',
+    studioProjects: '/studio-projects',
+  };
   const preferencesStore = {
     read: () => preferenceState,
     patch: (patch) => {
       calls.push('preferences.patch');
-      if (patch.devices) preferenceState.devices = { ...preferenceState.devices, ...patch.devices };
+      if (patch.devices)
+        preferenceState.devices = {
+          ...preferenceState.devices,
+          ...patch.devices,
+        };
       if (patch.extras) preferenceState.extras = { ...preferenceState.extras, ...patch.extras };
     },
   };
-  const videoPresetStore = { read: () => presetDocument ?? { activePresetId: 'default', presets: [preset] } };
+  const videoPresetStore = {
+    read: () => presetDocument ?? { activePresetId: 'default', presets: [preset] },
+  };
   const stillPresetStore = {
-    read: () => screenshotPresetDocument ?? { activePresetId: 'default', presets: [preset] },
+    read: () =>
+      screenshotPresetDocument ?? {
+        activePresetId: 'default',
+        presets: [preset],
+      },
   };
   let cropParent = null;
   let showFailuresRemaining = showFailure ? 1 : 0;
@@ -224,7 +242,15 @@ async function selectAndStart(controller, mode = 'studio') {
 }
 
 test('Quick Snip inherits shared recording desktop and real cursor defaults', async () => {
-  const f = harness({ preferences: { extras: { hideTaskbar: true, hideDesktopIcons: true, showRealCursor: true } } });
+  const f = harness({
+    preferences: {
+      extras: {
+        hideTaskbar: true,
+        hideDesktopIcons: true,
+        showRealCursor: true,
+      },
+    },
+  });
   await f.controller.toggle();
   const job = f.controller.state().job;
   assert.equal(job.hideTaskbar, true);
@@ -233,7 +259,15 @@ test('Quick Snip inherits shared recording desktop and real cursor defaults', as
 });
 
 test('Instant source options override the shared desktop and cursor defaults', async () => {
-  const f = harness({ preferences: { extras: { hideTaskbar: true, hideDesktopIcons: true, showRealCursor: true } } });
+  const f = harness({
+    preferences: {
+      extras: {
+        hideTaskbar: true,
+        hideDesktopIcons: true,
+        showRealCursor: true,
+      },
+    },
+  });
   await f.controller.fromHud({
     screenKind: 'display',
     screenId: 'display:1',
@@ -260,7 +294,10 @@ test('one toggle selects, starts, stops and finalizes Instant Quick Snip accordi
   assert.equal(controller.state().state, 'recording');
   await controller.toggle();
   assert.equal(controller.state().state, 'finalizing');
-  await controller.report({ type: 'completed', session: { projectId: 'project' } });
+  await controller.report({
+    type: 'completed',
+    session: { projectId: 'project' },
+  });
   assert.equal(controller.state().state, 'completed');
   assert.equal(controller.state().result.path, '/instant-projects/snippet.mp4');
   assert.equal(finalizeCalls[0].configuration.mode, 'instant');
@@ -442,13 +479,19 @@ test('a late processing result cannot replace canceled state or copy a file', as
   await selectAndStart(controller, 'instant');
   await controller.report({ type: 'recording' });
   await controller.stop();
-  const completion = controller.report({ type: 'completed', session: { projectId: 'project' } });
+  const completion = controller.report({
+    type: 'completed',
+    session: { projectId: 'project' },
+  });
   await Promise.resolve();
   assert.equal(controller.state().state, 'processing');
 
   await controller.cancel();
   assert.equal(controller.state().state, 'canceled');
-  resolveFinalize({ path: '/instant-projects/late-result.mp4', projectId: 'project' });
+  resolveFinalize({
+    path: '/instant-projects/late-result.mp4',
+    projectId: 'project',
+  });
   await completion;
 
   assert.equal(controller.state().state, 'canceled');
@@ -470,7 +513,10 @@ test('cancels an Instant export without hiding its status window', async () => {
   await selectAndStart(controller, 'instant');
   await controller.report({ type: 'recording' });
   await controller.stop();
-  const completion = controller.report({ type: 'completed', session: { projectId: 'project' } });
+  const completion = controller.report({
+    type: 'completed',
+    session: { projectId: 'project' },
+  });
   await Promise.resolve();
   assert.equal(controller.state().state, 'processing');
 
@@ -481,7 +527,10 @@ test('cancels an Instant export without hiding its status window', async () => {
   assert.ok(calls.includes('crop.hide'));
   assert.equal(calls.includes('status.hide'), false);
 
-  resolveFinalize({ path: '/instant-projects/late-result.mp4', projectId: 'project' });
+  resolveFinalize({
+    path: '/instant-projects/late-result.mp4',
+    projectId: 'project',
+  });
   await completion;
   assert.equal(controller.state().state, 'canceled');
   assert.equal(calls.includes('copy'), false);
@@ -499,7 +548,10 @@ test('late failed and completed reports after cancel do not reopen the status wi
   await selectAndStart(controller, 'instant');
   await controller.report({ type: 'recording' });
   await controller.stop();
-  const completion = controller.report({ type: 'completed', session: { projectId: 'project' } });
+  const completion = controller.report({
+    type: 'completed',
+    session: { projectId: 'project' },
+  });
   await Promise.resolve();
   assert.equal(controller.state().state, 'processing');
 
@@ -508,7 +560,10 @@ test('late failed and completed reports after cancel do not reopen the status wi
   calls.length = 0;
 
   await controller.report({ type: 'failed', error: 'late failure' });
-  await controller.report({ type: 'completed', session: { projectId: 'late-project' } });
+  await controller.report({
+    type: 'completed',
+    session: { projectId: 'late-project' },
+  });
 
   assert.equal(controller.state().state, 'canceled');
   assert.equal(controller.state().result, null);
@@ -518,7 +573,10 @@ test('late failed and completed reports after cancel do not reopen the status wi
     false,
   );
 
-  resolveFinalize({ path: '/instant-projects/late-result.mp4', projectId: 'project' });
+  resolveFinalize({
+    path: '/instant-projects/late-result.mp4',
+    projectId: 'project',
+  });
   await completion;
 });
 
@@ -531,7 +589,10 @@ test('cancellation while awaiting a thumbnail cannot restart processing', async 
   const f = harness({ thumbnail });
   await selectAndStart(f.controller, 'instant');
   await f.controller.report({ type: 'recording' });
-  const pending = f.controller.report({ type: 'completed', session: { projectId: 'project' } });
+  const pending = f.controller.report({
+    type: 'completed',
+    session: { projectId: 'project' },
+  });
   await f.controller.cancel();
   finishThumbnail(null);
   await pending;
@@ -547,7 +608,10 @@ test('clipboard failure preserves the completed output and exposes a retryable e
   });
   await selectAndStart(f.controller, 'instant');
   await f.controller.report({ type: 'recording' });
-  await f.controller.report({ type: 'completed', session: { projectId: 'project' } });
+  await f.controller.report({
+    type: 'completed',
+    session: { projectId: 'project' },
+  });
   assert.equal(f.controller.state().state, 'completed');
   assert.equal(f.controller.state().copied, false);
   assert.equal(f.controller.state().clipboardError, 'Clipboard busy');

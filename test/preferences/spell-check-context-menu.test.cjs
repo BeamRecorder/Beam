@@ -4,7 +4,7 @@ const test = require('node:test');
 const {
   createSpellCheckMenuTemplate,
   registerSpellCheckContextMenu,
-} = require('../../electron/preferences/spell-check-context-menu.cjs');
+} = require('../../apps/desktop/electron/preferences/spell-check-context-menu.cjs');
 
 const createWebContents = ({ url = 'beam://app', destroyed = false } = {}) => {
   const webContents = new EventEmitter();
@@ -52,7 +52,11 @@ test('deduplicates and limits suggestions, and replaces the misspelled word', ()
   const suggestions = ['the', 'the', 'ten', '', null, 'then', 'them', 'their', 'they', 'there', 'theme', 'thé'];
   const template = createSpellCheckMenuTemplate({
     webContents,
-    params: { isEditable: true, misspelledWord: 'teh', dictionarySuggestions: suggestions },
+    params: {
+      isEditable: true,
+      misspelledWord: 'teh',
+      dictionarySuggestions: suggestions,
+    },
     locale: 'en',
   });
 
@@ -70,7 +74,11 @@ test('shows a localized empty state and add-to-dictionary action', () => {
   const webContents = createWebContents();
   const template = createSpellCheckMenuTemplate({
     webContents,
-    params: { isEditable: true, misspelledWord: 'xinloi', dictionarySuggestions: [] },
+    params: {
+      isEditable: true,
+      misspelledWord: 'xinloi',
+      dictionarySuggestions: [],
+    },
     locale: 'fr-FR',
   });
 
@@ -85,7 +93,11 @@ test('localizes the empty state and dictionary action for Vietnamese', () => {
   const webContents = createWebContents();
   const template = createSpellCheckMenuTemplate({
     webContents,
-    params: { isEditable: true, misspelledWord: 'xinloi', dictionarySuggestions: [] },
+    params: {
+      isEditable: true,
+      misspelledWord: 'xinloi',
+      dictionarySuggestions: [],
+    },
     locale: 'vi',
   });
 
@@ -166,7 +178,9 @@ test('builds and pops up the menu for a trusted renderer URL', () => {
       return { popup: (options) => popupCalls.push(options) };
     },
   };
-  const BrowserWindow = { fromWebContents: (contents) => (contents === webContents ? window : null) };
+  const BrowserWindow = {
+    fromWebContents: (contents) => (contents === webContents ? window : null),
+  };
   const cleanup = registerSpellCheckContextMenu({
     app,
     Menu,
@@ -214,8 +228,14 @@ test('ignores an untrusted frame and a trusted webContents without an owning win
   const event = { preventDefault: () => assert.fail('menu should not open') };
 
   app.emit('web-contents-created', {}, webContents);
-  webContents.emit('context-menu', event, { isEditable: true, frame: { url: 'https://attacker.example' } });
-  webContents.emit('context-menu', event, { isEditable: true, frame: { url: 'beam://app/editor' } });
+  webContents.emit('context-menu', event, {
+    isEditable: true,
+    frame: { url: 'https://attacker.example' },
+  });
+  webContents.emit('context-menu', event, {
+    isEditable: true,
+    frame: { url: 'beam://app/editor' },
+  });
 
   assert.equal(buildCount, 0);
   cleanup();

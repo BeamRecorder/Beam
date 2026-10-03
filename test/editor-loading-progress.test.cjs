@@ -1,12 +1,19 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createEditorProgressReporter } = require('../electron/window/editor-loading-progress.cjs');
+const { createEditorProgressReporter } = require('../apps/desktop/electron/window/editor-loading-progress.cjs');
 const setup = () => {
   const calls = [];
   let destroyed = false;
-  const session = { lastProgressValue: 0, lastProgressStage: '', lastProgressAt: 0 };
+  const session = {
+    lastProgressValue: 0,
+    lastProgressStage: '',
+    lastProgressAt: 0,
+  };
   const report = createEditorProgressReporter(
-    { isDestroyed: () => destroyed, webContents: { send: (...args) => calls.push(args) } },
+    {
+      isDestroyed: () => destroyed,
+      webContents: { send: (...args) => calls.push(args) },
+    },
     (candidate) => candidate === session,
   );
   return {

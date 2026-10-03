@@ -53,7 +53,7 @@ function fixture(snapshot, extra = {}) {
   };
   let fileClipboardOptions = null;
   let service;
-  const source = require.resolve('../electron/quick-snip/quick-snip-service.cjs');
+  const source = require.resolve('../apps/desktop/electron/quick-snip/quick-snip-service.cjs');
   const previous = Module._load;
   delete require.cache[source];
   Module._load = function (name, ...args) {
@@ -68,7 +68,9 @@ function fixture(snapshot, extra = {}) {
     if (name === './quick-snip-settings-window.cjs') return { createQuickSnipSettingsWindow: () => settingsWindow };
     if (name === './quick-snip-status-window.cjs') return { createQuickSnipStatusWindow: () => statusWindow };
     if (name === './quick-snip-renderer.cjs')
-      return { createQuickSnipRenderer: () => ({ render() {}, destination() {} }) };
+      return {
+        createQuickSnipRenderer: () => ({ render() {}, destination() {} }),
+      };
     if (name === './quick-snip-finalizer.cjs') return { createQuickSnipFinalizer: () => () => {} };
     if (name === '../clipboard/file-clipboard.cjs')
       return {
@@ -142,10 +144,18 @@ test('main process retains the status window while canceling export and opening 
   assert.deepEqual(f.calls, [['cancel', { keepStatus: true }], 'editor:project', 'hide']);
 });
 test('completed Studio and Instant projects open in the editor without canceling', async () => {
-  const f = fixture({ state: 'completed', job: { mode: 'studio' }, result: { projectId: 'finished' } });
+  const f = fixture({
+    state: 'completed',
+    job: { mode: 'studio' },
+    result: { projectId: 'finished' },
+  });
   await f.invoke('open-editor');
   assert.deepEqual(f.calls, ['editor:finished', 'hide']);
-  const instant = fixture({ state: 'completed', job: { mode: 'instant' }, result: { projectId: 'instant' } });
+  const instant = fixture({
+    state: 'completed',
+    job: { mode: 'instant' },
+    result: { projectId: 'instant' },
+  });
   await instant.invoke('open-editor');
   assert.deepEqual(instant.calls, ['editor:instant', 'hide']);
 });
@@ -242,7 +252,10 @@ test('forwards the status renderer ready sender to the status window', () => {
 });
 
 test('returns the status snapshot with popover side only to its owning renderer', () => {
-  const controllerState = { state: 'processing', job: { mode: 'instant', projectId: 'project' } };
+  const controllerState = {
+    state: 'processing',
+    job: { mode: 'instant', projectId: 'project' },
+  };
   const statusSnapshot = { ...controllerState, popoverSide: 'below' };
   const f = fixture(controllerState, { statusSnapshot });
 
@@ -280,7 +293,10 @@ test('validates Instant project output paths before delegating to the file clipb
     },
   });
   assert.deepEqual(f.fileClipboardOptions().platform, 'linux');
-  assert.deepEqual(await f.invoke('copy-file', file), { native: true, fallback: null });
+  assert.deepEqual(await f.invoke('copy-file', file), {
+    native: true,
+    fallback: null,
+  });
   assert.deepEqual(copied, [{ target: file, platform: 'linux' }]);
   assert.throws(() => f.invoke('copy-file', outsideFile), /invalid/);
   assert.deepEqual(copied, [{ target: file, platform: 'linux' }]);
@@ -291,8 +307,16 @@ test('accepts screenshot capture stages only from the owning Crop Bar', () => {
   const reports = [
     { type: 'restarting', name: 'current-job' },
     { type: 'capture-cancelled', name: 'current-job' },
-    { type: 'screenshot-captured', name: 'current-job', screenshotId: 'still-id' },
-    { type: 'screenshot-rendered', name: 'current-job', preview: 'data:image/jpeg;base64,AA==' },
+    {
+      type: 'screenshot-captured',
+      name: 'current-job',
+      screenshotId: 'still-id',
+    },
+    {
+      type: 'screenshot-rendered',
+      name: 'current-job',
+      preview: 'data:image/jpeg;base64,AA==',
+    },
     { type: 'screenshot', name: 'current-job', screenshotId: 'still-id' },
   ];
 
@@ -309,7 +333,10 @@ test('accepts screenshot capture stages only from the owning Crop Bar', () => {
 });
 
 test('resolves a Windows Quick Snip source from the selected display center in physical coordinates', async () => {
-  const display = { id: 22, bounds: { x: -1920, y: -120, width: 1920, height: 1080 } };
+  const display = {
+    id: 22,
+    bounds: { x: -1920, y: -120, width: 1920, height: 1080 },
+  };
   const calls = [];
   const f = fixture(undefined, {
     platform: 'win32',
@@ -337,7 +364,10 @@ test('resolves a Windows Quick Snip source from the selected display center in p
 });
 
 test('resolves a macOS Quick Snip source from the display ID without asking the capture engine', async () => {
-  const display = { id: 456, bounds: { x: 0, y: 0, width: 1920, height: 1080 } };
+  const display = {
+    id: 456,
+    bounds: { x: 0, y: 0, width: 1920, height: 1080 },
+  };
   const f = fixture(undefined, {
     platform: 'darwin',
     screen: {

@@ -3,9 +3,9 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { createScreenshotStore } = require('../electron/screenshot/screenshot-store.cjs');
-const { registerScreenshotIpc } = require('../electron/screenshot/screenshot-ipc.cjs');
-const { historicalAppearance } = require('../electron/projects/composition-appearance.cjs');
+const { createScreenshotStore } = require('../apps/desktop/electron/screenshot/screenshot-store.cjs');
+const { registerScreenshotIpc } = require('../apps/desktop/electron/screenshot/screenshot-ipc.cjs');
+const { historicalAppearance } = require('../apps/desktop/electron/projects/composition-appearance.cjs');
 
 const pngBytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 1, 2, 3]);
 const webpBytes = Buffer.alloc(16);
@@ -76,8 +76,13 @@ function makeFixture(options = {}) {
     openedEditorRequests: [],
     canCapture: 0,
   };
-  let dialogResult = options.dialogResult ?? { canceled: false, filePath: path.join(outputDirectory, 'saved.png') };
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  let dialogResult = options.dialogResult ?? {
+    canceled: false,
+    filePath: path.join(outputDirectory, 'saved.png'),
+  };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   const captureEngine = {
     request: async (command, payload = {}) => {
       if (typeof command !== 'string') throw new TypeError('CaptureEngine.request requires a command string.');
@@ -101,7 +106,12 @@ function makeFixture(options = {}) {
       return {
         schemaVersion: 1,
         activePresetId: 'screenshot-default',
-        presets: [{ id: 'screenshot-default', settings: { format: 'png', canvas: { width: 1920, height: 1080 } } }],
+        presets: [
+          {
+            id: 'screenshot-default',
+            settings: { format: 'png', canvas: { width: 1920, height: 1080 } },
+          },
+        ],
       };
     },
   };
@@ -116,7 +126,12 @@ function makeFixture(options = {}) {
     read: async () => {
       calls.clipboardReads += 1;
       return options.clipboardPng
-        ? [{ types: ['image/png'], getType: async () => new Blob([options.clipboardPng]) }]
+        ? [
+            {
+              types: ['image/png'],
+              getType: async () => new Blob([options.clipboardPng]),
+            },
+          ]
         : [];
     },
     write: async (items) => {
@@ -139,7 +154,9 @@ function makeFixture(options = {}) {
       };
     },
   };
-  const BrowserWindow = { fromWebContents: () => ({ owner: 'trusted-window' }) };
+  const BrowserWindow = {
+    fromWebContents: () => ({ owner: 'trusted-window' }),
+  };
   const openEditor = async (id, openOptions, sender) => {
     calls.openedEditors.push(id);
     calls.openedEditorRequests.push({ id, options: openOptions, sender });
@@ -220,7 +237,10 @@ test('rejects unsupported screenshot source kinds before discovery and releases 
   const fixture = makeFixture();
   try {
     await assert.rejects(
-      fixture.invoke('screenshot:capture', { screenKind: 'screenshot', screenId: 'display-1' }),
+      fixture.invoke('screenshot:capture', {
+        screenKind: 'screenshot',
+        screenId: 'display-1',
+      }),
       /invalid screenshot source/i,
     );
     assert.deepEqual(fixture.calls.nativeRequests, []);
@@ -266,7 +286,9 @@ test('captures through the native screenshot command without cursor or audio tra
 });
 
 test('creates a named canvas screenshot with the active Screenshot preset', async () => {
-  const fixture = makeFixture({ nativeImageSize: { width: 1920, height: 1080 } });
+  const fixture = makeFixture({
+    nativeImageSize: { width: 1920, height: 1080 },
+  });
   try {
     const result = await fixture.invoke('screenshot:create-from-canvas', {
       bytes: asArrayBuffer(pngBytes),
@@ -276,7 +298,10 @@ test('creates a named canvas screenshot with the active Screenshot preset', asyn
     assert.equal(result.name, 'Product demo — Sep 18, 2026');
     assert.equal(result.width, 1920);
     assert.equal(result.height, 1080);
-    assert.deepEqual(result.preset, { format: 'png', canvas: { width: 1920, height: 1080 } });
+    assert.deepEqual(result.preset, {
+      format: 'png',
+      canvas: { width: 1920, height: 1080 },
+    });
     assert.deepEqual(fs.readFileSync(path.join(fixture.screenshotRoot, result.id, 'source.png')), pngBytes);
     assert.equal(fixture.calls.presetReads, 1);
     assert.deepEqual(fixture.calls.nativeRequests, []);
@@ -312,13 +337,19 @@ test('serializes capture requests and releases the lock after completion', async
   });
   const fixture = makeFixture({ onScreenshot: () => screenshotResult });
   try {
-    const first = fixture.invoke('screenshot:capture', { screenKind: 'display', screenId: 'display-1' });
+    const first = fixture.invoke('screenshot:capture', {
+      screenKind: 'display',
+      screenId: 'display-1',
+    });
     await new Promise((resolve) => setImmediate(resolve));
     assert.equal(fixture.registration.isBusy(), true);
     assert.equal(fixture.calls.nativeRequests.length, 2);
 
     await assert.rejects(
-      fixture.invoke('screenshot:capture', { screenKind: 'display', screenId: 'display-1' }),
+      fixture.invoke('screenshot:capture', {
+        screenKind: 'display',
+        screenId: 'display-1',
+      }),
       /another capture is already active/i,
     );
     assert.equal(fixture.calls.nativeRequests.length, 2);
@@ -340,7 +371,10 @@ test('removes a pending screenshot and releases the lock when native capture fai
   });
   try {
     await assert.rejects(
-      fixture.invoke('screenshot:capture', { screenKind: 'display', screenId: 'display-1' }),
+      fixture.invoke('screenshot:capture', {
+        screenKind: 'display',
+        screenId: 'display-1',
+      }),
       /native screenshot failed/,
     );
     assert.equal(fixture.store.list().length, 0);
@@ -430,7 +464,10 @@ test('removes a captured screenshot and releases the lock when preset lookup fai
   });
   try {
     await assert.rejects(
-      fixture.invoke('screenshot:capture', { screenKind: 'display', screenId: 'display-1' }),
+      fixture.invoke('screenshot:capture', {
+        screenKind: 'display',
+        screenId: 'display-1',
+      }),
       /screenshot preset unavailable/,
     );
     assert.deepEqual(
@@ -460,16 +497,25 @@ test('saves screenshot editor state and opens only an existing screenshot', asyn
       undo: [JSON.parse(JSON.stringify(state))],
       redo: [redoState],
     };
-    await fixture.invoke('screenshot:save', { id: screenshot.id, state, history });
+    await fixture.invoke('screenshot:save', {
+      id: screenshot.id,
+      state,
+      history,
+    });
     assert.deepEqual(fixture.store.read(screenshot.id).state, state);
     assert.deepEqual(fixture.store.read(screenshot.id).history, history);
     assert.deepEqual(await fixture.invoke('screenshot:get', screenshot.id), fixture.store.read(screenshot.id));
     assert.equal((await fixture.invoke('screenshot:list')).length, 1);
 
     const open = fixture.handlers.get('screenshot:open');
-    assert.deepEqual(await open(fixture.trustedEvent, screenshot.id, { disposition: 'new-window' }), {
-      opened: screenshot.id,
-    });
+    assert.deepEqual(
+      await open(fixture.trustedEvent, screenshot.id, {
+        disposition: 'new-window',
+      }),
+      {
+        opened: screenshot.id,
+      },
+    );
     assert.deepEqual(fixture.calls.openedEditors, [screenshot.id]);
     assert.deepEqual(fixture.calls.openedEditorRequests, [
       {
@@ -495,7 +541,12 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
     const webp = asArrayBuffer(webpBytes);
 
     assert.equal(
-      await fixture.invoke('screenshot:export', { id: screenshot.id, bytes: png, format: 'png', copy: true }),
+      await fixture.invoke('screenshot:export', {
+        id: screenshot.id,
+        bytes: png,
+        format: 'png',
+        copy: true,
+      }),
       null,
     );
     assert.deepEqual(fixture.calls.imageBuffers[0], pngBytes);
@@ -505,7 +556,12 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
     assert.deepEqual(Buffer.from(await payload.arrayBuffer()), pngBytes);
 
     await assert.rejects(
-      fixture.invoke('screenshot:export', { id: screenshot.id, bytes: webp, format: 'webp', copy: true }),
+      fixture.invoke('screenshot:export', {
+        id: screenshot.id,
+        bytes: webp,
+        format: 'webp',
+        copy: true,
+      }),
       /clipboard images must be encoded as png/i,
     );
     assert.equal(fixture.calls.imageBuffers.length, 1);
@@ -513,11 +569,21 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
     assert.equal(fixture.calls.dialogs.length, 0);
 
     await assert.rejects(
-      fixture.invoke('screenshot:export', { id: screenshot.id, bytes: webp, format: 'png', copy: true }),
+      fixture.invoke('screenshot:export', {
+        id: screenshot.id,
+        bytes: webp,
+        format: 'png',
+        copy: true,
+      }),
       /encoding does not match/i,
     );
     await assert.rejects(
-      fixture.invoke('screenshot:export', { id: screenshot.id, bytes: png, format: 'webp', copy: true }),
+      fixture.invoke('screenshot:export', {
+        id: screenshot.id,
+        bytes: png,
+        format: 'webp',
+        copy: true,
+      }),
       /encoding does not match/i,
     );
     await assert.rejects(
@@ -534,7 +600,12 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
     const outputFile = path.join(fixture.outputDirectory, 'final.png');
     fixture.setDialogResult({ canceled: false, filePath: outputFile });
     assert.equal(
-      await fixture.invoke('screenshot:export', { id: screenshot.id, bytes: png, format: 'png', copy: false }),
+      await fixture.invoke('screenshot:export', {
+        id: screenshot.id,
+        bytes: png,
+        format: 'png',
+        copy: false,
+      }),
       outputFile,
     );
     assert.deepEqual(fs.readFileSync(outputFile), pngBytes);
@@ -545,7 +616,12 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
     const outputWebpFile = path.join(fixture.outputDirectory, 'final.webp');
     fixture.setDialogResult({ canceled: false, filePath: outputWebpFile });
     assert.equal(
-      await fixture.invoke('screenshot:export', { id: screenshot.id, bytes: webp, format: 'webp', copy: false }),
+      await fixture.invoke('screenshot:export', {
+        id: screenshot.id,
+        bytes: webp,
+        format: 'webp',
+        copy: false,
+      }),
       outputWebpFile,
     );
     assert.deepEqual(fs.readFileSync(outputWebpFile), webpBytes);
@@ -554,7 +630,12 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
     const canceledFile = path.join(fixture.outputDirectory, 'canceled.webp');
     fixture.setDialogResult({ canceled: true, filePath: undefined });
     assert.equal(
-      await fixture.invoke('screenshot:export', { id: screenshot.id, bytes: webp, format: 'webp', copy: false }),
+      await fixture.invoke('screenshot:export', {
+        id: screenshot.id,
+        bytes: webp,
+        format: 'webp',
+        copy: false,
+      }),
       null,
     );
     assert.equal(fs.existsSync(canceledFile), false);

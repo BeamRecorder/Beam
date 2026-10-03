@@ -25,7 +25,7 @@ function fixture() {
     destroy: () => calls.push(['idle.destroy']),
   };
   const originalLoad = Module._load;
-  const modulePath = require.resolve('../electron/lifecycle/tray-runtime.cjs');
+  const modulePath = require.resolve('../apps/desktop/electron/lifecycle/tray-runtime.cjs');
   delete require.cache[modulePath];
   Module._load = function (name, ...args) {
     if (name === '../tray/tray-manager.cjs')

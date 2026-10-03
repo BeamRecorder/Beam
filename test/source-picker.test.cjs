@@ -1,9 +1,11 @@
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const test = require('node:test');
-const { createDevelopmentSourceProvider } = require('../electron/source-picker/development-source-provider.cjs');
+const {
+  createDevelopmentSourceProvider,
+} = require('../apps/desktop/electron/source-picker/development-source-provider.cjs');
 const flush = () => new Promise((resolve) => setImmediate(resolve));
-const { createSourcePickerController } = require('../electron/source-picker/source-picker-controller.cjs');
+const { createSourcePickerController } = require('../apps/desktop/electron/source-picker/source-picker-controller.cjs');
 const path = require('node:path');
 
 function fixture(options = {}) {
@@ -15,7 +17,12 @@ function fixture(options = {}) {
     constructor(options) {
       super();
       this.options = options;
-      this.bounds = { x: options.x, y: options.y, width: options.width, height: options.height };
+      this.bounds = {
+        x: options.x,
+        y: options.y,
+        width: options.width,
+        height: options.height,
+      };
       this.visible = false;
       this.destroyed = false;
       this.calls = [];
@@ -107,7 +114,17 @@ function fixture(options = {}) {
   };
   const act = (action) => controller.action(action);
   const latest = (target) => target.calls.filter(([type]) => type === 'send').at(-1)?.[2];
-  return { controller, windows, hudWindow, handlers, ipcMain, ready, act, latest, provider };
+  return {
+    controller,
+    windows,
+    hudWindow,
+    handlers,
+    ipcMain,
+    ready,
+    act,
+    latest,
+    provider,
+  };
 }
 
 test('one transparent centered chooser remains owned above the HUD', async () => {
@@ -125,7 +142,12 @@ test('one transparent centered chooser remains owned above the HUD', async () =>
     chooser.calls.some(([name, enabled, level]) => name === 'alwaysOnTop' && enabled && level === 'screen-saver'),
   );
   assert.equal(chooser.options.focusable, true);
-  assert.deepEqual(chooser.bounds, { x: -1336, y: 440, width: 752, height: 200 });
+  assert.deepEqual(chooser.bounds, {
+    x: -1336,
+    y: 440,
+    width: 752,
+    height: 200,
+  });
   ready(chooser);
   assert.ok(chooser.calls.some(([name, value]) => name === 'mouse' && value === false));
   controller.action({ type: 'cancel' });
@@ -139,7 +161,12 @@ test('screen selection uses the same centered transparent preview without a full
   const result = controller.open('screen');
   await flush();
   assert.equal(windows.length, 2);
-  assert.deepEqual(windows.at(-1).bounds, { x: -1280, y: 440, width: 640, height: 200 });
+  assert.deepEqual(windows.at(-1).bounds, {
+    x: -1280,
+    y: 440,
+    width: 640,
+    height: 200,
+  });
   assert.deepEqual(hudWindow.getBounds(), before);
   controller.action({ type: 'cancel' });
   await result;
@@ -149,7 +176,10 @@ for (const platform of ['linux', 'win32', 'darwin']) {
   for (const kind of ['window', 'screen']) {
     test(`${platform} ${kind} backdrop stays below its topmost chooser in either readiness order`, async () => {
       for (const first of ['chooser', 'backdrop']) {
-        const { controller, windows, ready } = fixture({ platform, development: true });
+        const { controller, windows, ready } = fixture({
+          platform,
+          development: true,
+        });
         const result = controller.open(kind);
         await flush();
         const [backdrop, chooser] = windows;
@@ -164,7 +194,10 @@ for (const platform of ['linux', 'win32', 'darwin']) {
         };
         backdrop.moveTop = () => order.push('backdrop:raise');
         chooser.moveTop = () => order.push('chooser:raise');
-        controller.action({ type: 'hover', id: kind === 'window' ? 'demo-window-1' : 'demo-screen-1' });
+        controller.action({
+          type: 'hover',
+          id: kind === 'window' ? 'demo-window-1' : 'demo-screen-1',
+        });
         await flush();
         ready(first === 'chooser' ? chooser : backdrop);
         ready(first === 'chooser' ? backdrop : chooser);
@@ -175,7 +208,10 @@ for (const platform of ['linux', 'win32', 'darwin']) {
           false,
         );
         const bounds = { ...backdrop.bounds };
-        controller.action({ type: 'hover', id: kind === 'window' ? 'demo-window-2' : 'demo-screen-2' });
+        controller.action({
+          type: 'hover',
+          id: kind === 'window' ? 'demo-window-2' : 'demo-screen-2',
+        });
         await flush();
         assert.deepEqual(backdrop.bounds, bounds);
         controller.action({ type: 'hover', id: null });
@@ -301,7 +337,9 @@ test('development and packaged choosers load the same source-selection entry', a
 });
 
 test('chooser presentation waits for native and owning renderer readiness', async () => {
-  const { controller, windows, ready, latest } = fixture({ platform: 'darwin' });
+  const { controller, windows, ready, latest } = fixture({
+    platform: 'darwin',
+  });
   const result = controller.open('window');
   await flush();
   windows.at(-1).emit('ready-to-show');
@@ -322,12 +360,23 @@ test('chooser presentation waits for native and owning renderer readiness', asyn
 });
 
 test('single native screen skips the chooser while empty and multi-screen catalogues show it', async () => {
-  const display = { id: 'native:screen', kind: 'screen', name: 'Screen', app: '', detail: '', aspect: 1.6 };
-  const one = fixture({ provider: { development: false, list: async () => [display] } });
+  const display = {
+    id: 'native:screen',
+    kind: 'screen',
+    name: 'Screen',
+    app: '',
+    detail: '',
+    aspect: 1.6,
+  };
+  const one = fixture({
+    provider: { development: false, list: async () => [display] },
+  });
   assert.equal((await one.controller.open('screen')).id, display.id);
   assert.equal(one.windows.length, 0);
   for (const sources of [[], [display, { ...display, id: 'native:screen2' }]]) {
-    const { controller, windows } = fixture({ provider: { development: false, list: async () => sources } });
+    const { controller, windows } = fixture({
+      provider: { development: false, list: async () => sources },
+    });
     const result = controller.open('screen');
     await flush();
     assert.equal(windows.length, 2);
@@ -398,7 +447,10 @@ test('late preview results are discarded when hover changes', async () => {
   ready(windows.at(-1));
   controller.action({ type: 'hover', id: 'demo-window-1' });
   controller.action({ type: 'hover', id: 'demo-window-2' });
-  resolveFirst({ bounds: { x: 9000, y: 0, width: 400, height: 400 }, thumbnail: 'stale' });
+  resolveFirst({
+    bounds: { x: 9000, y: 0, width: 400, height: 400 },
+    thumbnail: 'stale',
+  });
   await flush();
   const state = latest(windows.at(-1));
   assert.equal(state.highlightedId, 'demo-window-2');
@@ -449,7 +501,10 @@ test('a pending preview cannot reappear or restart refreshes after pointer exit'
   ready(windows.at(-1));
   controller.action({ type: 'hover', id: 'demo-window-1' });
   controller.action({ type: 'hover', id: null });
-  resolvePreview({ bounds: { x: 5000, y: 0, width: 10, height: 10 }, thumbnail: 'stale' });
+  resolvePreview({
+    bounds: { x: 5000, y: 0, width: 10, height: 10 },
+    thumbnail: 'stale',
+  });
   await flush();
   context.mock.timers.tick(3500);
   await flush();
@@ -511,7 +566,9 @@ test('confirmation waits for stale hover inspection then raises only the clicked
 });
 
 test('cancelling during confirmation destroys both surfaces and cannot resume a late handoff', async () => {
-  const { controller, windows, provider, ready } = fixture({ development: true });
+  const { controller, windows, provider, ready } = fixture({
+    development: true,
+  });
   let resolveHover;
   let count = 0;
   provider.preview = () => {

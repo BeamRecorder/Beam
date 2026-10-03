@@ -10,9 +10,18 @@
   },
   "type": "module",
   "packageManager": "bun@1.4.2",
-  "main": "electron/main.cjs",
+  "main": "apps/desktop/electron/entry.cjs",
   "workspaces": [
-    "website"
+    "website",
+    "packages/engine",
+    "packages/runtime",
+    "packages/encoder",
+    "apps/cli",
+    "apps/desktop",
+    "packages/storage",
+    "packages/native-client",
+    "packages/system-metrics",
+    "packages/electron-export"
   ],
   "overrides": {
     "@unhead/dom": "3.4.2",
@@ -32,8 +41,8 @@
     "rust-test:coverage": "powershell.exe -NoProfile -Command \"cargo llvm-cov --workspace --all-features --html --output-dir coverage/rust; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; cargo llvm-cov report --text --show-missing-lines; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; cargo llvm-cov report --lcov --output-path coverage/rust/lcov.info\"",
     "typecheck": "tsc -p tsconfig.typecheck.json --noEmit --pretty false",
     "typecheck:vue": "vue-tsc -b --pretty false",
-    "format": "oxfmt --write \"src/**/*.{vue,ts}\" \"website/**/*.{vue,ts,css,html,json,jsonc}\" \"electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
-    "format:check": "oxfmt --check \"src/**/*.{vue,ts}\" \"website/**/*.{vue,ts,css,html,json,jsonc}\" \"electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
+    "format": "oxfmt --write \"apps/desktop/src/**/*.{vue,ts}\" \"packages/{engine,runtime,encoder,storage,native-client,system-metrics,electron-export}/src/**/*.{ts,js,cjs}\" \"apps/cli/src/**/*.{ts,cjs}\" \"website/**/*.{vue,ts,css,html,json,jsonc}\" \"apps/desktop/electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
+    "format:check": "oxfmt --check \"apps/desktop/src/**/*.{vue,ts}\" \"packages/{engine,runtime,encoder,storage,native-client,system-metrics,electron-export}/src/**/*.{ts,js,cjs}\" \"apps/cli/src/**/*.{ts,cjs}\" \"website/**/*.{vue,ts,css,html,json,jsonc}\" \"apps/desktop/electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
     "lint": "oxlint --vue-plugin",
     "dev": "node scripts/dev/beam.cjs",
     "dev:renderer": "vite",
@@ -43,10 +52,16 @@
     "website:preview": "bun run --filter @beam/website preview",
     "website:typecheck": "bun run --filter @beam/website typecheck",
     "website:test": "bun run --filter @beam/website test",
-    "build": "node scripts/native/artifacts.cjs build && vite build",
+    "build": "node scripts/native/artifacts.cjs build && vite build && bun run build:cli",
     "electron:dev": "node scripts/dev/electron.cjs",
     "electron:dev:no-rust": "node scripts/dev/electron.cjs --force-no-rust",
-    "electron:build": "bun run build && electron-builder --publish never"
+    "diagnose:webcodecs": "node scripts/diagnostics/webcodecs-export.cjs",
+    "build:ffmpeg-export": "node scripts/native/ffmpeg-export.cjs",
+    "electron:build": "bun run build && electron-builder --publish never",
+    "typecheck:packages": "bun run --filter @beam/engine --filter @beam/runtime --filter @beam/encoder --filter @beam/cli --filter @beam/storage --filter @beam/system-metrics typecheck",
+    "beam": "bun apps/cli/src/index.ts",
+    "check:boundaries": "node scripts/check-package-boundaries.mjs",
+    "build:cli": "bun scripts/build-cli.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "4.3.0",
@@ -62,7 +77,14 @@
     "pinia": "^4.0.3",
     "vitest": "^5.0.2",
     "vue": "^3.5.43",
-    "vue-i18n": "^11.4.12"
+    "vue-i18n": "^11.4.12",
+    "@beam/engine": "workspace:*",
+    "@beam/runtime": "workspace:*",
+    "@beam/encoder": "workspace:*",
+    "@beam/storage": "workspace:*",
+    "@beam/native-client": "workspace:*",
+    "@beam/system-metrics": "workspace:*",
+    "@beam/electron-export": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",
@@ -86,7 +108,14 @@
     "productName": "Beam",
     "files": [
       "dist/**/*",
-      "electron/**/*"
+      "apps/desktop/electron/**/*",
+      "packages/engine/src/scene/scene-schema.js",
+      "packages/engine/src/zoom/glass-highlight-schema.js",
+      "packages/engine/src/zoom/zoom-schema.js",
+      "packages/storage/src/node/*.cjs",
+      "packages/native-client/src/*.cjs",
+      "packages/system-metrics/src/node/*.cjs",
+      "packages/electron-export/src/*.cjs"
     ],
     "directories": {
       "output": "dist_electron"
@@ -184,7 +213,22 @@
       ],
       "afterInstall": "build/linux/after-install.sh",
       "afterRemove": "build/linux/rpm-after-remove.sh"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "apps/cli/dist",
+        "to": "beam-cli"
+      },
+      {
+        "from": "apps/cli/dist/node_modules",
+        "to": "beam-cli/node_modules"
+      },
+      {
+        "from": "apps/desktop/cli",
+        "to": "cli"
+      }
+    ],
+    "afterPack": "scripts/native/desktop-cli.cjs"
   },
   "patchedDependencies": {
     "@huggingface/transformers@4.3.0": "patches/@huggingface%2Ftransformers@4.3.0.patch"

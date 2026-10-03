@@ -1,0 +1,59 @@
+import type { ProjectEditorData } from '~/api/types/capture-api';
+import type { ClipComposition, NormalizedTransform } from '@beam/engine/shared/composition-types';
+import type { ZoomAutoFollowSettings, ZoomElement, ZoomMotionBlurSettings } from '@beam/engine/zoom/zoom-types';
+import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
+import type { CompositionSceneLayers } from '@beam/engine/composition/scene-layers';
+
+export interface VideoWindowBounds {
+  dx: number;
+  dy: number;
+  dw: number;
+  dh: number;
+  scale: number;
+  focusX?: number;
+  focusY?: number;
+  tiltX?: number;
+  tiltY?: number;
+}
+
+export interface RenderedVideoWindow extends VideoWindowBounds {
+  focusX: number;
+  focusY: number;
+  tiltX?: number;
+  tiltY?: number;
+}
+
+export interface UseCameraZoomOptions {
+  canvasRef: () => HTMLCanvasElement | null;
+  outputCanvas: () => OutputCanvasSettings;
+  zoomElements: () => ZoomElement[];
+  zoomMotionBlur?: () => ZoomMotionBlurSettings;
+  zoomAutoFollow?: () => ZoomAutoFollowSettings;
+  selectedZoom: () => ZoomElement | null;
+  currentTime: () => number;
+  isPlaying: () => boolean;
+  editorData: () => ProjectEditorData | null | undefined;
+  activeTab: () => string;
+  composition: () => ClipComposition;
+  sceneLayersAt?: (timeMs: number) => CompositionSceneLayers;
+  screenTransformDraft?: () => NormalizedTransform | null;
+  isCropping?: () => boolean | undefined;
+  drawBackground: (
+    ctx: CanvasRenderingContext2D,
+    bounds: { x: number; y: number; width: number; height: number },
+  ) => void;
+  renderVisualStack?: (
+    ctx: CanvasRenderingContext2D,
+    videoWindow: RenderedVideoWindow,
+    drawScreen: () => void,
+    layers: CompositionSceneLayers,
+  ) => void;
+  onUpdateZoom: (zoom: ZoomElement) => void;
+  onSelectScreenClip: (clipId: string, event: PointerEvent) => void;
+  onSelectCanvas: () => void;
+  onDeselectTransformClip: () => void;
+  onDeselectZoom: () => void;
+  selectVisualAt: (event: PointerEvent) => boolean;
+  selectedTransformClipExists: () => boolean;
+  onRenderOnce?: () => void;
+}

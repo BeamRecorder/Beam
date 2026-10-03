@@ -5,6 +5,10 @@ if [ "${1:-0}" != "0" ]; then
   exit 0
 fi
 
+if [ -L /usr/bin/beam-cli ]; then
+  case "$(readlink /usr/bin/beam-cli)" in /opt/Beam/beam-cli|/opt/beam/beam-cli) rm /usr/bin/beam-cli ;; esac
+fi
+
 if [ -x /usr/libexec/beam-input-helper ]; then
   /usr/libexec/beam-input-helper uninstall >/dev/null
 fi

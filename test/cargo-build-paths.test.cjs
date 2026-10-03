@@ -1,11 +1,14 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { resolveCargoTargetDirectory } = require('../electron/capture/cargo-build-paths.cjs');
+const { resolveCargoTargetDirectory } = require('@beam/native-client/cargo-build-paths');
 test('resolves Cargo configuration without guessing a worktree-local target directory', () => {
   let invocation;
   const directory = resolveCargoTargetDirectory('/worktree', (command, args, options) => {
     invocation = { command, args, options };
-    return { status: 0, stdout: JSON.stringify({ target_directory: '/cache/cargo target' }) };
+    return {
+      status: 0,
+      stdout: JSON.stringify({ target_directory: '/cache/cargo target' }),
+    };
   });
   assert.equal(directory, '/cache/cargo target');
   assert.equal(invocation.command, 'cargo');
@@ -15,11 +18,18 @@ test('resolves Cargo configuration without guessing a worktree-local target dire
 });
 test('reports Cargo process and configuration errors', () => {
   assert.throws(
-    () => resolveCargoTargetDirectory('/worktree', () => ({ error: new Error('Cargo missing') })),
+    () =>
+      resolveCargoTargetDirectory('/worktree', () => ({
+        error: new Error('Cargo missing'),
+      })),
     /Cargo missing/,
   );
   assert.throws(
-    () => resolveCargoTargetDirectory('/worktree', () => ({ status: 101, stderr: 'Bad Cargo configuration' })),
+    () =>
+      resolveCargoTargetDirectory('/worktree', () => ({
+        status: 101,
+        stderr: 'Bad Cargo configuration',
+      })),
     /Bad Cargo configuration/,
   );
   assert.throws(() => resolveCargoTargetDirectory('/worktree', () => ({ status: 2 })), /Cargo metadata failed: 2/);

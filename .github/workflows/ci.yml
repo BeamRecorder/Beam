@@ -30,18 +30,16 @@ jobs:
               - 'build/**'
               - 'bun.lock'
               - 'Cargo.*'
-              - 'electron/**'
+              - 'apps/**'
               - 'packages/**'
               - 'package*.json'
               - 'public/**'
               - 'rust-toolchain.toml'
               - 'scripts/**'
-              - 'src/**'
               - 'test/**'
               - 'tests/**'
               - 'tsconfig*.json'
               - 'vite.config.ts'
-              - 'html/**'
 
   quality:
     runs-on: ubuntu-latest
@@ -192,7 +190,9 @@ jobs:
           cargo build -p capture --bin capture-engine --release --target aarch64-pc-windows-msvc
           node scripts/native/artifacts.cjs stage --platform win32 --arch x64 --target x86_64-pc-windows-msvc
           node scripts/native/artifacts.cjs stage --platform win32 --arch arm64 --target aarch64-pc-windows-msvc
+          bun install --frozen-lockfile --cpu "*"
           bunx vite build
+          bun run build:cli
       - run: bunx electron-builder --win nsis --x64 --arm64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -297,7 +297,9 @@ jobs:
         run: |
           cargo build -p capture --bin capture-engine --release --target aarch64-apple-darwin
           node scripts/native/artifacts.cjs stage --platform darwin --arch arm64 --target aarch64-apple-darwin
+          bun install --frozen-lockfile --cpu "*"
           bunx vite build
+          bun run build:cli
       - run: bunx electron-builder --mac dmg zip --arm64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'

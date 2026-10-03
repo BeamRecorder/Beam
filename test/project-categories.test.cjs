@@ -5,8 +5,8 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const test = require('node:test');
 
-const { createProjectStore } = require('../electron/projects/project-store.cjs');
-const { organizeProjectCategories } = require('../electron/storage/project-categories.cjs');
+const { createProjectStore } = require('../apps/desktop/electron/projects/project-store.cjs');
+const { organizeProjectCategories } = require('../apps/desktop/electron/storage/project-categories.cjs');
 
 function temporaryRoot(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-project-categories-'));
@@ -146,7 +146,9 @@ test('organizing categories twice preserves the migrated files and manifest byte
   const root = temporaryRoot(t);
   const projectId = '66666666-6666-4666-8666-666666666666';
   const legacy = path.join(root, 'Repeatable');
-  const original = writeProject(legacy, projectId, { customData: { retained: true } });
+  const original = writeProject(legacy, projectId, {
+    customData: { retained: true },
+  });
   const media = path.join(legacy, 'media', 'asset.bin');
   fs.mkdirSync(path.dirname(media), { recursive: true });
   fs.writeFileSync(media, Buffer.from('preserve these bytes'));

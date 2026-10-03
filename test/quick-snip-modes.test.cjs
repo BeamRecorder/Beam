@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { createQuickSnipController } = require('../electron/quick-snip/quick-snip-controller.cjs');
+const { createQuickSnipController } = require('../apps/desktop/electron/quick-snip/quick-snip-controller.cjs');
 
 const displayBounds = { x: 0, y: 0, width: 1920, height: 1080 };
 const selectionRegion = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
@@ -36,16 +36,32 @@ function fixture({
   const activeScreenshotPreset = screenshotPreset ?? makePreset('screenshot-default');
   const dependencies = {
     platform: 'win32',
-    userPaths: { instantProjects: '/projects/instant', studioProjects: '/projects/studio' },
+    userPaths: {
+      instantProjects: '/projects/instant',
+      studioProjects: '/projects/studio',
+    },
     preferencesStore: {
       read: () => preferenceState,
       patch: (patch) => {
         preferenceWrites.push(patch);
-        if (patch.extras) preferenceState.extras = { ...preferenceState.extras, ...patch.extras };
-        if (patch.devices) preferenceState.devices = { ...preferenceState.devices, ...patch.devices };
+        if (patch.extras)
+          preferenceState.extras = {
+            ...preferenceState.extras,
+            ...patch.extras,
+          };
+        if (patch.devices)
+          preferenceState.devices = {
+            ...preferenceState.devices,
+            ...patch.devices,
+          };
       },
     },
-    presetStore: { read: () => ({ activePresetId: activeVideoPreset.id, presets: [activeVideoPreset] }) },
+    presetStore: {
+      read: () => ({
+        activePresetId: activeVideoPreset.id,
+        presets: [activeVideoPreset],
+      }),
+    },
     screenshotStore: {
       read: (id) => {
         assert.equal(id, screenshotId);
@@ -53,7 +69,10 @@ function fixture({
       },
     },
     screenshotPresetStore: {
-      read: () => ({ activePresetId: activeScreenshotPreset.id, presets: [activeScreenshotPreset] }),
+      read: () => ({
+        activePresetId: activeScreenshotPreset.id,
+        presets: [activeScreenshotPreset],
+      }),
     },
     openEditor: async (id) => {
       openEditors.push(id);
@@ -67,7 +86,10 @@ function fixture({
     regionOverlay: {
       select: (options) => {
         selectionCalls.push(options);
-        return Promise.resolve({ bounds: displayBounds, region: selectionRegion });
+        return Promise.resolve({
+          bounds: displayBounds,
+          region: selectionRegion,
+        });
       },
       cancel: () => calls.push('selection.cancel'),
     },
@@ -95,7 +117,10 @@ function fixture({
       finalized.push(options);
       return finalize
         ? finalize(options)
-        : { path: '/projects/instant/exports/quick-snip.mp4', projectId: options.session.projectId };
+        : {
+            path: '/projects/instant/exports/quick-snip.mp4',
+            projectId: options.session.projectId,
+          };
     },
     copyFile: async (file) => calls.push(`copy:${file}`),
     onStateChanged: (state) => calls.push(`state:${state.state}`),
@@ -156,9 +181,16 @@ test('accepts only Studio, Instant, and Screenshot mode values', async () => {
 
 for (const presetId of ['default', 'saved-video']) {
   test(`Screenshot to Studio restores ${presetId} devices and zoom without overwriting preferences`, async () => {
-    const devices = { micId: 'mic-usb', cameraId: 'camera-usb', systemAudioMode: 'on' };
+    const devices = {
+      micId: 'mic-usb',
+      cameraId: 'camera-usb',
+      systemAudioMode: 'on',
+    };
     const f = fixture({
-      preferences: { extras: { captureMode: 'screenshot' }, devices: { ...devices } },
+      preferences: {
+        extras: { captureMode: 'screenshot' },
+        devices: { ...devices },
+      },
       videoPreset: makePreset(presetId, { devices, automaticZoom: true }),
     });
     await f.controller.toggle();
@@ -177,10 +209,17 @@ for (const presetId of ['default', 'saved-video']) {
 }
 
 test('fromHud starts Instant immediately with the chosen source, active preset, and native project root', async () => {
-  const devices = { micId: 'mic-1', cameraId: 'camera-1', systemAudioMode: 'on' };
+  const devices = {
+    micId: 'mic-1',
+    cameraId: 'camera-1',
+    systemAudioMode: 'on',
+  };
   const f = fixture({
     preferences: { extras: { captureMode: 'studio' } },
-    videoPreset: makePreset('video-active', { format: 'webm', automaticZoom: false }),
+    videoPreset: makePreset('video-active', {
+      format: 'webm',
+      automaticZoom: false,
+    }),
   });
 
   await f.controller.fromHud({
@@ -222,7 +261,11 @@ test('fromHud rejects a source outside the native display and window options', a
 });
 
 test('Quick Snip uses the native source resolved for its selected display instead of a stale saved source ID', async () => {
-  const display = { id: 22, bounds: { x: -1920, y: -120, width: 1920, height: 1080 }, workArea: displayBounds };
+  const display = {
+    id: 22,
+    bounds: { x: -1920, y: -120, width: 1920, height: 1080 },
+    workArea: displayBounds,
+  };
   const resolvedDisplays = [];
   const f = fixture({
     preferences: {
@@ -295,7 +338,10 @@ test('Studio and HUD Instant both finalize, export and copy without opening an e
   await studio.controller.toggle();
   await studio.controller.start();
   await studio.controller.report({ type: 'recording' });
-  await studio.controller.report({ type: 'completed', session: { projectId: 'studio-project' } });
+  await studio.controller.report({
+    type: 'completed',
+    session: { projectId: 'studio-project' },
+  });
 
   assert.deepEqual(studio.openEditors, []);
   assert.equal(studio.finalized[0].configuration.outputRoot, '/projects/instant');
@@ -304,9 +350,15 @@ test('Studio and HUD Instant both finalize, export and copy without opening an e
   assert.equal(studio.controller.state().state, 'completed');
 
   const instant = fixture();
-  await instant.controller.fromHud({ screenKind: 'display', screenId: 'display:2' });
+  await instant.controller.fromHud({
+    screenKind: 'display',
+    screenId: 'display:2',
+  });
   await instant.controller.report({ type: 'recording' });
-  await instant.controller.report({ type: 'completed', session: { projectId: 'instant-project' } });
+  await instant.controller.report({
+    type: 'completed',
+    session: { projectId: 'instant-project' },
+  });
 
   assert.equal(instant.finalized.length, 1);
   assert.equal(instant.finalized[0].configuration.mode, 'instant');
@@ -323,22 +375,35 @@ test('Screenshot completion retains its ID and copies by default or opens the sc
   });
   await copied.controller.toggle();
   await copied.controller.start();
-  await copied.controller.report({ type: 'screenshot', name: copied.controller.state().job.name, screenshotId });
+  await copied.controller.report({
+    type: 'screenshot',
+    name: copied.controller.state().job.name,
+    screenshotId,
+  });
 
   assert.equal(copied.controller.state().state, 'completed');
   assert.equal(copied.controller.state().job.projectId, screenshotId);
-  assert.deepEqual(copied.controller.state().result, { path: '', projectId: screenshotId });
+  assert.deepEqual(copied.controller.state().result, {
+    path: '',
+    projectId: screenshotId,
+  });
   assert.equal(copied.controller.state().copied, true);
   assert.equal(copied.controller.state().preview, null);
   assert.deepEqual(copied.openScreenshots, []);
 
-  const edited = fixture({ preferences: { extras: { captureMode: 'screenshot' } } });
+  const edited = fixture({
+    preferences: { extras: { captureMode: 'screenshot' } },
+  });
   await edited.controller.toggle();
   await edited.controller.configure({ screenshotAction: 'edit' });
   await edited.controller.start();
   assert.equal(edited.controller.state().job.mode, 'screenshot');
   assert.equal(edited.controller.state().job.screenshotAction, 'edit');
-  await edited.controller.report({ type: 'screenshot', name: edited.controller.state().job.name, screenshotId });
+  await edited.controller.report({
+    type: 'screenshot',
+    name: edited.controller.state().job.name,
+    screenshotId,
+  });
 
   assert.equal(edited.controller.state().state, 'completed');
   assert.equal(edited.controller.state().copied, false);
@@ -357,7 +422,11 @@ test('keeps Screenshot capture failed when opening its editor fails', async () =
   await f.controller.toggle();
   await f.controller.configure({ screenshotAction: 'edit' });
   await f.controller.start();
-  await f.controller.report({ type: 'screenshot', name: f.controller.state().job.name, screenshotId });
+  await f.controller.report({
+    type: 'screenshot',
+    name: f.controller.state().job.name,
+    screenshotId,
+  });
 
   assert.equal(f.controller.state().state, 'failed');
   assert.match(f.controller.state().error, /Screenshot editor unavailable/);
@@ -375,7 +444,11 @@ test('ignores a late screenshot editor result after capture cancellation', async
   await f.controller.toggle();
   await f.controller.configure({ screenshotAction: 'edit' });
   await f.controller.start();
-  const report = f.controller.report({ type: 'screenshot', name: f.controller.state().job.name, screenshotId });
+  const report = f.controller.report({
+    type: 'screenshot',
+    name: f.controller.state().job.name,
+    screenshotId,
+  });
   await Promise.resolve();
   assert.equal(f.controller.state().state, 'processing');
 
@@ -397,7 +470,10 @@ test('keeps a Studio quick export failure visible and ignores a stale export res
   await failed.controller.toggle();
   await failed.controller.start();
   await failed.controller.report({ type: 'recording' });
-  await failed.controller.report({ type: 'completed', session: { projectId: 'failed-studio-project' } });
+  await failed.controller.report({
+    type: 'completed',
+    session: { projectId: 'failed-studio-project' },
+  });
   assert.equal(failed.controller.state().state, 'failed');
   assert.match(failed.controller.state().error, /Video export unavailable/);
   assert.deepEqual(failed.openEditors, []);
@@ -407,7 +483,10 @@ test('keeps a Studio quick export failure visible and ignores a stale export res
   await stale.controller.toggle();
   await stale.controller.start();
   await stale.controller.report({ type: 'recording' });
-  const report = stale.controller.report({ type: 'completed', session: { projectId: 'late-project' } });
+  const report = stale.controller.report({
+    type: 'completed',
+    session: { projectId: 'late-project' },
+  });
   await Promise.resolve();
   assert.equal(stale.controller.state().state, 'processing');
   await stale.controller.cancel();
@@ -444,7 +523,10 @@ test('ignores a stale cancellation or a cancellation received after recording st
   await f.controller.toggle();
   await f.controller.start();
   const name = f.controller.state().job.name;
-  await f.controller.report({ type: 'capture-cancelled', name: 'previous-job' });
+  await f.controller.report({
+    type: 'capture-cancelled',
+    name: 'previous-job',
+  });
   assert.equal(f.controller.state().state, 'preparing');
   await f.controller.report({ type: 'recording' });
   await f.controller.report({ type: 'capture-cancelled', name });
@@ -462,12 +544,20 @@ test('Screenshot shows processing and real previews before clipboard completion'
   const name = f.controller.state().job.name;
   assert.ok(f.calls.includes('status.prepare'));
   assert.ok(!f.calls.includes('status.processing'));
-  await f.controller.report({ type: 'screenshot-captured', name, screenshotId });
+  await f.controller.report({
+    type: 'screenshot-captured',
+    name,
+    screenshotId,
+  });
   assert.equal(f.controller.state().state, 'processing');
   assert.equal(f.controller.state().copied, false);
   assert.equal(f.controller.state().preview, `project-media://screenshot/${screenshotId}/source.png`);
   assert.ok(f.calls.includes('status.processing'));
-  await f.controller.report({ type: 'screenshot-rendered', name, preview: 'data:image/jpeg;base64,AA==' });
+  await f.controller.report({
+    type: 'screenshot-rendered',
+    name,
+    preview: 'data:image/jpeg;base64,AA==',
+  });
   assert.equal(f.controller.state().progress, 0.75);
   await f.controller.report({ type: 'screenshot', name, screenshotId });
   assert.equal(f.controller.state().state, 'completed');
@@ -480,15 +570,35 @@ test('Screenshot ignores stale stages and cancels a pending clipboard export', a
   await f.controller.toggle();
   await f.controller.start();
   const name = f.controller.state().job.name;
-  await f.controller.report({ type: 'screenshot-captured', name: 'stale', screenshotId });
-  await f.controller.report({ type: 'screenshot-rendered', name, preview: 'untrusted' });
+  await f.controller.report({
+    type: 'screenshot-captured',
+    name: 'stale',
+    screenshotId,
+  });
+  await f.controller.report({
+    type: 'screenshot-rendered',
+    name,
+    preview: 'untrusted',
+  });
   assert.equal(f.controller.state().state, 'preparing');
-  await f.controller.report({ type: 'screenshot-captured', name, screenshotId });
+  await f.controller.report({
+    type: 'screenshot-captured',
+    name,
+    screenshotId,
+  });
   await assert.rejects(
-    f.controller.report({ type: 'screenshot-rendered', name, preview: 'https://arbitrary' }),
+    f.controller.report({
+      type: 'screenshot-rendered',
+      name,
+      preview: 'https://arbitrary',
+    }),
     /Invalid screenshot preview/,
   );
-  await f.controller.report({ type: 'screenshot-rendered', name: 'stale', preview: 'data:image/jpeg;base64,AA==' });
+  await f.controller.report({
+    type: 'screenshot-rendered',
+    name: 'stale',
+    preview: 'data:image/jpeg;base64,AA==',
+  });
   assert.equal(f.controller.state().progress, 0.25);
   await f.controller.cancel();
   assert.ok(f.calls.includes('crop.cancel'));

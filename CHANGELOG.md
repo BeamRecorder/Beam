@@ -6,6 +6,26 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Video and Screenshot share manual 2D, 3D and GPU glass zooms, with circular or freehand lenses, pixel-based focus/diameter controls and grouped appearance settings in all 15 languages. New lenses use a larger 60% diameter and restrained glass defaults.
+- Automatic glass lenses group nearby recorded clicks, adapt magnification and diameter to the clicked region, respect reserved timeline intervals and remain manually editable. Focus follows trimmed, retimed, mirrored, rotated and framed recordings and scene transforms.
+- Background library items can be removed with an exact-item preview and destructive confirmation in all 15 languages. Imported images/videos have a Delete action above Show more; colors/gradients pair editing with a compact trash button. The last deletion supports persisted undo/redo while existing projects and source files remain intact.
+- Media orientation controls provide horizontal/vertical mirrors and 90° turns; media and text share precise angle editing and a canvas rotation handle in preview and export, translated into all 15 languages.
+- Recorder General settings can launch Beam at login, enabled by default for installed applications, with Linux XDG autostart and Windows/macOS login items. The setting is translated into all 15 languages.
+- Video and image clip inspectors have compact numeric placement controls, a nine-point alignment pad and a proportional size lock, with positioning calculated by the shared engine and controls translated into all 15 languages. Numeric typing commits on blur or Enter; mouse drags update immediately.
+- CLI video exports can select WebCodecs or experimental Linux FFmpeg VA-API encoding, using the same Beam renderer and GPU transport as desktop. Exports return JSON diagnostics and protect destinations on failure or cancellation; the FFmpeg backend requires an X11/XWayland display and compatible native dependencies.
+- The Chromium CLI host can select software video decoding independently of GPU rendering to work around failing accelerated decoders.
+- Linux desktop has an opt-in experimental FFmpeg GPU exporter for MP4 and WebM, with direct DMA-BUF transfer to VA-API and audio support. Its export option is translated into all 15 languages; native build and driver requirements are documented.
+- A WebCodecs diagnostic command checks CPU/GPU frame inputs in separate sandboxed Electron processes, records encoded packets and native GPU crashes, and compares hardware requests with software controls.
+- Export reports include native GPU utilization minimum, median, mean and maximum, plus per-engine measurements on Linux, Windows and macOS when driver counters are available. Reports identify process-wide versus device-wide scope and unavailable measurements.
+- Create and edit video or image documents through a shared engine API and CLI, with identified JSON transactions, revision conflicts, retry deduplication and undo/redo.
+- Packaged CLI launchers use Beam's bundled Electron runtime and support native recording/screenshot commands without a separate Bun or Node installation.
+- Render seekable HTML/Vue motion projects through the shared video renderer and encoder, including paused GSAP animations.
+- Extract a video frame into an editable image document, then modify layers and export PNG or WebP through the same still renderer as Screenshot.
+
+- Documents support nested scenes with group transforms, opacity, blending, masks and local clocks, plus generic property keyframes editable through shared commands and the CLI.
+- CLI export runs in headless Chromium on Linux without an X11 or Wayland display; imported fonts use explicit portable resources.
+- A development CLI can inspect, edit and benchmark Beam documents, and export portable render snapshots through an independent Chromium backend without opening the editor.
+- Export diagnostics include bounded engine measurements with median/p95 timings for decode, rendering, encoder waits and separate GPU submission/execution stages.
 - Screenshot layers can be renamed by single-clicking their title in the left inspector header or double-clicking their Composition label (or pressing F2), with saved names, undo/redo and copy/paste support.
 - Screenshot shows a translated Recenter view button when the preview is moved or zoomed too far, matching the video editor.
 - `bun run dev` now starts Vite and Electron together, with automatic ports and persistent Electron profiles isolated per worktree; `--session <name>` supports additional parallel sessions in the same worktree while retaining the usual shared project library.
@@ -31,6 +51,38 @@ User-facing changes to Beam are documented in this file.
 - Startup temporary audio cleanup scans project folders directly, avoiding loading project timelines and recording data before Beam opens.
 - Project pickers load their first catalogue faster by reading each video project once per request. Missing video thumbnails render directly at preview size rather than allocating full-resolution canvases.
 - Project pickers use a persistent lightweight index and automatically load batches as you scroll, with search and Select all covering the entire library. Catalogue work runs outside the main thread and releases its worker when idle.
+- Screenshot Composition requests thumbnails only for visible rows plus a scroll margin, cancels queued offscreen work and keeps a bounded cache for immediate reuse when returning to a layer.
+- Timeline scrolling retains unchanged virtual row and item lists, reducing repeated updates of clip controls, icons and shared handles.
+- Timeline clips share modern type colors, rose zooms and gold captions in both themes, with equal track heights, full-height blocks and matching rounded trim handles revealed on track hover or keyboard focus.
+- Gradients use a compact preview, draggable keyboard-accessible stops, precise position/opacity fields and shared color controls, with all labels translated into 15 languages. Color and gradient stops share the full picker surface without a redundant header or extra frame.
+- Background images, videos, colors and gradients share the same active border and focus treatment, with the selection ring kept visible above media pixels.
+- Destructive actions use a calmer shared theme red with white text/icons; small trash buttons match the height of their adjacent labelled actions.
+- Shadow direction uses the shared neutral preset controls, and a help tooltip explains solid and adaptive shadows in all 15 languages.
+- Popovers and nested menus use a stronger shared 12 px backdrop blur in both themes; numeric unit menus show clear hover feedback and compact affix spacing.
+- Clip dimensions default to canvas pixels with a clickable px/% unit selector that preserves document placement, and the compact rotation row shows at most two decimal places with the same controls for text and media.
+- The placement reset appears inside the expanded clip controls, keeping inspector section headings consistent.
+- Clip properties are grouped into animated accordions with neutral surfaces and consistent spacing; property search opens the matching section. Video and screenshot inspectors are slightly wider and reserve scrollbar space to prevent field shifts when sections expand.
+- The experimental Linux FFmpeg GPU export choice is now saved across restarts, shared with General preferences, and applied to Quick Snip video exports.
+- Experimental Linux GPU exports overlap rendering and native transfer through a bounded GPU texture queue, use one frame IPC and wait one presentation boundary per frame. Reports separate capture, transfer and queue waits; the dedicated CLI process also removes display frame-rate throttling while retaining every authored frame. Local before/after results are documented; gains vary by container and workload.
+- Experimental Linux GPU exports send DMA-BUF descriptors through an asynchronous native bridge instead of launching a process for every frame. Reports separate Chromium presentation waits, GPU import/conversion and native encoding timings.
+- MP4 and WebM exports select a working WebCodecs encoder at the requested resolution, frame rate and bitrate, checking hardware variable and constant bitrate modes before software encoding. Linux desktop and hardware CLI backends enable accelerated video encoding; reports show the selected bitrate mode and hardware frame-check failures.
+- Preview and export reuse unchanged active clip order and text layout; Studio retains fixed background pixels, and export progress thumbnails convert without pausing video encoding.
+- Dense previews evaluate canvas selection geometry only when needed, reuse shape paint styles and skip rectangles fully outside the rendered image during zooms. Preview and export share the same visibility checks without reducing image quality.
+- Timeline playback moves the playhead with a composited 3D transform and reuses unchanged visible clip lists instead of repainting static artwork on every tick.
+- Desktop application code now lives under `apps/desktop`; reusable document, rendering, encoding, storage and native capture transport code lives in separate packages.
+- Timeline artwork shares one viewport-sized canvas and one measurement/paint queue; Ctrl/Cmd-wheel zoom keeps the time beneath the pointer and supports long timelines without a fixed ruler cap.
+
+- Studio preview and export use the same completed-frame renderer for scenes, camera effects, cursor, text and transitions.
+- Immutable engine edits and undo/redo share unchanged document records, reducing full-document JSON copies; CLI benchmarks now include editing timings.
+- Timeline artwork now uses viewport-sized canvas lanes instead of per-clip DOM artwork, while keeping accessible editing controls and GPU audio waveforms.
+- Blur, frost, pixelation and highlight effects share retained GPU filtering in preview and export, with bounded masks and ordered backdrop groups.
+- Scrubbing requests preceding keyframes while moving, then refines to the exact image on release or after a short pause. Timeline drag previews retain sparse timing patches, and history/save observers avoid repeated whole-document serialization and deep traversal.
+- Dense runs of eligible pixel-aligned opaque rectangles batch on the GPU in preview and export, preserving native video/effect ordering and full-resolution output. Complex and fractional shapes retain their original painter.
+- Video-heavy previews and exports batch adaptive shadow color sampling and reuse eligible full-resolution geometric media shadows. Shape effects retain compact blur masks and reusable paths; editor and export teardown releases their GPU surfaces.
+- Virtualized timeline lanes, clips, captions, zooms and ruler ticks in both scroll directions; offscreen audio lanes no longer start waveform decoding. Large selections remain available across scrolling.
+- Large clipboard selections now paste in one validated transaction. Drag previews avoid repeated deep reactivity scans, and fragment collision limits use indexed lane boundaries.
+- Identical video copies share decoded frames in preview and export without merging their visual layers. Full-resolution blurs combine backdrop cropping and filtering, and reuse bounded feathered masks without GPU allocation churn in oversized scenes.
+- Shape-heavy Studio projects share identical element thumbnails and reuse timeline metadata and indexed camera lookups to reduce preview, playback and scrubbing work without lowering preview quality.
 - Video and screenshot project pickers retain their cards between openings while refreshing the catalogue, reveal projects and decoded images smoothly, and generate up to two visible video thumbnails concurrently.
 - Screenshot's lighter editing dock includes undo/redo, while dimensions, fullscreen and Settings live in the topbar. The dock, Composition and topbar share subtle frosted surfaces; the preview supports wheel zoom and middle-button or Space-drag panning without changing exports.
 - Screenshot editing uses a centered floating tool dock and a contextual inspector on the left, consistent with the video editor. A visible Properties toggle smoothly hides and restores the inspector without losing its context, replacing the separate Canvas/Clip/Settings navigation rail.
@@ -82,6 +134,26 @@ User-facing changes to Beam are documented in this file.
 
 - Quick Snip settings stay attached to their trigger on every opening, close on a second cog press, animate from the cog, prepare while the toolbar is active, and use a light shadow without horizontal or duplicate Select scrollbars. Device choices use Beam menus instead of native context menus.
 - Quick Snip settings open on the development session's selected port, including when other Beam instances already use the default port.
+- Audio waveforms now redraw during timeline zoom without waiting for thumbnail work or an obsolete crossfade; rapid changes keep only the latest pending draw.
+- AI caption icons reserve their own space before the timeline label, including locked captions.
+- Add and canvas insertion submenus now blur the content behind them instead of showing it sharply through a transparent background; context menus share the same frosted surface in both themes.
+- Adding a timeline element no longer temporarily clears other clips. Canvas artwork follows animated row reordering, and successive drag swaps use spatial hysteresis instead of a 150 ms pause; clip, caption and row positions use `translate3d`.
+- Custom radius and shadow choices fill their entire preset slot, matching the click target and highlighted area of adjacent choices.
+- Inspector accordions keep their final height during animation at every interface scale, and compact input labels and units stay centered with intact rounded borders.
+- The loading mascot’s brief triangle phase now visibly looks around and blinks, in both the startup shell and application loading views, while respecting reduced motion.
+
+- Recorder Settings and Projects open above an always-on-top recorder and follow its topmost preference. Their prepared native windows reopen without reloading the renderer; hidden feature content is unmounted and app shutdown releases the cache.
+
+- Projects created in Studio now generate thumbnails and hover previews from imported video clips, including projects without a screen recording.
+
+- Updating preferences while an editor is open no longer fails on the Recorder window's always-on-top setting; hidden Recorder windows remain hidden and editor windows retain their native behavior.
+
+- Canvas horizontal mouse-wheel scrolling now zooms in and out according to its direction instead of always zooming out; zero-motion events no longer change the zoom.
+- Fast horizontal and vertical timeline scrolling keeps the canvas covering the viewport and prepares newly visible tracks before painting.
+- Desktop startup resolves the shared JSON storage adapter when organizing project categories.
+- Horizontal timeline scrolling keeps clip artwork, titles, trim handles and audio waveforms aligned; audio titles stay above waveforms and zoom badges retain the theme's text color.
+- VP9/AV1 exports on Linux use buffered software decoding to prevent decoder flush failures. Multi-video scenes retain every current image instead of evicting visible layers when the seek-history cache fills.
+- Imported VP9 videos, timeline thumbnails and video posters use buffered software decoding on Linux to prevent hardware decoder failures during playback and seeking.
 - Screenshot exports move rendering off the interface thread, avoid repeated image decoding and oversized working rasters, and reuse unchanged results for repeated saves or copies with a bounded cache. Large Composition lists no longer rebuild every row when export starts or finishes.
 - Startup skeletons follow each editor's actual workspace, scaled inspector and controls: Screenshot has its editing dock and Composition instead of a video timeline, while Studio preserves the saved timeline height. Screenshot keeps a correctly sized placeholder until its first canvas paint.
 - Theme previews keep proportional miniature layouts and a readable maximum width in recorder settings, including maximized windows and compact editor inspectors.

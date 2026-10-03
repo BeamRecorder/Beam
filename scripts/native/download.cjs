@@ -7,7 +7,7 @@ const {
   nativeManifestAssetName,
   prebuiltCaptureEnginePath,
   prebuiltInputHelperPath,
-} = require('../../electron/capture/capture-engine-path.cjs');
+} = require('@beam/native-client/capture-engine-path');
 
 const RELEASE_BASE_URL = 'https://github.com/BeamRecorder/Beam/releases/download';
 
@@ -64,7 +64,10 @@ async function writeVerifiedFile(destination, bytes, expectedSha256, platform = 
   await fs.promises.mkdir(path.dirname(destination), { recursive: true });
   const temporary = `${destination}.${process.pid}.${crypto.randomBytes(6).toString('hex')}.tmp`;
   try {
-    await fs.promises.writeFile(temporary, bytes, { mode: platform === 'win32' ? 0o644 : 0o755, flag: 'wx' });
+    await fs.promises.writeFile(temporary, bytes, {
+      mode: platform === 'win32' ? 0o644 : 0o755,
+      flag: 'wx',
+    });
     if (platform !== 'win32') await fs.promises.chmod(temporary, 0o755);
     await fs.promises.rename(temporary, destination);
   } catch (error) {

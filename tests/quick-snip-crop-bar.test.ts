@@ -62,9 +62,16 @@ const mocks = vi.hoisted(() => ({
   offState: null as ReturnType<typeof vi.fn> | null,
 }));
 
-const deviceMocks = vi.hoisted(() => ({ cameras: vi.fn(), microphones: vi.fn() }));
-vi.mock('~/api/camera-recorder', () => ({ listBrowserCameras: deviceMocks.cameras }));
-vi.mock('~/api/microphone-recorder', () => ({ listBrowserMicrophones: deviceMocks.microphones }));
+const deviceMocks = vi.hoisted(() => ({
+  cameras: vi.fn(),
+  microphones: vi.fn(),
+}));
+vi.mock('~/api/camera-recorder', () => ({
+  listBrowserCameras: deviceMocks.cameras,
+}));
+vi.mock('~/api/microphone-recorder', () => ({
+  listBrowserMicrophones: deviceMocks.microphones,
+}));
 
 const screenshotMocks = vi.hoisted(() => ({
   screenshotState: vi.fn(),
@@ -73,10 +80,10 @@ const screenshotMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('~/api/capture', () => ({ capture: mocks.capture }));
-vi.mock('~/components/video-editor/screenshot/screenshot-state', () => ({
+vi.mock('~/components/screenshot/screenshot-state', () => ({
   screenshotState: screenshotMocks.screenshotState,
 }));
-vi.mock('~/components/video-editor/screenshot/screenshot-render', () => ({
+vi.mock('~/components/screenshot/screenshot-render', () => ({
   encodeScreenshot: screenshotMocks.encodeScreenshot,
   screenshotPreview: screenshotMocks.screenshotPreview,
 }));
@@ -131,7 +138,7 @@ vi.mock('~/components/hud/recorder/useRecordingController', async () => {
 import type { QuickSnipConfiguration } from '~/api/types/quick-snip';
 import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
 import type { RecordingSessionResult, RecordingStartFailure } from '~/components/hud/recorder/recording-types';
-import QuickSnipCropBar from '../src/components/quick-snip/QuickSnipCropBar.vue';
+import QuickSnipCropBar from '../apps/desktop/src/components/quick-snip/QuickSnipCropBar.vue';
 
 const preset = {
   id: 'default',
@@ -141,11 +148,20 @@ const preset = {
   settings: {
     editor: { schemaVersion: 1 as const },
     devices: { micId: 'mic-1', cameraId: 'camera-1', systemAudioMode: 'off' },
-    export: { format: 'mp4' as const, preset: 'medium' as const, frameRate: 30, resolution: '1080p' as const },
+    export: {
+      format: 'mp4' as const,
+      preset: 'medium' as const,
+      frameRate: 30,
+      resolution: '1080p' as const,
+    },
     quickSnip: { automaticZoom: true },
   },
 };
-const presetDocument = { schemaVersion: 1 as const, activePresetId: preset.id, presets: [preset] };
+const presetDocument = {
+  schemaVersion: 1 as const,
+  activePresetId: preset.id,
+  presets: [preset],
+};
 const configuration = {
   mode: 'studio' as const,
   format: 'mp4' as const,
@@ -253,16 +269,20 @@ beforeEach(() => {
   mocks.capture.reportQuickSnip.mockResolvedValue({ state: 'recording' });
   screenshotMocks.screenshotState.mockReturnValue(screenshotState);
   screenshotMocks.encodeScreenshot.mockResolvedValue(screenshotBytes);
-  mocks.capture.onQuickSnipConfigure.mockImplementation((listener: (value: QuickSnipConfiguration) => unknown) => {
-    mocks.configure = listener;
-    mocks.offConfigure = vi.fn();
-    return mocks.offConfigure;
-  });
-  mocks.capture.onQuickSnipCommand.mockImplementation((listener: (value: 'start' | 'stop' | 'cancel') => unknown) => {
-    mocks.command = listener;
-    mocks.offCommand = vi.fn();
-    return mocks.offCommand;
-  });
+  mocks.capture.onQuickSnipConfigure.mockImplementation(
+    (listener: (value: QuickSnipConfiguration) => unknown) => {
+      mocks.configure = listener;
+      mocks.offConfigure = vi.fn();
+      return mocks.offConfigure;
+    },
+  );
+  mocks.capture.onQuickSnipCommand.mockImplementation(
+    (listener: (value: 'start' | 'stop' | 'cancel') => unknown) => {
+      mocks.command = listener;
+      mocks.offCommand = vi.fn();
+      return mocks.offCommand;
+    },
+  );
   mocks.capture.onQuickSnipState.mockImplementation((listener: (value: { state: string }) => unknown) => {
     mocks.state = listener;
     mocks.offState = vi.fn();
@@ -298,9 +318,15 @@ describe('QuickSnipCropBar', () => {
       await wrapper.get('[role="alertdialog"]').findAll('button')[1]!.trigger('click');
       await flushPromises();
       expect(mocks.recorder!.cancel).toHaveBeenCalledOnce();
-      expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({ type: 'restarting', name: configuration.name });
+      expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({
+        type: 'restarting',
+        name: configuration.name,
+      });
       expect(mocks.recorder!.start).toHaveBeenCalledWith(
-        expect.objectContaining({ screenId: configuration.screenId, countdownSeconds: 0 }),
+        expect.objectContaining({
+          screenId: configuration.screenId,
+          countdownSeconds: 0,
+        }),
       );
       expect(mocks.capture.quickSnipStop).not.toHaveBeenCalled();
       wrapper.unmount();
@@ -415,9 +441,9 @@ describe('QuickSnipCropBar', () => {
 
     mocks.nativePreviewLevel!.value = 0.73;
     await wrapper.vm.$nextTick();
-    expect(wrapper.get<HTMLElement>('button[aria-label="System audio"] .level-bar-fill').element.style.height).toBe(
-      '73%',
-    );
+    expect(
+      wrapper.get<HTMLElement>('button[aria-label="System audio"] .level-bar-fill').element.style.height,
+    ).toBe('73%');
 
     await mocks.state?.({ state: 'processing' });
     await wrapper.vm.$nextTick();
@@ -433,9 +459,9 @@ describe('QuickSnipCropBar', () => {
     mocks.recorder!.systemAudioLevel.value = 0.42;
     await wrapper.vm.$nextTick();
     expect(mocks.nativePreviewEnabled?.value).toBe(false);
-    expect(wrapper.get<HTMLElement>('button[aria-label="System audio"] .level-bar-fill').element.style.height).toBe(
-      '42%',
-    );
+    expect(
+      wrapper.get<HTMLElement>('button[aria-label="System audio"] .level-bar-fill').element.style.height,
+    ).toBe('42%');
 
     wrapper.unmount();
   });
@@ -467,14 +493,19 @@ describe('QuickSnipCropBar', () => {
     });
     await mocks.command?.('start');
     await flushPromises();
-    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({ type: 'capture-cancelled', name: configuration.name });
+    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({
+      type: 'capture-cancelled',
+      name: configuration.name,
+    });
     expect(mocks.capture.saveScreenshot).not.toHaveBeenCalled();
     expect(mocks.capture.exportScreenshot).not.toHaveBeenCalled();
     expect(wrapper.get('.capture-actions button').attributes('disabled')).toBeUndefined();
     expect(wrapper.get('[aria-label="Image"]').attributes('aria-pressed')).toBe('true');
     expect(wrapper.find('select').exists()).toBe(false);
     await wrapper.get('.capture-actions button').trigger('click');
-    expect(mocks.capture.quickSnipStart).toHaveBeenCalledWith(expect.objectContaining({ mode: 'screenshot' }));
+    expect(mocks.capture.quickSnipStart).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: 'screenshot' }),
+    );
     wrapper.unmount();
   });
 
@@ -502,7 +533,10 @@ describe('QuickSnipCropBar', () => {
     await mocks.command?.('start');
     await flushPromises();
     await mocks.onStartupCancelled?.();
-    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({ type: 'capture-cancelled', name: configuration.name });
+    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({
+      type: 'capture-cancelled',
+      name: configuration.name,
+    });
     wrapper.unmount();
   });
 
@@ -533,7 +567,12 @@ describe('QuickSnipCropBar', () => {
       screenshotState,
       expect.objectContaining({ onRendered: expect.any(Function) }),
     );
-    expect(mocks.capture.exportScreenshot).toHaveBeenCalledWith(screenshotDocument.id, screenshotBytes, 'png', true);
+    expect(mocks.capture.exportScreenshot).toHaveBeenCalledWith(
+      screenshotDocument.id,
+      screenshotBytes,
+      'png',
+      true,
+    );
     expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({
       type: 'screenshot',
       name: configuration.name,
@@ -592,7 +631,9 @@ describe('QuickSnipCropBar', () => {
 
     mocks.recorder!.phase.value = 'recording';
     await wrapper.vm.$nextTick();
-    const stopButton = wrapper.findAll('button').find((button) => button.attributes('aria-label') === 'Stop recording');
+    const stopButton = wrapper
+      .findAll('button')
+      .find((button) => button.attributes('aria-label') === 'Stop recording');
     expect(stopButton).toBeDefined();
     mocks.capture.quickSnipToggle.mockClear();
     mocks.capture.quickSnipStop.mockClear();
@@ -634,7 +675,9 @@ describe('QuickSnipCropBar', () => {
 
     expect(mocks.recorder?.start).toHaveBeenCalledOnce();
     const startConfiguration = mocks.recorder!.start.mock.calls[0]![0];
-    expect(structuredClone(startConfiguration)).toEqual(expect.objectContaining({ region: configuration.region }));
+    expect(structuredClone(startConfiguration)).toEqual(
+      expect.objectContaining({ region: configuration.region }),
+    );
 
     wrapper.unmount();
   });
@@ -743,10 +786,18 @@ describe('QuickSnipCropBar', () => {
         ...preset,
         settings: {
           ...preset.settings,
-          devices: { micId: 'preset-mic', cameraId: 'preset-camera', systemAudioMode: 'off' as const },
+          devices: {
+            micId: 'preset-mic',
+            cameraId: 'preset-camera',
+            systemAudioMode: 'off' as const,
+          },
         },
       },
-      devices: { micId: 'job-mic', cameraId: 'job-camera', systemAudioMode: 'on' as const },
+      devices: {
+        micId: 'job-mic',
+        cameraId: 'job-camera',
+        systemAudioMode: 'on' as const,
+      },
       excludedWindowHandle: 'native-handle',
     } satisfies QuickSnipConfiguration;
     await mocks.configure?.(overriddenConfiguration);
@@ -797,10 +848,18 @@ describe('QuickSnipCropBar', () => {
         ...preset,
         settings: {
           ...preset.settings,
-          devices: { micId: 'no-audio', cameraId: 'off', systemAudioMode: 'off' as const },
+          devices: {
+            micId: 'no-audio',
+            cameraId: 'off',
+            systemAudioMode: 'off' as const,
+          },
         },
       },
-      devices: { micId: 'no-audio', cameraId: 'off', systemAudioMode: 'off' as const },
+      devices: {
+        micId: 'no-audio',
+        cameraId: 'off',
+        systemAudioMode: 'off' as const,
+      },
     } satisfies QuickSnipConfiguration;
     await mocks.configure?.(disabledConfiguration);
     await flushPromises();
@@ -853,7 +912,10 @@ describe('QuickSnipCropBar', () => {
     await wrapper.get('button[aria-label="Image"]').trigger('click');
     await flushPromises();
 
-    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({ type: 'failed', error: failure.message });
+    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({
+      type: 'failed',
+      error: failure.message,
+    });
 
     wrapper.unmount();
   });
@@ -879,7 +941,11 @@ describe('QuickSnipCropBar', () => {
   });
 
   it('starts even when the active preset is absent from the preset document', async () => {
-    const document = { schemaVersion: 1 as const, activePresetId: 'missing', presets: [preset] };
+    const document = {
+      schemaVersion: 1 as const,
+      activePresetId: 'missing',
+      presets: [preset],
+    };
     mocks.capture.getEditorPresets.mockResolvedValue(document);
     const wrapper = await mountBar();
     mocks.capture.updateActiveEditorPreset.mockClear();
@@ -901,7 +967,11 @@ describe('QuickSnipCropBar', () => {
       name: 'Incoming',
       settings: {
         ...preset.settings,
-        devices: { micId: 'incoming-mic', cameraId: 'incoming-camera', systemAudioMode: 'on' as const },
+        devices: {
+          micId: 'incoming-mic',
+          cameraId: 'incoming-camera',
+          systemAudioMode: 'on' as const,
+        },
         quickSnip: { automaticZoom: false },
       },
     };
@@ -936,7 +1006,10 @@ describe('QuickSnipCropBar', () => {
     await flushPromises();
 
     expect(mocks.recorder?.start).not.toHaveBeenCalled();
-    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({ type: 'failed', error: failure.message });
+    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({
+      type: 'failed',
+      error: failure.message,
+    });
 
     wrapper.unmount();
   });
@@ -950,7 +1023,10 @@ describe('QuickSnipCropBar', () => {
     await startButton.trigger('click');
     await flushPromises();
 
-    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({ type: 'failed', error: failure });
+    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({
+      type: 'failed',
+      error: failure,
+    });
     expect(startButton.attributes('disabled')).toBeUndefined();
 
     wrapper.unmount();
@@ -964,7 +1040,10 @@ describe('QuickSnipCropBar', () => {
     await mocks.command?.('start');
     await flushPromises();
 
-    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({ type: 'failed', error: failure.message });
+    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({
+      type: 'failed',
+      error: failure.message,
+    });
 
     wrapper.unmount();
   });
@@ -1073,7 +1152,10 @@ describe('QuickSnipCropBar', () => {
 
     mocks.onComplete?.(session);
     await flushPromises();
-    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({ type: 'completed', session });
+    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({
+      type: 'completed',
+      session,
+    });
 
     mocks.capture.reportQuickSnip.mockClear();
     const failure = {
@@ -1087,7 +1169,10 @@ describe('QuickSnipCropBar', () => {
     } satisfies RecordingStartFailure;
     mocks.onStartupFailure?.(failure);
     await flushPromises();
-    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({ type: 'failed', error: failure.message });
+    expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({
+      type: 'failed',
+      error: failure.message,
+    });
 
     wrapper.unmount();
   });
@@ -1137,25 +1222,37 @@ describe('QuickSnipCropBar', () => {
       }),
     );
     const cameraButton = wrapper.get('button[aria-label="Camera"]');
-    const context = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2 });
+    const context = new MouseEvent('contextmenu', {
+      bubbles: true,
+      cancelable: true,
+      button: 2,
+    });
     cameraButton.element.dispatchEvent(context);
     await flushPromises();
     expect(context.defaultPrevented).toBe(true);
-    expect(mocks.capture.chooseQuickSnipDevice).toHaveBeenCalledWith(expect.objectContaining({ kind: 'camera' }));
+    expect(mocks.capture.chooseQuickSnipDevice).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'camera' }),
+    );
     expect(cameraButton.attributes('aria-pressed')).toBe('true');
     expect(wrapper.get('[aria-label="Camera"]').attributes('disabled')).toBeDefined();
     expect(wrapper.get('[aria-label="Recording settings"]').attributes('disabled')).toBeDefined();
     resolveMenu('camera:chromium:usb');
     await flushPromises();
     expect(mocks.capture.configureQuickSnip).toHaveBeenCalledWith(
-      expect.objectContaining({ devices: expect.objectContaining({ cameraId: 'camera:chromium:usb' }) }),
+      expect.objectContaining({
+        devices: expect.objectContaining({ cameraId: 'camera:chromium:usb' }),
+      }),
     );
     expect(mocks.capture.updateActiveEditorPreset).toHaveBeenCalledWith(
-      expect.objectContaining({ devices: expect.objectContaining({ cameraId: 'camera:chromium:usb' }) }),
+      expect.objectContaining({
+        devices: expect.objectContaining({ cameraId: 'camera:chromium:usb' }),
+      }),
     );
     await mocks.command?.('start');
     await flushPromises();
-    expect(mocks.recorder!.start).toHaveBeenCalledWith(expect.objectContaining({ cameraId: 'camera:chromium:usb' }));
+    expect(mocks.recorder!.start).toHaveBeenCalledWith(
+      expect.objectContaining({ cameraId: 'camera:chromium:usb' }),
+    );
     wrapper.unmount();
   });
 });

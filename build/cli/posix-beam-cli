@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+launcher_path="$0"
+if [ "$(uname -s)" != Darwin ]; then launcher_path=$(readlink -f -- "$0"); fi
+application_dir=$(CDPATH= cd -- "$(dirname -- "$launcher_path")" && pwd)
+if [ "$(uname -s)" = Darwin ]; then
+  exec "$application_dir/../Resources/cli/beam" "$@"
+fi
+exec "$application_dir/resources/cli/beam" "$@"

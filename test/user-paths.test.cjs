@@ -3,11 +3,11 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { configureDevelopmentProfile } = require('../electron/lifecycle/development-profile.cjs');
-const { createUserPaths } = require('../electron/storage/user-paths.cjs');
-const { createProjectStore } = require('../electron/projects/project-store.cjs');
-const { createScreenshotStore } = require('../electron/screenshot/screenshot-store.cjs');
-const { createProjectLibrary } = require('../electron/projects/project-library.cjs');
+const { configureDevelopmentProfile } = require('../apps/desktop/electron/lifecycle/development-profile.cjs');
+const { createUserPaths } = require('../apps/desktop/electron/storage/user-paths.cjs');
+const { createProjectStore } = require('../apps/desktop/electron/projects/project-store.cjs');
+const { createScreenshotStore } = require('../apps/desktop/electron/screenshot/screenshot-store.cjs');
+const { createProjectLibrary } = require('../apps/desktop/electron/projects/project-library.cjs');
 
 function fakeApp(root) {
   const paths = new Map([

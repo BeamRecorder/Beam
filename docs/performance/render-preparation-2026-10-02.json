@@ -1,0 +1,23 @@
+{
+  "scope": "Temporal query and paint-order preparation only; no animation, drawing, decoding or presentation.",
+  "environment": {
+    "platform": "linux",
+    "cpu": "Intel(R) Core(TM) Ultra 5 125H",
+    "runtime": "Bun 1.4.2"
+  },
+  "clipCount": 10893,
+  "activeAtFirstTick": 10129,
+  "ticksPerSample": 60,
+  "samples": 40,
+  "warmups": 5,
+  "baselineBuildMs": 3.1448019999999985,
+  "retainedBuildMs": 5.152879999999996,
+  "baseline": {
+    "medianMs": 54.45554900000002,
+    "p95Ms": 171.71560200000022
+  },
+  "retained": {
+    "medianMs": 0.008715999999822088,
+    "p95Ms": 0.021282000000155676
+  }
+}

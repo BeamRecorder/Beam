@@ -107,7 +107,11 @@ test('collects staged engines and helper under standalone versioned asset names'
     stage(root, 'darwin', 'arm64');
     stage(root, 'linux', 'x64');
 
-    const collected = collectNativeAssets({ root, outputDirectory, version: VERSION });
+    const collected = collectNativeAssets({
+      root,
+      outputDirectory,
+      version: VERSION,
+    });
     const names = collected.map((file) => path.basename(file)).sort();
     assert.deepEqual(names, [
       `beam-input-helper-${VERSION}-linux-x64`,
@@ -139,11 +143,22 @@ test('unknown targets are rejected and a collector with no staged files fails cl
     assert.equal(builderPlatform('freebsd'), null);
     assert.equal(stageDirectory(root, 'freebsd', 'x64'), null);
     assert.throws(
-      () => stageNativeFiles({ root, version: VERSION, platform: 'freebsd', arch: 'x64' }),
+      () =>
+        stageNativeFiles({
+          root,
+          version: VERSION,
+          platform: 'freebsd',
+          arch: 'x64',
+        }),
       /Unsupported native target freebsd\/x64/,
     );
     assert.throws(
-      () => collectNativeAssets({ root, outputDirectory: path.join(root, 'empty-assets'), version: VERSION }),
+      () =>
+        collectNativeAssets({
+          root,
+          outputDirectory: path.join(root, 'empty-assets'),
+          version: VERSION,
+        }),
       /No staged native engine was found/,
     );
   } finally {
@@ -158,7 +173,13 @@ test('stages both release binaries from Cargo-configured shared outputs', () => 
     fs.mkdirSync(path.join(targetDirectory, 'release'), { recursive: true });
     fs.writeFileSync(path.join(targetDirectory, 'release', 'capture-engine'), 'engine');
     fs.writeFileSync(path.join(targetDirectory, 'release', 'beam-input-helper'), 'helper');
-    const files = stageNativeFiles({ root, version: VERSION, platform: 'linux', arch: 'x64', targetDirectory });
+    const files = stageNativeFiles({
+      root,
+      version: VERSION,
+      platform: 'linux',
+      arch: 'x64',
+      targetDirectory,
+    });
     assert.equal(fs.readFileSync(files[0].destination, 'utf8'), 'engine');
     assert.equal(fs.readFileSync(files[1].destination, 'utf8'), 'helper');
   } finally {

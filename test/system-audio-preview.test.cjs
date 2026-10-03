@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const test = require('node:test');
 
-const { createSystemAudioPreview } = require('../electron/capture/system-audio-preview.cjs');
+const { createSystemAudioPreview } = require('../apps/desktop/electron/capture/system-audio-preview.cjs');
 
 function createSender() {
   const sender = new EventEmitter();
@@ -23,7 +23,11 @@ function createPreviewHarness({ request: requestOverride, canCleanup = () => tru
   const request = async (command) => {
     calls.push(command);
     if (requestOverride)
-      return requestOverride(command, { calls, getState: () => state, setState: (value) => (state = value) });
+      return requestOverride(command, {
+        calls,
+        getState: () => state,
+        setState: (value) => (state = value),
+      });
     if (command === 'status') return { state };
     if (command === 'system-audio-preview-level') return { level };
     return {};

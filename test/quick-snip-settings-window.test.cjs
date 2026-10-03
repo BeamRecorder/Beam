@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const { EventEmitter } = require('node:events');
-const { createQuickSnipSettingsWindow } = require('../electron/quick-snip/quick-snip-settings-window.cjs');
+const { createQuickSnipSettingsWindow } = require('../apps/desktop/electron/quick-snip/quick-snip-settings-window.cjs');
 const area = { x: -1920, y: -100, width: 1920, height: 1080 };
 const anchor = { x: 500, y: 26, width: 32, height: 32 };
 function fixture(overrides = {}) {

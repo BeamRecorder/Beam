@@ -3,7 +3,7 @@ const test = require('node:test');
 const {
   applySpellCheckPreferences,
   resolveSpellCheckerLanguage,
-} = require('../../electron/preferences/spell-check.cjs');
+} = require('../../apps/desktop/electron/preferences/spell-check.cjs');
 
 const session = (availableSpellCheckerLanguages) => {
   const calls = [];
@@ -47,7 +47,11 @@ test('disables spell check when the preference is disabled on every platform', (
       platform,
     });
 
-    assert.deepEqual(result, { enabled: false, language: null, reason: 'disabled' });
+    assert.deepEqual(result, {
+      enabled: false,
+      language: null,
+      reason: 'disabled',
+    });
     assert.deepEqual(electronSession.calls, [['enabled', false]]);
   }
 });
@@ -62,7 +66,11 @@ test('configures and enables a supported language on Windows and Linux', () => {
       platform,
     });
 
-    assert.deepEqual(result, { enabled: true, language: 'en-US', reason: 'configured' });
+    assert.deepEqual(result, {
+      enabled: true,
+      language: 'en-US',
+      reason: 'configured',
+    });
     assert.deepEqual(electronSession.calls, [
       ['languages', ['en-US']],
       ['enabled', true],
@@ -80,7 +88,11 @@ test('disables spell check when Windows or Linux has no matching dictionary', ()
       platform,
     });
 
-    assert.deepEqual(result, { enabled: false, language: null, reason: 'unsupported-language' });
+    assert.deepEqual(result, {
+      enabled: false,
+      language: null,
+      reason: 'unsupported-language',
+    });
     assert.deepEqual(electronSession.calls, [['enabled', false]]);
   }
 });

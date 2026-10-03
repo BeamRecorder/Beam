@@ -3,8 +3,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { createScreenshotStore } = require('../electron/screenshot/screenshot-store.cjs');
-const { historicalAppearance } = require('../electron/projects/composition-appearance.cjs');
+const { createScreenshotStore } = require('../apps/desktop/electron/screenshot/screenshot-store.cjs');
+const { historicalAppearance } = require('../apps/desktop/electron/projects/composition-appearance.cjs');
 
 const pngBytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0]);
 const makeStore = () => {
@@ -273,7 +273,12 @@ test('rejects persisted metadata with invalid capture dimensions', () => {
     const pending = fixture.store.create();
     fs.writeFileSync(
       metadataFile(fixture.root, pending.id),
-      JSON.stringify({ schemaVersion: 1, id: pending.id, width: 16_385, height: 1 }),
+      JSON.stringify({
+        schemaVersion: 1,
+        id: pending.id,
+        width: 16_385,
+        height: 1,
+      }),
     );
     assert.throws(() => fixture.store.read(pending.id), /invalid screenshot document/i);
   } finally {
@@ -296,14 +301,28 @@ test('validates screenshot settings and atomically replaces the persisted docume
       validState({ canvas: { width: 0, height: 720 } }),
       validState({ canvas: { width: 16384, height: 4097 } }),
       validState({ canvas: { showBackground: 'yes' } }),
-      validState({ image: { id: 'screenshot', kind: 'image', transform: { x: 0, y: 0, width: 0, height: 1 } } }),
       validState({
-        image: { ...validState().image, appearance: { ...historicalAppearance('screen', true), shadowColor: 'red' } },
+        image: {
+          id: 'screenshot',
+          kind: 'image',
+          transform: { x: 0, y: 0, width: 0, height: 1 },
+        },
+      }),
+      validState({
+        image: {
+          ...validState().image,
+          appearance: {
+            ...historicalAppearance('screen', true),
+            shadowColor: 'red',
+          },
+        },
       }),
       validState({ shapes: Array.from({ length: 501 }, () => ({})) }),
       validState({ shapes: [validShape({ family: 'unknown' })] }),
       validState({ shapes: [validShape({ id: 'screenshot' })] }),
-      validState({ shapes: [validShape({ transform: { x: 0, y: 0, width: 0, height: 1 } })] }),
+      validState({
+        shapes: [validShape({ transform: { x: 0, y: 0, width: 0, height: 1 } })],
+      }),
       validState({ background: { kind: 'invalid' } }),
     ];
     for (const state of invalidStates) {
@@ -419,7 +438,11 @@ test('persists source cropping and rejects crops outside the captured image with
       { x: 0, y: 0, width: 1, height: '1' },
     ]) {
       assert.throws(
-        () => fixture.store.save(pending.id, { ...state, image: { ...state.image, crop } }),
+        () =>
+          fixture.store.save(pending.id, {
+            ...state,
+            image: { ...state.image, crop },
+          }),
         /invalid screenshot settings/i,
       );
       assert.deepEqual(fixture.store.read(pending.id).state.image.crop, state.image.crop);
@@ -440,8 +463,18 @@ test('round trips static cursors and their explicit back-to-front layer order', 
       { id: '__watermark__', opacity: 40, blendMode: 'screen', locked: false },
       { id: 'cursor-1', opacity: 70, blendMode: 'multiply', locked: true },
       { id: 'shape-1', opacity: 35, blendMode: 'overlay', locked: false },
-      { id: 'screenshot', opacity: 100, blendMode: 'source-over', locked: true },
-      { id: '__background__', opacity: 0, blendMode: 'source-over', locked: false },
+      {
+        id: 'screenshot',
+        opacity: 100,
+        blendMode: 'source-over',
+        locked: true,
+      },
+      {
+        id: '__background__',
+        opacity: 0,
+        blendMode: 'source-over',
+        locked: false,
+      },
     ];
 
     fixture.store.save(pending.id, state);

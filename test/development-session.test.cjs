@@ -5,7 +5,7 @@ const {
   developmentSessionId,
   developmentOrigin,
   developmentRendererUrl,
-} = require('../electron/lifecycle/development-session.cjs');
+} = require('../apps/desktop/electron/lifecycle/development-session.cjs');
 
 test('session identity is stable across restarts and normalized paths', () => {
   assert.equal(developmentSessionId('/beam/one'), developmentSessionId('/beam/one', 'default'));

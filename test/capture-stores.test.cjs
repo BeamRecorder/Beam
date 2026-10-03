@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { createCaptureStores } = require('../electron/storage/capture-stores.cjs');
+const { createCaptureStores } = require('../apps/desktop/electron/storage/capture-stores.cjs');
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-capture-stores-'));
@@ -23,14 +23,26 @@ function fixture(t) {
     devices: { micId: 'preferred-mic', cameraId: 'preferred-camera' },
     extras: {
       captureMode: 'studio',
-      editorDefaults: { schemaVersion: 78, marker: 'saved video editor settings' },
-      exportSettings: { format: 'webm', quality: 0.73, marker: 'saved video export settings' },
+      editorDefaults: {
+        schemaVersion: 78,
+        marker: 'saved video editor settings',
+      },
+      exportSettings: {
+        format: 'webm',
+        quality: 0.73,
+        marker: 'saved video export settings',
+      },
       keepThisPreference: 'unchanged',
     },
   };
   const preferenceSnapshot = JSON.parse(JSON.stringify(preferences));
   const preferencesStore = { read: () => preferences };
-  const stores = createCaptureStores({ userPaths, preferencesStore, applicationRoot, isPackaged: false });
+  const stores = createCaptureStores({
+    userPaths,
+    preferencesStore,
+    applicationRoot,
+    isPackaged: false,
+  });
   return { root, userPaths, preferences, preferenceSnapshot, stores };
 }
 
@@ -47,7 +59,10 @@ test('keeps video preferences and the screenshot preset baseline separate', (t) 
   assert.equal(screenshotDefault.settings.editor.schemaVersion, 1);
   assert.equal(screenshotDefault.settings.editor.presentation.blurPercent, 30);
   assert.equal(screenshotDefault.settings.editor.presentation.selectedBackgroundId, '/wallpapers/image/baseline.webp');
-  assert.deepEqual(screenshotDefault.settings.export, { format: 'png', quality: 0.95 });
+  assert.deepEqual(screenshotDefault.settings.export, {
+    format: 'png',
+    quality: 0.95,
+  });
   assert.deepEqual(f.preferences, f.preferenceSnapshot);
   assert.notEqual(f.stores.editorPresetStore.file, f.stores.screenshotPresetStore.file);
 });

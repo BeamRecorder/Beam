@@ -1,0 +1,455 @@
+import { mayBeEnabled } from '@beam/engine/scene/scene-visibility';
+import { AudioBufferSink, type WrappedAudioBuffer } from 'mediabunny';
+import {
+  MediaInputError,
+  isAudioClip,
+  mediaSourceDescriptor,
+  openMediaInput,
+  sourceTimeAt,
+  type AudioClip,
+  type ClipComposition,
+  type MediaError,
+  type OpenedMediaInput,
+} from '@beam/runtime/shared/index';
+import { audioTransitionGainAt } from '@beam/engine/shared/clip-transitions';
+import { effectiveAudioClipGain } from '@beam/engine/shared/audio-gain';
+import { AUDIO_LIMITER_RELEASE_SECONDS, AUDIO_LIMITER_THRESHOLD_DB } from '@beam/engine/shared/audio-limiter';
+import { emptyAudioPlaybackMetrics, type AudioPlaybackMetrics } from '@beam/runtime/playback/audio-playback-metrics';
+import { createAudioGainSampler } from '@beam/engine/scene/audio-animation';
+
+const SCHEDULE_AHEAD_SECONDS = 1;
+const SCHEDULE_INTERVAL_MS = 100;
+
+type AudioAssetDecoder = {
+  opened: OpenedMediaInput;
+  sink: AudioBufferSink;
+};
+
+type AudioConsumer = {
+  clip: AudioClip;
+  decoder: AudioAssetDecoder;
+  iterator: AsyncIterator<WrappedAudioBuffer>;
+  pending: WrappedAudioBuffer | null;
+};
+
+type ScheduledNode = { source: AudioBufferSourceNode; gain: GainNode };
+
+export class AudioPlaybackScheduler {
+  private composition: ClipComposition | null = null;
+  private readonly decoders = new Map<string, AudioAssetDecoder>();
+  private consumers: AudioConsumer[] = [];
+  private readonly scheduled = new Set<ScheduledNode>();
+  private context: AudioContext | null = null;
+  private masterGain: GainNode | null = null;
+  private limiter: DynamicsCompressorNode | null = null;
+  private timer: ReturnType<typeof setInterval> | null = null;
+  private schedulePromise: Promise<void> | null = null;
+  private queuedScheduleGeneration: number | null = null;
+  private generation = 0;
+  private loadGeneration = 0;
+  private playing = false;
+  private anchorTimelineSeconds = 0;
+  private anchorContextSeconds = 0;
+  private pausedTimelineSeconds = 0;
+  private readonly onPlaybackError?: (error: MediaError) => void;
+  private readonly metrics = emptyAudioPlaybackMetrics();
+
+  constructor(onPlaybackError?: (error: MediaError) => void) {
+    this.onPlaybackError = onPlaybackError;
+  }
+
+  async loadComposition(composition: ClipComposition): Promise<MediaError[]> {
+    if (this.canUpdateComposition(composition)) {
+      this.updateComposition(composition);
+      return [];
+    }
+    const loadGeneration = ++this.loadGeneration;
+    this.stopPlayback();
+    this.disposeDecoders();
+    this.composition = composition;
+    const clips = composition.clips.filter(isAudioClip);
+    const assetIds = new Set(clips.map((clip) => clip.assetId));
+    const issues: MediaError[] = [];
+    const loadedDecoders = new Map<string, AudioAssetDecoder>();
+    for (const assetId of assetIds) {
+      let opened: OpenedMediaInput | null = null;
+      try {
+        const asset = composition.assets.find((entry) => entry.id === assetId);
+        if (!asset) throw this.missingAsset(assetId);
+        const descriptor = { ...mediaSourceDescriptor(asset), kind: 'audio' as const };
+        opened = await openMediaInput(descriptor);
+        if (loadGeneration !== this.loadGeneration) {
+          opened.dispose();
+          this.disposeDecoderMap(loadedDecoders);
+          return [];
+        }
+        const track = await opened.input.getPrimaryAudioTrack();
+        if (loadGeneration !== this.loadGeneration) {
+          opened.dispose();
+          this.disposeDecoderMap(loadedDecoders);
+          return [];
+        }
+        if (!track) {
+          throw new MediaInputError({
+            kind: 'missing-track',
+            sourceId: asset.id,
+            track: 'audio',
+            message: 'An audio clip references media without an audio track.',
+          });
+        }
+        const canDecode = await track.canDecode();
+        if (loadGeneration !== this.loadGeneration) {
+          opened.dispose();
+          this.disposeDecoderMap(loadedDecoders);
+          return [];
+        }
+        if (!canDecode) {
+          const codec = await track.getCodec();
+          throw new MediaInputError({
+            kind: 'unsupported-codec',
+            sourceId: asset.id,
+            track: 'audio',
+            codec,
+            message: 'The audio codec is unsupported by this device.',
+          });
+        }
+        loadedDecoders.set(assetId, { opened, sink: new AudioBufferSink(track) });
+        opened = null;
+      } catch (error) {
+        opened?.dispose();
+        if (loadGeneration !== this.loadGeneration) {
+          this.disposeDecoderMap(loadedDecoders);
+          return [];
+        }
+        issues.push(this.mediaError(error, assetId));
+      }
+    }
+    if (loadGeneration !== this.loadGeneration) {
+      this.disposeDecoderMap(loadedDecoders);
+      return [];
+    }
+    for (const [assetId, decoder] of loadedDecoders) this.decoders.set(assetId, decoder);
+    return issues;
+  }
+
+  updateComposition(composition: ClipComposition): void {
+    const assetIds = new Set(composition.clips.filter(isAudioClip).map((clip) => clip.assetId));
+    if (assetIds.size !== this.decoders.size || [...assetIds].some((assetId) => !this.decoders.has(assetId))) {
+      throw new Error('Audio assets changed during a timing-only composition update.');
+    }
+    this.stopPlayback();
+    this.composition = composition;
+  }
+
+  private canUpdateComposition(composition: ClipComposition): boolean {
+    if (!this.composition) return false;
+    const nextAssetIds = new Set(composition.clips.filter(isAudioClip).map((clip) => clip.assetId));
+    if (nextAssetIds.size !== this.decoders.size || [...nextAssetIds].some((assetId) => !this.decoders.has(assetId))) {
+      return false;
+    }
+    const topology = (value: ClipComposition) => {
+      const assetIds = [...new Set(value.clips.filter(isAudioClip).map((clip) => clip.assetId))].sort();
+      return JSON.stringify(
+        assetIds.map((assetId) => {
+          const asset = value.assets.find((entry) => entry.id === assetId);
+          return { assetId, kind: asset?.kind, src: asset?.src };
+        }),
+      );
+    };
+    return topology(this.composition) === topology(composition);
+  }
+
+  async play(timelineSeconds: number, generation: number): Promise<void> {
+    const context = this.ensureContext();
+    if (context.state === 'suspended') await context.resume();
+    if (generation < this.generation) return;
+    this.generation = generation;
+    this.stopNodes();
+    this.playing = true;
+    this.anchorTimelineSeconds = timelineSeconds;
+    this.pausedTimelineSeconds = timelineSeconds;
+    this.anchorContextSeconds = context.currentTime;
+    this.createConsumers(timelineSeconds);
+    await this.requestSchedule(generation);
+    if (!this.playing || generation !== this.generation) return;
+    this.timer = setInterval(() => {
+      void this.requestSchedule(generation).catch((error: unknown) => this.handleScheduleError(error, generation));
+    }, SCHEDULE_INTERVAL_MS);
+  }
+
+  pause(timelineSeconds = this.currentTime()): void {
+    this.pausedTimelineSeconds = timelineSeconds;
+    this.playing = false;
+    this.generation += 1;
+    this.stopNodes();
+    this.releaseConsumers();
+  }
+
+  async seek(timelineSeconds: number, generation: number, resume: boolean): Promise<void> {
+    this.pausedTimelineSeconds = timelineSeconds;
+    this.generation = generation;
+    this.stopNodes();
+    this.releaseConsumers();
+    if (resume) await this.play(timelineSeconds, generation);
+  }
+
+  currentTime(): number {
+    if (this.context) this.metrics.contextState = this.context.state;
+    if (!this.playing || !this.context) return this.pausedTimelineSeconds;
+    return this.anchorTimelineSeconds + (this.context.currentTime - this.anchorContextSeconds);
+  }
+
+  setVolume(percent: number): void {
+    const value = Math.max(0, Math.min(1, percent / 100));
+    const context = this.ensureContext();
+    this.masterGain?.gain.setTargetAtTime(value, context.currentTime, 0.004);
+  }
+
+  get performanceMetrics(): AudioPlaybackMetrics {
+    return { ...this.metrics };
+  }
+
+  dispose(): void {
+    this.loadGeneration += 1;
+    this.stopPlayback();
+    this.disposeDecoders();
+    this.masterGain?.disconnect();
+    this.limiter?.disconnect();
+    this.masterGain = null;
+    this.limiter = null;
+    void this.context?.close();
+    this.context = null;
+    this.composition = null;
+  }
+
+  private ensureContext(): AudioContext {
+    if (this.context) return this.context;
+    this.context = new AudioContext();
+    this.metrics.contextState = this.context.state;
+    this.masterGain = this.context.createGain();
+    this.limiter = this.context.createDynamicsCompressor();
+    this.limiter.threshold.value = AUDIO_LIMITER_THRESHOLD_DB;
+    this.limiter.knee.value = 0;
+    this.limiter.ratio.value = 20;
+    this.limiter.attack.value = 0.003;
+    this.limiter.release.value = AUDIO_LIMITER_RELEASE_SECONDS;
+    this.masterGain.connect(this.limiter);
+    this.limiter.connect(this.context.destination);
+    return this.context;
+  }
+
+  private createConsumers(timelineSeconds: number) {
+    const composition = this.composition;
+    if (!composition) return;
+    this.consumers = composition.clips
+      .filter((clip): clip is AudioClip => isAudioClip(clip) && mayBeEnabled(composition, clip))
+      .flatMap((clip) => {
+        const decoder = this.decoders.get(clip.assetId);
+        const sourceTimeMs = sourceTimeAt(clip, Math.max(clip.timelineStartMs, timelineSeconds * 1_000));
+        if (!decoder || sourceTimeMs === null) return [];
+        const sourceStart = Math.max(clip.sourceInMs / 1_000, sourceTimeMs / 1_000);
+        const sourceEnd = (clip.sourceInMs + clip.sourceDurationMs) / 1_000;
+        return [
+          {
+            clip,
+            decoder,
+            iterator: decoder.sink.buffers(sourceStart, sourceEnd)[Symbol.asyncIterator](),
+            pending: null,
+          },
+        ];
+      });
+  }
+
+  private async schedule(requestGeneration: number) {
+    if (!this.playing || requestGeneration !== this.generation || !this.context) return;
+    this.metrics.contextState = this.context.state;
+    this.metrics.schedulePasses += 1;
+    const horizon = this.currentTime() + SCHEDULE_AHEAD_SECONDS;
+    await Promise.all(this.consumers.map((consumer) => this.scheduleConsumer(consumer, horizon, requestGeneration)));
+  }
+
+  private requestSchedule(requestGeneration: number): Promise<void> {
+    this.queuedScheduleGeneration = requestGeneration;
+    if (this.schedulePromise) return this.schedulePromise;
+    const drain = async () => {
+      while (this.queuedScheduleGeneration !== null) {
+        const generation = this.queuedScheduleGeneration;
+        this.queuedScheduleGeneration = null;
+        await this.schedule(generation);
+      }
+    };
+    const promise = drain().finally(() => {
+      if (this.schedulePromise === promise) this.schedulePromise = null;
+    });
+    this.schedulePromise = promise;
+    return promise;
+  }
+
+  private async scheduleConsumer(consumer: AudioConsumer, horizon: number, requestGeneration: number) {
+    while (this.playing && requestGeneration === this.generation) {
+      const wrapped = consumer.pending ?? (await consumer.iterator.next()).value ?? null;
+      if (!this.playing || requestGeneration !== this.generation) return;
+      consumer.pending = null;
+      if (!wrapped) return;
+      const clip = consumer.clip;
+      const clipSourceStart = clip.sourceInMs / 1_000;
+      const clipSourceEnd = (clip.sourceInMs + clip.sourceDurationMs) / 1_000;
+      let segmentStart = Math.max(wrapped.timestamp, clipSourceStart);
+      const segmentEnd = Math.min(wrapped.timestamp + wrapped.duration, clipSourceEnd);
+      let timelineStart = clip.timelineStartMs / 1_000 + (segmentStart - clipSourceStart) / clip.playbackRate;
+      if (timelineStart > horizon) {
+        consumer.pending = wrapped;
+        return;
+      }
+      if (segmentEnd <= segmentStart) continue;
+      let when = this.anchorContextSeconds + (timelineStart - this.anchorTimelineSeconds);
+      if (when < this.context!.currentTime) {
+        const latenessMs = (this.context!.currentTime - when) * 1_000;
+        if (latenessMs >= 20) {
+          this.metrics.lateBuffers += 1;
+          this.metrics.maxLatenessMs = Math.max(this.metrics.maxLatenessMs, latenessMs);
+        }
+        segmentStart += (this.context!.currentTime - when) * clip.playbackRate;
+        timelineStart = clip.timelineStartMs / 1_000 + (segmentStart - clipSourceStart) / clip.playbackRate;
+        when = this.anchorContextSeconds + (timelineStart - this.anchorTimelineSeconds);
+      }
+      if (segmentEnd <= segmentStart) continue;
+      this.startNode(consumer, wrapped, segmentStart, segmentEnd, Math.max(this.context!.currentTime, when));
+    }
+  }
+
+  private startNode(
+    consumer: AudioConsumer,
+    wrapped: WrappedAudioBuffer,
+    segmentStart: number,
+    segmentEnd: number,
+    when: number,
+  ) {
+    const context = this.context!;
+    const source = context.createBufferSource();
+    const gain = context.createGain();
+    source.buffer = wrapped.buffer;
+    source.playbackRate.value = consumer.clip.playbackRate;
+    const volume = effectiveAudioClipGain(consumer.clip);
+    const animated = this.composition?.animations?.tracks.some((track) => track.targetId === consumer.clip.id);
+    if (animated) {
+      const gainAt = createAudioGainSampler(this.composition!, consumer.clip);
+      const startMs =
+        consumer.clip.timelineStartMs +
+        ((segmentStart - consumer.clip.sourceInMs / 1000) / consumer.clip.playbackRate) * 1000;
+      const durationMs = ((segmentEnd - segmentStart) / consumer.clip.playbackRate) * 1000;
+      const count = Math.max(2, Math.ceil((durationMs / 1000) * context.sampleRate) + 1);
+      const curve = Float32Array.from({ length: count }, (_, i) => {
+        const time = startMs + (durationMs * i) / (count - 1);
+        return gainAt(time) * audioTransitionGainAt(consumer.clip, time);
+      });
+      gain.gain.setValueCurveAtTime(curve, when, durationMs / 1000);
+    } else if (!consumer.clip.transitions?.entry && !consumer.clip.transitions?.exit) {
+      gain.gain.value = volume;
+    } else {
+      const timelineStartMs =
+        consumer.clip.timelineStartMs +
+        ((segmentStart - consumer.clip.sourceInMs / 1_000) / consumer.clip.playbackRate) * 1_000;
+      const timelineEndMs =
+        consumer.clip.timelineStartMs +
+        ((segmentEnd - consumer.clip.sourceInMs / 1_000) / consumer.clip.playbackRate) * 1_000;
+      const contextTimeAt = (timelineMs: number) => when + (timelineMs - timelineStartMs) / 1_000;
+      gain.gain.value = volume * audioTransitionGainAt(consumer.clip, timelineStartMs);
+      gain.gain.setValueAtTime(gain.gain.value, when);
+      const entryEnd = consumer.clip.timelineStartMs + (consumer.clip.transitions.entry?.durationMs ?? 0);
+      if (consumer.clip.transitions.entry && entryEnd > timelineStartMs && entryEnd <= timelineEndMs)
+        gain.gain.linearRampToValueAtTime(volume, contextTimeAt(entryEnd));
+      const exitStart =
+        consumer.clip.timelineStartMs +
+        consumer.clip.timelineDurationMs -
+        (consumer.clip.transitions.exit?.durationMs ?? 0);
+      if (consumer.clip.transitions.exit && exitStart > timelineStartMs && exitStart < timelineEndMs)
+        gain.gain.setValueAtTime(volume, contextTimeAt(exitStart));
+      if (consumer.clip.transitions.exit && timelineEndMs > exitStart)
+        gain.gain.linearRampToValueAtTime(
+          volume * audioTransitionGainAt(consumer.clip, timelineEndMs),
+          contextTimeAt(timelineEndMs),
+        );
+    }
+    source.connect(gain);
+    gain.connect(this.masterGain!);
+    const node = { source, gain };
+    this.scheduled.add(node);
+    source.onended = () => {
+      source.disconnect();
+      gain.disconnect();
+      this.scheduled.delete(node);
+    };
+    source.start(when, segmentStart - wrapped.timestamp, segmentEnd - segmentStart);
+    this.metrics.scheduledBuffers += 1;
+  }
+
+  private stopPlayback() {
+    this.playing = false;
+    this.generation += 1;
+    this.stopNodes();
+    this.releaseConsumers();
+  }
+
+  private releaseConsumers() {
+    const consumers = this.consumers;
+    this.consumers = [];
+    for (const consumer of consumers) {
+      void Promise.resolve(consumer.iterator.return?.()).catch(() => undefined);
+    }
+  }
+
+  private stopNodes() {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = null;
+    this.queuedScheduleGeneration = null;
+    for (const node of this.scheduled) {
+      try {
+        node.source.stop();
+      } catch {
+        // Already-ended nodes still need to be disconnected.
+      }
+      node.source.disconnect();
+      node.gain.disconnect();
+    }
+    this.scheduled.clear();
+  }
+
+  private disposeDecoders() {
+    this.disposeDecoderMap(this.decoders);
+  }
+
+  private disposeDecoderMap(decoders: Map<string, AudioAssetDecoder>) {
+    for (const decoder of decoders.values()) decoder.opened.dispose();
+    decoders.clear();
+  }
+
+  private missingAsset(assetId: string) {
+    return new MediaInputError({
+      kind: 'missing',
+      sourceId: assetId,
+      message: 'An audio clip references a missing media asset.',
+    });
+  }
+
+  private mediaError(error: unknown, sourceId: string): MediaError {
+    return error instanceof MediaInputError
+      ? error.detail
+      : {
+          kind: 'decode-failure',
+          sourceId,
+          message: error instanceof Error ? error.message : 'Audio playback failed.',
+        };
+  }
+
+  private handleScheduleError(error: unknown, requestGeneration: number) {
+    if (!this.playing || requestGeneration !== this.generation) return;
+    this.metrics.scheduleErrors += 1;
+    const detail = this.mediaError(error, 'audio-playback');
+    this.stopPlayback();
+    if (this.onPlaybackError) this.onPlaybackError(detail);
+    else console.error('[Beam media:audio] Audio scheduling failed.', detail);
+  }
+}
+
+export { SCHEDULE_AHEAD_SECONDS };

@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const test = require('node:test');
-const { registerScreenColorIpc } = require('../electron/capture/screen-color-ipc.cjs');
+const { registerScreenColorIpc } = require('../apps/desktop/electron/capture/screen-color-ipc.cjs');
 
 function fixture(options = {}) {
   const handlers = new Map();
@@ -37,7 +37,9 @@ function fixture(options = {}) {
   registerScreenColorIpc({
     ipcMain: { handle: (name, handler) => handlers.set(name, handler) },
     app,
-    BrowserWindow: { fromWebContents: () => (options.ownerMissing ? null : owner) },
+    BrowserWindow: {
+      fromWebContents: () => (options.ownerMissing ? null : owner),
+    },
     applicationRoot: '/beam',
     isTrustedRenderer: () => options.trusted ?? true,
     canAcceptWork: () => options.accepting ?? true,
@@ -136,7 +138,11 @@ test('only the owning renderer can cancel the pending selection', async () => {
   const f = fixture();
   const pending = f.pick();
   const foreign = new EventEmitter();
-  Object.assign(foreign, { mainFrame: {}, isDestroyed: () => false, getURL: f.sender.getURL });
+  Object.assign(foreign, {
+    mainFrame: {},
+    isDestroyed: () => false,
+    getURL: f.sender.getURL,
+  });
   await f.cancel({ sender: foreign, senderFrame: foreign.mainFrame });
   assert.equal(f.calls.length, 1);
   await f.cancel();

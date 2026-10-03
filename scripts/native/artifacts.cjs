@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
-const { resolveCargoTargetDirectory } = require('../../electron/capture/cargo-build-paths.cjs');
+const { resolveCargoTargetDirectory } = require('@beam/native-client/cargo-build-paths');
 const {
   NATIVE_TARGETS,
   captureEngineAssetName,
@@ -9,7 +9,7 @@ const {
   inputHelperAssetName,
   inputHelperFilename,
   nativeTarget,
-} = require('../../electron/capture/capture-engine-path.cjs');
+} = require('@beam/native-client/capture-engine-path');
 
 const applicationRoot = path.join(__dirname, '../..');
 
@@ -23,7 +23,10 @@ function cargoAvailable(spawnSyncImpl = spawnSync) {
 
 function runCommand(command, args, options = {}, spawnImpl = spawn) {
   return new Promise((resolve, reject) => {
-    const child = spawnImpl(command, args, { ...options, stdio: options.stdio || 'inherit' });
+    const child = spawnImpl(command, args, {
+      ...options,
+      stdio: options.stdio || 'inherit',
+    });
     child.once('error', reject);
     child.once('exit', (code, signal) => {
       if (signal) return reject(new Error(`${command} terminated by ${signal}`));
@@ -116,7 +119,10 @@ function collectNativeAssets({ root = applicationRoot, outputDirectory, version 
       ];
       const helper = inputHelperFilename(version, platform, arch);
       if (helper)
-        candidates.push({ source: path.join(staged, helper), asset: inputHelperAssetName(version, platform, arch) });
+        candidates.push({
+          source: path.join(staged, helper),
+          asset: inputHelperAssetName(version, platform, arch),
+        });
       for (const candidate of candidates) {
         if (!fs.existsSync(candidate.source)) continue;
         const destination = path.join(outputDirectory, candidate.asset);
@@ -165,7 +171,11 @@ async function main() {
   }
   if (command === 'collect') {
     const output = path.resolve(options.output || 'dist_native');
-    for (const file of collectNativeAssets({ outputDirectory: output, version })) console.log(`Collected ${file}`);
+    for (const file of collectNativeAssets({
+      outputDirectory: output,
+      version,
+    }))
+      console.log(`Collected ${file}`);
     return;
   }
   throw new Error('Usage: node scripts/native/artifacts.cjs <build|stage|collect> [--key value]');

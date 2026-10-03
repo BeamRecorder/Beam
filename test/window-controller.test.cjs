@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { HUD_SIZE, RECORDER_SIZE, WindowController } = require('../electron/window/window-controller.cjs');
+const { HUD_SIZE, RECORDER_SIZE, WindowController } = require('../apps/desktop/electron/window/window-controller.cjs');
 
 function fakeWindow() {
   const listeners = new Map();
@@ -108,10 +108,16 @@ test('Recorder centers independently on each display rather than reusing another
   let selected = right;
   const win = fakeWindow();
   const controller = new WindowController(win, {
-    screenModule: { getCursorScreenPoint: () => ({ x: 0, y: 0 }), getDisplayNearestPoint: () => selected },
+    screenModule: {
+      getCursorScreenPoint: () => ({ x: 0, y: 0 }),
+      getDisplayNearestPoint: () => selected,
+    },
     preferencesStore: {
       read: () => ({
-        extras: { recorderPositions: { left: { x: -1000, y: 400 } }, lastRecorderPosition: { x: -1000, y: 400 } },
+        extras: {
+          recorderPositions: { left: { x: -1000, y: 400 } },
+          lastRecorderPosition: { x: -1000, y: 400 },
+        },
       }),
       patch: () => {},
     },
@@ -133,8 +139,14 @@ test('Recorder restores the X11 zero origin and clamps off-screen placements', (
   let stored = { x: 0, y: 0 };
   const win = fakeWindow();
   const controller = new WindowController(win, {
-    screenModule: { getCursorScreenPoint: () => ({ x: 0, y: 0 }), getDisplayNearestPoint: () => display },
-    preferencesStore: { read: () => ({ extras: { recorderPositions: { 1: stored } } }), patch: () => {} },
+    screenModule: {
+      getCursorScreenPoint: () => ({ x: 0, y: 0 }),
+      getDisplayNearestPoint: () => display,
+    },
+    preferencesStore: {
+      read: () => ({ extras: { recorderPositions: { 1: stored } } }),
+      patch: () => {},
+    },
   });
   controller.setMode('recorder');
   assert.deepEqual(win.getBounds(), { x: 0, y: 0, ...RECORDER_SIZE });
@@ -264,7 +276,10 @@ test('linux HUD and recorder stay interactive so the renderer can classify the p
     getDisplayNearestPoint: () => display,
   };
   const win = fakeWindow();
-  const controller = new WindowController(win, { screenModule, platform: 'linux' });
+  const controller = new WindowController(win, {
+    screenModule,
+    platform: 'linux',
+  });
   controller.markReadyToShow();
   controller.setHudInteractive(true);
   controller.setHudInteractive(false);
@@ -362,7 +377,10 @@ test('recorder mode keeps its compact native hit target interactive', () => {
     getDisplayNearestPoint: () => display,
   };
   const win = fakeWindow();
-  const controller = new WindowController(win, { screenModule, platform: 'darwin' });
+  const controller = new WindowController(win, {
+    screenModule,
+    platform: 'darwin',
+  });
   controller.setMode('recorder');
   controller.markReadyToShow();
 
@@ -412,7 +430,10 @@ test('recorder position persistence stores the compact bar position', () => {
     patch: (value) => saved.push(value),
   };
   const win = fakeWindow();
-  const controller = new WindowController(win, { screenModule, preferencesStore });
+  const controller = new WindowController(win, {
+    screenModule,
+    preferencesStore,
+  });
   controller.setMode('recorder');
   controller.rememberRecorderPosition();
   controller.flushRecorderPosition();
@@ -420,10 +441,16 @@ test('recorder position persistence stores the compact bar position', () => {
   win.setPosition(200, 300);
   win.emit('move');
   controller.flushRecorderPosition();
-  assert.deepEqual(saved.at(-1).extras.recorderPositions['1'], { x: 200, y: 300 });
+  assert.deepEqual(saved.at(-1).extras.recorderPositions['1'], {
+    x: 200,
+    y: 300,
+  });
   win.setPosition(324, 696);
   win.emit('moved');
-  assert.deepEqual(saved.at(-1).extras.recorderPositions['1'], { x: 324, y: 696 });
+  assert.deepEqual(saved.at(-1).extras.recorderPositions['1'], {
+    x: 324,
+    y: 696,
+  });
   controller.setMode('hud');
 });
 
@@ -453,7 +480,10 @@ test('HUD restores and clamps saved positions using the normalized native width'
 });
 
 test('saved Recorder setup preference controls the HUD while capture stays topmost', () => {
-  const preferencesStore = { read: () => ({ alwaysOnTop: false }), patch: () => undefined };
+  const preferencesStore = {
+    read: () => ({ alwaysOnTop: false }),
+    patch: () => undefined,
+  };
   const display = {
     id: 1,
     bounds: { x: 0, y: 0, width: 1000, height: 800 },
@@ -462,7 +492,10 @@ test('saved Recorder setup preference controls the HUD while capture stays topmo
   const win = fakeWindow();
   const controller = new WindowController(win, {
     preferencesStore,
-    screenModule: { getCursorScreenPoint: () => ({ x: 500, y: 400 }), getDisplayNearestPoint: () => display },
+    screenModule: {
+      getCursorScreenPoint: () => ({ x: 500, y: 400 }),
+      getDisplayNearestPoint: () => display,
+    },
   });
   controller.markReadyToShow();
   assert.equal(topCalls(win).at(-1)[1], false);
@@ -558,7 +591,12 @@ test('showHud applies the normalized HUD size to native bounds, minimum, and sav
 
   controller.showHud();
 
-  assert.deepEqual(win.getBounds(), { x: 100, y: 532, width: 672, height: 268 });
+  assert.deepEqual(win.getBounds(), {
+    x: 100,
+    y: 532,
+    width: 672,
+    height: 268,
+  });
   assert.deepEqual(win.calls.filter((call) => call[0] === 'minimumSize').at(-1), [
     'minimumSize',
     HUD_SIZE.width,

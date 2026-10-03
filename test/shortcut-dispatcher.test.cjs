@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { createShortcutDispatcher } = require('../electron/lifecycle/shortcut-dispatcher.cjs');
+const { createShortcutDispatcher } = require('../apps/desktop/electron/lifecycle/shortcut-dispatcher.cjs');
 function fixture(options = {}) {
   const calls = [],
     pending = [];

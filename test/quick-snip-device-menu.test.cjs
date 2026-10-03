@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const { EventEmitter } = require('node:events');
-const { registerQuickSnipDeviceMenu } = require('../electron/quick-snip/quick-snip-device-menu.cjs');
+const { registerQuickSnipDeviceMenu } = require('../apps/desktop/electron/quick-snip/quick-snip-device-menu.cjs');
 function fixture() {
   const sender = new EventEmitter();
   const window = { isDestroyed: () => false };

@@ -1,7 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { QuickSnipRenderTask, QuickSnipSnapshot } from '~/api/types/quick-snip';
-import messages from '../src/i18n/en/core.json';
+import messages from '../apps/desktop/src/i18n/en/core.json';
 const mocks = vi.hoisted(() => ({
   status: null as ((value: QuickSnipSnapshot) => void) | null,
   statusBlur: null as (() => void) | null,
@@ -32,20 +32,21 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 vi.mock('~/api/capture', () => ({ capture: mocks.capture }));
-vi.mock('~/components/video-editor/screenshot/screenshot-state', () => {
+vi.mock('~/components/screenshot/screenshot-state', () => {
   mocks.screenshotStateModuleLoaded();
   return { screenshotState: mocks.screenshotState };
 });
-vi.mock('~/components/video-editor/screenshot/screenshot-render', () => {
+vi.mock('~/components/screenshot/screenshot-render', () => {
   mocks.screenshotRenderModuleLoaded();
   return { encodeScreenshot: mocks.encodeScreenshot };
 });
-vi.mock('../src/components/quick-snip/quick-snip-export', () => {
+vi.mock('../apps/desktop/src/components/quick-snip/quick-snip-export', () => {
   mocks.videoRenderModuleLoaded();
   return { renderQuickSnip: mocks.renderQuickSnip };
 });
-import QuickSnipStatus from '../src/components/quick-snip/QuickSnipStatus.vue';
-import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
+import QuickSnipStatus from '../apps/desktop/src/components/quick-snip/QuickSnipStatus.vue';
+import type { ScreenshotDocument } from '~/api/types/screenshot';
+import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 const snapshot: QuickSnipSnapshot = {
   state: 'processing',
   progress: 0.42,
@@ -61,7 +62,12 @@ const snapshot: QuickSnipSnapshot = {
       name: 'Default',
       protected: true,
       updatedAt: '',
-      settings: { editor: { schemaVersion: 1 }, devices: {}, export: {}, quickSnip: { automaticZoom: true } },
+      settings: {
+        editor: { schemaVersion: 1 },
+        devices: {},
+        export: {},
+        quickSnip: { automaticZoom: true },
+      },
     },
     automaticZoom: true,
     screenKind: 'display',
@@ -112,7 +118,10 @@ beforeEach(() => {
   mocks.capture.reportQuickSnipRender.mockResolvedValue(undefined);
   mocks.renderQuickSnip.mockResolvedValue(undefined);
   mocks.capture.getQuickSnipState.mockResolvedValue(snapshot);
-  mocks.capture.copyQuickSnipFile.mockResolvedValue({ native: true, fallback: null });
+  mocks.capture.copyQuickSnipFile.mockResolvedValue({
+    native: true,
+    fallback: null,
+  });
   mocks.capture.getScreenshot.mockResolvedValue(screenshotDocument);
   mocks.capture.listBackgroundLibrary.mockResolvedValue([]);
   mocks.capture.exportScreenshot.mockResolvedValue('/screenshots/copied.png');
@@ -247,7 +256,9 @@ describe('Quick Snip status pill', () => {
     const surface = wrapper.get('.snip-surface');
 
     await surface.trigger('focusin');
-    await surface.trigger('focusout', { relatedTarget: wrapper.get('.snip-pill').element });
+    await surface.trigger('focusout', {
+      relatedTarget: wrapper.get('.snip-pill').element,
+    });
     expect(wrapper.classes()).toContain('expanded');
     expect(mocks.capture.setQuickSnipStatusInteractive).toHaveBeenLastCalledWith(true);
 
@@ -311,7 +322,11 @@ describe('Quick Snip status pill', () => {
     wrapper.unmount();
   });
   it('keeps native error details open after native blur clears hover and focus', async () => {
-    const wrapper = await setup({ ...completed, copied: false, error: 'Native stop failed.' });
+    const wrapper = await setup({
+      ...completed,
+      copied: false,
+      error: 'Native stop failed.',
+    });
     const surface = wrapper.get('.snip-surface');
 
     await surface.trigger('mouseenter');
@@ -345,7 +360,10 @@ describe('Quick Snip status pill', () => {
     }
   });
   it('expands for error details without hover and synchronizes native interactivity when errors change', async () => {
-    const wrapper = await setup({ ...snapshot, error: 'Native screen capture failed.' });
+    const wrapper = await setup({
+      ...snapshot,
+      error: 'Native screen capture failed.',
+    });
     vi.useFakeTimers();
     try {
       const surface = wrapper.get('.snip-surface');
@@ -380,7 +398,11 @@ describe('Quick Snip status pill', () => {
     wrapper.unmount();
   });
   it('dismisses a failure directly from the pill with the full error details still visible', async () => {
-    const wrapper = await setup({ ...snapshot, state: 'failed', error: 'Portal permission denied' });
+    const wrapper = await setup({
+      ...snapshot,
+      state: 'failed',
+      error: 'Portal permission denied',
+    });
     const close = wrapper.get('.snip-pill button[aria-label="Dismiss"]');
     expect(close.attributes('disabled')).toBeUndefined();
     expect(wrapper.get('.status-error').text()).toBe('Portal permission denied');
@@ -395,7 +417,9 @@ describe('Quick Snip status pill', () => {
       (_, index) => `Native failure detail ${index}: capture backend error`,
     ).join('\n');
     clipboardWriteText.mockResolvedValue(undefined);
-    vi.stubGlobal('navigator', { clipboard: { writeText: clipboardWriteText } });
+    vi.stubGlobal('navigator', {
+      clipboard: { writeText: clipboardWriteText },
+    });
     const wrapper = await setup({ ...snapshot, state: 'failed', error });
 
     const errorText = wrapper.get('.status-error');
@@ -418,7 +442,11 @@ describe('Quick Snip status pill', () => {
         resolveEditor = resolve;
       }),
     );
-    const wrapper = await setup({ ...snapshot, state: 'failed', error: 'Native capture failed.' });
+    const wrapper = await setup({
+      ...snapshot,
+      state: 'failed',
+      error: 'Native capture failed.',
+    });
     const openEditor = wrapper.findAll('button').find((item) => item.text().includes('Open in editor'))!;
     const opening = openEditor.trigger('click');
     await wrapper.vm.$nextTick();
@@ -667,7 +695,11 @@ describe('Quick Snip status pill', () => {
   it('copies screenshot output through the native screenshot exporter', async () => {
     const screenshotCompleted = {
       ...completed,
-      job: { ...completed.job!, mode: 'screenshot' as const, projectId: screenshotDocument.id },
+      job: {
+        ...completed.job!,
+        mode: 'screenshot' as const,
+        projectId: screenshotDocument.id,
+      },
       result: { path: '', projectId: screenshotDocument.id },
       copied: false,
     } satisfies QuickSnipSnapshot;
@@ -685,7 +717,12 @@ describe('Quick Snip status pill', () => {
     expect(mocks.capture.getScreenshot).toHaveBeenCalledWith(screenshotDocument.id);
     expect(mocks.screenshotState).toHaveBeenCalledWith(screenshotDocument, []);
     expect(mocks.encodeScreenshot).toHaveBeenCalledWith(screenshotDocument.source, screenshotState);
-    expect(mocks.capture.exportScreenshot).toHaveBeenCalledWith(screenshotDocument.id, screenshotBytes, 'png', true);
+    expect(mocks.capture.exportScreenshot).toHaveBeenCalledWith(
+      screenshotDocument.id,
+      screenshotBytes,
+      'png',
+      true,
+    );
     expect(mocks.capture.copyQuickSnipFile).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('Copied to clipboard');
     wrapper.unmount();
@@ -693,7 +730,11 @@ describe('Quick Snip status pill', () => {
   it('offers the screenshot editor for a retained screenshot project', async () => {
     const screenshotSnapshot = {
       ...snapshot,
-      job: { ...snapshot.job!, mode: 'screenshot' as const, projectId: screenshotDocument.id },
+      job: {
+        ...snapshot.job!,
+        mode: 'screenshot' as const,
+        projectId: screenshotDocument.id,
+      },
     } satisfies QuickSnipSnapshot;
     const wrapper = await setup(screenshotSnapshot);
     const openButton = wrapper.findAll('button').find((item) => item.text().includes('Open in editor'))!;
