@@ -148,7 +148,12 @@ test('generates and validates the complete native manifest for every supported e
     assert.equal(path.basename(manifestPath), `native-engines-${VERSION}.json`);
     assert.equal(manifest.version, VERSION);
     assert.deepEqual(
-      manifest.files.map(({ kind, platform, arch, asset }) => ({ kind, platform, arch, asset })),
+      manifest.files.map(({ kind, platform, arch, asset }) => ({
+        kind,
+        platform,
+        arch,
+        asset,
+      })),
       entries,
     );
     assert.deepEqual(entries.map(({ kind, platform, arch }) => `${kind}:${platform}/${arch}`).sort(), [

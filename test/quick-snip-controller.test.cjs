@@ -1,13 +1,18 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { createQuickSnipController } = require('../electron/quick-snip/quick-snip-controller.cjs');
+const { createQuickSnipController } = require('../apps/desktop/electron/quick-snip/quick-snip-controller.cjs');
 
 const region = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
 const bounds = { x: 0, y: 0, width: 1920, height: 1080 };
 const preset = {
   id: 'default',
   name: 'Default',
-  settings: { editor: {}, devices: {}, export: { format: 'mp4' }, quickSnip: { automaticZoom: true } },
+  settings: {
+    editor: {},
+    devices: {},
+    export: { format: 'mp4' },
+    quickSnip: { automaticZoom: true },
+  },
 };
 
 function deferred() {
@@ -19,6 +24,44 @@ function deferred() {
   });
   return { promise, resolve, reject };
 }
+
+test('restart retains the Instant job and does not export the discarded take', async () => {
+  const f = harness();
+  await selectAndStart(f.controller, 'instant');
+  await f.controller.report({ type: 'recording' });
+  const job = f.controller.state().job;
+  await f.controller.report({ type: 'restarting', name: job.name });
+  assert.equal(f.controller.state().state, 'preparing');
+  assert.deepEqual(f.controller.state().job, job);
+  assert.equal(f.controller.state().progress, 0);
+  assert.equal(f.finalizeCalls.length, 0);
+  await f.controller.report({ type: 'recording' });
+  assert.equal(f.controller.state().state, 'recording');
+});
+
+test('restart ignores an obsolete job and non-recording states', async () => {
+  const f = harness();
+  await selectAndStart(f.controller, 'instant');
+  const job = f.controller.state().job;
+  await f.controller.report({ type: 'restarting', name: job.name });
+  assert.equal(f.controller.state().state, 'preparing');
+  await f.controller.report({ type: 'recording' });
+  await f.controller.report({ type: 'restarting', name: 'obsolete' });
+  assert.equal(f.controller.state().state, 'recording');
+  await f.controller.stop();
+  await f.controller.report({ type: 'restarting', name: job.name });
+  assert.equal(f.controller.state().state, 'finalizing');
+});
+
+test('late restart cannot revive a canceled recording', async () => {
+  const f = harness();
+  await selectAndStart(f.controller, 'instant');
+  await f.controller.report({ type: 'recording' });
+  const job = f.controller.state().job;
+  await f.controller.cancel();
+  await f.controller.report({ type: 'restarting', name: job.name });
+  assert.equal(f.controller.state().state, 'canceled');
+});
 
 function harness({
   normalRecording = false,
@@ -36,6 +79,8 @@ function harness({
   userPaths,
   openEditor,
   openScreenshot,
+  selectSource,
+  resolveDisplay,
 } = {}) {
   const calls = [];
   const preferenceState = preferences ?? { extras: {} };
@@ -49,18 +94,31 @@ function harness({
   const finalizeCalls = [];
   const editorCalls = [];
   const screenshotCalls = [];
-  const paths = userPaths ?? { instantProjects: '/instant-projects', studioProjects: '/studio-projects' };
+  const paths = userPaths ?? {
+    instantProjects: '/instant-projects',
+    studioProjects: '/studio-projects',
+  };
   const preferencesStore = {
     read: () => preferenceState,
     patch: (patch) => {
       calls.push('preferences.patch');
-      if (patch.devices) preferenceState.devices = { ...preferenceState.devices, ...patch.devices };
+      if (patch.devices)
+        preferenceState.devices = {
+          ...preferenceState.devices,
+          ...patch.devices,
+        };
       if (patch.extras) preferenceState.extras = { ...preferenceState.extras, ...patch.extras };
     },
   };
-  const videoPresetStore = { read: () => presetDocument ?? { activePresetId: 'default', presets: [preset] } };
+  const videoPresetStore = {
+    read: () => presetDocument ?? { activePresetId: 'default', presets: [preset] },
+  };
   const stillPresetStore = {
-    read: () => screenshotPresetDocument ?? { activePresetId: 'default', presets: [preset] },
+    read: () =>
+      screenshotPresetDocument ?? {
+        activePresetId: 'default',
+        presets: [preset],
+      },
   };
   let cropParent = null;
   let showFailuresRemaining = showFailure ? 1 : 0;
@@ -144,8 +202,10 @@ function harness({
     cropWindow,
     statusWindow,
     platform,
+    selectSource: selectSource ?? (async (kind) => ({ id: 'native-display:1', kind })),
+    cancelSourceSelection: () => calls.push('source.cancel'),
     resolveScreenId: async (display) => `native-display:${display.id}`,
-    resolveDisplay: () => ({ id: 1, bounds, workArea: bounds }),
+    resolveDisplay: resolveDisplay ?? (() => ({ id: 1, bounds, workArea: bounds })),
     isNormalRecordingActive: () => normalRecording,
     finalize: async (options) => {
       finalizeCalls.push(options);
@@ -181,6 +241,46 @@ async function selectAndStart(controller, mode = 'studio') {
   await controller.toggle();
 }
 
+test('Quick Snip inherits shared recording desktop and real cursor defaults', async () => {
+  const f = harness({
+    preferences: {
+      extras: {
+        hideTaskbar: true,
+        hideDesktopIcons: true,
+        showRealCursor: true,
+      },
+    },
+  });
+  await f.controller.toggle();
+  const job = f.controller.state().job;
+  assert.equal(job.hideTaskbar, true);
+  assert.equal(job.hideDesktopIcons, true);
+  assert.equal(job.showRealCursor, true);
+});
+
+test('Instant source options override the shared desktop and cursor defaults', async () => {
+  const f = harness({
+    preferences: {
+      extras: {
+        hideTaskbar: true,
+        hideDesktopIcons: true,
+        showRealCursor: true,
+      },
+    },
+  });
+  await f.controller.fromHud({
+    screenKind: 'display',
+    screenId: 'display:1',
+    hideTaskbar: false,
+    hideDesktopIcons: false,
+    showRealCursor: false,
+  });
+  const job = f.controller.state().job;
+  assert.equal(job.hideTaskbar, false);
+  assert.equal(job.hideDesktopIcons, false);
+  assert.equal(job.showRealCursor, false);
+});
+
 test('one toggle selects, starts, stops and finalizes Instant Quick Snip according to state', async () => {
   const { controller, calls, finalizeCalls } = harness();
   assert.equal(controller.state().state, 'idle');
@@ -194,245 +294,153 @@ test('one toggle selects, starts, stops and finalizes Instant Quick Snip accordi
   assert.equal(controller.state().state, 'recording');
   await controller.toggle();
   assert.equal(controller.state().state, 'finalizing');
-  await controller.report({ type: 'completed', session: { projectId: 'project' } });
+  await controller.report({
+    type: 'completed',
+    session: { projectId: 'project' },
+  });
   assert.equal(controller.state().state, 'completed');
   assert.equal(controller.state().result.path, '/instant-projects/snippet.mp4');
   assert.equal(finalizeCalls[0].configuration.mode, 'instant');
   assert.ok(calls.includes('copy'));
 });
 
-test('toggle confirms a pending selection and starts without a countdown', async () => {
-  const { controller, calls } = harness({ pendingSelection: true });
-  void controller.toggle();
-  await Promise.resolve();
-  assert.equal(controller.state().state, 'selecting');
-  assert.ok(calls.includes('crop.show'));
-  await controller.toggle();
-  await Promise.resolve();
-  const confirmationIndex = calls.indexOf('selection.confirm');
-  const startIndex = calls.indexOf('crop.start');
-  assert.ok(confirmationIndex >= 0);
-  assert.ok(startIndex > confirmationIndex);
-  assert.deepEqual(controller.state().job.region, region);
-  assert.equal(controller.state().state, 'preparing');
-});
-
-test('passes the selection overlay parent to Crop Bar show and detaches it before confirming the region', async () => {
-  const { controller, calls, showCalls, selectionOverlayWindow } = harness({ pendingSelection: true });
-
-  void controller.toggle();
-  await Promise.resolve();
-  assert.equal(showCalls[0][2], selectionOverlayWindow);
-  assert.equal(calls.includes('crop.parent:selection-overlay-1'), false);
-
-  await controller.toggle();
-  const detachIndex = calls.indexOf('crop.parent:none');
-  const confirmationIndex = calls.indexOf('selection.confirm');
-  assert.ok(detachIndex >= 0);
-  assert.ok(confirmationIndex > detachIndex);
-});
-
-test('preserves start overrides through pending selection confirmation', async () => {
-  const f = harness({ pendingSelection: true });
-  const overrides = {
-    automaticZoom: false,
-    devices: { micId: 'mic-custom', cameraId: 'camera-custom', systemAudioMode: 'on' },
-  };
-
-  void f.controller.toggle();
-  await Promise.resolve();
-  await f.controller.start(overrides);
-  await new Promise((resolve) => setImmediate(resolve));
-
-  const snapshot = f.controller.state();
-  assert.equal(snapshot.state, 'preparing');
-  assert.equal(snapshot.job.mode, 'studio');
-  assert.equal(snapshot.job.format, 'mp4');
-  assert.equal(snapshot.job.automaticZoom, false);
-  assert.deepEqual(snapshot.job.devices, overrides.devices);
-  assert.equal(snapshot.job.outputRoot, '/instant-projects');
-});
-
-test('updates the confirmed job before sending the start command', async () => {
+test('opening Quick Snip shows only the toolbar, with no region or source chooser', async () => {
   const f = harness();
-
   await f.controller.toggle();
-  await f.controller.configure({ mode: 'instant', automaticZoom: false });
-  await f.controller.start();
-
-  const updateIndex = f.calls.lastIndexOf('crop.updateConfiguration');
-  const startIndex = f.calls.lastIndexOf('crop.start');
-  assert.ok(updateIndex >= 0);
-  assert.ok(updateIndex < startIndex);
-  assert.deepEqual(f.configurationUpdates.at(-1), f.controller.state().job);
-  assert.equal(f.configurationUpdates.at(-1).outputRoot, '/instant-projects');
-  assert.equal(f.configurationUpdates.at(-1).automaticZoom, false);
-});
-
-for (const platform of ['win32', 'darwin']) {
-  test(`${platform} Quick Snip keeps display capture and region selection`, async () => {
-    const f = harness({ platform });
-
-    await f.controller.toggle();
-    const snapshot = f.controller.state();
-    assert.equal(snapshot.state, 'selecting');
-    assert.equal(snapshot.job.screenKind, 'display');
-    assert.notEqual(snapshot.job.region, null);
-    assert.equal(f.selectCalls.length, 1);
-
-    await f.controller.toggle();
-    assert.equal(f.controller.state().state, 'preparing');
-    assert.equal(f.controller.state().job.screenKind, 'display');
-  });
-}
-
-test('Linux Quick Snip captures the portal window without opening a region overlay', async () => {
-  const f = harness({ platform: 'linux' });
-
-  await f.controller.toggle();
-  const selecting = f.controller.state();
-  assert.equal(selecting.state, 'selecting');
-  assert.equal(selecting.job.screenKind, 'window');
-  assert.equal(selecting.job.screenId, 'portal:window');
-  assert.equal(selecting.job.region, null);
-  assert.deepEqual(selecting.job.regionBounds, bounds);
-  assert.equal(selecting.job.displayId, '1');
   assert.equal(f.selectCalls.length, 0);
-  assert.equal(f.calls.includes('preferences.patch'), false);
-  assert.equal(f.showCalls.length, 1);
-  assert.equal(f.showCalls[0][0].region, null);
-  assert.equal(f.showCalls[0][0].regionBounds, bounds);
-
-  await f.controller.toggle();
-  assert.equal(f.controller.state().state, 'preparing');
-  assert.equal(f.controller.state().job.screenKind, 'window');
-  assert.equal(f.controller.state().job.screenId, 'portal:window');
   assert.equal(f.controller.state().job.region, null);
-  assert.ok(f.calls.includes('crop.start'));
-
-  await f.controller.report({ type: 'recording' });
-  await f.controller.stop();
-  assert.equal(f.controller.state().state, 'finalizing');
-  assert.ok(f.calls.includes('crop.stop'));
+  assert.equal(f.controller.state().job.sourceReady, false);
+  assert.equal(f.showCalls.length, 1);
 });
-
-test('Linux Quick Snip cancel hides the Crop Bar and the next toggle retries window selection', async () => {
-  const f = harness({ platform: 'linux' });
-
-  await f.controller.toggle();
-  await f.controller.cancel();
-  assert.equal(f.controller.state().state, 'canceled');
-  assert.ok(f.calls.includes('crop.hide'));
-  assert.equal(f.selectCalls.length, 0);
-
-  const showsBeforeRetry = f.showCalls.length;
-  await f.controller.toggle();
-  assert.equal(f.controller.state().state, 'selecting');
-  assert.equal(f.controller.state().job.screenKind, 'window');
-  assert.equal(f.showCalls.length, showsBeforeRetry + 1);
-  assert.equal(f.selectCalls.length, 0);
-});
-
-test('Linux Quick Snip failure hides the Crop Bar and the next toggle retries', async () => {
-  const f = harness({ platform: 'linux' });
-
-  await f.controller.toggle();
-  await f.controller.report({ type: 'failed', error: 'window capture failed' });
-  assert.equal(f.controller.state().state, 'failed');
-  assert.equal(f.controller.state().error, 'window capture failed');
-  assert.ok(f.calls.includes('crop.hide'));
-  assert.ok(f.calls.includes('status.failed'));
-  assert.equal(f.selectCalls.length, 0);
-
-  await f.controller.toggle();
-  assert.equal(f.controller.state().state, 'selecting');
-  assert.equal(f.controller.state().job.screenKind, 'window');
-  assert.equal(f.selectCalls.length, 0);
-});
-
-test('Linux Crop Bar show failure becomes a retryable Quick Snip error', async () => {
-  const failure = new Error('Crop Bar unavailable');
-  const f = harness({ platform: 'linux', showFailure: failure });
-
-  await f.controller.toggle();
-  assert.equal(f.controller.state().state, 'failed');
-  assert.equal(f.controller.state().error, failure.message);
-  assert.ok(f.calls.includes('crop.hide'));
-  assert.ok(f.calls.includes('status.failed'));
-  assert.equal(f.selectCalls.length, 0);
-
-  await f.controller.toggle();
-  assert.equal(f.controller.state().state, 'selecting');
-  assert.equal(f.controller.state().job.screenKind, 'window');
-  assert.equal(f.selectCalls.length, 0);
-});
-
-for (const timing of ['sync', 'async']) {
-  test(`selection ${timing} rejection fails visibly and allows a retry`, async () => {
-    const error = new Error(`${timing} selection failure`);
-    const f = harness({
-      selectionPlans: [{ failure: { timing, error } }, { value: { bounds, region } }],
-    });
-
-    await f.controller.toggle();
-    assert.equal(f.controller.state().state, 'failed');
-    assert.equal(f.controller.state().error, error.message);
-    assert.ok(f.calls.includes('selection.cancel'));
-    assert.ok(f.calls.includes('crop.hide'));
-    assert.ok(f.calls.includes('status.failed'));
-
-    const showsBeforeRetry = f.showCalls.length;
-    await f.controller.toggle();
-    assert.equal(f.controller.state().state, 'selecting');
-    assert.equal(f.controller.state().error, null);
-    assert.equal(f.showCalls.length, showsBeforeRetry + 1);
-  });
-}
-
-test('a failed selection clears the overlay and ignores its late resolution', async () => {
+test('the capture action opens the chosen region and confirmation starts the same job', async () => {
   const f = harness({ pendingSelection: true });
-  const selection = f.controller.toggle();
-  await Promise.resolve();
-  const updatesBeforeFailure = f.configurationUpdates.length;
-
-  await f.controller.report({ type: 'failed', error: 'selection failed' });
-  assert.equal(f.controller.state().state, 'failed');
-  assert.equal(f.controller.state().error, 'selection failed');
-  assert.equal(f.cropParent(), null);
-  assert.ok(f.calls.includes('selection.cancel'));
-  assert.ok(f.calls.includes('crop.hide'));
-  assert.ok(f.calls.includes('status.failed'));
-
-  const callsAfterFailure = [...f.calls];
+  await f.controller.toggle();
+  const name = f.controller.state().job.name;
+  await f.controller.chooseSource('region');
+  const pending = f.controller.start();
+  assert.equal(f.selectCalls[0].drawOnly, true);
+  assert.equal(f.selectCalls[0].region, null);
   f.resolveSelection();
-  await selection;
-
-  assert.equal(f.controller.state().state, 'failed');
-  assert.deepEqual(f.calls, callsAfterFailure);
-  assert.equal(f.configurationUpdates.length, updatesBeforeFailure);
+  await pending;
+  assert.equal(f.controller.state().state, 'preparing');
+  assert.equal(f.controller.state().job.name, name);
+  assert.deepEqual(f.controller.state().job.region, region);
 });
-
-test('a stale selection cannot detach the Crop Bar parent of a newer session', async () => {
-  const f = harness({ selectionPlans: [{ pending: true }, { pending: true }] });
-  const firstSelection = f.controller.toggle();
-  await Promise.resolve();
-  assert.equal(f.cropParent(), f.selectionOverlayWindows[0]);
-
-  await f.controller.cancel();
-  const secondSelection = f.controller.toggle();
-  await Promise.resolve();
-  const secondShowIndex = f.calls.lastIndexOf('crop.show');
-  assert.equal(f.cropParent(), f.selectionOverlayWindows[1]);
-
-  f.pendingSelections[0].resolve({ bounds, region });
-  await firstSelection;
-
+test('canceling a region returns to the existing toolbar without starting', async () => {
+  const f = harness({ pendingSelection: true });
+  await f.controller.toggle();
+  await f.controller.chooseSource('region');
+  const previous = f.controller.state().job;
+  const pending = f.controller.start();
+  f.resolveSelection(null);
+  await pending;
   assert.equal(f.controller.state().state, 'selecting');
-  assert.equal(f.cropParent(), f.selectionOverlayWindows[1]);
-  assert.equal(f.calls.slice(secondShowIndex + 1).includes('crop.parent:none'), false);
-
-  f.pendingSelections[1].resolve({ bounds, region });
-  await secondSelection;
+  assert.deepEqual(f.controller.state().job, previous);
+  assert.equal(f.calls.includes('crop.start'), false);
+});
+test('a late region result cannot revive a canceled Quick Snip', async () => {
+  const f = harness({ pendingSelection: true });
+  await f.controller.toggle();
+  await f.controller.chooseSource('region');
+  const pending = f.controller.start();
+  await f.controller.cancel();
+  f.resolveSelection();
+  await pending;
+  assert.equal(f.controller.state().state, 'canceled');
+  assert.equal(f.calls.includes('crop.start'), false);
+});
+for (const target of ['screen', 'window'])
+  test(`selects ${target} defers its chooser and capture until Record is pressed`, async () => {
+    const f = harness();
+    await f.controller.toggle();
+    await f.controller.chooseSource(target);
+    assert.equal(f.controller.state().job.captureTarget, target);
+    assert.equal(f.controller.state().job.sourceReady, false);
+    assert.equal(f.controller.state().job.region, null);
+    assert.equal(f.calls.includes('crop.start'), false);
+    await f.controller.start();
+    assert.equal(f.controller.state().state, 'preparing');
+  });
+for (const zoomMode of ['off', '2d', '3d'])
+  test(`persists the shared ${zoomMode} zoom preference and countdown`, async () => {
+    const f = harness();
+    await f.controller.toggle();
+    f.controller.configure({ zoomMode, countdownSeconds: 10 });
+    assert.equal(f.controller.state().job.zoomMode, zoomMode);
+    assert.equal(f.controller.state().job.automaticZoom, zoomMode !== 'off');
+    assert.equal(f.preferenceState.extras.recordingZoomMode, zoomMode);
+    assert.equal(f.preferenceState.extras.recordingCountdownSeconds, 10);
+  });
+test('rejects invalid source, countdown and zoom options', async () => {
+  const f = harness();
+  await f.controller.toggle();
+  await assert.rejects(f.controller.chooseSource('anything'), /Invalid/);
+  assert.throws(() => f.controller.configure({ zoomMode: '4d' }), /Invalid/);
+  assert.throws(() => f.controller.configure({ countdownSeconds: 11 }), /Invalid/);
+});
+for (const target of ['screen', 'window', 'region'])
+  test(`Linux ${target} uses the exact supported Portal source intent`, async () => {
+    const f = harness({ platform: 'linux' });
+    await f.controller.toggle();
+    await f.controller.chooseSource(target);
+    await f.controller.start();
+    assert.equal(f.controller.state().job.screenId, target === 'window' ? 'portal:window' : 'portal:monitor');
+    assert.equal(f.controller.state().job.screenKind, target === 'window' ? 'window' : 'display');
+    assert.equal(f.controller.state().job.region !== null, target === 'region');
+  });
+test('uses the source kind selected inside the shared chooser rather than the original toolbar tab', async () => {
+  const f = harness({ selectSource: async () => ({ id: 'wgc:window:123', kind: 'window' }) });
+  await f.controller.toggle();
+  await f.controller.chooseSource('screen');
+  await f.controller.start();
+  assert.equal(f.controller.state().job.captureTarget, 'window');
+  assert.equal(f.controller.state().job.screenKind, 'window');
+});
+test('source cancellation retains the job and a late chooser result after cancellation cannot start capture', async () => {
+  let finish;
+  const f = harness({
+    selectSource: () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  });
+  await f.controller.toggle();
+  await f.controller.chooseSource('window');
+  const before = f.controller.state().job;
+  let pending = f.controller.start();
+  finish(null);
+  await pending;
+  assert.deepEqual(f.controller.state().job, before);
+  await f.controller.chooseSource('window');
+  pending = f.controller.start();
+  await f.controller.cancel();
+  finish({ id: 'wgc:window:123', kind: 'window' });
+  await pending;
+  assert.equal(f.controller.state().state, 'canceled');
+  assert.ok(f.calls.includes('source.cancel'));
+  assert.equal(f.calls.includes('crop.start'), false);
+});
+test('reopening the toolbar restores the saved zoom preference independently of the preset', async () => {
+  const f = harness();
+  await f.controller.toggle();
+  f.controller.configure({ zoomMode: '3d' });
+  await f.controller.cancel();
+  await f.controller.toggle();
+  assert.equal(f.controller.state().job.zoomMode, '3d');
+  assert.equal(f.controller.state().job.automaticZoom, true);
+});
+test('opens on the remembered toolbar display rather than an older capture-region display', async () => {
+  const requested = [];
+  const f = harness({
+    preferences: { extras: { quickSnipBarDisplayId: '2', quickSnipRegion: { displayId: '1' } } },
+    resolveDisplay: (id) => {
+      requested.push(id);
+      return { id, bounds, workArea: bounds };
+    },
+  });
+  await f.controller.toggle();
+  assert.deepEqual(requested, ['2']);
+  assert.equal(f.controller.state().job.displayId, '2');
 });
 
 test('preparing toggle cancels while Instant processing toggle only restores status', async () => {
@@ -471,13 +479,19 @@ test('a late processing result cannot replace canceled state or copy a file', as
   await selectAndStart(controller, 'instant');
   await controller.report({ type: 'recording' });
   await controller.stop();
-  const completion = controller.report({ type: 'completed', session: { projectId: 'project' } });
+  const completion = controller.report({
+    type: 'completed',
+    session: { projectId: 'project' },
+  });
   await Promise.resolve();
   assert.equal(controller.state().state, 'processing');
 
   await controller.cancel();
   assert.equal(controller.state().state, 'canceled');
-  resolveFinalize({ path: '/instant-projects/late-result.mp4', projectId: 'project' });
+  resolveFinalize({
+    path: '/instant-projects/late-result.mp4',
+    projectId: 'project',
+  });
   await completion;
 
   assert.equal(controller.state().state, 'canceled');
@@ -499,7 +513,10 @@ test('cancels an Instant export without hiding its status window', async () => {
   await selectAndStart(controller, 'instant');
   await controller.report({ type: 'recording' });
   await controller.stop();
-  const completion = controller.report({ type: 'completed', session: { projectId: 'project' } });
+  const completion = controller.report({
+    type: 'completed',
+    session: { projectId: 'project' },
+  });
   await Promise.resolve();
   assert.equal(controller.state().state, 'processing');
 
@@ -510,7 +527,10 @@ test('cancels an Instant export without hiding its status window', async () => {
   assert.ok(calls.includes('crop.hide'));
   assert.equal(calls.includes('status.hide'), false);
 
-  resolveFinalize({ path: '/instant-projects/late-result.mp4', projectId: 'project' });
+  resolveFinalize({
+    path: '/instant-projects/late-result.mp4',
+    projectId: 'project',
+  });
   await completion;
   assert.equal(controller.state().state, 'canceled');
   assert.equal(calls.includes('copy'), false);
@@ -528,7 +548,10 @@ test('late failed and completed reports after cancel do not reopen the status wi
   await selectAndStart(controller, 'instant');
   await controller.report({ type: 'recording' });
   await controller.stop();
-  const completion = controller.report({ type: 'completed', session: { projectId: 'project' } });
+  const completion = controller.report({
+    type: 'completed',
+    session: { projectId: 'project' },
+  });
   await Promise.resolve();
   assert.equal(controller.state().state, 'processing');
 
@@ -537,7 +560,10 @@ test('late failed and completed reports after cancel do not reopen the status wi
   calls.length = 0;
 
   await controller.report({ type: 'failed', error: 'late failure' });
-  await controller.report({ type: 'completed', session: { projectId: 'late-project' } });
+  await controller.report({
+    type: 'completed',
+    session: { projectId: 'late-project' },
+  });
 
   assert.equal(controller.state().state, 'canceled');
   assert.equal(controller.state().result, null);
@@ -547,7 +573,10 @@ test('late failed and completed reports after cancel do not reopen the status wi
     false,
   );
 
-  resolveFinalize({ path: '/instant-projects/late-result.mp4', projectId: 'project' });
+  resolveFinalize({
+    path: '/instant-projects/late-result.mp4',
+    projectId: 'project',
+  });
   await completion;
 });
 
@@ -560,7 +589,10 @@ test('cancellation while awaiting a thumbnail cannot restart processing', async 
   const f = harness({ thumbnail });
   await selectAndStart(f.controller, 'instant');
   await f.controller.report({ type: 'recording' });
-  const pending = f.controller.report({ type: 'completed', session: { projectId: 'project' } });
+  const pending = f.controller.report({
+    type: 'completed',
+    session: { projectId: 'project' },
+  });
   await f.controller.cancel();
   finishThumbnail(null);
   await pending;
@@ -576,7 +608,10 @@ test('clipboard failure preserves the completed output and exposes a retryable e
   });
   await selectAndStart(f.controller, 'instant');
   await f.controller.report({ type: 'recording' });
-  await f.controller.report({ type: 'completed', session: { projectId: 'project' } });
+  await f.controller.report({
+    type: 'completed',
+    session: { projectId: 'project' },
+  });
   assert.equal(f.controller.state().state, 'completed');
   assert.equal(f.controller.state().copied, false);
   assert.equal(f.controller.state().clipboardError, 'Clipboard busy');

@@ -13,6 +13,10 @@ use super::{
     VideoTransform,
 };
 
+#[cfg(test)]
+#[path = "tests/metadata_tests.rs"]
+mod tests;
+
 pub(super) fn header(buffer: &pipewire::buffer::Buffer<'_>) -> HeaderMetadata {
     let Some(header) = buffer.find_meta::<MetaHeader>() else {
         return HeaderMetadata::default();
@@ -48,35 +52,16 @@ fn cursor_shape(
     cursor: &MetaCursor,
     classifier: &mut CursorClassifier,
 ) -> Option<(u64, Hotspot, crate::cursor::CursorKind)> {
-    if !cursor.is_valid() {
-        return None;
+    let header = bitmap_header(cursor)?;
+    if header.offset() == 0 {
+        return Some((
+            HIDDEN_CURSOR_SHAPE_ID,
+            Hotspot { x: 0, y: 0 },
+            crate::cursor::CursorKind::Custom,
+        ));
     }
-    let cursor_offset = usize::try_from(cursor.bitmap_offset()).ok()?;
-    let bitmap_meta_size = size_of::<pipewire::spa::sys::spa_meta_bitmap>();
-    if cursor_offset < size_of::<pipewire::spa::sys::spa_meta_cursor>()
-        || cursor_offset.checked_add(bitmap_meta_size)? > CURSOR_META_SIZE
-    {
-        return None;
-    }
-    let bitmap = cursor.bitmap()?;
-    if !bitmap.is_valid() {
-        return None;
-    }
+    let bitmap = valid_bitmap(cursor)?;
     let size = bitmap.size();
-    let width = usize::try_from(size.width).ok()?;
-    let height = usize::try_from(size.height).ok()?;
-    let stride = usize::try_from(bitmap.stride().unsigned_abs()).ok()?;
-    if width == 0 || height == 0 || width > 384 || height > 384 || stride < width.checked_mul(4)? {
-        return None;
-    }
-    let data_offset = usize::try_from(bitmap.offset()).ok()?;
-    let data_size = height.checked_mul(stride)?;
-    let data_end = cursor_offset
-        .checked_add(data_offset)?
-        .checked_add(data_size)?;
-    if data_offset < bitmap_meta_size || data_end > CURSOR_META_SIZE {
-        return None;
-    }
     let pixels = bitmap.bitmap_data()?;
     let hidden = CursorClassifier::is_fully_transparent(
         bitmap.format(),
@@ -115,6 +100,79 @@ fn cursor_shape(
         )
     };
     Some((id, hotspot, kind))
+}
+
+fn bitmap_header(cursor: &MetaCursor) -> Option<&pipewire::spa::buffer::meta::MetaBitmap> {
+    if !cursor.is_valid() {
+        return None;
+    }
+    let cursor_offset = usize::try_from(cursor.bitmap_offset()).ok()?;
+    let bitmap_meta_size = size_of::<pipewire::spa::sys::spa_meta_bitmap>();
+    if cursor_offset < size_of::<pipewire::spa::sys::spa_meta_cursor>()
+        || cursor_offset.checked_add(bitmap_meta_size)? > CURSOR_META_SIZE
+    {
+        return None;
+    }
+    let bitmap = cursor.bitmap()?;
+    if !bitmap.is_valid() {
+        return None;
+    }
+    Some(bitmap)
+}
+
+fn valid_bitmap(cursor: &MetaCursor) -> Option<&pipewire::spa::buffer::meta::MetaBitmap> {
+    let bitmap = bitmap_header(cursor)?;
+    let cursor_offset = usize::try_from(cursor.bitmap_offset()).ok()?;
+    let bitmap_meta_size = size_of::<pipewire::spa::sys::spa_meta_bitmap>();
+    let size = bitmap.size();
+    let width = usize::try_from(size.width).ok()?;
+    let height = usize::try_from(size.height).ok()?;
+    let stride = usize::try_from(bitmap.stride().unsigned_abs()).ok()?;
+    if width == 0 || height == 0 || width > 384 || height > 384 || stride < width.checked_mul(4)? {
+        return None;
+    }
+    let data_offset = usize::try_from(bitmap.offset()).ok()?;
+    let data_size = height.checked_mul(stride)?;
+    let data_end = cursor_offset
+        .checked_add(data_offset)?
+        .checked_add(data_size)?;
+    if data_offset < bitmap_meta_size || data_end > CURSOR_META_SIZE {
+        return None;
+    }
+    bitmap.bitmap_data()?;
+    Some(bitmap)
+}
+
+pub(super) fn native_bitmap(
+    buffer: &pipewire::buffer::Buffer<'_>,
+) -> Option<super::NativeCursorBitmap> {
+    let cursor = buffer.find_meta::<MetaCursor>()?;
+    let bitmap = valid_bitmap(cursor)?;
+    let size = bitmap.size();
+    let pixels = super::canonical_bitmap(
+        bitmap.format(),
+        size.width,
+        size.height,
+        bitmap.stride(),
+        bitmap.bitmap_data()?,
+    )?;
+    let hotspot = cursor.hotspot();
+    if hotspot.x < 0
+        || hotspot.y < 0
+        || hotspot.x as u32 >= size.width
+        || hotspot.y as u32 >= size.height
+    {
+        return None;
+    }
+    Some(super::NativeCursorBitmap {
+        width: size.width,
+        height: size.height,
+        hotspot: Hotspot {
+            x: u32::try_from(hotspot.x).ok()?,
+            y: u32::try_from(hotspot.y).ok()?,
+        },
+        pixels: pixels.into(),
+    })
 }
 
 pub(crate) fn stable_cursor_shape_id(

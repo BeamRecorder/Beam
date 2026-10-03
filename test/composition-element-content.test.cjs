@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { normalizeElementContent } = require('../electron/projects/composition-element-content.cjs');
-const { normalizeShapeLayerStyle } = require('../electron/projects/composition-shape-layer.cjs');
+const { normalizeElementContent } = require('../apps/desktop/electron/projects/composition-element-content.cjs');
+const { normalizeShapeLayerStyle } = require('../apps/desktop/electron/projects/composition-shape-layer.cjs');
 
 const captionStyle = (overrides = {}) => ({
   fontFamily: 'Inter',
@@ -17,7 +17,14 @@ const captionStyle = (overrides = {}) => ({
   wrap: true,
   shadowColor: '#000000',
   shadowBlur: 4,
-  shape: { preset: 'rounded', radius: 20, color: '#000000', opacity: 0, blur: 0, padding: 0 },
+  shape: {
+    preset: 'rounded',
+    radius: 20,
+    color: '#000000',
+    opacity: 0,
+    blur: 0,
+    padding: 0,
+  },
   outlineColor: '#000000',
   outlineWidth: 0,
   extrusionDepth: 0,
@@ -46,7 +53,10 @@ const drawing = (
 });
 
 test('preserves an older shape without adding element payloads', () => {
-  const normalized = normalizeShapeLayerStyle({ family: 'shape', preset: 'rounded-rectangle' });
+  const normalized = normalizeShapeLayerStyle({
+    family: 'shape',
+    preset: 'rounded-rectangle',
+  });
 
   assert.equal(normalized.family, 'shape');
   assert.equal(normalized.preset, 'rounded-rectangle');
@@ -88,11 +98,19 @@ test('round-trips normalized freehand drawing points and settings', () => {
 test('rejects missing or oversized text payloads', () => {
   assert.throws(() => normalizeElementContent({ family: 'text' }), /Missing element content/);
   assert.throws(
-    () => normalizeElementContent({ family: 'shape', text: elementText({ content: 'x'.repeat(10_001) }) }),
+    () =>
+      normalizeElementContent({
+        family: 'shape',
+        text: elementText({ content: 'x'.repeat(10_001) }),
+      }),
     /Invalid element text/,
   );
   assert.throws(
-    () => normalizeElementContent({ family: 'shape', text: elementText({ padding: 41 }) }),
+    () =>
+      normalizeElementContent({
+        family: 'shape',
+        text: elementText({ padding: 41 }),
+      }),
     /Invalid element text/,
   );
 });
@@ -100,7 +118,12 @@ test('rejects missing or oversized text payloads', () => {
 test('bounds freehand point count and coordinates at the Electron boundary', () => {
   const bounded = normalizeElementContent({
     family: 'drawing',
-    drawing: drawing(Array.from({ length: 8_192 }, (_, index) => ({ x: index / 8_191, y: 0.5 }))),
+    drawing: drawing(
+      Array.from({ length: 8_192 }, (_, index) => ({
+        x: index / 8_191,
+        y: 0.5,
+      })),
+    ),
   });
   assert.equal(bounded.drawing.points.length, 8_192);
 
@@ -113,7 +136,11 @@ test('bounds freehand point count and coordinates at the Electron boundary', () 
     /Invalid freehand drawing/,
   );
   assert.throws(
-    () => normalizeElementContent({ family: 'drawing', drawing: drawing([{ x: -0.01, y: 0.5 }]) }),
+    () =>
+      normalizeElementContent({
+        family: 'drawing',
+        drawing: drawing([{ x: -0.01, y: 0.5 }]),
+      }),
     /Invalid freehand drawing/,
   );
 });
@@ -121,7 +148,9 @@ test('bounds freehand point count and coordinates at the Electron boundary', () 
 test('preserves supported text decorations and resets unsupported values', () => {
   const valid = normalizeElementContent({
     family: 'text',
-    text: elementText({ style: captionStyle({ textDecoration: 'underline line-through' }) }),
+    text: elementText({
+      style: captionStyle({ textDecoration: 'underline line-through' }),
+    }),
   });
   const invalid = normalizeElementContent({
     family: 'text',

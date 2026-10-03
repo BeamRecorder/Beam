@@ -50,6 +50,8 @@
 - 📦 **Direct Export**
   Export straight to MP4 or WebM, up to 4K, with simple bitrate presets and fast rendering.
 
+See [GPU drivers and WebCodecs export](docs/dev/gpu-drivers.md) for hardware prerequisites, installation guidance and verified platform limits.
+
 Have ideas or feature requests? Open an issue or join the discussion on [Discord](https://discord.gg/6Q6v2xUCB).
 
 ## 🌍 Availability
@@ -119,6 +121,8 @@ The interface is available in 15 languages:
 
 ## 🛠️ Developer documentation
 
+Run `bun run dev` to start Vite and Electron in one terminal. Each worktree gets its own persistent development session and an available renderer port. All sessions reuse your existing projects, screenshots and preferences in `Videos/Beam/user/`. Use `bun run dev --session preview` for another isolated Electron profile in the same worktree, or `bun run dev --force-no-rust` to use the verified prebuilt capture engine. `Ctrl+C` stops the session.
+
 If you want to run Beam locally or contribute to the project, start with the guide for your platform:
 
 - 📖 [Contributing Guide](./docs/dev/CONTRIBUTING.md)
@@ -127,6 +131,12 @@ If you want to run Beam locally or contribute to the project, start with the gui
 - 🐧 [Linux development](./docs/dev/linux.md)
 
 The repository's engineering guidelines are linked from each guide.
+
+Beam's framework-independent engine provides the same document commands, immutable history and identified JSON transactions to application code, CLI tools and agent adapters. See the [shared authoring protocol](./docs/architecture/authoring-protocol.md) and [architecture](./docs/ARCHITECTURE.md).
+
+The packaged application includes `beam-cli` (`beam-cli.cmd` on Windows); Linux also accepts `beam --cli`. In development, use `bun run beam`. Commands support creating video/image documents, editing, JSON-lines transactions, native capture, frame extraction, HTML/Vue motion and MP4/WebM/PNG/WebP export. Codecs and GPU rendering use an explicit Chromium backend; install it with `beam-cli browser install` or configure `BEAM_CHROMIUM_EXECUTABLE`.
+
+Video export accepts `beam-cli export request.json output.mp4 --backend webcodecs` (default), or `--backend ffmpeg-vaapi` for experimental Linux GPU export. Both use Beam's common renderer. FFmpeg requires a working X11/XWayland display, VA-API drivers and built native artifacts; see [setup and CLI usage](./docs/dev/ffmpeg-gpu-export.md).
 
 ## 💬 Join the Beam community
 

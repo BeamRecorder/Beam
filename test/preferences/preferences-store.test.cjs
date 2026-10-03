@@ -3,16 +3,62 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { createPreferencesStore, defaults, normalize } = require('../../electron/preferences/preferences-store.cjs');
+const {
+  createPreferencesStore,
+  defaults,
+  normalize,
+} = require('../../apps/desktop/electron/preferences/preferences-store.cjs');
 
-const CANONICAL_HUD_WINDOW = { width: 352, height: 512 };
+const RECORDER_LAYOUT_EXTRAS = {
+  recorderLayoutVersion: 1,
+  recorderPositions: {},
+  quickSnipBarPositions: {},
+};
+
+const CANONICAL_HUD_WINDOW = { width: 672, height: 268 };
+
+test('durably clears old recorder placements once and keeps later movements across restarts', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-recorder-layout-'));
+  const file = path.join(directory, 'preferences.json');
+  try {
+    fs.writeFileSync(
+      file,
+      JSON.stringify({
+        extras: {
+          locale: 'fr',
+          recorderPositions: { left: { x: -1900, y: 200 } },
+          quickSnipBarPositions: { right: { x: 4000, y: 200 } },
+          lastRecorderPosition: { x: 12, y: 34 },
+        },
+      }),
+    );
+    const store = createPreferencesStore(file);
+    store.repair();
+    assert.deepEqual(store.read().extras, {
+      ...RECORDER_LAYOUT_EXTRAS,
+      locale: 'fr',
+    });
+    const moved = { left: { x: -900, y: 0 } };
+    store.patch({ extras: { recorderPositions: moved } });
+    assert.deepEqual(createPreferencesStore(file).read().extras.recorderPositions, moved);
+    assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).extras.lastRecorderPosition, undefined);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 test('writes durable generic preferences and merges patches', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-'));
   const store = createPreferencesStore(directory);
   const saved = store.patch({
     theme: 'dark',
-    shortcuts: { 'hud.startStopRecording': { keys: 'Ctrl+Shift+R', scope: 'global', category: 'hud' } },
+    shortcuts: {
+      'hud.startStopRecording': {
+        keys: 'Ctrl+Shift+R',
+        scope: 'global',
+        category: 'hud',
+      },
+    },
     extras: { futureFlag: true },
   });
   assert.equal(saved.theme, 'dark');
@@ -33,8 +79,14 @@ test('writes camera and teleprompter window coordinates to preferences.json', ()
 
   store.patch({ extras: bounds });
 
-  assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')).extras, bounds);
-  assert.deepEqual(store.read().extras, bounds);
+  assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')).extras, {
+    ...bounds,
+    ...RECORDER_LAYOUT_EXTRAS,
+  });
+  assert.deepEqual(store.read().extras, {
+    ...bounds,
+    ...RECORDER_LAYOUT_EXTRAS,
+  });
 });
 
 test('rejects duplicate global shortcuts', () => {
@@ -73,7 +125,10 @@ test('repair returns safe runtime preferences for duplicate global shortcuts wit
 
   assert.equal(repaired.theme, 'dark');
   assert.deepEqual(repaired.devices, original.devices);
-  assert.deepEqual(repaired.extras, original.extras);
+  assert.deepEqual(repaired.extras, {
+    ...original.extras,
+    ...RECORDER_LAYOUT_EXTRAS,
+  });
   assert.deepEqual(repaired.shortcuts, defaults('darwin').shortcuts);
   assert.equal(fs.readFileSync(file, 'utf8'), originalContents);
 
@@ -104,7 +159,9 @@ test('exposes canonical HUD window dimensions in defaults and normalized prefere
   assert.deepEqual(defaults('darwin').hudWindow, CANONICAL_HUD_WINDOW);
   assert.deepEqual(normalize({}).hudWindow, CANONICAL_HUD_WINDOW);
   assert.deepEqual(
-    normalize({ hudWindow: { width: 352, height: 512, unexpected: 'discarded' } }).hudWindow,
+    normalize({
+      hudWindow: { width: 672, height: 268, unexpected: 'discarded' },
+    }).hudWindow,
     CANONICAL_HUD_WINDOW,
   );
 });
@@ -113,20 +170,20 @@ test('normalizes missing, partial, malformed, and unexpected HUD window sizes ex
   const invalidSizes = [
     null,
     {},
-    { width: 352 },
-    { height: 512 },
-    { width: undefined, height: 512 },
-    { width: 352, height: undefined },
-    { width: 351, height: 512 },
-    { width: 352, height: 511 },
-    { width: 352.5, height: 512 },
-    { width: 352, height: '512' },
-    { width: '352', height: 512 },
+    { width: 672 },
+    { height: 268 },
+    { width: undefined, height: 268 },
+    { width: 672, height: undefined },
+    { width: 711, height: 268 },
+    { width: 672, height: 283 },
+    { width: 672.5, height: 268 },
+    { width: 672, height: '268' },
+    { width: '672', height: 268 },
     { width: 0, height: 0 },
-    { width: -352, height: -512 },
-    { width: 352, height: 512, scale: 2 },
-    [352, 512],
-    '352x512',
+    { width: -672, height: -268 },
+    { width: 672, height: 268, scale: 2 },
+    [672, 268],
+    '672x268',
     true,
   ];
 
@@ -166,13 +223,18 @@ test('repair rewrites preferences.json with canonical HUD dimensions and preserv
   assert.equal(persisted.appearance.primaryColor, '#8b5cf6');
   assert.equal(persisted.appearance.surfaceTone, 'slate');
   assert.deepEqual(persisted.devices, original.devices);
-  assert.deepEqual(persisted.extras, original.extras);
+  assert.deepEqual(persisted.extras, {
+    ...original.extras,
+    ...RECORDER_LAYOUT_EXTRAS,
+  });
 });
 
 test('repair creates missing preferences and quarantines malformed JSON before writing defaults', () => {
   const missingDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-hud-window-missing-'));
   const missingFile = path.join(missingDirectory, 'preferences.json');
-  const missingStore = createPreferencesStore(missingFile, { platform: 'darwin' });
+  const missingStore = createPreferencesStore(missingFile, {
+    platform: 'darwin',
+  });
 
   assert.deepEqual(missingStore.repair().hudWindow, CANONICAL_HUD_WINDOW);
   assert.deepEqual(JSON.parse(fs.readFileSync(missingFile, 'utf8')).hudWindow, CANONICAL_HUD_WINDOW);
@@ -182,7 +244,9 @@ test('repair creates missing preferences and quarantines malformed JSON before w
   const malformedFile = path.join(malformedDirectory, 'preferences.json');
   const malformedContents = '{broken';
   fs.writeFileSync(malformedFile, malformedContents);
-  const malformedStore = createPreferencesStore(malformedFile, { platform: 'darwin' });
+  const malformedStore = createPreferencesStore(malformedFile, {
+    platform: 'darwin',
+  });
 
   const repaired = malformedStore.repair();
   const quarantinedFile = `${malformedFile}.invalid`;
@@ -207,7 +271,7 @@ test('repair returns normalized preferences when writing the temporary file fail
   const writeFileSync = fs.writeFileSync;
   let attempted = false;
   fs.writeFileSync = (destination, ...args) => {
-    if (destination === `${file}.tmp`) {
+    if (destination.startsWith(`${file}.`) && destination.endsWith('.tmp')) {
       attempted = true;
       throw new Error('temporary preferences write failed');
     }
@@ -225,7 +289,10 @@ test('repair returns normalized preferences when writing the temporary file fail
   assert.equal(repaired.theme, 'dark');
   assert.deepEqual(repaired.hudWindow, CANONICAL_HUD_WINDOW);
   assert.deepEqual(repaired.devices, original.devices);
-  assert.deepEqual(repaired.extras, original.extras);
+  assert.deepEqual(repaired.extras, {
+    ...original.extras,
+    ...RECORDER_LAYOUT_EXTRAS,
+  });
   assert.equal(fs.readFileSync(file, 'utf8'), originalContents);
 });
 
@@ -263,7 +330,10 @@ test('repair returns normalized preferences when atomic rename fails without rep
   assert.equal(repaired.theme, 'dark');
   assert.deepEqual(repaired.hudWindow, CANONICAL_HUD_WINDOW);
   assert.deepEqual(repaired.devices, original.devices);
-  assert.deepEqual(repaired.extras, original.extras);
+  assert.deepEqual(repaired.extras, {
+    ...original.extras,
+    ...RECORDER_LAYOUT_EXTRAS,
+  });
   assert.equal(fs.readFileSync(file, 'utf8'), originalContents);
 });
 
@@ -283,7 +353,9 @@ test('defaults spell check to enabled and persists an explicit disabled preferen
 
   assert.deepEqual(saved.spellCheck, { enabled: false });
   assert.deepEqual(store.read().spellCheck, { enabled: false });
-  assert.deepEqual(JSON.parse(fs.readFileSync(store.file, 'utf8')).spellCheck, { enabled: false });
+  assert.deepEqual(JSON.parse(fs.readFileSync(store.file, 'utf8')).spellCheck, {
+    enabled: false,
+  });
 });
 
 test('applies the injected platform default to missing and corrupt preference files', () => {
@@ -297,7 +369,9 @@ test('applies the injected platform default to missing and corrupt preference fi
   });
   assert.equal(macStore.read().recordingBar.visibility, 'always');
 
-  const preserved = linuxStore.patch({ recordingBar: { visibility: 'always' } });
+  const preserved = linuxStore.patch({
+    recordingBar: { visibility: 'always' },
+  });
   assert.equal(preserved.recordingBar.visibility, 'always');
   assert.equal(linuxStore.patch({ theme: 'dark' }).recordingBar.visibility, 'always');
 
@@ -308,12 +382,18 @@ test('applies the injected platform default to missing and corrupt preference fi
 test('migrates interaction recording preferences and validates booleans', () => {
   const migrated = normalize({ schemaVersion: 2, theme: 'dark' });
   assert.equal(migrated.schemaVersion, 3);
-  assert.deepEqual(migrated.recordingInteractions, { enabled: false, noticeDismissed: false });
+  assert.deepEqual(migrated.recordingInteractions, {
+    enabled: false,
+    noticeDismissed: false,
+  });
 
   const normalized = normalize({
     recordingInteractions: { enabled: true, noticeDismissed: true },
   });
-  assert.deepEqual(normalized.recordingInteractions, { enabled: true, noticeDismissed: true });
+  assert.deepEqual(normalized.recordingInteractions, {
+    enabled: true,
+    noticeDismissed: true,
+  });
   assert.deepEqual(normalize({ recordingInteractions: { enabled: 'yes', noticeDismissed: 1 } }).recordingInteractions, {
     enabled: false,
     noticeDismissed: false,
@@ -325,11 +405,17 @@ test('merges interaction preference patches without erasing sibling state', () =
   const store = createPreferencesStore(directory);
   store.patch({ recordingInteractions: { noticeDismissed: true } });
   const saved = store.patch({ recordingInteractions: { enabled: true } });
-  assert.deepEqual(saved.recordingInteractions, { enabled: true, noticeDismissed: true });
+  assert.deepEqual(saved.recordingInteractions, {
+    enabled: true,
+    noticeDismissed: true,
+  });
 });
 
 test('defaults voice-over countdown and project monitoring preferences', () => {
-  assert.deepEqual(defaults().voiceover, { countdownSeconds: 3, monitorProjectAudio: false });
+  assert.deepEqual(defaults().voiceover, {
+    countdownSeconds: 3,
+    monitorProjectAudio: false,
+  });
   assert.deepEqual(normalize({ schemaVersion: 2 }).voiceover, {
     countdownSeconds: 3,
     monitorProjectAudio: false,
@@ -344,13 +430,20 @@ test('normalizes invalid voice-over preference values and accepts supported coun
   const normalized = normalize({
     voiceover: { countdownSeconds: 4, monitorProjectAudio: 'yes' },
   });
-  assert.deepEqual(normalized.voiceover, { countdownSeconds: 3, monitorProjectAudio: false });
+  assert.deepEqual(normalized.voiceover, {
+    countdownSeconds: 3,
+    monitorProjectAudio: false,
+  });
   assert.equal(
-    normalize({ voiceover: { countdownSeconds: NaN, monitorProjectAudio: true } }).voiceover.countdownSeconds,
+    normalize({
+      voiceover: { countdownSeconds: NaN, monitorProjectAudio: true },
+    }).voiceover.countdownSeconds,
     3,
   );
   assert.equal(
-    normalize({ voiceover: { countdownSeconds: 10, monitorProjectAudio: true } }).voiceover.monitorProjectAudio,
+    normalize({
+      voiceover: { countdownSeconds: 10, monitorProjectAudio: true },
+    }).voiceover.monitorProjectAudio,
     true,
   );
 });
@@ -362,7 +455,10 @@ test('merges and persists partial voice-over preference patches without erasing 
   store.patch({ voiceover: { monitorProjectAudio: true } });
   const saved = store.patch({ voiceover: { countdownSeconds: 10 } });
 
-  assert.deepEqual(saved.voiceover, { countdownSeconds: 10, monitorProjectAudio: true });
+  assert.deepEqual(saved.voiceover, {
+    countdownSeconds: 10,
+    monitorProjectAudio: true,
+  });
   assert.deepEqual(store.read().voiceover, saved.voiceover);
   assert.deepEqual(JSON.parse(fs.readFileSync(store.file, 'utf8')).voiceover, saved.voiceover);
 });
@@ -372,8 +468,8 @@ test('normalizes and patches appearance customizer settings properly', () => {
   const store = createPreferencesStore(directory);
   const initial = store.read();
   assert.ok(initial.appearance);
-  assert.equal(initial.appearance.primaryColor, '#ff5a1f');
-  assert.equal(initial.appearance.radiusPx, 10);
+  assert.equal(initial.appearance.primaryColor, '#b85c38');
+  assert.equal(initial.appearance.radiusPx, 7);
   assert.equal(initial.appearance.surfaceTone, 'default');
 
   const patched = store.patch({
@@ -398,4 +494,69 @@ test('normalizes and patches appearance customizer settings properly', () => {
   assert.equal(themePatched.theme, 'dark');
   assert.equal(themePatched.appearance.theme, 'dark');
   assert.equal(themePatched.appearance.primaryColor, '#8b5cf6');
+});
+test('upgrades the legacy Beam Sunset accent while preserving its theme and radius', () => {
+  const settings = normalize({
+    appearance: {
+      primaryColor: '#FF5A1F',
+      activePresetId: 'beam-sunset',
+      theme: 'dark',
+      radiusPx: 12,
+    },
+  });
+  assert.equal(settings.appearance.primaryColor, '#b85c38');
+  assert.equal(settings.appearance.theme, 'dark');
+  assert.equal(settings.appearance.radiusPx, 12);
+});
+test('preserves custom orange and colors belonging to other presets', () => {
+  for (const activePresetId of [null, 'custom-orange'])
+    assert.equal(
+      normalize({ appearance: { primaryColor: '#ff5a1f', activePresetId } }).appearance.primaryColor,
+      '#ff5a1f',
+    );
+  assert.equal(
+    normalize({
+      appearance: { primaryColor: '#c47751', activePresetId: 'beam-sunset' },
+    }).appearance.primaryColor,
+    '#c47751',
+  );
+});
+test('new and invalid appearance settings use the same softer default orange', () => {
+  assert.equal(defaults().appearance.primaryColor, '#b85c38');
+  assert.equal(normalize({ appearance: { primaryColor: 'orange' } }).appearance.primaryColor, '#b85c38');
+});
+
+test('defaults Recorder setup to always on top and preserves explicit booleans', () => {
+  for (const platform of ['linux', 'darwin', 'win32']) {
+    assert.equal(defaults(platform).alwaysOnTop, true);
+    assert.equal(normalize({}, platform).alwaysOnTop, true);
+    assert.equal(normalize({ alwaysOnTop: false }, platform).alwaysOnTop, false);
+    assert.equal(normalize({ alwaysOnTop: true }, platform).alwaysOnTop, true);
+  }
+});
+
+test('rejects malformed always-on-top values without truthiness coercion', () => {
+  for (const alwaysOnTop of [null, 0, 1, '', 'false', [], {}])
+    assert.equal(normalize({ alwaysOnTop }).alwaysOnTop, true);
+});
+
+test('persists always-on-top changes across restart without resetting other preferences', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-topmost-'));
+  const file = path.join(directory, 'preferences.json');
+  try {
+    const store = createPreferencesStore(file);
+    store.patch({
+      alwaysOnTop: false,
+      recordingBar: { visibility: 'auto-fade' },
+    });
+    const reopened = createPreferencesStore(file);
+    assert.equal(reopened.read().alwaysOnTop, false);
+    reopened.patch({ theme: 'dark' });
+    assert.equal(reopened.read().alwaysOnTop, false);
+    assert.equal(reopened.read().recordingBar.visibility, 'auto-fade');
+    reopened.patch({ alwaysOnTop: true });
+    assert.equal(createPreferencesStore(file).read().alwaysOnTop, true);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
 });

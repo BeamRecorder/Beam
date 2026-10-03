@@ -79,7 +79,10 @@ test('keeps the Windows shell when retrying Bun install', () => {
   assert.deepEqual(fixtureState.delays, [5_000]);
   assert.equal(fixtureState.calls.length, 2);
   assert.deepEqual(
-    fixtureState.calls.map(({ command, spawnOptions }) => ({ command, spawnOptions })),
+    fixtureState.calls.map(({ command, spawnOptions }) => ({
+      command,
+      spawnOptions,
+    })),
     [
       { command: 'bun.exe', spawnOptions: { stdio: 'inherit', shell: true } },
       { command: 'bun.exe', spawnOptions: { stdio: 'inherit', shell: true } },

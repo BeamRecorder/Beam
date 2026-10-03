@@ -2,8 +2,8 @@
 import { ExternalLink, Menu } from '@lucide/vue';
 import { computed } from 'vue';
 import { useData, withBase, type DefaultTheme } from 'vitepress';
-import Button from '../../../../src/components/ui/button/Button.vue';
-import Popover from '../../../../src/components/ui/popover/Popover.vue';
+import Button from '../../../../apps/desktop/src/components/ui/button/Button.vue';
+import Popover from '../../../../apps/desktop/src/components/ui/popover/Popover.vue';
 import { docsLocaleFromPath } from '../content/docs-locales';
 
 const websiteUrl = 'https://beam.plinka.eu';

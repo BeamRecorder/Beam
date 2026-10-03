@@ -1,0 +1,49 @@
+.clip-properties {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 100%;
+}
+.options-group,
+.appearance-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.options-group {
+  flex: 1;
+}
+.section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.section-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.sub-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.sub-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-title);
+  color: var(--text-secondary);
+}
+.shadow-hint {
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+.margin-top-sm {
+  margin-top: 4px;
+}
+
+.shadow-style-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

@@ -2,6 +2,10 @@
 
 Beam records screens and windows on Linux through the XDG ScreenCast Portal, PipeWire and FFmpeg. Electron never enumerates desktop sources on Linux: the source selector represents the system picker, which opens once during preparation and remains attached across pause/resume.
 
+Electron windows use X11 (`--ozone-platform=x11`) on Linux, including XWayland on a Wayland desktop. This restores global window placement; HUD popovers stay within compact bounds so transparent added space cannot block desktop clicks. Capture remains the Rust Portal/PipeWire backend, and desktop session environment variables remain intact.
+
+Video editor export uses WebCodecs, independently of the native capture backend. See [GPU drivers and WebCodecs export](gpu-drivers.md) for driver packages, codec/buffer checks and measured Intel results.
+
 ### Cinnamon on X11
 
 Linux Mint's default Cinnamon/X11 session uses the XApp portal backend, which does not implement the ScreenCast interface. Installing or restarting `xdg-desktop-portal` or `xdg-desktop-portal-xapp` alone cannot make Beam record in that session. Beam currently has no direct X11 capture backend.
@@ -17,7 +21,7 @@ gdbus introspect --session --dest org.freedesktop.portal.Desktop \
 
 Interaction recording also requires Polkit: `pkexec` on Debian/Ubuntu, `polkit` on Fedora, and an authentication agent in the desktop session. Beam's DEB/RPM declare the corresponding runtime dependency. AppImage users install that prerequisite through their distribution. The protected input helper handles Wayland and X11 alike; startup errors are available in Beam Preferences and in **Copy system information**. Include the package format and whether the authorization dialog appeared when reporting a failure.
 
-- Node.js 22 or newer and Bun 1.4.0
+- Node.js 22 or newer and Bun 1.4.2
 - [Rust stable](./INSTALL_RUST.md)
 - Git
 - a C/C++ compiler, Clang development libraries and pkg-config
@@ -79,13 +83,15 @@ FFmpeg must report:
 
 Beam checks these capabilities before opening the Portal picker. If FFmpeg is installed outside `PATH`, set `BEAM_FFMPEG_PATH` to its executable. A missing executable reports `ffmpeg-unavailable`; a build without either supported encoder reports `ffmpeg-encoder-unavailable`.
 
-Start Electron from the second development terminal with:
+Start Vite and Electron together in one terminal:
 
 ```bash
-bun run electron:dev
+bun run dev
 ```
 
 The command checks Cargo first. When Cargo is available, it builds both `capture-engine` and the filtered `beam-input-helper`, and stops if compilation fails. Without Cargo, it looks for the exact application version under `packages/native-recorder/linux/x64/`. If either native file is missing in an interactive terminal, confirm the verified download with `Y`; answer `N` to stop. Non-interactive execution never prompts and downloads only with the explicit `BEAM_DOWNLOAD_CAPTURE_ENGINE=1` opt-in.
+
+Run `bun run dev` in each worktree to test them in parallel. Chromium profiles and Vite ports are isolated automatically; projects, screenshots and preferences reuse the shared `Videos/Beam/user/` library. Use `bun run dev --session preview` for another profile in the same worktree. `Ctrl+C` stops Electron and Vite together. See the [session guide](CONTRIBUTING.md#4-installing-dependencies--running-locally) for storage locations and shortcut behavior.
 
 The deterministic FFmpeg tests use a fake child process. The opt-in synthetic runtime smoke uses the actual system executable without opening the Portal picker:
 

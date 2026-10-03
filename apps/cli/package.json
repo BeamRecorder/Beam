@@ -1,0 +1,25 @@
+{
+  "name": "@beam/cli",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@beam/encoder": "workspace:*",
+    "@beam/engine": "workspace:*",
+    "@beam/runtime": "workspace:*",
+    "@puppeteer/browsers": "^3.2.3",
+    "puppeteer-core": "^25.12.0",
+    "vite": "^8.3.1",
+    "@beam/storage": "workspace:*",
+    "@beam/native-client": "workspace:*",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@beam/system-metrics": "workspace:*",
+    "@beam/electron-export": "workspace:*"
+  },
+  "bin": {
+    "beam": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}

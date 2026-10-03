@@ -4,8 +4,9 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "types": ["vite/client"],
     "paths": {
-      "~/ui/*": ["./src/components/ui/*"],
-      "~/*": ["./src/*"]
+      "@desktop/*": ["./apps/desktop/src/*"],
+      "~/ui/*": ["./apps/desktop/src/components/ui/*"],
+      "~/*": ["./apps/desktop/src/*"]
     },
     "allowArbitraryExtensions": true,
 
@@ -15,5 +16,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"]
+  "include": ["apps/desktop/src/**/*.ts", "apps/desktop/src/**/*.tsx", "apps/desktop/src/**/*.vue"]
 }

@@ -1,0 +1,2639 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-01",
+  "scope": "GPU follow-up; baseline working tree already includes timeline virtualization, decoder fixes, frame sharing and fused blur",
+  "environment": {
+    "appVersion": "0.4.0",
+    "platform": "linux",
+    "navigatorPlatform": "Linux x86_64",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.7977.130 Electron/44.5.1 Safari/537.36",
+    "language": "en-US",
+    "timezone": "Europe/Paris",
+    "hardwareConcurrency": 18,
+    "deviceMemoryGb": 32,
+    "screen": "1600x1200",
+    "viewport": "1280x800",
+    "devicePixelRatio": 1,
+    "webgpuAvailable": true,
+    "webglRenderer": "ANGLE (Intel, Mesa Intel(R) Arc(tm) Graphics (MTL), OpenGL 4.6)",
+    "offscreenCanvas": true,
+    "videoEncoder": true,
+    "videoDecoder": true,
+    "audioEncoder": true,
+    "audioDecoder": true,
+    "hardwareAcceleration": null
+  },
+  "measurement": {
+    "sharedComputer": true,
+    "osCachesCleared": false,
+    "privateNativeDisplay": true,
+    "concurrentBuildsOrTests": false,
+    "pairedFrames": 12,
+    "warmups": 2,
+    "fencedReadbackIncluded": true,
+    "pureGpuTimestamp": false
+  },
+  "originalProject": {
+    "path": "/home/albi/Vidéos/Beam/user/projects/studio/project-soft-signal",
+    "files": [
+      {
+        "file": "media/3557911b-7640-4fd3-bc7f-e58372fb11ea.webm",
+        "sha256": "54dda16a3404b0fbaa07ec98a1f966449f96ed15e30746aa54e0db3aab1bdc8b",
+        "frozenSha256": "54dda16a3404b0fbaa07ec98a1f966449f96ed15e30746aa54e0db3aab1bdc8b"
+      },
+      {
+        "file": "project.json",
+        "sha256": "1d06979b8795b1f7e45d2caacd6688460af9f371c7f99d92d9750e354a88fa7c",
+        "frozenSha256": "1d06979b8795b1f7e45d2caacd6688460af9f371c7f99d92d9750e354a88fa7c"
+      },
+      {
+        "file": "session-01a01ac4-b390-7763-992a-2f4109da83ed/cursor/cursor.json",
+        "sha256": "a78b6f2945bed3876e13aeba4c446cea1b6220231adb479d5e85d77868ee6498",
+        "frozenSha256": "a78b6f2945bed3876e13aeba4c446cea1b6220231adb479d5e85d77868ee6498"
+      },
+      {
+        "file": "session-01a01ac4-b390-7763-992a-2f4109da83ed/cursor/input.json",
+        "sha256": "4dc053158155615894f74b59dce3a9d78834f79ee1f3a2b9242f558829246095",
+        "frozenSha256": "4dc053158155615894f74b59dce3a9d78834f79ee1f3a2b9242f558829246095"
+      },
+      {
+        "file": "session-01a01ac4-b390-7763-992a-2f4109da83ed/cursor/shapes.json",
+        "sha256": "8a581b9c55c27efaadb99e74bff949391990f9f400b2243ae6533c65f4ba9dbb",
+        "frozenSha256": "8a581b9c55c27efaadb99e74bff949391990f9f400b2243ae6533c65f4ba9dbb"
+      },
+      {
+        "file": "session-01a01ac4-b390-7763-992a-2f4109da83ed/cursor/telemetry.json",
+        "sha256": "3de504a68b7dcdd5c5848007078fbcba1437014188beb3532fbd333e174e65df",
+        "frozenSha256": "3de504a68b7dcdd5c5848007078fbcba1437014188beb3532fbd333e174e65df"
+      },
+      {
+        "file": "session-01a01ac4-b390-7763-992a-2f4109da83ed/cursor/track.json",
+        "sha256": "26165c4688acbdcf235bddcc81b7ae0fe45ab89721d531472406d470e9bf00f6",
+        "frozenSha256": "26165c4688acbdcf235bddcc81b7ae0fe45ab89721d531472406d470e9bf00f6"
+      },
+      {
+        "file": "session-01a01ac4-b390-7763-992a-2f4109da83ed/health.jsonl",
+        "sha256": "50efdb39ae5c33063af527c2b35910b852fef8e27cb70df385b4954bccef5645",
+        "frozenSha256": "50efdb39ae5c33063af527c2b35910b852fef8e27cb70df385b4954bccef5645"
+      },
+      {
+        "file": "session-01a01ac4-b390-7763-992a-2f4109da83ed/manifest.json",
+        "sha256": "12423deb65fae1f4c125067f4130e8524704f8364dbcaabde0d38dcf49880917",
+        "frozenSha256": "12423deb65fae1f4c125067f4130e8524704f8364dbcaabde0d38dcf49880917"
+      },
+      {
+        "file": "session-01a01ac4-b390-7763-992a-2f4109da83ed/screen/segment-0001.mp4",
+        "sha256": "0e1b9d49e0fc80ed89c74f0aad93b4559391d955f6ea460b7fac64aceb167ec8",
+        "frozenSha256": "0e1b9d49e0fc80ed89c74f0aad93b4559391d955f6ea460b7fac64aceb167ec8"
+      },
+      {
+        "file": "session-01a01ac4-b390-7763-992a-2f4109da83ed/screen/track.json",
+        "sha256": "4f16aae027312adb7dcfb54d06fd289aed7ccf54b0c0c7fa01b21f1146d19e74",
+        "frozenSha256": "4f16aae027312adb7dcfb54d06fd289aed7ccf54b0c0c7fa01b21f1146d19e74"
+      },
+      {
+        "file": "session-01a01ac4-b390-7763-992a-2f4109da83ed/system-audio/segment-0001.wav",
+        "sha256": "5983d725b062b6076a0309395d5a46a228aff3ed2201130638ea2d654aeb78ac",
+        "frozenSha256": "5983d725b062b6076a0309395d5a46a228aff3ed2201130638ea2d654aeb78ac"
+      },
+      {
+        "file": "session-01a01ac4-b390-7763-992a-2f4109da83ed/system-audio/track.json",
+        "sha256": "654a626d5d2d3ac61cc1a7e4aef87b843f6b3100fa88ce61520eda50846157a4",
+        "frozenSha256": "654a626d5d2d3ac61cc1a7e4aef87b843f6b3100fa88ce61520eda50846157a4"
+      },
+      {
+        "file": "session-01a01ac4-b390-7763-992a-2f4109da83ed/timing.jsonl",
+        "sha256": "df3030d6aa3dda1f7d00c205ee4513aca584352e0de7bc5e563d439d6a975bd6",
+        "frozenSha256": "df3030d6aa3dda1f7d00c205ee4513aca584352e0de7bc5e563d439d6a975bd6"
+      },
+      {
+        "file": "thumbnail.webp",
+        "sha256": "191cc4887f002c52511bebc1487fc921edf863f05af8a1de48813682d9109ac1",
+        "frozenSha256": "191cc4887f002c52511bebc1487fc921edf863f05af8a1de48813682d9109ac1"
+      }
+    ],
+    "unchanged": true
+  },
+  "mixedFixture": {
+    "path": "/home/albi/Vidéos/Beam/user/projects/studio/project-beam-stress-mixed-gpu",
+    "id": "d6a0fd68-57f8-494d-8748-4714458ab9bb",
+    "name": "Beam Stress — mixed GPU — 64 videos + 128 shapes + 64 effects — 60s",
+    "videos": 64,
+    "videoSourceTimePhases": 4,
+    "shapes": 128,
+    "effects": 64,
+    "durationSeconds": 60,
+    "seed": 7458,
+    "zoomMotionBlurDisabled": true,
+    "measuredPlaybackSeconds": 30,
+    "fullMinuteExportMeasured": false
+  },
+  "nativeRendering": {
+    "frozenBaseline": {
+      "canvas": {
+        "width": 1920,
+        "height": 1080
+      },
+      "decodedSources": 4,
+      "method": "12 frames after 2 warmups; synchronous RGBA readback included, not pure GPU timestamp",
+      "cases": [
+        {
+          "name": "videos-solid-128",
+          "count": 128,
+          "kind": "video",
+          "shadowMode": "solid",
+          "frames": 12,
+          "submissionMs": {
+            "median": 6.399999991059303,
+            "p95": 13.399999991059303
+          },
+          "completedWithReadbackMs": {
+            "median": 47.20000000298023,
+            "p95": 65.5
+          },
+          "hash": "a3f009527bbd8580862e6b55c49c81a036ccb913d3f2e601eef54e3833710e64",
+          "referenceHash": "a3f009527bbd8580862e6b55c49c81a036ccb913d3f2e601eef54e3833710e64",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "videos-adaptive-128",
+          "count": 128,
+          "kind": "video",
+          "shadowMode": "adaptive",
+          "frames": 12,
+          "submissionMs": {
+            "median": 1234.5999999940395,
+            "p95": 1378.9000000059605
+          },
+          "completedWithReadbackMs": {
+            "median": 1280.2000000029802,
+            "p95": 1417.699999988079
+          },
+          "hash": "8b35754a06f36bc9a55847ee29847c6fbb5e34d877e685f40fe5151ae99ff76b",
+          "referenceHash": "8b35754a06f36bc9a55847ee29847c6fbb5e34d877e685f40fe5151ae99ff76b",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "videos-fresh-adaptive-128",
+          "count": 128,
+          "kind": "video",
+          "shadowMode": "adaptive",
+          "fresh": true,
+          "frames": 12,
+          "submissionMs": {
+            "median": 263.59999999403954,
+            "p95": 303.5
+          },
+          "completedWithReadbackMs": {
+            "median": 279.5,
+            "p95": 314.59999999403954
+          },
+          "hash": "071c8df046d1c8c5c64e357b42fbd2e86f161f97966f894d58f867ce530353ef",
+          "referenceHash": "071c8df046d1c8c5c64e357b42fbd2e86f161f97966f894d58f867ce530353ef",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "videos-squircle-128",
+          "count": 128,
+          "kind": "video",
+          "shadowMode": "solid",
+          "mask": "squircle",
+          "frames": 12,
+          "submissionMs": {
+            "median": 5,
+            "p95": 14.899999991059303
+          },
+          "completedWithReadbackMs": {
+            "median": 57.79999999701977,
+            "p95": 114.79999999701977
+          },
+          "hash": "5652f4ed2fee713022b0a8aa02fac9f814c81e908506621fca35aa40b0130f01",
+          "referenceHash": "5652f4ed2fee713022b0a8aa02fac9f814c81e908506621fca35aa40b0130f01",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "shapes-catalog-1000",
+          "count": 1000,
+          "kind": "shape",
+          "preset": "heart",
+          "frames": 12,
+          "submissionMs": {
+            "median": 9.200000002980232,
+            "p95": 19
+          },
+          "completedWithReadbackMs": {
+            "median": 153.29999999701977,
+            "p95": 599.2000000029802
+          },
+          "hash": "2072e79b769259d9eed882d6a66947fe6d2458ef1ba1064a5df3cae8a361ca2d",
+          "referenceHash": "2072e79b769259d9eed882d6a66947fe6d2458ef1ba1064a5df3cae8a361ca2d",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "shapes-native-1000",
+          "count": 1000,
+          "kind": "shape",
+          "preset": "rounded-rectangle",
+          "frames": 12,
+          "submissionMs": {
+            "median": 4.5999999940395355,
+            "p95": 15.600000008940697
+          },
+          "completedWithReadbackMs": {
+            "median": 157.5,
+            "p95": 439.40000000596046
+          },
+          "hash": "360178e9ced9c23dab504d2dd07dadf2c8734ea3a9ae1917de1de909e36d82f7",
+          "referenceHash": "360178e9ced9c23dab504d2dd07dadf2c8734ea3a9ae1917de1de909e36d82f7",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "shapes-backdrop-100",
+          "count": 100,
+          "kind": "shape",
+          "preset": "heart",
+          "backdrop": true,
+          "frames": 12,
+          "submissionMs": {
+            "median": 4.200000002980232,
+            "p95": 9.600000008940697
+          },
+          "completedWithReadbackMs": {
+            "median": 63.400000005960464,
+            "p95": 238.40000000596046
+          },
+          "hash": "6d9ab3896ed162cecda632d1ec7bc90e3f32d346c72b60316edd917002d6547c",
+          "referenceHash": "6d9ab3896ed162cecda632d1ec7bc90e3f32d346c72b60316edd917002d6547c",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "blurs-small-after-large-500",
+          "count": 500,
+          "kind": "blur",
+          "frames": 12,
+          "submissionMs": {
+            "median": 19.900000005960464,
+            "p95": 67.29999999701977
+          },
+          "completedWithReadbackMs": {
+            "median": 205.70000000298023,
+            "p95": 406.30000001192093
+          },
+          "hash": "1db913a3a36c2e753fa576e27701f70ab6559cf6430c7738d6b026eb30863fc3",
+          "referenceHash": "1db913a3a36c2e753fa576e27701f70ab6559cf6430c7738d6b026eb30863fc3",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        }
+      ]
+    },
+    "earlierPairedTrial": {
+      "canvas": {
+        "width": 1920,
+        "height": 1080
+      },
+      "decodedSources": 4,
+      "method": "12 frames after 2 warmups; synchronous RGBA readback included, not pure GPU timestamp",
+      "cases": [
+        {
+          "name": "videos-solid-128",
+          "count": 128,
+          "kind": "video",
+          "shadowMode": "solid",
+          "frames": 12,
+          "submissionMs": {
+            "median": 2.5,
+            "p95": 10.399999991059303
+          },
+          "completedWithReadbackMs": {
+            "median": 21.899999991059303,
+            "p95": 39.099999994039536
+          },
+          "pairedDirectMediaControl": {
+            "submissionMs": {
+              "median": 3,
+              "p95": 6.899999991059303
+            },
+            "completedWithReadbackMs": {
+              "median": 44,
+              "p95": 61.70000000298023
+            },
+            "bypassed": "adaptive color memo/batching and geometric media shadow rasters only; shape/blur code unchanged"
+          },
+          "hash": "a3f009527bbd8580862e6b55c49c81a036ccb913d3f2e601eef54e3833710e64",
+          "referenceHash": "a3f009527bbd8580862e6b55c49c81a036ccb913d3f2e601eef54e3833710e64",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "videos-adaptive-128",
+          "count": 128,
+          "kind": "video",
+          "shadowMode": "adaptive",
+          "frames": 12,
+          "submissionMs": {
+            "median": 1,
+            "p95": 32.79999999701977
+          },
+          "completedWithReadbackMs": {
+            "median": 14.600000008940697,
+            "p95": 49.3999999910593
+          },
+          "pairedDirectMediaControl": {
+            "submissionMs": {
+              "median": 1101.7000000029802,
+              "p95": 1327.2000000029802
+            },
+            "completedWithReadbackMs": {
+              "median": 1134.2999999970198,
+              "p95": 1361
+            },
+            "bypassed": "adaptive color memo/batching and geometric media shadow rasters only; shape/blur code unchanged"
+          },
+          "hash": "8b35754a06f36bc9a55847ee29847c6fbb5e34d877e685f40fe5151ae99ff76b",
+          "referenceHash": "8b35754a06f36bc9a55847ee29847c6fbb5e34d877e685f40fe5151ae99ff76b",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "videos-fresh-adaptive-128",
+          "count": 128,
+          "kind": "video",
+          "shadowMode": "adaptive",
+          "fresh": true,
+          "frames": 12,
+          "submissionMs": {
+            "median": 26.399999991059303,
+            "p95": 69.59999999403954
+          },
+          "completedWithReadbackMs": {
+            "median": 43.80000001192093,
+            "p95": 85
+          },
+          "pairedDirectMediaControl": {
+            "submissionMs": {
+              "median": 261.3999999910593,
+              "p95": 308.1000000089407
+            },
+            "completedWithReadbackMs": {
+              "median": 284.70000000298023,
+              "p95": 320.20000000298023
+            },
+            "bypassed": "adaptive color memo/batching and geometric media shadow rasters only; shape/blur code unchanged"
+          },
+          "hash": "071c8df046d1c8c5c64e357b42fbd2e86f161f97966f894d58f867ce530353ef",
+          "referenceHash": "071c8df046d1c8c5c64e357b42fbd2e86f161f97966f894d58f867ce530353ef",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "videos-squircle-128",
+          "count": 128,
+          "kind": "video",
+          "shadowMode": "solid",
+          "mask": "squircle",
+          "frames": 12,
+          "submissionMs": {
+            "median": 2.5999999940395355,
+            "p95": 9.5
+          },
+          "completedWithReadbackMs": {
+            "median": 19.200000002980232,
+            "p95": 25.200000002980232
+          },
+          "pairedDirectMediaControl": {
+            "submissionMs": {
+              "median": 2.9000000059604645,
+              "p95": 16.700000002980232
+            },
+            "completedWithReadbackMs": {
+              "median": 45.1000000089407,
+              "p95": 82.3999999910593
+            },
+            "bypassed": "adaptive color memo/batching and geometric media shadow rasters only; shape/blur code unchanged"
+          },
+          "hash": "5652f4ed2fee713022b0a8aa02fac9f814c81e908506621fca35aa40b0130f01",
+          "referenceHash": "5652f4ed2fee713022b0a8aa02fac9f814c81e908506621fca35aa40b0130f01",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "shapes-catalog-1000",
+          "count": 1000,
+          "kind": "shape",
+          "preset": "heart",
+          "frames": 12,
+          "submissionMs": {
+            "median": 5,
+            "p95": 16.200000002980232
+          },
+          "completedWithReadbackMs": {
+            "median": 203.3999999910593,
+            "p95": 555.4000000059605
+          },
+          "pairedDirectMediaControl": {
+            "submissionMs": {
+              "median": 5.4000000059604645,
+              "p95": 10
+            },
+            "completedWithReadbackMs": {
+              "median": 175.1000000089407,
+              "p95": 268.20000000298023
+            },
+            "bypassed": "adaptive color memo/batching and geometric media shadow rasters only; shape/blur code unchanged"
+          },
+          "hash": "2072e79b769259d9eed882d6a66947fe6d2458ef1ba1064a5df3cae8a361ca2d",
+          "referenceHash": "2072e79b769259d9eed882d6a66947fe6d2458ef1ba1064a5df3cae8a361ca2d",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "shapes-native-1000",
+          "count": 1000,
+          "kind": "shape",
+          "preset": "rounded-rectangle",
+          "frames": 12,
+          "submissionMs": {
+            "median": 4,
+            "p95": 28.700000002980232
+          },
+          "completedWithReadbackMs": {
+            "median": 143.19999998807907,
+            "p95": 170.59999999403954
+          },
+          "pairedDirectMediaControl": {
+            "submissionMs": {
+              "median": 5.199999988079071,
+              "p95": 22
+            },
+            "completedWithReadbackMs": {
+              "median": 168.70000000298023,
+              "p95": 420.29999999701977
+            },
+            "bypassed": "adaptive color memo/batching and geometric media shadow rasters only; shape/blur code unchanged"
+          },
+          "hash": "360178e9ced9c23dab504d2dd07dadf2c8734ea3a9ae1917de1de909e36d82f7",
+          "referenceHash": "360178e9ced9c23dab504d2dd07dadf2c8734ea3a9ae1917de1de909e36d82f7",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "shapes-backdrop-100",
+          "count": 100,
+          "kind": "shape",
+          "preset": "heart",
+          "backdrop": true,
+          "frames": 12,
+          "submissionMs": {
+            "median": 5.300000011920929,
+            "p95": 12.600000008940697
+          },
+          "completedWithReadbackMs": {
+            "median": 70.20000000298023,
+            "p95": 190.90000000596046
+          },
+          "pairedDirectMediaControl": {
+            "submissionMs": {
+              "median": 5.199999988079071,
+              "p95": 17.299999997019768
+            },
+            "completedWithReadbackMs": {
+              "median": 98.1000000089407,
+              "p95": 217.8999999910593
+            },
+            "bypassed": "adaptive color memo/batching and geometric media shadow rasters only; shape/blur code unchanged"
+          },
+          "hash": "6d9ab3896ed162cecda632d1ec7bc90e3f32d346c72b60316edd917002d6547c",
+          "referenceHash": "6d9ab3896ed162cecda632d1ec7bc90e3f32d346c72b60316edd917002d6547c",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "blurs-small-after-large-500",
+          "count": 500,
+          "kind": "blur",
+          "frames": 12,
+          "submissionMs": {
+            "median": 21.600000008940697,
+            "p95": 71.29999999701977
+          },
+          "completedWithReadbackMs": {
+            "median": 211.8999999910593,
+            "p95": 394.40000000596046
+          },
+          "pairedDirectMediaControl": {
+            "submissionMs": {
+              "median": 14.300000011920929,
+              "p95": 70.30000001192093
+            },
+            "completedWithReadbackMs": {
+              "median": 295.29999999701977,
+              "p95": 411.59999999403954
+            },
+            "bypassed": "adaptive color memo/batching and geometric media shadow rasters only; shape/blur code unchanged"
+          },
+          "hash": "1db913a3a36c2e753fa576e27701f70ab6559cf6430c7738d6b026eb30863fc3",
+          "referenceHash": "1db913a3a36c2e753fa576e27701f70ab6559cf6430c7738d6b026eb30863fc3",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        }
+      ]
+    },
+    "finalPairedTrial": {
+      "canvas": {
+        "width": 1920,
+        "height": 1080
+      },
+      "decodedSources": 4,
+      "method": "12 frames after 2 warmups; synchronous RGBA readback included, not pure GPU timestamp",
+      "cases": [
+        {
+          "name": "videos-solid-128",
+          "count": 128,
+          "kind": "video",
+          "shadowMode": "solid",
+          "frames": 12,
+          "submissionMs": {
+            "median": 6.5999999940395355,
+            "p95": 9.600000008940697
+          },
+          "completedWithReadbackMs": {
+            "median": 27.5,
+            "p95": 33
+          },
+          "pairedDirectMediaControl": {
+            "submissionMs": {
+              "median": 4.800000011920929,
+              "p95": 8.099999994039536
+            },
+            "completedWithReadbackMs": {
+              "median": 54.80000001192093,
+              "p95": 91.59999999403954
+            },
+            "bypassed": "adaptive color memo/batching and geometric media shadow rasters only; shape/blur code unchanged"
+          },
+          "hash": "a3f009527bbd8580862e6b55c49c81a036ccb913d3f2e601eef54e3833710e64",
+          "referenceHash": "a3f009527bbd8580862e6b55c49c81a036ccb913d3f2e601eef54e3833710e64",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "videos-adaptive-128",
+          "count": 128,
+          "kind": "video",
+          "shadowMode": "adaptive",
+          "frames": 12,
+          "submissionMs": {
+            "median": 2.699999988079071,
+            "p95": 8.299999997019768
+          },
+          "completedWithReadbackMs": {
+            "median": 23.299999997019768,
+            "p95": 33.6000000089407
+          },
+          "pairedDirectMediaControl": {
+            "submissionMs": {
+              "median": 1409.6000000089407,
+              "p95": 1665.1000000089407
+            },
+            "completedWithReadbackMs": {
+              "median": 1451,
+              "p95": 1701.6000000089407
+            },
+            "bypassed": "adaptive color memo/batching and geometric media shadow rasters only; shape/blur code unchanged"
+          },
+          "hash": "8b35754a06f36bc9a55847ee29847c6fbb5e34d877e685f40fe5151ae99ff76b",
+          "referenceHash": "8b35754a06f36bc9a55847ee29847c6fbb5e34d877e685f40fe5151ae99ff76b",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "videos-fresh-adaptive-128",
+          "count": 128,
+          "kind": "video",
+          "shadowMode": "adaptive",
+          "fresh": true,
+          "frames": 12,
+          "submissionMs": {
+            "median": 22.600000008940697,
+            "p95": 53.70000000298023
+          },
+          "completedWithReadbackMs": {
+            "median": 37.20000000298023,
+            "p95": 73.40000000596046
+          },
+          "pairedDirectMediaControl": {
+            "submissionMs": {
+              "median": 359.79999999701977,
+              "p95": 406.80000001192093
+            },
+            "completedWithReadbackMs": {
+              "median": 376.3999999910593,
+              "p95": 420.80000001192093
+            },
+            "bypassed": "adaptive color memo/batching and geometric media shadow rasters only; shape/blur code unchanged"
+          },
+          "hash": "071c8df046d1c8c5c64e357b42fbd2e86f161f97966f894d58f867ce530353ef",
+          "referenceHash": "071c8df046d1c8c5c64e357b42fbd2e86f161f97966f894d58f867ce530353ef",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "videos-squircle-128",
+          "count": 128,
+          "kind": "video",
+          "shadowMode": "solid",
+          "mask": "squircle",
+          "frames": 12,
+          "submissionMs": {
+            "median": 8.200000002980232,
+            "p95": 13.800000011920929
+          },
+          "completedWithReadbackMs": {
+            "median": 27,
+            "p95": 47.5
+          },
+          "pairedDirectMediaControl": {
+            "submissionMs": {
+              "median": 6.299999997019768,
+              "p95": 24.299999997019768
+            },
+            "completedWithReadbackMs": {
+              "median": 74.30000001192093,
+              "p95": 116
+            },
+            "bypassed": "adaptive color memo/batching and geometric media shadow rasters only; shape/blur code unchanged"
+          },
+          "hash": "5652f4ed2fee713022b0a8aa02fac9f814c81e908506621fca35aa40b0130f01",
+          "referenceHash": "5652f4ed2fee713022b0a8aa02fac9f814c81e908506621fca35aa40b0130f01",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "shapes-catalog-1000",
+          "count": 1000,
+          "kind": "shape",
+          "preset": "heart",
+          "frames": 12,
+          "submissionMs": {
+            "median": 7.299999997019768,
+            "p95": 26
+          },
+          "completedWithReadbackMs": {
+            "median": 306,
+            "p95": 660
+          },
+          "pairedDirectMediaControl": {
+            "submissionMs": {
+              "median": 12.099999994039536,
+              "p95": 18
+            },
+            "completedWithReadbackMs": {
+              "median": 313.79999999701977,
+              "p95": 401.69999998807907
+            },
+            "bypassed": "adaptive color memo/batching and geometric media shadow rasters only; shape/blur code unchanged"
+          },
+          "hash": "2072e79b769259d9eed882d6a66947fe6d2458ef1ba1064a5df3cae8a361ca2d",
+          "referenceHash": "2072e79b769259d9eed882d6a66947fe6d2458ef1ba1064a5df3cae8a361ca2d",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "shapes-native-1000",
+          "count": 1000,
+          "kind": "shape",
+          "preset": "rounded-rectangle",
+          "frames": 12,
+          "submissionMs": {
+            "median": 13.5,
+            "p95": 22.69999998807907
+          },
+          "completedWithReadbackMs": {
+            "median": 246.20000000298023,
+            "p95": 461.09999999403954
+          },
+          "pairedDirectMediaControl": {
+            "submissionMs": {
+              "median": 8.600000008940697,
+              "p95": 30
+            },
+            "completedWithReadbackMs": {
+              "median": 266.09999999403954,
+              "p95": 478.20000000298023
+            },
+            "bypassed": "adaptive color memo/batching and geometric media shadow rasters only; shape/blur code unchanged"
+          },
+          "hash": "360178e9ced9c23dab504d2dd07dadf2c8734ea3a9ae1917de1de909e36d82f7",
+          "referenceHash": "360178e9ced9c23dab504d2dd07dadf2c8734ea3a9ae1917de1de909e36d82f7",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "shapes-backdrop-100",
+          "count": 100,
+          "kind": "shape",
+          "preset": "heart",
+          "backdrop": true,
+          "frames": 12,
+          "submissionMs": {
+            "median": 10.099999994039536,
+            "p95": 25.5
+          },
+          "completedWithReadbackMs": {
+            "median": 132.1000000089407,
+            "p95": 230.30000001192093
+          },
+          "pairedDirectMediaControl": {
+            "submissionMs": {
+              "median": 7.4000000059604645,
+              "p95": 14.5
+            },
+            "completedWithReadbackMs": {
+              "median": 113.09999999403954,
+              "p95": 232.5
+            },
+            "bypassed": "adaptive color memo/batching and geometric media shadow rasters only; shape/blur code unchanged"
+          },
+          "hash": "6d9ab3896ed162cecda632d1ec7bc90e3f32d346c72b60316edd917002d6547c",
+          "referenceHash": "6d9ab3896ed162cecda632d1ec7bc90e3f32d346c72b60316edd917002d6547c",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        },
+        {
+          "name": "blurs-small-after-large-500",
+          "count": 500,
+          "kind": "blur",
+          "frames": 12,
+          "submissionMs": {
+            "median": 39,
+            "p95": 54.900000005960464
+          },
+          "completedWithReadbackMs": {
+            "median": 265.20000000298023,
+            "p95": 446.70000000298023
+          },
+          "pairedDirectMediaControl": {
+            "submissionMs": {
+              "median": 41.5,
+              "p95": 57.3999999910593
+            },
+            "completedWithReadbackMs": {
+              "median": 326.09999999403954,
+              "p95": 438.5
+            },
+            "bypassed": "adaptive color memo/batching and geometric media shadow rasters only; shape/blur code unchanged"
+          },
+          "hash": "1db913a3a36c2e753fa576e27701f70ab6559cf6430c7738d6b026eb30863fc3",
+          "referenceHash": "1db913a3a36c2e753fa576e27701f70ab6559cf6430c7738d6b026eb30863fc3",
+          "difference": {
+            "differentBytes": 0,
+            "maxChannelDelta": 0,
+            "meanSquaredDelta": 0
+          }
+        }
+      ]
+    },
+    "allBaselineHashesMatch": true,
+    "allDirectHashesMatch": true
+  },
+  "endToEnd": {
+    "softBaseline": {
+      "previewReadyMs": 1486.9887949999993,
+      "presentedMs": 723.6973749999997,
+      "timelineDom": {
+        "rows": 9,
+        "clips": 10
+      },
+      "success": true,
+      "phases": {
+        "playback": {
+          "time": 14.506666666666668,
+          "frames": 1864,
+          "draws": 774,
+          "drawMs": {
+            "median": 2.7999999970197678,
+            "p95": 14.799999997019768,
+            "total": 4139.299999982119
+          },
+          "rafMs": {
+            "median": 33.399999999999636,
+            "p95": 90.09999999999854,
+            "max": 304
+          },
+          "longTasks": [120, 52, 75, 205, 112, 120, 147, 142, 83],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 3632,
+            "presentedFrames": 1852,
+            "droppedFrames": 1732,
+            "supersededRequests": 0,
+            "queueSize": 6,
+            "cacheBytes": 66355200,
+            "disposedBitmaps": 1774,
+            "seekLatencyMs": [251.79999999701977, 26.899999991059303, 32.1000000089407]
+          },
+          "audioMetrics": {
+            "schedulePasses": 294,
+            "scheduledBuffers": 356,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "wallMs": 30070.844858000004,
+          "mainCpu": {
+            "user": 287359,
+            "system": 123657
+          },
+          "rendererCpuMs": 64780
+        },
+        "seeking": {
+          "seekMs": {
+            "median": 278.09999999403954,
+            "p95": 455.29999999701977,
+            "total": 10741
+          },
+          "failures": [],
+          "frames": 132,
+          "draws": 79,
+          "drawMs": {
+            "median": 5.100000008940697,
+            "p95": 10.700000002980232,
+            "total": 559.7000000327826
+          },
+          "rafMs": {
+            "median": 16.700000000004366,
+            "p95": 127.40000000000146,
+            "max": 350.6999999999971
+          },
+          "longTasks": [138],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 3784,
+            "presentedFrames": 1994,
+            "droppedFrames": 1742,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 65925120,
+            "disposedBitmaps": 1790,
+            "seekLatencyMs": [
+              251.79999999701977, 26.899999991059303, 32.1000000089407, 42.1000000089407, 315.6000000089407,
+              124.29999999701977, 154.79999999701977, 338.29999999701977, 193.69999998807907, 208.59999999403954,
+              202.29999999701977, 319.90000000596046, 93.09999999403954, 163.70000000298023, 302.79999999701977,
+              131.30000001192093, 417.8999999910593, 161.20000000298023, 210.19999998807907, 363, 320.09999999403954,
+              278.29999999701977, 114.5, 345.09999999403954, 144.59999999403954, 192.09999999403954, 368.79999999701977,
+              244.80000001192093, 260.70000000298023, 83.5, 405.70000000298023, 206.80000001192093, 197.20000000298023,
+              324.70000000298023, 231.30000001192093, 345.59999999403954, 51.900000005960464, 314.1000000089407,
+              181.70000000298023, 145, 364.20000000298023, 194.8999999910593, 257.59999999403954
+            ]
+          },
+          "audioMetrics": {
+            "schedulePasses": 296,
+            "scheduledBuffers": 356,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "wallMs": 10754.032029000002,
+          "mainCpu": {
+            "user": 136540,
+            "system": 253107
+          },
+          "rendererCpuMs": 73880
+        },
+        "scrubbing": {
+          "requests": 120,
+          "results": [
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "presented"
+          ],
+          "frames": 39,
+          "draws": 16,
+          "drawMs": {
+            "median": 8,
+            "p95": 14.299999997019768,
+            "total": 133.60000003874302
+          },
+          "rafMs": {
+            "median": 100.30000000000291,
+            "p95": 247.6999999999971,
+            "max": 349.20000000000437
+          },
+          "longTasks": [],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 3784,
+            "presentedFrames": 1994,
+            "droppedFrames": 1742,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 65925120,
+            "disposedBitmaps": 1790,
+            "seekLatencyMs": [
+              251.79999999701977, 26.899999991059303, 32.1000000089407, 42.1000000089407, 315.6000000089407,
+              124.29999999701977, 154.79999999701977, 338.29999999701977, 193.69999998807907, 208.59999999403954,
+              202.29999999701977, 319.90000000596046, 93.09999999403954, 163.70000000298023, 302.79999999701977,
+              131.30000001192093, 417.8999999910593, 161.20000000298023, 210.19999998807907, 363, 320.09999999403954,
+              278.29999999701977, 114.5, 345.09999999403954, 144.59999999403954, 192.09999999403954, 368.79999999701977,
+              244.80000001192093, 260.70000000298023, 83.5, 405.70000000298023, 206.80000001192093, 197.20000000298023,
+              324.70000000298023, 231.30000001192093, 345.59999999403954, 51.900000005960464, 314.1000000089407,
+              181.70000000298023, 145, 364.20000000298023, 194.8999999910593, 257.59999999403954
+            ]
+          },
+          "audioMetrics": {
+            "schedulePasses": 296,
+            "scheduledBuffers": 356,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "wallMs": 2804.132805000001,
+          "mainCpu": {
+            "user": 35986,
+            "system": 77979
+          },
+          "rendererCpuMs": 26020
+        },
+        "export": {
+          "export": {
+            "path": "/tmp/beam-gpu-perf-GAvrDz/soft-before.mp4",
+            "format": "mp4",
+            "diagnostics": {
+              "schemaVersion": 1,
+              "startedAt": "2026-10-01T17:51:53.008Z",
+              "completedAt": "2026-10-01T17:52:19.257Z",
+              "destinationDialogMs": 505.29999999701977,
+              "environment": {
+                "appVersion": "0.4.0",
+                "platform": "linux",
+                "navigatorPlatform": "Linux x86_64",
+                "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.7977.130 Electron/44.5.1 Safari/537.36",
+                "language": "en-US",
+                "timezone": "Europe/Paris",
+                "hardwareConcurrency": 18,
+                "deviceMemoryGb": 32,
+                "screen": "1600x1200",
+                "viewport": "1280x800",
+                "devicePixelRatio": 1,
+                "webgpuAvailable": true,
+                "webglRenderer": "ANGLE (Intel, Mesa Intel(R) Arc(tm) Graphics (MTL), OpenGL 4.6)",
+                "offscreenCanvas": true,
+                "videoEncoder": true,
+                "videoDecoder": true,
+                "audioEncoder": true,
+                "audioDecoder": true,
+                "hardwareAcceleration": null
+              },
+              "runtime": {
+                "validationMs": 29.600000008940697,
+                "assetLoadingMs": 311.40000000596046,
+                "outputSetupMs": 82.8999999910593,
+                "videoPipelineMs": 25087.20000000298,
+                "audioPipelineMs": 1629,
+                "muxFinalizationMs": 166.79999999701977,
+                "nativeFinalizationMs": 1.4000000059604645,
+                "decodeMs": 252.0999998897314,
+                "renderMs": 6907.899999931455,
+                "encoderBackpressureMs": 17693.899999901652,
+                "ipcWriteWaitMs": 99.59999999403954,
+                "encodedFps": 18.53534870371922,
+                "audioRealtimeSpeed": 9.515039901780233,
+                "chunkCount": 1,
+                "bytesWritten": 13398576,
+                "videoCodec": "avc",
+                "audioCodec": "aac",
+                "inputVideoCodecs": ["av1", "vp9"],
+                "inputAudioCodecs": ["pcm-f32"],
+                "audioEncoderImplementation": "mediabunny-aac",
+                "hardwareAcceleration": "no-preference",
+                "encoderCodec": "avc1.640028",
+                "encoderBitrate": 9953280,
+                "encodedPacketCount": 465,
+                "keyFrameCount": 8,
+                "encodedVideoBytes": 13387909,
+                "elapsedMs": 25682.10000000894,
+                "phase": "finalizing"
+              }
+            }
+          },
+          "frames": 0,
+          "draws": 1,
+          "drawMs": {
+            "median": 1.8999999910593033,
+            "p95": 1.8999999910593033,
+            "total": 1.8999999910593033
+          },
+          "rafMs": {
+            "median": 16.69999999999709,
+            "p95": 16.80000000000291,
+            "max": 340.90000000000146
+          },
+          "longTasks": [],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 3820,
+            "presentedFrames": 2030,
+            "droppedFrames": 1742,
+            "supersededRequests": 119,
+            "queueSize": 0,
+            "cacheBytes": 65710080,
+            "disposedBitmaps": 1790,
+            "seekLatencyMs": [
+              251.79999999701977, 26.899999991059303, 32.1000000089407, 42.1000000089407, 315.6000000089407,
+              124.29999999701977, 154.79999999701977, 338.29999999701977, 193.69999998807907, 208.59999999403954,
+              202.29999999701977, 319.90000000596046, 93.09999999403954, 163.70000000298023, 302.79999999701977,
+              131.30000001192093, 417.8999999910593, 161.20000000298023, 210.19999998807907, 363, 320.09999999403954,
+              278.29999999701977, 114.5, 345.09999999403954, 144.59999999403954, 192.09999999403954, 368.79999999701977,
+              244.80000001192093, 260.70000000298023, 83.5, 405.70000000298023, 206.80000001192093, 197.20000000298023,
+              324.70000000298023, 231.30000001192093, 345.59999999403954, 51.900000005960464, 314.1000000089407,
+              181.70000000298023, 145, 364.20000000298023, 194.8999999910593, 257.59999999403954, 155.40000000596046,
+              356.5
+            ]
+          },
+          "audioMetrics": {
+            "schedulePasses": 296,
+            "scheduledBuffers": 356,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "wallMs": 26264.265698000003,
+          "mainCpu": {
+            "user": 255236,
+            "system": 239913
+          },
+          "rendererCpuMs": 51610
+        }
+      }
+    },
+    "softBaselineRepeat": {
+      "previewReadyMs": 1836.393086,
+      "presentedMs": 932.5368749999998,
+      "timelineDom": {
+        "rows": 9,
+        "clips": 10
+      },
+      "success": true,
+      "phases": {
+        "playback": {
+          "time": 14.506666666666668,
+          "frames": 1660,
+          "draws": 645,
+          "drawMs": {
+            "median": 2.7000000029802322,
+            "p95": 18.200000002980232,
+            "total": 4492.099999934435
+          },
+          "rafMs": {
+            "median": 35.19999999999891,
+            "p95": 124.80000000000018,
+            "max": 401.5
+          },
+          "longTasks": [171, 113, 150, 340, 51, 56, 411, 98, 133, 154],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 3274,
+            "presentedFrames": 1658,
+            "droppedFrames": 1566,
+            "supersededRequests": 0,
+            "queueSize": 4,
+            "cacheBytes": 66355200,
+            "disposedBitmaps": 1612,
+            "seekLatencyMs": [223.1000000089407, 50.6000000089407, 51.099999994039536]
+          },
+          "audioMetrics": {
+            "schedulePasses": 291,
+            "scheduledBuffers": 356,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "wallMs": 30096.883366000002,
+          "mainCpu": {
+            "user": 302068,
+            "system": 146315
+          },
+          "rendererCpuMs": 68880
+        },
+        "export": {
+          "export": {
+            "path": "/tmp/beam-gpu-perf-GAvrDz/soft-before-repeat.mp4",
+            "format": "mp4",
+            "diagnostics": {
+              "schemaVersion": 1,
+              "startedAt": "2026-10-01T18:04:09.167Z",
+              "completedAt": "2026-10-01T18:04:54.849Z",
+              "destinationDialogMs": 61.900000005960464,
+              "environment": {
+                "appVersion": "0.4.0",
+                "platform": "linux",
+                "navigatorPlatform": "Linux x86_64",
+                "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.7977.130 Electron/44.5.1 Safari/537.36",
+                "language": "en-US",
+                "timezone": "Europe/Paris",
+                "hardwareConcurrency": 18,
+                "deviceMemoryGb": 32,
+                "screen": "1600x1200",
+                "viewport": "1280x800",
+                "devicePixelRatio": 1,
+                "webgpuAvailable": true,
+                "webglRenderer": "ANGLE (Intel, Mesa Intel(R) Arc(tm) Graphics (MTL), OpenGL 4.6)",
+                "offscreenCanvas": true,
+                "videoEncoder": true,
+                "videoDecoder": true,
+                "audioEncoder": true,
+                "audioDecoder": true,
+                "hardwareAcceleration": null
+              },
+              "runtime": {
+                "validationMs": 34,
+                "assetLoadingMs": 138,
+                "outputSetupMs": 131.8999999910593,
+                "videoPipelineMs": 45056.39999999106,
+                "audioPipelineMs": 1853.800000011921,
+                "muxFinalizationMs": 179.20000000298023,
+                "nativeFinalizationMs": 1.0999999940395355,
+                "decodeMs": 431.7999999374151,
+                "renderMs": 8223.800000101328,
+                "encoderBackpressureMs": 36131.89999991655,
+                "ipcWriteWaitMs": 101.5,
+                "encodedFps": 10.320398433964815,
+                "audioRealtimeSpeed": 8.361204013324159,
+                "chunkCount": 1,
+                "bytesWritten": 13398576,
+                "videoCodec": "avc",
+                "audioCodec": "aac",
+                "inputVideoCodecs": ["av1", "vp9"],
+                "inputAudioCodecs": ["pcm-f32"],
+                "audioEncoderImplementation": "mediabunny-aac",
+                "hardwareAcceleration": "no-preference",
+                "encoderCodec": "avc1.640028",
+                "encoderBitrate": 9953280,
+                "encodedPacketCount": 465,
+                "keyFrameCount": 8,
+                "encodedVideoBytes": 13387909,
+                "elapsedMs": 45543.19999998808,
+                "phase": "finalizing"
+              }
+            }
+          },
+          "frames": 0,
+          "draws": 1,
+          "drawMs": {
+            "median": 3.5,
+            "p95": 3.5,
+            "total": 3.5
+          },
+          "rafMs": {
+            "median": 16.69999999999709,
+            "p95": 16.80000000000291,
+            "max": 133.70000000000437
+          },
+          "longTasks": [65],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 3274,
+            "presentedFrames": 1658,
+            "droppedFrames": 1566,
+            "supersededRequests": 0,
+            "queueSize": 4,
+            "cacheBytes": 66355200,
+            "disposedBitmaps": 1612,
+            "seekLatencyMs": [223.1000000089407, 50.6000000089407, 51.099999994039536]
+          },
+          "audioMetrics": {
+            "schedulePasses": 291,
+            "scheduledBuffers": 356,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "wallMs": 45710.015263999994,
+          "mainCpu": {
+            "user": 298449,
+            "system": 274257
+          },
+          "rendererCpuMs": 63130
+        }
+      }
+    },
+    "softFinal": {
+      "previewReadyMs": 1902.0861460000006,
+      "presentedMs": 889.7548740000002,
+      "timelineDom": {
+        "rows": 9,
+        "clips": 10
+      },
+      "success": true,
+      "phases": {
+        "playback": {
+          "time": 14.549333333333337,
+          "frames": 1328,
+          "draws": 484,
+          "drawMs": {
+            "median": 3.0999999940395355,
+            "p95": 20.100000008940697,
+            "total": 3747.4000000804663
+          },
+          "rafMs": {
+            "median": 43.899999999999636,
+            "p95": 190.09999999999854,
+            "max": 372.40000000000146
+          },
+          "longTasks": [51, 138, 59, 301, 159, 53, 108, 164, 138, 150, 151],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2607,
+            "presentedFrames": 1320,
+            "droppedFrames": 1236,
+            "supersededRequests": 0,
+            "queueSize": 4,
+            "cacheBytes": 66355200,
+            "disposedBitmaps": 1283,
+            "seekLatencyMs": [66, 34.79999999701977, 58.400000005960464]
+          },
+          "audioMetrics": {
+            "schedulePasses": 291,
+            "scheduledBuffers": 356,
+            "lateBuffers": 1,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 42.66666666666641,
+            "contextState": "running"
+          },
+          "wallMs": 30092.297788999997,
+          "mainCpu": {
+            "user": 259400,
+            "system": 123963
+          },
+          "rendererCpuMs": 57280
+        },
+        "seeking": {
+          "seekMs": {
+            "median": 267.40000000596046,
+            "p95": 464.70000000298023,
+            "total": 11609
+          },
+          "failures": [],
+          "frames": 132,
+          "draws": 80,
+          "drawMs": {
+            "median": 5.100000008940697,
+            "p95": 10.799999997019768,
+            "total": 620.7999999821186
+          },
+          "rafMs": {
+            "median": 16.700000000004366,
+            "p95": 144.5,
+            "max": 369.8000000000029
+          },
+          "longTasks": [172],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2751,
+            "presentedFrames": 1458,
+            "droppedFrames": 1242,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 65925120,
+            "disposedBitmaps": 1293,
+            "seekLatencyMs": [
+              66, 34.79999999701977, 58.400000005960464, 50.29999999701977, 394.90000000596046, 140.29999999701977,
+              190.8999999910593, 432.6000000089407, 229.70000000298023, 196.79999999701977, 230.70000000298023, 313.5,
+              93.5, 146.1000000089407, 342.20000000298023, 156, 399.40000000596046, 205.40000000596046,
+              247.40000000596046, 316.5, 286.6000000089407, 308.90000000596046, 111.5, 343.70000000298023,
+              163.40000000596046, 216.20000000298023, 391.70000000298023, 262.59999999403954, 267, 85,
+              418.6000000089407, 225.6000000089407, 201.90000000596046, 365.40000000596046, 230.30000001192093,
+              275.29999999701977, 60.900000005960464, 365.59999999403954, 165.79999999701977, 159.70000000298023,
+              416.09999999403954, 221.20000000298023, 270.09999999403954
+            ]
+          },
+          "audioMetrics": {
+            "schedulePasses": 293,
+            "scheduledBuffers": 356,
+            "lateBuffers": 1,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 42.66666666666641,
+            "contextState": "running"
+          },
+          "wallMs": 11612.206732999999,
+          "mainCpu": {
+            "user": 156111,
+            "system": 207824
+          },
+          "rendererCpuMs": 80410
+        },
+        "scrubbing": {
+          "requests": 120,
+          "results": [
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "superseded",
+            "presented"
+          ],
+          "frames": 58,
+          "draws": 20,
+          "drawMs": {
+            "median": 5.299999997019768,
+            "p95": 26.099999994039536,
+            "total": 156.3999999910593
+          },
+          "rafMs": {
+            "median": 124.30000000000291,
+            "p95": 252.3000000000029,
+            "max": 304
+          },
+          "longTasks": [],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2751,
+            "presentedFrames": 1458,
+            "droppedFrames": 1242,
+            "supersededRequests": 0,
+            "queueSize": 0,
+            "cacheBytes": 65925120,
+            "disposedBitmaps": 1293,
+            "seekLatencyMs": [
+              66, 34.79999999701977, 58.400000005960464, 50.29999999701977, 394.90000000596046, 140.29999999701977,
+              190.8999999910593, 432.6000000089407, 229.70000000298023, 196.79999999701977, 230.70000000298023, 313.5,
+              93.5, 146.1000000089407, 342.20000000298023, 156, 399.40000000596046, 205.40000000596046,
+              247.40000000596046, 316.5, 286.6000000089407, 308.90000000596046, 111.5, 343.70000000298023,
+              163.40000000596046, 216.20000000298023, 391.70000000298023, 262.59999999403954, 267, 85,
+              418.6000000089407, 225.6000000089407, 201.90000000596046, 365.40000000596046, 230.30000001192093,
+              275.29999999701977, 60.900000005960464, 365.59999999403954, 165.79999999701977, 159.70000000298023,
+              416.09999999403954, 221.20000000298023, 270.09999999403954
+            ]
+          },
+          "audioMetrics": {
+            "schedulePasses": 293,
+            "scheduledBuffers": 356,
+            "lateBuffers": 1,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 42.66666666666641,
+            "contextState": "running"
+          },
+          "wallMs": 2847.1286709999986,
+          "mainCpu": {
+            "user": 49582,
+            "system": 76276
+          },
+          "rendererCpuMs": 22100
+        },
+        "export": {
+          "export": {
+            "path": "/tmp/beam-gpu-perf-GAvrDz/soft-final.mp4",
+            "format": "mp4",
+            "diagnostics": {
+              "schemaVersion": 1,
+              "startedAt": "2026-10-01T18:27:31.064Z",
+              "completedAt": "2026-10-01T18:28:00.746Z",
+              "destinationDialogMs": 220.09999999403954,
+              "environment": {
+                "appVersion": "0.4.0",
+                "platform": "linux",
+                "navigatorPlatform": "Linux x86_64",
+                "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.7977.130 Electron/44.5.1 Safari/537.36",
+                "language": "en-US",
+                "timezone": "Europe/Paris",
+                "hardwareConcurrency": 18,
+                "deviceMemoryGb": 32,
+                "screen": "1600x1200",
+                "viewport": "1280x800",
+                "devicePixelRatio": 1,
+                "webgpuAvailable": true,
+                "webglRenderer": "ANGLE (Intel, Mesa Intel(R) Arc(tm) Graphics (MTL), OpenGL 4.6)",
+                "offscreenCanvas": true,
+                "videoEncoder": true,
+                "videoDecoder": true,
+                "audioEncoder": true,
+                "audioDecoder": true,
+                "hardwareAcceleration": null
+              },
+              "runtime": {
+                "validationMs": 23.899999991059303,
+                "assetLoadingMs": 126.29999999701977,
+                "outputSetupMs": 90.29999999701977,
+                "videoPipelineMs": 28989.5,
+                "audioPipelineMs": 1652.1000000089407,
+                "muxFinalizationMs": 173.29999999701977,
+                "nativeFinalizationMs": 1.2000000029802322,
+                "decodeMs": 395.9000002294779,
+                "renderMs": 7746.799999818206,
+                "encoderBackpressureMs": 20588.200000151992,
+                "ipcWriteWaitMs": 97.20000000298023,
+                "encodedFps": 16.040290449990515,
+                "audioRealtimeSpeed": 9.381998668310706,
+                "chunkCount": 1,
+                "bytesWritten": 13394368,
+                "videoCodec": "avc",
+                "audioCodec": "aac",
+                "inputVideoCodecs": ["av1", "vp9"],
+                "inputAudioCodecs": ["pcm-f32"],
+                "audioEncoderImplementation": "mediabunny-aac",
+                "hardwareAcceleration": "no-preference",
+                "encoderCodec": "avc1.640028",
+                "encoderBitrate": 9953280,
+                "encodedPacketCount": 465,
+                "keyFrameCount": 8,
+                "encodedVideoBytes": 13383701,
+                "elapsedMs": 29410.20000000298,
+                "phase": "finalizing"
+              }
+            }
+          },
+          "frames": 0,
+          "draws": 1,
+          "drawMs": {
+            "median": 2.0999999940395355,
+            "p95": 2.0999999940395355,
+            "total": 2.0999999940395355
+          },
+          "rafMs": {
+            "median": 16.69999999999709,
+            "p95": 16.80000000000291,
+            "max": 175.8000000000029
+          },
+          "longTasks": [],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 2794,
+            "presentedFrames": 1501,
+            "droppedFrames": 1242,
+            "supersededRequests": 119,
+            "queueSize": 0,
+            "cacheBytes": 65710080,
+            "disposedBitmaps": 1293,
+            "seekLatencyMs": [
+              66, 34.79999999701977, 58.400000005960464, 50.29999999701977, 394.90000000596046, 140.29999999701977,
+              190.8999999910593, 432.6000000089407, 229.70000000298023, 196.79999999701977, 230.70000000298023, 313.5,
+              93.5, 146.1000000089407, 342.20000000298023, 156, 399.40000000596046, 205.40000000596046,
+              247.40000000596046, 316.5, 286.6000000089407, 308.90000000596046, 111.5, 343.70000000298023,
+              163.40000000596046, 216.20000000298023, 391.70000000298023, 262.59999999403954, 267, 85,
+              418.6000000089407, 225.6000000089407, 201.90000000596046, 365.40000000596046, 230.30000001192093,
+              275.29999999701977, 60.900000005960464, 365.59999999403954, 165.79999999701977, 159.70000000298023,
+              416.09999999403954, 221.20000000298023, 270.09999999403954, 170.29999999701977, 406.29999999701977
+            ]
+          },
+          "audioMetrics": {
+            "schedulePasses": 293,
+            "scheduledBuffers": 356,
+            "lateBuffers": 1,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 42.66666666666641,
+            "contextState": "running"
+          },
+          "wallMs": 29698.500985,
+          "mainCpu": {
+            "user": 281741,
+            "system": 220687
+          },
+          "rendererCpuMs": 57760
+        }
+      }
+    },
+    "mixedBaseline": {
+      "previewReadyMs": 2463.282492,
+      "presentedMs": 966.7099929999999,
+      "timelineDom": {
+        "rows": 9,
+        "clips": 9
+      },
+      "success": true,
+      "phases": {
+        "playback": {
+          "time": 31.40266666666667,
+          "frames": 257,
+          "draws": 39,
+          "drawMs": {
+            "median": 842,
+            "p95": 985.2999999970198,
+            "total": 31134.200000032783
+          },
+          "rafMs": {
+            "median": 718.2000000000007,
+            "p95": 991.4000000000015,
+            "max": 1027.800000000003
+          },
+          "longTasks": [
+            267, 61, 463, 652, 802, 682, 708, 717, 773, 616, 725, 670, 741, 861, 681, 716, 766, 885, 1032, 992, 872,
+            854, 856, 906, 924, 843, 987, 897, 950, 893, 882, 832, 888, 897, 870, 982, 903, 882, 817, 761
+          ],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 567,
+            "presentedFrames": 197,
+            "droppedFrames": 314,
+            "supersededRequests": 0,
+            "queueSize": 10,
+            "cacheBytes": 65925120,
+            "disposedBitmaps": 360,
+            "seekLatencyMs": [577, 668.5]
+          },
+          "audioMetrics": {
+            "schedulePasses": 20,
+            "scheduledBuffers": 140,
+            "lateBuffers": 38,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 469.33333333333405,
+            "contextState": "running"
+          },
+          "wallMs": 32072.685598000004,
+          "mainCpu": {
+            "user": 257832,
+            "system": 299866
+          },
+          "rendererCpuMs": 217120
+        }
+      }
+    },
+    "mixedFinal": {
+      "previewReadyMs": 2704.6042390000002,
+      "presentedMs": 1087.8363930000005,
+      "timelineDom": {
+        "rows": 9,
+        "clips": 9
+      },
+      "success": true,
+      "phases": {
+        "playback": {
+          "time": 30.80533333333333,
+          "frames": 234,
+          "draws": 97,
+          "drawMs": {
+            "median": 25.900000005960464,
+            "p95": 1118.4000000059605,
+            "total": 21211
+          },
+          "rafMs": {
+            "median": 167,
+            "p95": 1061.2000000000007,
+            "max": 1931.7999999999956
+          },
+          "longTasks": [
+            62, 436, 220, 250, 123, 54, 337, 238, 98, 420, 64, 309, 52, 247, 236, 291, 544, 460, 856, 502, 1574, 506,
+            450, 1494, 577, 1048, 1065, 444, 1157, 168, 879, 442, 1134, 338, 50, 1933, 834
+          ],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 488,
+            "presentedFrames": 174,
+            "droppedFrames": 256,
+            "supersededRequests": 0,
+            "queueSize": 12,
+            "cacheBytes": 65925120,
+            "disposedBitmaps": 302,
+            "seekLatencyMs": [604.1999999880791, 372.40000000596046]
+          },
+          "audioMetrics": {
+            "schedulePasses": 123,
+            "scheduledBuffers": 176,
+            "lateBuffers": 1,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 42.66666666666641,
+            "contextState": "running"
+          },
+          "wallMs": 31145.628295000002,
+          "mainCpu": {
+            "user": 363462,
+            "system": 424289
+          },
+          "rendererCpuMs": 203060
+        }
+      }
+    },
+    "blurs2000DiagnosticBeforeScaleSafeguard": {
+      "previewReadyMs": 6710.121072,
+      "presentedMs": 626.2068020000006,
+      "timelineDom": {
+        "rows": 9,
+        "clips": 9
+      },
+      "success": true,
+      "phases": {
+        "playback": {
+          "time": 5.760000000000002,
+          "frames": 9,
+          "draws": 7,
+          "drawMs": {
+            "median": 177.20000000298023,
+            "p95": 319.30000001192093,
+            "total": 1273.800000026822
+          },
+          "rafMs": {
+            "median": 467.7000000000007,
+            "p95": 1553.300000000001,
+            "max": 1553.300000000001
+          },
+          "longTasks": [82, 165, 199, 159, 386, 199, 246],
+          "playbackError": null,
+          "playbackMetrics": {
+            "decodedFrames": 22,
+            "presentedFrames": 9,
+            "droppedFrames": 11,
+            "supersededRequests": 0,
+            "queueSize": 2,
+            "cacheBytes": 56555520,
+            "disposedBitmaps": 11,
+            "seekLatencyMs": [52.599999994039536, 108.5]
+          },
+          "audioMetrics": {
+            "schedulePasses": 50,
+            "scheduledBuffers": 160,
+            "lateBuffers": 0,
+            "scheduleErrors": 0,
+            "maxLatenessMs": 0,
+            "contextState": "running"
+          },
+          "wallMs": 6127.842669,
+          "mainCpu": {
+            "user": 35281,
+            "system": 15467
+          },
+          "rendererCpuMs": 5830
+        }
+      }
+    }
+  },
+  "quality": {
+    "media": [
+      {
+        "name": "rounded",
+        "matrix": 0,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "rounded",
+        "matrix": 1,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "rounded",
+        "matrix": 2,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "rounded",
+        "matrix": 3,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "rounded",
+        "matrix": 4,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "circle",
+        "matrix": 0,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "circle",
+        "matrix": 1,
+        "differentBytes": 1,
+        "maxChannelDelta": 1
+      },
+      {
+        "name": "circle",
+        "matrix": 2,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "circle",
+        "matrix": 3,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "circle",
+        "matrix": 4,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "squircle",
+        "matrix": 0,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "squircle",
+        "matrix": 1,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "squircle",
+        "matrix": 2,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "squircle",
+        "matrix": 3,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "squircle",
+        "matrix": 4,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "directional",
+        "matrix": 0,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "directional",
+        "matrix": 1,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "directional",
+        "matrix": 2,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "directional",
+        "matrix": 3,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "directional",
+        "matrix": 4,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "adaptive",
+        "matrix": 0,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "adaptive",
+        "matrix": 1,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "adaptive",
+        "matrix": 2,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "adaptive",
+        "matrix": 3,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "adaptive",
+        "matrix": 4,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "safari",
+        "matrix": 0,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "safari",
+        "matrix": 1,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "safari",
+        "matrix": 2,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "safari",
+        "matrix": 3,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "safari",
+        "matrix": 4,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "windows",
+        "matrix": 0,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "windows",
+        "matrix": 1,
+        "differentBytes": 1,
+        "maxChannelDelta": 1
+      },
+      {
+        "name": "windows",
+        "matrix": 2,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "windows",
+        "matrix": 3,
+        "differentBytes": 2,
+        "maxChannelDelta": 1
+      },
+      {
+        "name": "windows",
+        "matrix": 4,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "phone",
+        "matrix": 0,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "phone",
+        "matrix": 1,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "phone",
+        "matrix": 2,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "phone",
+        "matrix": 3,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      },
+      {
+        "name": "phone",
+        "matrix": 4,
+        "differentBytes": 0,
+        "maxChannelDelta": 0
+      }
+    ],
+    "realPreview": [
+      {
+        "time": 0,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 0,
+        "maxChannelDelta": 0,
+        "optimizedRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        },
+        "directRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        }
+      },
+      {
+        "time": 0.6,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 0,
+        "maxChannelDelta": 0,
+        "optimizedRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        },
+        "directRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        }
+      },
+      {
+        "time": 1.7,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 0,
+        "maxChannelDelta": 0,
+        "optimizedRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        },
+        "directRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        }
+      },
+      {
+        "time": 2.396,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 0,
+        "maxChannelDelta": 0,
+        "optimizedRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        },
+        "directRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        }
+      },
+      {
+        "time": 3.75,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 0,
+        "maxChannelDelta": 0,
+        "optimizedRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        },
+        "directRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        }
+      },
+      {
+        "time": 5.6,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 0,
+        "maxChannelDelta": 0,
+        "optimizedRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        },
+        "directRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        }
+      },
+      {
+        "time": 7.2,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 0,
+        "maxChannelDelta": 0,
+        "optimizedRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        },
+        "directRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        }
+      },
+      {
+        "time": 11,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 0,
+        "maxChannelDelta": 0,
+        "optimizedRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        },
+        "directRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        }
+      },
+      {
+        "time": 14.2,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 0,
+        "maxChannelDelta": 0,
+        "optimizedRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        },
+        "directRepeat": {
+          "differentBytes": 0,
+          "maxChannelDelta": 0
+        }
+      }
+    ],
+    "mixedPreview": [
+      {
+        "time": 0,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 29289,
+        "maxChannelDelta": 255,
+        "optimizedRepeat": { "differentBytes": 29289, "maxChannelDelta": 255 },
+        "directRepeat": { "differentBytes": 0, "maxChannelDelta": 0 }
+      },
+      {
+        "time": 0.6,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 0,
+        "maxChannelDelta": 0,
+        "optimizedRepeat": { "differentBytes": 0, "maxChannelDelta": 0 },
+        "directRepeat": { "differentBytes": 0, "maxChannelDelta": 0 }
+      },
+      {
+        "time": 1.7,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 0,
+        "maxChannelDelta": 0,
+        "optimizedRepeat": { "differentBytes": 0, "maxChannelDelta": 0 },
+        "directRepeat": { "differentBytes": 0, "maxChannelDelta": 0 }
+      },
+      {
+        "time": 2.396,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 0,
+        "maxChannelDelta": 0,
+        "optimizedRepeat": { "differentBytes": 0, "maxChannelDelta": 0 },
+        "directRepeat": { "differentBytes": 0, "maxChannelDelta": 0 }
+      },
+      {
+        "time": 3.75,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 0,
+        "maxChannelDelta": 0,
+        "optimizedRepeat": { "differentBytes": 0, "maxChannelDelta": 0 },
+        "directRepeat": { "differentBytes": 0, "maxChannelDelta": 0 }
+      },
+      {
+        "time": 5.6,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 0,
+        "maxChannelDelta": 0,
+        "optimizedRepeat": { "differentBytes": 0, "maxChannelDelta": 0 },
+        "directRepeat": { "differentBytes": 0, "maxChannelDelta": 0 }
+      },
+      {
+        "time": 7.2,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 0,
+        "maxChannelDelta": 0,
+        "optimizedRepeat": { "differentBytes": 0, "maxChannelDelta": 0 },
+        "directRepeat": { "differentBytes": 0, "maxChannelDelta": 0 }
+      },
+      {
+        "time": 11,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 0,
+        "maxChannelDelta": 0,
+        "optimizedRepeat": { "differentBytes": 0, "maxChannelDelta": 0 },
+        "directRepeat": { "differentBytes": 0, "maxChannelDelta": 0 }
+      },
+      {
+        "time": 14.2,
+        "width": 776,
+        "height": 390,
+        "differentBytes": 0,
+        "maxChannelDelta": 0,
+        "optimizedRepeat": { "differentBytes": 0, "maxChannelDelta": 0 },
+        "directRepeat": { "differentBytes": 0, "maxChannelDelta": 0 }
+      }
+    ],
+    "mixedPreviewStabilityExclusion": {
+      "time": 0,
+      "reason": "Optimized repeat control is not stable during initialization; exclude this first paint from equivalence claims.",
+      "stableRemainingPositions": 8
+    },
+    "blurCases": [
+      {
+        "scale": 1,
+        "name": "blur",
+        "hash": "a192fc7f3b08cb8ebfd0907ce726170bc88110ae79199d33af348bb1f8983020"
+      },
+      {
+        "scale": 1,
+        "name": "frosted",
+        "hash": "4151cc03b9c93c0fff1706154dcb036acecbf447ab5c1db22d670e6bfd237578"
+      },
+      {
+        "scale": 1,
+        "name": "edge",
+        "hash": "6909a7d2db78e88493fe035008ab848c5138e16448850ce35e3b55e4e91782fd"
+      },
+      {
+        "scale": 1,
+        "name": "pixelated",
+        "hash": "9be05e3ce1ed690fa01864bc20c9db86c32f39593b10d91c71bb71a7699174c6"
+      },
+      {
+        "scale": 1,
+        "name": "opaque",
+        "hash": "0d03d1be14736ad711b69040d327faf66576e5c5f7c50c426d694f999cff37d8"
+      },
+      {
+        "scale": 1,
+        "name": "external-custom-mask",
+        "hash": "200c19cf9a0d4a1914c6c73455712dcefd8dd3314e18799813ae45b768453e39"
+      },
+      {
+        "scale": 0.75,
+        "name": "blur",
+        "hash": "0a6e0cddca71643a24320dd5be297072a06a309370e9c84f9c06aae1cc0bedca"
+      },
+      {
+        "scale": 0.75,
+        "name": "frosted",
+        "hash": "72031956a11dfc870b476477c7dc44d3239648059a6d2a8107d5f8ea8b28be29"
+      },
+      {
+        "scale": 0.75,
+        "name": "edge",
+        "hash": "d17c2c20e12568925264f47223225f171e35c0312629683ed5b8d3314a40111b"
+      },
+      {
+        "scale": 0.75,
+        "name": "pixelated",
+        "hash": "a258aeb98bb7b29702915f93c82c3f2ec2e9491d7b637c9b975f4c978cc4691c"
+      },
+      {
+        "scale": 0.75,
+        "name": "opaque",
+        "hash": "07ef445e07c9bea6ea70b7722841756d9c9ebe0aee5758840b9f7f6cc4ce0938"
+      },
+      {
+        "scale": 0.75,
+        "name": "external-custom-mask",
+        "hash": "b351f708a84c81097b974ab069357282e53b44d5c5f565f00271c51efb8060a0"
+      },
+      {
+        "scale": 1.4,
+        "name": "blur",
+        "hash": "3ae304a26b936eff5b403903761730db940415654ee8fac89c7b9842a0d6135c"
+      },
+      {
+        "scale": 1.4,
+        "name": "frosted",
+        "hash": "2ca27371662978a16a00aa56ddd25389d93d3354e3aefbb851bad783d9df744b"
+      },
+      {
+        "scale": 1.4,
+        "name": "edge",
+        "hash": "fb440a118c2e82aa258dc20d4e2ca84e52fd2a87ebc68b5499f4fadeb87e6a16"
+      },
+      {
+        "scale": 1.4,
+        "name": "pixelated",
+        "hash": "3e261fc99a510fcacec0a9c5b0b1d19eb7fa8d1077261151d7b9bb84f55b06d0"
+      },
+      {
+        "scale": 1.4,
+        "name": "opaque",
+        "hash": "a52aa07c7bda9e587c9abf7680428851482d04c9cc221b3639b1be3599b6e6be"
+      },
+      {
+        "scale": 1.4,
+        "name": "external-custom-mask",
+        "hash": "fbc18194f2b60723a23aff16d5a534e7960fe7ed28776912ec05a80e63655116"
+      }
+    ],
+    "allEarlierBlurHashesMatch": true,
+    "export": {
+      "proof": "/home/albi/Vidéos/Beam-performance/Soft Signal - GPU performance.mp4",
+      "info": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1920,
+            "height": 1080,
+            "r_frame_rate": "30/1",
+            "duration": "15.500000",
+            "nb_frames": "465"
+          },
+          {
+            "codec_name": "aac",
+            "r_frame_rate": "0/0",
+            "duration": "15.530667",
+            "nb_frames": "728"
+          }
+        ],
+        "format": {
+          "duration": "15.530667",
+          "size": "13394368"
+        }
+      },
+      "fileSha256": "4e4bb4a435d0a2be952a3f0110e8d593acdf53e855df9a221d40a749f01ba805",
+      "decodedBaselineSha256": "7037a8fccf0312424e4998256a6b4a1154e315f650aaa049827d298b08103066",
+      "decodedFinalSha256": "73ead8dff7ff60c677d383cd642555bf2161f6325af0d82c3e99dea8efd09320",
+      "decodedBitExact": false,
+      "ssim": 0.999043,
+      "psnrAverageDb": 57.812036,
+      "finalAndAdmissionExportBytesIdentical": false,
+      "frameVisuallyInspected": true
+    }
+  },
+  "rejected": {
+    "coloredShapeRaster": {
+      "shipped": false,
+      "maxChannelDelta": 47
+    },
+    "scaledAppearanceShadowRaster": {
+      "shipped": false,
+      "previewMaxChannelDelta": 148,
+      "finalSafeguard": "Scaled appearance uses native painting; color batching remains enabled"
+    },
+    "oneHitAdmission": {
+      "shipped": false,
+      "reason": "Avoid one-off fractional camera/drag GPU allocations"
+    }
+  },
+  "trace": {
+    "path": "/home/albi/Vidéos/Beam-performance/Beam mixed GPU trace.json",
+    "sha256": "da040a5ed30cd55e32476a38152f2ae33c904f3c04adb60acf0950d1ac750b40",
+    "build": "intermediate admission build before scaled-appearance safeguard",
+    "playbackSeconds": 6,
+    "excludesTimingComparison": true,
+    "readbackCalls": 9,
+    "readbackBrowserScopeTotalMs": 2353.857,
+    "readbackBrowserScopeMaxMs": 425.554,
+    "nestedScopesNotAdditive": true,
+    "pureHardwareGpuTime": false
+  },
+  "verification": {
+    "vitestFiles": 19,
+    "vitestTests": 266,
+    "nodeTests": 3,
+    "coverage": {
+      "lines": {
+        "total": 365,
+        "covered": 365,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 425,
+        "covered": 425,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 43,
+        "covered": 43,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 225,
+        "covered": 222,
+        "skipped": 0,
+        "pct": 98.66
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "vueTypecheck": true,
+    "shippingViteBuild": true,
+    "shippingProbesAbsent": true,
+    "plainTypescriptPreexistingErrors": 9,
+    "rustChanged": false,
+    "windowsMacNativeChecked": false,
+    "audibleAudioChecked": false
+  }
+}

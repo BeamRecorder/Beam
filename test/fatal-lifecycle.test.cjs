@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const { test } = require('node:test');
-const { registerFatalLifecycle } = require('../electron/lifecycle/fatal-events.cjs');
+const { registerFatalLifecycle } = require('../apps/desktop/electron/lifecycle/fatal-events.cjs');
 
 const setup = () => {
   const app = new EventEmitter();

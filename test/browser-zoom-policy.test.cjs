@@ -7,7 +7,7 @@ const {
   enforceDefaultZoom,
   installBrowserZoomPolicy,
   isBrowserZoomShortcut,
-} = require('../electron/window/browser-zoom-policy.cjs');
+} = require('../apps/desktop/electron/window/browser-zoom-policy.cjs');
 
 function createWebContents({ destroyed = false } = {}) {
   const webContents = new EventEmitter();

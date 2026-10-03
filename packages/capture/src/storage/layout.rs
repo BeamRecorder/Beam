@@ -21,11 +21,7 @@ impl ProjectLayout {
             for entry in entries.flatten() {
                 let candidate = entry.path();
                 let manifest = candidate.join("project.json");
-                let Ok(contents) = std::fs::read(&manifest) else {
-                    continue;
-                };
-                let Ok(value) = serde_json::from_slice::<crate::model::ProjectManifest>(&contents)
-                else {
+                let Ok(value) = super::read_json::<crate::model::ProjectManifest>(&manifest) else {
                     continue;
                 };
                 if value.project_id == self.project_id {

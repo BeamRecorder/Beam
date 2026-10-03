@@ -23,6 +23,8 @@ pub(super) fn capture(request: &ScreenshotRequest) -> Result<OwnedVideoFrame, Ca
         source_id,
         request.region,
         &request.excluded_window_handles,
+        false,
+        false,
     )?;
     let mut config = SCStreamConfiguration::new()
         .with_width(width)

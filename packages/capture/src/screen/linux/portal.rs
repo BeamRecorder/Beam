@@ -23,10 +23,40 @@ pub(super) struct PreparedPortal {
     pub node_id: u32,
     pub stream_id: Option<String>,
     pub source_type: Option<SourceType>,
+    pub position: Option<(i32, i32)>,
+    pub size: Option<(i32, i32)>,
     control: PortalControl,
 }
 
 impl PreparedPortal {
+    pub(super) fn open_preview_remote_fd(&self) -> Result<OwnedFd, CaptureError> {
+        let (reply, result) = mpsc::sync_channel(1);
+        self.control
+            .commands
+            .as_ref()
+            .ok_or_else(|| {
+                CaptureError::native(
+                    NativeCaptureErrorCode::PortalSessionClosed,
+                    "Region Portal session is closed",
+                )
+            })?
+            .send(PortalCommand::OpenRemote { reply })
+            .map_err(|error| {
+                CaptureError::native(
+                    NativeCaptureErrorCode::PortalSessionClosed,
+                    error.to_string(),
+                )
+            })?;
+        result
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .map_err(|error| {
+                CaptureError::native(
+                    NativeCaptureErrorCode::PipewireConnectFailed,
+                    format!("Region preview remote did not open: {error}"),
+                )
+            })?
+    }
+
     pub(super) fn take_remote_fd(&mut self) -> Result<OwnedFd, CaptureError> {
         self.remote_fd.take().ok_or_else(|| {
             CaptureError::native(
@@ -46,6 +76,9 @@ impl PreparedPortal {
 }
 
 enum PortalCommand {
+    OpenRemote {
+        reply: mpsc::SyncSender<Result<OwnedFd, CaptureError>>,
+    },
     Close,
 }
 
@@ -54,6 +87,8 @@ struct PortalReady {
     node_id: u32,
     stream_id: Option<String>,
     source_type: Option<SourceType>,
+    position: Option<(i32, i32)>,
+    size: Option<(i32, i32)>,
 }
 
 struct PortalControl {
@@ -124,6 +159,8 @@ pub(super) fn prepare_portal(
         node_id: ready.node_id,
         stream_id: ready.stream_id,
         source_type: ready.source_type,
+        position: ready.position,
+        size: ready.size,
         control: PortalControl {
             commands: Some(commands),
             thread: Some(thread),
@@ -162,17 +199,18 @@ async fn portal_task(
         )
     })?;
     let mut closed = session.receive_closed().await.map_err(map_portal_error)?;
-    tokio::select! {
-        command = commands.recv() => {
-            if matches!(command, Some(PortalCommand::Close)) {
-                session.close().await.map_err(map_portal_error)?;
+    loop {
+        tokio::select! {
+            command = commands.recv() => match command {
+                Some(PortalCommand::OpenRemote { reply }) => {
+                    let remote = proxy.open_pipe_wire_remote(&session, OpenPipeWireRemoteOptions::default()).await.map_err(map_portal_error);
+                    let _ = reply.send(remote);
+                }
+                Some(PortalCommand::Close) | None => { session.close().await.map_err(map_portal_error)?; break; }
+            },
+            _ = closed.next() => {
+                return Err(CaptureError::native(NativeCaptureErrorCode::PortalSessionClosed, "the ScreenCast portal closed the capture session"));
             }
-        }
-        _ = closed.next() => {
-            return Err(CaptureError::native(
-                NativeCaptureErrorCode::PortalSessionClosed,
-                "the ScreenCast portal closed the capture session",
-            ));
         }
     }
     drop(proxy);
@@ -253,6 +291,8 @@ async fn prepare_session(
         node_id: stream.pipe_wire_node_id(),
         stream_id: stream.id().map(ToOwned::to_owned),
         source_type: stream.source_type(),
+        position: stream.position(),
+        size: stream.size(),
     })
 }
 

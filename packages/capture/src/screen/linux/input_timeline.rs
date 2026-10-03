@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::{
     CaptureError,
     input::{InputEvent, InputEventSidecar, NativeInputEvent},
-    storage::write_atomic,
+    storage::write_json_atomic,
 };
 
 use super::LinuxInputMonitor;
@@ -80,9 +80,9 @@ impl InputTimeline {
         self.events.sort_by_key(InputEvent::session_ns);
         std::fs::create_dir_all(&self.directory)
             .map_err(|error| CaptureError::storage(&self.directory, error))?;
-        write_atomic(
+        write_json_atomic(
             &self.directory.join("input.json"),
-            &serde_json::to_vec_pretty(&InputEventSidecar::new(self.events.clone()))?,
+            &InputEventSidecar::new(self.events.clone()),
         )
     }
 }

@@ -15,7 +15,7 @@ const {
   packagedInputHelperPath,
   prebuiltCaptureEnginePath,
   prebuiltInputHelperPath,
-} = require('../electron/capture/capture-engine-path.cjs');
+} = require('@beam/native-client/capture-engine-path');
 
 const root = path.join('project', 'beam');
 const version = '1.2.3';

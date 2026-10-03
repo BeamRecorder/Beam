@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const { test } = require('node:test');
-const { initializeSingleInstance, shortcutId } = require('../electron/lifecycle/single-instance.cjs');
+const { initializeSingleInstance, shortcutId } = require('../apps/desktop/electron/lifecycle/single-instance.cjs');
 
 test('a losing Beam instance exits before any application resource is initialized', () => {
   const app = new EventEmitter();
@@ -11,7 +11,11 @@ test('a losing Beam instance exits before any application resource is initialize
   app.quit = () => {
     quit += 1;
   };
-  const acquired = initializeSingleInstance({ app, initialize: () => (initialized += 1), restoreHud: () => {} });
+  const acquired = initializeSingleInstance({
+    app,
+    initialize: () => (initialized += 1),
+    restoreHud: () => {},
+  });
   assert.equal(acquired, false);
   assert.equal(quit, 1);
   assert.equal(initialized, 0);

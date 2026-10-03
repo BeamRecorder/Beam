@@ -1,0 +1,184 @@
+import { createPinia, setActivePinia } from 'pinia';
+import { mount } from '@vue/test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useToastStore } from './toastStore';
+import ToastProvider from './ToastProvider.vue';
+
+describe('ToastProvider', () => {
+  beforeEach(() => setActivePinia(createPinia()));
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('renders icons for each type and handles action and dismissal', async () => {
+    const store = useToastStore();
+    const onClick = vi.fn();
+    store.add('Success message', 'success', 0);
+    store.add('Error message', 'error', 0);
+    store.add('Warning message', 'warning', 0);
+    store.add('Action message', 'info', 0, { label: 'Retry', onClick });
+    const wrapper = mount(ToastProvider);
+    expect(wrapper.findAll('.toast-item')).toHaveLength(4);
+    expect(wrapper.find('.toast-icon.success').exists()).toBe(true);
+    expect(wrapper.find('.toast-icon.error').exists()).toBe(true);
+    expect(wrapper.find('.toast-item.warning .toast-icon.warning').exists()).toBe(true);
+    expect(wrapper.find('.toast-icon.info').exists()).toBe(true);
+    await wrapper.find('.toast-action-btn').trigger('click');
+    expect(onClick).toHaveBeenCalledOnce();
+    expect(store.toasts).toHaveLength(3);
+    await wrapper.find('.toast-close').trigger('click');
+    expect(store.toasts).toHaveLength(2);
+  });
+
+  it('places a long wrapping action below the toast message', () => {
+    const store = useToastStore();
+    store.success('Capture d’écran créée', 0, {
+      label: 'Ouvrir dans l’éditeur de captures d’écran',
+      onClick: vi.fn(),
+    });
+    const wrapper = mount(ToastProvider);
+
+    expect(wrapper.get('.toast-body > .toast-content').text()).toContain('Capture d’écran créée');
+    expect(wrapper.get('.toast-action .toast-action-btn').classes()).toContain('btn-wrap');
+    expect(wrapper.get('.toast-action .toast-action-btn').classes()).toContain('btn-block');
+  });
+
+  it('renders a copy action with the Lucide Copy icon and an accessible label', () => {
+    const store = useToastStore();
+    store.error('Playback failed', 0, {
+      label: 'Copy error',
+      copyText: 'diagnostic details',
+    });
+    const wrapper = mount(ToastProvider);
+    const action = wrapper.get('.toast-action-btn');
+
+    expect(action.attributes('aria-label')).toBe('Copy error');
+    expect(action.find('svg').classes()).toEqual(expect.arrayContaining(['lucide-copy']));
+  });
+
+  it('keeps an action toast visible when its asynchronous action fails', async () => {
+    const store = useToastStore();
+    const onClick = vi.fn().mockRejectedValue(new Error('clipboard unavailable'));
+    store.error('Playback failed', 0, { label: 'Copy error', onClick });
+    const wrapper = mount(ToastProvider);
+
+    await wrapper.get('.toast-action-btn').trigger('click');
+    await vi.waitFor(() => expect(onClick).toHaveBeenCalledOnce());
+
+    expect(store.toasts).toHaveLength(1);
+    expect(wrapper.find('.toast-item').exists()).toBe(true);
+  });
+
+  it('shows action details and a Check icon after a successful non-dismissing action', async () => {
+    const store = useToastStore();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    store.error('Playback failed', 0, {
+      label: 'Copy error',
+      detail: 'Copied to clipboard',
+      dismissOnSuccess: false,
+      copyText: 'diagnostic details',
+    });
+    const wrapper = mount(ToastProvider);
+
+    expect(wrapper.text()).toContain('Copied to clipboard');
+    expect(wrapper.get('.toast-detail').classes()).toContain('toast-detail');
+    await wrapper.get('.toast-action-btn').trigger('click');
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+
+    expect(store.toasts).toHaveLength(1);
+    expect(wrapper.get('.toast-action-btn').find('svg').classes()).toEqual(expect.arrayContaining(['lucide-check']));
+  });
+
+  it('renders a duration bar for expiring toasts and no bar for persistent toasts', () => {
+    const store = useToastStore();
+    store.success('Expiring', 1200);
+    store.info('Persistent', 0);
+    const wrapper = mount(ToastProvider);
+
+    const expiring = wrapper.findAll('.toast-item').find((item) => item.text().includes('Expiring'));
+    const persistent = wrapper.findAll('.toast-item').find((item) => item.text().includes('Persistent'));
+    expect(expiring?.find('.toast-progress').exists()).toBe(true);
+    expect(expiring?.find('.toast-progress').attributes('style')).toContain('--toast-duration: 1200ms');
+    expect(persistent?.find('.toast-progress').exists()).toBe(false);
+  });
+
+  it('renders one toast with an xN count after strict deduplication', async () => {
+    const store = useToastStore();
+    store.success('Copied', 0, undefined, { leadingIcon: 'copy' });
+    store.success('Copied', 0, undefined, { leadingIcon: 'copy' });
+    const wrapper = mount(ToastProvider);
+
+    expect(wrapper.findAll('.toast-item')).toHaveLength(1);
+    expect(wrapper.get('.toast-count').text()).toBe('×2');
+    expect(wrapper.find('.toast-icon-morph').exists()).toBe(true);
+  });
+
+  it('renders a generic media thumbnail and selection count', () => {
+    const store = useToastStore();
+    store.success('Copied rectangle', 0, undefined, {
+      leadingIcon: 'copy',
+      preview: {
+        kind: 'image',
+        src: 'data:image/svg+xml,preview',
+        alt: 'Rectangle',
+        count: 3,
+      },
+    });
+    const wrapper = mount(ToastProvider);
+
+    expect(wrapper.get('.toast-preview').attributes('aria-label')).toBe('Rectangle');
+    expect(wrapper.get('.toast-preview img').attributes('src')).toBe('data:image/svg+xml,preview');
+    expect(wrapper.get('.toast-preview-count').text()).toBe('+2');
+  });
+
+  it.each([
+    ['copy', 'lucide-copy'],
+    ['paste', 'lucide-clipboard-paste'],
+  ] as const)(
+    'shows the %s source icon and a check icon for a successful clipboard toast',
+    (leadingIcon, sourceIcon) => {
+      const store = useToastStore();
+      store.success('Done', 0, undefined, { leadingIcon });
+      const wrapper = mount(ToastProvider);
+
+      expect(wrapper.get('.toast-icon-source').classes()).toContain(sourceIcon);
+      expect(wrapper.find('.toast-icon-confirmed').exists()).toBe(true);
+    },
+  );
+  it.each(['Fermer', 'Schließen', '閉じる'])(
+    'uses the supplied translated dismissal label %s',
+    async (dismissLabel) => {
+      const store = useToastStore();
+      store.success('Settings reset', 0);
+      const wrapper = mount(ToastProvider, { props: { dismissLabel } });
+      expect(wrapper.get('.toast-close').attributes('aria-label')).toBe(dismissLabel);
+      await wrapper.get('.toast-close').trigger('click');
+      expect(store.toasts).toHaveLength(0);
+      wrapper.unmount();
+    },
+  );
+  it.each([2, 0, NaN])('prepares video thumbnails safely for duration %s', async (duration) => {
+    const store = useToastStore();
+    store.success('Video', 0, undefined, {
+      preview: { kind: 'video', src: 'blob:video', alt: 'Video' },
+    });
+    const wrapper = mount(ToastProvider);
+    const video = wrapper.get('video');
+    Object.defineProperty(video.element, 'duration', { value: duration });
+    await video.trigger('loadedmetadata');
+    expect(video.element.currentTime).toBe(duration > 0 ? 0.1 : 0);
+    wrapper.unmount();
+  });
+  it('reports a failed copy action without dismissing the toast', async () => {
+    const report = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const store = useToastStore();
+    store.error('Failure', 0, { label: 'Copy', copyText: 'details' });
+    const wrapper = mount(ToastProvider);
+    const copy = wrapper.findComponent({ name: 'CopyButton' });
+    const reason = new Error('Denied');
+    copy.vm.$emit('error', reason);
+    expect(report).toHaveBeenCalledWith('Unable to copy toast details.', reason);
+    expect(store.toasts).toHaveLength(1);
+    wrapper.unmount();
+    report.mockRestore();
+  });
+});

@@ -4,7 +4,7 @@ const {
   emptyComposition,
   migrateComposition,
   normalizeComposition,
-} = require('../electron/projects/clip-composition.cjs');
+} = require('../apps/desktop/electron/projects/clip-composition.cjs');
 
 const shapeClip = (overrides = {}) => ({
   id: 'shape-1',
@@ -66,7 +66,12 @@ test('preserves normalized gradient fills on shape and drawing clips', () => {
   const normalized = normalizeComposition({
     ...emptyComposition(),
     clips: [
-      shapeClip({ family: 'shape', preset: 'ellipse', fill, fillColor: '#123456' }),
+      shapeClip({
+        family: 'shape',
+        preset: 'ellipse',
+        fill,
+        fillColor: '#123456',
+      }),
       shapeClip({
         id: 'drawing-1',
         trackId: 'drawing-track',
@@ -125,7 +130,12 @@ test('drops an invalid optional gradient fill while preserving the solid legacy 
         },
         fillColor: '#123456',
       }),
-      shapeClip({ id: 'legacy-shape', trackId: 'legacy-track', family: 'shape', preset: 'rectangle' }),
+      shapeClip({
+        id: 'legacy-shape',
+        trackId: 'legacy-track',
+        family: 'shape',
+        preset: 'rectangle',
+      }),
     ],
   });
   const invalidGradient = normalized.clips.find((clip) => clip.id === 'shape-1');

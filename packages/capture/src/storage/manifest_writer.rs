@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::model::SessionManifest;
 
-use super::{SessionLayout, write_atomic};
+use super::{SessionLayout, write_json_atomic};
 
 pub struct ManifestWriter {
     layout: SessionLayout,
@@ -17,8 +17,7 @@ impl ManifestWriter {
         }
     }
     pub fn checkpoint(&self, manifest: &SessionManifest) -> Result<(), crate::CaptureError> {
-        let bytes = serde_json::to_vec_pretty(manifest)?;
-        write_atomic(&self.layout.partial_manifest(), &bytes)
+        write_json_atomic(&self.layout.partial_manifest(), manifest)
     }
     pub fn finalize(
         &mut self,
@@ -28,8 +27,7 @@ impl ManifestWriter {
             return Ok(self.layout.manifest());
         }
         manifest.completed = true;
-        let bytes = serde_json::to_vec_pretty(manifest)?;
-        write_atomic(&self.layout.manifest(), &bytes)?;
+        write_json_atomic(&self.layout.manifest(), manifest)?;
         let partial = self.layout.partial_manifest();
         if partial.exists() {
             std::fs::remove_file(&partial)

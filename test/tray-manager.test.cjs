@@ -46,7 +46,7 @@ test('adds a tray stop action while recording and forwards it to the HUD window'
   };
 
   try {
-    const { createTrayManager } = require('../electron/tray/tray-manager.cjs');
+    const { createTrayManager } = require('../apps/desktop/electron/tray/tray-manager.cjs');
     const manager = createTrayManager({
       applicationRoot: '/app',
       getWindow: () => window,
@@ -90,7 +90,7 @@ test('keeps Quick Snip first, updates its state label, invokes its callback and 
     ipcMain: { on() {} },
   };
   const originalLoad = Module._load;
-  const modulePath = require.resolve('../electron/tray/tray-manager.cjs');
+  const modulePath = require.resolve('../apps/desktop/electron/tray/tray-manager.cjs');
   Module._load = function load(request, parent, isMain) {
     return request === 'electron' ? electron : originalLoad.call(this, request, parent, isMain);
   };
@@ -112,7 +112,7 @@ test('keeps Quick Snip first, updates its state label, invokes its callback and 
     assert.deepEqual(calls, ['quick-snip']);
 
     manager.setQuickSnipState('selecting');
-    assert.equal(latestTemplate[0].label, 'Start Quick Snip');
+    assert.equal(latestTemplate[0].label, 'Hide Quick Snip');
     manager.setQuickSnipState('recording');
     assert.equal(latestTemplate[0].label, 'Stop Quick Snip');
 
@@ -159,14 +159,17 @@ function loadTrayIconPath(platform) {
     ipcMain: { on() {} },
   };
 
-  Object.defineProperty(process, 'platform', { value: platform, configurable: true });
+  Object.defineProperty(process, 'platform', {
+    value: platform,
+    configurable: true,
+  });
   Module._load = function load(request, parent, isMain) {
     if (request === 'electron') return electron;
     if (request === 'fs') return { existsSync: () => true };
     return originalLoad.call(this, request, parent, isMain);
   };
 
-  const modulePath = require.resolve('../electron/tray/tray-manager.cjs');
+  const modulePath = require.resolve('../apps/desktop/electron/tray/tray-manager.cjs');
   delete require.cache[modulePath];
 
   try {
@@ -193,7 +196,7 @@ test('uses dedicated tray icons on every platform', () => {
 test('normalizes the Linux tray icon to 24x24 when nativeImage resize is available', () => {
   const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
   const originalLoad = Module._load;
-  const modulePath = require.resolve('../electron/tray/tray-manager.cjs');
+  const modulePath = require.resolve('../apps/desktop/electron/tray/tray-manager.cjs');
   let resizeOptions;
   let trayIcon;
   const icon = {
@@ -225,7 +228,10 @@ test('normalizes the Linux tray icon to 24x24 when nativeImage resize is availab
     app: { quit() {} },
     ipcMain: { on() {} },
   };
-  Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
+  Object.defineProperty(process, 'platform', {
+    value: 'linux',
+    configurable: true,
+  });
   Module._load = function load(request, parent, isMain) {
     if (request === 'electron') return electron;
     if (request === 'fs') return { existsSync: () => true };
@@ -235,7 +241,11 @@ test('normalizes the Linux tray icon to 24x24 when nativeImage resize is availab
 
   try {
     const { createTrayManager } = require(modulePath);
-    createTrayManager({ applicationRoot: '/app', getWindow: () => null, getController: () => null }).init();
+    createTrayManager({
+      applicationRoot: '/app',
+      getWindow: () => null,
+      getController: () => null,
+    }).init();
     assert.equal(resizeOptions.width, 24);
     assert.equal(resizeOptions.height, 24);
     assert.equal(trayIcon.resized, true);
@@ -249,7 +259,7 @@ test('normalizes the Linux tray icon to 24x24 when nativeImage resize is availab
 test('skips Linux tray initialization when tray icon assets are unreadable', () => {
   const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
   const originalLoad = Module._load;
-  const modulePath = require.resolve('../electron/tray/tray-manager.cjs');
+  const modulePath = require.resolve('../apps/desktop/electron/tray/tray-manager.cjs');
   const originalWarn = console.warn;
   let trayCreated = false;
   const warnings = [];
@@ -275,7 +285,10 @@ test('skips Linux tray initialization when tray icon assets are unreadable', () 
     app: { quit() {} },
     ipcMain: { on() {} },
   };
-  Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
+  Object.defineProperty(process, 'platform', {
+    value: 'linux',
+    configurable: true,
+  });
   console.warn = (message) => warnings.push(message);
   Module._load = function load(request, parent, isMain) {
     if (request === 'electron') return electron;
@@ -286,7 +299,11 @@ test('skips Linux tray initialization when tray icon assets are unreadable', () 
 
   try {
     const { createTrayManager } = require(modulePath);
-    const manager = createTrayManager({ applicationRoot: '/app', getWindow: () => null, getController: () => null });
+    const manager = createTrayManager({
+      applicationRoot: '/app',
+      getWindow: () => null,
+      getController: () => null,
+    });
     assert.equal(manager.init(), null);
     assert.equal(trayCreated, false);
     assert.match(warnings[0], /Linux tray icon is missing or unreadable/i);

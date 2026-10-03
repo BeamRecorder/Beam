@@ -257,7 +257,7 @@ impl WindowsRecording {
             matches!(
                 request.cursor,
                 crate::model::CursorSelection::Separate { .. }
-            ),
+            ) && !request.show_real_cursor,
             request.region,
             request.start_gate,
         )

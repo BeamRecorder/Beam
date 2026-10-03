@@ -1,0 +1,16 @@
+{
+  "name": "@beam/electron-export",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "peerDependencies": {
+    "electron": "^44.5.1"
+  },
+  "exports": {
+    "./preload": "./src/gpu-preload.cjs",
+    ".": "./src/gpu-export.cjs",
+    "./ffmpeg-process": "./src/ffmpeg-process.cjs",
+    "./gpu-frame-transport": "./src/gpu-frame-transport.cjs",
+    "./export-validation": "./src/export-validation.cjs"
+  }
+}

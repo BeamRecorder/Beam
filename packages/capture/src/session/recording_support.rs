@@ -328,11 +328,13 @@ pub(super) fn checkpoint_tracks(
     layout: &crate::storage::SessionLayout,
     tracks: &[TrackMetadata],
 ) -> Result<(), CaptureError> {
-    for track in tracks {
-        let path = layout.track_dir(track.kind).join("track.json");
-        crate::storage::write_atomic(&path, &serde_json::to_vec_pretty(track)?)?;
-    }
-    Ok(())
+    let documents = tracks
+        .iter()
+        .map(|track| {
+            crate::storage::JsonWrite::new(layout.track_dir(track.kind).join("track.json"), track)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    crate::storage::write_json_batch(documents)
 }
 
 pub(super) fn write_timing_anchors(

@@ -3,8 +3,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { registerTranscriptExportIpc } = require('../electron/captions/transcript-export-ipc.cjs');
-const { safeExportName } = require('../electron/export/export-ipc.cjs');
+const { registerTranscriptExportIpc } = require('../apps/desktop/electron/captions/transcript-export-ipc.cjs');
+const { safeExportName } = require('../apps/desktop/electron/export/export-ipc.cjs');
 
 const CHANNEL = 'captions:export-transcript';
 
@@ -47,6 +47,7 @@ function makeFsFixture({ failureStage = null } = {}) {
   const failure = new Error(`simulated ${failureStage} failure`);
   const fsModule = {
     promises: {
+      mkdir: fs.promises.mkdir.bind(fs.promises),
       writeFile: async (filePath, data, options) => {
         calls.writeFile.push({ filePath, data, options });
         if (failureStage === 'write') {
@@ -74,7 +75,9 @@ function makeFixture(root, options = {}) {
   const calls = { dialogs: [], senders: [] };
   const owner = { isDestroyed: () => options.ownerDestroyed === true };
   const sender = { id: 7 };
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   const dialog = {
     showSaveDialog: async (window, dialogOptions) => {
       calls.dialogs.push({ window, options: dialogOptions });
@@ -123,7 +126,10 @@ test('exports normalized JSON atomically with Unicode, a final newline, and a pr
   const fixture = makeFixture(root, { fsModule: fsFixture.fsModule });
   const transcript = validTranscript();
 
-  assert.deepEqual(await fixture.invoke({ projectName: 'Demo', transcript }), { canceled: false, path: target });
+  assert.deepEqual(await fixture.invoke({ projectName: 'Demo', transcript }), {
+    canceled: false,
+    path: target,
+  });
   const normalized = {
     format: 'beam-transcript',
     schemaVersion: 1,
@@ -152,10 +158,14 @@ test('exports normalized JSON atomically with Unicode, a final newline, and a pr
   assert.equal(fs.readFileSync(target, 'utf8').endsWith('\n'), true);
   assert.equal(fs.statSync(target).mode & 0o777, 0o600);
   assert.equal(fsFixture.calls.writeFile.length, 1);
-  assert.deepEqual(fsFixture.calls.writeFile[0].options, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+  assert.deepEqual(fsFixture.calls.writeFile[0].options, {
+    encoding: 'utf8',
+    mode: 0o600,
+    flag: 'wx',
+  });
   assert.match(
     fsFixture.calls.writeFile[0].filePath,
-    /^.+\.json\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.partial$/,
+    /^.+\.json\.\d+\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$/,
   );
   assert.deepEqual(fsFixture.calls.rename, [{ fromPath: fsFixture.calls.writeFile[0].filePath, toPath: target }]);
   assert.deepEqual(fs.readdirSync(root), ['transcript.json']);
@@ -165,12 +175,21 @@ test('parents the JSON save dialog and defaults to the sanitized transcript file
   const root = createRoot('beam-transcript-dialog-');
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const defaultExportDirectory = path.join(root, 'exports');
-  const fixture = makeFixture(root, { defaultExportDirectory, dialogResult: { canceled: true } });
+  const fixture = makeFixture(root, {
+    defaultExportDirectory,
+    dialogResult: { canceled: true },
+  });
   const sender = fixture.sender;
 
-  assert.deepEqual(await fixture.invoke({ projectName: ' Café:/demo ', transcript: validTranscript() }), {
-    canceled: true,
-  });
+  assert.deepEqual(
+    await fixture.invoke({
+      projectName: ' Café:/demo ',
+      transcript: validTranscript(),
+    }),
+    {
+      canceled: true,
+    },
+  );
   assert.deepEqual(fixture.calls.senders, [sender]);
   assert.equal(fixture.calls.dialogs.length, 1);
   assert.equal(fixture.calls.dialogs[0].window, fixture.owner);
@@ -205,69 +224,120 @@ test('rejects malformed transcript data before showing a save dialog', async (t)
   const fixture = makeFixture(root);
   const invalidCases = [
     ['non-string project name', { projectName: 4, transcript: validTranscript() }],
-    ['unsupported format', { projectName: 'Demo', transcript: { ...validTranscript(), format: 'other' } }],
-    ['wrong schema version', { projectName: 'Demo', transcript: { ...validTranscript(), schemaVersion: 2 } }],
+    [
+      'unsupported format',
+      {
+        projectName: 'Demo',
+        transcript: { ...validTranscript(), format: 'other' },
+      },
+    ],
+    [
+      'wrong schema version',
+      {
+        projectName: 'Demo',
+        transcript: { ...validTranscript(), schemaVersion: 2 },
+      },
+    ],
     [
       'invalid timeline duration',
-      { projectName: 'Demo', transcript: { ...validTranscript(), timelineDurationMs: Infinity } },
+      {
+        projectName: 'Demo',
+        transcript: { ...validTranscript(), timelineDurationMs: Infinity },
+      },
     ],
     ['non-string transcript text', { projectName: 'Demo', transcript: { ...validTranscript(), text: null } }],
-    ['empty segments', { projectName: 'Demo', transcript: { ...validTranscript(), segments: [] } }],
-    ['sparse segments', { projectName: 'Demo', transcript: { ...validTranscript(), segments: sparseArray(1) } }],
+    [
+      'empty segments',
+      {
+        projectName: 'Demo',
+        transcript: { ...validTranscript(), segments: [] },
+      },
+    ],
+    [
+      'sparse segments',
+      {
+        projectName: 'Demo',
+        transcript: { ...validTranscript(), segments: sparseArray(1) },
+      },
+    ],
     [
       'sparse words',
       {
         projectName: 'Demo',
-        transcript: { ...validTranscript(), segments: [{ ...validTranscript().segments[0], words: sparseArray(1) }] },
+        transcript: {
+          ...validTranscript(),
+          segments: [{ ...validTranscript().segments[0], words: sparseArray(1) }],
+        },
       },
     ],
     [
       'non-string clip ID',
       {
         projectName: 'Demo',
-        transcript: { ...validTranscript(), segments: [{ ...validTranscript().segments[0], clipId: 3 }] },
+        transcript: {
+          ...validTranscript(),
+          segments: [{ ...validTranscript().segments[0], clipId: 3 }],
+        },
       },
     ],
     [
       'non-string sentence ID',
       {
         projectName: 'Demo',
-        transcript: { ...validTranscript(), segments: [{ ...validTranscript().segments[0], sentenceId: 3 }] },
+        transcript: {
+          ...validTranscript(),
+          segments: [{ ...validTranscript().segments[0], sentenceId: 3 }],
+        },
       },
     ],
     [
       'non-boolean AI marker',
       {
         projectName: 'Demo',
-        transcript: { ...validTranscript(), segments: [{ ...validTranscript().segments[0], isAiGenerated: 'yes' }] },
+        transcript: {
+          ...validTranscript(),
+          segments: [{ ...validTranscript().segments[0], isAiGenerated: 'yes' }],
+        },
       },
     ],
     [
       'blank segment text',
       {
         projectName: 'Demo',
-        transcript: { ...validTranscript(), segments: [{ ...validTranscript().segments[0], text: '  ' }] },
+        transcript: {
+          ...validTranscript(),
+          segments: [{ ...validTranscript().segments[0], text: '  ' }],
+        },
       },
     ],
     [
       'negative segment timestamp',
       {
         projectName: 'Demo',
-        transcript: { ...validTranscript(), segments: [{ ...validTranscript().segments[0], startMs: -1 }] },
+        transcript: {
+          ...validTranscript(),
+          segments: [{ ...validTranscript().segments[0], startMs: -1 }],
+        },
       },
     ],
     [
       'non-finite segment timestamp',
       {
         projectName: 'Demo',
-        transcript: { ...validTranscript(), segments: [{ ...validTranscript().segments[0], endMs: NaN }] },
+        transcript: {
+          ...validTranscript(),
+          segments: [{ ...validTranscript().segments[0], endMs: NaN }],
+        },
       },
     ],
     [
       'zero-length segment',
       {
         projectName: 'Demo',
-        transcript: { ...validTranscript(), segments: [{ ...validTranscript().segments[0], endMs: 100 }] },
+        transcript: {
+          ...validTranscript(),
+          segments: [{ ...validTranscript().segments[0], endMs: 100 }],
+        },
       },
     ],
     [
@@ -284,7 +354,10 @@ test('rejects malformed transcript data before showing a save dialog', async (t)
       'non-array words',
       {
         projectName: 'Demo',
-        transcript: { ...validTranscript(), segments: [{ ...validTranscript().segments[0], words: null }] },
+        transcript: {
+          ...validTranscript(),
+          segments: [{ ...validTranscript().segments[0], words: null }],
+        },
       },
     ],
     [
@@ -378,7 +451,10 @@ test('rejects oversized documents and excessive segment or word counts before th
   const base = validTranscript();
   const segment = base.segments[0];
   const oversized = { ...base, text: 'x'.repeat(16 * 1024 * 1024) };
-  const tooManySegments = { ...base, segments: Array.from({ length: 100_001 }, () => segment) };
+  const tooManySegments = {
+    ...base,
+    segments: Array.from({ length: 100_001 }, () => segment),
+  };
   const tooManyWords = {
     ...base,
     segments: [{ ...segment, words: sparseArray(1_000_001) }],
@@ -398,7 +474,10 @@ test('rejects a non-JSON extension before creating a temporary file', async (t) 
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const fsFixture = makeFsFixture();
   const target = path.join(root, 'transcript.txt');
-  const fixture = makeFixture(root, { filePath: target, fsModule: fsFixture.fsModule });
+  const fixture = makeFixture(root, {
+    filePath: target,
+    fsModule: fsFixture.fsModule,
+  });
 
   await assert.rejects(fixture.invoke(), /\.json extension/i);
   assert.equal(fixture.calls.dialogs.length, 1);

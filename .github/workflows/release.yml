@@ -64,7 +64,7 @@ jobs:
           node-version: 22
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.2
       - name: Cache Electron packaging binaries
         uses: actions/cache@v4
         with:
@@ -88,7 +88,9 @@ jobs:
           cargo build -p capture --bin capture-engine --release --target aarch64-pc-windows-msvc
           node scripts/native/artifacts.cjs stage --platform win32 --arch x64 --target x86_64-pc-windows-msvc
           node scripts/native/artifacts.cjs stage --platform win32 --arch arm64 --target aarch64-pc-windows-msvc
+          bun install --frozen-lockfile --cpu "*"
           bunx vite build
+          bun run build:cli
       - run: bunx electron-builder --win nsis --x64 --arm64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -161,7 +163,7 @@ jobs:
           node-version: 22
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.2
       - name: Cache Electron packaging binaries
         uses: actions/cache@v4
         with:
@@ -182,7 +184,9 @@ jobs:
         run: |
           cargo build -p capture --bin capture-engine --release --target aarch64-apple-darwin
           node scripts/native/artifacts.cjs stage --platform darwin --arch arm64 --target aarch64-apple-darwin
+          bun install --frozen-lockfile --cpu "*"
           bunx vite build
+          bun run build:cli
       - run: bunx electron-builder --mac dmg zip --arm64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -219,7 +223,7 @@ jobs:
           node-version: 22
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.2
       - name: Cache Electron packaging binaries
         uses: actions/cache@v4
         with:
@@ -283,7 +287,7 @@ jobs:
           node-version: 22
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.2
       - run: bun install --frozen-lockfile --ignore-scripts
       - name: Install artifact inspection tools
         run: |

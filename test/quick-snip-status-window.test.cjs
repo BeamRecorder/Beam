@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { createQuickSnipStatusWindow } = require('../electron/quick-snip/quick-snip-status-window.cjs');
+const { createQuickSnipStatusWindow } = require('../apps/desktop/electron/quick-snip/quick-snip-status-window.cjs');
 
 function createFixture(
   platform = 'win32',
@@ -18,7 +18,10 @@ function createFixture(
     patch: ({ extras }) => {
       preferenceWrites.push(extras);
       for (const [key, value] of Object.entries(extras ?? {})) {
-        preferenceState.extras[key] = { ...(preferenceState.extras[key] ?? {}), ...value };
+        preferenceState.extras[key] = {
+          ...(preferenceState.extras[key] ?? {}),
+          ...value,
+        };
       }
     },
   };
@@ -34,7 +37,12 @@ function createFixture(
   class FakeWindow {
     constructor(options) {
       this.options = options;
-      this.bounds = { x: 0, y: 0, width: options.width, height: options.height };
+      this.bounds = {
+        x: 0,
+        y: 0,
+        width: options.width,
+        height: options.height,
+      };
       this.listeners = new Map();
       this.destroyed = false;
       this.visible = false;
@@ -317,7 +325,11 @@ test('preserves a user-dragged position through show and status updates, then pl
   original.bounds = userPlacement;
   assert.equal(fixture.status.show(), true);
   fixture.status.update({ ...processingStatus, progress: 0.8 });
-  fixture.status.update({ ...processingStatus, state: 'completed', progress: 1 });
+  fixture.status.update({
+    ...processingStatus,
+    state: 'completed',
+    progress: 1,
+  });
 
   assert.deepEqual(original.bounds, userPlacement);
   assert.equal(fixture.calls.filter((call) => call[0] === 'setPosition').length, 1);
@@ -341,13 +353,24 @@ test('saves the visible pill origin per display and flips below with 84px native
 
   // The previous layout placed details above the pill. Dragging the native window
   // to the work-area top flips details below while keeping the pill under the same point.
-  window.bounds = { ...window.bounds, x: 2500, y: fixture.capturedDisplay.workArea.y };
+  window.bounds = {
+    ...window.bounds,
+    x: 2500,
+    y: fixture.capturedDisplay.workArea.y,
+  };
   window.emit('move');
   window.emit('moved');
 
   assert.equal(fixture.status.snapshot().popoverSide, 'below');
-  assert.deepEqual(window.getBounds(), { x: 2500, y: 164, width: 380, height: 184 });
-  assert.deepEqual(fixture.preferenceState.extras.quickSnipStatusPositions, { 2: { x: 2512, y: 176 } });
+  assert.deepEqual(window.getBounds(), {
+    x: 2500,
+    y: 164,
+    width: 380,
+    height: 184,
+  });
+  assert.deepEqual(fixture.preferenceState.extras.quickSnipStatusPositions, {
+    2: { x: 2512, y: 176 },
+  });
   assert.equal(fixture.preferenceWrites.length, 1);
   assert.deepEqual(window.getSize(), initialSize);
   assert.deepEqual(
@@ -367,16 +390,25 @@ test('saves the visible pill origin per display and flips below with 84px native
 });
 
 test('restores a saved pill origin without rewriting it during presentation', () => {
-  const preferenceState = { extras: { quickSnipStatusPositions: { 2: { x: 2100, y: 120 } } } };
+  const preferenceState = {
+    extras: { quickSnipStatusPositions: { 2: { x: 2100, y: 120 } } },
+  };
   const fixture = createFixture('win32', { preferenceState });
   fixture.status.update(processingStatus);
   const window = fixture.windows[0];
   fixture.ready(window);
 
-  assert.deepEqual(fixture.preferenceState.extras.quickSnipStatusPositions, { 2: { x: 2100, y: 120 } });
+  assert.deepEqual(fixture.preferenceState.extras.quickSnipStatusPositions, {
+    2: { x: 2100, y: 120 },
+  });
   assert.equal(fixture.preferenceWrites.length, 0);
   assert.equal(fixture.status.snapshot().popoverSide, 'below');
-  assert.deepEqual(window.getBounds(), { x: 2088, y: 108, width: 380, height: 184 });
+  assert.deepEqual(window.getBounds(), {
+    x: 2088,
+    y: 108,
+    width: 380,
+    height: 184,
+  });
 });
 
 test('debounces visible status-window moves and stores only the trailing macOS position', () => {
@@ -397,7 +429,9 @@ test('debounces visible status-window moves and stores only the trailing macOS p
   assert.equal(timer.delay, 350);
   timer.callback();
   assert.equal(fixture.preferenceWrites.length, 1);
-  assert.deepEqual(fixture.preferenceState.extras.quickSnipStatusPositions, { 2: { x: 2712, y: 546 } });
+  assert.deepEqual(fixture.preferenceState.extras.quickSnipStatusPositions, {
+    2: { x: 2712, y: 546 },
+  });
 });
 
 test('passes transparent pixels through on Windows and restores it after hover', () => {
@@ -526,7 +560,11 @@ test('pauses completed dismissal while dragging and restarts the timer after pos
   assert.equal(fixture.timers.size, 1);
 
   fixture.setNow(startedAt + 1200);
-  window.bounds = { ...window.bounds, x: 2500, y: fixture.capturedDisplay.workArea.y };
+  window.bounds = {
+    ...window.bounds,
+    x: 2500,
+    y: fixture.capturedDisplay.workArea.y,
+  };
   window.emit('move');
   assert.equal(fixture.timers.size, 0);
   const pausedSnapshot = {
@@ -614,7 +652,9 @@ test('leaves failures visible for recovery and rejects unrelated senders', () =>
 
 test('cleans the renderer exactly once with the live webContents reference', () => {
   const cleaned = [];
-  const fixture = createFixture('win32', { cleanupStatus: (contents) => cleaned.push(contents) });
+  const fixture = createFixture('win32', {
+    cleanupStatus: (contents) => cleaned.push(contents),
+  });
   fixture.status.update(processingStatus);
   const window = fixture.windows[0];
   const contents = window.webContents;
@@ -630,7 +670,9 @@ test('cleans the renderer exactly once with the live webContents reference', () 
 
 test('ignores readiness that arrives after the status window closes', () => {
   const cleaned = [];
-  const fixture = createFixture('win32', { cleanupStatus: (contents) => cleaned.push(contents) });
+  const fixture = createFixture('win32', {
+    cleanupStatus: (contents) => cleaned.push(contents),
+  });
   fixture.status.update(processingStatus);
   const window = fixture.windows[0];
   const contents = window.webContents;

@@ -1,8 +1,8 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { historicalAppearance } = require('../electron/projects/composition-appearance.cjs');
-const { validateScreenshotState } = require('../electron/screenshot/screenshot-validation.cjs');
-const { validateScreenshotHistory } = require('../electron/screenshot/screenshot-history.cjs');
+const { historicalAppearance } = require('../apps/desktop/electron/projects/composition-appearance.cjs');
+const { validateScreenshotState } = require('../apps/desktop/electron/screenshot/screenshot-validation.cjs');
+const { validateScreenshotHistory } = require('../apps/desktop/electron/screenshot/screenshot-history.cjs');
 
 const blendModes = [
   'source-over',
@@ -107,6 +107,44 @@ const layerSettings = (id, patch = {}) => ({
   ...patch,
 });
 
+test('screenshot names preserve Unicode labels for actual image, shape, cursor, background and watermark IDs', () => {
+  const state = screenshotState({
+    shapes: [shape()],
+    cursors: [cursor()],
+    layerNames: {
+      screenshot: 'Référence',
+      'shape-1': 'Annotation',
+      'cursor-1': 'Pointer',
+      __background__: 'Fond',
+      __watermark__: 'Logo',
+    },
+  });
+  assert.doesNotThrow(() => validateScreenshotState(state));
+  assert.equal(state.layerNames.screenshot, 'Référence');
+});
+test('screenshot names reject invalid containers, unknown IDs and empty, untrimmed, oversized or non-string labels', () => {
+  for (const layerNames of [
+    null,
+    new Map(),
+    new Date(),
+    [],
+    'name',
+    1,
+    { missing: 'Name' },
+    { screenshot: '' },
+    { screenshot: '  ' },
+    { screenshot: ' Name ' },
+    { screenshot: 'a'.repeat(201) },
+    { screenshot: 1 },
+  ])
+    assert.throws(() => validateScreenshotState(screenshotState({ layerNames })), /Invalid screenshot layer name/);
+});
+test('screenshot names remain optional for old documents and accept the exact label length boundary', () => {
+  assert.doesNotThrow(() => validateScreenshotState(screenshotState()));
+  assert.doesNotThrow(() => validateScreenshotState(screenshotState({ layerNames: {} })));
+  assert.doesNotThrow(() => validateScreenshotState(screenshotState({ layerNames: { screenshot: 'a'.repeat(200) } })));
+});
+
 const layerIds = (state) => [
   '__background__',
   state.image.id,
@@ -123,8 +161,20 @@ const withComposition = (state, ids = layerIds(state)) => {
 
 test('accepts boundary cursor payloads, normalized hex colours, and boundary layer opacities', () => {
   for (const boundary of [
-    { position: { x: -10, y: 10 }, size: 16, rotation: 0, shadowBlur: 0, color: '#AABBCCDD' },
-    { position: { x: 10, y: -10 }, size: 384, rotation: 360, shadowBlur: 24, color: '#aabbcc' },
+    {
+      position: { x: -10, y: 10 },
+      size: 16,
+      rotation: 0,
+      shadowBlur: 0,
+      color: '#AABBCCDD',
+    },
+    {
+      position: { x: 10, y: -10 },
+      size: 384,
+      rotation: 360,
+      shadowBlur: 24,
+      color: '#aabbcc',
+    },
   ]) {
     const state = withComposition(screenshotState({ cursors: [cursor(boundary)] }));
     state.composition[0].opacity = 0;
@@ -139,7 +189,11 @@ test('accepts boundary cursor payloads, normalized hex colours, and boundary lay
         cursor({
           id: longId,
           name: 'n'.repeat(200),
-          selection: { packId: 'p'.repeat(200), mode: 'fixed', cursorId: 'a'.repeat(200) },
+          selection: {
+            packId: 'p'.repeat(200),
+            mode: 'fixed',
+            cursorId: 'a'.repeat(200),
+          },
         }),
       ],
     }),
@@ -174,7 +228,16 @@ test('rejects cursor IDs, selection modes, and values outside their bounds', () 
     ['automatic selection', { selection: { packId: 'pack', mode: 'automatic', cursorId: null } }],
     ['empty pack id', { selection: { packId: '', mode: 'fixed', cursorId: 'default' } }],
     ['empty cursor id in selection', { selection: { packId: 'pack', mode: 'fixed', cursorId: '' } }],
-    ['oversized pack id', { selection: { packId: 'p'.repeat(201), mode: 'fixed', cursorId: 'default' } }],
+    [
+      'oversized pack id',
+      {
+        selection: {
+          packId: 'p'.repeat(201),
+          mode: 'fixed',
+          cursorId: 'default',
+        },
+      },
+    ],
     ['invalid colour', { color: 'rgb(0, 0, 0)' }],
     ['invalid shadow colour', { shadowColor: '#12345' }],
     ['non-boolean shadow toggle', { shadowEnabled: 'true' }],
@@ -298,7 +361,10 @@ test('requires a unique composition reference for each persisted highlight effec
   assert.throws(() => validateScreenshotState(staleReference), /invalid screenshot compositing settings/i);
 
   const duplicateId = withComposition(
-    screenshotState({ effects: [highlightEffect({ id: 'shape-1' })], shapes: [shape()] }),
+    screenshotState({
+      effects: [highlightEffect({ id: 'shape-1' })],
+      shapes: [shape()],
+    }),
   );
   assert.throws(() => validateScreenshotState(duplicateId), /duplicate screenshot layer identifier/i);
 });
@@ -317,7 +383,11 @@ test('validates highlight effects in undo and redo screenshot history snapshots'
       effects: [highlightEffect({ highlightColor: '#123456', tintOpacity: 35 })],
     }),
   );
-  const history = { version: 1, undo: [previous, structuredClone(current)], redo: [structuredClone(redo)] };
+  const history = {
+    version: 1,
+    undo: [previous, structuredClone(current)],
+    redo: [structuredClone(redo)],
+  };
 
   assert.doesNotThrow(() => validateScreenshotHistory(history, current));
   assert.equal(history.undo[1].effects[0].highlightColor, '#aabbccdd');
@@ -339,7 +409,10 @@ test('rejects duplicate IDs across content and reserved screenshot layers', () =
     [cursor({ id: '__watermark__' })],
   ]) {
     const state = withComposition(
-      screenshotState({ shapes: cursors.some(({ id }) => id === 'shape-1') ? [shape()] : [], cursors }),
+      screenshotState({
+        shapes: cursors.some(({ id }) => id === 'shape-1') ? [shape()] : [],
+        cursors,
+      }),
     );
     assert.throws(() => validateScreenshotState(state), /invalid screenshot cursor/i);
   }
@@ -372,4 +445,25 @@ test('accepts legacy screenshot states without composition metadata without synt
   assert.equal('composition' in state, false);
   assert.doesNotThrow(() => validateScreenshotState(state));
   assert.equal('composition' in state, false);
+});
+
+test('screenshot media rotation accepts legacy omission and precise finite angles', () => {
+  for (const rotation of [undefined, 0, 32.75, 270]) {
+    const state = screenshotState({ image: { ...(rotation === undefined ? {} : { rotation }) } });
+    validateScreenshotState(state);
+    assert.equal(state.image.rotation, rotation);
+  }
+  for (const rotation of ['90', null, NaN, Infinity]) {
+    assert.throws(() => validateScreenshotState(screenshotState({ image: { rotation } })), /Invalid screenshot/);
+  }
+});
+
+test('validates persisted still lenses, static timing and required composition references', () => {
+  const { DEFAULT_GLASS_HIGHLIGHT } = require('../packages/engine/src/zoom/glass-highlight-schema.js');
+  const lens = { id: 'lens', kind: 'zoom', name: 'Lens', sessionId: 'manual', startMs: 0, endMs: 1, focus: { cx: .5, cy: .5 }, depth: 4, mode: 'manual', enabled: true, effect: 'glass', glass: { ...DEFAULT_GLASS_HIGHLIGHT, path: [] } };
+  const state = withComposition(screenshotState()); state.zooms = [lens];
+  state.composition.push({ id: lens.id, opacity: 100, blendMode: 'source-over', locked: false });
+  assert.doesNotThrow(() => validateScreenshotState(state));
+  for (const patch of [{ mode: 'auto' }, { endMs: 1000 }, { animations: [] }, { glass: { ...lens.glass, size: 5 } }, { id: state.image.id }]) assert.throws(() => validateScreenshotState({ ...state, zooms: [{ ...lens, ...patch }] }));
+  assert.throws(() => validateScreenshotState({ ...state, composition: state.composition.filter(layer => layer.id !== lens.id) }));
 });

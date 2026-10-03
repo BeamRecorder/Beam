@@ -4,7 +4,7 @@ const test = require('node:test');
 const {
   createCommittedWindowPosition,
   POSITION_COMMIT_DELAY_MS,
-} = require('../electron/window/committed-window-position.cjs');
+} = require('../apps/desktop/electron/window/committed-window-position.cjs');
 
 function createFixture(platform = 'linux', environment = {}, onCommit) {
   const timers = new Map();
@@ -74,7 +74,12 @@ test('debounces a Linux move burst and commits only the final negative coordinat
 
   fixture.window.bounds = { ...fixture.window.bounds, x: -860, y: 72 };
   fixture.window.emit('move');
-  assert.deepEqual(fixture.moves.at(-1), { x: -860, y: 72, width: 380, height: 184 });
+  assert.deepEqual(fixture.moves.at(-1), {
+    x: -860,
+    y: 72,
+    width: 380,
+    height: 184,
+  });
   assert.equal(fixture.timers.size, 1);
   assert.deepEqual(fixture.commits, []);
 
@@ -96,7 +101,12 @@ test('coalesces macOS move aliases and waits for the final debounce timer', () =
   fixture.window.emit('move');
   fixture.window.emit('moved');
 
-  assert.deepEqual(fixture.moves.at(-1), { x: 200, y: 240, width: 380, height: 184 });
+  assert.deepEqual(fixture.moves.at(-1), {
+    x: 200,
+    y: 240,
+    width: 380,
+    height: 184,
+  });
   assert.deepEqual(fixture.commits, []);
   assert.equal(fixture.timers.size, 1);
   assert.notEqual([...fixture.timers.keys()][0], firstTimer);
@@ -182,12 +192,15 @@ test('ignores synchronous and asynchronous notifications for programmatic bounds
   assert.deepEqual(fixture.commits.at(-1), requested);
 });
 
-test('ignores Wayland synthetic origin while accepting negative coordinates', () => {
+test('accepts zero and negative X11 coordinates even in a Wayland desktop session', () => {
   const fixture = createFixture('linux', { WAYLAND_DISPLAY: 'wayland-0' });
   fixture.window.bounds = { ...fixture.window.bounds, x: 0, y: 0 };
   fixture.window.emit('move');
-  assert.deepEqual(fixture.moves, []);
+  assert.deepEqual(fixture.moves, [{ x: 0, y: 0, width: 380, height: 184 }]);
   assert.deepEqual(fixture.commits, []);
+  fireTimers(fixture);
+  fixture.moves.length = 0;
+  fixture.commits.length = 0;
 
   fixture.window.bounds = { ...fixture.window.bounds, x: -120, y: 35 };
   fixture.window.emit('move');

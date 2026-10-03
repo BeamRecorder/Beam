@@ -7,6 +7,10 @@ case "${1:-remove}" in
     ;;
 esac
 
+if [ -L /usr/bin/beam-cli ]; then
+  case "$(readlink /usr/bin/beam-cli)" in /opt/Beam/beam-cli|/opt/beam/beam-cli) rm /usr/bin/beam-cli ;; esac
+fi
+
 if [ -x /usr/libexec/beam-input-helper ]; then
   /usr/libexec/beam-input-helper uninstall >/dev/null
 fi

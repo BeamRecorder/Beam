@@ -17,6 +17,19 @@ if [ -f /opt/Beam/chrome-sandbox ]; then
   chmod 4755 /opt/Beam/chrome-sandbox
 fi
 
+# Keep the CLI command distinct from the graphical Beam desktop entry.
+for application in /opt/Beam /opt/beam
+do
+  if [ -x "$application/beam-cli" ]; then
+    if [ -e /usr/bin/beam-cli ] || [ -L /usr/bin/beam-cli ]; then
+      existing=$(readlink /usr/bin/beam-cli || true)
+      case "$existing" in /opt/Beam/beam-cli|/opt/beam/beam-cli) ;; *) echo "beam-cli command is already owned by another installation" >&2; exit 1 ;; esac
+    fi
+    ln -sfn "$application/beam-cli" /usr/bin/beam-cli
+    break
+  fi
+done
+
 for directory in /opt/Beam/resources/input-helper /opt/beam/resources/input-helper
 do
   helper=$(

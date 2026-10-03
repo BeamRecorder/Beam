@@ -75,6 +75,29 @@ impl FrameGeometry {
         Some(cursor)
     }
 
+    pub(super) fn cursor_scale(self, format: NegotiatedFormat) -> (f64, f64) {
+        let (width, height) = self
+            .cursor_crop
+            .map_or((format.width, format.height), |crop| {
+                (crop.width, crop.height)
+            });
+        let (width, height) = if matches!(
+            self.transform,
+            VideoTransform::Rotated90
+                | VideoTransform::Rotated270
+                | VideoTransform::Flipped90
+                | VideoTransform::Flipped270
+        ) {
+            (height, width)
+        } else {
+            (width, height)
+        };
+        (
+            f64::from(self.uncropped_width) / f64::from(width),
+            f64::from(self.uncropped_height) / f64::from(height),
+        )
+    }
+
     pub(super) const fn width(self) -> u32 {
         self.width
     }

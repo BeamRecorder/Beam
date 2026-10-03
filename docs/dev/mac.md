@@ -5,7 +5,7 @@ This guide covers the basic local development and verification workflow for Beam
 ## Prerequisites
 
 - macOS 13 or newer
-- Node.js 22 or newer and Bun 1.4.0
+- Node.js 22 or newer and Bun 1.4.2
 - [Rust stable](./INSTALL_RUST.md) for native rebuilds
 - Xcode Command Line Tools
 - Git
@@ -18,21 +18,19 @@ bun install --frozen-lockfile
 
 ## Run Beam locally
 
-Use two Terminal windows. Keeping the Vite server running separately lets Electron start as soon as its native capture engine is ready.
-
-In the first terminal, start the Vite server:
+Start Vite and Electron together in one terminal:
 
 ```bash
 bun run dev
 ```
 
-In a second terminal, start Electron:
+Run the same command in another worktree to test independent Beam instances in parallel. Each worktree uses a separate persistent profile and an available Vite port. For another session in the same worktree:
 
 ```bash
-bun run electron:dev
+bun run dev --session preview
 ```
 
-Keep both terminals open while developing. Stop the processes with `Ctrl+C`.
+Stop the session with `Ctrl+C`. See the [session guide](CONTRIBUTING.md#4-installing-dependencies--running-locally) for storage locations and manual renderer-only launches.
 
 On first launch, grant Beam the macOS permissions it requests for Screen Recording, Microphone, and Camera when those sources are enabled.
 

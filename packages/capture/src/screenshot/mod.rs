@@ -31,6 +31,16 @@ pub struct ScreenshotResult {
 }
 
 pub fn capture(request: ScreenshotRequest) -> Result<ScreenshotResult, CaptureError> {
+    capture_with_selection(request, None)
+}
+
+pub fn capture_with_selection(
+    request: ScreenshotRequest,
+    selection: Option<crate::screen::RegionSelection>,
+) -> Result<ScreenshotResult, CaptureError> {
+    if let Some(selection) = &selection {
+        selection.validate_source(Some(&request.screen))?;
+    }
     if let Some(region) = request.region {
         region.validate()?;
         let display = match &request.screen {
@@ -58,7 +68,9 @@ pub fn capture(request: ScreenshotRequest) -> Result<ScreenshotResult, CaptureEr
         ));
     }
     #[cfg(target_os = "linux")]
-    let frame = linux::capture(&request)?;
+    let frame = linux::capture(&request, selection)?;
+    #[cfg(not(target_os = "linux"))]
+    let _ = selection;
     #[cfg(target_os = "macos")]
     let frame = mac::capture(&request)?;
     #[cfg(windows)]
@@ -66,7 +78,7 @@ pub fn capture(request: ScreenshotRequest) -> Result<ScreenshotResult, CaptureEr
     write_png(&frame, &request.output)
 }
 
-fn write_png(
+pub(crate) fn write_png(
     frame: &OwnedVideoFrame,
     output: &std::path::Path,
 ) -> Result<ScreenshotResult, CaptureError> {

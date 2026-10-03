@@ -4,7 +4,7 @@ const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 const zlib = require('node:zlib');
-const { createCursorPackLibrary } = require('../electron/cursors/cursor-pack-library.cjs');
+const { createCursorPackLibrary } = require('../apps/desktop/electron/cursors/cursor-pack-library.cjs');
 
 const STATIC_METADATA = [{ filename: 'cursor.svg', nominal_size: 32, hotspot_x: 1, hotspot_y: 2 }];
 
@@ -52,8 +52,22 @@ function xcursorBuffer(images) {
 
 function animatedXcursorBuffer(marker, size = 7 * 1024 * 1024) {
   const source = xcursorBuffer([
-    { size: 32, width: 1, height: 1, xhot: 0, yhot: 0, pixels: [[marker, 0, 0, 0xff]] },
-    { size: 32, width: 1, height: 1, xhot: 0, yhot: 0, pixels: [[0, marker, 0, 0xff]] },
+    {
+      size: 32,
+      width: 1,
+      height: 1,
+      xhot: 0,
+      yhot: 0,
+      pixels: [[marker, 0, 0, 0xff]],
+    },
+    {
+      size: 32,
+      width: 1,
+      height: 1,
+      xhot: 0,
+      yhot: 0,
+      pixels: [[0, marker, 0, 0xff]],
+    },
   ]);
   const padded = Buffer.alloc(size);
   source.copy(padded);
@@ -140,7 +154,14 @@ function fixture(t, options = {}) {
     fs.writeFileSync(path.join(compiled, role), contents);
 
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  return { root, theme, scalable, compiled, libraryRoot, library: createCursorPackLibrary(libraryRoot) };
+  return {
+    root,
+    theme,
+    scalable,
+    compiled,
+    libraryRoot,
+    library: createCursorPackLibrary(libraryRoot),
+  };
 }
 
 function importableRoles(overrides = {}) {
@@ -167,7 +188,14 @@ test('imports static XCursor roles as original-color PNG assets', () => {
         },
       ]),
       left_ptr: xcursorBuffer([
-        { size: 24, width: 1, height: 1, xhot: 0, yhot: 0, pixels: [[0xff, 0xff, 0xff, 0xff]] },
+        {
+          size: 24,
+          width: 1,
+          height: 1,
+          xhot: 0,
+          yhot: 0,
+          pixels: [[0xff, 0xff, 0xff, 0xff]],
+        },
       ]),
     },
   });
@@ -195,7 +223,16 @@ test('imports static XCursor roles as original-color PNG assets', () => {
 });
 
 test('retains duplicate XCursor roles as aliases to equivalent assets', () => {
-  const cursor = xcursorBuffer([{ size: 32, width: 1, height: 1, xhot: 0, yhot: 0, pixels: [[0, 0, 0, 0xff]] }]);
+  const cursor = xcursorBuffer([
+    {
+      size: 32,
+      width: 1,
+      height: 1,
+      xhot: 0,
+      yhot: 0,
+      pixels: [[0, 0, 0, 0xff]],
+    },
+  ]);
   const item = fixture(test, {
     withScalable: false,
     xcursorRoles: { default: cursor, arrow: cursor, left_ptr: cursor },
@@ -206,17 +243,46 @@ test('retains duplicate XCursor roles as aliases to equivalent assets', () => {
     result.pack.cursors.map((asset) => asset.id),
     ['arrow', 'default', 'left_ptr'],
   );
-  assert.deepEqual(result.pack.automaticMap, { arrow: 'arrow', default: 'default', left_ptr: 'left_ptr' });
+  assert.deepEqual(result.pack.automaticMap, {
+    arrow: 'arrow',
+    default: 'default',
+    left_ptr: 'left_ptr',
+  });
 });
 
 test('ignores animated XCursor roles while retaining static roles', () => {
   const item = fixture(test, {
     withScalable: false,
     xcursorRoles: {
-      default: xcursorBuffer([{ size: 32, width: 1, height: 1, xhot: 0, yhot: 0, pixels: [[0, 0, 0, 0xff]] }]),
+      default: xcursorBuffer([
+        {
+          size: 32,
+          width: 1,
+          height: 1,
+          xhot: 0,
+          yhot: 0,
+          pixels: [[0, 0, 0, 0xff]],
+        },
+      ]),
       busy: xcursorBuffer([
-        { size: 32, width: 1, height: 1, xhot: 0, yhot: 0, delay: 80, pixels: [[0xff, 0, 0, 0xff]] },
-        { size: 32, width: 1, height: 1, xhot: 0, yhot: 0, delay: 80, pixels: [[0, 0, 0xff, 0xff]] },
+        {
+          size: 32,
+          width: 1,
+          height: 1,
+          xhot: 0,
+          yhot: 0,
+          delay: 80,
+          pixels: [[0xff, 0, 0, 0xff]],
+        },
+        {
+          size: 32,
+          width: 1,
+          height: 1,
+          xhot: 0,
+          yhot: 0,
+          delay: 80,
+          pixels: [[0, 0, 0xff, 0xff]],
+        },
       ]),
     },
   });
@@ -231,7 +297,16 @@ test('ignores animated XCursor roles while retaining static roles', () => {
 });
 
 test('rejects invalid, truncated, and out-of-range XCursor images', (t) => {
-  const valid = xcursorBuffer([{ size: 32, width: 1, height: 1, xhot: 0, yhot: 0, pixels: [[0, 0, 0, 0xff]] }]);
+  const valid = xcursorBuffer([
+    {
+      size: 32,
+      width: 1,
+      height: 1,
+      xhot: 0,
+      yhot: 0,
+      pixels: [[0, 0, 0, 0xff]],
+    },
+  ]);
   const cases = [
     ['bad magic', Buffer.from('not-an-xcursor')],
     ['truncated header', valid.subarray(0, 12)],
@@ -239,12 +314,24 @@ test('rejects invalid, truncated, and out-of-range XCursor images', (t) => {
     ['dimensions over XCursor limit', xcursorBuffer([{ size: 32, width: 0x8000, height: 1, xhot: 0, yhot: 0 }])],
     [
       'hotspot outside image',
-      xcursorBuffer([{ size: 32, width: 1, height: 1, xhot: 2, yhot: 0, pixels: [[0, 0, 0, 0xff]] }]),
+      xcursorBuffer([
+        {
+          size: 32,
+          width: 1,
+          height: 1,
+          xhot: 2,
+          yhot: 0,
+          pixels: [[0, 0, 0, 0xff]],
+        },
+      ]),
     ],
   ];
 
   for (const [name, contents] of cases) {
-    const item = fixture(t, { withScalable: false, xcursorRoles: { default: contents } });
+    const item = fixture(t, {
+      withScalable: false,
+      xcursorRoles: { default: contents },
+    });
     assert.throws(
       () => item.library.importDirectory(item.theme),
       /XCursor|curseur|image|format|invalide|tronqu|dimension|hotspot/i,
@@ -254,7 +341,9 @@ test('rejects invalid, truncated, and out-of-range XCursor images', (t) => {
 });
 
 test('enforces the XCursor role-count limit', (t) => {
-  const roles = { default: xcursorBuffer([{ size: 16, width: 1, height: 1, pixels: [[0, 0, 0, 0xff]] }]) };
+  const roles = {
+    default: xcursorBuffer([{ size: 16, width: 1, height: 1, pixels: [[0, 0, 0, 0xff]] }]),
+  };
   for (let index = 1; index < 257; index += 1) roles[`role-${String(index).padStart(3, '0')}`] = roles.default;
   const item = fixture(t, { withScalable: false, xcursorRoles: roles });
 
@@ -263,9 +352,22 @@ test('enforces the XCursor role-count limit', (t) => {
 
 test('prefers cursors_scalable over compiled XCursor files when both exist', () => {
   const item = fixture(test, {
-    roles: { default: { svg: '<svg width="32" height="16"><path fill="currentColor"/></svg>' } },
+    roles: {
+      default: {
+        svg: '<svg width="32" height="16"><path fill="currentColor"/></svg>',
+      },
+    },
     xcursorRoles: {
-      default: xcursorBuffer([{ size: 8, width: 1, height: 1, xhot: 0, yhot: 0, pixels: [[0xff, 0, 0, 0xff]] }]),
+      default: xcursorBuffer([
+        {
+          size: 8,
+          width: 1,
+          height: 1,
+          xhot: 0,
+          yhot: 0,
+          pixels: [[0xff, 0, 0, 0xff]],
+        },
+      ]),
     },
   });
   const result = item.library.importDirectory(item.theme);
@@ -310,7 +412,16 @@ test('unwraps a single nested XCursor theme and accepts a direct cursors directo
   const direct = fixture(test, {
     withScalable: false,
     xcursorRoles: {
-      default: xcursorBuffer([{ size: 16, width: 1, height: 1, xhot: 0, yhot: 0, pixels: [[0x12, 0x34, 0x56, 0xff]] }]),
+      default: xcursorBuffer([
+        {
+          size: 16,
+          width: 1,
+          height: 1,
+          xhot: 0,
+          yhot: 0,
+          pixels: [[0x12, 0x34, 0x56, 0xff]],
+        },
+      ]),
     },
   });
   const directResult = direct.library.importDirectory(direct.compiled);
@@ -345,14 +456,20 @@ test('imports a theme directory and serves its canonical SVG descriptors', () =>
 });
 
 test('accepts a direct cursors_scalable directory and falls back to its folder name', () => {
-  const item = fixture(test, { name: null, themeName: 'Fallback Theme', roles: importableRoles() });
+  const item = fixture(test, {
+    name: null,
+    themeName: 'Fallback Theme',
+    roles: importableRoles(),
+  });
   const result = item.library.importDirectory(item.scalable);
 
   assert.equal(result.pack.name, 'Fallback Theme');
 });
 
 test('deduplicates identical imports and persists descriptors across library instances', () => {
-  const item = fixture(test, { roles: importableRoles({ arrow: { fill: '#ffffff' } }) });
+  const item = fixture(test, {
+    roles: importableRoles({ arrow: { fill: '#ffffff' } }),
+  });
   const first = item.library.importDirectory(item.theme);
   const duplicate = item.library.importDirectory(item.scalable);
   const reopened = createCursorPackLibrary(item.libraryRoot);
@@ -368,8 +485,18 @@ test('ignores animated roles while retaining static roles', () => {
     roles: importableRoles({
       busy: {
         metadata: [
-          { filename: 'first.svg', nominal_size: 32, hotspot_x: 0, hotspot_y: 0 },
-          { filename: 'second.svg', nominal_size: 32, hotspot_x: 0, hotspot_y: 0 },
+          {
+            filename: 'first.svg',
+            nominal_size: 32,
+            hotspot_x: 0,
+            hotspot_y: 0,
+          },
+          {
+            filename: 'second.svg',
+            nominal_size: 32,
+            hotspot_x: 0,
+            hotspot_y: 0,
+          },
         ],
       },
     }),
@@ -386,7 +513,16 @@ test('ignores animated roles while retaining static roles', () => {
 
 test('enforces the global size limit across multiple animated XCursor roles', () => {
   const xcursorRoles = {
-    default: xcursorBuffer([{ size: 32, width: 1, height: 1, xhot: 0, yhot: 0, pixels: [[0, 0, 0, 0xff]] }]),
+    default: xcursorBuffer([
+      {
+        size: 32,
+        width: 1,
+        height: 1,
+        xhot: 0,
+        yhot: 0,
+        pixels: [[0, 0, 0, 0xff]],
+      },
+    ]),
   };
   for (const [index, role] of ['busy', 'progress', 'wait', 'watch', 'working'].entries())
     xcursorRoles[role] = animatedXcursorBuffer(index + 1);
@@ -398,7 +534,9 @@ test('enforces the global size limit across multiple animated XCursor roles', ()
 });
 
 test('marks a pack with fixed colors as original instead of tintable', () => {
-  const item = fixture(test, { roles: importableRoles({ left_ptr: { fill: '#123456' } }) });
+  const item = fixture(test, {
+    roles: importableRoles({ left_ptr: { fill: '#123456' } }),
+  });
   const result = item.library.importDirectory(item.theme);
 
   assert.equal(result.pack.colorMode, 'original');
@@ -407,7 +545,11 @@ test('marks a pack with fixed colors as original instead of tintable', () => {
 
 test('marks black and white cursor artwork as tintable', (t) => {
   const item = fixture(t, {
-    roles: { default: { svg: '<svg viewBox="0 0 32 32"><path fill="#fff"/><path fill="#000"/></svg>' } },
+    roles: {
+      default: {
+        svg: '<svg viewBox="0 0 32 32"><path fill="#fff"/><path fill="#000"/></svg>',
+      },
+    },
   });
   const result = item.library.importDirectory(item.theme);
 
@@ -416,7 +558,9 @@ test('marks black and white cursor artwork as tintable', (t) => {
 });
 
 test('rejects packs without a static default role', () => {
-  const item = fixture(test, { roles: { busy: { metadata: [{ delay: 50 }] } } });
+  const item = fixture(test, {
+    roles: { busy: { metadata: [{ delay: 50 }] } },
+  });
 
   assert.throws(() => item.library.importDirectory(item.theme), /curseur statique|default|left_ptr|arrow/i);
   assert.deepEqual(item.library.list(), []);
@@ -424,12 +568,34 @@ test('rejects packs without a static default role', () => {
 
 test('rejects non-SVG metadata references and traversal', (t) => {
   const cases = [
-    { name: 'non-svg', metadata: [{ filename: 'cursor.png', nominal_size: 32, hotspot_x: 0, hotspot_y: 0 }] },
-    { name: 'traversal', metadata: [{ filename: '../outside.svg', nominal_size: 32, hotspot_x: 0, hotspot_y: 0 }] },
+    {
+      name: 'non-svg',
+      metadata: [
+        {
+          filename: 'cursor.png',
+          nominal_size: 32,
+          hotspot_x: 0,
+          hotspot_y: 0,
+        },
+      ],
+    },
+    {
+      name: 'traversal',
+      metadata: [
+        {
+          filename: '../outside.svg',
+          nominal_size: 32,
+          hotspot_x: 0,
+          hotspot_y: 0,
+        },
+      ],
+    },
   ];
 
   for (const current of cases) {
-    const item = fixture(t, { roles: { default: { metadata: current.metadata } } });
+    const item = fixture(t, {
+      roles: { default: { metadata: current.metadata } },
+    });
     assert.throws(() => item.library.importDirectory(item.theme), /SVG|référence|chemin|pack/i, current.name);
   }
 });
@@ -473,12 +639,23 @@ test('rejects dangerous or malformed SVG documents', (t) => {
 
 test('rejects invalid dimensions and hotspots', (t) => {
   const cases = [
-    { name: 'negative viewBox', svg: '<svg viewBox="0 0 -1 16"/>', metadata: STATIC_METADATA },
+    {
+      name: 'negative viewBox',
+      svg: '<svg viewBox="0 0 -1 16"/>',
+      metadata: STATIC_METADATA,
+    },
     { name: 'missing dimensions', svg: '<svg/>', metadata: STATIC_METADATA },
     {
       name: 'hotspot outside viewBox',
       svg: '<svg viewBox="0 0 16 16"/>',
-      metadata: [{ filename: 'cursor.svg', nominal_size: 32, hotspot_x: 17, hotspot_y: 0 }],
+      metadata: [
+        {
+          filename: 'cursor.svg',
+          nominal_size: 32,
+          hotspot_x: 17,
+          hotspot_y: 0,
+        },
+      ],
     },
     {
       name: 'invalid nominal size',

@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { historicalAppearance } = require('../electron/projects/composition-appearance.cjs');
-const { validateScreenshotHistory } = require('../electron/screenshot/screenshot-history.cjs');
+const { historicalAppearance } = require('../apps/desktop/electron/projects/composition-appearance.cjs');
+const { validateScreenshotHistory } = require('../apps/desktop/electron/screenshot/screenshot-history.cjs');
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const validState = (patch = {}) => {

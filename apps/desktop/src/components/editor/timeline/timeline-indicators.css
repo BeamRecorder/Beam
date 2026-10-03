@@ -1,0 +1,26 @@
+.cursor-zoom-indicator,
+.annotation-indicator {
+  position: absolute;
+  inset-block: 0;
+  min-width: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-title);
+  cursor: grab;
+  transition: border-color var(--fast) ease;
+  overflow: visible;
+}
+.preview-ghost {
+  z-index: 8;
+}
+
+.clip-center-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  white-space: nowrap;
+}

@@ -27,9 +27,13 @@ pub enum ScreenConsumer {
 
 pub struct ScreenOpenRequest<'a> {
     pub selection: &'a ScreenSelection,
+    pub region_selection: Option<super::RegionSelection>,
     pub recording: &'a RecordingSettings,
     pub region: Option<ScreenRegion>,
+    pub hide_taskbar: bool,
+    pub hide_desktop_icons: bool,
     pub cursor: CursorSelection,
+    pub show_real_cursor: bool,
     pub excluded_window_handles: &'a [String],
     pub start_ns: u64,
     pub start_gate: Arc<StartGate>,

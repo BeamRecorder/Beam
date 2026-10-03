@@ -113,7 +113,9 @@ fn read_requests(sender: mpsc::Sender<Result<Option<RequestEnvelope>, capture::C
 #[derive(Default)]
 struct Engine {
     session: Option<RecordingSession>,
+    region_selection: Option<capture::screen::RegionSelection>,
     catalog: NativeCatalog,
+    gpu_sampler: beam_system_metrics::GpuSampler,
     system_audio_preview: Option<SystemAudioMonitor>,
     #[cfg(target_os = "linux")]
     last_portal_snapshot: Option<CatalogSnapshot>,
@@ -157,6 +159,9 @@ fn prepare_snapshot(engine: &mut Engine) -> Result<CatalogSnapshot, capture::Cap
 
 fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
     let result: Result<serde_json::Value, capture::CaptureError> = (|| match request.command {
+        Command::GpuUsage { process_ids } => {
+            serde_json::to_value(engine.gpu_sampler.sample(&process_ids)).map_err(Into::into)
+        }
         Command::Discover => serde_json::to_value(discover_snapshot(engine)?).map_err(Into::into),
         Command::ResolveDisplay { x, y } => {
             #[cfg(windows)]
@@ -184,6 +189,9 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
         Command::RequestInputAccess => {
             serde_json::to_value(capture::input::request_input_access()?).map_err(Into::into)
         }
+        Command::PickScreenColor { parent_window_id } => {
+            serde_json::to_value(capture::screen_color::pick(parent_window_id)?).map_err(Into::into)
+        }
         Command::Formats { source } => {
             let snapshot = discover_snapshot(engine)?;
             serde_json::to_value(
@@ -197,6 +205,25 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
             )
             .map_err(Into::into)
         }
+        Command::PrepareRegionSelection { config, cursor } => {
+            if !matches!(
+                engine.state(),
+                SessionState::Idle | SessionState::Completed | SessionState::Failed
+            ) || engine.region_selection.is_some()
+            {
+                return Err(capture::CaptureError::InvalidConfiguration(
+                    "Another region selection or capture is active".into(),
+                ));
+            }
+            engine.stop_system_audio_preview()?;
+            let (selection, preview) = capture::screen::RegionSelection::prepare(config, cursor)?;
+            engine.region_selection = Some(selection);
+            serde_json::to_value(preview).map_err(Into::into)
+        }
+        Command::CancelRegionSelection => {
+            engine.region_selection = None;
+            Ok(serde_json::json!({}))
+        }
         Command::Screenshot { config } => {
             if !matches!(
                 engine.state(),
@@ -207,7 +234,11 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
                 ));
             }
             engine.stop_system_audio_preview()?;
-            serde_json::to_value(capture::screenshot::capture(config)?).map_err(Into::into)
+            serde_json::to_value(capture::screenshot::capture_with_selection(
+                config,
+                engine.region_selection.take(),
+            )?)
+            .map_err(Into::into)
         }
         Command::SourcePreview {
             source,
@@ -219,6 +250,13 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
             max_height,
         )?)
         .map_err(Into::into),
+        Command::WindowSelectionPreview { source, raise } => {
+            serde_json::to_value(capture::screen::preview_window_selection(
+                &capture::model::SourceId::new(source)?,
+                raise,
+            )?)
+            .map_err(Into::into)
+        }
         Command::Prepare { config } => {
             engine.stop_system_audio_preview()?;
             if engine.session.as_ref().is_some_and(|session| {
@@ -233,7 +271,11 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
                 });
             }
             let snapshot = prepare_snapshot(engine)?;
-            let session = RecordingSession::prepare(*config, snapshot)?;
+            let session = RecordingSession::prepare_with_selection(
+                *config,
+                snapshot,
+                engine.region_selection.take(),
+            )?;
             let value = serde_json::json!({
                 "state": session.state(),
                 "sessionId": session.session_id(),

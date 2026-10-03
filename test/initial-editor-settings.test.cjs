@@ -4,8 +4,8 @@ const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 
-const { createEditorPresetStore } = require('../electron/presets/editor-preset-store.cjs');
-const { initialEditorSettings } = require('../electron/presets/initial-editor-settings.cjs');
+const { createEditorPresetStore } = require('../apps/desktop/electron/presets/editor-preset-store.cjs');
+const { initialEditorSettings } = require('../apps/desktop/electron/presets/initial-editor-settings.cjs');
 
 const roots = [];
 
@@ -44,14 +44,20 @@ test('chooses a bundled image deterministically and persists that randomized cho
   let randomValue = 0.99;
   const presetFile = path.join(applicationRoot, 'user-data', 'editor-presets.json');
   const readPreferences = () => ({
-    extras: { editorDefaults: initialEditorSettings(applicationRoot, false, () => randomValue) },
+    extras: {
+      editorDefaults: initialEditorSettings(applicationRoot, false, () => randomValue),
+    },
   });
-  const initialDocument = createEditorPresetStore(presetFile, { readPreferences }).read();
+  const initialDocument = createEditorPresetStore(presetFile, {
+    readPreferences,
+  }).read();
   const persistedBackground = initialDocument.presets[0].settings.editor.presentation.selectedBackgroundId;
   assert.equal(persistedBackground, '/wallpapers/image/zebra.jpg');
 
   randomValue = 0;
-  const reopenedDocument = createEditorPresetStore(presetFile, { readPreferences }).read();
+  const reopenedDocument = createEditorPresetStore(presetFile, {
+    readPreferences,
+  }).read();
   assert.equal(reopenedDocument.presets[0].settings.editor.presentation.selectedBackgroundId, persistedBackground);
 });
 

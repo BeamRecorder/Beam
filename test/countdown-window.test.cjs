@@ -3,12 +3,75 @@ const Module = require('node:module');
 const path = require('node:path');
 const test = require('node:test');
 
+test('zero and invalid countdown values never allocate or reveal a window', () => {
+  const fixture = loadCountdownWindow({ platform: 'win32', prepare: false });
+  for (const value of [0, -1, null, 1.5, '3', NaN]) fixture.overlay.show(value);
+  assert.equal(fixture.windows.length, 0);
+});
+
+test('Cancel only notifies the current requesting owner once', () => {
+  const fixture = loadCountdownWindow({ platform: 'win32' });
+  const messages = [];
+  const owner = {
+    isDestroyed: () => false,
+    send: (...args) => messages.push(args),
+  };
+  fixture.overlay.show(3, owner);
+  fixture.finishLoad();
+  assert.equal(fixture.overlay.cancel({}), false);
+  assert.equal(fixture.overlay.cancel(fixture.window.webContents), true);
+  assert.equal(fixture.calls.at(-1)[0], 'hide');
+  assert.deepEqual(messages, [['countdown:cancelled']]);
+  assert.equal(fixture.overlay.cancel(fixture.window.webContents), false);
+  fixture.overlay.destroy();
+});
+
+test('Cancel cannot reach a closed owner or a replacement countdown session', () => {
+  const fixture = loadCountdownWindow({ platform: 'win32' });
+  const messages = [];
+  const closedOwner = {
+    isDestroyed: () => true,
+    send: () => assert.fail('closed owner was notified'),
+  };
+  fixture.overlay.show(3, closedOwner);
+  assert.equal(fixture.overlay.cancel(fixture.window.webContents), false);
+  fixture.overlay.destroy();
+  const owner = {
+    isDestroyed: () => false,
+    send: (...args) => messages.push(args),
+  };
+  fixture.overlay.show(2, owner);
+  assert.equal(fixture.overlay.cancel(fixture.window.webContents), false);
+  assert.equal(fixture.overlay.cancel(fixture.windows[1].webContents), true);
+  assert.deepEqual(messages, [['countdown:cancelled']]);
+  fixture.overlay.destroy();
+});
+
+for (const platform of ['win32', 'darwin', 'linux'])
+  test(`${platform} enables only supported countdown mouse handling without focus`, () => {
+    const fixture = loadCountdownWindow({ platform });
+    const renderer = fixture.window.webContents;
+    assert.equal(fixture.overlay.setInteractive(renderer, true), false);
+    fixture.overlay.show(3);
+    assert.equal(fixture.overlay.setInteractive({}, true), false);
+    assert.equal(fixture.overlay.setInteractive(renderer, 'yes'), false);
+    assert.equal(fixture.overlay.setInteractive(renderer, true), true);
+    assert.deepEqual(fixture.calls.at(-1), ['mouse', false]);
+    assert.equal(fixture.overlay.setInteractive(renderer, false), true);
+    if (platform !== 'linux') assert.deepEqual(fixture.calls.at(-1), ['mouse', true]);
+    fixture.overlay.show(null);
+    assert.equal(fixture.overlay.setInteractive(renderer, true), false);
+    assert.equal(fixture.calls.find(([name]) => name === 'constructor')[1].focusable, false);
+    fixture.overlay.destroy();
+  });
+
 function loadCountdownWindow({
   platform,
   environment,
   isPackaged = false,
   loadResultForWindow = () => undefined,
   workArea = { x: 0, y: 0, width: 1_000, height: 800 },
+  prepare = true,
 }) {
   const calls = [];
   const screenCalls = [];
@@ -86,7 +149,7 @@ function loadCountdownWindow({
   };
 
   const originalLoad = Module._load;
-  const modulePath = path.resolve(__dirname, '../electron/countdown-window.cjs');
+  const modulePath = path.resolve(__dirname, '../apps/desktop/electron/countdown-window.cjs');
   delete require.cache[modulePath];
   Module._load = function load(request, parent, isMain) {
     return request === 'electron' ? electron : originalLoad.call(this, request, parent, isMain);
@@ -100,20 +163,24 @@ function loadCountdownWindow({
       platform,
       environment,
     });
+    if (prepare) overlay.prepare();
     return {
       calls,
       screenCalls,
       windows,
       window: windows[0],
       overlay,
-      finishLoad: (index = 0) => windows[index].emitContent('did-finish-load'),
+      finishLoad: (index = 0) => {
+        windows[index].emitContent('did-finish-load');
+        overlay.markRendererReady(windows[index].webContents);
+      },
       failLoad: (index = 0, { code = -2, isMainFrame = true } = {}) =>
         windows[index].emitContent(
           'did-fail-load',
           {},
           code,
           'load failed',
-          'http://localhost:6500/countdown.html',
+          'http://localhost:6500/html/countdown.html',
           isMainFrame,
         ),
     };
@@ -124,15 +191,20 @@ function loadCountdownWindow({
 
 test('prewarms the dedicated countdown renderer in development and packaged builds', async () => {
   for (const isPackaged of [false, true]) {
-    const fixture = loadCountdownWindow({ platform: 'linux', environment: {}, isPackaged });
+    const fixture = loadCountdownWindow({
+      platform: 'linux',
+      environment: {},
+      isPackaged,
+    });
     const expected = isPackaged
-      ? ['loadFile', path.join('/app', 'dist/countdown.html')]
-      : ['loadURL', 'http://localhost:6500/countdown.html'];
+      ? ['loadFile', path.join('/app', 'dist/html/countdown.html')]
+      : ['loadURL', 'http://localhost:6500/html/countdown.html'];
     assert.deepEqual(
       fixture.calls.find(([name]) => name.startsWith('load')),
       expected,
     );
     const ready = fixture.overlay.prepare();
+    assert.equal(fixture.calls.find(([name]) => name === 'constructor')[1].webPreferences.backgroundThrottling, false);
     fixture.overlay.show(3);
     fixture.overlay.show(2);
     fixture.finishLoad();
@@ -145,8 +217,31 @@ test('prewarms the dedicated countdown renderer in development and packaged buil
   }
 });
 
+test('creates no countdown renderer until the presentation owner prepares it or requests a value', async () => {
+  for (const action of ['prepare', 'show']) {
+    const fixture = loadCountdownWindow({
+      platform: 'linux',
+      environment: {},
+      prepare: false,
+    });
+    assert.equal(fixture.windows.length, 0);
+    if (action === 'prepare') fixture.overlay.prepare();
+    else fixture.overlay.show(3);
+    assert.equal(fixture.windows.length, 1);
+    fixture.finishLoad();
+    assert.equal(
+      fixture.calls.some(([name]) => name === 'showInactive'),
+      action === 'show',
+    );
+    fixture.overlay.destroy();
+  }
+});
+
 test('suspend clears a queued countdown and ignores readiness from the destroyed renderer after recreation', async () => {
-  const fixture = loadCountdownWindow({ platform: 'linux', environment: { XDG_SESSION_TYPE: 'x11' } });
+  const fixture = loadCountdownWindow({
+    platform: 'linux',
+    environment: { XDG_SESSION_TYPE: 'x11' },
+  });
   const firstReady = fixture.overlay.prepare();
   firstReady.catch(() => undefined);
   fixture.overlay.show(3);
@@ -186,8 +281,36 @@ test('suspend clears a queued countdown and ignores readiness from the destroyed
   await fixture.overlay.suspend();
 });
 
+for (const first of ['native', 'renderer'])
+  test(`queues the latest countdown until both readiness signals arrive (${first} first)`, async () => {
+    const fixture = loadCountdownWindow({ platform: 'linux', environment: {} });
+    const window = fixture.windows[0];
+    const ready = fixture.overlay.prepare();
+    fixture.overlay.show(3);
+    assert.equal(fixture.overlay.markRendererReady({}), false);
+    if (first === 'native') window.emitContent('did-finish-load');
+    else fixture.overlay.markRendererReady(window.webContents);
+    fixture.overlay.show(2);
+    assert.equal(
+      fixture.calls.some(([name]) => name === 'showInactive'),
+      false,
+    );
+    if (first === 'native') fixture.overlay.markRendererReady(window.webContents);
+    else window.emitContent('did-finish-load');
+    assert.equal(await ready, true);
+    assert.deepEqual(
+      fixture.calls.filter(([name]) => name === 'send'),
+      [['send', 'countdown:state', 2]],
+    );
+    fixture.overlay.destroy();
+    assert.equal(fixture.overlay.markRendererReady(window.webContents), false);
+  });
+
 test('ignores aborted and subframe loads, then fails the main load and recreates for a retry', async () => {
-  const fixture = loadCountdownWindow({ platform: 'linux', environment: { XDG_SESSION_TYPE: 'x11' } });
+  const fixture = loadCountdownWindow({
+    platform: 'linux',
+    environment: { XDG_SESSION_TYPE: 'x11' },
+  });
   const firstReady = fixture.overlay.prepare();
   fixture.overlay.show(3);
 
@@ -239,63 +362,20 @@ test('recreates the countdown after its navigation promise rejects', async () =>
   await fixture.overlay.suspend();
 });
 
-test('Wayland presents the countdown without unsupported global window operations', () => {
+test('a Wayland desktop still positions the countdown through the forced X11 client', () => {
   const fixture = loadCountdownWindow({
     platform: 'linux',
     environment: { XDG_SESSION_TYPE: 'wayland', WAYLAND_DISPLAY: 'wayland-0' },
   });
   const constructor = fixture.calls.find((call) => call[0] === 'constructor');
-
-  assert.equal(constructor[1].width, 560);
-  assert.equal(constructor[1].height, 256);
-  assert.equal(constructor[1].show, false);
-  assert.equal(constructor[1].center, true);
+  assert.equal(constructor[1].center, false);
   assert.equal(constructor[1].focusable, false);
-  assert.ok(fixture.calls.some((call) => call[0] === 'mouse' && call[1] === true));
-  assert.deepEqual(fixture.screenCalls, []);
-
   fixture.overlay.show(3);
-  assert.equal(
-    fixture.calls.some((call) => call[0] === 'send'),
-    false,
-  );
-  assert.equal(
-    fixture.calls.some((call) => call[0] === 'show'),
-    false,
-  );
-
   fixture.finishLoad();
-  assert.ok(fixture.calls.some((call) => call[0] === 'send' && call[1] === 'countdown:state' && call[2] === 3));
-  assert.equal(fixture.calls.filter((call) => call[0] === 'show').length, 1);
-  assert.equal(
-    fixture.calls.some((call) => call[0] === 'showInactive'),
-    false,
-  );
-  assert.equal(
-    fixture.calls.some((call) => call[0] === 'top'),
-    false,
-  );
-  assert.equal(
-    fixture.calls.some((call) => call[0] === 'position'),
-    false,
-  );
-  assert.deepEqual(fixture.screenCalls, []);
-
-  fixture.overlay.show(2);
-  assert.equal(fixture.calls.filter((call) => call[0] === 'show').length, 2);
-  assert.equal(
-    fixture.calls.some((call) => call[0] === 'showInactive'),
-    false,
-  );
-  assert.equal(
-    fixture.calls.some((call) => call[0] === 'top'),
-    false,
-  );
-  assert.equal(
-    fixture.calls.some((call) => call[0] === 'position'),
-    false,
-  );
-
+  assert.ok(fixture.calls.some((call) => call[0] === 'showInactive'));
+  assert.ok(fixture.calls.some((call) => call[0] === 'position'));
+  assert.ok(fixture.calls.some((call) => call[0] === 'top'));
+  assert.ok(fixture.screenCalls.length > 0);
   fixture.overlay.show(null);
   assert.equal(fixture.calls.at(-1)[0], 'hide');
 });
@@ -308,11 +388,11 @@ test('X11 positions and raises the countdown with the supported inactive path', 
   const constructor = fixture.calls.find((call) => call[0] === 'constructor');
 
   assert.equal(constructor[1].width, 560);
-  assert.equal(constructor[1].height, 256);
+  assert.equal(constructor[1].height, 320);
   assert.equal(constructor[1].show, false);
   assert.equal(constructor[1].center, false);
   assert.equal(constructor[1].focusable, false);
-  assert.ok(fixture.calls.some((call) => call[0] === 'mouse' && call[1] === true));
+  assert.ok(fixture.calls.some((call) => call[0] === 'mouse' && call[1] === false));
 
   fixture.overlay.show(3);
   assert.equal(
@@ -329,8 +409,8 @@ test('X11 positions and raises the countdown with the supported inactive path', 
   assert.deepEqual(
     fixture.calls.filter((call) => call[0] === 'position'),
     [
-      ['position', 220, 272],
-      ['position', 220, 272],
+      ['position', 220, 240],
+      ['position', 220, 240],
     ],
   );
   assert.equal(fixture.calls.filter((call) => call[0] === 'showInactive').length, 1);

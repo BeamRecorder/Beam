@@ -16,8 +16,8 @@ import {
   setTransform,
   splitClip,
   trimClip,
-} from '../../src/components/video-editor/composition/engine/clip-engine';
-import { activeClipsAt, sourceTimeAt } from '../../src/media/shared/timeline-mapping';
+} from '@beam/engine/commands/clip-engine';
+import { activeClipsAt, sourceTimeAt } from '@beam/engine/shared/timeline-mapping';
 import type {
   AudioClip,
   BlurClip,
@@ -25,9 +25,9 @@ import type {
   ClipComposition,
   MediaAsset,
   VisualClip,
-} from '../../src/media/shared/composition-types';
-import { createDefaultClipAppearance } from '../../src/media/shared/composition-defaults';
-import { normalizeClipTransitions } from '../../src/media/shared/clip-transitions';
+} from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { normalizeClipTransitions } from '@beam/engine/shared/clip-transitions';
 
 const asset = (id: string, kind: MediaAsset['kind'] = 'video'): MediaAsset => ({
   id,
@@ -165,8 +165,14 @@ describe('clip composition engine', () => {
       preset: { kind: 'slide', direction: 'left' },
       durationMs: 500,
     });
-    expect(configured.clips.find((clip) => clip.id === 'camera')?.transitions).toEqual({ entry: null, exit: null });
-    expect(configured.clips.find((clip) => clip.id === 'audio')?.transitions).toEqual({ entry: null, exit: null });
+    expect(configured.clips.find((clip) => clip.id === 'camera')?.transitions).toEqual({
+      entry: null,
+      exit: null,
+    });
+    expect(configured.clips.find((clip) => clip.id === 'audio')?.transitions).toEqual({
+      entry: null,
+      exit: null,
+    });
 
     const moved = moveClip(configured, 'screen', 2_500);
     expect(moved.clips.find((clip) => clip.id === 'screen')?.transitions?.entry).toEqual(
@@ -186,18 +192,18 @@ describe('clip composition engine', () => {
     const trimmed = trimClip(composition, 'source', 'end', 3_000);
     const trimmedClip = trimmed.clips[0]!;
     expect(trimmedClip.timelineDurationMs).toBe(2_000);
-    expect((trimmedClip.transitions?.entry?.durationMs ?? 0) + (trimmedClip.transitions?.exit?.durationMs ?? 0)).toBe(
-      2_000,
-    );
+    expect(
+      (trimmedClip.transitions?.entry?.durationMs ?? 0) + (trimmedClip.transitions?.exit?.durationMs ?? 0),
+    ).toBe(2_000);
     expect(trimmedClip.transitions?.entry?.preset).toEqual({ kind: 'fade' });
     expect(trimmedClip.transitions?.exit?.preset).toEqual({ kind: 'blur' });
 
     const retimed = setPlaybackRate(composition, 'source', 2);
     const retimedClip = retimed.clips[0]!;
     expect(retimedClip.timelineDurationMs).toBe(2_000);
-    expect((retimedClip.transitions?.entry?.durationMs ?? 0) + (retimedClip.transitions?.exit?.durationMs ?? 0)).toBe(
-      2_000,
-    );
+    expect(
+      (retimedClip.transitions?.entry?.durationMs ?? 0) + (retimedClip.transitions?.exit?.durationMs ?? 0),
+    ).toBe(2_000);
   });
 
   it('keeps only the left entry and right exit transition when splitting', () => {
@@ -222,16 +228,26 @@ describe('clip composition engine', () => {
     const composition = compositionFor([
       visualClip('screen', 'screen', {
         groupId: 'linked',
-        transitions: { entry: { preset: { kind: 'fade' }, durationMs: 400 }, exit: null },
+        transitions: {
+          entry: { preset: { kind: 'fade' }, durationMs: 400 },
+          exit: null,
+        },
       }),
       visualClip('camera', 'webcam', {
         groupId: 'linked',
-        transitions: { entry: null, exit: { preset: { kind: 'blur' }, durationMs: 700 } },
+        transitions: {
+          entry: null,
+          exit: { preset: { kind: 'blur' }, durationMs: 700 },
+        },
       }),
     ]);
     const retimed = setPlaybackRate(composition, 'screen', 2);
-    expect(retimed.clips.find((clip) => clip.id === 'screen')?.transitions?.entry?.preset).toEqual({ kind: 'fade' });
-    expect(retimed.clips.find((clip) => clip.id === 'camera')?.transitions?.exit?.preset).toEqual({ kind: 'blur' });
+    expect(retimed.clips.find((clip) => clip.id === 'screen')?.transitions?.entry?.preset).toEqual({
+      kind: 'fade',
+    });
+    expect(retimed.clips.find((clip) => clip.id === 'camera')?.transitions?.exit?.preset).toEqual({
+      kind: 'blur',
+    });
     expect(retimed.clips.find((clip) => clip.id === 'screen')?.transitions?.exit).toBeNull();
     expect(retimed.clips.find((clip) => clip.id === 'camera')?.transitions?.entry).toBeNull();
   });
@@ -282,7 +298,8 @@ describe('clip composition engine', () => {
     const trimmed = trimClip(linked(), 'screen', 'end', 3_000);
     expect(
       trimmed.clips.every(
-        (entry) => entry.timelineDurationMs === 2_000 && entry.sourceDurationMs === 2_000 && entry.sourceInMs === 200,
+        (entry) =>
+          entry.timelineDurationMs === 2_000 && entry.sourceDurationMs === 2_000 && entry.sourceInMs === 200,
       ),
     ).toBe(true);
   });
@@ -292,9 +309,9 @@ describe('clip composition engine', () => {
     let cursor = 0;
     const split = splitClip(linked(), 'screen', 3_000, () => ids[cursor++]!);
     expect(split.clips).toHaveLength(6);
-    expect(new Set(split.clips.filter((entry) => entry.timelineStartMs < 3_000).map((entry) => entry.groupId))).toEqual(
-      new Set(['recording']),
-    );
+    expect(
+      new Set(split.clips.filter((entry) => entry.timelineStartMs < 3_000).map((entry) => entry.groupId)),
+    ).toEqual(new Set(['recording']));
     expect(
       new Set(split.clips.filter((entry) => entry.timelineStartMs === 3_000).map((entry) => entry.groupId)),
     ).toEqual(new Set(['right-group']));
@@ -373,7 +390,9 @@ describe('clip composition engine', () => {
     ]);
     const split = splitClip(source, 'front', 3_000, () => 'front-right');
     const reordered = reorderClip(split, 'front', 1);
-    const frontOrders = reordered.clips.filter((clip) => clip.trackId === 'front-track').map((clip) => clip.order);
+    const frontOrders = reordered.clips
+      .filter((clip) => clip.trackId === 'front-track')
+      .map((clip) => clip.order);
     const backOrder = reordered.clips.find((clip) => clip.trackId === 'back-track')!.order;
 
     expect(new Set(frontOrders).size).toBe(1);
@@ -410,8 +429,16 @@ describe('clip composition engine', () => {
   it('validates and updates an assetless blur clip', () => {
     const composition = createComposition([], [blurClip()]);
     expect(activeClipsAt(composition, 1_500).map((clip) => clip.kind)).toEqual(['blur']);
-    const updated = setBlurEffect(composition, 'blur', { mode: 'pixelated', shape: 'circle', strength: 85 });
-    expect(updated.clips[0]).toMatchObject({ mode: 'pixelated', shape: 'circle', strength: 85 });
+    const updated = setBlurEffect(composition, 'blur', {
+      mode: 'pixelated',
+      shape: 'circle',
+      strength: 85,
+    });
+    expect(updated.clips[0]).toMatchObject({
+      mode: 'pixelated',
+      shape: 'circle',
+      strength: 85,
+    });
     expect(() => setBlurEffect(composition, 'missing', { mode: 'opaque' })).toThrow(/Unknown clip/);
   });
 
@@ -420,9 +447,15 @@ describe('clip composition engine', () => {
     delete legacyClip.cornerRadius;
     const composition = createComposition([], [legacyClip]);
 
-    const updated = setBlurEffect(composition, legacyClip.id, { mode: 'frosted', tintOpacity: 24 });
+    const updated = setBlurEffect(composition, legacyClip.id, {
+      mode: 'frosted',
+      tintOpacity: 24,
+    });
 
-    expect(updated.clips[0]).toMatchObject({ mode: 'frosted', tintOpacity: 24 });
+    expect(updated.clips[0]).toMatchObject({
+      mode: 'frosted',
+      tintOpacity: 24,
+    });
   });
 
   it('rejects invalid blur settings without affecting media assets', () => {
@@ -438,7 +471,12 @@ describe('clip composition engine', () => {
   it('supports enable, delete and visual transforms while pruning unused media', () => {
     const disabled = setClipEnabled(linked(), 'camera', false);
     expect(disabled.clips.find((entry) => entry.id === 'camera')?.enabled).toBe(false);
-    const transformed = setTransform(disabled, 'camera', { x: -0.2, y: 0.2, width: 2, height: 0.4 });
+    const transformed = setTransform(disabled, 'camera', {
+      x: -0.2,
+      y: 0.2,
+      width: 2,
+      height: 0.4,
+    });
     expect(transformed.clips.find((entry) => entry.id === 'camera')).toMatchObject({
       transform: { x: -0.2, y: 0.2, width: 2, height: 0.4 },
     });

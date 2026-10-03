@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+launcher_path=$(readlink -f -- "$0")
+application_dir=$(CDPATH= cd -- "$(dirname -- "$launcher_path")" && pwd)
+# AppImage may prepend its sandbox flag, and desktop launchers add the X11 flag.
+for argument in "$@"; do
+  case "$argument" in
+    --cli)
+      while [ "$1" != --cli ]; do shift; done
+      shift
+      exec "$application_dir/resources/cli/beam" "$@"
+      ;;
+    --no-sandbox|--ozone-platform=x11) ;;
+    *) break ;;
+  esac
+done
+exec "$application_dir/beam-bin" "$@"

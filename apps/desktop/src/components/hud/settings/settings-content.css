@@ -1,0 +1,79 @@
+.preference-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.preference-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px;
+  background: var(--color-bg-element);
+  border-radius: var(--radius-lg);
+  min-width: 0;
+}
+.preference-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+.preference-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--weight-display);
+  line-height: 1.4;
+}
+.preference-description {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+}
+.preference-control,
+.input-access-actions {
+  flex-shrink: 0;
+}
+.preference-appearance-item {
+  align-items: stretch;
+}
+.preview-preference {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+.preview-control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.language-select {
+  width: 152px;
+}
+.recorder-bar-select {
+  width: 152px;
+}
+.countdown-select {
+  width: 84px;
+}
+[data-setting]:focus-visible {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 3px;
+}
+@media (max-width: 700px) {
+  .preview-control-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .preference-item {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px;
+  }
+  .preference-copy {
+    flex-basis: 100%;
+  }
+}

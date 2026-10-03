@@ -1,0 +1,12 @@
+{
+  "name": "@beam/native-client",
+  "private": true,
+  "version": "0.1.0",
+  "exports": {
+    ".": {
+      "types": "./src/native-client.d.cts",
+      "default": "./src/native-client.cjs"
+    },
+    "./*": "./src/*.cjs"
+  }
+}

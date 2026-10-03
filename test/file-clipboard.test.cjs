@@ -4,7 +4,7 @@ const { PassThrough } = require('node:stream');
 const test = require('node:test');
 const { pathToFileURL } = require('node:url');
 
-const { createFileClipboard } = require('../electron/clipboard/file-clipboard.cjs');
+const { createFileClipboard } = require('../apps/desktop/electron/clipboard/file-clipboard.cjs');
 
 function createSpawnFixture() {
   const calls = [];
@@ -32,7 +32,11 @@ function inputText(child) {
 
 test('publishes a Wayland file as a native URI list and resolves on acquisition exit', async () => {
   const { calls, spawn } = createSpawnFixture();
-  const env = { WAYLAND_DISPLAY: 'wayland-0', DISPLAY: ':0', HOME: '/fake-home' };
+  const env = {
+    WAYLAND_DISPLAY: 'wayland-0',
+    DISPLAY: ':0',
+    HOME: '/fake-home',
+  };
   const file = "/tmp/Quick Snip 漢字;$(touch should-not-run) ' #1?.png";
   const clipboard = createFileClipboard({ platform: 'linux', env, spawn });
 
@@ -61,7 +65,11 @@ test('publishes an X11 file as text/uri-list using xclip', async () => {
   const { calls, spawn } = createSpawnFixture();
   const env = { DISPLAY: ':1' };
   const file = '/tmp/Quick Snip café.png';
-  const pending = createFileClipboard({ platform: 'linux', env, spawn }).copyFile(file);
+  const pending = createFileClipboard({
+    platform: 'linux',
+    env,
+    spawn,
+  }).copyFile(file);
 
   assert.equal(calls.length, 1);
   const [{ command, args, options, child }] = calls;
@@ -78,7 +86,11 @@ test('publishes an X11 file as text/uri-list using xclip', async () => {
 test('sends a Unicode Windows path as stdin data to a static PowerShell script', async () => {
   const { calls, spawn } = createSpawnFixture();
   const file = "C:\\Users\\Ada\\Quick Snip 漢字;$(Write-Output 'injected'); $env:PATH.png";
-  const pending = createFileClipboard({ platform: 'win32', env: { PATH: 'fake' }, spawn }).copyFile(file);
+  const pending = createFileClipboard({
+    platform: 'win32',
+    env: { PATH: 'fake' },
+    spawn,
+  }).copyFile(file);
 
   assert.equal(calls.length, 1);
   const [{ command, args, options, child }] = calls;
@@ -95,15 +107,28 @@ test('sends a Unicode Windows path as stdin data to a static PowerShell script',
   assert.deepEqual(await pending, { native: true, fallback: null });
 });
 
-test('publishes a macOS public.file-url without starting a helper process', async () => {
+test('publishes a macOS native file using ClipboardItem without starting a helper process', async () => {
   const { calls, spawn } = createSpawnFixture();
   const writes = [];
-  const clipboard = { writeBuffer: (...args) => writes.push(args) };
+  const clipboard = { write: async (items) => writes.push(items) };
+  class ClipboardItem {
+    constructor(data) {
+      this.data = data;
+    }
+  }
   const file = '/tmp/Quick Snip café #1.png';
 
-  const result = await createFileClipboard({ platform: 'darwin', clipboard, spawn }).copyFile(file);
+  const result = await createFileClipboard({
+    platform: 'darwin',
+    clipboard,
+    ClipboardItem,
+    spawn,
+  }).copyFile(file);
 
-  assert.deepEqual(writes, [['public.file-url', Buffer.from(pathToFileURL(file).href)]]);
+  assert.equal(writes.length, 1);
+  assert.deepEqual(writes[0][0].data, {
+    'text/uri-list': `${pathToFileURL(file).href}\r\n`,
+  });
   assert.equal(calls.length, 0);
   assert.deepEqual(result, { native: true, fallback: null });
 });
@@ -132,7 +157,9 @@ test('reports a missing Linux clipboard helper', async () => {
     spawn,
   }).copyFile('/tmp/capture.png');
   const { child } = calls[0];
-  const error = Object.assign(new Error('spawn wl-copy ENOENT'), { code: 'ENOENT' });
+  const error = Object.assign(new Error('spawn wl-copy ENOENT'), {
+    code: 'ENOENT',
+  });
   child.emit('error', error);
 
   await assert.rejects(pending, /requires wl-copy\. Install wl-clipboard/);
@@ -188,4 +215,46 @@ test('rejects invalid paths and Linux sessions without a clipboard display', asy
   await assert.rejects(clipboard.copyFile('/tmp/bad\0path'), /Invalid clipboard file/);
   await assert.rejects(clipboard.copyFile('/tmp/capture.png'), /requires a Wayland or X11 session/);
   assert.equal(calls.length, 0);
+});
+
+test('waits for asynchronous native file publication and reports failures', async () => {
+  class ClipboardItem {
+    constructor(data) {
+      this.data = data;
+    }
+  }
+  let finish;
+  let completed = false;
+  const clipboard = {
+    write: () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  };
+  const pending = createFileClipboard({
+    platform: 'darwin',
+    clipboard,
+    ClipboardItem,
+  }).copyFile('/tmp/capture.png');
+  pending.then(() => {
+    completed = true;
+  });
+  await Promise.resolve();
+  assert.equal(completed, false);
+  finish();
+  await pending;
+  assert.equal(completed, true);
+  await assert.rejects(
+    () =>
+      createFileClipboard({
+        platform: 'darwin',
+        ClipboardItem,
+        clipboard: {
+          write: async () => {
+            throw new Error('Clipboard busy');
+          },
+        },
+      }).copyFile('/tmp/capture.png'),
+    /Clipboard busy/,
+  );
 });

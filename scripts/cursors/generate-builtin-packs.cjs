@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { createCursorPackLibrary } = require('../../electron/cursors/cursor-pack-library.cjs');
+const { createCursorPackLibrary } = require('../../apps/desktop/electron/cursors/cursor-pack-library.cjs');
 
 const repositoryRoot = path.resolve(__dirname, '../..');
 

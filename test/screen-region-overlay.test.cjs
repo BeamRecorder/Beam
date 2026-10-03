@@ -2,12 +2,16 @@ const assert = require('node:assert/strict');
 const Module = require('node:module');
 const test = require('node:test');
 
-function createOverlayHarness() {
+function createOverlayHarness(options = {}) {
   const calls = [];
   const listeners = new Map();
   let destroyed = false;
   const window = {
-    webContents: { send: (...args) => calls.push(['send', ...args]) },
+    options: null,
+    webContents: {
+      send: (...args) => calls.push(['send', ...args]),
+      on: (event, callback) => listeners.set(`contents:${event}`, callback),
+    },
     once: (event, listener) => listeners.set(event, listener),
     on: (event, listener) => listeners.set(event, listener),
     emit: (event, ...args) => listeners.get(event)?.(...args),
@@ -25,12 +29,19 @@ function createOverlayHarness() {
       destroyed = true;
       listeners.get('closed')?.();
     },
-    loadURL: () => undefined,
-    loadFile: () => undefined,
+    loadURL: (url) => {
+      calls.push(['loadURL', url]);
+      return Promise.resolve();
+    },
+    loadFile: (file) => {
+      calls.push(['loadFile', file]);
+      return Promise.resolve();
+    },
   };
   const electron = {
     BrowserWindow: class {
-      constructor() {
+      constructor(options) {
+        window.options = options;
         return window;
       }
     },
@@ -41,14 +52,15 @@ function createOverlayHarness() {
   };
 
   try {
-    const modulePath = require.resolve('../electron/screen-region-overlay.cjs');
+    const modulePath = require.resolve('../apps/desktop/electron/screen-region-overlay.cjs');
     delete require.cache[modulePath];
-    const { createScreenRegionOverlayWindow } = require('../electron/screen-region-overlay.cjs');
+    const { createScreenRegionOverlayWindow } = require('../apps/desktop/electron/screen-region-overlay.cjs');
     return {
       overlay: createScreenRegionOverlayWindow({
         applicationRoot: '/app',
         isPackaged: false,
         platform: 'linux',
+        ...options,
       }),
       calls,
       window,
@@ -57,6 +69,172 @@ function createOverlayHarness() {
     Module._load = originalLoad;
   }
 }
+
+test('failed selector loading releases its prepared monitor and disposes the native window', async () => {
+  let cancelled = 0;
+  const { overlay, window } = createOverlayHarness({
+    selectionPreview: {
+      prepare: async () => ({}),
+      cancel: async () => cancelled++,
+    },
+  });
+  window.loadURL = () => Promise.reject(new Error('selector load failed'));
+  await assert.rejects(overlay.select({ bounds: { x: 0, y: 0, width: 1000, height: 800 } }), /selector load failed/);
+  assert.equal(window.isDestroyed(), true);
+  assert.equal(overlay.isSelecting(), false);
+  assert.equal(cancelled, 1);
+});
+test('loads the lightweight region entry while the native monitor preview is still preparing', async () => {
+  let finish;
+  const bounds = { x: 0, y: 0, width: 1000, height: 800 };
+  const selectedBounds = { ...bounds, x: 1000 };
+  const { overlay, window, calls } = createOverlayHarness({
+    selectionPreview: {
+      prepare: () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+      cancel: async () => {},
+    },
+  });
+  const selection = overlay.select({ bounds });
+  assert.deepEqual(
+    calls.find(([name]) => name === 'loadURL'),
+    ['loadURL', 'http://localhost:6500/html/screen-region.html'],
+  );
+  assert.equal(window.options.webPreferences.backgroundThrottling, false);
+  overlay.markRendererReady(window.webContents);
+  window.emit('ready-to-show');
+  assert.equal(
+    calls.some(([name]) => name === 'show' || name === 'send'),
+    false,
+  );
+  finish({ bounds: selectedBounds, preview: 'data:image/png;base64,preview' });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(
+    calls.find(([name]) => name === 'bounds'),
+    ['bounds', selectedBounds],
+  );
+  assert.equal(calls.filter(([name]) => name === 'show').length, 1);
+  overlay.confirm({ x: 0, y: 0, width: 1, height: 1 });
+  assert.deepEqual((await selection).bounds, selectedBounds);
+});
+test('preview completion still waits for a loaded and subscribed renderer', async () => {
+  const { overlay, window, calls } = createOverlayHarness({
+    isPackaged: true,
+    selectionPreview: { prepare: async () => ({}), cancel: async () => {} },
+  });
+  const selection = overlay.select({
+    bounds: { x: 0, y: 0, width: 1000, height: 800 },
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(
+    calls.find(([name]) => name === 'loadFile'),
+    ['loadFile', '/app/dist/html/screen-region.html'],
+  );
+  overlay.markRendererReady(window.webContents);
+  assert.equal(
+    calls.some(([name]) => name === 'show'),
+    false,
+  );
+  window.emit('ready-to-show');
+  assert.equal(calls.filter(([name]) => name === 'show').length, 1);
+  overlay.cancel();
+  assert.equal(await selection, null);
+});
+test('cancelling during native preparation leaves a warmed selector hidden', async () => {
+  let finish;
+  let cancelled = 0;
+  const { overlay, window, calls } = createOverlayHarness({
+    selectionPreview: {
+      prepare: () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+      cancel: async () => cancelled++,
+    },
+  });
+  const selection = overlay.select({
+    bounds: { x: 0, y: 0, width: 1000, height: 800 },
+  });
+  overlay.cancel();
+  overlay.markRendererReady(window.webContents);
+  window.emit('ready-to-show');
+  finish({});
+  assert.equal(await selection, null);
+  assert.equal(cancelled, 1);
+  assert.equal(
+    calls.some(([name]) => name === 'show'),
+    false,
+  );
+});
+test('renderer loss and unresponsiveness reject selection instead of leaving the HUD waiting', async () => {
+  for (const event of ['contents:render-process-gone', 'unresponsive']) {
+    const { overlay, window } = createOverlayHarness();
+    const result = overlay.select({
+      bounds: { x: 0, y: 0, width: 1000, height: 800 },
+    });
+    window.emit(event);
+    await assert.rejects(result, /renderer exited|unresponsive/);
+    assert.equal(overlay.isSelecting(), false);
+    assert.equal(window.isDestroyed(), true);
+  }
+});
+test('a second selection cannot cancel or replace an active monitor authorization', async () => {
+  const { overlay } = createOverlayHarness();
+  const options = { bounds: { x: 0, y: 0, width: 1000, height: 800 } };
+  const original = overlay.select(options);
+  await assert.rejects(overlay.select(options), /already open/);
+  assert.equal(overlay.isSelecting(), true);
+  overlay.cancel();
+  assert.equal(await original, null);
+});
+
+test('Linux region construction uses exact X11 display bounds', async () => {
+  const { overlay, window, calls } = createOverlayHarness();
+  const bounds = { x: 0, y: 0, width: 1920, height: 1080 };
+  const selection = overlay.select({ bounds });
+  assert.equal(window.options.fullscreen, undefined);
+  assert.equal(window.options.width, bounds.width);
+  assert.equal(window.options.height, bounds.height);
+  window.emit('ready-to-show');
+  assert.equal(
+    calls.some(([name]) => name === 'show'),
+    false,
+  );
+  assert.equal(overlay.markRendererReady({}), false);
+  assert.equal(
+    calls.some(([name]) => name === 'send'),
+    false,
+  );
+  assert.equal(overlay.markRendererReady(window.webContents), true);
+  assert.equal(
+    calls.some(([name]) => name === 'show'),
+    true,
+  );
+  overlay.cancel();
+  assert.equal(await selection, null);
+});
+
+test('renderer readiness before native readiness does not show an unpainted overlay', async () => {
+  const { overlay, window, calls } = createOverlayHarness();
+  assert.equal(overlay.markRendererReady(window.webContents), false);
+  const selection = overlay.select({
+    bounds: { x: 0, y: 0, width: 1280, height: 800 },
+  });
+  overlay.markRendererReady(window.webContents);
+  assert.equal(
+    calls.some(([name]) => name === 'show'),
+    false,
+  );
+  window.emit('ready-to-show');
+  assert.equal(
+    calls.some(([name]) => name === 'show'),
+    true,
+  );
+  overlay.cancel();
+  assert.equal(await selection, null);
+});
 
 test('defers screen overlay presentation until the native window is ready', async () => {
   const { overlay, calls, window } = createOverlayHarness();
@@ -79,6 +257,7 @@ test('defers screen overlay presentation until the native window is ready', asyn
     false,
   );
 
+  overlay.markRendererReady(window.webContents);
   window.emit('ready-to-show');
 
   assert.equal(
@@ -105,6 +284,7 @@ test('stays hidden when a pending selection is canceled before native readiness'
   });
 
   overlay.cancel();
+  overlay.markRendererReady(window.webContents);
   window.emit('ready-to-show');
 
   assert.equal(
@@ -130,6 +310,7 @@ test('stays hidden when the overlay is hidden before native readiness', async ()
   });
 
   overlay.hide();
+  overlay.markRendererReady(window.webContents);
   window.emit('ready-to-show');
 
   assert.equal(
@@ -155,7 +336,7 @@ test('restores the noninteractive recording overlay with showInactive', () => {
     region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
   });
 
-  window.emit('ready-to-show');
+  overlay.markMarkerReady(window.webContents);
 
   assert.equal(
     calls.some((call) => call[0] === 'showInactive'),
@@ -170,8 +351,8 @@ test('restores the noninteractive recording overlay with showInactive', () => {
     false,
   );
   assert.equal(
-    calls.some((call) => call[0] === 'send' && call[1] === 'screen-region:configure' && call[2].mode === 'record'),
-    true,
+    calls.some((call) => call[0] === 'send' && call[1] === 'screen-region:configure'),
+    false,
   );
   overlay.hide();
 });
@@ -185,7 +366,10 @@ test('cleans a failed region selection so a later selection can complete', async
     getBounds: () => ({ x: 2048, y: 120, width: 352, height: 512 }),
   };
   const window = {
-    webContents: { send: (...args) => calls.push(['send', ...args]) },
+    webContents: {
+      send: (...args) => calls.push(['send', ...args]),
+      on: () => {},
+    },
     once: (event, listener) => listeners.set(event, listener),
     on: (event, listener) => listeners.set(event, listener),
     isDestroyed: () => destroyed,
@@ -202,8 +386,8 @@ test('cleans a failed region selection so a later selection can complete', async
       destroyed = true;
       listeners.get('closed')?.();
     },
-    loadURL: () => undefined,
-    loadFile: () => undefined,
+    loadURL: () => Promise.resolve(),
+    loadFile: () => Promise.resolve(),
   };
   const electron = {
     BrowserWindow: class {
@@ -227,9 +411,9 @@ test('cleans a failed region selection so a later selection can complete', async
   };
 
   try {
-    const modulePath = require.resolve('../electron/screen-region-overlay.cjs');
+    const modulePath = require.resolve('../apps/desktop/electron/screen-region-overlay.cjs');
     delete require.cache[modulePath];
-    const { createScreenRegionOverlayWindow } = require('../electron/screen-region-overlay.cjs');
+    const { createScreenRegionOverlayWindow } = require('../apps/desktop/electron/screen-region-overlay.cjs');
     const overlay = createScreenRegionOverlayWindow({
       applicationRoot: '/app',
       isPackaged: false,
@@ -237,7 +421,7 @@ test('cleans a failed region selection so a later selection can complete', async
       screen: electron.screen,
     });
 
-    assert.throws(
+    await assert.rejects(
       () => overlay.select({ bounds: { x: 0, y: 0, width: 0, height: 1080 }, region: null }, parentWindow),
       /Screen overlay size is invalid/,
     );
@@ -249,7 +433,7 @@ test('cleans a failed region selection so a later selection can complete', async
     assert.deepEqual(await nextSelection, { bounds, region: selectedRegion });
     assert.deepEqual(
       calls.filter((call) => call[0] === 'parent').map((call) => call[1]),
-      [parentWindow, null],
+      [null, null],
     );
   } finally {
     Module._load = originalLoad;
@@ -265,7 +449,10 @@ test('resolves Linux selection bounds from the parent display and falls back to 
     getBounds: () => ({ x: 2048, y: 120, width: 352, height: 512 }),
   };
   const window = {
-    webContents: { send: (...args) => calls.push(['send', ...args]) },
+    webContents: {
+      send: (...args) => calls.push(['send', ...args]),
+      on: () => {},
+    },
     once: (event, listener) => listeners.set(event, listener),
     on: (event, listener) => listeners.set(event, listener),
     isDestroyed: () => destroyed,
@@ -282,8 +469,8 @@ test('resolves Linux selection bounds from the parent display and falls back to 
       destroyed = true;
       listeners.get('closed')?.();
     },
-    loadURL: () => undefined,
-    loadFile: () => undefined,
+    loadURL: () => Promise.resolve(),
+    loadFile: () => Promise.resolve(),
   };
   const matchingBounds = { x: 1920, y: 0, width: 2560, height: 1440 };
   const primaryBounds = { x: 0, y: 0, width: 1920, height: 1080 };
@@ -307,9 +494,9 @@ test('resolves Linux selection bounds from the parent display and falls back to 
   };
 
   try {
-    const modulePath = require.resolve('../electron/screen-region-overlay.cjs');
+    const modulePath = require.resolve('../apps/desktop/electron/screen-region-overlay.cjs');
     delete require.cache[modulePath];
-    const { createScreenRegionOverlayWindow } = require('../electron/screen-region-overlay.cjs');
+    const { createScreenRegionOverlayWindow } = require('../apps/desktop/electron/screen-region-overlay.cjs');
     const overlay = createScreenRegionOverlayWindow({
       applicationRoot: '/app',
       isPackaged: false,
@@ -347,6 +534,7 @@ test('updates the live overlay payload and clamps the current selection before c
     context: 'quick-snip',
     region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
   });
+  overlay.markRendererReady(window.webContents);
   window.emit('ready-to-show');
   calls.length = 0;
   let liveRegion = null;
@@ -427,6 +615,7 @@ test('cancels an active selection, detaches its parent, and ignores stale update
     parentWindow,
   );
 
+  overlay.markRendererReady(window.webContents);
   window.emit('ready-to-show');
   overlay.cancel();
 
@@ -497,8 +686,8 @@ function createRegionOverlayWindowMock(calls) {
       listeners.get('webContents:before-input-event')?.(event, input);
       return event;
     },
-    loadURL: () => undefined,
-    loadFile: () => undefined,
+    loadURL: () => Promise.resolve(),
+    loadFile: () => Promise.resolve(),
   };
 }
 
@@ -518,9 +707,9 @@ test('keeps interactive Windows region selection available on Windows 10', async
   };
 
   try {
-    const modulePath = require.resolve('../electron/screen-region-overlay.cjs');
+    const modulePath = require.resolve('../apps/desktop/electron/screen-region-overlay.cjs');
     delete require.cache[modulePath];
-    const { createScreenRegionOverlayWindow } = require('../electron/screen-region-overlay.cjs');
+    const { createScreenRegionOverlayWindow } = require('../apps/desktop/electron/screen-region-overlay.cjs');
     const overlay = createScreenRegionOverlayWindow({
       applicationRoot: '/app',
       isPackaged: false,
@@ -529,10 +718,14 @@ test('keeps interactive Windows region selection available on Windows 10', async
     });
     const bounds = { x: -1280, y: 0, width: 1280, height: 720 };
     const selection = overlay.select({ bounds, region: null });
+    overlay.markRendererReady(window.webContents);
     window.emit('ready-to-show');
     const region = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
 
-    assert.deepEqual(await (overlay.confirm(region), selection), { bounds, region });
+    assert.deepEqual(await (overlay.confirm(region), selection), {
+      bounds,
+      region,
+    });
     assert.deepEqual(
       calls.filter((call) => ['bounds', 'mouse', 'show', 'focus'].includes(call[0])),
       [['bounds', bounds], ['mouse', false], ['show'], ['focus']],
@@ -560,16 +753,19 @@ test('suppresses the recording region marker on Windows 10 build 19045', () => {
   };
 
   try {
-    const modulePath = require.resolve('../electron/screen-region-overlay.cjs');
+    const modulePath = require.resolve('../apps/desktop/electron/screen-region-overlay.cjs');
     delete require.cache[modulePath];
-    const { createScreenRegionOverlayWindow } = require('../electron/screen-region-overlay.cjs');
+    const { createScreenRegionOverlayWindow } = require('../apps/desktop/electron/screen-region-overlay.cjs');
     const overlay = createScreenRegionOverlayWindow({
       applicationRoot: '/app',
       isPackaged: false,
       platform: 'win32',
       platformRelease: '10.0.19045',
     });
-    overlay.show({ bounds: { x: -1280, y: 0, width: 1280, height: 720 }, region: { x: 0, y: 0, width: 1, height: 1 } });
+    overlay.show({
+      bounds: { x: -1280, y: 0, width: 1280, height: 720 },
+      region: { x: 0, y: 0, width: 1, height: 1 },
+    });
 
     assert.equal(constructed, 0);
     assert.deepEqual(calls, []);
@@ -596,9 +792,9 @@ test('shows the recording region marker on Windows 11 build 22000 and newer', ()
   };
 
   try {
-    const modulePath = require.resolve('../electron/screen-region-overlay.cjs');
+    const modulePath = require.resolve('../apps/desktop/electron/screen-region-overlay.cjs');
     delete require.cache[modulePath];
-    const { createScreenRegionOverlayWindow } = require('../electron/screen-region-overlay.cjs');
+    const { createScreenRegionOverlayWindow } = require('../apps/desktop/electron/screen-region-overlay.cjs');
     const overlay = createScreenRegionOverlayWindow({
       applicationRoot: '/app',
       isPackaged: false,
@@ -606,7 +802,11 @@ test('shows the recording region marker on Windows 11 build 22000 and newer', ()
       platformRelease: '10.0.22000',
     });
     const bounds = { x: -1280, y: 0, width: 1280, height: 720 };
-    overlay.show({ bounds, region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 } });
+    overlay.show({
+      bounds,
+      region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+    });
+    overlay.markRendererReady(window.webContents);
     window.emit('ready-to-show');
 
     assert.equal(constructed, 1);
@@ -635,9 +835,9 @@ test('keeps an offset macOS display selection interactive across Spaces', async 
   };
 
   try {
-    const modulePath = require.resolve('../electron/screen-region-overlay.cjs');
+    const modulePath = require.resolve('../apps/desktop/electron/screen-region-overlay.cjs');
     delete require.cache[modulePath];
-    const { createScreenRegionOverlayWindow } = require('../electron/screen-region-overlay.cjs');
+    const { createScreenRegionOverlayWindow } = require('../apps/desktop/electron/screen-region-overlay.cjs');
     const overlay = createScreenRegionOverlayWindow({
       applicationRoot: '/app',
       isPackaged: false,
@@ -647,6 +847,7 @@ test('keeps an offset macOS display selection interactive across Spaces', async 
     const region = { x: 0.125, y: 0.2, width: 0.5, height: 0.4 };
 
     const firstSelection = overlay.select({ bounds, region: null });
+    overlay.markRendererReady(window.webContents);
     window.emit('ready-to-show');
     assert.deepEqual(
       calls.filter((call) =>
@@ -666,6 +867,7 @@ test('keeps an offset macOS display selection interactive across Spaces', async 
         ['visibleOnAllWorkspaces', true, { visibleOnFullScreen: true, skipTransformProcessType: true }],
         ['alwaysOnTop', true, 'screen-saver'],
         ['webContents-on', 'before-input-event'],
+        ['webContents-on', 'render-process-gone'],
         ['bounds', bounds],
         ['mouse', false],
         ['show'],
@@ -702,9 +904,9 @@ test('uses native Escape handling to cancel a macOS selection', async () => {
   };
 
   try {
-    const modulePath = require.resolve('../electron/screen-region-overlay.cjs');
+    const modulePath = require.resolve('../apps/desktop/electron/screen-region-overlay.cjs');
     delete require.cache[modulePath];
-    const { createScreenRegionOverlayWindow } = require('../electron/screen-region-overlay.cjs');
+    const { createScreenRegionOverlayWindow } = require('../apps/desktop/electron/screen-region-overlay.cjs');
     const overlay = createScreenRegionOverlayWindow({
       applicationRoot: '/app',
       isPackaged: false,
@@ -715,7 +917,10 @@ test('uses native Escape handling to cancel a macOS selection', async () => {
       region: null,
     });
 
-    const inputEvent = window.emitBeforeInput({ type: 'keyDown', key: 'Escape' });
+    const inputEvent = window.emitBeforeInput({
+      type: 'keyDown',
+      key: 'Escape',
+    });
     assert.equal(inputEvent.defaultPrevented, true);
     assert.deepEqual(await selection, null);
     assert.ok(calls.some((call) => call[0] === 'preventDefault'));
@@ -723,7 +928,10 @@ test('uses native Escape handling to cancel a macOS selection', async () => {
     assert.deepEqual(calls.filter((call) => call[0] === 'parent').at(-1), ['parent', null]);
 
     // The native listener must only cancel a pending interactive selection.
-    const idleInputEvent = window.emitBeforeInput({ type: 'keyDown', key: 'Escape' });
+    const idleInputEvent = window.emitBeforeInput({
+      type: 'keyDown',
+      key: 'Escape',
+    });
     assert.equal(idleInputEvent.defaultPrevented, false);
     assert.equal(calls.filter((call) => call[0] === 'preventDefault').length, 1);
   } finally {

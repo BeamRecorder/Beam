@@ -6,7 +6,7 @@ const {
   MAX_CACHE_ENTRIES,
   createSourcePreviewService,
   previewRequest,
-} = require('../electron/capture/source-preview-service.cjs');
+} = require('../apps/desktop/electron/capture/source-preview-service.cjs');
 
 const preview = (sourceId) => ({
   sourceId,
@@ -20,12 +20,20 @@ test('normalizes source preview requests and enforces safe dimensions', () => {
     maxHeight: 200,
     refresh: false,
   });
-  assert.deepEqual(previewRequest({ sourceId: 'sck:display:7', maxWidth: 640, maxHeight: 360, refresh: true }), {
-    sourceId: 'sck:display:7',
-    maxWidth: 640,
-    maxHeight: 360,
-    refresh: true,
-  });
+  assert.deepEqual(
+    previewRequest({
+      sourceId: 'sck:display:7',
+      maxWidth: 640,
+      maxHeight: 360,
+      refresh: true,
+    }),
+    {
+      sourceId: 'sck:display:7',
+      maxWidth: 640,
+      maxHeight: 360,
+      refresh: true,
+    },
+  );
 
   for (const request of [
     null,
@@ -134,7 +142,10 @@ test('caches native failures as unavailable and retries them after expiry', asyn
 test('returns a generic unavailable result when the native result is invalid', async () => {
   const service = createSourcePreviewService({
     platform: 'darwin',
-    requestNative: async () => ({ sourceId: 'sck:window:other', thumbnail: 'not-a-data-url' }),
+    requestNative: async () => ({
+      sourceId: 'sck:window:other',
+      thumbnail: 'not-a-data-url',
+    }),
   });
 
   assert.deepEqual(await service.get({ sourceId: 'sck:window:42' }), {

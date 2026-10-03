@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { registerPreferencesIpc } = require('../../electron/preferences/preferences-ipc.cjs');
+const { registerPreferencesIpc } = require('../../apps/desktop/electron/preferences/preferences-ipc.cjs');
 
 function ipcMainWith(handlers) {
   return { handle: (channel, handler) => handlers.set(channel, handler) };
@@ -22,9 +22,21 @@ function shortcutPreferences() {
     alwaysOnTop: true,
     devices: {},
     shortcuts: {
-      'hud.startStopRecording': { keys: 'Alt+Shift+R', scope: 'global', category: 'hud' },
-      'editor.playPause': { keys: 'Space', scope: 'application', category: 'video-editor' },
-      'teleprompter.toggleVisibility': { keys: 'Alt+Shift+T', scope: 'global', category: 'teleprompter' },
+      'hud.startStopRecording': {
+        keys: 'Alt+Shift+R',
+        scope: 'global',
+        category: 'hud',
+      },
+      'editor.playPause': {
+        keys: 'Space',
+        scope: 'application',
+        category: 'video-editor',
+      },
+      'teleprompter.toggleVisibility': {
+        keys: 'Alt+Shift+T',
+        scope: 'global',
+        category: 'teleprompter',
+      },
     },
     backgroundPresets: { colors: [], gradients: [] },
     extras: {},
@@ -32,7 +44,7 @@ function shortcutPreferences() {
 }
 
 function storeWith(preferences) {
-  return {
+  const store = {
     read: () => structuredClone(preferences),
     patch: (patch) => {
       const next = { ...preferences, ...patch };
@@ -41,7 +53,97 @@ function storeWith(preferences) {
     },
     write: (next) => Object.assign(preferences, next),
   };
+  store.patchBatch = (patches) => {
+    const previous = structuredClone(preferences);
+    for (const patch of patches) store.patch(patch);
+    return { previous, preferences };
+  };
+  return store;
 }
+
+test('a batch publishes only its final settings and registers shortcuts once', async () => {
+  const handlers = new Map();
+  const sent = [];
+  const changes = [];
+  const source = linuxSourceWith({ fallbackIds: [] });
+  const cleanup = registerPreferencesIpc({
+    ipcMain: ipcMainWith(handlers),
+    BrowserWindow: { getAllWindows: () => [windowWith(sent)] },
+    globalShortcut: { register: () => {}, unregisterAll: () => {} },
+    store: storeWith(shortcutPreferences()),
+    linuxShortcutSource: source,
+    onPreferencesChanged: (preferences) => changes.push(preferences),
+  });
+  await flush();
+  const result = await handlers.get('preferences:update-batch')(null, [
+    { theme: 'dark' },
+    {
+      shortcuts: {
+        'hud.startStopRecording': {
+          keys: 'Alt+Shift+Q',
+          scope: 'global',
+          category: 'hud',
+        },
+      },
+    },
+    {
+      shortcuts: {
+        'hud.startStopRecording': {
+          keys: 'Alt+Shift+E',
+          scope: 'global',
+          category: 'hud',
+        },
+      },
+    },
+  ]);
+  assert.equal(result.theme, 'dark');
+  assert.equal(source.calls.register.length, 2);
+  assert.equal(source.calls.register.at(-1), 'Alt+Shift+E');
+  assert.deepEqual(sent, [{ channel: 'preferences:changed', id: result }]);
+  assert.deepEqual(changes, [result]);
+  await cleanup();
+});
+
+test('empty batches do not write, broadcast or apply window policy', async () => {
+  const handlers = new Map();
+  const sent = [];
+  const store = storeWith(shortcutPreferences());
+  store.patchBatch = () => assert.fail('empty batch should not write');
+  const cleanup = registerPreferencesIpc({
+    ipcMain: ipcMainWith(handlers),
+    BrowserWindow: { getAllWindows: () => [windowWith(sent)] },
+    globalShortcut: { register: () => {}, unregisterAll: () => {} },
+    store,
+    onPreferencesChanged: () => assert.fail('empty batch should not change policy'),
+  });
+  assert.deepEqual(await handlers.get('preferences:update-batch')(null, []), shortcutPreferences());
+  assert.deepEqual(sent, []);
+  await cleanup();
+});
+
+test('rejects invalid or oversized batches before storage and propagates persistence failure without broadcast', async () => {
+  const handlers = new Map();
+  const sent = [];
+  const store = storeWith(shortcutPreferences());
+  let writes = 0;
+  store.patchBatch = () => {
+    writes += 1;
+    throw new Error('disk full');
+  };
+  const cleanup = registerPreferencesIpc({
+    ipcMain: ipcMainWith(handlers),
+    BrowserWindow: { getAllWindows: () => [windowWith(sent)] },
+    globalShortcut: { register: () => {}, unregisterAll: () => {} },
+    store,
+  });
+  const update = handlers.get('preferences:update-batch');
+  for (const invalid of [null, {}, Array(65).fill({})]) await assert.rejects(update(null, invalid), TypeError);
+  assert.equal(writes, 0);
+  await assert.rejects(update(null, [{ theme: 'dark' }]), /disk full/);
+  assert.equal(writes, 1);
+  assert.deepEqual(sent, []);
+  await cleanup();
+});
 
 function linuxSourceWith(result) {
   const calls = { register: [], cleanup: 0 };
@@ -157,7 +259,13 @@ test('preference updates serialize registration and use newest shortcuts', async
 
   const update = handlers.get('preferences:update');
   const result = await update(null, {
-    shortcuts: { 'hud.startStopRecording': { keys: 'Alt+Shift+Q', scope: 'global', category: 'hud' } },
+    shortcuts: {
+      'hud.startStopRecording': {
+        keys: 'Alt+Shift+Q',
+        scope: 'global',
+        category: 'hud',
+      },
+    },
   });
   assert.equal(result.shortcuts['hud.startStopRecording'].keys, 'Alt+Shift+Q');
   assert.equal(source.calls.register.at(-1), 'Alt+Shift+Q');
@@ -209,10 +317,14 @@ test('ordinary updates and resets do not wait for or repeat shortcut registratio
     },
   });
   await flush();
-  const updated = await handlers.get('preferences:update')(null, { theme: 'dark' });
+  const updated = await handlers.get('preferences:update')(null, {
+    theme: 'dark',
+  });
   assert.equal(updated.theme, 'dark');
   await handlers.get('preferences:reset')(null, ['theme']);
-  await handlers.get('preferences:update')(null, { shortcuts: structuredClone(updated.shortcuts) });
+  await handlers.get('preferences:update')(null, {
+    shortcuts: structuredClone(updated.shortcuts),
+  });
   assert.equal(registrations, 1);
   assert.equal(sent.length, 3);
   assert.equal(changes.length, 3);
@@ -232,10 +344,78 @@ test('resetting changed shortcuts registers the restored bindings', async () => 
   });
   await flush();
   await handlers.get('preferences:update')(null, {
-    shortcuts: { 'hud.startStopRecording': { keys: 'Alt+Shift+Q', scope: 'global', category: 'hud' } },
+    shortcuts: {
+      'hud.startStopRecording': {
+        keys: 'Alt+Shift+Q',
+        scope: 'global',
+        category: 'hud',
+      },
+    },
   });
   const reset = await handlers.get('preferences:reset')(null, ['shortcuts']);
   assert.equal(source.calls.register.length, 3);
   assert.equal(source.calls.register.at(-1), reset.shortcuts['hud.startStopRecording'].keys);
+  await cleanup();
+});
+
+for (const channel of ['preferences:update', 'preferences:update-batch', 'preferences:reset']) {
+  test(`${channel} applies startup before publishing settings and rolls back failed OS registration`, async () => {
+    const handlers = new Map(),
+      sent = [],
+      changes = [],
+      attempts = [];
+    const preferences = { ...shortcutPreferences(), launchAtStartup: channel === 'preferences:reset' ? false : true };
+    const previous = structuredClone(preferences);
+    const store = storeWith(preferences);
+    let fail = true;
+    const cleanup = registerPreferencesIpc({
+      ipcMain: ipcMainWith(handlers),
+      BrowserWindow: { getAllWindows: () => [windowWith(sent)] },
+      globalShortcut: { unregisterAll() {}, register() {} },
+      store,
+      launchAtStartup: {
+        apply(next) {
+          attempts.push(next.launchAtStartup);
+          if (fail) throw new Error('registration denied');
+        },
+      },
+      onPreferencesChanged: (value) => changes.push(value),
+    });
+    const payload =
+      channel === 'preferences:reset'
+        ? ['launchAtStartup']
+        : channel === 'preferences:update-batch'
+          ? [{ launchAtStartup: false }]
+          : { launchAtStartup: false };
+    await assert.rejects(handlers.get(channel)({}, payload), /registration denied/);
+    assert.deepEqual(store.read(), previous);
+    assert.equal(sent.length, 0);
+    assert.equal(changes.length, 0);
+    fail = false;
+    const saved = await handlers.get(channel)({}, payload);
+    assert.equal(saved.launchAtStartup, !previous.launchAtStartup);
+    assert.equal(sent.length, 1);
+    assert.equal(changes.length, 1);
+    assert.equal(attempts.length, 2);
+    await cleanup();
+  });
+}
+test('unrelated or identical preference edits do not touch OS startup registration', async () => {
+  const handlers = new Map(),
+    preferences = { ...shortcutPreferences(), launchAtStartup: true };
+  const cleanup = registerPreferencesIpc({
+    ipcMain: ipcMainWith(handlers),
+    BrowserWindow: { getAllWindows: () => [] },
+    globalShortcut: { unregisterAll() {}, register() {} },
+    store: storeWith(preferences),
+    launchAtStartup: {
+      apply() {
+        assert.fail('unexpected OS registration');
+      },
+    },
+  });
+  await handlers.get('preferences:update')({}, { theme: 'dark' });
+  await handlers.get('preferences:update')({}, { launchAtStartup: true });
+  await handlers.get('preferences:reset')({}, ['alwaysOnTop']);
   await cleanup();
 });

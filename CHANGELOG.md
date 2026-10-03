@@ -4,6 +4,204 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Video and Screenshot share manual 2D, 3D and GPU glass zooms, with circular or freehand lenses, pixel-based focus/diameter controls and grouped appearance settings in all 15 languages. New lenses use a larger 60% diameter and restrained glass defaults.
+- Automatic glass lenses group nearby recorded clicks, adapt magnification and diameter to the clicked region, respect reserved timeline intervals and remain manually editable. Focus follows trimmed, retimed, mirrored, rotated and framed recordings and scene transforms.
+- Background library items can be removed with an exact-item preview and destructive confirmation in all 15 languages. Imported images/videos have a Delete action above Show more; colors/gradients pair editing with a compact trash button. The last deletion supports persisted undo/redo while existing projects and source files remain intact.
+- Media orientation controls provide horizontal/vertical mirrors and 90° turns; media and text share precise angle editing and a canvas rotation handle in preview and export, translated into all 15 languages.
+- Recorder General settings can launch Beam at login, enabled by default for installed applications, with Linux XDG autostart and Windows/macOS login items. The setting is translated into all 15 languages.
+- Video and image clip inspectors have compact numeric placement controls, a nine-point alignment pad and a proportional size lock, with positioning calculated by the shared engine and controls translated into all 15 languages. Numeric typing commits on blur or Enter; mouse drags update immediately.
+- CLI video exports can select WebCodecs or experimental Linux FFmpeg VA-API encoding, using the same Beam renderer and GPU transport as desktop. Exports return JSON diagnostics and protect destinations on failure or cancellation; the FFmpeg backend requires an X11/XWayland display and compatible native dependencies.
+- The Chromium CLI host can select software video decoding independently of GPU rendering to work around failing accelerated decoders.
+- Linux desktop has an opt-in experimental FFmpeg GPU exporter for MP4 and WebM, with direct DMA-BUF transfer to VA-API and audio support. Its export option is translated into all 15 languages; native build and driver requirements are documented.
+- A WebCodecs diagnostic command checks CPU/GPU frame inputs in separate sandboxed Electron processes, records encoded packets and native GPU crashes, and compares hardware requests with software controls.
+- Export reports include native GPU utilization minimum, median, mean and maximum, plus per-engine measurements on Linux, Windows and macOS when driver counters are available. Reports identify process-wide versus device-wide scope and unavailable measurements.
+- Create and edit video or image documents through a shared engine API and CLI, with identified JSON transactions, revision conflicts, retry deduplication and undo/redo.
+- Packaged CLI launchers use Beam's bundled Electron runtime and support native recording/screenshot commands without a separate Bun or Node installation.
+- Render seekable HTML/Vue motion projects through the shared video renderer and encoder, including paused GSAP animations.
+- Extract a video frame into an editable image document, then modify layers and export PNG or WebP through the same still renderer as Screenshot.
+
+- Documents support nested scenes with group transforms, opacity, blending, masks and local clocks, plus generic property keyframes editable through shared commands and the CLI.
+- CLI export runs in headless Chromium on Linux without an X11 or Wayland display; imported fonts use explicit portable resources.
+- A development CLI can inspect, edit and benchmark Beam documents, and export portable render snapshots through an independent Chromium backend without opening the editor.
+- Export diagnostics include bounded engine measurements with median/p95 timings for decode, rendering, encoder waits and separate GPU submission/execution stages.
+- Screenshot layers can be renamed by single-clicking their title in the left inspector header or double-clicking their Composition label (or pressing F2), with saved names, undo/redo and copy/paste support.
+- Screenshot shows a translated Recenter view button when the preview is moved or zoomed too far, matching the video editor.
+- `bun run dev` now starts Vite and Electron together, with automatic ports and persistent Electron profiles isolated per worktree; `--session <name>` supports additional parallel sessions in the same worktree while retaining the usual shared project library.
+- Recording settings share a saved Off/2D/3D automatic zoom preference, defaulting to 2D. Recordings with click data can regenerate automatic zoom positions after confirmation in all 15 languages, preserving manual, locked and detached zooms.
+- Added 11 macOS Golden Gate wallpapers in WebP format to the Studio and Screenshot background library, including light, dark, day, evening, sunset, night, 4K and 5K variants.
+- Double-clicking empty Studio canvas space opens the grouped Add menu, while double-clicking clips still opens text editing or cropping.
+- Video editor Accessibility settings can require double-clicks to add zooms, captions and elements from empty timeline tracks, preventing accidental additions.
+- Recorder and region settings can record the real system cursor on Windows, macOS and Linux while keeping automatic zooms. These recordings start with Beam's custom cursor overlay disabled; a toggle in the Cursor header can enable it again, and the choice is saved with the project and used for exports.
+- Studio and Screenshot share a compact Ctrl+F / Cmd+F Spotlight with grouped Add, Clips, sections, settings and actions. Clips show their project thumbnails; results stay aligned and scroll smoothly, with scroll shadows and mouse Back/Forward navigation.
+- Development Settings now include shortcuts to detached DevTools and a separate Mascot Lab, with adjustable eye size, width, height, spacing and vertical position. Eye proportions are saved with lab presets and included in exports.
+- Added a shared screen/window chooser for Windows and macOS with searchable thumbnails and keyboard navigation. Development launches can supply 3 simulated displays and 21 windows through `DEV_CROSSPLATFORM=1`, including on Linux; normal Linux capture retains the Portal.
+- Beamy appears centered during loading with translated tips, then disappears when the recorder is ready. Clicking the Beam wordmark plays one of twelve text effects before returning to plain text.
+- The recorder shows a lightweight animated Beamy while its interface loads, with a retry action if startup fails.
+- Instant capture now has a small Beamy mascot that accompanies recording, dances and morphs during export, and briefly celebrates completed videos, respecting reduced-motion preferences.
+- Region recording now offers a desktop magnifier, live pixel dimensions, Full screen and size presets, teleprompter, device controls and a 0–10 second countdown. Controls hide during dragging and return with a spring animation. Desktop icons and the taskbar/Dock can be hidden from capture on supported platforms.
+- Capture problems now appear in the toolbar with a count and a scrollable hover panel, including individual copy actions.
+- Settings and Projects now open in separate, resizable desktop windows.
+
+### Changed
+
+- Quick Snip uses neutral mode/source choices and one fixed circular capture button, with smooth device/icon transitions; source selection opens only when Capture is pressed, source tabs remain responsive, and empty toolbar space supports native dragging.
+- Tray Quick Snip is separate from Show/Hide Beam. Quick Snip loads screenshot effects only after capture. Hidden idle Beam releases its HUD and auxiliary renderers; completed or canceled Quick Snip releases its toolbar, menus and device previews.
+- Startup temporary audio cleanup scans project folders directly, avoiding loading project timelines and recording data before Beam opens.
+- Project pickers load their first catalogue faster by reading each video project once per request. Missing video thumbnails render directly at preview size rather than allocating full-resolution canvases.
+- Project pickers use a persistent lightweight index and automatically load batches as you scroll, with search and Select all covering the entire library. Catalogue work runs outside the main thread and releases its worker when idle.
+- Screenshot Composition requests thumbnails only for visible rows plus a scroll margin, cancels queued offscreen work and keeps a bounded cache for immediate reuse when returning to a layer.
+- Timeline scrolling retains unchanged virtual row and item lists, reducing repeated updates of clip controls, icons and shared handles.
+- Timeline clips share modern type colors, rose zooms and gold captions in both themes, with equal track heights, full-height blocks and matching rounded trim handles revealed on track hover or keyboard focus.
+- Gradients use a compact preview, draggable keyboard-accessible stops, precise position/opacity fields and shared color controls, with all labels translated into 15 languages. Color and gradient stops share the full picker surface without a redundant header or extra frame.
+- Background images, videos, colors and gradients share the same active border and focus treatment, with the selection ring kept visible above media pixels.
+- Destructive actions use a calmer shared theme red with white text/icons; small trash buttons match the height of their adjacent labelled actions.
+- Shadow direction uses the shared neutral preset controls, and a help tooltip explains solid and adaptive shadows in all 15 languages.
+- Popovers and nested menus use a stronger shared 12 px backdrop blur in both themes; numeric unit menus show clear hover feedback and compact affix spacing.
+- Clip dimensions default to canvas pixels with a clickable px/% unit selector that preserves document placement, and the compact rotation row shows at most two decimal places with the same controls for text and media.
+- The placement reset appears inside the expanded clip controls, keeping inspector section headings consistent.
+- Clip properties are grouped into animated accordions with neutral surfaces and consistent spacing; property search opens the matching section. Video and screenshot inspectors are slightly wider and reserve scrollbar space to prevent field shifts when sections expand.
+- The experimental Linux FFmpeg GPU export choice is now saved across restarts, shared with General preferences, and applied to Quick Snip video exports.
+- Experimental Linux GPU exports overlap rendering and native transfer through a bounded GPU texture queue, use one frame IPC and wait one presentation boundary per frame. Reports separate capture, transfer and queue waits; the dedicated CLI process also removes display frame-rate throttling while retaining every authored frame. Local before/after results are documented; gains vary by container and workload.
+- Experimental Linux GPU exports send DMA-BUF descriptors through an asynchronous native bridge instead of launching a process for every frame. Reports separate Chromium presentation waits, GPU import/conversion and native encoding timings.
+- MP4 and WebM exports select a working WebCodecs encoder at the requested resolution, frame rate and bitrate, checking hardware variable and constant bitrate modes before software encoding. Linux desktop and hardware CLI backends enable accelerated video encoding; reports show the selected bitrate mode and hardware frame-check failures.
+- Preview and export reuse unchanged active clip order and text layout; Studio retains fixed background pixels, and export progress thumbnails convert without pausing video encoding.
+- Dense previews evaluate canvas selection geometry only when needed, reuse shape paint styles and skip rectangles fully outside the rendered image during zooms. Preview and export share the same visibility checks without reducing image quality.
+- Timeline playback moves the playhead with a composited 3D transform and reuses unchanged visible clip lists instead of repainting static artwork on every tick.
+- Desktop application code now lives under `apps/desktop`; reusable document, rendering, encoding, storage and native capture transport code lives in separate packages.
+- Timeline artwork shares one viewport-sized canvas and one measurement/paint queue; Ctrl/Cmd-wheel zoom keeps the time beneath the pointer and supports long timelines without a fixed ruler cap.
+
+- Studio preview and export use the same completed-frame renderer for scenes, camera effects, cursor, text and transitions.
+- Immutable engine edits and undo/redo share unchanged document records, reducing full-document JSON copies; CLI benchmarks now include editing timings.
+- Timeline artwork now uses viewport-sized canvas lanes instead of per-clip DOM artwork, while keeping accessible editing controls and GPU audio waveforms.
+- Blur, frost, pixelation and highlight effects share retained GPU filtering in preview and export, with bounded masks and ordered backdrop groups.
+- Scrubbing requests preceding keyframes while moving, then refines to the exact image on release or after a short pause. Timeline drag previews retain sparse timing patches, and history/save observers avoid repeated whole-document serialization and deep traversal.
+- Dense runs of eligible pixel-aligned opaque rectangles batch on the GPU in preview and export, preserving native video/effect ordering and full-resolution output. Complex and fractional shapes retain their original painter.
+- Video-heavy previews and exports batch adaptive shadow color sampling and reuse eligible full-resolution geometric media shadows. Shape effects retain compact blur masks and reusable paths; editor and export teardown releases their GPU surfaces.
+- Virtualized timeline lanes, clips, captions, zooms and ruler ticks in both scroll directions; offscreen audio lanes no longer start waveform decoding. Large selections remain available across scrolling.
+- Large clipboard selections now paste in one validated transaction. Drag previews avoid repeated deep reactivity scans, and fragment collision limits use indexed lane boundaries.
+- Identical video copies share decoded frames in preview and export without merging their visual layers. Full-resolution blurs combine backdrop cropping and filtering, and reuse bounded feathered masks without GPU allocation churn in oversized scenes.
+- Shape-heavy Studio projects share identical element thumbnails and reuse timeline metadata and indexed camera lookups to reduce preview, playback and scrubbing work without lowering preview quality.
+- Video and screenshot project pickers retain their cards between openings while refreshing the catalogue, reveal projects and decoded images smoothly, and generate up to two visible video thumbnails concurrently.
+- Screenshot's lighter editing dock includes undo/redo, while dimensions, fullscreen and Settings live in the topbar. The dock, Composition and topbar share subtle frosted surfaces; the preview supports wheel zoom and middle-button or Space-drag panning without changing exports.
+- Screenshot editing uses a centered floating tool dock and a contextual inspector on the left, consistent with the video editor. A visible Properties toggle smoothly hides and restores the inspector without losing its context, replacing the separate Canvas/Clip/Settings navigation rail.
+- Development launches reuse the configured Cargo target directory and incremental compilation cache across worktrees, while keeping each running instance's native executables separate.
+- Quick Snip opens as a compact, movable single-row toolbar with Video/Image, source and device icons, shared settings with scrollable presets, and an icon-only capture button. Screen/window selection reuses the Recorder chooser; region drawing starts with Start or Enter. Toolbar positions are remembered per display, with native background blur on Windows/macOS and translucency on Linux.
+- Editor settings now use clear categories, consistent option typography and aligned category icons. Update actions sit together with a shorter Changelog label; About groups community links and system information, and developer tools no longer sit inside nested boxes.
+- Recorder and editor settings share clearer Light/Dark/System previews, with brighter dark previews and one sliding selection indicator instead of an extra orange checkmark. The redundant language description is removed and Theme replaces Theme Mode.
+- Theme Advanced contains colors and style. Scaling keeps the global UI scale visible and puts per-area overrides behind its own Advanced button.
+- Recording defaults and region controls share desktop icon and taskbar/Dock visibility switches and the same saved preferences, also used by Quick Snip.
+- Advanced panels share smooth opening and closing animations, including quick reversals and reduced-motion support.
+- Cursor properties now group appearance, shadow, motion and click effects without repeated dividers. Shadow options appear directly when Drop Shadow is enabled and hide when disabled. Motion details use Advanced, Custom motion opens its sliders automatically, and Screenshot keeps rotation with appearance.
+- Element properties now live in Clip in Studio and Screenshot. Each editor keeps a single grouped Add menu with arrow submenus, neutral actions, rounded corners and equal padding.
+- Editor sidebars now share the button groups' sliding orange selection animation, including Settings, with immediate positioning during scroll/resize and reduced-motion support.
+- 3D zooms offer six compact, outlined tilt previews and show the selected perspective in the timeline. Advanced reveals the sliders, Custom opens them automatically, and a small Info tooltip replaces the long perspective explanation.
+- Color pickers now use a compact control row without the redundant large swatch, HEX caption or repeated Color header. HEX/RGB switching and the eyedropper have visible icons, and Escape closes the popover from its controls.
+- Buttons and custom selects keep neutral hover and open states. Button groups offer orange or neutral selections with clearer light-theme contrast; preview eyes appear only in menus that offer a visible preview.
+- Watermark text/position and text alignment button groups now use the Recorder's sliding selection animation.
+- Undo/redo feedback identifies the action and affected item, including reopened Screenshot history.
+- New editor and recording controls, Spotlight labels, undo/redo descriptions and contextual help are translated into all 15 supported languages.
+- The Recorder and editors use one shared light/dark palette with a livelier Beam orange and white action labels and icons, including saved orange appearances with custom corner radii.
+- Editor titlebars now center a borderless project switcher with a wider rectangular project panel, place presets on the left with a settings icon, and shorten video export labels in all 15 languages. Export buttons fit their labels.
+- Capture modes now use Beam’s original Recorder, Screenshot and Instant SVG icons in the HUD, Quick Snip controls and project pickers.
+- Simplified the editor with Concat-inspired light/dark surfaces, neutral controls, taller sliders with rounded handles and compact value editors, a softer orange accent, aligned sidebar buttons and subtle properties-panel opening animations. Slider focus outlines appear with keyboard navigation.
+- Background imports now occupy the first library tile. Image, video, color and gradient tiles share their dimensions, with translated addition tooltips in all 15 languages.
+- Zoom and caption tracks are larger; audio tracks are shorter. Timeline items share neutral selection, hover and disabled states, with quieter lane backgrounds and clearer colored blocks and waveforms in both themes.
+- Beamy now uses Bloub’s original circular body, rounded capsule eyes and neutral/sad/happy expressions in Beam’s theme color, without cloud styling or cheeks. Sad states blink and move their gaze naturally.
+- Startup immediately shows compact animated loading dots. After three seconds, Beamy briefly morphs into a triangle before returning to the dancing dots, using the shared Mascot Lab engine.
+- Projects and Preferences now use smaller muted gray titlebar icons and lighter titles. Preferences matches the recorder’s compact 38 px titlebar height, including native window controls.
+- Titlebars use the fixed Beam logo for the recorder, the existing folder icon for Projects and the gear icon for Preferences. The text-only Beam easter egg remains available, including in About. Beamy is reserved for loading and status states.
+- Redesigned Settings with neutral navigation, colored category icons, direction-aware transitions and indexed search across setting names, descriptions and shortcuts in the selected language and English. Search is focused on opening and accepts typing only in the active Settings window. Recorder setup now has a saved Always on top option, with previews for its window, recording bar visibility and Light/Dark/System themes. About features the interactive Beam wordmark, clearer version contrast, update controls and the current Discord invitation.
+- Preference changes can now be saved together in one batch. Shared JSON storage in Electron and Rust avoids repeated writes, preserves complete existing documents when staging fails, and cleans up owned temporary files after failures.
+- Projects now uses Beam’s compact titlebar with only Close and no oversized navigation footer. Ctrl+W (Cmd+W on macOS) closes the window, clicking a project title renames it, and typing anywhere on the page starts searching immediately. Project titles stay left-aligned.
+- Simplified source selection into a centered transparent Alt-Tab-style overlay with a compact search header, thumbnail row and scroll fades, without shadows, glow or footer. Hover shows the source behind the selector; clicking or pressing Enter starts the configured countdown immediately, or recording directly at 0 seconds.
+- The countdown now has a Cancel button translated into all 15 supported languages, which releases the prepared recording without starting capture.
+- Capture mode and Light/Dark/System controls share a sliding selection indicator, with instant updates when reduced motion is enabled.
+- Beam's light theme uses a clearer orange with subtle accent fills and borders, correcting its brown appearance on white surfaces; the dark theme and custom colors retain their selected shades.
+- Projects opens in a smaller window with square cards that adapt to resizing. Missing thumbnails are generated only for visible projects, with bounded concurrency.
+- Desktop windows load their selected interface, language and appearance in parallel. Camera and Quick Snip controls load independently of the HUD, and auxiliary startup waits for native capture discovery.
+- Recorder startup now loads other languages, recording overlays, font parsing and SVG validation only when needed, and exposes startup timings in developer tools.
+- Updated desktop and website JavaScript dependencies to their latest stable versions, including Electron 44, and upgraded Bun to 1.4.2 locally and in CI.
+- Recording controls are now a compact horizontal bar with Delete, confirmed Restart, Pause/Resume and Stop. Old bar positions reset once to the bottom center of each display; later moves remain saved.
+- Simplified the teleprompter to a larger floating toolbar for speed, text size/color, window transparency, reset and playback, with translated reset confirmation and only a title and Close button above the script.
+- Consolidated the desktop HTML entry pages in `html/`, including the recorder, editor and teleprompter.
+- The recorder source cards now share the Full screen artwork.
+- Redesigned the capture HUD into a compact horizontal layout with Full screen, Region and Window cards that open the matching selection and capture after confirmation.
+- Refreshed the default light and dark surfaces, typography and control shapes, with bundled Hanken Grotesk and themed device/preset menus.
+
+### Fixed
+
+- Quick Snip settings stay attached to their trigger on every opening, close on a second cog press, animate from the cog, prepare while the toolbar is active, and use a light shadow without horizontal or duplicate Select scrollbars. Device choices use Beam menus instead of native context menus.
+- Quick Snip settings open on the development session's selected port, including when other Beam instances already use the default port.
+- Audio waveforms now redraw during timeline zoom without waiting for thumbnail work or an obsolete crossfade; rapid changes keep only the latest pending draw.
+- AI caption icons reserve their own space before the timeline label, including locked captions.
+- Add and canvas insertion submenus now blur the content behind them instead of showing it sharply through a transparent background; context menus share the same frosted surface in both themes.
+- Adding a timeline element no longer temporarily clears other clips. Canvas artwork follows animated row reordering, and successive drag swaps use spatial hysteresis instead of a 150 ms pause; clip, caption and row positions use `translate3d`.
+- Custom radius and shadow choices fill their entire preset slot, matching the click target and highlighted area of adjacent choices.
+- Inspector accordions keep their final height during animation at every interface scale, and compact input labels and units stay centered with intact rounded borders.
+- The loading mascot’s brief triangle phase now visibly looks around and blinks, in both the startup shell and application loading views, while respecting reduced motion.
+
+- Recorder Settings and Projects open above an always-on-top recorder and follow its topmost preference. Their prepared native windows reopen without reloading the renderer; hidden feature content is unmounted and app shutdown releases the cache.
+
+- Projects created in Studio now generate thumbnails and hover previews from imported video clips, including projects without a screen recording.
+
+- Updating preferences while an editor is open no longer fails on the Recorder window's always-on-top setting; hidden Recorder windows remain hidden and editor windows retain their native behavior.
+
+- Canvas horizontal mouse-wheel scrolling now zooms in and out according to its direction instead of always zooming out; zero-motion events no longer change the zoom.
+- Fast horizontal and vertical timeline scrolling keeps the canvas covering the viewport and prepares newly visible tracks before painting.
+- Desktop startup resolves the shared JSON storage adapter when organizing project categories.
+- Horizontal timeline scrolling keeps clip artwork, titles, trim handles and audio waveforms aligned; audio titles stay above waveforms and zoom badges retain the theme's text color.
+- VP9/AV1 exports on Linux use buffered software decoding to prevent decoder flush failures. Multi-video scenes retain every current image instead of evicting visible layers when the seek-history cache fills.
+- Imported VP9 videos, timeline thumbnails and video posters use buffered software decoding on Linux to prevent hardware decoder failures during playback and seeking.
+- Screenshot exports move rendering off the interface thread, avoid repeated image decoding and oversized working rasters, and reuse unchanged results for repeated saves or copies with a bounded cache. Large Composition lists no longer rebuild every row when export starts or finishes.
+- Startup skeletons follow each editor's actual workspace, scaled inspector and controls: Screenshot has its editing dock and Composition instead of a video timeline, while Studio preserves the saved timeline height. Screenshot keeps a correctly sized placeholder until its first canvas paint.
+- Theme previews keep proportional miniature layouts and a readable maximum width in recorder settings, including maximized windows and compact editor inspectors.
+- Restored Screenshot's topbar search and Ctrl/Cmd+F using Studio's shared command palette, with layer-aware categories, supported properties and capture actions. Search results reopen the left inspector and focus the appropriate Appearance or Text controls.
+- Editor project menus fade and lift smoothly from their first presented frame, avoiding abrupt bright flashes when opening and closing without delaying interaction.
+- Editor project menus respond on the initial pointer press; cached catalogue refresh waits until after presentation, and first-use loading no longer leaves a blank panel.
+- Clicking empty editor topbar space now dismisses its popovers; native window dragging resumes once the menus close.
+- Screenshot fullscreen transitions keep their backdrop opaque to prevent bright flashes when entering or leaving the preview.
+- Development sessions show existing videos and screenshots and reuse saved preferences from the usual Beam library instead of an empty profile-specific library.
+- Fresh development sessions can save onboarding preferences without applying recorder-only window methods to the welcome screen.
+- Shape and zoom selections no longer prevent manual navigation to Clip.
+- Spotlight no longer flashes on each typed letter or scales its text when opening; panel height changes animate smoothly.
+- Tooltips preserve intentional line breaks, including the perspective explanation.
+- The eyedropper on Wayland uses the native color portal without closing the screen chooser immediately or dismissing nested color pickers; cancellation and failures have clear feedback.
+- Color picker popovers stay open when a drag starts inside and ends outside, including nested pickers; a new outside click still dismisses them.
+- The color picker's saturation/value pad now paints one continuous rounded surface, removing gaps and seams around its corners.
+- Selected editor sidebar sections now use Beam's orange and matching legible labels and icons in both themes, including Settings, without a permanent border around the active item.
+- Recenter and undo/redo overlays use quieter shadows with enough canvas margin to avoid clipping against the editor bars.
+- Linux recordings with the real cursor enabled respect hidden-cursor metadata and refresh cursor-only frames without leaving trails.
+- Gradient preset tiles now render clean rounded corners without repeated color seams along their borders.
+- Whisper transcription now releases decoder and alignment buffers to prevent GPU memory accumulation. Failed workers are released before retrying, and failure reports show the planned segments and actual inference time.
+- Linux AV1 playback and timeline thumbnails use the software decoder to avoid hardware decoding failures during seeking. Copied playback diagnostics now identify the file, clip, codec, decoder configuration, operation and exact source/timeline position.
+- Copy buttons keep their icon stable while copying, then show confirmation without briefly flashing disabled or displaying a spinner.
+- Playback errors now show a sad Beamy and a translated diagnostic copy button in the editor preview, instead of drawing technical errors into the canvas.
+- Double-clicking a project’s action menu no longer opens the project behind it.
+- Window and Full screen previews stay behind the source selector, including during rapid hovering and late preview loading.
+- Moving between source cards keeps the same preview visible, avoiding repeated window-opening animations and preview remounts in development mode.
+- Centered the Beam logo and wordmark vertically in the recorder toolbar, including animated text.
+- Editor opening now shows Beamy with a single friendly, translated status, no HUD titlebar, and a Cancel button that safely returns to the recorder without deleting the project.
+- Beamy shows a downcast expression with round eyes when editor opening or another Beamy status fails; editor error actions stay accessible with long translations.
+- Project playback starts after saved editor settings are restored; audio waveform GPU work runs in a shared worker to keep the editor responsive during loading.
+- Saved project thumbnails use the same media protocol as video previews, so development windows display them instead of a broken image.
+- macOS window selection excludes privacy indicators and other system UI surfaces while retaining real application windows.
+- The first countdown value now waits for its mounted renderer as well as native window readiness, preventing an empty countdown on first use.
+- The Beam wordmark stays vertically centered and unclipped at rest; its text easter egg eases back to the original layout after each interaction.
+- Full screen region controls keep a visible margin at the top and bottom, and their placement adapts to translated labels, wrapped controls and device errors.
+- The region selector shows the live desktop through its transparent crop instead of covering it with a frozen screenshot; the snapshot is used only by the magnifier.
+- Region controls return directly to their final position at screen edges, and the selector loads independently while its native desktop preview prepares.
+- Linux region capture chooses a monitor once through the Portal and reuses that authorized source for the magnifier and recording. Accidental clicks no longer create empty crops.
+- Windows/macOS HUD popovers temporarily expand the transparent window; Linux menus scroll within compact bounds so added transparent space cannot block desktop clicks.
+- Development builds and launches now find native capture binaries in the Cargo-configured build directory, including shared Linux caches.
+- Linux now selects X11/XWayland at launch to avoid GPU startup crashes and enable native placement; screen region selection waits for renderer readiness and opens at the exact display bounds.
+
+### Removed
+
+- Removed the redundant Elements sidebar section; its properties are available in Clip.
+- Removed the standalone Mascot Lab entry from production builds; the lab remains accessible through development Settings.
+
 ## [0.4.0] - 2026-09-27
 
 ### Added

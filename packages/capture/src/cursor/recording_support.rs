@@ -4,7 +4,7 @@ use crate::{
     CaptureError,
     cursor::{CursorEvent, CursorShapeCatalogEntry, telemetry_from_events},
     input::finalize_input_events,
-    storage::write_atomic,
+    storage::{JsonWrite, write_json_batch},
 };
 
 pub(crate) struct CursorRecordingPaths {
@@ -48,11 +48,8 @@ fn finalize_cursor_artifacts(
         .filter(|line| !line.trim().is_empty())
         .map(serde_json::from_str::<CursorEvent>)
         .collect::<Result<Vec<_>, _>>()?;
-    write_atomic(destination, &serde_json::to_vec_pretty(&events)?)?;
-    write_atomic(
-        telemetry_path,
-        &serde_json::to_vec_pretty(&telemetry_from_events(&events))?,
-    )?;
+    let events_json = JsonWrite::new(destination, &events)?;
+    let telemetry_json = JsonWrite::new(telemetry_path, &telemetry_from_events(&events))?;
     let shapes = events
         .into_iter()
         .filter_map(|event| match event {
@@ -73,7 +70,11 @@ fn finalize_cursor_artifacts(
             _ => None,
         })
         .collect::<std::collections::BTreeMap<_, _>>();
-    write_atomic(shapes_path, &serde_json::to_vec_pretty(&shapes)?)?;
+    write_json_batch([
+        events_json,
+        telemetry_json,
+        JsonWrite::new(shapes_path, &shapes)?,
+    ])?;
     remove_published_partial(partial)
 }
 

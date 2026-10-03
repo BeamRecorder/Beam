@@ -14,7 +14,7 @@ const {
   validateManifestEntry,
   writeVerifiedFile,
 } = require('../scripts/native/download.cjs');
-const { nativeManifestAssetName } = require('../electron/capture/capture-engine-path.cjs');
+const { nativeManifestAssetName } = require('@beam/native-client/capture-engine-path');
 
 const version = '1.2.3';
 
@@ -56,8 +56,14 @@ test('required native files are exact for Windows, macOS, and Linux helper paylo
     assert.deepEqual(
       linux.map(({ kind, asset }) => ({ kind, asset })),
       [
-        { kind: 'capture-engine', asset: `capture-engine-${version}-linux-x64` },
-        { kind: 'beam-input-helper', asset: `beam-input-helper-${version}-linux-x64` },
+        {
+          kind: 'capture-engine',
+          asset: `capture-engine-${version}-linux-x64`,
+        },
+        {
+          kind: 'beam-input-helper',
+          asset: `beam-input-helper-${version}-linux-x64`,
+        },
       ],
     );
 
@@ -111,7 +117,10 @@ test('fetchBuffer reports HTTP failures and follows successful binary responses'
     }),
     bytes,
   );
-  assert.deepEqual(request, { url: 'https://example.test/engine', options: { redirect: 'follow' } });
+  assert.deepEqual(request, {
+    url: 'https://example.test/engine',
+    options: { redirect: 'follow' },
+  });
   await assert.rejects(
     fetchBuffer('https://example.test/missing', async () => response(Buffer.alloc(0), 404)),
     /Download failed \(404\)/,

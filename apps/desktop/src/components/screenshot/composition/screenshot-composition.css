@@ -1,0 +1,182 @@
+.screenshot-composition {
+  --composition-header-height: 56px;
+  position: absolute;
+  z-index: 12;
+  top: 0;
+  left: 0;
+  width: 264px;
+  max-width: calc(100% - 32px);
+  height: var(--composition-header-height);
+  --composition-body-height: 360px;
+}
+.screenshot-composition.positioning {
+  visibility: hidden;
+}
+.screenshot-composition.moving-panel {
+  will-change: transform;
+}
+.composition-surface {
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  outline: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.upward .composition-surface {
+  flex-direction: column-reverse;
+  transform: translateY(calc(-100% + var(--composition-header-height)));
+}
+.composition-header {
+  flex-shrink: 0;
+  height: var(--composition-header-height);
+}
+.composition-header:hover {
+  background: var(--color-bg-surface-hover);
+}
+.composition-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.composition-heading strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+}
+.composition-heading .layer-count {
+  flex-shrink: 0;
+  color: var(--text-primary);
+  background: var(--color-bg-element);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  padding: 4px 7px;
+}
+.composition-chevron {
+  flex-shrink: 0;
+  transition: transform 160ms ease;
+}
+.composition-chevron.points-up {
+  transform: rotate(180deg);
+}
+.composition-content {
+  display: flex;
+  flex-direction: column;
+  max-height: var(--composition-body-height);
+  min-height: 0;
+  overflow-y: auto;
+  border-top: 1px solid var(--color-border);
+  box-sizing: border-box;
+}
+.upward .composition-content {
+  border-top: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.compositing-controls {
+  border: 0;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.compositing-controls:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.layer-list {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  min-height: 0;
+  padding: 4px;
+}
+.layer-list[inert] {
+  opacity: 0.45;
+}
+.layer-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.layer-row {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  box-sizing: border-box;
+  padding-right: 2px;
+}
+.layer-row.selected {
+  background: color-mix(in srgb, var(--color-primary) 14%, var(--color-bg-element));
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+.layer-row.dragging {
+  box-shadow: var(--shadow-sm);
+  border-color: var(--color-primary);
+}
+.layer-row.hidden .layer-select {
+  opacity: 0.45;
+}
+.layer-select {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 0;
+  padding: 0 0 0 6px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 8px;
+  text-align: left;
+  cursor: grab;
+  touch-action: none;
+}
+.layer-row.dragging .layer-select {
+  cursor: grabbing;
+}
+.layer-select:focus-visible {
+  outline: 1px solid var(--color-primary);
+  outline-offset: -1px;
+  border-radius: var(--radius-sm);
+}
+.layer-name {
+  font-size: 11px;
+  color: var(--text-primary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.layer-move {
+  transition: transform 160ms ease;
+}
+.layer-enter-active,
+.layer-leave-active {
+  transition: opacity 140ms ease;
+}
+.layer-enter-from,
+.layer-leave-to {
+  opacity: 0;
+}
+.layer-leave-active {
+  position: absolute;
+}
+@media (prefers-reduced-motion: reduce) {
+  .composition-chevron,
+  .layer-move,
+  .layer-enter-active,
+  .layer-leave-active {
+    transition: none;
+  }
+}

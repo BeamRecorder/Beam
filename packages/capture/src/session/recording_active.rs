@@ -31,6 +31,7 @@ pub(super) struct ActiveRecordings {
 
 pub(super) struct OpenContext<'a> {
     pub(super) request: &'a CaptureRequest,
+    pub(super) region_selection: &'a mut Option<crate::screen::RegionSelection>,
     pub(super) snapshot: &'a CatalogSnapshot,
     pub(super) layout: &'a crate::storage::SessionLayout,
     pub(super) generation: u32,
@@ -88,6 +89,7 @@ impl ActiveRecordings {
     pub(super) fn open(&mut self, context: OpenContext<'_>) -> Result<(), CaptureError> {
         let OpenContext {
             request,
+            region_selection,
             snapshot,
             layout,
             generation,
@@ -182,7 +184,18 @@ impl ActiveRecordings {
             ));
             track.status = TrackStatus::Recording;
         }
-        self.open_screen(request, layout, generation, start_ns, tracks, start_gate)?;
+        self.open_screen(OpenContext {
+            request,
+            region_selection,
+            snapshot,
+            layout,
+            generation,
+            start_ns,
+            tracks: &mut *tracks,
+            start_gate,
+            #[cfg(all(target_os = "macos", feature = "cursor"))]
+            cursor_shape_source,
+        })?;
         self.open_system_audio(request, layout, generation, start_ns, tracks, start_gate)?;
         let _ = snapshot;
         let samplers = metrics::samplers(self, tracks);
@@ -233,15 +246,17 @@ impl ActiveRecordings {
         Ok(())
     }
 
-    fn open_screen(
-        &mut self,
-        request: &CaptureRequest,
-        layout: &crate::storage::SessionLayout,
-        generation: u32,
-        start_ns: u64,
-        tracks: &mut Vec<TrackMetadata>,
-        start_gate: &Arc<super::StartGate>,
-    ) -> Result<(), CaptureError> {
+    fn open_screen(&mut self, context: OpenContext<'_>) -> Result<(), CaptureError> {
+        let OpenContext {
+            request,
+            layout,
+            generation,
+            start_ns,
+            tracks,
+            start_gate,
+            region_selection,
+            ..
+        } = context;
         let Some(selection) = &request.screen else {
             return Ok(());
         };
@@ -250,9 +265,13 @@ impl ActiveRecordings {
             .then(|| layout.track_dir(TrackKind::Cursor));
         let recording = crate::screen::ScreenRecording::open(crate::screen::ScreenOpenRequest {
             selection,
+            region_selection: region_selection.take(),
             recording: &request.recording,
             region: request.region,
+            hide_taskbar: request.hide_taskbar,
+            hide_desktop_icons: request.hide_desktop_icons,
             cursor: request.cursor,
+            show_real_cursor: request.show_real_cursor,
             excluded_window_handles: &request.excluded_window_handles,
             start_ns,
             start_gate: start_gate.clone(),
@@ -343,6 +362,7 @@ impl ActiveRecordings {
     pub(super) fn resume_portal(&mut self, context: OpenContext<'_>) -> Result<(), CaptureError> {
         let OpenContext {
             request,
+            region_selection: _,
             snapshot,
             layout,
             generation,
