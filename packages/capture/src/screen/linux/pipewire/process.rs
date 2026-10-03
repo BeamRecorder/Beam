@@ -63,6 +63,8 @@ pub(super) struct ProcessState {
     pub repair_window_crop: bool,
     pub region: Option<ScreenRegion>,
     pub dmabuf_importer: DmaBufImporter,
+    /// When `true`, the Hyprland IPC cursor fallback is activated for this session.
+    pub separate_cursor_enabled: bool,
 }
 
 pub(super) fn should_defer_timestamp_origin(
@@ -96,7 +98,21 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         return;
     };
     let header = metadata::header(&buffer);
-    let cursor = metadata::cursor(&buffer, state.cursor.classifier_mut());
+    let mut cursor = metadata::cursor(&buffer, state.cursor.classifier_mut());
+    if cursor.is_none()
+        && state.separate_cursor_enabled
+        && super::super::hyprland::is_hyprland()
+        && let Some((hx, hy)) = super::super::hyprland::query_cursor_pos()
+    {
+        cursor = Some(super::cursor_state::CursorMetadata {
+            id: 1,
+            shape_id: Some(1),
+            x: hx,
+            y: hy,
+            hotspot: Some(crate::cursor::Hotspot { x: 0, y: 0 }),
+            cursor_kind: Some(crate::cursor::CursorKind::Default),
+        });
+    }
     let bitmap = if state.native_cursor.enabled() {
         metadata::native_bitmap(&buffer)
     } else {
@@ -470,11 +486,8 @@ fn flush_pending_drops(state: &mut ProcessState, session_ns: u64) {
 
 pub(super) fn backpressure_event(lost_frames: u64, session_ns: u64) -> ScreenDiscontinuity {
     ScreenDiscontinuity {
-        session_ns,
-        lost_frames,
-        code: NativeCaptureErrorCode::ScreenSinkBackpressure
-            .as_str()
-            .into(),
+        session_ns, lost_frames,
+        code: NativeCaptureErrorCode::ScreenSinkBackpressure.as_str().into(),
         message: "the bounded screen sample queue was full".into(),
     }
 }

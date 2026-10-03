@@ -34,15 +34,27 @@ pub struct LinuxNativeCapabilities {
     pub recording_available: bool,
 }
 
+/// Evaluates native Linux capture capabilities from portal properties, PipeWire, and FFmpeg availability.
 #[must_use]
 pub fn evaluate_capabilities(
     portal: PortalProperties,
     pipewire_available: bool,
     ffmpeg_available: bool,
 ) -> LinuxNativeCapabilities {
+    evaluate_capabilities_with_compositor(portal, pipewire_available, ffmpeg_available, false)
+}
+
+/// Evaluates native Linux capture capabilities including compositor-specific fallbacks (such as Hyprland).
+pub fn evaluate_capabilities_with_compositor(
+    portal: PortalProperties,
+    pipewire_available: bool,
+    ffmpeg_available: bool,
+    hyprland_available: bool,
+) -> LinuxNativeCapabilities {
     let portal_selection = portal.version >= MIN_PORTAL_VERSION
         && (portal.monitor || portal.window)
         && pipewire_available;
+    let separate_cursor = portal_selection && (portal.metadata_cursor || (portal.hidden_cursor && hyprland_available));
     LinuxNativeCapabilities {
         backend: "xdg-portal-pipewire".into(),
         portal_version: portal.version,
@@ -51,22 +63,24 @@ pub fn evaluate_capabilities(
         portal_selection,
         hidden_cursor: portal.hidden_cursor,
         embedded_cursor: portal.embedded_cursor,
-        separate_cursor: portal_selection && portal.metadata_cursor,
+        separate_cursor,
         cursor_clicks: super::input_helper_supported(),
-        cursor_shapes: portal_selection && portal.metadata_cursor,
+        cursor_shapes: separate_cursor,
         pipewire_available,
         recording_available: portal_selection && ffmpeg_available,
     }
 }
 
+/// Probes the system for portal, PipeWire, FFmpeg, and compositor capabilities within the given timeout.
 pub fn probe_native_capabilities(
     timeout: Duration,
 ) -> Result<LinuxNativeCapabilities, CaptureError> {
     let portal = probe_portal_properties(timeout)?;
-    Ok(evaluate_capabilities(
+    Ok(evaluate_capabilities_with_compositor(
         portal,
         probe_pipewire(),
         super::probe_ffmpeg().is_ok(),
+        super::hyprland::is_hyprland(),
     ))
 }
 

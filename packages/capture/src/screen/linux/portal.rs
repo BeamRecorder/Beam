@@ -252,13 +252,17 @@ async fn prepare_session(
     kind: PortalSourceKind,
     cursor: CursorSelection,
 ) -> Result<PortalReady, CaptureError> {
+    let modes = proxy
+        .available_cursor_modes()
+        .await
+        .map_err(map_portal_error)?;
     let request = proxy
         .select_sources(
             session,
             SelectSourcesOptions::default()
                 .set_sources(source_type(kind))
                 .set_multiple(false)
-                .set_cursor_mode(cursor_mode(cursor))
+                .set_cursor_mode(cursor_mode(cursor, &modes))
                 .set_persist_mode(PersistMode::DoNot),
         )
         .await
@@ -312,7 +316,7 @@ async fn verify_capabilities(
         .available_cursor_modes()
         .await
         .map_err(map_portal_error)?;
-    let requested_cursor = cursor_mode(cursor);
+    let requested_cursor = cursor_mode(cursor, &modes);
     if !modes.contains(requested_cursor) {
         return Err(CaptureError::native(
             NativeCaptureErrorCode::PortalCursorMetadataUnavailable,
@@ -330,11 +334,24 @@ fn source_type(kind: PortalSourceKind) -> ashpd::enumflags2::BitFlags<SourceType
     }
 }
 
-fn cursor_mode(cursor: CursorSelection) -> CursorMode {
+/// Selects the portal cursor mode for the requested cursor capture configuration,
+/// falling back to Hidden mode on Hyprland when Metadata mode is not supported.
+fn cursor_mode(
+    cursor: CursorSelection,
+    modes: &ashpd::enumflags2::BitFlags<CursorMode>,
+) -> CursorMode {
     match cursor {
         CursorSelection::Disabled => CursorMode::Hidden,
         CursorSelection::Embedded => CursorMode::Embedded,
-        CursorSelection::Separate { .. } => CursorMode::Metadata,
+        CursorSelection::Separate { .. } => {
+            if modes.contains(CursorMode::Metadata) {
+                CursorMode::Metadata
+            } else if modes.contains(CursorMode::Hidden) && super::hyprland::is_hyprland() {
+                CursorMode::Hidden
+            } else {
+                CursorMode::Metadata
+            }
+        }
     }
 }
 

@@ -18,7 +18,8 @@ pub use selection::{SelectionBounds, WindowSelectionPreview, preview_window_sele
 pub mod linux;
 #[cfg(target_os = "linux")]
 pub use linux::{
-    LinuxNativeCapabilities, PortalProperties, evaluate_capabilities, probe_native_capabilities,
+    LinuxNativeCapabilities, PortalProperties, evaluate_capabilities,
+    evaluate_capabilities_with_compositor, probe_native_capabilities,
 };
 #[cfg(target_os = "macos")]
 pub mod mac;
