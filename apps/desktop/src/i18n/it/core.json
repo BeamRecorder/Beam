@@ -556,6 +556,9 @@
     "back": "Torna a Beam"
   },
   "HudPreferences": {
+    "launchAtStartup": "Avvia Beam all’avvio",
+    "launchAtStartupDescription": "Apri Beam automaticamente quando accedi.",
+    "launchAtStartupInstalled": "Disponibile dopo aver installato Beam.",
     "categoryRecording": "Registrazione",
     "categoryDeveloper": "Sviluppatore",
     "developerDescription": "Strumenti per esaminare Beam e sperimentare con Beamy.",

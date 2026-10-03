@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const capture = vi.hoisted(() => ({
   platform: 'linux',
   notifyHudPanelReady: vi.fn(),
+  notifyHudPanelPrepared: vi.fn(),
+  visibility: null as ((value: boolean) => void) | null,
+  unsubscribe: vi.fn(),
+  onHudPanelVisibility: vi.fn(),
   requestHudProject: vi.fn(),
   close: vi.fn(),
 }));
@@ -20,7 +24,7 @@ const projects = {
   template: '<div />',
 };
 const mascot = { name: 'MascotLab', props: ['embedded'], template: '<div />' };
-const create = async (panel: string) => {
+const create = async (panel: string, visible = true) => {
   window.history.replaceState({}, '', `?panel=${panel}`);
   const wrapper = mount(HudPanelApp, {
     props: {
@@ -35,12 +39,17 @@ const create = async (panel: string) => {
       },
     },
   });
+  if (visible) capture.visibility?.(true);
   await flushPromises();
   return wrapper;
 };
 beforeEach(() => {
   vi.clearAllMocks();
   capture.platform = 'linux';
+  capture.onHudPanelVisibility.mockImplementation((listener) => {
+    capture.visibility = listener;
+    return capture.unsubscribe;
+  });
   capture.requestHudProject.mockResolvedValue(true);
 });
 describe('independent HUD panel renderer', () => {
@@ -112,4 +121,46 @@ describe('independent HUD panel renderer', () => {
     expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     wrapper.unmount();
   });
+});
+
+it('prepares only the shell and mounts fresh feature content on each presentation', async () => {
+  const wrapper = await create('projects', false);
+  expect(capture.notifyHudPanelPrepared).toHaveBeenCalledOnce();
+  expect(capture.notifyHudPanelReady).not.toHaveBeenCalled();
+  expect(wrapper.findComponent(projects).exists()).toBe(false);
+  capture.visibility?.(true);
+  await flushPromises();
+  const first = wrapper.getComponent(projects).vm;
+  expect(capture.notifyHudPanelReady).toHaveBeenCalledOnce();
+  capture.visibility?.(false);
+  await flushPromises();
+  expect(wrapper.findComponent(projects).exists()).toBe(false);
+  capture.visibility?.(true);
+  await flushPromises();
+  expect(wrapper.getComponent(projects).vm).not.toBe(first);
+  expect(capture.notifyHudPanelReady).toHaveBeenCalledTimes(2);
+  wrapper.unmount();
+  expect(capture.unsubscribe).toHaveBeenCalledOnce();
+});
+it('clears a selection error when hidden and does not expose stale errors on reopening', async () => {
+  const wrapper = await create('projects');
+  capture.requestHudProject.mockRejectedValueOnce(new Error('busy'));
+  wrapper.getComponent(projects).vm.$emit('open-project', { id: 'image', mode: 'screenshot' });
+  await flushPromises();
+  expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+  capture.visibility?.(false);
+  await flushPromises();
+  expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+  wrapper.unmount();
+});
+it('keeps hidden Settings unmounted until visibility and waits for explicit content readiness', async () => {
+  const wrapper = await create('settings', false);
+  expect(capture.notifyHudPanelPrepared).toHaveBeenCalledOnce();
+  expect(wrapper.findComponent(settings).exists()).toBe(false);
+  capture.visibility?.(true);
+  await flushPromises();
+  expect(capture.notifyHudPanelReady).not.toHaveBeenCalled();
+  wrapper.getComponent(settings).vm.$emit('ready');
+  expect(capture.notifyHudPanelReady).toHaveBeenCalledOnce();
+  wrapper.unmount();
 });

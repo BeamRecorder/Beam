@@ -8,7 +8,18 @@ function registerPreferencesIpc({
   shortcutHandler = null,
   onPreferencesChanged = null,
   linuxShortcutSource = null,
+  launchAtStartup = null,
 }) {
+  const applyStartup = (previous, preferences) => {
+    if (!launchAtStartup || previous.launchAtStartup === preferences.launchAtStartup) return;
+    try {
+      launchAtStartup.apply(preferences);
+    } catch (error) {
+      // Do not publish an enabled preference when OS registration failed.
+      store.write(previous);
+      throw error;
+    }
+  };
   const broadcast = (preferences) =>
     BrowserWindow.getAllWindows().forEach((win) => win.webContents.send('preferences:changed', preferences));
   const dispatch = (id) => {
@@ -49,6 +60,7 @@ function registerPreferencesIpc({
       throw new TypeError('Preference batch must contain at most 64 patches.');
     if (!patches.length) return store.read();
     const { previous, preferences } = store.patchBatch(patches);
+    applyStartup(previous, preferences);
     if (!isDeepStrictEqual(previous.shortcuts, preferences.shortcuts)) await registerShortcuts(preferences);
     broadcast(preferences);
     onPreferencesChanged?.(preferences);
@@ -64,6 +76,7 @@ function registerPreferencesIpc({
         }
       : initial;
     const preferences = store.write(next);
+    applyStartup(current, preferences);
     if (!isDeepStrictEqual(current.shortcuts, preferences.shortcuts)) await registerShortcuts(preferences);
     broadcast(preferences);
     onPreferencesChanged?.(preferences);

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { Sparkles } from '@lucide/vue';
+import { ref } from 'vue';
+import { usePreferencesStore } from '~/stores/preferences';
 import { useLocaleStore } from '~/stores/locale';
 import { useTranslate } from '~/i18n/useTranslate';
 import { isSupportedLocale, localeOptions } from '~/i18n/locales';
@@ -16,6 +18,21 @@ const { t } = useTranslate('HudPreferences');
 const { t: exportText } = useTranslate('ExportPopover');
 const exportBackend = useExportBackendPreference();
 const localeStore = useLocaleStore();
+const preferences = usePreferencesStore();
+const startupBusy = ref(false);
+const startupError = ref('');
+const setLaunchAtStartup = async (enabled: boolean) => {
+  if (!capture.canLaunchAtStartup || startupBusy.value || !preferences.settings) return;
+  startupBusy.value = true;
+  startupError.value = '';
+  try {
+    await preferences.update({ launchAtStartup: enabled });
+  } catch (error) {
+    startupError.value = String(error);
+  } finally {
+    startupBusy.value = false;
+  }
+};
 const updateLocale = (value: string | number) => {
   if (typeof value === 'string' && isSupportedLocale(value)) localeStore.setLocale(value);
 };
@@ -27,6 +44,16 @@ const openOnboarding = () => {
 
 <template>
   <div class="preference-stack">
+    <div class="preference-item preview-preference" data-setting="launch-at-startup" tabindex="-1">
+      <TogglePreference
+        :model-value="preferences.settings?.launchAtStartup ?? true"
+        :disabled="!capture.canLaunchAtStartup || !preferences.settings || startupBusy"
+        :label="t('launchAtStartup')"
+        :description="t(capture.canLaunchAtStartup ? 'launchAtStartupDescription' : 'launchAtStartupInstalled')"
+        @update:model-value="setLaunchAtStartup"
+      />
+      <p v-if="startupError" class="preference-error" role="alert">{{ startupError }}</p>
+    </div>
     <div class="preference-item" data-setting="language" tabindex="-1">
       <div class="preference-copy">
         <p class="preference-title">{{ t('language') }}</p>

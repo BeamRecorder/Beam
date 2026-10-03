@@ -568,6 +568,9 @@
     "back": "Return to Beam"
   },
   "HudPreferences": {
+    "launchAtStartup": "Launch Beam on startup",
+    "launchAtStartupDescription": "Open Beam automatically when you sign in.",
+    "launchAtStartupInstalled": "Available after installing Beam.",
     "categoryRecording": "Recording",
     "categoryDeveloper": "Developer",
     "developerDescription": "Tools for inspecting Beam and experimenting with Beamy.",

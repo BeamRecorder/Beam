@@ -556,6 +556,9 @@
     "back": "Quay lại Beam"
   },
   "HudPreferences": {
+    "launchAtStartup": "Khởi chạy Beam khi đăng nhập",
+    "launchAtStartupDescription": "Tự động mở Beam khi bạn đăng nhập.",
+    "launchAtStartupInstalled": "Khả dụng sau khi cài đặt Beam.",
     "categoryRecording": "Ghi hình",
     "categoryDeveloper": "Nhà phát triển",
     "developerDescription": "Công cụ để kiểm tra Beam và thử nghiệm với Beamy.",

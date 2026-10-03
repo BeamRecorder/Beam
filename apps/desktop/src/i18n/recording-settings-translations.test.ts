@@ -3,6 +3,9 @@ import { i18n, setCurrentLocale } from './index';
 import { SUPPORTED_LOCALES } from './locales';
 afterEach(() => setCurrentLocale('en'));
 const keys = [
+  'HudPreferences.launchAtStartup',
+  'HudPreferences.launchAtStartupDescription',
+  'HudPreferences.launchAtStartupInstalled',
   'Updates.check',
   'Updates.changelog',
   'EditorAccessibility.title',

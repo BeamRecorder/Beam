@@ -142,3 +142,23 @@ describe('lightweight startup portrait', () => {
     expect(removeVisibility).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
   });
 });
+
+it('updates the triangle eye transforms through looking, blink and reopening in the bootstrap DOM', () => {
+  setup();
+  const eye = element.querySelector('.startup-eyes')!;
+  const values = () =>
+    eye
+      .getAttribute('transform')!
+      .match(/-?\d+(?:\.\d+)?/g)!
+      .map(Number);
+  for (let time = 0; time <= 3550; time += 50) tick(time);
+  const before = values();
+  for (let time = 3600; time <= 3700; time += 50) tick(time);
+  const closed = values();
+  expect(Math.abs(closed[3]!)).toBeLessThan(Math.abs(before[3]!) / 10);
+  for (let time = 3750; time <= 3850; time += 50) tick(time);
+  const reopened = values();
+  expect(Math.abs(reopened[3]!)).toBeGreaterThan(Math.abs(closed[3]!) * 10);
+  expect(before.slice(4)).not.toEqual(reopened.slice(4));
+  expect(eye.getAttribute('opacity')).toBe('1');
+});

@@ -67,6 +67,7 @@ export interface ImportedFont {
 
 export interface CaptureApi {
   readonly platform: string;
+  readonly canLaunchAtStartup: boolean;
   pickScreenColor(): Promise<string | null>;
   cancelScreenColorPicker(): Promise<void>;
   discover(): Promise<CaptureCatalog>;
@@ -302,6 +303,7 @@ export interface PreferenceShortcut {
 }
 export interface PreferenceSettings {
   alwaysOnTop?: boolean;
+  launchAtStartup?: boolean;
   schemaVersion: 3;
   theme: 'light' | 'dark' | 'system';
   appearance?: AppearanceSettings;

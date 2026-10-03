@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld(
   'capture',
   Object.freeze({
     platform: process.platform,
+    canLaunchAtStartup: process.argv.includes('--beam-installed'),
     pickScreenColor: () => ipcRenderer.invoke('screen-color:pick'),
     cancelScreenColorPicker: () => ipcRenderer.invoke('screen-color:cancel'),
     devCrossplatform: process.argv.includes('--beam-dev-crossplatform'),
@@ -75,6 +76,12 @@ contextBridge.exposeInMainWorld(
     openHudSettings: () => ipcRenderer.invoke('hud:open-settings'),
     openHudProjects: () => ipcRenderer.invoke('hud:open-projects'),
     notifyHudPanelReady: () => ipcRenderer.send('hud-panel:ready'),
+    notifyHudPanelPrepared: () => ipcRenderer.send('hud-panel:prepared'),
+    onHudPanelVisibility: (listener) => {
+      const callback = (_event, visible) => listener(visible);
+      ipcRenderer.on('hud-panel:visibility', callback);
+      return () => ipcRenderer.removeListener('hud-panel:visibility', callback);
+    },
     requestHudProject: (request) => ipcRenderer.invoke('hud-panel:open-project', request),
     onHudProjectRequested: (listener) => {
       const callback = (_event, request) => listener(request);

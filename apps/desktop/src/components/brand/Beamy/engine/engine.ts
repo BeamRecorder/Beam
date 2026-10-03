@@ -267,6 +267,10 @@ export class BotEngine {
     // Dans la video, chaque changement de forme est masque par un clignement.
     if (STATE_BY_ID.get(id)?.blinkIn) this.blinkAt = now;
   }
+  blink(now: number) {
+    if (Number.isFinite(now)) this.blinkAt = now;
+  }
+
   sample(now: number): BotFrame {
     const R = this.scale;
     const def = STATE_BY_ID.get(this.cur)!;

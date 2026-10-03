@@ -6,6 +6,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Recorder General settings can launch Beam at login, enabled by default for installed applications, with Linux XDG autostart and Windows/macOS login items. The setting is translated into all 15 languages.
 - CLI video exports can select WebCodecs or experimental Linux FFmpeg VA-API encoding, using the same Beam renderer and GPU transport as desktop. Exports return JSON diagnostics and protect destinations on failure or cancellation; the FFmpeg backend requires an X11/XWayland display and compatible native dependencies.
 - The Chromium CLI host can select software video decoding independently of GPU rendering to work around failing accelerated decoders.
 - Linux desktop has an opt-in experimental FFmpeg GPU exporter for MP4 and WebM, with direct DMA-BUF transfer to VA-API and audio support. Its export option is translated into all 15 languages; native build and driver requirements are documented.
@@ -106,6 +107,10 @@ User-facing changes to Beam are documented in this file.
 - Refreshed the default light and dark surfaces, typography and control shapes, with bundled Hanken Grotesk and themed device/preset menus.
 
 ### Fixed
+
+- The loading mascot’s brief triangle phase now visibly looks around and blinks, in both the startup shell and application loading views, while respecting reduced motion.
+
+- Recorder Settings and Projects open above an always-on-top recorder and follow its topmost preference. Their prepared native windows reopen without reloading the renderer; hidden feature content is unmounted and app shutdown releases the cache.
 
 - Projects created in Studio now generate thumbnails and hover previews from imported video clips, including projects without a screen recording.
 

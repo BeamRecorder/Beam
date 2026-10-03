@@ -57,6 +57,7 @@ export const settingsCategories = (development: boolean) =>
   SETTINGS_CATEGORIES.filter(({ id }) => development || id !== 'developer');
 
 const definitions = [
+  ['launch-at-startup', 'general', 'HudPreferences.launchAtStartup', 'HudPreferences.launchAtStartupDescription'],
   ['always-on-top', 'recording', 'HudPreferences.alwaysOnTop', 'HudPreferences.recorderAlwaysOnTopDesc'],
   ['language', 'general', 'HudPreferences.language', 'HudPreferences.chooseLanguage'],
   [

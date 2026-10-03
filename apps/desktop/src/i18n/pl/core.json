@@ -556,6 +556,9 @@
     "back": "Wróć do Beam"
   },
   "HudPreferences": {
+    "launchAtStartup": "Uruchamiaj Beam przy logowaniu",
+    "launchAtStartupDescription": "Automatycznie otwieraj Beam po zalogowaniu.",
+    "launchAtStartupInstalled": "Dostępne po zainstalowaniu Beam.",
     "categoryRecording": "Nagrywanie",
     "categoryDeveloper": "Deweloper",
     "developerDescription": "Narzędzia do sprawdzania Beam i eksperymentowania z Beamy.",

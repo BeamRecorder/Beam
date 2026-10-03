@@ -11,6 +11,8 @@ export interface HudPanelApi {
   openDeveloperTools(): Promise<void>;
   openMascotLab(): Promise<boolean>;
   notifyHudPanelReady(): void;
+  notifyHudPanelPrepared(): void;
+  onHudPanelVisibility(listener: (visible: boolean) => void): () => void;
   requestHudProject(request: HudProjectRequest): Promise<boolean>;
   onHudProjectRequested(listener: (request: HudProjectRequest) => void): () => void;
 }

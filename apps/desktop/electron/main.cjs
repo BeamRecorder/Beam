@@ -47,7 +47,7 @@ const { createMicrophoneStorage, registerMicrophoneIpc } = require('./microphone
 const { createSystemAudioStorage, registerSystemAudioIpc } = require('./system-audio/ipc.cjs');
 const { createWhisperModelStore } = require('./captions/whisper-model-store.cjs');
 const { registerWhisperIpc } = require('./captions/whisper-ipc.cjs');
-const { createPreferencesStore } = require('./preferences/preferences-store.cjs');
+const { initializeDesktopPreferences } = require('./preferences/desktop-preferences.cjs');
 const { registerEditorPresetIpc } = require('./presets/editor-preset-ipc.cjs');
 const { registerPreferencesIpc } = require('./preferences/preferences-ipc.cjs');
 const { applySpellCheckPreferences } = require('./preferences/spell-check.cjs');
@@ -140,8 +140,8 @@ function initializeApplication() {
       registerInputAccessIpc(applicationIpc, inputAccess);
       const userPaths = createUserPaths(app);
       organizeProjectCategories(userPaths.projects);
-      const preferencesStore = createPreferencesStore(userPaths.preferences, { platform: process.platform });
-      const startupPreferences = preferencesStore.repair();
+      const preferences = initializeDesktopPreferences(app, userPaths.preferences);
+      const { preferencesStore, startupPreferences, launchAtStartup } = preferences;
       const { editorPresetStore, screenshotPresetStore, screenshotStore } = createCaptureStores({
         userPaths,
         preferencesStore,
@@ -191,6 +191,7 @@ function initializeApplication() {
         return false;
       };
       const preferencesCleanup = registerPreferencesIpc({
+        launchAtStartup,
         ipcMain: applicationIpc,
         BrowserWindow,
         globalShortcut,
@@ -432,6 +433,7 @@ function initializeApplication() {
       if (!preferencesStore.read().onboardingCompleted) onboardingWindow.open();
 
       const hudPanels = createHudPanelManager({
+        captureWarmup,
         ...lifecycleOptions,
         appIconPath,
         ipcMain: applicationIpc,

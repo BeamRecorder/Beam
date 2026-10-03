@@ -556,6 +556,9 @@
     "back": "Вернуться в Beam"
   },
   "HudPreferences": {
+    "launchAtStartup": "Запускать Beam при входе",
+    "launchAtStartupDescription": "Автоматически открывать Beam при входе в систему.",
+    "launchAtStartupInstalled": "Доступно после установки Beam.",
     "categoryRecording": "Запись",
     "categoryDeveloper": "Разработчик",
     "developerDescription": "Инструменты для изучения Beam и экспериментов с Beamy.",

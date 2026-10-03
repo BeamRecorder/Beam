@@ -556,6 +556,9 @@
     "back": "Volver a Beam"
   },
   "HudPreferences": {
+    "launchAtStartup": "Iniciar Beam al arrancar",
+    "launchAtStartupDescription": "Abrir Beam automáticamente al iniciar sesión.",
+    "launchAtStartupInstalled": "Disponible después de instalar Beam.",
     "categoryRecording": "Grabación",
     "categoryDeveloper": "Desarrollador",
     "developerDescription": "Herramientas para inspeccionar Beam y experimentar con Beamy.",

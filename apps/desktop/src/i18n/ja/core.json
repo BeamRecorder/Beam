@@ -556,6 +556,9 @@
     "back": "Beamに戻る"
   },
   "HudPreferences": {
+    "launchAtStartup": "ログイン時にBeamを起動",
+    "launchAtStartupDescription": "ログイン時にBeamを自動的に開きます。",
+    "launchAtStartupInstalled": "Beamをインストールすると利用できます。",
     "categoryRecording": "録画",
     "categoryDeveloper": "開発者",
     "developerDescription": "Beam の検証と Beamy の実験用ツール。",

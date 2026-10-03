@@ -357,3 +357,65 @@ test('resetting changed shortcuts registers the restored bindings', async () => 
   assert.equal(source.calls.register.at(-1), reset.shortcuts['hud.startStopRecording'].keys);
   await cleanup();
 });
+
+for (const channel of ['preferences:update', 'preferences:update-batch', 'preferences:reset']) {
+  test(`${channel} applies startup before publishing settings and rolls back failed OS registration`, async () => {
+    const handlers = new Map(),
+      sent = [],
+      changes = [],
+      attempts = [];
+    const preferences = { ...shortcutPreferences(), launchAtStartup: channel === 'preferences:reset' ? false : true };
+    const previous = structuredClone(preferences);
+    const store = storeWith(preferences);
+    let fail = true;
+    const cleanup = registerPreferencesIpc({
+      ipcMain: ipcMainWith(handlers),
+      BrowserWindow: { getAllWindows: () => [windowWith(sent)] },
+      globalShortcut: { unregisterAll() {}, register() {} },
+      store,
+      launchAtStartup: {
+        apply(next) {
+          attempts.push(next.launchAtStartup);
+          if (fail) throw new Error('registration denied');
+        },
+      },
+      onPreferencesChanged: (value) => changes.push(value),
+    });
+    const payload =
+      channel === 'preferences:reset'
+        ? ['launchAtStartup']
+        : channel === 'preferences:update-batch'
+          ? [{ launchAtStartup: false }]
+          : { launchAtStartup: false };
+    await assert.rejects(handlers.get(channel)({}, payload), /registration denied/);
+    assert.deepEqual(store.read(), previous);
+    assert.equal(sent.length, 0);
+    assert.equal(changes.length, 0);
+    fail = false;
+    const saved = await handlers.get(channel)({}, payload);
+    assert.equal(saved.launchAtStartup, !previous.launchAtStartup);
+    assert.equal(sent.length, 1);
+    assert.equal(changes.length, 1);
+    assert.equal(attempts.length, 2);
+    await cleanup();
+  });
+}
+test('unrelated or identical preference edits do not touch OS startup registration', async () => {
+  const handlers = new Map(),
+    preferences = { ...shortcutPreferences(), launchAtStartup: true };
+  const cleanup = registerPreferencesIpc({
+    ipcMain: ipcMainWith(handlers),
+    BrowserWindow: { getAllWindows: () => [] },
+    globalShortcut: { unregisterAll() {}, register() {} },
+    store: storeWith(preferences),
+    launchAtStartup: {
+      apply() {
+        assert.fail('unexpected OS registration');
+      },
+    },
+  });
+  await handlers.get('preferences:update')({}, { theme: 'dark' });
+  await handlers.get('preferences:update')({}, { launchAtStartup: true });
+  await handlers.get('preferences:reset')({}, ['alwaysOnTop']);
+  await cleanup();
+});

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, type Component } from 'vue';
+import { onBeforeUnmount, onMounted, ref, type Component } from 'vue';
 import { capture } from '~/api/capture';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { CaptureProject } from '~/api/types/capture-api';
@@ -14,6 +14,12 @@ const { panel, content } = defineProps<{
 const { t } = useTranslate('HudPreferences');
 const title = panel === 'settings' ? 'Beam Settings' : panel === 'mascot' ? 'Beam Mascot Lab' : 'Beam Projects';
 const error = ref('');
+const visible = ref(false);
+const unsubscribe = capture.onHudPanelVisibility((value) => {
+  visible.value = value;
+  if (!value) error.value = '';
+});
+onBeforeUnmount(unsubscribe);
 const contentMounted = () => {
   if (panel !== 'settings') capture.notifyHudPanelReady();
 };
@@ -30,6 +36,7 @@ const openProject = async (project: CaptureProject) => {
 };
 onMounted(() => {
   document.title = title;
+  if (panel) capture.notifyHudPanelPrepared();
 });
 </script>
 
@@ -50,7 +57,7 @@ onMounted(() => {
     <p v-if="error" class="panel-error" role="alert">{{ error }}</p>
     <component
       :is="content"
-      v-if="content"
+      v-if="content && visible"
       v-bind="panel === 'mascot' ? { embedded: true } : {}"
       @ready="capture.notifyHudPanelReady()"
       @vue:mounted="contentMounted"

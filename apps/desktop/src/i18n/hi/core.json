@@ -556,6 +556,9 @@
     "back": "Beam पर वापस जाएँ"
   },
   "HudPreferences": {
+    "launchAtStartup": "स्टार्टअप पर Beam शुरू करें",
+    "launchAtStartupDescription": "साइन इन करते समय Beam अपने आप खोलें।",
+    "launchAtStartupInstalled": "Beam इंस्टॉल करने के बाद उपलब्ध है।",
     "categoryRecording": "रिकॉर्डिंग",
     "categoryDeveloper": "डेवलपर",
     "developerDescription": "Beam की जाँच और Beamy के साथ प्रयोग करने के उपकरण।",

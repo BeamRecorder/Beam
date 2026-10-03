@@ -45,3 +45,23 @@ describe('Beamy loading choreography', () => {
     expect(sample(time)).toEqual(sample(0));
   });
 });
+
+it('moves the triangle gaze visibly and blinks before the dots resume', () => {
+  const sample = createBeamyLoadingMotion();
+  const matrix = (time: number) =>
+    sample(time)
+      .eyes[0]!.matrix.match(/-?\d+(?:\.\d+)?/g)!
+      .map(Number);
+  const before = matrix(3.55),
+    closed = matrix(3.7),
+    reopened = matrix(3.85);
+  expect(Math.abs(closed[3]!)).toBeLessThan(Math.abs(before[3]!) / 10);
+  expect(Math.abs(reopened[3]!)).toBeGreaterThan(Math.abs(closed[3]!) * 10);
+  expect(Math.abs(matrix(3.45)[4]! - matrix(4.1)[4]!)).toBeGreaterThan(4);
+  expect(sample(3.7).eyes.every((eye) => eye.alpha === 1)).toBe(true);
+  expect(sample(3.7).dots).toHaveLength(0);
+});
+it('replays triangle eye movement and blinking identically after forward and backward seeks', () => {
+  const sample = createBeamyLoadingMotion();
+  for (const time of [3.7, 5, 3.55, 0, 3.85, 100, 3.7]) expect(sample(time)).toEqual(createBeamyLoadingMotion()(time));
+});

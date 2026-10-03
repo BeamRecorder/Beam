@@ -556,6 +556,9 @@
     "back": "返回 Beam"
   },
   "HudPreferences": {
+    "launchAtStartup": "登入時啟動 Beam",
+    "launchAtStartupDescription": "登入時自動開啟 Beam。",
+    "launchAtStartupInstalled": "安裝 Beam 後可用。",
     "categoryRecording": "錄影",
     "categoryDeveloper": "開發者",
     "developerDescription": "用於檢查 Beam 與實驗 Beamy 的工具。",
