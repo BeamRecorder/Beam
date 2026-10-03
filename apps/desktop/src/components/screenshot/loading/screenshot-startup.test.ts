@@ -12,7 +12,7 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 it('starts all metadata requests immediately and reuses them while the module loads', async () => {
-  const startup = createScreenshotStartup();
+  const startup = createScreenshotStartup({ backgrounds: api.listBackgroundLibrary, presets: api.getEditorPresets });
   startup.start('id');
   expect(api.getScreenshot).toHaveBeenCalledWith('id');
   expect(api.listBackgroundLibrary).toHaveBeenCalledOnce();
@@ -34,7 +34,7 @@ it('starts all metadata requests immediately and reuses them while the module lo
 it('captures state/history/first-render times and finishes once without exposing project contents', async () => {
   const state = stateFixture();
   api.getScreenshot.mockResolvedValue({ ...documentFixture(), state, history: { undo: [state], redo: [state] } });
-  const startup = createScreenshotStartup();
+  const startup = createScreenshotStartup({ backgrounds: api.listBackgroundLibrary, presets: api.getEditorPresets });
   await startup.load('id');
   expect(startup.time('history', () => 42)).toBe(42);
   startup.record('fonts', 10);
@@ -62,7 +62,7 @@ it('ignores measurements and scene metadata from a superseded project request', 
         finish = resolve;
       }),
   );
-  const startup = createScreenshotStartup();
+  const startup = createScreenshotStartup({ backgrounds: api.listBackgroundLibrary, presets: api.getEditorPresets });
   const old = startup.load('old');
   await startup.load('new');
   const current = startup.report();
@@ -72,7 +72,7 @@ it('ignores measurements and scene metadata from a superseded project request', 
   expect(api.getScreenshot).toHaveBeenCalledTimes(2);
 });
 it('records failed async and synchronous phases and preserves the actual error', async () => {
-  const startup = createScreenshotStartup();
+  const startup = createScreenshotStartup({ backgrounds: api.listBackgroundLibrary, presets: api.getEditorPresets });
   await startup.load('id');
   await expect(
     startup.measure('module', async () => {
@@ -94,14 +94,14 @@ it('records failed async and synchronous phases and preserves the actual error',
 });
 it('retains prefetch errors until the screenshot child awaits them', async () => {
   api.getScreenshot.mockRejectedValueOnce(new Error('document missing'));
-  const startup = createScreenshotStartup();
+  const startup = createScreenshotStartup({ backgrounds: api.listBackgroundLibrary, presets: api.getEditorPresets });
   startup.start('id');
   await expect(startup.load('id')).rejects.toThrow('document missing');
   startup.fail('document missing');
   expect(startup.report()!.error).toBe('document missing');
 });
 it('does not manufacture a report without a project and supports repeated opens with new requests', async () => {
-  const startup = createScreenshotStartup();
+  const startup = createScreenshotStartup({ backgrounds: api.listBackgroundLibrary, presets: api.getEditorPresets });
   startup.record('fonts', 4);
   startup.finish(1, 1);
   startup.fail('empty');

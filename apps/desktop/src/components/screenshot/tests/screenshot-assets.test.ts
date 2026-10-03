@@ -50,6 +50,56 @@ afterEach(() => {
 });
 
 describe('createScreenshotImageLoader', () => {
+  it('shares raw pending images without assigning consumer callbacks to them', async () => {
+    const load = createScreenshotImageLoader();
+    const request = load.request('photo');
+    expect(load('photo')).toBe(request.ready);
+    expect(await request.ready).toBe(request.image);
+    expect(load.request('photo')).toBe(request);
+  });
+  it('ignores a late decode from before clearing and keeps the new request', async () => {
+    const finish: Array<() => void> = [];
+    decodeImage = () => new Promise<void>((resolve) => finish.push(resolve));
+    const load = createScreenshotImageLoader();
+    const first = load('photo');
+    load.clear();
+    const second = load('photo');
+    finish[0]!();
+    await first;
+    expect(load('photo')).toBe(second);
+    finish[1]!();
+    expect(await second).not.toBe(await first);
+    expect(load('photo')).toBe(second);
+  });
+  it('clears retained pixels and images while preserving pixels already borrowed by a painter', async () => {
+    const load = createScreenshotImageLoader({ maxDecodedPixels: 10_000 });
+    const first = await load('photo');
+    load.clear();
+    load.clear();
+    const second = await load('photo');
+    expect(second).not.toBe(first);
+    expect(first.src).toBe('photo');
+    expect(await load('photo')).toBe(second);
+  });
+  it('keeps the current decode in flight when a cleared request for the same URL later rejects', async () => {
+    const finish: Array<() => void> = [],
+      fail: Array<(reason: unknown) => void> = [];
+    decodeImage = () =>
+      new Promise<void>((resolve, reject) => {
+        finish.push(resolve);
+        fail.push(reject);
+      });
+    const load = createScreenshotImageLoader();
+    const first = load('photo');
+    load.clear();
+    const second = load('photo');
+    fail[0]!(new Error('obsolete decode failed'));
+    await expect(first).rejects.toThrow('obsolete decode failed');
+    expect(load('photo')).toBe(second);
+    expect(instances).toHaveLength(2);
+    finish[1]!();
+    expect(await second).toBe(instances[1]);
+  });
   it('does not evict in-flight decodes when a scene requests more than three distinct images', async () => {
     const finish = new Map<string, () => void>();
     decodeImage = (image) => new Promise<void>((resolve) => finish.set(image.src, resolve));

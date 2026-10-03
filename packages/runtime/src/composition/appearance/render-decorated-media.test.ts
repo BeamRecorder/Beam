@@ -80,7 +80,7 @@ const context = () => {
     get: () => filterWrites.at(-1) ?? 'none',
     set: (next: unknown) => filterWrites.push(next),
   });
-  return value as unknown as CanvasRenderingContext2D & { fillStyles: unknown[]; filterWrites: unknown[] };
+  return value as unknown as CanvasRenderingContext2D & typeof value;
 };
 const source = {} as CanvasImageSource;
 
@@ -377,7 +377,28 @@ describe('decorated media rendering', () => {
     expect(ctx.createLinearGradient).not.toHaveBeenCalled();
     expect(ctx.fillStyles[0]).toBe(frameColor);
     expect(ctx.fillStyles).toContain(frameColor);
+    expect(ctx.fillStyles).toContain('#303030');
+    expect(ctx.fillStyles).toContain('#e5e5e5');
   });
+  it.each([
+    { frameTheme: 'dark' as const, frameColor: '#ffffff', address: '#303030', text: '#e5e5e5' },
+    { frameTheme: 'light' as const, frameColor: '#000000', address: '#f7f7f7', text: '#565656' },
+    { frameTheme: 'auto' as const, frameColor: '#ffddaa', address: '#f7f7f7', text: '#565656' },
+  ])(
+    'paints $frameTheme Safari chrome without replacing the custom frame color',
+    ({ frameTheme, frameColor, address, text }) => {
+      const ctx = context();
+      drawDecoratedMedia(ctx, {
+        source,
+        rect: { x: 0, y: 0, width: 160, height: 100 },
+        appearance: appearance({ frame: 'safari', frameColor, frameTheme }),
+        title: 'beam',
+      });
+      expect(ctx.fillStyles).toContain(frameColor);
+      expect(ctx.fillStyles).toContain(address);
+      expect(ctx.fillStyles).toContain(text);
+    },
+  );
   it.each(['safari', 'iphone-16-max', 'pixel-9-pro'] as const)(
     'uses a custom frame color for %s while retaining the frame passes and clipping',
     (frame) => {

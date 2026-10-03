@@ -35,10 +35,6 @@ const {
   renderedBackground,
   composition,
   isExporting,
-  undo,
-  redo,
-  canUndo,
-  canRedo,
   isPropertiesPanelOpen,
   selectPropertiesTab,
   isDeleteDialogOpen,
@@ -74,15 +70,11 @@ import VideoEditorTracks from './workspace/VideoEditorTracks.vue';
       :playhead-seconds="currentTime"
       :project="project"
       :is-saving="editorState.isSaving.value"
-      :can-undo="canUndo"
-      :can-redo="canRedo"
       :performance-snapshot="performanceSnapshot"
       :preset-document="editorPresets.document.value"
       :preset-dirty="editorPresets.dirty.value"
       @back-to-hud="emit('back-to-hud')"
       @open-project="emit('open-project', $event)"
-      @undo="undo"
-      @redo="redo"
       @preset-select="editorPresets.select"
       @preset-add="editorPresets.create"
       @preset-rename="editorPresets.rename"

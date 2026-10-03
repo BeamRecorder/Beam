@@ -1,5 +1,5 @@
 import { computed, onMounted, onScopeDispose, ref, type Ref } from 'vue';
-import { capture } from '~/api/capture';
+import { useEditorResources } from '../editor/resources/useEditorResources';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import { orderedCursorPacks } from '../editor/properties/cursor/cursor-packs';
@@ -11,12 +11,14 @@ import {
 import type { NormalizedTransform } from '@beam/engine/shared/composition-types';
 import { initializeScreenshotComposition, insertScreenshotLayer } from '@beam/engine/screenshot/screenshot-layers';
 import type { ScreenshotCursorUpdate } from '@beam/engine/screenshot/screenshot-types';
+import type { EditorResources } from '../editor/resources/editor-resource-types';
 
 export function useScreenshotCursors(
   state: Ref<ScreenshotState | null>,
   selectedId: Ref<string | null>,
   select: (id: string) => void,
   fail: (error: unknown) => void,
+  resources: EditorResources = useEditorResources(),
 ) {
   const imported = ref<CursorPackDescriptor[]>([]);
   const ready = ref(false);
@@ -28,7 +30,7 @@ export function useScreenshotCursors(
   const refresh = async () => {
     const request = ++libraryRequest;
     try {
-      const next = await capture.listCursorPacks();
+      const next = await resources.cursors();
       if (!disposed && request === libraryRequest) {
         imported.value = next;
         ready.value = true;
@@ -42,7 +44,7 @@ export function useScreenshotCursors(
   };
   onMounted(() => {
     void refresh();
-    unsubscribe = capture.onCursorPacksChanged(() => void refresh());
+    unsubscribe = resources.onCursorsChanged(() => void refresh());
   });
   onScopeDispose(() => {
     disposed = true;

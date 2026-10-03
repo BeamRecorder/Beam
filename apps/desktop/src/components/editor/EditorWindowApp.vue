@@ -10,6 +10,7 @@ import { clampTimelineHeight, DEFAULT_TIMELINE_HEIGHT } from './composables/useT
 import EditorProjectLoadingOverlay from './EditorProjectLoadingOverlay.vue';
 import type { EditorLayoutKind } from './layout/editor-layout-types';
 import { useScreenshotStartup } from '../screenshot/loading/useScreenshotStartup';
+import { clearEditorImages } from './resources/editor-image-cache';
 const screenshotStartup = useScreenshotStartup();
 const VideoEditor = shallowRef<Component>();
 const ScreenshotEditor = shallowRef<Component>();
@@ -191,6 +192,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  clearEditorImages();
   loadGeneration += 1;
   removeContextListener?.();
   removePreferencesListener?.();

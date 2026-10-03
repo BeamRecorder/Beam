@@ -73,7 +73,11 @@
     "continuityDescription": "Prolonge une copie floutée de la vidéo derrière le contenu ajusté.",
     "continuityBlur": "Flou de l’arrière-plan",
     "continuityBrightness": "Luminosité de l’arrière-plan",
-    "borderColor": "Couleur de bordure"
+    "borderColor": "Couleur de bordure",
+    "frameTheme": "Apparence du navigateur",
+    "auto": "Auto",
+    "light": "Clair",
+    "dark": "Sombre"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Chargement de l'aperçu caméra",

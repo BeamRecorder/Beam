@@ -10,6 +10,7 @@ import { MAX_TIMELINE_ZOOM, MIN_TIMELINE_ZOOM, zoomTimelineByButton } from './co
 import type { PreviewQuality } from '@beam/runtime/playback/index';
 import PreviewQualityPopover from './PreviewQualityPopover.vue';
 import type { PreviewPerformanceSnapshot } from '../performance/preview-performance-types';
+import EditorHistoryControls from '../EditorHistoryControls.vue';
 
 const { t } = useTranslate('TimelineToolbar');
 
@@ -20,6 +21,8 @@ const props = withDefaults(
     isPlaying: boolean;
     zoomLevel: number;
     canSplit?: boolean;
+    canUndo?: boolean;
+    canRedo?: boolean;
     isSnappingEnabled?: boolean;
     loading?: boolean;
     previewQuality?: PreviewQuality;
@@ -29,6 +32,8 @@ const props = withDefaults(
   {
     zoomLevel: 100,
     canSplit: false,
+    canUndo: false,
+    canRedo: false,
     isSnappingEnabled: true,
     loading: false,
     previewQuality: 'full',
@@ -43,6 +48,8 @@ const emit = defineEmits<{
   (e: 'update:isSnappingEnabled', value: boolean): void;
   (e: 'update:previewQuality', value: PreviewQuality): void;
   (e: 'split'): void;
+  (e: 'undo'): void;
+  (e: 'redo'): void;
   (e: 'toggle:canvas-fullscreen'): void;
 }>();
 
@@ -118,6 +125,13 @@ const handleFullscreenClick = (event?: MouseEvent) => {
             class="toolbar-snap-btn"
             :aria-pressed="isSnappingEnabled"
             @click="emit('update:isSnappingEnabled', !isSnappingEnabled)"
+          />
+          <EditorHistoryControls
+            :can-undo="canUndo && !loading"
+            :can-redo="canRedo && !loading"
+            tooltip-position="top"
+            @undo="emit('undo')"
+            @redo="emit('redo')"
           />
         </div>
       </div>

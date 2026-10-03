@@ -486,6 +486,22 @@ describe('useCameraZoom', () => {
     },
   );
 
+  it.each(['auto', 'light', 'dark'] as const)(
+    'preserves the %s Safari address appearance while cropping a screen',
+    (frameTheme) => {
+      mountComposable({ enabled: false, intensity: 0.55 }, true);
+      const screen = options.compositionRef.value!.clips[0] as VisualClip;
+      screen.appearance = { ...screen.appearance, frame: 'safari', frameTheme };
+      state.drawVideoWindow(context(), 800, 450, frame(1280, 720));
+      expect(drawDecoratedMedia).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          appearance: expect.objectContaining({ frame: 'safari', frameTheme }),
+        }),
+      );
+    },
+  );
+
   it.each(['iphone-16-max', 'pixel-9-pro'] as const)(
     'draws the unframed source and one fixed %s chrome overlay while cropping',
     (frameModel) => {

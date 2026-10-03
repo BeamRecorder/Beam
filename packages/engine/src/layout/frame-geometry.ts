@@ -1,9 +1,11 @@
 import type { MediaRect } from '@beam/engine/shared/geometry-types';
+import type { ClipFrameTheme } from '@beam/engine/shared/composition-types';
 
 export interface FrameOptions {
   showMenu?: boolean;
   showScrollbars?: boolean;
   chromeScale?: number;
+  theme?: ClipFrameTheme;
 }
 
 export const normalizeFrameChromeScale = (value: number | undefined) =>

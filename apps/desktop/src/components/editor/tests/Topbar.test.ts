@@ -1,6 +1,8 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Topbar from '../Topbar.vue';
+import { computed, ref } from 'vue';
+import { editorSearchKey, type EditorSearchContext } from '../search/editor-search-types';
 import type { EditorExportSource } from '@beam/encoder/export-types';
 import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
 import type { PreviewPerformanceSnapshot } from '../performance/preview-performance-types';
@@ -71,14 +73,22 @@ describe('VideoEditor Topbar', () => {
     wrapper.unmount();
   });
 
-  it('forwards undo and redo from the real shared history controls', async () => {
-    const wrapper = mount(Topbar, { props: { canUndo: true, canRedo: true } });
-
-    await wrapper.get('button[aria-label="Undo (Ctrl+Z)"]').trigger('click');
-    await wrapper.get('button[aria-label="Redo (Ctrl+Y)"]').trigger('click');
-
-    expect(wrapper.emitted('undo')).toHaveLength(1);
-    expect(wrapper.emitted('redo')).toHaveLength(1);
+  it('keeps search in the titlebar after history moves beside snapping', async () => {
+    const search: EditorSearchContext = {
+      open: ref(false),
+      ready: ref(true),
+      actions: computed(() => []),
+      items: computed(() => []),
+      setVisibleActions: vi.fn(),
+      registerActions: vi.fn(() => vi.fn()),
+      navigate: vi.fn(async () => {}),
+      setNavigator: vi.fn(() => vi.fn()),
+    };
+    const wrapper = mount(Topbar, { global: { provide: { [editorSearchKey as symbol]: search } } });
+    expect(wrapper.find('.history-actions').exists()).toBe(false);
+    const button = wrapper.get('.left-actions button[aria-label="Search the editor"]');
+    await button.trigger('click');
+    expect(search.open.value).toBe(true);
     wrapper.unmount();
   });
 

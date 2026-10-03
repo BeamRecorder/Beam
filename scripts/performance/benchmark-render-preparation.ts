@@ -57,7 +57,11 @@ process.stdout.write(
   JSON.stringify(
     {
       scope: 'Temporal query and paint-order preparation only; no animation, drawing, decoding or presentation.',
-      environment: { platform: platform(), cpu: cpus()[0]?.model, runtime: `Bun ${Bun.version}` },
+      environment: {
+        platform: platform(),
+        cpu: cpus()[0]?.model,
+        runtime: process.versions.bun ? `Bun ${process.versions.bun}` : `Node ${process.versions.node}`,
+      },
       clipCount: composition.clips.length,
       activeAtFirstTick: retained(ticks[0]!).length,
       ticksPerSample: ticks.length,

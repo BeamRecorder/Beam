@@ -73,7 +73,11 @@
     "continuityDescription": "Разширява замъглено копие на видеото зад побраното съдържание.",
     "continuityBlur": "Замъгляване на фона",
     "continuityBrightness": "Яркост на фона",
-    "borderColor": "Цвят на рамката"
+    "borderColor": "Цвят на рамката",
+    "frameTheme": "Облик на браузъра",
+    "auto": "Авто",
+    "light": "Светъл",
+    "dark": "Тъмен"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Зареждане на визуализацията от камерата",

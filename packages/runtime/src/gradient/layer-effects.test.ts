@@ -176,10 +176,12 @@ describe('isolated layer gradient effects', () => {
       'OffscreenCanvas',
       class {
         readonly index = index++;
-        constructor(
-          public width: number,
-          public height: number,
-        ) {}
+        width: number;
+        height: number;
+        constructor(width: number, height: number) {
+          this.width = width;
+          this.height = height;
+        }
         getContext() {
           return this.index === missing ? null : context(this);
         }

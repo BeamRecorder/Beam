@@ -73,7 +73,11 @@
     "continuityDescription": "Rozciąga rozmytą kopię filmu za dopasowaną zawartością.",
     "continuityBlur": "Rozmycie tła",
     "continuityBrightness": "Jasność tła",
-    "borderColor": "Kolor obramowania"
+    "borderColor": "Kolor obramowania",
+    "frameTheme": "Wygląd przeglądarki",
+    "auto": "Auto",
+    "light": "Jasny",
+    "dark": "Ciemny"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Ładowanie podglądu kamery",

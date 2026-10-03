@@ -41,6 +41,7 @@ const normalizeAppearance = (value) => {
     !finite(value.borderWidth) ||
     !['none', 'safari', 'windows-95', 'iphone-16-max', 'pixel-9-pro'].includes(value.frame) ||
     color(value.frameColor, null) === null ||
+    (value.frameTheme !== undefined && !['auto', 'light', 'dark'].includes(value.frameTheme)) ||
     typeof value.frameShowMenu !== 'boolean' ||
     typeof value.frameShowScrollbars !== 'boolean' ||
     !finite(value.frameChromeScale)
@@ -59,6 +60,7 @@ const normalizeAppearance = (value) => {
     frame: value.frame,
     frameTitle: text(value.frameTitle, 120),
     frameColor: color(value.frameColor, null),
+    ...(value.frameTheme !== undefined ? { frameTheme: value.frameTheme } : {}),
     frameShowMenu: value.frameShowMenu,
     frameShowScrollbars: value.frameShowScrollbars,
     frameChromeScale: Math.max(0.5, Math.min(2, value.frameChromeScale)),

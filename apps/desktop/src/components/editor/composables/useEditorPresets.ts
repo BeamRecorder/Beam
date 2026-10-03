@@ -3,11 +3,16 @@ import { capture } from '~/api/capture';
 import type { EditorPresetDocument, EditorPresetSettings } from '~/api/types/editor-preset';
 import type { EditorPreferenceDefaults } from './editor-default-types';
 import { normalizeEditorPreferenceDefaults } from './editor-defaults';
+import { useEditorResources } from '../resources/useEditorResources';
+import type { EditorResources } from '../resources/editor-resource-types';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const serialized = (value: unknown) => JSON.stringify(value);
 
-export function useEditorPresets(editorDefaults: Ref<EditorPreferenceDefaults>) {
+export function useEditorPresets(
+  editorDefaults: Ref<EditorPreferenceDefaults>,
+  resources: EditorResources = useEditorResources(),
+) {
   const document = ref<EditorPresetDocument | null>(null);
   const baseline = ref('');
   const activePreset = computed(() =>
@@ -16,6 +21,7 @@ export function useEditorPresets(editorDefaults: Ref<EditorPreferenceDefaults>) 
   const dirty = computed(() => Boolean(activePreset.value && baseline.value !== serialized(editorDefaults.value)));
 
   const applyDocument = (next: EditorPresetDocument, applyEditor = false) => {
+    resources.rememberPresets('video', next);
     document.value = next;
     const selected = next.presets.find((preset) => preset.id === next.activePresetId);
     if (selected && applyEditor)
@@ -23,7 +29,7 @@ export function useEditorPresets(editorDefaults: Ref<EditorPreferenceDefaults>) 
     baseline.value = serialized(selected?.settings.editor ?? editorDefaults.value);
   };
 
-  const load = async (applyEditor = false) => applyDocument(await capture.getEditorPresets(), applyEditor);
+  const load = async (applyEditor = false) => applyDocument(await resources.presets('video'), applyEditor);
   const settings = (): EditorPresetSettings => ({
     ...(clone(activePreset.value?.settings) ?? {
       devices: {},
@@ -77,7 +83,7 @@ export function useEditorPresets(editorDefaults: Ref<EditorPreferenceDefaults>) 
     },
     { deep: true },
   );
-  const unsubscribe = capture.onEditorPresetsChanged((next) => {
+  const unsubscribe = resources.onPresetsChanged('video', (next) => {
     if (!dirty.value) applyDocument(next);
   });
   onScopeDispose(() => {

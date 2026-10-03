@@ -73,7 +73,11 @@
     "continuityDescription": "맞춰진 콘텐츠 뒤에 흐린 동영상 사본을 확장합니다.",
     "continuityBlur": "배경 흐림",
     "continuityBrightness": "배경 밝기",
-    "borderColor": "테두리 색상"
+    "borderColor": "테두리 색상",
+    "frameTheme": "브라우저 모양",
+    "auto": "자동",
+    "light": "라이트",
+    "dark": "다크"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "카메라 미리 보기 로드 중",

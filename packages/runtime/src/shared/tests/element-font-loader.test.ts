@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { Clip } from '@beam/engine/shared/composition-types';
 
 let add: ReturnType<typeof vi.fn>;
-let load: ReturnType<typeof vi.fn>;
+const load = vi.fn(async (face: { family: string; source: string }) => face);
 let faces: Array<{ family: string; source: string }>;
 const clips = (...ids: string[]) =>
   ids.map((id) => ({ kind: 'shape', text: { style: { fontAssetId: id, fontFamily: `family-${id}` } } }) as Clip);
@@ -11,7 +11,7 @@ beforeEach(() => {
   vi.resetModules();
   faces = [];
   add = vi.fn();
-  load = vi.fn(async (face) => face);
+  load.mockReset().mockImplementation(async (face) => face);
   vi.stubGlobal(
     'FontFace',
     class {

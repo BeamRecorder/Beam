@@ -56,7 +56,9 @@ describe('screenshot gradient local geometry', () => {
   });
   it('resolves an imported image from its own decoded asset rather than the capture', () => {
     const s = state();
-    s.images = [{ ...s.image, id: 'imported', source: 'imported.png', width: 100, height: 100, rotation: 20 }];
+    s.images = [
+      { ...s.image, kind: 'image', id: 'imported', source: 'imported.png', width: 100, height: 100, rotation: 20 },
+    ];
     const rect = screenshotLayerEffectRect(
       s,
       layer('imported'),

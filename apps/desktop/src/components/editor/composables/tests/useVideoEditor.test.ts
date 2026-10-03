@@ -414,10 +414,9 @@ describe('useVideoEditor', () => {
 
     projectRef.value = { ...project, id: 'project-current' };
     await flushPromises();
-    expect(state.editorState.load).toHaveBeenCalledWith('project-current', {
-      schemaVersion: 3,
-    });
-    expect(state.player.loadComposition).toHaveBeenCalledOnce();
+    expect(capture.getEditorPresets).toHaveBeenCalledOnce();
+    expect(state.editorState.load).not.toHaveBeenCalled();
+    expect(state.player.loadComposition).not.toHaveBeenCalled();
 
     slowPresetLoad.resolve({
       schemaVersion: 1,
@@ -426,6 +425,7 @@ describe('useVideoEditor', () => {
     });
     await flushPromises();
 
+    expect(state.editorState.load).toHaveBeenCalledWith('project-current', { schemaVersion: 3 });
     expect(state.editorState.load).not.toHaveBeenCalledWith('project-slow', {
       schemaVersion: 3,
     });

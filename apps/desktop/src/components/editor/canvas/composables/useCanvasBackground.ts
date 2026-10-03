@@ -12,6 +12,7 @@ import {
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import { renderBackground } from '@beam/runtime/composition/background/render-background';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
+import { requestEditorImage } from '../../resources/editor-image-cache';
 
 const BACKGROUND_CLIP_ID = 'background-video';
 
@@ -70,7 +71,6 @@ export function useCanvasBackground(
   let transitionStartTime: number | null = null;
   const TRANSITION_DURATION = 180;
 
-  const bgImageCache = new Map<string, HTMLImageElement>();
   let backgroundLoadVersion = 0;
   let backgroundEngine: MediaPlaybackEngine | null = null;
   let stopFrameListener: (() => void) | null = null;
@@ -91,14 +91,6 @@ export function useCanvasBackground(
     isTransitioningBackground.value = true;
     transitionStartTime = performance.now();
     renderCanvas();
-  };
-
-  const cacheBackgroundImage = (path: string, image: HTMLImageElement) => {
-    bgImageCache.set(path, image);
-    if (bgImageCache.size > 20) {
-      const firstKey = bgImageCache.keys().next().value;
-      if (firstKey) bgImageCache.delete(firstKey);
-    }
   };
 
   const loadVideo = async (nextBg: BackgroundMedia, loadVersion: number) => {
@@ -173,26 +165,23 @@ export function useCanvasBackground(
     }
 
     if (nextBg.kind === 'image') {
-      const cached = bgImageCache.get(nextBg.path);
-      if (cached && cached.naturalWidth > 0) {
-        prevBgState.value = activeBgState.value;
-        prevBgImg.value = activeBgImg.value;
-        activeBgState.value = nextBg;
-        activeBgImg.value = cached;
-        triggerBgTransition();
-        return;
-      }
-      const image = new Image();
-      image.src = resolvePublicAssetUrl(nextBg.path);
-      image.addEventListener('load', () => {
-        if (loadVersion !== backgroundLoadVersion || !image.naturalWidth) return;
-        cacheBackgroundImage(nextBg.path, image);
-        prevBgState.value = activeBgState.value;
-        prevBgImg.value = activeBgImg.value;
-        activeBgState.value = nextBg;
-        activeBgImg.value = image;
-        triggerBgTransition();
-      });
+      const { ready } = requestEditorImage(nextBg.path);
+      void ready
+        .then((image) => {
+          if (loadVersion !== backgroundLoadVersion || !image.naturalWidth) return;
+          prevBgState.value = activeBgState.value;
+          prevBgImg.value = activeBgImg.value;
+          activeBgState.value = nextBg;
+          activeBgImg.value = image;
+          triggerBgTransition();
+        })
+        .catch((reason: unknown) => {
+          if (loadVersion !== backgroundLoadVersion) return;
+          backgroundError.value = { kind: 'decode-failure', sourceId: nextBg.id, message: String(reason) };
+          activeBgState.value = nextBg;
+          activeBgImg.value = null;
+          renderCanvas();
+        });
     } else if (nextBg.kind === 'video') {
       void loadVideo(nextBg, loadVersion);
     } else {

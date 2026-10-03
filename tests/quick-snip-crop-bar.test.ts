@@ -136,7 +136,8 @@ vi.mock('~/components/hud/recorder/useRecordingController', async () => {
 });
 
 import type { QuickSnipConfiguration } from '~/api/types/quick-snip';
-import type { ScreenshotDocument, ScreenshotState } from '~/api/types/screenshot';
+import type { ScreenshotDocument } from '~/api/types/screenshot';
+import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { RecordingSessionResult, RecordingStartFailure } from '~/components/hud/recorder/recording-types';
 import QuickSnipCropBar from '../apps/desktop/src/components/quick-snip/QuickSnipCropBar.vue';
 
@@ -269,20 +270,16 @@ beforeEach(() => {
   mocks.capture.reportQuickSnip.mockResolvedValue({ state: 'recording' });
   screenshotMocks.screenshotState.mockReturnValue(screenshotState);
   screenshotMocks.encodeScreenshot.mockResolvedValue(screenshotBytes);
-  mocks.capture.onQuickSnipConfigure.mockImplementation(
-    (listener: (value: QuickSnipConfiguration) => unknown) => {
-      mocks.configure = listener;
-      mocks.offConfigure = vi.fn();
-      return mocks.offConfigure;
-    },
-  );
-  mocks.capture.onQuickSnipCommand.mockImplementation(
-    (listener: (value: 'start' | 'stop' | 'cancel') => unknown) => {
-      mocks.command = listener;
-      mocks.offCommand = vi.fn();
-      return mocks.offCommand;
-    },
-  );
+  mocks.capture.onQuickSnipConfigure.mockImplementation((listener: (value: QuickSnipConfiguration) => unknown) => {
+    mocks.configure = listener;
+    mocks.offConfigure = vi.fn();
+    return mocks.offConfigure;
+  });
+  mocks.capture.onQuickSnipCommand.mockImplementation((listener: (value: 'start' | 'stop' | 'cancel') => unknown) => {
+    mocks.command = listener;
+    mocks.offCommand = vi.fn();
+    return mocks.offCommand;
+  });
   mocks.capture.onQuickSnipState.mockImplementation((listener: (value: { state: string }) => unknown) => {
     mocks.state = listener;
     mocks.offState = vi.fn();
@@ -441,9 +438,9 @@ describe('QuickSnipCropBar', () => {
 
     mocks.nativePreviewLevel!.value = 0.73;
     await wrapper.vm.$nextTick();
-    expect(
-      wrapper.get<HTMLElement>('button[aria-label="System audio"] .level-bar-fill').element.style.height,
-    ).toBe('73%');
+    expect(wrapper.get<HTMLElement>('button[aria-label="System audio"] .level-bar-fill').element.style.height).toBe(
+      '73%',
+    );
 
     await mocks.state?.({ state: 'processing' });
     await wrapper.vm.$nextTick();
@@ -459,9 +456,9 @@ describe('QuickSnipCropBar', () => {
     mocks.recorder!.systemAudioLevel.value = 0.42;
     await wrapper.vm.$nextTick();
     expect(mocks.nativePreviewEnabled?.value).toBe(false);
-    expect(
-      wrapper.get<HTMLElement>('button[aria-label="System audio"] .level-bar-fill').element.style.height,
-    ).toBe('42%');
+    expect(wrapper.get<HTMLElement>('button[aria-label="System audio"] .level-bar-fill').element.style.height).toBe(
+      '42%',
+    );
 
     wrapper.unmount();
   });
@@ -503,9 +500,7 @@ describe('QuickSnipCropBar', () => {
     expect(wrapper.get('[aria-label="Image"]').attributes('aria-pressed')).toBe('true');
     expect(wrapper.find('select').exists()).toBe(false);
     await wrapper.get('.capture-actions button').trigger('click');
-    expect(mocks.capture.quickSnipStart).toHaveBeenCalledWith(
-      expect.objectContaining({ mode: 'screenshot' }),
-    );
+    expect(mocks.capture.quickSnipStart).toHaveBeenCalledWith(expect.objectContaining({ mode: 'screenshot' }));
     wrapper.unmount();
   });
 
@@ -567,12 +562,7 @@ describe('QuickSnipCropBar', () => {
       screenshotState,
       expect.objectContaining({ onRendered: expect.any(Function) }),
     );
-    expect(mocks.capture.exportScreenshot).toHaveBeenCalledWith(
-      screenshotDocument.id,
-      screenshotBytes,
-      'png',
-      true,
-    );
+    expect(mocks.capture.exportScreenshot).toHaveBeenCalledWith(screenshotDocument.id, screenshotBytes, 'png', true);
     expect(mocks.capture.reportQuickSnip).toHaveBeenCalledWith({
       type: 'screenshot',
       name: configuration.name,
@@ -631,9 +621,7 @@ describe('QuickSnipCropBar', () => {
 
     mocks.recorder!.phase.value = 'recording';
     await wrapper.vm.$nextTick();
-    const stopButton = wrapper
-      .findAll('button')
-      .find((button) => button.attributes('aria-label') === 'Stop recording');
+    const stopButton = wrapper.findAll('button').find((button) => button.attributes('aria-label') === 'Stop recording');
     expect(stopButton).toBeDefined();
     mocks.capture.quickSnipToggle.mockClear();
     mocks.capture.quickSnipStop.mockClear();
@@ -675,9 +663,7 @@ describe('QuickSnipCropBar', () => {
 
     expect(mocks.recorder?.start).toHaveBeenCalledOnce();
     const startConfiguration = mocks.recorder!.start.mock.calls[0]![0];
-    expect(structuredClone(startConfiguration)).toEqual(
-      expect.objectContaining({ region: configuration.region }),
-    );
+    expect(structuredClone(startConfiguration)).toEqual(expect.objectContaining({ region: configuration.region }));
 
     wrapper.unmount();
   });
@@ -1230,9 +1216,7 @@ describe('QuickSnipCropBar', () => {
     cameraButton.element.dispatchEvent(context);
     await flushPromises();
     expect(context.defaultPrevented).toBe(true);
-    expect(mocks.capture.chooseQuickSnipDevice).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: 'camera' }),
-    );
+    expect(mocks.capture.chooseQuickSnipDevice).toHaveBeenCalledWith(expect.objectContaining({ kind: 'camera' }));
     expect(cameraButton.attributes('aria-pressed')).toBe('true');
     expect(wrapper.get('[aria-label="Camera"]').attributes('disabled')).toBeDefined();
     expect(wrapper.get('[aria-label="Recording settings"]').attributes('disabled')).toBeDefined();
@@ -1250,9 +1234,7 @@ describe('QuickSnipCropBar', () => {
     );
     await mocks.command?.('start');
     await flushPromises();
-    expect(mocks.recorder!.start).toHaveBeenCalledWith(
-      expect.objectContaining({ cameraId: 'camera:chromium:usb' }),
-    );
+    expect(mocks.recorder!.start).toHaveBeenCalledWith(expect.objectContaining({ cameraId: 'camera:chromium:usb' }));
     wrapper.unmount();
   });
 });
@@ -1299,7 +1281,7 @@ it('rapid source-tab changes keep every control enabled and never show capture l
   const wrapper = await mountBar();
   const controls = wrapper
     .findAll('button')
-    .filter((button) => ['Full screen', 'Region', 'Window'].includes(button.attributes('aria-label')));
+    .filter((button) => ['Full screen', 'Region', 'Window'].includes(button.attributes('aria-label') ?? ''));
   for (const button of controls) {
     await button.trigger('click');
     await flushPromises();

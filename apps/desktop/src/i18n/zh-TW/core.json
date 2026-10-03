@@ -73,7 +73,11 @@
     "continuityDescription": "在適應內容後方延伸一份模糊的影片副本。",
     "continuityBlur": "背景模糊",
     "continuityBrightness": "背景亮度",
-    "borderColor": "邊框顏色"
+    "borderColor": "邊框顏色",
+    "frameTheme": "瀏覽器外觀",
+    "auto": "自動",
+    "light": "淺色",
+    "dark": "深色"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "正在載入相機預覽",

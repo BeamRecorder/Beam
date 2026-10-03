@@ -252,6 +252,7 @@ const handleShadowColorChange = (color: string) => {
       :frame="selectedClip.frame"
       :frame-title="selectedClip.frameTitle"
       :frame-color="selectedClip.frameColor"
+      :frame-theme="selectedClip.frameTheme"
       :frame-show-menu="selectedClip.frameShowMenu"
       :frame-show-scrollbars="selectedClip.frameShowScrollbars"
       :frame-chrome-scale="selectedClip.frameChromeScale"

@@ -73,7 +73,11 @@
     "continuityDescription": "フィットした映像の背後に、ぼかした動画のコピーを広げます。",
     "continuityBlur": "背景のぼかし",
     "continuityBrightness": "背景の明るさ",
-    "borderColor": "枠線の色"
+    "borderColor": "枠線の色",
+    "frameTheme": "ブラウザーの外観",
+    "auto": "自動",
+    "light": "ライト",
+    "dark": "ダーク"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "カメラプレビューを読み込み中",

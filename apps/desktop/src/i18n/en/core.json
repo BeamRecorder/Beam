@@ -73,7 +73,11 @@
     "continuityDescription": "Extends a blurred copy of the video behind the fitted content.",
     "continuityBlur": "Background blur",
     "continuityBrightness": "Background brightness",
-    "borderColor": "Border color"
+    "borderColor": "Border color",
+    "frameTheme": "Browser appearance",
+    "auto": "Auto",
+    "light": "Light",
+    "dark": "Dark"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Loading camera preview",

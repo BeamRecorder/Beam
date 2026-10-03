@@ -73,7 +73,11 @@
     "continuityDescription": "फ़िट किए गए कंटेंट के पीछे वीडियो की धुंधली कॉपी फैलाता है।",
     "continuityBlur": "बैकग्राउंड ब्लर",
     "continuityBrightness": "बैकग्राउंड चमक",
-    "borderColor": "बॉर्डर रंग"
+    "borderColor": "बॉर्डर रंग",
+    "frameTheme": "ब्राउज़र का रूप",
+    "auto": "स्वचालित",
+    "light": "हल्का",
+    "dark": "गहरा"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "कैमरा प्रीव्यू लोड हो रहा है",

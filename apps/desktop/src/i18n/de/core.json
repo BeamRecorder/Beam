@@ -73,7 +73,11 @@
     "continuityDescription": "Erweitert eine weichgezeichnete Kopie des Videos hinter dem eingepassten Inhalt.",
     "continuityBlur": "Hintergrundunschärfe",
     "continuityBrightness": "Hintergrundhelligkeit",
-    "borderColor": "Rahmenfarbe"
+    "borderColor": "Rahmenfarbe",
+    "frameTheme": "Browserdarstellung",
+    "auto": "Auto",
+    "light": "Hell",
+    "dark": "Dunkel"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Kameravorschau wird geladen",

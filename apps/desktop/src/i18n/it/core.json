@@ -73,7 +73,11 @@
     "continuityDescription": "Estende una copia sfocata del video dietro il contenuto adattato.",
     "continuityBlur": "Sfocatura dello sfondo",
     "continuityBrightness": "Luminosità dello sfondo",
-    "borderColor": "Colore del bordo"
+    "borderColor": "Colore del bordo",
+    "frameTheme": "Aspetto del browser",
+    "auto": "Auto",
+    "light": "Chiaro",
+    "dark": "Scuro"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Caricamento anteprima fotocamera",

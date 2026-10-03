@@ -1,8 +1,11 @@
 import { capture } from '~/api/capture';
 import type { ScreenshotLoadReport, ScreenshotStartup, ScreenshotStartupData } from './screenshot-startup-types';
+import type { EditorResources } from '../../editor/resources/editor-resource-types';
 
 /** One editor owns its requests and report; native/window startup is outside this clock. */
-export function createScreenshotStartup(): ScreenshotStartup {
+export function createScreenshotStartup(
+  libraries: Pick<EditorResources, 'backgrounds' | 'presets'>,
+): ScreenshotStartup {
   let report: ScreenshotLoadReport | null = null;
   let request: Promise<ScreenshotStartupData> | undefined;
   let started = 0,
@@ -33,8 +36,8 @@ export function createScreenshotStartup(): ScreenshotStartup {
     report = { projectId: id, status: 'loading', totalMs: 0, timings: {} };
     request = Promise.all([
       measure('document', () => capture.getScreenshot(id)),
-      measure('backgroundLibrary', () => capture.listBackgroundLibrary()),
-      measure('presets', () => capture.getEditorPresets('screenshot')),
+      measure('backgroundLibrary', () => libraries.backgrounds()),
+      measure('presets', () => libraries.presets('screenshot')),
     ]).then((data) => {
       if (current === generation && report) {
         const document = data[0],

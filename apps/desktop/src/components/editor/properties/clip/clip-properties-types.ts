@@ -1,5 +1,6 @@
 import type {
   ClipFrame,
+  ClipFrameTheme,
   ClipShadowMode,
   ClipShadowSize,
   NormalizedCrop,
@@ -35,6 +36,7 @@ export interface ClipPropertiesEmits {
       frame?: ClipFrame;
       frameTitle?: string;
       frameColor?: string;
+      frameTheme?: ClipFrameTheme;
       frameShowMenu?: boolean;
       frameShowScrollbars?: boolean;
       frameChromeScale?: number;
@@ -77,6 +79,7 @@ export interface ClipAppearanceEmits {
       frame?: ClipFrame;
       frameTitle?: string;
       frameColor?: string;
+      frameTheme?: ClipFrameTheme;
       frameShowMenu?: boolean;
       frameShowScrollbars?: boolean;
       frameChromeScale?: number;

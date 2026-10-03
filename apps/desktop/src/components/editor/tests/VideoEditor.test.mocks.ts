@@ -12,6 +12,9 @@ const { editorState } = vi.hoisted(() => ({
   editorState: { store: undefined as any, previewInitiallySettled: true },
 }));
 const capture = vi.hoisted(() => ({
+  onAuthoringRequest: vi.fn(() => vi.fn()),
+  registerAuthoringDocument: vi.fn(async () => {}),
+  replyAuthoringRequest: vi.fn(),
   pasteProjectClipboardImage: vi.fn(),
   createScreenshotFromCanvas: vi.fn(),
   openScreenshot: vi.fn(),
@@ -333,6 +336,8 @@ vi.mock('../composables/useVideoEditor', async () => {
         });
       const store = {
         activeTab,
+        // This fixture exposes export metadata without an authorable render document.
+        projectStateReady: ref(false),
         initialPlaybackSettled: ref(editorState.previewInitiallySettled),
         includeAudioInExport: ref(true),
         editorDefaults: ref({ zoom: { durationMs: 1_500 } }),
@@ -507,7 +512,7 @@ vi.mock('../Topbar.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockTopbar',
-      emits: ['back-to-hud', 'open-project', 'undo', 'redo'],
+      emits: ['back-to-hud', 'open-project'],
       setup(_, { emit }) {
         return () =>
           h('div', { class: 'mock-topbar' }, [
@@ -516,8 +521,6 @@ vi.mock('../Topbar.vue', async () => {
               class: 'open',
               onClick: () => emit('open-project', { id: 'project-1' }),
             }),
-            h('button', { class: 'undo', onClick: () => emit('undo') }),
-            h('button', { class: 'redo', onClick: () => emit('redo') }),
           ]);
       },
     }),
@@ -919,9 +922,13 @@ vi.mock('../timeline/TimelineToolbar.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockTimelineToolbar',
-      props: { isCanvasFullscreen: { type: Boolean, default: false } },
-      emits: ['update:is-playing', 'update:current-time', 'toggle:canvas-fullscreen'],
-      setup(_, { emit }) {
+      props: {
+        isCanvasFullscreen: { type: Boolean, default: false },
+        canUndo: { type: Boolean, default: false },
+        canRedo: { type: Boolean, default: false },
+      },
+      emits: ['update:is-playing', 'update:current-time', 'toggle:canvas-fullscreen', 'undo', 'redo'],
+      setup(props, { emit }) {
         return () =>
           h('div', [
             h('button', {
@@ -936,6 +943,8 @@ vi.mock('../timeline/TimelineToolbar.vue', async () => {
               class: 'timeline-fullscreen',
               onClick: () => emit('toggle:canvas-fullscreen'),
             }),
+            h('button', { class: 'undo', disabled: !props.canUndo, onClick: () => emit('undo') }),
+            h('button', { class: 'redo', disabled: !props.canRedo, onClick: () => emit('redo') }),
           ]);
       },
     }),

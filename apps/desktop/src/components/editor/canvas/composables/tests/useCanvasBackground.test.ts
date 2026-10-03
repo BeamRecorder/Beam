@@ -2,6 +2,7 @@ import { defineComponent, h, nextTick, ref, type Ref } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCanvasBackground } from '../useCanvasBackground';
+import { clearEditorImages } from '../../../resources/editor-image-cache';
 import type { BackgroundValue } from '@beam/engine/shared/background-types';
 
 const playback = vi.hoisted(() => {
@@ -78,6 +79,12 @@ class FakeImage extends EventTarget {
   naturalWidth = 320;
   naturalHeight = 180;
   src = '';
+  decode = () =>
+    new Promise<void>((resolve) => {
+      this.addEventListener('load', () => {
+        if (this.naturalWidth) resolve();
+      });
+    });
 
   constructor() {
     super();
@@ -162,6 +169,7 @@ const mountComposable = () => {
 };
 
 beforeEach(() => {
+  clearEditorImages();
   FakeImage.instances = [];
   playback.instances.length = 0;
   playback.loadCompositionImpl.current = null;
@@ -210,6 +218,7 @@ describe('useCanvasBackground', () => {
     const loading = state.backgroundCacheKey();
     expect(loading).not.toEqual(before);
     FakeImage.instances[0]!.dispatchEvent(new Event('load'));
+    await flushPromises();
     await nextTick();
     expect(state.backgroundCacheKey()).toBeNull();
     clock.mockReturnValue(1200);
@@ -266,16 +275,19 @@ describe('useCanvasBackground', () => {
     selected.value = image('second.png');
     await nextTick();
     firstImage.dispatchEvent(new Event('load'));
+    await flushPromises();
     expect(renderCanvas).not.toHaveBeenCalled();
 
     const secondImage = FakeImage.instances[1]!;
     secondImage.naturalWidth = 0;
     secondImage.dispatchEvent(new Event('load'));
+    await flushPromises();
     state.drawBackground(ctx, { x: 0, y: 0, width: 100, height: 100 });
     expect(ctx.drawImage).not.toHaveBeenCalled();
 
     secondImage.naturalWidth = 320;
     secondImage.dispatchEvent(new Event('load'));
+    await flushPromises();
     state.drawBackground(ctx, { x: 0, y: 0, width: 100, height: 100 });
     expect(ctx.drawImage).toHaveBeenCalledWith(
       secondImage,

@@ -1,16 +1,20 @@
-import type { ScreenshotImageLoaderOptions } from './screenshot-image-loader-types';
+import type {
+  ScreenshotImageLoader,
+  ScreenshotImageLoaderOptions,
+  ScreenshotImageRequest,
+} from './screenshot-image-loader-types';
 
-/** A canvas owns its decoded source/background/logo; editing a cursor does not decode them again. */
-export function createScreenshotImageLoader(options: ScreenshotImageLoaderOptions = {}) {
+/** The caller owns a bounded cache; borrowed decoded images remain valid after eviction or disposal. */
+export function createScreenshotImageLoader(options: ScreenshotImageLoaderOptions = {}): ScreenshotImageLoader {
   const maxEntries = options.maxEntries ?? 64;
   const maxPixels = options.maxDecodedPixels ?? 16_777_216;
   if (!Number.isSafeInteger(maxEntries) || maxEntries < 1 || !Number.isFinite(maxPixels) || maxPixels < 1)
     throw new Error('Invalid screenshot image cache limits.');
-  const images = new Map<string, Promise<HTMLImageElement>>();
+  const images = new Map<string, ScreenshotImageRequest>();
   const pixels = new Map<string, number>();
   let totalPixels = 0;
-  const pending = new Map<string, Promise<HTMLImageElement>>();
-  return (url: string): Promise<HTMLImageElement> => {
+  const pending = new Map<string, ScreenshotImageRequest>();
+  const request = (url: string): ScreenshotImageRequest => {
     const cached = pending.get(url) ?? images.get(url);
     if (cached) {
       if (images.has(url)) {
@@ -23,8 +27,9 @@ export function createScreenshotImageLoader(options: ScreenshotImageLoaderOption
     image.crossOrigin = 'anonymous';
     image.src = url;
     const decoded = image.decode().then(() => {
+      if (pending.get(url) !== entry) return image;
       pending.delete(url);
-      images.set(url, decoded);
+      images.set(url, entry);
       const size = image.naturalWidth * image.naturalHeight;
       pixels.set(url, size);
       totalPixels += size;
@@ -36,10 +41,21 @@ export function createScreenshotImageLoader(options: ScreenshotImageLoaderOption
       }
       return image;
     });
-    pending.set(url, decoded);
+    const entry = { image, ready: decoded };
+    pending.set(url, entry);
     decoded.catch(() => {
-      pending.delete(url);
+      if (pending.get(url) === entry) pending.delete(url);
     });
-    return decoded;
+    return entry;
   };
+  return Object.assign((url: string) => request(url).ready, {
+    request,
+    clear() {
+      // Active painters own their pixels; dropping retained references must not blank them.
+      images.clear();
+      pixels.clear();
+      pending.clear();
+      totalPixels = 0;
+    },
+  });
 }

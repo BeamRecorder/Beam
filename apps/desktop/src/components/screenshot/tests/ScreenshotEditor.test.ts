@@ -16,6 +16,8 @@ const capture = vi.hoisted(() => ({
   registerAuthoringDocument: vi.fn(async () => {}),
   replyAuthoringRequest: vi.fn(),
   getScreenshot: vi.fn(),
+  onBackgroundLibraryChanged: vi.fn(() => vi.fn()),
+  onEditorPresetsChanged: vi.fn(() => vi.fn()),
   listBackgroundLibrary: vi.fn(),
   listCursorPacks: vi.fn(),
   onCursorPacksChanged: vi.fn(),

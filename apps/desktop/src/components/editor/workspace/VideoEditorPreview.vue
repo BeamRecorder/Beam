@@ -52,6 +52,10 @@ const {
   editLocked,
   selectedTransformClip,
   historyAction,
+  undo,
+  redo,
+  canUndo,
+  canRedo,
   isVoiceoverOpen,
   timelineDisplayDuration,
   beginInlineCaptionEditing,
@@ -192,6 +196,8 @@ const { editorData } = toRefs(workspace.props);
         :is-playing="isPlaying"
         :loading="!initialPlaybackSettled || isVoiceoverOpen"
         :can-split="!editLocked && selectedClipIds.length === 1"
+        :can-undo="canUndo"
+        :can-redo="canRedo"
         :is-canvas-fullscreen="canvasFullscreen.isFullscreen.value"
         v-model:zoom-level="timelineZoomLevel"
         v-model:is-snapping-enabled="isSnappingEnabled"
@@ -200,6 +206,8 @@ const { editorData } = toRefs(workspace.props);
         @update:is-playing="handlePlayingIntent"
         @update:current-time="handleSeekIntent"
         @split="splitSelectedClip"
+        @undo="undo"
+        @redo="redo"
         @toggle:canvas-fullscreen="canvasFullscreen.toggleFullscreen"
       />
     </div>

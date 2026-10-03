@@ -73,7 +73,11 @@
     "continuityDescription": "Растягивает размытую копию видео за вписанным содержимым.",
     "continuityBlur": "Размытие фона",
     "continuityBrightness": "Яркость фона",
-    "borderColor": "Цвет границы"
+    "borderColor": "Цвет границы",
+    "frameTheme": "Внешний вид браузера",
+    "auto": "Авто",
+    "light": "Светлый",
+    "dark": "Тёмный"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Загрузка предпросмотра камеры",

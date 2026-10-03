@@ -1,6 +1,6 @@
 import { onBeforeUnmount, shallowRef, watch } from 'vue';
 import { loadScreenshotAssets } from './screenshot-render';
-import { createScreenshotImageLoader } from '@beam/runtime/screenshot/screenshot-image-loader';
+import { loadEditorImage } from '../editor/resources/editor-image-cache';
 import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot-types';
 import type { ScreenshotCanvasProps } from './screenshot-canvas-contract-types';
 import { injectScreenshotStartup } from './loading/screenshot-startup-context';
@@ -12,7 +12,6 @@ export function useScreenshotCanvasAssets(
   fail: (reason: unknown) => void,
 ) {
   const assets = shallowRef<ScreenshotRenderAssets | null>(null);
-  const loadImage = createScreenshotImageLoader();
   const startup = injectScreenshotStartup();
   let generation = 0,
     loaded = 0;
@@ -55,7 +54,7 @@ export function useScreenshotCanvasAssets(
           props.source,
           props.state,
           props.cursorPacks,
-          loadImage,
+          loadEditorImage,
           (stage, ms) => {
             if (current === generation) startup?.record(stage, ms);
           },

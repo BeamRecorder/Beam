@@ -1,6 +1,6 @@
 import { onMounted, onUnmounted, ref, type Ref } from 'vue';
-import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import { WATERMARK_LOGO_PATH } from '@beam/runtime/rendering/watermark-render';
+import { requestEditorImage } from '../../resources/editor-image-cache';
 
 export function useEditorCanvasAssets(
   container: Ref<HTMLDivElement | null>,
@@ -9,17 +9,27 @@ export function useEditorCanvasAssets(
 ) {
   const watermarkLogo = ref<HTMLImageElement | null>(null);
   let resizeObserver: ResizeObserver | null = null;
+  let disposed = false;
 
   onMounted(() => {
-    watermarkLogo.value = new Image();
-    watermarkLogo.value.onload = renderOnce;
-    watermarkLogo.value.src = resolvePublicAssetUrl(WATERMARK_LOGO_PATH);
+    const { image, ready } = requestEditorImage(WATERMARK_LOGO_PATH);
+    watermarkLogo.value = image;
+    void ready
+      .then(() => {
+        if (!disposed) renderOnce();
+      })
+      .catch((reason: unknown) => {
+        if (!disposed) console.error('[Beam media:editor] watermark loading failed.', reason);
+      });
     resizeCanvas();
     resizeObserver = new ResizeObserver(resizeCanvas);
     if (container.value) resizeObserver.observe(container.value);
     renderOnce();
   });
-  onUnmounted(() => resizeObserver?.disconnect());
+  onUnmounted(() => {
+    disposed = true;
+    resizeObserver?.disconnect();
+  });
 
   return watermarkLogo;
 }

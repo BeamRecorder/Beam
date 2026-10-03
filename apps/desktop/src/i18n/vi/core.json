@@ -73,7 +73,11 @@
     "continuityDescription": "Mở rộng bản sao video được làm mờ phía sau nội dung vừa khung.",
     "continuityBlur": "Độ mờ nền",
     "continuityBrightness": "Độ sáng nền",
-    "borderColor": "Màu viền"
+    "borderColor": "Màu viền",
+    "frameTheme": "Giao diện trình duyệt",
+    "auto": "Tự động",
+    "light": "Sáng",
+    "dark": "Tối"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Đang tải xem trước camera",

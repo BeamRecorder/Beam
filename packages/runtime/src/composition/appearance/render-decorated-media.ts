@@ -250,6 +250,7 @@ function drawOrientedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions)
     showMenu: appearance.frameShowMenu,
     showScrollbars: appearance.frameShowScrollbars,
     chromeScale: appearance.frameChromeScale,
+    ...(appearance.frameTheme !== undefined ? { theme: appearance.frameTheme } : {}),
   };
   const outer = frameOuterRect(options.rect, appearance.frame);
   const sourceSize = mediaSourceDimensions(options);

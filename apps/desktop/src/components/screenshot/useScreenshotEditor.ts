@@ -42,7 +42,9 @@ import { useScreenshotLayerShortcuts } from './useScreenshotLayerShortcuts';
 import { useScreenshotLayerClipboard } from './useScreenshotLayerClipboard';
 import { createScreenshotImage, screenshotImageProperties } from './screenshot-images';
 import { screenshotImage } from '@beam/engine/screenshot/screenshot-images';
-import { createScreenshotImageLoader } from '@beam/runtime/screenshot/screenshot-image-loader';
+import { loadEditorImage } from '../editor/resources/editor-image-cache';
+import { useEditorResources } from '../editor/resources/useEditorResources';
+import { useScreenshotBackgroundLibrary } from './useScreenshotBackgroundLibrary';
 import { validScreenshotDimensions } from '@beam/engine/screenshot/screenshot-dimensions';
 import {
   initializeScreenshotComposition,
@@ -62,7 +64,8 @@ export function useScreenshotEditor(
   const { t: elementsText } = useTranslate('Elements');
   const { t: zoomText } = useTranslate('SidebarPanel');
   const notifyExport = useScreenshotExportToast();
-  const startup = useScreenshotStartup();
+  const resources = useEditorResources();
+  const startup = useScreenshotStartup(resources);
   const encodeScreenshot = useScreenshotEncoder();
   const document = ref<ScreenshotDocument | null>(null);
   const state = ref<ScreenshotState | null>(null);
@@ -80,7 +83,6 @@ export function useScreenshotEditor(
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   let saveQueue = Promise.resolve();
   let generation = 0;
-  const loadImage = createScreenshotImageLoader();
   const plain = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
   const fail = (reason: unknown) => {
     error.value = reason instanceof Error ? reason.message : String(reason);
@@ -88,8 +90,9 @@ export function useScreenshotEditor(
   const backgrounds = computed(() =>
     groupBackgroundMedia([...BACKGROUND_MEDIA, ...backgroundLibrary.value].filter((item) => item.kind === 'image')),
   );
-  const presetEditor = useScreenshotPresets({ document, state, presets, backgroundLibrary, busy, t, fail });
+  const presetEditor = useScreenshotPresets({ document, state, presets, backgroundLibrary, busy, t, fail }, resources);
   const { activePreset, dirty, savePreset, presetAction } = presetEditor;
+  useScreenshotBackgroundLibrary(resources, backgroundLibrary, fail);
   const selectedShape = computed(() => state.value?.shapes.find((shape) => shape.id === selectedId.value));
   const selectedLayer = computed(() =>
     state.value ? screenshotLayers(state.value).find((layer) => layer.id === selectedId.value) : undefined,
@@ -172,7 +175,7 @@ export function useScreenshotEditor(
     if (image.value) image.value.appearance = { ...image.value.appearance, ...value };
   };
   const insertImageAsset = async (asset: MediaAsset, current: number) => {
-    const decoded = await loadImage(asset.src);
+    const decoded = await loadEditorImage(asset.src);
     if (current !== generation || !state.value) return false;
     if (
       !validScreenshotDimensions({
@@ -243,7 +246,7 @@ export function useScreenshotEditor(
     timing: () => ({ startMs: 0, durationMs: 1 }),
     canInteract: () => !busy.value && !cropping.value && !previewFullscreen() && !selectedLayer.value?.locked,
   });
-  const cursors = useScreenshotCursors(state, selectedId, select, fail);
+  const cursors = useScreenshotCursors(state, selectedId, select, fail, resources);
   const zooms = useScreenshotZooms(
     state,
     selectedId,

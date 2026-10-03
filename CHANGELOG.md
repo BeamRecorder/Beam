@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Safari frames offer Auto, Light and Dark browser chrome independently of the frame color, with matching previews, screenshots and video exports.
+
 - Screenshot copy and image exports provide a timing report for resource loading, rendering, encoding, caching and native clipboard/file publication, available from the result toast and developer console.
 
 - Screenshot Composition shows expandable groups with their member layers together, including the logo and editable text in a brand group.
@@ -61,6 +63,9 @@ User-facing changes to Beam are documented in this file.
 - Settings and Projects now open in separate, resizable desktop windows.
 
 ### Changed
+
+- Screenshot and video editors reuse background/cursor catalogues, presets and decoded images when switching projects in the same window, while keeping document state and media decoders separate.
+- Video undo/redo controls sit next to timeline snapping; editor search stays in the titlebar.
 
 - Screenshot startup overlaps editor module loading with project reads, retains scene images in a bounded LRU cache, loads imported fonts concurrently and defers layer thumbnails until the first preview. Per-stage loading measurements are emitted to the development console.
 - Screenshot copy overlaps document saving with image encoding, loads fonts and images in parallel, and confirms copy/export completion with an output thumbnail and green success or red failure badge.

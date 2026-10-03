@@ -52,13 +52,11 @@ it('supports multi-member insertion, duplicate selection IDs and optional stacki
   const noComposition = { ...doc.state, composition: undefined };
   expect(moveScreenshotLayersToGroup(noComposition, ['a'], null).composition).toBeDefined();
 });
-it.each([
-  [],
-  ['unknown'],
-  ['__background__'],
-  ['__watermark__'],
-  Array.from({ length: 501 }, (_, i) => `missing-${i}`),
-])('rejects ineligible members %j', (ids) => {
+it.each(
+  [[], ['unknown'], ['__background__'], ['__watermark__'], Array.from({ length: 501 }, (_, i) => `missing-${i}`)].map(
+    (ids) => ({ ids }),
+  ),
+)('rejects ineligible members $ids', ({ ids }) => {
   expect(canMoveScreenshotLayersToGroup(fixture().state, ids, 'target')).toBe(false);
   expect(() => moveScreenshotLayersToGroup(fixture().state, ids, 'target')).toThrow('Cannot');
 });

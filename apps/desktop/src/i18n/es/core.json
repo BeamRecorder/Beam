@@ -73,7 +73,11 @@
     "continuityDescription": "Extiende una copia desenfocada del vídeo detrás del contenido ajustado.",
     "continuityBlur": "Desenfoque del fondo",
     "continuityBrightness": "Brillo del fondo",
-    "borderColor": "Color del borde"
+    "borderColor": "Color del borde",
+    "frameTheme": "Apariencia del navegador",
+    "auto": "Auto",
+    "light": "Claro",
+    "dark": "Oscuro"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Cargando vista previa de la cámara",
