@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Recording and editor settings offer a shared project location preserving `projects/studio`, `projects/instant` and `projects/screenshot`. New captures use the chosen root immediately; the project picker retains previous locations and refreshes when they change.
+- Video and image exports share a separate folder preference, with a fixed destination or the last successfully used folder and a searchable list of recent folders.
 - Safari frames offer Auto, Light and Dark browser chrome independently of the frame color, with matching previews, screenshots and video exports.
 
 - Screenshot copy and image exports provide a timing report for resource loading, rendering, encoding, caching and native clipboard/file publication, available from the result toast and developer console.
@@ -166,6 +168,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Video export reuses the last successfully used destination across projects and application restarts instead of always returning to the OS Videos folder.
 - Screenshot project thumbnails now show the edited composition, including HTML layers, gradients and text, and refresh automatically in the background after edits.
 - Moving a selected Screenshot group member changes only that layer; selecting the group header still moves all members together.
 - Screenshot canvas clicks select a group first, then its clicked member; double and triple clicks edit that member without expanding the selection.

@@ -1178,5 +1178,18 @@
     "stopPosition": "Позиция точки {number}",
     "stopOpacity": "Непрозрачность точки {number}",
     "addAtPosition": "Нажмите, чтобы добавить цветовую точку"
+  },
+  "DirectoryPreferences": {
+    "projects": "Расположение проектов",
+    "projectsDescription": "Новые проекты Studio, Instant и Screenshot используют projects/studio, projects/instant и projects/screenshot в этой папке. Прежние расположения остаются в списке проектов.",
+    "exports": "Папка экспорта",
+    "exportsDescription": "Выберите постоянную папку или используйте последнюю папку экспорта видео или изображений. Настройка общая для всех проектов.",
+    "defaultLocation": "Расположение по умолчанию",
+    "lastUsed": "Последняя использованная папка",
+    "browse": "Выбрать папку",
+    "search": "Поиск папок",
+    "noMatches": "Подходящих папок нет",
+    "error": "Не удалось обновить папку.",
+    "retry": "Повторить"
   }
 }

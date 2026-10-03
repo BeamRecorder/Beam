@@ -6,6 +6,7 @@ import RecordingDesktopPreferences from './RecordingDesktopPreferences.vue';
 import Select from '~/ui/select/Select.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import RecordingWindowPreview from './RecordingWindowPreview.vue';
+import StoragePreferences from '~/components/settings/StoragePreferences.vue';
 import type { RecordingPreferenceProps } from './recording-preference-types';
 import type { RecordingBarVisibility } from '../recorder/recording-types';
 
@@ -108,6 +109,7 @@ const updateCountdownSeconds = (value: string | number) => {
         />
       </div>
     </div>
+    <StoragePreferences />
   </div>
 </template>
 

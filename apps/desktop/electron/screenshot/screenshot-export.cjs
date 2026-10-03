@@ -58,7 +58,10 @@ async function publishScreenshot(services, event, { id, bytes, format, copy }) {
     }
     const selected = await measureAsync('saveDialog', () =>
       dialog.showSaveDialog(BrowserWindow.fromWebContents(event.sender), {
-        defaultPath: path.join(outputDirectory, `${document.name.replace(/[:.]/g, '-')}.${format}`),
+        defaultPath: path.join(
+          services.directories ? services.directories.exportDirectory() : outputDirectory,
+          `${document.name.replace(/[:.]/g, '-')}.${format}`,
+        ),
         filters: [{ name: format.toUpperCase(), extensions: [format] }],
       }),
     );
@@ -75,6 +78,7 @@ async function publishScreenshot(services, event, { id, bytes, format, copy }) {
         await fs.promises.rm(temporary, { force: true });
       }
     });
+    services.directories?.rememberExport(selected.filePath);
     return result('saved', selected.filePath);
   } catch (reason) {
     console.info('[Beam Screenshot publish]', {

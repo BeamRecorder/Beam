@@ -13,10 +13,13 @@ const screenshotName = (value) => {
   return name;
 };
 
-function createScreenshotStore(root) {
+function createScreenshotStore(root, { roots = () => [root], writeRoot = () => root } = {}) {
   const directory = (id) => {
     if (typeof id !== 'string' || !UUID.test(id)) throw new Error('Invalid screenshot identifier.');
-    const target = path.join(root, id);
+    const matches = roots()
+      .map((root) => path.join(root, id))
+      .filter((target) => fs.existsSync(target));
+    const target = matches[0] ?? path.join(writeRoot(), id);
     if (fs.existsSync(target) && fs.lstatSync(target).isSymbolicLink())
       throw new Error('Invalid screenshot directory.');
     return target;
@@ -131,9 +134,7 @@ function createScreenshotStore(root) {
       write(id, { ...document, state, history });
     },
     list() {
-      if (!fs.existsSync(root)) return [];
-      return fs
-        .readdirSync(root)
+      return [...new Set(roots().flatMap((root) => (fs.existsSync(root) ? fs.readdirSync(root) : [])))]
         .filter((id) => UUID.test(id))
         .flatMap((id) => {
           try {

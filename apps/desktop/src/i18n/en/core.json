@@ -1175,5 +1175,18 @@
     "stopPosition": "Stop {number} position",
     "stopOpacity": "Stop {number} opacity",
     "addAtPosition": "Click to add a color stop"
+  },
+  "DirectoryPreferences": {
+    "projects": "Project location",
+    "projectsDescription": "New Studio, Instant and Screenshot projects use projects/studio, projects/instant and projects/screenshot inside this folder. Previous locations remain in the project picker.",
+    "exports": "Export folder",
+    "exportsDescription": "Choose a fixed folder or reuse the last folder used for a video or image export. This setting is shared by all projects.",
+    "defaultLocation": "Default location",
+    "lastUsed": "Last used folder",
+    "browse": "Choose a folder",
+    "search": "Search folders",
+    "noMatches": "No matching folders",
+    "error": "Unable to update the folder.",
+    "retry": "Retry"
   }
 }

@@ -1178,5 +1178,18 @@
     "stopPosition": "節點 {number} 的位置",
     "stopOpacity": "節點 {number} 的不透明度",
     "addAtPosition": "點擊新增顏色節點"
+  },
+  "DirectoryPreferences": {
+    "projects": "專案位置",
+    "projectsDescription": "新的 Studio、Instant 和 Screenshot 專案使用此資料夾中的 projects/studio、projects/instant 和 projects/screenshot。先前的位置仍會顯示在專案選擇器中。",
+    "exports": "匯出資料夾",
+    "exportsDescription": "選擇固定資料夾，或重複使用上次匯出影片或圖片的資料夾。所有專案共用此設定。",
+    "defaultLocation": "預設位置",
+    "lastUsed": "上次使用的資料夾",
+    "browse": "選擇資料夾",
+    "search": "搜尋資料夾",
+    "noMatches": "沒有相符的資料夾",
+    "error": "無法更新資料夾。",
+    "retry": "重試"
   }
 }

@@ -6,6 +6,7 @@ import type { CaptureProject } from '@beam/engine/capture/capture-session';
 const listProjects = vi.fn();
 
 export const captureMock = {
+  onProjectLocationsChanged: vi.fn(() => vi.fn()),
   openHudSettings: vi.fn().mockResolvedValue(true),
   openHudProjects: vi.fn().mockResolvedValue(true),
   notifyScreenRegionReady: vi.fn(),

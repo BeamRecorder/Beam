@@ -2,7 +2,7 @@ const { readJsonSync, writeJsonAtomicSync } = require('@beam/storage/node/json-f
 const { randomUUID } = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { fileURLToPath, pathToFileURL } = require('url');
+const { pathToFileURL } = require('url');
 const { kindFor } = require('../backgrounds/background-library.cjs');
 const { emptyComposition, importMedia, importImageBuffer } = require('./clip-composition.cjs');
 const { normalizeInputSidecar, recordedPlatform } = require('./input-sidecar.cjs');
@@ -17,22 +17,12 @@ const { createProjectSummary } = require('./project-summary.cjs');
 const { createProjectPreview } = require('./project-preview.cjs');
 const { createProjectFeatureDetector } = require('./project-feature-detection.cjs');
 const { listProjectDirectories } = require('./project-directories.cjs');
-function createProjectStore(root, { mediaHost = 'asset', category = null, repairMetadata = true } = {}) {
-  const safePath = (directory, relativePath) => {
-    if (typeof relativePath !== 'string' || !relativePath) return null;
-    const resolvedRoot = path.resolve(directory);
-    const candidate = path.resolve(resolvedRoot, relativePath);
-    return candidate === resolvedRoot || candidate.startsWith(`${resolvedRoot}${path.sep}`) ? candidate : null;
-  };
-  const existingFileWithin = (directory, candidate) => {
-    try {
-      const realRoot = fs.realpathSync(directory);
-      const realFile = fs.realpathSync(candidate);
-      return realFile.startsWith(`${realRoot}${path.sep}`) && fs.statSync(realFile).isFile() ? realFile : null;
-    } catch {
-      return null;
-    }
-  };
+const { createProjectMediaLocations, safePath } = require('./project-media-locations.cjs');
+function createProjectStore(
+  root,
+  { mediaHost = 'asset', category = null, repairMetadata = true, roots = () => [root], writeRoot = () => root } = {},
+) {
+  const { mediaUrlFor, mediaFileForUrl } = createProjectMediaLocations(root, roots, mediaHost);
   const assertId = (id) => {
     if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
       throw new Error('Identifiant de projet invalide');
@@ -50,7 +40,9 @@ function createProjectStore(root, { mediaHost = 'asset', category = null, repair
     const target = path.join(directory, 'project.json');
     writeJsonAtomicSync(target, manifest);
   };
-  const projectDirectories = () => listProjectDirectories(root, category);
+  const projectDirectories = () => [
+    ...new Set(roots().flatMap((directory) => listProjectDirectories(directory, category))),
+  ];
   const directoryFor = (id) => {
     const projectId = assertId(id);
     const directory = projectDirectories().find((candidate) => {
@@ -76,8 +68,8 @@ function createProjectStore(root, { mediaHost = 'asset', category = null, repair
       const destination = currentDirectory
         ? path.dirname(currentDirectory)
         : category
-          ? path.join(root, category)
-          : root;
+          ? path.join(writeRoot(), category)
+          : writeRoot();
       const candidate = path.join(destination, suffix === 1 ? base : `${base}-${suffix}`);
       if (candidate === currentDirectory || !fs.existsSync(candidate)) return candidate;
     }
@@ -90,40 +82,9 @@ function createProjectStore(root, { mediaHost = 'asset', category = null, repair
     }
     return null;
   };
-  const mediaUrlFor = (fileUrl) => {
-    if (typeof fileUrl !== 'string') return null;
-    let file;
-    try {
-      file = fileURLToPath(fileUrl);
-    } catch {
-      return null;
-    }
-    const relativePath = path.relative(root, file);
-    const safeFile = safePath(root, relativePath);
-    return safeFile && safeFile === path.resolve(file) && existingFileWithin(root, safeFile)
-      ? `project-media://${mediaHost}/${encodeURIComponent(relativePath.split(path.sep).join('/'))}`
-      : null;
-  };
-  const mediaFileForUrl = (mediaUrl) => {
-    let parsed;
-    try {
-      parsed = new URL(mediaUrl);
-    } catch {
-      return null;
-    }
-    if (parsed.protocol !== 'project-media:' || parsed.hostname !== mediaHost) return null;
-    let relativePath;
-    try {
-      relativePath = decodeURIComponent(parsed.pathname.slice(1));
-    } catch {
-      return null;
-    }
-    const file = safePath(root, relativePath);
-    return file ? existingFileWithin(root, file) : null;
-  };
   const previewFor = createProjectPreview({ safePath, sessionFileFor, mediaUrlFor, writeManifest, repairMetadata });
   const detectProjectFeatures = createProjectFeatureDetector({ safePath, sessionFileFor });
-  const summary = createProjectSummary({ root, category, detectProjectFeatures, previewFor, thumbnailFor });
+  const summary = createProjectSummary({ category, detectProjectFeatures, previewFor, thumbnailFor });
   const readJsonArray = (file) => {
     if (!fs.existsSync(file)) return null;
     try {
@@ -352,6 +313,9 @@ function createProjectStore(root, { mediaHost = 'asset', category = null, repair
   if (repairMetadata) applyPendingRenames();
   return {
     rootDirectory: root,
+    get rootDirectories() {
+      return roots();
+    },
     summaryForDirectory: summary,
     list: () =>
       projectDirectories()
@@ -404,7 +368,7 @@ function createProjectStore(root, { mediaHost = 'asset', category = null, repair
       const now = new Date().toISOString();
       const name =
         typeof options.name === 'string' && options.name.trim() ? options.name.trim().slice(0, 80) : generatedName(id);
-      fs.mkdirSync(category ? path.join(root, category) : root, { recursive: true });
+      fs.mkdirSync(category ? path.join(writeRoot(), category) : writeRoot(), { recursive: true });
       const directory = availableDirectory(name);
       fs.mkdirSync(directory);
       const manifest = {

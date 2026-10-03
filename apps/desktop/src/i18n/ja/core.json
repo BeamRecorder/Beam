@@ -1178,5 +1178,18 @@
     "stopPosition": "ストップ {number} の位置",
     "stopOpacity": "ストップ {number} の不透明度",
     "addAtPosition": "クリックしてカラーストップを追加"
+  },
+  "DirectoryPreferences": {
+    "projects": "プロジェクトの保存先",
+    "projectsDescription": "新しいStudio、Instant、Screenshotプロジェクトは、このフォルダー内のprojects/studio、projects/instant、projects/screenshotに保存されます。以前の保存先もプロジェクト一覧に表示されます。",
+    "exports": "書き出しフォルダー",
+    "exportsDescription": "固定のフォルダーを選ぶか、動画や画像の書き出しに最後に使用したフォルダーを再利用します。この設定はすべてのプロジェクトで共通です。",
+    "defaultLocation": "既定の保存先",
+    "lastUsed": "最後に使用したフォルダー",
+    "browse": "フォルダーを選択",
+    "search": "フォルダーを検索",
+    "noMatches": "一致するフォルダーはありません",
+    "error": "フォルダーを更新できませんでした。",
+    "retry": "再試行"
   }
 }

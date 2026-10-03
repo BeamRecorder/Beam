@@ -1178,5 +1178,18 @@
     "stopPosition": "बिंदु {number} की स्थिति",
     "stopOpacity": "बिंदु {number} की अपारदर्शिता",
     "addAtPosition": "रंग बिंदु जोड़ने के लिए क्लिक करें"
+  },
+  "DirectoryPreferences": {
+    "projects": "प्रोजेक्ट का स्थान",
+    "projectsDescription": "नए Studio, Instant और Screenshot प्रोजेक्ट इस फ़ोल्डर में projects/studio, projects/instant और projects/screenshot का उपयोग करते हैं। पुराने स्थान प्रोजेक्ट चयन में बने रहते हैं।",
+    "exports": "एक्सपोर्ट फ़ोल्डर",
+    "exportsDescription": "एक निश्चित फ़ोल्डर चुनें या वीडियो या इमेज एक्सपोर्ट के लिए पिछले फ़ोल्डर का उपयोग करें। यह सेटिंग सभी प्रोजेक्ट के लिए साझा है।",
+    "defaultLocation": "डिफ़ॉल्ट स्थान",
+    "lastUsed": "पिछली बार इस्तेमाल किया गया फ़ोल्डर",
+    "browse": "फ़ोल्डर चुनें",
+    "search": "फ़ोल्डर खोजें",
+    "noMatches": "कोई मिलते हुए फ़ोल्डर नहीं",
+    "error": "फ़ोल्डर अपडेट नहीं किया जा सका।",
+    "retry": "फिर कोशिश करें"
   }
 }

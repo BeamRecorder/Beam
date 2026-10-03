@@ -1163,5 +1163,18 @@
     "stopPosition": "Vị trí điểm {number}",
     "stopOpacity": "Độ mờ đục của điểm {number}",
     "addAtPosition": "Nhấp để thêm điểm màu"
+  },
+  "DirectoryPreferences": {
+    "projects": "Vị trí dự án",
+    "projectsDescription": "Các dự án Studio, Instant và Screenshot mới sử dụng projects/studio, projects/instant và projects/screenshot trong thư mục này. Các vị trí cũ vẫn xuất hiện trong bộ chọn dự án.",
+    "exports": "Thư mục xuất",
+    "exportsDescription": "Chọn một thư mục cố định hoặc dùng lại thư mục xuất video hay ảnh gần nhất. Cài đặt này dùng chung cho mọi dự án.",
+    "defaultLocation": "Vị trí mặc định",
+    "lastUsed": "Thư mục dùng gần nhất",
+    "browse": "Chọn thư mục",
+    "search": "Tìm thư mục",
+    "noMatches": "Không có thư mục phù hợp",
+    "error": "Không thể cập nhật thư mục.",
+    "retry": "Thử lại"
   }
 }

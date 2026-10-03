@@ -1178,5 +1178,18 @@
     "stopPosition": "节点 {number} 的位置",
     "stopOpacity": "节点 {number} 的不透明度",
     "addAtPosition": "点击添加颜色节点"
+  },
+  "DirectoryPreferences": {
+    "projects": "项目位置",
+    "projectsDescription": "新的 Studio、Instant 和 Screenshot 项目使用此文件夹中的 projects/studio、projects/instant 和 projects/screenshot。以前的位置仍会显示在项目选择器中。",
+    "exports": "导出文件夹",
+    "exportsDescription": "选择固定文件夹，或重复使用上次导出视频或图片的文件夹。所有项目共享此设置。",
+    "defaultLocation": "默认位置",
+    "lastUsed": "上次使用的文件夹",
+    "browse": "选择文件夹",
+    "search": "搜索文件夹",
+    "noMatches": "没有匹配的文件夹",
+    "error": "无法更新文件夹。",
+    "retry": "重试"
   }
 }

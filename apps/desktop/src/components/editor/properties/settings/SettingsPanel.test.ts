@@ -67,7 +67,7 @@ describe('SettingsPanel', () => {
     localStorage.setItem('dev_mode_enabled', 'true');
     const wrapper = mount(SettingsPanel, {
       props: { hideRecorder: true },
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true } },
     });
     expect(wrapper.find('.appearance-settings').exists()).toBe(true);
     expect(wrapper.findAll('.dev-option-card')).toHaveLength(1);
@@ -78,7 +78,7 @@ describe('SettingsPanel', () => {
 
   it('renders appearance controls and changes locale through the store', async () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true } },
     });
     expect(wrapper.find('.appearance-settings').exists()).toBe(true);
     const languageSetting = wrapper.get('.language-setting');
@@ -110,7 +110,7 @@ describe('SettingsPanel', () => {
 
   it('groups writing assistance in Accessibility and toggles spell check', async () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true } },
     });
 
     const spellCheck = wrapper.get('.accessibility-setting .spell-check-preference [role="switch"]');
@@ -129,7 +129,7 @@ describe('SettingsPanel', () => {
 
   it('renders the update controls section', () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true } },
     });
     expect(wrapper.find('.update-controls-stub').exists()).toBe(true);
     expect(wrapper.findAll('.category-heading').map((section) => section.text())).toEqual([
@@ -144,7 +144,7 @@ describe('SettingsPanel', () => {
 
   it('opens the community links from the socials section', async () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true } },
     });
     const socialButtons = wrapper.findAll('.social-links button');
 
@@ -159,7 +159,7 @@ describe('SettingsPanel', () => {
 
   it('opens the recorder through the editor launcher', async () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true } },
     });
 
     const switchBtn = wrapper.get('.dev-switch [role="switch"]');
@@ -185,7 +185,7 @@ describe('SettingsPanel', () => {
       }),
     );
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true } },
     });
     await wrapper.get('.dev-switch [role="switch"]').trigger('click');
     const launchButton = wrapper.findAll('.dev-action-btn')[0];
@@ -208,7 +208,7 @@ describe('SettingsPanel', () => {
 
   it('copies system information to clipboard when clicking copy button', async () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls } },
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true } },
     });
     const copyBtn = wrapper.get('.about-setting .system-info-button');
     await copyBtn.trigger('click');

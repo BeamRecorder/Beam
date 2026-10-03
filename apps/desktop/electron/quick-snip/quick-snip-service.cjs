@@ -34,7 +34,7 @@ function createQuickSnipService(options) {
   });
   const requireOutputFile = (file) => {
     const target = fs.realpathSync(path.resolve(String(file || '')));
-    const roots = [userPaths.instantProjects].map((root) => path.resolve(root));
+    const roots = options.projectStore.rootDirectories.map((root) => path.resolve(root, 'instant'));
     if (!roots.some((root) => target.startsWith(`${root}${path.sep}`)) || !fs.statSync(target).isFile())
       throw new Error('Quick Snip clipboard path is invalid.');
     return target;

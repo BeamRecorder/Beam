@@ -1178,5 +1178,18 @@
     "stopPosition": "Posición del punto {number}",
     "stopOpacity": "Opacidad del punto {number}",
     "addAtPosition": "Haz clic para añadir un punto de color"
+  },
+  "DirectoryPreferences": {
+    "projects": "Ubicación de los proyectos",
+    "projectsDescription": "Los nuevos proyectos Studio, Instant y Screenshot usan projects/studio, projects/instant y projects/screenshot dentro de esta carpeta. Las ubicaciones anteriores siguen en el selector de proyectos.",
+    "exports": "Carpeta de exportación",
+    "exportsDescription": "Elige una carpeta fija o reutiliza la última carpeta de exportación de vídeos o imágenes. Este ajuste se comparte entre todos los proyectos.",
+    "defaultLocation": "Ubicación predeterminada",
+    "lastUsed": "Última carpeta utilizada",
+    "browse": "Elegir una carpeta",
+    "search": "Buscar carpetas",
+    "noMatches": "No hay carpetas coincidentes",
+    "error": "No se pudo actualizar la carpeta.",
+    "retry": "Reintentar"
   }
 }

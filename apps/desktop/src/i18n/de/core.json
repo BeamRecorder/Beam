@@ -1178,5 +1178,18 @@
     "stopPosition": "Position von Stopp {number}",
     "stopOpacity": "Deckkraft von Stopp {number}",
     "addAtPosition": "Klicken, um einen Farbstopp hinzuzufügen"
+  },
+  "DirectoryPreferences": {
+    "projects": "Projektordner",
+    "projectsDescription": "Neue Studio-, Instant- und Screenshot-Projekte werden in projects/studio, projects/instant und projects/screenshot in diesem Ordner gespeichert. Frühere Speicherorte bleiben in der Projektauswahl.",
+    "exports": "Exportordner",
+    "exportsDescription": "Wählen Sie einen festen Ordner oder verwenden Sie den letzten Ordner für Video- oder Bildexporte. Diese Einstellung gilt für alle Projekte.",
+    "defaultLocation": "Standardspeicherort",
+    "lastUsed": "Zuletzt verwendeter Ordner",
+    "browse": "Ordner auswählen",
+    "search": "Ordner suchen",
+    "noMatches": "Keine passenden Ordner",
+    "error": "Der Ordner konnte nicht aktualisiert werden.",
+    "retry": "Erneut versuchen"
   }
 }

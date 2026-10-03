@@ -1178,5 +1178,18 @@
     "stopPosition": "Pozycja punktu {number}",
     "stopOpacity": "Krycie punktu {number}",
     "addAtPosition": "Kliknij, aby dodać punkt koloru"
+  },
+  "DirectoryPreferences": {
+    "projects": "Lokalizacja projektów",
+    "projectsDescription": "Nowe projekty Studio, Instant i Screenshot używają projects/studio, projects/instant i projects/screenshot w tym folderze. Poprzednie lokalizacje pozostają w wyborze projektów.",
+    "exports": "Folder eksportu",
+    "exportsDescription": "Wybierz stały folder lub użyj ostatniego folderu eksportu wideo albo obrazów. To ustawienie dotyczy wszystkich projektów.",
+    "defaultLocation": "Domyślna lokalizacja",
+    "lastUsed": "Ostatnio używany folder",
+    "browse": "Wybierz folder",
+    "search": "Szukaj folderów",
+    "noMatches": "Brak pasujących folderów",
+    "error": "Nie udało się zaktualizować folderu.",
+    "retry": "Spróbuj ponownie"
   }
 }

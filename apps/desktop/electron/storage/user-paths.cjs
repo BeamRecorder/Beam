@@ -1,17 +1,27 @@
 const path = require('path');
 
-/** User content stays in Videos even when the Chromium profile is isolated. */
-function createUserPaths(app) {
+/** Preferences and shared libraries stay stable; only the project tree follows its chosen root. */
+function createUserPaths(app, { projectRoot, recordingRoot = projectRoot } = {}) {
   const user = path.join(app.getPath('videos'), 'Beam', 'user');
+  const projects = () => path.join(projectRoot ? projectRoot() : user, 'projects');
+  const recordingProjects = () => path.join(recordingRoot ? recordingRoot() : user, 'projects');
   return Object.freeze({
     user,
     preferences: path.join(user, 'preferences.json'),
     editorPresets: path.join(user, 'editor-presets.json'),
     screenshotPresets: path.join(user, 'screenshot-presets.json'),
-    screenshots: path.join(user, 'projects', 'screenshot'),
-    studioProjects: path.join(user, 'projects', 'studio'),
-    instantProjects: path.join(user, 'projects', 'instant'),
-    projects: path.join(user, 'projects'),
+    get screenshots() {
+      return path.join(projects(), 'screenshot');
+    },
+    get studioProjects() {
+      return path.join(recordingProjects(), 'studio');
+    },
+    get instantProjects() {
+      return path.join(recordingProjects(), 'instant');
+    },
+    get projects() {
+      return projects();
+    },
     wallpapers: path.join(user, 'media', 'wallpapers'),
     wallpaperImages: path.join(user, 'media', 'wallpapers', 'image'),
     wallpaperVideos: path.join(user, 'media', 'wallpapers', 'video'),

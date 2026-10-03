@@ -59,6 +59,8 @@ function registerPreferencesIpc({
   const updateBatch = async (patches) => {
     if (!Array.isArray(patches) || patches.length > 64)
       throw new TypeError('Preference batch must contain at most 64 patches.');
+    if (patches.some((patch) => patch && Object.hasOwn(patch, 'directories')))
+      throw new TypeError('Storage locations must be changed through the directory picker.');
     if (!patches.length) return store.read();
     const { previous, preferences } = store.patchBatch(patches);
     applyStartup(previous, preferences);
@@ -76,6 +78,8 @@ function registerPreferencesIpc({
           ...Object.fromEntries(keys.filter((key) => key in initial).map((key) => [key, initial[key]])),
         }
       : initial;
+    // A preference reset must not forget the roots containing the user's projects.
+    next.directories = current.directories;
     const preferences = store.write(next);
     applyStartup(current, preferences);
     if (!isDeepStrictEqual(current.shortcuts, preferences.shortcuts)) await registerShortcuts(preferences);

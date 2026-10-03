@@ -19,6 +19,7 @@ function registerScreenshotIpc({
   isTrustedRenderer,
   canCapture,
   outputDirectory,
+  directories,
   platform = process.platform,
   prepareCapture,
 }) {
@@ -121,7 +122,7 @@ function registerScreenshotIpc({
   });
   handle('screenshot:export', (event, input) =>
     publishScreenshot(
-      { store, nativeImage, clipboard, ClipboardItem, dialog, BrowserWindow, outputDirectory },
+      { store, nativeImage, clipboard, ClipboardItem, dialog, BrowserWindow, outputDirectory, directories },
       event,
       input,
     ),

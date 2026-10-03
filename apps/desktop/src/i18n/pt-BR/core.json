@@ -1178,5 +1178,18 @@
     "stopPosition": "Posição do ponto {number}",
     "stopOpacity": "Opacidade do ponto {number}",
     "addAtPosition": "Clique para adicionar um ponto de cor"
+  },
+  "DirectoryPreferences": {
+    "projects": "Local dos projetos",
+    "projectsDescription": "Os novos projetos Studio, Instant e Screenshot usam projects/studio, projects/instant e projects/screenshot nesta pasta. Os locais anteriores continuam no seletor de projetos.",
+    "exports": "Pasta de exportação",
+    "exportsDescription": "Escolha uma pasta fixa ou reutilize a última pasta de exportação de vídeos ou imagens. Esta configuração vale para todos os projetos.",
+    "defaultLocation": "Local padrão",
+    "lastUsed": "Última pasta utilizada",
+    "browse": "Escolher uma pasta",
+    "search": "Buscar pastas",
+    "noMatches": "Nenhuma pasta correspondente",
+    "error": "Não foi possível atualizar a pasta.",
+    "retry": "Tentar novamente"
   }
 }

@@ -1178,5 +1178,18 @@
     "stopPosition": "지점 {number} 위치",
     "stopOpacity": "지점 {number} 불투명도",
     "addAtPosition": "클릭하여 색상 지점 추가"
+  },
+  "DirectoryPreferences": {
+    "projects": "프로젝트 위치",
+    "projectsDescription": "새 Studio, Instant 및 Screenshot 프로젝트는 이 폴더 안의 projects/studio, projects/instant 및 projects/screenshot에 저장됩니다. 이전 위치도 프로젝트 선택기에 표시됩니다.",
+    "exports": "내보내기 폴더",
+    "exportsDescription": "고정 폴더를 선택하거나 동영상 또는 이미지 내보내기에 마지막으로 사용한 폴더를 다시 사용합니다. 이 설정은 모든 프로젝트에서 공유됩니다.",
+    "defaultLocation": "기본 위치",
+    "lastUsed": "마지막으로 사용한 폴더",
+    "browse": "폴더 선택",
+    "search": "폴더 검색",
+    "noMatches": "일치하는 폴더 없음",
+    "error": "폴더를 업데이트할 수 없습니다.",
+    "retry": "다시 시도"
   }
 }
