@@ -27,6 +27,17 @@ afterEach(async () => {
 });
 
 describe('internationalization', () => {
+  it('translates screenshot layer names and rename hints in every supported locale', async () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      await setCurrentLocale(locale);
+      for (const path of ['ScreenshotComposition.name', 'ScreenshotComposition.rename']) {
+        expect(i18n.global.te(path, locale), `${locale}: ${path}`).toBe(true);
+        expect(i18n.global.t(path).trim()).not.toBe('');
+      }
+    }
+    await setCurrentLocale('fr');
+    expect(i18n.global.t('ScreenshotComposition.name')).toBe('Nom du calque');
+  });
   it('uses an imperative Vietnamese label for screenshot actions and keeps screenshot names nominal', async () => {
     await setCurrentLocale('vi');
 

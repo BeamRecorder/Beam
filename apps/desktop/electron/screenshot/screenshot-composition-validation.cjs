@@ -63,6 +63,18 @@ function validateScreenshotComposition(state) {
       requiredIds.add(cursor.id);
     }
   }
+  if (state.layerNames !== undefined) {
+    if (
+      !state.layerNames ||
+      typeof state.layerNames !== 'object' ||
+      Array.isArray(state.layerNames) ||
+      ![Object.prototype, null].includes(Object.getPrototypeOf(state.layerNames))
+    )
+      throw new Error('Invalid screenshot layer names.');
+    for (const [id, name] of Object.entries(state.layerNames)) {
+      if (!ids.has(id) || !identifier(name) || name !== name.trim()) throw new Error('Invalid screenshot layer name.');
+    }
+  }
   if (state.composition === undefined) return; // Older documents keep their original paint order on load.
   if (
     !Array.isArray(state.composition) ||

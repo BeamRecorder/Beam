@@ -1,16 +1,13 @@
 <script setup lang="ts">
 import EditorTitlebar from '../editor/EditorTitlebar.vue';
-import EditorHistoryControls from '../editor/EditorHistoryControls.vue';
 import UndoRedoToast from '../editor/canvas/UndoRedoToast.vue';
 import PropertiesDeleteAction from '../editor/properties/PropertiesDeleteAction.vue';
 import ElementClipControls from '../editor/elements/ElementClipControls.vue';
-import { computed, ref } from 'vue';
-import { ArrowLeft, Copy, Crop, Film, Maximize2, Monitor, RotateCcw, SlidersHorizontal } from '@lucide/vue';
+import { computed, ref, watch } from 'vue';
+import { ArrowLeft, Copy, RotateCcw, Settings2 } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import Button from '~/ui/button/Button.vue';
-import Popover from '~/ui/popover/Popover.vue';
 import type { ClipAppearance } from '@beam/engine/shared/composition-types';
-import SidebarPanel from '../editor/sidebar/SidebarPanel.vue';
 import CanvasPanel from '../editor/properties/canvas/CanvasPanel.vue';
 import BlurPropertiesPanel from '../editor/properties/clip/BlurPropertiesPanel.vue';
 import ClipPropertiesPanel from '../editor/properties/clip/ClipPropertiesPanel.vue';
@@ -21,14 +18,19 @@ import EditorAmbientBackground from '../editor/EditorAmbientBackground.vue';
 import ScreenshotCanvas from './ScreenshotCanvas.vue';
 import ScreenshotPropertiesPanel from './ScreenshotPropertiesPanel.vue';
 import ScreenshotExportPopover from './ScreenshotExportPopover.vue';
-import ScreenshotSizeControls from './ScreenshotSizeControls.vue';
-import ScreenshotAddMenu from './ScreenshotAddMenu.vue';
+import ScreenshotViewControls from './ScreenshotViewControls.vue';
+import ScreenshotToolbar from './ScreenshotToolbar.vue';
 import EditorSearchButton from '../editor/search/EditorSearchButton.vue';
+import ScreenshotSearch from './ScreenshotSearch.vue';
+import ScreenshotLayerTitle from './ScreenshotLayerTitle.vue';
+import EditorWorkspace from '../editor/layout/EditorWorkspace.vue';
+import EditorProjectLoadingOverlay from '../editor/EditorProjectLoadingOverlay.vue';
 import { useScreenshotEditor } from './useScreenshotEditor';
 import ScreenshotCursorControls from './ScreenshotCursorControls.vue';
 import ScreenshotComposition from './composition/ScreenshotComposition.vue';
 import {
   screenshotLayers,
+  renameScreenshotLayer,
   reorderScreenshotLayer,
   updateScreenshotLayer,
   updateScreenshotBackground,
@@ -42,13 +44,17 @@ import { useElementFullscreen } from '../editor/canvas/composables/useElementFul
 const props = defineProps<{ id: string }>();
 const emit = defineEmits<{ ready: [] }>();
 const handlesMuted = ref(false);
+const toolbarHeight = ref(50);
 const { t } = useTranslate('ScreenshotEditor');
 const { t: topbarText } = useTranslate('Topbar');
 const { t: elementsText } = useTranslate('Elements');
 const { t: sidebarText } = useTranslate('SidebarPanel');
 const { t: fullscreenText } = useTranslate('TimelineToolbar');
 const { t: backText } = useTranslate('TopbarHUD');
+const { t: preparingText } = useTranslate('EditorPreparingHud');
 const previewStage = ref<HTMLElement | null>(null);
+const canvasPreview = ref<InstanceType<typeof ScreenshotCanvas> | null>(null);
+const viewControls = ref<InstanceType<typeof ScreenshotViewControls> | null>(null);
 const canvasFullscreen = useElementFullscreen(() => previewStage.value);
 const toggleFullscreen = (event?: MouseEvent) => {
   (event?.currentTarget as HTMLElement | null)?.blur();
@@ -108,20 +114,66 @@ useClipboardImagePaste({
   paste: pasteImage,
   onError: fail,
 });
-const tabs = computed(() => [
-  { id: 'canvas', label: t('canvas'), icon: Monitor },
-  { id: 'clip', label: sidebarText('clip'), icon: Film },
-]);
+const inspectorOpen = ref(true);
+const inspectorToolbar = ref<InstanceType<typeof ScreenshotToolbar> | null>(null);
+const hideInspector = () => {
+  inspectorOpen.value = false;
+  inspectorToolbar.value?.focusInspector();
+};
+const showSelection = (...args: Parameters<typeof select>) => {
+  select(...args);
+  inspectorOpen.value = true;
+};
+watch([panel, selectedId], () => {
+  inspectorOpen.value = true;
+});
+const choosePanel = (target: 'canvas' | 'settings') => {
+  inspectorOpen.value = panel.value !== target || !inspectorOpen.value;
+  selectPanel(target);
+};
+const chooseSelection = () => {
+  elements.finishText();
+  elements.drawingMode.value = false;
+  cropping.value = false;
+  if (!selectedId.value && state.value) select(state.value.image.id);
+  else selectPanel('clip');
+  inspectorOpen.value = true;
+};
 const panelTitle = computed(() =>
-  panel.value === 'canvas' ? t('canvas') : panel.value === 'settings' ? sidebarText('settings') : sidebarText('clip'),
+  panel.value === 'canvas'
+    ? t('canvas')
+    : panel.value === 'settings'
+      ? sidebarText('settings')
+      : selectedLayer.value?.name || (selectedLayer.value ? elementsText(selectedLayer.value.kind) : t('properties')),
 );
 const composition = computed(() => (state.value ? screenshotLayers(state.value) : []));
+const renameLayer = (id: string, name: string) => {
+  if (state.value && !busy.value && !cropping.value) renameScreenshotLayer(state.value, id, name);
+};
+const navigateSearch = (tab: string) => {
+  if (tab === 'clip' && !selectedId.value && state.value) select(state.value.image.id);
+  else selectPanel(tab);
+  inspectorOpen.value = true;
+};
 </script>
 
 <template>
   <main class="screenshot-editor">
+    <ScreenshotSearch
+      v-if="state && document && !canvasFullscreen.isFullscreen.value"
+      :navigate="navigateSearch"
+      :disabled="busy || cropping"
+      :can-crop="Boolean(image && !selectedLayer?.locked)"
+      :can-fullscreen="!elements.editing.value && !elements.drawingMode.value"
+      @copy="exportImage(true)"
+      @export="exportImage(false)"
+      @crop="image && startCrop(image.id)"
+      @recenter="canvasPreview?.resetView()"
+      @fullscreen="toggleFullscreen()"
+      @dimensions="viewControls?.openDimensions()"
+    />
     <EditorAmbientBackground :background="state?.canvas.showBackground ? state.background : null" />
-    <EditorTitlebar class="screenshot-topbar">
+    <EditorTitlebar class="screenshot-topbar screenshot-chrome">
       <template #left>
         <Button
           variant="ghost"
@@ -143,14 +195,18 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
           @delete="presetAction('delete')"
           @save="savePreset().catch(fail)"
         />
-        <EditorHistoryControls
-          :can-undo="history.canUndo.value"
-          :can-redo="history.canRedo.value"
-          @undo="history.undo().catch(fail)"
-          @redo="history.redo().catch(fail)"
-        />
-        <ScreenshotAddMenu :disabled="!state || busy || cropping" @add="addElement" />
         <EditorSearchButton />
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="Settings2"
+          :disabled="busy || cropping"
+          :aria-label="sidebarText('settings')"
+          :tooltip="sidebarText('settings')"
+          :aria-pressed="panel === 'settings' && inspectorOpen"
+          @click="choosePanel('settings')"
+        />
       </template>
       <template #center>
         <VideoProjectEdition
@@ -163,6 +219,19 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
         />
       </template>
       <template #right>
+        <ScreenshotViewControls
+          ref="viewControls"
+          v-if="state && document"
+          :document="document"
+          :disabled="busy"
+          :can-fullscreen="!busy && !cropping && !elements.editing.value && !elements.drawingMode.value"
+          :zoom-percent="canvasPreview?.zoomPercent ?? 100"
+          v-model:canvas="state.canvas"
+          v-model:advanced="advanced"
+          v-model:keep-aspect="keepAspect"
+          @reset-view="canvasPreview?.resetView()"
+          @fullscreen="toggleFullscreen"
+        />
         <Button
           variant="secondary"
           size="sm"
@@ -186,14 +255,25 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
       </template>
     </EditorTitlebar>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
-    <div v-if="state && document" class="editor-body">
-      <SidebarPanel
-        :active-tab="['image', 'shapes', 'cursor'].includes(panel) ? 'clip' : panel"
-        :items="tabs"
-        @select-tab="selectPanel"
-      />
-      <ScreenshotPropertiesPanel :title="panelTitle">
-        <template v-if="selectedLayer" #footer>
+    <EditorProjectLoadingOverlay
+      v-if="!state && !error"
+      kind="screenshot"
+      visible
+      :label="preparingText('title')"
+      :show-topbar-skeleton="false"
+    />
+    <EditorWorkspace v-if="state && document" kind="screenshot" class="editor-body">
+      <ScreenshotPropertiesPanel :open="inspectorOpen" :title="panelTitle" @close="hideInspector">
+        <template v-if="selectedLayer && panel !== 'settings'" #title>
+          <ScreenshotLayerTitle
+            :key="selectedLayer.id"
+            :name="selectedLayer.name || panelTitle"
+            :disabled="busy || cropping || selectedLayer.locked"
+            :active="inspectorOpen"
+            @rename="renameLayer(selectedLayer.id, $event)"
+          />
+        </template>
+        <template v-if="selectedLayer && panel !== 'settings' && panel !== 'canvas'" #footer>
           <PropertiesDeleteAction
             :name="selectedLayer.name || elementsText(selectedLayer.kind)"
             :disabled="busy || selectedLayer.locked"
@@ -202,15 +282,6 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
         </template>
         <template #actions>
           <div v-if="image && (panel === 'image' || panel === 'shapes')" class="crop-actions">
-            <Button
-              :variant="cropping ? 'secondary' : 'ghost'"
-              size="xs"
-              :icon="Crop"
-              :aria-pressed="cropping"
-              :disabled="selectedLayer?.locked"
-              @click="cropping = !cropping"
-              >{{ t('crop') }}</Button
-            >
             <Button
               v-if="image.crop"
               variant="ghost"
@@ -307,17 +378,29 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
           </Button>
         </div>
         <ScreenshotCanvas
+          ref="canvasPreview"
+          :class="{
+            'is-preview-fullscreen': canvasFullscreen.isFullscreen.value,
+            'is-preview-exiting': canvasFullscreen.isExiting.value,
+          }"
+          :style="{
+            '--screenshot-controls-space': `${Math.max(84, toolbarHeight + 40)}px`,
+          }"
           :source="document.source"
           :state="state"
           :selected-id="canvasFullscreen.isFullscreen.value ? null : selectedId"
           :selected-ids="canvasFullscreen.isFullscreen.value ? [] : selectedIds"
           :disabled="busy || canvasFullscreen.isFullscreen.value"
+          :zoom-disabled="busy"
           :cropping="cropping && !canvasFullscreen.isFullscreen.value"
           :handles-muted="handlesMuted"
           :cursor-packs="cursors.packs.value"
           :cursor-packs-ready="cursors.ready.value"
-          @select="select"
-          @select-many="selectMany"
+          @select="showSelection"
+          @select-many="
+            selectMany($event);
+            inspectorOpen = true;
+          "
           @transform="transform"
           @rotate="rotate"
           @translate="translate"
@@ -341,116 +424,44 @@ const composition = computed(() => (state.value ? screenshotLayers(state.value) 
               :selected-ids="selectedIds"
               :source="document.source"
               :disabled="busy || cropping"
-              @select="select"
+              @select="showSelection"
               @reorder="(id, index) => reorderScreenshotLayer(state!, id, index)"
               @update="(id, patch) => updateScreenshotLayer(state!, id, patch)"
               @visibility="(id, visible) => setScreenshotLayerVisible(state!, id, visible)"
               @remove="removeLayer"
+              @rename="renameLayer"
             />
           </template>
           <template #controls>
-            <Popover
+            <ScreenshotToolbar
+              ref="inspectorToolbar"
               v-if="!canvasFullscreen.isFullscreen.value"
-              align="center"
-              direction="up"
-              :match-trigger-width="false"
-            >
-              <template #trigger>
-                <Button variant="secondary" size="sm" :icon="SlidersHorizontal" :aria-label="t('dimensions')">
-                  {{ state.canvas.width }} × {{ state.canvas.height }}
-                  <span class="format-badge">{{ state.format.toUpperCase() }}</span>
-                </Button>
-              </template>
-              <div class="canvas-size-popover">
-                <ScreenshotSizeControls
-                  :original="document"
-                  v-model:canvas="state.canvas"
-                  v-model:advanced="advanced"
-                  v-model:keep-aspect="keepAspect"
-                />
-              </div>
-            </Popover>
-            <Button
-              v-if="!canvasFullscreen.isFullscreen.value"
-              variant="ghost"
-              size="sm"
-              icon-only
-              :icon="Maximize2"
-              :disabled="busy || cropping || Boolean(elements.editing.value) || elements.drawingMode.value"
-              :aria-label="fullscreenText('fullscreenPreview')"
-              :tooltip="fullscreenText('fullscreenPreview')"
-              @click="toggleFullscreen"
+              :disabled="busy"
+              :cropping="cropping"
+              :can-crop="Boolean(image && !selectedLayer?.locked)"
+              :drawing="elements.drawingMode.value"
+              :editing-text="Boolean(elements.editing.value)"
+              :panel="panel"
+              :inspector-open="inspectorOpen"
+              :can-undo="history.canUndo.value"
+              :can-redo="history.canRedo.value"
+              @add="addElement"
+              @select="chooseSelection"
+              @crop="cropping = !cropping"
+              @canvas="choosePanel('canvas')"
+              @undo="history.undo().catch(fail)"
+              @redo="history.redo().catch(fail)"
+              @toggle-inspector="inspectorOpen = !inspectorOpen"
+              @resize="toolbarHeight = $event"
             />
           </template>
         </ScreenshotCanvas>
       </div>
-    </div>
+    </EditorWorkspace>
   </main>
 </template>
 
-<style scoped>
-.screenshot-editor {
-  position: relative;
-  isolation: isolate;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-bg-surface);
-  color: var(--text-primary);
-}
-.screenshot-editor > :not(.editor-ambient-background) {
-  position: relative;
-}
-.back-label {
-  display: var(--editor-back-label-display, inline);
-}
-.copy-label {
-  display: var(--editor-copy-label-display, inline);
-}
-.editor-body {
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-.crop-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-.effect-properties {
-  padding: 12px;
-}
-.layer-properties {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-.layer-properties:disabled {
-  opacity: 0.5;
-  pointer-events: none;
-}
-.canvas-size-popover {
-  width: 320px;
-  max-width: calc(100vw - 48px);
-  padding: 16px;
-}
-.screenshot-history-feedback {
-  bottom: 76px;
-}
-.format-badge {
-  color: var(--text-secondary);
-  font-size: 10px;
-  margin-left: 4px;
-}
-.error {
-  color: var(--color-error);
-  padding: 8px 16px;
-  margin: 0;
-}
-</style>
+<style scoped src="./screenshot-editor.css"></style>
+<style scoped src="../editor/layout/editor-preview-layout.css"></style>
 <style scoped src="./screenshot-fullscreen.css"></style>
+<style scoped src="./screenshot-chrome.css"></style>

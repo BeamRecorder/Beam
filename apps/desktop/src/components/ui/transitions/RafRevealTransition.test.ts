@@ -1,4 +1,4 @@
-import { defineComponent, h } from 'vue';
+import { defineComponent, h, vShow, withDirectives } from 'vue';
 import { enableAutoUnmount, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import RafRevealTransition from './RafRevealTransition.vue';
@@ -34,7 +34,10 @@ beforeEach(() => {
       }) as MediaQueryList,
   );
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-    return { height: Number.parseFloat(this.style.height) || 100 } as DOMRect;
+    return {
+      height: Number.parseFloat(this.style.height) || 100,
+      width: Number.parseFloat(this.style.width) || 300,
+    } as DOMRect;
   });
 });
 afterEach(() => {
@@ -92,4 +95,40 @@ it('honors reduced motion on opening and closing', async () => {
   await wrapper.setData({ open: false });
   expect(wrapper.find('.panel').exists()).toBe(false);
   expect(frames.size).toBe(0);
+});
+
+it('animates a mounted horizontal inspector and reverses closing without remounting its controls', async () => {
+  const wrapper = mount(
+    defineComponent({
+      data: () => ({ open: true }),
+      render() {
+        return h(RafRevealTransition, { axis: 'horizontal' }, () =>
+          withDirectives(h('aside', { class: 'panel' }, [h('input')]), [[vShow, this.open]]),
+        );
+      },
+    }),
+    { global: { stubs: { transition: false } } },
+  );
+  const panel = wrapper.get('.panel').element as HTMLElement;
+  const input = wrapper.get('input').element as HTMLInputElement;
+  input.value = 'Retained draft';
+  await wrapper.setData({ open: false });
+  step(100);
+  expect(panel.style.width).toBe('150px');
+  expect(panel.style.height).toBe('');
+  await wrapper.setData({ open: true });
+  expect(panel.style.width).toBe('150px');
+  expect(frames.size).toBe(1);
+  step(200);
+  expect(wrapper.get('input').element).toBe(input);
+  expect(input.value).toBe('Retained draft');
+  expect(panel.style.width).toBe('');
+  await wrapper.setData({ open: false });
+  step(200);
+  expect(panel.style.display).toBe('none');
+  expect(frames.size).toBe(0);
+  await wrapper.setData({ open: true });
+  expect(panel.style.width).toBe('0px');
+  step(200);
+  expect(panel.style.display).not.toBe('none');
 });

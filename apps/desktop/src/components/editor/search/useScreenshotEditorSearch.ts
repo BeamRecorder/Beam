@@ -1,12 +1,35 @@
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Film } from '@lucide/vue';
+import {
+  Image,
+  Shapes,
+  MousePointer2,
+  Paintbrush,
+  Stamp,
+  Focus,
+  CircleDashed,
+  Type,
+  ArrowRight,
+  Pencil,
+} from '@lucide/vue';
+import { screenshotSearchPropertyAvailable } from './screenshot-search-properties';
 import { screenshotLayers } from '@beam/engine/screenshot/screenshot-layers';
 import { screenshotImage } from '@beam/engine/screenshot/screenshot-images';
 import { screenshotThumbnailSpecs } from '../../screenshot/composition/thumbnails/thumbnail-spec';
 import { useLayerThumbnails } from '../../screenshot/composition/thumbnails/useLayerThumbnails';
 import { provideEditorSearch } from './useEditorSearch';
 import type { ScreenshotEditorSearchOptions } from './editor-search-types';
+const layerIcons = {
+  image: Image,
+  shape: Shapes,
+  text: Type,
+  arrow: ArrowRight,
+  drawing: Pencil,
+  cursor: MousePointer2,
+  background: Paintbrush,
+  watermark: Stamp,
+  effect: CircleDashed,
+};
 export function provideScreenshotEditorSearch(options: ScreenshotEditorSearchOptions) {
   const { t } = useI18n();
   const visible = ref<string[]>([]);
@@ -36,6 +59,8 @@ export function provideScreenshotEditorSearch(options: ScreenshotEditorSearchOpt
     canInsert: options.canInsert,
     insert: options.insert,
     clipKind: kind,
+    propertyAvailable: (group, key) =>
+      screenshotSearchPropertyAvailable(options.state.value, options.selectedId.value, group, key),
     canEditClip: () =>
       Boolean(
         options.canInsert() &&
@@ -58,12 +83,21 @@ export function provideScreenshotEditorSearch(options: ScreenshotEditorSearchOpt
                   : layer.kind === 'watermark'
                     ? 'CanvasPanel.watermark'
                     : layer.kind === 'effect'
-                      ? 'TimelineTracks.blur'
+                      ? options.state.value?.effects?.find((effect) => effect.id === layer.id)?.mode === 'highlight'
+                        ? 'Highlight.title'
+                        : 'TimelineTracks.blur'
                       : `Elements.${layer.kind}`,
               ),
-            icon: Film,
+            icon:
+              layer.kind === 'effect' &&
+              options.state.value?.effects?.find((effect) => effect.id === layer.id)?.mode === 'highlight'
+                ? Focus
+                : layerIcons[layer.kind],
             tab: ['background', 'watermark'].includes(layer.kind) ? 'canvas' : 'clip',
-            terms: [layer.kind],
+            terms: [
+              layer.kind,
+              options.state.value?.shapes.find((shape) => shape.id === layer.id)?.text?.content ?? '',
+            ],
             preview: { kind: 'layer', value: thumbnails.value[layer.id] },
             run: () => options.select(layer.id),
           }))

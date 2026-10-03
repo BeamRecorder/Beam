@@ -107,6 +107,44 @@ const layerSettings = (id, patch = {}) => ({
   ...patch,
 });
 
+test('screenshot names preserve Unicode labels for actual image, shape, cursor, background and watermark IDs', () => {
+  const state = screenshotState({
+    shapes: [shape()],
+    cursors: [cursor()],
+    layerNames: {
+      screenshot: 'Référence',
+      'shape-1': 'Annotation',
+      'cursor-1': 'Pointer',
+      __background__: 'Fond',
+      __watermark__: 'Logo',
+    },
+  });
+  assert.doesNotThrow(() => validateScreenshotState(state));
+  assert.equal(state.layerNames.screenshot, 'Référence');
+});
+test('screenshot names reject invalid containers, unknown IDs and empty, untrimmed, oversized or non-string labels', () => {
+  for (const layerNames of [
+    null,
+    new Map(),
+    new Date(),
+    [],
+    'name',
+    1,
+    { missing: 'Name' },
+    { screenshot: '' },
+    { screenshot: '  ' },
+    { screenshot: ' Name ' },
+    { screenshot: 'a'.repeat(201) },
+    { screenshot: 1 },
+  ])
+    assert.throws(() => validateScreenshotState(screenshotState({ layerNames })), /Invalid screenshot layer name/);
+});
+test('screenshot names remain optional for old documents and accept the exact label length boundary', () => {
+  assert.doesNotThrow(() => validateScreenshotState(screenshotState()));
+  assert.doesNotThrow(() => validateScreenshotState(screenshotState({ layerNames: {} })));
+  assert.doesNotThrow(() => validateScreenshotState(screenshotState({ layerNames: { screenshot: 'a'.repeat(200) } })));
+});
+
 const layerIds = (state) => [
   '__background__',
   state.image.id,

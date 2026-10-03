@@ -1,3 +1,4 @@
+import { loadScreenshotCursors } from '@beam/runtime/screenshot/screenshot-cursors';
 import { prepareScreenshotAssets } from '@beam/runtime/screenshot/screenshot-assets';
 import { encodeStillImage } from '@beam/encoder/still-encoder';
 import { StillEncodingError } from '@beam/encoder/still-encoding-error';
@@ -30,6 +31,25 @@ export async function loadScreenshotAssets(
     cursorPacks,
     watermarkSource: resolvePublicAssetUrl(WATERMARK_LOGO_PATH),
   });
+}
+
+export async function loadScreenshotDecorations(
+  state: ScreenshotState,
+  packs?: readonly CursorPackDescriptor[],
+  load = createScreenshotImageLoader(),
+) {
+  const cursorPacks = state.cursors?.some((cursor) => cursor.enabled)
+    ? (packs ?? [...BUILTIN_CURSOR_PACKS, ...(await (await import('~/api/capture')).capture.listCursorPacks())])
+    : [];
+  const [logo, cursors] = await Promise.all([
+    state.canvas.watermark?.enabled && state.canvas.watermark.showLogo
+      ? load(resolvePublicAssetUrl(WATERMARK_LOGO_PATH))
+      : null,
+    state.cursors?.some((cursor) => cursor.enabled)
+      ? loadScreenshotCursors(state.cursors, cursorPacks, state.canvas)
+      : undefined,
+  ]);
+  return { logo, ...(cursors ? { cursors } : {}) };
 }
 
 export async function encodeScreenshot(

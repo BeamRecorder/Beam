@@ -920,6 +920,8 @@
     "defaultSystemAudio": "Đầu ra hệ thống mặc định"
   },
   "ScreenshotEditor": {
+    "tools": "Công cụ",
+    "selectTool": "Chọn",
     "title": "Ảnh chụp màn hình",
     "export": "Xuất",
     "layers": "Lớp ảnh chụp",
@@ -1045,6 +1047,8 @@
   },
   "ScreenshotComposition": {
     "title": "Bố cục",
+    "name": "Tên lớp",
+    "rename": "Đổi tên lớp · Nhấp đúp hoặc F2",
     "layers": "Lớp",
     "blendMode": "Chế độ hòa trộn",
     "opacity": "Độ mờ đục",

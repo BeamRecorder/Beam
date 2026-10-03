@@ -2,6 +2,9 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import DrawingControls from '~/components/editor/elements/DrawingControls.vue';
+import ElementTextControls from '~/components/editor/elements/ElementTextControls.vue';
+import ShadowDirectionGroup from '../../cursor/ShadowDirectionGroup.vue';
+import { createElementText } from '@beam/engine/shared/element-text';
 import ShapeLayerPropertiesPanel from '../ShapeLayerPropertiesPanel.vue';
 
 const { capture } = vi.hoisted(() => ({
@@ -56,7 +59,7 @@ const clip = (overrides: ShapeClipOverrides = {}): ShapeClip =>
 
 const ColorPickerStub = {
   name: 'ColorPickerStub',
-  props: ['label', 'modelValue'],
+  props: ['label', 'modelValue', 'formatValue'],
   emits: ['update:modelValue'],
   template: '<div class="color-picker-stub" :data-label="label" :data-value="modelValue" />',
 };
@@ -70,7 +73,7 @@ const ColorFillPresetControlsStub = {
 
 const BigSliderStub = {
   name: 'BigSliderStub',
-  props: ['label', 'modelValue'],
+  props: ['label', 'modelValue', 'formatValue'],
   emits: ['update:modelValue'],
   template: '<div class="slider-stub" :data-label="label" :data-value="modelValue" />',
 };
@@ -110,7 +113,11 @@ const stubs = {
     template:
       '<button class="switch-stub" :aria-label="ariaLabel" :aria-pressed="modelValue" @click="$emit(\'update:modelValue\', !modelValue)" />',
   },
-  ShadowDirectionGroup: { template: '<div class="direction-stub" />' },
+  ShadowDirectionGroup: {
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    template: '<div class="direction-stub" />',
+  },
   ShapePicker: ShapePickerStub,
 };
 
@@ -130,6 +137,54 @@ beforeEach(() => {
 });
 
 describe('ShapeLayerPropertiesPanel', () => {
+  it('focuses the named Appearance/Text panes and forwards their real editable properties', async () => {
+    const wrapper = mount(ShapeLayerPropertiesPanel, {
+      props: { clip: clip({ opacityEnabled: true, shadowEnabled: true }) },
+      global: { stubs },
+    });
+    try {
+      await wrapper.get('[data-editor-property-section="text"]').trigger('click');
+      const text = createElementText('Annotation');
+      wrapper.findComponent(ElementTextControls).vm.$emit('update', text);
+      expect(wrapper.emitted('update')).toContainEqual([{ text }]);
+      await wrapper.get('[data-editor-property-section="appearance"]').trigger('click');
+      for (const control of wrapper.findAllComponents(BigSliderStub)) {
+        control.vm.$emit('update:modelValue', 20);
+        if (control.props('label') === 'Rotation') expect(control.props('formatValue')(21.8)).toBe('22°');
+      }
+      for (const picker of wrapper.findAllComponents(ColorPickerStub)) picker.vm.$emit('update:modelValue', '#112233');
+      wrapper
+        .findComponent(ColorFillPresetControlsStub)
+        .vm.$emit('update:modelValue', { kind: 'color', color: '#334455' });
+      wrapper.findComponent(ShadowDirectionGroup).vm.$emit('update:modelValue', 'all');
+      for (const toggle of wrapper.findAll('.switch-stub')) await toggle.trigger('click');
+      for (const patch of [
+        { rotation: 20 },
+        { cornerRadius: 20 },
+        { borderWidth: 20 },
+        { opacity: 20 },
+        { backdropBlur: 20 },
+        { shadowBlur: 20 },
+        { borderColor: '#112233' },
+        { shadowColor: '#112233' },
+        { shadowDirection: 'all' },
+        { shadowEnabled: false },
+        { fillEnabled: false },
+      ])
+        expect(wrapper.emitted('update')).toContainEqual([patch]);
+      await wrapper.setProps({ clip: clip({ family: 'arrow', preset: 'arrow' }) });
+      for (const control of wrapper.findAllComponents(BigSliderStub)) control.vm.$emit('update:modelValue', 30);
+      expect(wrapper.emitted('update')).toContainEqual([{ arrowThickness: 30 }]);
+      expect(wrapper.emitted('update')).toContainEqual([{ arrowHeadSize: 30 }]);
+      await wrapper
+        .findAll('button')
+        .find((button) => button.text() === 'Shapes')!
+        .trigger('click');
+      expect(wrapper.emitted('update')).toContainEqual([{ family: 'shape', preset: 'rounded-rectangle' }]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
   it('switches between shape and arrow families using family defaults', async () => {
     const wrapper = mount(ShapeLayerPropertiesPanel, {
       props: { clip: clip() },

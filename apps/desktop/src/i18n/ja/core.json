@@ -935,6 +935,8 @@
     "defaultSystemAudio": "既定のシステム出力"
   },
   "ScreenshotEditor": {
+    "tools": "ツール",
+    "selectTool": "選択",
     "title": "スクリーンショット",
     "export": "書き出す",
     "layers": "スクリーンショットのレイヤー",
@@ -1060,6 +1062,8 @@
   },
   "ScreenshotComposition": {
     "title": "コンポジション",
+    "name": "レイヤー名",
+    "rename": "レイヤー名を変更 · ダブルクリックまたは F2",
     "layers": "レイヤー",
     "blendMode": "描画モード",
     "opacity": "不透明度",

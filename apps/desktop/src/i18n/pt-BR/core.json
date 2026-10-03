@@ -935,6 +935,8 @@
     "defaultSystemAudio": "Saída padrão do sistema"
   },
   "ScreenshotEditor": {
+    "tools": "Ferramentas",
+    "selectTool": "Selecionar",
     "title": "Captura de tela",
     "export": "Exportar",
     "layers": "Camadas da captura",
@@ -1060,6 +1062,8 @@
   },
   "ScreenshotComposition": {
     "title": "Composição",
+    "name": "Nome da camada",
+    "rename": "Renomear camada · Clique duplo ou F2",
     "layers": "Camadas",
     "blendMode": "Modo de mesclagem",
     "opacity": "Opacidade",

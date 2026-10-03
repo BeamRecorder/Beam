@@ -6,7 +6,7 @@ const test = require('node:test');
 const { createRendererSetup } = require('../apps/desktop/electron/lifecycle/renderer-setup.cjs');
 const { HUD_SIZE, WindowController } = require('../apps/desktop/electron/window/window-controller.cjs');
 
-function createFixture({ onboardingCompleted = true } = {}) {
+function createFixture({ onboardingCompleted = true, environment = {} } = {}) {
   const calls = [];
   let visible = false;
   const applicationRoot = '/beam-app';
@@ -125,10 +125,13 @@ function createFixture({ onboardingCompleted = true } = {}) {
       applicationRoot,
       controllers,
       logStartup: (message) => calls.push(['log', message]),
+      environment,
     });
     const window = setup.createWindow(preferencesStore, '/beam-app/public/brand/BeamIcon.png');
     return {
       calls,
+      setup,
+      BrowserWindow: FakeBrowserWindow,
       controllers,
       window,
       controller: controllers.get(window),
@@ -155,6 +158,54 @@ test('creates the HUD at the canonical native size with isolated renderer settin
   assert.equal(options.webPreferences.contextIsolation, true);
   assert.equal(fixture.controllers.get(fixture.window) instanceof WindowController, true);
   assert.ok(fixture.calls.some(([name, url]) => name === 'loadURL' && url === 'http://localhost:6500/html/index.html'));
+});
+
+test('loads the HUD from its session port and trusts only that renderer origin', () => {
+  const environment = { BEAM_DEV_SERVER_URL: 'http://localhost:6508' };
+  const fixture = createFixture({ environment });
+  assert.ok(fixture.calls.some(([name, url]) => name === 'loadURL' && url === 'http://localhost:6508/html/index.html'));
+  const setup = createRendererSetup({ app: { isPackaged: false }, applicationRoot: '/beam-app', environment });
+  assert.equal(setup.isTrustedRenderer('http://localhost:6508/html/editor.html'), true);
+  assert.equal(setup.isTrustedRenderer('http://localhost:6500/html/editor.html'), false);
+  assert.equal(setup.isTrustedRenderer('http://localhost:6508/html/untrusted.html'), false);
+});
+
+test('packaged renderers cannot obtain media permissions from a development origin', () => {
+  const setup = createRendererSetup({
+    app: { isPackaged: true },
+    applicationRoot: '/beam-app',
+    environment: { BEAM_DEV_SERVER_URL: 'http://localhost:6508' },
+  });
+  assert.equal(setup.isTrustedRenderer('http://localhost:6508/html/index.html'), false);
+  assert.equal(setup.isTrustedRenderer('file:///beam-app/dist/html/index.html'), true);
+});
+
+test('preference changes update only the transparent HUD controller', () => {
+  const fixture = createFixture();
+  const onboarding = {};
+  const editor = {};
+  fixture.controllers.set(onboarding, { applyModePolicy: () => assert.fail('onboarding has no HUD policy') });
+  fixture.controllers.set(editor, { applyModePolicy: () => assert.fail('editor has no HUD policy') });
+  fixture.BrowserWindow.getAllWindows = () => [onboarding, fixture.window, editor, {}];
+  const calls = [];
+  fixture.controller.setHudAlwaysOnTop = (value) => calls.push(['topmost', value]);
+  fixture.controller.applyModePolicy = () => calls.push(['policy']);
+  fixture.setup.applyHudPreferences({ alwaysOnTop: false });
+  fixture.setup.applyHudPreferences({ alwaysOnTop: true });
+  assert.deepEqual(calls, [
+    ['topmost', false],
+    ['topmost', true],
+  ]);
+});
+
+test('preference changes before a HUD exists leave onboarding controllers usable', () => {
+  const fixture = createFixture();
+  const onboarding = {};
+  fixture.controllers.set(onboarding, { applyModePolicy: () => assert.fail('unexpected policy') });
+  fixture.BrowserWindow.getAllWindows = () => [onboarding];
+  assert.doesNotThrow(() => fixture.setup.applyHudPreferences({ alwaysOnTop: false }));
+  fixture.BrowserWindow.getAllWindows = () => [];
+  assert.doesNotThrow(() => fixture.setup.applyHudPreferences({ alwaysOnTop: true }));
 });
 
 test('keeps the HUD hidden until ready-to-show, then applies native size constraints', () => {

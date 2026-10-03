@@ -48,6 +48,18 @@ afterEach(() => {
 });
 
 describe('createScreenshotImageLoader', () => {
+  it('does not evict in-flight decodes when a scene requests more than three distinct images', async () => {
+    const finish = new Map<string, () => void>();
+    decodeImage = (image) => new Promise<void>((resolve) => finish.set(image.src, resolve));
+    const load = createScreenshotImageLoader();
+    const first = Array.from({ length: 6 }, (_, index) => load(`photo-${index}`));
+    const repeated = Array.from({ length: 60 }, (_, index) => load(`photo-${index % 6}`));
+    expect(instances).toHaveLength(6);
+    repeated.forEach((promise, index) => expect(promise).toBe(first[index % 6]));
+    finish.forEach((resolve) => resolve());
+    await Promise.all(repeated);
+    expect(instances).toHaveLength(6);
+  });
   it('shares the same decoded image promise for concurrent and later requests of one URL', async () => {
     let finishDecode!: () => void;
     decodeImage = () => new Promise<void>((resolve) => (finishDecode = resolve));

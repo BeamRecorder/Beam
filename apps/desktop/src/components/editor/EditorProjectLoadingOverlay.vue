@@ -1,119 +1,56 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
-import { useMotion, type Variant } from '@vueuse/motion';
+import { onBeforeUnmount, ref, watch } from 'vue';
+import { useMediaQuery } from '@vueuse/core';
+import EditorTitlebar from './EditorTitlebar.vue';
+import EditorLoadingLayout from './layout/EditorLoadingLayout.vue';
 import Skeleton from '~/ui/skeleton/Skeleton.vue';
+import type { EditorProjectLoadingProps } from './layout/editor-layout-types';
 
-const props = defineProps<{
-  visible: boolean;
-  label: string;
-  showTopbarSkeleton?: boolean;
-  timelineHeight?: number;
-}>();
-
+const props = withDefaults(defineProps<EditorProjectLoadingProps>(), { kind: 'video' });
 const displayOverlay = ref(props.visible);
-const motionTarget = ref<HTMLElement | null>(null);
-let transitionGeneration = 0;
-
-const variants = {
-  initial: { opacity: 0 },
-  enter: {
-    opacity: 1,
-    transition: { type: 'tween', duration: 210, ease: [0.22, 1, 0.36, 1] },
-  },
-  leave: {
-    opacity: 0,
-    transition: { type: 'tween', duration: 160, ease: [0.4, 0, 0.2, 1] },
-  },
-} satisfies Record<'initial' | 'enter' | 'leave', Variant>;
-
-const motion = useMotion(motionTarget, {}, { lifeCycleHooks: false, syncVariants: false });
-
-async function show(generation: number) {
-  await nextTick();
-  if (generation !== transitionGeneration || !motionTarget.value) return;
-  motion.set(variants.initial);
-  await motion.apply(variants.enter);
-}
-
-async function hide(generation: number) {
-  if (generation !== transitionGeneration || !motionTarget.value) return;
-  await motion.apply(variants.leave);
-  if (generation === transitionGeneration) displayOverlay.value = false;
-}
-
+const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+let exitTimer: ReturnType<typeof setTimeout> | undefined;
+const cancelExit = () => clearTimeout(exitTimer);
 watch(
   () => props.visible,
   (visible) => {
-    const generation = visible ? ++transitionGeneration : transitionGeneration;
-    if (visible) {
-      displayOverlay.value = true;
-      void show(generation);
-    } else if (displayOverlay.value) {
-      void hide(generation);
-    }
+    cancelExit();
+    if (visible) displayOverlay.value = true;
+    else if (reducedMotion.value) displayOverlay.value = false;
+    else
+      exitTimer = setTimeout(() => {
+        displayOverlay.value = false;
+      }, 160);
   },
 );
-
-onMounted(() => {
-  if (displayOverlay.value) void show(transitionGeneration);
-});
-
-onUnmounted(() => {
-  motion.stop();
-});
+onBeforeUnmount(cancelExit);
 </script>
 
 <template>
   <div
     v-if="displayOverlay"
-    ref="motionTarget"
     class="editor-project-loading-overlay"
+    :class="{ 'is-leaving': !visible }"
     :aria-label="label"
     aria-live="polite"
     role="status"
   >
-    <Skeleton
-      v-if="showTopbarSkeleton"
-      class="loading-titlebar"
-      variant="animated-gradient"
-      width="100%"
-      height="40px"
-      radius="0"
-      aria-hidden="true"
-    />
-    <div v-else class="loading-titlebar loading-titlebar-spacer" aria-hidden="true"></div>
-    <div class="loading-workspace" aria-hidden="true">
-      <div class="loading-upper">
-        <div class="loading-sidebar-space" />
-        <div class="loading-properties-space" />
-        <div class="loading-canvas-column">
-          <div class="loading-canvas-toolbar">
-            <Skeleton variant="animated-gradient" width="280px" height="28px" radius="var(--radius-md)" />
-          </div>
-          <div class="loading-canvas-stage">
-            <Skeleton
-              class="loading-canvas-frame"
-              variant="animated-gradient"
-              width="100%"
-              height="100%"
-              radius="var(--radius-lg)"
-            />
-          </div>
-          <div class="loading-timeline-toolbar">
-            <Skeleton
-              variant="animated-gradient"
-              width="min(560px, calc(100% - 32px))"
-              height="36px"
-              radius="var(--radius-md)"
-            />
-          </div>
-        </div>
-      </div>
-      <div class="loading-timeline-resize-space" />
-      <div class="loading-timeline" :style="{ height: `${timelineHeight ?? 210}px` }">
-        <Skeleton variant="animated-gradient" width="100%" height="100%" radius="inherit" />
-      </div>
-    </div>
+    <EditorTitlebar v-if="showTopbarSkeleton" class="loading-titlebar" aria-hidden="true">
+      <template #left>
+        <Skeleton width="84px" height="28px" />
+        <Skeleton width="92px" height="28px" />
+        <Skeleton v-if="kind === 'video'" width="64px" height="28px" />
+        <Skeleton width="28px" height="28px" />
+      </template>
+      <template #center><Skeleton width="100%" height="32px" /></template>
+      <template #right>
+        <Skeleton v-if="kind === 'screenshot'" width="136px" height="28px" />
+        <Skeleton width="80px" height="28px" />
+        <Skeleton width="96px" height="28px" />
+      </template>
+    </EditorTitlebar>
+    <div v-else class="loading-titlebar-spacer" aria-hidden="true" />
+    <EditorLoadingLayout :kind="kind" :timeline-height="timelineHeight" :aspect-ratio="aspectRatio" />
   </div>
 </template>
 
@@ -125,106 +62,22 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: transparent;
   pointer-events: auto;
+  opacity: 1;
+  transition: opacity 160ms ease-out;
+}
+.is-leaving {
   opacity: 0;
-  will-change: opacity;
-}
-
-.loading-titlebar {
-  flex: none;
-}
-
-.loading-titlebar-spacer {
-  height: 40px;
   pointer-events: none;
 }
-
-.loading-workspace {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-}
-
-.loading-upper {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  gap: 12px;
-  overflow: hidden;
-}
-
-.loading-timeline {
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  box-sizing: border-box;
-}
-
-.loading-sidebar-space,
-.loading-properties-space {
+.loading-titlebar-spacer {
   flex: none;
+  height: var(--editor-titlebar-height);
+  pointer-events: none;
 }
-
-.loading-sidebar-space {
-  width: 92px;
-}
-
-.loading-properties-space {
-  width: 400px;
-}
-
-.loading-canvas-column {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.loading-canvas-toolbar,
-.loading-timeline-toolbar {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-}
-
-.loading-canvas-toolbar {
-  height: 44px;
-}
-
-.loading-timeline-toolbar {
-  height: 48px;
-}
-
-.loading-timeline-resize-space {
-  flex: none;
-  height: 12px;
-  margin-block: -6px;
-}
-
-.loading-canvas-stage {
-  container-type: size;
-  position: relative;
-  flex: 1;
-  min-height: 0;
-}
-
-.loading-canvas-frame {
-  position: absolute;
-  inset: 0;
-  width: min(100cqw, calc(100cqh * 1.7778)) !important;
-  height: min(100cqh, calc(100cqw / 1.7778)) !important;
-  margin: auto;
-}
-
-.loading-timeline {
-  flex: none;
+@media (prefers-reduced-motion: reduce) {
+  .editor-project-loading-overlay {
+    transition: none;
+  }
 }
 </style>

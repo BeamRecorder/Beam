@@ -90,17 +90,22 @@ describe('visible project thumbnail scheduling', () => {
     expect(media.generate).not.toHaveBeenCalled();
     wrapper.unmount();
   });
-  it('decodes one preview at a time and drops projects that scroll out of view', async () => {
+  it('decodes at most two previews and drops queued projects that scroll out of view', async () => {
     const first = deferred();
-    media.generate.mockReturnValueOnce(first.promise).mockResolvedValue('thumbnail');
-    const { visible, wrapper } = create([project('one'), project('two')]);
-    expect(media.generate).toHaveBeenCalledTimes(1);
-    visible.value = [project('three')];
+    const second = deferred();
+    media.generate
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+      .mockResolvedValue('thumbnail');
+    const { visible, wrapper } = create([project('one'), project('two'), project('three')]);
+    expect(media.generate).toHaveBeenCalledTimes(2);
+    visible.value = [project('four')];
     await flushPromises();
-    expect(media.generate).toHaveBeenCalledTimes(1);
+    expect(media.generate).toHaveBeenCalledTimes(2);
     first.resolve('thumbnail');
     await flushPromises();
-    expect(media.generate.mock.calls.map(([id]) => id)).toEqual(['one', 'three']);
+    expect(media.generate.mock.calls.map(([id]) => id)).toEqual(['one', 'two', 'four']);
+    second.resolve(null);
     wrapper.unmount();
   });
   it('does not loop on failed sources but permits a changed source', async () => {
@@ -118,11 +123,43 @@ describe('visible project thumbnail scheduling', () => {
   it('does not start another decoder when its picker unmounts during media work', async () => {
     const first = deferred();
     media.generate.mockReturnValue(first.promise);
-    const { wrapper } = create([project('one'), project('two')]);
+    const { wrapper } = create([project('one'), project('two'), project('three')]);
     wrapper.unmount();
     first.resolve(null);
     await flushPromises();
-    expect(media.generate).toHaveBeenCalledOnce();
+    expect(media.generate).toHaveBeenCalledTimes(2);
+  });
+
+  it('allows a fast second thumbnail to finish while the first is stalled', async () => {
+    const first = deferred();
+    media.generate.mockReturnValueOnce(first.promise).mockResolvedValue(null);
+    const { wrapper, visible, preview } = create([project('one'), project('two'), project('three')]);
+    await flushPromises();
+    expect(media.generate.mock.calls.map(([id]) => id)).toEqual(['one', 'two', 'three']);
+    preview.handleProjectMouseEnter(project('two'), mouseEvent(null));
+    visible.value = [];
+    await flushPromises();
+    expect(preview.hoveredProjectId.value).toBeNull();
+    first.resolve(null);
+    await flushPromises();
+    expect(media.generate).toHaveBeenCalledTimes(3);
+    wrapper.unmount();
+  });
+
+  it('does not start queued work or delayed hover playback while hidden', async () => {
+    const first = deferred();
+    media.generate.mockReturnValue(first.promise);
+    const { visible, wrapper, preview } = create([project('one'), project('two'), project('three')]);
+    const video = document.createElement('video');
+    video.play = vi.fn().mockResolvedValue(undefined);
+    preview.handleProjectMouseEnter(project('one'), mouseEvent(video));
+    visible.value = [];
+    await flushPromises();
+    first.resolve(null);
+    await flushPromises();
+    expect(media.generate).toHaveBeenCalledTimes(2);
+    expect(video.play).not.toHaveBeenCalled();
+    wrapper.unmount();
   });
 });
 

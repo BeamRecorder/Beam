@@ -36,6 +36,38 @@ test('detects GNOME Wayland but leaves other Linux sessions alone', () => {
   assert.match(customPath('hud.startStopRecording'), /\/beam-[0-9a-f]{16}\/$/);
 });
 
+test('parallel development profiles never overwrite desktop GNOME bindings', () => {
+  const fake = fakeGsettings();
+  for (const session of ['default', 'one', 'two']) {
+    assert.equal(
+      createLinuxShortcutSource({
+        app: devApp,
+        applicationRoot: '/beam',
+        platform: 'linux',
+        env: { ...env, BEAM_DEVELOPMENT_INSTANCE: '1', BEAM_DEV_SESSION: session },
+        execFile: fake.execFile,
+      }),
+      null,
+    );
+  }
+  assert.deepEqual(fake.calls, []);
+});
+
+test('packaged shortcut registration ignores inherited development markers', () => {
+  const fake = fakeGsettings();
+  assert.notEqual(
+    createLinuxShortcutSource({
+      app,
+      applicationRoot: '/beam',
+      platform: 'linux',
+      env: { ...env, BEAM_DEVELOPMENT_INSTANCE: '1' },
+      execFile: fake.execFile,
+    }),
+    null,
+  );
+  assert.deepEqual(fake.calls, []);
+});
+
 test('maps Beam accelerators to GNOME keybinding syntax', () => {
   assert.equal(gnomeAccelerator('Alt+Shift+R'), '<Alt><Shift>r');
   assert.equal(gnomeAccelerator('Ctrl+Shift+Right'), '<Control><Shift>Right');

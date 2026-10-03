@@ -19,7 +19,13 @@ The shared `CommandPalette` composes editor Spotlight views with fixed-height vi
 
 Shared settings use `SettingsSection` for category headings and `TogglePreference` for consistent option labels, descriptions and accessible switches. Recorder and editor appearance choices reuse `ThemeModePicker`; System shows both palettes with a localized explanation. Theme Advanced contains colors/style only. Scaling keeps its global slider visible and reveals per-area overrides separately.
 
-Advanced disclosures use `ui/transitions/RafRevealTransition.vue`. It measures geometry once, batches style writes per animation frame, preserves the current height on reversal and cancels work on unmount. Keep the content unscaled, preserve reduced motion, and use the same transition for opening and closing.
+Theme choice previews keep a 3:2 aspect ratio and scale their miniature geometry with the card's container, not just its width. Cap the choice group at 36rem so maximized settings windows keep readable previews; the same group must still fit the compact editor inspector.
+
+Screenshot layer naming reuses `Input`: single-click the selected layer title in the left inspector header, or double-click/F2 in Composition. Do not add a separate name field in the properties body. Enter or blur commits a name, Escape cancels, and inline editing restores the initiating control's focus only for keyboard completion. Names describe layers without changing text rendered on the canvas.
+
+Editor startup uses the same `EditorWorkspace`, preview geometry and layout tokens as the live screenshot/video editors. The shared skeleton surface measures inert presentational controls rather than inventing their sizes, and the Canvas inspector reuses `CanvasPanelLayout` without starting media or preference requests. Preserve UI scale and saved timeline height; do not show a video timeline in Screenshot or guess an output aspect ratio before metadata is available. Loading surfaces start opaque, respect reduced motion and release observers/frames on disposal.
+
+Advanced disclosures use `ui/transitions/RafRevealTransition.vue`. It measures geometry once, batches style writes per animation frame, preserves the current size on reversal and cancels work on unmount. Its default vertical axis reveals advanced controls; use `axis="horizontal"` for collapsible inspectors. Keep the content unscaled, preserve reduced motion, and use the same transition for opening and closing.
 
 ## Icons and imagery
 

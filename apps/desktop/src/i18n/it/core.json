@@ -935,6 +935,8 @@
     "defaultSystemAudio": "Uscita di sistema predefinita"
   },
   "ScreenshotEditor": {
+    "tools": "Strumenti",
+    "selectTool": "Seleziona",
     "title": "Schermata",
     "export": "Esporta",
     "layers": "Livelli della schermata",
@@ -1060,6 +1062,8 @@
   },
   "ScreenshotComposition": {
     "title": "Composizione",
+    "name": "Nome del livello",
+    "rename": "Rinomina livello · Doppio clic o F2",
     "layers": "Livelli",
     "blendMode": "Metodo di fusione",
     "opacity": "Opacità",

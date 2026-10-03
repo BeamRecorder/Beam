@@ -124,7 +124,9 @@ function createLinuxShortcutSource({
   env = process.env,
   execFile = defaultExecFile,
 } = {}) {
-  if (!isGnomeWayland(platform, env)) return null;
+  // GNOME custom bindings are shared desktop settings. Parallel development
+  // profiles use Electron registration so they cannot overwrite each other's bindings.
+  if ((!app.isPackaged && env.BEAM_DEVELOPMENT_INSTANCE === '1') || !isGnomeWayland(platform, env)) return null;
 
   const readCurrentPaths = async () =>
     readPaths((await run(execFile, ['get', SETTINGS_SCHEMA, 'custom-keybindings'])).stdout);

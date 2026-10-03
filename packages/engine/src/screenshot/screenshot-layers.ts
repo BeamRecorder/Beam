@@ -61,7 +61,10 @@ export function screenshotLayers(state: ScreenshotState): ScreenshotLayer[] {
   const order = state.composition ?? content.map(({ id }) => defaultLayerCompositing(id));
   return order.flatMap((settings) => {
     const layer = byId.get(settings.id);
-    return layer ? [{ ...layer, ...settings }] : [];
+    if (!layer) return [];
+    const name =
+      state.layerNames && Object.hasOwn(state.layerNames, settings.id) ? state.layerNames[settings.id]! : layer.name;
+    return [{ ...layer, ...settings, name }];
   });
 }
 
@@ -135,6 +138,7 @@ export function setScreenshotLayerVisible(state: ScreenshotState, id: string, vi
   }
 }
 export function removeScreenshotLayer(state: ScreenshotState, id: string) {
+  if (state.layerNames) delete state.layerNames[id];
   const special = id === state.image.id || id === SCREENSHOT_BACKGROUND_ID || id === SCREENSHOT_WATERMARK_ID;
   if (special) initializeScreenshotComposition(state);
   if (id === SCREENSHOT_BACKGROUND_ID) state.canvas.showBackground = false;
@@ -148,4 +152,12 @@ export function removeScreenshotLayer(state: ScreenshotState, id: string) {
     if (state.images) state.images = state.images.filter((layer) => layer.id !== id);
   }
   if (state.composition) state.composition = state.composition.filter((layer) => layer.id !== id);
+}
+
+export function renameScreenshotLayer(state: ScreenshotState, id: string, requested: string): boolean {
+  const name = requested.trim();
+  const layer = screenshotLayers(state).find((layer) => layer.id === id);
+  if (!name || name.length > 200 || !layer || layer.locked || layer.name === name) return false;
+  state.layerNames = { ...state.layerNames, [id]: name };
+  return true;
 }

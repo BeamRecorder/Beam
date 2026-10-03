@@ -935,6 +935,8 @@
     "defaultSystemAudio": "Standard-Systemausgabe"
   },
   "ScreenshotEditor": {
+    "tools": "Werkzeuge",
+    "selectTool": "Auswählen",
     "title": "Screenshot",
     "export": "Exportieren",
     "layers": "Screenshot-Ebenen",
@@ -1060,6 +1062,8 @@
   },
   "ScreenshotComposition": {
     "title": "Komposition",
+    "name": "Ebenenname",
+    "rename": "Ebene umbenennen · Doppelklick oder F2",
     "layers": "Ebenen",
     "blendMode": "Mischmodus",
     "opacity": "Deckkraft",

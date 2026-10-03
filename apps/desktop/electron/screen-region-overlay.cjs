@@ -4,6 +4,7 @@ const { isCaptureCancellation } = require('./capture/capture-cancellation.cjs');
 const { createRegionRecordingMarker } = require('./region-recording-marker.cjs');
 const { regionRecordingSettings } = require('./region-selection-settings.cjs');
 const path = require('path');
+const { developmentRendererUrl } = require('./lifecycle/development-session.cjs');
 
 function supportsCaptureSafeRecordingOverlay(platform, release) {
   if (platform !== 'win32') return true;
@@ -169,7 +170,7 @@ function createScreenRegionOverlayWindow({
     target.on('unresponsive', () => fail(new Error('Region selector is unresponsive.')));
     const loaded = isPackaged
       ? target.loadFile(path.join(applicationRoot, 'dist/html/screen-region.html'))
-      : target.loadURL('http://localhost:6500/html/screen-region.html');
+      : target.loadURL(developmentRendererUrl('screen-region.html'));
     void loaded.catch(fail);
     return window;
   };

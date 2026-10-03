@@ -101,7 +101,17 @@ const cursorPack: CursorPackDescriptor = {
 const SelectionStub = defineComponent({
   name: 'CanvasLayerSelection',
   props: { handleStyle: Object, viewportStyle: Object, resizeCorners: Array },
-  emits: ['pointer-down', 'pointer-move', 'pointer-up', 'resize-start', 'resize-move', 'resize-end'],
+  emits: [
+    'pointer-down',
+    'pointer-move',
+    'pointer-up',
+    'resize-start',
+    'resize-move',
+    'resize-end',
+    'rotate-start',
+    'rotate',
+    'rotate-end',
+  ],
   template:
     '<div data-testid="layer-selection" :style="handleStyle" @pointerdown="$emit(\'pointer-down\', $event)" @pointermove="$emit(\'pointer-move\', $event)" @pointerup="$emit(\'pointer-up\', $event)" @pointercancel="$emit(\'pointer-up\', $event)" />',
 });
@@ -172,7 +182,13 @@ beforeEach(() => {
     animationFrames.delete(id);
   });
   renderer.loadScreenshotAssets.mockResolvedValue(assets);
+  Object.defineProperties(HTMLElement.prototype, {
+    setPointerCapture: { configurable: true, value: vi.fn() },
+    hasPointerCapture: { configurable: true, value: () => false },
+    releasePointerCapture: { configurable: true, value: vi.fn() },
+  });
   assets.cursors = new Map<string, ScreenshotCursorAsset>();
+  assets.images = new Map();
   vi.stubGlobal(
     'ResizeObserver',
     class TestResizeObserver {
@@ -195,6 +211,231 @@ afterEach(() => {
 });
 
 describe('ScreenshotCanvas', () => {
+  it('keeps the exact output-aspect placeholder while initial assets decode, then removes it after first paint', async () => {
+    let resolveAssets!: (value: ScreenshotRenderAssets) => void;
+    renderer.loadScreenshotAssets.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveAssets = resolve;
+      }),
+    );
+    const wrapper = mountCanvas();
+    measurement.set?.(800, 600);
+    expect(wrapper.get('.loading-canvas-frame').attributes('style')).toContain('--loading-aspect-ratio: 2');
+    expect(wrapper.emitted('ready')).toBeUndefined();
+    resolveAssets(assets);
+    await flushPromises();
+    expect(wrapper.find('.loading-canvas-frame').exists()).toBe(false);
+    expect(wrapper.emitted('ready')).toEqual([[]]);
+    wrapper.unmount();
+  });
+  it('removes the initial placeholder after an asset failure instead of hiding the error behind loading', async () => {
+    renderer.loadScreenshotAssets.mockRejectedValueOnce(new Error('Cannot decode screenshot'));
+    const wrapper = mountCanvas();
+    await flushPromises();
+    expect(wrapper.find('.loading-canvas-frame').exists()).toBe(false);
+    expect(wrapper.emitted('error')).toEqual([['Error: Cannot decode screenshot']]);
+    wrapper.unmount();
+  });
+  it('shows the shared recenter button only beyond the video editor pan threshold', async () => {
+    const state = stateFixture();
+    const original = JSON.stringify(state);
+    const wrapper = mountCanvas(state);
+    measurement.set?.(800, 600);
+    await flushPromises();
+    const stage = wrapper.get('.stage-bounds');
+    expect(wrapper.find('.recenter-button').exists()).toBe(false);
+    await triggerPointer(stage, 'pointerdown', { button: 1, pointerId: 3, clientX: 100, clientY: 100 });
+    await triggerPointer(stage, 'pointermove', { pointerId: 3, clientX: 260, clientY: 100 });
+    expect(wrapper.find('.recenter-button').exists()).toBe(false);
+    await triggerPointer(stage, 'pointermove', { pointerId: 3, clientX: 261, clientY: 100 });
+    await triggerPointer(stage, 'pointerup', { pointerId: 3 });
+    expect(wrapper.get('.recenter-button').text()).toBe('Recenter view');
+    await wrapper.get('.recenter-button').trigger('pointerdown');
+    await wrapper.get('.recenter-button').trigger('click');
+    expect(wrapper.find('.recenter-button').exists()).toBe(false);
+    expect((wrapper.get('.image-stage').element as HTMLElement).style.transform).toContain('translate3d(0px, 0px, 0)');
+    expect(wrapper.emitted('select')).toBeUndefined();
+    expect(wrapper.emitted('translate')).toBeUndefined();
+    expect(JSON.stringify(state)).toBe(original);
+    wrapper.unmount();
+  });
+
+  it('recenters excessive wheel zoom and remains usable in a read-only fullscreen preview', async () => {
+    const wrapper = mountCanvas();
+    measurement.set?.(800, 600);
+    await flushPromises();
+    const stage = wrapper.get('.stage-bounds');
+    vi.spyOn(stage.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 800, 600));
+    await wrapper.setProps({ disabled: true, zoomDisabled: false });
+    await stage.trigger('wheel', { deltaY: -120 });
+    expect(wrapper.find('.recenter-button').exists()).toBe(false);
+    await stage.trigger('wheel', { deltaY: -120 });
+    await stage.trigger('wheel', { deltaY: -120 });
+    expect(wrapper.vm.zoomPercent).toBe(140);
+    expect(wrapper.get('.recenter-button').attributes('disabled')).toBeUndefined();
+    await wrapper.get('.recenter-button').trigger('click');
+    expect(wrapper.vm.zoomPercent).toBe(100);
+    expect(wrapper.find('.recenter-button').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('disables the recenter control while the editor is busy', async () => {
+    const wrapper = mountCanvas();
+    measurement.set?.(800, 600);
+    await flushPromises();
+    const stage = wrapper.get('.stage-bounds');
+    await triggerPointer(stage, 'pointerdown', { button: 1, pointerId: 2, clientX: 0, clientY: 0 });
+    await triggerPointer(stage, 'pointermove', { pointerId: 2, clientX: 200, clientY: 200 });
+    await triggerPointer(stage, 'pointerup', { pointerId: 2 });
+    await wrapper.setProps({ zoomDisabled: true });
+    expect(wrapper.get('.recenter-button').attributes('disabled')).toBeDefined();
+    await wrapper.get('.recenter-button').trigger('click');
+    expect(wrapper.find('.recenter-button').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it.each(['pointerup', 'pointercancel', 'lostpointercapture'])(
+    'ends viewport panning on %s without moving document layers',
+    async (endEvent) => {
+      const state = stateFixture();
+      const original = JSON.stringify(state);
+      const wrapper = mountCanvas(state);
+      measurement.set?.(800, 600);
+      await flushPromises();
+      const stage = wrapper.get('.stage-bounds');
+      await triggerPointer(stage, 'pointerdown', { button: 1, pointerId: 3, clientX: 100, clientY: 100 });
+      expect(stage.classes()).toContain('is-grabbing');
+      await triggerPointer(stage, 'pointermove', { button: 1, pointerId: 3, clientX: 150, clientY: 130 });
+      expect((wrapper.get('.image-stage').element as HTMLElement).style.transform).toContain(
+        'translate3d(50px, 30px, 0)',
+      );
+      await triggerPointer(stage, endEvent, { pointerId: 3 });
+      expect(stage.classes()).not.toContain('is-grabbing');
+      expect(wrapper.emitted('select')).toBeUndefined();
+      expect(wrapper.emitted('transform')).toBeUndefined();
+      expect(JSON.stringify(state)).toBe(original);
+      wrapper.unmount();
+    },
+  );
+
+  it('keeps rotation in one property interaction and ignores wheel changes while rotating', async () => {
+    const wrapper = mountCanvas(stateFixture(), 'shape-upper');
+    measurement.set?.(800, 600);
+    await flushPromises();
+    const selection = wrapper.findComponent(SelectionStub);
+    selection.vm.$emit('rotate', 10);
+    selection.vm.$emit('rotate-end', 20);
+    expect(wrapper.emitted('rotate')).toBeUndefined();
+    selection.vm.$emit('rotate-start');
+    selection.vm.$emit('rotate-start');
+    expect(propertyInteractionActive.value).toBe(true);
+    selection.vm.$emit('rotate', 45);
+    const stage = wrapper.get('.stage-bounds');
+    vi.spyOn(stage.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 800, 600));
+    await stage.trigger('wheel', { deltaY: -120 });
+    expect(wrapper.vm.zoomPercent).toBe(100);
+    selection.vm.$emit('rotate-end', 90);
+    expect(wrapper.emitted('rotate')).toEqual([[45], [90]]);
+    expect(propertyInteractionActive.value).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('blocks disabled rotations and releases active rotation on unmount', async () => {
+    const wrapper = mountCanvas(stateFixture(), 'shape-upper');
+    await flushPromises();
+    const selection = wrapper.findComponent(SelectionStub);
+    await wrapper.setProps({ disabled: true });
+    selection.vm.$emit('rotate-start');
+    selection.vm.$emit('rotate', 30);
+    expect(wrapper.emitted('rotate')).toBeUndefined();
+    expect(propertyInteractionActive.value).toBe(false);
+    await wrapper.setProps({ disabled: false });
+    selection.vm.$emit('rotate-start');
+    expect(propertyInteractionActive.value).toBe(true);
+    wrapper.unmount();
+    expect(propertyInteractionActive.value).toBe(false);
+  });
+
+  it('keeps imported crops intact while previewing and forwards crop updates separately from zoom', async () => {
+    const state = stateFixture();
+    const imported = {
+      ...structuredClone(state.image),
+      id: 'imported',
+      kind: 'image' as const,
+      width: 2000,
+      height: 1000,
+      source: 'data:image/png;base64,imported',
+      crop: { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
+    };
+    const other = { ...structuredClone(imported), id: 'other' };
+    state.images = [imported, other];
+    assets.images!.set(imported.id, { image: assets.image, width: 2000, height: 1000 });
+    const wrapper = mountCanvas(state, imported.id);
+    measurement.set?.(800, 600);
+    await flushPromises();
+    await wrapper.setProps({ cropping: true });
+    await flushAnimationFrames();
+    const preview = renderer.drawScreenshot.mock.calls.at(-1)?.[1] as ScreenshotState;
+    expect(preview.image.crop).toBe(state.image.crop);
+    expect(preview.images?.[0]?.crop).toBeUndefined();
+    expect(preview.images?.[1]?.crop).toEqual(other.crop);
+    const crop = wrapper.findComponent({ name: 'ScreenshotCropSelection' });
+    const update = { x: 0.2, y: 0.2, width: 0.6, height: 0.6 };
+    crop.vm.$emit('crop', update);
+    crop.vm.$emit('done');
+    expect(wrapper.emitted('crop')).toEqual([[update]]);
+    expect(wrapper.emitted('cropDone')).toEqual([[]]);
+    expect(imported.crop).toEqual({ x: 0.1, y: 0.1, width: 0.8, height: 0.8 });
+    wrapper.unmount();
+  });
+
+  it('zooms only the viewport, repaints at its new resolution and restores the fitted view', async () => {
+    const state = stateFixture();
+    const original = JSON.stringify(state);
+    const wrapper = mountCanvas(state);
+    measurement.set?.(800, 600);
+    await flushPromises();
+    await flushAnimationFrames();
+    const stage = wrapper.get('.stage-bounds');
+    vi.spyOn(stage.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 50, 800, 600));
+    const width = (wrapper.get('.image-stage').element as HTMLElement).style.width;
+    const loaded = renderer.loadScreenshotAssets.mock.calls.length;
+    renderer.drawScreenshot.mockClear();
+    stage.element.dispatchEvent(
+      new WheelEvent('wheel', { deltaY: -120, clientX: 500, clientY: 350, bubbles: true, cancelable: true }),
+    );
+    await nextTick();
+    expect(wrapper.vm.zoomPercent).toBe(112);
+    expect(Number.parseFloat((wrapper.get('.image-stage').element as HTMLElement).style.width)).toBeCloseTo(
+      Number.parseFloat(width) * 1.12,
+    );
+    await flushAnimationFrames();
+    expect(renderer.drawScreenshot).toHaveBeenCalledOnce();
+    expect(renderer.loadScreenshotAssets).toHaveBeenCalledTimes(loaded);
+    expect(JSON.stringify(state)).toBe(original);
+    expect(wrapper.emitted('select')).toBeUndefined();
+    wrapper.vm.resetView();
+    await nextTick();
+    expect(wrapper.vm.zoomPercent).toBe(100);
+    expect((wrapper.get('.image-stage').element as HTMLElement).style.width).toBe(width);
+    wrapper.unmount();
+  });
+
+  it('disables wheel zoom while busy but allows it in a read-only fullscreen preview', async () => {
+    const wrapper = mountCanvas();
+    measurement.set?.(800, 600);
+    await flushPromises();
+    const stage = wrapper.get('.stage-bounds');
+    vi.spyOn(stage.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 800, 600));
+    await wrapper.setProps({ disabled: true });
+    await stage.trigger('wheel', { deltaY: -120 });
+    expect(wrapper.vm.zoomPercent).toBe(100);
+    await wrapper.setProps({ zoomDisabled: false });
+    await stage.trigger('wheel', { deltaY: -120 });
+    expect(wrapper.vm.zoomPercent).toBe(112);
+    wrapper.unmount();
+  });
+
   it('forwards canvas marquee selections to the screenshot selection owner', async () => {
     const wrapper = mountCanvas();
     await flushPromises();

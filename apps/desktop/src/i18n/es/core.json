@@ -935,6 +935,8 @@
     "defaultSystemAudio": "Salida predeterminada del sistema"
   },
   "ScreenshotEditor": {
+    "tools": "Herramientas",
+    "selectTool": "Seleccionar",
     "title": "Captura de pantalla",
     "export": "Exportar",
     "layers": "Capas de la captura",
@@ -1060,6 +1062,8 @@
   },
   "ScreenshotComposition": {
     "title": "Composición",
+    "name": "Nombre de la capa",
+    "rename": "Renombrar capa · Doble clic o F2",
     "layers": "Capas",
     "blendMode": "Modo de fusión",
     "opacity": "Opacidad",

@@ -932,6 +932,8 @@
     "defaultSystemAudio": "Sortie système par défaut"
   },
   "ScreenshotEditor": {
+    "tools": "Outils",
+    "selectTool": "Sélection",
     "title": "Capture d’écran",
     "export": "Exporter",
     "layers": "Calques de la capture",
@@ -1057,6 +1059,8 @@
   },
   "ScreenshotComposition": {
     "title": "Composition",
+    "name": "Nom du calque",
+    "rename": "Renommer le calque · Double-clic ou F2",
     "layers": "Calques",
     "blendMode": "Mode de fusion",
     "opacity": "Opacité",

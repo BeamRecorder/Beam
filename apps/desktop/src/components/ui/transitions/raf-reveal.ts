@@ -1,19 +1,34 @@
-import type { RevealProperty, RevealRuntime, RevealState } from './raf-reveal-types';
+import type { RevealAxis, RevealProperty, RevealRuntime, RevealState } from './raf-reveal-types';
 
-const properties: RevealProperty[] = [
-  'height',
-  'paddingTop',
-  'paddingBottom',
-  'marginTop',
-  'marginBottom',
-  'borderTopWidth',
-  'borderBottomWidth',
-  'opacity',
-];
-const savedProperties = [...properties, 'overflow', 'minHeight', 'boxSizing', 'willChange'] as const;
 const pixels = (value: string) => Number.parseFloat(value) || 0;
 
-export function createRafReveal(runtime: RevealRuntime) {
+export function createRafReveal(runtime: RevealRuntime, axis: RevealAxis = 'vertical') {
+  const horizontal = axis === 'horizontal';
+  const dimension = horizontal ? 'width' : 'height';
+  const minimum = horizontal ? 'minWidth' : 'minHeight';
+  const endMargin = horizontal ? 'marginRight' : 'marginBottom';
+  const properties: RevealProperty[] = horizontal
+    ? [
+        'width',
+        'paddingLeft',
+        'paddingRight',
+        'marginLeft',
+        'marginRight',
+        'borderLeftWidth',
+        'borderRightWidth',
+        'opacity',
+      ]
+    : [
+        'height',
+        'paddingTop',
+        'paddingBottom',
+        'marginTop',
+        'marginBottom',
+        'borderTopWidth',
+        'borderBottomWidth',
+        'opacity',
+      ];
+  const savedProperties = [...properties, 'overflow', minimum, 'boxSizing', 'willChange'] as const;
   const states = new Map<HTMLElement, RevealState>();
   let interruptedStart: Record<RevealProperty, number> | null = null;
   const cancel = (element: Element) => {
@@ -29,8 +44,10 @@ export function createRafReveal(runtime: RevealRuntime) {
     const style = getComputedStyle(element);
     const parent = element.parentElement ? getComputedStyle(element.parentElement) : null;
     const gap =
-      parent && (parent.display === 'grid' || (parent.display === 'flex' && parent.flexDirection.startsWith('column')))
-        ? pixels(parent.rowGap)
+      parent &&
+      (parent.display === 'grid' ||
+        (parent.display === 'flex' && parent.flexDirection.startsWith(horizontal ? 'row' : 'column')))
+        ? pixels(horizontal ? parent.columnGap : parent.rowGap)
         : 0;
     return {
       frame: null,
@@ -38,8 +55,8 @@ export function createRafReveal(runtime: RevealRuntime) {
       target: Object.fromEntries(
         properties.map((property) => [
           property,
-          property === 'height'
-            ? element.getBoundingClientRect().height
+          property === dimension
+            ? element.getBoundingClientRect()[dimension]
             : property === 'opacity'
               ? 1
               : pixels(style[property]),
@@ -57,7 +74,7 @@ export function createRafReveal(runtime: RevealRuntime) {
     const current = getComputedStyle(node);
     const closed = {
       ...Object.fromEntries(properties.map((property) => [property, 0])),
-      marginBottom: -state.gap,
+      [endMargin]: -state.gap,
     } as Record<RevealProperty, number>;
     const start =
       opening && interruptedStart
@@ -66,7 +83,7 @@ export function createRafReveal(runtime: RevealRuntime) {
           ? (Object.fromEntries(
               properties.map((property) => [
                 property,
-                property === 'height' ? node.getBoundingClientRect().height : pixels(current[property]),
+                property === dimension ? node.getBoundingClientRect()[dimension] : pixels(current[property]),
               ]),
             ) as Record<RevealProperty, number>)
           : closed;
@@ -82,9 +99,9 @@ export function createRafReveal(runtime: RevealRuntime) {
     }
     Object.assign(node.style, {
       overflow: 'hidden',
-      minHeight: '0',
+      [minimum]: '0',
       boxSizing: 'border-box',
-      willChange: 'height, opacity',
+      willChange: `${dimension}, opacity`,
     });
     const paint = (progress: number) => {
       const eased = progress * progress * (3 - 2 * progress);
@@ -121,7 +138,7 @@ export function createRafReveal(runtime: RevealRuntime) {
       const state = states.get(node);
       if (!state) return;
       // Vue can remove a leaving v-if node before its RAF finishes when the
-      // same panel reopens. Continue on the replacement without a height jump.
+      // same panel reopens. Continue on the replacement without a size jump.
       interruptedStart = Object.fromEntries(
         properties.map((property) => [property, pixels(node.style[property])]),
       ) as Record<RevealProperty, number>;

@@ -50,7 +50,6 @@ const { registerWhisperIpc } = require('./captions/whisper-ipc.cjs');
 const { createPreferencesStore } = require('./preferences/preferences-store.cjs');
 const { registerEditorPresetIpc } = require('./presets/editor-preset-ipc.cjs');
 const { registerPreferencesIpc } = require('./preferences/preferences-ipc.cjs');
-const { applyHudWindowPreferences } = require('./preferences/window-preferences.cjs');
 const { applySpellCheckPreferences } = require('./preferences/spell-check.cjs');
 const { registerSpellCheckContextMenu } = require('./preferences/spell-check-context-menu.cjs');
 const { createLinuxShortcutSource } = require('./preferences/linux-shortcut-source.cjs');
@@ -85,7 +84,7 @@ const logStartup = (step) => {
 };
 
 const applicationRoot = path.resolve(__dirname, '../../..');
-configureDevelopmentProfile(app);
+configureDevelopmentProfile(app, process.env, { applicationRoot });
 require('./lifecycle/chromium-features.cjs').configureChromiumFeatures(app);
 const controllers = new WeakMap();
 let captureEngine = null;
@@ -105,8 +104,14 @@ function restoreCanonicalHud() {
   else pendingHudRestore = true;
 }
 
-const { isTrustedRenderer, configureMediaPermission, configureDesktopLoopback, getAppIconPath, createWindow } =
-  createRendererSetup({ app, BrowserWindow, session, desktopCapturer, applicationRoot, controllers, logStartup });
+const {
+  isTrustedRenderer,
+  configureMediaPermission,
+  configureDesktopLoopback,
+  getAppIconPath,
+  createWindow,
+  applyHudPreferences,
+} = createRendererSetup({ app, BrowserWindow, session, desktopCapturer, applicationRoot, controllers, logStartup });
 function initializeApplication() {
   const inputAccess = new InputAccess({
     app,
@@ -133,7 +138,7 @@ function initializeApplication() {
       logStartup('Media permission policy registered.');
       configureDesktopLoopback();
       registerInputAccessIpc(applicationIpc, inputAccess);
-      const userPaths = createUserPaths(app.getPath('videos'));
+      const userPaths = createUserPaths(app);
       organizeProjectCategories(userPaths.projects);
       const preferencesStore = createPreferencesStore(userPaths.preferences, { platform: process.platform });
       const startupPreferences = preferencesStore.repair();
@@ -198,7 +203,7 @@ function initializeApplication() {
         }),
         onPreferencesChanged: (preferences) => {
           applySpellCheck(preferences);
-          applyHudWindowPreferences({ windows: BrowserWindow.getAllWindows(), controllers, preferences });
+          applyHudPreferences(preferences);
         },
       });
       registerEditorPresetIpc({ ipcMain: applicationIpc, BrowserWindow, store: editorPresetStore });

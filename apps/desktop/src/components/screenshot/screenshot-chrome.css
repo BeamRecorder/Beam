@@ -1,0 +1,5 @@
+.screenshot-chrome {
+  background: color-mix(in srgb, var(--color-bg-surface) 86%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}

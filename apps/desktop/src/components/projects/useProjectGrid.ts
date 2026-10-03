@@ -6,7 +6,13 @@ import { projectGridLayout } from './project-grid-layout';
 export function useProjectGrid(projects: Ref<CaptureProject[]>, compact: () => boolean) {
   const gridRef = ref<HTMLElement | null>(null);
   const { width } = useElementSize(gridRef);
-  const layout = computed(() => projectGridLayout(width.value, compact()));
+  const measuredWidth = ref(width.value);
+  // Hiding a retained picker reports zero size; keep its measured row geometry
+  // instead of moving loaded cards into different virtual rows on every reopen.
+  watch(width, (value) => {
+    if (Number.isFinite(value) && value > 0) measuredWidth.value = value;
+  });
+  const layout = computed(() => projectGridLayout(measuredWidth.value, compact()));
   const rows = computed(() => {
     const result: CaptureProject[][] = [];
     const columns = layout.value.columns;

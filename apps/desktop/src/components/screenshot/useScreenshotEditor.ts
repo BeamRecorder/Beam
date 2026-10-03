@@ -20,9 +20,10 @@ import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { ClipAppearance, MediaAsset, NormalizedTransform } from '@beam/engine/shared/composition-types';
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
 import { BACKGROUND_MEDIA, groupBackgroundMedia } from '../editor/composables/backgroundCatalog';
-import { type BackgroundMedia } from '@beam/engine/shared/background-types';
+import type { BackgroundMedia } from '@beam/engine/shared/background-types';
 import { screenshotState } from './screenshot-state';
 import { useScreenshotExport } from './useScreenshotExport';
+import { useScreenshotExport as useScreenshotEncoder } from './export/useScreenshotExport';
 import {
   beginPropertyInteraction,
   endPropertyInteraction,
@@ -48,13 +49,14 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
   const { t } = useTranslate('ScreenshotEditor');
   const { t: elementsText } = useTranslate('Elements');
   const toast = useToastStore();
+  const encodeScreenshot = useScreenshotEncoder();
   const document = ref<ScreenshotDocument | null>(null);
   const state = ref<ScreenshotState | null>(null);
   const presets = ref<EditorPresetDocument | null>(null);
   const backgroundLibrary = ref<BackgroundMedia[]>([]);
   const selection = useScreenshotSelection(() => (state.value ? screenshotLayers(state.value) : []));
   const { selectedId, selectedIds } = selection;
-  const panel = ref<ScreenshotPanel>('shapes');
+  const panel = ref<ScreenshotPanel>('canvas');
   const cropping = ref(false);
   const advanced = ref(false);
   const keepAspect = ref(true);
@@ -304,6 +306,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     finishText: elements.finishText,
     save,
     fail,
+    encode: encodeScreenshot,
     copiedToast: () => toast.success(t('copiedToast'), 5000),
   });
   const leave = async (navigate: () => unknown | Promise<unknown>) => {

@@ -7,6 +7,7 @@ import { emptyComposition, type Clip } from '@beam/engine/shared/composition-typ
 import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 import { DEFAULT_COLOR_FILL } from '@beam/engine/shared/color-fill-types';
 import { normalizeShapeLayerStyle } from '@beam/engine/shared/shape-layer-style';
+import { createElementText } from '@beam/engine/shared/element-text';
 import { insertScreenshotLayer } from '@beam/engine/screenshot/screenshot-layers';
 import { screenshotState } from '../../../screenshot/screenshot-state';
 import { documentFixture } from '../../../screenshot/tests/screenshot-editor-test-helpers';
@@ -256,6 +257,7 @@ describe('editor search domain adapters', () => {
       assetId: '',
       name: 'Text',
       ...normalizeShapeLayerStyle({ family: 'text' }),
+      text: createElementText(),
       transform: { x: 0, y: 0, width: 1, height: 1 },
     });
     options.selectedId.value = 'shape';
@@ -278,6 +280,11 @@ describe('editor search domain adapters', () => {
     ];
     insertScreenshotLayer(options.state.value, 'effect');
     expect(context.actions.value.find((item) => item.id === 'clip:effect')!.label).toBe('Blur');
+    options.state.value.effects[0]!.mode = 'highlight';
+    expect(context.actions.value.find((item) => item.id === 'clip:effect')!.label).toBe('Highlight');
+    options.state.value.layerNames = { effect: 'Focus area' };
+    expect(context.actions.value.find((item) => item.id === 'clip:effect')!.label).toBe('Focus area');
+    options.state.value.effects[0]!.mode = 'blur';
     options.selectedId.value = 'effect';
     expect(context.actions.value.some((item) => item.id === 'setting:BlurPropertiesPanel.mode')).toBe(true);
     options.state.value.cursors = [
@@ -304,6 +311,8 @@ describe('editor search domain adapters', () => {
     options.selectedId.value = 'cursor';
     expect(context.actions.value.some((item) => item.id === 'setting:CursorPanel.cursorStyle')).toBe(true);
     expect(context.actions.value.some((item) => item.id === 'setting:ClipPropertiesPanel.cornerRadius')).toBe(false);
+    options.selectedId.value = null;
+    expect(context.actions.value.some((item) => item.id === 'setting:CursorPanel.cursorStyle')).toBe(false);
     context.open.value = false;
     context.setVisibleActions([]);
     expect(thumbnail.specs!()).toEqual([]);

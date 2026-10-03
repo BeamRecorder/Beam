@@ -4,13 +4,11 @@ import { useMediaQuery } from '@vueuse/core';
 import { ChevronDown, Eye, EyeOff, Layers, LockKeyhole, Trash2, UnlockKeyhole } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Badge from '~/ui/badge/Badge.vue';
-import BigSlider from '~/ui/slider/BigSlider.vue';
-import Select from '~/ui/select/Select.vue';
+import ScreenshotLayerControls from './ScreenshotLayerControls.vue';
 import { ContextMenu, ContextMenuItem } from '~/ui/context-menu';
 import type { ContextMenuPosition } from '~/ui/context-menu';
 import { useTranslate } from '~/i18n/useTranslate';
-import { LAYER_BLEND_MODES } from '@beam/engine/shared/layer-compositing';
-import type { LayerBlendMode, LayerCompositing } from '@beam/engine/shared/layer-compositing-types';
+import type { LayerCompositing } from '@beam/engine/shared/layer-compositing-types';
 import type { ScreenshotLayer } from '@beam/engine/screenshot/screenshot-types';
 import type { ScreenshotSelectionMode } from '../screenshot-types';
 import { canRemoveScreenshotLayer } from '@beam/engine/screenshot/screenshot-layers';
@@ -19,6 +17,7 @@ import { useCompositionPanelPosition } from './useCompositionPanelPosition';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import LayerThumbnail from './thumbnails/LayerThumbnail.vue';
+import ScreenshotLayerName from '../ScreenshotLayerName.vue';
 import { screenshotThumbnailSpecs } from './thumbnails/thumbnail-spec';
 import { useLayerThumbnails } from './thumbnails/useLayerThumbnails';
 const props = defineProps<{
@@ -36,10 +35,10 @@ const emit = defineEmits<{
   update: [id: string, patch: Partial<Omit<LayerCompositing, 'id'>>];
   visibility: [id: string, visible: boolean];
   remove: [id: string];
+  rename: [id: string, name: string];
 }>();
-const { t } = useTranslate('ScreenshotComposition');
+const { t, locale } = useTranslate('ScreenshotComposition');
 const { t: tHighlight } = useTranslate('Highlight');
-const { t: blendText } = useTranslate('BlendModes');
 const { t: elementsText } = useTranslate('Elements');
 const compact = useMediaQuery('(max-width: 1180px)');
 const collapsed = ref(compact.value);
@@ -63,6 +62,32 @@ watch(compact, (value) => {
   if (value) collapsed.value = true;
 });
 const list = ref<HTMLElement | null>(null);
+const editingId = ref<string | null>(null);
+const rename = (id: string) => {
+  if (props.disabled || props.layers.find((layer) => layer.id === id)?.locked) return;
+  emit('select', id);
+  editingId.value = id;
+};
+const finishRename = async (id: string, restoreFocus: boolean) => {
+  editingId.value = null;
+  if (!restoreFocus) return;
+  await nextTick();
+  [...(list.value?.querySelectorAll<HTMLButtonElement>('.layer-select') ?? [])]
+    .find((button) => button.closest<HTMLElement>('[data-layer-id]')?.dataset.layerId === id)
+    ?.focus();
+};
+watch(
+  [collapsed, () => props.disabled, () => props.layers],
+  () => {
+    if (
+      collapsed.value ||
+      props.disabled ||
+      !props.layers.some((layer) => layer.id === editingId.value && !layer.locked)
+    )
+      editingId.value = null;
+  },
+  { deep: true },
+);
 const thumbnails = useLayerThumbnails(
   () => (props.state ? screenshotThumbnailSpecs(props.state, props.source, props.cursorPacks ?? []) : []),
   () => !collapsed.value,
@@ -71,13 +96,16 @@ const front = computed(() => [...props.layers].reverse());
 const { preview, dragging, begin, consumeClick } = useScreenshotLayerReorder(
   list,
   () => front.value.map((layer) => layer.id),
-  (id, index) => emit('reorder', id, index),
+  (id, index) => {
+    if (!props.disabled) emit('reorder', id, index);
+  },
 );
 const ordered = computed(
   () => preview.value?.flatMap((id) => front.value.filter((layer) => layer.id === id)) ?? front.value,
 );
 const selected = computed(() => props.layers.find((layer) => layer.id === props.selectedId));
 const selectLayer = (event: MouseEvent, id: string) => {
+  if (props.disabled) return;
   if (consumeClick(event, id)) return;
   if (event.ctrlKey || event.metaKey) emit('select', id, 'toggle');
   else emit('select', id);
@@ -87,7 +115,6 @@ const label = (layer: ScreenshotLayer) =>
   layer.name ||
   (layer.kind === 'effect' ? tHighlight('title') : '') ||
   (['shape', 'arrow', 'text', 'drawing', 'cursor'].includes(layer.kind) ? elementsText(layer.kind) : t(layer.kind));
-const blendOptions = computed(() => LAYER_BLEND_MODES.map((value) => ({ value, label: blendText(value) })));
 const menuId = ref<string | null>(null);
 const menuPosition = ref<ContextMenuPosition>({ x: 0, y: 0 });
 const menuDelete = ref<InstanceType<typeof ContextMenuItem> | null>(null);
@@ -135,6 +162,11 @@ watch(menuId, (id, previous) => {
   if (!id && previous && menuTrigger?.isConnected) menuTrigger.focus();
 });
 const keyboard = (event: KeyboardEvent, id: string) => {
+  if (event.key === 'F2') {
+    event.preventDefault();
+    rename(id);
+    return;
+  }
   if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
     void openMenu(event, id);
     return;
@@ -166,7 +198,7 @@ const keyboard = (event: KeyboardEvent, id: string) => {
     }"
     :aria-label="t('title')"
   >
-    <div class="composition-surface">
+    <div class="composition-surface screenshot-chrome">
       <header class="composition-header">
         <!-- Button forwards these styles to its native button, inside the component wrapper. -->
         <Button
@@ -206,33 +238,26 @@ const keyboard = (event: KeyboardEvent, id: string) => {
       </header>
       <!-- Measure before the first visible frame, including when initially collapsed. -->
       <div v-if="!collapsed || !ready" ref="content" class="composition-content">
-        <fieldset class="compositing-controls" :disabled="disabled || !selected || selected.locked">
-          <Select
-            size="sm"
-            :aria-label="t('blendMode')"
-            :model-value="selected?.blendMode ?? 'source-over'"
-            :options="blendOptions"
-            :disabled="disabled || !selected || selected.locked"
-            @update:model-value="
-              selected &&
-              emit('update', selected.id, {
-                blendMode: $event as LayerBlendMode,
-              })
-            "
-          />
-          <BigSlider
-            :model-value="selected?.opacity ?? 100"
-            :label="t('opacity')"
-            :min="0"
-            :max="100"
-            :step="1"
-            :default-value="100"
-            :format-value="(value) => `${value}%`"
-            @update:model-value="selected && emit('update', selected.id, { opacity: $event })"
-          />
-        </fieldset>
-        <div ref="list" class="layer-list" role="list" :aria-label="t('layers')">
-          <TransitionGroup tag="div" name="layer" class="layer-rows">
+        <ScreenshotLayerControls
+          :layer="selected"
+          :disabled="disabled"
+          @update="selected && emit('update', selected.id, $event)"
+        />
+        <div
+          ref="list"
+          class="layer-list"
+          role="list"
+          :aria-label="t('layers')"
+          :inert="disabled || undefined"
+          :aria-disabled="disabled"
+        >
+          <!-- Export disables the list once, without updating every row or remeasuring its buttons. -->
+          <TransitionGroup
+            v-memo="[ordered, selectedIds, dragging, editingId, thumbnails, locale]"
+            tag="div"
+            name="layer"
+            class="layer-rows"
+          >
             <div
               v-for="layer in ordered"
               :key="layer.id"
@@ -248,32 +273,40 @@ const keyboard = (event: KeyboardEvent, id: string) => {
               @contextmenu="openMenu($event, layer.id)"
             >
               <button
+                v-if="editingId !== layer.id"
                 class="layer-select"
-                :disabled="disabled"
+                :title="t('rename')"
                 :aria-pressed="selectedIds.includes(layer.id)"
-                @pointerdown="begin($event, layer.id)"
+                @pointerdown="!disabled && begin($event, layer.id)"
                 @click="selectLayer($event, layer.id)"
+                @dblclick.stop="rename(layer.id)"
               >
                 <LayerThumbnail :value="thumbnails[layer.id]" />
                 <span class="layer-name" :title="label(layer)">{{ label(layer) }}</span>
               </button>
+              <ScreenshotLayerName
+                v-else
+                inline
+                :name="label(layer)"
+                :disabled="layer.locked"
+                @rename="!disabled && emit('rename', layer.id, $event)"
+                @finish="finishRename(layer.id, $event)"
+              />
               <Button
                 variant="ghost"
                 size="xs"
                 icon-only
                 :icon="layer.locked ? LockKeyhole : UnlockKeyhole"
-                :disabled="disabled"
                 :aria-label="t(layer.locked ? 'unlock' : 'lock', { name: label(layer) })"
-                @click="emit('update', layer.id, { locked: !layer.locked })"
+                @click="!disabled && emit('update', layer.id, { locked: !layer.locked })"
               />
               <Button
                 variant="ghost"
                 size="xs"
                 icon-only
                 :icon="layer.visible ? Eye : EyeOff"
-                :disabled="disabled"
                 :aria-label="t(layer.visible ? 'hide' : 'show', { name: label(layer) })"
-                @click="emit('visibility', layer.id, !layer.visible)"
+                @click="!disabled && emit('visibility', layer.id, !layer.visible)"
               />
             </div>
           </TransitionGroup>
@@ -293,186 +326,5 @@ const keyboard = (event: KeyboardEvent, id: string) => {
     </ContextMenu>
   </aside>
 </template>
-<style scoped>
-.screenshot-composition {
-  --composition-header-height: 56px;
-  position: absolute;
-  z-index: 12;
-  top: 0;
-  left: 0;
-  width: 264px;
-  max-width: calc(100% - 32px);
-  height: var(--composition-header-height);
-  --composition-body-height: 360px;
-}
-.screenshot-composition.positioning {
-  visibility: hidden;
-}
-.screenshot-composition.moving-panel {
-  will-change: transform;
-}
-.composition-surface {
-  position: absolute;
-  inset: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  outline: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--color-bg-surface) 94%, transparent);
-  box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(16px);
-  overflow: hidden;
-}
-.upward .composition-surface {
-  flex-direction: column-reverse;
-  transform: translateY(calc(-100% + var(--composition-header-height)));
-}
-.composition-header {
-  flex-shrink: 0;
-  height: var(--composition-header-height);
-}
-.composition-header:hover {
-  background: var(--color-bg-surface-hover);
-}
-.composition-heading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-width: 0;
-}
-.composition-heading strong {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 14px;
-}
-.composition-heading .layer-count {
-  flex-shrink: 0;
-  color: var(--text-primary);
-  background: var(--color-bg-element);
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-  padding: 4px 7px;
-}
-.composition-chevron {
-  flex-shrink: 0;
-  transition: transform 160ms ease;
-}
-.composition-chevron.points-up {
-  transform: rotate(180deg);
-}
-.composition-content {
-  display: flex;
-  flex-direction: column;
-  max-height: var(--composition-body-height);
-  min-height: 0;
-  overflow-y: auto;
-  border-top: 1px solid var(--color-border);
-  box-sizing: border-box;
-}
-.upward .composition-content {
-  border-top: 0;
-  border-bottom: 1px solid var(--color-border);
-}
-.compositing-controls {
-  border: 0;
-  flex-shrink: 0;
-  margin: 0;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-}
-.compositing-controls:disabled {
-  opacity: 0.45;
-  pointer-events: none;
-}
-.layer-list {
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
-  min-height: 0;
-  padding: 4px;
-}
-.layer-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.layer-row {
-  display: flex;
-  align-items: center;
-  height: 44px;
-  flex-shrink: 0;
-  border-radius: var(--radius-md);
-  border: 1px solid transparent;
-  box-sizing: border-box;
-  padding-right: 2px;
-}
-.layer-row.selected {
-  background: color-mix(in srgb, var(--color-primary) 14%, var(--color-bg-element));
-  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
-}
-.layer-row.dragging {
-  box-shadow: var(--shadow-sm);
-  border-color: var(--color-primary);
-}
-.layer-row.hidden .layer-select {
-  opacity: 0.45;
-}
-.layer-select {
-  background: transparent;
-  color: var(--text-secondary);
-  border: 0;
-  padding: 0 0 0 6px;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  flex: 1;
-  min-width: 0;
-  gap: 8px;
-  text-align: left;
-  cursor: grab;
-  touch-action: none;
-}
-.layer-row.dragging .layer-select {
-  cursor: grabbing;
-}
-.layer-select:focus-visible {
-  outline: 1px solid var(--color-primary);
-  outline-offset: -1px;
-  border-radius: var(--radius-sm);
-}
-.layer-name {
-  font-size: 11px;
-  color: var(--text-primary);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.layer-move {
-  transition: transform 160ms ease;
-}
-.layer-enter-active,
-.layer-leave-active {
-  transition: opacity 140ms ease;
-}
-.layer-enter-from,
-.layer-leave-to {
-  opacity: 0;
-}
-.layer-leave-active {
-  position: absolute;
-}
-@media (prefers-reduced-motion: reduce) {
-  .composition-chevron,
-  .layer-move,
-  .layer-enter-active,
-  .layer-leave-active {
-    transition: none;
-  }
-}
-</style>
+<style scoped src="./screenshot-composition.css"></style>
+<style scoped src="../screenshot-chrome.css"></style>

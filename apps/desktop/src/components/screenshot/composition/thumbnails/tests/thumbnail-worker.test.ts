@@ -100,7 +100,7 @@ describe('thumbnail worker queue', () => {
 
     expect(dependencies.createImageLoader).toHaveBeenCalledOnce();
     expect(dependencies.loadImage).toHaveBeenCalledWith(source);
-    expect(dependencies.loadFonts).toHaveBeenCalledWith(value.state.shapes);
+    expect(dependencies.loadFonts).toHaveBeenCalledWith(value.state.shapes, expect.any(Function));
     expect(dependencies.render).toHaveBeenCalledWith(
       value,
       expect.objectContaining({

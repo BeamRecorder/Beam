@@ -7,6 +7,7 @@ export interface ScreenshotExportHost {
   busy: Ref<boolean>;
   error: Ref<string>;
   copied: Ref<boolean>;
+  encode(source: string, state: ScreenshotState): Promise<ArrayBuffer>;
   finishText(): void;
   save(): Promise<unknown>;
   fail(reason: unknown): void;

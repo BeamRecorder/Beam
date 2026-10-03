@@ -935,6 +935,8 @@
     "defaultSystemAudio": "Системный выход по умолчанию"
   },
   "ScreenshotEditor": {
+    "tools": "Инструменты",
+    "selectTool": "Выбрать",
     "title": "Снимок экрана",
     "export": "Экспорт",
     "layers": "Слои снимка",
@@ -1060,6 +1062,8 @@
   },
   "ScreenshotComposition": {
     "title": "Композиция",
+    "name": "Имя слоя",
+    "rename": "Переименовать слой · Двойной щелчок или F2",
     "layers": "Слои",
     "blendMode": "Режим наложения",
     "opacity": "Непрозрачность",

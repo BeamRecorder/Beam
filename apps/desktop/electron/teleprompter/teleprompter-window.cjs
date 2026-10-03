@@ -1,5 +1,6 @@
 const { BrowserWindow, screen } = require('electron');
 const path = require('path');
+const { developmentRendererUrl } = require('../lifecycle/development-session.cjs');
 const { placeOutsideRegion, regionRectangle } = require('./teleprompter-region.cjs');
 const { createTeleprompterCheckpoint } = require('./teleprompter-checkpoint.cjs');
 
@@ -121,7 +122,7 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
 
   const load = (target) => {
     if (isPackaged) return target.loadFile(path.join(applicationRoot, 'dist/html/teleprompter.html'));
-    return target.loadURL('http://localhost:6500/html/teleprompter.html');
+    return target.loadURL(developmentRendererUrl('teleprompter.html'));
   };
 
   const notifyVisibility = () => {

@@ -148,7 +148,7 @@ watch(menuItems, () => updateSelection(), { flush: 'post' });
 .sidebar-island {
   position: relative;
   isolation: isolate;
-  width: calc(92px * var(--ui-scale-sidebar, 1));
+  width: var(--editor-sidebar-width);
   height: 100%;
   max-height: 100%;
   background: transparent;

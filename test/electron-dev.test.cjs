@@ -3,11 +3,12 @@ const fs = require('node:fs');
 const { EventEmitter } = require('node:events');
 const os = require('node:os');
 const path = require('node:path');
-const { Readable, Writable } = require('node:stream');
+const { PassThrough, Readable, Writable } = require('node:stream');
 const test = require('node:test');
 
 const {
   askDownload,
+  buildDevelopmentEngine,
   cargoAvailable,
   cargoBuildArguments,
   parseDevelopmentArguments,
@@ -93,6 +94,94 @@ test('development arguments reject unsupported options', () => {
   assert.throws(() => parseDevelopmentArguments(['--skip-build']), /Unknown electron:dev option: --skip-build/);
 });
 
+test('development arguments accept named sessions and the no-Rust option together', () => {
+  assert.deepEqual(parseDevelopmentArguments(['--session', 'preview']), { forceNoRust: false, session: 'preview' });
+  assert.deepEqual(parseDevelopmentArguments(['--force-no-rust', '--session', 'preview']), {
+    forceNoRust: true,
+    session: 'preview',
+  });
+  assert.deepEqual(parseDevelopmentArguments(['--session', 'preview', '--force-no-rust']), {
+    forceNoRust: true,
+    session: 'preview',
+  });
+});
+
+test('development arguments reject missing, duplicated and unsafe session names', () => {
+  assert.throws(() => parseDevelopmentArguments(['--session']), /requires a name/);
+  assert.throws(() => parseDevelopmentArguments(['--session', '../bad']), /Development session/);
+  assert.throws(() => parseDevelopmentArguments(['--session', 'one', '--session', 'two']), /Unknown/);
+});
+
+test('native development builds reuse the Cargo-configured target directory without an override', async () => {
+  for (const platform of ['linux', 'win32', 'darwin']) {
+    let invocation;
+    const target = await buildDevelopmentEngine({
+      cwd: '/worktree/beam',
+      platform,
+      resolveTarget: (cwd) => {
+        assert.equal(cwd, '/worktree/beam');
+        return '/shared/cargo-target';
+      },
+      spawnImpl: (command, args, options) => {
+        invocation = { command, args, options };
+        const child = new EventEmitter();
+        queueMicrotask(() => child.emit('exit', 0, null));
+        return child;
+      },
+    });
+    assert.equal(target, '/shared/cargo-target');
+    assert.equal(invocation.command, 'cargo');
+    assert.deepEqual(invocation.args, cargoBuildArguments(platform));
+    assert.equal(invocation.options.cwd, '/worktree/beam');
+  }
+});
+
+test('native development build failures propagate and cancellation reaches Cargo', async () => {
+  const controller = new AbortController();
+  let receivedSignal;
+  await assert.rejects(
+    buildDevelopmentEngine({
+      signal: controller.signal,
+      spawnImpl: (_command, _args, options) => {
+        receivedSignal = options.signal;
+        const child = new EventEmitter();
+        queueMicrotask(() => child.emit('exit', 2, null));
+        return child;
+      },
+    }),
+    /exit code 2/,
+  );
+  assert.equal(receivedSignal, controller.signal);
+});
+
+test('direct Electron launches inherit the session, server and cancellation signal', async () => {
+  const controller = new AbortController();
+  let invocation;
+  await startElectron('/native/engine', {
+    electronPath: '/electron',
+    platform: 'linux',
+    signal: controller.signal,
+    env: { BEAM_DEV_SESSION: 'one', BEAM_DEV_SERVER_URL: 'http://localhost:6502' },
+    withRuntime: async (_executable, _options, launch) => launch('/private/capture-engine'),
+    spawnImpl: (command, args, options) => {
+      invocation = { command, args, options };
+      const child = new EventEmitter();
+      queueMicrotask(() => {
+        child.emit('exit', 0, null);
+        child.emit('close', 0, null);
+      });
+      return child;
+    },
+  });
+  assert.equal(invocation.command, '/electron');
+  assert.deepEqual(invocation.args, ['.', '--ozone-platform=x11']);
+  assert.equal(invocation.options.signal, controller.signal);
+  assert.equal(invocation.options.env.BEAM_DEV_SESSION, 'one');
+  assert.equal(invocation.options.env.BEAM_DEV_SERVER_URL, 'http://localhost:6502');
+  assert.equal(invocation.options.env.BEAM_DEVELOPMENT_INSTANCE, '1');
+  assert.equal(invocation.options.env.BEAM_CAPTURE_ENGINE, '/private/capture-engine');
+});
+
 test('startElectron marks GNOME Wayland shortcut launches as the development instance', async () => {
   const child = new EventEmitter();
   let invocation;
@@ -106,9 +195,13 @@ test('startElectron marks GNOME Wayland shortcut launches as the development ins
   const start = startElectron('/built/capture-engine', {
     root: '/workspace',
     env,
+    withRuntime: async (executable, _options, launch) => launch(executable),
     spawnImpl: (command, args, options) => {
       invocation = { command, args, options };
-      queueMicrotask(() => child.emit('exit', 0, null));
+      queueMicrotask(() => {
+        child.emit('exit', 0, null);
+        child.emit('close', 0, null);
+      });
       return child;
     },
   });
@@ -238,6 +331,53 @@ test('interactive confirmation accepts Y and rejects N while the default is yes'
   assert.equal(empty.result, true);
 });
 
+test('download prompts settle on cancellation and end-of-input', async () => {
+  const input = new PassThrough();
+  const output = new PassThrough();
+  const controller = new AbortController();
+  const prompting = askDownload(version, input, output, controller.signal);
+  controller.abort();
+  assert.equal(await prompting, false);
+  assert.equal(await askDownload(version, input, output, controller.signal), false);
+  input.destroy();
+  output.destroy();
+  assert.equal(await askDownload(version, Readable.from([]), new PassThrough()), false);
+});
+
+test('cancellation before native resolution performs no build or download', async () => {
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(
+    resolveDevelopmentEngine({
+      version,
+      signal: controller.signal,
+      hasCargo: () => assert.fail('Cargo queried after cancellation'),
+    }),
+    { name: 'AbortError' },
+  );
+});
+
+test('cancellation reaches an interactive native prompt and prevents download', async () => {
+  const controller = new AbortController();
+  await assert.rejects(
+    resolveDevelopmentEngine({
+      version,
+      signal: controller.signal,
+      hasCargo: () => false,
+      existsSync: () => false,
+      stdin: { isTTY: true },
+      stdout: { isTTY: true },
+      prompt: async (_version, _input, _output, signal) => {
+        assert.equal(signal, controller.signal);
+        controller.abort();
+        return true;
+      },
+      download: () => assert.fail('download after cancellation'),
+    }),
+    { name: 'AbortError' },
+  );
+});
+
 test('interactive N refuses a missing cache without downloading', async () => {
   const root = temporaryRoot();
   let downloadCalls = 0;
@@ -333,7 +473,7 @@ test('unknown architectures fail before Cargo detection or fallback', async () =
   }
 });
 
-test('development launch uses Cargo-configured shared outputs for each supported platform', async () => {
+test('development engine resolution uses the directory returned by its injected builder', async () => {
   for (const platform of ['linux', 'win32', 'darwin']) {
     const executable = await resolveDevelopmentEngine({
       applicationRoot: '/worktree',

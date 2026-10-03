@@ -1,5 +1,6 @@
 const { BrowserWindow, screen } = require('electron');
 const path = require('path');
+const { developmentRendererUrl } = require('./lifecycle/development-session.cjs');
 
 function createCountdownWindow({
   applicationRoot,
@@ -103,7 +104,7 @@ function createCountdownWindow({
     });
     const loading = isPackaged
       ? target.loadFile(path.join(applicationRoot, 'dist/html/countdown.html'))
-      : target.loadURL('http://localhost:6500/html/countdown.html');
+      : target.loadURL(developmentRendererUrl('countdown.html'));
     void Promise.resolve(loading).catch(failPreparation);
     return prepared;
   };

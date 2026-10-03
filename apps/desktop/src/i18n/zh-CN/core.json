@@ -935,6 +935,8 @@
     "defaultSystemAudio": "默认系统输出"
   },
   "ScreenshotEditor": {
+    "tools": "工具",
+    "selectTool": "选择",
     "title": "截图",
     "export": "导出",
     "layers": "截图图层",
@@ -1060,6 +1062,8 @@
   },
   "ScreenshotComposition": {
     "title": "合成",
+    "name": "图层名称",
+    "rename": "重命名图层 · 双击或 F2",
     "layers": "图层",
     "blendMode": "混合模式",
     "opacity": "不透明度",

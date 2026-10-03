@@ -27,7 +27,7 @@ export function registerScreenshotEditorHistoryAndFooterTests(
     vi.stubGlobal('crypto', { randomUUID: () => 'footer-shape' });
     const wrapper = mountEditor();
     await flushPromises();
-    await wrapper.get('[aria-label="Clip"]').trigger('click');
+    await wrapper.get('button[aria-label="Select"]').trigger('click');
     await clickText(wrapper, 'Arrow');
 
     const composition = wrapper.findComponent(ScreenshotCompositionStub);
@@ -72,7 +72,7 @@ export function registerScreenshotEditorHistoryAndFooterTests(
     vi.stubGlobal('crypto', { randomUUID: () => 'footer-cursor' });
     const wrapper = mountEditor();
     await flushPromises();
-    await wrapper.get('[aria-label="Clip"]').trigger('click');
+    await wrapper.get('button[aria-label="Select"]').trigger('click');
     await clickText(wrapper, 'Cursor');
 
     const composition = wrapper.findComponent(ScreenshotCompositionStub);
@@ -108,7 +108,7 @@ export function registerScreenshotEditorHistoryAndFooterTests(
     vi.stubGlobal('crypto', { randomUUID: () => 'history-shape' });
     const first = mountEditor();
     await flushPromises();
-    await first.get('[aria-label="Clip"]').trigger('click');
+    await first.get('button[aria-label="Select"]').trigger('click');
     await clickText(first, 'Arrow');
     const initialFill = canvasState(first).shapes[0]!.fillColor;
     await first.get('[data-testid="change-shape-style"]').trigger('click');

@@ -1,17 +1,18 @@
 const path = require('node:path');
+const { developmentOrigin } = require('../lifecycle/development-session.cjs');
 const { fileURLToPath } = require('node:url');
 const { createSourcePickerController } = require('./source-picker-controller.cjs');
 const { isDevelopmentSourceDataEnabled } = require('./source-picker-state.cjs');
 const { createDevelopmentSourceProvider } = require('./development-source-provider.cjs');
 const { createNativeSourceProvider } = require('./native-source-provider.cjs');
 
-function isHudSourcePickerOwner(url, applicationRoot, isPackaged) {
+function isHudSourcePickerOwner(url, applicationRoot, isPackaged, environment = process.env) {
   try {
     const target = new URL(url);
     if (target.search || target.hash) return false;
     return isPackaged
       ? fileURLToPath(target) === path.join(applicationRoot, 'dist/html/index.html')
-      : target.origin === 'http://localhost:6500' && target.pathname === '/html/index.html';
+      : target.origin === developmentOrigin(environment) && target.pathname === '/html/index.html';
   } catch {
     return false;
   }

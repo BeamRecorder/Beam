@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { CaptureProject, ProjectEditorData } from '~/api/types/capture-api';
+import EditorWorkspace from './layout/EditorWorkspace.vue';
 import SidebarPanel from '~/components/editor/sidebar/SidebarPanel.vue';
 import Topbar from '~/components/editor/Topbar.vue';
 import EditorAmbientBackground from '~/components/editor/EditorAmbientBackground.vue';
@@ -92,24 +93,24 @@ import VideoEditorTracks from './workspace/VideoEditorTracks.vue';
     <div v-if="isExporting" class="export-notice-banner">
       <Sparkles :size="14" class="banner-icon" /><span>{{ t('exportBanner') }}</span>
     </div>
-    <div class="editor-workspace">
-      <div class="workspace-upper">
-        <SidebarPanel :active-tab="activeTab" :panel-open="isPropertiesPanelOpen" @select-tab="selectPropertiesTab" />
-        <VideoEditorProperties />
+    <EditorWorkspace kind="video">
+      <SidebarPanel :active-tab="activeTab" :panel-open="isPropertiesPanelOpen" @select-tab="selectPropertiesTab" />
+      <VideoEditorProperties />
 
-        <VideoEditorPreview />
-      </div>
-      <div
-        class="timeline-resize-handle"
-        role="separator"
-        tabindex="0"
-        :class="{ 'is-resizing': isResizingTimeline }"
-        @pointerdown="startTimelineResize"
-      >
-        <div class="resize-handle-bar" />
-      </div>
-      <VideoEditorTracks />
-    </div>
+      <VideoEditorPreview />
+      <template #after-upper>
+        <div
+          class="timeline-resize-handle"
+          role="separator"
+          tabindex="0"
+          :class="{ 'is-resizing': isResizingTimeline }"
+          @pointerdown="startTimelineResize"
+        >
+          <div class="resize-handle-bar" />
+        </div>
+        <VideoEditorTracks />
+      </template>
+    </EditorWorkspace>
     <LinkedClipsDeleteDialog
       :is-open="isDeleteDialogOpen"
       :clips="linkedDeleteClips"
@@ -153,22 +154,8 @@ import VideoEditorTracks from './workspace/VideoEditorTracks.vue';
 .editor-page > :not(.editor-ambient-background, .media-drop-overlay) {
   position: relative;
 }
-.editor-workspace {
-  flex: 1;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  overflow: hidden;
-}
-.workspace-upper {
-  flex: 1;
-  display: flex;
-  gap: 12px;
-  overflow: hidden;
-}
 .timeline-resize-handle {
-  height: 12px;
+  height: var(--editor-timeline-resize-height);
   margin-block: -6px;
   cursor: ns-resize;
   display: flex;

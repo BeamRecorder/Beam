@@ -1,0 +1,110 @@
+.popover-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+.popover-container.popover-block {
+  display: block;
+  width: 100%;
+}
+
+.popover-trigger {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.popover-trigger.popover-block {
+  display: block;
+  width: 100%;
+}
+
+.popover-content {
+  position: absolute;
+  background-color: var(--color-bg-element);
+  color: var(--text-primary);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 4px 0;
+  z-index: 50;
+  box-sizing: border-box;
+  overflow: hidden;
+  width: fit-content;
+  max-width: calc(100vw - 16px);
+}
+
+.popover-content.popover-block {
+  min-width: 0;
+}
+
+.popover-content.popover-flush {
+  padding: 0;
+  background: var(--color-bg-surface);
+}
+
+.popover-content.popover-attached {
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.popover-content.popover-allow-overflow {
+  overflow: visible;
+}
+
+/* Animations */
+.pop-enter-active,
+.pop-leave-active {
+  transition:
+    opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pop-lift-enter-active {
+  /* Keyframes start at presentation, without Vue's two-frame transition setup. */
+  animation: pop-lift-in 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.pop-lift-leave-active {
+  animation: pop-lift-out 100ms ease-in both;
+}
+@keyframes pop-lift-in {
+  from {
+    opacity: var(--popover-lift-opacity, 0.16);
+    transform: var(--popover-lift-transform, translate3d(0, 6px, 0));
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+@keyframes pop-lift-out {
+  from {
+    opacity: var(--popover-lift-opacity, 1);
+    transform: var(--popover-lift-transform, translate3d(0, 0, 0));
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, 4px, 0);
+  }
+}
+
+.pop-enter-from,
+.pop-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.pop-enter-to,
+.pop-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pop-enter-active,
+  .pop-leave-active,
+  .pop-lift-enter-active,
+  .pop-lift-leave-active {
+    transition: none;
+    animation: none;
+  }
+}

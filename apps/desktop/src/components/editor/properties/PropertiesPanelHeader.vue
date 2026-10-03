@@ -49,10 +49,12 @@ defineExpose({ focusTransitionButton });
           <Button variant="ghost" size="xs" :icon="ArrowLeft" icon-only aria-label="Back" @click="emit('back')" />
           <h3 class="panel-title">{{ transitionTitle }}</h3>
         </div>
-        <div v-else class="panel-title-block">
-          <h3 class="panel-title">{{ title }}</h3>
-          <PropertiesSelectionSummary v-if="selectionNames?.length" :names="selectionNames" />
-        </div>
+        <slot v-else name="title">
+          <div class="panel-title-block">
+            <h3 class="panel-title">{{ title }}</h3>
+            <PropertiesSelectionSummary v-if="selectionNames?.length" :names="selectionNames" />
+          </div>
+        </slot>
         <slot name="actions">
           <ClipActionGroup
             v-if="showClipActions && !transitionsOpen"

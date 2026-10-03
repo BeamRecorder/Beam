@@ -935,6 +935,8 @@
     "defaultSystemAudio": "Domyślne wyjście systemowe"
   },
   "ScreenshotEditor": {
+    "tools": "Narzędzia",
+    "selectTool": "Zaznacz",
     "title": "Zrzut ekranu",
     "export": "Eksportuj",
     "layers": "Warstwy zrzutu",
@@ -1060,6 +1062,8 @@
   },
   "ScreenshotComposition": {
     "title": "Kompozycja",
+    "name": "Nazwa warstwy",
+    "rename": "Zmień nazwę warstwy · Dwukrotne kliknięcie lub F2",
     "layers": "Warstwy",
     "blendMode": "Tryb mieszania",
     "opacity": "Krycie",

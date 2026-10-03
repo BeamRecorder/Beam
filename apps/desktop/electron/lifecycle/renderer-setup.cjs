@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const { developmentOrigin, developmentRendererUrl } = require('./development-session.cjs');
+const { applyHudWindowPreferences } = require('../preferences/window-preferences.cjs');
 const { WindowController } = require('../window/window-controller.cjs');
 const { shouldAutoOpenDevTools } = require('../window/devtools-policy.cjs');
 const { normalizeHudWindowSize } = require('../window/hud-window-size.cjs');
@@ -13,6 +15,7 @@ function createRendererSetup({
   applicationRoot,
   controllers,
   logStartup,
+  environment = process.env,
 }) {
   function isTrustedRenderer(url) {
     if (url.startsWith('file://')) {
@@ -28,7 +31,8 @@ function createRendererSetup({
     try {
       const target = new URL(url);
       return (
-        target.origin === 'http://localhost:6500' &&
+        !app?.isPackaged &&
+        target.origin === developmentOrigin(environment) &&
         [
           '/html/index.html',
           '/html/countdown.html',
@@ -57,6 +61,10 @@ function createRendererSetup({
       if (!trusted(webContents)) return callback(false);
       callback(allowed.has(permission));
     });
+  }
+
+  function applyHudPreferences(preferences) {
+    applyHudWindowPreferences({ windows: BrowserWindow.getAllWindows(), controllers, preferences });
   }
 
   function configureDesktopLoopback() {
@@ -138,8 +146,9 @@ function createRendererSetup({
       logStartup('Loading dist/html/index.html.');
       win.loadFile(path.join(applicationRoot, 'dist/html/index.html'));
     } else {
-      logStartup('Loading http://localhost:6500/html/index.html.');
-      win.loadURL('http://localhost:6500/html/index.html');
+      const url = developmentRendererUrl('index.html', environment);
+      logStartup(`Loading ${url}.`);
+      win.loadURL(url);
     }
     return win;
   }
@@ -150,6 +159,7 @@ function createRendererSetup({
     configureDesktopLoopback,
     getAppIconPath,
     createWindow,
+    applyHudPreferences,
   };
 }
 module.exports = { createRendererSetup };

@@ -1,5 +1,4 @@
 import { capture } from '~/api/capture';
-import { encodeScreenshot } from './screenshot-render';
 import type { ScreenshotExportHost } from './screenshot-export-types';
 
 export function useScreenshotExport(host: ScreenshotExportHost) {
@@ -13,7 +12,7 @@ export function useScreenshotExport(host: ScreenshotExportHost) {
       await host.save();
       const snapshot = JSON.parse(JSON.stringify(host.state.value)) as typeof host.state.value;
       const format = copy ? 'png' : snapshot.format;
-      const bytes = await encodeScreenshot(host.document.value.source, { ...snapshot, format });
+      const bytes = await host.encode(host.document.value.source, { ...snapshot, format });
       await capture.exportScreenshot(host.document.value.id, bytes, format, copy);
       host.copied.value = copy;
       if (copy) host.copiedToast();

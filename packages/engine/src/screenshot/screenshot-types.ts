@@ -15,6 +15,7 @@ export interface ScreenshotState {
   cursors?: ScreenshotCursorLayer[];
   images?: ScreenshotImageLayer[];
   composition?: LayerCompositing[];
+  layerNames?: Record<string, string>;
   format: 'png' | 'webp';
   quality: number;
 }

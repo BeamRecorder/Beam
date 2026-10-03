@@ -2,6 +2,27 @@ const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const Module = require('node:module');
 const test = require('node:test');
+const { isHudSourcePickerOwner } = require('../apps/desktop/electron/source-picker/source-picker-ipc.cjs');
+
+test('only the current session port can own the development source picker', () => {
+  const environment = { BEAM_DEV_SERVER_URL: 'http://localhost:6508' };
+  assert.equal(isHudSourcePickerOwner('http://localhost:6508/html/index.html', '/beam', false, environment), true);
+  for (const url of [
+    'http://localhost:6500/html/index.html',
+    'http://localhost:6508/html/editor.html',
+    'http://localhost:6508/html/index.html?quickSnipCrop=1',
+    'http://localhost:6508/html/index.html#one',
+  ]) {
+    assert.equal(isHudSourcePickerOwner(url, '/beam', false, environment), false);
+  }
+});
+
+test('packaged source-picker ownership ignores the development origin', () => {
+  const environment = { BEAM_DEV_SERVER_URL: 'http://localhost:6508' };
+  assert.equal(isHudSourcePickerOwner('file:///beam/dist/html/index.html', '/beam', true, environment), true);
+  assert.equal(isHudSourcePickerOwner('http://localhost:6508/html/index.html', '/beam', true, environment), false);
+  assert.equal(isHudSourcePickerOwner('invalid', '/beam', false, environment), false);
+});
 
 function fixture({ platform = 'win32', isPackaged = false, accepting = true } = {}) {
   const handlers = new Map();

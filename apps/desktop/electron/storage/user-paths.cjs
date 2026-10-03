@@ -1,8 +1,8 @@
 const path = require('path');
 
-/** Resolves every mutable user-data location without creating it. */
-function createUserPaths(videosDirectory) {
-  const user = path.join(videosDirectory, 'Beam', 'user');
+/** User content stays in Videos even when the Chromium profile is isolated. */
+function createUserPaths(app) {
+  const user = path.join(app.getPath('videos'), 'Beam', 'user');
   return Object.freeze({
     user,
     preferences: path.join(user, 'preferences.json'),

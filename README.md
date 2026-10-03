@@ -121,6 +121,8 @@ The interface is available in 15 languages:
 
 ## 🛠️ Developer documentation
 
+Run `bun run dev` to start Vite and Electron in one terminal. Each worktree gets its own persistent development session and an available renderer port. All sessions reuse your existing projects, screenshots and preferences in `Videos/Beam/user/`. Use `bun run dev --session preview` for another isolated Electron profile in the same worktree, or `bun run dev --force-no-rust` to use the verified prebuilt capture engine. `Ctrl+C` stops the session.
+
 If you want to run Beam locally or contribute to the project, start with the guide for your platform:
 
 - 📖 [Contributing Guide](./docs/dev/CONTRIBUTING.md)
