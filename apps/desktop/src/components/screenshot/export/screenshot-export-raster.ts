@@ -8,8 +8,9 @@ export function screenshotExportRasterScale(
   source: string,
   url: string,
   size: ScreenshotDimensions,
+  outputSize: ScreenshotDimensions = state.canvas,
 ) {
-  const { width, height } = state.canvas;
+  const { width, height } = outputSize;
   let scale = 0;
   const images = [
     ...(url === source ? [state.image] : []),

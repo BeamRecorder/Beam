@@ -37,6 +37,7 @@ import { useElementFullscreen } from '../editor/canvas/composables/useElementFul
 const props = defineProps<{ id: string }>();
 const emit = defineEmits<{ ready: [] }>();
 const handlesMuted = ref(false);
+const previewReady = ref(false);
 const selectionBounds = ref<NormalizedTransform | null>(null);
 const toolbarHeight = ref(50);
 const { t } = useTranslate('ScreenshotEditor');
@@ -60,6 +61,7 @@ const editor = useScreenshotEditor(
   () => props.id,
   () => emit('ready'),
   () => canvasFullscreen.isFullscreen.value,
+  () => previewReady.value,
 );
 const {
   document,
@@ -351,7 +353,10 @@ const navigateSearch = (tab: string) => {
             error = $event;
             emit('ready');
           "
-          @ready="emit('ready')"
+          @ready="
+            previewReady = true;
+            emit('ready');
+          "
         >
           <template #overlay>
             <UndoRedoToast :action="history.lastAction.value" class="screenshot-history-feedback" />
@@ -359,6 +364,7 @@ const navigateSearch = (tab: string) => {
               v-if="!canvasFullscreen.isFullscreen.value"
               :layers="composition"
               :state="state"
+              :preview-ready="previewReady"
               :cursor-packs="cursors.packs.value"
               :selected-id="selectedId"
               :selected-ids="selectedIds"

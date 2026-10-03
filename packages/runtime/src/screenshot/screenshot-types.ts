@@ -1,3 +1,4 @@
+import type { ScreenshotLayer } from '@beam/engine/screenshot/screenshot-types';
 import type { CursorAssetDescriptor } from '@beam/engine/capture/cursor-pack';
 import type { MediaRect } from '../composition/appearance/appearance-types';
 
@@ -26,3 +27,4 @@ export interface ScreenshotImageFraming {
   sourceRect: MediaRect;
   sourceSize?: { width: number; height: number };
 }
+export type ScreenshotLayerPaintObserver = (layer: ScreenshotLayer, durationMs: number) => void;

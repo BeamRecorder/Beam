@@ -10,7 +10,6 @@ import {
 import type { EditorPresetSettings } from '~/api/types/editor-preset';
 import type { ScreenshotDocument } from '~/api/types/screenshot';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
-import type { NormalizedTransform } from '@beam/engine/shared/composition-types';
 import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot-types';
 import { screenshotShape, screenshotState } from '../screenshot-state';
 
@@ -132,6 +131,7 @@ const pointerEvent = (values: Partial<PointerEvent> = {}) =>
     clientX: 10,
     clientY: 10,
     pointerId: 7,
+    altKey: true,
     currentTarget: { setPointerCapture: vi.fn() },
     preventDefault: vi.fn(),
     ...values,
@@ -184,7 +184,7 @@ afterEach(() => {
 });
 
 describe('ScreenshotCanvas interaction performance', () => {
-  it('coalesces pointer moves to one animation frame and flushes the last transform on release', async () => {
+  it('coalesces pointer moves to one animation frame and flushes the last translation on release', async () => {
     const wrapper = await prepareCanvas();
     setCanvasBounds(wrapper);
     const selection = wrapper.findComponent(SelectionStub);
@@ -214,13 +214,14 @@ describe('ScreenshotCanvas interaction performance', () => {
     expect(dragRenderer.draw).toHaveBeenCalledOnce();
     selection.vm.$emit('pointer-up', pointerEvent({ clientX: 90, clientY: 80 }));
 
-    expect(wrapper.emitted('transform')).toHaveLength(1);
-    const committed = wrapper.emitted('transform')?.[0]?.[0] as NormalizedTransform | undefined;
-    expect(committed?.x).toBeCloseTo(0.75);
-    expect(committed?.y).toBeCloseTo(0.7);
+    expect(wrapper.emitted('translate')).toHaveLength(1);
+    const committed = wrapper.emitted('translate')?.[0]?.[0] as { x: number; y: number } | undefined;
+    expect(committed?.x).toBeCloseTo(0.45);
+    expect(committed?.y).toBeCloseTo(0.4);
     while (animationFrames.size) flushOneFrame();
     await flushPromises();
-    expect(wrapper.emitted('transform')).toHaveLength(1);
+    expect(wrapper.emitted('translate')).toHaveLength(1);
+    expect(wrapper.emitted('transform')).toBeUndefined();
     expect(dragRenderer.draw).toHaveBeenCalledOnce();
     expect(propertyInteractionActive.value).toBe(false);
     wrapper.unmount();
@@ -272,8 +273,9 @@ describe('ScreenshotCanvas interaction performance', () => {
     const translation = wrapper.emitted('translate');
     expect(translation).toHaveLength(1);
     expect(translation?.[0]).toHaveLength(1);
-    expect((translation?.[0]?.[0] as { x: number; y: number }).x).toBeCloseTo(0.2);
-    expect((translation?.[0]?.[0] as { x: number; y: number }).y).toBeCloseTo(0.1);
+    const delta = translation![0]![0] as { x: number; y: number };
+    expect(delta.x).toBeCloseTo(0.2);
+    expect(delta.y).toBeCloseTo(0.1);
     expect(wrapper.emitted('transform')).toBeUndefined();
     expect(propertyInteractionActive.value).toBe(false);
     wrapper.unmount();
@@ -322,7 +324,10 @@ describe('ScreenshotCanvas interaction performance', () => {
     selection.vm.$emit('pointer-move', pointerEvent({ clientX: 85, clientY: 90 }));
     wrapper.unmount();
 
-    expect(wrapper.emitted('transform')).toEqual([[expect.objectContaining({ x: 0.7, y: 0.8 })]]);
+    expect(wrapper.emitted('translate')).toHaveLength(1);
+    const translation = wrapper.emitted('translate')?.[0]?.[0] as { x: number; y: number };
+    expect(translation.x).toBeCloseTo(0.4);
+    expect(translation.y).toBeCloseTo(0.5);
     expect(propertyInteractionActive.value).toBe(false);
   });
 });

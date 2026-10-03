@@ -7,11 +7,16 @@ import type { ScreenshotExportReply, ScreenshotWorkerOptions } from './screensho
 export async function encodeScreenshot(
   source: string,
   state: ScreenshotState,
-  { signal }: ScreenshotWorkerOptions = {},
+  options: ScreenshotWorkerOptions = {},
 ): Promise<ArrayBuffer> {
+  const { signal } = options;
   if (!validScreenshotDimensions(state.canvas)) throw new Error(i18n.global.t('ScreenshotEditor.dimensionsError'));
   signal?.throwIfAborted();
-  const { decorations, transfer } = await screenshotExportAssets(state);
+  const preparation = performance.now();
+  const { decorations, transfer } = await screenshotExportAssets(state).finally(() =>
+    options.onTiming?.('decorations', performance.now() - preparation),
+  );
+  const started = performance.now();
   let worker: Worker | undefined;
   try {
     signal?.throwIfAborted();
@@ -25,6 +30,8 @@ export async function encodeScreenshot(
       const cleanup = () => signal?.removeEventListener('abort', abort);
       worker!.onmessage = ({ data }: MessageEvent<ScreenshotExportReply>) => {
         cleanup();
+        for (const [stage, ms] of Object.entries(data.timings)) options.onTiming?.(`worker.${stage}`, ms);
+        if (data.preview) options.onPreview?.(data.preview);
         if ('error' in data) reject(new Error(data.error));
         else resolve(data.bytes);
       };
@@ -51,6 +58,8 @@ export async function encodeScreenshot(
               images: state.images?.map((image) => ({ ...image, source: absolute(image.source) })),
             },
             decorations,
+            ...(options.includePreview ? { includePreview: true } : {}),
+            ...(options.outputSize ? { outputSize: options.outputSize } : {}),
           },
           transfer,
         );
@@ -60,6 +69,7 @@ export async function encodeScreenshot(
       }
     });
   } finally {
+    options.onTiming?.('workerRoundTrip', performance.now() - started);
     worker?.terminate();
     for (const bitmap of transfer) bitmap.close();
   }

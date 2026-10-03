@@ -16,7 +16,13 @@ export function createScreenshotExportImages(request: ScreenshotExportRequest) {
       const original = await createImageBitmap(await response.blob());
       bitmaps.add(original);
       const { width, height } = original;
-      const scale = screenshotExportRasterScale(request.state, request.source, url, { width, height });
+      const scale = screenshotExportRasterScale(
+        request.state,
+        request.source,
+        url,
+        { width, height },
+        request.outputSize,
+      );
       let image = original;
       if (scale < 1) {
         image = await createImageBitmap(original, {

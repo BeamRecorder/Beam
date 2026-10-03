@@ -8,6 +8,22 @@ describe('ToastProvider', () => {
   beforeEach(() => setActivePinia(createPinia()));
   afterEach(() => vi.unstubAllGlobals());
 
+  it.each([
+    ['success', 'lucide-check-circle'],
+    ['error', 'lucide-circle-x'],
+  ] as const)('renders a %s badge over the actual output thumbnail', (status, icon) => {
+    const store = useToastStore();
+    store.add('Image result', status, 0, undefined, {
+      preview: { kind: 'image', src: 'output.png', alt: 'Output', status },
+    });
+    const wrapper = mount(ToastProvider);
+    expect(wrapper.get('.toast-preview-status').classes()).toContain(status);
+    expect(wrapper.get('.toast-preview-status svg').classes()).toContain(icon);
+    expect(wrapper.find('.toast-icon').exists()).toBe(false);
+    expect(wrapper.get('.toast-preview img').attributes('src')).toBe('output.png');
+    wrapper.unmount();
+  });
+
   it('renders icons for each type and handles action and dismissal', async () => {
     const store = useToastStore();
     const onClick = vi.fn();

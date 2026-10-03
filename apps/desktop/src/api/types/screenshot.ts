@@ -4,6 +4,8 @@ import type { SnapshotHistory } from '@beam/engine/shared/editor-history-types';
 import type { ScreenRegion } from './screen-region';
 import type { EditorPresetSettings } from './editor-preset';
 import type { MediaAsset } from '@beam/engine/shared/composition-types';
+import type { ScreenshotPublishResult } from './screenshot-export';
+import type { ScreenshotThumbnailInput } from './screenshot-thumbnail';
 
 export interface ScreenshotCaptureOptions {
   screenKind: 'display' | 'window';
@@ -36,6 +38,12 @@ export interface ScreenshotApi {
   getScreenshot(id: string): Promise<ScreenshotDocument>;
   listScreenshots(): Promise<ScreenshotDocument[]>;
   saveScreenshot(id: string, state: ScreenshotState, history?: SnapshotHistory<ScreenshotState>): Promise<void>;
+  saveScreenshotThumbnail(id: string, input: ScreenshotThumbnailInput): Promise<string | null>;
   openScreenshot(id: string, options?: EditorOpenOptions): Promise<void>;
-  exportScreenshot(id: string, bytes: ArrayBuffer, format: 'png' | 'webp', copy: boolean): Promise<string | null>;
+  exportScreenshot(
+    id: string,
+    bytes: ArrayBuffer,
+    format: 'png' | 'webp',
+    copy: boolean,
+  ): Promise<ScreenshotPublishResult>;
 }

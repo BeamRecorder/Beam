@@ -9,6 +9,8 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { clampTimelineHeight, DEFAULT_TIMELINE_HEIGHT } from './composables/useTimelineResize';
 import EditorProjectLoadingOverlay from './EditorProjectLoadingOverlay.vue';
 import type { EditorLayoutKind } from './layout/editor-layout-types';
+import { useScreenshotStartup } from '../screenshot/loading/useScreenshotStartup';
+const screenshotStartup = useScreenshotStartup();
 const VideoEditor = shallowRef<Component>();
 const ScreenshotEditor = shallowRef<Component>();
 const screenshotId = ref<string | null>(null);
@@ -103,7 +105,8 @@ const loadContext = async (context: { projectId: string; kind?: 'screenshot' }) 
     editorData.value = null;
     screenshotId.value = null;
     try {
-      const editor = await import('../screenshot/ScreenshotEditor.vue');
+      screenshotStartup.start(context.projectId);
+      const editor = await screenshotStartup.measure('module', () => import('../screenshot/ScreenshotEditor.vue'));
       if (generation !== loadGeneration) return;
       ScreenshotEditor.value = editor.default;
       screenshotId.value = context.projectId;
@@ -111,6 +114,7 @@ const loadContext = async (context: { projectId: string; kind?: 'screenshot' }) 
       editorData.value = null;
     } catch (reason) {
       if (generation !== loadGeneration) return;
+      screenshotStartup.fail(reason);
       error.value = reason instanceof Error ? reason.message : String(reason);
     } finally {
       if (generation === loadGeneration) loading.value = false;

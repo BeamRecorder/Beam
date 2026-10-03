@@ -27,18 +27,17 @@ import ScreenshotCropSelection from './ScreenshotCropSelection.vue';
 import { rotateMediaVector } from '@beam/engine/layout/media-rotation';
 import { screenshotImageFraming, resizeScreenshotImage } from '@beam/engine/screenshot/screenshot-geometry';
 import CanvasLayerSelection from '../editor/canvas/CanvasLayerSelection.vue';
-import { loadScreenshotAssets } from './screenshot-render';
+import { useScreenshotCanvasAssets } from './useScreenshotCanvasAssets';
+import { injectScreenshotStartup } from './loading/screenshot-startup-context';
 import { releaseCompositedLayerSurface } from '@beam/runtime/composition/render-composited-layer';
 import { drawScreenshot } from '@beam/runtime/screenshot/screenshot-render';
 import CanvasRecenterButton from '../editor/canvas/CanvasRecenterButton.vue';
 import EditorLoadingFrame from '../editor/layout/EditorLoadingFrame.vue';
 import { moveScreenshotLayer } from './screenshot-state';
 import type { ScreenshotDrag, ScreenshotTranslation } from './screenshot-types';
-import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot-types';
 import { movableScreenshotSelection, withScreenshotTranslation } from './screenshot-selection-transform';
 import { screenshotLayerTransform, screenshotLayerRotation } from './screenshot-layer-geometry';
 import { screenshotLayers } from '@beam/engine/screenshot/screenshot-layers';
-import { createScreenshotImageLoader } from '@beam/runtime/screenshot/screenshot-image-loader';
 import ScreenshotMarqueeSurface from './ScreenshotMarqueeSurface.vue';
 import ScreenshotAlignmentGuides from './ScreenshotAlignmentGuides.vue';
 import { screenshotPreviewSize } from './screenshot-preview-resolution';
@@ -66,12 +65,19 @@ const viewport = useScreenshotViewport(
 const { available, stageSize, stageStyle } = viewport;
 defineExpose({ resetView: viewport.viewport.resetZoom, zoomPercent: viewport.viewport.zoomPercent });
 const canvas = ref<HTMLCanvasElement | null>(null);
-const assets = shallowRef<ScreenshotRenderAssets | null>(null);
-const loadImage = createScreenshotImageLoader();
-let generation = 0;
-let loadedGeneration = 0;
-let painted = false;
 const initialFramePending = ref(true);
+const startup = injectScreenshotStartup();
+const resources = useScreenshotCanvasAssets(
+  props,
+  () => paint(),
+  (reason) => {
+    initialFramePending.value = false;
+    startup?.fail(reason);
+    emit('error', String(reason));
+  },
+);
+const { assets } = resources;
+let painted = false;
 let drag: ScreenshotDrag | null = null;
 let rotating = false;
 const dragging = ref(false);
@@ -117,7 +123,7 @@ const { selections, selectionBounds, marqueeTargets, editingRotation3d } = useSc
   (bounds) => emit('selectionBounds', bounds),
 );
 const paint = () => {
-  if (loadedGeneration !== generation) return;
+  if (!resources.isReady()) return;
   const ctx = canvas.value?.getContext('2d');
   if (!ctx || !assets.value || !canvas.value || !available.width.value || !available.height.value) return;
   const { width, height } = screenshotPreviewSize(props.state.canvas, stageSize.value, window.devicePixelRatio);
@@ -149,13 +155,25 @@ const paint = () => {
         drag.selection?.[0] ?? props.selectedId,
         elements?.editing.value?.id,
       );
-    else drawScreenshot(ctx, preview, assets.value, width, height, elements?.editing.value?.id);
+    else {
+      const render = () => {
+        if (!painted && startup)
+          drawScreenshot(ctx, preview, assets.value!, width, height, elements?.editing.value?.id, (layer, ms) =>
+            startup.record(`layer.${layer.kind}:${layer.id}`, ms),
+          );
+        else drawScreenshot(ctx, preview, assets.value!, width, height, elements?.editing.value?.id);
+      };
+      if (!painted && startup) startup.time('firstRender', render);
+      else render();
+    }
     if (!painted) {
+      startup?.finish(width, height);
       painted = true;
       initialFramePending.value = false;
       emit('ready');
     }
   } catch (reason) {
+    startup?.fail(reason);
     initialFramePending.value = false;
     emit('error', String(reason));
   }
@@ -166,44 +184,6 @@ const frames = createCanvasFrameScheduler(
     paint();
   },
   () => false,
-);
-watch(
-  () => [
-    props.source,
-    props.state.background,
-    props.state.canvas.showBackground,
-    props.state.canvas.watermark,
-    props.state.shapes.map((c) => c.text?.style.fontAssetId),
-    props.state.cursors?.map((cursor) => [cursor.selection, cursor.color, cursor.enabled]),
-    props.state.images?.map((image) => image.source),
-    props.cursorPacks,
-    props.cursorPacksReady,
-    [props.state.canvas.width, props.state.canvas.height],
-  ],
-  async () => {
-    const current = ++generation;
-    if (
-      props.cursorPacksReady === false &&
-      props.state.cursors?.some(
-        (cursor) => cursor.enabled && !props.cursorPacks?.some((pack) => pack.id === cursor.selection.packId),
-      )
-    )
-      return;
-    try {
-      const next = await loadScreenshotAssets(props.source, props.state, props.cursorPacks, loadImage);
-      if (current === generation) {
-        assets.value = next;
-        loadedGeneration = current;
-        paint();
-      }
-    } catch (error) {
-      if (current === generation) {
-        initialFramePending.value = false;
-        emit('error', String(error));
-      }
-    }
-  },
-  { immediate: true, deep: true },
 );
 watch(() => elements?.editing.value?.id, frames.requestRender);
 watch(
@@ -382,7 +362,6 @@ watch(
   },
 );
 onBeforeUnmount(() => {
-  generation++;
   endDrag();
   if (rotating) endPropertyInteraction();
   const context = canvas.value?.getContext('2d');

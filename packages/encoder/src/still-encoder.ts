@@ -12,22 +12,40 @@ export async function encodeStillImage(
   options: StillEncodeOptions = {},
 ): Promise<ArrayBuffer> {
   if (!validScreenshotDimensions(state.canvas)) throw new StillEncodingError('dimensions');
-  const canvas = new OffscreenCanvas(state.canvas.width, state.canvas.height);
+  const size = options.outputSize ?? state.canvas;
+  if (!validScreenshotDimensions(size)) throw new StillEncodingError('dimensions');
+  const canvas = new OffscreenCanvas(size.width, size.height);
   const context = canvas.getContext('2d');
+  const measure = async <T>(stage: 'thumbnail' | 'encode' | 'bytes', action: () => T | Promise<T>): Promise<T> => {
+    const start = performance.now();
+    try {
+      return await action();
+    } finally {
+      options.onTiming?.(stage, performance.now() - start);
+    }
+  };
+  let blob: Blob;
   try {
     if (!context) throw new StillEncodingError('render-unavailable');
-    drawScreenshot(context, state, assets, canvas.width, canvas.height);
-    await options.onRendered?.(canvas);
+    const start = performance.now();
+    try {
+      drawScreenshot(context, state, assets, canvas.width, canvas.height);
+    } finally {
+      options.onTiming?.('render', performance.now() - start);
+    }
+    if (options.onRendered) await measure('thumbnail', () => options.onRendered!(canvas));
     const type = `image/${state.format}`;
-    const blob = await canvas.convertToBlob({
-      type,
-      quality: Math.max(0, Math.min(1, state.quality)),
-    });
+    blob = await measure('encode', () =>
+      canvas.convertToBlob({
+        type,
+        quality: Math.max(0, Math.min(1, state.quality)),
+      }),
+    );
     if (blob.type !== type) throw new StillEncodingError('encoding-unavailable');
-    return blob.arrayBuffer();
   } finally {
     if (context) releaseCompositedLayerSurface(context);
     canvas.width = 0;
     canvas.height = 0;
   }
+  return await measure('bytes', () => blob.arrayBuffer());
 }

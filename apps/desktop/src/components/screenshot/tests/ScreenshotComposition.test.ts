@@ -15,6 +15,17 @@ const compositionPosition = vi.hoisted(() => ({
   begin: vi.fn<(event: PointerEvent) => void>(),
   click: vi.fn(),
 }));
+const thumbnailLifecycle = vi.hoisted(() => ({ enabled: undefined as (() => boolean) | undefined }));
+vi.mock('../composition/thumbnails/useLayerThumbnails', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../composition/thumbnails/useLayerThumbnails')>();
+  return {
+    ...actual,
+    useLayerThumbnails: (...args: Parameters<typeof actual.useLayerThumbnails>) => {
+      thumbnailLifecycle.enabled = args[1];
+      return actual.useLayerThumbnails(...args);
+    },
+  };
+});
 
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: (namespace: string) => ({
@@ -88,6 +99,7 @@ const mountComposition = (
     selectedIds: string[];
     source: string;
     disabled: boolean;
+    previewReady: boolean;
   }> = {},
   attachTo?: Element,
 ) => {
@@ -328,6 +340,15 @@ afterEach(() => {
 });
 
 describe('ScreenshotComposition', () => {
+  it('defers layer thumbnail work until the first completed canvas preview', async () => {
+    const wrapper = mountComposition({ previewReady: false });
+    wrappers.push(wrapper);
+    expect(thumbnailLifecycle.enabled?.()).toBe(false);
+    await wrapper.setProps({ previewReady: true });
+    expect(thumbnailLifecycle.enabled?.()).toBe(true);
+    await wrapper.setProps({ previewReady: false });
+    expect(thumbnailLifecycle.enabled?.()).toBe(false);
+  });
   it('lists every layer front-to-back, labels every kind, and routes selection', async () => {
     const layers = allLayers();
     const wrapper = mountComposition({ layers });

@@ -19,6 +19,7 @@ export async function loadScreenshotAssets(
   state: ScreenshotState,
   packs?: readonly CursorPackDescriptor[],
   load = createScreenshotImageLoader(),
+  onTiming?: (stage: string, durationMs: number) => void,
 ): Promise<ScreenshotRenderAssets> {
   if (state.canvas.showBackground && state.background?.kind === 'video')
     throw new Error(i18n.global.t('ScreenshotEditor.backgroundError'));
@@ -30,6 +31,7 @@ export async function loadScreenshotAssets(
     fontSource: projectFontSource,
     cursorPacks,
     watermarkSource: resolvePublicAssetUrl(WATERMARK_LOGO_PATH),
+    onTiming,
   });
 }
 

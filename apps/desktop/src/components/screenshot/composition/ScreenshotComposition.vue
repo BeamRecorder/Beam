@@ -49,6 +49,7 @@ const props = defineProps<{
   source: string;
   disabled?: boolean;
   state?: ScreenshotState;
+  previewReady?: boolean;
   cursorPacks?: CursorPackDescriptor[];
   canGroup?: boolean;
   canMoveToGroup?: (id: string, groupId: string | null) => boolean;
@@ -136,7 +137,7 @@ const thumbnails = useLayerThumbnails(
     props.state
       ? screenshotThumbnailSpecs(props.state, props.source, props.cursorPacks ?? [], visibleThumbnailIds.value)
       : [],
-  () => !collapsed.value,
+  () => !collapsed.value && props.previewReady !== false,
   { allIds: () => compositionThumbnailIds(props.layers) },
 );
 const selectedSet = computed(() => new Set(props.selectedIds));

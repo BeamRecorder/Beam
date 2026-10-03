@@ -4,6 +4,7 @@ const path = require('path');
 const { randomUUID } = require('crypto');
 const { dimensions: validDimensions, validateScreenshotState } = require('./screenshot-validation.cjs');
 const { validateScreenshotHistory } = require('./screenshot-history.cjs');
+const { screenshotThumbnailUrl } = require('./screenshot-thumbnail.cjs');
 const { importMedia, importImageBuffer } = require('../projects/composition-project-media.cjs');
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const screenshotName = (value) => {
@@ -46,7 +47,7 @@ function createScreenshotStore(root) {
       mode: 'screenshot',
       sessionCount: 0,
       previewSrc: null,
-      thumbnailSrc: `project-media://screenshot/${id}/source.png`,
+      thumbnailSrc: screenshotThumbnailUrl(directory(id), id),
     };
   };
   const read = (id) => {
@@ -146,7 +147,9 @@ function createScreenshotStore(root) {
     fileForUrl(value) {
       try {
         const url = new URL(value);
-        const match = /^\/([^/]+)\/(source\.png|media\/[0-9a-f-]{36}\.(?:png|jpg|jpeg|webp))$/.exec(url.pathname);
+        const match = /^\/([^/]+)\/(source\.png|thumbnail\.webp|media\/[0-9a-f-]{36}\.(?:png|jpg|jpeg|webp))$/.exec(
+          url.pathname,
+        );
         if (url.protocol !== 'project-media:' || url.hostname !== 'screenshot' || !match) return null;
         const file = path.join(directory(match[1]), match[2]);
         if (match[2].startsWith('media/') && fs.lstatSync(path.dirname(file)).isSymbolicLink()) return null;

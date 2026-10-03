@@ -157,6 +157,7 @@ contextBridge.exposeInMainWorld(
     getScreenshot: (id) => ipcRenderer.invoke('screenshot:get', id),
     listScreenshots: () => ipcRenderer.invoke('screenshot:list'),
     saveScreenshot: (id, state, history) => ipcRenderer.invoke('screenshot:save', { id, state, history }),
+    saveScreenshotThumbnail: (id, input) => ipcRenderer.invoke('screenshot:save-thumbnail', { id, ...input }),
     openScreenshot: (id, options) => ipcRenderer.invoke('screenshot:open', id, options),
     exportScreenshot: (id, bytes, format, copy) => ipcRenderer.invoke('screenshot:export', { id, bytes, format, copy }),
     getEditorPresets: (kind = 'video') =>

@@ -29,6 +29,7 @@ function watchPaths(root, directory, manifest) {
   };
   add(directory);
   add(path.join(directory, 'media'));
+  add(path.join(directory, 'thumbnail.webp'));
   const sessions = Array.isArray(manifest?.sessions) ? manifest.sessions : [];
   for (const session of sessions) {
     if (typeof session?.relativePath !== 'string') continue;

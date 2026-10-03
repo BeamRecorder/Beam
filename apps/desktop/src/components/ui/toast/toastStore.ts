@@ -32,6 +32,7 @@ export interface ToastPreview {
   src: string;
   alt: string;
   count?: number;
+  status?: 'success' | 'error';
 }
 
 export interface Toast {
@@ -59,7 +60,8 @@ const samePreview = (left?: ToastPreview, right?: ToastPreview) =>
     left.kind === right.kind &&
     left.src === right.src &&
     left.alt === right.alt &&
-    left.count === right.count,
+    left.count === right.count &&
+    left.status === right.status,
   );
 
 const sameAction = (left?: ToastAction, right?: ToastAction) => {

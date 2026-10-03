@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Screenshot copy and image exports provide a timing report for resource loading, rendering, encoding, caching and native clipboard/file publication, available from the result toast and developer console.
+
 - Screenshot Composition shows expandable groups with their member layers together, including the logo and editable text in a brand group.
 - Screenshot Composition adds a Group shortcut beside effects, precise drag-and-drop into and out of groups, and fading layer names that scroll on sustained hover without horizontal scrollbars.
 - Screenshot group members can be selected individually from Composition, while group headers select all members; dropping above or between groups keeps layers in the root list.
@@ -59,6 +61,9 @@ User-facing changes to Beam are documented in this file.
 - Settings and Projects now open in separate, resizable desktop windows.
 
 ### Changed
+
+- Screenshot startup overlaps editor module loading with project reads, retains scene images in a bounded LRU cache, loads imported fonts concurrently and defers layer thumbnails until the first preview. Per-stage loading measurements are emitted to the development console.
+- Screenshot copy overlaps document saving with image encoding, loads fonts and images in parallel, and confirms copy/export completion with an output thumbnail and green success or red failure badge.
 
 - The Beautiful Captures promo keeps secondary feature labels and icons more visible while retaining the slot-machine hierarchy.
 - The Beautiful Captures promo composition uses Beam’s capture icons, the supplied rounded cursor SVG and a tighter layout with larger editable labels and one dashed Captures region.
@@ -156,6 +161,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Screenshot project thumbnails now show the edited composition, including HTML layers, gradients and text, and refresh automatically in the background after edits.
 - Moving a selected Screenshot group member changes only that layer; selecting the group header still moves all members together.
 - Screenshot canvas clicks select a group first, then its clicked member; double and triple clicks edit that member without expanding the selection.
 

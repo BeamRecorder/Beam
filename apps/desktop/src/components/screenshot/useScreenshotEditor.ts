@@ -13,7 +13,9 @@ import { editorTitle } from '../editor/editor-window-title';
 import { provideElementEditor } from '../editor/elements/useElementEditor';
 import { useTranslate } from '~/i18n/useTranslate';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { useToastStore } from '~/ui/toast/toastStore';
+import { useScreenshotExportToast } from './export/screenshot-export-toast';
+import { useScreenshotProjectThumbnail } from './export/useScreenshotProjectThumbnail';
+import { useScreenshotStartup } from './loading/useScreenshotStartup';
 import type { ScreenshotPanel, ScreenshotSelectionMode, ScreenshotTranslation } from './screenshot-types';
 import type { CanvasMarqueeSelection } from '../editor/canvas/canvas-marquee-types';
 import { useScreenshotSelection } from './useScreenshotSelection';
@@ -50,11 +52,17 @@ import {
   screenshotLayers,
 } from '@beam/engine/screenshot/screenshot-layers';
 
-export function useScreenshotEditor(id: () => string, ready: () => void, previewFullscreen: () => boolean) {
+export function useScreenshotEditor(
+  id: () => string,
+  ready: () => void,
+  previewFullscreen: () => boolean,
+  previewReady: () => boolean = () => true,
+) {
   const { t } = useTranslate('ScreenshotEditor');
   const { t: elementsText } = useTranslate('Elements');
   const { t: zoomText } = useTranslate('SidebarPanel');
-  const toast = useToastStore();
+  const notifyExport = useScreenshotExportToast();
+  const startup = useScreenshotStartup();
   const encodeScreenshot = useScreenshotEncoder();
   const document = ref<ScreenshotDocument | null>(null);
   const state = ref<ScreenshotState | null>(null);
@@ -341,7 +349,13 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     save,
     fail,
     encode: encodeScreenshot,
-    copiedToast: () => toast.success(t('copiedToast'), 5000),
+    notify: notifyExport,
+  });
+  const thumbnail = useScreenshotProjectThumbnail({
+    document,
+    state,
+    save,
+    blocked: () => !previewReady() || busy.value || propertyInteractionActive.value || Boolean(elements.editing.value),
   });
   const leave = async (navigate: () => unknown | Promise<unknown>) => {
     if (busy.value) return;
@@ -349,6 +363,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     busy.value = true;
     try {
       await save();
+      await thumbnail.flush();
       if (activePreset.value?.id === 'default' && dirty.value) await savePreset();
       await navigate();
     } catch (reason) {
@@ -388,11 +403,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     const current = ++generation;
     try {
       capture.reportEditorLoadingStage('loadingProject');
-      const [next, library, presetDocument] = await Promise.all([
-        capture.getScreenshot(id()),
-        capture.listBackgroundLibrary(),
-        capture.getEditorPresets('screenshot'),
-      ]);
+      const [next, library, presetDocument] = await startup.load(id());
       if (current !== generation) return;
       // Persisted state and history move into their respective owners below.
       // Keep only metadata here, rather than retaining a second edit history.
@@ -401,13 +412,17 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
       window.document.title = editorTitle(metadata.name);
       backgroundLibrary.value = library;
       presets.value = presetDocument;
-      const initial = screenshotState(next, library);
-      initializeScreenshotComposition(initial);
+      const initial = startup.time('state', () => {
+        const initial = screenshotState(next, library);
+        initializeScreenshotComposition(initial);
+        return initial;
+      });
       state.value = initial;
-      history.initialize(initial, savedHistory, 'transfer');
+      startup.time('history', () => history.initialize(initial, savedHistory, 'transfer'));
       presetEditor.initializeBaseline();
     } catch (reason) {
       if (current === generation) {
+        startup.fail(reason);
         fail(reason);
         ready();
       }
