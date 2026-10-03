@@ -17,6 +17,7 @@ import { benchmarkDocument } from './benchmark';
 import { writeJsonOutput } from '@beam/storage/node/atomic-output';
 import { createDocumentHost, serveDocument } from './document-host';
 import type { StillDocument } from '@beam/engine';
+import { parseExportOptions, exportWithBackend } from './export-backends';
 
 const help = `beam inspect DOCUMENT
 beam create video OUTPUT
@@ -25,7 +26,7 @@ beam edit DOCUMENT COMMANDS.json OUTPUT [--overwrite]
 beam benchmark DOCUMENT [ITERATIONS]
 beam frame REQUEST.json TIME_MS OUTPUT [--overwrite]
 beam motion JOB.json OUTPUT [--overwrite]
-beam export REQUEST.json OUTPUT [--overwrite]
+beam export REQUEST.json OUTPUT [--backend webcodecs|ffmpeg-vaapi] [--overwrite]
 beam browser install
 beam serve DOCUMENT
 beam capture COMMAND [PAYLOAD.json]
@@ -117,13 +118,13 @@ export async function runCliCommand(args: string[]) {
     value && typeof value === 'object' && 'kind' in value && value.kind === 'image' ? (value as StillDocument) : null;
   if (still) validateStillDocument(still);
   if (command === 'export') {
-    if (!second || (output && output !== '--overwrite') || flags.length) throw new Error(help);
-    const { exportInChromium } = await import('./chromium-export');
-    return exportInChromium(
+    if (!second) throw new Error(help);
+    const options = parseExportOptions(args.slice(3));
+    return exportWithBackend(
       still ? { kind: 'image', document: still } : readExportRequest(value),
       dirname(resolve(input)),
       resolve(second),
-      output === '--overwrite',
+      options,
     );
   }
   if (still && command === 'inspect' && args.length === 2)

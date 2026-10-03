@@ -1,9 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const {
-  validateExperimentalRequest,
-  readNativeResult,
-} = require('../apps/desktop/electron/export/experimental-export-validation.cjs');
+const { validateExperimentalRequest, readNativeResult } = require('@beam/electron-export/export-validation');
 const request = () => ({
   format: 'mp4',
   preset: 'medium',

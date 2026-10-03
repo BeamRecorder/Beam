@@ -3,14 +3,14 @@ const { homedir } = require('node:os');
 const { join } = require('node:path');
 const { startProcess } = require('./ffmpeg-process.cjs');
 const { createFramePump, sendGpuFrame } = require('./gpu-frame-transport.cjs');
-const { validateExperimentalRequest, readNativeResult } = require('./experimental-export-validation.cjs');
+const { validateExperimentalRequest, readNativeResult } = require('./export-validation.cjs');
 
 function createExperimentalGpuExport({
   ipcMain,
-  app,
   BrowserWindow,
-  applicationRoot,
-  developmentUrl = 'http://localhost:6500',
+  nativeDirectory,
+  renderer,
+  preload = join(__dirname, 'gpu-preload.cjs'),
 }) {
   const sessions = new Map();
   const requireSession = (event) => {
@@ -24,18 +24,12 @@ function createExperimentalGpuExport({
     clearTimeout(session.startupTimer);
     return session.request;
   });
-  ipcMain.handle('ffmpeg-gpu:prepare-frame', (event, sequence) => {
-    const session = requireSession(event);
-    if (sequence !== session.nextFrame || sequence >= session.geometry.frames)
-      throw new Error('Invalid experimental export frame order.');
-    session.pump.arm(sequence);
-    event.sender.stopPainting();
-  });
   ipcMain.handle('ffmpeg-gpu:frame', async (event, sequence) => {
     const session = requireSession(event);
     if (sequence !== session.nextFrame || sequence >= session.geometry.frames)
       throw new Error('Invalid experimental export frame order.');
     session.nextFrame += 1;
+    await session.pump.prepare(sequence);
     const captured = session.pump.capture(sequence);
     event.sender.startPainting();
     await captured;
@@ -76,10 +70,19 @@ function createExperimentalGpuExport({
       throw new Error('Invalid experimental export progress.');
     session.owner.send('export:ffmpeg-progress', { jobId: session.job.id, progress });
   });
-  ipcMain.handle('ffmpeg-gpu:complete', (event, diagnostics) => {
+  ipcMain.handle('ffmpeg-gpu:complete', async (event, diagnostics) => {
     const session = requireSession(event);
     if (session.nextFrame !== session.geometry.frames) throw new Error('Experimental export is incomplete.');
-    session.resolve(diagnostics);
+    const started = performance.now();
+    await session.pump.drain();
+    const drainedMs = performance.now() - started;
+    session.resolve({
+      ...diagnostics,
+      elapsedMs: diagnostics.elapsedMs + drainedMs,
+      videoPipelineMs: diagnostics.videoPipelineMs + drainedMs,
+      encoderBackpressureMs: diagnostics.encoderBackpressureMs + drainedMs,
+      encodedFps: session.geometry.frames / Math.max(0.001, (diagnostics.videoPipelineMs + drainedMs) / 1000),
+    });
   });
   ipcMain.handle('ffmpeg-gpu:error', (event, message) =>
     requireSession(event).reject(new Error(String(message).slice(0, 16_384))),
@@ -87,16 +90,15 @@ function createExperimentalGpuExport({
 
   async function run(owner, job, request) {
     if (process.platform !== 'linux') throw new Error('Experimental FFmpeg GPU export is Linux-only.');
+    if (!nativeDirectory || !renderer || (!renderer.url && !renderer.file))
+      throw new Error('The GPU export host requires native and renderer locations.');
     const geometry = validateExperimentalRequest(request);
     const checkCancelled = () => {
       if (job.cancelled) throw new Error('Experimental GPU export cancelled.');
     };
     checkCancelled();
-    const root = app.isPackaged
-      ? join(process.resourcesPath, 'ffmpeg-export')
-      : join(applicationRoot, 'build/native/ffmpeg-export');
-    const executable = join(root, 'beam-ffmpeg-export');
-    const transport = join(root, 'beam-gpu-transport.node');
+    const executable = join(nativeDirectory, 'beam-ffmpeg-export');
+    const transport = join(nativeDirectory, 'beam-gpu-transport.node');
     if (!fs.existsSync(executable) || !fs.existsSync(transport))
       throw new Error('The experimental GPU backend is not built. Run bun run build:ffmpeg-export.');
     const bridge = require(transport);
@@ -154,7 +156,7 @@ function createExperimentalGpuExport({
         transparent: false,
         webPreferences: {
           offscreen: { useSharedTexture: true, deviceScaleFactor: 1 },
-          preload: join(__dirname, 'experimental-gpu-preload.cjs'),
+          preload,
           sandbox: true,
           contextIsolation: true,
           nodeIntegration: false,
@@ -177,6 +179,9 @@ function createExperimentalGpuExport({
       // Shared-texture OSR accepts rates above the bitmap limit of 240. This
       // accelerates presentation scheduling, not the output video's frame rate.
       window.webContents.setFrameRate(1000);
+      // Drawing is independent of capture. Keep capture paused from startup;
+      // one frame IPC resumes it after the renderer's presentation boundary.
+      window.webContents.stopPainting();
       const complete = new Promise((resolve, reject) => {
         session = {
           owner,
@@ -192,8 +197,12 @@ function createExperimentalGpuExport({
           audioFile: null,
           audioQueue: Promise.resolve(),
           startupTimer: setTimeout(() => reject(new Error('GPU export renderer startup timed out.')), 30_000),
-          pump: createFramePump(window.webContents, (info, sequence) =>
-            sendGpuFrame(bridge, socket, info, sequence, geometry.width, geometry.height),
+          pump: createFramePump(
+            window.webContents,
+            (info, sequence) => sendGpuFrame(bridge, socket, info, sequence, geometry.width, geometry.height),
+            15000,
+            () => performance.now(),
+            Math.max(1, Math.min(3, Math.floor((128 * 1024 ** 2) / (geometry.width * geometry.height * 4)))),
           ),
         };
       });
@@ -207,9 +216,7 @@ function createExperimentalGpuExport({
       window.once('closed', () => {
         if (!closed) session.reject(new Error('GPU export window closed unexpectedly.'));
       });
-      const loading = app.isPackaged
-        ? window.loadFile(join(applicationRoot, 'dist/html/export-gpu.html'))
-        : window.loadURL(`${developmentUrl}/html/export-gpu.html`);
+      const loading = renderer.file ? window.loadFile(renderer.file) : window.loadURL(renderer.url);
       loading.catch(session.reject);
       checkCancelled();
       const diagnostics = await complete;
@@ -273,6 +280,10 @@ function createExperimentalGpuExport({
         keyFrameCount: encoded.keyframes,
         nativeConversionMs: encoded.conversionMs,
         nativeEncodingMs: encoded.encodingMs,
+        gpuCaptureWaitMs: session.pump.timings.captureWaitMs,
+        gpuTransferWaitMs: session.pump.timings.transferWaitMs,
+        gpuFrameQueueCapacity: session.pump.timings.capacity,
+        gpuFrameQueuePeak: session.pump.timings.peakFrames,
         videoEncoderImplementation: 'ffmpeg-vaapi',
         frameTransfer: 'dma-buf-direct',
         videoCodec: request.format === 'mp4' ? 'avc' : 'vp9',

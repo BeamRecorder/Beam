@@ -21,7 +21,7 @@ export async function buildRenderBundle(directory: string) {
       outDir: directory,
       emptyOutDir: true,
       modulePreload: { polyfill: false },
-      rollupOptions: { input: resolve(root, 'export.html') },
+      rollupOptions: { input: [resolve(root, 'export.html'), resolve(root, 'gpu-export.html')] },
     },
   });
   const files = await listBundle(directory);

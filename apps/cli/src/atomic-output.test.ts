@@ -104,3 +104,29 @@ describe('owned CLI outputs', () => {
     await output.abort();
   });
 });
+describe('direct native writes to the owned staging inode', () => {
+  it('synchronizes external writes before publishing the destination', async () => {
+    const path = await destination();
+    const output = await createBinaryOutput(path, false);
+    await writeFile(output.temporaryPath, 'native output');
+    await output.finalize();
+    expect(await readFile(path, 'utf8')).toBe('native output');
+  });
+  it('removes cancelled external writes without publishing a destination', async () => {
+    const path = await destination();
+    const output = await createBinaryOutput(path, false);
+    await writeFile(output.temporaryPath, 'partial native output');
+    await output.abort();
+    await expect(readFile(path)).rejects.toThrow('ENOENT');
+    await expect(readFile(output.temporaryPath)).rejects.toThrow('ENOENT');
+  });
+  it('preserves an existing destination when the external writer is not authorized to overwrite', async () => {
+    const path = await destination();
+    await writeFile(path, 'existing');
+    const output = await createBinaryOutput(path, false);
+    await writeFile(output.temporaryPath, 'replacement');
+    await expect(output.finalize()).rejects.toThrow();
+    await output.abort();
+    expect(await readFile(path, 'utf8')).toBe('existing');
+  });
+});

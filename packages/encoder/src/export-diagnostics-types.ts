@@ -28,6 +28,10 @@ export interface ExportRuntimeDiagnostics {
   presentationMs?: number;
   nativeConversionMs?: number;
   nativeEncodingMs?: number;
+  gpuCaptureWaitMs?: number;
+  gpuTransferWaitMs?: number;
+  gpuFrameQueueCapacity?: number;
+  gpuFrameQueuePeak?: number;
   inputVideoCodecs: string[];
   inputAudioCodecs: string[];
   hardwareAcceleration?: 'no-preference' | 'prefer-hardware' | 'prefer-software';

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 const render = vi.hoisted(() => vi.fn());
-vi.mock('../experimental-renderer', () => ({ renderExperimentalExport: render }));
+vi.mock('@beam/encoder/gpu-export/experimental-renderer', () => ({ renderExperimentalExport: render }));
 afterEach(() => {
   delete window.gpuExport;
   vi.resetModules();

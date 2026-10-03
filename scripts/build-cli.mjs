@@ -18,7 +18,7 @@ await buildBrowser({
     outDir: resolve(output, 'browser'),
     emptyOutDir: true,
     modulePreload: { polyfill: false },
-    rollupOptions: { input: resolve(root, 'apps/cli/export.html') },
+    rollupOptions: { input: [resolve(root, 'apps/cli/export.html'), resolve(root, 'apps/cli/gpu-export.html')] },
   },
 });
 await mkdir(resolve(output, 'browser/brand'), { recursive: true });
@@ -40,6 +40,16 @@ const result = await Bun.build({
   naming: { entry: '[name].mjs', chunk: '[name]-[hash].mjs' },
 });
 if (!result.success) throw new AggregateError(result.logs, 'CLI compilation failed.');
+const gpuHost = await Bun.build({
+  entrypoints: [resolve(root, 'apps/cli/src/ffmpeg-host.cjs')],
+  outdir: output,
+  target: 'node',
+  format: 'cjs',
+  external: ['electron'],
+  naming: '[name].cjs',
+});
+if (!gpuHost.success) throw new AggregateError(gpuHost.logs, 'GPU export host compilation failed.');
+await cp(resolve(root, 'packages/electron-export/src/gpu-preload.cjs'), resolve(output, 'gpu-preload.cjs'));
 await packageCliCompiler(root, output);
 await writeFile(
   resolve(output, 'version.json'),

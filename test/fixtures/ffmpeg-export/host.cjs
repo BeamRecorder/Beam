@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
-const { createExperimentalGpuExport } = require('../../../apps/desktop/electron/export/experimental-gpu-export.cjs');
+const { createExperimentalGpuExport } = require('@beam/electron-export');
 const directory = process.env.BEAM_TEST_DIRECTORY;
 const format = process.env.BEAM_TEST_FORMAT || 'mp4';
 app.setPath('userData', path.join(directory, 'profile'));
@@ -153,10 +153,13 @@ app
     }
     const service = createExperimentalGpuExport({
       ipcMain,
-      app,
       BrowserWindow,
-      applicationRoot: path.resolve(__dirname, '../../..'),
-      developmentUrl: process.env.BEAM_TEST_RENDERER_URL,
+      nativeDirectory: path.resolve(__dirname, '../../../build/native/ffmpeg-export'),
+      renderer: {
+        url:
+          process.env.BEAM_TEST_RENDERER_PAGE ||
+          `${process.env.BEAM_TEST_RENDERER_URL || 'http://localhost:6500'}/html/export-gpu.html`,
+      },
     });
     const job = { id: 'hardware-test', temporaryPath: path.join(directory, `result.${format}`) };
     const owner = {

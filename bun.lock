@@ -5,6 +5,7 @@
     "": {
       "name": "beam",
       "dependencies": {
+        "@beam/electron-export": "workspace:*",
         "@beam/encoder": "workspace:*",
         "@beam/engine": "workspace:*",
         "@beam/native-client": "workspace:*",
@@ -51,6 +52,7 @@
         "beam": "./src/index.ts",
       },
       "dependencies": {
+        "@beam/electron-export": "workspace:*",
         "@beam/encoder": "workspace:*",
         "@beam/engine": "workspace:*",
         "@beam/native-client": "workspace:*",
@@ -86,6 +88,13 @@
         "pinia": "^4.0.3",
         "vue": "^3.5.43",
         "vue-i18n": "^11.4.12",
+      },
+    },
+    "packages/electron-export": {
+      "name": "@beam/electron-export",
+      "version": "0.1.0",
+      "peerDependencies": {
+        "electron": "^44.5.1",
       },
     },
     "packages/encoder": {
@@ -226,6 +235,8 @@
     "@beam/cli": ["@beam/cli@workspace:apps/cli"],
 
     "@beam/desktop": ["@beam/desktop@workspace:apps/desktop"],
+
+    "@beam/electron-export": ["@beam/electron-export@workspace:packages/electron-export"],
 
     "@beam/encoder": ["@beam/encoder@workspace:packages/encoder"],
 

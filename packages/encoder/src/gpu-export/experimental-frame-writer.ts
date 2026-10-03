@@ -1,9 +1,9 @@
 import type { AudioFrameWriter, VideoFrameWriter } from '@beam/encoder/mediabunny/video-pipeline-types';
-import type { ExperimentalGpuExportApi } from './experimental-export-types';
+import type { ExperimentalGpuExportApi } from './gpu-export-types';
 
 const presentCanvas = () =>
   new Promise<void>((resolve) => {
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    requestAnimationFrame(() => resolve());
   });
 
 export function createGpuExportWriter(
@@ -18,13 +18,12 @@ export function createGpuExportWriter(
   return {
     async prepareVideo(frame) {
       if (videoClosed || prepared || frame !== sequence) throw new Error('Invalid GPU export frame preparation.');
-      await api.prepareFrame(frame);
       prepared = true;
     },
     async addVideo() {
       if (videoClosed || !prepared) throw new Error('GPU export frame is not prepared.');
-      // The offscreen capturer is paused while the canvas changes. Resume it only
-      // after Chromium has composited this frame; never request a CPU bitmap.
+      // Capture stays paused while the canvas changes. The host resumes it at
+      // the next presentation boundary; never request a CPU bitmap.
       const started = performance.now();
       await present();
       onPresentation?.(performance.now() - started);

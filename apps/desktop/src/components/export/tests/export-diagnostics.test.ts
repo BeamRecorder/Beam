@@ -103,6 +103,10 @@ describe('buildBeamExportReport', () => {
         audioEncoderImplementation: 'ffmpeg' as const,
         presentationMs: 200,
         nativeConversionMs: 120,
+        gpuCaptureWaitMs: 1500,
+        gpuTransferWaitMs: 400,
+        gpuFrameQueueCapacity: 3,
+        gpuFrameQueuePeak: 2,
         nativeEncodingMs: 80,
       },
     };
@@ -119,6 +123,9 @@ describe('buildBeamExportReport', () => {
     expect(report).toContain('separate FFmpeg encoder process excluded');
     expect(report).toContain('Audio Encoder: FFmpeg');
     expect(report).toContain('Chromium Presentation Wait: 200 ms');
+    expect(report).toContain('Chromium GPU Texture Capture Wait: 1500 ms');
+    expect(report).toContain('GPU Texture Transfer / Acknowledgement: 400 ms');
+    expect(report).toContain('GPU Texture Queue: peak 2 / 3 retained frames');
     expect(report).toContain('Native GPU Import / Conversion: 120 ms');
     expect(report).toContain('Native Encode / Mux: 80 ms');
     expect(report).not.toContain('Hardware Acceleration Request:');

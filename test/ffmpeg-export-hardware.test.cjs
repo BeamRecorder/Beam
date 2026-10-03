@@ -74,7 +74,11 @@ function runCase(
       ]);
     command(
       path.join(root, 'node_modules/electron/dist/electron'),
-      ['--ozone-platform=x11', path.join(__dirname, 'fixtures/ffmpeg-export/host.cjs')],
+      [
+        '--ozone-platform=x11',
+        ...(process.env.BEAM_TEST_UNLIMITED_CAPTURE === '1' ? ['--disable-frame-rate-limit'] : []),
+        path.join(__dirname, 'fixtures/ffmpeg-export/host.cjs'),
+      ],
       { env },
     );
     if (cancel) {

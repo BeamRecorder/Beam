@@ -9,6 +9,7 @@ const allowed = {
   storage: new Set(['@beam/storage']),
   'native-client': new Set(['@beam/native-client']),
   'system-metrics': new Set(['@beam/system-metrics']),
+  'electron-export': new Set(['@beam/electron-export', 'electron']),
   engine: new Set(['@beam/engine']),
   runtime: new Set(['@beam/engine', '@beam/runtime', 'mediabunny']),
   encoder: new Set([
@@ -75,7 +76,9 @@ for (const [name, dependencies] of Object.entries(allowed)) {
         return;
       }
       if (
-        (name === 'native-client' || (name === 'storage' && filename.includes(path.sep + 'node' + path.sep))) &&
+        (name === 'native-client' ||
+          name === 'electron-export' ||
+          (name === 'storage' && filename.includes(path.sep + 'node' + path.sep))) &&
         builtinModules.includes(specifier.replace(/^node:/, ''))
       )
         return;

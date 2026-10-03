@@ -134,6 +134,8 @@ Beam's framework-independent engine provides the same document commands, immutab
 
 The packaged application includes `beam-cli` (`beam-cli.cmd` on Windows); Linux also accepts `beam --cli`. In development, use `bun run beam`. Commands support creating video/image documents, editing, JSON-lines transactions, native capture, frame extraction, HTML/Vue motion and MP4/WebM/PNG/WebP export. Codecs and GPU rendering use an explicit Chromium backend; install it with `beam-cli browser install` or configure `BEAM_CHROMIUM_EXECUTABLE`.
 
+Video export accepts `beam-cli export request.json output.mp4 --backend webcodecs` (default), or `--backend ffmpeg-vaapi` for experimental Linux GPU export. Both use Beam's common renderer. FFmpeg requires a working X11/XWayland display, VA-API drivers and built native artifacts; see [setup and CLI usage](./docs/dev/ffmpeg-gpu-export.md).
+
 ## 💬 Join the Beam community
 
 Have feedback, ideas, or questions? Join the Beam community on Discord and follow the project on GitHub.

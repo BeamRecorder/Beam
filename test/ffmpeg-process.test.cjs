@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
-const { startProcess } = require('../apps/desktop/electron/export/ffmpeg-process.cjs');
+const { startProcess } = require('@beam/electron-export/ffmpeg-process');
 function fixture(timeoutMs = 1000) {
   const child = new EventEmitter();
   child.stdout = new EventEmitter();

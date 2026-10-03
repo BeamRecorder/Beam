@@ -23,12 +23,23 @@ function registerExportIpc({
   defaultExportDirectory = null,
   resolveAutomaticDestination = () => null,
   createGpuMonitor,
-  createExperimentalExport = require('./experimental-gpu-export.cjs').createExperimentalGpuExport,
+  createExperimentalExport = require('@beam/electron-export').createExperimentalGpuExport,
   fsModule = fs,
   pathModule = path,
 }) {
   const jobs = new Map();
-  const experimental = createExperimentalExport({ ipcMain, app, BrowserWindow, applicationRoot });
+  const experimental = createExperimentalExport({
+    ipcMain,
+    BrowserWindow,
+    nativeDirectory: app?.isPackaged
+      ? pathModule.join(process.resourcesPath, 'ffmpeg-export')
+      : applicationRoot
+        ? pathModule.join(applicationRoot, 'build/native/ffmpeg-export')
+        : null,
+    renderer: app?.isPackaged
+      ? { file: pathModule.join(applicationRoot, 'dist/html/export-gpu.html') }
+      : { url: 'http://localhost:6500/html/export-gpu.html' },
+  });
   const ownerId = (event) => event.sender.id;
   const requireJob = (event, jobId) => {
     const job = jobs.get(jobId);

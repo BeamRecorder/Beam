@@ -1,10 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { AudioSample } from 'mediabunny';
-import { createGpuExportWriter } from '../experimental-frame-writer';
-import type { ExperimentalGpuExportApi } from '../experimental-export-types';
+import { createGpuExportWriter } from '@beam/encoder/gpu-export/experimental-frame-writer';
+import type { ExperimentalGpuExportApi } from '@beam/encoder/gpu-export/gpu-export-types';
 const fixture = () => {
   const api = {
-    prepareFrame: vi.fn().mockResolvedValue(undefined),
     frame: vi.fn().mockResolvedValue(undefined),
     audio: vi.fn().mockResolvedValue(undefined),
   };
@@ -20,7 +19,7 @@ const sample = (channels = 2, rate = 48000) =>
     timestamp: 0.5,
   });
 describe('experimental GPU frame writer', () => {
-  it('measures compositor presentation separately from the native acknowledgement wait', async () => {
+  it('measures compositor presentation before the capture acknowledgement wait', async () => {
     const { api, present } = fixture();
     const measured = vi.fn();
     const clock = vi.spyOn(performance, 'now').mockReturnValueOnce(100).mockReturnValueOnce(121);
@@ -40,7 +39,6 @@ describe('experimental GPU frame writer', () => {
       await writer.prepareVideo!(frame);
       await writer.addVideo(frame / 30, 1 / 30);
     }
-    expect(api.prepareFrame.mock.calls).toEqual([[0], [1], [2]]);
     expect(api.frame.mock.calls).toEqual([[0], [1], [2]]);
     expect(present).toHaveBeenCalledTimes(3);
     expect(present.mock.invocationCallOrder[0]).toBeLessThan(api.frame.mock.invocationCallOrder[0]!);
@@ -60,7 +58,7 @@ describe('experimental GPU frame writer', () => {
     expect(api.frame.mock.calls).toEqual([[0], [0]]);
     await writer.prepareVideo!(1);
   });
-  it('waits for two animation frames with the default presentation scheduler', async () => {
+  it('waits for the canvas presentation boundary before requesting capture', async () => {
     const { api } = fixture();
     const callbacks: FrameRequestCallback[] = [];
     const raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
@@ -73,10 +71,9 @@ describe('experimental GPU frame writer', () => {
       const task = writer.addVideo(0, 1);
       expect(api.frame).not.toHaveBeenCalled();
       callbacks.shift()!(0);
-      expect(api.frame).not.toHaveBeenCalled();
-      callbacks.shift()!(1);
       await task;
       expect(api.frame).toHaveBeenCalledWith(0);
+      expect(callbacks).toHaveLength(0);
     } finally {
       raf.mockRestore();
     }

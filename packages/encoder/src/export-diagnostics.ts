@@ -174,6 +174,9 @@ export function buildBeamExportReport(options: {
     ...(runtime?.videoEncoderImplementation === 'ffmpeg-vaapi'
       ? [
           `    Chromium Presentation Wait: ${finite(runtime.presentationMs)}`,
+          `    Chromium GPU Texture Capture Wait: ${finite(runtime.gpuCaptureWaitMs)}`,
+          `    GPU Texture Transfer / Acknowledgement: ${finite(runtime.gpuTransferWaitMs)}`,
+          `    GPU Texture Queue: peak ${runtime.gpuFrameQueuePeak ?? 'Unknown'} / ${runtime.gpuFrameQueueCapacity ?? 'Unknown'} retained frames`,
           `    Native GPU Import / Conversion: ${finite(runtime.nativeConversionMs)}`,
           `    Native Encode / Mux: ${finite(runtime.nativeEncodingMs)}`,
           '    Native timings include setup and flush; they are not additive pipeline stages.',

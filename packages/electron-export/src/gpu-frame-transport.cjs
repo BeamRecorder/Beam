@@ -1,3 +1,5 @@
+const { createGpuFrameQueue } = require('./gpu-frame-queue.cjs');
+
 function frameArguments(info, sequence, width, height, socket) {
   if (!info || !['rgba', 'bgra'].includes(info.pixelFormat)) throw new Error('Unsupported GPU export texture format.');
   if (info.codedSize?.width !== width || info.codedSize?.height !== height)
@@ -37,24 +39,24 @@ function frameArguments(info, sequence, width, height, socket) {
   };
 }
 
-function createFramePump(webContents, submit, timeoutMs = 15_000) {
+function createFramePump(webContents, submit, timeoutMs = 15_000, now = () => performance.now(), queueDepth = 3) {
   let pending = null;
   let disposed = false;
-  let inFlight = Promise.resolve();
   let armed = null;
-  let busy = false;
+  let captureWaitMs = 0;
+  const queue = createGpuFrameQueue(submit, queueDepth, now);
   const deliver = (texture, frame) => {
     pending = null;
     armed = null;
-    busy = true;
-    inFlight = (async () => {
-      try {
-        await submit(texture.textureInfo, frame.sequence);
-      } finally {
-        texture.release();
-        busy = false;
-      }
-    })().then(frame.resolve, frame.reject);
+    captureWaitMs += now() - frame.startedAt;
+    webContents.stopPainting?.();
+    try {
+      queue.enqueue(texture, frame.sequence);
+      frame.resolve();
+    } catch (error) {
+      texture.release();
+      frame.reject(error);
+    }
   };
   const paint = (event) => {
     const texture = event.texture;
@@ -67,11 +69,19 @@ function createFramePump(webContents, submit, timeoutMs = 15_000) {
   };
   webContents.on('paint', paint);
   return {
+    get timings() {
+      return { captureWaitMs, ...queue.timings };
+    },
+    async prepare(sequence) {
+      await queue.ready();
+      this.arm(sequence);
+    },
     arm(sequence) {
-      if (disposed || pending || busy || armed !== null)
+      if (disposed || pending || armed !== null)
         throw new Error('GPU frame preparation is unavailable or already pending.');
       armed = sequence;
     },
+    drain: () => queue.drain(),
     capture(sequence) {
       if (disposed || pending || armed !== sequence)
         return Promise.reject(new Error('GPU frame capture is unavailable or already pending.'));
@@ -85,7 +95,7 @@ function createFramePump(webContents, submit, timeoutMs = 15_000) {
           clearTimeout(timer);
           callback(value);
         };
-        pending = { sequence, resolve: finish(resolve), reject: finish(reject) };
+        pending = { sequence, startedAt: now(), resolve: finish(resolve), reject: finish(reject) };
       });
     },
     async dispose() {
@@ -94,7 +104,7 @@ function createFramePump(webContents, submit, timeoutMs = 15_000) {
       pending = null;
       armed = null;
       webContents.removeListener('paint', paint);
-      await inFlight;
+      await queue.dispose();
     },
   };
 }

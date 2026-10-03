@@ -34,4 +34,25 @@ describe('headless backend choices', () => {
   it('rejects an unknown backend instead of silently changing renderers', () => {
     expect(() => chromiumSettings({ BEAM_CHROMIUM_GPU: 'unavailable' })).toThrow('software or hardware');
   });
+  it('retains automatic video decoding by default', () => {
+    expect(chromiumSettings({}).args).not.toContain('--disable-accelerated-video-decode');
+    expect(chromiumSettings({ BEAM_CHROMIUM_VIDEO_DECODE: 'auto' }).args).not.toContain(
+      '--disable-accelerated-video-decode',
+    );
+  });
+  it.each(['linux', 'win32', 'darwin'] as const)(
+    'can disable a failing hardware decoder on %s independently of GPU rendering',
+    (platform) => {
+      const settings = chromiumSettings(
+        { BEAM_CHROMIUM_GPU: 'hardware', BEAM_CHROMIUM_VIDEO_DECODE: 'software' },
+        platform,
+      );
+      expect(settings.args).toContain('--disable-accelerated-video-decode');
+      expect(settings.args).toContain('--enable-gpu');
+      expect(settings.args).not.toContain('--use-angle=swiftshader');
+    },
+  );
+  it('rejects unknown decoder settings', () => {
+    expect(() => chromiumSettings({ BEAM_CHROMIUM_VIDEO_DECODE: 'unknown' })).toThrow('auto or software');
+  });
 });

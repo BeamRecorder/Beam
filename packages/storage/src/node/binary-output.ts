@@ -9,6 +9,8 @@ export async function createBinaryOutput(destination: string, overwrite: boolean
   let closed = false;
   let finalized = false;
   return {
+    /** Trusted host backends may write directly to this owned staging inode. */
+    temporaryPath: temporary,
     async write(position: number, data: Uint8Array) {
       if (closed) throw new Error('Export output is closed.');
       if (!Number.isSafeInteger(position) || position < 0) throw new RangeError('Invalid output position.');

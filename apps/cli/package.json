@@ -13,7 +13,8 @@
     "@beam/storage": "workspace:*",
     "@beam/native-client": "workspace:*",
     "@vitejs/plugin-vue": "^6.0.9",
-    "@beam/system-metrics": "workspace:*"
+    "@beam/system-metrics": "workspace:*",
+    "@beam/electron-export": "workspace:*"
   },
   "bin": {
     "beam": "./src/index.ts"

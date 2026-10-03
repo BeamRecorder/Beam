@@ -10,7 +10,7 @@
   },
   "type": "module",
   "packageManager": "bun@1.4.2",
-  "main": "apps/desktop/electron/main.cjs",
+  "main": "apps/desktop/electron/entry.cjs",
   "workspaces": [
     "website",
     "packages/engine",
@@ -20,7 +20,8 @@
     "apps/desktop",
     "packages/storage",
     "packages/native-client",
-    "packages/system-metrics"
+    "packages/system-metrics",
+    "packages/electron-export"
   ],
   "overrides": {
     "@unhead/dom": "3.4.2",
@@ -40,8 +41,8 @@
     "rust-test:coverage": "powershell.exe -NoProfile -Command \"cargo llvm-cov --workspace --all-features --html --output-dir coverage/rust; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; cargo llvm-cov report --text --show-missing-lines; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; cargo llvm-cov report --lcov --output-path coverage/rust/lcov.info\"",
     "typecheck": "tsc -p tsconfig.typecheck.json --noEmit --pretty false",
     "typecheck:vue": "vue-tsc -b --pretty false",
-    "format": "oxfmt --write \"apps/desktop/src/**/*.{vue,ts}\" \"packages/{engine,runtime,encoder,storage,native-client,system-metrics}/src/**/*.{ts,js,cjs}\" \"apps/cli/src/**/*.{ts,cjs}\" \"website/**/*.{vue,ts,css,html,json,jsonc}\" \"apps/desktop/electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
-    "format:check": "oxfmt --check \"apps/desktop/src/**/*.{vue,ts}\" \"packages/{engine,runtime,encoder,storage,native-client,system-metrics}/src/**/*.{ts,js,cjs}\" \"apps/cli/src/**/*.{ts,cjs}\" \"website/**/*.{vue,ts,css,html,json,jsonc}\" \"apps/desktop/electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
+    "format": "oxfmt --write \"apps/desktop/src/**/*.{vue,ts}\" \"packages/{engine,runtime,encoder,storage,native-client,system-metrics,electron-export}/src/**/*.{ts,js,cjs}\" \"apps/cli/src/**/*.{ts,cjs}\" \"website/**/*.{vue,ts,css,html,json,jsonc}\" \"apps/desktop/electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
+    "format:check": "oxfmt --check \"apps/desktop/src/**/*.{vue,ts}\" \"packages/{engine,runtime,encoder,storage,native-client,system-metrics,electron-export}/src/**/*.{ts,js,cjs}\" \"apps/cli/src/**/*.{ts,cjs}\" \"website/**/*.{vue,ts,css,html,json,jsonc}\" \"apps/desktop/electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
     "lint": "oxlint --vue-plugin",
     "dev": "vite",
     "website:dev": "bun run --filter @beam/website dev",
@@ -81,7 +82,8 @@
     "@beam/encoder": "workspace:*",
     "@beam/storage": "workspace:*",
     "@beam/native-client": "workspace:*",
-    "@beam/system-metrics": "workspace:*"
+    "@beam/system-metrics": "workspace:*",
+    "@beam/electron-export": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",
@@ -109,7 +111,8 @@
       "packages/engine/src/scene/scene-schema.js",
       "packages/storage/src/node/*.cjs",
       "packages/native-client/src/*.cjs",
-      "packages/system-metrics/src/node/*.cjs"
+      "packages/system-metrics/src/node/*.cjs",
+      "packages/electron-export/src/*.cjs"
     ],
     "directories": {
       "output": "dist_electron"

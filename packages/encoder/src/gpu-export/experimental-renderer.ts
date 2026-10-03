@@ -9,7 +9,7 @@ import { openExportAssets } from '@beam/encoder/mediabunny/export-worker-assets'
 import { renderExportVideo, renderExportAudio } from '@beam/encoder/mediabunny/export-worker-pipelines';
 import type { ExportRuntimeDiagnostics } from '@beam/encoder/export-diagnostics-types';
 import type { ExportProgress } from '@beam/encoder/export-types';
-import type { ExperimentalGpuExportApi } from './experimental-export-types';
+import type { ExperimentalGpuExportApi } from './gpu-export-types';
 import { createGpuExportWriter } from './experimental-frame-writer';
 
 export async function renderExperimentalExport(api: ExperimentalGpuExportApi) {

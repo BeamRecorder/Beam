@@ -1,7 +1,5 @@
+import { serveRegisteredAsset } from './asset-server';
 import type { GpuMonitor } from '@beam/system-metrics/node/gpu-monitor';
-import { createReadStream } from 'node:fs';
-import { stat } from 'node:fs/promises';
-import { extname } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { CliRenderJob } from './render-job-types';
 import type { createBinaryOutput } from '@beam/storage/node/binary-output';
@@ -22,7 +20,7 @@ export function createExportServer(
   auth: string,
   job: CliRenderJob,
   files: Map<string, string>,
-  output: Awaited<ReturnType<typeof createBinaryOutput>>,
+  output: Pick<Awaited<ReturnType<typeof createBinaryOutput>>, 'write' | 'finalize' | 'abort'>,
   completed: (result: unknown) => void,
   failed: (error: Error) => void,
   gpuMonitor?: () => GpuMonitor | undefined,
@@ -39,38 +37,7 @@ export function createExportServer(
       return json({ error: 'Unauthorized CLI job.' });
     }
     try {
-      if (url.pathname.startsWith('/beam-cli/asset/') && request.method === 'GET') {
-        const file = files.get(url.pathname.slice('/beam-cli/asset/'.length));
-        if (!file) throw new Error('Unknown export asset.');
-        const { size } = await stat(file);
-        const range = request.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
-        const start = range ? Number(range[1]) : 0;
-        const end = range && range[2] ? Math.min(Number(range[2]), size - 1) : size - 1;
-        if (start < 0 || end < start || end >= size) {
-          response.statusCode = 416;
-          return response.end();
-        }
-        const mediaTypes: Record<string, string> = {
-          '.svg': 'image/svg+xml',
-          '.png': 'image/png',
-          '.jpg': 'image/jpeg',
-          '.jpeg': 'image/jpeg',
-          '.webm': 'video/webm',
-          '.mp4': 'video/mp4',
-        };
-        response.setHeader('Content-Type', mediaTypes[extname(file).toLowerCase()] ?? 'application/octet-stream');
-        response.setHeader('Accept-Ranges', 'bytes');
-        response.setHeader('Content-Length', end - start + 1);
-        if (range) {
-          response.statusCode = 206;
-          response.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
-        }
-        const stream = createReadStream(file, { start, end });
-        response.on('close', () => stream.destroy());
-        stream.on('error', (error) => response.destroy(error));
-        stream.pipe(response);
-        return;
-      }
+      if (await serveRegisteredAsset(url, request, response, files)) return;
       if (url.pathname === '/beam-cli/job' && request.method === 'GET')
         return json({ request: job, platform: process.platform });
       if (request.method !== 'POST') throw new Error('Invalid CLI operation.');

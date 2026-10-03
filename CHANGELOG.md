@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- CLI video exports can select WebCodecs or experimental Linux FFmpeg VA-API encoding, using the same Beam renderer and GPU transport as desktop. Exports return JSON diagnostics and protect destinations on failure or cancellation; the FFmpeg backend requires an X11/XWayland display and compatible native dependencies.
+- The Chromium CLI host can select software video decoding independently of GPU rendering to work around failing accelerated decoders.
 - Linux desktop has an opt-in experimental FFmpeg GPU exporter for MP4 and WebM, with direct DMA-BUF transfer to VA-API and audio support. Its export option is translated into all 15 languages; native build and driver requirements are documented.
 - A WebCodecs diagnostic command checks CPU/GPU frame inputs in separate sandboxed Electron processes, records encoded packets and native GPU crashes, and compares hardware requests with software controls.
 - Export reports include native GPU utilization minimum, median, mean and maximum, plus per-engine measurements on Linux, Windows and macOS when driver counters are available. Reports identify process-wide versus device-wide scope and unavailable measurements.
@@ -34,6 +36,7 @@ User-facing changes to Beam are documented in this file.
 ### Changed
 
 - The experimental Linux FFmpeg GPU export choice is now saved across restarts, shared with General preferences, and applied to Quick Snip video exports.
+- Experimental Linux GPU exports overlap rendering and native transfer through a bounded GPU texture queue, use one frame IPC and wait one presentation boundary per frame. Reports separate capture, transfer and queue waits; the dedicated CLI process also removes display frame-rate throttling while retaining every authored frame. Local before/after results are documented; gains vary by container and workload.
 - Experimental Linux GPU exports send DMA-BUF descriptors through an asynchronous native bridge instead of launching a process for every frame. Reports separate Chromium presentation waits, GPU import/conversion and native encoding timings.
 - MP4 and WebM exports select a working WebCodecs encoder at the requested resolution, frame rate and bitrate, checking hardware variable and constant bitrate modes before software encoding. Linux desktop and hardware CLI backends enable accelerated video encoding; reports show the selected bitrate mode and hardware frame-check failures.
 - Preview and export reuse unchanged active clip order and text layout; Studio retains fixed background pixels, and export progress thumbnails convert without pausing video encoding.

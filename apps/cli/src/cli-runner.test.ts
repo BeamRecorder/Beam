@@ -87,3 +87,25 @@ it('rejects malformed inputs and protects destinations without overwrite', async
   await expect(runCliCommand(['edit', file, commands, join(root, 'edited.json')])).rejects.toThrow('Expected');
   expect(await runCliCommand(['--help'])).toMatchObject({ usage: expect.stringContaining('beam serve') });
 });
+it('routes an agent export to the selected backend with validated settings and portable paths', async () => {
+  const root = await fixture(),
+    input = join(root, 'video.json'),
+    output = join(root, 'result.mp4');
+  await runCliCommand(['create', 'video', input]);
+  const backend = await import('./export-backends');
+  const render = vi.spyOn(backend, 'exportWithBackend').mockResolvedValue({ path: output });
+  expect(await runCliCommand(['export', input, output, '--overwrite', '--backend', 'ffmpeg-vaapi'])).toEqual({
+    path: output,
+  });
+  expect(render).toHaveBeenCalledWith(
+    expect.objectContaining({ format: 'mp4', snapshot: expect.any(Object) }),
+    root,
+    output,
+    { backend: 'ffmpeg-vaapi', overwrite: true },
+  );
+  await expect(runCliCommand(['export', input, output, '--backend', 'unknown'])).rejects.toThrow('backend');
+  expect(render).toHaveBeenCalledTimes(1);
+  expect(await runCliCommand(['--help'])).toMatchObject({
+    usage: expect.stringContaining('--backend webcodecs|ffmpeg-vaapi'),
+  });
+});
