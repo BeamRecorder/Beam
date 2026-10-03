@@ -1,21 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, nextTick, onBeforeUnmount } from 'vue';
+import type { BigSliderProps } from './big-slider-types';
 import { RotateCcw } from '@lucide/vue';
 import Input from '../input/Input.vue';
 import { beginPropertyInteraction, endPropertyInteraction } from '~/composables/property-interaction';
 
-const props = withDefaults(
-  defineProps<{
-    modelValue: number;
-    min?: number;
-    max?: number;
-    step?: number;
-    label: string;
-    defaultValue?: number;
-    formatValue?: (val: number) => string;
-  }>(),
-  { min: 0, max: 1, step: 0.01 },
-);
+const props = withDefaults(defineProps<BigSliderProps>(), { min: 0, max: 1, step: 0.01 });
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: number): void;
@@ -37,10 +27,14 @@ const percentage = computed(() => {
   return Math.min(100, Math.max(0, ((props.modelValue - props.min) / range) * 100));
 });
 
-const displayValue = computed(() => {
-  if (props.formatValue) return props.formatValue(props.modelValue);
-  return props.modelValue.toString();
-});
+const roundedValue = computed(() =>
+  props.displayPrecision === undefined
+    ? props.modelValue
+    : Number(props.modelValue.toFixed(Math.max(0, Math.min(10, Math.trunc(props.displayPrecision))))),
+);
+const displayValue = computed(() =>
+  props.formatValue ? props.formatValue(roundedValue.value) : String(roundedValue.value),
+);
 
 const isChanged = computed(() => {
   if (props.defaultValue === undefined) return false;
@@ -48,7 +42,7 @@ const isChanged = computed(() => {
 });
 
 const startEditing = () => {
-  editValue.value = props.modelValue;
+  editValue.value = roundedValue.value;
   isEditing.value = true;
   void nextTick(() => {
     const el = document.getElementById(`slider-input-${props.label.replace(/\s+/g, '-')}`);
@@ -64,6 +58,7 @@ const finishEditing = () => {
   isEditing.value = false;
   let parsed = typeof editValue.value === 'number' ? editValue.value : parseFloat(String(editValue.value));
   if (isNaN(parsed)) parsed = props.modelValue;
+  if (parsed === roundedValue.value && props.modelValue !== roundedValue.value) return;
   if (props.min !== undefined) parsed = Math.max(props.min, parsed);
   if (props.max !== undefined) parsed = Math.min(props.max, parsed);
   emit('update:modelValue', parsed);
@@ -228,7 +223,7 @@ onBeforeUnmount(() => {
   width: 100%;
   height: var(--big-slider-height);
   border-radius: var(--radius-sm);
-  border: 1px solid transparent;
+  border: 1px solid var(--color-border);
   overflow: hidden;
   display: flex;
   align-items: center;

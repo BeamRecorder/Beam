@@ -1004,7 +1004,12 @@
     "backgroundError": "배경으로 이미지, 색상 또는 그라데이션을 선택하세요.",
     "dimensionsError": "최대 6400만 화소의 해상도를 선택하세요(한 변당 최대 16384픽셀).",
     "renderUnavailable": "이미지 렌더링을 사용할 수 없습니다.",
-    "encodingUnavailable": "{format} 인코딩을 사용할 수 없습니다."
+    "encodingUnavailable": "{format} 인코딩을 사용할 수 없습니다.",
+    "rotation3d": "3D 회전",
+    "perspective": "원근감",
+    "group": "그룹화",
+    "selectionTitle": "선택 · 요소 {count}개",
+    "ungroup": "그룹 해제"
   },
   "EditorPresetControls": {
     "preset": "프리셋",

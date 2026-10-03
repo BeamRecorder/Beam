@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createGradientEffect } from '@beam/engine';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { BlurClip, ShapeClip } from '@beam/engine/shared/composition-types';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
@@ -181,6 +182,39 @@ const specialImageLayer = (id: string, name: string, source: string): Screenshot
 });
 
 describe('screenshot layer clipboard', () => {
+  it('deep-copies attached effects independently on the clipboard and pasted layer', () => {
+    const state = makeState([makeShape('shape')]);
+    const effect = createGradientEffect('gradient');
+    state.composition!.find((layer) => layer.id === 'shape')!.effects = [effect];
+    const clipboard = copyScreenshotLayerSelection(state, ['shape'], 'shape')!;
+    effect.recipe.colors[0] = '#ffffff';
+    const copied = clipboard.entries[0]!.effects![0]!;
+    if (copied.kind !== 'gradient') throw new Error('Expected gradient');
+    expect(copied.recipe.colors[0]).toBe('#2457ff');
+    pasteScreenshotLayerSelection(state, clipboard, () => 'copy');
+    const pasted = state.composition!.find((layer) => layer.id === 'copy')!.effects![0]!;
+    copied.recipe.seed = 99;
+    if (pasted.kind !== 'gradient') throw new Error('Expected pasted gradient');
+    expect(pasted.recipe.seed).toBe(12);
+  });
+  it.each([SCREENSHOT_BACKGROUND_ID, SCREENSHOT_WATERMARK_ID])(
+    'does not apply baked %s gradient effects a second time',
+    (id) => {
+      const state = makeState();
+      state.composition!.find((layer) => layer.id === id)!.effects = [createGradientEffect('gradient')];
+      const raster = specialImageLayer(id, 'Raster', 'raster.png');
+      const copied = copyScreenshotLayerSelection(
+        state,
+        [id],
+        id,
+        false,
+        id === SCREENSHOT_BACKGROUND_ID ? { background: raster } : { watermark: raster },
+      )!;
+      expect(copied.entries[0]!.effects).toBeUndefined();
+      pasteScreenshotLayerSelection(state, copied, () => 'copy');
+      expect(state.composition!.find((layer) => layer.id === 'copy')!.effects).toBeUndefined();
+    },
+  );
   it('deep-copies a multi-selection, preserves its compositing order, and unlocks pasted shapes', () => {
     const state = makeState([
       makeShape('shape-a', 'First shape'),
@@ -511,13 +545,57 @@ it('copies and pastes a static lens with independent contour data and compositio
   const { createManualZoom } = await import('@beam/engine/zoom/manual-zoom');
   const { createGlassHighlight } = await import('@beam/engine/zoom/glass-highlight');
   const { insertScreenshotLayer } = await import('@beam/engine/screenshot/screenshot-layers');
-  const state = makeState(); state.zooms = [{ ...createManualZoom('lens', 0, 1), kind: 'zoom', name: 'Lens', mode: 'manual', enabled: true, effect: 'glass', glass: { ...createGlassHighlight(), shape: 'freehand', path: [{ x: -1, y: -1 }, { x: 1, y: -1 }, { x: 0, y: 1 }] } }];
+  const state = makeState();
+  state.zooms = [
+    {
+      ...createManualZoom('lens', 0, 1),
+      kind: 'zoom',
+      name: 'Lens',
+      mode: 'manual',
+      enabled: true,
+      effect: 'glass',
+      glass: {
+        ...createGlassHighlight(),
+        shape: 'freehand',
+        path: [
+          { x: -1, y: -1 },
+          { x: 1, y: -1 },
+          { x: 0, y: 1 },
+        ],
+      },
+    },
+  ];
   insertScreenshotLayer(state, 'lens');
   const copied = copyScreenshotLayerSelection(state, ['lens'], 'lens')!;
   expect(copied.entries[0]!.layer.type).toBe('zoom');
   pasteScreenshotLayerSelection(state, copied, () => 'duplicate-lens');
-  expect(state.zooms).toHaveLength(2); expect(state.zooms[1]).toMatchObject({ id: 'duplicate-lens', startMs: 0, endMs: 1, effect: 'glass', mode: 'manual' });
+  expect(state.zooms).toHaveLength(2);
+  expect(state.zooms[1]).toMatchObject({ id: 'duplicate-lens', startMs: 0, endMs: 1, effect: 'glass', mode: 'manual' });
   expect(state.zooms[1]!.glass!.path).toEqual(state.zooms[0]!.glass!.path);
   expect(state.zooms[1]!.glass!.path).not.toBe(state.zooms[0]!.glass!.path);
-  expect(screenshotLayers(state).find(layer => layer.id === 'duplicate-lens')!.kind).toBe('zoom');
+  expect(screenshotLayers(state).find((layer) => layer.id === 'duplicate-lens')!.kind).toBe('zoom');
+});
+
+it('pastes an independent group and retains each native layer perspective', () => {
+  const state = makeState([makeShape('first'), makeTextShape('second', 'Beam')]);
+  for (const layer of state.composition!)
+    if (['first', 'second'].includes(layer.id)) {
+      layer.groupId = 'original';
+      layer.rotation3d = { x: 24, y: 0, perspective: 1200 };
+    }
+  const copied = copyScreenshotLayerSelection(state, ['first', 'second'], 'first')!;
+  let id = 0;
+  pasteScreenshotLayerSelection(state, copied, () => `copy-${++id}`);
+  const members = state.composition!.filter((r) => r.id.startsWith('copy-'));
+  expect(members).toHaveLength(2);
+  expect(members[0]!.groupId).toBeTruthy();
+  expect(members[0]!.groupId).toBe(members[1]!.groupId);
+  expect(members[0]!.groupId).not.toBe('original');
+  expect(members[0]!.rotation3d).toEqual({ x: 24, y: 0, perspective: 1200 });
+});
+it('does not retain an orphan group identity when copying one member', () => {
+  const state = makeState([makeShape('first'), makeShape('second')]);
+  for (const layer of state.composition!) if (['first', 'second'].includes(layer.id)) layer.groupId = 'original';
+  pasteScreenshotLayerSelection(state, copyScreenshotLayerSelection(state, ['first'], 'first')!, () => 'copy');
+  expect(state.composition!.find((r) => r.id === 'copy')!.groupId).toBeUndefined();
 });

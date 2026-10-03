@@ -12,6 +12,9 @@ import { registerScreenshotEditorSearchTests } from './screenshot-editor-search-
 import { registerScreenshotEditorRenameTests } from './screenshot-editor-rename-cases';
 
 const capture = vi.hoisted(() => ({
+  onAuthoringRequest: vi.fn(() => vi.fn()),
+  registerAuthoringDocument: vi.fn(async () => {}),
+  replyAuthoringRequest: vi.fn(),
   getScreenshot: vi.fn(),
   listBackgroundLibrary: vi.fn(),
   listCursorPacks: vi.fn(),
@@ -45,6 +48,8 @@ vi.mock('../screenshot-layer-clipboard-raster', () => ({
 }));
 
 import ScreenshotEditor from '../ScreenshotEditor.vue';
+import TransformControls from '../../editor/properties/shared/TransformControls.vue';
+import MediaOrientationControls from '../../editor/properties/shared/MediaOrientationControls.vue';
 const editorHarness = createScreenshotEditorTestHarness(ScreenshotEditor, (editor) => {
   screenshotCanvasEditor = editor;
 });
@@ -1069,6 +1074,50 @@ describe('ScreenshotEditor', () => {
         source: 'data:image/webp;base64,__background__',
       }),
     );
+    wrapper.unmount();
+  });
+
+  it('shows shared Placement instead of member properties and edits all group members with undo', async () => {
+    const ids = ['inspector-a', 'inspector-b', 'pair'];
+    let index = 0;
+    vi.stubGlobal('crypto', { randomUUID: () => ids[index++]! });
+    const wrapper = mountEditor();
+    await flushPromises();
+    await wrapper.get('button[aria-label="Select"]').trigger('click');
+    await clickText(wrapper, 'Arrow');
+    await clickText(wrapper, 'Arrow');
+    const canvas = wrapper.findComponent(ScreenshotCanvasStub),
+      composition = wrapper.findComponent(ScreenshotCompositionStub);
+    const original = JSON.parse(JSON.stringify(canvas.props('state'))) as ScreenshotState;
+    composition.vm.$emit('select', 'inspector-a');
+    composition.vm.$emit('select', 'inspector-b', 'toggle');
+    canvas.vm.$emit('selectionBounds', { x: 0.2, y: 0.2, width: 0.6, height: 0.6 });
+    await flushPromises();
+    expect(wrapper.get('[data-screenshot-group-inspector]').exists()).toBe(true);
+    expect(wrapper.findComponent(ShapePropertiesStub).exists()).toBe(false);
+    expect(wrapper.findComponent(ClipPropertiesStub).exists()).toBe(false);
+    expect(wrapper.find('.screenshot-properties-title input').exists()).toBe(false);
+    expect(wrapper.text()).toContain('Selection · 2 elements');
+    wrapper.getComponent(TransformControls).vm.$emit('update:modelValue', { x: 0.3, y: 0.4, width: 0.6, height: 0.6 });
+    await flushPromises();
+    const moved = canvas.props('state') as ScreenshotState;
+    for (const [index, layer] of moved.shapes.entries()) {
+      expect(layer.transform.x).toBeCloseTo(original.shapes[index]!.transform.x + 0.1);
+      expect(layer.transform.y).toBeCloseTo(original.shapes[index]!.transform.y + 0.2);
+    }
+    const history = wrapper.findComponent({ name: 'EditorHistoryControls' });
+    history.vm.$emit('undo');
+    await flushPromises();
+    expect((canvas.props('state') as ScreenshotState).shapes).toEqual(original.shapes);
+    canvas.vm.$emit('selectionBounds', { x: 0.2, y: 0.2, width: 0.6, height: 0.6 });
+    await flushPromises();
+    wrapper.getComponent(MediaOrientationControls).vm.$emit('update:rotation', 90);
+    await flushPromises();
+    expect((canvas.props('state') as ScreenshotState).shapes.map((layer) => layer.rotation)).toEqual([90, 90]);
+    composition.vm.$emit('select', 'inspector-a');
+    await flushPromises();
+    expect(wrapper.find('[data-screenshot-group-inspector]').exists()).toBe(false);
+    expect(wrapper.findComponent(ShapePropertiesStub).exists()).toBe(true);
     wrapper.unmount();
   });
 

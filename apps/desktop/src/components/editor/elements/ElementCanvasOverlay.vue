@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { LayerRotation3d } from '@beam/engine/layout/layer-perspective-types';
+
 import { beginPropertyInteraction, endPropertyInteraction } from '~/composables/property-interaction';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import CaptionInlineEditor from '../canvas/CaptionInlineEditor.vue';
@@ -16,6 +18,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 const props = defineProps<{
   viewport: ElementViewport;
   camera?: ElementCamera;
+  rotation3d?: LayerRotation3d;
   surfaceSize: { width: number; height: number };
 }>();
 const editor = useElementEditor();
@@ -42,7 +45,7 @@ const textLayout = computed(() => {
     frame: {
       width: `${rect.width}px`,
       height: `${rect.height}px`,
-      transform: elementMatrix(rect, props.viewport, props.camera, clip.rotation),
+      transform: elementMatrix(rect, props.viewport, props.camera, clip.rotation, props.rotation3d),
     },
     layout: {
       left: `${(layout.x - clip.transform.x) * props.viewport.width}px`,

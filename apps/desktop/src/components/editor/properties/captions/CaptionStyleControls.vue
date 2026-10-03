@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Select from '~/ui/select/Select.vue';
 import Switch from '~/ui/switch/Switch.vue';
-import Divider from '~/ui/divider/Divider.vue';
+import Accordion from '~/ui/accordion/Accordion.vue';
 import type { CaptionStyle } from '@beam/engine/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import Button from '~/ui/button/Button.vue';
@@ -31,6 +31,7 @@ const emit = defineEmits<{
   (event: 'preview', patch: Partial<CaptionStyle> | null): void;
 }>();
 const { fonts, loading, error, refreshSystem, importFont } = useFontCatalog();
+const open = ref({ typography: true, highlight: false, background: false, outline: false, shadow: false });
 let previewSequence = 0;
 const previewFont = async (value: string | number | null) => {
   const sequence = ++previewSequence;
@@ -76,238 +77,257 @@ const shadowDirectionOptions = computed(() => [
 </script>
 
 <template>
-  <div class="section-block">
-    <span class="section-title">{{ t('typography') }}</span>
-    <div class="font-row">
-      <Select
-        :model-value="style.fontFamily ?? 'sans-serif'"
-        :options="fonts"
-        :loading="loading"
-        :option-height="58"
-        :search-placeholder="t('searchFonts')"
-        :no-results-label="t('noFontsFound')"
-        variant="search"
-        show-preview-indicator
-        size="sm"
-        @toggle="$event && refreshSystem()"
-        @preview:model-value="previewFont"
-        @update:model-value="commitFont"
-      >
-        <template #option="{ option }">
-          <span class="font-option">
-            <span class="option-label">{{ option.label }}</span>
-            <span class="font-sample" :style="{ fontFamily: String(option.value) }">{{
-              sampleText || t('fontSample')
-            }}</span>
-          </span>
-        </template>
-      </Select>
-      <Button
-        :icon="Upload"
-        icon-only
-        size="sm"
-        variant="outline"
-        :loading="loading"
-        :tooltip="t('importFont')"
-        :aria-label="t('importFont')"
-        @click="pickFont"
-      />
-    </div>
-    <p v-if="error" class="font-error" role="status">{{ t(error) }}</p>
-    <ButtonGroup full :columns="4" :aria-label="t('textStyle')">
-      <Button
-        :icon="Bold"
-        icon-only
-        size="xs"
-        :variant="style.fontWeight === 800 ? 'selected' : 'ghost'"
-        :tooltip="t('bold')"
-        :aria-label="t('bold')"
-        @click="emit('update', 'fontWeight', style.fontWeight === 800 ? 400 : 800)"
-      />
-      <Button
-        :icon="Italic"
-        icon-only
-        size="xs"
-        :variant="style.fontStyle === 'italic' ? 'selected' : 'ghost'"
-        :tooltip="t('italic')"
-        :aria-label="t('italic')"
-        @click="emit('update', 'fontStyle', style.fontStyle === 'italic' ? 'normal' : 'italic')"
-      />
-      <Button
-        :icon="Strikethrough"
-        icon-only
-        size="xs"
-        :variant="style.textDecoration.includes('line-through') ? 'selected' : 'ghost'"
-        :tooltip="t('strikethrough')"
-        :aria-label="t('strikethrough')"
-        @click="emit('update', 'textDecoration', toggleTextDecoration(style.textDecoration, 'line-through'))"
-      />
-      <Button
-        :icon="Underline"
-        icon-only
-        size="xs"
-        :variant="style.textDecoration.includes('underline') ? 'selected' : 'ghost'"
-        :tooltip="t('underline')"
-        :aria-label="t('underline')"
-        @click="emit('update', 'textDecoration', toggleTextDecoration(style.textDecoration, 'underline'))"
-      />
-    </ButtonGroup>
-    <ButtonGroup
-      full
-      :columns="3"
-      :aria-label="t('textAlignment')"
-      :selection="{
-        count: 3,
-        index: ['left', 'center', 'right'].indexOf(style.textAlign),
-      }"
-    >
-      <Button
-        v-for="item in [
-          { value: 'left', icon: AlignLeft, label: t('alignLeft') },
-          { value: 'center', icon: AlignCenter, label: t('alignCenter') },
-          { value: 'right', icon: AlignRight, label: t('alignRight') },
-        ]"
-        :key="item.value"
-        :icon="item.icon"
-        icon-only
-        size="xs"
-        :variant="style.textAlign === item.value ? 'selected' : 'ghost'"
-        :tooltip="item.label"
-        :aria-label="item.label"
-        @click="emit('update', 'textAlign', item.value as CaptionStyle['textAlign'])"
-      />
-    </ButtonGroup>
-    <div class="sub-group">
-      <span class="sub-label">{{ t('textColor') }}</span>
-      <ColorPicker
-        :model-value="style.color"
-        :show-label="false"
-        @update:model-value="emit('update', 'color', $event)"
-      />
-    </div>
-    <BigSlider
-      :label="t('lineHeight')"
-      :model-value="style.lineHeight ?? 1.2"
-      :min="0.8"
-      :max="2"
-      :step="0.05"
-      :default-value="1.2"
-      :format-value="(value) => value.toFixed(2)"
-      @update:model-value="emit('update', 'lineHeight', $event)"
-    />
-    <BigSlider
-      :label="t('letterSpacing')"
-      :model-value="style.letterSpacing ?? 0"
-      :min="-5"
-      :max="20"
-      :step="0.5"
-      :default-value="0"
-      :format-value="(value) => `${value}px`"
-      @update:model-value="emit('update', 'letterSpacing', $event)"
-    />
-    <BigSlider
-      :label="t('fontSize')"
-      :model-value="style.fontSize"
-      :min="12"
-      :max="256"
-      :step="1"
-      :default-value="defaultFontSize"
-      :format-value="(value) => `${value}px`"
-      @update:model-value="emit('update', 'fontSize', $event)"
-    />
-    <div class="wrap-setting">
-      <div>
-        <span class="sub-label">{{ t('textWrap') }}</span>
-        <p class="section-desc">{{ t('textWrapDescription') }}</p>
+  <Accordion
+    v-model="open.typography"
+    appearance="inspector"
+    :title="t('typography')"
+    data-element-section="typography"
+  >
+    <div class="section-block">
+      <div class="font-row">
+        <Select
+          :model-value="style.fontFamily ?? 'sans-serif'"
+          :options="fonts"
+          :loading="loading"
+          :option-height="58"
+          :search-placeholder="t('searchFonts')"
+          :no-results-label="t('noFontsFound')"
+          variant="search"
+          show-preview-indicator
+          size="sm"
+          @toggle="$event && refreshSystem()"
+          @preview:model-value="previewFont"
+          @update:model-value="commitFont"
+        >
+          <template #option="{ option }">
+            <span class="font-option">
+              <span class="option-label">{{ option.label }}</span>
+              <span class="font-sample" :style="{ fontFamily: String(option.value) }">{{
+                sampleText || t('fontSample')
+              }}</span>
+            </span>
+          </template>
+        </Select>
+        <Button
+          :icon="Upload"
+          icon-only
+          size="sm"
+          variant="outline"
+          :loading="loading"
+          :tooltip="t('importFont')"
+          :aria-label="t('importFont')"
+          @click="pickFont"
+        />
       </div>
-      <Switch
-        :model-value="style.wrap !== false"
-        :aria-label="t('textWrap')"
-        @update:model-value="emit('update', 'wrap', $event)"
+      <p v-if="error" class="font-error" role="status">{{ t(error) }}</p>
+      <ButtonGroup full :columns="4" :aria-label="t('textStyle')">
+        <Button
+          :icon="Bold"
+          icon-only
+          size="xs"
+          :variant="style.fontWeight === 800 ? 'selected' : 'ghost'"
+          :tooltip="t('bold')"
+          :aria-label="t('bold')"
+          @click="emit('update', 'fontWeight', style.fontWeight === 800 ? 400 : 800)"
+        />
+        <Button
+          :icon="Italic"
+          icon-only
+          size="xs"
+          :variant="style.fontStyle === 'italic' ? 'selected' : 'ghost'"
+          :tooltip="t('italic')"
+          :aria-label="t('italic')"
+          @click="emit('update', 'fontStyle', style.fontStyle === 'italic' ? 'normal' : 'italic')"
+        />
+        <Button
+          :icon="Strikethrough"
+          icon-only
+          size="xs"
+          :variant="style.textDecoration.includes('line-through') ? 'selected' : 'ghost'"
+          :tooltip="t('strikethrough')"
+          :aria-label="t('strikethrough')"
+          @click="emit('update', 'textDecoration', toggleTextDecoration(style.textDecoration, 'line-through'))"
+        />
+        <Button
+          :icon="Underline"
+          icon-only
+          size="xs"
+          :variant="style.textDecoration.includes('underline') ? 'selected' : 'ghost'"
+          :tooltip="t('underline')"
+          :aria-label="t('underline')"
+          @click="emit('update', 'textDecoration', toggleTextDecoration(style.textDecoration, 'underline'))"
+        />
+      </ButtonGroup>
+      <ButtonGroup
+        full
+        variant="neutral"
+        :columns="3"
+        :aria-label="t('textAlignment')"
+        :selection="{
+          count: 3,
+          index: ['left', 'center', 'right'].indexOf(style.textAlign),
+        }"
+      >
+        <Button
+          v-for="item in [
+            { value: 'left', icon: AlignLeft, label: t('alignLeft') },
+            { value: 'center', icon: AlignCenter, label: t('alignCenter') },
+            { value: 'right', icon: AlignRight, label: t('alignRight') },
+          ]"
+          :key="item.value"
+          icon-only
+          size="sm"
+          :variant="style.textAlign === item.value ? 'selected' : 'ghost'"
+          :tooltip="item.label"
+          :aria-label="item.label"
+          @click="emit('update', 'textAlign', item.value as CaptionStyle['textAlign'])"
+          ><template #icon><component :is="item.icon" :size="20" :stroke-width="2.25" /></template
+        ></Button>
+      </ButtonGroup>
+      <div class="sub-group">
+        <span class="sub-label">{{ t('textColor') }}</span>
+        <ColorPicker
+          :model-value="style.color"
+          :show-label="false"
+          @update:model-value="emit('update', 'color', $event)"
+        />
+      </div>
+      <BigSlider
+        :display-precision="2"
+        :label="t('lineHeight')"
+        :model-value="style.lineHeight ?? 1.2"
+        :min="0.8"
+        :max="2"
+        :step="0.05"
+        :default-value="1.2"
+        :format-value="(value) => value.toFixed(2)"
+        @update:model-value="emit('update', 'lineHeight', $event)"
       />
-    </div>
-  </div>
-
-  <Divider spacing="xs" />
-
-  <CaptionHighlightControls
-    v-if="showWordHighlight"
-    :model-value="style.wordHighlight"
-    :available="wordHighlightAvailable"
-    :custom-text="style.customText !== undefined"
-    @update:model-value="emit('update', 'wordHighlight', $event)"
-  />
-
-  <Divider v-if="showWordHighlight" spacing="xs" />
-
-  <CaptionShapeControls :model-value="style.shape" @update:model-value="emit('update', 'shape', $event)" />
-
-  <Divider spacing="xs" />
-
-  <div class="section-block">
-    <span class="section-title">{{ t('outlineExtrusion') }}</span>
-    <div class="sub-group">
-      <span class="sub-label">{{ t('outlineColor') }}</span>
-      <ColorPicker
-        :model-value="style.outlineColor"
-        :show-label="false"
-        @update:model-value="emit('update', 'outlineColor', $event)"
+      <BigSlider
+        :display-precision="2"
+        :label="t('letterSpacing')"
+        :model-value="style.letterSpacing ?? 0"
+        :min="-5"
+        :max="20"
+        :step="0.5"
+        :default-value="0"
+        :format-value="(value) => `${value}px`"
+        @update:model-value="emit('update', 'letterSpacing', $event)"
       />
+      <BigSlider
+        :display-precision="2"
+        :label="t('fontSize')"
+        :model-value="style.fontSize"
+        :min="12"
+        :max="256"
+        :step="1"
+        :default-value="defaultFontSize"
+        :format-value="(value) => `${value}px`"
+        @update:model-value="emit('update', 'fontSize', $event)"
+      />
+      <div class="wrap-setting">
+        <div>
+          <span class="sub-label">{{ t('textWrap') }}</span>
+          <p class="section-desc">{{ t('textWrapDescription') }}</p>
+        </div>
+        <Switch
+          :model-value="style.wrap !== false"
+          :aria-label="t('textWrap')"
+          @update:model-value="emit('update', 'wrap', $event)"
+        />
+      </div>
     </div>
-    <BigSlider
-      :label="t('outlineThickness')"
-      :model-value="style.outlineWidth"
-      :min="0"
-      :max="30"
-      :step="1"
-      :default-value="6"
-      :format-value="(value) => `${value}px`"
-      @update:model-value="emit('update', 'outlineWidth', $event)"
+  </Accordion>
+
+  <Accordion v-if="showWordHighlight" v-model="open.highlight" appearance="inspector" :title="t('highlightText')">
+    <CaptionHighlightControls
+      v-if="showWordHighlight"
+      :model-value="style.wordHighlight"
+      :available="wordHighlightAvailable"
+      :custom-text="style.customText !== undefined"
+      @update:model-value="emit('update', 'wordHighlight', $event)"
     />
-    <BigSlider
-      :label="t('extrusionDepth')"
-      :model-value="style.extrusionDepth"
-      :min="0"
-      :max="20"
-      :step="1"
-      :default-value="4"
-      :format-value="(value) => `${value}px`"
-      @update:model-value="emit('update', 'extrusionDepth', $event)"
-    />
-  </div>
+  </Accordion>
 
-  <Divider spacing="xs" />
-
-  <div class="section-block">
-    <span class="section-title">{{ t('textShadow') }}</span>
-    <div class="sub-group">
-      <span class="sub-label">{{ t('shadowColor') }}</span>
-      <ColorPicker
-        :model-value="style.shadowColor"
-        :show-label="false"
-        @update:model-value="emit('update', 'shadowColor', $event)"
+  <Accordion
+    v-model="open.background"
+    appearance="inspector"
+    :title="t('captionShape')"
+    data-element-section="text-background"
+  >
+    <CaptionShapeControls :model-value="style.shape" @update:model-value="emit('update', 'shape', $event)" />
+  </Accordion>
+  <Accordion
+    v-model="open.outline"
+    appearance="inspector"
+    :title="t('outlineExtrusion')"
+    data-element-section="text-outline"
+  >
+    <div class="section-block">
+      <div class="sub-group">
+        <span class="sub-label">{{ t('outlineColor') }}</span>
+        <ColorPicker
+          :model-value="style.outlineColor"
+          :show-label="false"
+          @update:model-value="emit('update', 'outlineColor', $event)"
+        />
+      </div>
+      <BigSlider
+        :display-precision="2"
+        :label="t('outlineThickness')"
+        :model-value="style.outlineWidth"
+        :min="0"
+        :max="30"
+        :step="1"
+        :default-value="6"
+        :format-value="(value) => `${value}px`"
+        @update:model-value="emit('update', 'outlineWidth', $event)"
+      />
+      <BigSlider
+        :display-precision="2"
+        :label="t('extrusionDepth')"
+        :model-value="style.extrusionDepth"
+        :min="0"
+        :max="20"
+        :step="1"
+        :default-value="4"
+        :format-value="(value) => `${value}px`"
+        @update:model-value="emit('update', 'extrusionDepth', $event)"
       />
     </div>
-    <div class="sub-group">
-      <span class="sub-label">{{ t('direction') }}</span>
-      <Select
-        :items="shadowDirectionOptions"
-        :model-value="style.shadowDirection ?? 'bottom-right'"
-        size="sm"
-        @update:model-value="emit('update', 'shadowDirection', $event as CaptionStyle['shadowDirection'])"
+  </Accordion>
+  <Accordion v-model="open.shadow" appearance="inspector" :title="t('textShadow')" data-element-section="text-shadow">
+    <div class="section-block">
+      <div class="sub-group">
+        <span class="sub-label">{{ t('shadowColor') }}</span>
+        <ColorPicker
+          :model-value="style.shadowColor"
+          :show-label="false"
+          @update:model-value="emit('update', 'shadowColor', $event)"
+        />
+      </div>
+      <div class="sub-group">
+        <span class="sub-label">{{ t('direction') }}</span>
+        <Select
+          :items="shadowDirectionOptions"
+          :model-value="style.shadowDirection ?? 'bottom-right'"
+          size="sm"
+          @update:model-value="emit('update', 'shadowDirection', $event as CaptionStyle['shadowDirection'])"
+        />
+      </div>
+      <BigSlider
+        :display-precision="2"
+        :label="t('shadowBlur')"
+        :model-value="style.shadowBlur"
+        :min="0"
+        :max="50"
+        :step="1"
+        :default-value="0"
+        :format-value="(value) => `${value}px`"
+        @update:model-value="emit('update', 'shadowBlur', $event)"
       />
     </div>
-    <BigSlider
-      :label="t('shadowBlur')"
-      :model-value="style.shadowBlur"
-      :min="0"
-      :max="50"
-      :step="1"
-      :default-value="0"
-      :format-value="(value) => `${value}px`"
-      @update:model-value="emit('update', 'shadowBlur', $event)"
-    />
-  </div>
+  </Accordion>
 </template>
 
 <style scoped>

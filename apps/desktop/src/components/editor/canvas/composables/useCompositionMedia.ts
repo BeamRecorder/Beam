@@ -64,14 +64,22 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   };
   const dispose = () => {
     gpuShapes.dispose();
+    for (const image of images.values()) image.onload = null;
     images.clear();
   };
   const reconcile = () => {
     const assets = new Map(options.composition().assets.map((asset) => [asset.id, asset]));
-    for (const [id] of images) if (assets.get(id)?.kind !== 'image') images.delete(id);
+    for (const [id, image] of images)
+      if (assets.get(id)?.kind !== 'image' || assets.get(id)?.src !== image.getAttribute('src')) {
+        image.onload = null;
+        images.delete(id);
+      }
     for (const asset of assets.values()) {
       if (asset.kind === 'image' && asset.src && !images.has(asset.id)) {
         const image = new Image();
+        image.onload = () => {
+          if (images.get(asset.id) === image) options.onRenderOnce();
+        };
         image.src = asset.src;
         images.set(asset.id, image);
       }
@@ -106,9 +114,9 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   };
 
   const prepareVisual = (clip: VisualClip, window: { dx: number; dy: number; dw: number; dh: number }) => {
-    const frame = clip.kind === 'image' ? null : options.frameFor(clip.id);
+    const frame = options.frameFor(clip.id);
     const image = clip.kind === 'image' ? images.get(clip.assetId) : null;
-    if (image && (!image.complete || !image.naturalWidth)) return;
+    if (!frame && image && (!image.complete || !image.naturalWidth)) return;
     const source = frame?.bitmap ?? image;
     if (!source) return;
     const selected = options.selectedTransformClip();

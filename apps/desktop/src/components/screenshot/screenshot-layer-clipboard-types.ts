@@ -1,3 +1,4 @@
+import type { LayerEffect } from '@beam/engine/gradient/gradient-types';
 import type { BlurClip, ShapeClip } from '@beam/engine/shared/composition-types';
 import type { LayerBlendMode } from '@beam/engine/shared/layer-compositing-types';
 import type {
@@ -18,6 +19,9 @@ export interface ScreenshotClipboardEntry {
   name: string;
   opacity: number;
   blendMode: LayerBlendMode;
+  effects?: LayerEffect[];
+  rotation3d?: import('@beam/engine/layout/layer-perspective-types').LayerRotation3d;
+  groupId?: string;
 }
 
 export interface ScreenshotLayerClipboard {

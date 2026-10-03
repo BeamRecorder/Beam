@@ -1,9 +1,11 @@
+import { releaseCompositedLayerSurface } from '@beam/runtime/composition/render-composited-layer';
 import { drawScreenshotLayer } from '@beam/runtime/screenshot/screenshot-layer-render';
 import { screenshotLayerRotation, screenshotLayerTransform } from '../../screenshot-layer-geometry';
 import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot-types';
 import { alphaBounds, fitThumbnail } from './thumbnail-pixels';
 import type { ThumbnailRequest } from './thumbnail-types';
 import { shadowBlurForAppearance } from '@beam/runtime/composition/appearance/render-decorated-media';
+import { layerPerspectiveCorners } from '@beam/engine/layout/layer-perspective';
 
 export async function renderLayerThumbnail(
   request: ThumbnailRequest,
@@ -31,9 +33,11 @@ export async function renderLayerThumbnail(
         height: transform.height * height,
       }
     : { x: 0, y: 0, width, height };
-  const angle = (screenshotLayerRotation(state, layer.id) * Math.PI) / 180;
-  const rotatedWidth = Math.abs(rect.width * Math.cos(angle)) + Math.abs(rect.height * Math.sin(angle));
-  const rotatedHeight = Math.abs(rect.height * Math.cos(angle)) + Math.abs(rect.width * Math.sin(angle));
+  const corners = layerPerspectiveCorners(rect, layer.rotation3d, screenshotLayerRotation(state, layer.id));
+  const left = Math.min(...corners.map((p) => p.x)),
+    top = Math.min(...corners.map((p) => p.y));
+  const rotatedWidth = Math.max(...corners.map((p) => p.x)) - left;
+  const rotatedHeight = Math.max(...corners.map((p) => p.y)) - top;
   const unit = Math.min(width, height) / 1080;
   const cursor = state.cursors?.find((item) => item.id === layer.id);
   const shape = state.shapes.find((item) => item.id === layer.id);
@@ -53,8 +57,8 @@ export async function renderLayerThumbnail(
   const context = surface.getContext('2d', { willReadFrequently: true });
   if (!context) throw new Error('Thumbnail rendering context unavailable.');
   context.translate(
-    surface.width / 2 - (rect.x + rect.width / 2) * scale,
-    surface.height / 2 - (rect.y + rect.height / 2) * scale,
+    surface.width / 2 - (left + rotatedWidth / 2) * scale,
+    surface.height / 2 - (top + rotatedHeight / 2) * scale,
   );
   const visibleState = {
     ...state,
@@ -63,7 +67,11 @@ export async function renderLayerThumbnail(
       watermark: state.canvas.watermark ? { ...state.canvas.watermark, enabled: true } : undefined,
     },
   };
-  drawScreenshotLayer(context, visibleState, layer, assets, width * scale, height * scale);
+  try {
+    drawScreenshotLayer(context, visibleState, layer, assets, width * scale, height * scale);
+  } finally {
+    releaseCompositedLayerSurface(context);
+  }
   const bounds = alphaBounds(
     context.getImageData(0, 0, surface.width, surface.height).data,
     surface.width,

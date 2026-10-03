@@ -4,6 +4,8 @@ import { defineComponent, nextTick, ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LayerBlendMode } from '@beam/engine/shared/layer-compositing-types';
 import Button from '~/ui/button/Button.vue';
+import ScreenshotEffectToolbar from '../gradient/ScreenshotEffectToolbar.vue';
+import ScreenshotOpacity from '../composition/ScreenshotOpacity.vue';
 import type { ScreenshotLayer } from '@beam/engine/screenshot/screenshot-types';
 
 const compositionPosition = vi.hoisted(() => ({
@@ -20,6 +22,8 @@ vi.mock('~/i18n/useTranslate', () => ({
       `${namespace}.${key}${typeof params?.name === 'string' ? ` (${params.name})` : ''}`,
   }),
 }));
+
+vi.mock('../composition/thumbnails/useVisibleThumbnailIds', () => ({ useVisibleThumbnailIds: () => ref(new Set()) }));
 
 vi.mock('../composition/useCompositionPanelPosition', () => ({
   useCompositionPanelPosition: (_panel: unknown, onToggle: () => void) => {
@@ -47,15 +51,7 @@ const SelectStub = defineComponent({
     '<select v-bind="$attrs" :disabled="disabled" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option></select>',
 });
 
-const BigSliderStub = defineComponent({
-  inheritAttrs: false,
-  props: ['defaultValue', 'formatValue', 'label', 'max', 'min', 'modelValue', 'step'],
-  emits: ['update:modelValue'],
-  template:
-    '<input v-bind="$attrs" data-testid="opacity-control" type="range" :aria-label="label" :min="min" :max="max" :step="step" :value="modelValue" @input="$emit(\'update:modelValue\', Number($event.target.value))" />',
-});
-
-const stubs = { Select: SelectStub, BigSlider: BigSliderStub };
+const stubs = { Select: SelectStub };
 const source = 'project-media://screenshot/shot-1/source.png';
 
 const makeLayer = (
@@ -373,12 +369,13 @@ describe('ScreenshotComposition', () => {
     const wrapper = mountComposition({ selectedId: 'shape-1' });
     wrappers.push(wrapper);
     const select = wrapper.findComponent(SelectStub);
-    const slider = wrapper.findComponent(BigSliderStub);
+    const slider = wrapper.findComponent(ScreenshotOpacity);
 
     expect(select.props('modelValue')).toBe('source-over');
     expect((select.props('options') as Array<{ value: string }>).map(({ value }) => value)).toContain('multiply');
     expect(slider.props('modelValue')).toBe(100);
-    expect((slider.props('formatValue') as (value: number) => string)(64)).toBe('64%');
+    expect(slider.get('input').attributes('type')).toBe('number');
+    expect(wrapper.find('input[type="range"]').exists()).toBe(false);
     select.vm.$emit('update:modelValue', 'multiply' satisfies LayerBlendMode);
     slider.vm.$emit('update:modelValue', 64);
     expect(wrapper.emitted('update')).toEqual([
@@ -836,4 +833,48 @@ describe('ScreenshotComposition', () => {
     await shape.trigger('click');
     expect(wrapper.emitted('select')).toEqual([['shape-1']]);
   });
+});
+
+it('adds a gradient to the selected Composition item and exposes attached effect selection', async () => {
+  const { createGradientEffect } = await import('@beam/engine');
+  const effect = createGradientEffect('gradient');
+  const wrapper = mountComposition({ layers: [makeLayer('shape-1', 'shape', 'Shape', { effects: [effect] })] });
+  wrappers.push(wrapper);
+  wrapper.findComponent(ScreenshotEffectToolbar).vm.$emit('add', 'gradient');
+  await nextTick();
+  expect(wrapper.emitted('add-effect')?.[0]).toEqual(['shape-1', 'gradient']);
+  await wrapper.get('.layer-effect-list button').trigger('click');
+  expect(wrapper.emitted('select-effect')?.[0]).toEqual(['shape-1', 'gradient']);
+});
+it('does not offer a gradient on backdrop effects and disables addition on locked or full layers', async () => {
+  const { createGradientEffect } = await import('@beam/engine');
+  const wrapper = mountComposition({ layers: [makeLayer('shape-1', 'effect', 'Blur')] });
+  wrappers.push(wrapper);
+  expect(wrapper.get('[data-effect-menu="effects"]').attributes('disabled')).toBeDefined();
+  await wrapper.setProps({ layers: [makeLayer('shape-1', 'shape', 'Shape', { locked: true })] });
+  expect(wrapper.get('[data-effect-menu="effects"]').attributes('disabled')).toBeDefined();
+  await wrapper.setProps({
+    layers: [
+      makeLayer('shape-1', 'shape', 'Shape', {
+        effects: Array.from({ length: 4 }, (_, i) => createGradientEffect(String(i))),
+      }),
+    ],
+  });
+  expect(wrapper.get('[data-effect-menu="effects"]').attributes('disabled')).toBeDefined();
+});
+
+it('keeps the scrollable list directly in the bounded content and contains wheel events', async () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const wheel = vi.fn();
+  host.addEventListener('wheel', wheel);
+  const wrapper = mountComposition({}, host);
+  const list = wrapper.get('.layer-list');
+  expect(list.element.parentElement?.classList.contains('composition-content')).toBe(true);
+  const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 120 });
+  list.element.dispatchEvent(event);
+  expect(event.defaultPrevented).toBe(false);
+  expect(wheel).not.toHaveBeenCalled();
+  wrapper.unmount();
+  host.remove();
 });

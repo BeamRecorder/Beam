@@ -18,6 +18,9 @@ export type LayerBlendMode =
   | 'luminosity';
 
 export interface LayerCompositing {
+  rotation3d?: import('../layout/layer-perspective-types').LayerRotation3d;
+  groupId?: string;
+  effects?: import('../gradient/gradient-types').LayerEffect[];
   id: string;
   opacity: number;
   blendMode: LayerBlendMode;

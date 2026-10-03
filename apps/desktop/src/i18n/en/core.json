@@ -1001,7 +1001,12 @@
     "backgroundError": "Choose an image, color or gradient for a screenshot background.",
     "dimensionsError": "Choose an image resolution up to 64 megapixels (16384 pixels per side).",
     "renderUnavailable": "Image rendering is unavailable.",
-    "encodingUnavailable": "{format} encoding is unavailable."
+    "encodingUnavailable": "{format} encoding is unavailable.",
+    "rotation3d": "3D rotation",
+    "perspective": "Perspective",
+    "group": "Group",
+    "selectionTitle": "Selection · {count} elements",
+    "ungroup": "Ungroup"
   },
   "EditorPresetControls": {
     "preset": "Preset",

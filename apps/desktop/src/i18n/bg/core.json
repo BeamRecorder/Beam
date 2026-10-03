@@ -1004,7 +1004,12 @@
     "backgroundError": "Изберете изображение, цвят или градиент за фон.",
     "dimensionsError": "Изберете резолюция до 64 мегапиксела (16384 пиксела на страна).",
     "renderUnavailable": "Изобразяването е недостъпно.",
-    "encodingUnavailable": "Кодирането {format} е недостъпно."
+    "encodingUnavailable": "Кодирането {format} е недостъпно.",
+    "rotation3d": "3D завъртане",
+    "perspective": "Перспектива",
+    "group": "Групиране",
+    "selectionTitle": "Селекция · {count} елемента",
+    "ungroup": "Разгрупиране"
   },
   "EditorPresetControls": {
     "preset": "Настройка",

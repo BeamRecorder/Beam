@@ -98,7 +98,7 @@ export function useLayerThumbnails(
         id: spec.id,
         revision: version,
         state,
-        layer: { ...spec.layer },
+        layer: JSON.parse(JSON.stringify(spec.layer)) as ThumbnailRequest['layer'],
         sourceUrl: spec.sourceUrl,
         cursorAsset: spec.cursorAsset ? JSON.parse(JSON.stringify(spec.cursorAsset)) : undefined,
         bitmap,

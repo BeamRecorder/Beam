@@ -23,6 +23,7 @@ export interface CanvasMarqueeBounds {
 
 export interface CanvasMarqueeGesture {
   pointerId: number;
+  button: number;
   origin: { x: number; y: number };
   clientOrigin: { x: number; y: number };
   target: Element;

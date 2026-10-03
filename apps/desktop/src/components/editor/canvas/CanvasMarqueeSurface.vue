@@ -14,6 +14,7 @@ const props = withDefaults(
     selection: string[];
     disabled?: boolean;
     showSelectionOutlines?: boolean;
+    canStartLeft?: (event: PointerEvent) => boolean;
   }>(),
   { disabled: false, showSelectionOutlines: false },
 );
@@ -151,6 +152,10 @@ const end = (event: PointerEvent) => {
   update(event);
   const finished = gesture;
   cleanup();
+  if (!finished.dragged && finished.button === 0) {
+    if (!finished.additive) emit('select', { ids: [], primaryId: null, additive: false });
+    return;
+  }
   if (!finished.dragged && finished.target.isConnected) {
     replayingContextMenu = true;
     try {
@@ -170,17 +175,18 @@ const end = (event: PointerEvent) => {
 };
 const begin = (event: PointerEvent) => {
   suppressContextMenu = false;
-  if (props.disabled || event.button !== 2 || !(event.target instanceof Element)) return;
+  if (props.disabled || !(event.target instanceof Element) || (event.button !== 2 && !(event.button === 0 && props.canStartLeft?.(event)))) return;
   event.preventDefault();
   event.stopPropagation();
   cancel();
-  suppressContextMenu = true;
+  suppressContextMenu = event.button === 2;
   const initial = [...props.selection];
   const startsFromSelection = Boolean(
     event.target.closest('.webcam-selection, .canvas-marquee-selection, .resize-handle'),
   );
   gesture = {
     pointerId: event.pointerId,
+    button: event.button,
     origin: point(event),
     clientOrigin: { x: event.clientX, y: event.clientY },
     target: event.target,

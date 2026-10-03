@@ -29,6 +29,7 @@ export interface ScreenshotZoomLayer extends ZoomElement {
   enabled: boolean;
 }
 export interface ScreenshotImageLayer extends VisualClip {
+  html?: import('../html/html-types').HtmlComposition;
   kind: 'image';
   source: string;
   width: number;

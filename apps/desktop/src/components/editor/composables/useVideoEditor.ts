@@ -8,6 +8,7 @@ import { computed, nextTick, onScopeDispose, ref, watch, type Ref } from 'vue';
 import { capture } from '../../../api/capture';
 import type { CaptureProject, ProjectEditorData } from '../../../api/types/capture-api';
 import { useVideoPlayer } from './useVideoPlayer';
+import { useHtmlPreview } from '../../authoring/useHtmlPreview';
 import { useCursorReplacer } from '../properties/cursor/useCursorReplacer';
 import { useClipComposition } from './useClipComposition';
 import { useProjectZoom } from './useProjectZoom';
@@ -51,6 +52,14 @@ export function useVideoEditor(options: {
     activeTab,
     editorDefaults,
   });
+  const htmlPreview = useHtmlPreview(
+    compositionState.composition,
+    player.currentTime,
+    () => {
+      player.frameVersion.value++;
+    },
+    (error) => toastStore.error(`HTML composition: ${error instanceof Error ? error.message : String(error)}`),
+  );
   const roleVolume = (role: Extract<AudioRole, 'system' | 'microphone'>) =>
     computed({
       get: () =>
@@ -309,8 +318,9 @@ export function useVideoEditor(options: {
     systemVolume,
     micVolume,
     outputCanvas,
-    player,
+    player: { ...player, frameFor: (clipId: string) => htmlPreview.frameFor(clipId) ?? player.frameFor(clipId) },
     initialPlaybackSettled,
+    projectStateReady,
     cursor,
     cursorMotion,
     compositionState: {

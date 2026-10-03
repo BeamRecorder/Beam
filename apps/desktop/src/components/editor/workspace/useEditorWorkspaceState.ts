@@ -49,6 +49,7 @@ export function useEditorWorkspaceState(props: EditorWorkspaceProps, emit: Edito
     outputCanvas,
     handleSelectTab,
     initialPlaybackSettled,
+    projectStateReady,
   } = useVideoEditor({
     project: toRef(props, 'project'),
     editorData: toRef(props, 'editorData'),
@@ -231,6 +232,7 @@ export function useEditorWorkspaceState(props: EditorWorkspaceProps, emit: Edito
     outputCanvas,
     handleSelectTab,
     initialPlaybackSettled,
+    projectStateReady,
     isPlaying,
     currentTime,
     duration,

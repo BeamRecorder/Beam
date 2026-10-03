@@ -1004,7 +1004,12 @@
     "backgroundError": "Wähle ein Bild, eine Farbe oder einen Verlauf als Hintergrund.",
     "dimensionsError": "Wähle eine Auflösung bis 64 Megapixel (16384 Pixel pro Seite).",
     "renderUnavailable": "Das Rendern von Bildern ist nicht verfügbar.",
-    "encodingUnavailable": "Die {format}-Kodierung ist nicht verfügbar."
+    "encodingUnavailable": "Die {format}-Kodierung ist nicht verfügbar.",
+    "rotation3d": "3D-Drehung",
+    "perspective": "Perspektive",
+    "group": "Gruppieren",
+    "selectionTitle": "Auswahl · {count} Elemente",
+    "ungroup": "Gruppierung aufheben"
   },
   "EditorPresetControls": {
     "preset": "Vorlage",

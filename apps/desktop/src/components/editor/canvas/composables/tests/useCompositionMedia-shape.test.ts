@@ -96,6 +96,7 @@ describe('useCompositionMedia shape rendering', () => {
     mountComposable([clip]);
     const ctx = {
       getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }),
+      canvas: { width: 800, height: 450 },
     } as CanvasRenderingContext2D;
     const window = { dx: 10, dy: 20, dw: 800, dh: 400, scale: 1 };
 
@@ -111,6 +112,7 @@ describe('useCompositionMedia shape rendering', () => {
     mountComposable([clip], clip, draft);
     const ctx = {
       getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }),
+      canvas: { width: 800, height: 450 },
     } as CanvasRenderingContext2D;
 
     state.drawVisualStack(ctx, { dx: 0, dy: 0, dw: 1_000, dh: 500, scale: 1 }, vi.fn());
@@ -123,6 +125,7 @@ describe('useCompositionMedia shape rendering', () => {
     mountComposable([clip]);
     const ctx = {
       getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }),
+      canvas: { width: 800, height: 450 },
     } as CanvasRenderingContext2D;
 
     state.drawComposition(ctx, { dx: 15, dy: 25, dw: 640, dh: 360 }, 'target-shape');

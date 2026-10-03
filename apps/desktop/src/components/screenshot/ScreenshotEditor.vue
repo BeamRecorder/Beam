@@ -2,16 +2,12 @@
 import EditorTitlebar from '../editor/EditorTitlebar.vue';
 import UndoRedoToast from '../editor/canvas/UndoRedoToast.vue';
 import PropertiesDeleteAction from '../editor/properties/PropertiesDeleteAction.vue';
-import ElementClipControls from '../editor/elements/ElementClipControls.vue';
 import { computed, ref, watch } from 'vue';
-import { ArrowLeft, Copy, RotateCcw, Settings2 } from '@lucide/vue';
+import type { NormalizedTransform } from '@beam/engine/shared/composition-types';
+import { ArrowLeft, Copy, Settings2 } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import Button from '~/ui/button/Button.vue';
-import type { ClipAppearance } from '@beam/engine/shared/composition-types';
-import CanvasPanel from '../editor/properties/canvas/CanvasPanel.vue';
-import BlurPropertiesPanel from '../editor/properties/clip/BlurPropertiesPanel.vue';
-import ClipPropertiesPanel from '../editor/properties/clip/ClipPropertiesPanel.vue';
-import SettingsPanel from '../editor/properties/settings/SettingsPanel.vue';
+import ScreenshotLayerInspector from './ScreenshotLayerInspector.vue';
 import EditorPresetControls from '../editor/EditorPresetControls.vue';
 import VideoProjectEdition from '../editor/VideoProjectEdition.vue';
 import EditorAmbientBackground from '../editor/EditorAmbientBackground.vue';
@@ -23,22 +19,17 @@ import ScreenshotToolbar from './ScreenshotToolbar.vue';
 import EditorSearchButton from '../editor/search/EditorSearchButton.vue';
 import ScreenshotSearch from './ScreenshotSearch.vue';
 import ScreenshotLayerTitle from './ScreenshotLayerTitle.vue';
+import ScreenshotCropReset from './ScreenshotCropReset.vue';
 import EditorWorkspace from '../editor/layout/EditorWorkspace.vue';
 import EditorProjectLoadingOverlay from '../editor/EditorProjectLoadingOverlay.vue';
 import { useScreenshotEditor } from './useScreenshotEditor';
-import ScreenshotCursorControls from './ScreenshotCursorControls.vue';
-import ZoomPanel from '../editor/properties/zoom/ZoomPanel.vue';
-import { DEFAULT_ZOOM_MOTION_BLUR } from '@beam/engine/zoom/zoom-types';
 import ScreenshotComposition from './composition/ScreenshotComposition.vue';
 import {
   screenshotLayers,
   renameScreenshotLayer,
   reorderScreenshotLayer,
   updateScreenshotLayer,
-  updateScreenshotBackground,
-  updateScreenshotBackgroundBlur,
   setScreenshotLayerVisible,
-  updateScreenshotWatermark,
 } from '@beam/engine/screenshot/screenshot-layers';
 import { useClipboardImagePaste } from '../editor/composables/useClipboardImagePaste';
 import { useElementFullscreen } from '../editor/canvas/composables/useElementFullscreen';
@@ -46,8 +37,11 @@ import { useElementFullscreen } from '../editor/canvas/composables/useElementFul
 const props = defineProps<{ id: string }>();
 const emit = defineEmits<{ ready: [] }>();
 const handlesMuted = ref(false);
+const selectionBounds = ref<NormalizedTransform | null>(null);
 const toolbarHeight = ref(50);
 const { t } = useTranslate('ScreenshotEditor');
+const { t: effectText } = useTranslate('GradientEffect');
+const { t: colorEffectText } = useTranslate('ColorEffect');
 const { t: topbarText } = useTranslate('Topbar');
 const { t: elementsText } = useTranslate('Elements');
 const { t: sidebarText } = useTranslate('SidebarPanel');
@@ -62,11 +56,15 @@ const toggleFullscreen = (event?: MouseEvent) => {
   (event?.currentTarget as HTMLElement | null)?.blur();
   canvasFullscreen.toggleFullscreen();
 };
+const editor = useScreenshotEditor(
+  () => props.id,
+  () => emit('ready'),
+  () => canvasFullscreen.isFullscreen.value,
+);
 const {
   document,
   state,
   presets,
-  backgroundLibrary,
   selectedId,
   selectedIds,
   panel,
@@ -76,9 +74,7 @@ const {
   error,
   busy,
   copied,
-  backgrounds,
   dirty,
-  selectedImage,
   image,
   pasteImage,
   addElement,
@@ -88,29 +84,26 @@ const {
   presetAction,
   select,
   selectMany,
+  groups,
+  resizeSelection,
   selectPanel,
   transform,
   rotate,
   startCrop,
   translate,
   removeLayer,
-  appearance,
   exportImage,
   back,
   openProject,
   renameProject,
   deleteProject,
   cursors,
-  effects,
+  layerEffects,
   zooms,
   selectedLayer,
   history,
   elements,
-} = useScreenshotEditor(
-  () => props.id,
-  () => emit('ready'),
-  () => canvasFullscreen.isFullscreen.value,
-);
+} = editor;
 useClipboardImagePaste({
   disabled: () => busy.value || cropping.value || canvasFullscreen.isFullscreen.value,
   preferInternal: canPasteLayers,
@@ -142,12 +135,17 @@ const chooseSelection = () => {
   else selectPanel('clip');
   inspectorOpen.value = true;
 };
-const panelTitle = computed(() =>
-  panel.value === 'canvas'
-    ? t('canvas')
-    : panel.value === 'settings'
-      ? sidebarText('settings')
-      : selectedLayer.value?.name || (selectedLayer.value ? elementsText(selectedLayer.value.kind) : t('properties')),
+const panelLabels = computed<Record<string, string>>(() => ({
+  canvas: t('canvas'),
+  settings: sidebarText('settings'),
+  'layer-effect':
+    layerEffects.selected.value?.kind === 'color-adjustment' ? colorEffectText('title') : effectText('title'),
+}));
+const panelTitle = computed(
+  () =>
+    panelLabels.value[panel.value] ??
+    (selectedIds.value.length > 1 ? t('selectionTitle', { count: selectedIds.value.length }) : undefined) ??
+    (selectedLayer.value?.name || (selectedLayer.value ? elementsText(selectedLayer.value.kind) : t('properties'))),
 );
 const composition = computed(() => (state.value ? screenshotLayers(state.value) : []));
 const renameLayer = (id: string, name: string) => {
@@ -159,7 +157,6 @@ const navigateSearch = (tab: string) => {
   inspectorOpen.value = true;
 };
 </script>
-
 <template>
   <main class="screenshot-editor">
     <ScreenshotSearch
@@ -267,7 +264,10 @@ const navigateSearch = (tab: string) => {
     />
     <EditorWorkspace v-if="state && document" kind="screenshot" class="editor-body">
       <ScreenshotPropertiesPanel :open="inspectorOpen" :title="panelTitle" @close="hideInspector">
-        <template v-if="selectedLayer && panel !== 'settings'" #title>
+        <template
+          v-if="selectedLayer && selectedIds.length < 2 && panel !== 'settings' && panel !== 'layer-effect'"
+          #title
+        >
           <ScreenshotLayerTitle
             :key="selectedLayer.id"
             :name="selectedLayer.name || panelTitle"
@@ -276,102 +276,24 @@ const navigateSearch = (tab: string) => {
             @rename="renameLayer(selectedLayer.id, $event)"
           />
         </template>
-        <template v-if="selectedLayer && panel !== 'settings' && panel !== 'canvas'" #footer>
+        <template
+          v-if="selectedLayer && panel !== 'settings' && panel !== 'canvas' && panel !== 'layer-effect'"
+          #footer
+        >
           <PropertiesDeleteAction
-            :name="selectedLayer.name || elementsText(selectedLayer.kind)"
-            :disabled="busy || selectedLayer.locked"
+            :name="selectedIds.length > 1 ? panelTitle : selectedLayer.name || elementsText(selectedLayer.kind)"
+            :disabled="busy || composition.some((layer) => selectedIds.includes(layer.id) && layer.locked)"
             @delete="removeLayer(selectedLayer.id)"
           />
         </template>
         <template #actions>
-          <div v-if="image && (panel === 'image' || panel === 'shapes')" class="crop-actions">
-            <Button
-              v-if="image.crop"
-              variant="ghost"
-              size="xs"
-              :icon="RotateCcw"
-              icon-only
-              :aria-label="t('resetCrop')"
-              :tooltip="t('resetCrop')"
-              :disabled="selectedLayer?.locked"
-              @click="image.crop = undefined"
-            />
-          </div>
+          <ScreenshotCropReset
+            v-if="selectedIds.length < 2 && image?.crop && (panel === 'image' || panel === 'shapes')"
+            :disabled="selectedLayer?.locked"
+            @reset="image!.crop = undefined"
+          />
         </template>
-        <fieldset class="layer-properties" :disabled="selectedLayer?.locked && panel !== 'settings'">
-          <ZoomPanel
-            v-if="panel === 'zoom' && zooms.selected.value"
-            still
-            :selected-zoom="zooms.selected.value"
-            :canvas-size="state.canvas"
-            :can-generate="false"
-            :has-automatic-zooms="false"
-            :motion-blur="DEFAULT_ZOOM_MOTION_BLUR"
-            @update="zooms.update"
-          />
-          <ElementClipControls v-if="panel === 'shapes' || panel === 'cursor'" />
-          <div v-if="panel === 'shapes' && effects.selected.value" class="effect-properties">
-            <BlurPropertiesPanel
-              :clip="{
-                ...effects.selected.value,
-                cornerRadius: effects.selected.value.cornerRadius ?? 0,
-              }"
-              @update="effects.update"
-            />
-          </div>
-          <ClipPropertiesPanel
-            :canvas-size="state.canvas"
-            v-if="selectedImage && image && (panel === 'image' || panel === 'shapes')"
-            hide-layout
-            hide-crop
-            :selected-clip="selectedImage"
-            @update:appearance="appearance"
-            @corner-radius-interaction="handlesMuted = $event"
-            @update:shadow="
-              appearance({
-                shadowSize: $event.size,
-                shadowBlur: $event.blur,
-                shadowMode: $event.mode,
-                shadowColor: $event.color,
-                shadowDirection: $event.direction as ClipAppearance['shadowDirection'],
-              })
-            "
-            @update:corner-radius="
-              appearance({
-                cornerRadius: $event as ClipAppearance['cornerRadius'],
-              })
-            "
-            @update:is-mirrored="image.isMirrored = $event"
-            @update:is-mirrored-y="image.isMirroredY = $event"
-            @update:rotation="rotate"
-            @update:clip-transform="transform"
-            @reset:clip-transform="image.transform = { x: 0.06, y: 0.06, width: 0.88, height: 0.88 }"
-          />
-          <CanvasPanel
-            v-else-if="panel === 'canvas'"
-            still
-            :selected-background="state.background"
-            :background-groups="backgrounds"
-            :blur-percent="state.blurPercent"
-            :show-background="state.canvas.showBackground"
-            :watermark="state.canvas.watermark"
-            @update:selected-background="updateScreenshotBackground(state, $event)"
-            @update:blur-percent="updateScreenshotBackgroundBlur(state, $event)"
-            @update:show-background="setScreenshotLayerVisible(state, '__background__', $event)"
-            @update:watermark="updateScreenshotWatermark(state, $event)"
-            @import:background="backgroundLibrary.push($event)"
-          />
-
-          <template v-if="panel === 'cursor' && cursors.selected.value">
-            <ScreenshotCursorControls
-              :cursor="cursors.selected.value"
-              :packs="cursors.packs.value"
-              @update="cursors.update"
-              @imported="cursors.registerPack"
-            />
-          </template>
-          <SettingsPanel v-else-if="panel === 'settings'" hide-recorder @back-to-hud="back" />
-        </fieldset>
+        <ScreenshotLayerInspector :editor="editor" :bounds="selectionBounds" @handles-muted="handlesMuted = $event" />
       </ScreenshotPropertiesPanel>
       <div
         ref="previewStage"
@@ -420,6 +342,8 @@ const navigateSearch = (tab: string) => {
           @rotate="rotate"
           @update-zoom="zooms.update"
           @translate="translate"
+          @resize-selection="resizeSelection"
+          @selection-bounds="selectionBounds = $event"
           @crop="image && (image.crop = $event)"
           @crop-done="cropping = false"
           @crop-request="startCrop"
@@ -445,6 +369,10 @@ const navigateSearch = (tab: string) => {
               @update="(id, patch) => updateScreenshotLayer(state!, id, patch)"
               @visibility="(id, visible) => setScreenshotLayerVisible(state!, id, visible)"
               @remove="removeLayer"
+              :selected-effect-id="panel === 'layer-effect' ? layerEffects.selected.value?.id : undefined"
+              @add-effect="layerEffects.add"
+              @select-effect="layerEffects.select"
+              @toggle-effect="layerEffects.toggle"
               @rename="renameLayer"
             />
           </template>
@@ -459,6 +387,10 @@ const navigateSearch = (tab: string) => {
               :editing-text="Boolean(elements.editing.value)"
               :panel="panel"
               :inspector-open="inspectorOpen"
+              :can-group="groups.canGroup.value"
+              :can-ungroup="groups.canUngroup.value"
+              @group="groups.group"
+              @ungroup="groups.ungroup"
               :can-undo="history.canUndo.value"
               :can-redo="history.canRedo.value"
               @add="addElement"

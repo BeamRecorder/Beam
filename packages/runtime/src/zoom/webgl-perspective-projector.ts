@@ -141,6 +141,16 @@ export class WebGlPerspectiveProjector {
   };
 
   render(source: TexImageSource, width: number, height: number, transform: PerspectiveTransform): PerspectiveCanvas {
+    const pixelWidth = Math.max(1, Math.round(width)),
+      pixelHeight = Math.max(1, Math.round(height));
+    return this.renderGeometry(
+      source,
+      pixelWidth,
+      pixelHeight,
+      createPerspectiveGeometry(pixelWidth, pixelHeight, transform).positions,
+    );
+  }
+  renderGeometry(source: TexImageSource, width: number, height: number, positions: Float32Array): PerspectiveCanvas {
     const pixelWidth = Math.max(1, Math.round(width));
     const pixelHeight = Math.max(1, Math.round(height));
     if (this.lost || this.gl.isContextLost()) throw new Error('Perspective zoom WebGL context was lost.');
@@ -155,9 +165,8 @@ export class WebGlPerspectiveProjector {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(resources.program);
 
-    const geometry = createPerspectiveGeometry(pixelWidth, pixelHeight, transform);
     gl.bindBuffer(gl.ARRAY_BUFFER, resources.positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, geometry.positions, gl.DYNAMIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW);
     gl.enableVertexAttribArray(resources.positionLocation);
     gl.vertexAttribPointer(resources.positionLocation, 4, gl.FLOAT, false, 0, 0);
 

@@ -43,7 +43,8 @@ test('one command starts Vite, resolves native capture and launches Electron aga
     ['server', 'listen', 'log', 'engine', 'log', 'electron', 'close'],
   );
   const serverOptions = calls[0][1];
-  assert.equal(serverOptions.root, options.root);
+  assert.equal(serverOptions.root, undefined);
+  assert.equal(serverOptions.configFile, path.join(options.root, 'vite.config.ts'));
   assert.deepEqual(serverOptions.server, { host: 'localhost', port: 6500, strictPort: false });
   assert.match(serverOptions.cacheDir, /[0-9a-f]{16}-preview$/);
   const launch = calls.find(([name]) => name === 'electron');
@@ -176,9 +177,19 @@ test(
     try {
       for (const name of ['one', 'two']) {
         const root = path.join(temporary, name);
-        fs.mkdirSync(path.join(root, 'html'), { recursive: true });
+        const rendererRoot = path.join(root, 'apps/desktop');
+        fs.mkdirSync(path.join(rendererRoot, 'html'), { recursive: true });
         fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ version: '1.2.3', type: 'module' }));
-        fs.writeFileSync(path.join(root, 'html/index.html'), `<html><body>worktree-${name}</body></html>`);
+        fs.writeFileSync(
+          path.join(root, 'vite.config.ts'),
+          `export default { root: ${JSON.stringify(rendererRoot)} };`,
+        );
+        for (const entry of ['index', 'hud-panel', 'onboarding']) {
+          fs.writeFileSync(
+            path.join(rendererRoot, `html/${entry}.html`),
+            `<html><body>worktree-${name}-${entry}</body></html>`,
+          );
+        }
       }
       for (const [worktree, name] of [
         ['one', 'default'],
@@ -201,7 +212,7 @@ test(
           processTarget: session.processTarget,
           createServer: (options) => {
             session.cacheDir = options.cacheDir;
-            return createServer({ ...options, configFile: false, logLevel: 'silent' });
+            return createServer({ ...options, logLevel: 'silent' });
           },
           resolveEngine: async () => '/native/engine',
           getElectronPath: () => '/electron',
@@ -220,9 +231,11 @@ test(
       assert.equal(new Set(sessions.map((session) => session.cacheDir)).size, 3);
       for (const session of sessions) {
         assert.equal(session.sessionName, session.name);
-        const response = await fetch(`${session.origin}/html/index.html`);
-        assert.equal(response.status, 200);
-        assert.match(await response.text(), new RegExp(`worktree-${session.worktree}`));
+        for (const entry of ['index', 'hud-panel', 'onboarding']) {
+          const response = await fetch(`${session.origin}/html/${entry}.html`);
+          assert.equal(response.status, 200, `${session.name}: ${entry}`);
+          assert.match(await response.text(), new RegExp(`worktree-${session.worktree}-${entry}`));
+        }
       }
       sessions[0].processTarget.emit('SIGINT');
       await sessions[0].running;

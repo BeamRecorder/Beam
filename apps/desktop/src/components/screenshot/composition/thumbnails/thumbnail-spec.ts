@@ -5,6 +5,7 @@ import { WATERMARK_LOGO_PATH } from '@beam/runtime/rendering/watermark-render';
 import { screenshotLayers } from '@beam/engine/screenshot/screenshot-layers';
 import type { ThumbnailSpec } from './thumbnail-types';
 import { screenshotImage } from '@beam/engine/screenshot/screenshot-images';
+import { effectThumbnailId } from './effect-thumbnail';
 
 export function screenshotThumbnailSpecs(
   state: ScreenshotState,
@@ -14,7 +15,7 @@ export function screenshotThumbnailSpecs(
 ): ThumbnailSpec[] {
   return screenshotLayers(state)
     .filter((layer) => layer.kind !== 'zoom' && (!visibleIds || visibleIds.has(layer.id)))
-    .map((layer) => {
+    .flatMap((layer) => {
       const effect = state.effects?.find((item) => item.id === layer.id);
       const shape = state.shapes.find((item) => item.id === layer.id);
       const cursor = state.cursors?.find((item) => item.id === layer.id);
@@ -54,9 +55,9 @@ export function screenshotThumbnailSpecs(
               : layer.kind === 'background'
                 ? [state.background, state.blurPercent]
                 : { ...state.canvas.watermark, enabled: true });
-      return {
+      const base: ThumbnailSpec = {
         id: layer.id,
-        key: JSON.stringify([state.canvas.width, state.canvas.height, sourceUrl, visual]),
+        key: JSON.stringify([state.canvas.width, state.canvas.height, sourceUrl, layer.rotation3d, visual, []]),
         state: {
           ...state,
           image: image ?? state.image,
@@ -68,10 +69,22 @@ export function screenshotThumbnailSpecs(
           composition: undefined,
           layerNames: undefined,
         },
-        layer,
+        layer: { ...layer, effects: [] },
         sourceUrl,
         cursorPack,
         cursorAsset,
       };
+      return [
+        base,
+        ...(layer.effects ?? []).map((attached, index) => {
+          const effects = layer.effects!.slice(0, index + 1);
+          return {
+            ...base,
+            id: effectThumbnailId(layer.id, attached.id),
+            key: JSON.stringify([state.canvas.width, state.canvas.height, sourceUrl, layer.rotation3d, visual, effects]),
+            layer: { ...layer, effects },
+          };
+        }),
+      ];
     });
 }

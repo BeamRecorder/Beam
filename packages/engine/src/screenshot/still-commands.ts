@@ -1,4 +1,7 @@
+import { registerStillGroupCommands } from './still-group-commands';
+import { validateLayerRotation3d } from '../layout/layer-perspective-schema.js';
 import { createCommandRegistry } from '../commands/command-registry';
+import { validateLayerEffects } from '../gradient/gradient-schema.js';
 import { LAYER_BLEND_MODES } from '../shared/layer-compositing';
 import { jsonObject } from '../document/json-value';
 import type { StillDocument } from './still-document-types';
@@ -14,6 +17,7 @@ import {
   removeScreenshotLayer,
   reorderScreenshotLayer,
   setScreenshotLayerVisible,
+  renameScreenshotLayer,
 } from './screenshot-layers';
 
 const layerId = (input: unknown) => {
@@ -44,6 +48,28 @@ const mutableState = (state: ScreenshotState, targetId?: string): ScreenshotStat
 
 export function createStillCommands() {
   const registry = createCommandRegistry<StillDocument>();
+  registerStillGroupCommands(registry);
+  registry.register({
+    type: 'still.layer.rename',
+    parse(input) {
+      const value = jsonObject(input);
+      if (
+        Object.keys(value).some((key) => !['layerId', 'name'].includes(key)) ||
+        typeof value.name !== 'string' ||
+        !value.name ||
+        value.name !== value.name.trim() ||
+        value.name.length > 200
+      )
+        throw new TypeError('Invalid layer name.');
+      return { id: layerId(input), name: value.name };
+    },
+    apply(document, { id, name }) {
+      editable(document, id);
+      const state = { ...document.state };
+      if (!renameScreenshotLayer(state, id, name)) return document;
+      return { ...document, state };
+    },
+  });
   registry.register({
     type: 'still.layer.add',
     parse: jsonObject,
@@ -146,12 +172,14 @@ export function createStillCommands() {
       const value = jsonObject(input),
         patch = jsonObject(value.patch);
       if (
-        Object.keys(patch).some((key) => !['opacity', 'blendMode', 'locked'].includes(key)) ||
+        Object.keys(patch).some((key) => !['opacity', 'blendMode', 'locked', 'effects', 'rotation3d'].includes(key)) ||
         ('opacity' in patch && (typeof patch.opacity !== 'number' || patch.opacity < 0 || patch.opacity > 100)) ||
         ('locked' in patch && typeof patch.locked !== 'boolean') ||
         ('blendMode' in patch && !LAYER_BLEND_MODES.includes(patch.blendMode as never))
       )
         throw new TypeError('Invalid layer compositing.');
+      if ('rotation3d' in patch) validateLayerRotation3d(patch.rotation3d);
+      if ('effects' in patch) validateLayerEffects(patch.effects, LAYER_BLEND_MODES);
       return { id: layerId(input), patch };
     },
     apply(document, { id, patch }) {

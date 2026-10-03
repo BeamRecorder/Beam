@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useElementSize } from '@vueuse/core';
-import { Crop, MousePointer2, Paintbrush, PanelLeft } from '@lucide/vue';
+import { Crop, MousePointer2, Paintbrush, PanelLeft, Group, Ungroup } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import Button from '~/ui/button/Button.vue';
 import ScreenshotAddMenu from './ScreenshotAddMenu.vue';
@@ -20,6 +20,8 @@ const emit = defineEmits<{
   redo: [];
   toggleInspector: [];
   resize: [height: number];
+  group: [];
+  ungroup: [];
 }>();
 const toolbar = ref<HTMLElement | null>(null);
 const focusInspector = () => toolbar.value?.querySelector<HTMLButtonElement>('button[aria-controls]')?.focus();
@@ -130,6 +132,33 @@ const navigate = (event: KeyboardEvent) => {
     </div>
     <span class="tool-divider" aria-hidden="true" />
     <div class="tool-group">
+      <Button
+        variant="ghost"
+        size="sm"
+        icon-only
+        :icon="Group"
+        :style="toolStyle"
+        :disabled="disabled || !canGroup"
+        :aria-label="t('ScreenshotEditor.group')"
+        :tooltip="canGroup ? t('ScreenshotEditor.group') + ' · Ctrl+G' : t('LayerEffects.selectElement')"
+        :tooltip-delay="200"
+        @click="emit('group')"
+      />
+      <Button
+        variant="ghost"
+        size="sm"
+        icon-only
+        :icon="Ungroup"
+        :style="toolStyle"
+        :disabled="disabled || !canUngroup"
+        :aria-label="t('ScreenshotEditor.ungroup')"
+        :tooltip="canUngroup ? t('ScreenshotEditor.ungroup') + ' · Ctrl+Shift+G' : t('LayerEffects.selectElement')"
+        :tooltip-delay="200"
+        @click="emit('ungroup')"
+      />
+    </div>
+    <span class="tool-divider" aria-hidden="true" />
+    <div class="tool-group">
       <EditorHistoryControls
         :can-undo="canUndo && !disabled"
         :can-redo="canRedo && !disabled"
@@ -143,6 +172,8 @@ const navigate = (event: KeyboardEvent) => {
 
 <style scoped>
 .screenshot-toolbar {
+  position: relative;
+  z-index: 0;
   display: flex;
   align-items: center;
   justify-content: center;

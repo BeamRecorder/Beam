@@ -5,7 +5,7 @@ import Textarea from '~/ui/textarea/Textarea.vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
-import Divider from '~/ui/divider/Divider.vue';
+import Accordion from '~/ui/accordion/Accordion.vue';
 const CaptionStyleControls = defineAsyncComponent(() => import('../properties/captions/CaptionStyleControls.vue'));
 import type { ShapeClip, CaptionStyle } from '@beam/engine/shared/composition-types';
 import type { ElementText } from '@beam/engine/shared/element-types';
@@ -20,10 +20,12 @@ const source = computed(() =>
   editor?.editing.value?.id === props.clip.id ? editor.editing.value.text : props.clip.text,
 );
 const text = ref<ElementText>();
+const contentOpen = ref(props.clip.family === 'text' || Boolean(props.clip.text));
 watch(
   source,
   (value) => {
     text.value = value;
+    if (editor?.editing.value?.id === props.clip.id) contentOpen.value = true;
   },
   { deep: true, immediate: true },
 );
@@ -50,53 +52,68 @@ const edit = () => {
 </script>
 <template>
   <section class="element-text-controls">
-    <Button variant="secondary" size="sm" :icon="Type" @click="edit">{{ t(text ? 'editText' : 'addText') }}</Button>
-    <template v-if="text">
-      <label class="text-field"
-        >{{ t('text') }}
-        <Textarea
-          :model-value="text.content"
-          :rows="3"
-          maxlength="10000"
-          @update:model-value="updateText({ ...text, content: $event })"
-        />
-      </label>
-      <ButtonGroup full :columns="3" :aria-label="t('verticalAlignment')" :selection="alignmentSelection">
-        <Button
-          v-for="item in alignments"
-          :key="item.value"
-          size="xs"
-          :icon="item.icon"
-          icon-only
-          :variant="text.verticalAlign === item.value ? 'selected' : 'ghost'"
-          :aria-label="t(item.value)"
-          :tooltip="t(item.value)"
-          @click="updateText({ ...text, verticalAlign: item.value })"
-        />
-      </ButtonGroup>
-      <BigSlider
-        :model-value="text.padding"
-        :label="t('textPadding')"
-        :min="0"
-        :max="40"
-        :step="1"
-        :default-value="6"
-        @update:model-value="updateText({ ...text, padding: $event })"
-      />
-      <Divider />
-      <CaptionStyleControls
-        :style="text.style"
-        :sample-text="text.content"
-        :default-font-size="48"
-        @update="updateStyle"
-      />
-    </template>
+    <Accordion v-model="contentOpen" appearance="inspector" :title="t('text')" data-element-section="text">
+      <div class="text-content">
+        <Button v-if="!text" variant="secondary" size="sm" :icon="Type" @click="edit">{{ t('addText') }}</Button>
+        <template v-if="text">
+          <label class="text-field"
+            >{{ t('text') }}
+            <Textarea
+              :model-value="text.content"
+              :rows="3"
+              maxlength="10000"
+              @update:model-value="updateText({ ...text, content: $event })"
+            />
+          </label>
+          <ButtonGroup
+            full
+            variant="neutral"
+            :columns="3"
+            :aria-label="t('verticalAlignment')"
+            :selection="alignmentSelection"
+          >
+            <Button
+              v-for="item in alignments"
+              :key="item.value"
+              size="sm"
+              icon-only
+              :variant="text.verticalAlign === item.value ? 'selected' : 'ghost'"
+              :aria-label="t(item.value)"
+              :tooltip="t(item.value)"
+              @click="updateText({ ...text, verticalAlign: item.value })"
+              ><template #icon><component :is="item.icon" :size="20" :stroke-width="2.25" /></template
+            ></Button>
+          </ButtonGroup>
+          <BigSlider
+            :display-precision="2"
+            :model-value="text.padding"
+            :label="t('textPadding')"
+            :min="0"
+            :max="40"
+            :step="1"
+            :default-value="6"
+            @update:model-value="updateText({ ...text, padding: $event })"
+          />
+        </template>
+      </div>
+    </Accordion>
+    <CaptionStyleControls
+      v-if="text"
+      :style="text.style"
+      :sample-text="text.content"
+      :default-font-size="48"
+      @update="updateStyle"
+    />
   </section>
 </template>
 <style scoped>
 .element-text-controls {
   display: flex;
   flex-direction: column;
+  gap: 0;
+}
+.text-content {
+  display: grid;
   gap: 12px;
 }
 .text-field {

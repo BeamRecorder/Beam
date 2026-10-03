@@ -460,10 +460,119 @@ test('screenshot media rotation accepts legacy omission and precise finite angle
 
 test('validates persisted still lenses, static timing and required composition references', () => {
   const { DEFAULT_GLASS_HIGHLIGHT } = require('../packages/engine/src/zoom/glass-highlight-schema.js');
-  const lens = { id: 'lens', kind: 'zoom', name: 'Lens', sessionId: 'manual', startMs: 0, endMs: 1, focus: { cx: .5, cy: .5 }, depth: 4, mode: 'manual', enabled: true, effect: 'glass', glass: { ...DEFAULT_GLASS_HIGHLIGHT, path: [] } };
-  const state = withComposition(screenshotState()); state.zooms = [lens];
+  const lens = {
+    id: 'lens',
+    kind: 'zoom',
+    name: 'Lens',
+    sessionId: 'manual',
+    startMs: 0,
+    endMs: 1,
+    focus: { cx: 0.5, cy: 0.5 },
+    depth: 4,
+    mode: 'manual',
+    enabled: true,
+    effect: 'glass',
+    glass: { ...DEFAULT_GLASS_HIGHLIGHT, path: [] },
+  };
+  const state = withComposition(screenshotState());
+  state.zooms = [lens];
   state.composition.push({ id: lens.id, opacity: 100, blendMode: 'source-over', locked: false });
   assert.doesNotThrow(() => validateScreenshotState(state));
-  for (const patch of [{ mode: 'auto' }, { endMs: 1000 }, { animations: [] }, { glass: { ...lens.glass, size: 5 } }, { id: state.image.id }]) assert.throws(() => validateScreenshotState({ ...state, zooms: [{ ...lens, ...patch }] }));
-  assert.throws(() => validateScreenshotState({ ...state, composition: state.composition.filter(layer => layer.id !== lens.id) }));
+  for (const patch of [
+    { mode: 'auto' },
+    { endMs: 1000 },
+    { animations: [] },
+    { glass: { ...lens.glass, size: 5 } },
+    { id: state.image.id },
+  ])
+    assert.throws(() => validateScreenshotState({ ...state, zooms: [{ ...lens, ...patch }] }));
+  assert.throws(() =>
+    validateScreenshotState({ ...state, composition: state.composition.filter((layer) => layer.id !== lens.id) }),
+  );
+});
+
+test('validates attached gradient recipes in current state and saved history', () => {
+  const { DEFAULT_GRADIENT_RECIPE } = require('../packages/engine/src/gradient/gradient-schema.js');
+  const state = screenshotState({
+    composition: [
+      {
+        id: '__background__',
+        opacity: 100,
+        blendMode: 'source-over',
+        locked: false,
+        effects: [
+          {
+            id: 'gradient',
+            kind: 'gradient',
+            enabled: true,
+            opacity: 100,
+            blendMode: 'source-over',
+            recipe: structuredClone(DEFAULT_GRADIENT_RECIPE),
+          },
+        ],
+      },
+      { id: 'screenshot', opacity: 100, blendMode: 'source-over', locked: false },
+    ],
+  });
+  assert.doesNotThrow(() => validateScreenshotState(state));
+  const history = { version: 1, undo: [structuredClone(state)], redo: [structuredClone(state)] };
+  assert.doesNotThrow(() => validateScreenshotHistory(history, state));
+  history.redo[0].composition[0].effects[0].recipe.grain = 101;
+  assert.throws(() => validateScreenshotHistory(history, state));
+  for (const patch of [
+    { grain: 101 },
+    { mode: 'unknown' },
+    { frame: Infinity },
+    { octaves: 1.2 },
+    { animated: true },
+  ]) {
+    const next = structuredClone(state);
+    Object.assign(next.composition[0].effects[0].recipe, patch);
+    assert.throws(() => validateScreenshotState(next));
+  }
+  const next = structuredClone(state);
+  next.composition[0].effects.push(next.composition[0].effects[0]);
+  assert.throws(() => validateScreenshotState(next));
+});
+
+test('validates color adjustments in persisted state and history without accepting unknown blend operations', () => {
+  const { createColorEffect } = require('../packages/engine/src/gradient/color-schema.js');
+  const state = withComposition(screenshotState());
+  state.composition[0].effects = [createColorEffect('color', true)];
+  assert.doesNotThrow(() => validateScreenshotState(state));
+  const history = { version: 1, undo: [structuredClone(state)], redo: [structuredClone(state)] };
+  assert.doesNotThrow(() => validateScreenshotHistory(history, state));
+  history.undo[0].composition[0].effects[0].recipe.hue = 181;
+  assert.throws(() => validateScreenshotHistory(history, state));
+  for (const patch of [
+    { blendMode: 'multiply' },
+    { recipe: { version: 1 } },
+    { recipe: { ...createColorEffect('x').recipe, saturation: Infinity } },
+  ]) {
+    const invalid = structuredClone(state);
+    Object.assign(invalid.composition[0].effects[0], patch);
+    assert.throws(() => validateScreenshotState(invalid));
+  }
+});
+
+test('validates 3D layer angles and persisted groups in screenshots and history', () => {
+  const state = withComposition(screenshotState({ shapes: [shape('shape-1')] }));
+  state.composition.find((r) => r.id === 'screenshot').rotation3d = { x: 24, y: -12, perspective: 1200 };
+  for (const id of ['screenshot', 'shape-1']) state.composition.find((r) => r.id === id).groupId = 'pair';
+  assert.doesNotThrow(() => validateScreenshotState(state));
+  const history = { version: 1, undo: [structuredClone(state)], redo: [] };
+  assert.doesNotThrow(() => validateScreenshotHistory(history, state));
+  history.undo[0].composition.find((r) => r.id === 'screenshot').rotation3d.x = 81;
+  assert.throws(() => validateScreenshotHistory(history, state));
+  for (const patch of [
+    { x: Infinity, y: 0, perspective: 1200 },
+    { x: 0, y: 0, perspective: 199 },
+  ]) {
+    const bad = structuredClone(state);
+    bad.composition.find((r) => r.id === 'screenshot').rotation3d = patch;
+    assert.throws(() => validateScreenshotState(bad));
+  }
+  const orphan = structuredClone(state);
+  delete orphan.composition.find((r) => r.id === 'shape-1').groupId;
+  assert.throws(() => validateScreenshotState(orphan));
 });

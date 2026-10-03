@@ -1001,7 +1001,12 @@
     "backgroundError": "Choisissez une image, une couleur ou un dégradé comme arrière-plan.",
     "dimensionsError": "Choisissez une résolution maximale de 64 mégapixels (16384 pixels par côté).",
     "renderUnavailable": "Le rendu de l’image est indisponible.",
-    "encodingUnavailable": "L’encodage {format} est indisponible."
+    "encodingUnavailable": "L’encodage {format} est indisponible.",
+    "rotation3d": "Rotation 3D",
+    "perspective": "Perspective",
+    "group": "Grouper",
+    "selectionTitle": "Sélection · {count} éléments",
+    "ungroup": "Dégrouper"
   },
   "EditorPresetControls": {
     "preset": "Préréglage",

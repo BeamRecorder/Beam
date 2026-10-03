@@ -230,18 +230,18 @@ describe('screenshot layer geometry', () => {
     expect(screenshotLayerRotation(state, 'screenshot')).toBe(0);
   });
 
-  it('returns the background for empty canvas space only when it is visible', () => {
+  it('leaves empty canvas space unselected whether the background is visible or hidden', () => {
     const state = makeState({
       canvas: { ...DEFAULT_OUTPUT_CANVAS, showBackground: true },
       image: { ...makeState().image, enabled: false },
     });
-    expect(screenshotLayerAt(state, null, 0.95, 0.95)).toBe('__background__');
+    expect(screenshotLayerAt(state, null, 0.95, 0.95)).toBeNull();
 
     state.canvas.showBackground = false;
     expect(screenshotLayerAt(state, null, 0.95, 0.95)).toBeNull();
   });
 
-  it('ignores a cursor without decoded art before reaching the background layer', () => {
+  it('ignores a cursor without decoded art without selecting the background', () => {
     const cursor = createScreenshotCursor('cursor-1', 'Pointer', pack);
     const state = makeState({
       canvas: { ...DEFAULT_OUTPUT_CANVAS, showBackground: true },
@@ -249,7 +249,7 @@ describe('screenshot layer geometry', () => {
       cursors: [cursor],
     });
 
-    expect(screenshotLayerAt(state, makeAssets(), 0.45, 0.45)).toBe('__background__');
+    expect(screenshotLayerAt(state, makeAssets(), 0.45, 0.45)).toBeNull();
   });
 });
 
@@ -261,4 +261,18 @@ it('hit-tests rotated screenshot images in pixel space on a non-square canvas', 
   expect(screenshotLayerRotation(state, state.image.id)).toBe(90);
   expect(screenshotLayerAt(state, null, 0.5, 0.6)).toBe(state.image.id);
   expect(screenshotLayerAt(state, null, 0.65, 0.45)).not.toBe(state.image.id);
+});
+
+it('shares projected bounds with accurate 3D hit testing on screenshot text', async () => {
+  const { screenshotLayerBounds } = await import('../screenshot-layer-geometry');
+  const state = makeState({ shapes: [makeShape('tilted')] }),
+    shape = state.shapes[0]!;
+  shape.transform = { x: 0.3, y: 0.3, width: 0.3, height: 0.2 };
+  layers(state);
+  state.composition!.find((r) => r.id === 'tilted')!.rotation3d = { x: 35, y: -20, perspective: 1200 };
+  expect(screenshotLayerAt(state, null, 0.45, 0.4)).toBe('tilted');
+  const bounds = screenshotLayerBounds(state, null, 'tilted')!;
+  expect(bounds.height).not.toBeCloseTo(0.2);
+  expect(screenshotLayerAt(state, null, bounds.x, bounds.y)).not.toBe('tilted');
+  expect(screenshotLayerBounds(state, null, 'missing')).toBeNull();
 });

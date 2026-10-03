@@ -137,17 +137,17 @@ beforeEach(() => {
 });
 
 describe('ShapeLayerPropertiesPanel', () => {
-  it('focuses the named Appearance/Text panes and forwards their real editable properties', async () => {
+  it('groups shape appearance and text in inspector accordions and forwards editable properties', async () => {
     const wrapper = mount(ShapeLayerPropertiesPanel, {
       props: { clip: clip({ opacityEnabled: true, shadowEnabled: true }) },
       global: { stubs },
     });
     try {
-      await wrapper.get('[data-editor-property-section="text"]').trigger('click');
+      expect(wrapper.find('[data-editor-property-section="appearance"]').exists()).toBe(false);
+      expect(wrapper.findAll('.accordion-inspector').length).toBeGreaterThanOrEqual(6);
       const text = createElementText('Annotation');
       wrapper.findComponent(ElementTextControls).vm.$emit('update', text);
       expect(wrapper.emitted('update')).toContainEqual([{ text }]);
-      await wrapper.get('[data-editor-property-section="appearance"]').trigger('click');
       for (const control of wrapper.findAllComponents(BigSliderStub)) {
         control.vm.$emit('update:modelValue', 20);
       }
@@ -456,4 +456,11 @@ describe('ShapeLayerPropertiesPanel', () => {
     borderPicker.vm.$emit('update:modelValue', '#fedcba');
     expect(wrapper.emitted('update')).toEqual([[{ fill: gradientFill }], [{ borderColor: '#fedcba' }]]);
   });
+});
+
+it('keeps the element-opacity switch inside the accordion body', () => {
+ const wrapper=mount(ShapeLayerPropertiesPanel,{props:{clip:clip({family:'text',preset:'text'})}});
+ const section=wrapper.get('[data-element-section="opacity"]');
+ expect(section.get('[role="switch"]').element.closest('.accordion-content')).not.toBeNull();
+ expect(section.get('.accordion-trigger').find('[role="switch"]').exists()).toBe(false);wrapper.unmount();
 });

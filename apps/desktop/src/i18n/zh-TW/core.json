@@ -1004,7 +1004,12 @@
     "backgroundError": "請選擇圖片、顏色或漸層作為背景。",
     "dimensionsError": "請選擇不超過 6400 萬像素的解析度（每邊最多 16384 像素）。",
     "renderUnavailable": "無法使用圖片繪製功能。",
-    "encodingUnavailable": "無法使用 {format} 編碼。"
+    "encodingUnavailable": "無法使用 {format} 編碼。",
+    "rotation3d": "3D 旋轉",
+    "perspective": "透視",
+    "group": "群組",
+    "selectionTitle": "選取 · {count} 個元素",
+    "ungroup": "取消群組"
   },
   "EditorPresetControls": {
     "preset": "預設",

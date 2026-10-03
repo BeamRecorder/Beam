@@ -1,3 +1,5 @@
+import { projectLayerPoint } from '@beam/engine/layout/layer-perspective';
+import type { LayerRotation3d } from '@beam/engine/layout/layer-perspective-types';
 import type { DrawingPoint } from '@beam/engine/shared/element-types';
 import type { ElementCamera, ElementViewport } from './element-editor-types';
 import { projectPerspectivePoint, unprojectPerspectivePoint } from '@beam/engine/zoom/perspective-projection';
@@ -43,6 +45,7 @@ export function elementMatrix(
   viewport: ElementViewport,
   camera: ElementCamera = {},
   rotation = 0,
+  rotation3d?: LayerRotation3d,
 ): string {
   const radians = (rotation * Math.PI) / 180,
     cos = Math.cos(radians),
@@ -55,14 +58,8 @@ export function elementMatrix(
   ].map(([u, v]) => {
     const x = (u! - 0.5) * rect.width,
       y = (v! - 0.5) * rect.height;
-    return projectElementPoint(
-      {
-        x: rect.x + rect.width / 2 + x * cos - y * sin,
-        y: rect.y + rect.height / 2 + x * sin + y * cos,
-      },
-      viewport,
-      camera,
-    );
+    const point = { x: rect.x + rect.width / 2 + x * cos - y * sin, y: rect.y + rect.height / 2 + x * sin + y * cos };
+    return projectElementPoint(rotation3d ? projectLayerPoint(point, rect, rotation3d) : point, viewport, camera);
   });
   const [a, b, c, d] = corners as [DrawingPoint, DrawingPoint, DrawingPoint, DrawingPoint];
   const dx1 = b.x - c.x,

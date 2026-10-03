@@ -306,3 +306,24 @@ describe('BigSlider', () => {
     expect(wrapper.emitted('interaction-cancel')).toHaveLength(1);
   });
 });
+
+describe('BigSlider display precision', () => {
+  it.each([[204.3824701, '204.38'], [-1.828685, '-1.83'], [1.20000003, '1.2']])('displays %s compactly without changing the stored value', async (value, expected) => {
+    const wrapper=mount(BigSlider,{props:{modelValue:value as number,min:-1000,max:1000,label:'Font size',displayPrecision:2},global:{stubs:{Input}}});
+    expect(wrapper.get('.big-slider-value').text()).toBe(expected);
+    await wrapper.get('.big-slider-value').trigger('click');
+    expect((wrapper.get('.slider-inline-input').element as HTMLInputElement).value).toBe(expected);
+    await wrapper.get('.slider-inline-input').trigger('blur');
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();wrapper.unmount();
+  });
+  it('commits a deliberate value, clamps it, and applies formatting to the rounded display',async()=>{
+    const wrapper=mount(BigSlider,{props:{modelValue:12.34567,min:0,max:100,label:'Size',displayPrecision:2,formatValue:(n:number)=>`${n} px`},global:{stubs:{Input}}});
+    expect(wrapper.get('.big-slider-value').text()).toBe('12.35 px');
+    await wrapper.get('.big-slider-value').trigger('click');await wrapper.get('.slider-inline-input').setValue('18.375');await wrapper.get('.slider-inline-input').trigger('keydown.enter');
+    expect(wrapper.emitted('update:modelValue')).toEqual([[18.375]]);
+    await wrapper.get('.big-slider-value').trigger('click');await wrapper.get('.slider-inline-input').setValue('200');await wrapper.get('.slider-inline-input').trigger('blur');expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([100]);wrapper.unmount();
+  });
+  it.each([[-4,'13'],[.5,'13'],[99,'12.987654321']])('bounds requested precision %s', (precision,expected)=>{
+    const wrapper=mount(BigSlider,{props:{modelValue:12.987654321,min:0,max:100,label:'Size',displayPrecision:precision as number}});expect(wrapper.get('.big-slider-value').text()).toBe(expected);wrapper.unmount();
+  });
+});

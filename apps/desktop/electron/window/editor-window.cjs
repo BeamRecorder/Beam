@@ -469,6 +469,10 @@ function createEditorWindowManager({
   ipcMain.on('editor:recorder-active', setRecorderActive);
 
   return {
+    contextFor: (sender) => {
+      const session = sessionForSender(sender);
+      return session?.currentProjectId ? editorContext(session) : null;
+    },
     open,
     showHud,
     destroy: () => {

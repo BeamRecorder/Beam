@@ -1,3 +1,6 @@
+import { drawWithLayerPerspective } from '../composition/render-layer-perspective';
+import { drawWithLayerEffects } from '../gradient/layer-effects';
+import { screenshotLayerEffectRect } from './screenshot-layer-effect-geometry';
 import { applyBlurEffect } from '@beam/runtime/composition/effects/blur-effect';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
@@ -13,7 +16,7 @@ import { screenshotImage } from '@beam/engine/screenshot/screenshot-images';
 import { screenshotImageRaster } from './screenshot-image-raster';
 import { drawScreenshotZoom } from './screenshot-zoom-render';
 
-export function drawScreenshotLayer(
+function drawScreenshotContent(
   target: Canvas2DContext,
   state: ScreenshotState,
   layer: ScreenshotLayer,
@@ -81,4 +84,28 @@ export function drawScreenshotLayer(
     const visible = shape.id === editingId ? { ...shape, text: undefined } : shape;
     drawShapeClip(target, visible, viewport, visible.transform, backdrop);
   }
+}
+
+export function drawScreenshotLayer(
+  target: Canvas2DContext,
+  state: ScreenshotState,
+  layer: ScreenshotLayer,
+  assets: Partial<ScreenshotRenderAssets>,
+  width: number,
+  height: number,
+  backdrop?: CanvasImageSource,
+  editingId?: string,
+) {
+  const scale = Math.min(width / state.canvas.width, height / state.canvas.height);
+  const draw = (context: Canvas2DContext) =>
+    drawScreenshotContent(context, state, layer, assets, width, height, backdrop ?? target.canvas, editingId);
+  const active = layer.effects?.some((effect) => effect.enabled && effect.opacity > 0);
+  const rect =
+    active || layer.rotation3d
+      ? screenshotLayerEffectRect(state, layer, assets, width, height)
+      : { x: 0, y: 0, width, height };
+  drawWithLayerPerspective(target, layer.rotation3d, rect, scale, (context) => {
+    if (active) drawWithLayerEffects(context, layer.effects!, rect, scale, draw);
+    else draw(context);
+  });
 }

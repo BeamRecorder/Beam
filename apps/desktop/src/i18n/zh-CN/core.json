@@ -1004,7 +1004,12 @@
     "backgroundError": "请选择图片、颜色或渐变作为背景。",
     "dimensionsError": "请选择不超过 6400 万像素的分辨率（每边最多 16384 像素）。",
     "renderUnavailable": "图片渲染不可用。",
-    "encodingUnavailable": "{format} 编码不可用。"
+    "encodingUnavailable": "{format} 编码不可用。",
+    "rotation3d": "3D 旋转",
+    "perspective": "透视",
+    "group": "编组",
+    "selectionTitle": "选择 · {count} 个元素",
+    "ungroup": "取消编组"
   },
   "EditorPresetControls": {
     "preset": "预设",

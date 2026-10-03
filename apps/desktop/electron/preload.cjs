@@ -5,6 +5,7 @@ const invoke = (command, payload) => ipcRenderer.invoke('capture:request', comma
 contextBridge.exposeInMainWorld(
   'capture',
   Object.freeze({
+    ...require('./authoring/preload.cjs'),
     platform: process.platform,
     canLaunchAtStartup: process.argv.includes('--beam-installed'),
     pickScreenColor: () => ipcRenderer.invoke('screen-color:pick'),

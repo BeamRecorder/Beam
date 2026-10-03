@@ -1,5 +1,6 @@
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
+import { releaseCompositedLayerSurface } from '@beam/runtime/composition/render-composited-layer';
 import { renderCompositedLayer } from '@beam/runtime/composition/render-composited-layer';
 import { drawScreenshotLayer } from '@beam/runtime/screenshot/screenshot-layer-render';
 import { screenshotLayers } from '@beam/engine/screenshot/screenshot-layers';
@@ -14,6 +15,8 @@ export function createScreenshotDragRenderer() {
   let cachedId: string | null = null;
   let cachedEditingId: string | undefined;
   const reset = () => {
+    const context = surface?.getContext('2d');
+    if (context) releaseCompositedLayerSurface(context);
     surface = null;
     cachedAssets = null;
     cachedId = null;
@@ -49,6 +52,7 @@ export function createScreenshotDragRenderer() {
       cachedId !== selectedId ||
       cachedEditingId !== editingId
     ) {
+      reset();
       const next = new OffscreenCanvas(width, height);
       const context = next.getContext('2d');
       if (!context) throw new Error('Screenshot rendering unavailable.');

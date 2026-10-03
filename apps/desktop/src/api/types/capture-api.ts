@@ -4,6 +4,7 @@ import type { HudPanelApi } from './hud-panel';
 import type { ProjectCatalogPage, ProjectCatalogRequest } from './project-catalog';
 import type { SourcePickerApi } from './source-picker';
 import type { InputAccessStatus } from './input-access';
+import type { AuthoringApi } from './authoring-api';
 export type { InputAccessStatus } from './input-access';
 import type { ScreenshotApi } from './screenshot';
 import type { TranscriptExportRequest, TranscriptExportResult } from './transcript';
@@ -98,7 +99,7 @@ export interface CaptureApi {
 }
 
 export interface DesktopCaptureApi
-  extends CaptureApi, ScreenshotApi, QuickSnipApi, HudPanelApi, SourcePickerApi, DesktopExportApi {
+  extends CaptureApi, ScreenshotApi, QuickSnipApi, HudPanelApi, SourcePickerApi, DesktopExportApi, AuthoringApi {
   close(): void;
   quit(): void;
   minimize(): void;

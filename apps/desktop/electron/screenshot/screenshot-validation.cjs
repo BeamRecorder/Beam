@@ -3,6 +3,7 @@ const { normalizeShapeLayerStyle } = require('../projects/composition-shape-laye
 const { normalizeAppearance } = require('../projects/composition-appearance.cjs');
 const { validateScreenshotComposition } = require('./screenshot-composition-validation.cjs');
 const { validateStillZoom } = require('../../../../packages/engine/src/zoom/zoom-schema.js');
+const { validateHtmlComposition } = require('../../../../packages/engine/src/html/html-schema.js');
 
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const transform = (value) =>
@@ -73,6 +74,10 @@ function validateScreenshotState(state, projectId) {
     if (!Array.isArray(state.images) || state.images.length + state.shapes.length + (state.cursors?.length ?? 0) > 500)
       throw new Error('Invalid screenshot image layers.');
     for (const image of state.images) {
+      if (image?.html !== undefined) {
+        validateHtmlComposition(image.html);
+        if (image.html.durationMs !== 0) throw new Error('A screenshot HTML layer must be static.');
+      }
       if (
         !image ||
         image.kind !== 'image' ||

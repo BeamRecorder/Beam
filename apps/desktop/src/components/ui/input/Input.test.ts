@@ -292,3 +292,15 @@ it('uses the field label for an optional unit menu and reflects unit-only change
   expect(wrapper.emitted('update:modelValue')).toBeUndefined();
   expect(wrapper.get('input').element.value).toBe('10');
 });
+
+it.each([{ width: '104px', height: '2.125rem' }, { height: '34px' }, {}])(
+  'applies explicit field geometry to the wrapper, preserving defaults when absent %#',
+  (geometry) => {
+    const wrapper = mount(Input, { props: { modelValue: 100, type: 'number', ...geometry } });
+    const element = wrapper.get('.input-wrapper').element as HTMLElement;
+    expect(element.style.width).toBe(geometry.width ?? '');
+    expect(element.style.height).toBe(geometry.height ?? '');
+    expect((wrapper.get('input').element as HTMLElement).style.height).toBe('');
+    wrapper.unmount();
+  },
+);

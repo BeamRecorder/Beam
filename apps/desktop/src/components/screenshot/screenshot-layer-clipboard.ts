@@ -76,6 +76,11 @@ export function copyScreenshotLayerSelection(
       name: layer.name || value.value.name,
       opacity: layer.opacity,
       blendMode: layer.blendMode,
+      ...(layer.rotation3d ? { rotation3d: clone(layer.rotation3d) } : {}),
+      ...(layer.groupId ? { groupId: layer.groupId } : {}),
+      ...(layer.effects && ![SCREENSHOT_BACKGROUND_ID, SCREENSHOT_WATERMARK_ID].includes(layer.id)
+        ? { effects: clone(layer.effects) }
+        : {}),
     });
   }
   if (!entries.length) return null;
@@ -120,6 +125,8 @@ export function pasteScreenshotLayerSelection(
   };
   initializeScreenshotComposition(next);
   const names: string[] = [];
+  const groups = new Map<string, string>();
+  for (const entry of clipboard.entries) if (entry.groupId && clipboard.entries.filter((r) => r.groupId === entry.groupId).length > 1) groups.set(entry.groupId, groups.get(entry.groupId) ?? crypto.randomUUID());
   clipboard.entries.forEach((entry, index) => {
     const id = ids[index]!;
     if (entry.layer.type === 'cursor') {
@@ -154,6 +161,9 @@ export function pasteScreenshotLayerSelection(
       id,
       opacity: entry.opacity,
       blendMode: entry.blendMode,
+      ...(entry.rotation3d ? { rotation3d: clone(entry.rotation3d) } : {}),
+      ...(entry.groupId && groups.has(entry.groupId) ? { groupId: groups.get(entry.groupId)! } : {}),
+      ...(entry.effects ? { effects: clone(entry.effects) } : {}),
       locked: false,
     });
     if (entry.name && screenshotLayers(next).find((layer) => layer.id === id)?.name !== entry.name)

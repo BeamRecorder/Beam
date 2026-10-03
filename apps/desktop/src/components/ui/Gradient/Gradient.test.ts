@@ -147,3 +147,28 @@ describe('Gradient', () => {
     expect(wrapper.classes()).not.toContain('is-selected');
   });
 });
+
+it('uses the same color editing actions for procedural palettes without unsupported position or alpha controls', async () => {
+  await setCurrentLocale('en');
+  const wrapper = mountGradient({ palette: true, showAngle: true, maxStops: 3 });
+  expect(wrapper.find('.gradient-toolbar').exists()).toBe(false);
+  expect(wrapper.find('.gradient-column-labels').exists()).toBe(false);
+  expect(wrapper.find('[role="slider"]').exists()).toBe(false);
+  expect(wrapper.find('input[aria-label="Stop 1 position"]').exists()).toBe(false);
+  expect(wrapper.find('input[aria-label="Stop 1 opacity"]').exists()).toBe(false);
+  expect(wrapper.getComponent(ColorPicker).props('showAlpha')).toBe(false);
+  await wrapper.get('[aria-label="Add color stop"]').trigger('click');
+  expect(lastValue(wrapper).stops).toHaveLength(3);
+  await wrapper.findAll('[aria-label="Remove color stop"]')[1]!.trigger('click');
+  expect(lastValue(wrapper).stops).toHaveLength(2);
+});
+it('replaces the linear swatch with a caller supplied live preview', async () => {
+  await setCurrentLocale('en');
+  const wrapper = mount(Gradient, {
+    props: { modelValue: base, palette: true },
+    slots: { preview: '<canvas data-live-preview />' },
+  });
+  expect(wrapper.get('.gradient-preview').classes()).toContain('custom-preview');
+  expect(wrapper.find('.gradient-preview canvas[data-live-preview]').exists()).toBe(true);
+  expect(wrapper.find('.gradient-preview > div').exists()).toBe(false);
+});

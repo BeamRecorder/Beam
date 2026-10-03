@@ -1004,7 +1004,12 @@
     "backgroundError": "पृष्ठभूमि के लिए चित्र, रंग या ग्रेडिएंट चुनें।",
     "dimensionsError": "64 मेगापिक्सेल तक का रिज़ॉल्यूशन चुनें (हर तरफ अधिकतम 16384 पिक्सेल)।",
     "renderUnavailable": "चित्र रेंडर करना उपलब्ध नहीं है।",
-    "encodingUnavailable": "{format} एन्कोडिंग उपलब्ध नहीं है।"
+    "encodingUnavailable": "{format} एन्कोडिंग उपलब्ध नहीं है।",
+    "rotation3d": "3D घुमाव",
+    "perspective": "परिप्रेक्ष्य",
+    "group": "समूह बनाएँ",
+    "selectionTitle": "चयन · {count} तत्व",
+    "ungroup": "समूह हटाएँ"
   },
   "EditorPresetControls": {
     "preset": "प्रीसेट",

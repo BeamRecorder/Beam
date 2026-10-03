@@ -146,6 +146,7 @@ export interface ClipAppearance extends WebcamAppearance {
 export type ClipFrame = 'none' | 'safari' | 'windows-95' | 'iphone-16-max' | 'pixel-9-pro';
 
 export interface MediaAsset {
+  html?: import('../html/html-types').HtmlComposition;
   id: string;
   kind: MediaKind;
   name: string;

@@ -1,3 +1,6 @@
+const { validateScreenshotGroups } = require('../../../../packages/engine/src/screenshot/screenshot-group-schema.js');
+const { validateLayerRotation3d } = require('../../../../packages/engine/src/layout/layer-perspective-schema.js');
+const { validateLayerEffects } = require('../../../../packages/engine/src/gradient/gradient-schema.js');
 const BLEND_MODES = new Set([
   'source-over',
   'darken',
@@ -88,6 +91,7 @@ function validateScreenshotComposition(state) {
     state.composition.length > ids.size
   )
     throw new Error('Invalid screenshot composition.');
+  validateScreenshotGroups(state.composition);
   const seen = new Set();
   for (const layer of state.composition) {
     if (
@@ -99,6 +103,15 @@ function validateScreenshotComposition(state) {
       typeof layer.locked !== 'boolean'
     )
       throw new Error('Invalid screenshot compositing settings.');
+    if (layer.rotation3d !== undefined) validateLayerRotation3d(layer.rotation3d);
+    if (layer.effects !== undefined) {
+      validateLayerEffects(layer.effects, [...BLEND_MODES]);
+      if (
+        layer.effects.length &&
+        [...(state.effects ?? []), ...(state.zooms ?? [])].some((item) => item.id === layer.id)
+      )
+        throw new Error('Backdrop effects cannot carry layer fills.');
+    }
     seen.add(layer.id);
   }
   if ([...requiredIds].some((id) => !seen.has(id))) throw new Error('Invalid screenshot composition.');

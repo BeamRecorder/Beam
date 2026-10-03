@@ -1004,7 +1004,12 @@
     "backgroundError": "背景には画像、色、またはグラデーションを選択してください。",
     "dimensionsError": "6400万画素以下の解像度を選択してください（各辺最大16384ピクセル）。",
     "renderUnavailable": "画像の描画を利用できません。",
-    "encodingUnavailable": "{format} エンコードを利用できません。"
+    "encodingUnavailable": "{format} エンコードを利用できません。",
+    "rotation3d": "3D 回転",
+    "perspective": "遠近感",
+    "group": "グループ化",
+    "selectionTitle": "選択 · {count} 個の要素",
+    "ungroup": "グループ解除"
   },
   "EditorPresetControls": {
     "preset": "プリセット",

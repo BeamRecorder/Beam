@@ -15,7 +15,7 @@ const { t } = useI18n();
     <aside
       v-show="open"
       id="screenshot-properties-panel"
-      class="properties-island"
+      class="properties-island screenshot-chrome"
       :aria-label="title"
       :inert="!open || undefined"
     >
@@ -54,6 +54,7 @@ const { t } = useI18n();
 </template>
 
 <style scoped src="../editor/properties/PropertiesPanel.css"></style>
+<style scoped src="./screenshot-chrome.css"></style>
 <style scoped>
 .properties-island {
   --screenshot-inspector-width: var(--editor-screenshot-inspector-width);
@@ -63,8 +64,18 @@ const { t } = useI18n();
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   animation: none;
+  overflow: hidden;
+  position: absolute;
+  inset: 12px auto 12px 12px;
+  height: calc(100% - 24px);
+  z-index: 13;
+}
+.properties-footer {
+  background: transparent;
 }
 .properties-scale-content {
+  overflow: hidden;
+  border-radius: inherit;
   width: calc((var(--screenshot-inspector-width) - 2px) / var(--ui-scale-properties, 1));
   flex-shrink: 0;
 }

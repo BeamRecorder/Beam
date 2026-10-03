@@ -6,6 +6,17 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Screenshot groups and multiple selections expose shared position, alignment, size and rotation controls in the Placement inspector, with proportional native text resizing and undo/redo.
+- Screenshot layers support native X/Y 3D rotation with a shared perspective for preview, editable text, thumbnails and PNG export.
+- Screenshot supports left-drag selection on empty canvas, right-drag selection, persistent groups with shared move/resize bounds, Ctrl/Cmd+G and Ctrl/Cmd+Shift+G, and alignment guides with document-pixel dimensions and spacing.
+
+- Agents can discover and import fonts through the CLI for editable native text, with the same fonts preserved in screenshot exports.
+
+- Screenshot layers support non-destructive hue, saturation, brightness, contrast, monochrome, sepia and inversion adjustments, with live previews, CLI editing, undo/redo and matching exports.
+
+- The CLI can rename every Screenshot layer, including background and watermark, through `still.layer.rename`, with the same lock protection and undo/redo as editor naming.
+- Screenshot Composition supports gradient effects attached to layers, using BEBE-ui's Mesh, Flow and Silk shaders and six presets. Colors, grain, geometry and light controls use translated inspector accordions; saved effects support undo/redo, copy/paste, live CLI edits and matching PNG/WebP exports.
+- The CLI discovers agent tools and bundled/GitHub documentation, controls open Studio and Screenshot projects with revision checks and editor undo/redo, and publishes persistent HTML/TypeScript layers. A file watcher updates the preview after code saves; seekable GSAP/WebGL compositions share their source with frame and video exports.
 - Video and Screenshot share manual 2D, 3D and GPU glass zooms, with circular or freehand lenses, pixel-based focus/diameter controls and grouped appearance settings in all 15 languages. New lenses use a larger 60% diameter and restrained glass defaults.
 - Automatic glass lenses group nearby recorded clicks, adapt magnification and diameter to the clicked region, respect reserved timeline intervals and remain manually editable. Focus follows trimmed, retimed, mirrored, rotated and framed recordings and scene transforms.
 - Background library items can be removed with an exact-item preview and destructive confirmation in all 15 languages. Imported images/videos have a Delete action above Show more; colors/gradients pair editing with a compact trash button. The last deletion supports persisted undo/redo while existing projects and source files remain intact.
@@ -45,6 +56,16 @@ User-facing changes to Beam are documented in this file.
 - Settings and Projects now open in separate, resizable desktop windows.
 
 ### Changed
+
+- The Beautiful Captures promo keeps secondary feature labels and icons more visible while retaining the slot-machine hierarchy.
+- The Beautiful Captures promo composition uses Beam’s capture icons, the supplied rounded cursor SVG and a tighter layout with larger editable labels and one dashed Captures region.
+
+- Text controls remove the redundant Edit text action and use clearer neutral alignment icons and concise numeric values. Element opacity toggles live inside their accordions, and the frosted Screenshot inspector confines its blur to the panel without softening the adjacent canvas.
+
+- Screenshot uses a full canvas viewport behind frosted theme panels, with compact neutral Effects/Color actions and precise draggable opacity. Procedural gradients reuse the shared palette editor and display a live preview of Mesh, Flow and Silk.
+- Text and shape properties are organized into inspector accordions for content, typography, geometry, fill, borders and shadows.
+
+- Screenshot Composition uses compact Effects and Color menus, draggable numeric opacity beside blending, and original/processed thumbnails that open effect settings. The properties inspector uses the same translucent, blurred theme surface.
 
 - Quick Snip uses neutral mode/source choices and one fixed circular capture button, with smooth device/icon transitions; source selection opens only when Capture is pressed, source tabs remain responsive, and empty toolbar space supports native dragging.
 - Tray Quick Snip is separate from Show/Hide Beam. Quick Snip loads screenshot effects only after capture. Hidden idle Beam releases its HUD and auxiliary renderers; completed or canceled Quick Snip releases its toolbar, menus and device previews.
@@ -132,6 +153,13 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Screenshot rectangle selection can start in the workspace outside the canvas and remains accurate when the preview is zoomed, panned or UI-scaled.
+- Editable text keeps the same vertical position when leaving inline editing, including centered text beside a logo, with matching preview and export.
+
+- Composition scrolls independently of canvas zoom. Empty canvas clicks clear selection, and double-clicks open Add. Disabled composition controls explain their state after 200 ms in all 15 languages.
+- Fields, sliders and secondary buttons retain visible neutral borders in light theme.
+
+- `bun run dev` serves the desktop renderer from its configured directory, restoring the Recorder, onboarding and HUD panels instead of loading missing pages.
 - Quick Snip settings stay attached to their trigger on every opening, close on a second cog press, animate from the cog, prepare while the toolbar is active, and use a light shadow without horizontal or duplicate Select scrollbars. Device choices use Beam menus instead of native context menus.
 - Quick Snip settings open on the development session's selected port, including when other Beam instances already use the default port.
 - Audio waveforms now redraw during timeline zoom without waiting for thumbnail work or an obsolete crossfade; rapid changes keep only the latest pending draw.

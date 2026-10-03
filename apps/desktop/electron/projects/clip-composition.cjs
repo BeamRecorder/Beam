@@ -63,6 +63,7 @@ const text = (value, max = 160) => (typeof value === 'string' ? value.slice(0, m
 const id = (value) => typeof value === 'string' && value.length > 0 && value.length <= 600;
 const { normalizeAudioAnalysis, normalizeAudioNormalization } = require('./composition-audio.cjs');
 const { validateSceneExtensions } = require('../../../../packages/engine/src/scene/scene-schema.js');
+const { validateHtmlComposition } = require('../../../../packages/engine/src/html/html-schema.js');
 const emptyComposition = () => ({
   schemaVersion,
   assets: [],
@@ -87,6 +88,10 @@ function normalizeComposition(value) {
   validateSceneExtensions(value);
   const assetIds = new Set();
   const assets = value.assets.map((asset) => {
+    if (asset?.html !== undefined) {
+      validateHtmlComposition(asset.html);
+      if (asset.kind !== 'image' || asset.origin !== 'project') throw new Error('Invalid HTML asset kind.');
+    }
     if (!asset || !id(asset.id) || assetIds.has(asset.id) || !mediaKinds.has(asset.kind) || !finite(asset.durationMs))
       throw new Error('Média de composition invalide');
     assetIds.add(asset.id);
@@ -113,6 +118,7 @@ function normalizeComposition(value) {
       throw new Error('Début de segment invalide');
     return {
       id: asset.id,
+      ...(asset.html === undefined ? {} : { html: { ...asset.html } }),
       kind: asset.kind,
       name: text(asset.name) || 'Media',
       fileName: origin === 'project' ? asset.fileName : null,

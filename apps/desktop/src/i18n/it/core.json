@@ -1004,7 +1004,12 @@
     "backgroundError": "Scegli un’immagine, un colore o una sfumatura come sfondo.",
     "dimensionsError": "Scegli una risoluzione fino a 64 megapixel (16384 pixel per lato).",
     "renderUnavailable": "Il rendering delle immagini non è disponibile.",
-    "encodingUnavailable": "La codifica {format} non è disponibile."
+    "encodingUnavailable": "La codifica {format} non è disponibile.",
+    "rotation3d": "Rotazione 3D",
+    "perspective": "Prospettiva",
+    "group": "Raggruppa",
+    "selectionTitle": "Selezione · {count} elementi",
+    "ungroup": "Separa"
   },
   "EditorPresetControls": {
     "preset": "Predefinito",

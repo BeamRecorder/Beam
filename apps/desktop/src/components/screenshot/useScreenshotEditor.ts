@@ -1,4 +1,8 @@
+import { useScreenshotGroups } from './useScreenshotGroups';
+import { transformScreenshotGroup } from '@beam/engine/screenshot/screenshot-groups';
+import { useScreenshotLayerEffects } from './gradient/useScreenshotLayerEffects';
 import { useScreenshotImageImport } from './useScreenshotImageImport';
+import { useScreenshotAuthoring } from '../authoring/useScreenshotAuthoring';
 import { useScreenshotPresets } from './useScreenshotPresets';
 import { useScreenshotPanel } from './useScreenshotPanel';
 import { provideScreenshotEditorSearch } from '../editor/search/useScreenshotEditorSearch';
@@ -270,6 +274,17 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     previewFullscreen() ||
     Boolean(elements.editing.value) ||
     elements.drawingMode.value;
+  const groups = useScreenshotGroups(state, selectedIds, shortcutsDisabled);
+  const resizeSelection = (from: NormalizedTransform, to: NormalizedTransform) => { if (state.value && !shortcutsDisabled()) state.value = transformScreenshotGroup(state.value, selectedIds.value, from, to); };
+  const layerEffects = useScreenshotLayerEffects({
+    state,
+    selectedId,
+    select,
+    disabled: shortcutsDisabled,
+    inspect: () => {
+      panel.value = 'layer-effect';
+    },
+  });
   const history = useScreenshotHistory(state, {
     disabled: () => busy.value || previewFullscreen() || Boolean(elements.editing.value),
     restore: () => {
@@ -304,6 +319,8 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
         : undefined,
     disabled: shortcutsDisabled,
     remove: removeLayer,
+    group: groups.group,
+    ungroup: groups.ungroup,
     copy: layerClipboard.copy,
     cut: layerClipboard.cut,
     paste: layerClipboard.paste,
@@ -400,6 +417,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     if (activePreset.value?.id === 'default' && dirty.value) void savePreset().catch(fail);
   });
 
+  useScreenshotAuthoring({ document, state, history, disabled: shortcutsDisabled, save });
   return {
     document,
     state,
@@ -428,6 +446,8 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     presetAction,
     select,
     selectMany,
+    groups,
+    resizeSelection,
     selectPanel,
     transform,
     rotate,
@@ -443,6 +463,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     deleteProject,
     cursors,
     effects,
+    layerEffects,
     zooms,
     selectedLayer,
     history,

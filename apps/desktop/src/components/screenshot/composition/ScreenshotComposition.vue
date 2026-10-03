@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { useMediaQuery } from '@vueuse/core';
-import { ChevronDown, Eye, EyeOff, Layers, LockKeyhole, Trash2, UnlockKeyhole, ZoomIn } from '@lucide/vue';
+import { ChevronDown, Eye, EyeOff, Layers, LockKeyhole, Trash2, Sparkles, UnlockKeyhole, ZoomIn } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Badge from '~/ui/badge/Badge.vue';
+import ScreenshotLayerEffectList from '../gradient/ScreenshotLayerEffectList.vue';
+import ScreenshotEffectToolbar from '../gradient/ScreenshotEffectToolbar.vue';
 import ScreenshotLayerControls from './ScreenshotLayerControls.vue';
+import { layerEffectDisabledReason } from './composition-disabled-reason';
 import { ContextMenu, ContextMenuItem } from '~/ui/context-menu';
 import type { ContextMenuPosition } from '~/ui/context-menu';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -21,10 +24,13 @@ import ScreenshotLayerName from '../ScreenshotLayerName.vue';
 import { screenshotThumbnailSpecs } from './thumbnails/thumbnail-spec';
 import { useLayerThumbnails } from './thumbnails/useLayerThumbnails';
 import { useVisibleThumbnailIds } from './thumbnails/useVisibleThumbnailIds';
+import { compositionThumbnailIds, effectThumbnailRevision } from './thumbnails/effect-thumbnail';
+import type { LayerEffectAddKind } from '@beam/engine/gradient/color-effect-types';
 const props = defineProps<{
   layers: ScreenshotLayer[];
   selectedId: string | null;
   selectedIds: string[];
+  selectedEffectId?: string | null;
   source: string;
   disabled?: boolean;
   state?: ScreenshotState;
@@ -37,8 +43,13 @@ const emit = defineEmits<{
   visibility: [id: string, visible: boolean];
   remove: [id: string];
   rename: [id: string, name: string];
+  'add-effect': [id: string, kind?: LayerEffectAddKind];
+  'select-effect': [id: string, effectId: string];
+  'toggle-effect': [id: string, effectId: string];
 }>();
 const { t, locale } = useTranslate('ScreenshotComposition');
+const { t: gradientText } = useTranslate('GradientEffect');
+const canAddEffect = (layer: ScreenshotLayer | undefined) => !layerEffectDisabledReason(layer, props.disabled);
 const { t: tHighlight } = useTranslate('Highlight');
 const { t: elementsText } = useTranslate('Elements');
 const compact = useMediaQuery('(max-width: 1180px)');
@@ -96,7 +107,7 @@ const thumbnails = useLayerThumbnails(
       ? screenshotThumbnailSpecs(props.state, props.source, props.cursorPacks ?? [], visibleThumbnailIds.value)
       : [],
   () => !collapsed.value,
-  { allIds: () => new Set(props.layers.map((layer) => layer.id)) },
+  { allIds: () => compositionThumbnailIds(props.layers) },
 );
 const selectedSet = computed(() => new Set(props.selectedIds));
 const front = computed(() => [...props.layers].reverse());
@@ -204,6 +215,7 @@ const keyboard = (event: KeyboardEvent, id: string) => {
       positioning: !ready,
     }"
     :aria-label="t('title')"
+    @wheel.stop
   >
     <div class="composition-surface screenshot-chrome">
       <header class="composition-header">
@@ -250,6 +262,12 @@ const keyboard = (event: KeyboardEvent, id: string) => {
           :disabled="disabled"
           @update="selected && emit('update', selected.id, $event)"
         />
+        <ScreenshotEffectToolbar
+          :disabled="!canAddEffect(selected)"
+          :disabled-reason="layerEffectDisabledReason(selected, disabled)"
+          :direction="upward ? 'up' : 'down'"
+          @add="selected && emit('add-effect', selected.id, $event)"
+        />
         <div
           ref="list"
           class="layer-list"
@@ -268,7 +286,9 @@ const keyboard = (event: KeyboardEvent, id: string) => {
                 dragging === layer.id,
                 editingId === layer.id,
                 thumbnails[layer.id],
+                effectThumbnailRevision(layer, thumbnails),
                 locale,
+                selectedEffectId,
               ]"
               :key="layer.id"
               class="layer-row"
@@ -276,6 +296,7 @@ const keyboard = (event: KeyboardEvent, id: string) => {
                 selected: selectedSet.has(layer.id),
                 hidden: !layer.visible,
                 dragging: dragging === layer.id,
+                'has-effects': Boolean(layer.effects?.length),
               }"
               :data-layer-id="layer.id"
               role="listitem"
@@ -319,6 +340,14 @@ const keyboard = (event: KeyboardEvent, id: string) => {
                 :aria-label="t(layer.visible ? 'hide' : 'show', { name: label(layer) })"
                 @click="!disabled && emit('visibility', layer.id, !layer.visible)"
               />
+              <ScreenshotLayerEffectList
+                :layer="layer"
+                :thumbnails="thumbnails"
+                :disabled="disabled"
+                :selected-effect-id="selectedId === layer.id ? selectedEffectId : null"
+                @select="emit('select-effect', layer.id, $event)"
+                @toggle="emit('toggle-effect', layer.id, $event)"
+              />
             </div>
           </TransitionGroup>
         </div>
@@ -333,6 +362,15 @@ const keyboard = (event: KeyboardEvent, id: string) => {
         :disabled="!canRemove"
         @click="removeFromMenu"
         @keydown.esc.stop.prevent="closeMenu"
+      />
+      <ContextMenuItem
+        :label="gradientText('add')"
+        :icon="Sparkles"
+        :disabled="!canAddEffect(menuLayer)"
+        @click="
+          menuLayer && canAddEffect(menuLayer) && emit('add-effect', menuLayer.id);
+          closeMenu();
+        "
       />
     </ContextMenu>
   </aside>

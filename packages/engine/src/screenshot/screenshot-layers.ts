@@ -1,3 +1,4 @@
+import { pruneScreenshotGroups } from './screenshot-group-members';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { WatermarkSettings } from '@beam/engine/layout/output-canvas';
 import type { BackgroundValue } from '@beam/engine/shared/background-types';
@@ -163,6 +164,7 @@ export function removeScreenshotLayer(state: ScreenshotState, id: string) {
     if (state.zooms) state.zooms = state.zooms.filter((layer) => layer.id !== id);
   }
   if (state.composition) state.composition = state.composition.filter((layer) => layer.id !== id);
+  pruneScreenshotGroups(state);
 }
 
 export function renameScreenshotLayer(state: ScreenshotState, id: string, requested: string): boolean {

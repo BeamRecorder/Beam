@@ -24,7 +24,8 @@ async function runDevelopment({
   let server;
   try {
     server = await createServer({
-      root,
+      // The Vite config owns the desktop renderer root; `root` here identifies
+      // the repository for native builds, Electron and development sessions.
       configFile: path.join(root, 'vite.config.ts'),
       cacheDir: path.join(root, 'node_modules', '.vite', id),
       server: { host: 'localhost', port: 6500, strictPort: false },

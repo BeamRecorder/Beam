@@ -53,6 +53,7 @@ onMounted(async () => {
       :maxlength="200"
       :size="inline ? 'xs' : 'sm'"
       width="100%"
+      appearance="neutral"
       select-on-focus
       @update:model-value="update"
       @blur="commit()"

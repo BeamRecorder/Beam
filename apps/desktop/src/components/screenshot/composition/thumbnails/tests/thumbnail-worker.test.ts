@@ -162,7 +162,7 @@ describe('thumbnail worker queue', () => {
     const worker = createThumbnailWorker((reply) => replies.push(reply));
     const image = bitmap();
     const value = request({
-      id: 'cursor-1',
+      id: 'effect-preview-of-cursor-1',
       layer: layer('cursor-1', 'cursor'),
       bitmap: image,
       cursorAsset: asset,

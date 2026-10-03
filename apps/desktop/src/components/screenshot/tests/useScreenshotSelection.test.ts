@@ -148,3 +148,15 @@ describe('useScreenshotSelection', () => {
     expect(selection.selectedId.value).toBe('b');
   });
 });
+
+describe('group selection',()=>{
+  it('selects all members and retains the clicked member as primary',()=>{
+    const {selection}=mountSelection([makeLayer('a',{groupId:'pair'}),makeLayer('b',{groupId:'pair'}),makeLayer('c')]);selection.select('a');expect(selection.selectedIds.value).toEqual(['b','a']);expect(selection.selectedId.value).toBe('a');
+  });
+  it('toggles whole groups while preserving other selected layers',()=>{
+    const {selection}=mountSelection([makeLayer('a',{groupId:'pair'}),makeLayer('b',{groupId:'pair'}),makeLayer('c')]);selection.select('c');selection.select('a','toggle');expect(selection.selectedIds.value).toEqual(['c','b','a']);selection.select('b','toggle');expect(selection.selectedIds.value).toEqual(['c']);
+  });
+  it('expands marquee hits and discards removed members during reconciliation',async()=>{
+    const {selection,layers}=mountSelection([makeLayer('a',{groupId:'pair'}),makeLayer('b',{groupId:'pair'}),makeLayer('c')]);selection.selectMany(['a'],'a');expect(selection.selectedIds.value).toEqual(['b','a']);layers.value=layers.value.filter(r=>r.id!=='b');await nextTick();expect(selection.selectedIds.value).toEqual(['a']);
+  });
+});

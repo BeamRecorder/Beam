@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { createGradientEffect, createColorEffect } from '@beam/engine';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { CursorAssetDescriptor, CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { screenshotLayers } from '@beam/engine/screenshot/screenshot-layers';
 import { screenshotShape } from '../../../screenshot-state';
+import { effectThumbnailId } from '../effect-thumbnail';
 import { screenshotThumbnailSpecs } from '../thumbnail-spec';
 
 const image = () =>
@@ -94,6 +96,59 @@ const state = (overrides: Partial<ScreenshotState> = {}): ScreenshotState =>
   }) as ScreenshotState;
 
 describe('screenshot thumbnail specifications', () => {
+  it('renders the untouched source followed by cumulative, independently keyed effect stages', () => {
+    const initial = state();
+    initial.composition = screenshotLayers(initial).map(({ id, opacity, blendMode, locked }) => ({
+      id,
+      opacity,
+      blendMode,
+      locked,
+    }));
+    const colorEffect = createColorEffect('color', true);
+    const effects = [createGradientEffect('fill'), colorEffect];
+    initial.composition.find((layer) => layer.id === 'shape-1')!.effects = effects;
+    const specs = screenshotThumbnailSpecs(initial, 'source.png', [cursorPack], new Set(['shape-1']));
+    expect(specs.map((spec) => spec.id)).toEqual([
+      'shape-1',
+      effectThumbnailId('shape-1', 'fill'),
+      effectThumbnailId('shape-1', 'color'),
+    ]);
+    expect(specs.map((spec) => spec.layer.effects?.length)).toEqual([0, 1, 2]);
+    expect(specs.every((spec) => spec.layer.id === 'shape-1')).toBe(true);
+    const keys = specs.map((spec) => spec.key);
+    colorEffect.recipe.grayscale = 0;
+    const changed = screenshotThumbnailSpecs(initial, 'source.png', [], new Set(['shape-1']));
+    expect(changed[0]!.key).toBe(keys[0]);
+    expect(changed[1]!.key).toBe(keys[1]);
+    expect(changed[2]!.key).not.toBe(keys[2]);
+    expect(screenshotThumbnailSpecs(initial, 'source.png', [], new Set())).toEqual([]);
+  });
+  it('invalidates only the affected thumbnail when an attached gradient changes', () => {
+    const initial = state();
+    initial.composition = screenshotLayers(initial).map(({ id, opacity, blendMode, locked }) => ({
+      id,
+      opacity,
+      blendMode,
+      locked,
+    }));
+    const first = screenshotThumbnailSpecs(initial, 'capture.png', [cursorPack]);
+    initial.composition.find((layer) => layer.id === 'shape-1')!.effects = [createGradientEffect('gradient')];
+    const added = screenshotThumbnailSpecs(initial, 'capture.png', [cursorPack]);
+    expect(added.find((item) => item.id === 'shape-1')!.key).toBe(first.find((item) => item.id === 'shape-1')!.key);
+    expect(added.find((item) => item.id === 'shape-1')!.layer.effects).toEqual([]);
+    expect(added.find((item) => item.id === 'screenshot')!.key).toBe(
+      first.find((item) => item.id === 'screenshot')!.key,
+    );
+    const recipe = initial.composition.find((layer) => layer.id === 'shape-1')!.effects![0]!;
+    recipe.enabled = false;
+    const disabled = screenshotThumbnailSpecs(initial, 'capture.png', [cursorPack]);
+    expect(disabled.find((item) => item.id === effectThumbnailId('shape-1', 'gradient'))!.key).not.toBe(
+      added.find((item) => item.id === effectThumbnailId('shape-1', 'gradient'))!.key,
+    );
+    expect(
+      disabled.find((item) => item.id === effectThumbnailId('shape-1', 'gradient'))!.layer.effects![0]!.enabled,
+    ).toBe(false);
+  });
   it('creates one isolated spec per composition layer and resolves layer-specific assets', () => {
     const specs = screenshotThumbnailSpecs(state(), 'project-media://capture.png', [cursorPack]);
     const byId = new Map(specs.map((spec) => [spec.id, spec]));
@@ -181,4 +236,24 @@ describe('screenshot thumbnail specifications', () => {
     expect(spec.cursorPack).toBeUndefined();
     expect(spec.cursorAsset).toBeUndefined();
   });
+});
+
+it('refreshes base and processed previews for perspective changes but preserves them for group identity', () => {
+  const initial = state();
+  initial.composition = screenshotLayers(initial).map(({ id, opacity, blendMode, locked }) => ({
+    id,
+    opacity,
+    blendMode,
+    locked,
+  }));
+  const layer = initial.composition.find((r) => r.id === 'shape-1')!;
+  layer.effects = [createGradientEffect('fx')];
+  const read = () => screenshotThumbnailSpecs(initial, 'source.png', [cursorPack], new Set(['shape-1']));
+  const old = read().map((r) => r.key);
+  layer.rotation3d = { x: 28, y: 0, perspective: 1600 };
+  const next = read();
+  expect(next.every((r, i) => r.key !== old[i])).toBe(true);
+  expect(next.every((r) => r.layer.rotation3d?.x === 28)).toBe(true);
+  layer.groupId = 'same-artwork';
+  expect(read().map((r) => r.key)).toEqual(next.map((r) => r.key));
 });

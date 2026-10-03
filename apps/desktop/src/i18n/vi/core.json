@@ -989,7 +989,12 @@
     "backgroundError": "Chọn ảnh, màu hoặc chuyển sắc làm nền.",
     "dimensionsError": "Chọn độ phân giải tối đa 64 megapixel (16384 pixel mỗi cạnh).",
     "renderUnavailable": "Không thể kết xuất ảnh.",
-    "encodingUnavailable": "Không thể mã hóa {format}."
+    "encodingUnavailable": "Không thể mã hóa {format}.",
+    "rotation3d": "Xoay 3D",
+    "perspective": "Phối cảnh",
+    "group": "Nhóm",
+    "selectionTitle": "Vùng chọn · {count} phần tử",
+    "ungroup": "Bỏ nhóm"
   },
   "EditorPresetControls": {
     "preset": "Thiết lập sẵn",

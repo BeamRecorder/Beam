@@ -16,6 +16,7 @@ const props = withDefaults(
     placeholder?: string;
     label?: string;
     disabled?: boolean;
+    appearance?: 'default' | 'neutral';
     direction?: 'up' | 'down';
     optionHeight?: number;
     loading?: boolean;
@@ -286,6 +287,7 @@ onBeforeUnmount(() => {
             'is-open': isOpen,
             'is-disabled': disabled,
             'is-source': variant === 'source',
+            'is-neutral': appearance === 'neutral',
           },
         ]"
         :disabled="disabled"
@@ -344,6 +346,7 @@ onBeforeUnmount(() => {
         :class="{
           'is-searchable': variant === 'search',
           'is-compact': normalizedSize === 'compact',
+          'is-neutral': appearance === 'neutral',
         }"
       >
         <div v-if="variant === 'search'" class="select-search-row">

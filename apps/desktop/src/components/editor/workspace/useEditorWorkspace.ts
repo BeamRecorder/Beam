@@ -1,4 +1,5 @@
 import { onMounted } from 'vue';
+import { useVideoAuthoring } from '../../authoring/useVideoAuthoring';
 import { capture } from '~/api/capture';
 import { useTimelineResize } from '../composables/useTimelineResize';
 import { useEditorWorkspaceState } from './useEditorWorkspaceState';
@@ -14,6 +15,7 @@ import type { EditorWorkspaceProps, EditorWorkspaceEmit } from './workspace-type
 export function useEditorWorkspace(props: EditorWorkspaceProps, emit: EditorWorkspaceEmit) {
   const state = useEditorWorkspaceState(props, emit);
   const history = useEditorWorkspaceHistory(state);
+  useVideoAuthoring(state, history);
   const selectClip = (clipId: string): void => {
     selection.selectEditorClip(clipId);
   };

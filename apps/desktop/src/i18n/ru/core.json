@@ -1004,7 +1004,12 @@
     "backgroundError": "Выберите изображение, цвет или градиент для фона.",
     "dimensionsError": "Выберите разрешение до 64 мегапикселей (16384 пикселя на сторону).",
     "renderUnavailable": "Рендеринг изображения недоступен.",
-    "encodingUnavailable": "Кодирование {format} недоступно."
+    "encodingUnavailable": "Кодирование {format} недоступно.",
+    "rotation3d": "3D-поворот",
+    "perspective": "Перспектива",
+    "group": "Сгруппировать",
+    "selectionTitle": "Выделение · {count} элементов",
+    "ungroup": "Разгруппировать"
   },
   "EditorPresetControls": {
     "preset": "Пресет",

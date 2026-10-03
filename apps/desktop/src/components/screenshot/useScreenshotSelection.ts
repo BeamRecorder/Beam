@@ -6,17 +6,21 @@ import type { ScreenshotSelectionMode } from './screenshot-types';
 export function useScreenshotSelection(layers: () => ScreenshotLayer[]) {
   const selectedIds = shallowRef<string[]>([]);
   const ids = computed(() => new Set(layers().map((layer) => layer.id)));
+  const expanded = (selected: readonly string[]) => {
+    const values = new Set(selected), groups = new Set(layers().filter((r) => values.has(r.id) && r.groupId).map((r) => r.groupId));
+    for (const r of layers()) if (r.groupId && groups.has(r.groupId)) values.add(r.id);
+    return [...values];
+  };
   const select = (id: string | null, mode: ScreenshotSelectionMode = 'replace') => {
     if (id !== null && !ids.value.has(id)) return;
-    if (mode === 'replace') selectedIds.value = id === null ? [] : [id];
+    if (mode === 'replace') selectedIds.value = id === null ? [] : [...expanded([id]).filter((r) => r !== id), id];
     else if (id !== null) {
-      selectedIds.value = selectedIds.value.includes(id)
-        ? selectedIds.value.filter((selected) => selected !== id)
-        : [...selectedIds.value, id];
+      const group = expanded([id]);
+      selectedIds.value = selectedIds.value.includes(id) ? selectedIds.value.filter((r) => !group.includes(r)) : [...new Set([...selectedIds.value, ...group.filter((r) => r !== id), id])];
     }
   };
   const selectMany = (nextIds: string[], primaryId: string | null = nextIds.at(-1) ?? null) => {
-    const valid = [...new Set(nextIds)].filter((id) => ids.value.has(id));
+    const valid = expanded(nextIds).filter((id) => ids.value.has(id));
     selectedIds.value =
       primaryId && valid.includes(primaryId) ? [...valid.filter((id) => id !== primaryId), primaryId] : valid;
   };

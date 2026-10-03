@@ -415,3 +415,18 @@ describe('screenshot selection translation', () => {
     expect(state).toEqual(snapshot);
   });
 });
+
+it('moves hidden group members with their visible siblings and blocks a partially locked group', () => {
+  const state = makeState(),
+    a = state.shapes[0]!,
+    b = state.shapes[1]!;
+  state.composition = screenshotLayers(state).map(({ id }) => defaultLayerCompositing(id));
+  for (const id of [a.id, b.id]) state.composition!.find((r) => r.id === id)!.groupId = 'pair';
+  b.enabled = false;
+  expect(movableScreenshotSelection(state, [a.id]).map((r) => r.id)).toEqual([a.id, b.id]);
+  const next = withScreenshotTranslation(state, [a.id], { x: 0.05, y: 0.04 });
+  expect(next.shapes[1]!.transform.x).toBeCloseTo(b.transform.x + 0.05);
+  state.composition!.find((r) => r.id === b.id)!.locked = true;
+  expect(movableScreenshotSelection(state, [a.id])).toEqual([]);
+  expect(withScreenshotTranslation(state, [a.id], { x: 0.05, y: 0.04 }).shapes).toEqual(state.shapes);
+});

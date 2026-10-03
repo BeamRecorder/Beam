@@ -201,7 +201,7 @@ const handleMouseDown = (e: MouseEvent) => {
       },
       `input-${size || 'md'}`,
     ]"
-    :style="width ? { width } : undefined"
+    :style="width || height ? { width, height } : undefined"
   >
     <div v-if="$slots.prefix" class="input-prefix">
       <slot name="prefix" />
@@ -391,7 +391,7 @@ const handleMouseDown = (e: MouseEvent) => {
 
 .input-wrapper.input-neutral:not(.is-error) {
   background: var(--color-bg-field);
-  border-color: transparent;
+  border-color: var(--color-border);
 }
 .input-wrapper.input-neutral:hover:not(.is-disabled, .is-error) {
   border-color: var(--color-border-strong);
@@ -412,6 +412,10 @@ const handleMouseDown = (e: MouseEvent) => {
   font-weight: 500;
 }
 .input-wrapper.input-neutral:focus-within:not(.is-disabled):not(.is-error) {
+  border-color: var(--text-secondary);
+  box-shadow: none;
+}
+.input-wrapper.input-neutral.is-dragging:not(.is-error) {
   border-color: var(--text-secondary);
   box-shadow: none;
 }

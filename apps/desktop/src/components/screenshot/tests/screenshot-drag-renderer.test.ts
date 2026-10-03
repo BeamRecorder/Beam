@@ -9,6 +9,7 @@ import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot
 const render = vi.hoisted(() => ({
   drawLayer: vi.fn(),
   compositedLayer: vi.fn(),
+  release: vi.fn(),
 }));
 
 vi.mock('@beam/runtime/screenshot/screenshot-layer-render', () => ({
@@ -17,6 +18,7 @@ vi.mock('@beam/runtime/screenshot/screenshot-layer-render', () => ({
 
 vi.mock('@beam/runtime/composition/render-composited-layer', () => ({
   renderCompositedLayer: render.compositedLayer,
+  releaseCompositedLayerSurface: render.release,
 }));
 
 import { createScreenshotDragRenderer } from '../screenshot-drag-renderer';

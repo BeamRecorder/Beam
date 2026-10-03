@@ -206,3 +206,16 @@ describe('Screenshot toolbar', () => {
     expect(document.activeElement).toBe(first.element);
   });
 });
+
+it('exposes enabled grouping and detaching actions in the toolbar', async () => {
+  const wrapper = makeToolbar({ canGroup: true, canUngroup: true });
+  await wrapper.get('button[aria-label="Group"]').trigger('click');
+  await wrapper.get('button[aria-label="Ungroup"]').trigger('click');
+  expect(wrapper.emitted('group')).toEqual([[]]);
+  expect(wrapper.emitted('ungroup')).toEqual([[]]);
+});
+it('disables unavailable group actions', () => {
+  const wrapper = makeToolbar();
+  expect(wrapper.get('button[aria-label="Group"]').attributes('disabled')).toBeDefined();
+  expect(wrapper.get('button[aria-label="Ungroup"]').attributes('disabled')).toBeDefined();
+});

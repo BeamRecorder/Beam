@@ -1004,7 +1004,12 @@
     "backgroundError": "Wybierz obraz, kolor lub gradient jako tło.",
     "dimensionsError": "Wybierz rozdzielczość do 64 megapikseli (16384 piksele na bok).",
     "renderUnavailable": "Renderowanie obrazu jest niedostępne.",
-    "encodingUnavailable": "Kodowanie {format} jest niedostępne."
+    "encodingUnavailable": "Kodowanie {format} jest niedostępne.",
+    "rotation3d": "Obrót 3D",
+    "perspective": "Perspektywa",
+    "group": "Grupuj",
+    "selectionTitle": "Zaznaczenie · {count} elementów",
+    "ungroup": "Rozgrupuj"
   },
   "EditorPresetControls": {
     "preset": "Preset",

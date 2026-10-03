@@ -1004,7 +1004,12 @@
     "backgroundError": "Escolha uma imagem, cor ou gradiente como fundo.",
     "dimensionsError": "Escolha uma resolução de até 64 megapixels (16384 pixels por lado).",
     "renderUnavailable": "A renderização de imagens não está disponível.",
-    "encodingUnavailable": "A codificação {format} não está disponível."
+    "encodingUnavailable": "A codificação {format} não está disponível.",
+    "rotation3d": "Rotação 3D",
+    "perspective": "Perspectiva",
+    "group": "Agrupar",
+    "selectionTitle": "Seleção · {count} elementos",
+    "ungroup": "Desagrupar"
   },
   "EditorPresetControls": {
     "preset": "Predefinição",

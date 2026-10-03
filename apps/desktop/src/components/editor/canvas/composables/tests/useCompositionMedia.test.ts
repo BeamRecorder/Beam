@@ -408,6 +408,29 @@ describe('useCompositionMedia', () => {
       }),
     );
   });
+  it('replaces changed image sources and repaints only after the current image decodes', async () => {
+    const mounted = mountComposable();
+    const original = state.images.get('image-asset')!;
+    original.dispatchEvent(new Event('load'));
+    expect(mounted.onRenderOnce).toHaveBeenCalledTimes(1);
+    mounted.compositionRef.value.assets[0]!.src = 'updated.png';
+    await nextTick();
+    const replacement = state.images.get('image-asset')!;
+    expect(replacement).not.toBe(original);
+    expect(original.onload).toBeNull();
+    replacement.dispatchEvent(new Event('load'));
+    expect(mounted.onRenderOnce).toHaveBeenCalledTimes(2);
+    wrapper!.unmount();
+    expect(replacement.onload).toBeNull();
+  });
+  it('draws programmable image frames even before their poster image finishes decoding', () => {
+    const mounted = mountComposable();
+    const frame = mediaFrame('image', 64, 64);
+    mounted.frames.set('image', frame);
+    const ctx = context();
+    state.drawComposition(ctx, { dx: 0, dy: 0, dw: 800, dh: 400 }, 'image');
+    expect(drawDecoratedMedia).toHaveBeenCalledWith(ctx, expect.objectContaining({ source: frame.bitmap }));
+  });
 
   it('renders per-clip transform drafts while a group is moving', () => {
     const mounted = mountComposable();
