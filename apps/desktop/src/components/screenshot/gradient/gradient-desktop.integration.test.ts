@@ -709,10 +709,11 @@ describe.skipIf(process.env.BEAM_RUN_DESKTOP_AGENT_TEST !== '1')('Screenshot gra
         `(()=>{const p=document.querySelector('.screenshot-toolbar button[aria-controls]');if(p.getAttribute('aria-expanded')==='true')p.click();const c=document.querySelector('button.composition-toggle');if(c?.getAttribute('aria-expanded')==='true')c.click();document.activeElement?.blur()})()`,
       );
       await wait(() => evaluate<boolean>(`!document.querySelector('.composition-content')`));
-      await evaluate(
-        `(()=>{const canvas=document.querySelector('.screenshot-stage canvas'),r=canvas.getBoundingClientRect();canvas.dispatchEvent(new MouseEvent('dblclick',{bubbles:true,clientX:r.x+r.width*0.68,clientY:r.y+r.height*0.4}))})()`,
+      await wait(() =>
+        evaluate<boolean>(
+          `(()=>{if(document.querySelector('.caption-text-editor textarea'))return true;const canvas=document.querySelector('.screenshot-stage canvas'),r=canvas.getBoundingClientRect();canvas.dispatchEvent(new MouseEvent('dblclick',{bubbles:true,clientX:r.x+r.width*0.68,clientY:r.y+r.height*0.4}));return Boolean(document.querySelector('.caption-text-editor textarea'))})()`,
+        ),
       );
-      await wait(() => evaluate<boolean>(`Boolean(document.querySelector('.caption-text-editor textarea'))`));
       await evaluate(
         `(async()=>{const field=document.querySelector('.caption-text-editor textarea');field.value=${JSON.stringify(content)};field.dispatchEvent(new Event('input',{bubbles:true}));await new Promise(done=>setTimeout(done,200));await new Promise(requestAnimationFrame)})()`,
       );
@@ -728,9 +729,7 @@ describe.skipIf(process.env.BEAM_RUN_DESKTOP_AGENT_TEST !== '1')('Screenshot gra
       })()`);
       };
       const editing = await captureBounds('while-editing');
-      await evaluate(
-        `document.querySelector('.caption-text-editor textarea').dispatchEvent(new FocusEvent('blur'))`,
-      );
+      await evaluate(`document.querySelector('.caption-text-editor textarea').dispatchEvent(new FocusEvent('blur'))`);
       await wait(() => evaluate<boolean>(`!document.querySelector('.caption-text-editor textarea')`));
       await evaluate(`new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)))`);
       const finished = await captureBounds('after-editing');
