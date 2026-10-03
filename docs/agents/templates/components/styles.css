@@ -1,0 +1,90 @@
+.beam-sentence {
+  display: inline;
+  font: inherit;
+  color: inherit;
+}
+.beam-caret {
+  display: inline-block;
+  width: 0.065em;
+  height: 0.95em;
+  margin-left: 0.09em;
+  background: currentColor;
+  vertical-align: -0.06em;
+}
+.beam-input-field {
+  --field-bg: #fff;
+  --field-fg: #211d25;
+  --field-border: #e4e0e8;
+  --field-accent: #c2adf5;
+  position: relative;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 22px;
+  border: 1px solid var(--field-border);
+  border-radius: 20px;
+  background: var(--field-bg);
+  color: var(--field-fg);
+  box-sizing: border-box;
+}
+.beam-input-copy {
+  width: 100%;
+  min-width: 0;
+  resize: none;
+  border: 0;
+  outline: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  line-height: 1.4;
+}
+.beam-send {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--field-accent);
+  color: var(--field-fg);
+  font: inherit;
+  font-size: 26px;
+}
+.beam-send:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
+.beam-cursor-position {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.beam-cursor-glyph {
+  position: absolute;
+  max-width: none;
+}
+.beam-click-ring {
+  position: absolute;
+  left: -24px;
+  top: -24px;
+  width: 48px;
+  height: 48px;
+  border: 2px solid var(--cursor-click-color, #b295ff);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.beam-zoom-viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.beam-zoom-stage {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}

@@ -58,8 +58,12 @@ export const TOOL_CATALOG: ToolDefinition[] = [
   ),
   definition(
     'projects.open',
-    'Open an existing project in Beam. Poll projects.list until it appears in open.',
-    { projectId, kind: { type: 'string', enum: ['image', 'video'] } },
+    'Open an existing project in a new editor window by default, preserving current editors. Use disposition: reuse to replace the active editor. Poll projects.list until it appears in open.',
+    {
+      projectId,
+      kind: { type: 'string', enum: ['image', 'video'] },
+      disposition: { type: 'string', enum: ['new-window', 'reuse'], default: 'new-window' },
+    },
     ['projectId', 'kind'],
   ),
   definition(

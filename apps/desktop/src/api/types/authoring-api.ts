@@ -16,5 +16,6 @@ export interface AuthoringApi {
   onAuthoringRequest(listener: (message: AuthoringMessage) => void): () => void;
   replyAuthoringRequest(id: string, response: DocumentResponse): void;
   renderHtmlFrame(html: HtmlComposition, timeMs: number): Promise<Uint8Array>;
+  getHtmlPreviewSource(html: HtmlComposition): Promise<string>;
   getHtmlFrameSources(assets: { id: string; html?: HtmlComposition }[]): Promise<HttpFrameSourceDescriptor[]>;
 }

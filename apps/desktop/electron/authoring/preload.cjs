@@ -8,5 +8,6 @@ module.exports = {
   },
   replyAuthoringRequest: (id, response) => ipcRenderer.send('authoring:reply', id, response),
   renderHtmlFrame: (html, timeMs) => ipcRenderer.invoke('authoring:html-frame', html, timeMs),
+  getHtmlPreviewSource: (html) => ipcRenderer.invoke('authoring:html-preview-source', html),
   getHtmlFrameSources: (assetIds) => ipcRenderer.invoke('authoring:html-sources', assetIds),
 };

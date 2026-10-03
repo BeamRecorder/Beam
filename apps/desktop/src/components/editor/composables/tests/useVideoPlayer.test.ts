@@ -319,6 +319,80 @@ describe('useVideoPlayer', () => {
     await firstLoad;
     expect(engine.play).toHaveBeenCalledOnce();
   });
+  it('keeps a pause requested during a pending reload instead of resuming an old intention', async () => {
+    const player = useVideoPlayer([]);
+    await player.loadComposition(composition);
+    await player.setPlaying(true);
+    const engine = playback.instances.at(-1)!;
+    let finish!: () => void;
+    engine.loadComposition.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    engine.play.mockClear();
+    const pending = player.loadComposition(composition);
+    await player.setPlaying(false);
+    finish();
+    await pending;
+    expect(engine.play).not.toHaveBeenCalled();
+    expect(player.isPlaying.value).toBe(false);
+  });
+  it('honors a new play request made while a paused composition is reloading', async () => {
+    const player = useVideoPlayer([]);
+    await player.loadComposition(composition);
+    const engine = playback.instances.at(-1)!;
+    let finish!: () => void;
+    engine.loadComposition.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const pending = player.loadComposition(composition);
+    await player.setPlaying(true);
+    engine.play.mockClear();
+    finish();
+    await pending;
+    expect(engine.play).toHaveBeenCalledOnce();
+  });
+  it('does not let a rejected older play request clear a newer play intention', async () => {
+    const player = useVideoPlayer([]);
+    await player.loadComposition(composition);
+    const engine = playback.instances.at(-1)!;
+    let fail!: (error: Error) => void;
+    engine.play.mockImplementationOnce(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          fail = reject;
+        }),
+    );
+    const older = player.setPlaying(true);
+    const rejected = expect(older).rejects.toThrow('old play');
+    await player.setPlaying(false);
+    await player.setPlaying(true);
+    fail(new Error('old play'));
+    await rejected;
+    engine.play.mockClear();
+    await player.loadComposition(composition);
+    expect(engine.play).toHaveBeenCalledOnce();
+  });
+  it('retimes media without invalidating its frames and changes epochs on seeks and play transitions', async () => {
+    const player = useVideoPlayer([]);
+    await player.loadComposition(composition);
+    const engine = playback.instances.at(-1)!;
+    engine.canRetimeComposition.mockReturnValueOnce(true);
+    const before = player.frameVersion.value;
+    await player.loadComposition(composition);
+    expect(engine.retimeComposition).toHaveBeenCalledWith(composition, 0);
+    expect(player.frameVersion.value).toBe(before);
+    expect(player.previewEpoch.value).toBe(0);
+    await player.togglePlay();
+    await player.seek(1);
+    await player.togglePlay();
+    expect(player.previewEpoch.value).toBe(3);
+  });
 
   it('does not let an older project load seek after a newer project has finished loading', async () => {
     const scope = effectScope();

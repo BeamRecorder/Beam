@@ -104,10 +104,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes \
-            clang cpio ffmpeg libclang-dev libgbm-dev libpipewire-0.3-dev \
+            clang cpio ffmpeg g++ libavcodec-dev libavutil-dev libavfilter-dev libavformat-dev \
+            libva-dev libdrm-dev libnode-dev libclang-dev libgbm-dev libpipewire-0.3-dev \
             p7zip-full pipewire pkg-config rpm wireplumber \
             xdg-desktop-portal xdg-desktop-portal-gnome
       - run: node scripts/ci/bun-install-retry.cjs
+      - name: Build and test Linux GPU export artifacts
+        run: |
+          bun run build:ffmpeg-export
+          node --test test/ffmpeg-export-pack.test.cjs test/ffmpeg-export-verify.test.cjs test/ffmpeg-native-protocol.test.cjs
       - run: bun run build
       - run: bunx electron-builder --linux AppImage deb rpm --x64 --publish never
         env:
@@ -128,6 +133,12 @@ jobs:
           packaged_helper="$(find dist_electron/squashfs-root -type f -path "*/resources/input-helper/beam-input-helper-$version" -print -quit)"
           test -x "$packaged_engine"
           test -x "$packaged_helper"
+          export_directory="$(dirname "$packaged_engine")/../ffmpeg-export"
+          node scripts/native/ffmpeg-export-verify.cjs "$export_directory"
+          for payload in beam-ffmpeg-export beam-gpu-transport.node; do
+            dpkg-deb --contents "$deb" | grep "resources/ffmpeg-export/$payload"
+            rpm --query --package --list "$rpm_package" | grep "resources/ffmpeg-export/$payload"
+          done
           dpkg-deb --contents "$deb" | grep "resources/capture-engine/capture-engine-$version"
           dpkg-deb --contents "$deb" | grep 'resources/package-type'
           rpm --query --package --list "$rpm_package" | grep "resources/capture-engine/capture-engine-$version"

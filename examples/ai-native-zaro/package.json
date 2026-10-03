@@ -1,0 +1,21 @@
+{
+  "name": "@beam/example-ai-native-zaro",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build --base=./",
+    "publish": "node scripts/publish.mjs",
+    "verify": "node scripts/verify.mjs",
+    "render": "node scripts/render.mjs",
+    "references": "python scripts/reference.py",
+    "compare": "python scripts/compare.py",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "gsap": "3.15.0"
+  },
+  "devDependencies": {
+    "vite": "8.3.1",
+    "puppeteer-core": "24.39.1"
+  }
+}

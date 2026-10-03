@@ -1,0 +1,107 @@
+@font-face {
+  font-family: "Hanken Grotesk";
+  src: url("../references/fonts/hanken-grotesk-latin-variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: block;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #fbf8f4; }
+body { font-family: "Hanken Grotesk", sans-serif; }
+#composition {
+  --ink: #141316;
+  --paper: #fbf8f4;
+  --pink: #f72e91;
+  --violet: #7926e7;
+  position: relative;
+  width: 100%; height: 100%;
+  overflow: hidden; isolation: isolate; color: var(--ink);
+}
+#paper { position: absolute; inset: 0; background: var(--paper); }
+#colour-field {
+  position: absolute; width: 2300px; height: 1500px; left: -200px; top: -210px;
+  background:
+    radial-gradient(ellipse at 90% 57%, #ffad934f 0, #ffad9300 44%),
+    radial-gradient(ellipse at 78% 20%, #f347a43d 0, #f347a400 42%),
+    radial-gradient(ellipse at 88% 88%, #875aff55 0, #875aff00 45%);
+}
+#colour-sweep {
+  position: absolute; width: 2300px; height: 1400px; left: -190px; top: -160px;
+  background: linear-gradient(120deg, #ffab41, #ff428a 38%, #b632f0 72%, #713eea);
+  border-radius: 280px; opacity: 0;
+}
+#world { position: absolute; inset: 0; transform-origin: 0 0; perspective: 1800px; }
+#devices { position: absolute; inset: 0; transform-style: preserve-3d; }
+.device {
+  position: absolute; left: 0; top: 0; width: 420px; height: 853.16px;
+  border-radius: 62px;
+  box-shadow: 0 50px 100px -30px #39203555, 0 8px 15px #00000018;
+  transform-origin: 50% 50%;
+}
+.device-screen {
+  position: absolute; left: 15.18px; top: 12.14px; width: 389.64px; height: 828.88px;
+  border-radius: 50.6px; overflow: hidden; background: #fff;
+}
+.device-screen::after { content: ""; position: absolute; inset: 0 0 auto; height: 48px; background: #fff; }
+.device-frame { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.official-plate { position: absolute; width: 1305px; max-width: none; height: auto; top: -18px; }
+#review { z-index: 1; }
+#projects { z-index: 2; }
+#ideas { z-index: 3; }
+#review .official-plate { left: -17px; }
+#projects .official-plate { left: -461px; }
+#ideas .official-plate { left: -901px; }
+#edits-icon {
+  position: absolute; left: 1120px; top: 265px; width: 430px; height: 430px;
+  border-radius: 104px; box-shadow: 0 55px 100px -45px #42143e80;
+  transform-origin: 50% 50%;
+}
+#copy { position: absolute; inset: 0; pointer-events: none; }
+.headline {
+  position: absolute; left: 100px; top: 300px;
+  font-weight: 850; font-size: 174px; letter-spacing: -10px;
+  line-height: .92; transform-origin: 0 50%;
+}
+.headline > span { display: block; white-space: nowrap; }
+.headline em, .hero-idea {
+  font-style: normal;
+  background: linear-gradient(112deg, #ff6136 4%, #ed2388 43%, #8125df 86%);
+  background-clip: text; -webkit-background-clip: text; color: transparent;
+}
+#hero { top: 282px; font-size: 150px; letter-spacing: -8px; }
+#hero .hero-idea { font-size: 320px; line-height: .94; letter-spacing: -22px; padding-right: 20px; }
+#announcement { top: 320px; opacity: 0; }
+#question { top: 242px; font-size: 140px; letter-spacing: -7px; opacity: 0; }
+#insight { top: 247px; font-size: 148px; letter-spacing: -8px; opacity: 0; }
+#vision { left: 110px; top: 350px; font-size: 218px; letter-spacing: -13px; opacity: 0; }
+#insight-line {
+  position: absolute; width: 590px; height: 9px; left: 110px; top: 728px;
+  border-radius: 5px; background: linear-gradient(90deg, #ed2388, #8125df);
+  transform-origin: 0 50%; opacity: 0;
+}
+#gallery { position: absolute; inset: 0; perspective: 1600px; opacity: 0; }
+.photo {
+  position: absolute; left: 0; top: 0; width: 300px; height: 452px;
+  border-radius: 32px; overflow: hidden;
+  box-shadow: 0 38px 70px -30px #28102866;
+}
+.photo svg { display: block; width: 100%; height: 100%; }
+#closing {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; opacity: 0;
+}
+#closing > img { width: 165px; height: 165px; border-radius: 40px; margin-bottom: 42px; }
+#closing h1 { margin: 0; font-size: 176px; line-height: 1.06; letter-spacing: -10px; font-weight: 850; }
+#closing p { margin: 22px 0 0; font-size: 43px; letter-spacing: -1.5px; font-weight: 500; }
+#brand {
+  position: absolute; top: 70px; left: 100px; display: flex; align-items: center;
+  gap: 18px; font-size: 32px; font-weight: 600; letter-spacing: -.8px;
+}
+#brand img { width: 48px; height: 48px; border-radius: 12px; }
+#signature, #credit {
+  position: absolute; bottom: 58px; font-size: 21px; font-weight: 500;
+  letter-spacing: -.3px; color: #615961;
+}
+#signature { left: 100px; }
+#credit { right: 100px; }
+#signature span, #credit span { padding: 0 9px; }

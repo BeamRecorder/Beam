@@ -644,6 +644,27 @@ describe('EditorCanvas', () => {
     expect(drafts.other).toBe(one);
   });
 
+  it('does not paint the hidden canvas during HTML playback or seeks, then resumes the compositor', async () => {
+    const mounted = mountEditor({ domPreviewActive: true, isPlaying: true, playbackState: 'playing' });
+    await flushPromises();
+    while (frames.length) runFrame();
+    expect(state.runtimeDraw).not.toHaveBeenCalled();
+    await mounted.setProps({ currentTime: 5, isPlaying: false, playbackState: 'paused' });
+    while (frames.length) runFrame();
+    expect(state.runtimeDraw).not.toHaveBeenCalled();
+    await mounted.setProps({ domPreviewActive: false });
+    while (frames.length) runFrame();
+    expect(state.runtimeDraw).toHaveBeenCalled();
+  });
+  it('uses exact HTML capture for screenshot actions without waking the hidden painter', async () => {
+    const capture = vi.fn(async () => ({ bytes: new ArrayBuffer(3), width: 1920, height: 1080 }));
+    const mounted = mountEditor({ domPreviewActive: true, captureCompositionPreview: capture });
+    await flushPromises();
+    const api = mounted.vm as unknown as { captureCurrentFrame: () => Promise<unknown> };
+    expect(await api.captureCurrentFrame()).toEqual({ bytes: new ArrayBuffer(3), width: 1920, height: 1080 });
+    expect(capture).toHaveBeenCalledOnce();
+    expect(state.runtimeDraw).not.toHaveBeenCalled();
+  });
   it('defaults to full preview quality', async () => {
     mountEditor();
     await nextTick();

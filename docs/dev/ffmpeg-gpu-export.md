@@ -6,7 +6,7 @@ This is an application preference, also available under Preferences → General 
 
 ## Build and dependencies
 
-Install a C++17 compiler, `pkg-config`, Node.js development headers, FFmpeg development libraries (`libavcodec`, `libavutil`, `libavfilter`, `libavformat`), libva and libdrm development packages. The runtime needs matching FFmpeg shared libraries and a functioning VA-API driver with the requested encoder and RGB DMA-BUF import support. `vainfo` reporting an encoding entrypoint is necessary but does not prove that import will work.
+Development builds need a C++17 compiler, `pkg-config`, Node.js development headers, FFmpeg development libraries (`libavcodec`, `libavutil`, `libavfilter`, `libavformat`), libva and libdrm development packages. Runtime uses the host's matching FFmpeg shared libraries, libva/libdrm and a functioning VA-API driver with the requested encoder and RGB DMA-BUF import support. `vainfo` reporting an encoding entrypoint is necessary but does not prove that import will work.
 
 On Fedora, the development packages are typically `gcc-c++`, `pkgconf-pkg-config`, `ffmpeg-devel`, `libva-devel` and `libdrm-devel`. FFmpeg/Intel driver availability and patent-restricted codecs depend on the configured distribution repositories. Use the same repositories/versions for headers and runtime libraries. On Debian/Ubuntu the corresponding development packages are `g++`, `pkg-config`, `libavcodec-dev`, `libavutil-dev`, `libavfilter-dev`, `libavformat-dev`, `libva-dev` and `libdrm-dev`. Install the runtime `ffmpeg` command for AAC/Opus audio remuxing.
 
@@ -15,7 +15,11 @@ bun run build:ffmpeg-export
 bun run electron:dev
 ```
 
-The build creates `build/native/ffmpeg-export/beam-ffmpeg-export` and `beam-gpu-transport.node`. Linux packaging includes them only when both have already been built; this experiment does not bundle FFmpeg shared libraries. The transport uses stable Node-API v8 and links no FFmpeg libraries into Electron. Set `BEAM_NODE_INCLUDE` to the directory containing `node_api.h` if it is unavailable beside the active Node executable or in `/usr/include/node`. A build intended to ship this option must compile the encoder against the target distribution's ABI. Windows/macOS packaging does not include these files and their UI does not display the option.
+The build creates `build/native/ffmpeg-export/beam-ffmpeg-export` and `beam-gpu-transport.node`. Both Linux CI and release jobs compile them before packaging. Linux packaging fails if either artifact is missing. AppImage, deb and rpm include only those two Beam artifacts under `resources/ffmpeg-export/`: no FFmpeg executable, FFmpeg shared library or codec dependency is copied into the application. The extracted AppImage is checked for executable startup against the CI system libraries, addon loading and the absence of bundled FFmpeg files; deb/rpm contents are checked for the two artifacts.
+
+`beam-ffmpeg-export` links dynamically to the host's FFmpeg, libva and libdrm. Its required shared-library ABI must be installed on the target machine; an AppImage does not make that dependency portable. The transport uses stable Node-API v8 and links no FFmpeg libraries into Electron. Set `BEAM_NODE_INCLUDE` to the directory containing `node_api.h` if it is unavailable beside the active Node executable or in `/usr/include/node`. Ubuntu CI installs `libnode-dev` for those headers. Local Linux packaging requires `bun run build:ffmpeg-export` before `bun run electron:build`. Windows/macOS packaging does not include these files and their UI does not display the option.
+
+Using system libraries avoids distributing FFmpeg libraries with Beam; dynamic linking or running a separate process alone does not establish license compliance. FFmpeg's LGPL/GPL terms depend on its build configuration. See [FFmpeg's official licensing guidance](https://ffmpeg.org/legal.html) before distributing a backend linked against a particular build.
 
 `BEAM_FFMPEG_DRM_DEVICE` selects the render node, defaulting to `/dev/dri/renderD128`. The device must be compatible with Electron's rendering GPU. There is no automatic multi-GPU migration. `CXX` selects the compiler; `BEAM_FFMPEG_BUILD_FLAGS` can provide trusted local include/link flags instead of pkg-config for development.
 

@@ -1,0 +1,16 @@
+{
+  "source": "User-supplied zaro template.mp4",
+  "sha256": "7ed8127ae2428e3c96388e6a35608ee0b534c6906e68b06762da6b594c666274",
+  "width": 1920,
+  "height": 1080,
+  "durationMs": 68600,
+  "inputFrames": 2056,
+  "outputFps": 30,
+  "audio": "Original reference soundtrack, not certified CC0",
+  "compressedReference": {
+    "file": "video/zaro-template.webm",
+    "sha256": "f936fcce6e5e1cd27062da9dabe89969b31903de7c0ec8035fa6653f605019d7",
+    "encoding": "VP9 / Opus",
+    "notice": "NOTICE.md"
+  }
+}

@@ -4,11 +4,12 @@ import { getCurrentInstance, provide } from 'vue';
 import { customCursorKey } from '../properties/cursor/custom-cursor-context';
 import { provideVideoEditorSearch } from '../search/useVideoEditorSearch';
 import { useVideoElements } from '../elements/useVideoElements';
-import { computed, nextTick, onScopeDispose, ref, watch, type Ref } from 'vue';
+import { computed, nextTick, onScopeDispose, ref, toRaw, watch, type Ref } from 'vue';
 import { capture } from '../../../api/capture';
 import type { CaptureProject, ProjectEditorData } from '../../../api/types/capture-api';
 import { useVideoPlayer } from './useVideoPlayer';
 import { useHtmlPreview } from '../../authoring/useHtmlPreview';
+import { createHtmlSceneResolver } from '@beam/engine/html/html-scene';
 import { useCursorReplacer } from '../properties/cursor/useCursorReplacer';
 import { useClipComposition } from './useClipComposition';
 import { useProjectZoom } from './useProjectZoom';
@@ -39,6 +40,7 @@ export function useVideoEditor(options: {
   const player = useVideoPlayer();
   const initialPlaybackSettled = ref(false);
   const projectStateReady = ref(false);
+  const authoringReady = ref(false);
   const cursor = useCursorReplacer();
   if (getCurrentInstance()) provide(customCursorKey, cursor.enabled);
   const cursorMotion = ref(createDefaultCursorMotionSettings());
@@ -52,14 +54,6 @@ export function useVideoEditor(options: {
     activeTab,
     editorDefaults,
   });
-  const htmlPreview = useHtmlPreview(
-    compositionState.composition,
-    player.currentTime,
-    () => {
-      player.frameVersion.value++;
-    },
-    (error) => toastStore.error(`HTML composition: ${error instanceof Error ? error.message : String(error)}`),
-  );
   const roleVolume = (role: Extract<AudioRole, 'system' | 'microphone'>) =>
     computed({
       get: () =>
@@ -91,6 +85,22 @@ export function useVideoEditor(options: {
     composition: compositionState.composition,
     canvas: outputCanvas,
   });
+  const htmlSceneAt = computed(() => createHtmlSceneResolver(toRaw(compositionState.composition.value)));
+  const liveHtmlPreview = computed(() =>
+    htmlSceneAt.value(player.currentTime.value * 1000, outputCanvas.value, zoomState.zoomElements.value.length > 0),
+  );
+  const htmlPreview = useHtmlPreview(
+    compositionState.composition,
+    player.currentTime,
+    () => {
+      player.frameVersion.value++;
+    },
+    (error) => toastStore.error(`HTML composition: ${error instanceof Error ? error.message : String(error)}`),
+    player.isPlaying,
+    player.previewEpoch,
+    computed(() => liveHtmlPreview.value?.clip.id ?? null),
+    authoringReady,
+  );
   const editorState = useProjectEditorState({
     project,
     composition: compositionState.composition,
@@ -318,9 +328,14 @@ export function useVideoEditor(options: {
     systemVolume,
     micVolume,
     outputCanvas,
-    player: { ...player, frameFor: (clipId: string) => htmlPreview.frameFor(clipId) ?? player.frameFor(clipId) },
+    player: {
+      ...player,
+      liveHtmlPreview,
+      frameFor: (clipId: string) => htmlPreview.frameFor(clipId) ?? player.frameFor(clipId),
+    },
     initialPlaybackSettled,
     projectStateReady,
+    authoringReady,
     cursor,
     cursorMotion,
     compositionState: {

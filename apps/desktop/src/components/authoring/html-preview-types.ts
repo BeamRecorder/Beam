@@ -4,10 +4,10 @@ export interface HtmlPreviewFrame {
   clipId: string;
   html: HtmlComposition;
   timeMs: number;
+  playbackEpoch?: number;
 }
 export interface HtmlPreviewServices {
-  render(html: HtmlComposition, timeMs: number): Promise<Uint8Array>;
-  decode(bytes: Uint8Array): Promise<ImageBitmap>;
+  render(html: HtmlComposition, timeMs: number): Promise<ImageBitmap>;
   changed(): void;
   failed(error: unknown): void;
 }

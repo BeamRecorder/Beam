@@ -1,4 +1,4 @@
-import { computed, inject, onUnmounted, shallowRef, watch, type Ref } from 'vue';
+import { computed, inject, onUnmounted, ref, shallowRef, watch, type Ref } from 'vue';
 import type { MediaAsset } from '@beam/runtime/shared/index';
 import {
   createMediaProcessingCollector,
@@ -8,6 +8,8 @@ import {
 import { createThumbnailSource, THUMBNAIL_WORKER_COUNT } from './thumbnail-source';
 import type { SharedThumbnailSource } from './thumbnail-source-types';
 import { THUMBNAIL_WIDTH } from '@beam/runtime/playback/thumbnail-protocol';
+import { createHtmlThumbnailSource } from './html-thumbnail-source';
+import { HTML_THUMBNAIL_ACTIVITY } from './html-thumbnail-context';
 
 const defaultCollector = createMediaProcessingCollector();
 const pools = new WeakMap<MediaProcessingCollector, Map<string, SharedThumbnailSource>>();
@@ -31,6 +33,7 @@ function requestSharedFrames(entry: SharedThumbnailSource) {
 
 export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
   const collector = inject(MEDIA_PROCESSING_COLLECTOR, defaultCollector);
+  const activity = inject(HTML_THUMBNAIL_ACTIVITY, { suspended: ref(false), interactive: ref(false) });
   let pool = pools.get(collector);
   if (!pool) pools.set(collector, (pool = new Map()));
   const sources = pool;
@@ -54,15 +57,20 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
   watch(
     () => {
       const asset = videoAssetRef.value;
-      return asset ? `${asset.id}\u0000${asset.src}` : null;
+      return asset ? `${asset.id}\u0000${asset.src}\u0000${asset.html?.revision ?? ''}` : null;
     },
     (key) => {
       release();
       if (key === null) return;
       let entry = sources.get(key);
       if (!entry) {
+        const asset = videoAssetRef.value!;
+        const pressure = collector.reporter('thumbnails', THUMBNAIL_WORKER_COUNT);
         entry = {
-          source: createThumbnailSource(videoAssetRef.value!, collector.reporter('thumbnails', THUMBNAIL_WORKER_COUNT)),
+          source:
+            asset.html && asset.html.durationMs > 0
+              ? createHtmlThumbnailSource(asset.html, pressure)
+              : createThumbnailSource(asset, pressure),
           requests: new Map(),
           queued: false,
         };
@@ -71,6 +79,13 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
       entry.requests.set(owner, { times: [], width: THUMBNAIL_WIDTH });
       current.value = entry;
       currentKey = key;
+    },
+    { immediate: true, flush: 'sync' },
+  );
+  watch(
+    [current, activity.suspended, activity.interactive],
+    ([entry, paused, interactive]) => {
+      if (entry && 'setActivity' in entry.source) entry.source.setActivity(paused, interactive);
     },
     { immediate: true, flush: 'sync' },
   );

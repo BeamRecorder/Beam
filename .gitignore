@@ -42,3 +42,6 @@ coverage/*
 
 # Compiled command-line host and its browser backend
 apps/cli/dist/
+
+# Private SSR website (maintained outside the public repository)
+/apps/website-private/

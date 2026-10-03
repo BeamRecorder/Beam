@@ -6,6 +6,8 @@ const { createAgentServer } = require('./agent-server.cjs');
 const { createDocumentBridge } = require('./document-bridge.cjs');
 const { createHtmlFiles } = require('./html-files.cjs');
 const { createHtmlRenderer } = require('./html-renderer.cjs');
+const { openAuthoringProject } = require('./project-opening.cjs');
+const { restrictHtmlPreviewNavigation } = require('./html-preview-page.cjs');
 const { validateHtmlComposition } = require('../../../../packages/engine/src/html/html-schema.js');
 
 async function initializeAgentRuntime(options) {
@@ -27,6 +29,7 @@ async function initializeAgentRuntime(options) {
   const bridge = createDocumentBridge({ ipcMain, editorWindow });
   const files = createHtmlFiles({ projectStore, screenshotStore });
   const sources = new Map();
+  const previewOwners = new WeakSet();
   let server;
   const renderer = createHtmlRenderer({ BrowserWindow, session, files, origin: () => server.origin });
   const sourcesFor = (context, assets) =>
@@ -52,6 +55,17 @@ async function initializeAgentRuntime(options) {
   ipcMain.handle('authoring:html-sources', (event, assets) => {
     if (!Array.isArray(assets) || assets.length > 2048) throw new Error('Invalid HTML sources.');
     return sourcesFor(bridge.contextFor(event.sender), assets);
+  });
+  ipcMain.handle('authoring:html-preview-source', (event, html) => {
+    if (event.senderFrame !== event.sender.mainFrame) throw new Error('HTML preview requires the editor main frame.');
+    validateHtmlComposition(html);
+    const context = bridge.contextFor(event.sender);
+    const [source] = sourcesFor(context, [{ id: html.id, html }]);
+    if (!previewOwners.has(event.sender)) {
+      restrictHtmlPreviewNavigation(event.sender, server.origin);
+      previewOwners.add(event.sender);
+    }
+    return `${source.url.replace('/frame/', '/preview/')}/${html.entry}`;
   });
   const resolveUrl = (value) =>
     projectStore.mediaFileForUrl(value) ||
@@ -148,13 +162,7 @@ async function initializeAgentRuntime(options) {
         throw error;
       }
     }
-    if (tool === 'projects.open') {
-      if (input.kind === 'image') screenshotStore.read(input.projectId);
-      else if (input.kind === 'video') projectStore.get(input.projectId);
-      else throw new Error('Project kind must be image or video.');
-      await editorWindow.open(input.projectId, input.kind === 'image' ? { kind: 'screenshot' } : {});
-      return { projectId: input.projectId, kind: input.kind, status: 'opened' };
-    }
+    if (tool === 'projects.open') return openAuthoringProject(input, { editorWindow, projectStore, screenshotStore });
     if (tool === 'documents.request') return bridge.request(input.projectId, input.request);
     if (tool === 'assets.resolve') {
       let directory;
@@ -203,10 +211,20 @@ async function initializeAgentRuntime(options) {
       dispatch,
       profile: app.getPath('userData'),
       bundleFile: renderer.bundleFile,
-      frame: (token, timeMs) => {
+      previewFile: (token, relative) => {
+        const source = sources.get(token);
+        return source
+          ? {
+              file: files.fileFor(source.context, source.html, relative),
+              entry: relative === source.html.entry,
+              previewId: `${source.html.id}:${source.html.revision}`,
+            }
+          : null;
+      },
+      frame: (token, timeMs, width) => {
         const source = sources.get(token);
         if (!source) throw new Error('Unknown HTML frame source.');
-        return renderer.capture(source.context, source.html, timeMs);
+        return renderer.capture(source.context, source.html, timeMs, width);
       },
     });
   } catch (error) {

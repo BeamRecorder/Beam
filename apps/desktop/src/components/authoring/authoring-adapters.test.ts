@@ -20,8 +20,45 @@ vi.mock('./useAuthoringHost', () => ({ useAuthoringHost: hooks.host }));
 vi.mock('~/api/capture', () => ({ capture: { renderHtmlFrame: hooks.render } }));
 beforeEach(() => {
   vi.clearAllMocks();
+  hooks.host.mockReturnValue({ ready: ref(true), error: ref('') });
 });
 describe('desktop document adapters', () => {
+  it('does not capture ordinary images or inactive HTML clips', async () => {
+    const composition = ref(createRenderDocument().composition),
+      scope = effectScope();
+    scope.run(() => useHtmlPreview(composition, ref(0), vi.fn(), vi.fn(), ref(false), ref(0)));
+    composition.value.assets.push({
+      id: 'image',
+      kind: 'image',
+      origin: 'project',
+      name: 'Image',
+      src: 'image.png',
+      fileName: 'image.png',
+      width: 64,
+      height: 64,
+      durationMs: 0,
+    });
+    composition.value.clips.push({
+      id: 'clip',
+      assetId: 'image',
+      kind: 'image',
+      name: 'Image',
+      timelineStartMs: 0,
+      timelineDurationMs: 1000,
+      sourceInMs: 0,
+      sourceDurationMs: 1000,
+      playbackRate: 1,
+      enabled: true,
+      order: 0,
+      transform: { x: 0, y: 0, width: 1, height: 1 },
+      appearance: createDefaultClipAppearance('image'),
+      isMirrored: false,
+      isMirroredY: false,
+    });
+    await nextTick();
+    expect(hooks.render).not.toHaveBeenCalled();
+    scope.stop();
+  });
   it('adapts Screenshot state and the existing history without inventing source dimensions', () => {
     const still = createStillDocument('project', 'source.png', 64, 64);
     const document = ref<ScreenshotDocument | null>({
@@ -83,6 +120,7 @@ describe('desktop document adapters', () => {
       zoomMotionBlur: ref(),
       zoomAutoFollow: ref(),
       outputCanvas,
+      authoringReady: ref(false),
       selectedBackground,
       backgroundBlurPercent: blur,
       backgroundGroups: ref([
@@ -183,8 +221,11 @@ describe('desktop document adapters', () => {
     hooks.render.mockResolvedValue(new Uint8Array());
     const scope = effectScope();
     let preview!: ReturnType<typeof useHtmlPreview>;
+    const registered = ref(false),
+      domClip = ref<string | null>(null),
+      playing = ref(false);
     scope.run(() => {
-      preview = useHtmlPreview(composition, time, changed, failed);
+      preview = useHtmlPreview(composition, time, changed, failed, playing, ref(0), domClip, registered);
     });
     composition.value.assets.push({
       id: 'html',
@@ -227,9 +268,22 @@ describe('desktop document adapters', () => {
     });
     time.value = 1.5;
     await nextTick();
+    expect(hooks.render).not.toHaveBeenCalled();
+    registered.value = true;
+    await nextTick();
     for (let i = 0; i < 12; i++) await Promise.resolve();
     expect(hooks.render).toHaveBeenCalledWith(expect.objectContaining({ revision: 'revision' }), 700);
     expect(preview.frameFor('clip')).not.toBeNull();
+    domClip.value = 'clip';
+    time.value = 1.6;
+    await nextTick();
+    expect(preview.frameFor('clip')).toBeNull();
+    expect(hooks.render).toHaveBeenCalledTimes(1);
+    domClip.value = null;
+    playing.value = true;
+    await nextTick();
+    for (let i = 0; i < 12; i++) await Promise.resolve();
+    expect(hooks.render).toHaveBeenLastCalledWith(expect.anything(), 800);
     composition.value.assets[0]!.html!.durationMs = 0;
     await nextTick();
     for (let i = 0; i < 12; i++) await Promise.resolve();

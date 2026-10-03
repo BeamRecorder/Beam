@@ -1,0 +1,76 @@
+.not-just {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 235px;
+  font-size: 82px;
+  color: #fcfefd;
+  letter-spacing: -2px;
+}
+.system-camera {
+  position: absolute;
+  inset: 0;
+  transform-origin: center;
+}
+.system {
+  position: absolute;
+  width: 1000px;
+  height: 1000px;
+  transform-origin: 50% 50%;
+}
+.system-card {
+  position: absolute;
+  left: 308px;
+  top: 295px;
+  width: 383px;
+  height: 413px;
+  border-radius: 26px;
+  outline: 20px solid #ffffff16;
+  z-index: 2;
+}
+.system-card img {
+  width: 100%;
+  height: 100%;
+  border-radius: 20px;
+}
+.orbit {
+  position: absolute;
+  border: 2px dashed #aea39b50;
+  border-radius: 50%;
+}
+.orbit-item {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+.orbit-1 .orbit-item,
+.orbit-2 .orbit-item {
+  width: 23px;
+  height: 23px;
+  border-radius: 5px;
+  padding: 2px;
+  border: 1px solid #aea39b50;
+  opacity: 0.7;
+}
+.grew-copy {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fcfefd;
+  font-size: 128px;
+  letter-spacing: -3px;
+}
+
+.system-iris {
+  position: absolute;
+  inset: 0;
+  background: #504542;
+}
+.grew-copy {
+  translate: 0 -20px;
+}

@@ -7,12 +7,17 @@ import { ArrowLeft } from '@lucide/vue';
 import { isVisualClip } from '@beam/engine/shared/composition-types';
 import { useEditorWorkspaceContext } from './workspace-context';
 import { toRefs } from 'vue';
+import HtmlDomPreview from '~/components/authoring/HtmlDomPreview.vue';
+import { capture } from '~/api/capture';
+import { sourceTimeAt } from '@beam/engine/shared/timeline-mapping';
+import { computed } from 'vue';
 const workspace = useEditorWorkspaceContext();
 const {
   tTopbarHud,
   tTimelineToolbar,
   activeTab,
   player,
+  authoring,
   cursorMotion,
   outputCanvas,
   initialPlaybackSettled,
@@ -84,6 +89,16 @@ const {
   selectCanvasPreset,
 } = workspace;
 const { editorData } = toRefs(workspace.props);
+const { liveHtmlPreview } = player;
+const captureCompositionPreview = computed(() => {
+  const preview = liveHtmlPreview.value;
+  if (!preview) return undefined;
+  return async () => {
+    const time = Math.min(preview.html.durationMs, sourceTimeAt(preview.clip, currentTime.value * 1000) ?? 0);
+    const bytes = await capture.renderHtmlFrame(preview.html, time);
+    return { bytes: new Uint8Array(bytes).buffer, width: preview.html.width, height: preview.html.height };
+  };
+});
 </script>
 <template>
   <div class="canvas-column">
@@ -143,6 +158,8 @@ const { editorData } = toRefs(workspace.props);
         :background-blur-percent="backgroundBlurPercent"
         :frame-for="player.frameFor"
         :frame-version="frameVersion"
+        :capture-composition-preview="captureCompositionPreview"
+        :dom-preview-active="Boolean(liveHtmlPreview)"
         :preview-quality="previewQuality"
         :playback-state="playbackState"
         :playback-error="playbackError"
@@ -185,7 +202,18 @@ const { editorData } = toRefs(workspace.props);
         @caption-editing-end="endInlineCaptionEditing"
         @done:crop="finishCrop"
         @deselect:zoom="selectedZoomId = null"
-      />
+      >
+        <template #composition-preview="{ bounds }">
+          <HtmlDomPreview
+            v-if="liveHtmlPreview"
+            :preview="liveHtmlPreview"
+            :clock="player.htmlClock"
+            :bounds="bounds"
+            :document-ready="authoring.ready.value"
+            :document-error="authoring.error.value"
+          />
+        </template>
+      </EditorCanvas>
       <TimelineToolbar
         :current-time="currentTime"
         :duration="timelineDisplayDuration"

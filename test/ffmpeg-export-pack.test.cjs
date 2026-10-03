@@ -27,16 +27,17 @@ test('copies the encoder executable and descriptor addon only into Linux package
   }
 });
 test(
-  'does not package an incomplete native build and rejects unusable binaries',
+  'fails Linux packaging for an incomplete native build or unusable binaries',
   { skip: process.platform !== 'linux' },
   async () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-ffmpeg-pack-'));
     try {
-      await installExperimentalFfmpeg(directory, path.join(directory, 'resources'), 'linux');
+      await assert.rejects(installExperimentalFfmpeg(directory, path.join(directory, 'resources'), 'linux'), /ENOENT/);
       assert.equal(fs.existsSync(path.join(directory, 'resources')), false);
       const source = path.join(directory, 'build/native/ffmpeg-export');
       fs.mkdirSync(source, { recursive: true });
       fs.writeFileSync(path.join(source, 'beam-ffmpeg-export'), 'bad', { mode: 0o600 });
+      fs.writeFileSync(path.join(source, 'beam-gpu-transport.node'), 'addon');
       await assert.rejects(installExperimentalFfmpeg(directory, path.join(directory, 'resources'), 'linux'), /EACCES/);
     } finally {
       fs.rmSync(directory, { recursive: true, force: true });
@@ -45,4 +46,21 @@ test(
 );
 test('rejects native builds on unsupported OSes before compiling', () => {
   for (const platform of ['darwin', 'win32']) assert.throws(() => buildFfmpegExport({ platform }), /only on Linux/);
+});
+
+test('removes obsolete codec payloads and never copies FFmpeg or libraries from a native build', async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-ffmpeg-no-bundle-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const source = path.join(directory, 'build/native/ffmpeg-export');
+  const resources = path.join(directory, 'resources');
+  fs.mkdirSync(path.join(source, 'lib'), { recursive: true });
+  for (const name of ['beam-ffmpeg-export', 'beam-gpu-transport.node', 'ffmpeg'])
+    fs.writeFileSync(path.join(source, name), 'binary', { mode: 0o755 });
+  fs.writeFileSync(path.join(source, 'lib/libavcodec.so.60'), 'codec');
+  const destination = path.join(resources, 'ffmpeg-export');
+  fs.mkdirSync(path.join(destination, 'lib'), { recursive: true });
+  fs.writeFileSync(path.join(destination, 'lib/libavcodec.so.60'), 'obsolete codec');
+  await installExperimentalFfmpeg(directory, resources, 'linux');
+  assert.deepEqual(fs.readdirSync(destination).sort(), ['beam-ffmpeg-export', 'beam-gpu-transport.node']);
+  assert.equal(fs.existsSync(path.join(source, 'lib/libavcodec.so.60')), true);
 });

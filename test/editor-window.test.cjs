@@ -936,6 +936,38 @@ test('editor:open preserves screenshot kind per window and closing one editor pr
   }
 });
 
+for (const isPackaged of [false, true]) {
+  test(`independent CLI-style editors preserve existing projects in ${isPackaged ? 'release' : 'development'}`, async () => {
+    const fixture = createRecorderFixture({ isPackaged });
+    try {
+      const original = await readyEditor(fixture, fixture.manager.open(projectId));
+      const screenshotId = '77777777-7777-4777-8777-777777777777';
+      const screenshot = await readyEditor(
+        fixture,
+        fixture.manager.open(screenshotId, {
+          kind: 'screenshot',
+          disposition: 'new-window',
+        }),
+      );
+      const context = fixture.ipcHandlers.get('editor:context');
+      assert.deepEqual(context({ sender: original.webContents }), { projectId });
+      assert.deepEqual(context({ sender: screenshot.webContents }), { projectId: screenshotId, kind: 'screenshot' });
+      assert.equal(original.isDestroyed(), false);
+      const videoId = '88888888-8888-4888-8888-888888888888';
+      const reused = fixture.manager.open(videoId, { disposition: 'reuse' });
+      fixture.ipcListeners.get('editor:ready')({ sender: screenshot.webContents });
+      assert.equal(await reused, true);
+      assert.equal(fixture.windows.length, 2);
+      assert.deepEqual(context({ sender: screenshot.webContents }), { projectId: videoId });
+      assert.deepEqual(context({ sender: original.webContents }), { projectId });
+      screenshot.close();
+      assert.equal(original.isDestroyed(), false);
+    } finally {
+      fixture.restore();
+    }
+  });
+}
+
 test('recorder launch is idempotent while idle and only the HUD may mark it active', async () => {
   const fixture = createRecorderFixture();
   try {

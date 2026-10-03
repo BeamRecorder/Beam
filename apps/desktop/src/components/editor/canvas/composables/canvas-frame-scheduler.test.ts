@@ -35,6 +35,55 @@ afterEach(() => {
 });
 
 describe('createCanvasFrameScheduler', () => {
+  it('does not schedule a hidden canvas while the DOM surface owns presentation', () => {
+    const render = vi.fn();
+    const scheduler = createCanvasFrameScheduler(
+      render,
+      () => true,
+      () => false,
+    );
+    scheduler.requestRender();
+    expect(pendingFrames).toHaveLength(0);
+    expect(render).not.toHaveBeenCalled();
+    scheduler.dispose();
+  });
+  it('cancels a queued canvas paint when presentation switches to HTML', () => {
+    let enabled = true;
+    const render = vi.fn();
+    const scheduler = createCanvasFrameScheduler(
+      render,
+      () => true,
+      () => enabled,
+    );
+    scheduler.requestRender();
+    enabled = false;
+    runNextFrame();
+    expect(render).not.toHaveBeenCalled();
+    expect(pendingFrames).toHaveLength(0);
+    enabled = true;
+    scheduler.requestRender();
+    runNextFrame();
+    expect(render).toHaveBeenCalledOnce();
+    expect(pendingFrames).toHaveLength(1);
+    scheduler.dispose();
+  });
+  it('does not retain redraw requests made by a render that disables presentation', () => {
+    let enabled = true;
+    const render = vi.fn(() => {
+      enabled = false;
+      scheduler.requestRender();
+    });
+    const scheduler = createCanvasFrameScheduler(
+      render,
+      () => true,
+      () => enabled,
+    );
+    scheduler.requestRender();
+    runNextFrame();
+    expect(render).toHaveBeenCalledOnce();
+    expect(pendingFrames).toHaveLength(0);
+    scheduler.dispose();
+  });
   it('coalesces repeated render requests before a frame', () => {
     const render = vi.fn();
     const scheduler = createCanvasFrameScheduler(render, () => false);

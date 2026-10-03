@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./html/playback-controller": "./src/html/playback-controller.cjs",
     "./*": "./src/*.ts"
   },
   "scripts": {

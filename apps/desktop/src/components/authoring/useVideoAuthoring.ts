@@ -6,6 +6,7 @@ import type { EditorWorkspaceState } from '../editor/workspace/workspace-types';
 import type { useEditorWorkspaceHistory } from '../editor/workspace/useEditorWorkspaceHistory';
 import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
 import type { BackgroundValue } from '@beam/engine/shared/background-types';
+import { watch } from 'vue';
 
 export function useVideoAuthoring(state: EditorWorkspaceState, history: ReturnType<typeof useEditorWorkspaceHistory>) {
   const read = () => {
@@ -23,7 +24,7 @@ export function useVideoAuthoring(state: EditorWorkspaceState, history: ReturnTy
     if (!found) throw new Error('Import the background into Beam before assigning its source.');
     return found;
   };
-  useAuthoringHost<CompositionSnapshot>({
+  const authoring = useAuthoringHost<CompositionSnapshot>({
     context: () =>
       state.props.project && state.projectStateReady.value && !state.editorState.loading.value
         ? { projectId: state.props.project.id, name: state.props.project.name, kind: 'video' }
@@ -59,4 +60,12 @@ export function useVideoAuthoring(state: EditorWorkspaceState, history: ReturnTy
       !state.timelineCanvasPreview.value,
     save: () => state.editorState.saveNow(),
   });
+  watch(
+    authoring.ready,
+    (ready) => {
+      state.authoringReady.value = ready;
+    },
+    { immediate: true, flush: 'sync' },
+  );
+  return authoring;
 }

@@ -102,8 +102,18 @@ It reads the current revision before each publication and coalesces rapid saves 
 compiling. Keep this process running while the agent writes HTML/TypeScript; changes
 appear in the open editor after compilation. Ctrl+C closes the watchers. Compilation,
 renderer and revision errors are printed, leaving the previous layer available.
-The preview requests coalesced frames at the HTML frame rate; expensive WebGL code may
-preview more slowly. Export requests every exact timeline frame.
+Full-canvas animated HTML scenes preview directly in Chromium inside the editor,
+without per-frame PNG capture or shared GPU textures. Beam supplies the source time
+from its audio clock; play, pause, reverse seeks, trimming and playback rate retain the
+same `seek(timeMs)` contract. The iframe has an opaque origin and no Beam preload,
+filesystem access, network/RPC, popups or nested frames. Imported audio remains on
+Beam's timeline; preview HTML media is muted.
+
+This direct presentation applies to one full-canvas HTML visual, with matching output
+aspect ratio and no additional visual layers, Beam frame/border/shadow, camera effects,
+watermark or transitions. Compositions requiring Beam's layer compositor use exact
+coalesced pixel frames. Export, thumbnails and explicit screenshot actions always
+request exact frames from the same frozen source. Export requests every timeline frame.
 
 Use `html.source` with the layer's descriptor to locate its saved source. Copy it into a
 working folder with the necessary dependencies before editing; published versions are

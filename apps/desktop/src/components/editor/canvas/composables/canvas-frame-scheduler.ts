@@ -3,14 +3,18 @@ export interface CanvasFrameScheduler {
   dispose: () => void;
 }
 
-export function createCanvasFrameScheduler(render: () => void, shouldContinue: () => boolean): CanvasFrameScheduler {
+export function createCanvasFrameScheduler(
+  render: () => void,
+  shouldContinue: () => boolean,
+  enabled: () => boolean = () => true,
+): CanvasFrameScheduler {
   let animationFrameId: number | null = null;
   let isRendering = false;
   let renderRequestedDuringFrame = false;
   let disposed = false;
 
   const requestRender = () => {
-    if (disposed) return;
+    if (disposed || !enabled()) return;
     if (isRendering) {
       renderRequestedDuringFrame = true;
       return;
@@ -20,6 +24,7 @@ export function createCanvasFrameScheduler(render: () => void, shouldContinue: (
 
   function drawFrame() {
     animationFrameId = null;
+    if (!enabled()) return;
     isRendering = true;
     renderRequestedDuringFrame = false;
     try {

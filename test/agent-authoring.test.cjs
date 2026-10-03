@@ -237,3 +237,25 @@ test('HTML staging rejects animation for stills, missing output and oversized tr
   fs.closeSync(large);
   assert.throws(() => files.stage(context, input), /limit/);
 });
+
+test('HTML frame capabilities accept only bounded thumbnail tiers and preserve full-resolution requests', async (t) => {
+  const directory = temporary(t),
+    capability = 'f'.repeat(64),
+    widths = [];
+  const server = await createAgentServer({
+    discoveryDirectory: directory,
+    dispatch: async () => {},
+    bundleFile: () => null,
+    frame: async (_token, _time, width) => {
+      widths.push(width);
+      return Buffer.from('pixels');
+    },
+  });
+  t.after(() => server.dispose());
+  for (const suffix of ['', '&width=240', '&width=480', '&width=960'])
+    assert.equal((await fetch(`${server.origin}/frame/${capability}?timeMs=0${suffix}`)).status, 200);
+  assert.deepEqual(widths, [undefined, 240, 480, 960]);
+  for (const width of ['0', '-1', '241', '10000', 'wat', ''])
+    assert.equal((await fetch(`${server.origin}/frame/${capability}?timeMs=0&width=${width}`)).status, 400);
+  assert.equal(widths.length, 4);
+});

@@ -1,0 +1,183 @@
+.intro-line {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  font-size: 120px;
+  letter-spacing: -4px;
+}
+.intro-and {
+  color: #a99d9e;
+}
+.app-cycle {
+  position: relative;
+  width: 145px;
+  height: 206px;
+  margin: 0 32px;
+}
+.small-app {
+  position: absolute;
+  inset: 0;
+  padding: 10px;
+  border-radius: 17px;
+  background: #fff;
+  color: #252322;
+  font-size: 24px;
+  letter-spacing: -1px;
+}
+.small-app strong {
+  display: block;
+  font-weight: 400;
+  line-height: 1.02;
+  margin-top: 10px;
+}
+.small-app small {
+  color: #888;
+  display: block;
+  font-size: 20px;
+  line-height: 1.4;
+}
+.pixel-letter {
+  background: currentColor;
+  color: #d4bff4;
+  height: 118px;
+  border-radius: 15px;
+  padding-left: 15px;
+  font-size: 93px;
+  font-weight: 700;
+  line-height: 115px;
+  text-shadow: 0 0 1px #fff;
+}
+.yellow .pixel-letter {
+  color: #f2d267;
+}
+.orange .pixel-letter {
+  color: #f1a072;
+}
+img.pixel-letter {
+  width: 125px;
+  height: 118px;
+  padding: 0;
+  object-fit: cover;
+}
+.agent-cycle {
+  position: relative;
+  width: 200px;
+  height: 75px;
+}
+.agent-label {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  white-space: nowrap;
+  font-size: 30px;
+  letter-spacing: -1.5px;
+  padding: 8px 16px;
+  background: #aadcd5;
+  color: #211719;
+  clip-path: polygon(
+    0 16%,
+    5% 16%,
+    5% 0,
+    95% 0,
+    95% 16%,
+    100% 16%,
+    100% 84%,
+    95% 84%,
+    95% 100%,
+    5% 100%,
+    5% 84%,
+    0 84%
+  );
+}
+.agent-label.yellow {
+  background: #efbc24;
+}
+.agent-label.orange {
+  background: #e6572b;
+  font-size: 22px;
+}
+.one-line {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 192px;
+  letter-spacing: -6px;
+}
+.purple-wash {
+  position: absolute;
+  inset: -400px;
+  background: radial-gradient(ellipse at 30% 35%, #dfd2fb 0, #bea9ef 35%, #e8e1f1 74%);
+}
+.meet-copy {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 400px;
+  letter-spacing: -15px;
+  color: #f2ecf8;
+}
+.intro-simple {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  font-size: 120px;
+  letter-spacing: -4px;
+}
+.intro-simple span {
+  color: #b9a5ee;
+}
+.agent-label.deal {
+  background: #efbc24;
+}
+
+.intro-simple,
+.intro-line {
+  translate: 0 -35px;
+}
+.one-line {
+  translate: 0 -45px;
+}
+.brand-wipe {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: radial-gradient(ellipse at center, #e3d8f4, #c0acef 55%, #edeee4);
+}
+.brand-wipe i {
+  position: absolute;
+  width: 640px;
+  height: 410px;
+  background: #b9a5ee;
+}
+.wipe-tl {
+  top: -45px;
+  left: -5px;
+}
+.wipe-tr {
+  top: -45px;
+  right: -5px;
+}
+.wipe-bl {
+  bottom: -45px;
+  left: -5px;
+}
+.wipe-br {
+  bottom: -45px;
+  right: -5px;
+}
+.app-loading {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}

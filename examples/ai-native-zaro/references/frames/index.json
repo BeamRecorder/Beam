@@ -1,0 +1,362 @@
+[
+  {
+    "frame": 0,
+    "timeMs": 0.0,
+    "file": "frame-0000.png"
+  },
+  {
+    "frame": 15,
+    "timeMs": 500.0,
+    "file": "frame-0015.png"
+  },
+  {
+    "frame": 30,
+    "timeMs": 1000.0,
+    "file": "frame-0030.png"
+  },
+  {
+    "frame": 45,
+    "timeMs": 1500.0,
+    "file": "frame-0045.png"
+  },
+  {
+    "frame": 60,
+    "timeMs": 2000.0,
+    "file": "frame-0060.png"
+  },
+  {
+    "frame": 90,
+    "timeMs": 3000.0,
+    "file": "frame-0090.png"
+  },
+  {
+    "frame": 120,
+    "timeMs": 4000.0,
+    "file": "frame-0120.png"
+  },
+  {
+    "frame": 150,
+    "timeMs": 5000.0,
+    "file": "frame-0150.png"
+  },
+  {
+    "frame": 165,
+    "timeMs": 5500.0,
+    "file": "frame-0165.png"
+  },
+  {
+    "frame": 180,
+    "timeMs": 6000.0,
+    "file": "frame-0180.png"
+  },
+  {
+    "frame": 210,
+    "timeMs": 7000.0,
+    "file": "frame-0210.png"
+  },
+  {
+    "frame": 240,
+    "timeMs": 8000.0,
+    "file": "frame-0240.png"
+  },
+  {
+    "frame": 270,
+    "timeMs": 9000.0,
+    "file": "frame-0270.png"
+  },
+  {
+    "frame": 300,
+    "timeMs": 10000.0,
+    "file": "frame-0300.png"
+  },
+  {
+    "frame": 330,
+    "timeMs": 11000.0,
+    "file": "frame-0330.png"
+  },
+  {
+    "frame": 360,
+    "timeMs": 12000.0,
+    "file": "frame-0360.png"
+  },
+  {
+    "frame": 390,
+    "timeMs": 13000.0,
+    "file": "frame-0390.png"
+  },
+  {
+    "frame": 420,
+    "timeMs": 14000.0,
+    "file": "frame-0420.png"
+  },
+  {
+    "frame": 450,
+    "timeMs": 15000.0,
+    "file": "frame-0450.png"
+  },
+  {
+    "frame": 480,
+    "timeMs": 16000.0,
+    "file": "frame-0480.png"
+  },
+  {
+    "frame": 510,
+    "timeMs": 17000.0,
+    "file": "frame-0510.png"
+  },
+  {
+    "frame": 540,
+    "timeMs": 18000.0,
+    "file": "frame-0540.png"
+  },
+  {
+    "frame": 570,
+    "timeMs": 19000.0,
+    "file": "frame-0570.png"
+  },
+  {
+    "frame": 600,
+    "timeMs": 20000.0,
+    "file": "frame-0600.png"
+  },
+  {
+    "frame": 630,
+    "timeMs": 21000.0,
+    "file": "frame-0630.png"
+  },
+  {
+    "frame": 660,
+    "timeMs": 22000.0,
+    "file": "frame-0660.png"
+  },
+  {
+    "frame": 690,
+    "timeMs": 23000.0,
+    "file": "frame-0690.png"
+  },
+  {
+    "frame": 720,
+    "timeMs": 24000.0,
+    "file": "frame-0720.png"
+  },
+  {
+    "frame": 750,
+    "timeMs": 25000.0,
+    "file": "frame-0750.png"
+  },
+  {
+    "frame": 780,
+    "timeMs": 26000.0,
+    "file": "frame-0780.png"
+  },
+  {
+    "frame": 810,
+    "timeMs": 27000.0,
+    "file": "frame-0810.png"
+  },
+  {
+    "frame": 840,
+    "timeMs": 28000.0,
+    "file": "frame-0840.png"
+  },
+  {
+    "frame": 870,
+    "timeMs": 29000.0,
+    "file": "frame-0870.png"
+  },
+  {
+    "frame": 900,
+    "timeMs": 30000.0,
+    "file": "frame-0900.png"
+  },
+  {
+    "frame": 930,
+    "timeMs": 31000.0,
+    "file": "frame-0930.png"
+  },
+  {
+    "frame": 960,
+    "timeMs": 32000.0,
+    "file": "frame-0960.png"
+  },
+  {
+    "frame": 990,
+    "timeMs": 33000.0,
+    "file": "frame-0990.png"
+  },
+  {
+    "frame": 1020,
+    "timeMs": 34000.0,
+    "file": "frame-1020.png"
+  },
+  {
+    "frame": 1050,
+    "timeMs": 35000.0,
+    "file": "frame-1050.png"
+  },
+  {
+    "frame": 1080,
+    "timeMs": 36000.0,
+    "file": "frame-1080.png"
+  },
+  {
+    "frame": 1110,
+    "timeMs": 37000.0,
+    "file": "frame-1110.png"
+  },
+  {
+    "frame": 1140,
+    "timeMs": 38000.0,
+    "file": "frame-1140.png"
+  },
+  {
+    "frame": 1170,
+    "timeMs": 39000.0,
+    "file": "frame-1170.png"
+  },
+  {
+    "frame": 1200,
+    "timeMs": 40000.0,
+    "file": "frame-1200.png"
+  },
+  {
+    "frame": 1230,
+    "timeMs": 41000.0,
+    "file": "frame-1230.png"
+  },
+  {
+    "frame": 1260,
+    "timeMs": 42000.0,
+    "file": "frame-1260.png"
+  },
+  {
+    "frame": 1290,
+    "timeMs": 43000.0,
+    "file": "frame-1290.png"
+  },
+  {
+    "frame": 1320,
+    "timeMs": 44000.0,
+    "file": "frame-1320.png"
+  },
+  {
+    "frame": 1350,
+    "timeMs": 45000.0,
+    "file": "frame-1350.png"
+  },
+  {
+    "frame": 1380,
+    "timeMs": 46000.0,
+    "file": "frame-1380.png"
+  },
+  {
+    "frame": 1410,
+    "timeMs": 47000.0,
+    "file": "frame-1410.png"
+  },
+  {
+    "frame": 1440,
+    "timeMs": 48000.0,
+    "file": "frame-1440.png"
+  },
+  {
+    "frame": 1470,
+    "timeMs": 49000.0,
+    "file": "frame-1470.png"
+  },
+  {
+    "frame": 1500,
+    "timeMs": 50000.0,
+    "file": "frame-1500.png"
+  },
+  {
+    "frame": 1530,
+    "timeMs": 51000.0,
+    "file": "frame-1530.png"
+  },
+  {
+    "frame": 1560,
+    "timeMs": 52000.0,
+    "file": "frame-1560.png"
+  },
+  {
+    "frame": 1590,
+    "timeMs": 53000.0,
+    "file": "frame-1590.png"
+  },
+  {
+    "frame": 1620,
+    "timeMs": 54000.0,
+    "file": "frame-1620.png"
+  },
+  {
+    "frame": 1650,
+    "timeMs": 55000.0,
+    "file": "frame-1650.png"
+  },
+  {
+    "frame": 1680,
+    "timeMs": 56000.0,
+    "file": "frame-1680.png"
+  },
+  {
+    "frame": 1710,
+    "timeMs": 57000.0,
+    "file": "frame-1710.png"
+  },
+  {
+    "frame": 1740,
+    "timeMs": 58000.0,
+    "file": "frame-1740.png"
+  },
+  {
+    "frame": 1770,
+    "timeMs": 59000.0,
+    "file": "frame-1770.png"
+  },
+  {
+    "frame": 1800,
+    "timeMs": 60000.0,
+    "file": "frame-1800.png"
+  },
+  {
+    "frame": 1830,
+    "timeMs": 61000.0,
+    "file": "frame-1830.png"
+  },
+  {
+    "frame": 1860,
+    "timeMs": 62000.0,
+    "file": "frame-1860.png"
+  },
+  {
+    "frame": 1890,
+    "timeMs": 63000.0,
+    "file": "frame-1890.png"
+  },
+  {
+    "frame": 1920,
+    "timeMs": 64000.0,
+    "file": "frame-1920.png"
+  },
+  {
+    "frame": 1950,
+    "timeMs": 65000.0,
+    "file": "frame-1950.png"
+  },
+  {
+    "frame": 1980,
+    "timeMs": 66000.0,
+    "file": "frame-1980.png"
+  },
+  {
+    "frame": 2010,
+    "timeMs": 67000.0,
+    "file": "frame-2010.png"
+  },
+  {
+    "frame": 2040,
+    "timeMs": 68000.0,
+    "file": "frame-2040.png"
+  }
+]

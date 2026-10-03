@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.beam/
+coverage/
+.media/
+__pycache__/
+*.py[cod]

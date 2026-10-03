@@ -6,6 +6,12 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Private website AI native demo now uses a lightweight Zaro recreation with sound disabled by default, playback controls and a tooltip explaining HTML/GSAP authoring and Beam CLI rendering.
+- Added reusable HTML/GSAP launch-video templates for typewriter sentences, prompt fields, macOS cursors and smooth camera moves, with a complete example and customization guide.
+
+- Added `examples/ai-native-zaro/`, a separate Beam CLI project reconstructing the supplied 68.6-second Zaro film in HTML/GSAP, with local reference assets, its original soundtrack, reversible seeks and frame verification.
+- Added the reusable `examples/ai-edits/` HTML/GSAP announcement composition, with official Edits references, the supplied iPhone frame, verified CC0 music/impacts and Beam CLI project publication/export.
+- Private website AI native documentation covers live video and Screenshot editing, HTML/TypeScript publication, live code previews, native text/fonts and CLI exports with copyable examples and product-media instructions.
 - Screenshot groups and multiple selections expose shared position, alignment, size and rotation controls in the Placement inspector, with proportional native text resizing and undo/redo.
 - Screenshot layers support native X/Y 3D rotation with a shared perspective for preview, editable text, thumbnails and PNG export.
 - Screenshot supports left-drag selection on empty canvas, right-drag selection, persistent groups with shared move/resize bounds, Ctrl/Cmd+G and Ctrl/Cmd+Shift+G, and alignment guides with document-pixel dimensions and spacing.
@@ -17,6 +23,9 @@ User-facing changes to Beam are documented in this file.
 - The CLI can rename every Screenshot layer, including background and watermark, through `still.layer.rename`, with the same lock protection and undo/redo as editor naming.
 - Screenshot Composition supports gradient effects attached to layers, using BEBE-ui's Mesh, Flow and Silk shaders and six presets. Colors, grain, geometry and light controls use translated inspector accordions; saved effects support undo/redo, copy/paste, live CLI edits and matching PNG/WebP exports.
 - The CLI discovers agent tools and bundled/GitHub documentation, controls open Studio and Screenshot projects with revision checks and editor undo/redo, and publishes persistent HTML/TypeScript layers. A file watcher updates the preview after code saves; seekable GSAP/WebGL compositions share their source with frame and video exports.
+- Private website documentation covers Recording, Screenshots, Instant, macOS/Windows/Linux setup, permissions, clipboard behavior and local file storage, with product-media slots to complete.
+- All private website copy uses English translation catalogs through Nuxt i18n, ready for additional languages once the wording is finalized.
+- A private Beam marketing website with server-rendered pages, light and dark themes, and an interactive MacBook video showcase.
 - Video and Screenshot share manual 2D, 3D and GPU glass zooms, with circular or freehand lenses, pixel-based focus/diameter controls and grouped appearance settings in all 15 languages. New lenses use a larger 60% diameter and restrained glass defaults.
 - Automatic glass lenses group nearby recorded clicks, adapt magnification and diameter to the clicked region, respect reserved timeline intervals and remain manually editable. Focus follows trimmed, retimed, mirrored, rotated and framed recordings and scene transforms.
 - Background library items can be removed with an exact-item preview and destructive confirmation in all 15 languages. Imported images/videos have a Delete action above Show more; colors/gradients pair editing with a compact trash button. The last deletion supports persisted undo/redo while existing projects and source files remain intact.
@@ -57,6 +66,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- CLI project opening creates an independent video or Screenshot editor by default, preserving existing projects; `disposition: "reuse"` optionally replaces the active editor in development and installed releases.
+- Private website Screenshot documentation explains selection groups, 3D perspective, gradient/color effects and native CLI capture.
 - The Beautiful Captures promo keeps secondary feature labels and icons more visible while retaining the slot-machine hierarchy.
 - The Beautiful Captures promo composition uses Beam’s capture icons, the supplied rounded cursor SVG and a tighter layout with larger editable labels and one dashed Captures region.
 
@@ -67,6 +78,18 @@ User-facing changes to Beam are documented in this file.
 
 - Screenshot Composition uses compact Effects and Color menus, draggable numeric opacity beside blending, and original/processed thumbnails that open effect settings. The properties inspector uses the same translucent, blurred theme surface.
 
+- Private website platform badges use green checks and red crosses, flow beside guide text, and category headings retain plain text without icons.
+- Private website missing-page errors show a dedicated Unsplash scene for each system theme, with direct actions to return to the previous Beam page or its home.
+- Private website docs use clearer text, Beam/Lucide icons, short guide titles and a Platform category, with subtle system-support badges beside limited features.
+- Private website documentation opens with system-aware forest photography and adds grouped guide navigation, section links and copyable commands.
+- Private website feature menu hover and keyboard focus use an opaque theme gray and neutral border that stay visible over the blurred background.
+- A lightweight smooth scroll gives every private website page, including the FAQ, documentation and downloads, a gentle easing tail while preserving native touch scrolling and reduced-motion preferences.
+- Private website footer links use larger text and a more spacious mobile layout.
+- The private website navigation fades away while scrolling down and returns while scrolling up, with safeguards for open menus and keyboard focus.
+- The private website FAQ opens with theme-aware lake photography, a soft transition into the answers and clearer category navigation.
+- The private website navigation blends Beam's dark surface color with its backdrop blur.
+- The private website's cropped footer wordmark fades into the page with crisp lettering.
+- Expanded the private Beam website with system-aware downloads and appearance, blurred navigation, a large faded footer wordmark, dedicated feature and documentation pages, the complete FAQ, and Free / Pro pricing with a launch waitlist.
 - Quick Snip uses neutral mode/source choices and one fixed circular capture button, with smooth device/icon transitions; source selection opens only when Capture is pressed, source tabs remain responsive, and empty toolbar space supports native dragging.
 - Tray Quick Snip is separate from Show/Hide Beam. Quick Snip loads screenshot effects only after capture. Hidden idle Beam releases its HUD and auxiliary renderers; completed or canceled Quick Snip releases its toolbar, menus and device previews.
 - Startup temporary audio cleanup scans project folders directly, avoiding loading project timelines and recording data before Beam opens.
@@ -153,6 +176,18 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Linux CI and release packages now compile and verify the experimental GPU export backend. Packages include only Beam native artifacts and use system FFmpeg libraries, preventing the backend from being omitted without bundling FFmpeg.
+
+- HTML playback and scrubbing now follow the shared runtime clock directly, skip the hidden canvas, and continue low-frequency thumbnail captures during interaction, with full-size refinement afterward. HTML timeline thumbnails decode and resize in a background worker, using smaller isolated render surfaces.
+
+- HTML preview waits for the editor's document registration to complete, preventing an initial still image with audio but no animation when opening a project.
+- Animated HTML stays above the editor's still-image canvas while preserving canvas selection and pointer controls.
+
+- Full-canvas HTML compositions preview directly in the editor with synchronized playback, immediate pause and seeking, without per-frame PNG capture or shared GPU textures. HTML timeline thumbnails sample the animation at each source time; an old frame or reload cannot override a newer seek or pause.
+- CLI HTML motion exports serve SVG device frames with the correct image type.
+
+- Private website links reset scroll before showing a new page, avoiding a flash of the large footer wordmark while preserving section scrolling and browser history positions.
+- Long private website guide contents stay accessible through an independently scrollable desktop summary.
 - Screenshot rectangle selection can start in the workspace outside the canvas and remains accurate when the preview is zoomed, panned or UI-scaled.
 - Editable text keeps the same vertical position when leaving inline editing, including centered text beside a logo, with matching preview and export.
 
@@ -160,6 +195,15 @@ User-facing changes to Beam are documented in this file.
 - Fields, sliders and secondary buttons retain visible neutral borders in light theme.
 
 - `bun run dev` serves the desktop renderer from its configured directory, restoring the Recorder, onboarding and HUD panels instead of loading missing pages.
+- Navigating between private website guides keeps the page shell, topbar and smooth scroll alive, avoiding full reloads and repeated entrance animations.
+- The private website's Beam logo stays on a stable rendering layer while the navigation reappears.
+- Private website smooth scrolling starts before Nuxt hydration, removing the delay after the page first appears.
+- Private website FAQ accordions use Beam's shared desktop disclosure and reveal animation.
+- Private website section links keep their correct position while content fades into view.
+- Private website download buttons animate their text and operating system logo together on hover.
+- Private website download buttons preserve the original Linux, Windows and Apple SVG logos instead of recoloring them.
+- The private website navigation now blurs scrolling content correctly.
+- The private website prevents vertical scroll bounce from exposing a blank strip above the hero.
 - Quick Snip settings stay attached to their trigger on every opening, close on a second cog press, animate from the cog, prepare while the toolbar is active, and use a light shadow without horizontal or duplicate Select scrollbars. Device choices use Beam menus instead of native context menus.
 - Quick Snip settings open on the development session's selected port, including when other Beam instances already use the default port.
 - Audio waveforms now redraw during timeline zoom without waiting for thumbnail work or an obsolete crossfade; rapid changes keep only the latest pending draw.
@@ -227,6 +271,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Removed
 
+- Removed the private website footer's “A brighter way to create” tagline.
 - Removed the redundant Elements sidebar section; its properties are available in Clip.
 - Removed the standalone Mascot Lab entry from production builds; the lab remains accessible through development Settings.
 

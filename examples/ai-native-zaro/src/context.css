@@ -1,0 +1,356 @@
+.connection-camera {
+  position: absolute;
+  inset: 0;
+  transform-origin: center;
+}
+.connection-title {
+  position: absolute;
+  left: 450px;
+  top: 443px;
+  white-space: nowrap;
+  font-size: 128px;
+  letter-spacing: -5px;
+  line-height: 1.1;
+}
+.floating-logo {
+  position: absolute;
+  border-radius: 30px;
+}
+.floating-logo img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+.floating-note {
+  position: absolute;
+  left: 409px;
+  top: 806px;
+  width: 234px;
+  height: 274px;
+}
+.floating-sticky {
+  position: absolute;
+  left: 81px;
+  top: 612px;
+  width: 159px;
+  height: 170px;
+}
+.file-chip {
+  position: absolute;
+  padding: 10px 24px;
+  border-radius: 35px;
+  background: #fcfefd;
+  box-shadow: 0 4px 12px #1d111317;
+  font-size: 25px;
+  color: #504f49;
+  white-space: nowrap;
+}
+.chip-one {
+  left: 1189px;
+  top: 310px;
+}
+.chip-two {
+  left: 387px;
+  top: 620px;
+}
+.chip-three {
+  left: 868px;
+  top: 1035px;
+}
+.chaos-points {
+  position: absolute;
+  left: 280px;
+  top: 186px;
+  width: 1330px;
+  height: 714px;
+}
+.chaos-points img {
+  width: 100%;
+  height: 100%;
+}
+.files-camera {
+  position: absolute;
+  inset: 0;
+  transform-origin: center;
+}
+.files-browser {
+  position: absolute;
+  width: 1580px;
+  height: 898px;
+  left: 174px;
+  top: 93px;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px #50454212;
+}
+.folder-grid {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 560px);
+  gap: 26px 32px;
+  padding: 14px 5px;
+  background: #fcfefd;
+  width: 1920px;
+}
+.folder-card {
+  height: 236px;
+  border: 1px solid #e5e6df;
+  border-radius: 23px;
+  padding: 29px;
+  background: #fcfefd;
+}
+.folder-card img {
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+}
+.folder-card strong {
+  display: block;
+  font-size: 33px;
+  letter-spacing: -1px;
+  margin-top: 17px;
+}
+.folder-card span {
+  display: block;
+  color: #a0a198;
+  font-size: 24px;
+  margin-top: 12px;
+}
+.folder-popup {
+  position: absolute;
+  left: 698px;
+  top: 192px;
+  width: 742px;
+  height: 383px;
+  padding: 14px 22px;
+  border-radius: 24px;
+  background: #fcfefd;
+  box-shadow: 0 15px 44px #50454227;
+}
+.folder-popup header {
+  font-size: 26px;
+  padding: 0 13px 18px;
+}
+.folder-popup small {
+  float: right;
+  font-size: 22px;
+  color: #95958c;
+}
+.folder-popup p {
+  height: 66px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  background: #f5f6ed;
+  padding: 12px 33px;
+}
+.folder-popup p img {
+  width: 40px;
+  height: 40px;
+}
+.folder-popup p span {
+  font-size: 24px;
+  color: #74746b;
+}
+.folder-popup p small {
+  margin-left: auto;
+}
+.files-camera .cursor {
+  left: 1300px;
+  top: 700px;
+}
+.file-list-camera {
+  position: absolute;
+  left: 240px;
+  top: 40px;
+  width: 1440px;
+  background: #fcfefd;
+  padding: 30px;
+}
+.file-row {
+  height: 180px;
+  display: flex;
+  align-items: center;
+  font-size: 45px;
+  gap: 55px;
+}
+.file-row img {
+  width: 95px;
+  height: 100px;
+  object-fit: contain;
+}
+.connections-card {
+  position: absolute;
+  left: 125px;
+  top: 132px;
+  width: 1740px;
+  height: 838px;
+  background: #fafaf3;
+  border-radius: 140px;
+  padding: 155px 180px;
+  font-size: 118px;
+  color: #999990;
+}
+.connections-logos {
+  display: flex;
+  align-items: center;
+  margin-top: 156px;
+}
+.connections-logos > img {
+  width: 220px;
+  height: 255px;
+  padding: 45px;
+  object-fit: contain;
+  background: #fcfefd;
+  border: 5px solid #d7d9cc;
+  border-radius: 60px;
+  margin-right: -60px;
+}
+.connections-logos span {
+  font-size: 95px;
+  color: #1d1113;
+  margin-left: 140px;
+  white-space: nowrap;
+}
+.answer-camera {
+  position: absolute;
+  left: 154px;
+  top: 68px;
+  width: 1633px;
+  height: 942px;
+  transform-origin: center;
+}
+.answer-camera img {
+  width: 100%;
+  height: 100%;
+}
+.answer-closeup {
+  position: absolute;
+  top: 350px;
+  left: 0;
+  width: 1920px;
+  height: 900px;
+  background: #fafaf4;
+  padding: 142px 175px 0;
+}
+.question-bubble {
+  margin-left: auto;
+  width: 765px;
+  padding: 14px 34px 38px;
+  font-size: 36px;
+  background: #edeee4;
+  border-radius: 40px;
+  white-space: nowrap;
+  letter-spacing: -1.2px;
+}
+.answer-closeup > small {
+  display: block;
+  text-align: right;
+  margin-top: 8px;
+  font-size: 25px;
+  color: #94948c;
+}
+.answer-closeup p {
+  font-size: 39px;
+  line-height: 1.35;
+  margin-top: 115px;
+}
+.answer-header {
+  position: absolute;
+  top: 164px;
+  left: 0;
+  width: 1750px;
+  height: 1080px;
+  background: #fafaf4;
+  border-radius: 0 50px 0 0;
+  padding: 65px 0;
+}
+.answer-header > span {
+  font-size: 48px;
+  color: #d7d8ce;
+}
+.answer-tools {
+  position: absolute;
+  left: 1455px;
+  top: 40px;
+  width: 273px;
+  height: 108px;
+}
+.answer-tools img {
+  width: 100%;
+  height: 100%;
+}
+.answer-header > small {
+  display: block;
+  margin: 60px 0 0 910px;
+  font-size: 36px;
+  color: #aaa;
+}
+.answer-header p {
+  font-size: 48px;
+  line-height: 1.65;
+  margin-top: 154px;
+  margin-left: -700px;
+  white-space: nowrap;
+}
+.answer-header .cursor {
+  left: 1630px;
+  top: 156px;
+}
+.source-list {
+  position: absolute;
+  left: 0;
+  top: 350px;
+  width: 960px;
+  text-align: center;
+  font-size: 94px;
+  line-height: 0.98;
+  letter-spacing: -2px;
+  color: #cccbc7;
+}
+.source-line {
+  white-space: nowrap;
+}
+.source-panel {
+  position: absolute;
+  left: 960px;
+  top: 0;
+  width: 960px;
+  height: 1080px;
+  background: #c0bdae;
+  padding: 79px 0 0 111px;
+}
+.source-panel img {
+  width: 849px;
+  height: 1001px;
+  border-radius: 14px 0 0 0;
+}
+
+.context-preview {
+  position: absolute;
+  left: 170px;
+  top: 120px;
+  width: 1580px;
+  height: 840px;
+  mask-image: radial-gradient(circle, #000 0 9px, transparent 10px);
+  mask-size: 35px 35px;
+}
+.context-preview img {
+  width: 100%;
+  height: 100%;
+}
+.connections-logos > img {
+  width: 901px;
+  height: 271px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  background: none;
+}
+.connections-logos span {
+  font-size: 118px;
+  margin-left: 60px;
+}

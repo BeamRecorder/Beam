@@ -4,6 +4,10 @@ The CLI exposes discoverable tools with JSON Schema inputs. It controls the docu
 actually open in Beam; edits update the preview and use the editor's undo history.
 Standalone `edit` and `serve` continue to work without the desktop application.
 
+For reusable HTML/GSAP sentences, prompt fields, macOS cursors and camera moves,
+see the [launch-video templates](../agents/templates/readme.md) and their complete
+12-second example. Each component is customizable and deterministic when seeking.
+
 Use `bun run beam` in a checkout, or `beam-cli` with the installed application. Below,
 `beam` denotes either launcher.
 
@@ -39,6 +43,19 @@ beam tools call documents.snapshot '{"projectId":"PROJECT_UUID"}'
 For a Screenshot canvas, create with `kind: "image", width: 1920, height: 1080`.
 Wait for the project to appear in `projects.list.open` before sending document commands.
 Only ready editor documents accept edits. Closed projects must be opened first.
+
+`projects.open` opens an independent editor window by default, for both video and
+Screenshot projects. Your existing editors keep their projects. This behavior is
+the same in development and installed releases; no second application process is
+needed. To replace the active editor instead, explicitly request `disposition: "reuse"`:
+
+```sh
+beam tools call projects.open '{"projectId":"PROJECT_UUID","kind":"video","disposition":"reuse"}'
+```
+
+Check `projects.list.open` before opening a project again when updating an existing
+CLI workflow. A canceled opening returns `status: "cancelled"`; it does not close
+previously opened editors.
 
 ## Modify the document
 

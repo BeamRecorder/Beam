@@ -1,10 +1,13 @@
-import { watch, onScopeDispose } from 'vue';
+import { watch, onScopeDispose, ref, readonly } from 'vue';
 import { capture } from '~/api/capture';
 import { createDocumentEndpoint } from '@beam/engine/document/document-endpoint';
 import { createHostedDocumentSession } from '@beam/engine/document/hosted-document-session';
 import type { AuthoringHost } from './authoring-host-types';
 
 export function useAuthoringHost<T extends object>(host: AuthoringHost<T>) {
+  const ready = ref(false),
+    error = ref('');
+  let registration = 0;
   let endpoint: ReturnType<typeof createDocumentEndpoint<T>> | null = null;
   let activeId: string | null = null;
   let disposed = false;
@@ -36,18 +39,31 @@ export function useAuthoringHost<T extends object>(host: AuthoringHost<T>) {
   });
   watch(
     () => host.context()?.projectId ?? null,
-    () => {
+    async () => {
+      const request = ++registration;
+      ready.value = false;
+      error.value = '';
       const context = host.context();
       activeId = context?.projectId ?? null;
       endpoint = context ? createDocumentEndpoint(context.projectId, createHostedDocumentSession(host)) : null;
-      void capture.registerAuthoringDocument(context).catch((error) => console.error('[Beam authoring]', error));
+      try {
+        await capture.registerAuthoringDocument(context);
+        if (!disposed && request === registration) ready.value = context !== null;
+      } catch (cause) {
+        if (!disposed && request === registration) {
+          error.value = String(cause);
+          console.error('[Beam authoring]', cause);
+        }
+      }
     },
     { immediate: true },
   );
   onScopeDispose(() => {
     disposed = true;
+    ready.value = false;
     endpoint = null;
     stop();
     void capture.registerAuthoringDocument(null).catch((error) => console.error('[Beam authoring]', error));
   });
+  return { ready: readonly(ready), error: readonly(error) };
 }

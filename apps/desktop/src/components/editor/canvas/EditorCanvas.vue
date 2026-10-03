@@ -2,6 +2,7 @@
 import { customCursorKey } from '../properties/cursor/custom-cursor-context';
 import CanvasAddMenu from '../search/CanvasAddMenu.vue';
 import { canvasDoubleClick } from './composables/canvas-double-click';
+import { canvasPreviewStyle } from './composables/canvas-preview-style';
 import ElementCanvasOverlay from '../elements/ElementCanvasOverlay.vue';
 import { useCanvasElements } from '../elements/useCanvasElements';
 import { useCanvasFormatTransition } from './composables/useCanvasFormatTransition';
@@ -86,21 +87,15 @@ const { showLoadingSkeleton, isCanvasCovered } = useCanvasLoadingState({
   playbackError: () => props.playbackError,
   playbackState: () => props.playbackState,
 });
-const previewFrameStyle = computed(() => {
-  const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
-  return {
-    left: `${preview.x}px`,
-    top: `${preview.y}px`,
-    width: `${preview.width}px`,
-    height: `${preview.height}px`,
-  };
-});
+const previewFrameStyle = computed(() => canvasPreviewStyle(logicalSize.value, props.outputCanvas));
 const outputAspectRatio = computed(() => props.outputCanvas.width / props.outputCanvas.height);
 const frameScheduler = createCanvasFrameScheduler(
   () => renderCanvas(),
   () => props.isPlaying || isTransitioningBackground.value,
+  () => !props.domPreviewActive,
 );
 const renderOnce = frameScheduler.requestRender;
+watch(() => props.domPreviewActive, renderOnce);
 const clipToggleTransition = useCanvasClipToggleTransition({
   canvas: () => canvasRef.value,
   composition: () => props.composition,
@@ -309,6 +304,7 @@ const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
   ctx.restore();
 };
 const renderCanvas = () => {
+  if (props.domPreviewActive) return;
   const canvas = canvasRef.value;
   const ctx = canvas?.getContext('2d');
   if (!canvas || !ctx || !logicalSize.value.width || !logicalSize.value.height) return;
@@ -370,6 +366,7 @@ onUnmounted(() => {
   disposeBlurEffect(context);
 });
 const captureCurrentFrame = () => {
+  if (props.captureCompositionPreview) return props.captureCompositionPreview();
   renderCanvas();
   return captureCanvasFrame(canvasRef.value, logicalSize.value, props.outputCanvas);
 };
@@ -424,6 +421,7 @@ defineExpose({ viewportZoom, captureCurrentFrame });
           'is-loading-covered': isCanvasCovered,
         }"
       ></canvas>
+      <slot name="composition-preview" :bounds="previewFrameStyle" />
       <EditorCanvasGuides :grid-visible="isGridVisible" :grid-style="previewFrameStyle" :guides="renderGuideLines" />
       <GlassHighlightSelection
         v-if="selectedZoom?.effect === 'glass' && selectedZoom.glass && !isPlaying && !isCropping"

@@ -31,22 +31,24 @@ function setup() {
   const commands = createCommandRegistry<{ value: number }>();
   commands.register({ type: 'set', parse: (input) => Number(input), apply: (_document, value) => ({ value }) });
   const scope = effectScope();
-  scope.run(() =>
-    useAuthoringHost({
-      context: () => (context.value ? { projectId: context.value, name: 'Test', kind: 'video' } : null),
-      read: () => current.value,
-      apply: (next) => {
-        current.value = next;
-      },
-      commands,
-      validate: () => {},
-      undo: async () => {},
-      redo: async () => {},
-      canEdit: () => true,
-      canUndo: () => false,
-      canRedo: () => false,
-      save,
-    }),
+  let authoring!: ReturnType<typeof useAuthoringHost>;
+  scope.run(
+    () =>
+      (authoring = useAuthoringHost({
+        context: () => (context.value ? { projectId: context.value, name: 'Test', kind: 'video' } : null),
+        read: () => current.value,
+        apply: (next) => {
+          current.value = next;
+        },
+        commands,
+        validate: () => {},
+        undo: async () => {},
+        redo: async () => {},
+        canEdit: () => true,
+        canUndo: () => false,
+        canRedo: () => false,
+        save,
+      })),
   );
   const transaction = (): AuthoringMessage => ({
     id: 'ipc',
@@ -64,9 +66,70 @@ function setup() {
       },
     },
   });
-  return { scope, current, context, stop, save, handler, transaction };
+  return { scope, current, context, stop, save, handler, transaction, authoring };
 }
 describe('Vue authoring host bridge', () => {
+  it('reports unregister failures without reviving a closed preview', async () => {
+    const report = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const fixture = setup();
+    await nextTick();
+    bridge.registerAuthoringDocument.mockRejectedValueOnce(new Error('unregister failed'));
+    fixture.scope.stop();
+    await nextTick();
+    expect(fixture.authoring.ready.value).toBe(false);
+    expect(report).toHaveBeenCalledWith('[Beam authoring]', expect.any(Error));
+    report.mockRestore();
+  });
+  it('waits for Electron acknowledgement before making previews ready', async () => {
+    let acknowledge!: () => void;
+    bridge.registerAuthoringDocument.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          acknowledge = resolve;
+        }),
+    );
+    const fixture = setup();
+    expect(fixture.authoring.ready.value).toBe(false);
+    acknowledge();
+    await nextTick();
+    expect(fixture.authoring.ready.value).toBe(true);
+    fixture.context.value = null;
+    await nextTick();
+    expect(fixture.authoring.ready.value).toBe(false);
+    fixture.scope.stop();
+  });
+  it('discards registration acknowledgement from a previous project or closed editor', async () => {
+    let acknowledge!: () => void;
+    bridge.registerAuthoringDocument.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          acknowledge = resolve;
+        }),
+    );
+    const fixture = setup();
+    fixture.context.value = null;
+    await nextTick();
+    acknowledge();
+    await nextTick();
+    expect(fixture.authoring.ready.value).toBe(false);
+    fixture.scope.stop();
+    expect(fixture.authoring.ready.value).toBe(false);
+  });
+  it('exposes registration failure and recovers when a new document registers', async () => {
+    const report = vi.spyOn(console, 'error').mockImplementation(() => {});
+    bridge.registerAuthoringDocument.mockRejectedValueOnce(new Error('editor ownership rejected'));
+    const fixture = setup();
+    await nextTick();
+    expect(fixture.authoring.error.value).toContain('ownership rejected');
+    expect(fixture.authoring.ready.value).toBe(false);
+    fixture.context.value = 'next';
+    await nextTick();
+    await nextTick();
+    expect(fixture.authoring.ready.value).toBe(true);
+    expect(fixture.authoring.error.value).toBe('');
+    fixture.scope.stop();
+    report.mockRestore();
+  });
   it('registers the current editor and persists a real transaction before replying', async () => {
     const fixture = setup();
     expect(bridge.registerAuthoringDocument).toHaveBeenCalledWith({

@@ -25,6 +25,7 @@ import type {
 import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 import type { PreviewQuality } from '@beam/runtime/playback/index';
 import type { CaptionInlineEditingEnd, CaptionInlineTextUpdate } from './caption-inline-editor-types';
+import type { CanvasFrameCapture } from './canvas-frame-capture';
 
 export type TransformClip = VisualClip | ColorClip | ShapeClip | BlurClip | CaptionClip;
 export interface ClipTransformUpdate {
@@ -53,6 +54,8 @@ export interface EditorCanvasProps {
   backgroundBlurPercent?: number;
   frameFor: (clipId: string) => MediaFrame | null;
   frameVersion: number;
+  captureCompositionPreview?: () => Promise<CanvasFrameCapture>;
+  domPreviewActive?: boolean;
   previewQuality: PreviewQuality;
   playbackState: 'idle' | 'loading' | 'paused' | 'playing' | 'error' | 'disposed';
   playbackError: MediaError | null;

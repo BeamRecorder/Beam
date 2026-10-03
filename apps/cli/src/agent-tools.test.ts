@@ -8,6 +8,33 @@ import type { AgentClient } from './agent-types';
 import { createAuthoringSession, createStillDocument } from '@beam/engine';
 
 describe('discoverable agent tools', () => {
+  it('advertises independent project windows by default', () => {
+    const tool = describeTool('projects.open');
+    expect(tool.inputSchema.properties).toMatchObject({
+      disposition: { enum: ['new-window', 'reuse'], default: 'new-window' },
+    });
+    validateToolArguments('projects.open', { projectId: 'project', kind: 'video' });
+  });
+  it.each(['image', 'video'])('forwards explicit window dispositions for %s projects', async (kind) => {
+    const call = vi.fn().mockResolvedValue({ status: 'opened' });
+    for (const disposition of ['new-window', 'reuse']) {
+      const input = { projectId: 'project', kind, disposition };
+      await callAgentTool('projects.open', input, '.', undefined, { call } as AgentClient);
+      expect(call).toHaveBeenLastCalledWith('projects.open', input);
+    }
+  });
+  it.each([null, false, 'new-instance', ''])(
+    'rejects invalid window disposition %j before calling Beam',
+    async (disposition) => {
+      const call = vi.fn();
+      await expect(
+        callAgentTool('projects.open', { projectId: 'project', kind: 'video', disposition }, '.', undefined, {
+          call,
+        } as AgentClient),
+      ).rejects.toThrow();
+      expect(call).not.toHaveBeenCalled();
+    },
+  );
   it('exposes executable gradient authoring documentation through the tool schema', async () => {
     validateToolArguments('docs.read', { topic: 'gradients' });
     const docs = await readAgentDocs('gradients');

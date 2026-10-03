@@ -19,6 +19,7 @@ export async function serveRenderBundle(
         '.js': 'text/javascript',
         '.wasm': 'application/wasm',
         '.webp': 'image/webp',
+        '.svg': 'image/svg+xml',
         '.css': 'text/css',
       };
       response.setHeader('Content-Type', types[extname(file)] ?? 'application/octet-stream');

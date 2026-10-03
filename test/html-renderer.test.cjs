@@ -15,6 +15,12 @@ function setup(t, options = {}) {
       this.webContents.setAudioMuted = (value) => {
         this.muted = value;
       };
+      this.webContents.setZoomMode = (mode) => {
+        this.zoomMode = mode;
+      };
+      this.webContents.setZoomFactor = (factor) => {
+        this.zoomFactor = factor;
+      };
       this.webContents.setWindowOpenHandler = (callback) => {
         this.popup = callback;
       };
@@ -187,4 +193,33 @@ test('HTML surfaces are bounded and disposal removes capabilities and rejects fu
   assert.ok(windows.every((window) => window.dead));
   assert.equal(renderer.bundleFile(token, 'index.html'), null);
   await assert.rejects(renderer.capture(context, html, 0), /stopped/);
+});
+
+test('HTML thumbnails retain full logical layout while rasterizing at an isolated small zoom', async (t) => {
+  const f = setup(t),
+    html = { ...f.html, width: 1920, height: 1080 };
+  await f.renderer.capture(f.context, html, 100, 240);
+  const small = f.windows[0];
+  assert.equal(small.settings.width, 480);
+  assert.equal(small.settings.height, 270);
+  assert.equal(small.zoomMode, 'isolated');
+  assert.equal(small.zoomFactor, 0.25);
+  assert.deepEqual(small.captureArgs[0], { x: 0, y: 0, width: 480, height: 270 });
+  await f.renderer.capture(f.context, html, 200, 480);
+  assert.equal(f.windows.length, 1);
+  await f.renderer.capture(f.context, html, 100);
+  assert.equal(f.windows.length, 2);
+  assert.equal(f.windows[1].settings.width, 1920);
+  assert.equal(f.windows[1].zoomFactor, 1);
+});
+test('HTML thumbnail resolution upgrades get their own bounded source and reject arbitrary widths', async (t) => {
+  const f = setup(t),
+    html = { ...f.html, width: 1920, height: 1080 };
+  await f.renderer.capture(f.context, html, 0, 960);
+  assert.equal(f.windows[0].settings.width, 960);
+  assert.equal(f.windows[0].settings.height, 540);
+  assert.equal(f.windows[0].zoomFactor, 0.5);
+  for (const width of [0, NaN, -1, 241, 8192])
+    await assert.rejects(f.renderer.capture(f.context, html, 0, width), /thumbnail width/);
+  assert.equal(f.windows.length, 1);
 });

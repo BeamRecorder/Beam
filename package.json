@@ -113,6 +113,7 @@
       "packages/engine/src/zoom/glass-highlight-schema.js",
       "packages/engine/src/zoom/zoom-schema.js",
       "packages/engine/src/html/html-schema.js",
+      "packages/runtime/src/html/playback-controller.cjs",
       "packages/engine/src/gradient/gradient-schema.js",
       "packages/engine/src/gradient/color-schema.js",
       "packages/engine/src/layout/layer-perspective-schema.js",

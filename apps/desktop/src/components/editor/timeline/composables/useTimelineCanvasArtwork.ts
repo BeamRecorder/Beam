@@ -26,7 +26,12 @@ export function useTimelineCanvasArtwork(props: TimelineClipProps) {
     shapeGeneration = 0;
   let previousArtwork: TimelineCanvasArtwork | null = null;
   const releaseShapes = retainShapePreviewCache();
-  const asset = computed(() => (props.clip.kind !== 'audio' && props.asset?.kind === 'video' ? props.asset : null));
+  const asset = computed(() =>
+    props.clip.kind !== 'audio' &&
+    (props.asset?.kind === 'video' || (props.asset?.html && props.asset.html.durationMs > 0))
+      ? props.asset
+      : null,
+  );
   const { thumbnails, widths, error: thumbnailError, requestVisibleFrames } = useThumbnails(asset);
   const slots = computed(() =>
     props.thumbnailSlots.flatMap((slot) => {

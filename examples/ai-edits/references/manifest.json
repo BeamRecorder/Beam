@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "retrievedAt": "2026-10-03",
+  "runtime": "beam-cli",
+  "assets": [
+    {
+      "file": "screenshots/edits-assistant-official.png",
+      "source": "https://techcrunch.com/wp-content/uploads/2026/09/instagram-edits-ai.png",
+      "provider": "Instagram (image credit supplied by TechCrunch)",
+      "license": "Copyright Instagram / respective visual owners",
+      "usage": "All three actual interfaces and gallery photograph crops",
+      "sha256": "8508f579fc00b323a17e5955d470978046f0af51aa4244c92245d5432bfe41a4",
+      "bytes": 5352266,
+      "width": 3361,
+      "height": 2348
+    },
+    {
+      "file": "logos/edits-official.png",
+      "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/69/2b/1a/692b1a5c-ca00-af61-d96a-14dd0b092bd2/Prod-0-0-1x_U007ephone-0-0-0-1-0-0-sRGB-85-220.png/1024x1024bb.png",
+      "provider": "Instagram, Inc. / Apple App Store",
+      "license": "Official trademark artwork",
+      "usage": "Opening and closing Edits identity",
+      "sha256": "3046fed9049b6d24184ae00bcd7e0b3b93b5b74fcbbd697414420c7f563b7c62",
+      "bytes": 956292,
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "file": "logos/instagram-official.png",
+      "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/3a/3d/fa/3a3dfa81-9e7a-f495-f177-04fbabc23f32/Prod-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/1024x1024bb.png",
+      "provider": "Instagram, Inc. / Apple App Store",
+      "license": "Official trademark artwork",
+      "usage": "Persistent Instagram signature",
+      "sha256": "2677d28a778feb6b3a5d628527eea27950612e8bfa4fb1a27328dbd6ad168492",
+      "bytes": 1427918,
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "file": "screenshots/edits-captions-app-store.png",
+      "source": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/ec/6b/7d/ec6b7d74-b42c-6786-2090-bd487112080f/01_en_US_iOS69-1320x2868-Captions.png/1320x2868bb.png",
+      "provider": "Instagram, Inc. / Apple App Store",
+      "license": "Copyright Instagram / respective visual owners",
+      "usage": "Additional reference; not currently shown",
+      "sha256": "cd4198e092ea8b40ca1de43ac3bac91caf41ae5324c581abf2a8a6f2c008ada8",
+      "bytes": 1195446,
+      "width": 1320,
+      "height": 2868
+    },
+    {
+      "file": "screenshots/edits-keyframes-app-store.png",
+      "source": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/21/a9/eb/21a9eb63-f8d0-0d4f-4a39-f0c83931d31a/04_en_US_iOS69-1320x2868-Keyframes.png/1320x2868bb.png",
+      "provider": "Instagram, Inc. / Apple App Store",
+      "license": "Copyright Instagram / respective visual owners",
+      "usage": "Additional reference; not currently shown",
+      "sha256": "9ee50c6f4a7345612d5e8ca69fffa4ac6da6612dd7656197ec8f485b885d4898",
+      "bytes": 1532249,
+      "width": 1320,
+      "height": 2868
+    },
+    {
+      "file": "screenshots/edits-ideas-app-store.png",
+      "source": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/64/85/f7/6485f710-0ad3-d053-3d42-6f0b237444de/08_en_US_iOS69-1320x2868-Ideas.png/1320x2868bb.png",
+      "provider": "Instagram, Inc. / Apple App Store",
+      "license": "Copyright Instagram / respective visual owners",
+      "usage": "Additional reference; not currently shown",
+      "sha256": "80f952894fd06e26992e95aba612542fee78aaa23bef885b301d7dee58f42128",
+      "bytes": 2273777,
+      "width": 1320,
+      "height": 2868
+    },
+    {
+      "file": "screenshots/edits-insights-app-store.png",
+      "source": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/66/bc/c3/66bcc3fb-577c-4356-5fff-66ad1294f458/10_en_US_iOS69-1320x2868-Insights-Detail.png/1320x2868bb.png",
+      "provider": "Instagram, Inc. / Apple App Store",
+      "license": "Copyright Instagram / respective visual owners",
+      "usage": "Additional reference; not currently shown",
+      "sha256": "1ea462c456c7a98c5bca17a4347b4e9321d09eb75c8ae6b94fd3eadfa9f627ac",
+      "bytes": 696389,
+      "width": 1320,
+      "height": 2868
+    },
+    {
+      "file": "fonts/hanken-grotesk-latin-variable.woff2",
+      "source": "https://github.com/marcologous/hanken-grotesk",
+      "provider": "Hanken Grotesk project authors",
+      "license": "SIL Open Font License 1.1; fonts/OFL.txt",
+      "usage": "Bundled Latin variable font",
+      "sha256": "e9201eddf1d41d0b62253295d869ce3cf65768f7102b797f02c7f8c876b4a9d5",
+      "bytes": 34704
+    },
+    {
+      "file": "audio/cc0/empacotatron_loop.ogg",
+      "source": "https://opengameart.org/content/empacotatron",
+      "provider": "Fupi",
+      "license": "CC0 1.0",
+      "sha256": "da95a6c87759d0b82f6153970a19c345a30241f2705b798eaca93b0a40e209e8",
+      "bytes": 1819852
+    },
+    {
+      "file": "audio/cc0/qubodupImpact.7z",
+      "source": "https://opengameart.org/content/impact",
+      "provider": "Iwan qubodup Gabovitch",
+      "license": "CC0 1.0",
+      "sha256": "98d72b55d6f78a32072439ed4d052fc43fdd80b8b409d18a9bb3150fc2ccd97b",
+      "bytes": 130980
+    },
+    {
+      "file": "audio/cc0/whoosh2_0.wav",
+      "source": "https://opengameart.org/content/air-whoosh",
+      "provider": "pyranostudios",
+      "license": "CC0 1.0",
+      "sha256": "d3fbff5bb78b289af16b2dfa29083f07ef83b0cbaff4514c48dfda16d082b468",
+      "bytes": 925662
+    },
+    {
+      "file": "audio/ai-native-score.wav",
+      "source": "../scripts/score.py",
+      "provider": "Beam example mix",
+      "license": "CC0 source remix",
+      "sha256": "095eedcfdf330fc72840741cd1be78fd665497278ae058972619a2fce54822f3",
+      "bytes": 2879782
+    },
+    {
+      "file": "frames/iphone-16-max.svg",
+      "source": "/home/albi/Documents/Projects/twitter/hyperframes/global-assets/frames/iphone-16-max.html.ts",
+      "provider": "User supplied global assets",
+      "license": "Supplied reference",
+      "sha256": "a29bb7d41770789d61d29a5b78c960db3763b0cb07d13241fa3a5125d7c3f44e",
+      "bytes": 20873
+    }
+  ]
+}

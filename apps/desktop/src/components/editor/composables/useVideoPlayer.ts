@@ -1,4 +1,5 @@
 import { createBrowserPlaybackEngine } from '@beam/runtime/browser';
+import { createHtmlPlaybackClock } from '@beam/runtime/html/html-playback-source';
 import { computed, onScopeDispose, ref, watch } from 'vue';
 import { engineMetrics } from '@beam/runtime/performance/engine-metrics';
 import type {
@@ -30,6 +31,8 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   let engine: MediaPlaybackEngine | null = null;
   let loadGeneration = 0;
   let playingIntent = false;
+  let intentGeneration = 0;
+  const previewEpoch = ref(0);
   let disposed = false;
   const ensureEngine = () => {
     if (disposed) throw new Error('Video player is disposed.');
@@ -103,7 +106,6 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     try {
       const generation = ++loadGeneration;
       const previousTime = currentTime.value;
-      const wasPlaying = playingIntent;
       duration.value = compositionDurationMs(composition) / 1_000;
       playbackError.value = null;
       const playback = ensureEngine();
@@ -117,20 +119,22 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
         await playback.loadComposition(composition, targetTime);
       }
       if (disposed || generation !== loadGeneration || playback !== engine) return;
-      if (wasPlaying) await playback.play(targetTime);
+      if (playingIntent) await playback.play(targetTime);
     } finally {
       endLoad();
     }
   };
 
   const setPlaying = async (playing: boolean) => {
+    const generation = ++intentGeneration;
+    previewEpoch.value++;
     playingIntent = playing;
     const playback = ensureEngine();
     try {
       if (playing) await playback.play(currentTime.value);
       else playback.pause();
     } catch (error) {
-      if (playing) playingIntent = false;
+      if (playing && generation === intentGeneration) playingIntent = false;
       throw error;
     }
   };
@@ -138,6 +142,7 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   const seek = async (time: number, mode: 'seek' | 'scrub' = 'seek') => {
     if (!Number.isFinite(time)) throw new RangeError('Playback time must be finite.');
     const target = Math.max(0, Math.min(time, duration.value));
+    previewEpoch.value++;
     currentTime.value = target;
     return engineMetrics.measureAsync('seek', () => ensureEngine().seek(target, mode));
   };
@@ -151,6 +156,7 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
       .padStart(2, '0')}`;
   };
   const api = {
+    htmlClock: createHtmlPlaybackClock(ensureEngine),
     isPlaying,
     currentTime,
     duration,
@@ -158,6 +164,7 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     playbackState,
     playbackError,
     frameVersion,
+    previewEpoch,
     previewQuality,
     playbackMetrics,
     audioMetrics,

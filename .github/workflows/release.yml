@@ -240,8 +240,12 @@ jobs:
       - name: Install Linux build and inspection dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes clang libclang-dev libgbm-dev libpipewire-0.3-dev pkg-config rpm
+          sudo apt-get install --yes clang g++ ffmpeg libavcodec-dev libavutil-dev libavfilter-dev libavformat-dev libva-dev libdrm-dev libnode-dev libclang-dev libgbm-dev libpipewire-0.3-dev pkg-config rpm
       - run: node scripts/ci/bun-install-retry.cjs
+      - name: Build and test Linux GPU export artifacts
+        run: |
+          bun run build:ffmpeg-export
+          node --test test/ffmpeg-export-pack.test.cjs test/ffmpeg-export-verify.test.cjs test/ffmpeg-native-protocol.test.cjs
       - run: bun run build
       - run: bunx electron-builder --linux AppImage deb rpm --x64 --publish never
         env:
@@ -261,6 +265,12 @@ jobs:
           packaged_helper="$(find dist_electron/squashfs-root -type f -path "*/resources/input-helper/beam-input-helper-$version" -print -quit)"
           test -x "$packaged_engine"
           test -x "$packaged_helper"
+          export_directory="$(dirname "$packaged_engine")/../ffmpeg-export"
+          node scripts/native/ffmpeg-export-verify.cjs "$export_directory"
+          for payload in beam-ffmpeg-export beam-gpu-transport.node; do
+            dpkg-deb --contents "$deb" | grep "resources/ffmpeg-export/$payload"
+            rpm --query --package --list "$rpm_package" | grep "resources/ffmpeg-export/$payload"
+          done
           dpkg-deb --contents "$deb" | grep 'resources/package-type'
           rpm --query --package --list "$rpm_package" | grep 'resources/package-type'
           node scripts/release/artifacts.cjs metadata dist_electron latest-linux.yml

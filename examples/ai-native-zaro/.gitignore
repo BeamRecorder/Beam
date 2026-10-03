@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.beam/
+coverage/
+references/frames/*.png
+references/video/*.mp4
+__pycache__/
+*.py[cod]

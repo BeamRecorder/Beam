@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "entry": "./index.html",
+  "width": 1920,
+  "height": 1080,
+  "duration": 12,
+  "fps": 30,
+  "format": "mp4",
+  "preset": "high"
+}

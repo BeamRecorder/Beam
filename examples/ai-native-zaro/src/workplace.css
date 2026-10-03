@@ -1,0 +1,226 @@
+.works-title {
+  position: absolute;
+  top: 423px;
+  left: 156px;
+  width: 650px;
+  font-size: 96px;
+  line-height: 0.95;
+  letter-spacing: -3px;
+  text-align: center;
+  color: #504542;
+}
+.works-title > div {
+  white-space: nowrap;
+}
+.work-icons {
+  display: inline-flex;
+  gap: 5px;
+  background: #edeee4;
+  padding: 6px;
+  border-radius: 22px;
+  align-items: center;
+}
+.work-icons img {
+  width: 67px;
+  height: 67px;
+  background: #fcfefd;
+  border-radius: 17px;
+  padding: 12px;
+  object-fit: contain;
+}
+.phone-panel {
+  position: absolute;
+  left: 960px;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  background: #c0bdae;
+}
+.slack-phone {
+  position: absolute;
+  width: 440px;
+  height: 825px;
+  left: 260px;
+  top: 128px;
+  border-radius: 68px;
+  background: #fcfefd;
+  padding: 375px 40px 30px;
+  transform-origin: 50% 50%;
+}
+.slack-message,
+.slack-reply {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.slack-message strong,
+.slack-reply strong {
+  font-size: 20px;
+}
+.slack-message small,
+.slack-reply small {
+  font-size: 15px;
+  color: #777;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+.slack-message p,
+.slack-reply p {
+  font-size: 20px;
+  margin: 4px 0 0;
+  line-height: 1.18;
+  width: 303px;
+}
+.avatar-orange,
+.avatar-zaro {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  flex: 0 0 50px;
+  overflow: hidden;
+}
+.avatar-orange {
+  background: #e85223;
+  position: relative;
+}
+.avatar-orange::before {
+  content: '';
+  position: absolute;
+  background: #fcfefd;
+  border-radius: 50%;
+  width: 15px;
+  height: 15px;
+  left: 18px;
+  top: 8px;
+}
+.avatar-orange::after {
+  content: '';
+  position: absolute;
+  background: #fcfefd;
+  border-radius: 50% 50% 0 0;
+  width: 30px;
+  height: 24px;
+  left: 10px;
+  top: 28px;
+}
+.avatar-zaro {
+  background: #1d1113;
+  position: relative;
+}
+.avatar-zaro .wordmark {
+  left: 9px;
+  top: 9px;
+  width: 33px;
+  height: 33px;
+  filter: invert(1);
+}
+.avatar-zaro .brand-mark {
+  width: 33px;
+  height: 33px;
+}
+.avatar-zaro .brand-word {
+  display: none;
+}
+.slack-reply {
+  margin-top: 25px;
+}
+.slack-reply .thinking {
+  position: absolute;
+  color: #999;
+}
+.slack-reply .reply-attachment {
+  font-family: monospace;
+  font-size: 17px;
+  color: #bf074d;
+  margin-top: 27px;
+}
+.slack-reply .reply-link {
+  font-size: 20px;
+  color: #167693;
+  margin-top: 15px;
+  white-space: nowrap;
+}
+
+.slack-closeup {
+  position: absolute;
+  left: 535px;
+  top: 225px;
+  width: 850px;
+  height: 640px;
+  padding: 65px 55px;
+  border-radius: 65px;
+  background: #fcfefd;
+}
+.slack-closeup .slack-message,
+.slack-closeup .slack-reply {
+  gap: 20px;
+}
+.slack-closeup .slack-message strong,
+.slack-closeup .slack-reply strong {
+  font-size: 40px;
+}
+.slack-closeup .slack-message small,
+.slack-closeup .slack-reply small {
+  font-size: 31px;
+}
+.slack-closeup .slack-message p,
+.slack-closeup .slack-reply p {
+  font-size: 38px;
+  width: 650px;
+  line-height: 1.15;
+}
+.slack-closeup .avatar-orange,
+.slack-closeup .avatar-zaro {
+  width: 90px;
+  height: 90px;
+  flex-basis: 90px;
+  border-radius: 20px;
+}
+.slack-closeup .avatar-orange::before {
+  width: 28px;
+  height: 28px;
+  left: 31px;
+  top: 16px;
+}
+.slack-closeup .avatar-orange::after {
+  width: 55px;
+  height: 40px;
+  left: 18px;
+  top: 53px;
+}
+.slack-closeup .avatar-zaro .wordmark {
+  top: 15px;
+  left: 15px;
+  width: 60px;
+  height: 60px;
+}
+.slack-closeup .avatar-zaro .brand-mark {
+  width: 60px;
+  height: 60px;
+}
+.slack-closeup .slack-reply {
+  margin-top: 48px;
+}
+.slack-closeup .slack-reply .reply-attachment {
+  font-size: 33px;
+  margin-top: 40px;
+}
+.slack-closeup .slack-reply .reply-link {
+  font-size: 37px;
+  margin-top: 22px;
+}
+
+.reply-attachment > span {
+  border: 1px solid #deddd8;
+  border-radius: 8px;
+  background: #f4f4f4;
+  padding: 5px 10px;
+}
+.slack-closeup .reply-attachment > small {
+  font:
+    31px Zaro Sans,
+    Arial,
+    sans-serif;
+  color: #252322;
+  margin-left: 0;
+}

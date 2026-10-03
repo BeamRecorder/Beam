@@ -23,6 +23,8 @@ import { usePreviewPerformanceMonitor } from '../performance/usePreviewPerforman
 import { createMediaProcessingCollector, MEDIA_PROCESSING_COLLECTOR } from '../performance/media-processing-pressure';
 import { useToastStore } from '~/ui/toast/toastStore';
 import type { EditorWorkspaceProps, EditorWorkspaceEmit } from './workspace-types';
+import { HTML_THUMBNAIL_ACTIVITY } from '../timeline/waveform/html-thumbnail-context';
+import { useHtmlThumbnailActivity } from '../timeline/waveform/useHtmlThumbnailActivity';
 export function useEditorWorkspaceState(props: EditorWorkspaceProps, emit: EditorWorkspaceEmit) {
   const { t } = useTranslate('VideoEditor');
   const { t: tTopbarHud } = useTranslate('TopbarHUD');
@@ -50,6 +52,7 @@ export function useEditorWorkspaceState(props: EditorWorkspaceProps, emit: Edito
     handleSelectTab,
     initialPlaybackSettled,
     projectStateReady,
+    authoringReady,
   } = useVideoEditor({
     project: toRef(props, 'project'),
     editorData: toRef(props, 'editorData'),
@@ -71,6 +74,14 @@ export function useEditorWorkspaceState(props: EditorWorkspaceProps, emit: Edito
     backgroundGroups,
     addBackground,
   } = player;
+  provide(
+    HTML_THUMBNAIL_ACTIVITY,
+    useHtmlThumbnailActivity(
+      isPlaying,
+      currentTime,
+      computed(() => authoringReady.value && initialPlaybackSettled.value),
+    ),
+  );
   const { snapshot: performanceSnapshot } = usePreviewPerformanceMonitor({
     isPlaying,
     playbackState,
@@ -233,6 +244,7 @@ export function useEditorWorkspaceState(props: EditorWorkspaceProps, emit: Edito
     handleSelectTab,
     initialPlaybackSettled,
     projectStateReady,
+    authoringReady,
     isPlaying,
     currentTime,
     duration,

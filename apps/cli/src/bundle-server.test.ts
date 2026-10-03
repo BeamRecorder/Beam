@@ -31,3 +31,20 @@ it('serves only the compiled allowlist and delegates authenticated operations', 
     await rm(directory, { recursive: true });
   }
 });
+it('serves SVG composition assets with their image MIME type', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'beam-bundle-svg-'));
+  const file = join(directory, 'phone.svg');
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="415" height="843"/>';
+  await writeFile(file, svg);
+  const server = await serveRenderBundle(new Map([['/motion/phone.svg', file]]), async (_request, _response, next) =>
+    next(),
+  );
+  try {
+    const response = await fetch(server.origin + '/motion/phone.svg');
+    expect(response.headers.get('Content-Type')).toBe('image/svg+xml');
+    expect(await response.text()).toBe(svg);
+  } finally {
+    await server.close();
+    await rm(directory, { recursive: true });
+  }
+});

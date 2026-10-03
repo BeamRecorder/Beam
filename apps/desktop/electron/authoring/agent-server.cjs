@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { randomBytes } = require('node:crypto');
 const { agentDirectory } = require('@beam/native-client/agent-discovery');
+const { htmlPreviewPage, htmlPreviewHeaders } = require('./html-preview-page.cjs');
 
 const mime = (file) =>
   ({
@@ -20,7 +21,14 @@ const mime = (file) =>
     '.woff': 'font/woff',
     '.ttf': 'font/ttf',
   })[path.extname(file)] || 'application/octet-stream';
-async function createAgentServer({ dispatch, bundleFile, frame, profile, discoveryDirectory = agentDirectory() }) {
+async function createAgentServer({
+  dispatch,
+  bundleFile,
+  previewFile,
+  frame,
+  profile,
+  discoveryDirectory = agentDirectory(),
+}) {
   const token = randomBytes(32).toString('hex');
   const json = (response, status, value) => {
     response.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
@@ -32,6 +40,20 @@ async function createAgentServer({ dispatch, bundleFile, frame, profile, discove
       if (!/^127\.0\.0\.1:\d+$/.test(request.headers.host || ''))
         return json(response, 403, { error: 'Forbidden origin or host.' });
       const url = new URL(request.url, 'http://127.0.0.1');
+      const preview = /^\/preview\/([0-9a-f]{64})\/(.+)$/.exec(url.pathname);
+      if (request.method === 'GET' && preview) {
+        const source = previewFile?.(preview[1], decodeURIComponent(preview[2]));
+        if (!source) return json(response, 404, { error: 'Unknown composition.' });
+        const base = `http://${request.headers.host}/preview/${preview[1]}/`;
+        response.writeHead(200, { ...htmlPreviewHeaders(base), 'Content-Type': mime(source.file) });
+        if (source.entry)
+          response.end(htmlPreviewPage(await fs.promises.readFile(source.file, 'utf8'), source.previewId));
+        else
+          fs.createReadStream(source.file)
+            .on('error', () => response.destroy())
+            .pipe(response);
+        return;
+      }
       const bundle = /^\/html\/([0-9a-f]{64})\/(.+)$/.exec(url.pathname);
       if (request.method === 'GET' && bundle) {
         const file = bundleFile(bundle[1], decodeURIComponent(bundle[2]));
@@ -44,7 +66,9 @@ async function createAgentServer({ dispatch, bundleFile, frame, profile, discove
       }
       const source = /^\/frame\/([0-9a-f]{64})$/.exec(url.pathname);
       if (request.method === 'GET' && source) {
-        const bytes = await frame(source[1], Number(url.searchParams.get('timeMs')));
+        const width = url.searchParams.has('width') ? Number(url.searchParams.get('width')) : undefined;
+        if (width !== undefined && ![240, 480, 960].includes(width)) throw new Error('Invalid HTML thumbnail width.');
+        const bytes = await frame(source[1], Number(url.searchParams.get('timeMs')), width);
         response.writeHead(200, {
           'Content-Type': 'image/png',
           'Cache-Control': 'no-store',
