@@ -5,6 +5,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const { createProjectVoiceoverStorage } = require('../electron/projects/project-voiceover-storage.cjs');
+const { createProjectStore } = require('../electron/projects/project-store.cjs');
 
 const projectId = '11111111-1111-4111-8111-111111111111';
 const ownerId = 17;
@@ -20,7 +21,7 @@ function fixture() {
       if (id !== projectId) throw new Error('Projet introuvable');
       return projectDirectory;
     },
-    list: () => [{ id: projectId }],
+    listDirectories: () => [projectDirectory],
     mediaUrlFor: (fileUrl) => {
       const file = new URL(fileUrl);
       const relative = path.relative(root, file.pathname);
@@ -148,4 +149,40 @@ test('aborts owner jobs and removes stale partials without touching unrelated fi
   } finally {
     removeFixture(value.root);
   }
+});
+
+test('startup cleanup scans Studio and Instant folders without parsing project or session data', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-voiceover-cleanup-'));
+  t.after(() => removeFixture(root));
+  const staleFiles = ['studio', 'instant'].map((category) => {
+    const directory = path.join(root, category, 'project-one');
+    const media = path.join(directory, 'media');
+    fs.mkdirSync(media, { recursive: true });
+    fs.writeFileSync(path.join(directory, 'project.json'), 'unparsed manifest');
+    const stale = path.join(media, 'crashed.voiceover.partial');
+    fs.writeFileSync(stale, 'partial audio');
+    fs.writeFileSync(path.join(media, 'keep.webm'), 'complete audio');
+    return stale;
+  });
+  const projectStore = createProjectStore(root, { category: 'studio' });
+  projectStore.list = projectStore.directoryFor = () => {
+    throw new Error('Startup must not load project summaries or resolve IDs');
+  };
+  createProjectVoiceoverStorage({ projectStore }).cleanupStalePartials();
+  for (const stale of staleFiles) {
+    assert.equal(fs.existsSync(stale), false);
+    assert.equal(fs.readFileSync(path.join(path.dirname(stale), 'keep.webm'), 'utf8'), 'complete audio');
+  }
+});
+
+test('startup cleanup leaves a linked media directory untouched', (t) => {
+  const value = fixture();
+  t.after(() => removeFixture(value.root));
+  const external = path.join(value.root, 'external');
+  fs.mkdirSync(external);
+  const partial = path.join(external, 'keep.voiceover.partial');
+  fs.writeFileSync(partial, 'external audio');
+  fs.symlinkSync(external, value.mediaDirectory, 'junction');
+  value.storage.cleanupStalePartials();
+  assert.equal(fs.readFileSync(partial, 'utf8'), 'external audio');
 });

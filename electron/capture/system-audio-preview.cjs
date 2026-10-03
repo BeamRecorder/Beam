@@ -31,10 +31,11 @@ function createSystemAudioPreview({ request, canCleanup = () => true, canStart =
     return active;
   };
   const removeClient = (sender) => {
-    const destroyed = clients.get(sender);
-    if (!destroyed) return false;
+    const listeners = clients.get(sender);
+    if (!listeners) return false;
     clients.delete(sender);
-    sender.removeListener('destroyed', destroyed);
+    sender.removeListener('destroyed', listeners.destroyed);
+    sender.removeListener('did-start-navigation', listeners.navigation);
     return true;
   };
   const stop = (sender) =>
@@ -56,8 +57,12 @@ function createSystemAudioPreview({ request, canCleanup = () => true, canStart =
         const destroyed = () => {
           void stop(sender).catch((error) => console.warn('[Audio preview] Cleanup failed:', error.message));
         };
-        clients.set(sender, destroyed);
+        const navigation = (event) => {
+          if (event.isMainFrame && !event.isSameDocument) destroyed();
+        };
+        clients.set(sender, { destroyed, navigation });
         sender.once('destroyed', destroyed);
+        sender.on('did-start-navigation', navigation);
       }
       try {
         await ensureStarted();

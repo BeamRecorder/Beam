@@ -430,7 +430,7 @@
     "straightPathsDesc": "將鏡頭移動限制為水平、垂直或對角線方向。",
     "generateAutoZooms": "產生自動縮放",
     "regenerateAutoZooms": "重新產生自動縮放",
-    "regenerateConfirm": "重新產生自動縮放？這會取代所有自動偵測到的縮放點。",
+    "regenerateConfirm": "重新計算此錄製的位置並取代未鎖定的自動縮放？手動、鎖定和已分離的縮放將保留。",
     "cancel": "取消",
     "regenerate": "重新產生",
     "mode": "模式",

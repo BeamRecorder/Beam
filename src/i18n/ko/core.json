@@ -521,7 +521,9 @@
     "microphone": "마이크",
     "teleprompter": "텔레프롬프터",
     "screenshotDescription": "캡처할 화면, 영역 또는 창을 선택하세요.",
-    "back": "뒤로"
+    "back": "뒤로",
+    "hideHud": "Beam 숨기기",
+    "hideQuickSnip": "Quick Snip 숨기기"
   },
   "EditorPreparingHud": {
     "title": "편집기를 여는 중",
@@ -930,7 +932,10 @@
     "instant": "즉시",
     "instantDescription": "스타일이 적용된 동영상을 녹화하고 자동으로 내보냅니다.",
     "deviceHint": "{device} — 마우스 오른쪽 버튼으로 소스 선택",
-    "defaultSystemAudio": "기본 시스템 출력"
+    "defaultSystemAudio": "기본 시스템 출력",
+    "video": "동영상",
+    "image": "이미지",
+    "zoom": "줌"
   },
   "ScreenshotEditor": {
     "tools": "도구",

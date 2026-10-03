@@ -8,7 +8,9 @@ export const startRecorder = async (loadRenderer: () => Promise<unknown>): Promi
   shell = null;
   performance.mark('beam:bootstrap-start');
   const query = new URLSearchParams(location.search);
-  const overlay = ['cameraOverlay', 'screenRegion', 'quickSnipCrop', 'teleprompter'].some((key) => query.has(key));
+  const overlay = ['cameraOverlay', 'screenRegion', 'quickSnipCrop', 'quickSnipSettings', 'teleprompter'].some((key) =>
+    query.has(key),
+  );
   const startup = document.getElementById('beam-startup');
   if (overlay) {
     startup?.remove();

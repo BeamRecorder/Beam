@@ -1,6 +1,7 @@
 const fs = require('fs');
 const { createProjectLibrary } = require('./project-library.cjs');
 const { readClipboardPng } = require('../clipboard/image-clipboard.cjs');
+const { createProjectCatalogClient } = require('./project-catalog-client.cjs');
 const CURSOR_PACK_DISCOVERY_URL = 'https://store.kde.org/browse/cat/107/';
 
 function registerProjectIpc(
@@ -16,6 +17,12 @@ function registerProjectIpc(
   clipboard,
 ) {
   const library = createProjectLibrary(projectStore, screenshotStore);
+  let catalog = null;
+  ipcMain.handle('projects:list-page', (event, request) => {
+    if (!trustedRenderer?.(event.sender.getURL())) throw new Error('Renderer non autorisé');
+    catalog ??= createProjectCatalogClient(projectStore.rootDirectory);
+    return catalog.page(request);
+  });
   ipcMain.handle('projects:list', () => library.list());
   ipcMain.handle('projects:get', (_event, payload = {}) => projectStore.get(payload.projectId));
   ipcMain.handle('projects:media-url', (_event, payload = {}) => projectStore.mediaUrlFor(payload.source));
@@ -129,6 +136,7 @@ function registerProjectIpc(
     }
     return false;
   });
+  return { destroy: () => catalog?.destroy() };
 }
 
 module.exports = { CURSOR_PACK_DISCOVERY_URL, registerProjectIpc };

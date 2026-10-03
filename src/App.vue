@@ -40,11 +40,13 @@ const syncTrayMenu = () => {
   if (isCameraOverlay || isTeleprompter || isQuickSnipCrop) return;
   capture.updateTrayMenu?.({
     openHud: tHud('openHud'),
+    hideHud: tHud('hideHud'),
     stopRecording: tRecorderBar('stopRecording'),
     quit: tHud('quit'),
     tooltip: 'Beam',
     quickSnip: tHud('quickSnip'),
     startQuickSnip: tHud('startQuickSnip'),
+    hideQuickSnip: tHud('hideQuickSnip'),
     stopQuickSnip: tHud('stopQuickSnip'),
     recording: ['countdown', 'starting', 'recording', 'paused'].includes(recording.phase.value),
   });

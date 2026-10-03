@@ -1,4 +1,6 @@
 import type { ClipComposition } from '~/media/shared/composition-types';
+import { applyRecordingZoomMode } from '../zoom/recording-zoom-preference';
+import type { RecordingZoomMode } from '~/api/types/recording-zoom';
 import { generateRecordingZooms } from '../zoom/recording-zoom-generation';
 import { preservesLockedItems, TimelineLockedError } from '../composition/timeline-locks';
 import { useLockedState } from './useLockedState';
@@ -30,6 +32,7 @@ export function useProjectZoom(options: {
   composition: Ref<ClipComposition>;
   activeTab: Ref<string>;
   editorDefaults: Ref<EditorPreferenceDefaults>;
+  recordingZoomMode?: Ref<RecordingZoomMode | null>;
 }) {
   const { editorData, durationMs, activeTab } = options;
   const { state: zoomElements, restore: restoreZoomElements } = useLockedState<ZoomElement[]>([], (value) => value);
@@ -41,7 +44,13 @@ export function useProjectZoom(options: {
   const selectedZoom = computed(
     () => zoomElements.value.find((element) => element.id === selectedZoomId.value) ?? null,
   );
-  const canGenerateZooms = computed(() => Boolean(editorData.value?.cursor.available && editorData.value.sessionId));
+  const canGenerateZooms = computed(() =>
+    Boolean(
+      editorData.value?.cursor.available &&
+      editorData.value.sessionId &&
+      editorData.value.cursor.telemetry.some((point) => point.interactionType === 'click'),
+    ),
+  );
   const hasAutomaticZooms = computed(() => zoomElements.value.some((element) => element.mode === 'auto'));
 
   watch(
@@ -121,6 +130,10 @@ export function useProjectZoom(options: {
           element.sessionId !== data.sessionId,
       ),
     );
+    const preferredMode = options.recordingZoomMode?.value ?? '2d';
+    const projected = generated.map((zoom) =>
+      applyRecordingZoomMode(zoom, preferredMode === 'off' ? '2d' : preferredMode),
+    );
     zoomElements.value = [
       ...zoomElements.value.filter(
         (element) =>
@@ -129,7 +142,7 @@ export function useProjectZoom(options: {
           element.sessionId !== data.sessionId ||
           element.mode !== 'auto',
       ),
-      ...generated,
+      ...projected,
     ];
     generatedSessions.value = [
       ...generatedSessions.value.filter((record) => record.sessionId !== data.sessionId),
@@ -143,6 +156,8 @@ export function useProjectZoom(options: {
   };
 
   const ensureAutomaticZooms = () => {
+    if (options.recordingZoomMode && (!options.recordingZoomMode.value || options.recordingZoomMode.value === 'off'))
+      return;
     const sessionId = editorData.value?.sessionId;
     if (
       !sessionId ||

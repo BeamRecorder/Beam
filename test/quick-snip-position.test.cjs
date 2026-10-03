@@ -192,6 +192,26 @@ test('saves rounded positions per display and skips duplicate coordinates', () =
   });
   assert.deepEqual(state.extras.untouched, { enabled: true });
 });
+test('remembers the last toolbar display even when its stored coordinates are unchanged', () => {
+  const state = {
+    extras: { quickSnipBarPositions: { 1: { x: 20, y: 30 }, 2: { x: -600, y: 50 } }, quickSnipBarDisplayId: '1' },
+  };
+  const patches = [];
+  const store = {
+    read: () => state,
+    patch: ({ extras }) => {
+      patches.push(extras);
+      Object.assign(state.extras, extras);
+    },
+  };
+  saveWindowPosition(store, 'quickSnipBarPositions', { id: 2 }, { x: -600, y: 50 });
+  assert.equal(state.extras.quickSnipBarDisplayId, '2');
+  assert.deepEqual(state.extras.quickSnipBarPositions[1], { x: 20, y: 30 });
+  saveWindowPosition(store, 'quickSnipBarPositions', { id: 2 }, { x: -600, y: 50 });
+  assert.equal(patches.length, 1);
+  saveWindowPosition(store, 'recorderPositions', { id: 1 }, { x: 10, y: 20 });
+  assert.equal(state.extras.quickSnipBarDisplayId, '2');
+});
 
 test('places details below the status pill near the top edge, including negative screen origins', () => {
   const workArea = { x: -1600, y: -200, width: 1600, height: 1000 };

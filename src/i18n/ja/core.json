@@ -521,7 +521,9 @@
     "microphone": "マイク",
     "teleprompter": "テレプロンプター",
     "screenshotDescription": "画面、範囲、ウィンドウを選択してキャプチャします。",
-    "back": "戻る"
+    "back": "戻る",
+    "hideHud": "Beam を隠す",
+    "hideQuickSnip": "Quick Snip を隠す"
   },
   "EditorPreparingHud": {
     "title": "エディターを開いています",
@@ -930,7 +932,10 @@
     "instant": "即時",
     "instantDescription": "スタイル付きの動画を録画して自動的に書き出します。",
     "deviceHint": "{device} — 右クリックでソースを選択",
-    "defaultSystemAudio": "既定のシステム出力"
+    "defaultSystemAudio": "既定のシステム出力",
+    "video": "動画",
+    "image": "画像",
+    "zoom": "ズーム"
   },
   "ScreenshotEditor": {
     "tools": "ツール",

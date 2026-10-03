@@ -6,6 +6,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { useProjectPreviews } from './useProjectPreviews';
 import { useProjectGrid } from './useProjectGrid';
 import { useProjectSearch } from './useProjectSearch';
+import { useProjectCatalog } from './useProjectCatalog';
 import { createProjectPickerRefresh } from './project-picker-refresh';
 import type { ProjectPickerProps, ProjectPickerEmit } from './project-picker-types';
 
@@ -13,27 +14,28 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
   const { t } = useTranslate('ProjectPicker');
   const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
 
-  let cachedProjects: CaptureProject[] | null = null;
-
-  const projects = ref<CaptureProject[]>([]);
   const selectedProjectId = ref<string | null>(null);
-  const isLoading = ref(true);
-  const errorMessage = ref('');
 
   const isSelectionMode = ref(false);
   const selectedBatchIds = ref<Set<string>>(new Set());
   const isDeletingBatch = ref(false);
   const deleteBatchError = ref('');
+  const isSelectingAll = ref(false);
+  let selectionGeneration = 0;
 
   const isAllSelected = computed(() => {
     const list = filteredProjects.value;
-    return list.length > 0 && list.every((p) => selectedBatchIds.value.has(p.id));
+    return (
+      catalog.total.value > 0 &&
+      selectedBatchIds.value.size === catalog.total.value &&
+      list.every((p) => selectedBatchIds.value.has(p.id))
+    );
   });
 
   const isSomeSelected = computed(() => {
     const list = filteredProjects.value;
     const count = list.filter((p) => selectedBatchIds.value.has(p.id)).length;
-    return count > 0 && count < list.length;
+    return count > 0 && !isAllSelected.value;
   });
 
   const toggleSelectionMode = () => {
@@ -43,11 +45,13 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
     }
     isSelectionMode.value = !isSelectionMode.value;
     if (!isSelectionMode.value) {
+      selectionGeneration++;
       selectedBatchIds.value = new Set();
     }
   };
 
   const cancelSelectionMode = () => {
+    selectionGeneration++;
     isSelectionMode.value = false;
     selectedBatchIds.value = new Set();
   };
@@ -62,10 +66,24 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
     selectedBatchIds.value = next;
   };
 
-  const toggleSelectAll = () => {
+  const toggleSelectAll = async () => {
+    if (isSelectingAll.value) return;
     if (isAllSelected.value) {
       selectedBatchIds.value = new Set();
     } else {
+      if (catalog.hasMore.value) {
+        const current = ++selectionGeneration;
+        isSelectingAll.value = true;
+        try {
+          await catalog.loadAll();
+          if (current !== selectionGeneration || !isSelectionMode.value || props.active === false) return;
+        } catch (error) {
+          deleteBatchError.value = error instanceof Error ? error.message : String(error);
+          return;
+        } finally {
+          isSelectingAll.value = false;
+        }
+      }
       selectedBatchIds.value = new Set(filteredProjects.value.map((p) => p.id));
     }
   };
@@ -85,7 +103,7 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
       const wasSelectedDeleted = selectedProjectId.value && selectedBatchIds.value.has(selectedProjectId.value);
       selectedBatchIds.value = new Set();
       isSelectionMode.value = false;
-      cachedProjects = null;
+      catalog.invalidate();
       await loadProjects();
 
       if (wasSelectedDeleted) {
@@ -107,6 +125,8 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
 
   const { isSearchOpen, searchQuery, searchInputRef, toggleSearch, clearSearch, handleSearchKeydown } =
     useProjectSearch(() => !props.compact && !isNewProjectOpen.value && !renameProjectId.value, cancelSelectionMode);
+  const catalog = useProjectCatalog(searchQuery, () => props.active !== false);
+  const { projects, isLoading, errorMessage, isLoadingMore, loadMoreError } = catalog;
 
   const filteredProjects = computed(() => {
     const query = searchQuery.value.trim().toLowerCase();
@@ -117,6 +137,29 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
   const { list, containerProps, wrapperProps, gridRef, gridStyle } = useProjectGrid(
     filteredProjects,
     () => props.compact,
+  );
+  watch(catalog.version, () => {
+    const container = containerProps.ref.value;
+    if (container) container.scrollTop = 0;
+    void nextTick(containerProps.onScroll);
+  });
+  watch(
+    [list, isLoadingMore],
+    ([rows, loadingMore]) => {
+      const last = rows.at(-1)?.data.at(-1);
+      if (
+        !loadingMore &&
+        gridRef.value &&
+        Number.parseFloat(gridStyle.value['--project-card-size']) > 0 &&
+        props.active !== false &&
+        last &&
+        !loadMoreError.value &&
+        catalog.hasMore.value &&
+        projects.value.findIndex((project) => project.id === last.id) >= projects.value.length - 8
+      )
+        void catalog.loadMore();
+    },
+    { flush: 'post' },
   );
 
   const { hasTopShadow, hasBottomShadow } = useScrollShadow(containerProps.ref, {
@@ -162,48 +205,26 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
   const isRefreshSuccess = ref(false);
   let refreshSuccessTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  let loadingRequest: Promise<void> | null = null;
-  const fetchProjects = async () => {
-    if (cachedProjects) {
-      isLoading.value = false;
-    } else {
-      isLoading.value = true;
-    }
-    errorMessage.value = '';
-    try {
-      const nextProjects = await capture.listProjects();
-      cachedProjects = nextProjects;
-      projects.value = [...nextProjects];
-      selectedProjectId.value = projects.value.some((project) => project.id === props.currentProjectId)
+  const loadProjects = async () => {
+    await catalog.load();
+    selectedProjectId.value =
+      projects.value.some((project) => project.id === props.currentProjectId) ||
+      (catalog.hasMore.value && props.currentProjectId)
         ? props.currentProjectId
         : (projects.value[0]?.id ?? null);
-    } catch (error) {
-      if (!cachedProjects) projects.value = [];
-      errorMessage.value = error instanceof Error ? error.message : String(error);
-    } finally {
-      isLoading.value = false;
-    }
-  };
-  const loadProjects = () => {
-    loadingRequest ??= fetchProjects().finally(() => {
-      loadingRequest = null;
-    });
-    return loadingRequest;
   };
   const reopeningRefresh = createProjectPickerRefresh(() => {
     void loadProjects();
   });
 
   const handleRefresh = async () => {
-    if (isRefreshing.value || isLoading.value || loadingRequest) return;
+    if (isRefreshing.value || isLoading.value || isLoadingMore.value) return;
     isRefreshing.value = true;
     isRefreshSuccess.value = false;
     if (refreshSuccessTimeout) clearTimeout(refreshSuccessTimeout);
     try {
-      cachedProjects = null;
-      const nextProjects = await capture.listProjects();
-      cachedProjects = nextProjects;
-      projects.value = [...nextProjects];
+      await catalog.load(true);
+      if (errorMessage.value) return;
       selectedProjectId.value = projects.value.some((project) => project.id === props.currentProjectId)
         ? props.currentProjectId
         : (projects.value[0]?.id ?? null);
@@ -246,8 +267,11 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
     () => props.active !== false,
     (active) => {
       reopeningRefresh.cancel();
-      if (!active) return;
-      if (cachedProjects) reopeningRefresh.schedule();
+      if (!active) {
+        selectionGeneration++;
+        return;
+      }
+      if (catalog.hasLoaded()) reopeningRefresh.schedule();
       else void loadProjects();
       void nextTick(() => containerProps.onScroll());
     },
@@ -307,7 +331,7 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
       const created = await capture.createProject({
         name: newProjectName.value.trim() || undefined,
       });
-      cachedProjects = null;
+      catalog.invalidate();
       await loadProjects();
       isNewProjectOpen.value = false;
       emit('open-project', created);
@@ -353,7 +377,7 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
           ? await capture.renameProject(renameProjectId.value, trimmed, 'screenshot')
           : await capture.renameProject(renameProjectId.value, trimmed);
       emit('rename-project', renamed);
-      cachedProjects = null;
+      catalog.invalidate();
       await loadProjects();
       cancelRename();
     } catch (error) {
@@ -380,7 +404,7 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
       if (project?.mode === 'screenshot') await capture.deleteProject(deleteProjectId.value, 'screenshot');
       else await capture.deleteProject(deleteProjectId.value);
       if (project) emit('delete-project', project);
-      cachedProjects = null;
+      catalog.invalidate();
       await loadProjects();
       deleteConfirmProjectId.value = null;
 
@@ -422,6 +446,10 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
     isDeletingBatch,
     isAllSelected,
     isSomeSelected,
+    isSelectingAll,
+    isLoadingMore,
+    loadMoreError,
+    loadMore: catalog.loadMore,
     toggleSelectionMode,
     cancelSelectionMode,
     toggleBatchSelect,
@@ -466,8 +494,6 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
     gridRef,
     gridStyle,
     ...previews,
-    invalidate: () => {
-      cachedProjects = null;
-    },
+    invalidate: catalog.invalidate,
   };
 }

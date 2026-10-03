@@ -128,15 +128,12 @@ function createProjectVoiceoverStorage({ projectStore, fsModule = fs, pathModule
   };
 
   const cleanupStalePartials = () => {
-    for (const project of projectStore.list()) {
-      let mediaDirectory;
-      try {
-        mediaDirectory = pathModule.join(projectStore.directoryFor(project.id), 'media');
-      } catch {
-        continue;
-      }
+    for (const directory of projectStore.listDirectories()) {
+      const mediaDirectory = pathModule.join(directory, 'media');
       try {
         if (!fsModule.existsSync(mediaDirectory)) continue;
+        const stat = fsModule.lstatSync(mediaDirectory);
+        if (!stat.isDirectory() || stat.isSymbolicLink()) continue;
         for (const name of fsModule.readdirSync(mediaDirectory)) {
           if (!name.endsWith('.voiceover.partial')) continue;
           fsModule.rmSync(pathModule.join(mediaDirectory, name), { force: true });

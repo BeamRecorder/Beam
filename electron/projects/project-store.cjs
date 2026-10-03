@@ -15,7 +15,8 @@ const {
 const { createProjectEditorAccess } = require('./project-editor-access.cjs');
 const { createProjectSummary } = require('./project-summary.cjs');
 const { createProjectFeatureDetector } = require('./project-feature-detection.cjs');
-function createProjectStore(root, { mediaHost = 'asset', category = null } = {}) {
+const { listProjectDirectories } = require('./project-directories.cjs');
+function createProjectStore(root, { mediaHost = 'asset', category = null, repairMetadata = true } = {}) {
   const safePath = (directory, relativePath) => {
     if (typeof relativePath !== 'string' || !relativePath) return null;
     const resolvedRoot = path.resolve(directory);
@@ -48,18 +49,7 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
     const target = path.join(directory, 'project.json');
     writeJsonAtomicSync(target, manifest);
   };
-  const projectDirectories = () => {
-    const roots = category ? ['studio', 'instant'].map((name) => path.join(root, name)) : [root];
-    return roots.flatMap((directory) =>
-      !fs.existsSync(directory)
-        ? []
-        : fs
-            .readdirSync(directory, { withFileTypes: true })
-            .filter((entry) => entry.isDirectory())
-            .map((entry) => path.join(directory, entry.name))
-            .filter((entry) => fs.existsSync(path.join(entry, 'project.json'))),
-    );
-  };
+  const projectDirectories = () => listProjectDirectories(root, category);
   const directoryFor = (id) => {
     const projectId = assertId(id);
     const directory = projectDirectories().find((candidate) => {
@@ -72,8 +62,7 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
     if (!directory) throw new Error('Projet introuvable');
     return directory;
   };
-  const sessionFileFor = (directory, sessionId, sessionPath) => {
-    const project = readManifest(directory);
+  const sessionFileFor = (directory, sessionId, sessionPath, project = readManifest(directory)) => {
     const session = Array.isArray(project.sessions)
       ? project.sessions.find((entry) => entry?.sessionId === sessionId)
       : null;
@@ -153,10 +142,12 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
           .sort()[0];
       if (video) {
         const url = pathToFileURL(path.join(screenDirectory, video)).href;
-        manifest.previewSrc = url;
-        try {
-          writeManifest(directory, manifest);
-        } catch {}
+        if (repairMetadata) {
+          manifest.previewSrc = url;
+          try {
+            writeManifest(directory, manifest);
+          } catch {}
+        }
         return mediaUrlFor(url);
       }
     }
@@ -389,8 +380,10 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
       path: pathToFileURL(targetPath).href,
     };
   };
-  applyPendingRenames();
+  if (repairMetadata) applyPendingRenames();
   return {
+    rootDirectory: root,
+    summaryForDirectory: summary,
     list: () =>
       projectDirectories()
         .map((directory) => {
@@ -410,6 +403,7 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
     mediaUrlFor,
     mediaFileForUrl,
     directoryFor,
+    listDirectories: projectDirectories,
     teleprompterFileFor: (id, sessionId) =>
       sessionFileFor(directoryFor(id), sessionId, path.join('session', 'teleprompter.json')),
     editorData,
@@ -496,5 +490,4 @@ function createProjectStore(root, { mediaHost = 'asset', category = null } = {})
     delete: (id) => fs.rmSync(directoryFor(id), { recursive: true, force: false }),
   };
 }
-
 module.exports = { createProjectStore };

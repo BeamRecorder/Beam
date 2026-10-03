@@ -12,11 +12,8 @@ function validateDeviceMenu(request) {
   )
     throw new Error('Invalid Quick Snip device menu.');
   if (
-    request.position !== undefined &&
-    (!request.position ||
-      ![request.position.x, request.position.y].every(
-        (value) => Number.isInteger(value) && value >= 0 && value <= 10000,
-      ))
+    !request.position ||
+    ![request.position.x, request.position.y].every((value) => Number.isInteger(value) && value >= 0 && value <= 10000)
   )
     throw new Error('Invalid Quick Snip device menu position.');
   const ids = new Set();
@@ -38,7 +35,7 @@ function validateDeviceMenu(request) {
   }
 }
 
-function registerQuickSnipDeviceMenu({ applicationIpc, BrowserWindow, cropWindow, controller, Menu }) {
+function registerQuickSnipDeviceMenu({ applicationIpc, BrowserWindow, cropWindow, controller, settingsWindow }) {
   let closeActive = null;
   const close = () => closeActive?.();
   applicationIpc.handle('quick-snip:choose-device', async (event, request) => {
@@ -49,7 +46,6 @@ function registerQuickSnipDeviceMenu({ applicationIpc, BrowserWindow, cropWindow
     const window = BrowserWindow.fromWebContents(event.sender);
     if (!window || window.isDestroyed()) return null;
     close();
-    const nativeMenu = Menu ?? require('electron').Menu;
     return new Promise((resolve, reject) => {
       const sender = event.sender;
       let finished = false;
@@ -69,17 +65,9 @@ function registerQuickSnipDeviceMenu({ applicationIpc, BrowserWindow, cropWindow
             : null,
         );
       };
-      const menu = nativeMenu.buildFromTemplate(
-        request.options.map((option) => ({
-          label: option.label,
-          type: 'radio',
-          checked: option.id === request.selectedId,
-          click: () => finish(option.id),
-        })),
-      );
       const dismiss = () => {
         try {
-          menu.closePopup();
+          settingsWindow.hide();
           finish();
         } catch (error) {
           finish(null, error);
@@ -88,11 +76,17 @@ function registerQuickSnipDeviceMenu({ applicationIpc, BrowserWindow, cropWindow
       closeActive = dismiss;
       sender.once('destroyed', dismiss);
       try {
-        menu.popup({
-          window,
-          ...(request.position && { x: request.position.x, y: request.position.y, sourceType: 'keyboard' }),
-          callback: () => finish(),
-        });
+        settingsWindow
+          .chooseDevice(window, {
+            kind: request.kind,
+            selectedId: request.selectedId,
+            options: request.options.map(({ id, label }) => ({ id, label })),
+            position: { x: request.position.x, y: request.position.y },
+          })
+          .then(
+            (id) => finish(id),
+            (error) => finish(null, error),
+          );
       } catch (error) {
         finish(null, error);
       }

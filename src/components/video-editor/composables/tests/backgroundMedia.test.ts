@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BACKGROUND_MEDIA,
   backgroundKindFor,
   createBackgroundMedia,
   createWallpaperMedia,
@@ -14,6 +15,25 @@ import {
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 
 describe('background media', () => {
+  it.each([
+    ['golden-gate-4k', 'Golden Gate 4k'],
+    ['golden-gate-4k-dark', 'Golden Gate 4k Dark'],
+    ['golden-gate-4k-light', 'Golden Gate 4k Light'],
+    ['golden-gate-5k-dark', 'Golden Gate 5k Dark'],
+    ['golden-gate-5k-light', 'Golden Gate 5k Light'],
+    ['golden-gate-dark', 'Golden Gate Dark'],
+    ['golden-gate-day', 'Golden Gate Day'],
+    ['golden-gate-evening', 'Golden Gate Evening'],
+    ['golden-gate-light', 'Golden Gate Light'],
+    ['golden-gate-night', 'Golden Gate Night'],
+    ['golden-gate-sunset', 'Golden Gate Sunset'],
+  ])('includes the bundled %s WebP in the editor catalog', (fileName, name) => {
+    const path = resolvePublicAssetUrl(`/wallpapers/image/${fileName}.webp`);
+    expect(BACKGROUND_MEDIA.filter((item) => item.path === path)).toEqual([
+      { id: path, name, path, extension: 'webp', kind: 'image' },
+    ]);
+  });
+
   it('classifies every supported extension case-insensitively', () => {
     expect(
       ['avif', 'bmp', 'jpeg', 'jpg', 'png', 'webp'].map((extension) =>

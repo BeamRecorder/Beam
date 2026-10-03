@@ -583,3 +583,55 @@ test('Recorder keeps its fixed horizontal native bounds with an unexpected HUD s
     RECORDER_SIZE.height,
   ]);
 });
+
+test('a suspended HUD reloads before it becomes visible', async () => {
+  const window = fakeWindow();
+  const controller = new WindowController(window, { platform: 'linux' });
+  let suspended = true,
+    release;
+  controller.rendererLifecycle = {
+    isSuspended: () => suspended,
+    resume: () =>
+      new Promise((resolve) => {
+        release = () => {
+          suspended = false;
+          resolve();
+        };
+      }),
+  };
+  assert.equal(controller.setVisible(true), false);
+  assert.equal(window.isVisible(), false);
+  release();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(window.isVisible(), true);
+});
+test('hiding a suspended HUD does not wake its renderer', () => {
+  const window = fakeWindow();
+  const controller = new WindowController(window, { platform: 'linux' });
+  let wakes = 0;
+  controller.rendererLifecycle = {
+    isSuspended: () => true,
+    resume: async () => {
+      wakes++;
+    },
+  };
+  controller.setVisible(false);
+  assert.equal(wakes, 0);
+  assert.equal(window.isVisible(), false);
+});
+test('failed HUD wake remains hidden and reports the failure', async (t) => {
+  const window = fakeWindow();
+  const controller = new WindowController(window, { platform: 'linux' });
+  const errors = [];
+  t.mock.method(console, 'error', (...args) => errors.push(args));
+  controller.rendererLifecycle = {
+    isSuspended: () => true,
+    resume: async () => {
+      throw Error('renderer unavailable');
+    },
+  };
+  controller.setVisible(true);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(window.isVisible(), false);
+  assert.equal(errors[0][0], '[HUD wake]');
+});

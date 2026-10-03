@@ -33,12 +33,12 @@ const hasCaptionContent = (clip) => {
 };
 
 function createProjectFeatureDetector({ safePath, sessionFileFor }) {
-  const assetFileExists = (directory, asset) => {
+  const assetFileExists = (directory, asset, manifest) => {
     if (!asset) return false;
     try {
       const target =
         asset.origin === 'session'
-          ? sessionFileFor(directory, asset.sessionId, asset.sessionPath)
+          ? sessionFileFor(directory, asset.sessionId, asset.sessionPath, manifest)
           : path.join(directory, 'media', asset.fileName);
       return Boolean(target && fs.existsSync(target) && fs.statSync(target).size > 0);
     } catch {
@@ -46,11 +46,11 @@ function createProjectFeatureDetector({ safePath, sessionFileFor }) {
     }
   };
 
-  const hasKeyboardCaptionEvents = (directory, sessionIds) => {
+  const hasKeyboardCaptionEvents = (directory, sessionIds, manifest) => {
     if (!Array.isArray(sessionIds) || sessionIds.length === 0) return false;
     return sessionIds.some((sessionId) => {
       try {
-        const file = sessionFileFor(directory, sessionId, path.join('cursor', 'input.json'));
+        const file = sessionFileFor(directory, sessionId, path.join('cursor', 'input.json'), manifest);
         if (!file || !fs.existsSync(file)) return false;
         const data = readJsonSync(file);
         return Array.isArray(data?.events) && data.events.length > 0;
@@ -95,7 +95,7 @@ function createProjectFeatureDetector({ safePath, sessionFileFor }) {
 
     for (const clip of clips) {
       if (!clip) continue;
-      const hasAsset = clip.assetId && assetFileExists(directory, assetsMap.get(clip.assetId));
+      const hasAsset = clip.assetId && assetFileExists(directory, assetsMap.get(clip.assetId), manifest);
       if ((clip.kind === 'screen' || clip.kind === 'video') && !hasScreen && hasAsset) {
         hasScreen = true;
       } else if (clip.kind === 'webcam' && !hasCamera && hasAsset) {
@@ -113,7 +113,7 @@ function createProjectFeatureDetector({ safePath, sessionFileFor }) {
       Array.isArray(manifest.editor?.composition?.keyboardCaptionSessions) &&
       manifest.editor.composition.keyboardCaptionSessions.length > 0
     ) {
-      hasCaption = hasKeyboardCaptionEvents(directory, manifest.editor.composition.keyboardCaptionSessions);
+      hasCaption = hasKeyboardCaptionEvents(directory, manifest.editor.composition.keyboardCaptionSessions, manifest);
     }
 
     for (const session of Array.isArray(sessions) ? sessions : []) {

@@ -5,13 +5,22 @@ function fixture(snapshot, extra = {}) {
   const handlers = new Map(),
     calls = [],
     sender = {},
-    cropSender = {};
+    cropSender = {},
+    settingsSender = {};
   const state = snapshot ?? { state: 'processing', job: { mode: 'instant', projectId: 'project' } };
   let currentStatusOwner = sender;
   const controller = {
     state: () => state,
     cancel: async (options) => calls.push(options ? ['cancel', options] : 'cancel'),
     updateSelectionRegion() {},
+    configure: (options) => {
+      calls.push(['configure', options]);
+      return state;
+    },
+    chooseSource: (target) => {
+      calls.push(['source', target]);
+      return state;
+    },
     report: (report) => {
       calls.push(['report', report]);
       return state;
@@ -20,6 +29,19 @@ function fixture(snapshot, extra = {}) {
   const cropWindow = {
     owns: (owner) => owner === cropSender,
     rendererReady: (owner) => calls.push(['crop-ready', owner]),
+    nativeWindow: () => ({ focus: () => calls.push('crop.focus') }),
+    destroy: () => calls.push('crop.destroy'),
+  };
+  const settingsWindow = {
+    owns: (owner) => owner === settingsSender,
+    toggle: () => calls.push('settings.toggle'),
+    hide: () => calls.push('settings.hide'),
+    dismiss: () => calls.push('settings.dismiss'),
+    prepare: () => calls.push('settings.prepare'),
+    update() {},
+    ready() {},
+    fit() {},
+    destroy: () => calls.push('settings.destroy'),
   };
   let controllerDependencies;
   const statusWindow = {
@@ -43,6 +65,7 @@ function fixture(snapshot, extra = {}) {
         },
       };
     if (name === './quick-snip-window.cjs') return { createQuickSnipWindow: () => cropWindow };
+    if (name === './quick-snip-settings-window.cjs') return { createQuickSnipSettingsWindow: () => settingsWindow };
     if (name === './quick-snip-status-window.cjs') return { createQuickSnipStatusWindow: () => statusWindow };
     if (name === './quick-snip-renderer.cjs')
       return { createQuickSnipRenderer: () => ({ render() {}, destination() {} }) };
@@ -64,7 +87,7 @@ function fixture(snapshot, extra = {}) {
   try {
     const { createQuickSnipService } = require(source);
     service = createQuickSnipService({
-      BrowserWindow: {},
+      BrowserWindow: { getAllWindows: () => [] },
       applicationIpc: { handle: (name, fn) => handlers.set(name, fn), on: (name, fn) => handlers.set(name, fn) },
       regionOverlay: {},
       userPaths: {},
@@ -83,6 +106,7 @@ function fixture(snapshot, extra = {}) {
     controllerDependencies,
     sender,
     cropSender,
+    settingsSender,
     fileClipboardOptions: () => fileClipboardOptions,
     replaceStatusOwner: (owner) => {
       currentStatusOwner = owner;
@@ -90,6 +114,28 @@ function fixture(snapshot, extra = {}) {
     invoke: (name, payload, owner = sender) => handlers.get(`quick-snip:${name}`)({ sender: owner }, payload),
   };
 }
+test('only the owning toolbar opens settings and selects a capture source', () => {
+  const f = fixture({ state: 'selecting', job: { mode: 'studio' } });
+  for (const action of ['settings', 'select-source'])
+    assert.throws(() => f.invoke(action, 'screen', {}), /not authorized/);
+  f.invoke('settings', undefined, f.cropSender);
+  f.invoke('select-source', 'screen', f.cropSender);
+  assert.deepEqual(f.calls, ['settings.toggle', 'settings.hide', ['source', 'screen']]);
+});
+test('the settings renderer can configure the job and dismiss only its own panel', () => {
+  const f = fixture({ state: 'selecting', job: { mode: 'studio' } });
+  assert.throws(() => f.invoke('configure', { zoomMode: '3d' }, {}), /not authorized/);
+  f.invoke('configure', { zoomMode: '3d' }, f.settingsSender);
+  f.invoke('settings-dismiss', undefined, {});
+  f.invoke('settings-dismiss', undefined, f.settingsSender);
+  assert.deepEqual(f.calls, [['configure', { zoomMode: '3d' }], 'settings.dismiss', 'crop.focus']);
+});
+test('settings cannot reopen after selection and native cleanup disposes both toolbar surfaces', () => {
+  const f = fixture({ state: 'recording', job: { mode: 'studio' } });
+  assert.throws(() => f.invoke('settings', undefined, f.cropSender), /not authorized/);
+  f.service.destroy();
+  assert.deepEqual(f.calls, ['settings.destroy', 'crop.destroy']);
+});
 test('main process retains the status window while canceling export and opening the project', async () => {
   const f = fixture();
   await f.invoke('open-editor');
@@ -349,3 +395,37 @@ test('refuses screenshot capture when the Crop Bar is still visible after hide',
   await assert.rejects(capture(), /Unable to hide the Quick Snip bar for capture/);
   assert.deepEqual(calls, ['bar.hide']);
 });
+
+for (const state of ['idle', 'completed', 'failed', 'canceled'])
+  test(`releases terminal ${state} Quick Snip windows only after its renderer's idle acknowledgment`, () => {
+    const f = fixture({ state, job: { mode: 'studio' } });
+    f.invoke('crop-idle', undefined, {});
+    assert.deepEqual(f.calls, []);
+    f.invoke('crop-idle', undefined, f.cropSender);
+    assert.deepEqual(f.calls, ['settings.destroy', 'crop.destroy']);
+  });
+for (const state of ['selecting', 'preparing', 'recording', 'finalizing', 'processing'])
+  test(`preserves a ${state} capture even if an idle acknowledgment arrives`, () => {
+    const f = fixture({ state, job: { mode: 'studio' } });
+    f.invoke('crop-idle', undefined, f.cropSender);
+    assert.deepEqual(f.calls, []);
+  });
+test('cancellation before renderer mount disposes the late toolbar instead of retaining a hidden page', () => {
+  const f = fixture({ state: 'canceled', job: { mode: 'studio' } });
+  f.invoke('crop-ready', undefined, f.cropSender);
+  assert.deepEqual(f.calls, [['crop-ready', f.cropSender], 'crop.destroy']);
+});
+test('prepares settings only after the selecting toolbar mounts, never for a foreign sender', () => {
+  const f = fixture({ state: 'selecting', job: { mode: 'studio' } });
+  f.invoke('crop-ready', undefined, {});
+  assert.deepEqual(f.calls, [['crop-ready', {}]]);
+  f.calls.length = 0;
+  f.invoke('crop-ready', undefined, f.cropSender);
+  assert.deepEqual(f.calls, [['crop-ready', f.cropSender], 'settings.prepare']);
+});
+for (const state of ['preparing', 'recording', 'completed', 'canceled'])
+  test(`releases the warmed settings renderer when leaving selection for ${state}`, () => {
+    const f = fixture();
+    f.controllerDependencies.onStateChanged({ state, job: { mode: 'studio' } });
+    assert.deepEqual(f.calls, ['settings.destroy']);
+  });

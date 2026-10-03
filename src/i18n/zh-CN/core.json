@@ -521,7 +521,9 @@
     "microphone": "麦克风",
     "teleprompter": "提词器",
     "screenshotDescription": "选择要捕获的屏幕、区域或窗口。",
-    "back": "返回"
+    "back": "返回",
+    "hideHud": "隐藏 Beam",
+    "hideQuickSnip": "隐藏 Quick Snip"
   },
   "EditorPreparingHud": {
     "title": "正在打开编辑器",
@@ -930,7 +932,10 @@
     "instant": "即时",
     "instantDescription": "录制并自动导出带样式的视频。",
     "deviceHint": "{device} — 右键单击以选择来源",
-    "defaultSystemAudio": "默认系统输出"
+    "defaultSystemAudio": "默认系统输出",
+    "video": "视频",
+    "image": "图片",
+    "zoom": "缩放"
   },
   "ScreenshotEditor": {
     "tools": "工具",

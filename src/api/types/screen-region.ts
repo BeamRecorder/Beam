@@ -16,6 +16,7 @@ export interface ScreenRegionOverlayOptions {
   bounds: ScreenRegionBounds;
   region?: ScreenRegion | null;
   context?: 'default' | 'quick-snip';
+  drawOnly?: boolean;
   captureMode?: 'studio' | 'instant' | 'screenshot';
   recording?: RegionRecordingSettings;
   preview?: string;
@@ -37,6 +38,7 @@ export interface ScreenRegionSelectionResult {
 }
 
 export interface RegionRecordingSettings {
+  zoomMode?: import('./recording-zoom').RecordingZoomMode;
   cameraId: string;
   microphoneId: string;
   systemAudio: boolean;

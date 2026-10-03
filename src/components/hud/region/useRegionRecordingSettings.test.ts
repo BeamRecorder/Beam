@@ -21,6 +21,7 @@ it('snapshots independent device, audio, countdown and desktop settings', () => 
   const refs = state();
   const settings = useRegionRecordingSettings(refs);
   expect(settings.snapshot()).toEqual({
+    zoomMode: '2d',
     cameraId: 'off',
     microphoneId: 'no-audio',
     systemAudio: false,
@@ -36,6 +37,7 @@ it('applies chosen settings and persists countdown and desktop options', async (
   const refs = state();
   const settings = useRegionRecordingSettings(refs);
   const next = {
+    zoomMode: '3d' as const,
     cameraId: 'camera',
     microphoneId: 'mic',
     systemAudio: true,
@@ -48,7 +50,13 @@ it('applies chosen settings and persists countdown and desktop options', async (
   await flushPromises();
   expect(settings.snapshot()).toEqual(next);
   expect(updatePreferences).toHaveBeenCalledWith({
-    extras: { recordingCountdownSeconds: 10, hideTaskbar: true, hideDesktopIcons: true, showRealCursor: true },
+    extras: {
+      recordingZoomMode: '3d',
+      recordingCountdownSeconds: 10,
+      hideTaskbar: true,
+      hideDesktopIcons: true,
+      showRealCursor: true,
+    },
   });
   settings.apply({ ...next, systemAudio: false });
   expect(refs.systemAudioMode.value).toBe('off');

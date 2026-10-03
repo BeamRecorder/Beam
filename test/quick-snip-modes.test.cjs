@@ -87,6 +87,7 @@ function fixture({
       show: () => calls.push('status.show'),
       update: (state) => calls.push(`status.${state.state}`),
     },
+    selectSource: async (kind) => ({ id: await resolveScreenId(display), kind }),
     resolveScreenId: (selectedDisplay) => resolveScreenId(selectedDisplay),
     resolveDisplay: () => display,
     isNormalRecordingActive: () => false,
@@ -197,13 +198,14 @@ test('fromHud starts Instant immediately with the chosen source, active preset, 
   assert.equal(job.region, null);
   assert.equal(job.preset.id, 'video-active');
   assert.equal(job.format, 'webm');
-  assert.equal(job.automaticZoom, false);
+  assert.equal(job.automaticZoom, true);
   assert.deepEqual(job.devices, devices);
   assert.equal(job.outputRoot, '/projects/instant');
   assert.equal(f.selectionCalls.length, 0);
   assert.equal(f.shownConfigurations[0].mode, 'instant');
   assert.ok(f.calls.includes('crop.start'));
-  assert.deepEqual(f.preferenceWrites.at(-1), { extras: { captureMode: 'instant' } });
+  assert.equal(f.preferenceState.extras.captureMode, 'instant');
+  assert.equal(f.preferenceState.extras.recordingZoomMode, '2d');
 });
 
 test('fromHud rejects a source outside the native display and window options', async () => {
@@ -239,7 +241,7 @@ test('Quick Snip uses the native source resolved for its selected display instea
 
   await f.controller.toggle();
   assert.equal(f.controller.state().job.screenId, undefined);
-  assert.deepEqual(f.selectionCalls[0].bounds, display.bounds);
+  assert.equal(f.selectionCalls.length, 0);
   await f.controller.start();
 
   const sentConfiguration = f.shownConfigurations.at(-1);
@@ -258,7 +260,7 @@ test('cancellation while the selected display source is resolving never starts n
 
   const starting = f.controller.start();
   await Promise.resolve();
-  assert.equal(f.controller.state().state, 'preparing');
+  assert.equal(f.controller.state().state, 'selecting');
   assert.ok(!f.calls.includes('crop.start'));
 
   await f.controller.cancel();
@@ -267,7 +269,7 @@ test('cancellation while the selected display source is resolving never starts n
 
   assert.equal(f.controller.state().state, 'canceled');
   assert.ok(!f.calls.includes('crop.start'));
-  assert.equal(f.shownConfigurations.length, configurationCount);
+  assert.equal(f.shownConfigurations.length, configurationCount + 1);
 });
 
 test('a selected display source resolution failure remains visible and never starts native capture', async () => {
@@ -279,13 +281,13 @@ test('a selected display source resolution failure remains visible and never sta
   await f.controller.toggle();
   const configurationCount = f.shownConfigurations.length;
 
-  await f.controller.start();
+  await assert.rejects(f.controller.start(), /display mapping unavailable/);
 
-  assert.equal(f.controller.state().state, 'failed');
+  assert.equal(f.controller.state().state, 'selecting');
   assert.match(f.controller.state().error, /display mapping unavailable/);
   assert.ok(!f.calls.includes('crop.start'));
-  assert.equal(f.shownConfigurations.length, configurationCount);
-  assert.ok(f.calls.includes('status.failed'));
+  assert.equal(f.shownConfigurations.length, configurationCount + 2);
+  assert.ok(!f.calls.includes('status.failed'));
 });
 
 test('Studio and HUD Instant both finalize, export and copy without opening an editor', async () => {

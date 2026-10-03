@@ -521,7 +521,9 @@
     "microphone": "Микрофон",
     "teleprompter": "Телесуфлёр",
     "screenshotDescription": "Выберите экран, область или окно для захвата.",
-    "back": "Назад"
+    "back": "Назад",
+    "hideHud": "Скрыть Beam",
+    "hideQuickSnip": "Скрыть Quick Snip"
   },
   "EditorPreparingHud": {
     "title": "Открываю редактор",
@@ -930,7 +932,10 @@
     "instant": "Мгновенно",
     "instantDescription": "Запишите и автоматически экспортируйте видео с оформлением.",
     "deviceHint": "{device} — щёлкните правой кнопкой для выбора источника",
-    "defaultSystemAudio": "Системный выход по умолчанию"
+    "defaultSystemAudio": "Системный выход по умолчанию",
+    "video": "Видео",
+    "image": "Изображение",
+    "zoom": "Масштаб"
   },
   "ScreenshotEditor": {
     "tools": "Инструменты",

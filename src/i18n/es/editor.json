@@ -430,7 +430,7 @@
     "straightPathsDesc": "Limita el movimiento de la cámara a trayectorias horizontales, verticales o diagonales.",
     "generateAutoZooms": "Generar zooms automáticos",
     "regenerateAutoZooms": "Regenerar zooms automáticos",
-    "regenerateConfirm": "¿Regenerar los zooms automáticos? Esto reemplazará todos los puntos de zoom detectados automáticamente.",
+    "regenerateConfirm": "¿Recalcular las posiciones y reemplazar los zooms automáticos desbloqueados de esta grabación? Se conservan los zooms manuales, bloqueados y desvinculados.",
     "cancel": "Cancelar",
     "regenerate": "Regenerar",
     "mode": "Modo",

@@ -104,7 +104,6 @@ onBeforeUnmount(() => {
       :aria-pressed="visible"
       @click="toggleTeleprompter"
     />
-    <RegionQuickSettings v-model="settings" />
     <span class="divider" />
     <div class="device-field">
       <Select
@@ -141,7 +140,8 @@ onBeforeUnmount(() => {
           ><AudioIconMeter kind="system" :enabled="settings.systemAudio" :level="systemAudioLevel" /></template
       ></Select>
     </div>
-    <Button variant="primary" size="sm" :icon="Circle" :disabled="disabled" @click="emit('record')">{{
+    <RegionQuickSettings v-model="settings" />
+    <Button data-region-start variant="primary" size="sm" :icon="Circle" :disabled="disabled" @click="emit('record')">{{
       regionT('record')
     }}</Button>
     <p v-if="error" class="device-error" role="alert">{{ error }}</p>

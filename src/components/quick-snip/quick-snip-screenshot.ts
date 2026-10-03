@@ -1,7 +1,5 @@
 import { capture } from '~/api/capture';
 import type { QuickSnipConfiguration } from '~/api/types/quick-snip';
-import { screenshotState } from '../video-editor/screenshot/screenshot-state';
-import { encodeScreenshot, screenshotPreview } from '../video-editor/screenshot/screenshot-render';
 
 export async function captureQuickScreenshot(current: QuickSnipConfiguration, isCurrent: () => boolean) {
   await capture.prepareRecordingSurface();
@@ -19,6 +17,11 @@ export async function captureQuickScreenshot(current: QuickSnipConfiguration, is
   }
   if (current.screenshotAction !== 'edit') {
     await capture.reportQuickSnip({ type: 'screenshot-captured', name: current.name, screenshotId: document.id });
+    const [{ screenshotState }, { encodeScreenshot, screenshotPreview }] = await Promise.all([
+      import('../video-editor/screenshot/screenshot-state'),
+      import('../video-editor/screenshot/screenshot-render'),
+    ]);
+    if (!isCurrent()) return;
     const backgrounds = await capture.listBackgroundLibrary();
     if (!isCurrent()) return;
     const state = screenshotState(document, backgrounds);

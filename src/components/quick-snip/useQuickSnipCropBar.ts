@@ -5,6 +5,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { usePreferencesStore } from '~/stores/preferences';
 import { capture } from '~/api/capture';
 import type { QuickSnipConfiguration } from '~/api/types/quick-snip';
+import type { QuickSnipSettingsAnchor } from '~/api/types/quick-snip-settings';
 import { useRecordingController } from '~/components/hud/recorder/useRecordingController';
 import { useNativeSystemAudioPreview } from '~/components/hud/recorder/useNativeSystemAudioPreview';
 import { useAudioLevelMeter } from '~/components/hud/audio/useAudioLevelMeter';
@@ -17,6 +18,11 @@ export function useQuickSnipCropBar() {
   const visibility = computed(() => preferences.settings?.recordingBar.visibility ?? 'always');
   const pointerOver = ref(false);
   const selectionActive = ref(false);
+  const finished = ref(false);
+  const settingsOpen = ref(false);
+  const offSettings = capture.onQuickSnipSettingsVisibility((open) => {
+    settingsOpen.value = open;
+  });
 
   // IPC configurations are immutable snapshots; deep Vue proxies cannot cross Electron's clone boundary.
   const configuration = shallowRef<QuickSnipConfiguration | null>(null);
@@ -28,16 +34,13 @@ export function useQuickSnipCropBar() {
     },
   });
   const deviceMenuBusy = ref(false);
-  const presetKind = () => (mode.value === 'screenshot' ? 'screenshot' : 'video');
-  const automaticZoom = ref(true);
   const microphone = ref(true);
   const systemAudio = ref(false);
   const camera = ref(false);
-  const presetOptions = ref<Array<{ label: string; value: string }>>([{ label: '', value: 'default' }]);
-  const selectedPresetId = ref('default');
+  const captureTarget = computed(() => configuration.value?.captureTarget ?? 'screen');
   const configured = ref(false);
-  const controlsEpoch = ref(0);
   const actionPending = ref(false);
+  const screenshotPending = ref(false);
   let settingsWrite = Promise.resolve();
   let commandGeneration = 0;
   let recordingJobName: string | undefined;
@@ -54,7 +57,7 @@ export function useQuickSnipCropBar() {
     microphone.value ? enabledDeviceId(configuration.value?.devices.micId, 'no-audio') : 'no-audio',
   );
   const { level: microphoneLevel } = useAudioLevelMeter(
-    computed(() => microphone.value && mode.value !== 'screenshot'),
+    computed(() => microphone.value && mode.value !== 'screenshot' && selectionActive.value),
     microphoneSourceId,
   );
   const recording = computed(() => recorder.phase.value === 'recording' || recorder.phase.value === 'paused');
@@ -99,7 +102,6 @@ export function useQuickSnipCropBar() {
     await capture.updateActiveEditorPreset({
       ...preset.settings,
       devices: overrides.devices,
-      quickSnip: { automaticZoom: overrides.automaticZoom },
     });
   };
 
@@ -114,7 +116,7 @@ export function useQuickSnipCropBar() {
   });
   const quickSnipOverrides = () => ({
     mode: mode.value,
-    automaticZoom: mode.value !== 'screenshot' && automaticZoom.value,
+    zoomMode: configuration.value?.zoomMode,
     devices: selectedDevices(),
   });
   const synchronize = async () => {
@@ -152,7 +154,12 @@ export function useQuickSnipCropBar() {
     await settingsWrite;
     if (generation !== commandGeneration) return;
     if (mode.value === 'screenshot') {
-      await captureQuickScreenshot(current, () => generation === commandGeneration);
+      screenshotPending.value = true;
+      try {
+        await captureQuickScreenshot(current, () => generation === commandGeneration);
+      } finally {
+        screenshotPending.value = false;
+      }
       return;
     }
     await persistQuickSettings();
@@ -218,31 +225,8 @@ export function useQuickSnipCropBar() {
     commandGeneration += 1;
     return capture.quickSnipCancel();
   };
-  const selectPreset = async (id: string | number) => {
-    if (settingsDisabled.value) return;
-    const generation = commandGeneration;
-    actionPending.value = true;
-    try {
-      const document = await capture.selectEditorPreset(String(id), presetKind());
-      if (generation !== commandGeneration) return;
-      const preset = document.presets.find((candidate) => candidate.id === document.activePresetId);
-      if (!preset || !configuration.value) return;
-      selectedPresetId.value = preset.id;
-      configuration.value = { ...configuration.value, preset, devices: preset.settings.devices };
-      automaticZoom.value = preset.settings.quickSnip.automaticZoom;
-      microphone.value = preset.settings.devices.micId !== 'no-audio';
-      camera.value = preset.settings.devices.cameraId !== 'off';
-      systemAudio.value = preset.settings.devices.systemAudioMode === 'on';
-      actionPending.value = false;
-      await synchronize();
-    } catch (reason) {
-      if (generation === commandGeneration) await reportFailure(reason);
-    } finally {
-      if (generation === commandGeneration) actionPending.value = false;
-    }
-  };
-
   const offConfigure = capture.onQuickSnipConfigure((next) => {
+    finished.value = false;
     if (next.name !== configuration.value?.name) {
       selectionActive.value = true;
       commandGeneration += 1;
@@ -250,27 +234,12 @@ export function useQuickSnipCropBar() {
       actionPending.value = false;
     }
     configured.value = false;
-    controlsEpoch.value += 1;
     configuration.value = next;
     mode.value = next.mode;
-    automaticZoom.value = next.automaticZoom;
-    selectedPresetId.value = next.preset.id;
-    presetOptions.value = [{ label: next.preset.name, value: next.preset.id || 'default' }];
     microphone.value = next.devices.micId !== 'no-audio';
     camera.value = next.devices.cameraId !== 'off';
     systemAudio.value = next.devices.systemAudioMode === 'on';
     configured.value = true;
-    const epoch = controlsEpoch.value;
-    void capture
-      .getEditorPresets(presetKind())
-      .then((document) => {
-        if (epoch !== controlsEpoch.value) return;
-        const available = document.presets.map((preset) => ({ label: preset.name, value: preset.id }));
-        if (available.length > 0) presetOptions.value = available;
-      })
-      .catch((reason) => {
-        if (epoch === controlsEpoch.value) return reportFailure(reason);
-      });
   });
   const offCommand = capture.onQuickSnipCommand((command) => {
     selectionActive.value = false;
@@ -287,7 +256,21 @@ export function useQuickSnipCropBar() {
   });
   const offState = capture.onQuickSnipState((snapshot) => {
     selectionActive.value = snapshot.state === 'selecting';
+    finished.value = ['idle', 'completed', 'failed', 'canceled'].includes(snapshot.state);
   });
+  watch(
+    [finished, actionPending, recorder.phase, screenshotPending],
+    () => {
+      if (
+        finished.value &&
+        !actionPending.value &&
+        !screenshotPending.value &&
+        ['idle', 'completed', 'failed'].includes(recorder.phase.value)
+      )
+        capture.notifyQuickSnipCropIdle();
+    },
+    { flush: 'post' },
+  );
   onMounted(() => {
     capture.notifyQuickSnipCropReady();
     void preferences.load().catch(reportFailure);
@@ -295,15 +278,15 @@ export function useQuickSnipCropBar() {
   watch(recorder.phase, (phase) => {
     if (phase === 'recording') void capture.reportQuickSnip({ type: 'recording' });
   });
-  watch([mode, automaticZoom, microphone, systemAudio, camera], () => void synchronize().catch(reportFailure), {
+  watch([mode, microphone, systemAudio, camera], () => void synchronize().catch(reportFailure), {
     flush: 'sync',
   });
   onBeforeUnmount(() => {
     commandGeneration += 1;
-    controlsEpoch.value += 1;
     offConfigure();
     offCommand();
     offState();
+    offSettings();
   });
 
   return {
@@ -315,15 +298,11 @@ export function useQuickSnipCropBar() {
     displayMode,
     mode,
     settingsDisabled,
-    selectedPresetId,
-    presetOptions,
-    selectPreset,
     microphone,
     microphoneLevel,
     systemAudio,
     systemAudioLevel,
     camera,
-    automaticZoom,
     elapsed,
     captureHint,
     preparing,
@@ -337,5 +316,18 @@ export function useQuickSnipCropBar() {
     reportFailure,
     restart,
     compact,
+    captureTarget,
+    selectSource: async (target: 'screen' | 'region' | 'window') => {
+      if (settingsDisabled.value) return;
+      try {
+        await settingsWrite;
+        await capture.selectQuickSnipSource(target);
+      } catch (reason) {
+        await reportFailure(reason);
+      }
+    },
+    settingsOpen,
+    dismissSettings: () => capture.dismissQuickSnipSettings(),
+    openSettings: (anchor: QuickSnipSettingsAnchor) => capture.toggleQuickSnipSettings(anchor).catch(reportFailure),
   };
 }

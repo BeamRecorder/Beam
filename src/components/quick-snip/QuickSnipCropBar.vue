@@ -2,43 +2,41 @@
 import {
   Camera,
   CameraOff,
-  ChevronDown,
+  Crop,
   GripVertical,
   MicOff,
-  Play,
-  Slash,
-  Square,
+  Monitor,
+  PanelsTopLeft,
+  Settings,
   VolumeOff,
   X,
-  ZoomIn,
 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import CaptureModeIcon from '../capture/CaptureModeIcon.vue';
-import CaptureModeGroup from '../hud/CaptureModeGroup.vue';
+import QuickSnipCaptureIcon from './QuickSnipCaptureIcon.vue';
 import Divider from '~/ui/divider/Divider.vue';
-import AudioIconMeter from '~/components/hud/audio/AudioIconMeter.vue';
+import RafRevealTransition from '~/ui/transitions/RafRevealTransition.vue';
+import AudioIconMeter from '../hud/audio/AudioIconMeter.vue';
 import RecorderBar from '../hud/recorder/RecorderBar.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useQuickSnipCropBar } from './useQuickSnipCropBar';
+import type { QuickSnipDeviceKind } from '~/api/types/quick-snip';
 const { t } = useTranslate('QuickSnipCropBar');
+const { t: hudT } = useTranslate('HUD');
 const {
   visibility,
   pointerOver,
-  selectionActive,
   recording,
   recorder,
   displayMode,
   mode,
   settingsDisabled,
-  selectedPresetId,
-  presetOptions,
-  selectPreset,
   microphone,
   microphoneLevel,
   systemAudio,
   systemAudioLevel,
   camera,
-  automaticZoom,
   elapsed,
   captureHint,
   preparing,
@@ -52,18 +50,46 @@ const {
   reportFailure,
   restart,
   compact,
+  captureTarget,
+  selectSource,
+  openSettings,
+  settingsOpen,
+  dismissSettings,
 } = useQuickSnipCropBar();
-const openSelect = (event: MouseEvent) => {
-  const select = (event.currentTarget as HTMLElement).querySelector('select')!;
-  if (select.disabled || (event.target as Element).closest('select')) return;
-  event.preventDefault();
-  select.focus();
-  select.showPicker();
+const openDeviceMenu = (kind: QuickSnipDeviceKind, event: MouseEvent) => {
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  void chooseDevice(kind, { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.bottom) }).catch(
+    reportFailure,
+  );
 };
+let closeSettingsOnClick: boolean | null = null;
+const rememberSettingsIntent = () => {
+  closeSettingsOnClick = settingsOpen.value;
+};
+const cancelSettingsIntent = () => {
+  closeSettingsOnClick = null;
+};
+const toggleSettings = (event: MouseEvent) => {
+  const close = closeSettingsOnClick ?? settingsOpen.value;
+  closeSettingsOnClick = null;
+  if (close) {
+    dismissSettings();
+    return;
+  }
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  void openSettings({ x: rect.left, y: rect.top, width: rect.width, height: rect.height });
+};
+const closeSettingsOutsideTrigger = (event: PointerEvent) => {
+  if (settingsOpen.value && !(event.target as Element).closest('[data-quick-snip-menu-trigger]')) dismissSettings();
+};
+const targets = [
+  { id: 'screen', label: 'fullScreen', icon: Monitor },
+  { id: 'region', label: 'region', icon: Crop },
+  { id: 'window', label: 'window', icon: PanelsTopLeft },
+] as const;
 </script>
-
 <template>
-  <main class="crop-shell">
+  <main class="crop-shell" @contextmenu.prevent @pointerdown.capture="closeSettingsOutsideTrigger">
     <RecorderBar
       v-if="compact"
       :phase="recorder.phase.value"
@@ -80,164 +106,165 @@ const openSelect = (event: MouseEvent) => {
     <section
       v-else
       class="crop-bar"
-      :class="{
-        'auto-fade': mode !== 'screenshot' && !selectionActive && visibility === 'auto-fade',
-        'hover-only':
-          mode !== 'screenshot' &&
-          !selectionActive &&
-          visibility === 'hover-only' &&
-          (recording || recorder.recorderHoverOnlyActive.value),
-        'pointer-over': pointerOver || deviceMenuBusy,
-      }"
       :aria-label="t('controls')"
       @pointerenter="pointerOver = true"
       @pointerleave="pointerOver = false"
     >
-      <div class="drag-handle" :title="t('drag')" :aria-label="t('drag')">
-        <GripVertical :size="16" aria-hidden="true" />
+      <div class="drag-handle" :title="t('drag')"><GripVertical :size="16" aria-hidden="true" /></div>
+      <div class="control-slot">
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="X"
+          :title="t('cancel')"
+          :aria-label="t('cancel')"
+          @click="cancel"
+        />
       </div>
-      <div class="crop-controls">
-        <div class="settings-row" role="group" :aria-label="t('settings')">
-          <CaptureModeGroup
-            class="quick-modes"
-            v-model="displayMode"
-            :modes="['studio', 'screenshot']"
-            full
-            labels
+      <ButtonGroup
+        size="sm"
+        variant="neutral"
+        class="control-slot capture-modes"
+        :selection="{ index: displayMode === 'screenshot' ? 1 : 0, count: 2 }"
+        :aria-label="t('mode')"
+      >
+        <Button
+          v-for="choice in ['studio', 'screenshot'] as const"
+          :key="choice"
+          variant="tab"
+          size="sm"
+          :class="{ active: displayMode === choice }"
+          :aria-pressed="displayMode === choice"
+          :aria-label="t(choice === 'studio' ? 'video' : 'image')"
+          :title="t(choice === 'studio' ? 'video' : 'image')"
+          :disabled="settingsDisabled"
+          @click="displayMode = choice"
+        >
+          <template #icon><CaptureModeIcon :mode="choice" decorative /></template
+          >{{ t(choice === 'studio' ? 'video' : 'image') }}
+        </Button>
+      </ButtonGroup>
+      <Divider orientation="vertical" spacing="none" class="control-divider" />
+      <ButtonGroup
+        size="sm"
+        variant="neutral"
+        class="control-slot"
+        :selection="{ index: targets.findIndex((target) => target.id === captureTarget), count: 3 }"
+        :aria-label="hudT('chooseCaptureSource')"
+      >
+        <Button
+          v-for="target in targets"
+          :key="target.id"
+          variant="tab"
+          size="sm"
+          icon-only
+          :style="{ width: '32px', height: '32px', padding: '0' }"
+          :icon="target.icon"
+          :class="{ active: captureTarget === target.id }"
+          :aria-pressed="captureTarget === target.id"
+          :aria-label="hudT(target.label)"
+          :title="hudT(target.label)"
+          :disabled="settingsDisabled"
+          @click="selectSource(target.id)"
+        />
+      </ButtonGroup>
+      <RafRevealTransition axis="horizontal">
+        <div v-if="mode !== 'screenshot'" class="device-controls control-slot" role="group" :aria-label="t('devices')">
+          <Button
+            variant="ghost"
+            size="sm"
+            icon-only
+            :aria-label="t('microphone')"
+            :aria-pressed="microphone"
+            :title="t('microphone')"
             :disabled="settingsDisabled"
-          />
-          <Divider orientation="vertical" spacing="none" class="field-divider" />
-          <label class="setting-field preset-field" :title="t('presetHint')" @click="openSelect">
-            <CaptureModeIcon :mode="displayMode" decorative />
-            <span class="field-content">
-              <span class="field-label">{{ t('preset') }}</span>
-              <select
-                class="preset-select"
-                v-model="selectedPresetId"
-                :disabled="settingsDisabled"
-                :aria-label="t('presetHint')"
-                :title="t('presetHint')"
-                @change="selectPreset(selectedPresetId)"
-              >
-                <option v-for="preset in presetOptions" :key="preset.value" :value="preset.value">
-                  {{ preset.value === 'default' ? t('defaultPreset') : preset.label }}
-                </option>
-              </select>
-              <ChevronDown class="select-chevron" :size="12" aria-hidden="true" />
-            </span>
-          </label>
+            data-quick-snip-menu-trigger
+            @click="openDeviceMenu('microphone', $event)"
+            @contextmenu.stop.prevent="openDeviceMenu('microphone', $event)"
+            @keydown="onDeviceKeydown('microphone', $event)?.catch(reportFailure)"
+          >
+            <template #icon
+              ><AudioIconMeter v-if="microphone" kind="mic" enabled :level="microphoneLevel" size="sm" /><MicOff
+                v-else
+                :size="18"
+                class="is-off"
+            /></template>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon-only
+            :aria-label="t('systemAudio')"
+            :aria-pressed="systemAudio"
+            :title="t('systemAudio')"
+            :disabled="settingsDisabled"
+            data-quick-snip-menu-trigger
+            @click="openDeviceMenu('systemAudio', $event)"
+            @contextmenu.stop.prevent="openDeviceMenu('systemAudio', $event)"
+            @keydown="onDeviceKeydown('systemAudio', $event)?.catch(reportFailure)"
+          >
+            <template #icon
+              ><AudioIconMeter v-if="systemAudio" kind="system" enabled :level="systemAudioLevel" size="sm" /><VolumeOff
+                v-else
+                :size="18"
+                class="is-off"
+            /></template>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon-only
+            :aria-label="t('camera')"
+            :aria-pressed="camera"
+            :title="t('camera')"
+            :disabled="settingsDisabled"
+            data-quick-snip-menu-trigger
+            @click="openDeviceMenu('camera', $event)"
+            @contextmenu.stop.prevent="openDeviceMenu('camera', $event)"
+            @keydown="onDeviceKeydown('camera', $event)?.catch(reportFailure)"
+          >
+            <template #icon
+              ><component :is="camera ? Camera : CameraOff" :size="18" :class="{ 'is-off': !camera }"
+            /></template>
+          </Button>
         </div>
-        <Divider spacing="none" />
-        <Transition name="quick-controls" mode="out-in">
-          <div :key="mode === 'screenshot' ? 'screenshot' : 'video'" class="controls-row">
-            <div v-if="mode !== 'screenshot'" class="control-group" role="group" :aria-label="t('devices')">
-              <Button
-                :variant="microphone ? 'secondary' : 'ghost'"
-                size="sm"
-                icon-only
-                :title="t('deviceHint', { device: t('microphone') })"
-                :aria-label="t('microphone')"
-                :aria-pressed="microphone"
-                :disabled="settingsDisabled"
-                @contextmenu.prevent="chooseDevice('microphone').catch(reportFailure)"
-                @keydown="onDeviceKeydown('microphone', $event)?.catch(reportFailure)"
-                @click="microphone = !microphone"
-              >
-                <template #icon>
-                  <AudioIconMeter v-if="microphone" kind="mic" enabled :level="microphoneLevel" size="sm" />
-                  <span v-else class="toggle-icon is-off" aria-hidden="true"><MicOff :size="20" /></span>
-                </template>
-              </Button>
-              <Button
-                :variant="systemAudio ? 'secondary' : 'ghost'"
-                size="sm"
-                icon-only
-                :title="t('deviceHint', { device: t('systemAudio') })"
-                :aria-label="t('systemAudio')"
-                :aria-pressed="systemAudio"
-                :disabled="settingsDisabled"
-                @contextmenu.prevent="chooseDevice('systemAudio').catch(reportFailure)"
-                @keydown="onDeviceKeydown('systemAudio', $event)?.catch(reportFailure)"
-                @click="systemAudio = !systemAudio"
-              >
-                <template #icon>
-                  <AudioIconMeter v-if="systemAudio" kind="system" enabled :level="systemAudioLevel" size="sm" />
-                  <span v-else class="toggle-icon is-off" aria-hidden="true"><VolumeOff :size="20" /></span>
-                </template>
-              </Button>
-            </div>
-            <template v-if="mode !== 'screenshot'">
-              <Divider orientation="vertical" spacing="none" class="control-divider" />
-              <div class="control-group" role="group" :aria-label="t('effects')">
-                <Button
-                  :variant="camera ? 'secondary' : 'ghost'"
-                  size="sm"
-                  icon-only
-                  :title="t('deviceHint', { device: t('camera') })"
-                  :aria-label="t('camera')"
-                  :aria-pressed="camera"
-                  :disabled="settingsDisabled"
-                  @contextmenu.prevent="chooseDevice('camera').catch(reportFailure)"
-                  @keydown="onDeviceKeydown('camera', $event)?.catch(reportFailure)"
-                  @click="camera = !camera"
-                >
-                  <template #icon>
-                    <span class="toggle-icon" :class="{ 'is-off': !camera }" aria-hidden="true">
-                      <component :is="camera ? Camera : CameraOff" :size="20" />
-                    </span>
-                  </template>
-                </Button>
-                <Button
-                  :variant="automaticZoom ? 'secondary' : 'ghost'"
-                  size="sm"
-                  icon-only
-                  :title="t('automaticZoom')"
-                  :aria-label="t('automaticZoom')"
-                  :aria-pressed="automaticZoom"
-                  :disabled="settingsDisabled"
-                  @click="automaticZoom = !automaticZoom"
-                >
-                  <template #icon>
-                    <span class="toggle-icon" :class="{ 'is-off': !automaticZoom }" aria-hidden="true">
-                      <ZoomIn :size="20" />
-                      <Slash v-if="!automaticZoom" :size="20" class="off-slash" />
-                    </span>
-                  </template>
-                </Button>
-              </div>
-            </template>
-            <Divider v-if="mode !== 'screenshot'" orientation="vertical" spacing="none" class="control-divider" />
-            <span v-if="recording" class="elapsed" role="timer" :aria-label="t('elapsed')">
-              <span class="recording-dot" aria-hidden="true" />{{ elapsed }}
-            </span>
-            <div class="capture-actions">
-              <Button
-                variant="primary"
-                size="sm"
-                :icon="mode === 'screenshot' ? undefined : recording ? Square : Play"
-                :title="captureHint"
-                :loading="preparing || actionPending"
-                :disabled="!configured || preparing || actionPending || deviceMenuBusy"
-                @click="toggleFromControls()"
-              >
-                <template v-if="mode === 'screenshot'" #icon><CaptureModeIcon mode="screenshot" decorative /></template>
-                {{ mode === 'screenshot' ? t('screenshot') : t(recording ? 'stop' : 'start') }}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                icon-only
-                :icon="X"
-                :title="t('cancel')"
-                :aria-label="t('cancel')"
-                @click="cancel"
-              />
-            </div>
-          </div>
-        </Transition>
+      </RafRevealTransition>
+      <div class="control-slot">
+        <Button
+          :variant="settingsOpen ? 'selected' : 'ghost'"
+          size="sm"
+          icon-only
+          :icon="Settings"
+          :aria-label="t('settings')"
+          :title="t('settings')"
+          :disabled="settingsDisabled"
+          :aria-expanded="settingsOpen"
+          aria-haspopup="dialog"
+          data-quick-snip-menu-trigger
+          @pointerdown="rememberSettingsIntent"
+          @pointercancel="cancelSettingsIntent"
+          @click="toggleSettings"
+        />
+      </div>
+      <div class="capture-actions control-slot">
+        <Button
+          variant="primary"
+          size="sm"
+          :style="{ width: '40px', height: '40px', fontSize: '18px', borderRadius: 'var(--radius-full)' }"
+          icon-only
+          :title="captureHint"
+          :aria-label="captureHint"
+          :loading="preparing || actionPending"
+          :disabled="!configured || preparing || actionPending || deviceMenuBusy"
+          @click="toggleFromControls()"
+        >
+          <template #icon>
+            <QuickSnipCaptureIcon :screenshot="mode === 'screenshot'" />
+          </template>
+        </Button>
       </div>
     </section>
   </main>
 </template>
-
 <style scoped src="./quick-snip-crop-bar.css"></style>

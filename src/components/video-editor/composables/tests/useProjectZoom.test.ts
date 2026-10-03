@@ -9,6 +9,7 @@ import type { ClipComposition } from '~/media/shared/composition-types';
 import type { EditorPreferenceDefaults } from '../editor-default-types';
 import { normalizeEditorPreferenceDefaults } from '../editor-defaults';
 import { useProjectZoom } from '../useProjectZoom';
+import type { RecordingZoomMode } from '~/api/types/recording-zoom';
 
 const zoom = (id: string, mode: ZoomElement['mode'] = 'manual', sessionId = 'session'): ZoomElement => ({
   id,
@@ -94,14 +95,17 @@ const create = (
   initialData: ProjectEditorData | null = data(),
   duration = 5_000,
   defaults: EditorPreferenceDefaults = normalizeEditorPreferenceDefaults(undefined),
+  mode: RecordingZoomMode | null = '2d',
 ) => {
   const activeTab = ref('canvas');
   const editorData = ref(initialData);
   const durationMs = ref(duration);
   const editorDefaults = ref(defaults);
   const composition = ref(recordingComposition());
+  const recordingZoomMode = ref(mode);
   return {
-    state: useProjectZoom({ editorData, durationMs, composition, activeTab, editorDefaults }),
+    state: useProjectZoom({ editorData, durationMs, composition, activeTab, editorDefaults, recordingZoomMode }),
+    recordingZoomMode,
     durationMs,
     activeTab,
     editorDefaults,
@@ -114,6 +118,40 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('useProjectZoom', () => {
+  it('keeps OFF recordings without generated zooms but permits explicit regeneration from clicks', () => {
+    const { state } = create(data(), 5000, undefined, 'off');
+    expect(state.canGenerateZooms.value).toBe(true);
+    state.ensureAutomaticZooms();
+    expect(state.zoomElements.value).toEqual([]);
+    state.generateZooms(true);
+    expect(state.zoomElements.value.length).toBeGreaterThan(0);
+    expect(state.zoomElements.value.every((item) => item.enabled && item.projection === '2d')).toBe(true);
+  });
+  it('generates 3D zooms and preserves manual, locked and detached zooms when regenerating', () => {
+    const { state } = create(data(), 5000, undefined, '3d');
+    const preserved = [
+      { ...zoom('manual'), startMs: 0, endMs: 200 },
+      { ...zoom('locked', 'auto'), startMs: 250, endMs: 450, locked: true },
+      { ...zoom('detached', 'auto'), startMs: 500, endMs: 700, linkedClipId: null },
+    ];
+    state.zoomElements.value = preserved;
+    state.generateZooms();
+    expect(state.zoomElements.value).toEqual(expect.arrayContaining(preserved));
+    const generated = state.zoomElements.value.filter((item) => !preserved.some((saved) => saved.id === item.id));
+    expect(generated.length).toBeGreaterThan(0);
+    expect(generated.every((item) => item.enabled && item.projection === '3d')).toBe(true);
+  });
+  it('waits for preferences before generating and does not offer regeneration without click data', () => {
+    const { state, recordingZoomMode } = create(data(), 5000, undefined, null);
+    state.ensureAutomaticZooms();
+    expect(state.zoomElements.value).toEqual([]);
+    recordingZoomMode.value = '3d';
+    state.ensureAutomaticZooms();
+    expect(state.zoomElements.value[0].projection).toBe('3d');
+    const empty = data();
+    empty.cursor.telemetry = [];
+    expect(create(empty).state.canGenerateZooms.value).toBe(false);
+  });
   it('derives selection and generation capabilities from editor data', () => {
     const { state } = create(null);
     expect(state.canGenerateZooms.value).toBe(false);

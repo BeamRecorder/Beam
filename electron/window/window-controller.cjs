@@ -315,6 +315,13 @@ class WindowController {
 
   setVisible(visible) {
     if (this.window.isDestroyed()) return false;
+    if (visible && this.rendererLifecycle?.isSuspended()) {
+      void this.rendererLifecycle
+        .resume()
+        .then(() => this.setVisible(true))
+        .catch((error) => console.error('[HUD wake]', error));
+      return false;
+    }
     if (visible) {
       this.hiddenByController = false;
       if (this.mode === 'hud') this.hudOverInteractive = false;

@@ -16,7 +16,7 @@ export function useQuickSnipDeviceMenu(controls: QuickSnipDeviceControls) {
   const keys = { microphone: 'micId', camera: 'cameraId', systemAudio: 'systemAudioMode' } as const;
   const off = { microphone: 'no-audio', camera: 'off', systemAudio: 'off' } as const;
 
-  const chooseDevice = async (kind: QuickSnipDeviceKind, position?: QuickSnipDeviceMenu['position']) => {
+  const chooseDevice = async (kind: QuickSnipDeviceKind, position: QuickSnipDeviceMenu['position']) => {
     if (controls.disabled() || !controls.configuration.value) return;
     const generation = controls.generation();
     controls.busy.value = true;
@@ -46,7 +46,7 @@ export function useQuickSnipDeviceMenu(controls: QuickSnipDeviceControls) {
         kind,
         options,
         selectedId,
-        ...(position && { position }),
+        position,
       });
       if (selected === null || generation !== controls.generation() || !controls.configuration.value) return;
       if (!options.some((option) => option.id === selected)) throw new Error('Unknown recording device.');
@@ -67,7 +67,8 @@ export function useQuickSnipDeviceMenu(controls: QuickSnipDeviceControls) {
     if (event.key !== 'ContextMenu' && !(event.shiftKey && event.key === 'F10')) return;
     event.preventDefault();
     const bounds = (event.currentTarget as HTMLElement | null)?.getBoundingClientRect();
-    return chooseDevice(kind, bounds ? { x: Math.round(bounds.left), y: Math.round(bounds.bottom) } : undefined);
+    if (!bounds) return;
+    return chooseDevice(kind, { x: Math.round(bounds.left + bounds.width / 2), y: Math.round(bounds.bottom) });
   };
   return { chooseDevice, onDeviceKeydown };
 }

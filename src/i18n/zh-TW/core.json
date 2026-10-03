@@ -521,7 +521,9 @@
     "microphone": "麥克風",
     "teleprompter": "提詞器",
     "screenshotDescription": "選擇要擷取的螢幕、區域或視窗。",
-    "back": "返回"
+    "back": "返回",
+    "hideHud": "隱藏 Beam",
+    "hideQuickSnip": "隱藏 Quick Snip"
   },
   "EditorPreparingHud": {
     "title": "正在開啟編輯器",
@@ -930,7 +932,10 @@
     "instant": "即時",
     "instantDescription": "錄製並自動匯出套用樣式的影片。",
     "deviceHint": "{device} — 按右鍵選擇來源",
-    "defaultSystemAudio": "預設系統輸出"
+    "defaultSystemAudio": "預設系統輸出",
+    "video": "影片",
+    "image": "圖片",
+    "zoom": "縮放"
   },
   "ScreenshotEditor": {
     "tools": "工具",

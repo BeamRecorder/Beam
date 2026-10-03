@@ -4,7 +4,7 @@ const { placeCropBar, restoreWindowPosition, saveWindowPosition } = require('./q
 const { createCommittedWindowPosition } = require('../window/committed-window-position.cjs');
 const { RECORDER_SIZE, bottomCenterRecorder } = require('../window/recorder-layout.cjs');
 
-const BAR_SIZE = { width: 480, height: 132 };
+const BAR_SIZE = { width: 616, height: 76 };
 
 function createQuickSnipWindow({
   BrowserWindow,
@@ -107,6 +107,7 @@ function createQuickSnipWindow({
       show: false,
       hasShadow: false,
       icon: appIconPath,
+      ...(platform === 'darwin' ? { vibrancy: 'under-window', visualEffectState: 'active' } : {}),
       webPreferences: {
         preload: path.join(applicationRoot, 'electron/preload.cjs'),
         nodeIntegration: false,
@@ -116,6 +117,8 @@ function createQuickSnipWindow({
       },
     });
     window.setContentProtection(true);
+    window.on('system-context-menu', (event) => event.preventDefault());
+    if (platform === 'win32') window.setBackgroundMaterial('acrylic');
     window.setAlwaysOnTop(true, 'screen-saver');
     const target = window;
     positionTracker = createCommittedWindowPosition({
@@ -183,7 +186,7 @@ function createQuickSnipWindow({
       if (saved) {
         baseBounds = saved;
         setNativeBounds(saved);
-      } else if (configuration.screenKind === 'window' || configuration.region == null) {
+      } else {
         const area = display.workArea;
         baseBounds = {
           ...BAR_SIZE,
@@ -191,8 +194,6 @@ function createQuickSnipWindow({
           y: Math.max(area.y, area.y + area.height - BAR_SIZE.height - 16),
         };
         setNativeBounds(baseBounds);
-      } else {
-        placeForRegion(configuration.region, display);
       }
       selectionBounds = baseBounds;
       flushReady();
@@ -260,6 +261,7 @@ function createQuickSnipWindow({
     owns(sender) {
       return Boolean(window && !window.isDestroyed() && sender === window.webContents);
     },
+    nativeWindow: () => window,
     nativeHandle() {
       if (!window || window.isDestroyed()) return null;
       return window.getNativeWindowHandle().toString('hex');

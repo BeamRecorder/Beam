@@ -204,7 +204,9 @@ function createScreenRegionOverlayWindow({
         const bounds = resolveSelectionBounds(options, platform, screen, parentWindow);
         ensureWindow(bounds);
         const preview =
-          options.context !== 'quick-snip' && selectionPreview ? await selectionPreview.prepare(bounds) : {};
+          (options.context !== 'quick-snip' || options.drawOnly === true) && selectionPreview
+            ? await selectionPreview.prepare(bounds)
+            : {};
         if (pending !== request) {
           await selectionPreview?.cancel();
           return await result;
@@ -213,6 +215,7 @@ function createScreenRegionOverlayWindow({
           {
             context: options.context === 'quick-snip' ? 'quick-snip' : 'default',
             captureMode: options.captureMode,
+            drawOnly: options.drawOnly === true,
             region: finiteRegion(options.region),
             bounds,
             ...preview,

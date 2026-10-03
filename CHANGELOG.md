@@ -9,6 +9,8 @@ User-facing changes to Beam are documented in this file.
 - Screenshot layers can be renamed by single-clicking their title in the left inspector header or double-clicking their Composition label (or pressing F2), with saved names, undo/redo and copy/paste support.
 - Screenshot shows a translated Recenter view button when the preview is moved or zoomed too far, matching the video editor.
 - `bun run dev` now starts Vite and Electron together, with automatic ports and persistent Electron profiles isolated per worktree; `--session <name>` supports additional parallel sessions in the same worktree while retaining the usual shared project library.
+- Recording settings share a saved Off/2D/3D automatic zoom preference, defaulting to 2D. Recordings with click data can regenerate automatic zoom positions after confirmation in all 15 languages, preserving manual, locked and detached zooms.
+- Added 11 macOS Golden Gate wallpapers in WebP format to the Studio and Screenshot background library, including light, dark, day, evening, sunset, night, 4K and 5K variants.
 - Double-clicking empty Studio canvas space opens the grouped Add menu, while double-clicking clips still opens text editing or cropping.
 - Video editor Accessibility settings can require double-clicks to add zooms, captions and elements from empty timeline tracks, preventing accidental additions.
 - Recorder and region settings can record the real system cursor on Windows, macOS and Linux while keeping automatic zooms. These recordings start with Beam's custom cursor overlay disabled; a toggle in the Cursor header can enable it again, and the choice is saved with the project and used for exports.
@@ -24,10 +26,16 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Quick Snip uses neutral mode/source choices and one fixed circular capture button, with smooth device/icon transitions; source selection opens only when Capture is pressed, source tabs remain responsive, and empty toolbar space supports native dragging.
+- Tray Quick Snip is separate from Show/Hide Beam. Quick Snip loads screenshot effects only after capture. Hidden idle Beam releases its HUD and auxiliary renderers; completed or canceled Quick Snip releases its toolbar, menus and device previews.
+- Startup temporary audio cleanup scans project folders directly, avoiding loading project timelines and recording data before Beam opens.
+- Project pickers load their first catalogue faster by reading each video project once per request. Missing video thumbnails render directly at preview size rather than allocating full-resolution canvases.
+- Project pickers use a persistent lightweight index and automatically load batches as you scroll, with search and Select all covering the entire library. Catalogue work runs outside the main thread and releases its worker when idle.
 - Video and screenshot project pickers retain their cards between openings while refreshing the catalogue, reveal projects and decoded images smoothly, and generate up to two visible video thumbnails concurrently.
 - Screenshot's lighter editing dock includes undo/redo, while dimensions, fullscreen and Settings live in the topbar. The dock, Composition and topbar share subtle frosted surfaces; the preview supports wheel zoom and middle-button or Space-drag panning without changing exports.
 - Screenshot editing uses a centered floating tool dock and a contextual inspector on the left, consistent with the video editor. A visible Properties toggle smoothly hides and restores the inspector without losing its context, replacing the separate Canvas/Clip/Settings navigation rail.
 - Development launches reuse the configured Cargo target directory and incremental compilation cache across worktrees, while keeping each running instance's native executables separate.
+- Quick Snip opens as a compact, movable single-row toolbar with Video/Image, source and device icons, shared settings with scrollable presets, and an icon-only capture button. Screen/window selection reuses the Recorder chooser; region drawing starts with Start or Enter. Toolbar positions are remembered per display, with native background blur on Windows/macOS and translucency on Linux.
 - Editor settings now use clear categories, consistent option typography and aligned category icons. Update actions sit together with a shorter Changelog label; About groups community links and system information, and developer tools no longer sit inside nested boxes.
 - Recorder and editor settings share clearer Light/Dark/System previews, with brighter dark previews and one sliding selection indicator instead of an extra orange checkmark. The redundant language description is removed and Theme replaces Theme Mode.
 - Theme Advanced contains colors and style. Scaling keeps the global UI scale visible and puts per-area overrides behind its own Advanced button.
@@ -72,6 +80,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Quick Snip settings stay attached to their trigger on every opening, close on a second cog press, animate from the cog, prepare while the toolbar is active, and use a light shadow without horizontal or duplicate Select scrollbars. Device choices use Beam menus instead of native context menus.
+- Quick Snip settings open on the development session's selected port, including when other Beam instances already use the default port.
 - Screenshot exports move rendering off the interface thread, avoid repeated image decoding and oversized working rasters, and reuse unchanged results for repeated saves or copies with a bounded cache. Large Composition lists no longer rebuild every row when export starts or finishes.
 - Startup skeletons follow each editor's actual workspace, scaled inspector and controls: Screenshot has its editing dock and Composition instead of a video timeline, while Studio preserves the saved timeline height. Screenshot keeps a correctly sized placeholder until its first canvas paint.
 - Theme previews keep proportional miniature layouts and a readable maximum width in recorder settings, including maximized windows and compact editor inspectors.

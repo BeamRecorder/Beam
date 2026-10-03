@@ -27,6 +27,7 @@ import ProjectFeatureBadges from '../projects/ProjectFeatureBadges.vue';
 import ProjectModeIcon from './ProjectModeIcon.vue';
 import ProjectTitle from './ProjectTitle.vue';
 import ProjectPreviewImage from './ProjectPreviewImage.vue';
+import ProjectCatalogError from './ProjectCatalogError.vue';
 import { useProjectPicker } from './useProjectPicker';
 import type { ProjectPickerProps, ProjectPickerEvents } from './project-picker-types';
 const props = withDefaults(defineProps<Partial<ProjectPickerProps>>(), {
@@ -49,6 +50,9 @@ const {
   isDeletingBatch,
   isAllSelected,
   isSomeSelected,
+  isSelectingAll,
+  loadMoreError,
+  loadMore,
   toggleSelectionMode,
   cancelSelectionMode,
   toggleBatchSelect,
@@ -174,6 +178,7 @@ defineExpose({ refresh: loadProjects, invalidate });
               size="sm"
               :model-value="isAllSelected"
               :indeterminate="isSomeSelected"
+              :disabled="isSelectingAll"
               :label="
                 selectedBatchIds.size > 0
                   ? `${selectedBatchIds.size} ${selectedBatchIds.size === 1 ? t('selected') : t('selected')}`
@@ -190,7 +195,7 @@ defineExpose({ refresh: loadProjects, invalidate });
               variant="danger"
               size="xs"
               :icon="Trash2"
-              :disabled="selectedBatchIds.size === 0"
+              :disabled="selectedBatchIds.size === 0 || isSelectingAll"
               :loading="isDeletingBatch"
               :tooltip="t('delete')"
               @click="handleDeleteBatch"
@@ -205,6 +210,7 @@ defineExpose({ refresh: loadProjects, invalidate });
           <Input
             :ref="(element) => (searchInputRef = element as InstanceType<typeof Input> | null)"
             v-model="searchQuery"
+            :maxlength="200"
             size="sm"
             class="project-search-input"
             :placeholder="t('searchPlaceholder')"
@@ -249,7 +255,7 @@ defineExpose({ refresh: loadProjects, invalidate });
           <Button variant="link" size="sm" @click="loadProjects">{{ t('tryAgain') }}</Button>
         </div>
 
-        <div v-else-if="projects.length === 0" class="project-state">
+        <div v-else-if="projects.length === 0 && !searchQuery.trim()" class="project-state">
           <Film class="empty-icon" />
           <p>{{ t('noProjects') }}</p>
           <span>{{ t('recordDemoFirst') }}</span>
@@ -471,6 +477,7 @@ defineExpose({ refresh: loadProjects, invalidate });
               </div>
             </div>
           </div>
+          <ProjectCatalogError v-if="loadMoreError" :message="loadMoreError" @retry="loadMore" />
         </div>
       </div>
     </div>

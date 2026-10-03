@@ -24,7 +24,7 @@ test('packaged source-picker ownership ignores the development origin', () => {
   assert.equal(isHudSourcePickerOwner('invalid', '/beam', false, environment), false);
 });
 
-function fixture({ platform = 'win32', isPackaged = false, accepting = true } = {}) {
+function fixture({ platform = 'win32', isPackaged = false, accepting = true, startPicker } = {}) {
   const handlers = new Map();
   const ipcMain = new EventEmitter();
   const app = new EventEmitter();
@@ -35,7 +35,7 @@ function fixture({ platform = 'win32', isPackaged = false, accepting = true } = 
   const manager = {
     open: (kind) => {
       calls.push(['open', kind]);
-      return Promise.resolve(null);
+      return startPicker ? startPicker(kind) : Promise.resolve(null);
     },
     ownsChooser: (sender) => sender === chooser,
     action: (action) => {
@@ -53,15 +53,23 @@ function fixture({ platform = 'win32', isPackaged = false, accepting = true } = 
     if (request === './source-picker-controller.cjs') return { createSourcePickerController: () => manager };
     return originalLoad.call(this, request, parent, isMain);
   };
+  let api;
   try {
     const { registerSourcePickerIpc } = require(file);
-    registerSourcePickerIpc({
+    api = registerSourcePickerIpc({
       ipcMain,
       app,
       platform,
       applicationRoot: '/beam',
       canAcceptWork: () => accepting,
-      BrowserWindow: { fromWebContents: () => ({ isDestroyed: () => false, getBounds: () => ({}) }) },
+      BrowserWindow: {
+        fromWebContents: (sender) => ({
+          webContents: sender,
+          isDestroyed: () => false,
+          once: () => {},
+          getBounds: () => ({}),
+        }),
+      },
       screen: { getDisplayMatching: () => ({ bounds: { x: 0, y: 0, width: 1920, height: 1080 } }) },
     });
   } finally {
@@ -77,6 +85,7 @@ function fixture({ platform = 'win32', isPackaged = false, accepting = true } = 
     ipcMain,
     chooser,
     owner,
+    api,
     open: (sender = owner) => handlers.get('source-picker:open')({ sender }, 'window'),
   };
 }
@@ -85,15 +94,58 @@ test('only the HUD owner opens selection and only its chooser can send actions',
   const { calls, open, owner, chooser, ipcMain } = fixture();
   assert.throws(() => open({ getURL: () => 'http://localhost:6500/html/editor.html' }), /Only the HUD/);
   await open();
-  assert.throws(() => open({ ...owner }), /Another HUD/);
+  await open({ ...owner });
   ipcMain.emit('source-picker:action', { sender: owner }, { type: 'cancel' });
-  assert.deepEqual(calls, [['open', 'window']]);
+  assert.deepEqual(calls, [
+    ['open', 'window'],
+    ['open', 'window'],
+  ]);
   ipcMain.emit('source-picker:action', { sender: chooser }, { type: 'cancel' });
   ipcMain.emit('source-picker:action', { sender: chooser }, null);
   assert.deepEqual(calls.slice(-2), [
     ['action', { type: 'cancel' }],
     ['error', 'Invalid selection'],
   ]);
+});
+test('keeps a pending chooser owned by one toolbar until selection completes', async () => {
+  let finish;
+  const f = fixture({
+    startPicker: () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  });
+  const pending = f.open();
+  assert.throws(() => f.open({ ...f.owner }), /Another toolbar/);
+  finish(null);
+  await pending;
+  const next = f.open({ ...f.owner });
+  finish(null);
+  await next;
+});
+test('allows the internal Quick Snip toolbar but keeps public source IPC restricted to the HUD', async () => {
+  const f = fixture();
+  const sender = { getURL: () => 'http://localhost:6500/html/index.html?quickSnipCrop=1' };
+  assert.throws(() => f.open(sender), /Only the HUD/);
+  await f.api.openForWindow(
+    { webContents: sender, isDestroyed: () => false, once() {}, getBounds: () => ({}) },
+    'screen',
+  );
+  assert.deepEqual(f.calls, [['open', 'screen']]);
+});
+test('rejects malformed kinds and releases ownership after a synchronous picker failure', async () => {
+  let failing = true;
+  const f = fixture({
+    startPicker: () => {
+      if (failing) throw new Error('renderer unavailable');
+      return Promise.resolve(null);
+    },
+  });
+  const parent = { webContents: f.owner, isDestroyed: () => false, once() {}, getBounds: () => ({}) };
+  assert.throws(() => f.api.openForWindow(parent, 'region'), /Invalid/);
+  assert.throws(() => f.open(), /renderer unavailable/);
+  failing = false;
+  await f.open({ ...f.owner });
 });
 
 test('normal Linux and packaged Linux reject custom selection even with a development environment flag', () => {

@@ -129,11 +129,21 @@
     display: none;
   }
 }
+.region-start-control {
+  bottom: auto;
+  transform: none;
+  padding: 8px;
+}
 .region-controls-enter-active {
-  transition: opacity 180ms ease-out, scale 360ms cubic-bezier(0.2, 1.45, 0.35, 1), translate 360ms cubic-bezier(0.2, 1.45, 0.35, 1);
+  transition:
+    opacity 180ms ease-out,
+    scale 360ms cubic-bezier(0.2, 1.45, 0.35, 1),
+    translate 360ms cubic-bezier(0.2, 1.45, 0.35, 1);
 }
 .region-controls-leave-active {
-  transition: opacity 70ms ease-in, scale 70ms ease-in;
+  transition:
+    opacity 70ms ease-in,
+    scale 70ms ease-in;
   pointer-events: none;
 }
 .region-controls-enter-from,
@@ -144,5 +154,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .region-controls-enter-active,
-  .region-controls-leave-active { transition: none; }
+  .region-controls-leave-active {
+    transition: none;
+  }
 }

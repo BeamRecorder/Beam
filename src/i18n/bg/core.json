@@ -521,7 +521,9 @@
     "microphone": "Микрофон",
     "teleprompter": "Телепромптер",
     "screenshotDescription": "Изберете екран, област или прозорец за заснемане.",
-    "back": "Назад"
+    "back": "Назад",
+    "hideHud": "Скриване на Beam",
+    "hideQuickSnip": "Скриване на Quick Snip"
   },
   "EditorPreparingHud": {
     "title": "Отваряне на редактора",
@@ -930,7 +932,10 @@
     "instant": "Мигновено",
     "instantDescription": "Запишете и автоматично експортирайте стилизирано видео.",
     "deviceHint": "{device} — десен бутон за избор на източник",
-    "defaultSystemAudio": "Системен изход по подразбиране"
+    "defaultSystemAudio": "Системен изход по подразбиране",
+    "video": "Видео",
+    "image": "Изображение",
+    "zoom": "Мащаб"
   },
   "ScreenshotEditor": {
     "tools": "Инструменти",

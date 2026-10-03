@@ -521,7 +521,9 @@
     "microphone": "Micrô",
     "teleprompter": "Máy nhắc chữ",
     "screenshotDescription": "Chọn màn hình, vùng hoặc cửa sổ để ghi lại.",
-    "back": "Quay lại"
+    "back": "Quay lại",
+    "hideHud": "Ẩn Beam",
+    "hideQuickSnip": "Ẩn Quick Snip"
   },
   "EditorPreparingHud": {
     "title": "Đang mở trình chỉnh sửa",
@@ -915,7 +917,10 @@
     "instant": "Tức thì",
     "instantDescription": "Quay và tự động xuất video đã tạo kiểu.",
     "deviceHint": "{device} — nhấp chuột phải để chọn nguồn",
-    "defaultSystemAudio": "Đầu ra hệ thống mặc định"
+    "defaultSystemAudio": "Đầu ra hệ thống mặc định",
+    "video": "Video",
+    "image": "Ảnh",
+    "zoom": "Thu phóng"
   },
   "ScreenshotEditor": {
     "tools": "Công cụ",

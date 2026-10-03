@@ -430,7 +430,7 @@
     "straightPathsDesc": "カメラの動きを水平・垂直・斜めの直線軌道に固定します。",
     "generateAutoZooms": "自動ズームを生成",
     "regenerateAutoZooms": "自動ズームを再生成",
-    "regenerateConfirm": "自動ズームを再生成しますか？自動検出されたズームポイントはすべて置き換えられます。",
+    "regenerateConfirm": "この録画の位置を再計算し、ロックされていない自動ズームを置き換えますか？手動、ロック済み、および切り離されたズームは保持されます。",
     "cancel": "キャンセル",
     "regenerate": "再生成",
     "mode": "モード",

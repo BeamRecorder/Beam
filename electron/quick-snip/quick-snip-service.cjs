@@ -4,6 +4,7 @@ const { fileURLToPath } = require('url');
 const { createFileClipboard } = require('../clipboard/file-clipboard.cjs');
 const { registerQuickSnipDeviceMenu } = require('./quick-snip-device-menu.cjs');
 const { createQuickSnipController } = require('./quick-snip-controller.cjs');
+const { createQuickSnipSettingsWindow } = require('./quick-snip-settings-window.cjs');
 const { createQuickSnipWindow } = require('./quick-snip-window.cjs');
 const { createQuickSnipStatusWindow } = require('./quick-snip-status-window.cjs');
 const { createQuickSnipRenderer } = require('./quick-snip-renderer.cjs');
@@ -23,6 +24,7 @@ function createQuickSnipService(options) {
   let normalRecordingActive = false;
   let deviceMenu = null;
   const cropWindow = createQuickSnipWindow(options);
+  const settingsWindow = createQuickSnipSettingsWindow(options);
   const statusWindow = createQuickSnipStatusWindow(options);
   const renderer = createQuickSnipRenderer({ applicationIpc, statusWindow });
   const fileClipboard = createFileClipboard({ platform, clipboard, ClipboardItem });
@@ -36,6 +38,10 @@ function createQuickSnipService(options) {
   const copyFile = (file) => fileClipboard.copyFile(requireOutputFile(file));
   const controller = createQuickSnipController({
     platform,
+    developmentSources: !options.isPackaged && process.env.DEV_CROSSPLATFORM === '1',
+    selectSource: options.selectSource,
+    cancelSourceSelection: options.cancelSourceSelection,
+    resolveDisplayForBounds: (bounds) => screen.getDisplayMatching(bounds),
     userPaths,
     preferencesStore: options.preferencesStore,
     presetStore: options.presetStore,
@@ -76,18 +82,60 @@ function createQuickSnipService(options) {
     },
     tray: { setQuickSnipState: (state) => options.getTrayManager()?.setQuickSnipState(state) },
     onStateChanged: (state) => {
-      if (state.state !== 'selecting') deviceMenu?.close();
+      if (state.state !== 'selecting') {
+        deviceMenu?.close();
+        settingsWindow.destroy();
+      } else if (state.job) settingsWindow.update(state.job);
       for (const target of BrowserWindow.getAllWindows()) target.webContents.send('quick-snip:state-changed', state);
     },
   });
-  deviceMenu = registerQuickSnipDeviceMenu({ applicationIpc, BrowserWindow, cropWindow, controller });
+  deviceMenu = registerQuickSnipDeviceMenu({ applicationIpc, BrowserWindow, cropWindow, controller, settingsWindow });
   options.regionOverlay.setRegionChangeListener?.((region, bounds) => controller.updateSelectionRegion(region, bounds));
   applicationIpc.handle('quick-snip:from-hud', (_event, options) => controller.fromHud(options));
   applicationIpc.handle('quick-snip:toggle', () => controller.toggle());
   applicationIpc.on('quick-snip:status-ready', (event) => statusWindow.rendererReady(event.sender));
-  applicationIpc.on('quick-snip:crop-ready', (event) => cropWindow.rendererReady(event.sender));
+  applicationIpc.on('quick-snip:crop-ready', (event) => {
+    cropWindow.rendererReady(event.sender);
+    if (cropWindow.owns(event.sender) && controller.state().state === 'selecting')
+      settingsWindow.prepare(cropWindow.nativeWindow(), controller.state().job);
+    if (cropWindow.owns(event.sender) && ['idle', 'completed', 'failed', 'canceled'].includes(controller.state().state))
+      cropWindow.destroy();
+  });
+  applicationIpc.on('quick-snip:crop-idle', (event) => {
+    if (
+      cropWindow.owns(event.sender) &&
+      ['idle', 'completed', 'failed', 'canceled'].includes(controller.state().state)
+    ) {
+      settingsWindow.destroy();
+      cropWindow.destroy();
+    }
+  });
   applicationIpc.handle('quick-snip:start', (_event, overrides) => controller.start(overrides));
-  applicationIpc.handle('quick-snip:configure', (_event, overrides) => controller.configure(overrides));
+  applicationIpc.handle('quick-snip:configure', (event, overrides) => {
+    if (!cropWindow.owns(event.sender) && !settingsWindow.owns(event.sender))
+      throw new Error('Quick Snip settings sender is not authorized.');
+    return controller.configure(overrides);
+  });
+  applicationIpc.handle('quick-snip:select-source', (event, target) => {
+    if (!cropWindow.owns(event.sender)) throw new Error('Quick Snip source sender is not authorized.');
+    settingsWindow.hide();
+    return controller.chooseSource(target);
+  });
+  applicationIpc.handle('quick-snip:settings', (event, anchor) => {
+    if (!cropWindow.owns(event.sender) || controller.state().state !== 'selecting')
+      throw new Error('Quick Snip settings sender is not authorized.');
+    settingsWindow.toggle(cropWindow.nativeWindow(), controller.state().job, anchor);
+  });
+  applicationIpc.on('quick-snip:device-select', (event, id) => {
+    if (settingsWindow.owns(event.sender)) settingsWindow.selectDevice(event.sender, id);
+  });
+  applicationIpc.on('quick-snip:settings-ready', (event) => settingsWindow.ready(event.sender));
+  applicationIpc.on('quick-snip:settings-fit', (event, height) => settingsWindow.fit(event.sender, height));
+  applicationIpc.on('quick-snip:settings-dismiss', (event) => {
+    if (!settingsWindow.owns(event.sender) && !cropWindow.owns(event.sender)) return;
+    settingsWindow.dismiss();
+    cropWindow.nativeWindow()?.focus();
+  });
   applicationIpc.handle('quick-snip:stop', () => controller.stop());
   applicationIpc.handle('quick-snip:cancel', () => controller.cancel());
   applicationIpc.handle('quick-snip:state', (event) =>
@@ -132,9 +180,14 @@ function createQuickSnipService(options) {
     if (target.isDestroyed() || target.isVisible()) throw new Error('Unable to hide the Quick Snip bar for capture.');
   };
   return {
+    destroy() {
+      settingsWindow.destroy();
+      cropWindow.destroy();
+    },
     prepareScreenshot,
     controller,
     cropWindow,
+    settingsWindow,
     statusWindow,
     exportDestination: renderer.destination,
     isNormalRecordingActive: () => normalRecordingActive,

@@ -112,7 +112,7 @@ test('keeps Quick Snip first, updates its state label, invokes its callback and 
     assert.deepEqual(calls, ['quick-snip']);
 
     manager.setQuickSnipState('selecting');
-    assert.equal(latestTemplate[0].label, 'Start Quick Snip');
+    assert.equal(latestTemplate[0].label, 'Hide Quick Snip');
     manager.setQuickSnipState('recording');
     assert.equal(latestTemplate[0].label, 'Stop Quick Snip');
 

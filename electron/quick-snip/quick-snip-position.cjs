@@ -63,8 +63,16 @@ function saveWindowPosition(preferencesStore, key, display, position) {
   const positions = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
   const next = { x: Math.round(position.x), y: Math.round(position.y) };
   const previous = positions[String(display.id)];
-  if (previous?.x === next.x && previous?.y === next.y) return;
-  preferencesStore.patch({ extras: { [key]: { ...positions, [String(display.id)]: next } } });
+  const toolbar = key === 'quickSnipBarPositions';
+  const displayId = String(display.id);
+  const rememberedDisplay = preferencesStore.read()?.extras?.quickSnipBarDisplayId;
+  if (previous?.x === next.x && previous?.y === next.y && (!toolbar || rememberedDisplay === displayId)) return;
+  preferencesStore.patch({
+    extras: {
+      [key]: { ...positions, [displayId]: next },
+      ...(toolbar ? { quickSnipBarDisplayId: displayId } : {}),
+    },
+  });
 }
 
 function statusPillPosition(bounds, popoverSide) {

@@ -80,13 +80,14 @@ afterEach(() => {
   while (wrappers.length) wrappers.pop()!.unmount();
 });
 
-describe('Quick Snip native device choices', () => {
+describe('Quick Snip device choices', () => {
   it('selects and enables a camera, preserving the other device choices and synchronizing once', async () => {
     const f = fixture();
     mocks.choose.mockResolvedValue('camera:chromium:usb');
-    await f.menu.chooseDevice('camera');
+    await f.menu.chooseDevice('camera', { x: 50, y: 48 });
     expect(mocks.choose).toHaveBeenCalledWith({
       kind: 'camera',
+      position: { x: 50, y: 48 },
       selectedId: 'off',
       options: [
         { id: 'camera:chromium:usb', label: 'USB camera' },
@@ -106,7 +107,7 @@ describe('Quick Snip native device choices', () => {
   it('marks the actual default microphone and can disable it', async () => {
     const f = fixture();
     mocks.choose.mockResolvedValue('no-audio');
-    await f.menu.chooseDevice('microphone');
+    await f.menu.chooseDevice('microphone', { x: 50, y: 48 });
     expect(mocks.choose).toHaveBeenCalledWith(expect.objectContaining({ selectedId: 'microphone:chromium:usb' }));
     expect(f.microphone.value).toBe(false);
     expect(f.configuration.value?.devices.micId).toBe('no-audio');
@@ -116,9 +117,10 @@ describe('Quick Snip native device choices', () => {
   it('offers the native default system output and Off without enumerating microphones or cameras', async () => {
     const f = fixture();
     mocks.choose.mockResolvedValue('on');
-    await f.menu.chooseDevice('systemAudio');
+    await f.menu.chooseDevice('systemAudio', { x: 50, y: 48 });
     expect(mocks.choose).toHaveBeenCalledWith({
       kind: 'systemAudio',
+      position: { x: 50, y: 48 },
       selectedId: 'off',
       options: [
         { id: 'on', label: 'Default system output' },
@@ -133,7 +135,7 @@ describe('Quick Snip native device choices', () => {
 
   it('leaves settings unchanged when a menu is dismissed', async () => {
     const f = fixture();
-    await f.menu.chooseDevice('camera');
+    await f.menu.chooseDevice('camera', { x: 50, y: 48 });
     expect(f.camera.value).toBe(false);
     expect(f.synchronize).not.toHaveBeenCalled();
     expect(f.busy.value).toBe(false);
@@ -147,7 +149,7 @@ describe('Quick Snip native device choices', () => {
         resolve = done;
       }),
     );
-    const choosing = f.menu.chooseDevice('camera');
+    const choosing = f.menu.chooseDevice('camera', { x: 50, y: 48 });
     expect(f.busy.value).toBe(true);
     f.replace();
     resolve([]);
@@ -165,9 +167,9 @@ describe('Quick Snip native device choices', () => {
         resolve = done;
       }),
     );
-    const choosing = f.menu.chooseDevice('camera');
+    const choosing = f.menu.chooseDevice('camera', { x: 50, y: 48 });
     await flushPromises();
-    await f.menu.chooseDevice('microphone');
+    await f.menu.chooseDevice('microphone', { x: 50, y: 48 });
     expect(mocks.microphones).not.toHaveBeenCalled();
     f.replace();
     resolve('camera:chromium:usb');
@@ -179,9 +181,10 @@ describe('Quick Snip native device choices', () => {
   it('allows turning the microphone off when no devices are connected', async () => {
     const f = fixture();
     mocks.microphones.mockResolvedValue([]);
-    await f.menu.chooseDevice('microphone');
+    await f.menu.chooseDevice('microphone', { x: 50, y: 48 });
     expect(mocks.choose).toHaveBeenCalledWith({
       kind: 'microphone',
+      position: { x: 50, y: 48 },
       selectedId: '',
       options: [{ id: 'no-audio', label: 'No Audio' }],
     });
@@ -190,7 +193,7 @@ describe('Quick Snip native device choices', () => {
   it('does not discover or display devices when changes are disabled', async () => {
     const f = fixture();
     f.disable();
-    await f.menu.chooseDevice('camera');
+    await f.menu.chooseDevice('camera', { x: 50, y: 48 });
     expect(mocks.cameras).not.toHaveBeenCalled();
     expect(mocks.choose).not.toHaveBeenCalled();
   });
@@ -198,10 +201,10 @@ describe('Quick Snip native device choices', () => {
   it('reports discovery and menu failures, clearing pending state for another attempt', async () => {
     const f = fixture();
     mocks.cameras.mockRejectedValueOnce(new Error('Disconnected'));
-    await expect(f.menu.chooseDevice('camera')).rejects.toThrow('Disconnected');
+    await expect(f.menu.chooseDevice('camera', { x: 50, y: 48 })).rejects.toThrow('Disconnected');
     expect(f.busy.value).toBe(false);
     mocks.choose.mockRejectedValueOnce(new Error('Window closed'));
-    await expect(f.menu.chooseDevice('camera')).rejects.toThrow('Window closed');
+    await expect(f.menu.chooseDevice('camera', { x: 50, y: 48 })).rejects.toThrow('Window closed');
     expect(f.busy.value).toBe(false);
     expect(f.synchronize).not.toHaveBeenCalled();
   });
@@ -209,6 +212,7 @@ describe('Quick Snip native device choices', () => {
   it('supports the keyboard context-menu shortcut and ignores ordinary typing', async () => {
     const f = fixture();
     const keyboard = new KeyboardEvent('keydown', { key: 'F10', shiftKey: true, cancelable: true });
+    Object.defineProperty(keyboard, 'currentTarget', { value: document.createElement('button') });
     await f.menu.onDeviceKeydown('camera', keyboard);
     expect(keyboard.defaultPrevented).toBe(true);
     expect(mocks.choose).toHaveBeenCalledOnce();
@@ -219,11 +223,11 @@ describe('Quick Snip native device choices', () => {
   it('anchors the keyboard menu below the focused device button', async () => {
     const f = fixture();
     const button = document.createElement('button');
-    button.getBoundingClientRect = () => ({ left: 40.4, bottom: 112.2 }) as DOMRect;
+    button.getBoundingClientRect = () => ({ left: 40.4, width: 32, bottom: 112.2 }) as DOMRect;
     const event = new KeyboardEvent('keydown', { key: 'ContextMenu' });
     Object.defineProperty(event, 'currentTarget', { value: button });
     await f.menu.onDeviceKeydown('microphone', event);
-    expect(mocks.choose).toHaveBeenCalledWith(expect.objectContaining({ position: { x: 40, y: 112 } }));
+    expect(mocks.choose).toHaveBeenCalledWith(expect.objectContaining({ position: { x: 56, y: 112 } }));
   });
 
   it('blocks another selection until the chosen device has finished synchronizing', async () => {
@@ -236,10 +240,10 @@ describe('Quick Snip native device choices', () => {
           resolve = done;
         }),
     );
-    const choosing = f.menu.chooseDevice('camera');
+    const choosing = f.menu.chooseDevice('camera', { x: 50, y: 48 });
     await flushPromises();
     expect(f.busy.value).toBe(true);
-    await f.menu.chooseDevice('microphone');
+    await f.menu.chooseDevice('microphone', { x: 50, y: 48 });
     expect(mocks.microphones).not.toHaveBeenCalled();
     resolve();
     await choosing;

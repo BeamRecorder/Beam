@@ -1,16 +1,25 @@
 const { Tray, Menu, nativeImage, app, ipcMain } = require('electron');
 const path = require('path');
 
-function createTrayManager({ applicationRoot, getWindow, getController, onShowHud = null, onQuickSnip = null }) {
+function createTrayManager({
+  applicationRoot,
+  getWindow,
+  getController,
+  onShowHud = null,
+  onHideHud = null,
+  onQuickSnip = null,
+}) {
   let tray = null;
   let labels = {
     openHud: 'Open HUD',
+    hideHud: 'Hide Beam',
     stopRecording: 'Stop recording',
     quit: 'Quit Beam',
     tooltip: 'Beam',
     quickSnip: 'Quick Snip',
     startQuickSnip: 'Start Quick Snip',
     stopQuickSnip: 'Stop Quick Snip',
+    hideQuickSnip: 'Hide Quick Snip',
   };
   let recording = false;
   let quickSnipState = 'idle';
@@ -35,15 +44,20 @@ function createTrayManager({ applicationRoot, getWindow, getController, onShowHu
           quickSnipState === 'recording'
             ? labels.stopQuickSnip
             : quickSnipState === 'selecting'
-              ? labels.startQuickSnip
+              ? labels.hideQuickSnip
               : labels.quickSnip,
         enabled: !recording,
         click: () => onQuickSnip?.(),
       },
       { type: 'separator' },
       {
-        label: labels.openHud,
-        click: () => showHud(),
+        label: getWindow()?.isVisible?.() ? labels.hideHud : labels.openHud,
+        click: () => {
+          if (getWindow()?.isVisible?.()) {
+            if (onHideHud) onHideHud();
+            else getController()?.setVisible(false);
+          } else showHud();
+        },
       },
       ...(recording
         ? [
@@ -68,6 +82,9 @@ function createTrayManager({ applicationRoot, getWindow, getController, onShowHu
 
   const updateMenu = (newLabels = {}) => {
     if (typeof newLabels.openHud === 'string' && newLabels.openHud) labels.openHud = newLabels.openHud;
+    if (typeof newLabels.hideHud === 'string' && newLabels.hideHud) labels.hideHud = newLabels.hideHud;
+    if (typeof newLabels.hideQuickSnip === 'string' && newLabels.hideQuickSnip)
+      labels.hideQuickSnip = newLabels.hideQuickSnip;
     if (typeof newLabels.stopRecording === 'string' && newLabels.stopRecording)
       labels.stopRecording = newLabels.stopRecording;
     if (typeof newLabels.quit === 'string' && newLabels.quit) labels.quit = newLabels.quit;

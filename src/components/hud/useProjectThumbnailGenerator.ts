@@ -14,7 +14,7 @@ const thumbnailTimestamp = async (track: InputVideoTrack) => {
 const renderThumbnail = async (track: InputVideoTrack) => {
   const { CanvasSink } = await import('mediabunny');
   const timestamp = await thumbnailTimestamp(track);
-  const sink = new CanvasSink(track);
+  const sink = new CanvasSink(track, { width: 240, poolSize: 1 });
   for await (const sample of sink.canvasesAtTimestamps([timestamp])) {
     const source = sample?.canvas;
     if (!source) return null;

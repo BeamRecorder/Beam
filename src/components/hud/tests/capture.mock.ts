@@ -1,5 +1,9 @@
 import { vi } from 'vitest';
 import type { ScreenRegionSelectionOptions, ScreenRegionSelectionResult } from '../../../api/types/screen-region';
+import type { ProjectCatalogPage, ProjectCatalogRequest } from '../../../api/types/project-catalog';
+import type { CaptureProject } from '../../../api/types/capture-session';
+
+const listProjects = vi.fn();
 
 export const captureMock = {
   openHudSettings: vi.fn().mockResolvedValue(true),
@@ -51,7 +55,13 @@ export const captureMock = {
   close: vi.fn(),
   quit: vi.fn(),
   minimize: vi.fn(),
-  listProjects: vi.fn(),
+  listProjects,
+  listProjectsPage: vi.fn<(request?: ProjectCatalogRequest) => Promise<ProjectCatalogPage>>(async (request = {}) => {
+    const projects = (await listProjects()) as CaptureProject[];
+    const query = request.query?.trim().toLowerCase() ?? '';
+    const matches = projects.filter((project) => project.name.toLowerCase().includes(query));
+    return { projects: matches, total: matches.length, nextCursor: null };
+  }),
   createProject: vi.fn(),
   renameProject: vi.fn(),
   deleteProject: vi.fn(),

@@ -3,7 +3,8 @@ import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Switch from '~/ui/switch/Switch.vue';
-import Popover from '~/ui/popover/Popover.vue';
+import ConfirmDialog from '~/ui/dialog/ConfirmDialog.vue';
+import { ref, watch } from 'vue';
 import ZoomClickEmptyState from '~/components/video-editor/properties/zoom/ZoomClickEmptyState.vue';
 import ZoomAutoFollowControls from '~/components/video-editor/properties/zoom/ZoomAutoFollowControls.vue';
 import ZoomTiltControls from './ZoomTiltControls.vue';
@@ -76,6 +77,18 @@ const setProjection = (projection: '2d' | '3d') => {
   });
 };
 
+const confirmingGeneration = ref(false);
+const confirmGeneration = () => {
+  confirmingGeneration.value = false;
+  if (props.canGenerate) emit('generate');
+};
+watch(
+  () => props.canGenerate,
+  (available) => {
+    if (!available) confirmingGeneration.value = false;
+  },
+);
+
 const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
   emit('update:motionBlur', { ...props.motionBlur, ...patch });
 };
@@ -86,41 +99,24 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
     <!-- Top Action Header -->
     <div class="header-action">
       <Button
-        v-if="!hasAutomaticZooms"
-        variant="secondary"
+        variant="outline"
         size="sm"
         :icon="Sparkles"
         :disabled="!canGenerate"
         block
-        @click="emit('generate')"
+        @click="confirmingGeneration = true"
       >
-        {{ t('generateAutoZooms') }}
+        {{ t(hasAutomaticZooms ? 'regenerateAutoZooms' : 'generateAutoZooms') }}
       </Button>
-      <Popover v-else block>
-        <template #trigger>
-          <Button variant="outline" size="sm" :icon="Sparkles" :disabled="!canGenerate" block>
-            {{ t('regenerateAutoZooms') }}
-          </Button>
-        </template>
-        <template #default="{ close }">
-          <div class="refresh-confirmation">
-            <p>{{ t('regenerateConfirm') }}</p>
-            <div class="refresh-actions">
-              <Button variant="ghost" size="xs" @click="close">{{ t('cancel') }}</Button>
-              <Button
-                variant="danger"
-                size="xs"
-                @click="
-                  emit('generate');
-                  close();
-                "
-              >
-                {{ t('regenerate') }}
-              </Button>
-            </div>
-          </div>
-        </template>
-      </Popover>
+      <ConfirmDialog
+        :is-open="confirmingGeneration"
+        :title="t(hasAutomaticZooms ? 'regenerateAutoZooms' : 'generateAutoZooms')"
+        :description="t('regenerateConfirm')"
+        :confirm-label="t('regenerate')"
+        :cancel-label="t('cancel')"
+        @close="confirmingGeneration = false"
+        @confirm="confirmGeneration"
+      />
     </div>
 
     <ZoomAutoFollowControls :model-value="autoFollow" @update:model-value="emit('update:autoFollow', $event)" />
@@ -400,23 +396,5 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
   font-size: 11px;
   color: var(--text-muted);
   line-height: 1.4;
-}
-
-.refresh-confirmation {
-  width: 240px;
-  padding: 10px;
-}
-
-.refresh-confirmation p {
-  margin: 0 0 10px;
-  color: var(--text-secondary);
-  font-size: 11px;
-  line-height: 1.4;
-}
-
-.refresh-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
 }
 </style>

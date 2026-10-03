@@ -70,7 +70,11 @@ describe('ZoomPanel', () => {
     });
     expect(wrapper.find('.empty-state').exists()).toBe(true);
     await wrapper.get('.header-action button').trigger('click');
+    expect(wrapper.emitted('generate')).toBeUndefined();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    (document.body.querySelector('[role="dialog"] .dialog-actions button:last-child') as HTMLButtonElement).click();
     expect(wrapper.emitted('generate')).toHaveLength(1);
+    wrapper.unmount();
   });
 
   it('updates modes and depth, including the clamped slider range', async () => {
@@ -102,7 +106,7 @@ describe('ZoomPanel', () => {
       global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
       attachTo: document.body,
     });
-    await wrapper.find('.popover-trigger').trigger('click');
+    await wrapper.find('.header-action button').trigger('click');
     expect(document.body.textContent).toContain('Regenerate Auto Zooms');
     expect(document.body.textContent).toContain('Cancel');
     wrapper.unmount();

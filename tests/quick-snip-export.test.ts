@@ -105,6 +105,7 @@ const task = (): QuickSnipRenderTask => {
         selectedBackgroundId: null,
         importedBackgrounds: [],
         cursor: {
+          enabled: true,
           selection: { packId: 'builtin:macos', mode: 'automatic', cursorId: null },
           size: 45,
           color: '#000000',
@@ -289,6 +290,19 @@ describe('Quick Snip composition export', () => {
     expect(state.zoom.elements).toHaveLength(1);
     expect(state.zoom.elements[0]).toEqual(expect.objectContaining({ sessionId: 'session', enabled: true }));
     expect(request.snapshot.zooms).toEqual(state.zoom.elements);
+  });
+  it.each(['off', '2d', '3d'] as const)('applies the %s recording preference to exported zooms', (zoomMode) => {
+    const input = task();
+    input.configuration.zoomMode = zoomMode;
+    input.configuration.automaticZoom = zoomMode !== 'off';
+    input.editorData.cursor.available = true;
+    input.editorData.cursor.telemetry = [{ timeMs: 1000, cx: 0.35, cy: 0.45, interactionType: 'click' }];
+    const { state } = quickSnipExportRequest(input, [], []);
+    expect(state.zoom.elements).toHaveLength(1);
+    expect(state.zoom.elements[0]).toMatchObject({
+      enabled: zoomMode !== 'off',
+      projection: zoomMode === '3d' ? '3d' : '2d',
+    });
   });
 
   it('disables automatic zoom while preserving preset canvas, cursor effects and clip appearance', () => {

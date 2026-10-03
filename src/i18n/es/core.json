@@ -521,7 +521,9 @@
     "microphone": "Micrófono",
     "teleprompter": "Teleprompter",
     "screenshotDescription": "Elige una pantalla, región o ventana para capturar.",
-    "back": "Volver"
+    "back": "Volver",
+    "hideHud": "Ocultar Beam",
+    "hideQuickSnip": "Ocultar Quick Snip"
   },
   "EditorPreparingHud": {
     "title": "Abriendo tu editor",
@@ -930,7 +932,10 @@
     "instant": "Instantáneo",
     "instantDescription": "Graba y exporta automáticamente un vídeo con estilo.",
     "deviceHint": "{device} — clic derecho para elegir una fuente",
-    "defaultSystemAudio": "Salida predeterminada del sistema"
+    "defaultSystemAudio": "Salida predeterminada del sistema",
+    "video": "Vídeo",
+    "image": "Imagen",
+    "zoom": "Zoom"
   },
   "ScreenshotEditor": {
     "tools": "Herramientas",

@@ -1,3 +1,5 @@
+import { usePreferencesStore } from '~/stores/preferences';
+import { recordingZoomMode } from '../zoom/recording-zoom-preference';
 import { getCurrentInstance, provide } from 'vue';
 import { customCursorKey } from '../properties/cursor/custom-cursor-context';
 import { provideVideoEditorSearch } from '../search/useVideoEditorSearch';
@@ -67,7 +69,11 @@ export function useVideoEditor(options: {
   // Composition state is available before the asynchronous playback engine has
   // decoded metadata, so it is the authoritative duration for zoom generation.
   const durationMs = computed(() => compositionDurationMs(compositionState.composition.value));
+  const preferences = usePreferencesStore();
   const zoomState = useProjectZoom({
+    recordingZoomMode: computed(() =>
+      preferences.settings ? recordingZoomMode(preferences.settings.extras.recordingZoomMode) : null,
+    ),
     editorData,
     durationMs,
     activeTab,
@@ -207,7 +213,11 @@ export function useVideoEditor(options: {
       initialPlaybackSettled.value = false;
       if (!id) return;
       try {
-        const [initialState] = await Promise.all([capture.getProjectEditorState(id), editorPresets.load(true)]);
+        const [initialState] = await Promise.all([
+          capture.getProjectEditorState(id),
+          editorPresets.load(true),
+          preferences.settings ? Promise.resolve() : preferences.load(),
+        ]);
         if (request !== editorLoad) return;
         await editorState.load(id, initialState);
         if (request !== editorLoad) return;

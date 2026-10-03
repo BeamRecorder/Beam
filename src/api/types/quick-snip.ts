@@ -9,7 +9,7 @@ export interface QuickSnipDeviceMenu {
   kind: QuickSnipDeviceKind;
   selectedId: string;
   options: Array<{ id: string; label: string }>;
-  position?: { x: number; y: number };
+  position: { x: number; y: number };
 }
 
 export type QuickSnipState =
@@ -24,6 +24,9 @@ export type QuickSnipState =
   | 'canceled';
 
 export interface QuickSnipConfiguration {
+  captureTarget?: 'screen' | 'region' | 'window';
+  sourceReady?: boolean;
+  zoomMode?: import('./recording-zoom').RecordingZoomMode;
   mode: QuickSnipMode;
   format: 'mp4' | 'webm';
   name: string;
@@ -80,6 +83,7 @@ export type QuickSnipRenderReport =
   | { id: string; type: 'failed'; error: string };
 
 export interface InstantCaptureOptions {
+  zoomMode?: import('./recording-zoom').RecordingZoomMode;
   countdownSeconds?: number;
   hideTaskbar?: boolean;
   hideDesktopIcons?: boolean;
@@ -90,3 +94,18 @@ export interface InstantCaptureOptions {
   region?: ScreenRegion | null;
   devices?: Record<string, unknown>;
 }
+
+export type QuickSnipOverrides = Partial<
+  Pick<
+    QuickSnipConfiguration,
+    | 'mode'
+    | 'automaticZoom'
+    | 'zoomMode'
+    | 'devices'
+    | 'screenshotAction'
+    | 'countdownSeconds'
+    | 'hideTaskbar'
+    | 'hideDesktopIcons'
+    | 'showRealCursor'
+  >
+>;

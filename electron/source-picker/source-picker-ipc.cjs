@@ -30,20 +30,19 @@ function registerSourcePickerIpc({
   getNativePreview,
   canAcceptWork,
 }) {
-  let manager = null;
-  let owner = null;
+  const managers = new Map();
+  let activeOwner = null;
   const isPackaged = app.isPackaged === true;
   const development = isDevelopmentSourceDataEnabled(isPackaged);
-  ipcMain.handle('source-picker:open', (event, kind) => {
+  const openForWindow = (hudWindow, kind) => {
+    if (!['screen', 'window'].includes(kind)) throw new TypeError('Invalid source picker kind');
     if (!canAcceptWork()) throw new Error('Source selection is unavailable during application shutdown');
-    if (!isHudSourcePickerOwner(event.sender.getURL(), applicationRoot, isPackaged))
-      throw new Error('Only the HUD can select a capture source');
     if (platform === 'linux' && !development) throw new Error('Linux capture selection belongs to the Portal');
-    const hudWindow = BrowserWindow.fromWebContents(event.sender);
-    if (!hudWindow || hudWindow.isDestroyed()) throw new Error('The capture HUD is unavailable');
-    if (manager && owner !== event.sender) throw new Error('Another HUD owns source selection');
+    if (!hudWindow || hudWindow.isDestroyed()) throw new Error('The capture toolbar is unavailable');
+    const owner = hudWindow.webContents;
+    if (activeOwner && activeOwner !== owner) throw new Error('Another toolbar owns source selection');
+    let manager = managers.get(owner);
     if (!manager) {
-      owner = event.sender;
       const provider = development
         ? createDevelopmentSourceProvider(screen.getDisplayMatching(hudWindow.getBounds()).bounds)
         : createNativeSourceProvider({
@@ -63,19 +62,47 @@ function registerSourcePickerIpc({
         platform,
         provider,
       });
+      managers.set(owner, manager);
+      hudWindow.once('closed', () => managers.delete(owner));
     }
-    return manager.open(kind);
+    activeOwner = owner;
+    try {
+      return Promise.resolve(manager.open(kind)).finally(() => {
+        if (activeOwner === owner) activeOwner = null;
+      });
+    } catch (error) {
+      activeOwner = null;
+      throw error;
+    }
+  };
+  ipcMain.handle('source-picker:open', (event, kind) => {
+    if (!isHudSourcePickerOwner(event.sender.getURL(), applicationRoot, isPackaged))
+      throw new Error('Only the HUD can select a capture source');
+    return openForWindow(BrowserWindow.fromWebContents(event.sender), kind);
   });
-  ipcMain.on('source-picker:ready', (event) => manager?.markReady(event.sender));
+  ipcMain.on('source-picker:ready', (event) =>
+    [...managers.values()].forEach((manager) => manager.markReady(event.sender)),
+  );
   ipcMain.on('source-picker:action', (event, action) => {
-    if (!manager?.ownsChooser(event.sender)) return;
+    const manager = [...managers.values()].find((candidate) => candidate.ownsChooser(event.sender));
+    if (!manager) return;
     try {
       manager.action(action);
     } catch (error) {
       manager.reportError(error);
     }
   });
-  app.once('before-quit', () => manager?.destroy());
+  app.once('before-quit', () => {
+    for (const manager of managers.values()) manager.destroy();
+    managers.clear();
+  });
+  return {
+    openForWindow,
+    cancel(owner) {
+      managers.get(owner)?.destroy();
+      managers.delete(owner);
+    },
+  };
 }
 
 module.exports = { registerSourcePickerIpc, isHudSourcePickerOwner };

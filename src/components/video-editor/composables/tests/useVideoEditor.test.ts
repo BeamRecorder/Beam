@@ -37,6 +37,10 @@ const state = vi.hoisted(() => ({
   createCompositionSnapshot: vi.fn(),
 }));
 
+vi.mock('~/stores/preferences', () => ({
+  usePreferencesStore: () => ({ settings: { extras: { recordingZoomMode: '2d' } }, load: vi.fn() }),
+}));
+
 vi.mock('../../../../api/capture', () => ({ capture }));
 vi.mock('~/ui/toast/toastStore', () => ({ useToastStore: () => toast }));
 vi.mock('../useVideoPlayer', async () => {

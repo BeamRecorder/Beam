@@ -184,7 +184,24 @@ contextBridge.exposeInMainWorld(
     },
     quickSnipFromHud: (options) => ipcRenderer.invoke('quick-snip:from-hud', options),
     quickSnipToggle: () => ipcRenderer.invoke('quick-snip:toggle'),
+    selectQuickSnipSource: (target) => ipcRenderer.invoke('quick-snip:select-source', target),
+    toggleQuickSnipSettings: (anchor) => ipcRenderer.invoke('quick-snip:settings', anchor),
+    selectQuickSnipDevice: (id) => ipcRenderer.send('quick-snip:device-select', id),
+    onQuickSnipSettingsVisibility: (listener) => {
+      const callback = (_event, open) => listener(open);
+      ipcRenderer.on('quick-snip:settings-visibility', callback);
+      return () => ipcRenderer.removeListener('quick-snip:settings-visibility', callback);
+    },
+    onQuickSnipSettingsContent: (listener) => {
+      const callback = (_event, content) => listener(content);
+      ipcRenderer.on('quick-snip:settings-content', callback);
+      return () => ipcRenderer.removeListener('quick-snip:settings-content', callback);
+    },
+    dismissQuickSnipSettings: () => ipcRenderer.send('quick-snip:settings-dismiss'),
+    fitQuickSnipSettings: (height) => ipcRenderer.send('quick-snip:settings-fit', height),
+    notifyQuickSnipSettingsReady: () => ipcRenderer.send('quick-snip:settings-ready'),
     notifyQuickSnipCropReady: () => ipcRenderer.send('quick-snip:crop-ready'),
+    notifyQuickSnipCropIdle: () => ipcRenderer.send('quick-snip:crop-idle'),
     quickSnipStart: (overrides = {}) => ipcRenderer.invoke('quick-snip:start', overrides),
     configureQuickSnip: (overrides = {}) => ipcRenderer.invoke('quick-snip:configure', overrides),
     chooseQuickSnipDevice: (request) => ipcRenderer.invoke('quick-snip:choose-device', request),
@@ -270,6 +287,7 @@ contextBridge.exposeInMainWorld(
       return () => ipcRenderer.removeListener('countdown:state', callback);
     },
     listProjects: () => ipcRenderer.invoke('projects:list'),
+    listProjectsPage: (request = {}) => ipcRenderer.invoke('projects:list-page', request),
     getProject: (projectId) => ipcRenderer.invoke('projects:get', { projectId }),
     projectMediaUrl: (source) => ipcRenderer.invoke('projects:media-url', { source }),
     getProjectEditorData: (projectId) => ipcRenderer.invoke('projects:editor-data', { projectId }),

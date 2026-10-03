@@ -132,7 +132,7 @@ function registerCaptureIpc({
     requestNative: requestEngine,
     platform,
   });
-  registerSourcePickerIpc({
+  const sourcePicker = registerSourcePickerIpc({
     ipcMain,
     BrowserWindow,
     screen,
@@ -288,6 +288,7 @@ function registerCaptureIpc({
     return sourcePreviews.get(request);
   });
   ipcMain.handle('screen:get-display-bounds', (_event, displayId) => displayBoundsForId(screen, displayId));
+  return { sourcePicker };
 }
 
 module.exports = { displayBoundsForId, registerCaptureIpc };

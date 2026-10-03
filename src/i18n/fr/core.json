@@ -521,7 +521,9 @@
     "microphone": "Microphone",
     "teleprompter": "Téléprompteur",
     "screenshotDescription": "Choisissez un écran, une région ou une fenêtre à capturer.",
-    "back": "Retour"
+    "back": "Retour",
+    "hideHud": "Masquer Beam",
+    "hideQuickSnip": "Masquer Quick Snip"
   },
   "SourcePicker": {
     "hoverHint": "Survolez pour afficher un aperçu. Cliquez pour sélectionner.",
@@ -927,7 +929,10 @@
     "instant": "Instantané",
     "instantDescription": "Enregistre et exporte automatiquement une vidéo stylisée.",
     "deviceHint": "{device} — clic droit pour choisir une source",
-    "defaultSystemAudio": "Sortie système par défaut"
+    "defaultSystemAudio": "Sortie système par défaut",
+    "video": "Vidéo",
+    "image": "Image",
+    "zoom": "Zoom"
   },
   "ScreenshotEditor": {
     "tools": "Outils",

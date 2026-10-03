@@ -90,6 +90,13 @@ function createEditorWindowManager({
   };
 
   const presentHud = () => {
+    if (hudController.rendererLifecycle?.isSuspended()) {
+      void hudController.rendererLifecycle
+        .resume()
+        .then(presentHud)
+        .catch((error) => console.error('[HUD wake]', error));
+      return;
+    }
     prepareHudAuxiliaryWindows();
     if (hudWindow.isMinimized()) hudWindow.restore();
     hudController.showHud();

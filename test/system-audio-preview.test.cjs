@@ -259,3 +259,35 @@ test('propagates a stop failure while native cleanup is still allowed', async ()
   await assert.rejects(preview.stop(quickSnip), /live preview stop failed/);
   assert.equal(calls.filter((command) => command === 'stop-system-audio-preview').length, 1);
 });
+
+test('navigating a HUD into standby releases its native audio preview without destroying webContents', async () => {
+  const { calls, preview } = createPreviewHarness();
+  const sender = createSender();
+  await preview.start(sender);
+  sender.emit('did-start-navigation', { isMainFrame: true, isSameDocument: false });
+  await preview.stop(sender);
+  assert.equal(calls.at(-1), 'stop-system-audio-preview');
+  assert.equal(sender.listenerCount('destroyed'), 0);
+  assert.equal(sender.listenerCount('did-start-navigation'), 0);
+});
+test('fragment and child-frame navigation retain the active preview subscription', async () => {
+  const { calls, preview } = createPreviewHarness();
+  const sender = createSender();
+  await preview.start(sender);
+  sender.emit('did-start-navigation', { isMainFrame: true, isSameDocument: true });
+  sender.emit('did-start-navigation', { isMainFrame: false, isSameDocument: false });
+  assert.equal(calls.includes('stop-system-audio-preview'), false);
+  await preview.stop(sender);
+});
+test('standby navigation releases only its owner while another renderer still uses audio preview', async () => {
+  const { calls, preview } = createPreviewHarness();
+  const hud = createSender(),
+    quick = createSender();
+  await preview.start(hud);
+  await preview.start(quick);
+  hud.emit('did-start-navigation', { isMainFrame: true, isSameDocument: false });
+  await preview.stop(hud);
+  assert.equal(calls.includes('stop-system-audio-preview'), false);
+  await preview.stop(quick);
+  assert.equal(calls.at(-1), 'stop-system-audio-preview');
+});

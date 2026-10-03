@@ -69,6 +69,7 @@ describe('useProjectThumbnailGenerator', () => {
     );
     expect(media.UrlSource).toHaveBeenCalledWith('video://source');
     expect(media.Input).toHaveBeenCalledWith(expect.objectContaining({ formats: media.ALL_FORMATS }));
+    expect(media.CanvasSink).toHaveBeenCalledWith(track, { width: 240, poolSize: 1 });
     expect(canvasesAtTimestamps).toHaveBeenCalledWith([5]);
     expect(saveProjectThumbnail).toHaveBeenCalledWith('success-project', 'data:image/webp;base64,thumbnail');
     expect(thumbnailCache['success-project']).toBe('saved://thumbnail');

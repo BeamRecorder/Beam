@@ -16,6 +16,7 @@ import type { RegionRecordingSettings } from '../../../api/types/screen-region';
 import { SCREEN_REGION_PRESETS, computePresetRegion, findMatchingPreset } from './screen-region-presets';
 
 const { t } = useTranslate('ScreenRegionOverlay');
+const { t: quickT } = useTranslate('QuickSnipCropBar');
 
 const options = ref<(ScreenRegionOverlayOptions & { mode?: 'select' | 'record' }) | null>(null);
 const region = ref<ScreenRegion | null>(null);
@@ -29,6 +30,7 @@ const viewport = ref({ width: window.innerWidth, height: window.innerHeight });
 const topControls = ref<HTMLElement | null>(null);
 const topSize = ref({ width: 310, height: 36 });
 const toolbarSize = ref({ width: 656, height: 56 });
+const startControl = ref<HTMLElement | null>(null);
 const recording = ref<RegionRecordingSettings | null>(null);
 const onResize = () => {
   viewport.value = { width: window.innerWidth, height: window.innerHeight };
@@ -45,6 +47,11 @@ useResizeObserver(topControls, () => {
   if (pointer.value || !topControls.value) return;
   const { offsetWidth: width, offsetHeight: height } = topControls.value;
   if (width > 0 && height > 0) topSize.value = { width, height };
+});
+useResizeObserver(startControl, () => {
+  const control = startControl.value;
+  if (control?.offsetWidth && control.offsetHeight)
+    toolbarSize.value = { width: control.offsetWidth, height: control.offsetHeight };
 });
 
 const isSelecting = computed(() => options.value?.mode === 'select');
@@ -223,7 +230,14 @@ const handleKeydown = (event: KeyboardEvent) => {
   if (!isSelecting.value || event.defaultPrevented || event.repeat || event.metaKey || event.ctrlKey || event.altKey)
     return;
   const target = event.target;
-  if (target instanceof Element && target.closest('button, input, select, [role="listbox"], [role="option"]')) return;
+  if (
+    target instanceof Element &&
+    target.closest(
+      'input, select, textarea, [contenteditable="true"], [role="listbox"], [role="option"], [role="menu"], [data-popover-id]',
+    )
+  )
+    return;
+  if (event.key === 'Enter' && target instanceof Element && target.closest('button:not([data-region-start])')) return;
   if (event.key === 'Escape') {
     event.preventDefault();
     cancel();
@@ -259,7 +273,12 @@ onMounted(() => {
     selectionError.value = '';
     options.value = next;
     recording.value = next.recording && next.captureMode !== 'screenshot' ? { ...next.recording } : null;
-    if (next.region) {
+    if (next.drawOnly) {
+      toolbarSize.value = { width: 140, height: 56 };
+      region.value = null;
+      selectedPreset.value = null;
+      userInteracted = true;
+    } else if (next.region) {
       region.value = { ...next.region };
       updatePresetMatch();
     } else if (selectedPreset.value) {
@@ -317,14 +336,20 @@ onBeforeUnmount(() => {
       <span v-if="isSelecting" class="resize-handle sw" data-handle="sw" />
       <span v-if="isSelecting" class="resize-handle se" data-handle="se" />
     </div>
-    <div ref="topControls" v-if="isSelecting && region" class="region-top-controls" :style="topPosition" @pointerdown.stop>
+    <div
+      ref="topControls"
+      v-if="isSelecting && region"
+      class="region-top-controls"
+      :style="topPosition"
+      @pointerdown.stop
+    >
       <RegionDimensions
         :width="Math.round(region.width * pixelBounds.width)"
         :height="Math.round(region.height * pixelBounds.height)"
         :live="Boolean(pointer)"
       />
       <Transition name="region-controls">
-        <div v-show="!pointer" class="region-preset-picker">
+        <div v-show="!pointer" v-if="!options?.drawOnly" class="region-preset-picker">
           <Select
             :model-value="selectedPreset"
             :options="presetOptions"
@@ -358,12 +383,18 @@ onBeforeUnmount(() => {
       />
     </Transition>
     <Transition name="region-controls">
-      <aside v-if="isSelecting && !recording" v-show="!pointer" class="region-toolbar" @pointerdown.stop>
+      <aside
+        v-if="isSelecting && !recording && !options?.drawOnly"
+        v-show="!pointer"
+        class="region-toolbar"
+        @pointerdown.stop
+      >
         <span class="region-instruction"><Move :size="16" /> {{ t('instruction') }}</span>
         <div class="region-actions">
           <Button variant="ghost" size="sm" :icon="RotateCcw" @click="reset">{{ t('reset') }}</Button>
           <Button variant="ghost" size="sm" :icon="X" @click="cancel">{{ t('cancel') }}</Button>
           <Button
+            data-region-start
             variant="primary"
             size="sm"
             :icon="Check"
@@ -372,6 +403,26 @@ onBeforeUnmount(() => {
             >{{ t('useThisArea') }}</Button
           >
         </div>
+      </aside>
+    </Transition>
+    <Transition name="region-controls">
+      <aside
+        v-if="isSelecting && options?.drawOnly && region"
+        v-show="!pointer"
+        ref="startControl"
+        class="region-toolbar region-start-control"
+        :style="toolbarPosition"
+        @pointerdown.stop
+      >
+        <Button
+          data-region-start
+          variant="primary"
+          size="sm"
+          :icon="Check"
+          :disabled="!region.width || !region.height"
+          @click="confirm"
+          >{{ quickT('start') }}</Button
+        >
       </aside>
     </Transition>
   </main>

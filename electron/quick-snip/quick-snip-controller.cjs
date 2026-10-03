@@ -1,7 +1,7 @@
+const { createQuickSnipSourceSelection } = require('./quick-snip-source-selection.cjs');
 const TERMINAL_STATES = new Set(['completed', 'failed', 'canceled']);
 
 function createQuickSnipController(dependencies) {
-  const windowCapture = (dependencies.platform ?? process.platform) === 'linux';
   let snapshot = {
     state: 'idle',
     job: null,
@@ -13,12 +13,8 @@ function createQuickSnipController(dependencies) {
     copied: false,
     clipboardError: null,
   };
-  let selectionGeneration = 0;
-  let selectionPending = false;
-  let startAfterSelection = false;
+  const selection = { generation: 0, pending: false, display: null };
   let processingAbort = null;
-  let selectionDisplay = null;
-  let resolveSelectionSource = false;
   const publish = (patch) => {
     snapshot = { ...snapshot, ...patch };
     dependencies.onStateChanged?.({ ...snapshot });
@@ -51,14 +47,14 @@ function createQuickSnipController(dependencies) {
   };
   const beginSelection = async (sourceOptions = null) => {
     if (dependencies.isNormalRecordingActive?.()) throw new Error('Quick Snip is unavailable during a Beam recording.');
-    const generation = ++selectionGeneration;
+    selection.generation += 1;
     dependencies.statusWindow?.hide();
     const preferences = dependencies.preferencesStore.read();
-    const display = dependencies.resolveDisplay(preferences.extras?.quickSnipRegion?.displayId);
-    selectionDisplay = display;
-    resolveSelectionSource = !windowCapture && !sourceOptions;
-    const saved = preferences.extras?.quickSnipRegion;
-    const region = windowCapture ? null : (saved?.region ?? { x: 0.1, y: 0.1, width: 0.8, height: 0.8 });
+    const display = dependencies.resolveDisplay(
+      preferences.extras?.quickSnipBarDisplayId ?? preferences.extras?.quickSnipRegion?.displayId,
+    );
+    selection.display = display;
+    const region = sourceOptions?.region ?? null;
     const mode = sourceOptions
       ? 'instant'
       : ['studio', 'instant', 'screenshot'].includes(preferences.extras?.captureMode)
@@ -71,12 +67,23 @@ function createQuickSnipController(dependencies) {
       format,
       name: `Quick Snip ${new Date().toISOString().replace(/[:.]/g, '-')}`,
       preset,
-      automaticZoom: preset.settings.quickSnip.automaticZoom,
-      screenKind: windowCapture ? 'window' : 'display',
+      zoomMode: ['off', '2d', '3d'].includes(preferences.extras.recordingZoomMode)
+        ? preferences.extras.recordingZoomMode
+        : '2d',
+      automaticZoom: preferences.extras.recordingZoomMode !== 'off',
+      captureTarget: sourceOptions?.screenKind === 'window' ? 'window' : sourceOptions?.region ? 'region' : 'screen',
+      sourceReady: Boolean(sourceOptions),
+      countdownSeconds:
+        Number.isInteger(preferences.extras.recordingCountdownSeconds) &&
+        preferences.extras.recordingCountdownSeconds >= 0 &&
+        preferences.extras.recordingCountdownSeconds <= 10
+          ? preferences.extras.recordingCountdownSeconds
+          : 3,
+      screenKind: 'display',
       region,
       regionBounds: display.bounds,
       displayId: String(display.id),
-      screenId: windowCapture ? 'portal:window' : undefined,
+      screenId: undefined,
       devices: preset.settings.devices,
       screenshotAction: 'copy',
       showRealCursor: preferences.extras.showRealCursor === true,
@@ -108,61 +115,32 @@ function createQuickSnipController(dependencies) {
       clipboardError: null,
     });
     if (mode === 'screenshot') dependencies.statusWindow.prepare(snapshot);
-    selectionPending = !windowCapture && !sourceOptions;
+    selection.pending = false;
     try {
-      if (windowCapture || sourceOptions) {
-        // Wayland's Portal chooses the target window when native preparation
-        // starts. Screen coordinates cannot describe a crop of that window.
-        dependencies.cropWindow.show(configuration, display);
-        return snapshot;
-      }
-      const selectionPromise = dependencies.regionOverlay.select({
-        bounds: display.bounds,
-        region,
-        context: 'quick-snip',
-      });
-      dependencies.cropWindow.show(configuration, display, dependencies.regionOverlay.nativeWindow?.());
-      const selection = await selectionPromise;
-      if (generation !== selectionGeneration || snapshot.state !== 'selecting') return snapshot;
-      dependencies.cropWindow.setParentWindow?.(null);
-      selectionPending = false;
-      if (!selection) {
-        dependencies.cropWindow.hide();
-        return reset();
-      }
-      dependencies.preferencesStore.patch({
-        extras: {
-          ...preferences.extras,
-          quickSnipRegion: { displayId: String(display.id), bounds: selection.bounds, region: selection.region },
-        },
-      });
-      const selectedConfiguration = {
-        ...snapshot.job,
-        region: selection.region,
-        regionBounds: selection.bounds,
-      };
-      publish({ state: 'selecting', job: selectedConfiguration });
-      dependencies.cropWindow.updateRegion?.(selection.region, display);
-      dependencies.cropWindow.updateConfiguration?.(selectedConfiguration);
-      if (startAfterSelection) {
-        startAfterSelection = false;
-        return start();
-      }
-      return snapshot;
+      dependencies.cropWindow.show(configuration, display);
     } catch (error) {
-      if (generation !== selectionGeneration || snapshot.state !== 'selecting') return snapshot;
-      return report({ type: 'failed', error: error instanceof Error ? error.message : String(error) });
+      return report({ type: 'failed', error: error.message });
     }
+    return snapshot;
   };
+  const resolveSource = createQuickSnipSourceSelection(dependencies, {
+    selection,
+    snapshot: () => snapshot,
+    publish,
+    start: () => start(),
+  });
   const start = async (overrides = {}) => {
     if (snapshot.state !== 'selecting' || !snapshot.job) return snapshot;
     if (dependencies.isNormalRecordingActive?.()) throw new Error('Quick Snip is unavailable during a Beam recording.');
     configure(overrides);
-    if (selectionPending) {
-      startAfterSelection = true;
+    if (selection.pending) {
       dependencies.cropWindow.setParentWindow?.(null);
       dependencies.regionOverlay.confirmCurrent?.();
       return snapshot;
+    }
+    if (!snapshot.job.sourceReady) {
+      await resolveSource(snapshot.job.captureTarget ?? 'screen');
+      if (snapshot.state !== 'selecting' || !snapshot.job?.sourceReady) return snapshot;
     }
     const mode = snapshot.job.mode;
     const preset = selectedPreset(mode);
@@ -174,17 +152,6 @@ function createQuickSnipController(dependencies) {
     };
     publish({ state: 'preparing', job, error: null });
     if (mode === 'screenshot' && job.screenshotAction !== 'edit') dependencies.statusWindow.prepare(snapshot);
-    if (resolveSelectionSource) {
-      const generation = selectionGeneration;
-      try {
-        const screenId = await dependencies.resolveScreenId(selectionDisplay);
-        if (generation !== selectionGeneration || snapshot.state !== 'preparing') return snapshot;
-        job.screenId = screenId;
-      } catch (error) {
-        if (generation !== selectionGeneration || snapshot.state !== 'preparing') return snapshot;
-        return report({ type: 'failed', error: error instanceof Error ? error.message : String(error) });
-      }
-    }
     dependencies.cropWindow.updateConfiguration?.(job);
     dependencies.cropWindow.command('start');
     return snapshot;
@@ -198,34 +165,59 @@ function createQuickSnipController(dependencies) {
     const changedMode = mode !== snapshot.job.mode;
     const changedPresetKind = (mode === 'screenshot') !== (snapshot.job.mode === 'screenshot');
     const preset = selectedPreset(mode);
+    if (overrides.zoomMode !== undefined && !['off', '2d', '3d'].includes(overrides.zoomMode))
+      throw new Error('Invalid zoom preference.');
+    if (
+      overrides.countdownSeconds !== undefined &&
+      (!Number.isInteger(overrides.countdownSeconds) ||
+        overrides.countdownSeconds < 0 ||
+        overrides.countdownSeconds > 10)
+    )
+      throw new Error('Invalid countdown.');
+    const options = {};
+    for (const key of ['hideTaskbar', 'hideDesktopIcons', 'showRealCursor']) {
+      if (overrides[key] !== undefined) {
+        if (typeof overrides[key] !== 'boolean') throw new Error(`Invalid ${key}.`);
+        options[key] = overrides[key];
+      }
+    }
+    if (overrides.countdownSeconds !== undefined) options.countdownSeconds = overrides.countdownSeconds;
     if (!changedPresetKind && mode !== 'screenshot' && preset.id === 'default' && overrides.devices)
       dependencies.preferencesStore.patch({ devices: overrides.devices });
     dependencies.preferencesStore.patch({ extras: { captureMode: mode } });
+    const zoomMode = overrides.zoomMode ?? snapshot.job.zoomMode ?? '2d';
+    dependencies.preferencesStore.patch({
+      extras: {
+        recordingZoomMode: zoomMode,
+        ...(options.countdownSeconds !== undefined ? { recordingCountdownSeconds: options.countdownSeconds } : {}),
+        ...Object.fromEntries(Object.entries(options).filter(([key]) => key !== 'countdownSeconds')),
+      },
+    });
     const job = {
       ...snapshot.job,
+      ...options,
+      zoomMode,
       mode,
       preset,
       format: preset.settings.export?.format === 'webm' ? 'webm' : 'mp4',
-      automaticZoom: changedPresetKind
-        ? preset.settings.quickSnip.automaticZoom
-        : typeof overrides.automaticZoom === 'boolean'
-          ? overrides.automaticZoom
-          : snapshot.job.automaticZoom,
-      devices: changedPresetKind ? preset.settings.devices : (overrides.devices ?? snapshot.job.devices),
+      automaticZoom: zoomMode !== 'off',
+      devices:
+        changedPresetKind || preset.id !== snapshot.job.preset.id
+          ? preset.settings.devices
+          : (overrides.devices ?? snapshot.job.devices),
       screenshotAction: overrides.screenshotAction ?? snapshot.job.screenshotAction,
     };
     const result = publish({ job });
+    dependencies.cropWindow.updateConfiguration?.(job);
     if (changedMode) {
       if (mode === 'screenshot') dependencies.statusWindow.prepare(snapshot);
       else if (changedPresetKind) dependencies.statusWindow.hide();
-      dependencies.cropWindow.updateConfiguration?.(job);
     }
     return result;
   };
   const updateSelectionRegion = (region, bounds) => {
-    if (snapshot.state !== 'selecting' || !selectionPending || !snapshot.job || !selectionDisplay) return false;
+    if (snapshot.state !== 'selecting' || !selection.pending || !snapshot.job || !selection.display) return false;
     snapshot = { ...snapshot, job: { ...snapshot.job, region, regionBounds: bounds } };
-    dependencies.cropWindow.updateRegion?.(region, selectionDisplay);
     return true;
   };
   const stop = async () => {
@@ -237,11 +229,13 @@ function createQuickSnipController(dependencies) {
   };
   const cancel = async ({ keepStatus = false } = {}) => {
     if (snapshot.state === 'idle') return snapshot;
-    const cancelSelection = snapshot.state === 'selecting' && selectionPending;
-    selectionGeneration += 1;
-    selectionPending = false;
-    startAfterSelection = false;
-    if (cancelSelection) dependencies.regionOverlay.cancel();
+    const cancelSelection = snapshot.state === 'selecting' && selection.pending;
+    selection.generation += 1;
+    selection.pending = false;
+    if (cancelSelection) {
+      dependencies.regionOverlay.cancel();
+      dependencies.cancelSourceSelection?.();
+    }
     if (
       ['preparing', 'recording'].includes(snapshot.state) ||
       (snapshot.state === 'processing' && snapshot.job?.mode === 'screenshot')
@@ -261,7 +255,6 @@ function createQuickSnipController(dependencies) {
     }
     if (snapshot.state === 'selecting') {
       if (!snapshot.job) {
-        startAfterSelection = true;
         dependencies.regionOverlay.confirmCurrent?.();
         return snapshot;
       }
@@ -295,13 +288,13 @@ function createQuickSnipController(dependencies) {
     }
     if (event.type === 'failed') {
       if (snapshot.state === 'selecting') {
-        selectionGeneration += 1;
-        if (selectionPending) {
+        selection.generation += 1;
+        if (selection.pending) {
           dependencies.cropWindow.setParentWindow?.(null);
           dependencies.regionOverlay.cancel();
+          dependencies.cancelSourceSelection?.();
         }
-        selectionPending = false;
-        startAfterSelection = false;
+        selection.pending = false;
       }
       dependencies.cropWindow.hide();
       dependencies.statusWindow.update(
@@ -345,7 +338,7 @@ function createQuickSnipController(dependencies) {
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(event.screenshotId ?? ''))
         throw new Error('Invalid screenshot result.');
       dependencies.cropWindow.hide();
-      const generation = selectionGeneration;
+      const generation = selection.generation;
       publish({
         state: 'processing',
         progress: 1,
@@ -356,19 +349,19 @@ function createQuickSnipController(dependencies) {
       });
       try {
         if (snapshot.job.screenshotAction === 'edit') await dependencies.openScreenshot(event.screenshotId);
-        if (generation !== selectionGeneration) return snapshot;
+        if (generation !== selection.generation) return snapshot;
         publish({ state: 'completed' });
         if (snapshot.job.screenshotAction !== 'edit') dependencies.statusWindow.update(snapshot);
       } catch (error) {
-        if (generation === selectionGeneration) return report({ type: 'failed', error: String(error) });
+        if (generation === selection.generation) return report({ type: 'failed', error: String(error) });
       }
       return snapshot;
     }
     if (event.type === 'completed' && ['finalizing', 'recording'].includes(snapshot.state)) {
       dependencies.cropWindow.hide();
-      const generation = selectionGeneration;
+      const generation = selection.generation;
       const thumbnail = await dependencies.thumbnail?.(event.session).catch(() => null);
-      if (generation !== selectionGeneration || !['finalizing', 'recording'].includes(snapshot.state)) return snapshot;
+      if (generation !== selection.generation || !['finalizing', 'recording'].includes(snapshot.state)) return snapshot;
       publish({
         state: 'processing',
         progress: 0,
@@ -433,6 +426,14 @@ function createQuickSnipController(dependencies) {
       return start();
     },
     configure,
+    async chooseSource(target) {
+      if (!['screen', 'region', 'window'].includes(target)) throw new Error('Invalid Quick Snip source.');
+      if (snapshot.state !== 'selecting' || !snapshot.job || selection.pending) return snapshot;
+      const job = { ...snapshot.job, captureTarget: target, sourceReady: false, screenId: undefined, region: null };
+      const result = publish({ job });
+      dependencies.cropWindow.updateConfiguration?.(job);
+      return result;
+    },
     start,
     stop,
     cancel,

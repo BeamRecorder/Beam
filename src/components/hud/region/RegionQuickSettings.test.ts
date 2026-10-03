@@ -1,9 +1,10 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, expect, it, vi } from 'vitest';
-const { capture, close } = vi.hoisted(() => ({ capture: { platform: 'win32' }, close: vi.fn() }));
+const { capture } = vi.hoisted(() => ({ capture: { platform: 'win32' } }));
 vi.mock('~/api/capture', () => ({ capture }));
 vi.mock('~/i18n/useTranslate', () => ({ useTranslate: () => ({ t: (key: string) => key }) }));
 import RegionQuickSettings from './RegionQuickSettings.vue';
+import CaptureQuickSettingsPanel from './CaptureQuickSettingsPanel.vue';
 const settings = {
   cameraId: 'off',
   microphoneId: 'no-audio',
@@ -12,51 +13,56 @@ const settings = {
   hideTaskbar: false,
   hideDesktopIcons: false,
   showRealCursor: false,
+  zoomMode: '2d' as const,
 };
-const Popover = {
-  setup: () => ({ close }),
-  template: '<div><slot name="trigger" :is-open="true" /><slot :close="close" /></div>',
-};
-const Menu = { props: ['items'], emits: ['select', 'dismiss'], template: '<div />' };
+const Popover = { template: '<div><slot name="trigger" :is-open="true" /><slot /></div>' };
+const Select = { props: ['modelValue', 'options', 'label'], emits: ['update:modelValue'], template: '<button />' };
 const Switch = {
   props: ['modelValue', 'disabled'],
   emits: ['update:modelValue'],
   template: '<button :disabled="disabled" />',
 };
-const mountSettings = (countdownSeconds = 3) =>
+const mountSettings = () =>
   mount(RegionQuickSettings, {
-    props: { modelValue: { ...settings, countdownSeconds } },
-    global: { stubs: { Popover, PopoverMenuList: Menu, Switch, Button: { template: '<button />' } } },
+    props: { modelValue: { ...settings } },
+    global: { stubs: { Popover, Select, Switch } },
   });
 beforeEach(() => {
   capture.platform = 'win32';
-  close.mockClear();
 });
-it.each([0, 1, 10])('exposes the hover submenu with all eleven countdown values, current %s', (seconds) => {
-  const wrapper = mountSettings(seconds);
-  const items = wrapper.findComponent(Menu).props('items');
-  expect(items[0].label).toBe(`countdown · ${seconds ? `${seconds}s` : 'off'}`);
-  expect(items[0].children).toHaveLength(11);
-  expect(items[0].children[seconds].active).toBe(true);
-  wrapper.findComponent(Menu).vm.$emit('select', '10');
-  expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([{ ...settings, countdownSeconds: 10 }]);
-  expect(close).toHaveBeenCalled();
-  wrapper.unmount();
-});
-it('switches the native Windows desktop options and closes on dismissal', () => {
+it.each([0, 1, 10])('offers every countdown and saves %s', (seconds) => {
   const wrapper = mountSettings();
-  const switches = wrapper.findAllComponents(Switch).slice(1);
-  switches[0]!.vm.$emit('update:modelValue', true);
-  switches[1]!.vm.$emit('update:modelValue', true);
-  expect(wrapper.emitted('update:modelValue')).toEqual([
-    [{ ...settings, hideTaskbar: true }],
-    [{ ...settings, hideTaskbar: true, hideDesktopIcons: true }],
-  ]);
-  wrapper.findComponent(Menu).vm.$emit('dismiss');
-  expect(close).toHaveBeenCalledOnce();
+  const countdown = wrapper.findAllComponents(Select).find((select) => select.props('label') === 'countdown')!;
+  expect(countdown.props('options')).toHaveLength(11);
+  countdown.vm.$emit('update:modelValue', seconds);
+  expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([{ ...settings, countdownSeconds: seconds }]);
   wrapper.unmount();
 });
-it('disables both desktop switches on Linux and explains availability', () => {
+it.each(['off', '2d', '3d'])('shares the %s zoom preference with the region toolbar', (zoomMode) => {
+  const wrapper = mountSettings();
+  wrapper
+    .findAllComponents(Select)
+    .find((select) => select.props('label') === 'zoom')!
+    .vm.$emit('update:modelValue', zoomMode);
+  expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([{ ...settings, zoomMode }]);
+  wrapper.unmount();
+});
+it('reserves presets for Quick Snip and passes ten example presets to the shared scrollable Select', () => {
+  const presets = Array.from({ length: 10 }, (_, index) => ({ value: `preset-${index}`, label: `Preset ${index}` }));
+  const wrapper = mount(CaptureQuickSettingsPanel, {
+    props: { modelValue: settings, showPreset: true, presets, presetId: 'preset-0' },
+    global: { stubs: { Select, Switch } },
+  });
+  const select = wrapper.findAllComponents(Select).find((select) => select.props('label') === 'preset')!;
+  expect(select.props('options')).toEqual(presets);
+  select.vm.$emit('update:modelValue', 'preset-9');
+  expect(wrapper.emitted('preset')).toEqual([['preset-9']]);
+  wrapper.unmount();
+  const region = mountSettings();
+  expect(region.findAllComponents(Select).some((select) => select.props('label') === 'preset')).toBe(false);
+  region.unmount();
+});
+it('disables desktop hiding on Linux while keeping real cursor capture available', () => {
   capture.platform = 'linux';
   const wrapper = mountSettings();
   expect(
@@ -66,23 +72,23 @@ it('disables both desktop switches on Linux and explains availability', () => {
       .every((control) => control.props('disabled')),
   ).toBe(true);
   expect(wrapper.text()).toContain('desktopUnavailable');
+  wrapper.findAllComponents(Switch)[0]!.vm.$emit('update:modelValue', true);
+  expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([{ ...settings, showRealCursor: true }]);
   wrapper.unmount();
 });
-it('labels the macOS Dock and explains that native filtering affects the recording', () => {
+it('uses Dock terminology and capture-only filtering on macOS', () => {
   capture.platform = 'darwin';
   const wrapper = mountSettings();
   expect(wrapper.text()).toContain('hideDock');
   expect(wrapper.text()).toContain('captureOnly');
-  expect(wrapper.findAllComponents(Switch)[1]!.props('disabled')).toBe(false);
   wrapper.unmount();
 });
-
-it('keeps the real cursor available on Linux and updates the shared setting', () => {
-  capture.platform = 'linux';
-  const wrapper = mountSettings();
-  const toggle = wrapper.findAllComponents(Switch)[0]!;
-  expect(toggle.props('disabled')).not.toBe(true);
-  toggle.vm.$emit('update:modelValue', true);
-  expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([{ ...settings, showRealCursor: true }]);
+it('hides recording controls for screenshots while retaining presets and desktop hiding', () => {
+  const wrapper = mount(CaptureQuickSettingsPanel, {
+    props: { modelValue: settings, showPreset: true, screenshot: true },
+    global: { stubs: { Select, Switch } },
+  });
+  expect(wrapper.findAllComponents(Select).map((control) => control.props('label'))).toEqual(['preset', 'countdown']);
+  expect(wrapper.findAllComponents(Switch)).toHaveLength(2);
   wrapper.unmount();
 });

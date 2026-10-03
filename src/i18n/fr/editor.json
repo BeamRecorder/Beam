@@ -430,7 +430,7 @@
     "straightPathsDesc": "Verrouille le mouvement sur un axe horizontal, vertical ou diagonal.",
     "generateAutoZooms": "Générer les zooms automatiques",
     "regenerateAutoZooms": "Régénérer les zooms automatiques",
-    "regenerateConfirm": "Régénérer les zooms automatiques ? Cela remplacera tous les points de zoom détectés automatiquement.",
+    "regenerateConfirm": "Recalculer les positions et remplacer les zooms automatiques déverrouillés de cet enregistrement ? Les zooms manuels, verrouillés et détachés sont conservés.",
     "cancel": "Annuler",
     "regenerate": "Régénérer",
     "mode": "Mode",

@@ -430,7 +430,7 @@
     "straightPathsDesc": "Giới hạn chuyển động của camera theo các đường ngang, dọc hoặc chéo.",
     "generateAutoZooms": "Tạo thu phóng tự động",
     "regenerateAutoZooms": "Tạo lại thu phóng tự động",
-    "regenerateConfirm": "Tạo lại thu phóng tự động? Thao tác này sẽ thay thế tất cả các điểm thu phóng đã phát hiện trước đó.",
+    "regenerateConfirm": "Tính lại vị trí và thay thế các lần thu phóng tự động chưa khóa của bản ghi này? Thu phóng thủ công, đã khóa và đã tách sẽ được giữ lại.",
     "cancel": "Hủy",
     "regenerate": "Tạo lại",
     "mode": "Chế độ",

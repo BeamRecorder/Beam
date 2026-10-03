@@ -1,3 +1,4 @@
+import { applyRecordingZoomMode, recordingZoomMode } from '../video-editor/zoom/recording-zoom-preference';
 import { capture } from '~/api/capture';
 import type { QuickSnipRenderTask } from '~/api/types/quick-snip';
 import type { CursorPackDescriptor } from '~/api/types/cursor-pack';
@@ -47,7 +48,7 @@ export function quickSnipExportRequest(
         sessionId: editorData.sessionId,
         durationMs,
         reserved: [],
-      }).map((zoom) => ({ ...zoom, enabled: config.automaticZoom }))
+      }).map((zoom) => applyRecordingZoomMode(zoom, config.automaticZoom ? recordingZoomMode(config.zoomMode) : 'off'))
     : [];
   state.zoom.generatedSessions = [
     {

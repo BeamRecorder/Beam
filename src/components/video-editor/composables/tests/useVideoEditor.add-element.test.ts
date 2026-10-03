@@ -43,6 +43,10 @@ const harness = vi.hoisted(() => ({
   elements: null as HarnessElements | null,
 }));
 
+vi.mock('~/stores/preferences', () => ({
+  usePreferencesStore: () => ({ settings: { extras: { recordingZoomMode: '2d' } }, load: vi.fn() }),
+}));
+
 vi.mock('../../../../api/capture', () => ({ capture: harness.capture }));
 vi.mock('~/ui/toast/toastStore', () => ({ useToastStore: () => harness.toast }));
 vi.mock('../useEditorPresets', () => ({

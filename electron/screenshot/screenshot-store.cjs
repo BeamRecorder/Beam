@@ -24,13 +24,33 @@ function createScreenshotStore(root) {
     const target = path.join(directory(id), 'screenshot.json');
     writeJsonAtomicSync(target, { ...document, updatedAt: new Date().toISOString() }, { pretty: false });
   };
-  const read = (id) => {
+  const readMetadata = (id) => {
     const metadata = path.join(directory(id), 'screenshot.json');
     const stat = fs.lstatSync(metadata);
     if (!stat.isFile()) throw new Error('Invalid screenshot metadata.');
     const document = readJsonSync(metadata);
     if (document.id !== id || document.schemaVersion !== 1 || !validDimensions(document.width, document.height))
       throw new Error('Invalid screenshot document.');
+    return { document, stat };
+  };
+  const dates = (document, stat) => ({
+    createdAt: document.createdAt || stat.birthtime.toISOString(),
+    updatedAt: document.updatedAt || stat.mtime.toISOString(),
+  });
+  const readSummary = (id) => {
+    const { document, stat } = readMetadata(id);
+    return {
+      id,
+      name: document.name,
+      ...dates(document, stat),
+      mode: 'screenshot',
+      sessionCount: 0,
+      previewSrc: null,
+      thumbnailSrc: `project-media://screenshot/${id}/source.png`,
+    };
+  };
+  const read = (id) => {
+    const { document, stat } = readMetadata(id);
     if (document.state) validateScreenshotState(document.state, id);
     try {
       validateScreenshotHistory(document.history, document.state, id);
@@ -40,13 +60,13 @@ function createScreenshotStore(root) {
     }
     return {
       ...document,
-      createdAt: document.createdAt || stat.birthtime.toISOString(),
-      updatedAt: document.updatedAt || stat.mtime.toISOString(),
+      ...dates(document, stat),
       source: `project-media://screenshot/${id}/source.png`,
     };
   };
   return {
     read,
+    readSummary,
     directoryFor: directory,
     importImage(id, source) {
       read(id);

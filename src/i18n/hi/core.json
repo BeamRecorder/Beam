@@ -521,7 +521,9 @@
     "microphone": "माइक्रोफ़ोन",
     "teleprompter": "टेलीप्रॉम्प्टर",
     "screenshotDescription": "कैप्चर करने के लिए स्क्रीन, क्षेत्र या विंडो चुनें।",
-    "back": "वापस"
+    "back": "वापस",
+    "hideHud": "Beam छिपाएँ",
+    "hideQuickSnip": "Quick Snip छिपाएँ"
   },
   "EditorPreparingHud": {
     "title": "आपका एडिटर खोल रहा हूँ",
@@ -930,7 +932,10 @@
     "instant": "तुरंत",
     "instantDescription": "स्टाइल किया हुआ वीडियो रिकॉर्ड करके अपने आप निर्यात करें।",
     "deviceHint": "{device} — स्रोत चुनने के लिए राइट-क्लिक करें",
-    "defaultSystemAudio": "डिफ़ॉल्ट सिस्टम आउटपुट"
+    "defaultSystemAudio": "डिफ़ॉल्ट सिस्टम आउटपुट",
+    "video": "वीडियो",
+    "image": "चित्र",
+    "zoom": "ज़ूम"
   },
   "ScreenshotEditor": {
     "tools": "टूल",

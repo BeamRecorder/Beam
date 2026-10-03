@@ -18,6 +18,7 @@ const {
   nativeTheme,
   powerMonitor,
 } = require('electron');
+Menu.setApplicationMenu(null);
 require('./lifecycle/linux-display-backend.cjs').configureLinuxDisplayBackend(app);
 const { autoUpdater } = require('electron-updater');
 const fs = require('fs');
@@ -59,7 +60,8 @@ const { createUserPaths } = require('./storage/user-paths.cjs');
 const { createBackgroundLibrary } = require('./backgrounds/background-library.cjs');
 const { createFontLibrary } = require('./fonts/font-library.cjs');
 const { createCursorPackLibrary } = require('./cursors/cursor-pack-library.cjs');
-const { createTrayManager } = require('./tray/tray-manager.cjs');
+const { createTrayRuntime } = require('./lifecycle/tray-runtime.cjs');
+const { createShortcutDispatcher } = require('./lifecycle/shortcut-dispatcher.cjs');
 const { InputAccess, registerInputAccessIpc } = require('./input/input-access.cjs');
 const { createShutdownCoordinator } = require('./lifecycle/shutdown-coordinator.cjs');
 const { createShutdownAwareIpc } = require('./lifecycle/shutdown-ipc.cjs');
@@ -134,7 +136,6 @@ function initializeApplication() {
     .whenReady()
     .then(() => {
       logStartup('Electron app.whenReady resolved.');
-      Menu.setApplicationMenu(null);
       const captureWarmup = prewarmCaptureCapabilities(captureEngine, { log: logStartup });
       configureMediaPermission();
       logStartup('Media permission policy registered.');
@@ -175,23 +176,17 @@ function initializeApplication() {
         preferencesStore,
         appIconPath,
       });
-      const dispatchShortcut = (id) => {
-        if (id.startsWith('teleprompter.')) return teleprompterWindow.handleShortcut(id);
-        if (id === 'quickSnip.toggle') {
-          void quickSnipController?.toggle().catch((error) => console.error('[Quick Snip] toggle failed:', error));
-          return true;
-        }
-        BrowserWindow.getAllWindows().forEach((win) => win.webContents.send('preferences:shortcut', id));
-        return true;
-      };
-      externalShortcutHandler = (id) => {
-        if (!shortcutReady) {
-          pendingExternalShortcuts.push(id);
-          return false;
-        }
-        if (preferencesStore.read().shortcuts[id]?.scope === 'global') return dispatchShortcut(id);
-        return false;
-      };
+      const shortcutDispatcher = createShortcutDispatcher({
+        BrowserWindow,
+        preferencesStore,
+        teleprompterWindow,
+        getTray: () => trayManager,
+        getQuickSnip: () => quickSnipController,
+        isReady: () => shortcutReady,
+        pending: pendingExternalShortcuts,
+      });
+      const dispatchShortcut = shortcutDispatcher.dispatch;
+      externalShortcutHandler = shortcutDispatcher.external;
       const preferencesCleanup = registerPreferencesIpc({
         ipcMain: applicationIpc,
         BrowserWindow,
@@ -216,7 +211,7 @@ function initializeApplication() {
         kind: 'screenshot',
       });
       logStartup('Desktop loopback policy registered.');
-      registerCaptureIpc({
+      const captureIpc = registerCaptureIpc({
         ipcMain,
         isTrustedRenderer,
         desktopCapturer,
@@ -253,7 +248,7 @@ function initializeApplication() {
       const cursorLibrary = createCursorPackLibrary(userPaths.cursors);
       const teleprompterStorage = createTeleprompterStorage({ projectStore });
       registerTeleprompterIpc(applicationIpc, teleprompterWindow, teleprompterStorage, () => win.webContents);
-      registerProjectIpc(
+      const projectIpc = registerProjectIpc(
         applicationIpc,
         projectStore,
         backgroundLibrary,
@@ -321,6 +316,9 @@ function initializeApplication() {
         cleanupStatus: (contents) => exportIpc.cleanupWindow(contents),
         projectStore,
         regionOverlay: screenRegionOverlay,
+        selectSource: (kind) => captureIpc.sourcePicker.openForWindow(quickSnipService.cropWindow.nativeWindow(), kind),
+        cancelSourceSelection: () =>
+          captureIpc.sourcePicker.cancel(quickSnipService.cropWindow.nativeWindow()?.webContents),
         nativeImage: require('electron').nativeImage,
         clipboard: require('electron').clipboard,
         ClipboardItem: require('electron').ClipboardItem,
@@ -419,13 +417,18 @@ function initializeApplication() {
         return editorWindow.showHud();
       };
       if (pendingHudRestore) restoreCanonicalHud();
-      trayManager = createTrayManager({
+      trayManager = createTrayRuntime({
+        window: win,
+        controller: controllers.get(win),
+        showHud: showExistingHud,
+        quickSnipService,
+        cameraOverlay,
+        countdownOverlay,
+        teleprompterWindow,
+        preferencesStore,
         applicationRoot,
-        getWindow: () => win,
-        getController: () => win && controllers.get(win),
-        onShowHud: showExistingHud,
-        onQuickSnip: () =>
-          void quickSnipController.toggle().catch((error) => console.error('[Quick Snip] tray toggle failed:', error)),
+        coordinator,
+        isScreenshotBusy: () => screenshotService?.isBusy() === true,
       });
       trayManager.init();
       if (!preferencesStore.read().onboardingCompleted) onboardingWindow.open();
@@ -448,9 +451,10 @@ function initializeApplication() {
       coordinator.registerCleanup({ id: 'camera-recording-control', cleanup: cameraRecordingCleanup });
       coordinator.registerCleanup({ id: 'camera-overlay', cleanup: () => cameraOverlay.destroy() });
       coordinator.registerCleanup({ id: 'screen-region', cleanup: () => screenRegionOverlay.destroy() });
-      coordinator.registerCleanup({ id: 'quick-snip-crop', cleanup: () => quickSnipService.cropWindow.destroy() });
+      coordinator.registerCleanup({ id: 'quick-snip-crop', cleanup: quickSnipService.destroy });
       coordinator.registerCleanup({ id: 'quick-snip-status', cleanup: () => quickSnipService.statusWindow.destroy() });
       coordinator.registerCleanup({ id: 'preferences', cleanup: preferencesCleanup });
+      coordinator.registerCleanup({ id: 'project-catalog', cleanup: projectIpc.destroy });
 
       win.on('closed', () => {
         if (coordinator.canAcceptWork()) app.quit();

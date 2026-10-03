@@ -1,4 +1,5 @@
 import type { HudPanelApi } from './hud-panel';
+import type { ProjectCatalogPage, ProjectCatalogRequest } from './project-catalog';
 import type { SourcePickerApi } from './source-picker';
 import type { InputAccessStatus } from './input-access';
 export type { InputAccessStatus } from './input-access';
@@ -99,6 +100,8 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipA
   toggleDevTools?(): void;
   updateTrayMenu?(labels: {
     openHud?: string;
+    hideHud?: string;
+    hideQuickSnip?: string;
     stopRecording?: string;
     quit?: string;
     tooltip?: string;
@@ -186,6 +189,7 @@ export interface DesktopCaptureApi extends CaptureApi, ScreenshotApi, QuickSnipA
   ): Promise<TeleprompterDocument>;
   getSessionTeleprompter(projectId: string, sessionId: string): Promise<TeleprompterDocument | null>;
   listProjects(): Promise<CaptureProject[]>;
+  listProjectsPage(request?: ProjectCatalogRequest): Promise<ProjectCatalogPage>;
   getProject(projectId: string): Promise<CaptureProject>;
   projectMediaUrl(source: string): Promise<string | null>;
   getProjectEditorData(projectId: string): Promise<ProjectEditorData | null>;

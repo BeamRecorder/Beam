@@ -521,7 +521,9 @@
     "microphone": "Mikrofon",
     "teleprompter": "Teleprompter",
     "screenshotDescription": "Wybierz ekran, obszar lub okno do przechwycenia.",
-    "back": "Wstecz"
+    "back": "Wstecz",
+    "hideHud": "Ukryj Beam",
+    "hideQuickSnip": "Ukryj Quick Snip"
   },
   "EditorPreparingHud": {
     "title": "Otwieranie edytora",
@@ -930,7 +932,10 @@
     "instant": "Natychmiast",
     "instantDescription": "Nagraj i automatycznie wyeksportuj stylizowany film.",
     "deviceHint": "{device} — kliknij prawym przyciskiem, aby wybrać źródło",
-    "defaultSystemAudio": "Domyślne wyjście systemowe"
+    "defaultSystemAudio": "Domyślne wyjście systemowe",
+    "video": "Wideo",
+    "image": "Obraz",
+    "zoom": "Zoom"
   },
   "ScreenshotEditor": {
     "tools": "Narzędzia",

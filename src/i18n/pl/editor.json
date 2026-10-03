@@ -430,7 +430,7 @@
     "straightPathsDesc": "Ogranicza ruch kamery do torów poziomych, pionowych lub diagonalnych.",
     "generateAutoZooms": "Generuj automatyczne powiększenia",
     "regenerateAutoZooms": "Wygeneruj automatyczne powiększenia ponownie",
-    "regenerateConfirm": "Wygenerować automatyczne powiększenia ponownie? Zastąpi to wszystkie automatycznie wykryte punkty powiększenia.",
+    "regenerateConfirm": "Przeliczyć pozycje i zastąpić odblokowane automatyczne przybliżenia tego nagrania? Ręczne, zablokowane i odłączone przybliżenia zostaną zachowane.",
     "cancel": "Anuluj",
     "regenerate": "Wygeneruj ponownie",
     "mode": "Tryb",

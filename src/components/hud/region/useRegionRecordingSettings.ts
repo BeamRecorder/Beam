@@ -1,13 +1,16 @@
+import { recordingZoomMode } from '~/components/video-editor/zoom/recording-zoom-preference';
 import { ref } from 'vue';
 import { capture } from '~/api/capture';
 import type { PreferenceSettings } from '~/api/types/capture-api';
 import type { RegionRecordingSettings } from '~/api/types/screen-region';
 import type { HudRegionSettingRefs } from './region-settings-types';
 export function useRegionRecordingSettings(state: HudRegionSettingRefs) {
+  const zoomMode = ref<import('~/api/types/recording-zoom').RecordingZoomMode>('2d');
   const hideTaskbar = ref(false);
   const hideDesktopIcons = ref(false);
   const showRealCursor = ref(false);
   const snapshot = (): RegionRecordingSettings => ({
+    zoomMode: zoomMode.value,
     cameraId: state.cameraId.value,
     microphoneId: state.microphoneId.value,
     systemAudio: state.systemAudioMode.value === 'on',
@@ -17,6 +20,7 @@ export function useRegionRecordingSettings(state: HudRegionSettingRefs) {
     showRealCursor: showRealCursor.value,
   });
   const apply = (settings: RegionRecordingSettings) => {
+    zoomMode.value = recordingZoomMode(settings.zoomMode);
     state.cameraId.value = settings.cameraId;
     state.microphoneId.value = settings.microphoneId;
     state.systemAudioMode.value = settings.systemAudio ? 'on' : 'off';
@@ -27,6 +31,7 @@ export function useRegionRecordingSettings(state: HudRegionSettingRefs) {
     void capture
       .updatePreferences({
         extras: {
+          recordingZoomMode: zoomMode.value,
           recordingCountdownSeconds: settings.countdownSeconds,
           hideTaskbar: settings.hideTaskbar,
           hideDesktopIcons: settings.hideDesktopIcons,
@@ -38,6 +43,7 @@ export function useRegionRecordingSettings(state: HudRegionSettingRefs) {
       });
   };
   const hydrate = (preferences: PreferenceSettings) => {
+    zoomMode.value = recordingZoomMode(preferences.extras.recordingZoomMode);
     const countdown = preferences.extras.recordingCountdownSeconds;
     state.countdownSeconds.value =
       typeof countdown === 'number' && Number.isInteger(countdown) && countdown >= 0 && countdown <= 10 ? countdown : 3;
