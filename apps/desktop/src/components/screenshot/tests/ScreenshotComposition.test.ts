@@ -110,6 +110,7 @@ const dispatchPointer = (
     button: { value: values.button ?? 0 },
     pointerId: { value: values.pointerId },
     clientY: { value: values.clientY },
+    clientX: { value: 50 },
   });
   target.dispatchEvent(event);
   return event;
@@ -127,6 +128,45 @@ const closeContextMenu = async () => {
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   await nextTick();
 };
+
+it('shows the Beam text and logo together in an expandable, selectable group without a folder icon', async () => {
+  const layers = [
+    makeLayer('logo', 'image', 'Logo Beam', { groupId: 'brand' }),
+    makeLayer('other', 'shape', 'Other'),
+    makeLayer('beam', 'text', 'Beam', { groupId: 'brand' }),
+  ];
+  const wrapper = mountComposition({ layers, selectedId: 'beam', selectedIds: ['logo', 'beam'] });
+  wrappers.push(wrapper);
+  const group = wrapper.get('[data-composition-group="brand"]');
+  expect(group.findAll('[data-layer-id]').map((row) => row.attributes('data-layer-id'))).toEqual(['beam', 'logo']);
+  expect(group.find('.lucide-folder').exists()).toBe(false);
+  expect(group.get('.group-heading').classes()).toContain('selected');
+  await group.get('.group-select').trigger('click');
+  expect(wrapper.emitted('select')).toEqual([['beam']]);
+  await group.get('[data-layer-id="logo"] .layer-select').trigger('click');
+  expect(wrapper.emitted('select')?.at(-1)).toEqual(['logo', 'individual']);
+  await group.get('[data-layer-id="beam"] .layer-select').trigger('click', { ctrlKey: true });
+  expect(wrapper.emitted('select')?.at(-1)).toEqual(['beam', 'toggle-individual']);
+  await group.get('button[aria-expanded]').trigger('click');
+  expect(group.get('.group-members').attributes('inert')).toBeDefined();
+  await wrapper.setProps({ layers: [...layers, makeLayer('next', 'shape', 'Next')] });
+  expect(group.get('button[aria-expanded]').attributes('aria-expanded')).toBe('false');
+  await group.get('button[aria-expanded]').trigger('click');
+  expect(group.get('button[aria-expanded]').attributes('aria-expanded')).toBe('true');
+});
+it('groups from the trailing effect-toolbar shortcut and disables it for ineligible selections', async () => {
+  const wrapper = mountComposition();
+  wrappers.push(wrapper);
+  const button = wrapper.get('[data-composition-group-action]');
+  expect(button.attributes('disabled')).toBeDefined();
+  await wrapper.setProps({ canGroup: true });
+  await button.trigger('click');
+  expect(wrapper.emitted('group')).toEqual([[]]);
+  await wrapper.setProps({ disabled: true });
+  await button.trigger('click');
+  expect(wrapper.emitted('group')).toHaveLength(1);
+  expect(button.element.closest('.effect-toolbar')).not.toBeNull();
+});
 
 it('renames a layer with a focused shared input on double-click and restores row focus on Enter', async () => {
   const wrapper = mountComposition({}, document.body);
@@ -746,11 +786,18 @@ describe('ScreenshotComposition', () => {
       y: 0,
       toJSON: () => ({}),
     } as DOMRect);
-    for (const row of wrapper.findAll('.layer-row')) {
+    for (const [index, row] of wrapper.findAll('.layer-row').entries()) {
       Object.defineProperty(row.element, 'offsetHeight', {
         configurable: true,
         value: 44,
       });
+      vi.spyOn(row.element, 'getBoundingClientRect').mockReturnValue({
+        top: index * 48,
+        bottom: index * 48 + 44,
+        left: 0,
+        right: 260,
+        height: 44,
+      } as DOMRect);
     }
 
     const selectButton = wrapper.get('.layer-row[data-layer-id="screenshot"] .layer-select');
@@ -760,13 +807,13 @@ describe('ScreenshotComposition', () => {
     });
     expect(pointerDown.defaultPrevented).toBe(false);
     expect(setPointerCapture).not.toHaveBeenCalled();
-    dispatchPointer(window, 'pointermove', { pointerId: 12, clientY: 35 });
+    dispatchPointer(window, 'pointermove', { pointerId: 12, clientY: 5 });
     runFrame();
     await wrapper.vm.$nextTick();
-    expect(wrapper.findAll('.layer-row').map((row) => row.attributes('data-layer-id'))[0]).toBe('screenshot');
+    expect(wrapper.get('[data-layer-id="__watermark__"]').classes()).toContain('drop-before');
     expect(setPointerCapture).toHaveBeenCalledWith(12);
 
-    dispatchPointer(window, 'pointerup', { pointerId: 12, clientY: 35 });
+    dispatchPointer(window, 'pointerup', { pointerId: 12, clientY: 5 });
     expect(wrapper.emitted('reorder')).toEqual([['screenshot', 0]]);
     expect(releasePointerCapture).toHaveBeenCalledWith(12);
 

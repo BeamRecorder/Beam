@@ -581,8 +581,29 @@ describe.skipIf(process.env.BEAM_RUN_DESKTOP_AGENT_TEST !== '1')('Screenshot gra
     });
     await wait(() =>
       evaluate<boolean>(
-        `(()=>{const row=document.querySelector('[data-layer-id="group-inspector-a"] .layer-select');row?.click();return Boolean(document.querySelector('[data-screenshot-group-inspector] input[aria-label="Width"]'))})()`,
+        `(()=>{const row=document.querySelector('[data-composition-group="inspector-pair"] .group-select');row?.click();return Boolean(document.querySelector('[data-screenshot-group-inspector] input[aria-label="Width"]'))})()`,
       ),
+    );
+    expect(
+      await evaluate(`document.querySelectorAll('[data-composition-group="inspector-pair"] [data-layer-id]').length`),
+    ).toBe(2);
+    await evaluate(`document.querySelector('[data-composition-group="inspector-pair"] button[aria-expanded]').click()`);
+    await wait(() =>
+      evaluate<boolean>(
+        `document.querySelector('[data-composition-group="inspector-pair"] .group-members').offsetHeight===0`,
+      ),
+    );
+    await evaluate(`document.querySelector('[data-composition-group="inspector-pair"] button[aria-expanded]').click()`);
+    await wait(() =>
+      evaluate<boolean>(
+        `document.querySelector('[data-composition-group="inspector-pair"] .group-members').offsetHeight>0`,
+      ),
+    );
+    await evaluate(
+      `document.querySelector('.stage-bounds').dispatchEvent(new WheelEvent('wheel',{bubbles:true,cancelable:true,deltaY:100,clientX:640,clientY:420}))`,
+    );
+    await wait(() =>
+      evaluate<boolean>(`document.querySelector('.screenshot-stage canvas').getBoundingClientRect().width<1270`),
     );
     const rect = await evaluate<{ x: number; y: number; width: number; height: number }>(
       `(()=>{const r=document.querySelector('.screenshot-stage canvas').getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height}})()`,

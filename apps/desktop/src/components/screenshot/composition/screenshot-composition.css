@@ -82,6 +82,7 @@
 .layer-list {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   min-height: 0;
@@ -93,9 +94,12 @@
 .layer-rows {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  min-width: 0;
 }
+.composition-action-spacer { flex: 1; }
 .layer-row {
+  position: relative;
   display: flex;
   align-items: center;
   height: 44px;
@@ -105,6 +109,19 @@
   box-sizing: border-box;
   padding-right: 2px;
 }
+.layer-row.drop-before::before,
+.layer-row.drop-after::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--text-primary);
+  pointer-events: none;
+}
+.layer-row.drop-before::before { top: -3px; }
+.layer-row.drop-after::after { bottom: -3px; }
 .layer-row.selected {
   background: var(--color-bg-field-active);
   border-color: var(--color-border-strong);
@@ -142,9 +159,6 @@
 .layer-name {
   font-size: 11px;
   color: var(--text-primary);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 .layer-move {
   transition: transform 160ms ease;

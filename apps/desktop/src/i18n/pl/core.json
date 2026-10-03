@@ -1093,6 +1093,9 @@
     "luminosity": "Jasność"
   },
   "ScreenshotComposition": {
+    "expandGroup": "Rozwiń grupę {name}",
+    "collapseGroup": "Zwiń grupę {name}",
+    "selectGroup": "Zaznacz grupę {name}",
     "title": "Kompozycja",
     "name": "Nazwa warstwy",
     "rename": "Zmień nazwę warstwy · Dwukrotne kliknięcie lub F2",

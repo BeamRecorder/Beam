@@ -1093,7 +1093,7 @@ describe('ScreenshotEditor', () => {
     composition.vm.$emit('select', 'inspector-b', 'toggle');
     canvas.vm.$emit('selectionBounds', { x: 0.2, y: 0.2, width: 0.6, height: 0.6 });
     await flushPromises();
-    expect(wrapper.get('[data-screenshot-group-inspector]').exists()).toBe(true);
+    expect(wrapper.find('[data-screenshot-group-inspector]').exists()).toBe(true);
     expect(wrapper.findComponent(ShapePropertiesStub).exists()).toBe(false);
     expect(wrapper.findComponent(ClipPropertiesStub).exists()).toBe(false);
     expect(wrapper.find('.screenshot-properties-title input').exists()).toBe(false);

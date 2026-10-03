@@ -1078,6 +1078,9 @@
     "luminosity": "Độ sáng"
   },
   "ScreenshotComposition": {
+    "expandGroup": "Mở rộng nhóm {name}",
+    "collapseGroup": "Thu gọn nhóm {name}",
+    "selectGroup": "Chọn nhóm {name}",
     "title": "Bố cục",
     "name": "Tên lớp",
     "rename": "Đổi tên lớp · Nhấp đúp hoặc F2",

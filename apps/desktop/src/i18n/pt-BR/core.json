@@ -1093,6 +1093,9 @@
     "luminosity": "Luminosidade"
   },
   "ScreenshotComposition": {
+    "expandGroup": "Expandir grupo {name}",
+    "collapseGroup": "Recolher grupo {name}",
+    "selectGroup": "Selecionar grupo {name}",
     "title": "Composição",
     "name": "Nome da camada",
     "rename": "Renomear camada · Clique duplo ou F2",

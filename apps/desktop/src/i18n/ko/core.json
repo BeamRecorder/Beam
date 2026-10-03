@@ -1093,6 +1093,9 @@
     "luminosity": "광도"
   },
   "ScreenshotComposition": {
+    "expandGroup": "{name} 그룹 펼치기",
+    "collapseGroup": "{name} 그룹 접기",
+    "selectGroup": "{name} 그룹 선택",
     "title": "컴포지션",
     "name": "레이어 이름",
     "rename": "레이어 이름 변경 · 두 번 클릭 또는 F2",

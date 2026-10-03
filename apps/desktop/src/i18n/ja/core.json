@@ -1093,6 +1093,9 @@
     "luminosity": "輝度"
   },
   "ScreenshotComposition": {
+    "expandGroup": "{name} グループを展開",
+    "collapseGroup": "{name} グループを折りたたむ",
+    "selectGroup": "{name} グループを選択",
     "title": "コンポジション",
     "name": "レイヤー名",
     "rename": "レイヤー名を変更 · ダブルクリックまたは F2",

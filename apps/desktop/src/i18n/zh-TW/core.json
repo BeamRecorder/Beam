@@ -1093,6 +1093,9 @@
     "luminosity": "明度"
   },
   "ScreenshotComposition": {
+    "expandGroup": "展開 {name} 群組",
+    "collapseGroup": "收合 {name} 群組",
+    "selectGroup": "選取 {name} 群組",
     "title": "合成",
     "name": "圖層名稱",
     "rename": "重新命名圖層 · 按兩下或 F2",

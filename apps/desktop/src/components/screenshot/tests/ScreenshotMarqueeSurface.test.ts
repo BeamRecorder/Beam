@@ -28,21 +28,21 @@ it('provides workspace coordinates only when a gesture asks for targets and forw
   const selection = { ids: ['a'], primaryId: 'a', additive: false };
   shared.vm.$emit('select', selection);
   expect(wrapper.emitted('select')).toEqual([[selection]]);
-  const event = new MouseEvent('pointerdown');
-  expect(shared.props('canStartLeft')(event)).toBe(true);
+  const event = new MouseEvent('pointerdown') as PointerEvent;
+  expect(shared.props('canStartLeft')!(event)).toBe(true);
   wrapper.unmount();
 });
 it('keeps controls and selected handles interactive and lets Space pan instead of selecting', async () => {
   const { wrapper, shared } = fixture();
   for (const node of [wrapper.get('button').element, wrapper.get('.webcam-selection').element]) {
-    const event = new MouseEvent('pointerdown');
+    const event = new MouseEvent('pointerdown') as PointerEvent;
     Object.defineProperty(event, 'target', { value: node });
-    expect(shared.props('canStartLeft')(event)).toBe(false);
+    expect(shared.props('canStartLeft')!(event)).toBe(false);
   }
   await wrapper.setProps({ spacePressed: true });
-  expect(shared.props('canStartLeft')(new MouseEvent('pointerdown'))).toBe(false);
+  expect(shared.props('canStartLeft')!(new MouseEvent('pointerdown') as PointerEvent)).toBe(false);
   await wrapper.setProps({ spacePressed: false, layerAt: () => 'a' });
-  expect(shared.props('canStartLeft')(new MouseEvent('pointerdown'))).toBe(false);
+  expect(shared.props('canStartLeft')!(new MouseEvent('pointerdown') as PointerEvent)).toBe(false);
   wrapper.unmount();
 });
 it('supplies no targets until the real canvas is available', async () => {

@@ -1090,6 +1090,9 @@
     "luminosity": "Luminosité"
   },
   "ScreenshotComposition": {
+    "expandGroup": "Déplier le groupe {name}",
+    "collapseGroup": "Replier le groupe {name}",
+    "selectGroup": "Sélectionner le groupe {name}",
     "title": "Composition",
     "name": "Nom du calque",
     "rename": "Renommer le calque · Double-clic ou F2",

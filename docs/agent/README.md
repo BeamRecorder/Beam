@@ -138,6 +138,9 @@ persist on composition records as `groupId`; grouping joins complete existing
 groups and requires at least two unlocked elements. Background, watermark and
 zoom controls cannot join a group. Resizing also scales native text and cursor
 sizes within their supported limits. Removing a member clears orphan groups.
+`still.selection.move-to-group` accepts `{ layerIds, groupId, frontIndex? }` to move explicit members into an existing group, or detach them with `groupId: null`. The optional front-to-back insertion index changes stacking in the same transaction. Source groups with a single remaining member dissolve automatically; locked groups reject the move. Composition supports expandable groups, dropping on their headers or between members, and moving members into the unindented root list.
+In Composition, a child row selects only that member; Ctrl/Cmd-click toggles individual members. The group header selects the complete group. The top edge of a header and gaps between groups insert standalone layers with a full-width guide; the header center adds a member to the group.
+On the canvas, the first raycast click on a grouped member selects its group. Clicking a member of that selected group selects only that member, while dragging preserves the active selection. Double or triple clicks open the clicked member's text editor or image crop.
 
 In Screenshot, drag on empty canvas or the surrounding workspace with the left button or drag with the right
 button to select a rectangle. Ctrl/Cmd+G groups the selection; Ctrl/Cmd+Shift+G

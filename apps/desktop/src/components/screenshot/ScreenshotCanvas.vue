@@ -4,7 +4,6 @@ import { useScreenshotCanvasGeometry } from './useScreenshotCanvasGeometry';
 import { createScreenshotAlignment } from './screenshot-alignment';
 import { transformScreenshotGroup } from '@beam/engine/screenshot/screenshot-groups';
 import type { AlignmentMeasurement } from '@beam/engine/layout/alignment-index-types';
-
 import {
   beginPropertyInteraction,
   endPropertyInteraction,
@@ -46,7 +45,6 @@ import { screenshotPreviewSize } from './screenshot-preview-resolution';
 import { useScreenshotViewport } from './useScreenshotViewport';
 import { screenshotCanvasInteraction } from './screenshot-canvas-interaction';
 import CanvasAddMenu from '../editor/search/CanvasAddMenu.vue';
-
 const { t } = useTranslate('ScreenshotEditor');
 const { t: canvasText } = useTranslate('CanvasPanel');
 const elements = useElementEditor();
@@ -220,10 +218,11 @@ watch(
   },
 );
 const addMenu = ref<InstanceType<typeof CanvasAddMenu> | null>(null);
-const { layerAt, select, editLayer } = screenshotCanvasInteraction({
+const { layerAt, selectHit, select, editLayer } = screenshotCanvasInteraction({
   state: () => props.state,
   assets: () => assets.value,
   canvas: () => canvas.value,
+  selectedIds: () => props.selectedIds,
   blocked: () => {
     const { isPanning, isSpacePressed } = viewport.viewport;
     return Boolean(
@@ -257,18 +256,19 @@ const endRotation = (value: number) => {
 const start = (event: PointerEvent, corner?: ResizeCorner, selectionId?: string) => {
   if (props.cropping || props.disabled || event.button !== 0) return;
   const selectedOutlineId = props.selectedIds.length > 1 ? selectionId : undefined;
+  const hitId = corner ? null : layerAt(event);
   if (event.ctrlKey || event.metaKey || event.shiftKey) {
     event.stopPropagation();
-    emit('select', selectedOutlineId ?? layerAt(event), 'toggle');
+    selectHit(hitId ?? selectedOutlineId ?? null, true);
     return;
   }
   const groupCorner = corner && selectionBounds.value;
   let targetId = selectedOutlineId ?? props.selectedId;
   if (!corner) {
-    const id = selectedOutlineId ?? layerAt(event);
+    const id = hitId ?? selectedOutlineId;
     if (!id || !props.selectedIds.includes(id)) {
       event.stopPropagation();
-      emit('select', id);
+      selectHit(id ?? null);
       return;
     }
     targetId = id;
@@ -290,6 +290,7 @@ const start = (event: PointerEvent, corner?: ResizeCorner, selectionId?: string)
     initial: { ...(groupCorner || screenshotImage(props.state, targetId)?.transform || targetTransform) },
     corner,
     targetId: targetId ?? undefined,
+    clickId: hitId ?? undefined,
     selection:
       !corner || groupCorner
         ? movableScreenshotSelection(props.state, props.selectedIds).map((layer) => layer.id)
@@ -356,7 +357,7 @@ const endDrag = () => {
     if (drag?.selection && drag.corner) emit('resizeSelection', drag.initial, transformDraft.value);
     else emit('transform', transformDraft.value);
   }
-  const clickedId = drag?.selection && !translationDraft.value ? drag.targetId : undefined;
+  const clickedId = drag?.selection && !translationDraft.value && !transformDraft.value ? drag.clickId : undefined;
   translationDraft.value = null;
   transformDraft.value = null;
   if (drag) endPropertyInteraction();
@@ -367,7 +368,7 @@ const endDrag = () => {
   dragging.value = false;
   dragRenderer.reset();
   frames.requestRender();
-  if (clickedId) emit('select', clickedId);
+  if (clickedId) selectHit(clickedId);
 };
 watch(
   () => props.selectedIds,
@@ -376,7 +377,7 @@ watch(
     transformDraft.value = null;
     pendingTranslation = null;
     translationDraft.value = null;
-    if (drag) drag.targetId = undefined;
+    if (drag) drag.clickId = undefined;
     endDrag();
   },
 );
@@ -399,6 +400,7 @@ onBeforeUnmount(() => {
       :class="{ 'is-grabbing': viewport.viewport.isPanning.value }"
       @pointerdown.self="select"
       @dblclick="editLayer"
+      @click="editLayer"
       @wheel="viewport.wheel"
       @pointerdown.capture="viewport.beginPan"
       @pointermove="viewport.movePan"
@@ -413,7 +415,7 @@ onBeforeUnmount(() => {
         :selection="selectedIds"
         :layer-at="layerAt"
         :space-pressed="viewport.viewport.isSpacePressed.value"
-        :disabled="disabled || cropping || Boolean(elements?.editing.value) || elements?.drawingMode.value"
+        :disabled="disabled || cropping || Boolean(elements?.editing.value || elements?.drawingMode.value)"
         @select="emit('selectMany', $event)"
       >
         <div class="image-stage" :style="stageStyle">

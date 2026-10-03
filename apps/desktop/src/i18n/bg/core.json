@@ -1093,6 +1093,9 @@
     "luminosity": "Осветеност"
   },
   "ScreenshotComposition": {
+    "expandGroup": "Разгъване на групата {name}",
+    "collapseGroup": "Свиване на групата {name}",
+    "selectGroup": "Избиране на групата {name}",
     "title": "Композиция",
     "name": "Име на слоя",
     "rename": "Преименуване на слой · Двойно щракване или F2",

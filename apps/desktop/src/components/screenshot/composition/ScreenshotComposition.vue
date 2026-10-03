@@ -1,12 +1,27 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { useMediaQuery } from '@vueuse/core';
-import { ChevronDown, Eye, EyeOff, Layers, LockKeyhole, Trash2, Sparkles, UnlockKeyhole, ZoomIn } from '@lucide/vue';
+import {
+  ChevronDown,
+  Eye,
+  EyeOff,
+  Layers,
+  LockKeyhole,
+  Trash2,
+  Sparkles,
+  UnlockKeyhole,
+  ZoomIn,
+  Group,
+} from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Badge from '~/ui/badge/Badge.vue';
+import { useScrollShadow } from '~/ui/scroll-shadow/useScrollShadow';
 import ScreenshotLayerEffectList from '../gradient/ScreenshotLayerEffectList.vue';
 import ScreenshotEffectToolbar from '../gradient/ScreenshotEffectToolbar.vue';
 import ScreenshotLayerControls from './ScreenshotLayerControls.vue';
+import ScreenshotCompositionGroup from './ScreenshotCompositionGroup.vue';
+import ScreenshotCompositionLabel from './ScreenshotCompositionLabel.vue';
+import { screenshotCompositionGroups } from './screenshot-composition-groups';
 import { layerEffectDisabledReason } from './composition-disabled-reason';
 import { ContextMenu, ContextMenuItem } from '~/ui/context-menu';
 import type { ContextMenuPosition } from '~/ui/context-menu';
@@ -35,6 +50,8 @@ const props = defineProps<{
   disabled?: boolean;
   state?: ScreenshotState;
   cursorPacks?: CursorPackDescriptor[];
+  canGroup?: boolean;
+  canMoveToGroup?: (id: string, groupId: string | null) => boolean;
 }>();
 const emit = defineEmits<{
   select: [id: string, mode?: ScreenshotSelectionMode];
@@ -46,12 +63,16 @@ const emit = defineEmits<{
   'add-effect': [id: string, kind?: LayerEffectAddKind];
   'select-effect': [id: string, effectId: string];
   'toggle-effect': [id: string, effectId: string];
+  group: [];
+  'move-to-group': [id: string, groupId: string | null, frontIndex: number];
 }>();
 const { t, locale } = useTranslate('ScreenshotComposition');
 const { t: gradientText } = useTranslate('GradientEffect');
 const canAddEffect = (layer: ScreenshotLayer | undefined) => !layerEffectDisabledReason(layer, props.disabled);
 const { t: tHighlight } = useTranslate('Highlight');
 const { t: elementsText } = useTranslate('Elements');
+const { t: editorText } = useTranslate('ScreenshotEditor');
+const { t: effectText } = useTranslate('LayerEffects');
 const compact = useMediaQuery('(max-width: 1180px)');
 const collapsed = ref(compact.value);
 const panel = ref<HTMLElement | null>(null);
@@ -74,11 +95,20 @@ watch(compact, (value) => {
   if (value) collapsed.value = true;
 });
 const list = ref<HTMLElement | null>(null);
+const { hasTopShadow, hasBottomShadow } = useScrollShadow(list);
+const listMask = computed(
+  () =>
+    `linear-gradient(to bottom, ${hasTopShadow.value ? 'transparent' : 'black'} 0, black 16px, black calc(100% - 16px), ${hasBottomShadow.value ? 'transparent' : 'black'} 100%)`,
+);
 const visibleThumbnailIds = useVisibleThumbnailIds(list, () => props.layers.map((layer) => layer.id));
 const editingId = ref<string | null>(null);
+const selectOne = (id: string) => {
+  if (props.layers.find((layer) => layer.id === id)?.groupId) emit('select', id, 'individual');
+  else emit('select', id);
+};
 const rename = (id: string) => {
   if (props.disabled || props.layers.find((layer) => layer.id === id)?.locked) return;
-  emit('select', id);
+  selectOne(id);
   editingId.value = id;
 };
 const finishRename = async (id: string, restoreFocus: boolean) => {
@@ -111,21 +141,35 @@ const thumbnails = useLayerThumbnails(
 );
 const selectedSet = computed(() => new Set(props.selectedIds));
 const front = computed(() => [...props.layers].reverse());
-const { preview, dragging, begin, consumeClick } = useScreenshotLayerReorder(
+const canReorderRoot = (id: string, groupId: string | null) =>
+  groupId === null && props.layers.some((layer) => layer.id === id && !layer.groupId && !layer.locked);
+const { preview, dragging, dropGroupId, dropTarget, begin, consumeClick } = useScreenshotLayerReorder(
   list,
   () => front.value.map((layer) => layer.id),
   (id, index) => {
     if (!props.disabled) emit('reorder', id, index);
   },
+  {
+    canDrop: (id, groupId) =>
+      !props.disabled && (canReorderRoot(id, groupId) || Boolean(props.canMoveToGroup?.(id, groupId))),
+    commit: (id, groupId, index) => {
+      if (props.disabled) return;
+      if (props.canMoveToGroup?.(id, groupId)) emit('move-to-group', id, groupId, index);
+      else if (canReorderRoot(id, groupId)) emit('reorder', id, index);
+    },
+  },
 );
 const ordered = computed(
   () => preview.value?.flatMap((id) => front.value.filter((layer) => layer.id === id)) ?? front.value,
 );
+const groupBlocks = computed(() => screenshotCompositionGroups(ordered.value));
 const selected = computed(() => props.layers.find((layer) => layer.id === props.selectedId));
-const selectLayer = (event: MouseEvent, id: string) => {
+const selectLayer = (event: MouseEvent, id: string, wholeGroup = false) => {
   if (props.disabled) return;
   if (consumeClick(event, id)) return;
-  if (event.ctrlKey || event.metaKey) emit('select', id, 'toggle');
+  const individual = !wholeGroup && Boolean(props.layers.find((layer) => layer.id === id)?.groupId);
+  if (event.ctrlKey || event.metaKey) emit('select', id, individual ? 'toggle-individual' : 'toggle');
+  else if (individual) emit('select', id, 'individual');
   else emit('select', id);
 };
 
@@ -164,7 +208,7 @@ const openMenu = async (event: MouseEvent | KeyboardEvent, id: string) => {
       ? { x: event.clientX, y: event.clientY }
       : { x: rect.left + 16, y: rect.bottom };
   menuId.value = id;
-  if (!selectedSet.value.has(id)) emit('select', id);
+  if (!selectedSet.value.has(id)) selectOne(id);
   await nextTick();
   const action = menuDelete.value?.$el as HTMLButtonElement | undefined;
   (action?.disabled ? action.closest<HTMLElement>('[role="menu"]') : action)?.focus();
@@ -267,7 +311,21 @@ const keyboard = (event: KeyboardEvent, id: string) => {
           :disabled-reason="layerEffectDisabledReason(selected, disabled)"
           :direction="upward ? 'up' : 'down'"
           @add="selected && emit('add-effect', selected.id, $event)"
-        />
+        >
+          <span class="composition-action-spacer" />
+          <Button
+            variant="ghost"
+            size="xs"
+            icon-only
+            :icon="Group"
+            :disabled="disabled || !canGroup"
+            :aria-label="editorText('group')"
+            :tooltip="canGroup ? editorText('group') + ' · Ctrl+G' : effectText('selectElement')"
+            :tooltip-delay="200"
+            data-composition-group-action
+            @click="!disabled && canGroup && emit('group')"
+          />
+        </ScreenshotEffectToolbar>
         <div
           ref="list"
           class="layer-list"
@@ -275,80 +333,99 @@ const keyboard = (event: KeyboardEvent, id: string) => {
           :aria-label="t('layers')"
           :inert="disabled || undefined"
           :aria-disabled="disabled"
+          :style="{ maskImage: listMask }"
         >
           <!-- Export disables the list once, without updating every row or remeasuring its buttons. -->
           <TransitionGroup tag="div" name="layer" class="layer-rows">
-            <div
-              v-for="layer in ordered"
-              v-memo="[
-                layer,
-                selectedSet.has(layer.id),
-                dragging === layer.id,
-                editingId === layer.id,
-                thumbnails[layer.id],
-                effectThumbnailRevision(layer, thumbnails),
-                locale,
-                selectedEffectId,
-              ]"
-              :key="layer.id"
-              class="layer-row"
-              :class="{
-                selected: selectedSet.has(layer.id),
-                hidden: !layer.visible,
-                dragging: dragging === layer.id,
-                'has-effects': Boolean(layer.effects?.length),
-              }"
-              :data-layer-id="layer.id"
-              role="listitem"
-              @keydown="keyboard($event, layer.id)"
-              @contextmenu="openMenu($event, layer.id)"
+            <ScreenshotCompositionGroup
+              v-for="block in groupBlocks"
+              :key="block.key"
+              :group-id="block.groupId"
+              :block-key="block.key"
+              :name="label(block.layers[0]!)"
+              :count="block.layers.length"
+              :disabled="disabled"
+              :selected="block.layers.every((layer) => selectedSet.has(layer.id))"
+              :drop-target="dropGroupId === block.groupId"
+              :root-insertion="dropTarget?.blockKey === block.key ? dropTarget.side : undefined"
+              @select="selectLayer($event, block.layers[0]!.id, true)"
             >
-              <button
-                v-if="editingId !== layer.id"
-                class="layer-select"
-                :title="t('rename')"
-                :aria-pressed="selectedSet.has(layer.id)"
-                @pointerdown="!disabled && begin($event, layer.id)"
-                @click="selectLayer($event, layer.id)"
-                @dblclick.stop="rename(layer.id)"
+              <div
+                v-for="layer in block.layers"
+                v-memo="[
+                  layer,
+                  selectedSet.has(layer.id),
+                  dragging === layer.id,
+                  editingId === layer.id,
+                  thumbnails[layer.id],
+                  effectThumbnailRevision(layer, thumbnails),
+                  locale,
+                  selectedEffectId,
+                  dropTarget?.anchorId === layer.id ? dropTarget.side : null,
+                ]"
+                :key="layer.id"
+                class="layer-row"
+                :class="{
+                  selected: selectedSet.has(layer.id),
+                  hidden: !layer.visible,
+                  dragging: dragging === layer.id,
+                  'has-effects': Boolean(layer.effects?.length),
+                  'drop-before':
+                    !dropTarget?.header && dropTarget?.anchorId === layer.id && dropTarget.side === 'before',
+                  'drop-after': !dropTarget?.header && dropTarget?.anchorId === layer.id && dropTarget.side === 'after',
+                }"
+                :data-layer-id="layer.id"
+                role="listitem"
+                @keydown="keyboard($event, layer.id)"
+                @contextmenu="openMenu($event, layer.id)"
               >
-                <ZoomIn v-if="layer.kind === 'zoom'" :size="24" aria-hidden="true" />
-                <LayerThumbnail v-else :value="thumbnails[layer.id]" />
-                <span class="layer-name" :title="label(layer)">{{ label(layer) }}</span>
-              </button>
-              <ScreenshotLayerName
-                v-else
-                inline
-                :name="label(layer)"
-                :disabled="layer.locked"
-                @rename="!disabled && emit('rename', layer.id, $event)"
-                @finish="finishRename(layer.id, $event)"
-              />
-              <Button
-                variant="ghost"
-                size="xs"
-                icon-only
-                :icon="layer.locked ? LockKeyhole : UnlockKeyhole"
-                :aria-label="t(layer.locked ? 'unlock' : 'lock', { name: label(layer) })"
-                @click="!disabled && emit('update', layer.id, { locked: !layer.locked })"
-              />
-              <Button
-                variant="ghost"
-                size="xs"
-                icon-only
-                :icon="layer.visible ? Eye : EyeOff"
-                :aria-label="t(layer.visible ? 'hide' : 'show', { name: label(layer) })"
-                @click="!disabled && emit('visibility', layer.id, !layer.visible)"
-              />
-              <ScreenshotLayerEffectList
-                :layer="layer"
-                :thumbnails="thumbnails"
-                :disabled="disabled"
-                :selected-effect-id="selectedId === layer.id ? selectedEffectId : null"
-                @select="emit('select-effect', layer.id, $event)"
-                @toggle="emit('toggle-effect', layer.id, $event)"
-              />
-            </div>
+                <button
+                  v-if="editingId !== layer.id"
+                  class="layer-select"
+                  :title="t('rename')"
+                  :aria-pressed="selectedSet.has(layer.id)"
+                  @pointerdown="!disabled && begin($event, layer.id)"
+                  @click="selectLayer($event, layer.id)"
+                  @dblclick.stop="rename(layer.id)"
+                >
+                  <ZoomIn v-if="layer.kind === 'zoom'" :size="24" aria-hidden="true" />
+                  <LayerThumbnail v-else :value="thumbnails[layer.id]" />
+                  <ScreenshotCompositionLabel class="layer-name" :text="label(layer)" />
+                </button>
+                <ScreenshotLayerName
+                  v-else
+                  inline
+                  :name="label(layer)"
+                  :disabled="layer.locked"
+                  @rename="!disabled && emit('rename', layer.id, $event)"
+                  @finish="finishRename(layer.id, $event)"
+                />
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  icon-only
+                  :icon="layer.locked ? LockKeyhole : UnlockKeyhole"
+                  :aria-label="t(layer.locked ? 'unlock' : 'lock', { name: label(layer) })"
+                  @click="!disabled && emit('update', layer.id, { locked: !layer.locked })"
+                />
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  icon-only
+                  :icon="layer.visible ? Eye : EyeOff"
+                  :aria-label="t(layer.visible ? 'hide' : 'show', { name: label(layer) })"
+                  @click="!disabled && emit('visibility', layer.id, !layer.visible)"
+                />
+                <ScreenshotLayerEffectList
+                  :layer="layer"
+                  :thumbnails="thumbnails"
+                  :disabled="disabled"
+                  :selected-effect-id="selectedId === layer.id ? selectedEffectId : null"
+                  @select="emit('select-effect', layer.id, $event)"
+                  @toggle="emit('toggle-effect', layer.id, $event)"
+                />
+              </div>
+            </ScreenshotCompositionGroup>
           </TransitionGroup>
         </div>
       </div>

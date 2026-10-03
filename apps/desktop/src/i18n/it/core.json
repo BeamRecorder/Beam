@@ -1093,6 +1093,9 @@
     "luminosity": "Luminosità"
   },
   "ScreenshotComposition": {
+    "expandGroup": "Espandi il gruppo {name}",
+    "collapseGroup": "Comprimi il gruppo {name}",
+    "selectGroup": "Seleziona il gruppo {name}",
     "title": "Composizione",
     "name": "Nome del livello",
     "rename": "Rinomina livello · Doppio clic o F2",

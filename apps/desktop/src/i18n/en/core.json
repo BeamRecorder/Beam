@@ -1090,6 +1090,9 @@
     "luminosity": "Luminosity"
   },
   "ScreenshotComposition": {
+    "expandGroup": "Expand {name} group",
+    "collapseGroup": "Collapse {name} group",
+    "selectGroup": "Select {name} group",
     "title": "Composition",
     "name": "Layer name",
     "rename": "Rename layer · Double-click or F2",

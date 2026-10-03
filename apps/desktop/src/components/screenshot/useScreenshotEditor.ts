@@ -220,7 +220,7 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     addImage,
     layers: () => state.value?.shapes ?? [],
     selectedId: () => selectedId.value,
-    select,
+    select: (id) => select(id, 'individual'),
     insert: (clip) => {
       if (!state.value) return;
       initializeScreenshotComposition(state.value);
@@ -275,7 +275,10 @@ export function useScreenshotEditor(id: () => string, ready: () => void, preview
     Boolean(elements.editing.value) ||
     elements.drawingMode.value;
   const groups = useScreenshotGroups(state, selectedIds, shortcutsDisabled);
-  const resizeSelection = (from: NormalizedTransform, to: NormalizedTransform) => { if (state.value && !shortcutsDisabled()) state.value = transformScreenshotGroup(state.value, selectedIds.value, from, to); };
+  const resizeSelection = (from: NormalizedTransform, to: NormalizedTransform) => {
+    if (state.value && !shortcutsDisabled())
+      state.value = transformScreenshotGroup(state.value, selectedIds.value, from, to);
+  };
   const layerEffects = useScreenshotLayerEffects({
     state,
     selectedId,

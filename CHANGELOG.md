@@ -6,6 +6,9 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Screenshot Composition shows expandable groups with their member layers together, including the logo and editable text in a brand group.
+- Screenshot Composition adds a Group shortcut beside effects, precise drag-and-drop into and out of groups, and fading layer names that scroll on sustained hover without horizontal scrollbars.
+- Screenshot group members can be selected individually from Composition, while group headers select all members; dropping above or between groups keeps layers in the root list.
 - Screenshot groups and multiple selections expose shared position, alignment, size and rotation controls in the Placement inspector, with proportional native text resizing and undo/redo.
 - Screenshot layers support native X/Y 3D rotation with a shared perspective for preview, editable text, thumbnails and PNG export.
 - Screenshot supports left-drag selection on empty canvas, right-drag selection, persistent groups with shared move/resize bounds, Ctrl/Cmd+G and Ctrl/Cmd+Shift+G, and alignment guides with document-pixel dimensions and spacing.
@@ -152,6 +155,9 @@ User-facing changes to Beam are documented in this file.
 - Refreshed the default light and dark surfaces, typography and control shapes, with bundled Hanken Grotesk and themed device/preset menus.
 
 ### Fixed
+
+- Moving a selected Screenshot group member changes only that layer; selecting the group header still moves all members together.
+- Screenshot canvas clicks select a group first, then its clicked member; double and triple clicks edit that member without expanding the selection.
 
 - Screenshot rectangle selection can start in the workspace outside the canvas and remains accurate when the preview is zoomed, panned or UI-scaled.
 - Editable text keeps the same vertical position when leaving inline editing, including centered text beside a logo, with matching preview and export.

@@ -1093,6 +1093,9 @@
     "luminosity": "Яркость"
   },
   "ScreenshotComposition": {
+    "expandGroup": "Развернуть группу {name}",
+    "collapseGroup": "Свернуть группу {name}",
+    "selectGroup": "Выбрать группу {name}",
     "title": "Композиция",
     "name": "Имя слоя",
     "rename": "Переименовать слой · Двойной щелчок или F2",

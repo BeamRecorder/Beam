@@ -3,6 +3,7 @@ import type { StillDocument } from './still-document-types';
 import { jsonObject } from '../document/json-value';
 import { groupScreenshotLayers, ungroupScreenshotLayers, transformScreenshotGroup } from './screenshot-groups';
 import { rotateScreenshotGroup } from './screenshot-group-rotation';
+import { moveScreenshotLayersToGroup } from './screenshot-group-transfer';
 import type { NormalizedTransform } from '../shared/composition-types';
 const parse = (input: unknown) => {
   const value = jsonObject(input);
@@ -20,9 +21,24 @@ const parse = (input: unknown) => {
     to: value.to,
     bounds: value.bounds,
     degrees: value.degrees,
+    frontIndex: value.frontIndex,
   };
 };
 export function registerStillGroupCommands(registry: CommandRegistry<StillDocument>) {
+  registry.register({
+    type: 'still.selection.move-to-group',
+    parse,
+    apply(document, input) {
+      if (input.groupId !== null && typeof input.groupId !== 'string')
+        throw new TypeError('Moving into a group requires an identifier or null.');
+      if (input.frontIndex !== undefined && typeof input.frontIndex !== 'number')
+        throw new TypeError('Insertion index must be a number.');
+      return {
+        ...document,
+        state: moveScreenshotLayersToGroup(document.state, input.layerIds, input.groupId, input.frontIndex),
+      };
+    },
+  });
   registry.register({
     type: 'still.selection.group',
     parse,

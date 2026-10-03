@@ -1093,6 +1093,9 @@
     "luminosity": "明度"
   },
   "ScreenshotComposition": {
+    "expandGroup": "展开 {name} 分组",
+    "collapseGroup": "折叠 {name} 分组",
+    "selectGroup": "选择 {name} 分组",
     "title": "合成",
     "name": "图层名称",
     "rename": "重命名图层 · 双击或 F2",

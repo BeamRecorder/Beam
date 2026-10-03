@@ -1093,6 +1093,9 @@
     "luminosity": "चमक"
   },
   "ScreenshotComposition": {
+    "expandGroup": "{name} समूह खोलें",
+    "collapseGroup": "{name} समूह समेटें",
+    "selectGroup": "{name} समूह चुनें",
     "title": "कंपोज़िशन",
     "name": "लेयर का नाम",
     "rename": "लेयर का नाम बदलें · डबल-क्लिक या F2",

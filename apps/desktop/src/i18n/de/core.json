@@ -1093,6 +1093,9 @@
     "luminosity": "Luminanz"
   },
   "ScreenshotComposition": {
+    "expandGroup": "Gruppe {name} aufklappen",
+    "collapseGroup": "Gruppe {name} zuklappen",
+    "selectGroup": "Gruppe {name} auswählen",
     "title": "Komposition",
     "name": "Ebenenname",
     "rename": "Ebene umbenennen · Doppelklick oder F2",

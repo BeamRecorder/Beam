@@ -1,6 +1,22 @@
 import { effectScope, ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useScreenshotLayerReorder } from '../composition/useScreenshotLayerReorder';
+import { useScreenshotLayerReorder as reorder } from '../composition/useScreenshotLayerReorder';
+const useScreenshotLayerReorder: typeof reorder = (list, ids, commit, groups) => {
+  let state: ReturnType<typeof reorder>;
+  if (list.value)
+    Object.assign(list.value, {
+      querySelectorAll: () =>
+        (state?.preview.value ?? ids()).map((id, index) => ({
+          dataset: { layerId: id },
+          getBoundingClientRect: () => {
+            const top = list.value!.getBoundingClientRect().top + index * 44 - list.value!.scrollTop;
+            return { top, bottom: top + 40, height: 40 };
+          },
+        })),
+    });
+  state = reorder(list, ids, commit, groups);
+  return state;
+};
 
 class PointerCaptureTarget extends EventTarget {
   private readonly capturedPointers = new Set<number>();
@@ -34,6 +50,7 @@ const pointer = (button: number, pointerId: number, clientY: number, target = ne
     button,
     pointerId,
     clientY,
+    clientX: 50,
     currentTarget: target,
     preventDefault: vi.fn(),
   } as unknown as PointerEvent,
@@ -45,6 +62,7 @@ const dispatchPointer = (type: 'pointermove' | 'pointerup' | 'pointercancel', po
   Object.defineProperties(event, {
     pointerId: { value: pointerId },
     clientY: { value: clientY },
+    clientX: { value: 50 },
   });
   window.dispatchEvent(event);
   return event;
