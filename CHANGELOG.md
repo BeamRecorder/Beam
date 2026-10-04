@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- The private website’s Edit captions and voiceover sections show eight-second, 60 fps light/dark loops using native Beam controls, timed words, audio waveforms and macOS cursor interactions. Reusable source lives in `examples/website-speech-loops/`.
+
 - Project thumbnails reveal a translated Open project action at the bottom right on hover or keyboard focus, with batch selection preserved.
 - Video editor Developer Mode can add a lightweight CC0 demo webcam linked to an existing screen recording. One repeated webcam lane covers the recording and supports zoom reactions, camera layouts, project saves and undo/redo; the action is translated into all fifteen languages.
 
