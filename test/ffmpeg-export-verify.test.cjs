@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const { verifyFfmpegExport } = require('../scripts/native/ffmpeg-export-verify.cjs');
+const { lgplRecords } = require('./fixtures/ffmpeg-export/licenses.cjs');
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-packaged-export-'));
@@ -13,7 +14,10 @@ function fixture(t) {
   return {
     root,
     options: {
-      run: () => ({ status: 1, stderr: 'Expected socket, destination, width, height' }),
+      run: (_executable, args) =>
+        args.length
+          ? { status: 0, stdout: JSON.stringify(lgplRecords()) }
+          : { status: 1, stderr: 'Expected socket, destination, width, height' },
       load: () => ({ transfer() {} }),
     },
   };
@@ -21,18 +25,19 @@ function fixture(t) {
 
 test('checks the Beam-only payload, system-linked executable and stable addon entrypoint', (t) => {
   const { root, options } = fixture(t);
-  let command;
+  const commands = [];
   assert.deepEqual(
     verifyFfmpegExport(root, {
       ...options,
       run: (...args) => {
-        command = args;
-        return options.run();
+        commands.push(args);
+        return options.run(...args);
       },
     }),
-    { artifacts: 2, ffmpeg: 'system' },
+    { artifacts: 2, ffmpeg: 'system', license: 'LGPL' },
   );
-  assert.deepEqual(command, [path.join(root, 'beam-ffmpeg-export'), [], { encoding: 'utf8', timeout: 5000 }]);
+  assert.deepEqual(commands[0], [path.join(root, 'beam-ffmpeg-export'), [], { encoding: 'utf8', timeout: 5000 }]);
+  assert.deepEqual(commands[1].slice(0, 2), [path.join(root, 'beam-ffmpeg-export'), ['--ffmpeg-info']]);
 });
 
 test('rejects accidentally bundled FFmpeg libraries or additional executables', (t) => {
@@ -67,4 +72,19 @@ test('rejects loader failures, unexpected exits and startup timeouts', (t) => {
 test('rejects an addon with an incompatible transfer interface', (t) => {
   const { root, options } = fixture(t);
   assert.throws(() => verifyFfmpegExport(root, { ...options, load: () => ({}) }), /transfer entrypoint/);
+});
+
+test('rejects a packaged exporter that loads a GPL library', (t) => {
+  const { root, options } = fixture(t);
+  const records = lgplRecords();
+  records[2].license = 'GPL version 2 or later';
+  assert.throws(
+    () =>
+      verifyFfmpegExport(root, {
+        ...options,
+        run: (executable, args) =>
+          args.length ? { status: 0, stdout: JSON.stringify(records) } : options.run(executable, args),
+      }),
+    /avfilter must be LGPL/,
+  );
 });

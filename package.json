@@ -57,6 +57,7 @@
     "electron:dev:no-rust": "node scripts/dev/electron.cjs --force-no-rust",
     "diagnose:webcodecs": "node scripts/diagnostics/webcodecs-export.cjs",
     "build:ffmpeg-export": "node scripts/native/ffmpeg-export.cjs",
+    "build:ffmpeg-lgpl": "bash scripts/native/ffmpeg-lgpl.sh",
     "electron:build": "bun run build && electron-builder --publish never",
     "typecheck:packages": "bun run --filter @beam/engine --filter @beam/runtime --filter @beam/encoder --filter @beam/cli --filter @beam/storage --filter @beam/system-metrics typecheck",
     "beam": "bun apps/cli/src/index.ts",

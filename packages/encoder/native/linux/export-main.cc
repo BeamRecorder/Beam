@@ -1,3 +1,4 @@
+#include "ffmpeg-library-info.h"
 #include "gpu-conversion.h"
 #include "process-lifetime.h"
 #include "video-encoder.h"
@@ -57,6 +58,10 @@ beam::FrameDescriptor receive(int connection, int &dma_buf) {
 
 int main(int argc, char **argv) {
   try {
+    if (argc == 2 && std::strcmp(argv[1], "--ffmpeg-info") == 0) {
+      beam::print_ffmpeg_library_info();
+      return 0;
+    }
     beam::bind_parent_lifetime();
     if (argc != 11)
       throw std::runtime_error(

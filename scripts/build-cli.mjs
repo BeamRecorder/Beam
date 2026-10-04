@@ -57,6 +57,10 @@ for (const file of [
   'docs/architecture/gradient-effects.md',
   'docs/architecture/authoring-protocol.md',
   'docs/ARCHITECTURE.md',
+  'docs/third-party/ffmpeg.md',
+  'docs/third-party/FFmpeg-LGPL-2.1.txt',
+  'docs/dev/ffmpeg-gpu-export.md',
+  'scripts/native/ffmpeg-lgpl.sh',
 ]) {
   await mkdir(resolve(output, file, '..'), { recursive: true });
   await cp(resolve(root, file), resolve(output, file));

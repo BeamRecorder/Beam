@@ -1,6 +1,7 @@
 const { accessSync, constants, readdirSync } = require('node:fs');
 const { join, resolve } = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { inspectFfmpegLibraries } = require('./ffmpeg-export-license.cjs');
 
 function verifyFfmpegExport(directory, { run = spawnSync, load = require } = {}) {
   const root = resolve(directory);
@@ -17,7 +18,8 @@ function verifyFfmpegExport(directory, { run = spawnSync, load = require } = {})
   if (result.error || result.status !== 1 || !result.stderr?.startsWith('Expected socket, destination,'))
     throw new Error('Packaged GPU export failed its startup check: ' + (result.error?.message ?? result.stderr));
   if (typeof load(addon).transfer !== 'function') throw new Error('Packaged GPU transport has no transfer entrypoint.');
-  return { artifacts: payload.length, ffmpeg: 'system' };
+  inspectFfmpegLibraries(executable, { run });
+  return { artifacts: payload.length, ffmpeg: 'system', license: 'LGPL' };
 }
 
 if (require.main === module) {

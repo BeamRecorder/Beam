@@ -66,6 +66,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Linux GPU export helpers are built and packaged only against dynamically linked LGPL FFmpeg libraries. CI uses a pinned LGPL-only build dependency; FFmpeg executables and libraries remain external to this backend.
 - CLI project opening creates an independent video or Screenshot editor by default, preserving existing projects; `disposition: "reuse"` optionally replaces the active editor in development and installed releases.
 - Private website Screenshot documentation explains selection groups, 3D perspective, gradient/color effects and native CLI capture.
 - The Beautiful Captures promo keeps secondary feature labels and icons more visible while retaining the slot-machine hierarchy.
