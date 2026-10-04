@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const {
+  applyHyprlandWindowRules,
   configureLinuxDisplayBackend,
   x11LaunchArguments,
 } = require('../apps/desktop/electron/lifecycle/linux-display-backend.cjs');
@@ -64,4 +65,55 @@ test('replaces joined and separate backend flags with one startup argument', () 
     '--user-data-dir=/tmp/my profile',
     '--ozone-platform=x11',
   ]);
+});
+
+test('applyHyprlandWindowRules returns silently when environment is not Hyprland', () => {
+  assert.doesNotThrow(() => {
+    applyHyprlandWindowRules({});
+    applyHyprlandWindowRules({ XDG_RUNTIME_DIR: '/tmp' });
+    applyHyprlandWindowRules({ HYPRLAND_INSTANCE_SIGNATURE: 'sig' });
+  });
+});
+
+test('applyHyprlandWindowRules connects to socket and writes window rule', async () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const net = require('node:net');
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hypr-test-'));
+  const sig = 'mock_signature';
+  const hyprDir = path.join(tmpDir, 'hypr', sig);
+  fs.mkdirSync(hyprDir, { recursive: true });
+  const socketPath = path.join(hyprDir, '.socket.sock');
+
+  let receivedData = '';
+  const server = net.createServer((c) => {
+    c.on('data', (d) => {
+      receivedData += d.toString();
+      c.write('ok');
+    });
+  });
+
+  await new Promise((resolve) => server.listen(socketPath, resolve));
+
+  try {
+    applyHyprlandWindowRules({
+      XDG_RUNTIME_DIR: tmpDir,
+      HYPRLAND_INSTANCE_SIGNATURE: sig,
+    });
+
+    // Wait for the client connection and message write
+    for (let i = 0; i < 20; i++) {
+      if (receivedData.length > 0) break;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+
+    assert.match(receivedData, /_G\.beam_overlay_rule = hl\.window_rule/);
+    assert.match(receivedData, /border_size = 0/);
+    assert.match(receivedData, /no_shadow = true/);
+  } finally {
+    server.close();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });
