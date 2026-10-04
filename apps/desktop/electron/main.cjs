@@ -1,8 +1,7 @@
 const startupAt = process.hrtime.bigint();
+const { initializeDesktopStorage } = require('./storage/desktop-storage.cjs');
 const { initializeApplicationUpdater } = require('./lifecycle/application-updater.cjs');
-const { createCaptureStores } = require('./storage/capture-stores.cjs');
 const { prewarmCaptureCapabilities } = require('./lifecycle/capture-warmup.cjs');
-const { organizeProjectCategories } = require('./storage/project-categories.cjs');
 const { registerScreenshotIpc } = require('./screenshot/screenshot-ipc.cjs');
 const {
   app,
@@ -21,17 +20,13 @@ const {
 Menu.setApplicationMenu(null);
 require('./lifecycle/linux-display-backend.cjs').configureLinuxDisplayBackend(app);
 const { autoUpdater } = require('electron-updater');
-const fs = require('fs');
 const path = require('path');
-const { Readable } = require('stream');
 const { CaptureEngine } = require('./capture/capture-engine.cjs');
 const { registerCaptureIpc } = require('./capture/capture-ipc.cjs');
 const { registerProjectIpc } = require('./projects/project-ipc.cjs');
 const projectVoiceover = require('./projects/project-voiceover-storage.cjs');
 const { createCameraRecordingControl } = require('./camera/recording-control.cjs');
 const { createCaptureWindows } = require('./lifecycle/capture-windows.cjs');
-const { createProjectStore } = require('./projects/project-store.cjs');
-const { createProjectMediaHandler } = require('./projects/project-media-protocol.cjs');
 const { registerWindowIpc } = require('./window/window-ipc.cjs');
 const { createRendererSetup } = require('./lifecycle/renderer-setup.cjs');
 const { createEditorWindowManager } = require('./window/editor-window.cjs');
@@ -43,9 +38,6 @@ const { registerTranscriptExportIpc } = require('./captions/transcript-export-ip
 const { createCameraStorage, registerCameraIpc } = require('./camera-ipc.cjs');
 const { createMicrophoneStorage, registerMicrophoneIpc } = require('./microphone/ipc.cjs');
 const { createSystemAudioStorage, registerSystemAudioIpc } = require('./system-audio/ipc.cjs');
-const { createWhisperModelStore } = require('./captions/whisper-model-store.cjs');
-const { registerWhisperIpc } = require('./captions/whisper-ipc.cjs');
-const { initializeDesktopPreferences } = require('./preferences/desktop-preferences.cjs');
 const { registerEditorPresetIpc } = require('./presets/editor-preset-ipc.cjs');
 const { registerPreferencesIpc } = require('./preferences/preferences-ipc.cjs');
 const { applySpellCheckPreferences } = require('./preferences/spell-check.cjs');
@@ -54,7 +46,6 @@ const { createLinuxShortcutSource } = require('./preferences/linux-shortcut-sour
 const { createTeleprompterWindow } = require('./teleprompter/teleprompter-window.cjs');
 const { registerTeleprompterIpc } = require('./teleprompter/teleprompter-ipc.cjs');
 const { createTeleprompterStorage } = require('./teleprompter/teleprompter-storage.cjs');
-const { createUserPaths } = require('./storage/user-paths.cjs');
 const { createBackgroundLibrary } = require('./backgrounds/background-library.cjs');
 const { createFontLibrary } = require('./fonts/font-library.cjs');
 const { createCursorPackLibrary } = require('./cursors/cursor-pack-library.cjs');
@@ -68,20 +59,16 @@ const { initializeSingleInstance } = require('./lifecycle/single-instance.cjs');
 const { configureDevelopmentProfile } = require('./lifecycle/development-profile.cjs');
 const { createQuickSnipService } = require('./quick-snip/quick-snip-service.cjs');
 const { registerCommunityLinks } = require('./community-links.cjs');
-
 const ENABLE_ELECTRON_DIAGNOSTIC_LOGS = !app.isPackaged;
-
 protocol.registerSchemesAsPrivileged([
   { scheme: 'whisper-model', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
   { scheme: 'project-media', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
 ]);
-
 const logStartup = (step) => {
   if (!ENABLE_ELECTRON_DIAGNOSTIC_LOGS || app.isPackaged) return;
   const elapsedMs = Number(process.hrtime.bigint() - startupAt) / 1_000_000;
   console.log(`[electron +${elapsedMs.toFixed(0)} ms] ${step}`);
 };
-
 const applicationRoot = path.resolve(__dirname, '../../..');
 configureDevelopmentProfile(app, process.env, { applicationRoot });
 require('./lifecycle/chromium-features.cjs').configureChromiumFeatures(app);
@@ -101,7 +88,6 @@ function restoreCanonicalHud() {
   if (showExistingHud()) pendingHudRestore = false;
   else pendingHudRestore = true;
 }
-
 const {
   isTrustedRenderer,
   configureMediaPermission,
@@ -125,26 +111,25 @@ function initializeApplication() {
   const cameraStorage = createCameraStorage({});
   const microphoneStorage = createMicrophoneStorage({});
   const systemAudioStorage = createSystemAudioStorage({});
-
   app
     .whenReady()
-    .then(() => {
+    .then(async () => {
       logStartup('Electron app.whenReady resolved.');
       const captureWarmup = prewarmCaptureCapabilities(captureEngine, { log: logStartup });
       configureMediaPermission();
       logStartup('Media permission policy registered.');
       configureDesktopLoopback();
       registerInputAccessIpc(applicationIpc, inputAccess);
-      const userPaths = createUserPaths(app);
-      organizeProjectCategories(userPaths.projects);
-      const preferences = initializeDesktopPreferences(app, userPaths.preferences);
-      const { preferencesStore, startupPreferences, launchAtStartup } = preferences;
-      const { editorPresetStore, screenshotPresetStore, screenshotStore } = createCaptureStores({
-        userPaths,
-        preferencesStore,
+      const storage = initializeDesktopStorage({
+        app,
+        ipcMain: applicationIpc,
+        BrowserWindow,
+        dialog: require('electron').dialog,
         applicationRoot,
-        isPackaged: app.isPackaged,
       });
+      const { userPaths, projectStore, directories, screenshotStore } = storage;
+      const { preferencesStore, startupPreferences, launchAtStartup } = storage;
+      const { editorPresetStore, screenshotPresetStore } = storage;
       let screenshotService = null;
       let quickSnipController = null;
       let trayManager = null;
@@ -194,6 +179,7 @@ function initializeApplication() {
           platform: process.platform,
         }),
         onPreferencesChanged: (preferences) => {
+          directories.hydrate(preferences);
           applySpellCheck(preferences);
           applyHudPreferences(preferences);
         },
@@ -234,7 +220,6 @@ function initializeApplication() {
       registerMicrophoneIpc({ ipcMain: applicationIpc, storage: microphoneStorage });
       registerSystemAudioIpc({ ipcMain: applicationIpc, storage: systemAudioStorage });
       logStartup('Capture track IPC registered.');
-      const projectStore = createProjectStore(userPaths.projects, { category: 'studio' });
       const projectVoiceoverStorage = projectVoiceover.createProjectVoiceoverStorage({ projectStore });
       projectVoiceoverStorage.cleanupStalePartials();
       projectVoiceover.registerProjectVoiceoverIpc({ ipcMain: applicationIpc, storage: projectVoiceoverStorage });
@@ -255,21 +240,17 @@ function initializeApplication() {
         screenshotStore,
         require('electron').clipboard,
       );
-      protocol.handle(
-        'project-media',
-        createProjectMediaHandler({ projectStore, backgroundLibrary, fontLibrary, cursorLibrary, screenshotStore }),
-      );
-      logStartup('Project IPC registered.');
-      const whisperStore = createWhisperModelStore(userPaths.whisperModels);
-      protocol.handle('whisper-model', (request) => {
-        const file = whisperStore.fileForUrl(request.url);
-        return file
-          ? new Response(Readable.toWeb(fs.createReadStream(file)), {
-              headers: { 'Content-Length': String(fs.statSync(file).size) },
-            })
-          : new Response('Not found', { status: 404 });
+      require('./lifecycle/media-protocols.cjs').registerMediaProtocols({
+        protocol,
+        ipcMain: applicationIpc,
+        whisperModels: userPaths.whisperModels,
+        projectStore,
+        backgroundLibrary,
+        fontLibrary,
+        cursorLibrary,
+        screenshotStore,
       });
-      registerWhisperIpc({ ipcMain: applicationIpc, store: whisperStore });
+      logStartup('Project IPC registered.');
       logStartup('Whisper model IPC registered.');
       registerWindowIpc(applicationIpc, (win) => win && controllers.get(win), { debug: !app.isPackaged });
       const lifecycleOptions = {
@@ -327,7 +308,7 @@ function initializeApplication() {
         applicationRoot,
         dialog: require('electron').dialog,
         BrowserWindow,
-        defaultExportDirectory: app.getPath('videos'),
+        directories,
         resolveAutomaticDestination: quickSnipService.exportDestination,
         createGpuMonitor: () => createDesktopGpuMonitor({ app, captureEngine }),
       });
@@ -378,6 +359,21 @@ function initializeApplication() {
         },
         canAcceptWork: () => coordinator.canAcceptWork(),
       });
+      await require('./authoring/agent-runtime.cjs').initializeAgentRuntime({
+        app,
+        ipcMain: applicationIpc,
+        BrowserWindow,
+        session,
+        editorWindow,
+        projectStore,
+        screenshotStore,
+        backgroundLibrary,
+        fontLibrary,
+        cursorLibrary,
+        coordinator,
+        screenshotPresetStore,
+        nativeImage: require('electron').nativeImage,
+      });
       screenshotService = registerScreenshotIpc({
         ipcMain: applicationIpc,
         store: screenshotStore,
@@ -397,6 +393,7 @@ function initializeApplication() {
             (quickSnipService.cropWindow.owns(event?.sender) &&
               quickSnipController.state().job?.mode === 'screenshot')),
         outputDirectory: userPaths.screenshots,
+        directories,
       });
       const onboardingWindow = createOnboardingWindowManager({
         applicationRoot,

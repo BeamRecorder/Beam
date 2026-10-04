@@ -21,6 +21,7 @@ function registerExportIpc({
   app,
   applicationRoot,
   defaultExportDirectory = null,
+  directories,
   resolveAutomaticDestination = () => null,
   createGpuMonitor,
   createExperimentalExport = require('@beam/electron-export').createExperimentalGpuExport,
@@ -67,11 +68,12 @@ function registerExportIpc({
     const window = BrowserWindow.fromWebContents(event.sender);
     const defaultName = safeExportName(payload.projectName, format);
     const automaticPath = resolveAutomaticDestination(event.sender, format);
+    const exportDirectory = directories ? directories.exportDirectory() : defaultExportDirectory;
     const result = automaticPath
       ? { filePath: automaticPath, canceled: false }
       : await dialog.showSaveDialog(window, {
           title: 'Export video',
-          defaultPath: defaultExportDirectory ? pathModule.resolve(defaultExportDirectory, defaultName) : defaultName,
+          defaultPath: exportDirectory ? pathModule.resolve(exportDirectory, defaultName) : defaultName,
           filters: [{ name: format.toUpperCase(), extensions: [format] }],
           properties: ['showOverwriteConfirmation'],
         });
@@ -87,6 +89,7 @@ function registerExportIpc({
       ownerId: ownerId(event),
       targetPath,
       temporaryPath,
+      rememberDirectory: !automaticPath,
       handle,
       gpuMonitor: createGpuMonitor?.(),
       nextSequence: 0,
@@ -125,6 +128,7 @@ function registerExportIpc({
     job.handle = null;
     await fsModule.promises.rename(job.temporaryPath, job.targetPath);
     jobs.delete(job.id);
+    if (job.rememberDirectory) directories?.rememberExport(job.targetPath);
     return { path: job.targetPath, ...(gpuUsage ? { gpuUsage } : {}) };
   });
   ipcMain.handle('export:abort', (event, payload = {}) => cleanup(requireJob(event, payload.jobId)));

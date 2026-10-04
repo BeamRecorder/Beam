@@ -64,7 +64,11 @@ const makeContext = () => {
     restore: vi.fn(),
     translate: vi.fn(),
     rotate: vi.fn(),
-    measureText: vi.fn((text: string) => ({ width: text.length * 12 }) as TextMetrics),
+    textBaseline: 'alphabetic' as CanvasTextBaseline,
+    measureText: vi.fn(
+      (text: string) =>
+        ({ width: text.length * 12, fontBoundingBoxAscent: 20, fontBoundingBoxDescent: 10 }) as TextMetrics,
+    ),
     beginPath: vi.fn(),
     moveTo: vi.fn(),
     lineTo: vi.fn(),
@@ -137,7 +141,7 @@ describe('drawElementText', () => {
     };
 
     expect(drawingHelpers.applyCanvasCaptionFont).toHaveBeenCalledWith(ctx, text.style);
-    expect(ctx.measureText).not.toHaveBeenCalled();
+    expect(ctx.measureText).toHaveBeenCalledWith('Hi');
     expect(ctx.translate).toHaveBeenNthCalledWith(1, 310, 240);
     expect(ctx.rotate).toHaveBeenCalledWith(Math.PI / 2);
     expect(ctx.translate).toHaveBeenNthCalledWith(2, -310, -240);
@@ -149,6 +153,21 @@ describe('drawElementText', () => {
       transform: expectedTransform,
       caption: { type: 'text', style: { customText: 'Hi', textAlign: 'right', textDecoration: 'underline' } },
     });
+    expect(ctx.restore).toHaveBeenCalledOnce();
+  });
+
+  it('matches the inline font box for wrapped centered text at preview scale', () => {
+    const ctx = makeContext();
+    const text = createElementText('Beam Studio text');
+    text.padding = 0;
+    text.verticalAlign = 'center';
+    text.style.wrap = true;
+    const viewport = { x: 0, y: 0, width: 1920, height: 1080 };
+    drawElementText(asCanvasContext(ctx), shapeClip({ text }), viewport);
+    expect(ctx.measureText.mock.calls.length).toBeGreaterThan(1);
+    expect(ctx.textBaseline).toBe('middle');
+    expect(ctx.translate).toHaveBeenNthCalledWith(3, 0, 5);
+    expect(drawingHelpers.drawCaptionText).toHaveBeenCalledOnce();
     expect(ctx.restore).toHaveBeenCalledOnce();
   });
 });

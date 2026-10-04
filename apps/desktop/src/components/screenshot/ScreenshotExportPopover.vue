@@ -9,6 +9,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { ScreenshotDimensions } from './screenshot-types';
 import ScreenshotSizeControls from './ScreenshotSizeControls.vue';
+import DirectoryPreference from '~/components/settings/DirectoryPreference.vue';
 
 defineProps<{
   state: ScreenshotState;
@@ -58,6 +59,7 @@ const { t } = useTranslate('ScreenshotEditor');
         :step="0.01"
       />
       <p>{{ t('transparency') }}</p>
+      <DirectoryPreference kind="exports" compact :disabled="busy" />
       <Button variant="primary" :icon="Download" :loading="busy" block @click="emit('export')">{{
         t('saveImage')
       }}</Button>

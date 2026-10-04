@@ -362,6 +362,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
                 showMenu: screen.appearance.frameShowMenu,
                 showScrollbars: screen.appearance.frameShowScrollbars,
                 chromeScale: screen.appearance.frameChromeScale,
+                ...(screen.appearance.frameTheme !== undefined ? { theme: screen.appearance.frameTheme } : {}),
               },
             );
         }

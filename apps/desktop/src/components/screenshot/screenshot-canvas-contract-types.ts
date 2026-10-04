@@ -22,6 +22,8 @@ export interface ScreenshotCanvasEmits {
   selectMany: [selection: CanvasMarqueeSelection];
   transform: [value: NormalizedTransform];
   translate: [value: ScreenshotTranslation];
+  resizeSelection: [from: NormalizedTransform, to: NormalizedTransform];
+  selectionBounds: [value: NormalizedTransform | null];
   error: [message: string];
   ready: [];
   crop: [value: NormalizedCrop];

@@ -73,7 +73,11 @@
     "continuityDescription": "Erweitert eine weichgezeichnete Kopie des Videos hinter dem eingepassten Inhalt.",
     "continuityBlur": "Hintergrundunschärfe",
     "continuityBrightness": "Hintergrundhelligkeit",
-    "borderColor": "Rahmenfarbe"
+    "borderColor": "Rahmenfarbe",
+    "frameTheme": "Browserdarstellung",
+    "auto": "Auto",
+    "light": "Hell",
+    "dark": "Dunkel"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Kameravorschau wird geladen",
@@ -991,6 +995,10 @@
     "customSize": "Benutzerdefinierte Größe",
     "sizePreset": "Größenvorlage",
     "copiedToast": "Bild in die Zwischenablage kopiert, überall einfügbar",
+    "exportedToast": "Bild gespeichert",
+    "copyFailedToast": "Bild konnte nicht kopiert werden",
+    "exportFailedToast": "Bildexport fehlgeschlagen",
+    "copyTimingReport": "Zeitmessungen kopieren",
     "instant": "Sofort",
     "copy": "Kopieren",
     "copied": "Kopiert",
@@ -1004,7 +1012,12 @@
     "backgroundError": "Wähle ein Bild, eine Farbe oder einen Verlauf als Hintergrund.",
     "dimensionsError": "Wähle eine Auflösung bis 64 Megapixel (16384 Pixel pro Seite).",
     "renderUnavailable": "Das Rendern von Bildern ist nicht verfügbar.",
-    "encodingUnavailable": "Die {format}-Kodierung ist nicht verfügbar."
+    "encodingUnavailable": "Die {format}-Kodierung ist nicht verfügbar.",
+    "rotation3d": "3D-Drehung",
+    "perspective": "Perspektive",
+    "group": "Gruppieren",
+    "selectionTitle": "Auswahl · {count} Elemente",
+    "ungroup": "Gruppierung aufheben"
   },
   "EditorPresetControls": {
     "preset": "Vorlage",
@@ -1088,6 +1101,9 @@
     "luminosity": "Luminanz"
   },
   "ScreenshotComposition": {
+    "expandGroup": "Gruppe {name} aufklappen",
+    "collapseGroup": "Gruppe {name} zuklappen",
+    "selectGroup": "Gruppe {name} auswählen",
     "title": "Komposition",
     "name": "Ebenenname",
     "rename": "Ebene umbenennen · Doppelklick oder F2",
@@ -1162,5 +1178,18 @@
     "stopPosition": "Position von Stopp {number}",
     "stopOpacity": "Deckkraft von Stopp {number}",
     "addAtPosition": "Klicken, um einen Farbstopp hinzuzufügen"
+  },
+  "DirectoryPreferences": {
+    "projects": "Projektordner",
+    "projectsDescription": "Neue Studio-, Instant- und Screenshot-Projekte werden in projects/studio, projects/instant und projects/screenshot in diesem Ordner gespeichert. Frühere Speicherorte bleiben in der Projektauswahl.",
+    "exports": "Exportordner",
+    "exportsDescription": "Wählen Sie einen festen Ordner oder verwenden Sie den letzten Ordner für Video- oder Bildexporte. Diese Einstellung gilt für alle Projekte.",
+    "defaultLocation": "Standardspeicherort",
+    "lastUsed": "Zuletzt verwendeter Ordner",
+    "browse": "Ordner auswählen",
+    "search": "Ordner suchen",
+    "noMatches": "Keine passenden Ordner",
+    "error": "Der Ordner konnte nicht aktualisiert werden.",
+    "retry": "Erneut versuchen"
   }
 }

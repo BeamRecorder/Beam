@@ -28,7 +28,7 @@ const dialogs: HTMLElement[] = [];
 const mountShortcuts = (
   initialSelection?: ScreenshotLayer,
   initialDisabled = false,
-  outcomes: { copy?: boolean; cut?: boolean; paste?: boolean } = {},
+  outcomes: { copy?: boolean; cut?: boolean; paste?: boolean; group?: boolean; ungroup?: boolean } = {},
 ) => {
   const selected = ref(initialSelection);
   const disabled = ref(initialDisabled);
@@ -36,6 +36,8 @@ const mountShortcuts = (
   const copy = vi.fn(() => outcomes.copy ?? true);
   const cut = vi.fn(() => outcomes.cut ?? true);
   const paste = vi.fn(() => outcomes.paste ?? true);
+  const group = vi.fn(() => outcomes.group ?? true);
+  const ungroup = vi.fn(() => outcomes.ungroup ?? true);
   const Host = defineComponent({
     setup() {
       useScreenshotLayerShortcuts({
@@ -45,6 +47,8 @@ const mountShortcuts = (
         copy,
         cut,
         paste,
+        group,
+        ungroup,
       });
       return () =>
         h('div', { 'data-testid': 'host' }, [
@@ -61,7 +65,7 @@ const mountShortcuts = (
   });
   const wrapper = mount(Host, { attachTo: document.body });
   wrappers.push(wrapper);
-  return { wrapper, selected, disabled, remove, copy, cut, paste };
+  return { wrapper, selected, disabled, remove, copy, cut, paste, group, ungroup };
 };
 
 const dispatchKey = (
@@ -380,4 +384,17 @@ describe('useScreenshotLayerShortcuts', () => {
     expect(event.defaultPrevented).toBe(false);
     expect(remove).not.toHaveBeenCalled();
   });
+});
+
+describe('screenshot group shortcuts',()=>{
+ it.each(['ctrlKey','metaKey'] as const)('groups with %s+G and detaches with Shift',modifier=>{
+  const {wrapper,group,ungroup}=mountShortcuts(makeLayer());const target=wrapper.get('[data-testid="plain-target"]').element;
+  expect(dispatchKey(target,'g',{[modifier]:true}).defaultPrevented).toBe(true);expect(group).toHaveBeenCalledOnce();
+  expect(dispatchKey(target,'G',{[modifier]:true,shiftKey:true}).defaultPrevented).toBe(true);expect(ungroup).toHaveBeenCalledOnce();
+ });
+ it('keeps browser and text-editing shortcuts when grouping is unavailable',()=>{
+  const {wrapper,group}=mountShortcuts(makeLayer(),false,{group:false});
+  expect(dispatchKey(wrapper.get('[data-testid="plain-target"]').element,'g',{ctrlKey:true}).defaultPrevented).toBe(false);
+  dispatchKey(wrapper.get('input').element,'g',{ctrlKey:true});expect(group).toHaveBeenCalledOnce();
+ });
 });

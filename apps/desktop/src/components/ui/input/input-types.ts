@@ -17,6 +17,7 @@ export interface InputProps {
   id?: string;
   size?: 'xs' | 'sm' | 'md';
   width?: string;
+  height?: string;
   min?: number;
   max?: number;
   step?: number;

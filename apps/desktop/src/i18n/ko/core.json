@@ -73,7 +73,11 @@
     "continuityDescription": "맞춰진 콘텐츠 뒤에 흐린 동영상 사본을 확장합니다.",
     "continuityBlur": "배경 흐림",
     "continuityBrightness": "배경 밝기",
-    "borderColor": "테두리 색상"
+    "borderColor": "테두리 색상",
+    "frameTheme": "브라우저 모양",
+    "auto": "자동",
+    "light": "라이트",
+    "dark": "다크"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "카메라 미리 보기 로드 중",
@@ -991,6 +995,10 @@
     "customSize": "사용자 지정 크기",
     "sizePreset": "크기 프리셋",
     "copiedToast": "이미지가 클립보드에 복사되었습니다. 어디에나 붙여넣으세요",
+    "exportedToast": "이미지를 저장했습니다",
+    "copyFailedToast": "이미지 복사에 실패했습니다",
+    "exportFailedToast": "이미지 내보내기에 실패했습니다",
+    "copyTimingReport": "처리 시간 보고서 복사",
     "instant": "즉시",
     "copy": "복사",
     "copied": "복사됨",
@@ -1004,7 +1012,12 @@
     "backgroundError": "배경으로 이미지, 색상 또는 그라데이션을 선택하세요.",
     "dimensionsError": "최대 6400만 화소의 해상도를 선택하세요(한 변당 최대 16384픽셀).",
     "renderUnavailable": "이미지 렌더링을 사용할 수 없습니다.",
-    "encodingUnavailable": "{format} 인코딩을 사용할 수 없습니다."
+    "encodingUnavailable": "{format} 인코딩을 사용할 수 없습니다.",
+    "rotation3d": "3D 회전",
+    "perspective": "원근감",
+    "group": "그룹화",
+    "selectionTitle": "선택 · 요소 {count}개",
+    "ungroup": "그룹 해제"
   },
   "EditorPresetControls": {
     "preset": "프리셋",
@@ -1088,6 +1101,9 @@
     "luminosity": "광도"
   },
   "ScreenshotComposition": {
+    "expandGroup": "{name} 그룹 펼치기",
+    "collapseGroup": "{name} 그룹 접기",
+    "selectGroup": "{name} 그룹 선택",
     "title": "컴포지션",
     "name": "레이어 이름",
     "rename": "레이어 이름 변경 · 두 번 클릭 또는 F2",
@@ -1162,5 +1178,18 @@
     "stopPosition": "지점 {number} 위치",
     "stopOpacity": "지점 {number} 불투명도",
     "addAtPosition": "클릭하여 색상 지점 추가"
+  },
+  "DirectoryPreferences": {
+    "projects": "프로젝트 위치",
+    "projectsDescription": "새 Studio, Instant 및 Screenshot 프로젝트는 이 폴더 안의 projects/studio, projects/instant 및 projects/screenshot에 저장됩니다. 이전 위치도 프로젝트 선택기에 표시됩니다.",
+    "exports": "내보내기 폴더",
+    "exportsDescription": "고정 폴더를 선택하거나 동영상 또는 이미지 내보내기에 마지막으로 사용한 폴더를 다시 사용합니다. 이 설정은 모든 프로젝트에서 공유됩니다.",
+    "defaultLocation": "기본 위치",
+    "lastUsed": "마지막으로 사용한 폴더",
+    "browse": "폴더 선택",
+    "search": "폴더 검색",
+    "noMatches": "일치하는 폴더 없음",
+    "error": "폴더를 업데이트할 수 없습니다.",
+    "retry": "다시 시도"
   }
 }

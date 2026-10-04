@@ -3,6 +3,7 @@ const path = require('path');
 const { readJsonSync, writeJsonAtomicSync } = require('@beam/storage/node/json-file');
 const { DEFAULT_HUD_WINDOW_SIZE, normalizeHudWindowSize } = require('../window/hud-window-size.cjs');
 const { normalizeRecorderLayout } = require('../window/recorder-layout.cjs');
+const { normalizeDirectorySettings } = require('../storage/directory-settings.cjs');
 
 const defaultAppearance = () => ({
   theme: 'light',
@@ -39,6 +40,7 @@ const defaults = (platform = process.platform) => ({
   recordingInteractions: { enabled: false, noticeDismissed: false },
   voiceover: { countdownSeconds: 3, monitorProjectAudio: false },
   spellCheck: { enabled: true },
+  directories: normalizeDirectorySettings(null, platform),
   onboardingCompleted: false,
   devices: {},
   shortcuts: {
@@ -246,6 +248,7 @@ const normalize = (value, platform = process.platform) => {
     devices: next.devices && typeof next.devices === 'object' && !Array.isArray(next.devices) ? next.devices : {},
     shortcuts,
     backgroundPresets: presets(next.backgroundPresets),
+    directories: normalizeDirectorySettings(next.directories, platform),
     extras: normalizeRecorderLayout(next.extras),
   };
 };
@@ -327,6 +330,10 @@ function createPreferencesStore(file, { platform = process.platform } = {}) {
       },
       voiceover: { ...current.voiceover, ...value?.voiceover },
       spellCheck: { ...current.spellCheck, ...value.spellCheck },
+      directories: {
+        projects: { ...current.directories.projects, ...value.directories?.projects },
+        exports: { ...current.directories.exports, ...value.directories?.exports },
+      },
       devices: { ...current.devices, ...value.devices },
       shortcuts: { ...current.shortcuts, ...value.shortcuts },
       backgroundPresets: {

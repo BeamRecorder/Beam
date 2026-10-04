@@ -37,7 +37,7 @@ const composition = () =>
 it('edits the media through structural composition updates and preserves other fields', () => {
   const initial = composition();
   const result = setClipRotation(initial, 'image', -90);
-  expect(result.clips[0]).toMatchObject({ rotation: 270, transform: initial.clips[0]!.transform });
+  expect(result.clips[0]).toMatchObject({ rotation: 270, transform: (initial.clips[0] as VisualClip).transform });
   expect((initial.clips[0] as VisualClip).rotation).toBeUndefined();
   expect(result.assets[0]).toBe(initial.assets[0]);
   expect((setCrop(result, 'image', { x: 0.1, y: 0.1, width: 0.8, height: 0.8 }).clips[0] as VisualClip).rotation).toBe(

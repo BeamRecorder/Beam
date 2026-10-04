@@ -73,7 +73,11 @@
     "continuityDescription": "फ़िट किए गए कंटेंट के पीछे वीडियो की धुंधली कॉपी फैलाता है।",
     "continuityBlur": "बैकग्राउंड ब्लर",
     "continuityBrightness": "बैकग्राउंड चमक",
-    "borderColor": "बॉर्डर रंग"
+    "borderColor": "बॉर्डर रंग",
+    "frameTheme": "ब्राउज़र का रूप",
+    "auto": "स्वचालित",
+    "light": "हल्का",
+    "dark": "गहरा"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "कैमरा प्रीव्यू लोड हो रहा है",
@@ -991,6 +995,10 @@
     "customSize": "कस्टम आकार",
     "sizePreset": "आकार का प्रीसेट",
     "copiedToast": "चित्र क्लिपबोर्ड पर कॉपी हो गया है, इसे कहीं भी इस्तेमाल करें",
+    "exportedToast": "इमेज सहेजी गई",
+    "copyFailedToast": "इमेज कॉपी नहीं हो सकी",
+    "exportFailedToast": "इमेज एक्सपोर्ट नहीं हो सकी",
+    "copyTimingReport": "समय की रिपोर्ट कॉपी करें",
     "instant": "तुरंत",
     "copy": "कॉपी करें",
     "copied": "कॉपी किया गया",
@@ -1004,7 +1012,12 @@
     "backgroundError": "पृष्ठभूमि के लिए चित्र, रंग या ग्रेडिएंट चुनें।",
     "dimensionsError": "64 मेगापिक्सेल तक का रिज़ॉल्यूशन चुनें (हर तरफ अधिकतम 16384 पिक्सेल)।",
     "renderUnavailable": "चित्र रेंडर करना उपलब्ध नहीं है।",
-    "encodingUnavailable": "{format} एन्कोडिंग उपलब्ध नहीं है।"
+    "encodingUnavailable": "{format} एन्कोडिंग उपलब्ध नहीं है।",
+    "rotation3d": "3D घुमाव",
+    "perspective": "परिप्रेक्ष्य",
+    "group": "समूह बनाएँ",
+    "selectionTitle": "चयन · {count} तत्व",
+    "ungroup": "समूह हटाएँ"
   },
   "EditorPresetControls": {
     "preset": "प्रीसेट",
@@ -1088,6 +1101,9 @@
     "luminosity": "चमक"
   },
   "ScreenshotComposition": {
+    "expandGroup": "{name} समूह खोलें",
+    "collapseGroup": "{name} समूह समेटें",
+    "selectGroup": "{name} समूह चुनें",
     "title": "कंपोज़िशन",
     "name": "लेयर का नाम",
     "rename": "लेयर का नाम बदलें · डबल-क्लिक या F2",
@@ -1162,5 +1178,18 @@
     "stopPosition": "बिंदु {number} की स्थिति",
     "stopOpacity": "बिंदु {number} की अपारदर्शिता",
     "addAtPosition": "रंग बिंदु जोड़ने के लिए क्लिक करें"
+  },
+  "DirectoryPreferences": {
+    "projects": "प्रोजेक्ट का स्थान",
+    "projectsDescription": "नए Studio, Instant और Screenshot प्रोजेक्ट इस फ़ोल्डर में projects/studio, projects/instant और projects/screenshot का उपयोग करते हैं। पुराने स्थान प्रोजेक्ट चयन में बने रहते हैं।",
+    "exports": "एक्सपोर्ट फ़ोल्डर",
+    "exportsDescription": "एक निश्चित फ़ोल्डर चुनें या वीडियो या इमेज एक्सपोर्ट के लिए पिछले फ़ोल्डर का उपयोग करें। यह सेटिंग सभी प्रोजेक्ट के लिए साझा है।",
+    "defaultLocation": "डिफ़ॉल्ट स्थान",
+    "lastUsed": "पिछली बार इस्तेमाल किया गया फ़ोल्डर",
+    "browse": "फ़ोल्डर चुनें",
+    "search": "फ़ोल्डर खोजें",
+    "noMatches": "कोई मिलते हुए फ़ोल्डर नहीं",
+    "error": "फ़ोल्डर अपडेट नहीं किया जा सका।",
+    "retry": "फिर कोशिश करें"
   }
 }

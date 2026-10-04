@@ -128,3 +128,17 @@ describe('element projection', () => {
     actual.forEach((point, index) => expectPoint(point, expected[index]!));
   });
 });
+
+it.each([0, 45, 90])('maps inline text corners to engine local 3D perspective at Z rotation %s', async (rotation) => {
+  const { layerPerspectiveCorners } = await import('@beam/engine/layout/layer-perspective');
+  const rect = { x: 120, y: 140, width: 420, height: 140 },
+    viewport = { x: 0, y: 0, width: 1920, height: 1004 },
+    local = { x: 24, y: -12, perspective: 1600 };
+  const matrix = cssMatrix(elementMatrix(rect, viewport, {}, rotation, local));
+  const expected = layerPerspectiveCorners(rect, local, rotation);
+  for (const [index, p] of rectCorners(rect.width, rect.height).entries()) {
+    const value = transformPoint(matrix, p);
+    expect(value.x).toBeCloseTo(expected[index]!.x);
+    expect(value.y).toBeCloseTo(expected[index]!.y);
+  }
+});

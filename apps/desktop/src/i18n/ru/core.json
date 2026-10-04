@@ -73,7 +73,11 @@
     "continuityDescription": "Растягивает размытую копию видео за вписанным содержимым.",
     "continuityBlur": "Размытие фона",
     "continuityBrightness": "Яркость фона",
-    "borderColor": "Цвет границы"
+    "borderColor": "Цвет границы",
+    "frameTheme": "Внешний вид браузера",
+    "auto": "Авто",
+    "light": "Светлый",
+    "dark": "Тёмный"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Загрузка предпросмотра камеры",
@@ -991,6 +995,10 @@
     "customSize": "Свой размер",
     "sizePreset": "Пресет размера",
     "copiedToast": "Изображение скопировано в буфер обмена — вставьте его куда угодно",
+    "exportedToast": "Изображение сохранено",
+    "copyFailedToast": "Не удалось скопировать изображение",
+    "exportFailedToast": "Не удалось экспортировать изображение",
+    "copyTimingReport": "Копировать отчёт о времени",
     "instant": "Мгновенно",
     "copy": "Копировать",
     "copied": "Скопировано",
@@ -1004,7 +1012,12 @@
     "backgroundError": "Выберите изображение, цвет или градиент для фона.",
     "dimensionsError": "Выберите разрешение до 64 мегапикселей (16384 пикселя на сторону).",
     "renderUnavailable": "Рендеринг изображения недоступен.",
-    "encodingUnavailable": "Кодирование {format} недоступно."
+    "encodingUnavailable": "Кодирование {format} недоступно.",
+    "rotation3d": "3D-поворот",
+    "perspective": "Перспектива",
+    "group": "Сгруппировать",
+    "selectionTitle": "Выделение · {count} элементов",
+    "ungroup": "Разгруппировать"
   },
   "EditorPresetControls": {
     "preset": "Пресет",
@@ -1088,6 +1101,9 @@
     "luminosity": "Яркость"
   },
   "ScreenshotComposition": {
+    "expandGroup": "Развернуть группу {name}",
+    "collapseGroup": "Свернуть группу {name}",
+    "selectGroup": "Выбрать группу {name}",
     "title": "Композиция",
     "name": "Имя слоя",
     "rename": "Переименовать слой · Двойной щелчок или F2",
@@ -1162,5 +1178,18 @@
     "stopPosition": "Позиция точки {number}",
     "stopOpacity": "Непрозрачность точки {number}",
     "addAtPosition": "Нажмите, чтобы добавить цветовую точку"
+  },
+  "DirectoryPreferences": {
+    "projects": "Расположение проектов",
+    "projectsDescription": "Новые проекты Studio, Instant и Screenshot используют projects/studio, projects/instant и projects/screenshot в этой папке. Прежние расположения остаются в списке проектов.",
+    "exports": "Папка экспорта",
+    "exportsDescription": "Выберите постоянную папку или используйте последнюю папку экспорта видео или изображений. Настройка общая для всех проектов.",
+    "defaultLocation": "Расположение по умолчанию",
+    "lastUsed": "Последняя использованная папка",
+    "browse": "Выбрать папку",
+    "search": "Поиск папок",
+    "noMatches": "Подходящих папок нет",
+    "error": "Не удалось обновить папку.",
+    "retry": "Повторить"
   }
 }

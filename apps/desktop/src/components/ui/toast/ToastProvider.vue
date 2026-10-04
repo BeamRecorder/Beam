@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useToastStore } from './toastStore';
-import { X, CheckCircle, AlertCircle, ClipboardPaste, Copy, Info } from '@lucide/vue';
+import { X, CheckCircle, CircleX, AlertCircle, ClipboardPaste, Copy, Info } from '@lucide/vue';
 import Button from '../button/Button.vue';
 import CopyButton from '../button/CopyButton.vue';
 import type { Toast } from './toastStore';
@@ -46,8 +46,17 @@ const handleToastAction = async (toast: Toast) => {
           <span v-if="toast.preview.count && toast.preview.count > 1" class="toast-preview-count">
             +{{ toast.preview.count - 1 }}
           </span>
+          <span
+            v-if="toast.preview.status"
+            class="toast-preview-status"
+            :class="toast.preview.status"
+            aria-hidden="true"
+          >
+            <CheckCircle v-if="toast.preview.status === 'success'" :size="16" />
+            <CircleX v-else :size="16" />
+          </span>
         </span>
-        <span class="toast-icon-wrapper" aria-hidden="true">
+        <span v-if="!toast.preview?.status" class="toast-icon-wrapper" aria-hidden="true">
           <span
             v-if="toast.type === 'success' && toast.leadingIcon"
             :key="`${toast.id}-${toast.revision}`"
@@ -187,6 +196,22 @@ const handleToastAction = async (toast: Toast) => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.toast-preview-status {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  display: flex;
+  padding: 1px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-element);
+}
+.toast-preview-status.success {
+  color: var(--color-success);
+}
+.toast-preview-status.error {
+  color: var(--color-error);
 }
 
 .toast-icon {

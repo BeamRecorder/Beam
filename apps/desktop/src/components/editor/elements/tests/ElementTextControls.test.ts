@@ -33,7 +33,7 @@ const uiStubs = {
             title: props.tooltip,
             onClick: () => emit('click'),
           },
-          slots.default?.(),
+          [slots.icon?.(), slots.default?.()],
         );
     },
   }),
@@ -196,4 +196,16 @@ describe('ElementTextControls', () => {
       wrapper.unmount();
     },
   );
+});
+
+describe('element text inspector polish',()=>{
+ it('uses the content field without a redundant edit button',async()=>{
+  const wrapper=mount(ElementTextControls,{props:{clip:clipWithText()},global:{stubs:uiStubs}});await flushPromises();expect(wrapper.find('textarea').exists()).toBe(true);expect(wrapper.text()).not.toContain('translated:editText');expect(wrapper.text()).not.toContain('translated:addText');wrapper.unmount();
+ });
+ it('keeps the add-text action for an element without text',async()=>{
+  const clip=clipWithText();delete clip.text;const wrapper=mount(ElementTextControls,{props:{clip},global:{stubs:uiStubs}});await flushPromises();expect(wrapper.text()).toContain('translated:addText');expect(wrapper.find('textarea').exists()).toBe(false);wrapper.unmount();
+ });
+ it('uses neutral alignment choices with clearly visible icons',async()=>{
+  const wrapper=mount(ElementTextControls,{props:{clip:clipWithText()},global:{stubs:{...uiStubs,ButtonGroup:false}}});await flushPromises();expect(wrapper.getComponent(ButtonGroup).props('variant')).toBe('neutral');expect(wrapper.getComponent(ButtonGroup).findAll('svg')).toHaveLength(3);for(const svg of wrapper.getComponent(ButtonGroup).findAll('svg')){expect(svg.attributes('width')).toBe('20');expect(svg.attributes('stroke-width')).toBe('2.25');}wrapper.unmount();
+ });
 });

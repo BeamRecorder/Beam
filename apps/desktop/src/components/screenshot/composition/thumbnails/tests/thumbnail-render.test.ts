@@ -208,8 +208,8 @@ describe('renderLayerThumbnail', () => {
       expect.anything(),
       expect.anything(),
       {},
-      1_000 * scale,
-      500 * scale,
+      expect.closeTo(1_000 * scale, 6),
+      expect.closeTo(500 * scale, 6),
     );
   });
 
@@ -343,8 +343,8 @@ describe('renderLayerThumbnail', () => {
       expect.anything(),
       value.layer,
       assets,
-      1_000 * scale,
-      500 * scale,
+      expect.closeTo(1_000 * scale, 6),
+      expect.closeTo(500 * scale, 6),
     );
   });
 
@@ -361,4 +361,25 @@ describe('renderLayerThumbnail', () => {
     await expect(renderLayerThumbnail(request(), {})).rejects.toThrow('Thumbnail output context unavailable.');
     expect(canvases[1]!.convertToBlob).not.toHaveBeenCalled();
   });
+});
+
+it('fits the projected 3D quad instead of clipping its asymmetric corners', async () => {
+  const { layerPerspectiveCorners } = await import('@beam/engine/layout/layer-perspective');
+  const value = request();
+  value.layer.rotation3d = { x: 35, y: 20, perspective: 400 };
+  value.state.shapes[0]!.rotation = 17;
+  const t = value.state.shapes[0]!.transform,
+    rect = { x: t.x * 1000, y: t.y * 500, width: t.width * 1000, height: t.height * 500 };
+  const corners = layerPerspectiveCorners(rect, value.layer.rotation3d, 17),
+    left = Math.min(...corners.map((p) => p.x)),
+    top = Math.min(...corners.map((p) => p.y)),
+    width = Math.max(...corners.map((p) => p.x)) - left,
+    height = Math.max(...corners.map((p) => p.y)) - top;
+  const unit = 500 / 1080,
+    padding = value.state.shapes[0]!.borderWidth * unit,
+    scale = 176 / Math.max(1, width + padding * 2, height + padding * 2);
+  await renderLayerThumbnail(value, {});
+  const offset = canvases[0]!.context.translate.mock.calls[0]!;
+  expect(offset[0]).toBeCloseTo(128 - (left + width / 2) * scale);
+  expect(offset[1]).toBeCloseTo(128 - (top + height / 2) * scale);
 });

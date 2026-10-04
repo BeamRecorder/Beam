@@ -18,6 +18,9 @@
   border-radius: var(--radius-md);
   overflow: hidden;
 }
+.gradient-preview.custom-preview {
+  height: 160px;
+}
 .gradient-preview > div {
   position: absolute;
   inset: 0;

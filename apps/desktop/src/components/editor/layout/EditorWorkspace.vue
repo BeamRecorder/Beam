@@ -20,7 +20,12 @@ defineProps<EditorWorkspaceProps>();
   gap: var(--editor-workspace-gap);
   overflow: hidden;
 }
+.editor-workspace[data-editor-kind='screenshot'] {
+  padding: 0;
+  gap: 0;
+}
 .workspace-upper {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;

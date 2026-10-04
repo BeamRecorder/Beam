@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import TimelineToolbar from '../TimelineToolbar.vue';
+import EditorHistoryControls from '../../EditorHistoryControls.vue';
 
 const PopoverMenuButton = {
   emits: ['select'],
@@ -38,6 +39,48 @@ const PreviewQualityPopover = {
     '<div class="preview-quality-popover-stub" :data-quality="modelValue" :data-status="performanceSnapshot?.status || \'idle\'" />',
 };
 describe('TimelineToolbar', () => {
+  const mountHistory = (props = {}) =>
+    mount(TimelineToolbar, {
+      props: { currentTime: 0, duration: 100, isPlaying: false, zoomLevel: 100, ...props },
+      global: { stubs: { Popover, BigSlider, Button, PreviewQualityPopover } },
+    });
+
+  it('places shared undo and redo immediately beside snapping and forwards both actions', async () => {
+    const wrapper = mountHistory({ canUndo: true, canRedo: true });
+    expect(wrapper.get('.toolbar-snap-btn').element.nextElementSibling).toBe(wrapper.get('.history-actions').element);
+    expect(wrapper.findComponent(EditorHistoryControls).props('tooltipPosition')).toBe('top');
+    await wrapper.get('button[aria-label="Undo (Ctrl+Z)"]').trigger('click');
+    await wrapper.get('button[aria-label="Redo (Ctrl+Y)"]').trigger('click');
+    expect(wrapper.emitted('undo')).toEqual([[]]);
+    expect(wrapper.emitted('redo')).toEqual([[]]);
+    wrapper.unmount();
+  });
+
+  it('follows each history stack availability without allowing disabled actions', async () => {
+    const wrapper = mountHistory({ canUndo: false, canRedo: true });
+    await wrapper.get('button[aria-label="Undo (Ctrl+Z)"]').trigger('click');
+    expect(wrapper.emitted('undo')).toBeUndefined();
+    await wrapper.setProps({ canUndo: true, canRedo: false });
+    await wrapper.get('button[aria-label="Undo (Ctrl+Z)"]').trigger('click');
+    await wrapper.get('button[aria-label="Redo (Ctrl+Y)"]').trigger('click');
+    expect(wrapper.emitted('undo')).toEqual([[]]);
+    expect(wrapper.emitted('redo')).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it('disables history during loading and hides editing actions in fullscreen preview', async () => {
+    const wrapper = mountHistory({ loading: true, canUndo: true, canRedo: true });
+    for (const button of wrapper.findAll('.history-actions button')) {
+      expect(button.attributes('disabled')).toBeDefined();
+      await button.trigger('click');
+    }
+    expect(wrapper.emitted('undo')).toBeUndefined();
+    expect(wrapper.emitted('redo')).toBeUndefined();
+    await wrapper.setProps({ loading: false, isCanvasFullscreen: true });
+    expect(wrapper.find('.history-actions').exists()).toBe(false);
+    expect(wrapper.find('.play-pause-btn').exists()).toBe(true);
+    wrapper.unmount();
+  });
   it('uses neutral snapping states and groups fullscreen with the view controls', async () => {
     const wrapper = mount(TimelineToolbar, {
       props: {

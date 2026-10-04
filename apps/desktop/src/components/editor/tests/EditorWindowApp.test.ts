@@ -19,6 +19,11 @@ const state = vi.hoisted(() => ({
 
 const capture = vi.hoisted(() => ({
   getEditorContext: vi.fn(),
+  getScreenshot: vi.fn(async () => ({ state: null, history: undefined })),
+  onBackgroundLibraryChanged: vi.fn(() => vi.fn()),
+  onEditorPresetsChanged: vi.fn(() => vi.fn()),
+  listBackgroundLibrary: vi.fn(async () => []),
+  getEditorPresets: vi.fn(async () => ({})),
   getProject: vi.fn(),
   getProjectEditorData: vi.fn(),
   listProjects: vi.fn(),

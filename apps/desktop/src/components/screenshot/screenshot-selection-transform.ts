@@ -8,9 +8,15 @@ import { computeCanvasAlignmentSnapping } from '../editor/canvas/composables/can
 
 export function movableScreenshotSelection(state: ScreenshotState, ids: readonly string[]) {
   const selected = new Set(ids);
-  return screenshotLayers(state).filter(
+  const layers = screenshotLayers(state);
+  const lockedGroups = new Set(layers.filter((r) => selected.has(r.id) && r.locked && r.groupId).map((r) => r.groupId));
+  return layers.filter(
     (layer) =>
-      selected.has(layer.id) && layer.visible && !layer.locked && !['background', 'watermark'].includes(layer.kind),
+      selected.has(layer.id) &&
+      (layer.visible || layer.groupId) &&
+      !layer.locked &&
+      !lockedGroups.has(layer.groupId) &&
+      !['background', 'watermark', 'zoom'].includes(layer.kind),
   );
 }
 

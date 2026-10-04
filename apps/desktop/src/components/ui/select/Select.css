@@ -22,7 +22,7 @@
 .select-trigger.select-compact {
   height: var(--control-height);
   padding: 0 8px;
-  border-color: transparent;
+  border-color: var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-bg-field);
   font-size: var(--font-size-body);
@@ -78,6 +78,19 @@
 .select-trigger.is-open {
   border-color: var(--color-border-strong);
   box-shadow: var(--shadow-sm);
+}
+.select-trigger.is-neutral {
+  background: var(--color-bg-field);
+  border-color: var(--color-border);
+}
+.select-trigger.is-neutral:hover:not(.is-disabled),
+.select-trigger.is-neutral.is-open {
+  background: var(--color-bg-field-hover);
+  border-color: var(--color-border-strong);
+  box-shadow: none;
+}
+.select-menu.is-neutral .option-check {
+  color: var(--text-secondary);
 }
 
 .select-trigger:focus-visible,

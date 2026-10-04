@@ -41,6 +41,36 @@ const global = {
 };
 
 describe('BorderAndFrameControls', () => {
+  it('offers independent Auto, Light and Dark Safari modes without changing the frame color', async () => {
+    const wrapper = mount(BorderAndFrameControls, { props: { frame: 'safari', frameColor: '#123456' }, global });
+    expect(wrapper.get('[aria-label="Browser appearance"]').text()).toContain('Auto');
+    for (const [label, value] of [
+      ['Auto', 'auto'],
+      ['Light', 'light'],
+      ['Dark', 'dark'],
+    ]) {
+      const button = wrapper.findAll('.frame-button').find((item) => item.text() === label)!;
+      await button.trigger('click');
+      expect(wrapper.emitted('update')).toContainEqual([{ frameTheme: value }]);
+    }
+    expect(wrapper.props('frameColor')).toBe('#123456');
+    await wrapper.setProps({ frameTheme: 'dark' });
+    expect(
+      wrapper
+        .findAll('.frame-button')
+        .find((item) => item.text() === 'Dark')!
+        .attributes('aria-pressed'),
+    ).toBe('true');
+    wrapper.unmount();
+  });
+  it.each(['windows-95', 'iphone-16-max'] as const)(
+    'keeps Safari appearance choices out of the %s controls',
+    (frame) => {
+      const wrapper = mount(BorderAndFrameControls, { props: { frame }, global });
+      expect(wrapper.find('[aria-label="Browser appearance"]').exists()).toBe(false);
+      wrapper.unmount();
+    },
+  );
   it('keeps enabled border and frame controls collapsed until requested without changing their values', async () => {
     const wrapper = mount(BorderAndFrameControls, {
       props: { borderEnabled: true, frame: 'safari', frameTitle: 'Saved title' },

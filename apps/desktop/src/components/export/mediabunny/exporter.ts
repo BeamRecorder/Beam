@@ -6,6 +6,7 @@ import type { ExportDiagnostics } from '@beam/encoder/export-diagnostics-types';
 import { collectExportEnvironment } from '~/components/export/export-environment';
 import { prepareExportCursorImages } from '@beam/encoder/mediabunny/export-cursor-images';
 import type { DesktopExportRequest } from '../experimental-export-types';
+import { withHtmlFrameSources } from '../../authoring/html-export';
 
 const abortError = () => new DOMException('Export cancelled.', 'AbortError');
 
@@ -15,6 +16,7 @@ export async function exportWithMediabunny(
   signal: AbortSignal,
   onStarted?: (diagnostics: ExportDiagnostics) => void,
 ): Promise<ExportResult> {
+  request = await withHtmlFrameSources(request);
   if (request.experimentalLinuxFfmpeg) {
     const { exportWithLinuxFfmpeg } = await import('../experimental-exporter');
     return exportWithLinuxFfmpeg(request, onProgress, signal, onStarted);

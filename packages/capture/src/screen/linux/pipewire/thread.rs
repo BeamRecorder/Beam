@@ -55,7 +55,7 @@ pub(crate) struct PipewireCaptureRequest {
     pub(crate) metrics: Arc<ScreenCaptureMetrics>,
     pub(crate) repair_window_crop: bool,
     pub(crate) region: Option<ScreenRegion>,
-    pub(crate) separate_cursor_enabled: bool,
+    pub(crate) hyprland_cursor: Option<super::super::hyprland::HyprlandCursor>,
     pub(crate) show_real_cursor: bool,
     pub(crate) target_fps: u32,
 }
@@ -73,7 +73,7 @@ impl PipewireCapture {
             metrics,
             repair_window_crop,
             region,
-            separate_cursor_enabled,
+            hyprland_cursor,
             show_real_cursor,
             target_fps,
         } = request;
@@ -117,7 +117,7 @@ impl PipewireCapture {
                     region,
                     show_real_cursor,
                     target_fps,
-                    separate_cursor_enabled,
+                    hyprland_cursor,
                 );
                 let _ = finish_sender.send(SinkMessage::Finish);
                 result
@@ -269,7 +269,9 @@ impl PipewireCapture {
 }
 
 impl Drop for PipewireCapture {
-    fn drop(&mut self) { let _ = self.stop(); }
+    fn drop(&mut self) {
+        let _ = self.stop();
+    }
 }
 
 #[cfg(test)]

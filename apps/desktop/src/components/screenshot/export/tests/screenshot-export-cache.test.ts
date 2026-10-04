@@ -5,6 +5,32 @@ vi.mock('../screenshot-export', () => ({ encodeScreenshot: rendering.encode }));
 import { createScreenshotExporter } from '../screenshot-export-cache';
 beforeEach(() => rendering.encode.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]).buffer));
 
+it('reuses the actual output thumbnail and reports a cache hit without invoking the worker again', async () => {
+  const exporter = createScreenshotExporter(),
+    state = stateFixture();
+  rendering.encode.mockImplementationOnce(async (_src, _state, options) => {
+    options.onPreview('preview');
+    return new ArrayBuffer(3);
+  });
+  const onPreview = vi.fn(),
+    onCacheHit = vi.fn(),
+    onTiming = vi.fn();
+  await exporter.encode('source', state, { includePreview: true, onPreview, onCacheHit, onTiming });
+  await exporter.encode('source', state, { includePreview: true, onPreview, onCacheHit, onTiming });
+  expect(rendering.encode).toHaveBeenCalledOnce();
+  expect(onCacheHit).toHaveBeenCalledOnce();
+  expect(onPreview).toHaveBeenCalledTimes(2);
+  expect(onTiming).toHaveBeenCalledWith('cacheLookup', expect.any(Number));
+});
+it('regenerates bytes when requesting a previously missing preview or different output dimensions', async () => {
+  const exporter = createScreenshotExporter(),
+    state = stateFixture();
+  await exporter.encode('source', state);
+  await exporter.encode('source', state, { includePreview: true });
+  await exporter.encode('source', state, { includePreview: true, outputSize: { width: 480, height: 240 } });
+  expect(rendering.encode).toHaveBeenCalledTimes(3);
+});
+
 it('is lazy and reuses an unchanged encoded screenshot without making mutable aliases', async () => {
   const exporter = createScreenshotExporter();
   expect(rendering.encode).not.toHaveBeenCalled();

@@ -5,6 +5,27 @@ import { jsonObject } from '../document/json-value';
 /** IDs are authored by the caller, making transactions reproducible across transports. */
 export function registerAuthoringCommands(registry: CommandRegistry<ClipComposition>) {
   registry.register({
+    type: 'asset.patch',
+    parse(input) {
+      const value = jsonObject(input),
+        patch = jsonObject(value.patch);
+      if (
+        typeof value.assetId !== 'string' ||
+        !value.assetId ||
+        ['id', 'kind', 'origin', 'sessionId', 'sessionPath', 'sessionStartMs'].some((key) => key in patch)
+      )
+        throw new TypeError('Cannot change asset identity or origin.');
+      return { id: value.assetId, patch };
+    },
+    apply(document, { id, patch }) {
+      if (!document.assets.some((asset) => asset.id === id)) throw new Error('Unknown asset.');
+      return {
+        ...document,
+        assets: document.assets.map((asset) => (asset.id === id ? ({ ...asset, ...patch } as MediaAsset) : asset)),
+      };
+    },
+  });
+  registry.register({
     type: 'asset.add',
     parse(input) {
       const value = jsonObject(input);

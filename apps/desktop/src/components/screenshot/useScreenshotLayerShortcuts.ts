@@ -10,6 +10,8 @@ export function useScreenshotLayerShortcuts(options: {
   copy: () => boolean | Promise<boolean>;
   cut: () => boolean | Promise<boolean>;
   paste: () => boolean;
+  group?: () => boolean;
+  ungroup?: () => boolean;
 }) {
   const keydown = (event: KeyboardEvent) => {
     if (event.defaultPrevented || event.repeat || event.isComposing || options.disabled()) return;
@@ -22,6 +24,10 @@ export function useScreenshotLayerShortcuts(options: {
     )
       return;
     const key = event.key.toLowerCase();
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && key === 'g') {
+      if (event.shiftKey ? options.ungroup?.() : options.group?.()) event.preventDefault();
+      return;
+    }
     if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) {
       const handled = key === 'c' ? options.copy() : key === 'x' ? options.cut() : false;
       if (handled instanceof Promise) {

@@ -14,10 +14,11 @@ export interface ScreenshotDrag {
   corner?: ResizeCorner;
   selection?: string[];
   targetId?: string;
+  clickId?: string;
 }
 
-export type ScreenshotPanel = 'canvas' | 'image' | 'shapes' | 'cursor' | 'settings' | 'zoom';
-export type ScreenshotSelectionMode = 'replace' | 'toggle';
+export type ScreenshotPanel = 'canvas' | 'image' | 'shapes' | 'cursor' | 'settings' | 'zoom' | 'layer-effect';
+export type ScreenshotSelectionMode = 'replace' | 'toggle' | 'individual' | 'toggle-individual';
 export interface ScreenshotTranslation {
   x: number;
   y: number;

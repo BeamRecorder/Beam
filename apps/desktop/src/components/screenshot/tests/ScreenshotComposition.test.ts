@@ -4,6 +4,8 @@ import { defineComponent, nextTick, ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LayerBlendMode } from '@beam/engine/shared/layer-compositing-types';
 import Button from '~/ui/button/Button.vue';
+import ScreenshotEffectToolbar from '../gradient/ScreenshotEffectToolbar.vue';
+import ScreenshotOpacity from '../composition/ScreenshotOpacity.vue';
 import type { ScreenshotLayer } from '@beam/engine/screenshot/screenshot-types';
 
 const compositionPosition = vi.hoisted(() => ({
@@ -13,6 +15,17 @@ const compositionPosition = vi.hoisted(() => ({
   begin: vi.fn<(event: PointerEvent) => void>(),
   click: vi.fn(),
 }));
+const thumbnailLifecycle = vi.hoisted(() => ({ enabled: undefined as (() => boolean) | undefined }));
+vi.mock('../composition/thumbnails/useLayerThumbnails', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../composition/thumbnails/useLayerThumbnails')>();
+  return {
+    ...actual,
+    useLayerThumbnails: (...args: Parameters<typeof actual.useLayerThumbnails>) => {
+      thumbnailLifecycle.enabled = args[1];
+      return actual.useLayerThumbnails(...args);
+    },
+  };
+});
 
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: (namespace: string) => ({
@@ -20,6 +33,8 @@ vi.mock('~/i18n/useTranslate', () => ({
       `${namespace}.${key}${typeof params?.name === 'string' ? ` (${params.name})` : ''}`,
   }),
 }));
+
+vi.mock('../composition/thumbnails/useVisibleThumbnailIds', () => ({ useVisibleThumbnailIds: () => ref(new Set()) }));
 
 vi.mock('../composition/useCompositionPanelPosition', () => ({
   useCompositionPanelPosition: (_panel: unknown, onToggle: () => void) => {
@@ -47,15 +62,7 @@ const SelectStub = defineComponent({
     '<select v-bind="$attrs" :disabled="disabled" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option></select>',
 });
 
-const BigSliderStub = defineComponent({
-  inheritAttrs: false,
-  props: ['defaultValue', 'formatValue', 'label', 'max', 'min', 'modelValue', 'step'],
-  emits: ['update:modelValue'],
-  template:
-    '<input v-bind="$attrs" data-testid="opacity-control" type="range" :aria-label="label" :min="min" :max="max" :step="step" :value="modelValue" @input="$emit(\'update:modelValue\', Number($event.target.value))" />',
-});
-
-const stubs = { Select: SelectStub, BigSlider: BigSliderStub };
+const stubs = { Select: SelectStub };
 const source = 'project-media://screenshot/shot-1/source.png';
 
 const makeLayer = (
@@ -92,6 +99,7 @@ const mountComposition = (
     selectedIds: string[];
     source: string;
     disabled: boolean;
+    previewReady: boolean;
   }> = {},
   attachTo?: Element,
 ) => {
@@ -114,6 +122,7 @@ const dispatchPointer = (
     button: { value: values.button ?? 0 },
     pointerId: { value: values.pointerId },
     clientY: { value: values.clientY },
+    clientX: { value: 50 },
   });
   target.dispatchEvent(event);
   return event;
@@ -131,6 +140,45 @@ const closeContextMenu = async () => {
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   await nextTick();
 };
+
+it('shows the Beam text and logo together in an expandable, selectable group without a folder icon', async () => {
+  const layers = [
+    makeLayer('logo', 'image', 'Logo Beam', { groupId: 'brand' }),
+    makeLayer('other', 'shape', 'Other'),
+    makeLayer('beam', 'text', 'Beam', { groupId: 'brand' }),
+  ];
+  const wrapper = mountComposition({ layers, selectedId: 'beam', selectedIds: ['logo', 'beam'] });
+  wrappers.push(wrapper);
+  const group = wrapper.get('[data-composition-group="brand"]');
+  expect(group.findAll('[data-layer-id]').map((row) => row.attributes('data-layer-id'))).toEqual(['beam', 'logo']);
+  expect(group.find('.lucide-folder').exists()).toBe(false);
+  expect(group.get('.group-heading').classes()).toContain('selected');
+  await group.get('.group-select').trigger('click');
+  expect(wrapper.emitted('select')).toEqual([['beam']]);
+  await group.get('[data-layer-id="logo"] .layer-select').trigger('click');
+  expect(wrapper.emitted('select')?.at(-1)).toEqual(['logo', 'individual']);
+  await group.get('[data-layer-id="beam"] .layer-select').trigger('click', { ctrlKey: true });
+  expect(wrapper.emitted('select')?.at(-1)).toEqual(['beam', 'toggle-individual']);
+  await group.get('button[aria-expanded]').trigger('click');
+  expect(group.get('.group-members').attributes('inert')).toBeDefined();
+  await wrapper.setProps({ layers: [...layers, makeLayer('next', 'shape', 'Next')] });
+  expect(group.get('button[aria-expanded]').attributes('aria-expanded')).toBe('false');
+  await group.get('button[aria-expanded]').trigger('click');
+  expect(group.get('button[aria-expanded]').attributes('aria-expanded')).toBe('true');
+});
+it('groups from the trailing effect-toolbar shortcut and disables it for ineligible selections', async () => {
+  const wrapper = mountComposition();
+  wrappers.push(wrapper);
+  const button = wrapper.get('[data-composition-group-action]');
+  expect(button.attributes('disabled')).toBeDefined();
+  await wrapper.setProps({ canGroup: true });
+  await button.trigger('click');
+  expect(wrapper.emitted('group')).toEqual([[]]);
+  await wrapper.setProps({ disabled: true });
+  await button.trigger('click');
+  expect(wrapper.emitted('group')).toHaveLength(1);
+  expect(button.element.closest('.effect-toolbar')).not.toBeNull();
+});
 
 it('renames a layer with a focused shared input on double-click and restores row focus on Enter', async () => {
   const wrapper = mountComposition({}, document.body);
@@ -292,6 +340,15 @@ afterEach(() => {
 });
 
 describe('ScreenshotComposition', () => {
+  it('defers layer thumbnail work until the first completed canvas preview', async () => {
+    const wrapper = mountComposition({ previewReady: false });
+    wrappers.push(wrapper);
+    expect(thumbnailLifecycle.enabled?.()).toBe(false);
+    await wrapper.setProps({ previewReady: true });
+    expect(thumbnailLifecycle.enabled?.()).toBe(true);
+    await wrapper.setProps({ previewReady: false });
+    expect(thumbnailLifecycle.enabled?.()).toBe(false);
+  });
   it('lists every layer front-to-back, labels every kind, and routes selection', async () => {
     const layers = allLayers();
     const wrapper = mountComposition({ layers });
@@ -373,12 +430,13 @@ describe('ScreenshotComposition', () => {
     const wrapper = mountComposition({ selectedId: 'shape-1' });
     wrappers.push(wrapper);
     const select = wrapper.findComponent(SelectStub);
-    const slider = wrapper.findComponent(BigSliderStub);
+    const slider = wrapper.findComponent(ScreenshotOpacity);
 
     expect(select.props('modelValue')).toBe('source-over');
     expect((select.props('options') as Array<{ value: string }>).map(({ value }) => value)).toContain('multiply');
     expect(slider.props('modelValue')).toBe(100);
-    expect((slider.props('formatValue') as (value: number) => string)(64)).toBe('64%');
+    expect(slider.get('input').attributes('type')).toBe('number');
+    expect(wrapper.find('input[type="range"]').exists()).toBe(false);
     select.vm.$emit('update:modelValue', 'multiply' satisfies LayerBlendMode);
     slider.vm.$emit('update:modelValue', 64);
     expect(wrapper.emitted('update')).toEqual([
@@ -749,11 +807,18 @@ describe('ScreenshotComposition', () => {
       y: 0,
       toJSON: () => ({}),
     } as DOMRect);
-    for (const row of wrapper.findAll('.layer-row')) {
+    for (const [index, row] of wrapper.findAll('.layer-row').entries()) {
       Object.defineProperty(row.element, 'offsetHeight', {
         configurable: true,
         value: 44,
       });
+      vi.spyOn(row.element, 'getBoundingClientRect').mockReturnValue({
+        top: index * 48,
+        bottom: index * 48 + 44,
+        left: 0,
+        right: 260,
+        height: 44,
+      } as DOMRect);
     }
 
     const selectButton = wrapper.get('.layer-row[data-layer-id="screenshot"] .layer-select');
@@ -763,13 +828,13 @@ describe('ScreenshotComposition', () => {
     });
     expect(pointerDown.defaultPrevented).toBe(false);
     expect(setPointerCapture).not.toHaveBeenCalled();
-    dispatchPointer(window, 'pointermove', { pointerId: 12, clientY: 35 });
+    dispatchPointer(window, 'pointermove', { pointerId: 12, clientY: 5 });
     runFrame();
     await wrapper.vm.$nextTick();
-    expect(wrapper.findAll('.layer-row').map((row) => row.attributes('data-layer-id'))[0]).toBe('screenshot');
+    expect(wrapper.get('[data-layer-id="__watermark__"]').classes()).toContain('drop-before');
     expect(setPointerCapture).toHaveBeenCalledWith(12);
 
-    dispatchPointer(window, 'pointerup', { pointerId: 12, clientY: 35 });
+    dispatchPointer(window, 'pointerup', { pointerId: 12, clientY: 5 });
     expect(wrapper.emitted('reorder')).toEqual([['screenshot', 0]]);
     expect(releasePointerCapture).toHaveBeenCalledWith(12);
 
@@ -836,4 +901,48 @@ describe('ScreenshotComposition', () => {
     await shape.trigger('click');
     expect(wrapper.emitted('select')).toEqual([['shape-1']]);
   });
+});
+
+it('adds a gradient to the selected Composition item and exposes attached effect selection', async () => {
+  const { createGradientEffect } = await import('@beam/engine');
+  const effect = createGradientEffect('gradient');
+  const wrapper = mountComposition({ layers: [makeLayer('shape-1', 'shape', 'Shape', { effects: [effect] })] });
+  wrappers.push(wrapper);
+  wrapper.findComponent(ScreenshotEffectToolbar).vm.$emit('add', 'gradient');
+  await nextTick();
+  expect(wrapper.emitted('add-effect')?.[0]).toEqual(['shape-1', 'gradient']);
+  await wrapper.get('.layer-effect-list button').trigger('click');
+  expect(wrapper.emitted('select-effect')?.[0]).toEqual(['shape-1', 'gradient']);
+});
+it('does not offer a gradient on backdrop effects and disables addition on locked or full layers', async () => {
+  const { createGradientEffect } = await import('@beam/engine');
+  const wrapper = mountComposition({ layers: [makeLayer('shape-1', 'effect', 'Blur')] });
+  wrappers.push(wrapper);
+  expect(wrapper.get('[data-effect-menu="effects"]').attributes('disabled')).toBeDefined();
+  await wrapper.setProps({ layers: [makeLayer('shape-1', 'shape', 'Shape', { locked: true })] });
+  expect(wrapper.get('[data-effect-menu="effects"]').attributes('disabled')).toBeDefined();
+  await wrapper.setProps({
+    layers: [
+      makeLayer('shape-1', 'shape', 'Shape', {
+        effects: Array.from({ length: 4 }, (_, i) => createGradientEffect(String(i))),
+      }),
+    ],
+  });
+  expect(wrapper.get('[data-effect-menu="effects"]').attributes('disabled')).toBeDefined();
+});
+
+it('keeps the scrollable list directly in the bounded content and contains wheel events', async () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const wheel = vi.fn();
+  host.addEventListener('wheel', wheel);
+  const wrapper = mountComposition({}, host);
+  const list = wrapper.get('.layer-list');
+  expect(list.element.parentElement?.classList.contains('composition-content')).toBe(true);
+  const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 120 });
+  list.element.dispatchEvent(event);
+  expect(event.defaultPrevented).toBe(false);
+  expect(wheel).not.toHaveBeenCalled();
+  wrapper.unmount();
+  host.remove();
 });

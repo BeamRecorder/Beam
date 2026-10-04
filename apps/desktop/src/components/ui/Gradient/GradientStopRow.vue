@@ -14,7 +14,7 @@ const { t } = useTranslate('Gradient');
 <template>
   <div
     class="gradient-stop-row"
-    :class="{ 'is-selected': selected }"
+    :class="{ 'is-selected': selected, 'is-palette': palette }"
     @focusin="emit('select')"
     @pointerdown="emit('select')"
   >
@@ -22,13 +22,14 @@ const { t } = useTranslate('Gradient');
       :model-value="stop.color"
       :label="t('stopColor', { number: index + 1 })"
       :show-label="false"
-      :show-alpha="true"
+      :show-alpha="!palette"
       :alpha-value="stop.alpha ?? 1"
       :disabled="disabled"
       @update:model-value="emit('update', { color: $event })"
       @update:alpha="emit('update', { alpha: $event })"
     />
     <Input
+      v-if="!palette"
       type="number"
       size="xs"
       appearance="neutral"
@@ -43,6 +44,7 @@ const { t } = useTranslate('Gradient');
       @update:model-value="emit('update', { position: Number($event) / 100 })"
     />
     <Input
+      v-if="!palette"
       type="number"
       size="xs"
       appearance="neutral"
@@ -78,6 +80,9 @@ const { t } = useTranslate('Gradient');
   min-width: 0;
   padding: 5px 4px;
   border-radius: var(--radius-md);
+}
+.gradient-stop-row.is-palette {
+  grid-template-columns: minmax(72px, 1fr) 24px;
 }
 .gradient-stop-row:hover {
   background: var(--color-bg-surface-hover);

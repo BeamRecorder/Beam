@@ -1,4 +1,4 @@
-import { computed, onUnmounted, ref, watch, type Ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch, type Ref } from 'vue';
 import { capture } from '~/api/capture';
 import type { CaptureProject } from '~/api/types/capture-api';
 
@@ -19,6 +19,7 @@ export function useProjectCatalog(query: Ref<string>, active: () => boolean) {
   let loading: Promise<void> | null = null;
   let more: Promise<void> | null = null;
   let searchTimer: ReturnType<typeof setTimeout> | null = null;
+  let unsubscribe: (() => void) | undefined;
   const normalizedQuery = () => query.value.trim().toLowerCase();
   const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
@@ -166,10 +167,17 @@ export function useProjectCatalog(query: Ref<string>, active: () => boolean) {
     isLoading.value = false;
     isLoadingMore.value = false;
   });
+  onMounted(() => {
+    unsubscribe = capture.onProjectLocationsChanged(() => {
+      invalidate();
+      if (active()) void load();
+    });
+  });
   onUnmounted(() => {
     disposed = true;
     generation++;
     if (searchTimer) clearTimeout(searchTimer);
+    unsubscribe?.();
   });
   return {
     projects,

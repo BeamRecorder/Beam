@@ -73,7 +73,11 @@
     "continuityDescription": "Estende uma cópia desfocada do vídeo atrás do conteúdo ajustado.",
     "continuityBlur": "Desfoque do fundo",
     "continuityBrightness": "Brilho do fundo",
-    "borderColor": "Cor da borda"
+    "borderColor": "Cor da borda",
+    "frameTheme": "Aparência do navegador",
+    "auto": "Auto",
+    "light": "Claro",
+    "dark": "Escuro"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Carregando prévia da câmera",
@@ -991,6 +995,10 @@
     "customSize": "Tamanho personalizado",
     "sizePreset": "Predefinição de tamanho",
     "copiedToast": "Imagem copiada para a área de transferência, use onde quiser",
+    "exportedToast": "Imagem salva",
+    "copyFailedToast": "Falha ao copiar a imagem",
+    "exportFailedToast": "Falha ao exportar a imagem",
+    "copyTimingReport": "Copiar relatório de tempos",
     "instant": "Instantâneo",
     "copy": "Copiar",
     "copied": "Copiado",
@@ -1004,7 +1012,12 @@
     "backgroundError": "Escolha uma imagem, cor ou gradiente como fundo.",
     "dimensionsError": "Escolha uma resolução de até 64 megapixels (16384 pixels por lado).",
     "renderUnavailable": "A renderização de imagens não está disponível.",
-    "encodingUnavailable": "A codificação {format} não está disponível."
+    "encodingUnavailable": "A codificação {format} não está disponível.",
+    "rotation3d": "Rotação 3D",
+    "perspective": "Perspectiva",
+    "group": "Agrupar",
+    "selectionTitle": "Seleção · {count} elementos",
+    "ungroup": "Desagrupar"
   },
   "EditorPresetControls": {
     "preset": "Predefinição",
@@ -1088,6 +1101,9 @@
     "luminosity": "Luminosidade"
   },
   "ScreenshotComposition": {
+    "expandGroup": "Expandir grupo {name}",
+    "collapseGroup": "Recolher grupo {name}",
+    "selectGroup": "Selecionar grupo {name}",
     "title": "Composição",
     "name": "Nome da camada",
     "rename": "Renomear camada · Clique duplo ou F2",
@@ -1162,5 +1178,18 @@
     "stopPosition": "Posição do ponto {number}",
     "stopOpacity": "Opacidade do ponto {number}",
     "addAtPosition": "Clique para adicionar um ponto de cor"
+  },
+  "DirectoryPreferences": {
+    "projects": "Local dos projetos",
+    "projectsDescription": "Os novos projetos Studio, Instant e Screenshot usam projects/studio, projects/instant e projects/screenshot nesta pasta. Os locais anteriores continuam no seletor de projetos.",
+    "exports": "Pasta de exportação",
+    "exportsDescription": "Escolha uma pasta fixa ou reutilize a última pasta de exportação de vídeos ou imagens. Esta configuração vale para todos os projetos.",
+    "defaultLocation": "Local padrão",
+    "lastUsed": "Última pasta utilizada",
+    "browse": "Escolher uma pasta",
+    "search": "Buscar pastas",
+    "noMatches": "Nenhuma pasta correspondente",
+    "error": "Não foi possível atualizar a pasta.",
+    "retry": "Tentar novamente"
   }
 }

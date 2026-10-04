@@ -20,6 +20,12 @@ import type { StillDocument } from '@beam/engine';
 import { parseExportOptions, exportWithBackend } from './export-backends';
 
 const help = `beam inspect DOCUMENT
+beam tools list
+beam tools describe NAME
+beam tools call NAME [JSON|@FILE|-] [--instance PID]
+beam docs [agent|html|commands|architecture]
+beam instances
+beam html watch @PUBLISH.json [--instance PID]
 beam create video OUTPUT
 beam create image SOURCE WIDTH HEIGHT OUTPUT
 beam edit DOCUMENT COMMANDS.json OUTPUT [--overwrite]
@@ -40,6 +46,10 @@ All successful results are JSON on stdout; errors use stderr and exit code 1.`;
 export async function runCliCommand(args: string[]) {
   const [command, input, second, output, ...flags] = args;
   if (!command || command === '--help') return { usage: help };
+  if (['tools', 'docs', 'instances', 'html'].includes(command)) {
+    const { runAgentCommand } = await import('./agent-runner');
+    return runAgentCommand(args);
+  }
   if (command === 'capture' || command === 'record' || command === 'screenshot') {
     const { runCaptureCommand } = await import('./native-capture');
     return runCaptureCommand(args);

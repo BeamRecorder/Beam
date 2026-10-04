@@ -73,7 +73,11 @@
     "continuityDescription": "Estende una copia sfocata del video dietro il contenuto adattato.",
     "continuityBlur": "Sfocatura dello sfondo",
     "continuityBrightness": "Luminosità dello sfondo",
-    "borderColor": "Colore del bordo"
+    "borderColor": "Colore del bordo",
+    "frameTheme": "Aspetto del browser",
+    "auto": "Auto",
+    "light": "Chiaro",
+    "dark": "Scuro"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Caricamento anteprima fotocamera",
@@ -991,6 +995,10 @@
     "customSize": "Dimensioni personalizzate",
     "sizePreset": "Dimensioni predefinite",
     "copiedToast": "Immagine copiata negli appunti, usala ovunque",
+    "exportedToast": "Immagine salvata",
+    "copyFailedToast": "Copia dell’immagine non riuscita",
+    "exportFailedToast": "Esportazione dell’immagine non riuscita",
+    "copyTimingReport": "Copia rapporto dei tempi",
     "instant": "Istantaneo",
     "copy": "Copia",
     "copied": "Copiato",
@@ -1004,7 +1012,12 @@
     "backgroundError": "Scegli un’immagine, un colore o una sfumatura come sfondo.",
     "dimensionsError": "Scegli una risoluzione fino a 64 megapixel (16384 pixel per lato).",
     "renderUnavailable": "Il rendering delle immagini non è disponibile.",
-    "encodingUnavailable": "La codifica {format} non è disponibile."
+    "encodingUnavailable": "La codifica {format} non è disponibile.",
+    "rotation3d": "Rotazione 3D",
+    "perspective": "Prospettiva",
+    "group": "Raggruppa",
+    "selectionTitle": "Selezione · {count} elementi",
+    "ungroup": "Separa"
   },
   "EditorPresetControls": {
     "preset": "Predefinito",
@@ -1088,6 +1101,9 @@
     "luminosity": "Luminosità"
   },
   "ScreenshotComposition": {
+    "expandGroup": "Espandi il gruppo {name}",
+    "collapseGroup": "Comprimi il gruppo {name}",
+    "selectGroup": "Seleziona il gruppo {name}",
     "title": "Composizione",
     "name": "Nome del livello",
     "rename": "Rinomina livello · Doppio clic o F2",
@@ -1162,5 +1178,18 @@
     "stopPosition": "Posizione del punto {number}",
     "stopOpacity": "Opacità del punto {number}",
     "addAtPosition": "Fai clic per aggiungere un punto colore"
+  },
+  "DirectoryPreferences": {
+    "projects": "Posizione dei progetti",
+    "projectsDescription": "I nuovi progetti Studio, Instant e Screenshot usano projects/studio, projects/instant e projects/screenshot in questa cartella. Le posizioni precedenti restano nel selettore dei progetti.",
+    "exports": "Cartella di esportazione",
+    "exportsDescription": "Scegli una cartella fissa o riutilizza l’ultima cartella di esportazione di video o immagini. Questa impostazione vale per tutti i progetti.",
+    "defaultLocation": "Posizione predefinita",
+    "lastUsed": "Ultima cartella utilizzata",
+    "browse": "Scegli una cartella",
+    "search": "Cerca cartelle",
+    "noMatches": "Nessuna cartella corrispondente",
+    "error": "Impossibile aggiornare la cartella.",
+    "retry": "Riprova"
   }
 }

@@ -73,7 +73,11 @@
     "continuityDescription": "Разширява замъглено копие на видеото зад побраното съдържание.",
     "continuityBlur": "Замъгляване на фона",
     "continuityBrightness": "Яркост на фона",
-    "borderColor": "Цвят на рамката"
+    "borderColor": "Цвят на рамката",
+    "frameTheme": "Облик на браузъра",
+    "auto": "Авто",
+    "light": "Светъл",
+    "dark": "Тъмен"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Зареждане на визуализацията от камерата",
@@ -991,6 +995,10 @@
     "customSize": "Персонализиран размер",
     "sizePreset": "Готов размер",
     "copiedToast": "Изображението е копирано в клипборда, използвайте го навсякъде",
+    "exportedToast": "Изображението е запазено",
+    "copyFailedToast": "Неуспешно копиране на изображението",
+    "exportFailedToast": "Неуспешно експортиране на изображението",
+    "copyTimingReport": "Копиране на отчета за времето",
     "instant": "Мигновено",
     "copy": "Копиране",
     "copied": "Копирано",
@@ -1004,7 +1012,12 @@
     "backgroundError": "Изберете изображение, цвят или градиент за фон.",
     "dimensionsError": "Изберете резолюция до 64 мегапиксела (16384 пиксела на страна).",
     "renderUnavailable": "Изобразяването е недостъпно.",
-    "encodingUnavailable": "Кодирането {format} е недостъпно."
+    "encodingUnavailable": "Кодирането {format} е недостъпно.",
+    "rotation3d": "3D завъртане",
+    "perspective": "Перспектива",
+    "group": "Групиране",
+    "selectionTitle": "Селекция · {count} елемента",
+    "ungroup": "Разгрупиране"
   },
   "EditorPresetControls": {
     "preset": "Настройка",
@@ -1088,6 +1101,9 @@
     "luminosity": "Осветеност"
   },
   "ScreenshotComposition": {
+    "expandGroup": "Разгъване на групата {name}",
+    "collapseGroup": "Свиване на групата {name}",
+    "selectGroup": "Избиране на групата {name}",
     "title": "Композиция",
     "name": "Име на слоя",
     "rename": "Преименуване на слой · Двойно щракване или F2",
@@ -1162,5 +1178,18 @@
     "stopPosition": "Позиция на точка {number}",
     "stopOpacity": "Непрозрачност на точка {number}",
     "addAtPosition": "Щракнете, за да добавите цветна точка"
+  },
+  "DirectoryPreferences": {
+    "projects": "Местоположение на проектите",
+    "projectsDescription": "Новите проекти Studio, Instant и Screenshot използват projects/studio, projects/instant и projects/screenshot в тази папка. Предишните местоположения остават в избора на проекти.",
+    "exports": "Папка за експортиране",
+    "exportsDescription": "Изберете постоянна папка или използвайте последната папка за експортиране на видео или изображения. Настройката е обща за всички проекти.",
+    "defaultLocation": "Местоположение по подразбиране",
+    "lastUsed": "Последно използвана папка",
+    "browse": "Избор на папка",
+    "search": "Търсене на папки",
+    "noMatches": "Няма съответстващи папки",
+    "error": "Папката не можа да се обнови.",
+    "retry": "Опитайте отново"
   }
 }

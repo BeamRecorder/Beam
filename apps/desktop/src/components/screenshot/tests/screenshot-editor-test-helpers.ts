@@ -99,6 +99,8 @@ export function createScreenshotEditorTestHarness(
       'selectMany',
       'transform',
       'translate',
+      'selectionBounds',
+      'resizeSelection',
       'rotate',
       'error',
       'ready',

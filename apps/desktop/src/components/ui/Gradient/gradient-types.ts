@@ -24,6 +24,7 @@ export interface GradientProps {
   minStops?: number;
   maxStops?: number;
   showAngle?: boolean;
+  palette?: boolean;
   disabled?: boolean;
 }
 
@@ -47,5 +48,6 @@ export interface GradientStopRowProps {
   index: number;
   selected: boolean;
   removable: boolean;
+  palette?: boolean;
   disabled?: boolean;
 }

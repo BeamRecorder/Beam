@@ -73,7 +73,11 @@
     "continuityDescription": "Prolonge une copie floutée de la vidéo derrière le contenu ajusté.",
     "continuityBlur": "Flou de l’arrière-plan",
     "continuityBrightness": "Luminosité de l’arrière-plan",
-    "borderColor": "Couleur de bordure"
+    "borderColor": "Couleur de bordure",
+    "frameTheme": "Apparence du navigateur",
+    "auto": "Auto",
+    "light": "Clair",
+    "dark": "Sombre"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Chargement de l'aperçu caméra",
@@ -988,6 +992,10 @@
     "customSize": "Taille personnalisée",
     "sizePreset": "Préréglage de taille",
     "copiedToast": "Image copiée dans le presse-papiers, utilisez-la partout",
+    "exportedToast": "Image enregistrée",
+    "copyFailedToast": "Échec de la copie de l’image",
+    "exportFailedToast": "Échec de l’export de l’image",
+    "copyTimingReport": "Copier les mesures",
     "instant": "Instantané",
     "copy": "Copier",
     "copied": "Copié",
@@ -1001,7 +1009,12 @@
     "backgroundError": "Choisissez une image, une couleur ou un dégradé comme arrière-plan.",
     "dimensionsError": "Choisissez une résolution maximale de 64 mégapixels (16384 pixels par côté).",
     "renderUnavailable": "Le rendu de l’image est indisponible.",
-    "encodingUnavailable": "L’encodage {format} est indisponible."
+    "encodingUnavailable": "L’encodage {format} est indisponible.",
+    "rotation3d": "Rotation 3D",
+    "perspective": "Perspective",
+    "group": "Grouper",
+    "selectionTitle": "Sélection · {count} éléments",
+    "ungroup": "Dégrouper"
   },
   "EditorPresetControls": {
     "preset": "Préréglage",
@@ -1085,6 +1098,9 @@
     "luminosity": "Luminosité"
   },
   "ScreenshotComposition": {
+    "expandGroup": "Déplier le groupe {name}",
+    "collapseGroup": "Replier le groupe {name}",
+    "selectGroup": "Sélectionner le groupe {name}",
     "title": "Composition",
     "name": "Nom du calque",
     "rename": "Renommer le calque · Double-clic ou F2",
@@ -1159,5 +1175,18 @@
     "stopPosition": "Position du point {number}",
     "stopOpacity": "Opacité du point {number}",
     "addAtPosition": "Cliquer pour ajouter un point de couleur"
+  },
+  "DirectoryPreferences": {
+    "projects": "Emplacement des projets",
+    "projectsDescription": "Les nouveaux projets Studio, Instant et Screenshot utilisent projects/studio, projects/instant et projects/screenshot dans ce dossier. Les anciens emplacements restent dans le sélecteur de projets.",
+    "exports": "Dossier d’export",
+    "exportsDescription": "Choisissez un dossier fixe ou réutilisez le dernier dossier d’export vidéo ou image. Ce réglage est commun à tous les projets.",
+    "defaultLocation": "Emplacement par défaut",
+    "lastUsed": "Dernier dossier utilisé",
+    "browse": "Choisir un dossier",
+    "search": "Rechercher des dossiers",
+    "noMatches": "Aucun dossier correspondant",
+    "error": "Impossible de mettre à jour le dossier.",
+    "retry": "Réessayer"
   }
 }

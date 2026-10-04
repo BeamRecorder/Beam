@@ -212,8 +212,44 @@ fn hyprland_enables_separate_cursor_when_metadata_is_absent_but_hidden_is_suppor
     assert!(hyprland_capabilities.portal_selection);
     assert!(hyprland_capabilities.hidden_cursor);
     assert!(hyprland_capabilities.separate_cursor);
-    assert!(hyprland_capabilities.cursor_shapes);
+    assert!(!hyprland_capabilities.cursor_shapes);
     assert_product_gate(&hyprland_capabilities, true);
+}
+
+#[test]
+fn hyprland_does_not_enable_separate_cursor_without_hidden_mode_or_pipewire() {
+    for (hidden, pipewire) in [(false, true), (true, false), (false, false)] {
+        let capabilities = capture::screen::linux::evaluate_capabilities_with_compositor(
+            portal_properties(5, true, false, hidden, true, false),
+            pipewire,
+            true,
+            true,
+        );
+        assert!(!capabilities.separate_cursor);
+        assert!(!capabilities.cursor_shapes);
+    }
+}
+
+#[test]
+fn compositor_fallback_does_not_change_native_metadata_or_non_hyprland_support() {
+    let properties = portal_properties(5, true, true, true, true, false);
+    assert!(
+        !capture::screen::linux::evaluate_capabilities_with_compositor(
+            properties, true, true, false
+        )
+        .separate_cursor
+    );
+    let native = capture::screen::linux::evaluate_capabilities_with_compositor(
+        PortalProperties {
+            metadata_cursor: true,
+            ..properties
+        },
+        true,
+        true,
+        true,
+    );
+    assert!(native.separate_cursor);
+    assert!(native.cursor_shapes);
 }
 
 const NATIVE_ERROR_CODES: &[(NativeCaptureErrorCode, &str)] = &[

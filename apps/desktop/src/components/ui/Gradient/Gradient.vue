@@ -34,7 +34,7 @@ const {
 
 <template>
   <div class="gradient-editor">
-    <div v-if="showAngle" class="gradient-toolbar">
+    <div v-if="showAngle && !palette" class="gradient-toolbar">
       <ButtonGroup full size="xs" variant="neutral" :columns="2" role="group" :aria-label="t('type')">
         <Button
           v-for="type in ['linear', 'radial']"
@@ -72,8 +72,11 @@ const {
         @click="updateGradientAngle(value.angle! + 90)"
       />
     </div>
-    <div class="gradient-preview transparency-grid" aria-hidden="true"><div :style="{ background: preview }" /></div>
+    <div class="gradient-preview transparency-grid" :class="{ 'custom-preview': $slots.preview }" aria-hidden="true">
+      <slot name="preview"><div :style="{ background: preview }" /></slot>
+    </div>
     <GradientStops
+      v-if="!palette"
       :stops="value.stops"
       :selected-id="selectedStopId"
       :can-add="canAdd"
@@ -142,7 +145,7 @@ const {
         />
       </div>
     </div>
-    <div class="gradient-column-labels" aria-hidden="true">
+    <div v-if="!palette" class="gradient-column-labels" aria-hidden="true">
       <span>{{ t('color') }}</span
       ><span>{{ t('position') }}</span
       ><span>{{ t('opacity') }}</span
@@ -152,6 +155,7 @@ const {
       <GradientStopRow
         v-for="(stop, index) in value.stops"
         :key="stop.id"
+        :palette="palette"
         :stop="stop"
         :index="index"
         :selected="stop.id === selectedStopId"

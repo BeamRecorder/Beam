@@ -4,9 +4,17 @@ const { validatePageRequest } = require('./project-catalog-page.cjs');
 
 function createProjectCatalogClient(
   root,
-  { idleMs = 10_000, createWorker = (file, options) => new Worker(file, options) } = {},
+  { idleMs = 10_000, roots, createWorker = (file, options) => new Worker(file, options) } = {},
 ) {
   if (typeof root !== 'string' || !path.isAbsolute(root)) throw new TypeError('Invalid catalogue root.');
+  if (
+    roots !== undefined &&
+    (!Array.isArray(roots) ||
+      !roots.length ||
+      roots.length > 65 ||
+      roots.some((item) => typeof item !== 'string' || !path.isAbsolute(item)))
+  )
+    throw new TypeError('Invalid catalogue roots.');
   let worker = null,
     timer = null,
     sequence = 0,
@@ -32,7 +40,9 @@ function createProjectCatalogClient(
   };
   const ensureWorker = () => {
     if (worker) return worker;
-    const created = createWorker(path.join(__dirname, 'project-catalog-worker.cjs'), { workerData: { root } });
+    const created = createWorker(path.join(__dirname, 'project-catalog-worker.cjs'), {
+      workerData: { root, ...(roots ? { roots } : {}) },
+    });
     worker = created;
     created.on('message', (message) => {
       if (worker !== created) return;

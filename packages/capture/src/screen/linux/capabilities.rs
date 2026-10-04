@@ -54,7 +54,8 @@ pub fn evaluate_capabilities_with_compositor(
     let portal_selection = portal.version >= MIN_PORTAL_VERSION
         && (portal.monitor || portal.window)
         && pipewire_available;
-    let separate_cursor = portal_selection && (portal.metadata_cursor || (portal.hidden_cursor && hyprland_available));
+    let separate_cursor = portal_selection
+        && (portal.metadata_cursor || (portal.hidden_cursor && hyprland_available));
     LinuxNativeCapabilities {
         backend: "xdg-portal-pipewire".into(),
         portal_version: portal.version,
@@ -65,7 +66,7 @@ pub fn evaluate_capabilities_with_compositor(
         embedded_cursor: portal.embedded_cursor,
         separate_cursor,
         cursor_clicks: super::input_helper_supported(),
-        cursor_shapes: separate_cursor,
+        cursor_shapes: portal_selection && portal.metadata_cursor,
         pipewire_available,
         recording_available: portal_selection && ffmpeg_available,
     }

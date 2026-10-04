@@ -465,7 +465,7 @@ describe('ScreenshotCanvas', () => {
       clientY: 10,
     });
 
-    expect(wrapper.emitted('select')).toContainEqual(['screenshot']);
+    expect(wrapper.emitted('select')).toContainEqual(['screenshot', 'individual']);
     expect(wrapper.emitted('cropRequest')).toEqual([['screenshot']]);
     wrapper.unmount();
   });
@@ -685,7 +685,7 @@ describe('ScreenshotCanvas', () => {
         ...modifier,
       } as unknown as PointerEvent);
 
-      expect(wrapper.emitted('select')).toEqual([['shape-lower', 'toggle']]);
+      expect(wrapper.emitted('select')).toEqual([['shape-lower', 'toggle-individual']]);
       expect(stopPropagation).toHaveBeenCalledOnce();
       expect(preventDefault).not.toHaveBeenCalled();
       expect(setPointerCapture).not.toHaveBeenCalled();
@@ -717,7 +717,7 @@ describe('ScreenshotCanvas', () => {
     expect(propertyInteractionActive.value).toBe(true);
     secondary.vm.$emit('pointer-up', event);
 
-    expect(wrapper.emitted('select')).toEqual([['shape-lower']]);
+    expect(wrapper.emitted('select')).toEqual([['shape-lower', 'individual']]);
     expect(wrapper.emitted('transform')).toBeUndefined();
     expect(wrapper.emitted('translate')).toBeUndefined();
     expect(propertyInteractionActive.value).toBe(false);
@@ -737,6 +737,7 @@ describe('ScreenshotCanvas', () => {
       clientX: 25,
       clientY: 30,
       pointerId: 9,
+      altKey: true,
       currentTarget: { setPointerCapture: vi.fn() },
       preventDefault: vi.fn(),
       stopPropagation: vi.fn(),
@@ -853,6 +854,7 @@ describe('ScreenshotCanvas', () => {
     if (!selectedSelection) throw new Error('Expected the newly selected shape outline.');
     const selectedPointerDown = {
       ...pointerDown,
+      altKey: true,
       preventDefault: vi.fn(),
       stopPropagation: vi.fn(),
     } as unknown as PointerEvent;
@@ -869,11 +871,10 @@ describe('ScreenshotCanvas', () => {
     expect(captureTarget.setPointerCapture).toHaveBeenCalledWith(7);
     expect(wrapper.emitted('transform')).toBeUndefined();
     selectedSelection.vm.$emit('pointer-up', moveEvent);
-    expect(wrapper.emitted('transform')).toHaveLength(1);
-    expect(wrapper.emitted('transform')?.[0]?.[0]).toMatchObject({
-      x: 0.5,
-      y: 0.5,
-    });
+    expect(wrapper.emitted('translate')).toHaveLength(1);
+    const translation = wrapper.emitted('translate')?.[0]?.[0] as { x: number; y: number };
+    expect(translation.x).toBeCloseTo(0.1);
+    expect(translation.y).toBeCloseTo(0.1);
     wrapper.unmount();
   });
 

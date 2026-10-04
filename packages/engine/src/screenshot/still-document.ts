@@ -1,3 +1,5 @@
+import { validateScreenshotGroups } from './screenshot-group-schema.js';
+import { validateLayerRotation3d } from '../layout/layer-perspective-schema.js';
 import type { StillDocument } from './still-document-types';
 import type { ScreenshotState } from './screenshot-types';
 import { DEFAULT_OUTPUT_CANVAS } from '../layout/output-canvas';
@@ -10,6 +12,8 @@ import { validateCanvas, validateBackground } from '../document/presentation-val
 import { LAYER_BLEND_MODES } from '../shared/layer-compositing';
 import { assertJsonValue } from '../document/json-value';
 import { validateStillZoom } from '../zoom/zoom-schema.js';
+import { validateLayerEffects } from '../gradient/gradient-schema.js';
+import { validateHtmlComposition } from '../html/html-schema.js';
 
 export function createStillDocument(id: string, source: string, width: number, height: number): StillDocument {
   const state: ScreenshotState = {
@@ -80,6 +84,12 @@ export function validateScreenshotState(state: ScreenshotState) {
   for (const image of state.images ?? [])
     if (typeof image.source !== 'string' || !image.source || !validScreenshotDimensions(image))
       throw new TypeError('Invalid still image source.');
+  for (const image of state.images ?? []) {
+    if (image.html !== undefined) {
+      validateHtmlComposition(image.html);
+      if (image.html.durationMs !== 0) throw new TypeError('A screenshot HTML layer must be static.');
+    }
+  }
   const clips: Clip[] = [state.image, ...state.shapes, ...(state.images ?? []), ...(state.effects ?? [])];
   for (const clip of [...clips, ...(state.cursors ?? [])]) {
     if (['__background__', '__watermark__'].includes(clip.id)) throw new TypeError('Reserved still layer id.');
@@ -141,6 +151,7 @@ export function validateScreenshotState(state: ScreenshotState) {
       throw new TypeError('Invalid still cursor layer.');
     ids.add(cursor.id);
   }
+  validateScreenshotGroups(state.composition ?? []);
   const seen = new Set<string>();
   for (const layer of state.composition ?? []) {
     if (
@@ -153,6 +164,15 @@ export function validateScreenshotState(state: ScreenshotState) {
       typeof layer.locked !== 'boolean'
     )
       throw new TypeError('Invalid still layer composition.');
+    if (layer.rotation3d !== undefined) validateLayerRotation3d(layer.rotation3d);
+    if (layer.effects !== undefined) {
+      validateLayerEffects(layer.effects, LAYER_BLEND_MODES);
+      if (
+        layer.effects.length &&
+        (state.effects?.some((item) => item.id === layer.id) || state.zooms?.some((item) => item.id === layer.id))
+      )
+        throw new TypeError('Backdrop effects cannot carry layer fills.');
+    }
     seen.add(layer.id);
   }
 }

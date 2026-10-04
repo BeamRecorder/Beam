@@ -73,7 +73,11 @@
     "continuityDescription": "Extends a blurred copy of the video behind the fitted content.",
     "continuityBlur": "Background blur",
     "continuityBrightness": "Background brightness",
-    "borderColor": "Border color"
+    "borderColor": "Border color",
+    "frameTheme": "Browser appearance",
+    "auto": "Auto",
+    "light": "Light",
+    "dark": "Dark"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Loading camera preview",
@@ -988,6 +992,10 @@
     "customSize": "Custom size",
     "sizePreset": "Size preset",
     "copiedToast": "Image copied to clipboard, use it anywhere",
+    "exportedToast": "Image saved",
+    "copyFailedToast": "Image copy failed",
+    "exportFailedToast": "Image export failed",
+    "copyTimingReport": "Copy timing report",
     "instant": "Instant",
     "copy": "Copy",
     "copied": "Copied",
@@ -1001,7 +1009,12 @@
     "backgroundError": "Choose an image, color or gradient for a screenshot background.",
     "dimensionsError": "Choose an image resolution up to 64 megapixels (16384 pixels per side).",
     "renderUnavailable": "Image rendering is unavailable.",
-    "encodingUnavailable": "{format} encoding is unavailable."
+    "encodingUnavailable": "{format} encoding is unavailable.",
+    "rotation3d": "3D rotation",
+    "perspective": "Perspective",
+    "group": "Group",
+    "selectionTitle": "Selection · {count} elements",
+    "ungroup": "Ungroup"
   },
   "EditorPresetControls": {
     "preset": "Preset",
@@ -1085,6 +1098,9 @@
     "luminosity": "Luminosity"
   },
   "ScreenshotComposition": {
+    "expandGroup": "Expand {name} group",
+    "collapseGroup": "Collapse {name} group",
+    "selectGroup": "Select {name} group",
     "title": "Composition",
     "name": "Layer name",
     "rename": "Rename layer · Double-click or F2",
@@ -1159,5 +1175,18 @@
     "stopPosition": "Stop {number} position",
     "stopOpacity": "Stop {number} opacity",
     "addAtPosition": "Click to add a color stop"
+  },
+  "DirectoryPreferences": {
+    "projects": "Project location",
+    "projectsDescription": "New Studio, Instant and Screenshot projects use projects/studio, projects/instant and projects/screenshot inside this folder. Previous locations remain in the project picker.",
+    "exports": "Export folder",
+    "exportsDescription": "Choose a fixed folder or reuse the last folder used for a video or image export. This setting is shared by all projects.",
+    "defaultLocation": "Default location",
+    "lastUsed": "Last used folder",
+    "browse": "Choose a folder",
+    "search": "Search folders",
+    "noMatches": "No matching folders",
+    "error": "Unable to update the folder.",
+    "retry": "Retry"
   }
 }

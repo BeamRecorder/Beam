@@ -13,12 +13,14 @@ import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import type { ScreenshotEncodeOptions } from './screenshot-types';
 import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot-types';
 import { createScreenshotImageLoader } from '@beam/runtime/screenshot/screenshot-image-loader';
+import type { ScreenshotImageLoad } from '@beam/runtime/screenshot/screenshot-image-loader-types';
 
 export async function loadScreenshotAssets(
   source: string,
   state: ScreenshotState,
   packs?: readonly CursorPackDescriptor[],
-  load = createScreenshotImageLoader(),
+  load: ScreenshotImageLoad = createScreenshotImageLoader(),
+  onTiming?: (stage: string, durationMs: number) => void,
 ): Promise<ScreenshotRenderAssets> {
   if (state.canvas.showBackground && state.background?.kind === 'video')
     throw new Error(i18n.global.t('ScreenshotEditor.backgroundError'));
@@ -30,13 +32,14 @@ export async function loadScreenshotAssets(
     fontSource: projectFontSource,
     cursorPacks,
     watermarkSource: resolvePublicAssetUrl(WATERMARK_LOGO_PATH),
+    onTiming,
   });
 }
 
 export async function loadScreenshotDecorations(
   state: ScreenshotState,
   packs?: readonly CursorPackDescriptor[],
-  load = createScreenshotImageLoader(),
+  load: ScreenshotImageLoad = createScreenshotImageLoader(),
 ) {
   const cursorPacks = state.cursors?.some((cursor) => cursor.enabled)
     ? (packs ?? [...BUILTIN_CURSOR_PACKS, ...(await (await import('~/api/capture')).capture.listCursorPacks())])

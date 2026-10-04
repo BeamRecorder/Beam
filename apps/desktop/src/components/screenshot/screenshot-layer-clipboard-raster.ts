@@ -1,3 +1,4 @@
+import { releaseCompositedLayerSurface } from '@beam/runtime/composition/render-composited-layer';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
@@ -64,7 +65,11 @@ export async function rasterizeScreenshotLayer(
             },
           }
         : state;
-    drawScreenshotLayer(context, visibleState, layer, { background, logo }, width, height);
+    try {
+      drawScreenshotLayer(context, visibleState, layer, { background, logo }, width, height);
+    } finally {
+      releaseCompositedLayerSurface(context);
+    }
 
     const bounds =
       id === SCREENSHOT_WATERMARK_ID

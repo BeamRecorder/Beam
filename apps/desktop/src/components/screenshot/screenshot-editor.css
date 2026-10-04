@@ -16,12 +16,6 @@
 .copy-label {
   display: var(--editor-copy-label-display, inline);
 }
-.crop-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
 .effect-properties {
   padding: 12px;
 }

@@ -39,6 +39,7 @@ import { resolveVisualClipFraming } from '@beam/engine/composition/visual-framin
 import { drawColorClip } from '@beam/runtime/composition/color/render-color-clip';
 import { drawShapeClip } from '@beam/runtime/composition/shape/render-shape-clip';
 import { createGpuShapeScope } from '@beam/runtime/composition/shape/ordered-gpu-shapes';
+import { requestEditorImage } from '../../resources/editor-image-cache';
 
 export interface UseCompositionMediaOptions {
   composition: () => ClipComposition;
@@ -57,6 +58,7 @@ export interface UseCompositionMediaOptions {
 
 export function useCompositionMedia(options: UseCompositionMediaOptions) {
   const images = new Map<string, HTMLImageElement>();
+  const sources = new Map<string, string>();
   const gpuShapes = createGpuShapeScope();
   const transformDraftFor = (clipId: string) => {
     const selected = options.selectedTransformClip();
@@ -65,15 +67,29 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   const dispose = () => {
     gpuShapes.dispose();
     images.clear();
+    sources.clear();
   };
   const reconcile = () => {
     const assets = new Map(options.composition().assets.map((asset) => [asset.id, asset]));
-    for (const [id] of images) if (assets.get(id)?.kind !== 'image') images.delete(id);
+    for (const id of images.keys())
+      if (assets.get(id)?.kind !== 'image' || assets.get(id)?.src !== sources.get(id)) {
+        images.delete(id);
+        sources.delete(id);
+      }
     for (const asset of assets.values()) {
       if (asset.kind === 'image' && asset.src && !images.has(asset.id)) {
-        const image = new Image();
-        image.src = asset.src;
+        const { image, ready } = requestEditorImage(asset.src);
+        sources.set(asset.id, asset.src);
         images.set(asset.id, image);
+        void ready
+          .then(() => {
+            if (images.get(asset.id) === image) options.onRenderOnce();
+          })
+          .catch((reason: unknown) => {
+            if (images.get(asset.id) !== image) return;
+            // Retain this failed source until it changes, avoiding a decode on every reconciliation.
+            console.error('[Beam media:editor] image loading failed.', reason);
+          });
       }
     }
   };
@@ -106,9 +122,9 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   };
 
   const prepareVisual = (clip: VisualClip, window: { dx: number; dy: number; dw: number; dh: number }) => {
-    const frame = clip.kind === 'image' ? null : options.frameFor(clip.id);
+    const frame = options.frameFor(clip.id);
     const image = clip.kind === 'image' ? images.get(clip.assetId) : null;
-    if (image && (!image.complete || !image.naturalWidth)) return;
+    if (!frame && image && (!image.complete || !image.naturalWidth)) return;
     const source = frame?.bitmap ?? image;
     if (!source) return;
     const selected = options.selectedTransformClip();
@@ -171,6 +187,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
           showMenu: clip.appearance.frameShowMenu,
           showScrollbars: clip.appearance.frameShowScrollbars,
           chromeScale: clip.appearance.frameChromeScale,
+          ...(clip.appearance.frameTheme !== undefined ? { theme: clip.appearance.frameTheme } : {}),
         },
       );
   };

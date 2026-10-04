@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { isDeepStrictEqual } from 'node:util';
+import { Quality } from 'mediabunny';
 import type { VideoEncoderRequirements } from '@beam/encoder/mediabunny/video-encoder-selection-types';
 import { selectVideoEncoder } from '@beam/encoder/mediabunny/video-encoder-selection';
 
@@ -19,7 +21,10 @@ const requirements: VideoEncoderRequirements = {
   frameRate: 30,
   bitrate: 5_910_000,
 };
-const mode = (options: Parameters<typeof supports>[1]) => options?.quality?._bitrateMode;
+const mode = (options: Parameters<typeof supports>[1]) =>
+  (['variable', 'constant'] as const).find((bitrateMode) =>
+    isDeepStrictEqual(options?.quality, new Quality({ bitrate: requirements.bitrate, bitrateMode })),
+  );
 
 describe('WebCodecs encoder selection', () => {
   beforeEach(() => {
@@ -46,7 +51,7 @@ describe('WebCodecs encoder selection', () => {
         hardwareAcceleration: 'prefer-hardware',
         latencyMode: 'quality',
       });
-      expect(result.quality._bitrate).toBe(5_910_000);
+      expect(result.quality).toEqual(new Quality({ bitrate: 5_910_000, bitrateMode: 'variable' }));
       expect(probe).toHaveBeenCalledWith(
         { ...requirements, format },
         expect.objectContaining({ codec: result.codec, quality: result.quality }),

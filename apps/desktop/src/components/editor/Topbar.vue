@@ -2,7 +2,6 @@
 import EditorTitlebar from './EditorTitlebar.vue';
 import type { CaptureProject } from '~/api/types/capture-api';
 import type { ProjectIdentity } from '../projects/project-picker-types';
-import EditorHistoryControls from './EditorHistoryControls.vue';
 import VideoProjectEdition from './VideoProjectEdition.vue';
 import ExportPopover from '../export/ExportPopover.vue';
 import Button from '~/ui/button/Button.vue';
@@ -23,9 +22,6 @@ withDefaults(
     playheadSeconds?: number;
     project?: ProjectIdentity | null;
     isSaving?: boolean;
-    canUndo?: boolean;
-    canRedo?: boolean;
-    historyTooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
     performanceSnapshot?: PreviewPerformanceSnapshot | null;
     presetDocument?: EditorPresetDocument | null;
     presetDirty?: boolean;
@@ -35,9 +31,6 @@ withDefaults(
     playheadSeconds: 0,
     project: null,
     isSaving: false,
-    canUndo: false,
-    canRedo: false,
-    historyTooltipPosition: 'bottom',
     performanceSnapshot: null,
     presetDocument: null,
     presetDirty: false,
@@ -47,8 +40,6 @@ withDefaults(
 const emit = defineEmits<{
   (e: 'back-to-hud'): void;
   (e: 'open-project', project: CaptureProject): void;
-  (e: 'undo'): void;
-  (e: 'redo'): void;
   (e: 'update:exportAudio', value: boolean): void;
   (e: 'presetSelect', id: string | number): void;
   (e: 'presetAdd', name: string): void;
@@ -85,13 +76,6 @@ const handleExit = () => {
         @rename="emit('presetRename', $event)"
         @delete="emit('presetDelete')"
         @save="emit('presetSave')"
-      />
-      <EditorHistoryControls
-        :can-undo="canUndo"
-        :can-redo="canRedo"
-        :tooltip-position="historyTooltipPosition"
-        @undo="emit('undo')"
-        @redo="emit('redo')"
       />
       <EditorSearchButton />
     </template>

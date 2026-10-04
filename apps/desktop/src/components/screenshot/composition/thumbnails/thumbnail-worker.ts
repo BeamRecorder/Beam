@@ -17,7 +17,7 @@ export function createThumbnailWorker(post: (reply: ThumbnailReply) => void) {
       try {
         const assets: Partial<ScreenshotRenderAssets> = {};
         if (request.bitmap && request.cursorAsset)
-          assets.cursors = new Map([[request.id, { image: request.bitmap, asset: request.cursorAsset }]]);
+          assets.cursors = new Map([[request.layer.id, { image: request.bitmap, asset: request.cursorAsset }]]);
         if (request.sourceUrl) {
           const asset = await loadImage(request.sourceUrl);
           const { image } = asset;

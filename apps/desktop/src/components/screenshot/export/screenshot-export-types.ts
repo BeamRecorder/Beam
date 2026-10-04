@@ -27,10 +27,20 @@ export interface ScreenshotExportRequest {
   source: string;
   state: ScreenshotState;
   decorations: ScreenshotExportDecorations;
+  includePreview?: boolean;
+  outputSize?: { width: number; height: number };
 }
-export type ScreenshotExportReply = { bytes: ArrayBuffer } | { error: string };
+export type ScreenshotExportReply = ({ bytes: ArrayBuffer } | { error: string }) & {
+  preview?: string;
+  timings: Record<string, number>;
+};
 export interface ScreenshotWorkerOptions {
   signal?: AbortSignal;
+  includePreview?: boolean;
+  outputSize?: { width: number; height: number };
+  onPreview?(src: string): void;
+  onTiming?(stage: string, durationMs: number): void;
+  onCacheHit?(): void;
 }
 export interface ScreenshotExporter {
   encode(source: string, state: ScreenshotState, options?: ScreenshotWorkerOptions): Promise<ArrayBuffer>;
@@ -39,4 +49,5 @@ export interface ScreenshotExporter {
 export interface ScreenshotExportCacheEntry {
   key: string;
   bytes: ArrayBuffer;
+  preview?: string;
 }

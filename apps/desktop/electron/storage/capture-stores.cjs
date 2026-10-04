@@ -2,7 +2,7 @@ const { createEditorPresetStore } = require('../presets/editor-preset-store.cjs'
 const { initialEditorSettings } = require('../presets/initial-editor-settings.cjs');
 const { createScreenshotStore } = require('../screenshot/screenshot-store.cjs');
 
-function createCaptureStores({ userPaths, preferencesStore, applicationRoot, isPackaged }) {
+function createCaptureStores({ userPaths, preferencesStore, applicationRoot, isPackaged, screenshotLocations }) {
   const editorPresetStore = createEditorPresetStore(userPaths.editorPresets, {
     readPreferences: () => {
       const preferences = preferencesStore.read();
@@ -23,7 +23,7 @@ function createCaptureStores({ userPaths, preferencesStore, applicationRoot, isP
       },
     }),
   });
-  const screenshotStore = createScreenshotStore(userPaths.screenshots);
+  const screenshotStore = createScreenshotStore(userPaths.screenshots, screenshotLocations);
   return { editorPresetStore, screenshotPresetStore, screenshotStore };
 }
 

@@ -1,9 +1,9 @@
 const fs = require('fs');
-const path = require('path');
-const { randomUUID } = require('crypto');
 const { buildDefaultCaptureConfig } = require('../capture/capture-config.cjs');
 const { isCaptureCancellation } = require('../capture/capture-cancellation.cjs');
 const { readClipboardPng } = require('../clipboard/image-clipboard.cjs');
+const { publishScreenshot } = require('./screenshot-export.cjs');
+const { saveScreenshotThumbnail } = require('./screenshot-thumbnail.cjs');
 
 function registerScreenshotIpc({
   ipcMain,
@@ -19,6 +19,7 @@ function registerScreenshotIpc({
   isTrustedRenderer,
   canCapture,
   outputDirectory,
+  directories,
   platform = process.platform,
   prepareCapture,
 }) {
@@ -114,52 +115,18 @@ function registerScreenshotIpc({
   });
   handle('screenshot:list', () => store.list());
   handle('screenshot:save', (_event, { id, state, history }) => store.save(id, state, history));
+  handle('screenshot:save-thumbnail', (_event, input) => saveScreenshotThumbnail(store, input));
   handle('screenshot:open', (event, id, options) => {
     store.read(id);
     return openEditor(id, options, event.sender);
   });
-  handle('screenshot:export', async (event, { id, bytes, format, copy }) => {
-    const document = store.read(id);
-    if (
-      !['png', 'webp'].includes(format) ||
-      !(bytes instanceof ArrayBuffer) ||
-      bytes.byteLength === 0 ||
-      bytes.byteLength > 100_000_000
-    )
-      throw new Error('Invalid screenshot export.');
-    const buffer = Buffer.from(bytes);
-    const png = buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
-    const webp = buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP';
-    if (!(format === 'png' ? png : webp)) throw new Error('Screenshot encoding does not match its format.');
-    // Electron NativeImage decodes PNG/JPEG; Chromium encodes WebP directly for files.
-    const image = format === 'png' ? nativeImage.createFromBuffer(buffer) : null;
-    if (image?.isEmpty()) throw new Error('Screenshot image is invalid.');
-    if (copy === true) {
-      if (!image) throw new Error('Clipboard images must be encoded as PNG.');
-      await clipboard.write([
-        new ClipboardItem({
-          'image/png': new Blob([buffer], { type: 'image/png' }),
-        }),
-      ]);
-      return null;
-    }
-    const result = await dialog.showSaveDialog(BrowserWindow.fromWebContents(event.sender), {
-      defaultPath: path.join(outputDirectory, `${document.name.replace(/[:.]/g, '-')}.${format}`),
-      filters: [{ name: format.toUpperCase(), extensions: [format] }],
-    });
-    if (result.canceled || !result.filePath) return null;
-    const temporary = `${result.filePath}.${randomUUID()}.tmp`;
-    const handle = await fs.promises.open(temporary, 'wx', 0o600);
-    try {
-      await handle.writeFile(buffer);
-      await handle.close();
-      await fs.promises.rename(temporary, result.filePath);
-    } finally {
-      await handle.close();
-      await fs.promises.rm(temporary, { force: true });
-    }
-    return result.filePath;
-  });
+  handle('screenshot:export', (event, input) =>
+    publishScreenshot(
+      { store, nativeImage, clipboard, ClipboardItem, dialog, BrowserWindow, outputDirectory, directories },
+      event,
+      input,
+    ),
+  );
   return { capture, isBusy: () => busy };
 }
 

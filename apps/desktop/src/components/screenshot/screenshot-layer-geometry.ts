@@ -1,3 +1,4 @@
+import { layerPerspectiveCorners, pointInsideLayerQuad } from '@beam/engine/layout/layer-perspective';
 import { effectShapeRect } from '@beam/runtime/composition/effects/effect-shape';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { NormalizedTransform } from '@beam/engine/shared/composition-types';
@@ -63,21 +64,26 @@ export function screenshotLayerAt(
   x: number,
   y: number,
 ): string | null {
+  if (![x, y].every(Number.isFinite) || x < 0 || y < 0 || x > 1 || y > 1) return null;
   for (const layer of screenshotLayers(state).reverse()) {
     if (!layer.visible || layer.locked || layer.opacity === 0) continue;
-    if (layer.kind === 'background') return layer.id;
+    if (layer.kind === 'background') continue;
     const rect = screenshotLayerTransform(state, assets, layer.id);
     if (!rect) continue;
-    const angle = (-screenshotLayerRotation(state, layer.id) * Math.PI) / 180;
-    const dx = (x - rect.x - rect.width / 2) * state.canvas.width;
-    const dy = (y - rect.y - rect.height / 2) * state.canvas.height;
-    const localX = dx * Math.cos(angle) - dy * Math.sin(angle);
-    const localY = dx * Math.sin(angle) + dy * Math.cos(angle);
-    if (
-      Math.abs(localX) <= (rect.width * state.canvas.width) / 2 &&
-      Math.abs(localY) <= (rect.height * state.canvas.height) / 2
-    )
-      return layer.id;
+    const bounds = { x: rect.x * state.canvas.width, y: rect.y * state.canvas.height, width: rect.width * state.canvas.width, height: rect.height * state.canvas.height };
+    const corners = layerPerspectiveCorners(bounds, layer.rotation3d, screenshotLayerRotation(state, layer.id));
+    if (pointInsideLayerQuad({ x: x * state.canvas.width, y: y * state.canvas.height }, corners)) return layer.id;
   }
   return null;
+}
+
+/** Projected bounds shared by marquee selection and alignment measurements. */
+export function screenshotLayerBounds(state: ScreenshotState, assets: ScreenshotRenderAssets | null, id: string): NormalizedTransform | null {
+  const t = screenshotLayerTransform(state, assets, id);
+  if (!t) return null;
+  const rect = { x: t.x * state.canvas.width, y: t.y * state.canvas.height, width: t.width * state.canvas.width, height: t.height * state.canvas.height };
+  const rotation3d = state.composition?.find((layer) => layer.id === id)?.rotation3d;
+  const corners = layerPerspectiveCorners(rect, rotation3d, screenshotLayerRotation(state, id));
+  const x = Math.min(...corners.map((p) => p.x)), y = Math.min(...corners.map((p) => p.y));
+  return { x: x / state.canvas.width, y: y / state.canvas.height, width: (Math.max(...corners.map((p) => p.x)) - x) / state.canvas.width, height: (Math.max(...corners.map((p) => p.y)) - y) / state.canvas.height };
 }

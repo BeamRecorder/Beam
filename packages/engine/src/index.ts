@@ -43,3 +43,28 @@ export * from './zoom/glass-highlight';
 export * from './zoom/glass-generation';
 export * from './zoom/manual-zoom';
 export * from './zoom/recording-zoom-generation';
+export { validateHtmlComposition } from './html/html-schema.js';
+export type { HtmlComposition } from './html/html-types';
+
+export {
+  DEFAULT_GRADIENT_RECIPE,
+  GRADIENT_RANGES,
+  validateGradientRecipe,
+  validateLayerEffects,
+} from './gradient/gradient-schema.js';
+export { GRADIENT_PRESETS, createGradientEffect } from './gradient/gradient-presets';
+export { DEFAULT_COLOR_RECIPE, COLOR_RANGES, createColorEffect, validateColorRecipe } from './gradient/color-schema.js';
+export type {
+  ColorAdjustmentEffect,
+  ColorAdjustmentRecipe,
+  ColorAdjustmentKey,
+  LayerEffectAddKind,
+} from './gradient/color-effect-types';
+export type {
+  GradientRecipe,
+  GradientMode,
+  GradientLayerEffect,
+  LayerEffect,
+  GradientNumberKey,
+  GradientPreset,
+} from './gradient/gradient-types';

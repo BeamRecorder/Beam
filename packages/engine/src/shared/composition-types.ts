@@ -137,6 +137,7 @@ export interface ClipAppearance extends WebcamAppearance {
   frame: ClipFrame;
   frameTitle: string;
   frameColor: string;
+  frameTheme?: ClipFrameTheme;
   frameShowMenu: boolean;
   frameShowScrollbars: boolean;
   frameChromeScale: number;
@@ -144,8 +145,10 @@ export interface ClipAppearance extends WebcamAppearance {
 }
 
 export type ClipFrame = 'none' | 'safari' | 'windows-95' | 'iphone-16-max' | 'pixel-9-pro';
+export type ClipFrameTheme = 'auto' | 'light' | 'dark';
 
 export interface MediaAsset {
+  html?: import('../html/html-types').HtmlComposition;
   id: string;
   kind: MediaKind;
   name: string;

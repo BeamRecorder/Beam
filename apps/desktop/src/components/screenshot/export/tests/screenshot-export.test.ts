@@ -46,6 +46,29 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
+
+it('forwards preview and measured worker phases and requests thumbnail output dimensions', async () => {
+  const onTiming = vi.fn(),
+    onPreview = vi.fn();
+  const pending = encodeScreenshot('source', stateFixture(), {
+    includePreview: true,
+    outputSize: { width: 480, height: 240 },
+    onTiming,
+    onPreview,
+  });
+  await flushPromises();
+  expect(workers[0]!.postMessage.mock.calls[0]![0]).toMatchObject({
+    includePreview: true,
+    outputSize: { width: 480, height: 240 },
+  });
+  workers[0]!.reply({ bytes: new ArrayBuffer(3), preview: 'preview', timings: { render: 12, total: 30 } });
+  await pending;
+  expect(onPreview).toHaveBeenCalledWith('preview');
+  expect(onTiming).toHaveBeenCalledWith('worker.render', 12);
+  expect(onTiming).toHaveBeenCalledWith('worker.total', 30);
+  expect(onTiming).toHaveBeenCalledWith('workerRoundTrip', expect.any(Number));
+  expect(onTiming).toHaveBeenCalledWith('decorations', expect.any(Number));
+});
 it('creates a module worker only on export and transfers SVG decorations without IPC or decoded photos', async () => {
   const state = stateFixture(),
     bytes = new ArrayBuffer(4);
@@ -58,7 +81,7 @@ it('creates a module worker only on export and transfers SVG decorations without
     { source: new URL('source', document.baseURI).href, state, decorations: transfer.decorations },
     transfer.transfer,
   );
-  worker.reply({ bytes });
+  worker.reply({ timings: {}, bytes });
   await expect(pending).resolves.toBe(bytes);
   expect(worker.terminate).toHaveBeenCalledOnce();
   expect(transfer.transfer[0]!.close).toHaveBeenCalledOnce();
@@ -96,7 +119,7 @@ it.each(['http://localhost:6500/html/editor.html', 'file:///beam/dist/html/edito
       transfer.transfer,
     );
     expect(state).toEqual(original);
-    workers[0]!.reply({ bytes: new ArrayBuffer(1) });
+    workers[0]!.reply({ timings: {}, bytes: new ArrayBuffer(1) });
     await pending;
   },
 );
@@ -113,7 +136,7 @@ it('leaves generated color backgrounds without a media URL', async () => {
   const pending = encodeScreenshot('source', state);
   await flushPromises();
   expect(workers[0]!.postMessage.mock.calls[0]![0].state.background).toEqual(state.background);
-  workers[0]!.reply({ bytes: new ArrayBuffer(1) });
+  workers[0]!.reply({ timings: {}, bytes: new ArrayBuffer(1) });
   await pending;
 });
 it('propagates decoration failures without constructing a worker', async () => {
@@ -135,7 +158,7 @@ it.each(['reply', 'runtime', 'message'])('reports worker %s failure and terminat
   const assertion = expect(pending).rejects.toThrow(phase === 'message' ? 'unreadable' : 'render failed');
   await flushPromises();
   const worker = workers[0]!;
-  if (phase === 'reply') worker.reply({ error: 'render failed' });
+  if (phase === 'reply') worker.reply({ timings: {}, error: 'render failed' });
   if (phase === 'runtime') worker.onerror!(new ErrorEvent('error', { message: 'render failed' }));
   if (phase === 'message') worker.onmessageerror!();
   await assertion;

@@ -160,7 +160,7 @@ describe('ExportPopover', () => {
         ...(playheadSeconds === undefined ? {} : { playheadSeconds }),
       },
       global: {
-        stubs: { Popover, Button, ButtonGroup, ProgressBar, CopyButton },
+        stubs: { Popover, Button, ButtonGroup, ProgressBar, CopyButton, DirectoryPreference: true },
       },
     });
   const openMoreOptions = async (wrapper: ReturnType<typeof mountExport>) => {

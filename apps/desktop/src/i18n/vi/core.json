@@ -73,7 +73,11 @@
     "continuityDescription": "Mở rộng bản sao video được làm mờ phía sau nội dung vừa khung.",
     "continuityBlur": "Độ mờ nền",
     "continuityBrightness": "Độ sáng nền",
-    "borderColor": "Màu viền"
+    "borderColor": "Màu viền",
+    "frameTheme": "Giao diện trình duyệt",
+    "auto": "Tự động",
+    "light": "Sáng",
+    "dark": "Tối"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Đang tải xem trước camera",
@@ -976,6 +980,10 @@
     "customSize": "Kích thước tùy chỉnh",
     "sizePreset": "Kích thước đặt sẵn",
     "copiedToast": "Đã sao chép ảnh vào bộ nhớ tạm, hãy dùng ở bất cứ đâu",
+    "exportedToast": "Đã lưu ảnh",
+    "copyFailedToast": "Sao chép ảnh thất bại",
+    "exportFailedToast": "Xuất ảnh thất bại",
+    "copyTimingReport": "Sao chép báo cáo thời gian",
     "instant": "Tức thì",
     "copy": "Sao chép",
     "copied": "Đã sao chép",
@@ -989,7 +997,12 @@
     "backgroundError": "Chọn ảnh, màu hoặc chuyển sắc làm nền.",
     "dimensionsError": "Chọn độ phân giải tối đa 64 megapixel (16384 pixel mỗi cạnh).",
     "renderUnavailable": "Không thể kết xuất ảnh.",
-    "encodingUnavailable": "Không thể mã hóa {format}."
+    "encodingUnavailable": "Không thể mã hóa {format}.",
+    "rotation3d": "Xoay 3D",
+    "perspective": "Phối cảnh",
+    "group": "Nhóm",
+    "selectionTitle": "Vùng chọn · {count} phần tử",
+    "ungroup": "Bỏ nhóm"
   },
   "EditorPresetControls": {
     "preset": "Thiết lập sẵn",
@@ -1073,6 +1086,9 @@
     "luminosity": "Độ sáng"
   },
   "ScreenshotComposition": {
+    "expandGroup": "Mở rộng nhóm {name}",
+    "collapseGroup": "Thu gọn nhóm {name}",
+    "selectGroup": "Chọn nhóm {name}",
     "title": "Bố cục",
     "name": "Tên lớp",
     "rename": "Đổi tên lớp · Nhấp đúp hoặc F2",
@@ -1147,5 +1163,18 @@
     "stopPosition": "Vị trí điểm {number}",
     "stopOpacity": "Độ mờ đục của điểm {number}",
     "addAtPosition": "Nhấp để thêm điểm màu"
+  },
+  "DirectoryPreferences": {
+    "projects": "Vị trí dự án",
+    "projectsDescription": "Các dự án Studio, Instant và Screenshot mới sử dụng projects/studio, projects/instant và projects/screenshot trong thư mục này. Các vị trí cũ vẫn xuất hiện trong bộ chọn dự án.",
+    "exports": "Thư mục xuất",
+    "exportsDescription": "Chọn một thư mục cố định hoặc dùng lại thư mục xuất video hay ảnh gần nhất. Cài đặt này dùng chung cho mọi dự án.",
+    "defaultLocation": "Vị trí mặc định",
+    "lastUsed": "Thư mục dùng gần nhất",
+    "browse": "Chọn thư mục",
+    "search": "Tìm thư mục",
+    "noMatches": "Không có thư mục phù hợp",
+    "error": "Không thể cập nhật thư mục.",
+    "retry": "Thử lại"
   }
 }

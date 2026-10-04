@@ -1,3 +1,5 @@
+const { applyHyprlandWindowRules } = require('./hyprland-window-rules.cjs');
+
 function x11LaunchArguments(args) {
   return [
     ...args.filter(
@@ -10,7 +12,7 @@ function x11LaunchArguments(args) {
   ];
 }
 
-function configureLinuxDisplayBackend(app, platform = process.platform, argv = process.argv) {
+function configureLinuxDisplayBackend(app, platform = process.platform, argv = process.argv, env = process.env) {
   if (platform !== 'linux') return;
   // Ozone also initializes in Chromium's GPU subprocess. It must be selected
   // on the original command line, before Electron loads the main JS entry.
@@ -20,6 +22,7 @@ function configureLinuxDisplayBackend(app, platform = process.platform, argv = p
     return;
   }
   app.commandLine.appendSwitch('ozone-platform', 'x11');
+  void applyHyprlandWindowRules(env, platform);
 }
 
-module.exports = { configureLinuxDisplayBackend, x11LaunchArguments };
+module.exports = { applyHyprlandWindowRules, configureLinuxDisplayBackend, x11LaunchArguments };

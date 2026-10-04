@@ -13,6 +13,7 @@ const props = withDefaults(
     hideScrollbar?: boolean;
     stableScrollbar?: boolean;
     isEnabled?: boolean;
+    scrollable?: boolean;
   }>(),
   {
     as: 'div',
@@ -23,6 +24,7 @@ const props = withDefaults(
     hideScrollbar: false,
     stableScrollbar: false,
     isEnabled: true,
+    scrollable: true,
   },
 );
 
@@ -104,6 +106,7 @@ defineExpose({
           'reserve-scrollbar': stableScrollbar && !hideScrollbar && orientation !== 'horizontal',
           'is-horizontal': orientation === 'horizontal',
           'is-both': orientation === 'both',
+          'clip-overflow': !scrollable,
         },
       ]"
       :style="maskStyle"
@@ -152,6 +155,9 @@ defineExpose({
 
 .scroll-shadow-viewport.is-both {
   overflow-x: auto;
+}
+.scroll-shadow-viewport.clip-overflow {
+  overflow: hidden;
 }
 
 .scroll-shadow-viewport.hide-scrollbar::-webkit-scrollbar {

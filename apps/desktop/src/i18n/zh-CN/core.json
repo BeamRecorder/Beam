@@ -73,7 +73,11 @@
     "continuityDescription": "在适应内容后方扩展一份模糊的视频副本。",
     "continuityBlur": "背景模糊",
     "continuityBrightness": "背景亮度",
-    "borderColor": "边框颜色"
+    "borderColor": "边框颜色",
+    "frameTheme": "浏览器外观",
+    "auto": "自动",
+    "light": "浅色",
+    "dark": "深色"
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "正在加载摄像头预览",
@@ -991,6 +995,10 @@
     "customSize": "自定义尺寸",
     "sizePreset": "尺寸预设",
     "copiedToast": "图片已复制到剪贴板，可粘贴到任何地方",
+    "exportedToast": "图片已保存",
+    "copyFailedToast": "图片复制失败",
+    "exportFailedToast": "图片导出失败",
+    "copyTimingReport": "复制耗时报告",
     "instant": "即时",
     "copy": "复制",
     "copied": "已复制",
@@ -1004,7 +1012,12 @@
     "backgroundError": "请选择图片、颜色或渐变作为背景。",
     "dimensionsError": "请选择不超过 6400 万像素的分辨率（每边最多 16384 像素）。",
     "renderUnavailable": "图片渲染不可用。",
-    "encodingUnavailable": "{format} 编码不可用。"
+    "encodingUnavailable": "{format} 编码不可用。",
+    "rotation3d": "3D 旋转",
+    "perspective": "透视",
+    "group": "编组",
+    "selectionTitle": "选择 · {count} 个元素",
+    "ungroup": "取消编组"
   },
   "EditorPresetControls": {
     "preset": "预设",
@@ -1088,6 +1101,9 @@
     "luminosity": "明度"
   },
   "ScreenshotComposition": {
+    "expandGroup": "展开 {name} 分组",
+    "collapseGroup": "折叠 {name} 分组",
+    "selectGroup": "选择 {name} 分组",
     "title": "合成",
     "name": "图层名称",
     "rename": "重命名图层 · 双击或 F2",
@@ -1162,5 +1178,18 @@
     "stopPosition": "节点 {number} 的位置",
     "stopOpacity": "节点 {number} 的不透明度",
     "addAtPosition": "点击添加颜色节点"
+  },
+  "DirectoryPreferences": {
+    "projects": "项目位置",
+    "projectsDescription": "新的 Studio、Instant 和 Screenshot 项目使用此文件夹中的 projects/studio、projects/instant 和 projects/screenshot。以前的位置仍会显示在项目选择器中。",
+    "exports": "导出文件夹",
+    "exportsDescription": "选择固定文件夹，或重复使用上次导出视频或图片的文件夹。所有项目共享此设置。",
+    "defaultLocation": "默认位置",
+    "lastUsed": "上次使用的文件夹",
+    "browse": "选择文件夹",
+    "search": "搜索文件夹",
+    "noMatches": "没有匹配的文件夹",
+    "error": "无法更新文件夹。",
+    "retry": "重试"
   }
 }

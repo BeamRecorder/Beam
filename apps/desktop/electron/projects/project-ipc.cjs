@@ -18,9 +18,17 @@ function registerProjectIpc(
 ) {
   const library = createProjectLibrary(projectStore, screenshotStore);
   let catalog = null;
+  let catalogRoots = '';
   ipcMain.handle('projects:list-page', (event, request) => {
     if (!trustedRenderer?.(event.sender.getURL())) throw new Error('Renderer non autorisé');
-    catalog ??= createProjectCatalogClient(projectStore.rootDirectory);
+    const roots = projectStore.rootDirectories;
+    const signature = JSON.stringify(roots);
+    if (catalog && signature !== catalogRoots) {
+      void catalog.destroy();
+      catalog = null;
+    }
+    catalog ??= createProjectCatalogClient(projectStore.rootDirectory, { roots });
+    catalogRoots = signature;
     return catalog.page(request);
   });
   ipcMain.handle('projects:list', () => library.list());

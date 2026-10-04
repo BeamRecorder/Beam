@@ -35,13 +35,14 @@ The initial document is copied once and recursively frozen. Commands retain unch
 
 ## Commands and extensions
 
-`createRenderCommands()` wraps `createCompositionCommands()` and adds `render.patch`. The registry includes asset/clip creation, appearance patches, move, split, trim, rate, volume, reorder, visibility, delete, detach, scene groups and generic animation tracks. `asset.add` requires complete metadata; `clip.add` requires a complete valid clip record. No host-specific file discovery runs inside a command.
+`createRenderCommands()` wraps `createCompositionCommands()` and adds `render.patch`. The registry includes asset/clip creation, appearance patches, move, split, trim, rate, volume, reorder, visibility, delete, detach, scene groups and generic animation tracks. `asset.add` requires complete metadata; `clip.add` requires a complete valid clip record. `asset.patch` accepts `{assetId, patch}` and changes metadata/source without changing identity, kind or origin; locked uses remain protected. No host-specific file discovery runs inside a command.
 
 `createStillCommands()` provides:
 
 - `still.layer.add`: add an image, shape/text/drawing, blur effect or static cursor.
 - `still.layer.patch`, `.delete`, `.enable`, `.reorder`: edit content and ordered layers.
-- `still.layer.compositing`: opacity, blend mode and explicit locking/unlocking.
+- `still.layer.rename`: `{layerId,name}` sets a saved, nonempty, trimmed name (up to 200 characters) for any unlocked layer, including background and watermark. It changes the inspector/Composition label without changing rendered text or source identity.
+- `still.layer.compositing`: opacity, blend mode, explicit locking/unlocking and attached `effects` recipes. [Gradient effects](gradient-effects.md) use the same command in the desktop, CLI and direct engine API.
 - `still.canvas.set`, `still.background.set`, `still.settings.patch`: canvas, background, blur and PNG/WebP settings.
 
 Stills share visual clip geometry, appearance and GPU effect rendering with video. They have no playback/keyframes; animated still content is rejected. Special background/image/watermark layers can be hidden and restored; deleting the captured image does not erase its source. Locked content cannot be patched, reordered or deleted without explicitly unlocking it.
@@ -130,7 +131,7 @@ window.beamComposition = {
 };
 ```
 
-An optional `ready` promise gates initialization. Seeking must also work backwards and repeatedly without wall-clock state. The host waits for fonts/images, captures transparent frames at source time, and supplies owned bitmap leases to the shared renderer and encoder. An optional render snapshot combines the generated clip with existing scenes/effects. GSAP belongs to the authored project, not engine. The compiler is lazily loaded only for motion; normal inspection/editing needs no browser/compiler. Desktop programmable-asset resolution is a separate integration from this CLI authoring host.
+An optional `ready` promise gates initialization. Seeking must also work backwards and repeatedly without wall-clock state. The host waits for fonts/images, captures transparent frames at source time, and supplies owned bitmap leases to the shared renderer and encoder. An optional render snapshot combines the generated clip with existing scenes/effects. GSAP belongs to the authored project, not engine. The compiler is lazily loaded only for motion or HTML publication; normal inspection/editing needs no browser/compiler. For persistent layers in an open desktop editor, use [the agent tools](../agent/README.md) and [HTML publication/watch](../agent/html-compositions.md).
 
 ## Backends and verification limits
 

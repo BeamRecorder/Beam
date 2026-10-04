@@ -1,15 +1,6 @@
 // A common catalogue with explicit dispatch to each project's storage format.
 function createProjectLibrary(projectStore, screenshotStore) {
-  const screenshotSummary = (document) => ({
-    id: document.id,
-    name: document.name,
-    mode: 'screenshot',
-    createdAt: document.createdAt,
-    updatedAt: document.updatedAt,
-    sessionCount: 0,
-    previewSrc: null,
-    thumbnailSrc: document.source,
-  });
+  const screenshotSummary = (document) => screenshotStore.readSummary(document.id);
   const storeFor = (mode) => {
     if (mode !== undefined && !['studio', 'instant', 'screenshot'].includes(mode))
       throw new Error('Invalid project mode.');

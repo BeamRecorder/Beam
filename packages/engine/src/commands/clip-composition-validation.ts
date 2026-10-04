@@ -19,6 +19,7 @@ import {
 } from '@beam/engine/shared/camera-layout-types';
 import { assertValidVisualTracks } from '@beam/engine/commands/visual-track-layout';
 import { validateSceneExtensions } from '../scene/scene-schema.js';
+import { validateHtmlComposition } from '../html/html-schema.js';
 
 export const MIN_PLAYBACK_RATE = 0.25;
 export const MAX_PLAYBACK_RATE = 4;
@@ -42,6 +43,11 @@ export function validateComposition(composition: ClipComposition): void {
   const assetIds = new Set<string>();
   validateSceneExtensions(composition);
   for (const asset of composition.assets) {
+    if (asset.html !== undefined) {
+      validateHtmlComposition(asset.html);
+      if (asset.kind !== 'image' || asset.origin !== 'project')
+        throw new CompositionEngineError('HTML must be a project visual asset.');
+    }
     if (
       !asset?.id ||
       assetIds.has(asset.id) ||
@@ -161,6 +167,12 @@ export function validateComposition(composition: ClipComposition): void {
     ) {
       throw new CompositionEngineError('Invalid visual preset.');
     }
+    if (
+      isVisualClip(clip) &&
+      clip.appearance.frameTheme !== undefined &&
+      !['auto', 'light', 'dark'].includes(clip.appearance.frameTheme)
+    )
+      throw new CompositionEngineError('Invalid frame theme.');
     if (
       isVisualClip(clip) &&
       clip.appearance.phoneFrameFill !== undefined &&

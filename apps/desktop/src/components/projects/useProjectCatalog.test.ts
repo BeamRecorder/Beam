@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { CaptureProject } from '~/api/types/capture-api';
 import type { ProjectCatalogPage, ProjectCatalogRequest } from '~/api/types/project-catalog';
 const bridge = vi.hoisted(() => ({
+  onProjectLocationsChanged: vi.fn<(listener: () => void) => () => void>(() => vi.fn()),
   listProjectsPage: vi.fn<(request?: ProjectCatalogRequest) => Promise<ProjectCatalogPage>>(),
 }));
 vi.mock('~/api/capture', () => ({ capture: bridge }));
@@ -233,4 +234,31 @@ it('makes first-load failures actionable and handles empty and forced-refresh re
   expect(catalog.hasMore.value).toBe(false);
   expect(bridge.listProjectsPage).toHaveBeenLastCalledWith({ query: '', limit: 40, force: true });
   await flushPromises();
+});
+
+it('reloads an open picker immediately after a project location change', async () => {
+  const { catalog } = create();
+  await catalog.load();
+  bridge.listProjectsPage.mockResolvedValueOnce(page(['external'], 1));
+  bridge.onProjectLocationsChanged.mock.calls.at(-1)![0]();
+  await flushPromises();
+  expect(catalog.projects.value.map((p) => p.id)).toEqual(['external']);
+  expect(catalog.total.value).toBe(1);
+});
+it('invalidates a hidden picker on a location change without loading until it becomes active', async () => {
+  const { catalog, active } = create();
+  await catalog.load();
+  active.value = false;
+  await flushPromises();
+  const calls = bridge.listProjectsPage.mock.calls.length;
+  bridge.onProjectLocationsChanged.mock.calls.at(-1)![0]();
+  await flushPromises();
+  expect(bridge.listProjectsPage.mock.calls.length).toBe(calls);
+  expect(catalog.hasLoaded()).toBe(false);
+});
+it('unsubscribes from project-location events when the picker is destroyed', () => {
+  const { wrapper } = create();
+  const unsubscribe = bridge.onProjectLocationsChanged.mock.results.at(-1)!.value;
+  wrapper.unmount();
+  expect(unsubscribe).toHaveBeenCalledOnce();
 });

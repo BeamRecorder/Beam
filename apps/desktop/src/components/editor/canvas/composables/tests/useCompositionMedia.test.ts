@@ -1,7 +1,8 @@
 import { defineComponent, h, nextTick, ref } from 'vue';
-import { mount, type VueWrapper } from '@vue/test-utils';
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCompositionMedia } from '../useCompositionMedia';
+import { clearEditorImages } from '../../../resources/editor-image-cache';
 import type { MediaFrame } from '@beam/runtime/shared/index';
 import type { BlurClip, ClipComposition, CaptionClip, VisualClip } from '@beam/engine/shared/composition-types';
 import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
@@ -289,8 +290,26 @@ const mountComposable = (initialComposition = composition(), initiallyCropping =
   };
 };
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  clearEditorImages();
+  vi.stubGlobal(
+    'Image',
+    class {
+      constructor() {
+        const image = document.createElement('img');
+        image.decode = () =>
+          new Promise<void>((resolve, reject) => {
+            image.addEventListener('load', () => resolve(), { once: true });
+            image.addEventListener('error', () => reject(new Error('decode failed')), { once: true });
+          });
+        return image;
+      }
+    },
+  );
+});
 afterEach(() => {
+  vi.unstubAllGlobals();
   wrapper?.unmount();
   wrapper = undefined;
   vi.restoreAllMocks();
@@ -407,6 +426,63 @@ describe('useCompositionMedia', () => {
         rotation: 32.5,
       }),
     );
+  });
+  it('replaces changed image sources and repaints only after the current image decodes', async () => {
+    const mounted = mountComposable();
+    const original = state.images.get('image-asset')!;
+    original.dispatchEvent(new Event('load'));
+    await flushPromises();
+    expect(mounted.onRenderOnce).toHaveBeenCalledTimes(1);
+    mounted.compositionRef.value.assets[0]!.src = 'updated.png';
+    await nextTick();
+    const replacement = state.images.get('image-asset')!;
+    expect(replacement).not.toBe(original);
+    expect(original.onload).toBeNull();
+    replacement.dispatchEvent(new Event('load'));
+    await flushPromises();
+    expect(mounted.onRenderOnce).toHaveBeenCalledTimes(2);
+    wrapper!.unmount();
+    expect(replacement.onload).toBeNull();
+  });
+  it('does not repeatedly decode a failed image during scene edits and retries a changed source', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const mounted = mountComposable();
+    const original = state.images.get('image-asset')!;
+    original.dispatchEvent(new Event('error'));
+    await flushPromises();
+    expect(error).toHaveBeenCalledOnce();
+    mounted.compositionRef.value = { ...mounted.compositionRef.value };
+    await nextTick();
+    expect(state.images.get('image-asset')).toBe(original);
+    mounted.compositionRef.value.assets[0]!.src = 'repaired.png';
+    await nextTick();
+    const replacement = state.images.get('image-asset')!;
+    expect(replacement).not.toBe(original);
+    replacement.dispatchEvent(new Event('load'));
+    await flushPromises();
+    expect(mounted.onRenderOnce).toHaveBeenCalledOnce();
+  });
+  it('ignores successful and failed image decodes from a disposed canvas', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const mounted = mountComposable();
+    const original = state.images.get('image-asset')!;
+    mounted.compositionRef.value.assets[0]!.src = 'replacement.png';
+    await nextTick();
+    const replacement = state.images.get('image-asset')!;
+    wrapper!.unmount();
+    original.dispatchEvent(new Event('load'));
+    replacement.dispatchEvent(new Event('error'));
+    await flushPromises();
+    expect(mounted.onRenderOnce).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+  });
+  it('draws programmable image frames even before their poster image finishes decoding', () => {
+    const mounted = mountComposable();
+    const frame = mediaFrame('image', 64, 64);
+    mounted.frames.set('image', frame);
+    const ctx = context();
+    state.drawComposition(ctx, { dx: 0, dy: 0, dw: 800, dh: 400 }, 'image');
+    expect(drawDecoratedMedia).toHaveBeenCalledWith(ctx, expect.objectContaining({ source: frame.bitmap }));
   });
 
   it('renders per-clip transform drafts while a group is moving', () => {
@@ -725,12 +801,32 @@ describe('useCompositionMedia', () => {
     expect(normal.rect).toEqual({ x: 90, y: 100, width: 400, height: 160 });
   });
 
+  it.each(['auto', 'light', 'dark'] as const)(
+    'preserves the %s Safari address appearance during crop preview',
+    (frameTheme) => {
+      const clip = {
+        ...visual('video', 'safari', 'video-asset', 2),
+        appearance: { ...appearance, frame: 'safari' as const, frameTheme },
+      };
+      const mounted = mountComposable({ ...composition(), clips: [clip] }, true);
+      mounted.selected.value = clip;
+      mounted.frames.set(clip.id, mediaFrame(clip.id, 640, 360));
+      state.drawComposition(context(), { dx: 10, dy: 20, dw: 800, dh: 400 }, clip.id);
+      expect(drawDecoratedMedia).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          appearance: expect.objectContaining({ frame: 'safari', frameTheme }),
+        }),
+      );
+    },
+  );
+
   it.each(['iphone-16-max', 'pixel-9-pro'] as const)(
     'renders the full source first and overlays the fixed %s chrome while cropping',
     (frame) => {
       const phone = {
         ...visual('video', `phone-${frame}`, 'video-asset', 2),
-        appearance: { ...appearance, frame },
+        appearance: { ...appearance, frame, frameTheme: 'dark' as const },
       };
       const mounted = mountComposable({ ...composition(), clips: [phone] }, true);
       mounted.selected.value = phone;
@@ -768,6 +864,7 @@ describe('useCompositionMedia', () => {
         showMenu: phone.appearance.frameShowMenu,
         showScrollbars: phone.appearance.frameShowScrollbars,
         chromeScale: phone.appearance.frameChromeScale,
+        theme: 'dark',
       });
       expect(overlayRect.x).toBeCloseTo(expectedOuter.x, 8);
       expect(overlayRect.y).toBeCloseTo(expectedOuter.y, 8);

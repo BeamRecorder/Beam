@@ -248,7 +248,7 @@ const handleClick = (event: MouseEvent) => {
 
 .btn-secondary {
   background-color: var(--color-bg-field);
-  border-color: transparent;
+  border-color: var(--color-border);
   color: var(--text-primary);
 }
 .btn-secondary:hover:not(:disabled) {

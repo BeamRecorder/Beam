@@ -5,6 +5,7 @@ import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { ScreenshotLayer } from '@beam/engine/screenshot/screenshot-types';
 import type { LayerThumbnail, ThumbnailReply, ThumbnailSpec } from '../thumbnail-types';
 import { useLayerThumbnails } from '../useLayerThumbnails';
+import { createGradientEffect } from '@beam/engine';
 
 const cursorRuntime = vi.hoisted(() => ({
   cursorGeometry: vi.fn(),
@@ -165,6 +166,19 @@ afterEach(() => {
 });
 
 describe('useLayerThumbnails', () => {
+  it('sends attached reactive effects as transferable plain document data', async () => {
+    const client = mountClient([
+      makeSpec('shape', 'gradient', { layer: { ...makeLayer('shape'), effects: [createGradientEffect('gradient')] } }),
+    ]);
+    await vi.advanceTimersByTimeAsync(80);
+    const request = workerAt().postMessage.mock.calls[0]![0];
+    expect(() => structuredClone(request)).not.toThrow();
+    expect(request.layer.effects[0].recipe.seed).toBe(12);
+    const effect = client.specs.value[0]!.layer.effects![0]!;
+    if (effect.kind !== 'gradient') throw new Error('Expected gradient');
+    effect.recipe.seed = 77;
+    expect(request.layer.effects[0].recipe.seed).toBe(12);
+  });
   it('retains offscreen ready thumbnails and cancels invisible requests before drawing', async () => {
     const allIds = ref(new Set(['a', 'b']));
     const client = mountClient([makeSpec('a', 'a')], true, () => allIds.value);

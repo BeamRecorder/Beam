@@ -51,6 +51,16 @@ const gpuHost = await Bun.build({
 if (!gpuHost.success) throw new AggregateError(gpuHost.logs, 'GPU export host compilation failed.');
 await cp(resolve(root, 'packages/electron-export/src/gpu-preload.cjs'), resolve(output, 'gpu-preload.cjs'));
 await packageCliCompiler(root, output);
+for (const file of [
+  'docs/agent/README.md',
+  'docs/agent/html-compositions.md',
+  'docs/architecture/gradient-effects.md',
+  'docs/architecture/authoring-protocol.md',
+  'docs/ARCHITECTURE.md',
+]) {
+  await mkdir(resolve(output, file, '..'), { recursive: true });
+  await cp(resolve(root, file), resolve(output, file));
+}
 await writeFile(
   resolve(output, 'version.json'),
   JSON.stringify({
