@@ -1,7 +1,7 @@
 import { flushPromises } from '@vue/test-utils';
 import type { App } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PreferenceSettings } from '../src/api/types/capture-api';
+import type { PreferenceSettings } from '../apps/desktop/src/api/types/capture-api';
 
 const capture = vi.hoisted(() => ({
   getPreferences: vi.fn(),
@@ -9,8 +9,10 @@ const capture = vi.hoisted(() => ({
   reportEditorLoadingStage: vi.fn(),
   updatePreferences: vi.fn(),
 }));
-vi.mock('../src/api/capture', () => ({ capture }));
-vi.mock('../src/components/video-editor/EditorWindowApp.vue', () => ({ default: { template: '<div />' } }));
+vi.mock('../apps/desktop/src/api/capture', () => ({ capture }));
+vi.mock('../apps/desktop/src/components/editor/EditorWindowApp.vue', () => ({
+  default: { template: '<div />' },
+}));
 vi.mock('@vueuse/motion', () => ({ MotionPlugin: { install() {} } }));
 
 const preferences = (theme: PreferenceSettings['theme']): PreferenceSettings => ({
@@ -44,7 +46,7 @@ describe('editor appearance bootstrap', () => {
         resolve = done;
       }),
     );
-    await import('../src/editor-main');
+    await import('../apps/desktop/src/editor-main');
     expect(capture.reportEditorLoadingStage).toHaveBeenCalledWith('loadingAppearance');
     expect(capture.reportEditorLoadingStage).toHaveBeenCalledOnce();
     expect(document.documentElement.classList.contains('editor-window-root')).toBe(false);
@@ -60,7 +62,7 @@ describe('editor appearance bootstrap', () => {
   it('applies light preferences before making the editor opaque', async () => {
     document.documentElement.classList.add('dark');
     capture.getPreferences.mockResolvedValue(preferences('light'));
-    await import('../src/editor-main');
+    await import('../apps/desktop/src/editor-main');
     await flushPromises();
     expect(document.documentElement.classList.contains('dark')).toBe(false);
     expect(document.documentElement.classList.contains('editor-window-root')).toBe(true);
@@ -68,9 +70,12 @@ describe('editor appearance bootstrap', () => {
 
   it('resolves the system theme through the same store that owns subsequent theme changes', async () => {
     const original = window.matchMedia('(prefers-color-scheme: dark)');
-    vi.spyOn(window, 'matchMedia').mockReturnValue({ ...original, matches: true });
+    vi.spyOn(window, 'matchMedia').mockReturnValue({
+      ...original,
+      matches: true,
+    });
     capture.getPreferences.mockResolvedValue(preferences('system'));
-    await import('../src/editor-main');
+    await import('../apps/desktop/src/editor-main');
     await flushPromises();
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     expect(document.documentElement.classList.contains('editor-window-root')).toBe(true);
@@ -78,7 +83,7 @@ describe('editor appearance bootstrap', () => {
 
   it('still mounts with the store default if preference loading fails', async () => {
     capture.getPreferences.mockRejectedValue(new Error('Unavailable'));
-    await import('../src/editor-main');
+    await import('../apps/desktop/src/editor-main');
     await flushPromises();
     expect(document.querySelector('#app')?.childElementCount).toBe(1);
     expect(document.documentElement.classList.contains('dark')).toBe(false);

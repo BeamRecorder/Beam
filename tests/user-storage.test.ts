@@ -119,9 +119,14 @@ describe('slugged projects', () => {
     const current = store.editorState(project.id);
     store.saveEditorState(project.id, {
       ...current,
-      presentation: { ...current.presentation, selectedBackgroundId: 'user-wallpaper:image:global.png' },
+      presentation: {
+        ...current.presentation,
+        selectedBackgroundId: 'user-wallpaper:image:global.png',
+      },
     });
-    const manifest = JSON.parse(fs.readFileSync(path.join(root, 'project-background', 'project.json'), 'utf8'));
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(root, 'project-background', 'project.json'), 'utf8'),
+    );
     expect(manifest.editor.presentation.selectedBackgroundId).toBe('user-wallpaper:image:global.png');
     expect(manifest.editor.presentation.importedBackgrounds).toEqual([]);
   });
@@ -133,7 +138,10 @@ describe('slugged projects', () => {
     const source = path.join(root, 'source.mp4');
     fs.writeFileSync(source, 'video');
 
-    const asset = store.importEditorMedia(project.id, { source, kind: 'video' });
+    const asset = store.importEditorMedia(project.id, {
+      source,
+      kind: 'video',
+    });
     const current = store.editorState(project.id);
     const withAsset: EditorState = {
       ...current,

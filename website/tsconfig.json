@@ -4,8 +4,8 @@
     "tsBuildInfoFile": "../node_modules/.tmp/tsconfig.website.tsbuildinfo",
     "types": ["vite/client", "vitest/globals"],
     "paths": {
-      "~/ui/*": ["../src/components/ui/*"],
-      "~/*": ["../src/*"],
+      "~/ui/*": ["../apps/desktop/src/components/ui/*"],
+      "~/*": ["../apps/desktop/src/*"],
       "@website/*": ["./src/*"]
     },
     "allowArbitraryExtensions": true,
@@ -19,6 +19,6 @@
     "src/**/*.vue",
     "docs/.vitepress/**/*.ts",
     "docs/.vitepress/**/*.vue",
-    "../src/vite-env.d.ts"
+    "../apps/desktop/src/vite-env.d.ts"
   ]
 }

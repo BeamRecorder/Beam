@@ -6,7 +6,7 @@ const {
   customPath,
   gnomeAccelerator,
   isGnomeWayland,
-} = require('../../electron/preferences/linux-shortcut-source.cjs');
+} = require('../../apps/desktop/electron/preferences/linux-shortcut-source.cjs');
 
 const env = { XDG_SESSION_TYPE: 'wayland', XDG_CURRENT_DESKTOP: 'ubuntu:GNOME' };
 const app = { isPackaged: true, getPath: () => '/opt/Beam/beam' };
@@ -34,6 +34,38 @@ test('detects GNOME Wayland but leaves other Linux sessions alone', () => {
   assert.equal(isGnomeWayland('linux', { ...env, XDG_CURRENT_DESKTOP: 'KDE' }), false);
   assert.equal(isGnomeWayland('darwin', env), false);
   assert.match(customPath('hud.startStopRecording'), /\/beam-[0-9a-f]{16}\/$/);
+});
+
+test('parallel development profiles never overwrite desktop GNOME bindings', () => {
+  const fake = fakeGsettings();
+  for (const session of ['default', 'one', 'two']) {
+    assert.equal(
+      createLinuxShortcutSource({
+        app: devApp,
+        applicationRoot: '/beam',
+        platform: 'linux',
+        env: { ...env, BEAM_DEVELOPMENT_INSTANCE: '1', BEAM_DEV_SESSION: session },
+        execFile: fake.execFile,
+      }),
+      null,
+    );
+  }
+  assert.deepEqual(fake.calls, []);
+});
+
+test('packaged shortcut registration ignores inherited development markers', () => {
+  const fake = fakeGsettings();
+  assert.notEqual(
+    createLinuxShortcutSource({
+      app,
+      applicationRoot: '/beam',
+      platform: 'linux',
+      env: { ...env, BEAM_DEVELOPMENT_INSTANCE: '1' },
+      execFile: fake.execFile,
+    }),
+    null,
+  );
+  assert.deepEqual(fake.calls, []);
 });
 
 test('maps Beam accelerators to GNOME keybinding syntax', () => {
@@ -102,7 +134,9 @@ test('disables the dev Electron sandbox when GNOME launches a shortcut', async (
     execFile: fake.execFile,
   });
 
-  await source.register({ shortcuts: { 'hud.startStopRecording': { keys: 'Alt+Shift+R', scope: 'global' } } });
+  await source.register({
+    shortcuts: { 'hud.startStopRecording': { keys: 'Alt+Shift+R', scope: 'global' } },
+  });
   const command = fake.calls.find(({ args }) => args[0] === 'set' && args[2] === 'command').args[3];
   assert.match(command, /BEAM_DEVELOPMENT_INSTANCE=1/);
   assert.match(command, /opt\/electron/);

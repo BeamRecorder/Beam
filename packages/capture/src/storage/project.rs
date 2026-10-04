@@ -2,7 +2,7 @@ use crate::model::{
     ProjectEditorState, ProjectId, ProjectManifest, ProjectSession, SCHEMA_VERSION, SessionId,
 };
 
-use super::{ProjectLayout, write_atomic};
+use super::{ProjectLayout, read_json, write_json_atomic};
 
 const MAX_PROJECT_NAME_SUFFIX: u32 = i32::MAX as u32;
 
@@ -77,10 +77,7 @@ fn existing_project_name(
             continue;
         }
         let manifest_path = entry.path().join("project.json");
-        let Ok(contents) = std::fs::read(&manifest_path) else {
-            continue;
-        };
-        let Ok(manifest) = serde_json::from_slice::<ProjectManifest>(&contents) else {
+        let Ok(manifest) = read_json::<ProjectManifest>(&manifest_path) else {
             continue;
         };
         if manifest.name == candidate {
@@ -118,10 +115,7 @@ pub fn create_or_update_project(
     let layout = ProjectLayout::new(root, project_id);
     let existing_path = layout.project_manifest();
     let mut project = if existing_path.exists() {
-        serde_json::from_slice(
-            &std::fs::read(&existing_path)
-                .map_err(|e| crate::CaptureError::storage(&existing_path, e))?,
-        )?
+        read_json(&existing_path)?
     } else {
         ProjectManifest {
             schema_version: SCHEMA_VERSION,
@@ -157,6 +151,6 @@ pub fn create_or_update_project(
         });
     }
     project.updated_at_utc = now_utc.into();
-    write_atomic(&path, &serde_json::to_vec_pretty(&project)?)?;
+    write_json_atomic(&path, &project)?;
     Ok(project)
 }

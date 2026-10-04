@@ -1,0 +1,464 @@
+{
+  "projectName": "GPU transfer verification",
+  "format": "mp4",
+  "preset": "medium",
+  "includeAudio": false,
+  "snapshot": {
+    "duration": 1.2,
+    "render": {
+      "sourceWidth": null,
+      "sourceHeight": null,
+      "fps": 10
+    },
+    "canvas": {
+      "preset": "16:9",
+      "width": 640,
+      "height": 360,
+      "showBackground": false,
+      "transitions": {
+        "entry": null,
+        "exit": null
+      },
+      "watermark": {
+        "enabled": false,
+        "text": "made-with-beam",
+        "customText": "",
+        "showLogo": true,
+        "localized": false,
+        "position": "bottom-right",
+        "size": 100,
+        "shadow": 20,
+        "backgroundColor": "#111114",
+        "backgroundOpacity": 78,
+        "backgroundRadius": 100,
+        "backgroundPadding": 100
+      }
+    },
+    "background": null,
+    "blurPercent": 0,
+    "zooms": [],
+    "cursor": {
+      "available": false,
+      "events": [],
+      "telemetry": [],
+      "shapes": {},
+      "catalog": {},
+      "missing": []
+    },
+    "cursorSettings": {
+      "enabled": false,
+      "selection": {
+        "packId": "builtin:macos",
+        "mode": "automatic",
+        "cursorId": null
+      },
+      "size": 45,
+      "color": "#000000",
+      "shadow": {
+        "enabled": true,
+        "blur": 6,
+        "color": "#000000",
+        "direction": "bottom"
+      },
+      "clickEffects": {
+        "left": {
+          "springEnabled": true,
+          "springIntensity": 50,
+          "rippleEnabled": false,
+          "rippleStyle": "single",
+          "rippleSize": 30,
+          "rippleColor": "#ff5a1f"
+        },
+        "right": {
+          "springEnabled": true,
+          "springIntensity": 50,
+          "rippleEnabled": false,
+          "rippleStyle": "single",
+          "rippleSize": 30,
+          "rippleColor": "#6366f1"
+        }
+      },
+      "motion": {
+        "preset": "smooth",
+        "smoothing": 0.67,
+        "springMassMultiplier": 1.29,
+        "motionBlur": 0.4,
+        "stopSpringEnabled": true,
+        "stopSpringStrength": 0.45
+      },
+      "autoHide": {
+        "enabled": false,
+        "delaySeconds": 2,
+        "fadeDurationMs": 250
+      }
+    },
+    "cursorPack": null,
+    "composition": {
+      "schemaVersion": 14,
+      "keyboardCaptionSessions": [],
+      "assets": [],
+      "clips": [
+        {
+          "id": "0",
+          "kind": "color",
+          "name": "0",
+          "color": "#00ff00",
+          "timelineStartMs": 0,
+          "timelineDurationMs": 100,
+          "sourceInMs": 0,
+          "sourceDurationMs": 100,
+          "playbackRate": 1,
+          "enabled": true,
+          "order": 0,
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "fill": {
+            "kind": "color",
+            "color": "#00ff00"
+          },
+          "opacity": 1,
+          "assetId": "",
+          "transitions": {
+            "entry": null,
+            "exit": null
+          },
+          "trackId": "0"
+        },
+        {
+          "id": "1",
+          "kind": "color",
+          "name": "1",
+          "color": "#00ff00",
+          "timelineStartMs": 100,
+          "timelineDurationMs": 100,
+          "sourceInMs": 0,
+          "sourceDurationMs": 100,
+          "playbackRate": 1,
+          "enabled": true,
+          "order": 0,
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "fill": {
+            "kind": "color",
+            "color": "#00ff00"
+          },
+          "opacity": 1,
+          "assetId": "",
+          "transitions": {
+            "entry": null,
+            "exit": null
+          },
+          "trackId": "1"
+        },
+        {
+          "id": "2",
+          "kind": "color",
+          "name": "2",
+          "color": "#00ff00",
+          "timelineStartMs": 200,
+          "timelineDurationMs": 100,
+          "sourceInMs": 0,
+          "sourceDurationMs": 100,
+          "playbackRate": 1,
+          "enabled": true,
+          "order": 0,
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "fill": {
+            "kind": "color",
+            "color": "#00ff00"
+          },
+          "opacity": 1,
+          "assetId": "",
+          "transitions": {
+            "entry": null,
+            "exit": null
+          },
+          "trackId": "2"
+        },
+        {
+          "id": "3",
+          "kind": "color",
+          "name": "3",
+          "color": "#00ff00",
+          "timelineStartMs": 300,
+          "timelineDurationMs": 100,
+          "sourceInMs": 0,
+          "sourceDurationMs": 100,
+          "playbackRate": 1,
+          "enabled": true,
+          "order": 0,
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "fill": {
+            "kind": "color",
+            "color": "#ff0000"
+          },
+          "opacity": 1,
+          "assetId": "",
+          "transitions": {
+            "entry": null,
+            "exit": null
+          },
+          "trackId": "3"
+        },
+        {
+          "id": "4",
+          "kind": "color",
+          "name": "4",
+          "color": "#00ff00",
+          "timelineStartMs": 400,
+          "timelineDurationMs": 100,
+          "sourceInMs": 0,
+          "sourceDurationMs": 100,
+          "playbackRate": 1,
+          "enabled": true,
+          "order": 0,
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "fill": {
+            "kind": "color",
+            "color": "#0000ff"
+          },
+          "opacity": 1,
+          "assetId": "",
+          "transitions": {
+            "entry": null,
+            "exit": null
+          },
+          "trackId": "4"
+        },
+        {
+          "id": "5",
+          "kind": "color",
+          "name": "5",
+          "color": "#00ff00",
+          "timelineStartMs": 500,
+          "timelineDurationMs": 100,
+          "sourceInMs": 0,
+          "sourceDurationMs": 100,
+          "playbackRate": 1,
+          "enabled": true,
+          "order": 0,
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "fill": {
+            "kind": "color",
+            "color": "#ffff00"
+          },
+          "opacity": 1,
+          "assetId": "",
+          "transitions": {
+            "entry": null,
+            "exit": null
+          },
+          "trackId": "5"
+        },
+        {
+          "id": "6",
+          "kind": "color",
+          "name": "6",
+          "color": "#00ff00",
+          "timelineStartMs": 600,
+          "timelineDurationMs": 100,
+          "sourceInMs": 0,
+          "sourceDurationMs": 100,
+          "playbackRate": 1,
+          "enabled": true,
+          "order": 0,
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "fill": {
+            "kind": "color",
+            "color": "#ff0000"
+          },
+          "opacity": 1,
+          "assetId": "",
+          "transitions": {
+            "entry": null,
+            "exit": null
+          },
+          "trackId": "6"
+        },
+        {
+          "id": "7",
+          "kind": "color",
+          "name": "7",
+          "color": "#00ff00",
+          "timelineStartMs": 700,
+          "timelineDurationMs": 100,
+          "sourceInMs": 0,
+          "sourceDurationMs": 100,
+          "playbackRate": 1,
+          "enabled": true,
+          "order": 0,
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "fill": {
+            "kind": "color",
+            "color": "#0000ff"
+          },
+          "opacity": 1,
+          "assetId": "",
+          "transitions": {
+            "entry": null,
+            "exit": null
+          },
+          "trackId": "7"
+        },
+        {
+          "id": "8",
+          "kind": "color",
+          "name": "8",
+          "color": "#00ff00",
+          "timelineStartMs": 800,
+          "timelineDurationMs": 100,
+          "sourceInMs": 0,
+          "sourceDurationMs": 100,
+          "playbackRate": 1,
+          "enabled": true,
+          "order": 0,
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "fill": {
+            "kind": "color",
+            "color": "#ffff00"
+          },
+          "opacity": 1,
+          "assetId": "",
+          "transitions": {
+            "entry": null,
+            "exit": null
+          },
+          "trackId": "8"
+        },
+        {
+          "id": "9",
+          "kind": "color",
+          "name": "9",
+          "color": "#00ff00",
+          "timelineStartMs": 900,
+          "timelineDurationMs": 100,
+          "sourceInMs": 0,
+          "sourceDurationMs": 100,
+          "playbackRate": 1,
+          "enabled": true,
+          "order": 0,
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "fill": {
+            "kind": "color",
+            "color": "#ff0000"
+          },
+          "opacity": 1,
+          "assetId": "",
+          "transitions": {
+            "entry": null,
+            "exit": null
+          },
+          "trackId": "9"
+        },
+        {
+          "id": "10",
+          "kind": "color",
+          "name": "10",
+          "color": "#00ff00",
+          "timelineStartMs": 1000,
+          "timelineDurationMs": 100,
+          "sourceInMs": 0,
+          "sourceDurationMs": 100,
+          "playbackRate": 1,
+          "enabled": true,
+          "order": 0,
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "fill": {
+            "kind": "color",
+            "color": "#0000ff"
+          },
+          "opacity": 1,
+          "assetId": "",
+          "transitions": {
+            "entry": null,
+            "exit": null
+          },
+          "trackId": "10"
+        },
+        {
+          "id": "11",
+          "kind": "color",
+          "name": "11",
+          "color": "#00ff00",
+          "timelineStartMs": 1100,
+          "timelineDurationMs": 100,
+          "sourceInMs": 0,
+          "sourceDurationMs": 100,
+          "playbackRate": 1,
+          "enabled": true,
+          "order": 0,
+          "transform": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "fill": {
+            "kind": "color",
+            "color": "#ffff00"
+          },
+          "opacity": 1,
+          "assetId": "",
+          "transitions": {
+            "entry": null,
+            "exit": null
+          },
+          "trackId": "11"
+        }
+      ]
+    }
+  }
+}

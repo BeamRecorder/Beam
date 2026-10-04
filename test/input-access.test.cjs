@@ -4,8 +4,8 @@ const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 
-const { InputAccess } = require('../electron/input/input-access.cjs');
-const { prebuiltInputHelperPath, packagedInputHelperPath } = require('../electron/capture/capture-engine-path.cjs');
+const { InputAccess } = require('../apps/desktop/electron/input/input-access.cjs');
+const { prebuiltInputHelperPath, packagedInputHelperPath } = require('@beam/native-client/capture-engine-path');
 
 const version = '1.2.3';
 const available = {
@@ -153,7 +153,10 @@ test('Linux preserves the broker-unavailable fallback and error when native stat
       shortcuts: false,
       recordsText: false,
       unavailableReason: 'input-broker-unavailable',
-      error: { code: 'input-broker-unavailable', message: 'input broker unavailable' },
+      error: {
+        code: 'input-broker-unavailable',
+        message: 'input broker unavailable',
+      },
     });
   } finally {
     cleanup();
@@ -173,7 +176,10 @@ test('Linux preserves a failed request error on a later permission-required stat
     await assert.rejects(inputAccess.request(), (error) => error === requestError);
     assert.deepEqual(await inputAccess.status(), {
       ...permissionRequired,
-      error: { code: 'helper-launch-failed', message: 'input helper failed to launch' },
+      error: {
+        code: 'helper-launch-failed',
+        message: 'input helper failed to launch',
+      },
     });
   } finally {
     cleanup();
@@ -181,8 +187,13 @@ test('Linux preserves a failed request error on a later permission-required stat
 });
 
 test('Linux native status errors take precedence over a remembered request error', async () => {
-  const requestError = Object.assign(new Error('request failed'), { code: 'request-failed' });
-  const nativeStatusError = { code: 'status-failed', message: 'native status diagnostic' };
+  const requestError = Object.assign(new Error('request failed'), {
+    code: 'request-failed',
+  });
+  const nativeStatusError = {
+    code: 'status-failed',
+    message: 'native status diagnostic',
+  };
   const { inputAccess, cleanup } = createLinuxInputAccess(async (command) => {
     if (command === 'request-input-access') throw requestError;
     return { ...permissionRequired, error: nativeStatusError };
@@ -325,5 +336,30 @@ test('Linux falls back to the installed helper when no bundled helper is availab
     assert.equal(inputAccess.helperForCapture(), '/usr/libexec/beam-input-helper');
   } finally {
     fs.statSync = originalStatSync;
+  }
+});
+
+test('finds the Linux input helper alongside shared Cargo outputs and caches the directory', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-cargo-helper-'));
+  let queries = 0;
+  try {
+    const targetDirectory = path.join(root, 'shared-target');
+    const helper = path.join(targetDirectory, 'debug', 'beam-input-helper');
+    writeExecutable(helper);
+    const access = new InputAccess({
+      app: app(),
+      applicationRoot: root,
+      platform: 'linux',
+      nativeRequest: async () => available,
+      resolveTargetDirectory: () => {
+        queries++;
+        return targetDirectory;
+      },
+    });
+    assert.equal(access.bundledHelper(), helper);
+    assert.equal(access.bundledHelper(), helper);
+    assert.equal(queries, 1);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });

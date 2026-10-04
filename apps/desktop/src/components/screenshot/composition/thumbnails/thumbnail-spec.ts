@@ -1,0 +1,90 @@
+import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
+import type { CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
+import { resolvePublicAssetUrl } from '~/utils/public-asset';
+import { WATERMARK_LOGO_PATH } from '@beam/runtime/rendering/watermark-render';
+import { screenshotLayers } from '@beam/engine/screenshot/screenshot-layers';
+import type { ThumbnailSpec } from './thumbnail-types';
+import { screenshotImage } from '@beam/engine/screenshot/screenshot-images';
+import { effectThumbnailId } from './effect-thumbnail';
+
+export function screenshotThumbnailSpecs(
+  state: ScreenshotState,
+  source: string,
+  packs: CursorPackDescriptor[],
+  visibleIds?: ReadonlySet<string>,
+): ThumbnailSpec[] {
+  return screenshotLayers(state)
+    .filter((layer) => layer.kind !== 'zoom' && (!visibleIds || visibleIds.has(layer.id)))
+    .flatMap((layer) => {
+      const effect = state.effects?.find((item) => item.id === layer.id);
+      const shape = state.shapes.find((item) => item.id === layer.id);
+      const cursor = state.cursors?.find((item) => item.id === layer.id);
+      const image = screenshotImage(state, layer.id);
+      const cursorPack = packs.find((pack) => pack.id === cursor?.selection.packId);
+      const cursorAsset = cursorPack?.cursors.find((asset) => asset.id === cursor?.selection.cursorId);
+      const sourceUrl =
+        layer.kind === 'image'
+          ? (state.images?.find((image) => image.id === layer.id)?.source ?? source)
+          : layer.kind === 'background' && state.background?.kind === 'image'
+            ? resolvePublicAssetUrl(state.background.path)
+            : layer.kind === 'watermark' && state.canvas.watermark?.showLogo
+              ? resolvePublicAssetUrl(WATERMARK_LOGO_PATH)
+              : undefined;
+      const visual =
+        effect ??
+        (shape
+          ? {
+              ...shape,
+              enabled: true,
+              transform: { ...shape.transform, x: 0, y: 0 },
+            }
+          : cursor
+            ? {
+                ...cursor,
+                name: '',
+                enabled: true,
+                position: { x: 0, y: 0 },
+                asset: cursorAsset,
+              }
+            : image
+              ? {
+                  ...image,
+                  enabled: true,
+                  transform: { ...image.transform, x: 0, y: 0 },
+                }
+              : layer.kind === 'background'
+                ? [state.background, state.blurPercent]
+                : { ...state.canvas.watermark, enabled: true });
+      const base: ThumbnailSpec = {
+        id: layer.id,
+        key: JSON.stringify([state.canvas.width, state.canvas.height, sourceUrl, layer.rotation3d, visual, []]),
+        state: {
+          ...state,
+          image: image ?? state.image,
+          images: [],
+          effects: effect ? [effect] : [],
+          shapes: shape ? [shape] : [],
+          cursors: cursor ? [cursor] : [],
+          zooms: [],
+          composition: undefined,
+          layerNames: undefined,
+        },
+        layer: { ...layer, effects: [] },
+        sourceUrl,
+        cursorPack,
+        cursorAsset,
+      };
+      return [
+        base,
+        ...(layer.effects ?? []).map((attached, index) => {
+          const effects = layer.effects!.slice(0, index + 1);
+          return {
+            ...base,
+            id: effectThumbnailId(layer.id, attached.id),
+            key: JSON.stringify([state.canvas.width, state.canvas.height, sourceUrl, layer.rotation3d, visual, effects]),
+            layer: { ...layer, effects },
+          };
+        }),
+      ];
+    });
+}

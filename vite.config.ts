@@ -58,16 +58,19 @@ const publicBackgroundMediaPlugin = (): Plugin => ({
 
 // https://vite.dev/config/
 export default defineConfig({
+  root: fileURLToPath(new URL('./apps/desktop', import.meta.url)),
+  publicDir: fileURLToPath(new URL('./public', import.meta.url)),
   base: './',
-  cacheDir: 'node_modules/.vite',
+  cacheDir: fileURLToPath(new URL('./node_modules/.vite', import.meta.url)),
   plugins: [publicBackgroundMediaPlugin(), vue({})],
   resolve: {
     // Keep libraries such as Lucide on the renderer's Vue instance even when
     // the dependency tree was installed by a different package manager.
     dedupe: ['vue'],
     alias: {
-      '~/ui': fileURLToPath(new URL('./src/components/ui', import.meta.url)),
-      '~': fileURLToPath(new URL('./src', import.meta.url)),
+      '~/ui': fileURLToPath(new URL('./apps/desktop/src/components/ui', import.meta.url)),
+      '@desktop': fileURLToPath(new URL('./apps/desktop/src', import.meta.url)),
+      '~': fileURLToPath(new URL('./apps/desktop/src', import.meta.url)),
     },
   },
   // The AAC encoder is first imported dynamically from the export worker.
@@ -77,14 +80,23 @@ export default defineConfig({
     include: ['@mediabunny/aac-encoder'],
   },
   build: {
+    outDir: fileURLToPath(new URL('./dist', import.meta.url)),
+    emptyOutDir: true,
+    // Every desktop renderer runs on Electron's current Chromium.
+    modulePreload: { polyfill: false },
     rollupOptions: {
       input: {
-        main: fileURLToPath(new URL('./index.html', import.meta.url)),
-        quickSnipStatus: fileURLToPath(new URL('./quick-snip-status.html', import.meta.url)),
-        countdown: fileURLToPath(new URL('./countdown.html', import.meta.url)),
-        editor: fileURLToPath(new URL('./editor.html', import.meta.url)),
-        teleprompter: fileURLToPath(new URL('./teleprompter.html', import.meta.url)),
-        onboarding: fileURLToPath(new URL('./onboarding.html', import.meta.url)),
+        main: fileURLToPath(new URL('./apps/desktop/html/index.html', import.meta.url)),
+        quickSnipStatus: fileURLToPath(new URL('./apps/desktop/html/quick-snip-status.html', import.meta.url)),
+        regionMarker: fileURLToPath(new URL('./apps/desktop/html/region-marker.html', import.meta.url)),
+        screenRegion: fileURLToPath(new URL('./apps/desktop/html/screen-region.html', import.meta.url)),
+        countdown: fileURLToPath(new URL('./apps/desktop/html/countdown.html', import.meta.url)),
+        editor: fileURLToPath(new URL('./apps/desktop/html/editor.html', import.meta.url)),
+        exportGpu: fileURLToPath(new URL('./apps/desktop/html/export-gpu.html', import.meta.url)),
+        teleprompter: fileURLToPath(new URL('./apps/desktop/html/teleprompter.html', import.meta.url)),
+        hudPanel: fileURLToPath(new URL('./apps/desktop/html/hud-panel.html', import.meta.url)),
+        onboarding: fileURLToPath(new URL('./apps/desktop/html/onboarding.html', import.meta.url)),
+        sourcePicker: fileURLToPath(new URL('./apps/desktop/html/source-picker.html', import.meta.url)),
       },
     },
   },
@@ -93,14 +105,15 @@ export default defineConfig({
     strictPort: true,
   },
   test: {
-    include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
+    root: fileURLToPath(new URL('./', import.meta.url)),
+    include: ['tests/**/*.test.ts', 'packages/**/*.test.ts', 'apps/**/*.test.ts'],
     setupFiles: ['tests/setup.ts'],
     environment: 'jsdom',
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],
-      include: ['src/**/*.{ts,vue}'],
-      exclude: ['src/**/*.test.ts', 'src/vite-env.d.ts'],
+      include: ['apps/desktop/src/**/*.{ts,vue}', 'packages/**/src/**/*.ts', 'apps/cli/src/**/*.ts'],
+      exclude: ['**/*.test.ts', 'apps/desktop/src/vite-env.d.ts'],
       thresholds: {
         statements: 90,
         branches: 90,

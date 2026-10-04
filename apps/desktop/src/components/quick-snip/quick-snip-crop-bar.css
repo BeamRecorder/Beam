@@ -1,0 +1,54 @@
+.crop-shell {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+}
+.crop-bar {
+  position: absolute;
+  inset: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 56px 6px 6px;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-bg-element) 82%, transparent);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+.drag-handle {
+  -webkit-app-region: drag;
+  app-region: drag;
+  display: grid;
+  place-items: center;
+  flex: 0 0 16px;
+  color: var(--text-muted);
+  cursor: grab;
+  user-select: none;
+}
+.control-slot {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+  flex-shrink: 0;
+}
+.control-divider {
+  height: 24px;
+}
+.device-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+.is-off {
+  color: var(--color-error);
+}
+.capture-actions {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}

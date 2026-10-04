@@ -1,0 +1,39 @@
+.screenshot-editor {
+  position: relative;
+  isolation: isolate;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-surface);
+  color: var(--text-primary);
+}
+.screenshot-editor > :not(.editor-ambient-background, .editor-project-loading-overlay) {
+  position: relative;
+}
+.back-label {
+  display: var(--editor-back-label-display, inline);
+}
+.copy-label {
+  display: var(--editor-copy-label-display, inline);
+}
+.effect-properties {
+  padding: 12px;
+}
+.layer-properties {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.layer-properties:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.screenshot-history-feedback {
+  bottom: 76px;
+}
+.error {
+  color: var(--color-error);
+  padding: 8px 16px;
+  margin: 0;
+}

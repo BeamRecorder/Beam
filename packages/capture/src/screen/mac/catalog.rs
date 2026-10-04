@@ -73,6 +73,7 @@ fn window_descriptor(
         window.window_layer(),
         &title,
         &application_name,
+        &application.bundle_identifier(),
         frame.size.width,
         frame.size.height,
     ) {

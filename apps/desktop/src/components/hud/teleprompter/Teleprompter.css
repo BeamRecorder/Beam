@@ -1,0 +1,98 @@
+.teleprompter-window {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg-surface);
+  color: var(--text-primary);
+}
+.teleprompter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  padding: 0 8px 0 12px;
+  flex-shrink: 0;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+.teleprompter-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+.teleprompter-title h1 {
+  margin: 0;
+  font: 600 12px var(--font-sans);
+}
+.teleprompter-close {
+  -webkit-app-region: no-drag;
+}
+.reader-view {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.teleprompter-editor,
+.teleprompter-display {
+  font-family: system-ui, 'Segoe UI', 'Noto Sans', Arial, sans-serif;
+  font-size: var(--teleprompter-font-size);
+  line-height: var(--teleprompter-line-height);
+  color: var(--teleprompter-text);
+  letter-spacing: normal;
+  word-spacing: normal;
+  flex: 1;
+  min-height: 0;
+  padding: 20px 8% 80px;
+}
+.teleprompter-editor {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  resize: none;
+  box-shadow: none;
+}
+.teleprompter-editor:focus {
+  border: 0;
+  box-shadow: none;
+}
+.teleprompter-display {
+  overflow: auto;
+  scrollbar-width: none;
+  scroll-behavior: auto;
+}
+.teleprompter-display::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.teleprompter-display.is-centered {
+  text-align: center;
+}
+.teleprompter-line {
+  margin: 0 0 0.55em;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.teleprompter-line.past {
+  opacity: 0.55;
+}
+.teleprompter-line.active {
+  font-weight: 700;
+}
+.teleprompter-error {
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--color-error);
+  background: var(--color-error-light);
+  font: 400 12px var(--font-sans);
+}
+.teleprompter-toasts {
+  bottom: 72px;
+  right: 12px;
+  width: calc(100vw - 24px);
+}

@@ -49,14 +49,16 @@ test('onboarding window passes appIconPath to BrowserWindow', () => {
   };
 
   try {
-    const modulePath = require.resolve('../electron/window/onboarding-window.cjs');
+    const modulePath = require.resolve('../apps/desktop/electron/window/onboarding-window.cjs');
     delete require.cache[modulePath];
     const { createOnboardingWindowManager } = require(modulePath);
     const appIconPath = '/app/dist/brand/BeamIcon.png';
     const manager = createOnboardingWindowManager({
       applicationRoot: '/app',
       isPackaged: false,
-      ipcMain: { handle: (channel, listener) => handlers.set(channel, listener) },
+      ipcMain: {
+        handle: (channel, listener) => handlers.set(channel, listener),
+      },
       hudWindow: {
         isDestroyed: () => false,
         isMinimized: () => false,

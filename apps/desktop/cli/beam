@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+# The installed Electron executable supplies Node; users need neither Bun nor Node.
+launcher_path="$0"
+if [ "$(uname -s)" != Darwin ]; then launcher_path=$(readlink -f -- "$0"); fi
+launcher_dir=$(CDPATH= cd -- "$(dirname -- "$launcher_path")" && pwd)
+if [ "$(uname -s)" = Darwin ]; then
+  beam_binary="$launcher_dir/../../MacOS/Beam"
+  resources_dir="$launcher_dir/.."
+else
+  beam_binary="$launcher_dir/../../beam-bin"
+  resources_dir="$launcher_dir/.."
+fi
+export ELECTRON_RUN_AS_NODE=1
+export BEAM_RESOURCES_PATH="$resources_dir"
+export BEAM_CLI_BROWSER_ROOT="$resources_dir/beam-cli/browser"
+export BEAM_APP_VERSION=$(cat "$resources_dir/beam-cli/version.json" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')
+exec "$beam_binary" "$resources_dir/beam-cli/index.mjs" "$@"

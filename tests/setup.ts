@@ -1,6 +1,6 @@
 import { config } from '@vue/test-utils';
 import { beforeEach } from 'vitest';
-import { i18n, setCurrentLocale } from '../src/i18n';
+import { i18n, setCurrentLocale } from '../apps/desktop/src/i18n';
 
 config.global.plugins = [i18n];
 
@@ -20,8 +20,8 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
   });
 }
 
-beforeEach(() => {
-  setCurrentLocale('en');
+beforeEach(async () => {
+  await setCurrentLocale('en');
 });
 
 // jsdom does not implement the scrolling API used by virtualized lists.

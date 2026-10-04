@@ -6,7 +6,7 @@ const {
   migratePresentation,
   presentationState,
   zoomState,
-} = require('../electron/projects/project-editor-state.cjs');
+} = require('../apps/desktop/electron/projects/project-editor-state.cjs');
 
 const cursor = () => ({
   selection: { packId: 'builtin:macos', mode: 'automatic', cursorId: null },
@@ -14,10 +14,27 @@ const cursor = () => ({
   color: '#000000',
   shadow: { enabled: true, blur: 6, color: '#000000', direction: 'bottom' },
   clickEffects: {
-    left: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#ff5a1f' },
-    right: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#6366f1' },
+    left: {
+      springEnabled: true,
+      springIntensity: 50,
+      rippleEnabled: true,
+      rippleSize: 30,
+      rippleColor: '#ff5a1f',
+    },
+    right: {
+      springEnabled: true,
+      springIntensity: 50,
+      rippleEnabled: true,
+      rippleSize: 30,
+      rippleColor: '#6366f1',
+    },
   },
-  motion: { preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+  motion: {
+    preset: 'smooth',
+    smoothing: 0.67,
+    springMassMultiplier: 1.29,
+    motionBlur: 0.4,
+  },
   autoHide: { enabled: true, delaySeconds: 3.5, fadeDurationMs: 640 },
 });
 
@@ -44,7 +61,11 @@ const canvas = (value) => ({
   watermark: value,
 });
 
-const balancedAutoFollow = () => ({ safeZone: 0.5, responsiveness: 0.55, directionLock: true });
+const balancedAutoFollow = () => ({
+  safeZone: 0.5,
+  responsiveness: 0.55,
+  directionLock: true,
+});
 
 test('defaults new cursor presentations to spring-on and ripple-off for both buttons', () => {
   const state = createDefaultPresentation();
@@ -88,7 +109,11 @@ test('defaults the stop spring for older projects and preserves an explicit disa
     ...input,
     cursor: {
       ...legacy,
-      motion: { ...legacy.motion, stopSpringEnabled: false, stopSpringStrength: 0.8 },
+      motion: {
+        ...legacy.motion,
+        stopSpringEnabled: false,
+        stopSpringStrength: 0.8,
+      },
     },
   };
   assert.deepEqual(presentationState(disabled).cursor.motion, disabled.cursor.motion);
@@ -151,7 +176,11 @@ test('defaults cursor auto-hide to disabled after migrating a legacy presentatio
     importedBackgrounds: [],
   });
 
-  assert.deepEqual(state.cursor.autoHide, { enabled: false, delaySeconds: 2, fadeDurationMs: 250 });
+  assert.deepEqual(state.cursor.autoHide, {
+    enabled: false,
+    delaySeconds: 2,
+    fadeDurationMs: 250,
+  });
 });
 
 test('clamps cursor auto-hide delay to the supported range during Electron normalization', () => {
@@ -161,7 +190,10 @@ test('clamps cursor auto-hide delay to the supported range during Electron norma
     background: null,
     blurPercent: 0,
     importedBackgrounds: [],
-    cursor: { ...cursor(), autoHide: { enabled: true, delaySeconds: 0.1, fadeDurationMs: -1 } },
+    cursor: {
+      ...cursor(),
+      autoHide: { enabled: true, delaySeconds: 0.1, fadeDurationMs: -1 },
+    },
   });
   const aboveMaximum = presentationState({
     canvas: canvas(undefined),
@@ -169,11 +201,22 @@ test('clamps cursor auto-hide delay to the supported range during Electron norma
     background: null,
     blurPercent: 0,
     importedBackgrounds: [],
-    cursor: { ...cursor(), autoHide: { enabled: true, delaySeconds: 25, fadeDurationMs: 2_000 } },
+    cursor: {
+      ...cursor(),
+      autoHide: { enabled: true, delaySeconds: 25, fadeDurationMs: 2_000 },
+    },
   });
 
-  assert.deepEqual(belowMinimum.cursor.autoHide, { enabled: true, delaySeconds: 0.5, fadeDurationMs: 0 });
-  assert.deepEqual(aboveMaximum.cursor.autoHide, { enabled: true, delaySeconds: 10, fadeDurationMs: 1_000 });
+  assert.deepEqual(belowMinimum.cursor.autoHide, {
+    enabled: true,
+    delaySeconds: 0.5,
+    fadeDurationMs: 0,
+  });
+  assert.deepEqual(aboveMaximum.cursor.autoHide, {
+    enabled: true,
+    delaySeconds: 10,
+    fadeDurationMs: 1_000,
+  });
 });
 
 test('preserves cursor auto-hide settings in the normalized presentation', () => {
@@ -186,7 +229,11 @@ test('preserves cursor auto-hide settings in the normalized presentation', () =>
     cursor: cursor(),
   });
 
-  assert.deepEqual(state.cursor.autoHide, { enabled: true, delaySeconds: 3.5, fadeDurationMs: 640 });
+  assert.deepEqual(state.cursor.autoHide, {
+    enabled: true,
+    delaySeconds: 3.5,
+    fadeDurationMs: 640,
+  });
 });
 
 test('migrates a legacy fixed macOS cursor without discarding presentation settings', () => {
@@ -210,7 +257,11 @@ test('migrates a legacy fixed macOS cursor without discarding presentation setti
 });
 
 test('preserves an unavailable imported pack selection for later reimport', () => {
-  const selection = { packId: 'a'.repeat(64), mode: 'fixed', cursorId: 'left_ptr' };
+  const selection = {
+    packId: 'a'.repeat(64),
+    mode: 'fixed',
+    cursorId: 'left_ptr',
+  };
   const state = presentationState({
     canvas: canvas(undefined),
     selectedBackgroundId: null,
@@ -232,7 +283,14 @@ test('rejects an automatic selection that carries a fixed cursor id', () => {
         background: null,
         blurPercent: 0,
         importedBackgrounds: [],
-        cursor: { ...cursor(), selection: { packId: 'builtin:macos', mode: 'automatic', cursorId: 'ignored' } },
+        cursor: {
+          ...cursor(),
+          selection: {
+            packId: 'builtin:macos',
+            mode: 'automatic',
+            cursorId: 'ignored',
+          },
+        },
       }),
     /curseur|présentation/i,
   );
@@ -247,7 +305,10 @@ test('rejects a fixed cursor selection without a cursor id', () => {
         background: null,
         blurPercent: 0,
         importedBackgrounds: [],
-        cursor: { ...cursor(), selection: { packId: 'builtin:macos', mode: 'fixed', cursorId: null } },
+        cursor: {
+          ...cursor(),
+          selection: { packId: 'builtin:macos', mode: 'fixed', cursorId: null },
+        },
       }),
     /curseur|présentation/i,
   );
@@ -282,13 +343,22 @@ test('clamps and round-trips persisted auto-follow settings', () => {
     autoFollow: { safeZone: 2, responsiveness: -1, directionLock: false },
   });
 
-  assert.deepEqual(state.autoFollow, { safeZone: 0.75, responsiveness: 0, directionLock: false });
+  assert.deepEqual(state.autoFollow, {
+    safeZone: 0.75,
+    responsiveness: 0,
+    directionLock: false,
+  });
   assert.deepEqual(zoomState(state).autoFollow, state.autoFollow);
 });
 
 test('rejects malformed persisted zoom motion blur settings', () => {
   assert.throws(
-    () => zoomState({ elements: [], generatedSessions: [], motionBlur: { enabled: 'yes', intensity: 0.5 } }),
+    () =>
+      zoomState({
+        elements: [],
+        generatedSessions: [],
+        motionBlur: { enabled: 'yes', intensity: 0.5 },
+      }),
     /Flou de mouvement du zoom invalide/,
   );
 });
@@ -564,7 +634,10 @@ test('preserves attached, detached and unspecified automatic zoom links', () => 
       mode: 'auto',
       ...link,
     };
-    const normalized = zoomState({ elements: [element], generatedSessions: [] });
+    const normalized = zoomState({
+      elements: [element],
+      generatedSessions: [],
+    });
     assert.equal(normalized.elements[0].linkedClipId, link.linkedClipId);
     assert.equal(Object.hasOwn(normalized.elements[0], 'linkedClipId'), Object.hasOwn(link, 'linkedClipId'));
     assert.deepEqual(zoomState(normalized), normalized);
@@ -591,4 +664,53 @@ test('rejects invalid recording link identifiers on zooms', () => {
       }),
     );
   }
+});
+
+for (const tiltPreset of ['tilt-back', 'tilt-front', 'tilt-left', 'tilt-right', 'pull-back', 'pull-front']) {
+  test(`round-trips the illustrated ${tiltPreset} zoom preset`, () => {
+    const state = zoomState({
+      elements: [
+        {
+          id: 'preset-zoom',
+          sessionId: 'session',
+          startMs: 0,
+          endMs: 1000,
+          focus: { cx: 0.4, cy: 0.6 },
+          depth: 2,
+          mode: 'manual',
+          projection: '3d',
+          tiltPreset,
+          tiltIntensity: 0.6,
+          tiltHorizontal: 0.65,
+          tiltVertical: -0.35,
+        },
+      ],
+      generatedSessions: [],
+    });
+    assert.equal(state.elements[0].tiltPreset, tiltPreset);
+    assert.equal(state.elements[0].tiltHorizontal, 0.65);
+    assert.deepEqual(zoomState(state), state);
+  });
+}
+
+test('persists the custom cursor toggle and preserves enabled cursors from older projects', () => {
+  const state = createDefaultPresentation();
+  assert.equal(state.cursor.enabled, true);
+  for (const enabled of [true, false]) {
+    assert.equal(presentationState({ ...state, cursor: { ...state.cursor, enabled } }).cursor.enabled, enabled);
+  }
+  const legacy = { ...state.cursor };
+  delete legacy.enabled;
+  assert.equal(presentationState({ ...state, cursor: legacy }).cursor.enabled, true);
+  for (const enabled of ['false', 1, null])
+    assert.throws(() => presentationState({ ...state, cursor: { ...state.cursor, enabled } }), /cursor enabled/);
+});
+
+test('preserves glass settings and automatic provenance through desktop JSON storage', () => {
+  const { DEFAULT_GLASS_HIGHLIGHT } = require('../packages/engine/src/zoom/glass-highlight-schema.js');
+  const lens = { id: 'lens', sessionId: 'recording', startMs: 0, endMs: 2000, depth: 4, mode: 'manual', effect: 'glass', generation: 'automatic', focus: { cx: .5, cy: .5 }, glass: { ...DEFAULT_GLASS_HIGHLIGHT, shape: 'freehand', path: [{ x: -1, y: -1 }, { x: 1, y: -1 }, { x: 0, y: 1 }] } };
+  const saved = zoomState({ elements: [lens], generatedSessions: [] }).elements[0];
+  assert.deepEqual(saved.glass, lens.glass); assert.equal(saved.generation, 'automatic');
+  assert.notEqual(saved.glass.path, lens.glass.path);
+  for (const patch of [{ generation: 'bad' }, { mode: 'auto' }, { glass: { ...lens.glass, size: 0 } }]) assert.throws(() => zoomState({ elements: [{ ...lens, ...patch }], generatedSessions: [] }));
 });

@@ -35,7 +35,7 @@ Follow these exact steps to prepare your workspace, fork the repository, and del
 4. **Engineering Guidelines**:
    - Before making any code changes, read the contracts:
      - `AGENTS.md` & `docs/ARCHITECTURE.md` (Electron security boundary & Rust capture engine)
-     - `docs/UI.md` (Design tokens, reusable components in `src/components/ui/`, no `:deep` overrides)
+     - `docs/UI.md` (Design tokens, reusable components in `apps/desktop/src/components/ui/`, no `:deep` overrides)
      - `docs/CODE_QUALITY.md` (Max 500 lines per file, types in dedicated files, small units)
      - `docs/electron_window.md` (Mandatory before touching window sizes, transparent regions, or IPC)
 
@@ -128,13 +128,32 @@ git checkout -b feat/your-feature-name
    ```
    This compiles the Rust native capture addon and starts both Vite and Electron in development mode.
 
+   Each worktree has a separate persistent development profile. Vite automatically selects an available port, and every Electron window connects to that worktree's server. Run the same command in another worktree to test both apps in parallel.
+
+   For multiple profiles within one worktree:
+
+   ```bash
+   bun run dev --session first
+   bun run dev --session second
+   ```
+
+   Session names use 1–40 lowercase letters, digits, underscores or hyphens, starting with a letter or digit. Restarting the same worktree/session reuses its data. A second launch of the same profile activates its existing Beam window; use a different session name to open another instance.
+
+   Development profiles live under `<appData>/Beam Development/<worktree-hash>-<session>/` and isolate Chromium state only. Preferences, presets, video projects, screenshots and imported media stay in the usual `Videos/Beam/user/` library, shared with other development sessions and the installed application. Changes and deletions in that library affect every instance. Native builds reuse Cargo's configured target directory, including `CARGO_TARGET_DIR` and shared caches, without a per-worktree override. Cargo rebuilds only what has changed. Each Electron launch uses a private temporary copy of the engine and Linux helper under `node_modules/.cache/beam-native/`, removed after that process closes. Named sessions also use separate Vite caches.
+
+   `Ctrl+C` stops Electron and Vite together. Closing Beam normally also stops its Vite server. Without Cargo, the existing verified download prompt applies; use `--force-no-rust` to select cached/downloaded binaries even when Cargo is installed.
+
+   Global shortcuts belong to the desktop: an accelerator already registered by another Beam instance cannot be registered again. Use each instance's controls for parallel tests. Development instances do not rewrite GNOME's shared custom shortcut settings.
+
+   For renderer-only browser development, use `bun run dev:renderer`. The separate `bun run electron:dev` command remains available; set `BEAM_DEV_SERVER_URL` to the renderer's local HTTP origin if it is not `http://localhost:6500`, and use the same `--session` name when relaunching that profile.
+
 ---
 
 ### 5. Repository Guidelines & Code Quality Contracts
 
 Before contributing, make sure your code aligns with our architecture and style rules:
 
-- **UI Primitives**: Always reuse existing UI components from [`src/components/ui/`](../../src/components/ui/) (`Button`, `Select`, `Popover`, `Dialog`, `Slider`, `Switch`, `Badge`, `CopyButton`, `DeleteItem`, etc.). Do not write ad-hoc styled buttons or custom controls.
+- **UI Primitives**: Always reuse existing UI components from [`apps/desktop/src/components/ui/`](../../apps/desktop/src/components/ui/) (`Button`, `Select`, `Popover`, `Dialog`, `Slider`, `Switch`, `Badge`, `CopyButton`, `DeleteItem`, etc.). Do not write ad-hoc styled buttons or custom controls.
 - **No `:deep` CSS Selectors**: Avoid `:deep` selectors in scoped Vue component styles.
 - **File Length**: No single source file should exceed **500 lines**. Split larger files into focused composables, modules, or sub-components.
 - **Type Definitions**: Place shared TypeScript interfaces and types in dedicated `.ts` files (e.g. `*-types.ts`), not inside Vue components.
@@ -148,7 +167,7 @@ Run focused tests directly related to the code you modified:
 
 - **Vue / Frontend tests**:
   ```bash
-  bunx vitest run src/components/video-editor/timeline/tests/
+  bunx vitest run apps/desktop/src/components/editor/timeline/tests/
   ```
 - **Electron / Node tests**:
   ```bash

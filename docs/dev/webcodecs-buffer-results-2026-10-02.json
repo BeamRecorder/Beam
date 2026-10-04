@@ -1,0 +1,445 @@
+{
+  "capturedOn": "2026-10-02",
+  "purpose": "Functional WebCodecs frame submission; not a throughput benchmark or successful hardware export.",
+  "host": {
+    "distribution": "Fedora 44",
+    "gpu": "Intel Arc MTL / Core Ultra 5 125H",
+    "mesa": "26.2.3",
+    "intelMediaDriver": "26.1.5",
+    "libva": "2.23.0"
+  },
+  "reports": [
+    {
+      "schemaVersion": 1,
+      "platform": "linux",
+      "arch": "x64",
+      "profile": {
+        "codec": "avc1.640028",
+        "width": 1920,
+        "height": 1080,
+        "framerate": 30,
+        "bitrate": 5910000,
+        "bitrateMode": "constant",
+        "frames": 30
+      },
+      "note": "Functional frame-transfer check, not a throughput benchmark. WebCodecs does not expose the actual encoder implementation.",
+      "results": [
+        {
+          "input": "cpu",
+          "acceleration": "prefer-software",
+          "config": {
+            "codec": "avc1.640028",
+            "width": 1920,
+            "height": 1080,
+            "framerate": 30,
+            "bitrate": 5910000,
+            "bitrateMode": "constant",
+            "hardwareAcceleration": "prefer-software",
+            "latencyMode": "quality"
+          },
+          "supported": true,
+          "status": "encoded",
+          "submittedFrames": 30,
+          "packets": 30,
+          "bytes": 290540,
+          "frameFormat": "BGRA",
+          "error": null,
+          "elapsedMs": 369.40000000037253,
+          "versions": {
+            "electron": "44.5.1",
+            "chromium": "152.0.7977.130"
+          },
+          "gpuFeatures": {
+            "2d_canvas": "enabled",
+            "direct_rendering_display_compositor": "disabled_off_ok",
+            "gpu_compositing": "enabled",
+            "multiple_raster_threads": "enabled_on",
+            "opengl": "enabled_on",
+            "rasterization": "enabled",
+            "raw_draw": "disabled_off_ok",
+            "skia_graphite": "disabled_off",
+            "trees_in_viz": "disabled_off",
+            "video_decode": "enabled",
+            "video_encode": "enabled",
+            "vulkan": "disabled_off",
+            "webgl": "enabled",
+            "webgpu": "enabled",
+            "webgpu_on_vk_via_gl_interop": "enabled",
+            "webnn": "disabled_off"
+          },
+          "gpuCrashes": [],
+          "hostExitCode": 0,
+          "hostSignal": null,
+          "hostError": null,
+          "diagnostics": ""
+        },
+        {
+          "input": "gpu",
+          "acceleration": "prefer-software",
+          "config": {
+            "codec": "avc1.640028",
+            "width": 1920,
+            "height": 1080,
+            "framerate": 30,
+            "bitrate": 5910000,
+            "bitrateMode": "constant",
+            "hardwareAcceleration": "prefer-software",
+            "latencyMode": "quality"
+          },
+          "supported": true,
+          "status": "encoded",
+          "submittedFrames": 30,
+          "packets": 30,
+          "bytes": 291666,
+          "frameFormat": "RGBX",
+          "error": null,
+          "elapsedMs": 469.59999999962747,
+          "versions": {
+            "electron": "44.5.1",
+            "chromium": "152.0.7977.130"
+          },
+          "gpuFeatures": {
+            "2d_canvas": "enabled",
+            "direct_rendering_display_compositor": "disabled_off_ok",
+            "gpu_compositing": "enabled",
+            "multiple_raster_threads": "enabled_on",
+            "opengl": "enabled_on",
+            "rasterization": "enabled",
+            "raw_draw": "disabled_off_ok",
+            "skia_graphite": "disabled_off",
+            "trees_in_viz": "disabled_off",
+            "video_decode": "enabled",
+            "video_encode": "enabled",
+            "vulkan": "disabled_off",
+            "webgl": "enabled",
+            "webgpu": "enabled",
+            "webgpu_on_vk_via_gl_interop": "enabled",
+            "webnn": "disabled_off"
+          },
+          "gpuCrashes": [],
+          "hostExitCode": 0,
+          "hostSignal": null,
+          "hostError": null,
+          "diagnostics": ""
+        },
+        {
+          "input": "cpu",
+          "acceleration": "prefer-hardware",
+          "config": {
+            "codec": "avc1.640028",
+            "width": 1920,
+            "height": 1080,
+            "framerate": 30,
+            "bitrate": 5910000,
+            "bitrateMode": "constant",
+            "hardwareAcceleration": "prefer-hardware",
+            "latencyMode": "quality"
+          },
+          "supported": true,
+          "status": "failed",
+          "submittedFrames": 4,
+          "packets": 0,
+          "bytes": 0,
+          "frameFormat": "BGRA",
+          "error": "OperationError: Encoding error.",
+          "versions": {
+            "electron": "44.5.1",
+            "chromium": "152.0.7977.130"
+          },
+          "gpuFeatures": {
+            "2d_canvas": "enabled",
+            "direct_rendering_display_compositor": "disabled_off_ok",
+            "gpu_compositing": "enabled",
+            "multiple_raster_threads": "enabled_on",
+            "opengl": "enabled_on",
+            "rasterization": "enabled",
+            "raw_draw": "disabled_off_ok",
+            "skia_graphite": "disabled_off",
+            "trees_in_viz": "disabled_off",
+            "video_decode": "enabled",
+            "video_encode": "enabled",
+            "vulkan": "disabled_off",
+            "webgl": "enabled",
+            "webgpu": "enabled",
+            "webgpu_on_vk_via_gl_interop": "enabled",
+            "webnn": "disabled_off"
+          },
+          "gpuCrashes": [],
+          "hostExitCode": 0,
+          "hostSignal": null,
+          "hostError": null,
+          "diagnostics": "[63223:1002/224044.199472:ERROR:media/video/video_encode_accelerator_adapter.cc:234] Unable to create a mappable shared image.\n[63223:1002/224044.199672:ERROR:media/video/video_encode_accelerator_adapter.cc:234] Unable to create a mappable shared image.\n[63223:1002/224044.200665:ERROR:media/video/video_encode_accelerator_adapter.cc:234] Unable to create a mappable shared image.\n[63223:1002/224044.201555:ERROR:media/video/video_encode_accelerator_adapter.cc:234] Unable to create a mappable shared image."
+        },
+        {
+          "input": "gpu",
+          "acceleration": "prefer-hardware",
+          "config": {
+            "codec": "avc1.640028",
+            "width": 1920,
+            "height": 1080,
+            "framerate": 30,
+            "bitrate": 5910000,
+            "bitrateMode": "constant",
+            "hardwareAcceleration": "prefer-hardware",
+            "latencyMode": "quality"
+          },
+          "supported": true,
+          "status": "failed",
+          "submittedFrames": 5,
+          "packets": 0,
+          "bytes": 0,
+          "frameFormat": "RGBX",
+          "error": "OperationError: Encoding error.",
+          "versions": {
+            "electron": "44.5.1",
+            "chromium": "152.0.7977.130"
+          },
+          "gpuFeatures": {
+            "2d_canvas": "enabled",
+            "direct_rendering_display_compositor": "disabled_off_ok",
+            "gpu_compositing": "enabled",
+            "multiple_raster_threads": "enabled_on",
+            "opengl": "enabled_on",
+            "rasterization": "enabled",
+            "raw_draw": "disabled_off_ok",
+            "skia_graphite": "disabled_off",
+            "trees_in_viz": "disabled_off",
+            "video_decode": "enabled",
+            "video_encode": "enabled",
+            "vulkan": "disabled_off",
+            "webgl": "enabled",
+            "webgpu": "enabled",
+            "webgpu_on_vk_via_gl_interop": "enabled",
+            "webnn": "disabled_off"
+          },
+          "gpuCrashes": [
+            {
+              "reason": "crashed",
+              "exitCode": 133
+            }
+          ],
+          "hostExitCode": 0,
+          "hostSignal": null,
+          "hostError": null,
+          "diagnostics": "[63273:1002/224045.985033:ERROR:content/browser/gpu/gpu_process_host.cc:1035] GPU process exited unexpectedly: exit_code=133"
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "platform": "linux",
+      "arch": "x64",
+      "profile": {
+        "codec": "vp09.00.40.08",
+        "width": 1920,
+        "height": 1080,
+        "framerate": 30,
+        "bitrate": 5910000,
+        "bitrateMode": "constant",
+        "frames": 30
+      },
+      "note": "Functional frame-transfer check, not a throughput benchmark. WebCodecs does not expose the actual encoder implementation.",
+      "results": [
+        {
+          "input": "cpu",
+          "acceleration": "prefer-software",
+          "config": {
+            "codec": "vp09.00.40.08",
+            "width": 1920,
+            "height": 1080,
+            "framerate": 30,
+            "bitrate": 5910000,
+            "bitrateMode": "constant",
+            "hardwareAcceleration": "prefer-software",
+            "latencyMode": "quality"
+          },
+          "supported": true,
+          "status": "encoded",
+          "submittedFrames": 30,
+          "packets": 30,
+          "bytes": 157697,
+          "frameFormat": "BGRA",
+          "error": null,
+          "elapsedMs": 318.3999999994412,
+          "versions": {
+            "electron": "44.5.1",
+            "chromium": "152.0.7977.130"
+          },
+          "gpuFeatures": {
+            "2d_canvas": "enabled",
+            "direct_rendering_display_compositor": "disabled_off_ok",
+            "gpu_compositing": "enabled",
+            "multiple_raster_threads": "enabled_on",
+            "opengl": "enabled_on",
+            "rasterization": "enabled",
+            "raw_draw": "disabled_off_ok",
+            "skia_graphite": "disabled_off",
+            "trees_in_viz": "disabled_off",
+            "video_decode": "enabled",
+            "video_encode": "enabled",
+            "vulkan": "disabled_off",
+            "webgl": "enabled",
+            "webgpu": "enabled",
+            "webgpu_on_vk_via_gl_interop": "enabled",
+            "webnn": "disabled_off"
+          },
+          "gpuCrashes": [],
+          "hostExitCode": 0,
+          "hostSignal": null,
+          "hostError": null,
+          "diagnostics": ""
+        },
+        {
+          "input": "gpu",
+          "acceleration": "prefer-software",
+          "config": {
+            "codec": "vp09.00.40.08",
+            "width": 1920,
+            "height": 1080,
+            "framerate": 30,
+            "bitrate": 5910000,
+            "bitrateMode": "constant",
+            "hardwareAcceleration": "prefer-software",
+            "latencyMode": "quality"
+          },
+          "supported": true,
+          "status": "encoded",
+          "submittedFrames": 30,
+          "packets": 30,
+          "bytes": 149673,
+          "frameFormat": "RGBX",
+          "error": null,
+          "elapsedMs": 412.29999999981374,
+          "versions": {
+            "electron": "44.5.1",
+            "chromium": "152.0.7977.130"
+          },
+          "gpuFeatures": {
+            "2d_canvas": "enabled",
+            "direct_rendering_display_compositor": "disabled_off_ok",
+            "gpu_compositing": "enabled",
+            "multiple_raster_threads": "enabled_on",
+            "opengl": "enabled_on",
+            "rasterization": "enabled",
+            "raw_draw": "disabled_off_ok",
+            "skia_graphite": "disabled_off",
+            "trees_in_viz": "disabled_off",
+            "video_decode": "enabled",
+            "video_encode": "enabled",
+            "vulkan": "disabled_off",
+            "webgl": "enabled",
+            "webgpu": "enabled",
+            "webgpu_on_vk_via_gl_interop": "enabled",
+            "webnn": "disabled_off"
+          },
+          "gpuCrashes": [],
+          "hostExitCode": 0,
+          "hostSignal": null,
+          "hostError": null,
+          "diagnostics": ""
+        },
+        {
+          "input": "cpu",
+          "acceleration": "prefer-hardware",
+          "config": {
+            "codec": "vp09.00.40.08",
+            "width": 1920,
+            "height": 1080,
+            "framerate": 30,
+            "bitrate": 5910000,
+            "bitrateMode": "constant",
+            "hardwareAcceleration": "prefer-hardware",
+            "latencyMode": "quality"
+          },
+          "supported": true,
+          "status": "failed",
+          "submittedFrames": 4,
+          "packets": 0,
+          "bytes": 0,
+          "frameFormat": "BGRA",
+          "error": "OperationError: Encoding error.",
+          "versions": {
+            "electron": "44.5.1",
+            "chromium": "152.0.7977.130"
+          },
+          "gpuFeatures": {
+            "2d_canvas": "enabled",
+            "direct_rendering_display_compositor": "disabled_off_ok",
+            "gpu_compositing": "enabled",
+            "multiple_raster_threads": "enabled_on",
+            "opengl": "enabled_on",
+            "rasterization": "enabled",
+            "raw_draw": "disabled_off_ok",
+            "skia_graphite": "disabled_off",
+            "trees_in_viz": "disabled_off",
+            "video_decode": "enabled",
+            "video_encode": "enabled",
+            "vulkan": "disabled_off",
+            "webgl": "enabled",
+            "webgpu": "enabled",
+            "webgpu_on_vk_via_gl_interop": "enabled",
+            "webnn": "disabled_off"
+          },
+          "gpuCrashes": [],
+          "hostExitCode": 0,
+          "hostSignal": null,
+          "hostError": null,
+          "diagnostics": "[62441:1002/223952.071871:ERROR:media/video/video_encode_accelerator_adapter.cc:234] Unable to create a mappable shared image.\n[62441:1002/223952.072122:ERROR:media/video/video_encode_accelerator_adapter.cc:234] Unable to create a mappable shared image.\n[62441:1002/223952.072843:ERROR:media/video/video_encode_accelerator_adapter.cc:234] Unable to create a mappable shared image.\n[62441:1002/223952.073579:ERROR:media/video/video_encode_accelerator_adapter.cc:234] Unable to create a mappable shared image."
+        },
+        {
+          "input": "gpu",
+          "acceleration": "prefer-hardware",
+          "config": {
+            "codec": "vp09.00.40.08",
+            "width": 1920,
+            "height": 1080,
+            "framerate": 30,
+            "bitrate": 5910000,
+            "bitrateMode": "constant",
+            "hardwareAcceleration": "prefer-hardware",
+            "latencyMode": "quality"
+          },
+          "supported": true,
+          "status": "failed",
+          "submittedFrames": 5,
+          "packets": 0,
+          "bytes": 0,
+          "frameFormat": "RGBX",
+          "error": "OperationError: Encoding error.",
+          "versions": {
+            "electron": "44.5.1",
+            "chromium": "152.0.7977.130"
+          },
+          "gpuFeatures": {
+            "2d_canvas": "enabled",
+            "direct_rendering_display_compositor": "disabled_off_ok",
+            "gpu_compositing": "enabled",
+            "multiple_raster_threads": "enabled_on",
+            "opengl": "enabled_on",
+            "rasterization": "enabled",
+            "raw_draw": "disabled_off_ok",
+            "skia_graphite": "disabled_off",
+            "trees_in_viz": "disabled_off",
+            "video_decode": "enabled",
+            "video_encode": "enabled",
+            "vulkan": "disabled_off",
+            "webgl": "enabled",
+            "webgpu": "enabled",
+            "webgpu_on_vk_via_gl_interop": "enabled",
+            "webnn": "disabled_off"
+          },
+          "gpuCrashes": [
+            {
+              "reason": "crashed",
+              "exitCode": 133
+            }
+          ],
+          "hostExitCode": 0,
+          "hostSignal": null,
+          "hostError": null,
+          "diagnostics": "[62490:1002/223953.378471:ERROR:content/browser/gpu/gpu_process_host.cc:1035] GPU process exited unexpectedly: exit_code=133"
+        }
+      ]
+    }
+  ]
+}

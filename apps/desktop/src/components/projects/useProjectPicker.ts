@@ -1,0 +1,499 @@
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
+import { useScrollShadow } from '~/ui/scroll-shadow/useScrollShadow';
+import { capture } from '~/api/capture';
+import type { CaptureProject } from '~/api/types/capture-api';
+import { useTranslate } from '~/i18n/useTranslate';
+import { useProjectPreviews } from './useProjectPreviews';
+import { useProjectGrid } from './useProjectGrid';
+import { useProjectSearch } from './useProjectSearch';
+import { useProjectCatalog } from './useProjectCatalog';
+import { createProjectPickerRefresh } from './project-picker-refresh';
+import type { ProjectPickerProps, ProjectPickerEmit } from './project-picker-types';
+
+export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerEmit) {
+  const { t } = useTranslate('ProjectPicker');
+  const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
+
+  const selectedProjectId = ref<string | null>(null);
+
+  const isSelectionMode = ref(false);
+  const selectedBatchIds = ref<Set<string>>(new Set());
+  const isDeletingBatch = ref(false);
+  const deleteBatchError = ref('');
+  const isSelectingAll = ref(false);
+  let selectionGeneration = 0;
+
+  const isAllSelected = computed(() => {
+    const list = filteredProjects.value;
+    return (
+      catalog.total.value > 0 &&
+      selectedBatchIds.value.size === catalog.total.value &&
+      list.every((p) => selectedBatchIds.value.has(p.id))
+    );
+  });
+
+  const isSomeSelected = computed(() => {
+    const list = filteredProjects.value;
+    const count = list.filter((p) => selectedBatchIds.value.has(p.id)).length;
+    return count > 0 && !isAllSelected.value;
+  });
+
+  const toggleSelectionMode = () => {
+    if (isSearchOpen.value) {
+      isSearchOpen.value = false;
+      searchQuery.value = '';
+    }
+    isSelectionMode.value = !isSelectionMode.value;
+    if (!isSelectionMode.value) {
+      selectionGeneration++;
+      selectedBatchIds.value = new Set();
+    }
+  };
+
+  const cancelSelectionMode = () => {
+    selectionGeneration++;
+    isSelectionMode.value = false;
+    selectedBatchIds.value = new Set();
+  };
+
+  const toggleBatchSelect = (id: string) => {
+    const next = new Set(selectedBatchIds.value);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    selectedBatchIds.value = next;
+  };
+
+  const toggleSelectAll = async () => {
+    if (isSelectingAll.value) return;
+    if (isAllSelected.value) {
+      selectedBatchIds.value = new Set();
+    } else {
+      if (catalog.hasMore.value) {
+        const current = ++selectionGeneration;
+        isSelectingAll.value = true;
+        try {
+          await catalog.loadAll();
+          if (current !== selectionGeneration || !isSelectionMode.value || props.active === false) return;
+        } catch (error) {
+          deleteBatchError.value = error instanceof Error ? error.message : String(error);
+          return;
+        } finally {
+          isSelectingAll.value = false;
+        }
+      }
+      selectedBatchIds.value = new Set(filteredProjects.value.map((p) => p.id));
+    }
+  };
+
+  const handleDeleteBatch = async () => {
+    if (selectedBatchIds.value.size === 0 || isDeletingBatch.value) return;
+    isDeletingBatch.value = true;
+    deleteBatchError.value = '';
+    try {
+      const ids = Array.from(selectedBatchIds.value);
+      for (const id of ids) {
+        const project = projects.value.find((item) => item.id === id);
+        if (project?.mode === 'screenshot') await capture.deleteProject(id, 'screenshot');
+        else await capture.deleteProject(id);
+        if (project) emit('delete-project', project);
+      }
+      const wasSelectedDeleted = selectedProjectId.value && selectedBatchIds.value.has(selectedProjectId.value);
+      selectedBatchIds.value = new Set();
+      isSelectionMode.value = false;
+      catalog.invalidate();
+      await loadProjects();
+
+      if (wasSelectedDeleted) {
+        const remaining = projects.value;
+        const nextProject = remaining[0] ?? null;
+        if (nextProject) {
+          selectedProjectId.value = nextProject.id;
+          emit('select-project', nextProject);
+        } else {
+          selectedProjectId.value = null;
+        }
+      }
+    } catch (error) {
+      deleteBatchError.value = error instanceof Error ? error.message : String(error);
+    } finally {
+      isDeletingBatch.value = false;
+    }
+  };
+
+  const { isSearchOpen, searchQuery, searchInputRef, toggleSearch, clearSearch, handleSearchKeydown } =
+    useProjectSearch(() => !props.compact && !isNewProjectOpen.value && !renameProjectId.value, cancelSelectionMode);
+  const catalog = useProjectCatalog(searchQuery, () => props.active !== false);
+  const { projects, isLoading, errorMessage, isLoadingMore, loadMoreError } = catalog;
+
+  const filteredProjects = computed(() => {
+    const query = searchQuery.value.trim().toLowerCase();
+    if (!query) return projects.value;
+    return projects.value.filter((project) => project.name.toLowerCase().includes(query));
+  });
+
+  const { list, containerProps, wrapperProps, gridRef, gridStyle } = useProjectGrid(
+    filteredProjects,
+    () => props.compact,
+  );
+  watch(catalog.version, () => {
+    const container = containerProps.ref.value;
+    if (container) container.scrollTop = 0;
+    void nextTick(containerProps.onScroll);
+  });
+  watch(
+    [list, isLoadingMore],
+    ([rows, loadingMore]) => {
+      const last = rows.at(-1)?.data.at(-1);
+      if (
+        !loadingMore &&
+        gridRef.value &&
+        Number.parseFloat(gridStyle.value['--project-card-size']) > 0 &&
+        props.active !== false &&
+        last &&
+        !loadMoreError.value &&
+        catalog.hasMore.value &&
+        projects.value.findIndex((project) => project.id === last.id) >= projects.value.length - 8
+      )
+        void catalog.loadMore();
+    },
+    { flush: 'post' },
+  );
+
+  const { hasTopShadow, hasBottomShadow } = useScrollShadow(containerProps.ref, {
+    offset: 2,
+    orientation: 'vertical',
+  });
+
+  const maskStyle = computed(() => {
+    const top = hasTopShadow.value;
+    const bottom = hasBottomShadow.value;
+    if (top && bottom) {
+      return {
+        maskImage: 'linear-gradient(to bottom, transparent 0%, black 24px, black calc(100% - 24px), transparent 100%)',
+        WebkitMaskImage:
+          'linear-gradient(to bottom, transparent 0%, black 24px, black calc(100% - 24px), transparent 100%)',
+      };
+    }
+    if (top) {
+      return {
+        maskImage: 'linear-gradient(to bottom, transparent 0%, black 24px, black 100%)',
+        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 24px, black 100%)',
+      };
+    }
+    if (bottom) {
+      return {
+        maskImage: 'linear-gradient(to bottom, black 0%, black calc(100% - 24px), transparent 100%)',
+        WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black calc(100% - 24px), transparent 100%)',
+      };
+    }
+    return {};
+  });
+
+  const previews = useProjectPreviews(
+    containerProps.ref,
+    computed(() => (props.active === false ? [] : list.value.flatMap((row) => row.data))),
+  );
+
+  const selectedProject = computed(
+    () => projects.value.find((project) => project.id === selectedProjectId.value) ?? null,
+  );
+
+  const isRefreshing = ref(false);
+  const isRefreshSuccess = ref(false);
+  let refreshSuccessTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  const loadProjects = async () => {
+    await catalog.load();
+    selectedProjectId.value =
+      projects.value.some((project) => project.id === props.currentProjectId) ||
+      (catalog.hasMore.value && props.currentProjectId)
+        ? props.currentProjectId
+        : (projects.value[0]?.id ?? null);
+  };
+  const reopeningRefresh = createProjectPickerRefresh(() => {
+    void loadProjects();
+  });
+
+  const handleRefresh = async () => {
+    if (isRefreshing.value || isLoading.value || isLoadingMore.value) return;
+    isRefreshing.value = true;
+    isRefreshSuccess.value = false;
+    if (refreshSuccessTimeout) clearTimeout(refreshSuccessTimeout);
+    try {
+      await catalog.load(true);
+      if (errorMessage.value) return;
+      selectedProjectId.value = projects.value.some((project) => project.id === props.currentProjectId)
+        ? props.currentProjectId
+        : (projects.value[0]?.id ?? null);
+      isRefreshSuccess.value = true;
+      await nextTick();
+      previews.retryVisibleThumbnails();
+      refreshSuccessTimeout = setTimeout(() => {
+        isRefreshSuccess.value = false;
+      }, 1600);
+    } catch (error) {
+      errorMessage.value = error instanceof Error ? error.message : String(error);
+    } finally {
+      isRefreshing.value = false;
+    }
+  };
+
+  const selectProject = (project: CaptureProject) => {
+    selectedProjectId.value = project.id;
+    if (props.compact) emit('select-project', project);
+  };
+
+  const openSelectedProject = () => {
+    if (selectedProject.value && selectedProject.value.id !== props.currentProjectId) {
+      emit('open-project', selectedProject.value);
+    }
+  };
+
+  const formatDate = (date: string) => {
+    const parsedDate = new Date(date);
+    if (Number.isNaN(parsedDate.getTime())) return t('dateUnknown');
+    return dateFormatter.format(parsedDate);
+  };
+
+  const handleProjectOpen = (project: CaptureProject) => {
+    selectProject(project);
+    openSelectedProject();
+  };
+
+  watch(
+    () => props.active !== false,
+    (active) => {
+      reopeningRefresh.cancel();
+      if (!active) {
+        selectionGeneration++;
+        return;
+      }
+      if (catalog.hasLoaded()) reopeningRefresh.schedule();
+      else void loadProjects();
+      void nextTick(() => containerProps.onScroll());
+    },
+    { immediate: true },
+  );
+
+  onUnmounted(() => {
+    reopeningRefresh.cancel();
+    if (refreshSuccessTimeout) clearTimeout(refreshSuccessTimeout);
+  });
+
+  watch(
+    () => props.currentProjectId,
+    (projectId) => {
+      if (projectId && projects.value.some((project) => project.id === projectId)) {
+        selectedProjectId.value = projectId;
+      }
+    },
+  );
+
+  // New project states
+  const isNewProjectOpen = ref(false);
+  const newProjectName = ref('');
+  const newProjectError = ref('');
+  const newProjectBusy = ref(false);
+
+  // Rename project states
+  const renameProjectId = ref('');
+  const renameValue = ref('');
+  const renameError = ref('');
+  const renameBusy = ref(false);
+
+  // Delete project states
+  const deleteProjectId = ref('');
+  const deleteError = ref('');
+  const deleteBusy = ref(false);
+  const deleteConfirmProjectId = ref<string | null>(null);
+
+  const handleActionPopoverToggle = (isOpen: boolean) => {
+    if (!isOpen) {
+      deleteConfirmProjectId.value = null;
+      deleteError.value = '';
+    }
+    emit('toggle-popover', isOpen);
+  };
+
+  const openNewProjectDialog = () => {
+    newProjectName.value = '';
+    newProjectError.value = '';
+    isNewProjectOpen.value = true;
+  };
+
+  const handleCreateProject = async () => {
+    newProjectBusy.value = true;
+    newProjectError.value = '';
+    try {
+      const created = await capture.createProject({
+        name: newProjectName.value.trim() || undefined,
+      });
+      catalog.invalidate();
+      await loadProjects();
+      isNewProjectOpen.value = false;
+      emit('open-project', created);
+    } catch (error) {
+      newProjectError.value = error instanceof Error ? error.message : String(error);
+    } finally {
+      newProjectBusy.value = false;
+    }
+  };
+
+  const startRename = (project: CaptureProject) => {
+    renameProjectId.value = project.id;
+    renameValue.value = project.name;
+    renameError.value = '';
+    void nextTick(() => {
+      const cardEl = document.querySelector<HTMLElement>(`.project-card-container[data-project-id="${project.id}"]`);
+      const inputEl = cardEl?.querySelector<HTMLInputElement>('input');
+      if (inputEl) {
+        inputEl.focus();
+        inputEl.select();
+      }
+    });
+  };
+
+  const cancelRename = () => {
+    renameProjectId.value = '';
+    renameValue.value = '';
+  };
+
+  const handleRenameProject = async () => {
+    if (renameBusy.value || !renameProjectId.value) return;
+    const trimmed = renameValue.value.trim();
+    const originalProject = projects.value.find((p) => p.id === renameProjectId.value);
+    if (!trimmed || (originalProject && originalProject.name === trimmed)) {
+      cancelRename();
+      return;
+    }
+    renameBusy.value = true;
+    renameError.value = '';
+    try {
+      const renamed =
+        originalProject?.mode === 'screenshot'
+          ? await capture.renameProject(renameProjectId.value, trimmed, 'screenshot')
+          : await capture.renameProject(renameProjectId.value, trimmed);
+      emit('rename-project', renamed);
+      catalog.invalidate();
+      await loadProjects();
+      cancelRename();
+    } catch (error) {
+      renameError.value = error instanceof Error ? error.message : String(error);
+      console.error('Rename failed:', renameError.value);
+      cancelRename();
+    } finally {
+      renameBusy.value = false;
+    }
+  };
+
+  const confirmDeleteProject = (project: CaptureProject) => {
+    deleteProjectId.value = project.id;
+    deleteError.value = '';
+    deleteConfirmProjectId.value = project.id;
+  };
+
+  const handleDeleteProject = async () => {
+    deleteBusy.value = true;
+    deleteError.value = '';
+    try {
+      const project = projects.value.find((item) => item.id === deleteProjectId.value);
+      const wasSelectedDeleted = selectedProjectId.value === deleteProjectId.value;
+      if (project?.mode === 'screenshot') await capture.deleteProject(deleteProjectId.value, 'screenshot');
+      else await capture.deleteProject(deleteProjectId.value);
+      if (project) emit('delete-project', project);
+      catalog.invalidate();
+      await loadProjects();
+      deleteConfirmProjectId.value = null;
+
+      // If the currently selected project was deleted, pick the first remaining one
+      if (wasSelectedDeleted) {
+        const remaining = projects.value;
+        const nextProject = remaining[0] ?? null;
+        if (nextProject) {
+          selectedProjectId.value = nextProject.id;
+          emit('select-project', nextProject);
+        } else {
+          selectedProjectId.value = null;
+        }
+      }
+    } catch (error) {
+      deleteError.value = error instanceof Error ? error.message : String(error);
+    } finally {
+      deleteBusy.value = false;
+    }
+  };
+
+  const revealProjectFolder = (project: CaptureProject) => {
+    void (project.mode === 'screenshot'
+      ? capture.revealProject(project.id, 'screenshot')
+      : capture.revealProject(project.id));
+  };
+
+  return {
+    t,
+    projects,
+    selectedProjectId,
+    isLoading,
+    errorMessage,
+    isSearchOpen,
+    searchQuery,
+    searchInputRef,
+    isSelectionMode,
+    selectedBatchIds,
+    isDeletingBatch,
+    isAllSelected,
+    isSomeSelected,
+    isSelectingAll,
+    isLoadingMore,
+    loadMoreError,
+    loadMore: catalog.loadMore,
+    toggleSelectionMode,
+    cancelSelectionMode,
+    toggleBatchSelect,
+    toggleSelectAll,
+    handleDeleteBatch,
+    toggleSearch,
+    clearSearch,
+    handleSearchKeydown,
+    filteredProjects,
+    maskStyle,
+    selectedProject,
+    isRefreshing,
+    isRefreshSuccess,
+    loadProjects,
+    handleRefresh,
+    selectProject,
+    openSelectedProject,
+    formatDate,
+    handleProjectOpen,
+    isNewProjectOpen,
+    newProjectName,
+    newProjectError,
+    newProjectBusy,
+    renameProjectId,
+    renameValue,
+    renameBusy,
+    deleteError,
+    deleteBusy,
+    deleteConfirmProjectId,
+    handleActionPopoverToggle,
+    openNewProjectDialog,
+    handleCreateProject,
+    startRename,
+    cancelRename,
+    handleRenameProject,
+    confirmDeleteProject,
+    handleDeleteProject,
+    revealProjectFolder,
+    list,
+    containerProps,
+    wrapperProps,
+    gridRef,
+    gridStyle,
+    ...previews,
+    invalidate: catalog.invalidate,
+  };
+}

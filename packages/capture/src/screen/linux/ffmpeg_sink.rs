@@ -11,7 +11,7 @@ use crate::{
         CursorSampleState, OwnedScreenSample, PixelFormat, ScreenDiscontinuity, ScreenSampleSink,
         ScreenSegment, VideoFormat,
     },
-    storage::write_atomic,
+    storage::{JsonWrite, write_json_batch},
 };
 
 use super::ffmpeg_process::FfmpegProcess;
@@ -117,12 +117,11 @@ impl FfmpegScreenSink {
         let events_path = cursor.directory.join("cursor.json");
         let telemetry_path = cursor.directory.join("telemetry.json");
         let shapes_path = cursor.directory.join("shapes.json");
-        write_atomic(&events_path, &serde_json::to_vec_pretty(&cursor.events)?)?;
-        write_atomic(
-            &telemetry_path,
-            &serde_json::to_vec_pretty(&telemetry_from_events(&cursor.events))?,
-        )?;
-        write_atomic(&shapes_path, &serde_json::to_vec_pretty(&cursor.shapes)?)?;
+        write_json_batch([
+            JsonWrite::new(events_path, &cursor.events)?,
+            JsonWrite::new(telemetry_path, &telemetry_from_events(&cursor.events))?,
+            JsonWrite::new(shapes_path, &cursor.shapes)?,
+        ])?;
         cursor.partial_writer = None;
         let partial = cursor.directory.join("cursor.partial.jsonl");
         if partial.exists() {

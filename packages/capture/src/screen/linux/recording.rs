@@ -76,7 +76,16 @@ impl LinuxRecording {
                 (Box::new(sink), true, Some(codec))
             }
         };
-        let mut portal = super::portal::prepare_portal(kind.clone(), request.cursor)?;
+        let mut portal = match request.region_selection {
+            Some(selection) => selection.linux.portal,
+            None => super::portal::prepare_portal(kind.clone(), request.cursor)?,
+        };
+        if !portal.is_available() {
+            return Err(CaptureError::native(
+                crate::NativeCaptureErrorCode::PortalSessionClosed,
+                "The screen selection was closed before recording",
+            ));
+        }
         let remote_fd = portal.take_remote_fd()?;
         let repair_window_crop = matches!(
             portal.source_type,
@@ -98,6 +107,9 @@ impl LinuxRecording {
             metrics: metrics.clone(),
             repair_window_crop,
             region: request.region,
+            target_fps: request.recording.target_fps,
+            show_real_cursor: request.show_real_cursor
+                && matches!(request.cursor, CursorSelection::Separate { .. }),
         })?;
         Ok(Self {
             portal: Some(portal),

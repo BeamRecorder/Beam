@@ -8,7 +8,7 @@ const {
   DEFAULT_PRESET_ID,
   SCHEMA_VERSION,
   createEditorPresetStore,
-} = require('../electron/presets/editor-preset-store.cjs');
+} = require('../apps/desktop/electron/presets/editor-preset-store.cjs');
 
 const roots = [];
 const temporaryFile = () => {
@@ -27,7 +27,10 @@ test('migrates legacy editor defaults into a protected Default preset', () => {
     readPreferences: () => ({
       devices: { cameraId: 'camera-1', micId: 'mic-1' },
       extras: {
-        editorDefaults: { schemaVersion: 1, presentation: { selectedBackgroundId: 'wallpaper-1' } },
+        editorDefaults: {
+          schemaVersion: 1,
+          presentation: { selectedBackgroundId: 'wallpaper-1' },
+        },
         exportSettings: { format: 'webm', preset: 'high' },
       },
     }),
@@ -43,7 +46,10 @@ test('migrates legacy editor defaults into a protected Default preset', () => {
       protected: true,
       updatedAt: new Date(0).toISOString(),
       settings: {
-        editor: { schemaVersion: 1, presentation: { selectedBackgroundId: 'wallpaper-1' } },
+        editor: {
+          schemaVersion: 1,
+          presentation: { selectedBackgroundId: 'wallpaper-1' },
+        },
         devices: { cameraId: 'camera-1', micId: 'mic-1' },
         export: { format: 'webm', preset: 'high' },
         quickSnip: { automaticZoom: true },
@@ -64,7 +70,10 @@ test('adds Default while preserving valid named presets and repairs the active s
           id: 'studio',
           name: ' Studio ',
           protected: true,
-          settings: { editor: { canvas: '16:9' }, quickSnip: { automaticZoom: false } },
+          settings: {
+            editor: { canvas: '16:9' },
+            quickSnip: { automaticZoom: false },
+          },
         },
         { id: 'studio', name: 'Duplicate', settings: {} },
         { id: '', name: 'Invalid', settings: {} },
@@ -75,13 +84,19 @@ test('adds Default while preserving valid named presets and repairs the active s
   const document = createEditorPresetStore(file).read();
   assert.equal(document.activePresetId, DEFAULT_PRESET_ID);
   assert.deepEqual(
-    document.presets.map(({ id, name, protected: isProtected }) => ({ id, name, protected: isProtected })),
+    document.presets.map(({ id, name, protected: isProtected }) => ({
+      id,
+      name,
+      protected: isProtected,
+    })),
     [
       { id: DEFAULT_PRESET_ID, name: 'Default', protected: true },
       { id: 'studio', name: 'Studio', protected: false },
     ],
   );
-  assert.deepEqual(document.presets[1].settings.quickSnip, { automaticZoom: false });
+  assert.deepEqual(document.presets[1].settings.quickSnip, {
+    automaticZoom: false,
+  });
 });
 
 test('creates presets by cloning Default and protects Default from CRUD mutations', () => {
@@ -170,7 +185,11 @@ test('normalizes invalid documents and settings without exposing malformed value
       activePresetId: 'valid',
       presets: [
         null,
-        { id: 'valid', name: ' Valid ', settings: { devices: [], quickSnip: { automaticZoom: 'yes' } } },
+        {
+          id: 'valid',
+          name: ' Valid ',
+          settings: { devices: [], quickSnip: { automaticZoom: 'yes' } },
+        },
         { id: 'valid', name: 'Duplicate', settings: {} },
         { id: 'invalid', name: '', settings: {} },
       ],

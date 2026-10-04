@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
+const { resolveCargoTargetDirectory } = require('@beam/native-client/cargo-build-paths');
 const {
   NATIVE_TARGETS,
   captureEngineAssetName,
@@ -8,7 +9,7 @@ const {
   inputHelperAssetName,
   inputHelperFilename,
   nativeTarget,
-} = require('../../electron/capture/capture-engine-path.cjs');
+} = require('@beam/native-client/capture-engine-path');
 
 const applicationRoot = path.join(__dirname, '../..');
 
@@ -22,7 +23,10 @@ function cargoAvailable(spawnSyncImpl = spawnSync) {
 
 function runCommand(command, args, options = {}, spawnImpl = spawn) {
   return new Promise((resolve, reject) => {
-    const child = spawnImpl(command, args, { ...options, stdio: options.stdio || 'inherit' });
+    const child = spawnImpl(command, args, {
+      ...options,
+      stdio: options.stdio || 'inherit',
+    });
     child.once('error', reject);
     child.once('exit', (code, signal) => {
       if (signal) return reject(new Error(`${command} terminated by ${signal}`));
@@ -46,17 +50,19 @@ async function buildCaptureEngine({
   target = null,
   spawnImpl = spawn,
   cwd = applicationRoot,
+  resolveTarget = resolveCargoTargetDirectory,
 } = {}) {
   await runCommand('cargo', cargoBuildArguments(platform, release, target), { cwd }, spawnImpl);
+  return resolveTarget(cwd);
 }
 
 function builderPlatform(platform) {
   return platform === 'win32' ? 'win' : platform === 'darwin' ? 'mac' : platform === 'linux' ? 'linux' : null;
 }
 
-function builtFile(root, name, platform, profile, target) {
+function builtFile(root, name, platform, profile, target, targetDirectory = path.join(root, 'target')) {
   const extension = platform === 'win32' && name === 'capture-engine' ? '.exe' : '';
-  return path.join(root, 'target', ...(target ? [target] : []), profile, `${name}${extension}`);
+  return path.join(targetDirectory, ...(target ? [target] : []), profile, `${name}${extension}`);
 }
 
 function stageDirectory(root, platform, arch) {
@@ -73,20 +79,21 @@ function stageNativeFiles({
   target = null,
   engineSource = null,
   helperSource = null,
+  targetDirectory,
 }) {
   const destinationDirectory = stageDirectory(root, platform, arch);
   const engineName = captureEngineFilename(version, platform, arch);
   if (!destinationDirectory || !engineName) throw new Error(`Unsupported native target ${platform}/${arch}`);
   const files = [
     {
-      source: engineSource || builtFile(root, 'capture-engine', platform, profile, target),
+      source: engineSource || builtFile(root, 'capture-engine', platform, profile, target, targetDirectory),
       destination: path.join(destinationDirectory, engineName),
     },
   ];
   const helperName = inputHelperFilename(version, platform, arch);
   if (helperName) {
     files.push({
-      source: helperSource || builtFile(root, 'beam-input-helper', platform, profile, target),
+      source: helperSource || builtFile(root, 'beam-input-helper', platform, profile, target, targetDirectory),
       destination: path.join(destinationDirectory, helperName),
     });
   }
@@ -112,7 +119,10 @@ function collectNativeAssets({ root = applicationRoot, outputDirectory, version 
       ];
       const helper = inputHelperFilename(version, platform, arch);
       if (helper)
-        candidates.push({ source: path.join(staged, helper), asset: inputHelperAssetName(version, platform, arch) });
+        candidates.push({
+          source: path.join(staged, helper),
+          asset: inputHelperAssetName(version, platform, arch),
+        });
       for (const candidate of candidates) {
         if (!fs.existsSync(candidate.source)) continue;
         const destination = path.join(outputDirectory, candidate.asset);
@@ -143,8 +153,8 @@ async function main() {
   const { version } = require('../../package.json');
   if (command === 'build') {
     if (!cargoAvailable()) throw new Error('Cargo is required by bun run build and bun run electron:build');
-    await buildCaptureEngine({ release: true });
-    stageNativeFiles({ version });
+    const targetDirectory = await buildCaptureEngine({ release: true });
+    stageNativeFiles({ version, targetDirectory });
     return;
   }
   if (command === 'stage') {
@@ -161,7 +171,11 @@ async function main() {
   }
   if (command === 'collect') {
     const output = path.resolve(options.output || 'dist_native');
-    for (const file of collectNativeAssets({ outputDirectory: output, version })) console.log(`Collected ${file}`);
+    for (const file of collectNativeAssets({
+      outputDirectory: output,
+      version,
+    }))
+      console.log(`Collected ${file}`);
     return;
   }
   throw new Error('Usage: node scripts/native/artifacts.cjs <build|stage|collect> [--key value]');

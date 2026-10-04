@@ -3,7 +3,7 @@ use std::{fs::OpenOptions, io::Write, path::Path};
 use crate::{
     CaptureError,
     input::{InputEvent, InputEventSidecar},
-    storage::write_atomic,
+    storage::write_json_atomic,
 };
 
 pub struct InputEventWriter {
@@ -19,10 +19,7 @@ pub fn finalize_input_events(partial: &Path, destination: &Path) -> Result<(), C
         .map(serde_json::from_str::<InputEvent>)
         .collect::<Result<Vec<_>, _>>()?;
     events.sort_by_key(InputEvent::session_ns);
-    write_atomic(
-        destination,
-        &serde_json::to_vec_pretty(&InputEventSidecar::new(events))?,
-    )?;
+    write_json_atomic(destination, &InputEventSidecar::new(events))?;
     std::fs::remove_file(partial).map_err(|error| CaptureError::storage(partial, error))
 }
 

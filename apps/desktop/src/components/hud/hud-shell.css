@@ -1,0 +1,124 @@
+.hud-wrapper {
+  width: calc(100% - 32px);
+  margin: 16px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: var(--font-sans);
+}
+.hud-wrapper.embedded {
+  width: 640px;
+  max-width: 100%;
+  margin: 0;
+  flex-shrink: 0;
+}
+.hud-body {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 14px;
+  overflow-y: auto;
+}
+.hud-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 188px;
+  gap: 12px;
+}
+.capture-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.capture-section .hud-modes {
+  width: 336px;
+  max-width: 100%;
+  align-self: center;
+}
+.hud-devices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--color-border);
+}
+.hud-devices.instant .device-spacer {
+  display: none;
+}
+.device-spacer {
+  flex: 1;
+}
+.hud-devices :deep(.teleprompter-button) {
+  height: var(--control-height);
+  padding: 0 8px;
+  font-size: var(--font-size-body);
+  font-weight: var(--weight-body);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-field);
+  border-color: transparent;
+}
+.hud-devices :deep(.teleprompter-button.active) {
+  color: var(--color-primary);
+  border-color: var(--color-primary-border);
+}
+.is-unavailable {
+  color: var(--color-error);
+}
+.mode-description {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+}
+.mode-shortcut {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+.hud-wrapper.region-selection-leaving {
+  animation: hud-region-out 180ms ease forwards;
+  pointer-events: none;
+}
+.hud-wrapper.region-selection-entering {
+  animation: hud-region-in 280ms ease both;
+}
+@keyframes hud-region-out {
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+@keyframes hud-region-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-wrapper.region-selection-leaving,
+  .hud-wrapper.region-selection-entering {
+    animation: none;
+  }
+}
+@media (max-width: 560px) {
+  .embedded .hud-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .embedded .hud-devices {
+    border-left: 0;
+    padding: 0;
+  }
+  .hud-wrapper.embedded {
+    height: auto !important;
+    max-height: 440px;
+  }
+  .embedded .hud-body {
+    padding: 14px;
+  }
+}

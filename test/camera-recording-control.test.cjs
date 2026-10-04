@@ -1,7 +1,10 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { createCameraRecordingControl, validateControl } = require('../electron/camera/recording-control.cjs');
+const {
+  createCameraRecordingControl,
+  validateControl,
+} = require('../apps/desktop/electron/camera/recording-control.cjs');
 
 const sourceId = 'camera:chromium:camera-1';
 const sessionId = '019f84dd-4d9d-7f61-ac30-5da50169ecbc';
@@ -18,7 +21,10 @@ function createFixture({ timeoutMs = 100, allowQuickSnipOwner = false } = {}) {
   const configureCalls = [];
   const rendererReadyCalls = [];
   const hudMessages = [];
-  const hudWebContents = { id: 1, send: (...message) => hudMessages.push(message) };
+  const hudWebContents = {
+    id: 1,
+    send: (...message) => hudMessages.push(message),
+  };
   const overlayWebContents = { id: 2 };
   const otherWebContents = { id: 3 };
   let quickSnipDestroyed = false;
@@ -87,7 +93,10 @@ function createFixture({ timeoutMs = 100, allowQuickSnipOwner = false } = {}) {
 }
 
 async function prepare(fixture) {
-  const resultPromise = fixture.invoke(fixture.hudWebContents, { action: 'prepare', sourceId });
+  const resultPromise = fixture.invoke(fixture.hudWebContents, {
+    action: 'prepare',
+    sourceId,
+  });
   await Promise.resolve();
   const command = fixture.commands.at(-1);
   fixture.emit('camera-overlay:recording-result', fixture.overlayWebContents, {
@@ -123,7 +132,10 @@ test('accepts recording control only from the canonical HUD sender', async () =>
 
 test('allows the Quick Snip crop window to own recording and rejects commands from other windows', async () => {
   const fixture = createFixture({ allowQuickSnipOwner: true });
-  const preparation = fixture.invoke(fixture.quickSnipWebContents, { action: 'prepare', sourceId });
+  const preparation = fixture.invoke(fixture.quickSnipWebContents, {
+    action: 'prepare',
+    sourceId,
+  });
   await Promise.resolve();
   const command = fixture.commands[0];
 
@@ -157,7 +169,10 @@ test('allows the Quick Snip crop window to own recording and rejects commands fr
 
 test('failure after Quick Snip owner destruction releases the camera recording lock', async () => {
   const fixture = createFixture({ allowQuickSnipOwner: true });
-  const cropPreparation = fixture.invoke(fixture.quickSnipWebContents, { action: 'prepare', sourceId });
+  const cropPreparation = fixture.invoke(fixture.quickSnipWebContents, {
+    action: 'prepare',
+    sourceId,
+  });
   await Promise.resolve();
   const cropCommand = fixture.commands.at(-1);
   fixture.emit('camera-overlay:recording-result', fixture.overlayWebContents, {
@@ -176,7 +191,10 @@ test('failure after Quick Snip owner destruction releases the camera recording l
   );
   assert.deepEqual(fixture.quickSnipMessages, []);
 
-  const hudPreparation = fixture.invoke(fixture.hudWebContents, { action: 'prepare', sourceId });
+  const hudPreparation = fixture.invoke(fixture.hudWebContents, {
+    action: 'prepare',
+    sourceId,
+  });
   await Promise.resolve();
   const hudCommand = fixture.commands.at(-1);
   assert.notEqual(hudCommand.recordingId, cropCommand.recordingId);
@@ -195,18 +213,32 @@ test('rejects malformed controls before dispatching to the overlay', () => {
   assert.throws(() => validateControl({ action: 'prepare', sourceId: 'camera:chromium:' }), /Invalid camera source/);
   assert.throws(() => validateControl({ action: 'start', recordingId: 'recording-1' }), /capture session identifier/);
   assert.throws(
-    () => validateControl({ action: 'pause', recordingId: 'recording-1', endNs: Number.POSITIVE_INFINITY }),
+    () =>
+      validateControl({
+        action: 'pause',
+        recordingId: 'recording-1',
+        endNs: Number.POSITIVE_INFINITY,
+      }),
     /camera segment end/,
   );
   assert.throws(
-    () => validateControl({ action: 'fail', recordingId: 'recording-1', sessionId, reason: 'x'.repeat(501) }),
+    () =>
+      validateControl({
+        action: 'fail',
+        recordingId: 'recording-1',
+        sessionId,
+        reason: 'x'.repeat(501),
+      }),
     /camera failure reason/,
   );
 });
 
 test('correlates results to the pending command and ignores other renderers or command ids', async () => {
   const fixture = createFixture();
-  const resultPromise = fixture.invoke(fixture.hudWebContents, { action: 'prepare', sourceId });
+  const resultPromise = fixture.invoke(fixture.hudWebContents, {
+    action: 'prepare',
+    sourceId,
+  });
   await Promise.resolve();
   const command = fixture.commands[0];
   let settled = false;
@@ -264,7 +296,11 @@ test('forwards renderer-ready only through the overlay identity and forwards fat
   ]);
 
   await assert.rejects(
-    fixture.invoke(fixture.hudWebContents, { action: 'stop', recordingId: command.recordingId, endNs: 1 }),
+    fixture.invoke(fixture.hudWebContents, {
+      action: 'stop',
+      recordingId: command.recordingId,
+      endNs: 1,
+    }),
     /no longer active/,
   );
 });
@@ -308,8 +344,16 @@ test('runs the camera recording control state machine with the session timeline'
     startNs: 0,
   });
 
-  const pause = await completeControl(fixture, { action: 'pause', recordingId, endNs: 1_000_000_000 });
-  assert.deepEqual(pause.command.control, { action: 'pause', recordingId, endNs: 1_000_000_000 });
+  const pause = await completeControl(fixture, {
+    action: 'pause',
+    recordingId,
+    endNs: 1_000_000_000,
+  });
+  assert.deepEqual(pause.command.control, {
+    action: 'pause',
+    recordingId,
+    endNs: 1_000_000_000,
+  });
 
   const commandCountBeforeMismatchedResume = fixture.commands.length;
   await assert.rejects(
@@ -336,8 +380,16 @@ test('runs the camera recording control state machine with the session timeline'
     startNs: 2_000_000_000,
   });
 
-  const stop = await completeControl(fixture, { action: 'stop', recordingId, endNs: 3_000_000_000 });
-  assert.deepEqual(stop.command.control, { action: 'stop', recordingId, endNs: 3_000_000_000 });
+  const stop = await completeControl(fixture, {
+    action: 'stop',
+    recordingId,
+    endNs: 3_000_000_000,
+  });
+  assert.deepEqual(stop.command.control, {
+    action: 'stop',
+    recordingId,
+    endNs: 3_000_000_000,
+  });
   assert.equal(stop.result, undefined);
 });
 
@@ -354,13 +406,20 @@ test('rejects a pending command on timeout and permits a later preparation', asy
 
 test('cleanup rejects pending commands and clears the active recording', async () => {
   const fixture = createFixture({ timeoutMs: 1_000 });
-  const pending = fixture.invoke(fixture.hudWebContents, { action: 'prepare', sourceId });
+  const pending = fixture.invoke(fixture.hudWebContents, {
+    action: 'prepare',
+    sourceId,
+  });
   await Promise.resolve();
   fixture.cleanup();
 
   await assert.rejects(pending, /control was closed/);
   await assert.rejects(
-    fixture.invoke(fixture.hudWebContents, { action: 'stop', recordingId: fixture.commands[0].recordingId, endNs: 1 }),
+    fixture.invoke(fixture.hudWebContents, {
+      action: 'stop',
+      recordingId: fixture.commands[0].recordingId,
+      endNs: 1,
+    }),
     /no longer active/,
   );
 });
@@ -382,7 +441,10 @@ test('cleanup notifies the HUD once for an active recording and rejects pending 
   assert.deepEqual(fixture.hudMessages, [
     [
       'camera-overlay:recording-failure',
-      { recordingId: command.recordingId, message: 'Camera recording control was closed.' },
+      {
+        recordingId: command.recordingId,
+        message: 'Camera recording control was closed.',
+      },
     ],
   ]);
 });

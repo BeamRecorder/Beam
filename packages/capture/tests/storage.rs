@@ -25,6 +25,7 @@ fn manifest(project_id: ProjectId, session_id: SessionId) -> SessionManifest {
         permissions: PermissionSnapshot::default(),
         warnings: Vec::new(),
         completed: false,
+        cursor_embedded: false,
     }
 }
 
@@ -66,7 +67,7 @@ fn segments_validate_boundaries() {
 }
 
 #[test]
-fn atomic_write_recovers_from_a_stale_temporary_file() {
+fn atomic_write_preserves_an_unowned_temporary_file() {
     let temporary = tempfile::tempdir().expect("temporary directory");
     let destination = temporary.path().join("manifest.json");
     let stale = temporary.path().join("manifest.json.tmp");
@@ -76,7 +77,10 @@ fn atomic_write_recovers_from_a_stale_temporary_file() {
         std::fs::read(&destination).expect("read destination"),
         b"complete"
     );
-    assert!(!stale.exists());
+    assert_eq!(
+        std::fs::read(&stale).expect("unowned temporary"),
+        b"truncated"
+    );
 }
 
 #[test]

@@ -10,8 +10,8 @@ const {
   migrateComposition,
   normalizeComposition,
   pruneProjectMedia,
-} = require('../electron/projects/clip-composition.cjs');
-const { createProjectStore } = require('../electron/projects/project-store.cjs');
+} = require('../apps/desktop/electron/projects/clip-composition.cjs');
+const { createProjectStore } = require('../apps/desktop/electron/projects/project-store.cjs');
 
 const setup = () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-clips-'));
@@ -73,15 +73,32 @@ const webcamClip = (assetId, overrides = {}) => {
 };
 
 const cursorPresentation = (
-  motion = { preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+  motion = {
+    preset: 'smooth',
+    smoothing: 0.67,
+    springMassMultiplier: 1.29,
+    motionBlur: 0.4,
+  },
 ) => ({
   selectedCursor: 'automatic',
   size: 45,
   color: '#000000',
   shadow: { enabled: true, blur: 6, color: '#000000', direction: 'bottom' },
   clickEffects: {
-    left: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#ff5a1f' },
-    right: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#6366f1' },
+    left: {
+      springEnabled: true,
+      springIntensity: 50,
+      rippleEnabled: true,
+      rippleSize: 30,
+      rippleColor: '#ff5a1f',
+    },
+    right: {
+      springEnabled: true,
+      springIntensity: 50,
+      rippleEnabled: true,
+      rippleSize: 30,
+      rippleColor: '#6366f1',
+    },
   },
   motion,
 });
@@ -346,7 +363,10 @@ test('round-trips optional clip lock flags without materializing omitted values'
   const project = store.create({ name: 'Clip locks' });
   const source = path.join(root, 'clip.mp4');
   fs.writeFileSync(source, 'video');
-  const imported = store.importEditorMedia(project.id, { kind: 'video', source });
+  const imported = store.importEditorMedia(project.id, {
+    kind: 'video',
+    source,
+  });
   const asset = { ...imported, durationMs: 1_000, width: 1_280, height: 720 };
   const state = store.editorState(project.id);
   state.composition = {
@@ -365,7 +385,11 @@ test('round-trips optional clip lock flags without materializing omitted values'
   const reopened = store.editorState(project.id);
   const lockValues = (clips) => Object.fromEntries(clips.map((clip) => [clip.id, clip.locked]));
 
-  const expected = { 'locked-clip': true, 'unlocked-clip': false, 'legacy-clip': undefined };
+  const expected = {
+    'locked-clip': true,
+    'unlocked-clip': false,
+    'legacy-clip': undefined,
+  };
   assert.deepEqual(lockValues(saved.composition.clips), expected);
   assert.deepEqual(lockValues(persisted.editor.composition.clips), expected);
   assert.deepEqual(lockValues(reopened.composition.clips), expected);
@@ -384,7 +408,10 @@ test('round-trips recording clip links, explicit detachment, and omitted legacy 
   const project = store.create({ name: 'Recording links' });
   const source = path.join(root, 'clip.mp4');
   fs.writeFileSync(source, 'video');
-  const imported = store.importEditorMedia(project.id, { kind: 'video', source });
+  const imported = store.importEditorMedia(project.id, {
+    kind: 'video',
+    source,
+  });
   const asset = { ...imported, durationMs: 1_000, width: 1_280, height: 720 };
   const state = store.editorState(project.id);
   state.composition = {
@@ -392,7 +419,10 @@ test('round-trips recording clip links, explicit detachment, and omitted legacy 
     assets: [asset],
     keyboardCaptionSessions: [],
     clips: [
-      visualClip(asset.id, { id: 'linked-clip', recordingClipId: 'screen-recording' }),
+      visualClip(asset.id, {
+        id: 'linked-clip',
+        recordingClipId: 'screen-recording',
+      }),
       visualClip(asset.id, { id: 'detached-clip', recordingClipId: null }),
       visualClip(asset.id, { id: 'legacy-clip' }),
     ],
@@ -482,7 +512,13 @@ test('normalizes voiceover clips with audio analyses and persisted normalization
         audioAnalyses: [analysis],
       },
     ],
-    clips: [audioClip('voiceover-asset', { id: 'voiceover-clip', role: 'voiceover', normalization })],
+    clips: [
+      audioClip('voiceover-asset', {
+        id: 'voiceover-clip',
+        role: 'voiceover',
+        normalization,
+      }),
+    ],
   });
 
   assert.equal(normalized.clips[0].role, 'voiceover');
@@ -497,7 +533,10 @@ test('migrates and persists schema v13 voiceover metadata into schema v14', () =
     const project = store.create({ name: 'Voice-over migration' });
     const source = path.join(root, 'voiceover.webm');
     fs.writeFileSync(source, 'webm');
-    const asset = store.importEditorMedia(project.id, { kind: 'audio', source });
+    const asset = store.importEditorMedia(project.id, {
+      kind: 'audio',
+      source,
+    });
     const analysis = {
       version: 1,
       key: `${asset.id}:0:1200:v1`,
@@ -586,7 +625,11 @@ test('normalizes the supported phone frame values and rejects unknown frames', (
           schemaVersion: 14,
           assets: [asset],
           keyboardCaptionSessions: [],
-          clips: [visualClip(asset.id, { appearance: { ...visualClip(asset.id).appearance, frame } })],
+          clips: [
+            visualClip(asset.id, {
+              appearance: { ...visualClip(asset.id).appearance, frame },
+            }),
+          ],
         }),
       /Apparence|invalide/i,
     );
@@ -627,7 +670,11 @@ test('persists solid, radial-gradient, adaptive and continuity phone fit backgro
       keyboardCaptionSessions: [],
       clips: [
         visualClip(asset.id, {
-          appearance: { ...visualClip(asset.id).appearance, frame: 'iphone-16-max', phoneFrameFill },
+          appearance: {
+            ...visualClip(asset.id).appearance,
+            frame: 'iphone-16-max',
+            phoneFrameFill,
+          },
         }),
       ],
     });
@@ -657,7 +704,10 @@ test('defaults omitted phone fit backgrounds for legacy appearances', () => {
     keyboardCaptionSessions: [],
     clips: [source],
   });
-  assert.deepEqual(normalized.clips[0].appearance.phoneFrameFill, { kind: 'color', color: '#000000' });
+  assert.deepEqual(normalized.clips[0].appearance.phoneFrameFill, {
+    kind: 'color',
+    color: '#000000',
+  });
 
   const migrated = migrateComposition(
     {
@@ -669,7 +719,10 @@ test('defaults omitted phone fit backgrounds for legacy appearances', () => {
     true,
     [],
   );
-  assert.deepEqual(migrated.clips[0].appearance.phoneFrameFill, { kind: 'color', color: '#000000' });
+  assert.deepEqual(migrated.clips[0].appearance.phoneFrameFill, {
+    kind: 'color',
+    color: '#000000',
+  });
 });
 
 test('rejects invalid phone fit backgrounds while accepting only adaptive as a special mode', () => {
@@ -708,7 +761,14 @@ test('rejects invalid phone fit backgrounds while accepting only adaptive as a s
           schemaVersion: 14,
           assets: [asset],
           keyboardCaptionSessions: [],
-          clips: [visualClip(asset.id, { appearance: { ...visualClip(asset.id).appearance, phoneFrameFill } })],
+          clips: [
+            visualClip(asset.id, {
+              appearance: {
+                ...visualClip(asset.id).appearance,
+                phoneFrameFill,
+              },
+            }),
+          ],
         }),
       /remplissage|couleur|dégradé|étape|invalide/i,
     );
@@ -719,11 +779,16 @@ test('rejects invalid phone fit backgrounds while accepting only adaptive as a s
     keyboardCaptionSessions: [],
     clips: [
       visualClip(asset.id, {
-        appearance: { ...visualClip(asset.id).appearance, phoneFrameFill: { kind: 'adaptive' } },
+        appearance: {
+          ...visualClip(asset.id).appearance,
+          phoneFrameFill: { kind: 'adaptive' },
+        },
       }),
     ],
   });
-  assert.deepEqual(adaptive.clips[0].appearance.phoneFrameFill, { kind: 'adaptive' });
+  assert.deepEqual(adaptive.clips[0].appearance.phoneFrameFill, {
+    kind: 'adaptive',
+  });
 });
 
 test('clamps continuity phone fit background settings during normalization', () => {
@@ -766,7 +831,10 @@ test('round-trips text and keyboard captions in the canonical composition schema
     keyboardCaptionSessions: ['session-keyboard', 'session-keyboard'],
     clips: [
       captionClip(textCaption({ style: canonicalCaptionStyle() })),
-      captionClip(keyboardCaption({ style: canonicalCaptionStyle() }), { id: 'clip-keyboard', order: 1 }),
+      captionClip(keyboardCaption({ style: canonicalCaptionStyle() }), {
+        id: 'clip-keyboard',
+        order: 1,
+      }),
     ],
   });
 
@@ -993,13 +1061,21 @@ test('normalizes assetless color layers and preserves their visual track orderin
   });
 
   assert.deepEqual(
-    normalized.clips.map((clip) => ({ id: clip.id, trackId: clip.trackId, order: clip.order, assetId: clip.assetId })),
+    normalized.clips.map((clip) => ({
+      id: clip.id,
+      trackId: clip.trackId,
+      order: clip.order,
+      assetId: clip.assetId,
+    })),
     [
       { id: 'color-solid', trackId: 'color-track', order: 0, assetId: '' },
       { id: 'color-radial', trackId: 'gradient-track', order: 1, assetId: '' },
     ],
   );
-  assert.deepEqual(normalized.clips[0].fill, { kind: 'color', color: '#000000' });
+  assert.deepEqual(normalized.clips[0].fill, {
+    kind: 'color',
+    color: '#000000',
+  });
   assert.equal(normalized.clips[1].fill.kind, 'gradient');
   assert.equal(normalized.clips[1].fill.gradient.type, 'radial');
   assert.equal(normalized.clips[1].fill.gradient.stops[1].alpha, 0.6);
@@ -1259,9 +1335,15 @@ test('rejects malformed keyboard captions and invalid keyboard session markers',
         { offsetMs: 9, modifiers: [], key: 'c' },
       ],
     }),
-    keyboardCaption({ steps: [{ offsetMs: 0, modifiers: ['control', 'control'], key: 'k' }] }),
-    keyboardCaption({ steps: [{ offsetMs: 0, modifiers: ['unknown'], key: 'k' }] }),
-    keyboardCaption({ steps: [{ offsetMs: 0, modifiers: [], key: 'unknown' }] }),
+    keyboardCaption({
+      steps: [{ offsetMs: 0, modifiers: ['control', 'control'], key: 'k' }],
+    }),
+    keyboardCaption({
+      steps: [{ offsetMs: 0, modifiers: ['unknown'], key: 'k' }],
+    }),
+    keyboardCaption({
+      steps: [{ offsetMs: 0, modifiers: [], key: 'unknown' }],
+    }),
     keyboardCaption({ recordedPlatform: 'android' }),
     keyboardCaption({ sourceSessionId: '' }),
   ];
@@ -1279,7 +1361,13 @@ test('rejects malformed keyboard captions and invalid keyboard session markers',
     );
 
   assert.throws(
-    () => normalizeComposition({ schemaVersion: 14, assets: [], keyboardCaptionSessions: [null], clips: [] }),
+    () =>
+      normalizeComposition({
+        schemaVersion: 14,
+        assets: [],
+        keyboardCaptionSessions: [null],
+        clips: [],
+      }),
     /session|caption/i,
   );
 });
@@ -1359,13 +1447,24 @@ test('migrates legacy composition fields and atomically persists the canonical e
     },
     zoom: { elements: [], generatedSessions: [] },
     presentation: {
-      canvas: { preset: '21:9', width: 2520, height: 1080, showBackground: true },
+      canvas: {
+        preset: '21:9',
+        width: 2520,
+        height: 1080,
+        showBackground: true,
+      },
       selectedBackgroundId: null,
       background: null,
       blurPercent: 0,
       importedBackgrounds: [],
       cursorEffects: {
-        left: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#ff5a1f' },
+        left: {
+          springEnabled: true,
+          springIntensity: 50,
+          rippleEnabled: true,
+          rippleSize: 30,
+          rippleColor: '#ff5a1f',
+        },
         right: {
           springEnabled: true,
           springIntensity: 50,
@@ -1374,7 +1473,12 @@ test('migrates legacy composition fields and atomically persists the canonical e
           rippleColor: '#6366f1',
         },
       },
-      cursorMotion: { preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+      cursorMotion: {
+        preset: 'smooth',
+        smoothing: 0.67,
+        springMassMultiplier: 1.29,
+        motionBlur: 0.4,
+      },
     },
   };
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
@@ -1433,7 +1537,11 @@ test('migrates v2 composition to v14 and records historical project sessions onc
   delete legacyText.type;
   manifest.editor = {
     schemaVersion: 2,
-    composition: { schemaVersion: 2, assets: [], clips: [captionClip(legacyText)] },
+    composition: {
+      schemaVersion: 2,
+      assets: [],
+      clips: [captionClip(legacyText)],
+    },
     zoom: { elements: [], generatedSessions: [] },
     presentation: manifest.editor.presentation,
   };
@@ -1451,7 +1559,11 @@ test('migrates v2 composition to v14 and records historical project sessions onc
   assert.deepEqual(store.editorState(project.id).composition.keyboardCaptionSessions, ['session-old', 'session-new']);
 
   const direct = migrateComposition(
-    { schemaVersion: 2, assets: [], clips: [captionClip({ ...textCaption(), type: undefined })] },
+    {
+      schemaVersion: 2,
+      assets: [],
+      clips: [captionClip({ ...textCaption(), type: undefined })],
+    },
     true,
     ['session-old'],
   );
@@ -1465,7 +1577,11 @@ test('migrates a v11 composition inside the current editor envelope and rewrites
   const project = store.create({ name: 'V11 envelope migration' });
   const manifestPath = path.join(store.directoryFor(project.id), 'project.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  const selection = { packId: 'builtin:macos', mode: 'automatic', cursorId: null };
+  const selection = {
+    packId: 'builtin:macos',
+    mode: 'automatic',
+    cursorId: null,
+  };
 
   manifest.editor = {
     ...manifest.editor,
@@ -1627,7 +1743,12 @@ test('migrates v7 webcam clips to v14 custom presets without changing their rend
     groupId: 'recording-segment',
   });
   const migrated = migrateComposition(
-    { schemaVersion: 7, assets: [asset], keyboardCaptionSessions: [], clips: [screen, camera] },
+    {
+      schemaVersion: 7,
+      assets: [asset],
+      keyboardCaptionSessions: [],
+      clips: [screen, camera],
+    },
     true,
     [],
   );
@@ -1665,7 +1786,12 @@ test('migrates v8 compositions to v14 while preserving freeze-frame source times
     freezeFrameSourceMs: 500,
   });
   const migrated = migrateComposition(
-    { schemaVersion: 8, assets: [asset], keyboardCaptionSessions: [], clips: [source] },
+    {
+      schemaVersion: 8,
+      assets: [asset],
+      keyboardCaptionSessions: [],
+      clips: [source],
+    },
     true,
     [],
   );
@@ -1726,10 +1852,16 @@ test('migrates v9 keyboard caption markers only when the matching keyboard capti
 
 test('migrates v10 captions to v14 without persisting keyboard caption custom text', () => {
   const keyboard = keyboardCaption({
-    style: canonicalCaptionStyle({ color: '#123456', customText: 'Old keyboard caption text' }),
+    style: canonicalCaptionStyle({
+      color: '#123456',
+      customText: 'Old keyboard caption text',
+    }),
   });
   const ordinary = textCaption({
-    style: canonicalCaptionStyle({ color: '#654321', customText: 'Keep this ordinary caption text' }),
+    style: canonicalCaptionStyle({
+      color: '#654321',
+      customText: 'Keep this ordinary caption text',
+    }),
   });
   const migrated = migrateComposition(
     {
@@ -1779,8 +1911,18 @@ test('normalizes a v14 webcam with omitted presets to custom while rejecting exp
   assert.equal(camera.cameraFramingPreset, 'custom');
   assert.equal(camera.cameraSplitRatio, 0.5);
   assert.equal(camera.cameraSplitPadding, 0);
-  assert.deepEqual(camera.transform, { x: 0.17, y: 0.23, width: 0.31, height: 0.27 });
-  assert.deepEqual(camera.crop, { x: 0.11, y: 0.07, width: 0.73, height: 0.81 });
+  assert.deepEqual(camera.transform, {
+    x: 0.17,
+    y: 0.23,
+    width: 0.31,
+    height: 0.27,
+  });
+  assert.deepEqual(camera.crop, {
+    x: 0.11,
+    y: 0.07,
+    width: 0.73,
+    height: 0.81,
+  });
 
   assert.throws(
     () =>
@@ -1788,7 +1930,12 @@ test('normalizes a v14 webcam with omitted presets to custom while rejecting exp
         schemaVersion: 14,
         assets: [asset],
         keyboardCaptionSessions: [],
-        clips: [webcamClip(asset.id, { cameraLayoutPreset: 'invalid', cameraFramingPreset: 'fill' })],
+        clips: [
+          webcamClip(asset.id, {
+            cameraLayoutPreset: 'invalid',
+            cameraFramingPreset: 'fill',
+          }),
+        ],
       }),
     /preset|caméra/i,
   );
@@ -1799,7 +1946,11 @@ test('normalizes a v14 webcam with omitted presets to custom while rejecting exp
         assets: [asset],
         keyboardCaptionSessions: [],
         clips: [
-          webcamClip(asset.id, { cameraLayoutPreset: 'split-left', cameraFramingPreset: 'fill', cameraSplitRatio: 1 }),
+          webcamClip(asset.id, {
+            cameraLayoutPreset: 'split-left',
+            cameraFramingPreset: 'fill',
+            cameraSplitRatio: 1,
+          }),
         ],
       }),
     /répartition|caméra/i,
@@ -1826,7 +1977,12 @@ test('normalizes a v14 webcam with omitted presets to custom while rejecting exp
         schemaVersion: 14,
         assets: [asset],
         keyboardCaptionSessions: [],
-        clips: [webcamClip(asset.id, { cameraLayoutPreset: 'fullscreen', cameraFramingPreset: 'invalid' })],
+        clips: [
+          webcamClip(asset.id, {
+            cameraLayoutPreset: 'fullscreen',
+            cameraFramingPreset: 'invalid',
+          }),
+        ],
       }),
     /preset|caméra/i,
   );
@@ -1884,18 +2040,35 @@ test('normalizes valid freeze-frame source times and rejects invalid or image fr
   ];
   for (const clip of invalid)
     assert.throws(
-      () => normalizeComposition({ schemaVersion: 14, assets: [asset], keyboardCaptionSessions: [], clips: [clip] }),
+      () =>
+        normalizeComposition({
+          schemaVersion: 14,
+          assets: [asset],
+          keyboardCaptionSessions: [],
+          clips: [clip],
+        }),
       /figée|freeze|image/i,
     );
 
-  const imageAsset = { ...asset, id: 'asset-image', kind: 'image', fileName: 'image.png' };
+  const imageAsset = {
+    ...asset,
+    id: 'asset-image',
+    kind: 'image',
+    fileName: 'image.png',
+  };
   assert.throws(
     () =>
       normalizeComposition({
         schemaVersion: 14,
         assets: [imageAsset],
         keyboardCaptionSessions: [],
-        clips: [visualClip(imageAsset.id, { id: 'image-hold', kind: 'image', freezeFrameSourceMs: 100 })],
+        clips: [
+          visualClip(imageAsset.id, {
+            id: 'image-hold',
+            kind: 'image',
+            freezeFrameSourceMs: 100,
+          }),
+        ],
       }),
     /figée|freeze|image/i,
   );
@@ -1907,7 +2080,10 @@ test('migrates and persists omitted camera presets when opening a v9 project', (
   const project = store.create({ name: 'Incomplete v9 camera presets' });
   const source = path.join(root, 'camera.mp4');
   fs.writeFileSync(source, 'camera');
-  const imported = store.importEditorMedia(project.id, { kind: 'video', source });
+  const imported = store.importEditorMedia(project.id, {
+    kind: 'video',
+    source,
+  });
   const projectDirectory = store.directoryFor(project.id);
   const manifestPath = path.join(projectDirectory, 'project.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
@@ -1948,7 +2124,12 @@ test('rejects unknown camera presets in a canonical v14 webcam clip', () => {
         schemaVersion: 14,
         assets: [asset],
         keyboardCaptionSessions: [],
-        clips: [webcamClip(asset.id, { cameraLayoutPreset: 'invalid', cameraFramingPreset: 'fill' })],
+        clips: [
+          webcamClip(asset.id, {
+            cameraLayoutPreset: 'invalid',
+            cameraFramingPreset: 'fill',
+          }),
+        ],
       }),
     /preset|caméra/i,
   );
@@ -1966,11 +2147,24 @@ test('validates canonical transition presets, durations, domains, and edge budge
     origin: 'project',
   };
   const canonical = (clip) =>
-    normalizeComposition({ schemaVersion: 14, assets: [asset], clips: [clip], keyboardCaptionSessions: [] });
+    normalizeComposition({
+      schemaVersion: 14,
+      assets: [asset],
+      clips: [clip],
+      keyboardCaptionSessions: [],
+    });
   const valid = visualClip(asset.id, {
     transitions: {
-      entry: { preset: { kind: 'slide', direction: 'left' }, durationMs: 250, easingPower: 1 },
-      exit: { preset: { kind: 'zoom', direction: 'out' }, durationMs: 250, easingPower: 5 },
+      entry: {
+        preset: { kind: 'slide', direction: 'left' },
+        durationMs: 250,
+        easingPower: 1,
+      },
+      exit: {
+        preset: { kind: 'zoom', direction: 'out' },
+        durationMs: 250,
+        easingPower: 5,
+      },
     },
   });
   assert.deepEqual(canonical(valid).clips[0].transitions, valid.transitions);
@@ -1979,7 +2173,10 @@ test('validates canonical transition presets, durations, domains, and edge budge
       () =>
         canonical(
           visualClip(asset.id, {
-            transitions: { entry: { preset: { kind: 'fade' }, durationMs: 100, easingPower }, exit: null },
+            transitions: {
+              entry: { preset: { kind: 'fade' }, durationMs: 100, easingPower },
+              exit: null,
+            },
           }),
         ),
       /puissance|power|transition/i,
@@ -1989,7 +2186,13 @@ test('validates canonical transition presets, durations, domains, and edge budge
     () =>
       canonical(
         visualClip(asset.id, {
-          transitions: { entry: { preset: { kind: 'slide', direction: 'diagonal' }, durationMs: 100 }, exit: null },
+          transitions: {
+            entry: {
+              preset: { kind: 'slide', direction: 'diagonal' },
+              durationMs: 100,
+            },
+            exit: null,
+          },
         }),
       ),
     /Direction|transition/i,
@@ -1998,7 +2201,10 @@ test('validates canonical transition presets, durations, domains, and edge budge
     () =>
       canonical(
         visualClip(asset.id, {
-          transitions: { entry: { preset: { kind: 'fade', extra: true }, durationMs: 100 }, exit: null },
+          transitions: {
+            entry: { preset: { kind: 'fade', extra: true }, durationMs: 100 },
+            exit: null,
+          },
         }),
       ),
     /paramètres|preset|transition/i,
@@ -2007,7 +2213,10 @@ test('validates canonical transition presets, durations, domains, and edge budge
     () =>
       canonical(
         visualClip(asset.id, {
-          transitions: { entry: { preset: { kind: 'fade' }, durationMs: 101.5 }, exit: null },
+          transitions: {
+            entry: { preset: { kind: 'fade' }, durationMs: 101.5 },
+            exit: null,
+          },
         }),
       ),
     /transition|durée/i,
@@ -2018,11 +2227,24 @@ test('validates canonical transition presets, durations, domains, and edge budge
         schemaVersion: 14,
         assets: [
           asset,
-          { ...asset, id: 'asset-audio', kind: 'audio', fileName: 'audio.wav', width: null, height: null },
+          {
+            ...asset,
+            id: 'asset-audio',
+            kind: 'audio',
+            fileName: 'audio.wav',
+            width: null,
+            height: null,
+          },
         ],
         clips: [
           audioClip('asset-audio', {
-            transitions: { entry: { preset: { kind: 'slide', direction: 'left' }, durationMs: 100 }, exit: null },
+            transitions: {
+              entry: {
+                preset: { kind: 'slide', direction: 'left' },
+                durationMs: 100,
+              },
+              exit: null,
+            },
           }),
         ],
         keyboardCaptionSessions: [],
@@ -2100,7 +2322,10 @@ test('persists and normalizes global canvas transitions without changing legacy 
   const manifestPath = path.join(store.directoryFor(project.id), 'project.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   manifest.editor.presentation.canvas.transitions = {
-    entry: { preset: { kind: 'slide', direction: 'diagonal' }, durationMs: 300 },
+    entry: {
+      preset: { kind: 'slide', direction: 'diagonal' },
+      durationMs: 300,
+    },
     exit: { preset: { kind: 'fade' }, durationMs: 6_000 },
   };
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
@@ -2253,7 +2478,12 @@ test('persists and reads one atomic editor state', () => {
     composition,
     zoom: { elements: [], generatedSessions: [] },
     presentation: {
-      canvas: { preset: '16:9', width: 1920, height: 1080, showBackground: true },
+      canvas: {
+        preset: '16:9',
+        width: 1920,
+        height: 1080,
+        showBackground: true,
+      },
       selectedBackgroundId: null,
       background: null,
       blurPercent: 0,
@@ -2301,7 +2531,11 @@ test('returns opaque project-media URLs for editor session assets', () => {
   fs.writeFileSync(
     path.join(sessionDirectory, 'manifest.json'),
     JSON.stringify({
-      tracks: [{ segments: [{ path: 'screen/capture.mp4', startMs: 0, durationMs: 1_000 }] }],
+      tracks: [
+        {
+          segments: [{ path: 'screen/capture.mp4', startMs: 0, durationMs: 1_000 }],
+        },
+      ],
     }),
   );
 
@@ -2525,7 +2759,10 @@ test('imports dropped project media safely and never returns a local path', () =
   const source = path.join(root, 'recording.mp4');
   fs.writeFileSync(source, 'video');
 
-  const imported = store.importDroppedProjectMedia(project.id, { kind: 'video', source });
+  const imported = store.importDroppedProjectMedia(project.id, {
+    kind: 'video',
+    source,
+  });
   assert.equal(imported.kind, 'video');
   assert.match(imported.src, /^project-media:/);
   assert.doesNotMatch(imported.src, /^file:/);
@@ -2535,17 +2772,32 @@ test('imports dropped project media safely and never returns a local path', () =
   const audio = path.join(root, 'voice.wav');
   fs.writeFileSync(audio, 'audio');
   assert.throws(
-    () => store.importDroppedProjectMedia(project.id, { kind: 'video', source: audio }),
+    () =>
+      store.importDroppedProjectMedia(project.id, {
+        kind: 'video',
+        source: audio,
+      }),
     /non autorisé|invalide/i,
   );
 
   const folder = path.join(root, 'folder.mp4');
   fs.mkdirSync(folder);
   assert.throws(
-    () => store.importDroppedProjectMedia(project.id, { kind: 'video', source: folder }),
+    () =>
+      store.importDroppedProjectMedia(project.id, {
+        kind: 'video',
+        source: folder,
+      }),
     /invalide|fichier|directory/i,
   );
-  assert.throws(() => store.importDroppedProjectMedia(project.id, { kind: 'video', source: '' }), /invalide|chemin/i);
+  assert.throws(
+    () =>
+      store.importDroppedProjectMedia(project.id, {
+        kind: 'video',
+        source: '',
+      }),
+    /invalide|chemin/i,
+  );
 });
 
 test('normalizes the v7 visual track identity and preserves it through editor-state round trips', () => {
@@ -2562,7 +2814,12 @@ test('normalizes the v7 visual track identity and preserves it through editor-st
     keyboardCaptionSessions: [],
     assets: [{ ...asset, durationMs: 2_000 }],
     clips: [
-      visualClip(asset.id, { id: 'left', trackId, timelineDurationMs: 1_000, sourceDurationMs: 1_000 }),
+      visualClip(asset.id, {
+        id: 'left',
+        trackId,
+        timelineDurationMs: 1_000,
+        sourceDurationMs: 1_000,
+      }),
       visualClip(asset.id, {
         id: 'right',
         trackId,
@@ -2603,7 +2860,11 @@ test('migrates only certain contiguous v3 visual fragments into one track', () =
       schemaVersion: 3,
       assets: [asset],
       clips: [
-        visualClip(asset.id, { id: 'certain-left', timelineDurationMs: 1_000, sourceDurationMs: 1_000 }),
+        visualClip(asset.id, {
+          id: 'certain-left',
+          timelineDurationMs: 1_000,
+          sourceDurationMs: 1_000,
+        }),
         visualClip(asset.id, {
           id: 'certain-right',
           timelineStartMs: 1_000,
@@ -2643,9 +2904,17 @@ test('rejects invalid visual track identities and overlapping clips assigned to 
     height: 1080,
     origin: 'project',
   };
-  const base = { schemaVersion: 14, assets: [asset], keyboardCaptionSessions: [] };
+  const base = {
+    schemaVersion: 14,
+    assets: [asset],
+    keyboardCaptionSessions: [],
+  };
   assert.throws(
-    () => normalizeComposition({ ...base, clips: [visualClip(asset.id, { trackId: '' })] }),
+    () =>
+      normalizeComposition({
+        ...base,
+        clips: [visualClip(asset.id, { trackId: '' })],
+      }),
     /track|piste|identit/i,
   );
   assert.throws(
@@ -2654,7 +2923,11 @@ test('rejects invalid visual track identities and overlapping clips assigned to 
         ...base,
         clips: [
           visualClip(asset.id, { id: 'first', trackId: 'same-track' }),
-          visualClip(asset.id, { id: 'second', trackId: 'same-track', timelineStartMs: 500 }),
+          visualClip(asset.id, {
+            id: 'second',
+            trackId: 'same-track',
+            timelineStartMs: 500,
+          }),
         ],
       }),
     /overlap|chevauch|track|piste/i,
@@ -2775,7 +3048,11 @@ test('migrates Golden Canvas 2 v4 screen fragments to v14 without losing visual 
   const directory = store.directoryFor(project.id);
   const manifestPath = path.join(directory, 'project.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  manifest.editor.composition = { schemaVersion: 4, assets: [asset], clips: [first, second, third] };
+  manifest.editor.composition = {
+    schemaVersion: 4,
+    assets: [asset],
+    clips: [first, second, third],
+  };
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
   const migrated = store.editorState(project.id);
@@ -2819,8 +3096,20 @@ test('project store reports media feature badges only when actual files exist', 
   manifest.editor.composition = {
     schemaVersion: 14,
     assets: [
-      { id: 'screen-asset', kind: 'video', name: 'Screen', fileName: 'screen.mp4', origin: 'project' },
-      { id: 'webcam-asset', kind: 'video', name: 'Webcam', fileName: 'webcam.mp4', origin: 'project' },
+      {
+        id: 'screen-asset',
+        kind: 'video',
+        name: 'Screen',
+        fileName: 'screen.mp4',
+        origin: 'project',
+      },
+      {
+        id: 'webcam-asset',
+        kind: 'video',
+        name: 'Webcam',
+        fileName: 'webcam.mp4',
+        origin: 'project',
+      },
       {
         id: 'system-audio-asset',
         kind: 'audio',
@@ -2828,8 +3117,20 @@ test('project store reports media feature badges only when actual files exist', 
         fileName: 'system-audio.webm',
         origin: 'project',
       },
-      { id: 'microphone-asset', kind: 'audio', name: 'Microphone', fileName: 'microphone.webm', origin: 'project' },
-      { id: 'missing-asset', kind: 'video', name: 'Missing', fileName: 'missing.mp4', origin: 'project' },
+      {
+        id: 'microphone-asset',
+        kind: 'audio',
+        name: 'Microphone',
+        fileName: 'microphone.webm',
+        origin: 'project',
+      },
+      {
+        id: 'missing-asset',
+        kind: 'video',
+        name: 'Missing',
+        fileName: 'missing.mp4',
+        origin: 'project',
+      },
     ],
     keyboardCaptionSessions: [],
     clips: [
@@ -2869,7 +3170,13 @@ test('project store reports media feature badges only when actual files exist', 
         caption: {
           type: 'text',
           sentences: [
-            { id: 's1', text: 'Hello', startMs: 0, endMs: 1000, words: [{ text: 'Hello', startMs: 0, endMs: 1000 }] },
+            {
+              id: 's1',
+              text: 'Hello',
+              startMs: 0,
+              endMs: 1000,
+              words: [{ text: 'Hello', startMs: 0, endMs: 1000 }],
+            },
           ],
           style: {
             fontFamily: 'sans-serif',
@@ -3066,4 +3373,51 @@ test('does not mark existing or migrated projects without the marker as fresh', 
   fs.writeFileSync(migratedManifestPath, `${JSON.stringify(migratedManifest, null, 2)}\n`);
 
   assert.equal(store.editorState(migrated.id).isFresh, false);
+});
+
+test('media rotation survives native normalization and materialization without losing decimals', () => {
+  const asset = {
+    id: 'asset-video',
+    kind: 'video',
+    name: 'Video',
+    fileName: 'video.mp4',
+    durationMs: 2000,
+    width: 1920,
+    height: 1080,
+    origin: 'project',
+  };
+  for (const rotation of [undefined, 0, 90, 32.75, -90]) {
+    const document = {
+      ...emptyComposition(),
+      assets: [asset],
+      clips: [visualClip(asset.id, { ...(rotation === undefined ? {} : { rotation }) })],
+    };
+    const result = normalizeComposition(document);
+    assert.equal(result.clips[0].rotation, rotation);
+    assert.equal(normalizeComposition(JSON.parse(JSON.stringify(result))).clips[0].rotation, rotation);
+  }
+  for (const rotation of ['90', null, NaN, Infinity]) {
+    assert.throws(
+      () =>
+        normalizeComposition({ ...emptyComposition(), assets: [asset], clips: [visualClip(asset.id, { rotation })] }),
+      /Rotation/,
+    );
+  }
+});
+
+test('text rotation survives native normalization while malformed angles are rejected', () => {
+  for (const rotation of [undefined, 0, 32.75, 270]) {
+    const clip = captionClip(
+      textCaption({ style: canonicalCaptionStyle() }),
+      rotation === undefined ? {} : { rotation },
+    );
+    const result = normalizeComposition({ ...emptyComposition(), clips: [clip] });
+    assert.equal(result.clips[0].rotation, rotation);
+    assert.equal(normalizeComposition(JSON.parse(JSON.stringify(result))).clips[0].rotation, rotation);
+  }
+  for (const rotation of [null, '90', Infinity, NaN])
+    assert.throws(
+      () => normalizeComposition({ ...emptyComposition(), clips: [captionClip(textCaption(), { rotation })] }),
+      /Rotation/,
+    );
 });

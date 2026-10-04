@@ -1,13 +1,25 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { createQuickSnipWindow } = require('../electron/quick-snip/quick-snip-window.cjs');
+const { createQuickSnipWindow } = require('../apps/desktop/electron/quick-snip/quick-snip-window.cjs');
 
 const display = {
   id: 2,
   bounds: { x: 0, y: 0, width: 1920, height: 1080 },
   workArea: { x: 0, y: 0, width: 1920, height: 1080 },
 };
+for (const platform of ['linux', 'win32', 'darwin'])
+  test(`${platform} configures the compact native toolbar backdrop`, () => {
+    const f = createFixture(display, platform);
+    f.crop.show({ mode: 'studio', devices: {} }, display);
+    const window = f.windows[0];
+    assert.equal(window.options.transparent, true);
+    assert.equal(window.options.width, 616);
+    assert.equal(window.options.height, 76);
+    assert.equal(window.options.vibrancy, platform === 'darwin' ? 'under-window' : undefined);
+    assert.equal(window.backgroundMaterial, platform === 'win32' ? 'acrylic' : undefined);
+    f.crop.destroy();
+  });
 
 function createFixture(
   targetDisplay = display,
@@ -24,7 +36,10 @@ function createFixture(
     patch: ({ extras }) => {
       preferenceWrites.push(extras);
       for (const [key, value] of Object.entries(extras ?? {})) {
-        preferenceState.extras[key] = { ...(preferenceState.extras[key] ?? {}), ...value };
+        preferenceState.extras[key] = {
+          ...(preferenceState.extras[key] ?? {}),
+          ...value,
+        };
       }
     },
   };
@@ -80,6 +95,9 @@ function createFixture(
       calls.push(['setBounds', this.getBounds()]);
     }
 
+    setBackgroundMaterial(value) {
+      this.backgroundMaterial = value;
+    }
     setContentProtection(value) {
       calls.push(['contentProtection', value]);
     }
@@ -166,18 +184,94 @@ function linuxWindowConfiguration() {
   };
 }
 
+test('switches capture to a bottom-centered horizontal recorder before starting, without moving it on later reports', () => {
+  const f = createFixture();
+  f.crop.show(linuxWindowConfiguration(), display);
+  f.crop.command('start');
+  const target = f.windows[0];
+  assert.deepEqual(target.getBounds(), {
+    x: 784,
+    y: 976,
+    width: 352,
+    height: 88,
+  });
+  const placements = f.calls.filter((call) => call[0] === 'setBounds').length;
+  f.crop.setRecording();
+  f.crop.setRecording();
+  assert.equal(f.crop.updateRegion(configuration().region, display), false);
+  assert.equal(f.calls.filter((call) => call[0] === 'setBounds').length, placements);
+});
+
+test('saves recorder moves under the shared recorder key and flushes them before returning to selection', () => {
+  const f = createFixture();
+  f.crop.show(linuxWindowConfiguration(), display);
+  const target = f.windows[0];
+  target.emit('ready-to-show');
+  f.crop.rendererReady(target.webContents);
+  target.setBounds({ x: 700, y: 800 });
+  target.emit('move');
+  f.crop.command('start');
+  assert.deepEqual(f.preferenceState.extras.quickSnipBarPositions, {
+    2: { x: 700, y: 800 },
+  });
+  target.emit('move');
+  target.emit('moved');
+  assert.equal(f.preferenceWrites.length, 1);
+
+  target.setBounds({ x: 500, y: 900 });
+  target.emit('move');
+  f.crop.showExisting();
+  assert.deepEqual(f.preferenceState.extras.recorderPositions, { 2: { x: 500, y: 900 } });
+  assert.deepEqual(target.getBounds(), { x: 700, y: 800, width: 616, height: 76 });
+  f.crop.command('start');
+  assert.deepEqual(target.getBounds(), {
+    x: 500,
+    y: 900,
+    width: 352,
+    height: 88,
+  });
+  assert.equal(f.preferenceWrites.length, 2);
+});
+
+test('restores a moved recording bar independently of the selection bar and returns to selection after cancellation', () => {
+  const f = createFixture(display, 'linux', {
+    preferenceState: {
+      extras: { recorderPositions: { 2: { x: 100, y: 200 } } },
+    },
+  });
+  f.crop.show(linuxWindowConfiguration(), display);
+  const selection = f.windows[0].getBounds();
+  f.crop.command('start');
+  assert.deepEqual(f.windows[0].getBounds(), {
+    x: 100,
+    y: 200,
+    width: 352,
+    height: 88,
+  });
+  f.crop.showExisting();
+  assert.deepEqual(f.windows[0].getBounds(), selection);
+});
+
+test('screenshot capture keeps the selection layout when it starts', () => {
+  const f = createFixture();
+  f.crop.show({ ...linuxWindowConfiguration(), mode: 'screenshot' }, display);
+  const bounds = f.windows[0].getBounds();
+  f.crop.command('start');
+  assert.deepEqual(f.windows[0].getBounds(), bounds);
+});
+
 test('shows the Crop Bar after native and renderer readiness while the region selection is pending', () => {
   const fixture = createFixture();
   fixture.crop.show(configuration(), display);
 
   const window = fixture.windows[0];
   assert.equal(window.visible, false);
-  assert.deepEqual({ width: window.options.width, height: window.options.height }, { width: 480, height: 132 });
+  assert.deepEqual({ width: window.options.width, height: window.options.height }, { width: 616, height: 76 });
   assert.deepEqual(window.getBounds(), {
-    x: 720,
-    y: 550,
-    width: 480,
-    height: 132,
+    x: 652,
+    y: 988,
+    width: 616,
+    height: 76,
   });
   assert.equal(
     fixture.calls.some((call) => call[0] === 'showInactive'),
@@ -209,10 +303,10 @@ test('places a Linux window capture bar centered at the bottom without a parent'
     false,
   );
   assert.deepEqual(window.getBounds(), {
-    x: 720,
-    y: 932,
-    width: 480,
-    height: 132,
+    x: 652,
+    y: 988,
+    width: 616,
+    height: 76,
   });
 
   window.emit('ready-to-show');
@@ -226,11 +320,16 @@ test('places a Linux window capture bar centered at the bottom without a parent'
 for (const platform of ['linux', 'win32', 'darwin']) {
   test(`${platform} places an uncropped display capture bar without region geometry`, () => {
     const fixture = createFixture(display, platform);
-    const selected = { ...configuration(), screenKind: 'display', screenId: 'portal:monitor', region: null };
+    const selected = {
+      ...configuration(),
+      screenKind: 'display',
+      screenId: 'portal:monitor',
+      region: null,
+    };
 
     assert.doesNotThrow(() => fixture.crop.show(selected, display));
     const window = fixture.windows[0];
-    assert.deepEqual(window.getBounds(), { x: 720, y: 932, width: 480, height: 132 });
+    assert.deepEqual(window.getBounds(), { x: 652, y: 988, width: 616, height: 76 });
     window.emit('ready-to-show');
     assert.equal(fixture.crop.rendererReady(window.webContents), true);
     const configureCall = fixture.calls.find((call) => call[0] === 'send' && call[1] === 'quick-snip:configure');
@@ -518,10 +617,10 @@ test('ignores both move notifications from one programmatic placement', () => {
 
   assert.equal(fixture.crop.updateRegion({ x: 0.1, y: 0.1, width: 0.2, height: 0.2 }, display), true);
   assert.deepEqual(window.getBounds(), {
-    x: 144,
+    x: 76,
     y: 334,
-    width: 480,
-    height: 132,
+    width: 616,
+    height: 76,
   });
 });
 
@@ -553,17 +652,19 @@ test('commits a dragged position, restores it per display, and preserves it thro
   firstWindow.emit('move');
   assert.equal(fixture.preferenceWrites.length, 0);
   firstWindow.emit('moved');
-  assert.deepEqual(fixture.preferenceState.extras.quickSnipBarPositions, { 2: { x: 640, y: 430 } });
+  assert.deepEqual(fixture.preferenceState.extras.quickSnipBarPositions, {
+    2: { x: 640, y: 430 },
+  });
 
   fixture.crop.hide();
   fixture.crop.destroy();
   fixture.crop.show(configuration(), display);
   const restoredWindow = fixture.windows[1];
-  assert.deepEqual(restoredWindow.getBounds(), { x: 640, y: 430, width: 480, height: 132 });
+  assert.deepEqual(restoredWindow.getBounds(), { x: 640, y: 430, width: 616, height: 76 });
   const writesAfterRestore = fixture.preferenceWrites.length;
 
   fixture.crop.updateRegion({ x: 0.1, y: 0.1, width: 0.2, height: 0.2 }, display);
-  assert.deepEqual(restoredWindow.getBounds(), { x: 640, y: 430, width: 480, height: 132 });
+  assert.deepEqual(restoredWindow.getBounds(), { x: 640, y: 430, width: 616, height: 76 });
   assert.equal(fixture.preferenceWrites.length, writesAfterRestore);
 });
 
@@ -586,7 +687,9 @@ test('debounces Linux and macOS Crop Bar moves until the trailing 350ms commit',
     const [timer] = fixture.timers.values();
     assert.equal(timer.delay, 350);
     timer.callback();
-    assert.deepEqual(fixture.preferenceState.extras.quickSnipBarPositions, { 2: { x: 660, y: 450 } });
+    assert.deepEqual(fixture.preferenceState.extras.quickSnipBarPositions, {
+      2: { x: 660, y: 450 },
+    });
     assert.equal(fixture.preferenceWrites.length, 1);
   }
 });
@@ -607,13 +710,17 @@ test('flushes a pending Crop Bar position before hide or destroy', () => {
     fixture.crop[lifecycle]();
 
     assert.equal(fixture.timers.size, 0);
-    assert.deepEqual(fixture.preferenceState.extras.quickSnipBarPositions, { 2: { x: 600, y: 410 } });
+    assert.deepEqual(fixture.preferenceState.extras.quickSnipBarPositions, {
+      2: { x: 600, y: 410 },
+    });
     assert.equal(fixture.preferenceWrites.length, 1);
   }
 });
 
-test('ignores the synthetic Wayland origin when committing a Crop Bar move', () => {
-  const fixture = createFixture(display, 'linux', { environment: { WAYLAND_DISPLAY: 'wayland-0' } });
+test('persists the X11 zero origin in a Wayland host session', () => {
+  const fixture = createFixture(display, 'linux', {
+    environment: { WAYLAND_DISPLAY: 'wayland-0' },
+  });
   fixture.crop.show(configuration(), display);
   const window = fixture.windows[0];
   window.emit('ready-to-show');
@@ -624,9 +731,12 @@ test('ignores the synthetic Wayland origin when committing a Crop Bar move', () 
   window.emit('moved');
 
   assert.equal(fixture.preferenceWrites.length, 0);
-  assert.equal(fixture.timers.size, 0);
+  assert.equal(fixture.timers.size, 1);
+  const [timer] = fixture.timers.values();
+  timer.callback();
+  assert.equal(fixture.preferenceWrites.length, 1);
   fixture.crop.updateRegion({ x: 0.1, y: 0.1, width: 0.2, height: 0.2 }, display);
-  assert.deepEqual(window.getBounds(), { x: 144, y: 334, width: 480, height: 132 });
+  assert.deepEqual(window.getBounds(), { x: 0, y: 0, width: 616, height: 76 });
 });
 
 test('repositions the Crop Bar below the live selected region', () => {
@@ -639,10 +749,10 @@ test('repositions the Crop Bar below the live selected region', () => {
   assert.equal(fixture.crop.updateRegion({ x: 0.25, y: 0.6, width: 0.5, height: 0.2 }, display), true);
   assert.notDeepEqual(window.getBounds(), initialBounds);
   assert.deepEqual(window.getBounds(), {
-    x: 720,
+    x: 652,
     y: 874,
-    width: 480,
-    height: 132,
+    width: 616,
+    height: 76,
   });
 });
 

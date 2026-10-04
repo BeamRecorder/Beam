@@ -4,7 +4,11 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { createWhisperModelStore, REQUIRED_PATHS, REVISIONS } = require('../electron/captions/whisper-model-store.cjs');
+const {
+  createWhisperModelStore,
+  REQUIRED_PATHS,
+  REVISIONS,
+} = require('../apps/desktop/electron/captions/whisper-model-store.cjs');
 
 const model = 'Xenova/whisper-tiny';
 const root = () => fs.mkdtempSync(path.join(os.tmpdir(), 'whisper-store-'));
@@ -22,7 +26,11 @@ const fetchFor =
             path: file,
             size: files[file].length,
             ...(lfs
-              ? { lfs: { oid: crypto.createHash('sha256').update(files[file]).digest('hex') } }
+              ? {
+                  lfs: {
+                    oid: crypto.createHash('sha256').update(files[file]).digest('hex'),
+                  },
+                }
               : { oid: gitBlobSha1(files[file]) }),
           })),
         ),
@@ -31,7 +39,9 @@ const fetchFor =
     const artifact = [...REQUIRED_PATHS].find((file) => url.endsWith(`/${file}`));
     if (!artifact) return new Response('', { status: 404 });
     const offset = Number(String(options.headers?.Range || 'bytes=0-').match(/\d+/)?.[0] || 0);
-    return new Response(files[artifact].subarray(offset), { status: offset ? 206 : 200 });
+    return new Response(files[artifact].subarray(offset), {
+      status: offset ? 206 : 200,
+    });
   };
 test('reports an absent model without making a network request', async () => {
   const requests = [];

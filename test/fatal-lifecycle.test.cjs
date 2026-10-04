@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const { test } = require('node:test');
-const { registerFatalLifecycle } = require('../electron/lifecycle/fatal-events.cjs');
+const { registerFatalLifecycle } = require('../apps/desktop/electron/lifecycle/fatal-events.cjs');
 
 const setup = () => {
   const app = new EventEmitter();
@@ -44,4 +44,46 @@ test('OS shutdown and signals request normal quit while clean Electron children 
   context.powerMonitor.emit('shutdown');
   context.processTarget.emit('SIGTERM');
   assert.deepEqual(context.requests, ['quit', 'quit']);
+});
+
+test('destroyed-object rejections remain fatal while the application is running', async () => {
+  const context = setup();
+  context.processTarget.emit('unhandledRejection', new Error('Object has been destroyed'));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(context.requests, ['fatal', 'exit:1']);
+});
+
+test('late destroyed-object and renderer notifications are harmless during teardown', async () => {
+  const context = setup();
+  context.processTarget.emit('uncaughtException', new Error('first failure'));
+  context.processTarget.emit('unhandledRejection', new Error('Object has been destroyed'));
+  context.app.emit(
+    'render-process-gone',
+    {},
+    {
+      get id() {
+        throw new Error('destroyed');
+      },
+    },
+    {},
+  );
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(context.requests, ['fatal', 'exit:1']);
+});
+
+test('a destroyed renderer cannot prevent an active crash from being handled', async () => {
+  for (const contents of [
+    undefined,
+    { isDestroyed: () => true },
+    {
+      get id() {
+        throw new Error('Object has been destroyed');
+      },
+    },
+  ]) {
+    const context = setup();
+    context.app.emit('render-process-gone', {}, contents, { reason: 'crashed', exitCode: 9 });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(context.requests, ['renderer-crash', 'exit:1']);
+  }
 });

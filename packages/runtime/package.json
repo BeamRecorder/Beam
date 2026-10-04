@@ -1,0 +1,17 @@
+{
+  "name": "@beam/runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@beam/engine": "workspace:*",
+    "mediabunny": "^1.61.0"
+  }
+}

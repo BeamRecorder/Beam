@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { buildDefaultCaptureConfig } = require('../electron/capture/capture-config.cjs');
+const { buildDefaultCaptureConfig } = require('../apps/desktop/electron/capture/capture-config.cjs');
 
 const catalog = {
   capabilities: {
@@ -20,7 +20,11 @@ const catalog = {
   ],
 };
 
-const environment = { platform: 'win32', defaultOutputRoot: 'recordings', excludedProcessId: 4242 };
+const environment = {
+  platform: 'win32',
+  defaultOutputRoot: 'recordings',
+  excludedProcessId: 4242,
+};
 
 test('builds a one-call recording config from defaults', () => {
   const config = buildDefaultCaptureConfig(catalog, {}, environment);
@@ -85,7 +89,11 @@ test('rejects missing explicit sources and invalid queue capacity', () => {
 test('builds a Linux monitor Portal selection without a Chromium source id', () => {
   const config = buildDefaultCaptureConfig(
     {
-      capabilities: { portalSelection: true, separateCursor: true, cursorShapes: true },
+      capabilities: {
+        portalSelection: true,
+        separateCursor: true,
+        cursorShapes: true,
+      },
       sources: [
         {
           id: 'portal:monitor',
@@ -115,7 +123,14 @@ test('maps Linux system audio to the native default output only when requested',
   const linux = { ...environment, platform: 'linux' };
   const linuxCatalog = {
     capabilities: { portalSelection: true },
-    sources: [{ id: 'portal:monitor', kind: 'display', isDefault: true, selectionMode: 'portal' }],
+    sources: [
+      {
+        id: 'portal:monitor',
+        kind: 'display',
+        isDefault: true,
+        selectionMode: 'portal',
+      },
+    ],
   };
 
   assert.deepEqual(buildDefaultCaptureConfig(linuxCatalog, { systemAudio: true }, linux).systemAudio, {
@@ -154,7 +169,14 @@ test('enables clicks and shortcuts on Linux only when interaction recording is o
       cursorShapes: true,
       inputShortcuts: true,
     },
-    sources: [{ id: 'portal:monitor', kind: 'display', isDefault: true, selectionMode: 'portal' }],
+    sources: [
+      {
+        id: 'portal:monitor',
+        kind: 'display',
+        isDefault: true,
+        selectionMode: 'portal',
+      },
+    ],
   };
 
   const disabled = buildDefaultCaptureConfig(linuxCatalog, { recordInteractions: false }, linux);
@@ -217,8 +239,18 @@ test('keeps Linux Portal intents when a second discovery is empty', () => {
   const firstCatalog = {
     capabilities: { portalSelection: true },
     sources: [
-      { id: 'portal:monitor', kind: 'display', isDefault: true, selectionMode: 'portal' },
-      { id: 'portal:window', kind: 'window', isDefault: true, selectionMode: 'portal' },
+      {
+        id: 'portal:monitor',
+        kind: 'display',
+        isDefault: true,
+        selectionMode: 'portal',
+      },
+      {
+        id: 'portal:window',
+        kind: 'window',
+        isDefault: true,
+        selectionMode: 'portal',
+      },
     ],
   };
   const emptySecondCatalog = { capabilities: {}, sources: [] };
@@ -235,4 +267,30 @@ test('keeps Linux Portal intents when a second discovery is empty', () => {
       restoreToken: null,
     });
   }
+});
+
+test('records the native cursor without disabling separate cursor telemetry on every OS', () => {
+  for (const platform of ['win32', 'darwin', 'linux']) {
+    const nativeCatalog = {
+      ...catalog,
+      capabilities: {
+        ...catalog.capabilities,
+        portalSelection: true,
+        embeddedCursor: true,
+      },
+    };
+    const config = buildDefaultCaptureConfig(
+      nativeCatalog,
+      { showRealCursor: true, recordInteractions: true },
+      { ...environment, platform },
+    );
+    assert.equal(config.showRealCursor, true);
+    assert.equal(config.cursor.mode, 'separate');
+    assert.equal(config.cursor.captureClicks, true);
+  }
+});
+test('defaults native cursor off and rejects non-boolean cursor options', () => {
+  assert.equal(buildDefaultCaptureConfig(catalog, {}, environment).showRealCursor, false);
+  for (const showRealCursor of ['true', null, 1])
+    assert.throws(() => buildDefaultCaptureConfig(catalog, { showRealCursor }, environment), /showRealCursor/);
 });

@@ -54,9 +54,11 @@ impl MacRecording {
             matches!(
                 request.cursor,
                 crate::model::CursorSelection::Separate { .. }
-            ),
+            ) && !request.show_real_cursor,
             request.region,
             request.excluded_window_handles,
+            request.hide_taskbar,
+            request.hide_desktop_icons,
             request.start_gate,
         )
     }
@@ -68,6 +70,8 @@ impl MacRecording {
         exclude_cursor: bool,
         region: Option<ScreenRegion>,
         excluded_window_handles: &[String],
+        hide_taskbar: bool,
+        hide_desktop_icons: bool,
         start_gate: Arc<StartGate>,
     ) -> Result<Self, CaptureError> {
         if fps == 0 {
@@ -76,8 +80,14 @@ impl MacRecording {
             ));
         }
         let content = SCShareableContent::get().map_err(backend_error)?;
-        let (filter, width, height, source_rect) =
-            resolve_filter(&content, source_id, region, excluded_window_handles)?;
+        let (filter, width, height, source_rect) = resolve_filter(
+            &content,
+            source_id,
+            region,
+            excluded_window_handles,
+            hide_taskbar,
+            hide_desktop_icons,
+        )?;
         let timescale = i32::try_from(fps).map_err(backend_error)?;
         let mut configuration = SCStreamConfiguration::new()
             .with_width(width)
@@ -186,6 +196,8 @@ pub(crate) fn resolve_filter(
     source_id: &SourceId,
     region: Option<ScreenRegion>,
     excluded_window_handles: &[String],
+    hide_taskbar: bool,
+    hide_desktop_icons: bool,
 ) -> Result<
     (
         SCContentFilter,
@@ -213,7 +225,20 @@ pub(crate) fn resolve_filter(
         let excluded_windows = content
             .windows()
             .into_iter()
-            .filter(|window| excluded_ids.contains(&window.window_id()))
+            .filter(|window| {
+                let owner = window
+                    .owning_application()
+                    .map(|app| app.bundle_identifier())
+                    .unwrap_or_default();
+                excluded_ids.contains(&window.window_id())
+                    || super::super::desktop_policy::exclude_desktop_window(
+                        &owner,
+                        window.window_layer(),
+                        desktop_icon_level(),
+                        hide_taskbar,
+                        hide_desktop_icons,
+                    )
+            })
             .collect::<Vec<_>>();
         let excluded_refs = excluded_windows.iter().collect::<Vec<_>>();
         let filter = SCContentFilter::create()
@@ -309,4 +334,13 @@ fn dimension(value: f64) -> u32 {
 
 fn backend_error(error: impl std::fmt::Display) -> CaptureError {
     CaptureError::Backend(format!("ScreenCaptureKit recording failed: {error}"))
+}
+
+fn desktop_icon_level() -> i32 {
+    // kCGDesktopIconWindowLevelKey, distinct from the desktop picture layer.
+    unsafe { CGWindowLevelForKey(18) }
+}
+#[link(name = "CoreGraphics", kind = "framework")]
+unsafe extern "C" {
+    fn CGWindowLevelForKey(key: i32) -> i32;
 }

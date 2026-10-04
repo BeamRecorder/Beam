@@ -342,7 +342,7 @@ fn push_theme(names: &mut Vec<String>, candidate: Option<String>) {
     }
 }
 
-fn canonical_bitmap(
+pub(super) fn canonical_bitmap(
     format: VideoFormat,
     width: u32,
     height: u32,

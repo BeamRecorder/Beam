@@ -1,0 +1,67 @@
+.gradient-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  width: 100%;
+}
+.gradient-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 70px 24px;
+  gap: 4px;
+  align-items: center;
+}
+.gradient-preview {
+  position: relative;
+  height: 68px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.gradient-preview.custom-preview {
+  height: 160px;
+}
+.gradient-preview > div {
+  position: absolute;
+  inset: 0;
+}
+.gradient-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font-size: var(--font-size-body);
+}
+.gradient-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.gradient-column-labels {
+  display: grid;
+  grid-template-columns: minmax(72px, 1fr) 58px 58px 24px;
+  gap: 4px;
+  padding: 0 4px;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+.gradient-column-labels > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gradient-stop-list {
+  max-height: 204px;
+}
+.gradient-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 180px;
+}
+.preset-swatch {
+  display: block;
+  width: 22px;
+  height: 14px;
+  border-radius: var(--radius-xs);
+}

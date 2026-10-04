@@ -23,7 +23,7 @@ function createElectronFixture(savedExtras = {}) {
       this.visible = false;
       this.destroyed = false;
       this.webContents = {
-        getURL: () => 'http://localhost:6500/?cameraOverlay=1',
+        getURL: () => 'http://localhost:6500/html/index.html?cameraOverlay=1',
         once: (event, listener) => this.contentListeners.set(event, listener),
         emit: (event, ...args) => {
           const listener = this.contentListeners.get(event);
@@ -134,7 +134,10 @@ function createElectronFixture(savedExtras = {}) {
     read: () => structuredClone(preferenceState),
     patch: (patch) => {
       patches.push(structuredClone(patch));
-      preferenceState.extras = { ...preferenceState.extras, ...(patch.extras || {}) };
+      preferenceState.extras = {
+        ...preferenceState.extras,
+        ...(patch.extras || {}),
+      };
       return structuredClone(preferenceState);
     },
   };
@@ -151,7 +154,7 @@ function createElectronFixture(savedExtras = {}) {
 }
 
 function loadOverlayWindow() {
-  const modulePath = require.resolve('../electron/camera/overlay-window.cjs');
+  const modulePath = require.resolve('../apps/desktop/electron/camera/overlay-window.cjs');
   delete require.cache[modulePath];
   return require(modulePath);
 }
@@ -168,7 +171,12 @@ test('opens a new camera preview as a square near the lower-right display edge',
     });
 
     overlay.configure({ cameraId: 'camera:front' });
-    assert.deepEqual(fixture.windows[0].getBounds(), { x: 1680, y: 840, width: 220, height: 220 });
+    assert.deepEqual(fixture.windows[0].getBounds(), {
+      x: 1680,
+      y: 840,
+      width: 220,
+      height: 220,
+    });
     overlay.destroy();
   } finally {
     fixture.restore();
@@ -176,7 +184,9 @@ test('opens a new camera preview as a square near the lower-right display edge',
 });
 
 test('updates the previous default camera shape while keeping its lower-right anchor', () => {
-  const fixture = createElectronFixture({ cameraOverlay: { x: 1580, y: 880, width: 320, height: 180 } });
+  const fixture = createElectronFixture({
+    cameraOverlay: { x: 1580, y: 880, width: 320, height: 180 },
+  });
   try {
     const { createCameraOverlayWindow } = loadOverlayWindow();
     const overlay = createCameraOverlayWindow({
@@ -187,7 +197,12 @@ test('updates the previous default camera shape while keeping its lower-right an
     });
 
     overlay.configure({ cameraId: 'camera:front' });
-    assert.deepEqual(fixture.windows[0].getBounds(), { x: 1680, y: 840, width: 220, height: 220 });
+    assert.deepEqual(fixture.windows[0].getBounds(), {
+      x: 1680,
+      y: 840,
+      width: 220,
+      height: 220,
+    });
     overlay.destroy();
   } finally {
     fixture.restore();
@@ -299,7 +314,11 @@ test('waits for the overlay renderer before forwarding recording commands', asyn
       platform: 'win32',
       preferencesStore: fixture.preferencesStore,
     });
-    const command = { commandId: 'command-1', recordingId: 'recording-1', control: { action: 'prepare' } };
+    const command = {
+      commandId: 'command-1',
+      recordingId: 'recording-1',
+      control: { action: 'prepare' },
+    };
 
     overlay.configure({ cameraId: 'camera:front' });
     const window = fixture.windows[0];
@@ -327,7 +346,11 @@ test('rejects a command waiting for readiness when the overlay closes', async ()
   const fixture = createElectronFixture();
   try {
     const { createCameraOverlayWindow } = loadOverlayWindow();
-    const overlay = createCameraOverlayWindow({ applicationRoot: '/app', isPackaged: false, platform: 'win32' });
+    const overlay = createCameraOverlayWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+      platform: 'win32',
+    });
     overlay.configure({ cameraId: 'camera:front' });
     const pending = overlay.sendRecordingCommand({ commandId: 'command-1' });
     fixture.windows[0].destroy();
@@ -341,8 +364,15 @@ test('does not forward a stale command after an aborted readiness wait and a new
   const fixture = createElectronFixture();
   try {
     const { createCameraOverlayWindow } = loadOverlayWindow();
-    const overlay = createCameraOverlayWindow({ applicationRoot: '/app', isPackaged: false, platform: 'win32' });
-    const staleCommand = { commandId: 'stale-command', recordingId: 'recording-1' };
+    const overlay = createCameraOverlayWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+      platform: 'win32',
+    });
+    const staleCommand = {
+      commandId: 'stale-command',
+      recordingId: 'recording-1',
+    };
 
     overlay.configure({ cameraId: 'camera:first' });
     const firstWindow = fixture.windows[0];
@@ -370,13 +400,22 @@ test('does not forward an explicitly aborted command when the same renderer beco
   let overlay;
   try {
     const { createCameraOverlayWindow } = loadOverlayWindow();
-    overlay = createCameraOverlayWindow({ applicationRoot: '/app', isPackaged: false, platform: 'win32' });
-    const staleCommand = { commandId: 'aborted-command', recordingId: 'recording-1' };
+    overlay = createCameraOverlayWindow({
+      applicationRoot: '/app',
+      isPackaged: false,
+      platform: 'win32',
+    });
+    const staleCommand = {
+      commandId: 'aborted-command',
+      recordingId: 'recording-1',
+    };
     const abort = new AbortController();
 
     overlay.configure({ cameraId: 'camera:first' });
     const window = fixture.windows[0];
-    const pending = overlay.sendRecordingCommand(staleCommand, { signal: abort.signal });
+    const pending = overlay.sendRecordingCommand(staleCommand, {
+      signal: abort.signal,
+    });
     const outcome = pending.then(
       () => 'resolved',
       () => 'rejected',

@@ -1,0 +1,380 @@
+import { defineComponent, h, nextTick, ref, type Ref } from 'vue';
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useCanvasBackground } from '../useCanvasBackground';
+import { clearEditorImages } from '../../../resources/editor-image-cache';
+import type { BackgroundValue } from '@beam/engine/shared/background-types';
+
+const playback = vi.hoisted(() => {
+  const loadCompositionImpl = { current: null as (() => Promise<void>) | null };
+  const instances: Array<{
+    state: 'paused' | 'loading';
+    currentTime: number;
+    loadComposition: ReturnType<typeof vi.fn>;
+    setPreviewQuality: ReturnType<typeof vi.fn>;
+    previewQuality: string;
+    play: ReturnType<typeof vi.fn>;
+    pause: ReturnType<typeof vi.fn>;
+    dispose: ReturnType<typeof vi.fn>;
+    frameFor: ReturnType<typeof vi.fn>;
+    listeners: Map<string, (value: unknown) => void>;
+    frame: MediaFrameLike | null;
+    on: (event: string, listener: (value: unknown) => void) => () => boolean;
+    emitFrame: () => void;
+  }> = [];
+  class FakePlaybackEngine {
+    static instances = instances;
+    state: 'paused' | 'loading' = 'paused';
+    currentTime = 0;
+    readonly loadComposition = vi.fn(() => loadCompositionImpl.current?.() ?? Promise.resolve());
+    readonly setPreviewQuality = vi.fn(async (_quality: string) => undefined);
+    readonly play = vi.fn(async () => undefined);
+    readonly pause = vi.fn();
+    readonly dispose = vi.fn();
+    readonly frameFor = vi.fn(() => this.frame);
+    readonly listeners = new Map<string, (value: unknown) => void>();
+    frame: MediaFrameLike | null = null;
+
+    previewQuality = 'full';
+
+    constructor(options: { previewQuality?: string } = {}) {
+      this.previewQuality = options.previewQuality ?? 'full';
+      instances.push(this as (typeof instances)[number]);
+    }
+
+    on(event: string, listener: (value: unknown) => void) {
+      this.listeners.set(event, listener);
+      return () => this.listeners.delete(event);
+    }
+
+    emitFrame() {
+      this.listeners.get('frame')?.({ clipId: 'background-video' });
+    }
+  }
+  return { FakePlaybackEngine, instances, loadCompositionImpl };
+});
+
+vi.mock('@beam/runtime/browser', () => ({
+  createBrowserPlaybackEngine: (options: { previewQuality?: string }) => new playback.FakePlaybackEngine(options),
+}));
+vi.mock('@beam/runtime/shared/index', () => ({
+  inspectMedia: vi.fn(async () => ({ metadata: { durationSeconds: 4 } })),
+  mediaSourceDescriptor: vi.fn((asset: { id: string; kind: string; name: string; src: string }) => ({
+    assetId: asset.id,
+    kind: asset.kind,
+    label: asset.name,
+    url: asset.src,
+  })),
+}));
+
+type MediaFrameLike = {
+  bitmap: CanvasImageSource;
+  width: number;
+  height: number;
+  close: ReturnType<typeof vi.fn>;
+};
+
+class FakeImage extends EventTarget {
+  static instances: FakeImage[] = [];
+  naturalWidth = 320;
+  naturalHeight = 180;
+  src = '';
+  decode = () =>
+    new Promise<void>((resolve) => {
+      this.addEventListener('load', () => {
+        if (this.naturalWidth) resolve();
+      });
+    });
+
+  constructor() {
+    super();
+    FakeImage.instances.push(this);
+  }
+}
+
+const color = (value = '#123456'): BackgroundValue => ({
+  id: `color:${value}`,
+  name: value,
+  kind: 'color',
+  color: value,
+});
+
+const image = (path = '/wallpapers/image/desk.png'): BackgroundValue => ({
+  id: path,
+  name: 'Desk',
+  path,
+  extension: 'png',
+  kind: 'image',
+});
+
+const video = (path = '/wallpapers/video/loop.mp4'): BackgroundValue => ({
+  id: path,
+  name: 'Loop',
+  path,
+  extension: 'mp4',
+  kind: 'video',
+});
+
+const gradient = (type: 'linear' | 'radial' = 'linear'): BackgroundValue => ({
+  id: `gradient:${type}`,
+  name: 'Gradient',
+  kind: 'gradient',
+  gradient: {
+    type,
+    angle: 45,
+    stops: [
+      { id: 'a', position: 0, color: '#000000', alpha: 1 },
+      { id: 'b', position: 1, color: '#ffffff', alpha: 0.5 },
+    ],
+  },
+});
+
+const context = () =>
+  ({
+    save: vi.fn(),
+    restore: vi.fn(),
+    fillRect: vi.fn(),
+    drawImage: vi.fn(),
+    createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+    createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+    globalAlpha: 1,
+    filter: 'none',
+    fillStyle: '',
+  }) as unknown as CanvasRenderingContext2D;
+
+let wrapper: VueWrapper | undefined;
+let selected!: Ref<BackgroundValue | null>;
+let blur!: Ref<number | undefined>;
+let previewQuality!: Ref<'full' | 'half' | 'quarter'>;
+let renderCanvas!: ReturnType<typeof vi.fn>;
+let state!: ReturnType<typeof useCanvasBackground>;
+
+const mountComposable = () => {
+  selected = ref<BackgroundValue | null>(null);
+  blur = ref<number | undefined>(0);
+  previewQuality = ref<'full' | 'half' | 'quarter'>('full');
+  renderCanvas = vi.fn();
+  const Harness = defineComponent({
+    setup() {
+      state = useCanvasBackground(
+        () => selected.value,
+        () => blur.value,
+        () => previewQuality.value,
+        renderCanvas as unknown as () => void,
+      );
+      return () => h('div');
+    },
+  });
+  wrapper = mount(Harness);
+};
+
+beforeEach(() => {
+  clearEditorImages();
+  FakeImage.instances = [];
+  playback.instances.length = 0;
+  playback.loadCompositionImpl.current = null;
+  vi.stubGlobal('Image', FakeImage);
+  vi.spyOn(document, 'createElement');
+  mountComposable();
+});
+
+afterEach(() => {
+  wrapper?.unmount();
+  wrapper = undefined;
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+describe('useCanvasBackground', () => {
+  it('exposes fixed pixel inputs and invalidates them after blur and deep gradient edits', async () => {
+    const clock = vi.spyOn(performance, 'now').mockReturnValue(1000);
+    const initial = state.backgroundCacheKey();
+    selected.value = gradient();
+    await nextTick();
+    expect(state.backgroundCacheKey()).toBeNull();
+    clock.mockReturnValue(1200);
+    state.drawBackground(context(), { x: 0, y: 0, width: 100, height: 100 });
+    const ready = state.backgroundCacheKey();
+    expect(ready).not.toEqual(initial);
+    expect(state.backgroundCacheKey()).toEqual(ready);
+    blur.value = 25;
+    await nextTick();
+    expect(state.backgroundCacheKey()).not.toEqual(ready);
+    const blurred = state.backgroundCacheKey();
+    if (selected.value.kind !== 'gradient') throw new Error('gradient');
+    selected.value.gradient.stops[0]!.color = '#123456';
+    await nextTick();
+    expect(state.backgroundCacheKey()).not.toEqual(blurred);
+    selected.value = null;
+    await nextTick();
+    expect(state.backgroundCacheKey()).not.toEqual(initial);
+  });
+
+  it('changes the pixel key when a loaded image replaces the previous background', async () => {
+    const clock = vi.spyOn(performance, 'now').mockReturnValue(1000);
+    const before = state.backgroundCacheKey();
+    selected.value = image();
+    await nextTick();
+    const loading = state.backgroundCacheKey();
+    expect(loading).not.toEqual(before);
+    FakeImage.instances[0]!.dispatchEvent(new Event('load'));
+    await flushPromises();
+    await nextTick();
+    expect(state.backgroundCacheKey()).toBeNull();
+    clock.mockReturnValue(1200);
+    state.drawBackground(context(), { x: 0, y: 0, width: 100, height: 100 });
+    expect(state.backgroundCacheKey()).not.toEqual(loading);
+  });
+
+  it('keeps video pixel keys live after the background transition finishes', async () => {
+    const clock = vi.spyOn(performance, 'now').mockReturnValue(1000);
+    selected.value = video();
+    await nextTick();
+    await flushPromises();
+    expect(state.backgroundCacheKey()).toBeNull();
+    clock.mockReturnValue(1200);
+    state.drawBackground(context(), { x: 0, y: 0, width: 100, height: 100 });
+    expect(state.isTransitioningBackground.value).toBe(false);
+    expect(state.backgroundCacheKey()).toBeNull();
+  });
+
+  it('draws colors, gradients, fallback media, and applies clamped blur', async () => {
+    const ctx = context();
+    selected.value = color();
+    blur.value = 200;
+    await nextTick();
+    state.drawBackground(ctx, { x: 10, y: 20, width: 100, height: 50 });
+    expect(ctx.fillRect).toHaveBeenCalledWith(-86, -76, 292, 242);
+    expect(ctx.filter).toBe('blur(48px)');
+
+    selected.value = gradient('linear');
+    await nextTick();
+    state.drawBackground(ctx, { x: 0, y: 0, width: 100, height: 100 });
+    expect(ctx.createLinearGradient).toHaveBeenCalled();
+
+    selected.value = gradient('radial');
+    await nextTick();
+    state.drawBackground(ctx, { x: 0, y: 0, width: 100, height: 100 });
+    expect(ctx.createRadialGradient).toHaveBeenCalled();
+
+    selected.value = image();
+    await nextTick();
+    state.drawBackground(ctx, { x: 0, y: 0, width: 100, height: 100 });
+    expect(ctx.fillRect).toHaveBeenCalled();
+    expect(vi.mocked(document.createElement).mock.calls.some(([tag]) => tag === 'video')).toBe(false);
+  });
+
+  it('loads images, ignores stale or unloaded images, and reuses the cache', async () => {
+    const ctx = context();
+    selected.value = image('first.png');
+    await nextTick();
+    const firstImage = FakeImage.instances[0]!;
+    expect(firstImage.src).toBe('http://localhost:3000/first.png');
+
+    renderCanvas.mockClear();
+    selected.value = image('second.png');
+    await nextTick();
+    firstImage.dispatchEvent(new Event('load'));
+    await flushPromises();
+    expect(renderCanvas).not.toHaveBeenCalled();
+
+    const secondImage = FakeImage.instances[1]!;
+    secondImage.naturalWidth = 0;
+    secondImage.dispatchEvent(new Event('load'));
+    await flushPromises();
+    state.drawBackground(ctx, { x: 0, y: 0, width: 100, height: 100 });
+    expect(ctx.drawImage).not.toHaveBeenCalled();
+
+    secondImage.naturalWidth = 320;
+    secondImage.dispatchEvent(new Event('load'));
+    await flushPromises();
+    state.drawBackground(ctx, { x: 0, y: 0, width: 100, height: 100 });
+    expect(ctx.drawImage).toHaveBeenCalledWith(
+      secondImage,
+      0,
+      0,
+      320,
+      180,
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+    );
+
+    selected.value = null;
+    await nextTick();
+    selected.value = image('second.png');
+    await nextTick();
+    state.drawBackground(ctx, { x: 0, y: 0, width: 100, height: 100 });
+    expect(ctx.drawImage).toHaveBeenCalled();
+  });
+
+  it('decodes video frames through MediaPlaybackEngine and never creates an HTML video', async () => {
+    const ctx = context();
+    selected.value = video();
+    await flushPromises();
+    const engine = playback.instances[0]!;
+    expect(engine.loadComposition).toHaveBeenCalledOnce();
+    expect(engine.previewQuality).toBe('full');
+    expect(vi.mocked(document.createElement).mock.calls.some(([tag]) => tag === 'video')).toBe(false);
+
+    const bitmap = {} as CanvasImageSource;
+    engine.frame = { bitmap, width: 640, height: 360, close: vi.fn() };
+    engine.emitFrame();
+    state.drawBackground(ctx, { x: 0, y: 0, width: 100, height: 100 });
+    expect(ctx.drawImage).toHaveBeenCalledWith(
+      bitmap,
+      0,
+      0,
+      640,
+      360,
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+    );
+
+    state.syncPlayback(true);
+    expect(engine.play).toHaveBeenCalledWith(0);
+    state.syncPlayback(false);
+    expect(engine.pause).toHaveBeenCalled();
+    previewQuality.value = 'quarter';
+    await nextTick();
+    expect(engine.setPreviewQuality).toHaveBeenCalledWith('quarter');
+    selected.value = color();
+    await nextTick();
+    expect(engine.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('reports decode failures and disposes the playback engine on unmount', async () => {
+    const inspect = await import('@beam/runtime/shared/index');
+    vi.mocked(inspect.inspectMedia).mockRejectedValueOnce(new Error('unsupported video'));
+    selected.value = video('broken.mp4');
+    await flushPromises();
+    expect(state.backgroundError.value).toMatchObject({
+      kind: 'decode-failure',
+      sourceId: 'broken.mp4',
+    });
+    expect(playback.instances).toHaveLength(0);
+  });
+
+  it('disposes an obsolete background engine when its load rejects after a replacement', async () => {
+    let rejectLoad!: (reason: unknown) => void;
+    playback.loadCompositionImpl.current = () =>
+      new Promise<void>((_resolve, reject) => {
+        rejectLoad = reject;
+      });
+
+    selected.value = video('stale.mp4');
+    await flushPromises();
+    expect(playback.instances).toHaveLength(1);
+    const staleEngine = playback.instances[0]!;
+
+    selected.value = color();
+    await nextTick();
+    rejectLoad(new Error('stale background decode failed'));
+    await flushPromises();
+
+    expect(staleEngine.dispose).toHaveBeenCalledOnce();
+  });
+});

@@ -1,0 +1,137 @@
+/* Imported with component scoping by each timeline renderer. Keep track states here. */
+.track-row,
+.canvas-track-row {
+  /* Row transforms create stacking contexts: keep every control above the shared bitmap. */
+  z-index: 2;
+  background: transparent;
+}
+.canvas-clip-target {
+  color: var(--color-timeline-item-text);
+  box-sizing: border-box;
+  border-radius: var(--radius-sm);
+}
+.track-row:hover,
+.track-row:focus-within,
+.canvas-track-row:hover,
+.canvas-track-row:focus-within {
+  --timeline-trim-opacity: 1;
+  --timeline-trim-pointer-events: auto;
+}
+.timeline-clip,
+.visual-content,
+.visual-add-indicator {
+  --timeline-track-color: var(--color-timeline-video);
+}
+.audio-content,
+.kind-audio,
+.voiceover-draft-clip {
+  --timeline-track-color: var(--color-timeline-audio);
+}
+.cursor-content,
+.cursor-zoom-indicator {
+  --timeline-track-color: var(--color-timeline-zoom);
+}
+.annotation-content,
+.annotation-indicator,
+.kind-caption {
+  --timeline-track-color: var(--color-timeline-caption);
+}
+.kind-shape {
+  --timeline-track-color: var(--color-timeline-shape);
+}
+.kind-highlight {
+  --timeline-track-color: var(--color-timeline-highlight);
+}
+.kind-blur {
+  --timeline-track-color: var(--color-timeline-blur);
+}
+.canvas-track-content,
+.canvas-transition-zone {
+  --timeline-track-color: var(--text-secondary);
+}
+:is(
+  .timeline-clip:not(.canvas-clip-target),
+  .cursor-zoom-indicator:not(.canvas-clip-target),
+  .annotation-indicator:not(.canvas-clip-target),
+  .canvas-transition-zone:not(.canvas-clip-target),
+  .visual-add-indicator,
+  .voiceover-draft-clip
+) {
+  background: color-mix(in srgb, var(--timeline-track-color) var(--timeline-item-tint), var(--color-bg-field));
+  border: 1px solid var(--color-timeline-item-border);
+  border-radius: var(--radius-sm);
+  box-sizing: border-box;
+  color: var(--color-timeline-item-text);
+  opacity: var(--timeline-item-opacity, 1);
+  box-shadow: none;
+}
+.canvas-transition-zone {
+  color: var(--text-primary);
+}
+:is(.timeline-clip, .cursor-zoom-indicator, .annotation-indicator, .canvas-transition-zone):hover {
+  border-color: var(--color-timeline-item-hover);
+}
+:is(.timeline-clip, .cursor-zoom-indicator, .annotation-indicator):active {
+  cursor: grabbing;
+}
+:is(
+  .timeline-clip:not(.canvas-clip-target),
+  .cursor-zoom-indicator:not(.canvas-clip-target),
+  .annotation-indicator:not(.canvas-clip-target),
+  .canvas-transition-zone:not(.canvas-clip-target)
+).selected {
+  border: 2px solid var(--color-timeline-selection);
+  outline: none;
+}
+:is(.timeline-clip, .cursor-zoom-indicator, .annotation-indicator, .canvas-transition-zone):focus-visible {
+  outline: 2px solid var(--color-timeline-selection);
+  outline-offset: 1px;
+}
+:is(.timeline-clip, .cursor-zoom-indicator, .annotation-indicator, .canvas-transition-zone):focus:not(:focus-visible) {
+  outline: none;
+}
+/* Inherit the state, rather than multiplying row opacity by clip opacity. */
+.track-row.disabled,
+:is(.timeline-clip, .cursor-zoom-indicator, .annotation-indicator, .canvas-transition-zone).disabled {
+  --timeline-item-opacity: var(--timeline-disabled-opacity);
+}
+.preview-ghost {
+  --timeline-item-opacity: var(--timeline-ghost-opacity);
+  border-style: dashed;
+  pointer-events: none;
+}
+.track-row.dragging,
+.sidebar-track-item.dragging {
+  opacity: var(--timeline-drag-opacity);
+}
+.track-row.dragging {
+  z-index: 10;
+}
+.sidebar-track-item.disabled .track-info {
+  opacity: var(--timeline-disabled-opacity);
+}
+.sidebar-track-item.selected {
+  box-shadow: inset 0 0 0 1px var(--color-timeline-selection);
+}
+.sidebar-track-item.selected .track-info {
+  background: var(--color-bg-field-active);
+  color: var(--text-primary);
+}
+.transition-zone {
+  background: var(--color-timeline-transition-fill);
+  box-shadow: inset 0 0 0 1px var(--color-timeline-transition-border);
+}
+.timeline-clip.trim-at-limit,
+.timeline-clip.trim-at-limit:hover {
+  border-color: var(--color-error);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cursor-zoom-indicator,
+  .annotation-indicator {
+    transition: none;
+  }
+}
+
+.canvas-clip-target {
+  z-index: 2;
+}

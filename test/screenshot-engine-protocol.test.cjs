@@ -6,8 +6,8 @@ const path = require('node:path');
 const { PassThrough } = require('node:stream');
 const childProcess = require('node:child_process');
 const { after, test } = require('node:test');
-const { createScreenshotStore } = require('../electron/screenshot/screenshot-store.cjs');
-const { registerScreenshotIpc } = require('../electron/screenshot/screenshot-ipc.cjs');
+const { createScreenshotStore } = require('../apps/desktop/electron/screenshot/screenshot-store.cjs');
+const { registerScreenshotIpc } = require('../apps/desktop/electron/screenshot/screenshot-ipc.cjs');
 
 const fakeExecutable = path.join(os.tmpdir(), 'beam-fake-capture-engine');
 const pngBytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 1, 2, 3]);
@@ -77,7 +77,7 @@ fs.existsSync = function (candidate, ...args) {
 };
 process.env.BEAM_CAPTURE_ENGINE = fakeExecutable;
 
-const { CaptureEngine } = require('../electron/capture/capture-engine.cjs');
+const { CaptureEngine } = require('../apps/desktop/electron/capture/capture-engine.cjs');
 
 after(() => {
   childProcess.spawn = originalSpawn;
@@ -102,7 +102,10 @@ function makeFixture({ failScreenshot = false } = {}) {
         result: { stale: true },
       };
       if (request.command === 'discover') {
-        return { staleResponse, response: { requestId: request.id, ok: true, result: catalog } };
+        return {
+          staleResponse,
+          response: { requestId: request.id, ok: true, result: catalog },
+        };
       }
       if (request.command === 'screenshot') {
         if (failScreenshot) {
@@ -111,14 +114,21 @@ function makeFixture({ failScreenshot = false } = {}) {
             response: {
               requestId: request.id,
               ok: false,
-              error: { code: 'native-screenshot-error', message: 'native screenshot failed promptly' },
+              error: {
+                code: 'native-screenshot-error',
+                message: 'native screenshot failed promptly',
+              },
             },
           };
         }
         fs.writeFileSync(request.config.output, pngBytes);
         return {
           staleResponse,
-          response: { requestId: request.id, ok: true, result: { width: 1280, height: 720 } },
+          response: {
+            requestId: request.id,
+            ok: true,
+            result: { width: 1280, height: 720 },
+          },
         };
       }
       return {
@@ -133,7 +143,9 @@ function makeFixture({ failScreenshot = false } = {}) {
   const engine = new CaptureEngine({ isPackaged: false, getVersion: () => '1.2.3', getPath: () => root }, root);
   const store = createScreenshotStore(screenshotRoot);
   const handlers = new Map();
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   registerScreenshotIpc({
     ipcMain,
     store,

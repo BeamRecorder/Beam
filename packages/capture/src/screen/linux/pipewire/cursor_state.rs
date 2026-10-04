@@ -139,9 +139,22 @@ pub(crate) fn map_cursor_metadata(
     });
     let x = i64::from(metadata.x) - i64::from(crop.x);
     let y = i64::from(metadata.y) - i64::from(crop.y);
-    let width = i64::from(crop.width);
-    let height = i64::from(crop.height);
-    let (x, y) = match transform {
+    let (x, y) = transform_cursor_point(x, y, crop.width, crop.height, transform);
+    metadata.x = i32::try_from(x).unwrap_or(if x < 0 { i32::MIN } else { i32::MAX });
+    metadata.y = i32::try_from(y).unwrap_or(if y < 0 { i32::MIN } else { i32::MAX });
+    Some(metadata)
+}
+
+pub(super) fn transform_cursor_point(
+    x: i64,
+    y: i64,
+    width: u32,
+    height: u32,
+    transform: VideoTransform,
+) -> (i64, i64) {
+    let width = i64::from(width);
+    let height = i64::from(height);
+    match transform {
         VideoTransform::None => (x, y),
         VideoTransform::Rotated90 => (y, width - 1 - x),
         VideoTransform::Rotated180 => (width - 1 - x, height - 1 - y),
@@ -150,8 +163,5 @@ pub(crate) fn map_cursor_metadata(
         VideoTransform::Flipped90 => (y, x),
         VideoTransform::Flipped180 => (x, height - 1 - y),
         VideoTransform::Flipped270 => (height - 1 - y, width - 1 - x),
-    };
-    metadata.x = i32::try_from(x).unwrap_or(if x < 0 { i32::MIN } else { i32::MAX });
-    metadata.y = i32::try_from(y).unwrap_or(if y < 0 { i32::MIN } else { i32::MAX });
-    Some(metadata)
+    }
 }

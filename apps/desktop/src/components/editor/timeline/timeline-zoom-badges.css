@@ -1,0 +1,47 @@
+.cursor-zoom-indicator {
+  container-type: inline-size;
+}
+.zoom-clip-labels {
+  display: grid;
+  grid-template-columns: auto minmax(0, auto) auto;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  gap: 4px;
+  pointer-events: none;
+}
+.zoom-meta-badge {
+  padding: 1px 3px;
+  border-radius: var(--radius-xs);
+  background: var(--color-timeline-badge);
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-title);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.zoom-clip-labels.has-lock {
+  grid-template-columns: auto auto minmax(0, auto) auto;
+}
+.zoom-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.zoom-projection-badge {
+  display: inline-flex;
+  align-items: center;
+  pointer-events: auto;
+}
+
+@container (max-width: 118px) {
+  .zoom-mode-badge {
+    display: none;
+  }
+}
+
+@container (max-width: 78px) {
+  .zoom-projection-badge {
+    display: none;
+  }
+}

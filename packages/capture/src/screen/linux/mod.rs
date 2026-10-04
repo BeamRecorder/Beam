@@ -24,6 +24,7 @@ mod owned_child;
 mod pipewire;
 mod portal;
 mod recording;
+mod region_selection;
 mod runtime;
 
 pub use capabilities::*;
@@ -37,3 +38,5 @@ pub use input_monitor::{
 };
 pub(crate) use owned_child::terminate_all as terminate_owned_descendants;
 pub use recording::*;
+pub(crate) use region_selection::LinuxRegionSelection;
+pub use region_selection::PortalDisplayGeometry;

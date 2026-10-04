@@ -1,0 +1,19 @@
+.floating-surface {
+  --floating-surface-background: var(--color-bg-popover);
+  background: transparent;
+}
+
+/* Filtering the container would prevent nested menus from sampling the canvas.
+ * Keep the blur on a non-interactive layer behind the menu content instead.
+ * Each surface's positioned z-index keeps this layer inside its stacking context. */
+.floating-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--floating-surface-background);
+  backdrop-filter: var(--popover-backdrop-filter);
+  -webkit-backdrop-filter: var(--popover-backdrop-filter);
+  pointer-events: none;
+}

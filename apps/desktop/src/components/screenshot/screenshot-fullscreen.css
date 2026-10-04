@@ -1,0 +1,22 @@
+.screenshot-preview-stage.is-app-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  width: 100%;
+  height: 100%;
+  padding: 12px;
+  box-sizing: border-box;
+  background: var(--color-bg-app);
+}
+.screenshot-preview-stage.is-app-fullscreen.is-fullscreen-exiting {
+  pointer-events: none;
+}
+.fullscreen-preview-back {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 100;
+}
+:global(body.beam-app-fullscreen-active) {
+  overflow: hidden;
+}

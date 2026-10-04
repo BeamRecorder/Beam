@@ -1,0 +1,44 @@
+{
+  "runtime": "1.4.2",
+  "platform": "linux",
+  "date": "2026-10-02T11:10:12.110Z",
+  "results": [
+    {
+      "clips": 1000,
+      "operations": 50,
+      "before": {
+        "name": "JSON commands + copied snapshot history",
+        "medianMs": 3.323305000000005,
+        "p95Ms": 14.397797999999966,
+        "retainedClipObjects": 50000
+      },
+      "after": {
+        "name": "immutable commands + document session",
+        "medianMs": 0.8732919999999922,
+        "p95Ms": 1.4938230000000203,
+        "retainedClipObjects": 1049
+      },
+      "medianSpeedup": 3.8054911759182892
+    },
+    {
+      "clips": 10000,
+      "operations": 50,
+      "before": {
+        "name": "JSON commands + copied snapshot history",
+        "medianMs": 41.832469000000174,
+        "p95Ms": 84.40546600000016,
+        "retainedClipObjects": 500000
+      },
+      "after": {
+        "name": "immutable commands + document session",
+        "medianMs": 9.575942000000396,
+        "p95Ms": 10.912818000000243,
+        "retainedClipObjects": 10049
+      },
+      "medianSpeedup": 4.368496488387089
+    }
+  ],
+  "hardware": "Intel Core Ultra 5 125H, Linux x86_64",
+  "baseline": "Pre-structural-sharing clip-engine saved before changes, with copied snapshot history",
+  "warmup": 10
+}

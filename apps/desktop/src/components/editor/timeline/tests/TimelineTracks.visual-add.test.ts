@@ -1,0 +1,214 @@
+import { describe, expect, it } from 'vitest';
+import type { BlurClip, ClipComposition, ColorClip, ShapeClip } from '@beam/engine/shared/composition-types';
+import { DEFAULT_COLOR_FILL } from '@beam/engine/shared/color-fill-types';
+import { DEFAULT_COLOR_LAYER_STYLE } from '@beam/engine/shared/color-layer-style';
+import { DEFAULT_SHAPE_LAYER_STYLE } from '@beam/engine/shared/shape-layer-style';
+import { composition, mountTracks, visual } from './TimelineTracks.test-support';
+
+const baseClip = {
+  timelineStartMs: 0,
+  sourceInMs: 0,
+  sourceDurationMs: 6_000,
+  playbackRate: 1,
+  transitions: { entry: null, exit: null },
+  enabled: true,
+};
+
+const colorClip = (endMs = 6_000): ColorClip => ({
+  ...baseClip,
+  id: 'color-track-clip',
+  trackId: 'color-track',
+  kind: 'color',
+  assetId: '',
+  name: 'Color',
+  timelineDurationMs: endMs,
+  sourceDurationMs: endMs,
+  order: -1,
+  transform: { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
+  fill: structuredClone(DEFAULT_COLOR_FILL),
+  ...DEFAULT_COLOR_LAYER_STYLE,
+});
+
+const shapeClip = (): ShapeClip => ({
+  ...baseClip,
+  id: 'shape-track-clip',
+  trackId: 'shape-track',
+  kind: 'shape',
+  assetId: '',
+  name: 'Shape',
+  timelineDurationMs: 6_000,
+  order: -2,
+  transform: { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
+  ...DEFAULT_SHAPE_LAYER_STYLE,
+});
+
+const blurClip = (): BlurClip => ({
+  ...baseClip,
+  id: 'blur-track-clip',
+  trackId: 'blur-track',
+  kind: 'blur',
+  assetId: '',
+  name: 'Blur',
+  timelineDurationMs: 6_000,
+  order: -3,
+  transform: { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
+  shape: 'rectangle',
+  mode: 'blur',
+  strength: 40,
+  feather: 0,
+  cornerRadius: 0,
+  tintOpacity: 0,
+  color: '#000000',
+});
+
+const visualTrackComposition = (extraClips: ClipComposition['clips'] = []): ClipComposition => {
+  const base = composition();
+  return { ...base, clips: [...base.clips, ...extraClips] };
+};
+
+describe('TimelineTracks visual add placement', () => {
+  it('renders Add in the ruler spacer, opens upward, and emits the selected element', async () => {
+    const mounted = await mountTracks({
+      composition: visualTrackComposition(),
+      selectedZoomId: null,
+      selectedClipId: null,
+    });
+    const spacer = mounted!.get('.sidebar-ruler-spacer');
+    const addButton = spacer.find('button');
+    expect(addButton.exists()).toBe(true);
+
+    const popover = mounted!.findComponent({ name: 'Popover' });
+    expect(popover.exists()).toBe(true);
+    expect(popover.props('direction')).toBe('up');
+
+    await addButton.trigger('click');
+    const elementsMenu = Array.from(
+      document.body.querySelectorAll<HTMLButtonElement>('.menu-content:not(.submenu-panel) > .menu-entry > .menu-item'),
+    ).find((button) => button.textContent?.toLowerCase().includes('elements'));
+    expect(elementsMenu).toBeDefined();
+    elementsMenu!.click();
+    await mounted!.vm.$nextTick();
+    const blur = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.submenu-panel .menu-item')).find(
+      (button) => button.textContent?.toLowerCase().includes('blur'),
+    );
+    expect(blur).toBeDefined();
+    blur!.click();
+    expect(mounted!.emitted('add:element')).toEqual([['blur']]);
+  });
+
+  it.each([
+    ['image-track', 'image'],
+    ['color-track', 'color'],
+    ['shape-track', 'shape'],
+    ['blur-track', 'blur'],
+    ['highlight-track', 'highlight'],
+  ] as const)('shows an Add ghost and emits a continuation request for %s', async (trackId, kind) => {
+    const clips =
+      kind === 'color'
+        ? [colorClip()]
+        : kind === 'shape'
+          ? [shapeClip()]
+          : kind === 'blur'
+            ? [blurClip()]
+            : kind === 'highlight'
+              ? [
+                  {
+                    ...blurClip(),
+                    id: 'highlight',
+                    trackId,
+                    name: 'Highlight',
+                    mode: 'highlight',
+                  } satisfies BlurClip,
+                ]
+              : [];
+    const mounted = await mountTracks({
+      composition: visualTrackComposition(clips),
+      selectedZoomId: null,
+      selectedClipId: null,
+    });
+    const content = mounted!.get(`[data-track-id="${trackId}"] .visual-content`);
+
+    await content.trigger('mousemove', { clientX: 900 });
+    const ghost = content.find('.visual-add-indicator.preview-ghost');
+    expect(ghost.exists()).toBe(true);
+    expect(ghost.classes()).toContain(`kind-${kind}`);
+    if (kind === 'highlight') {
+      expect(ghost.classes()).not.toContain('kind-blur');
+      expect(content.attributes('title')).toBe('Add Highlight');
+      expect(mounted!.get(`[data-track-id="${trackId}"] .track-title`).text()).toBe('Highlight');
+    }
+
+    await content.trigger('click', { clientX: 900 });
+    expect(mounted!.emitted('add:visual-element')).toContainEqual([
+      expect.objectContaining({
+        kind,
+        trackId,
+        durationMs: kind === 'image' ? 5_000 : 3_000,
+      }),
+    ]);
+  });
+
+  it('shortens the ghost to the available gap and keeps the requested duration in the event', async () => {
+    const mounted = await mountTracks({
+      composition: visualTrackComposition([colorClip(8_500)]),
+      selectedZoomId: null,
+      selectedClipId: null,
+    });
+    const content = mounted!.get('[data-track-id="color-track"] .visual-content');
+
+    await content.trigger('mousemove', { clientX: 1_000 });
+    expect(content.find('.visual-add-indicator.preview-ghost').exists()).toBe(true);
+    await content.trigger('click', { clientX: 1_000 });
+
+    expect(mounted!.emitted('add:visual-element')).toContainEqual([
+      expect.objectContaining({
+        kind: 'color',
+        trackId: 'color-track',
+        durationMs: 1_500,
+      }),
+    ]);
+  });
+
+  it('hides the ghost and emits nothing when the remaining gap is shorter than 200 ms', async () => {
+    const mounted = await mountTracks({
+      composition: visualTrackComposition([colorClip(9_850)]),
+      selectedZoomId: null,
+      selectedClipId: null,
+    });
+    const content = mounted!.get('[data-track-id="color-track"] .visual-content');
+
+    await content.trigger('mousemove', { clientX: 1_080 });
+    expect(content.find('.visual-add-indicator.preview-ghost').exists()).toBe(false);
+    await content.trigger('click', { clientX: 1_080 });
+
+    expect(mounted!.emitted('add:visual-element') ?? []).toHaveLength(0);
+  });
+
+  it('does not offer visual continuation on screen, webcam, or video tracks', async () => {
+    const mounted = await mountTracks({
+      composition: visualTrackComposition([
+        visual({
+          id: 'video-clip',
+          trackId: 'video-track',
+          kind: 'video',
+          name: 'Video',
+          assetId: 'screen-asset',
+          timelineStartMs: 0,
+          timelineDurationMs: 6_000,
+          sourceDurationMs: 6_000,
+        }),
+      ]),
+      selectedZoomId: null,
+      selectedClipId: null,
+    });
+
+    for (const trackId of ['screen-track', 'webcam-track', 'video-track']) {
+      const content = mounted!.get(`[data-track-id="${trackId}"] .visual-content`);
+      await content.trigger('mousemove', { clientX: 900 });
+      expect(content.find('.visual-add-indicator.preview-ghost').exists()).toBe(false);
+      await content.trigger('click', { clientX: 900 });
+    }
+
+    expect(mounted!.emitted('add:visual-element') ?? []).toHaveLength(0);
+  });
+});

@@ -3,10 +3,10 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { createProjectStore } = require('../electron/projects/project-store.cjs');
-const { createScreenshotStore } = require('../electron/screenshot/screenshot-store.cjs');
-const { createProjectLibrary } = require('../electron/projects/project-library.cjs');
-const { registerProjectIpc } = require('../electron/projects/project-ipc.cjs');
+const { createProjectStore } = require('../apps/desktop/electron/projects/project-store.cjs');
+const { createScreenshotStore } = require('../apps/desktop/electron/screenshot/screenshot-store.cjs');
+const { createProjectLibrary } = require('../apps/desktop/electron/projects/project-library.cjs');
+const { registerProjectIpc } = require('../apps/desktop/electron/projects/project-ipc.cjs');
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-library-'));
@@ -178,3 +178,12 @@ function expectProject(project, mode) {
     hasMicrophone: false,
   };
 }
+
+test('lists and renames screenshots with the current composition thumbnail instead of the source', (t) => {
+  const { library, screenshots, screenshot } = fixture(t);
+  fs.writeFileSync(path.join(screenshots.directoryFor(screenshot.id), 'thumbnail.webp'), 'edited composition');
+  const expected = screenshots.readSummary(screenshot.id).thumbnailSrc;
+  assert.match(expected, /thumbnail\.webp\?v=/);
+  assert.equal(library.list().find((project) => project.id === screenshot.id).thumbnailSrc, expected);
+  assert.equal(library.rename(screenshot.id, 'Updated', 'screenshot').thumbnailSrc, expected);
+});

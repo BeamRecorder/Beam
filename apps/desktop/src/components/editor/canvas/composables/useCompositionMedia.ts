@@ -1,0 +1,444 @@
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
+import { drawSceneStack } from '@beam/runtime/rendering/scene-stack';
+import { onUnmounted, watch } from 'vue';
+import { activeClipsAt, type MediaFrame } from '@beam/runtime/shared/index';
+import {
+  isBlurClip,
+  isColorClip,
+  isShapeClip,
+  isVisualClip,
+  type BlurClip,
+  type CaptionClip,
+  type ClipComposition,
+  type ColorClip,
+  type NormalizedTransform,
+  type ShapeClip,
+  type VisualClip,
+} from '@beam/engine/shared/composition-types';
+import { captionContentAt } from '@beam/engine/shared/caption-text-layout';
+import {
+  drawWebcamOverlay,
+  webcamReactsToZoom,
+  webcamSettingsForAppearance,
+} from '@beam/runtime/composition/webcam/webcam-zoom';
+import { drawDecoratedMedia } from '@beam/runtime/composition/appearance/render-decorated-media';
+import { primeAdaptiveShadowColors } from '@beam/runtime/composition/appearance/adaptive-shadow';
+import type {
+  AdaptiveShadowRequest,
+  DecoratedMediaOptions,
+} from '@beam/runtime/composition/appearance/appearance-types';
+import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
+import { drawFrameOverlay } from '@beam/runtime/composition/appearance/frames';
+import { frameOuterRect } from '@beam/engine/shared/frame-layout';
+import { drawCaptionText, type CaptionViewport } from '@beam/runtime/composition/captions/render-caption-text';
+import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
+import { applyBlurEffect } from '@beam/runtime/composition/effects/blur-effect';
+import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '@beam/engine/composition/scene-layers';
+import { drawWithClipTransition } from '@beam/runtime/composition/transitions/render-transition';
+import { resolveVisualClipFraming } from '@beam/engine/composition/visual-framing';
+import { drawColorClip } from '@beam/runtime/composition/color/render-color-clip';
+import { drawShapeClip } from '@beam/runtime/composition/shape/render-shape-clip';
+import { createGpuShapeScope } from '@beam/runtime/composition/shape/ordered-gpu-shapes';
+import { requestEditorImage } from '../../resources/editor-image-cache';
+
+export interface UseCompositionMediaOptions {
+  composition: () => ClipComposition;
+  currentTime: () => number;
+  frameFor: (clipId: string) => MediaFrame | null;
+  selectedTransformClip: () => VisualClip | ColorClip | ShapeClip | BlurClip | CaptionClip | null;
+  transformDraft: () => NormalizedTransform | null;
+  transformDraftFor?: (clipId: string) => NormalizedTransform | null;
+  isCropping?: () => boolean | undefined;
+  outputCanvas: () => OutputCanvasSettings;
+  captionViewport: () => CaptionViewport;
+  keyboardCursorPosition?: () => { x: number; y: number } | null;
+  editingCaptionId?: () => string | null;
+  onRenderOnce: () => void;
+}
+
+export function useCompositionMedia(options: UseCompositionMediaOptions) {
+  const images = new Map<string, HTMLImageElement>();
+  const sources = new Map<string, string>();
+  const gpuShapes = createGpuShapeScope();
+  const transformDraftFor = (clipId: string) => {
+    const selected = options.selectedTransformClip();
+    return options.transformDraftFor?.(clipId) ?? (clipId === selected?.id ? options.transformDraft() : null);
+  };
+  const dispose = () => {
+    gpuShapes.dispose();
+    images.clear();
+    sources.clear();
+  };
+  const reconcile = () => {
+    const assets = new Map(options.composition().assets.map((asset) => [asset.id, asset]));
+    for (const id of images.keys())
+      if (assets.get(id)?.kind !== 'image' || assets.get(id)?.src !== sources.get(id)) {
+        images.delete(id);
+        sources.delete(id);
+      }
+    for (const asset of assets.values()) {
+      if (asset.kind === 'image' && asset.src && !images.has(asset.id)) {
+        const { image, ready } = requestEditorImage(asset.src);
+        sources.set(asset.id, asset.src);
+        images.set(asset.id, image);
+        void ready
+          .then(() => {
+            if (images.get(asset.id) === image) options.onRenderOnce();
+          })
+          .catch((reason: unknown) => {
+            if (images.get(asset.id) !== image) return;
+            // Retain this failed source until it changes, avoiding a decode on every reconciliation.
+            console.error('[Beam media:editor] image loading failed.', reason);
+          });
+      }
+    }
+  };
+  watch(
+    () =>
+      options
+        .composition()
+        .assets.map((asset) => `${asset.id}:${asset.kind}:${asset.src}`)
+        .join('|'),
+    reconcile,
+    { immediate: true },
+  );
+
+  const drawCaption = (ctx: Canvas2DContext, clip: CaptionClip, timeMs: number) => {
+    const { text, runs, wordHighlight } = captionContentAt(clip, timeMs);
+    if (!text) return;
+    const transformDraft = transformDraftFor(clip.id);
+    const renderClip = transformDraft ? { ...clip, transform: transformDraft } : clip;
+    drawCaptionText(ctx, {
+      clip: renderClip,
+      text,
+      runs,
+      wordHighlight,
+      cursorPosition:
+        clip.caption.type === 'keyboard' && clip.caption.followCursor ? options.keyboardCursorPosition?.() : null,
+      hideText: options.editingCaptionId?.() === clip.id,
+      canvas: options.outputCanvas(),
+      viewport: options.captionViewport(),
+    });
+  };
+
+  const prepareVisual = (clip: VisualClip, window: { dx: number; dy: number; dw: number; dh: number }) => {
+    const frame = options.frameFor(clip.id);
+    const image = clip.kind === 'image' ? images.get(clip.assetId) : null;
+    if (!frame && image && (!image.complete || !image.naturalWidth)) return;
+    const source = frame?.bitmap ?? image;
+    if (!source) return;
+    const selected = options.selectedTransformClip();
+    const transform = transformDraftFor(clip.id) ?? clip.transform;
+    const sourceWidth = frame?.width ?? image?.naturalWidth ?? 0;
+    const sourceHeight = frame?.height ?? image?.naturalHeight ?? 0;
+    const editingCrop = Boolean(options.isCropping?.() && clip.id === selected?.id);
+    const editingPhoneCrop = editingCrop && isPhoneFrame(clip.appearance.frame);
+    const crop = editingCrop ? { x: 0, y: 0, width: 1, height: 1 } : clip.crop;
+    const layout = {
+      x: window.dx + transform.x * window.dw,
+      y: window.dy + transform.y * window.dh,
+      width: transform.width * window.dw,
+      height: transform.height * window.dh,
+    };
+    const framing = resolveVisualClipFraming(
+      clip,
+      layout,
+      sourceWidth,
+      sourceHeight,
+      crop,
+      editingPhoneCrop ? 'fit' : editingCrop ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
+    );
+    const output = options.outputCanvas?.();
+    const shadowScale = output
+      ? Math.min(window.dw / Math.max(1, output.width), window.dh / Math.max(1, output.height))
+      : 1;
+    const mediaOptions: DecoratedMediaOptions = {
+      source,
+      sourceRect: framing.sourceRect,
+      rect: framing.rect,
+      appearance: editingPhoneCrop ? { ...clip.appearance, frame: 'none' } : clip.appearance,
+      shadowScale,
+      title: clip.name,
+      mirrored: clip.isMirrored,
+      mirroredY: clip.isMirroredY,
+      rotation: clip.rotation,
+      mask: framing.mask,
+      shadowFollowsSourceAlpha: clip.kind === 'image',
+    };
+    return { editingPhoneCrop, layout, options: mediaOptions };
+  };
+  const drawVisual = (
+    ctx: Canvas2DContext,
+    clip: VisualClip,
+    window: { dx: number; dy: number; dw: number; dh: number },
+  ) => {
+    const prepared = prepareVisual(clip, window);
+    if (!prepared) return;
+    const { editingPhoneCrop, layout } = prepared;
+    drawDecoratedMedia(ctx, prepared.options);
+    if (editingPhoneCrop)
+      drawFrameOverlay(
+        ctx,
+        frameOuterRect(layout, clip.appearance.frame),
+        clip.appearance.frame,
+        clip.name,
+        clip.appearance.frameColor,
+        {
+          showMenu: clip.appearance.frameShowMenu,
+          showScrollbars: clip.appearance.frameShowScrollbars,
+          chromeScale: clip.appearance.frameChromeScale,
+          ...(clip.appearance.frameTheme !== undefined ? { theme: clip.appearance.frameTheme } : {}),
+        },
+      );
+  };
+
+  const drawBlur = (
+    ctx: Canvas2DContext,
+    clip: BlurClip,
+    window: { dx: number; dy: number; dw: number; dh: number },
+  ) => {
+    const transform = transformDraftFor(clip.id) ?? clip.transform;
+    applyBlurEffect(ctx, clip, {
+      x: window.dx + transform.x * window.dw,
+      y: window.dy + transform.y * window.dh,
+      width: transform.width * window.dw,
+      height: transform.height * window.dh,
+    });
+  };
+
+  const drawColor = (
+    ctx: Canvas2DContext,
+    clip: ColorClip,
+    window: { dx: number; dy: number; dw: number; dh: number },
+  ) => {
+    const transform = transformDraftFor(clip.id) ?? clip.transform;
+    drawColorClip(ctx, clip, { x: window.dx, y: window.dy, width: window.dw, height: window.dh }, transform);
+  };
+
+  const drawShape = (
+    ctx: Canvas2DContext,
+    clip: ShapeClip,
+    window: { dx: number; dy: number; dw: number; dh: number },
+  ) => {
+    const transform = transformDraftFor(clip.id) ?? clip.transform;
+    const visible = clip.id === options.editingCaptionId?.() ? { ...clip, text: undefined } : clip;
+    drawShapeClip(ctx, visible, { x: window.dx, y: window.dy, width: window.dw, height: window.dh }, transform);
+  };
+
+  const drawWebcam = (
+    ctx: Canvas2DContext,
+    clip: VisualClip,
+    window: {
+      dx: number;
+      dy: number;
+      dw: number;
+      dh: number;
+      scale: number;
+      focusX?: number;
+      focusY?: number;
+    },
+  ) => {
+    const frame = options.frameFor(clip.id);
+    if (!frame) return;
+    const selected = options.selectedTransformClip();
+    const scale = window.scale || 1;
+    const centerX = window.dx + window.dw / 2;
+    const centerY = window.dy + window.dh / 2;
+    ctx.save();
+    // The scene stack is rendered in camera space. Cancel that projection for
+    // webcam overlays so zoom keeps their existing screen-anchored behavior,
+    // while their position in the stack can still be blurred by higher layers.
+    ctx.translate(window.focusX ?? centerX, window.focusY ?? centerY);
+    ctx.scale(1 / scale, 1 / scale);
+    ctx.translate(-centerX, -centerY);
+    ctx.translate(window.dx, window.dy);
+    drawWebcamOverlay(
+      ctx,
+      frame.bitmap,
+      { width: frame.width, height: frame.height },
+      window.dw,
+      window.dh,
+      scale,
+      {
+        ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+        rotation: clip.rotation,
+        reactToZoom: webcamReactsToZoom(clip),
+      },
+      transformDraftFor(clip.id) ?? clip.transform,
+      options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop,
+      clip.appearance,
+      clip.name,
+      undefined,
+      options.isCropping?.() && clip.id === selected?.id ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
+    );
+    ctx.restore();
+  };
+
+  const drawVisualStack = (
+    ctx: Canvas2DContext,
+    window: {
+      dx: number;
+      dy: number;
+      dw: number;
+      dh: number;
+      scale: number;
+      focusX?: number;
+      focusY?: number;
+    },
+    drawScreen: () => void,
+    resolvedLayers?: CompositionSceneLayers,
+  ) => {
+    const layers =
+      resolvedLayers ?? resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000);
+    const timeMs = options.currentTime() * 1_000;
+    const requests: AdaptiveShadowRequest[] = [];
+    for (const clip of layers.visualStack) {
+      if (
+        !isVisualClip(clip) ||
+        clip.kind === 'screen' ||
+        clip.kind === 'webcam' ||
+        clip.appearance.shadowMode !== 'adaptive' ||
+        clip.appearance.shadowSize === 'none'
+      )
+        continue;
+      const prepared = prepareVisual(clip, window);
+      if (prepared)
+        requests.push({
+          source: prepared.options.source,
+          sourceRect: prepared.options.sourceRect,
+          fallbackColor: clip.appearance.shadowColor,
+        });
+    }
+    primeAdaptiveShadowColors(requests);
+    drawSceneStack(
+      ctx,
+      layers.visualStack,
+      layers.scene,
+      { x: window.dx, y: window.dy, width: window.dw, height: window.dh },
+      (ctx, clips) =>
+        gpuShapes.render(ctx, (batch) => {
+          for (const clip of clips) {
+            if (
+              clip.kind === 'blur' &&
+              batch.tryBlur(
+                clip,
+                {
+                  x: window.dx,
+                  y: window.dy,
+                  width: window.dw,
+                  height: window.dh,
+                },
+                transformDraftFor(clip.id) ?? clip.transform,
+              )
+            )
+              continue;
+            if (
+              clip.kind === 'shape' &&
+              batch.tryShape(
+                clip,
+                {
+                  x: window.dx,
+                  y: window.dy,
+                  width: window.dw,
+                  height: window.dh,
+                },
+                () => drawShape(ctx, clip, window),
+                transformDraftFor(clip.id) ?? clip.transform,
+              )
+            )
+              continue;
+            batch.flush();
+            drawWithClipTransition(
+              ctx,
+              clip,
+              timeMs,
+              {
+                x: window.dx,
+                y: window.dy,
+                width: window.dw,
+                height: window.dh,
+              },
+              () => {
+                if (clip.kind === 'screen') drawScreen();
+                else if (clip.kind === 'color') drawColor(ctx, clip, window);
+                else if (clip.kind === 'shape') drawShape(ctx, clip, window);
+                else if (clip.kind === 'blur') drawBlur(ctx, clip, window);
+                else if (clip.kind === 'webcam') drawWebcam(ctx, clip, window);
+                else drawVisual(ctx, clip, window);
+              },
+            );
+          }
+        }),
+    );
+  };
+
+  const drawComposition = (
+    ctx: Canvas2DContext,
+    window: { dx: number; dy: number; dw: number; dh: number },
+    onlyClipId?: string,
+    resolvedLayers?: CompositionSceneLayers,
+  ) => {
+    const timeMs = options.currentTime() * 1_000;
+    const clips = (resolvedLayers?.captions ?? activeClipsAt(options.composition(), timeMs))
+      .filter((clip) => (onlyClipId ? clip.id === onlyClipId : clip.kind === 'caption'))
+      .sort((left, right) => right.order - left.order);
+    for (const clip of clips) {
+      drawWithClipTransition(
+        ctx,
+        clip,
+        timeMs,
+        { x: window.dx, y: window.dy, width: window.dw, height: window.dh },
+        () => {
+          if (clip.kind === 'caption') drawCaption(ctx, clip, timeMs);
+          else if (isColorClip(clip)) drawColor(ctx, clip, window);
+          else if (isShapeClip(clip)) drawShape(ctx, clip, window);
+          else if (isBlurClip(clip)) drawBlur(ctx, clip, window);
+          else if (isVisualClip(clip) && clip.kind !== 'webcam') drawVisual(ctx, clip, window);
+        },
+      );
+    }
+  };
+
+  const drawWebcamClips = (
+    ctx: Canvas2DContext,
+    window: { dx: number; dy: number; dw: number; dh: number; scale: number },
+    onlyClipId?: string,
+  ) => {
+    const selected = options.selectedTransformClip();
+    for (const clip of activeClipsAt(options.composition(), options.currentTime() * 1_000)) {
+      if (clip.kind !== 'webcam' || (onlyClipId && clip.id !== onlyClipId)) continue;
+      const frame = options.frameFor(clip.id);
+      if (!frame) continue;
+      ctx.save();
+      ctx.translate(window.dx, window.dy);
+      drawWebcamOverlay(
+        ctx,
+        frame.bitmap,
+        { width: frame.width, height: frame.height },
+        window.dw,
+        window.dh,
+        window.scale,
+        {
+          ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+          rotation: clip.rotation,
+          reactToZoom: webcamReactsToZoom(clip),
+        },
+        transformDraftFor(clip.id) ?? clip.transform,
+        options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop,
+        clip.appearance,
+        clip.name,
+        options.outputCanvas
+          ? Math.min(
+              window.dw / Math.max(1, options.outputCanvas().width),
+              window.dh / Math.max(1, options.outputCanvas().height),
+            )
+          : 1,
+        options.isCropping?.() && clip.id === selected?.id ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
+      );
+      ctx.restore();
+    }
+  };
+
+  onUnmounted(dispose);
+  return { images, drawComposition, drawWebcamClips, drawVisualStack };
+}

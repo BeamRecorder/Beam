@@ -35,18 +35,23 @@ export type UserPaths = {
   whisperModels: string;
 };
 
-export const { createUserPaths } = require('../electron/storage/user-paths.cjs') as {
+export const { createUserPaths } = require('../apps/desktop/electron/storage/user-paths.cjs') as {
   createUserPaths: (videos: string) => UserPaths;
 };
 
-export const { createBackgroundLibrary } = require('../electron/backgrounds/background-library.cjs') as {
-  createBackgroundLibrary: (paths: UserPaths) => {
-    list: () => Array<{ kind: string; path: string; fileName: string }>;
-    importFile: (source: string) => { kind: string; path: string; fileName: string };
-    fileForUrl: (url: string) => string | null;
+export const { createBackgroundLibrary } =
+  require('../apps/desktop/electron/backgrounds/background-library.cjs') as {
+    createBackgroundLibrary: (paths: UserPaths) => {
+      list: () => Array<{ kind: string; path: string; fileName: string }>;
+      importFile: (source: string) => {
+        kind: string;
+        path: string;
+        fileName: string;
+      };
+      fileForUrl: (url: string) => string | null;
+    };
   };
-};
 
-export const { createProjectStore } = require('../electron/projects/project-store.cjs') as {
+export const { createProjectStore } = require('../apps/desktop/electron/projects/project-store.cjs') as {
   createProjectStore: (root: string) => ProjectStore;
 };

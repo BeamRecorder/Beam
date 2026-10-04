@@ -3,10 +3,10 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { registerScreenshotIpc } = require('../electron/screenshot/screenshot-ipc.cjs');
-const { createScreenshotStore } = require('../electron/screenshot/screenshot-store.cjs');
-const { createProjectMediaHandler } = require('../electron/projects/project-media-protocol.cjs');
-const { historicalAppearance } = require('../electron/projects/composition-appearance.cjs');
+const { registerScreenshotIpc } = require('../apps/desktop/electron/screenshot/screenshot-ipc.cjs');
+const { createScreenshotStore } = require('../apps/desktop/electron/screenshot/screenshot-store.cjs');
+const { createProjectMediaHandler } = require('../apps/desktop/electron/projects/project-media-protocol.cjs');
+const { historicalAppearance } = require('../apps/desktop/electron/projects/composition-appearance.cjs');
 
 const pngBytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 1, 2, 3, 4]);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -98,7 +98,9 @@ function clone(value) {
 function registerImageIpc(fx, openDialog) {
   const handlers = new Map();
   const calls = { dialogs: [], owners: [] };
-  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const ipcMain = {
+    handle: (channel, handler) => handlers.set(channel, handler),
+  };
   const owner = { id: 'screenshot-window' };
   const BrowserWindow = {
     fromWebContents: (sender) => {
@@ -171,7 +173,15 @@ test('imports image media into its screenshot directory and persists scoped refe
         width,
         height,
       })),
-      [{ id: 'image-layer-1', assetId: asset.id, source: expectedUrl, width: 800, height: 600 }],
+      [
+        {
+          id: 'image-layer-1',
+          assetId: asset.id,
+          source: expectedUrl,
+          width: 800,
+          height: 600,
+        },
+      ],
     );
 
     fs.rmSync(fx.source);
@@ -245,7 +255,10 @@ test('does not resolve symlinked screenshot media directories or files', (t) => 
     assert.equal(fx.store.fileForUrl(url), null);
 
     const linkedId = '22222222-2222-4222-8222-222222222222';
-    fs.rmSync(path.join(fx.screenshotRoot, linkedId), { recursive: true, force: true });
+    fs.rmSync(path.join(fx.screenshotRoot, linkedId), {
+      recursive: true,
+      force: true,
+    });
     fs.symlinkSync(outside, path.join(fx.screenshotRoot, linkedId), 'dir');
     assert.equal(fx.store.fileForUrl(`project-media://screenshot/${linkedId}/media/${fileName}`), null);
   } catch (error) {
@@ -271,12 +284,26 @@ test('validates imported screenshot image payloads and rejects duplicate layer I
     const invalidStates = [
       screenshotState([{ ...importedLayer(asset), source: '/outside/photo.png' }]),
       screenshotState([
-        { ...importedLayer(asset), source: `project-media://screenshot/${fx.document.id}/media/../secret.png` },
+        {
+          ...importedLayer(asset),
+          source: `project-media://screenshot/${fx.document.id}/media/../secret.png`,
+        },
       ]),
       screenshotState([{ ...importedLayer(asset), width: 0 }]),
-      screenshotState([{ ...importedLayer(asset), transform: { x: 0, y: 0, width: 0, height: 1 } }]),
       screenshotState([
-        { ...importedLayer(asset), appearance: { ...historicalAppearance('image', true), shadowColor: 'red' } },
+        {
+          ...importedLayer(asset),
+          transform: { x: 0, y: 0, width: 0, height: 1 },
+        },
+      ]),
+      screenshotState([
+        {
+          ...importedLayer(asset),
+          appearance: {
+            ...historicalAppearance('image', true),
+            shadowColor: 'red',
+          },
+        },
       ]),
       screenshotState([{ ...importedLayer(asset), id: 'screenshot' }]),
       screenshotState([importedLayer(asset), importedLayer(asset, { id: 'image-layer-1' })]),
@@ -299,7 +326,11 @@ test('retains imported media while saved history moves the image through undo an
     const asset = fx.store.importImage(fx.document.id, fx.source);
     const beforeImage = screenshotState();
     const afterImage = screenshotState([importedLayer(asset)]);
-    const historyWithImage = { version: 1, undo: [clone(beforeImage), clone(afterImage)], redo: [] };
+    const historyWithImage = {
+      version: 1,
+      undo: [clone(beforeImage), clone(afterImage)],
+      redo: [],
+    };
     fx.store.save(fx.document.id, afterImage, historyWithImage);
 
     const reopened = fx.store.read(fx.document.id);
@@ -336,7 +367,10 @@ test('retains imported media while saved history moves the image through undo an
 test('returns null for screenshot image picker cancellation without copying a file', async () => {
   const fx = fixture();
   try {
-    const ipc = registerImageIpc(fx, async () => ({ canceled: true, filePaths: [] }));
+    const ipc = registerImageIpc(fx, async () => ({
+      canceled: true,
+      filePaths: [],
+    }));
     const result = await ipc.invoke('screenshot:pick-image', fx.document.id);
 
     assert.equal(result, null);
@@ -418,7 +452,11 @@ test('discards an unreferenced screenshot image but retains assets in state or h
   try {
     const currentAsset = fx.store.importImage(fx.document.id, fx.source);
     const currentState = screenshotState([importedLayer(currentAsset)]);
-    fx.store.save(fx.document.id, currentState, { version: 1, undo: [clone(currentState)], redo: [] });
+    fx.store.save(fx.document.id, currentState, {
+      version: 1,
+      undo: [clone(currentState)],
+      redo: [],
+    });
     fx.store.discardImage(fx.document.id, currentAsset.src);
     assert.ok(fs.existsSync(fx.store.fileForUrl(currentAsset.src)));
 
@@ -487,7 +525,10 @@ test('screenshot image discard IPC enforces sender trust before removing scoped 
     const asset = fx.store.importImage(fx.document.id, fx.source);
     const imagePath = fx.store.fileForUrl(asset.src);
     assert.ok(imagePath);
-    const ipc = registerImageIpc(fx, async () => ({ canceled: true, filePaths: [] }));
+    const ipc = registerImageIpc(fx, async () => ({
+      canceled: true,
+      filePaths: [],
+    }));
 
     await assert.rejects(
       Promise.resolve().then(() =>
@@ -497,8 +538,31 @@ test('screenshot image discard IPC enforces sender trust before removing scoped 
     );
     assert.ok(fs.existsSync(imagePath));
 
-    await ipc.invoke('screenshot:discard-image', { id: fx.document.id, source: asset.src });
+    await ipc.invoke('screenshot:discard-image', {
+      id: fx.document.id,
+      source: asset.src,
+    });
     assert.equal(fs.existsSync(imagePath), false);
+  } finally {
+    fx.cleanup();
+  }
+});
+
+test('persists imported image rotation with fractional angles and validates restored data', () => {
+  const fx = fixture();
+  try {
+    const asset = fx.store.importImage(fx.document.id, fx.source);
+    for (const rotation of [0, 32.75, 270]) {
+      fx.store.save(fx.document.id, screenshotState([importedLayer(asset, { rotation })]));
+      assert.equal(fx.store.read(fx.document.id).state.images[0].rotation, rotation);
+    }
+    for (const rotation of ['90', null, Infinity, NaN]) {
+      assert.throws(
+        () => fx.store.save(fx.document.id, screenshotState([importedLayer(asset, { rotation })])),
+        /Invalid screenshot image/,
+      );
+      assert.equal(fx.store.read(fx.document.id).state.images[0].rotation, 270);
+    }
   } finally {
     fx.cleanup();
   }

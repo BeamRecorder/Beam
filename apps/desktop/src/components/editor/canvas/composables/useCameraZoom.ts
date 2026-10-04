@@ -1,0 +1,494 @@
+import { computed, getCurrentScope, onScopeDispose, ref } from 'vue';
+import { ZOOM_DEPTH_SCALES } from '@beam/engine/zoom/zoom-types';
+import { createCompositionCameraEvaluator } from '@beam/engine/zoom/composition-camera';
+import { clampFocusToScale } from '@beam/engine/zoom/zoom-playback';
+import { createCameraMotionBlurPlan } from '@beam/engine/zoom/zoom-motion-blur';
+import {
+  compositeIsolatedMotionBlurSample,
+  createMotionBlurSurface,
+  resizeMotionBlurSurface,
+  type MotionBlurSurface,
+} from '@beam/runtime/zoom/zoom-motion-blur-compositor';
+import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from '@beam/engine/layout/output-canvas';
+import { sessionTimeAt, type MediaFrame } from '@beam/runtime/shared/index';
+import type { VisualClip } from '@beam/engine/shared/composition-types';
+import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { drawDecoratedMedia } from '@beam/runtime/composition/appearance/render-decorated-media';
+import { drawFrameOverlay } from '@beam/runtime/composition/appearance/frames';
+import { frameMediaRect, frameOuterRect, transformedFrameOuterRect } from '@beam/engine/shared/frame-layout';
+import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
+import { mapSourcePointToScreen, resolveScreenRenderGeometry } from '@beam/engine/composition/camera-layout';
+import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '@beam/engine/composition/scene-layers';
+import { createCurrentScreenResolver } from './current-screen-resolver';
+import type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
+import { selectedZoomPreviewTilt } from './camera-preview-tilt';
+import { drawInCameraSpace } from './camera-space';
+export type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
+export function useCameraZoom(options: UseCameraZoomOptions) {
+  let cameraEvaluator: ReturnType<typeof createCompositionCameraEvaluator> | null = null;
+  let cameraEvaluatorInputs: readonly unknown[] | null = null;
+  const videoWindowBounds = ref<VideoWindowBounds | null>(null);
+  const screenHitBounds = ref<{ dx: number; dy: number; dw: number; dh: number } | null>(null);
+  const overlayWindowBounds = ref<VideoWindowBounds | null>(null);
+  const isMovingSelection = ref(false);
+  const draftFocus = ref<{ cx: number; cy: number } | null>(null);
+  let pendingFocusPoint: { x: number; y: number } | null = null;
+  let zoomDragFrame: number | null = null;
+  let zoomDragGeometry: {
+    canvasLeft: number;
+    canvasTop: number;
+    scaleRatio: number;
+    bounds: VideoWindowBounds;
+  } | null = null;
+  let motionBlurSurface: MotionBlurSurface | null = null;
+  const sceneLayersAt = (timeMs: number) =>
+    options.sceneLayersAt?.(timeMs) ?? resolveCompositionSceneLayers(options.composition(), timeMs);
+  const screens = createCurrentScreenResolver(options.composition);
+  const screenClip = (): VisualClip | null => screens.at(options.currentTime() * 1_000);
+  const resetCamera = () => {
+    cameraEvaluator = null;
+    cameraEvaluatorInputs = null;
+    screens.invalidate();
+    options.onRenderOnce?.();
+  };
+  const resetCameraUnlessDragging = () => {
+    if (!isMovingSelection.value) resetCamera();
+  };
+
+  const focusTargetStyle = computed(() => {
+    const bounds = overlayWindowBounds.value;
+    const selected = options.selectedZoom();
+    if (!selected || selected.effect === 'glass' || selected.mode !== 'manual' || options.isPlaying() || !bounds)
+      return { display: 'none' };
+    const selectionScale = ZOOM_DEPTH_SCALES[selected.depth];
+    const scale = bounds.scale || 1;
+    const centerX = bounds.dx + bounds.dw / 2;
+    const centerY = bounds.dy + bounds.dh / 2;
+    const focusX = bounds.focusX ?? centerX;
+    const focusY = bounds.focusY ?? centerY;
+    const targetWidth = bounds.dw / selectionScale;
+    const targetHeight = bounds.dh / selectionScale;
+    const focus = clampFocusToScale(draftFocus.value ?? selected.focus, selectionScale);
+    const { cx, cy } = focus;
+    const left = bounds.dx + cx * bounds.dw - targetWidth / 2;
+    const top = bounds.dy + cy * bounds.dh - targetHeight / 2;
+    return {
+      width: `${targetWidth * scale}px`,
+      height: `${targetHeight * scale}px`,
+      transform: `translate3d(${centerX + (left - focusX) * scale - bounds.dx}px, ${centerY + (top - focusY) * scale - bounds.dy}px, 0)`,
+      willChange: isMovingSelection.value ? 'transform' : 'auto',
+    };
+  });
+
+  const createZoomDragGeometry = () => {
+    const canvas = options.canvasRef();
+    const bounds = overlayWindowBounds.value;
+    if (!canvas || !bounds) return null;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      canvasLeft: rect.left,
+      canvasTop: rect.top,
+      scaleRatio: rect.width / (canvas.clientWidth || 1) || 1,
+      bounds: { ...bounds },
+    };
+  };
+
+  const focusAt = (point: { x: number; y: number }) => {
+    const geometry = zoomDragGeometry;
+    const selected = options.selectedZoom();
+    if (!geometry || !selected || selected.mode !== 'manual') return null;
+    const { bounds, scaleRatio } = geometry;
+    const canvasX = (point.x - geometry.canvasLeft) / scaleRatio;
+    const canvasY = (point.y - geometry.canvasTop) / scaleRatio;
+    const scale = bounds.scale || 1;
+    const centerX = bounds.dx + bounds.dw / 2;
+    const centerY = bounds.dy + bounds.dh / 2;
+    const focusX = bounds.focusX ?? centerX;
+    const focusY = bounds.focusY ?? centerY;
+    const unzoomedX = (canvasX - centerX) / scale + focusX;
+    const unzoomedY = (canvasY - centerY) / scale + focusY;
+    return clampFocusToScale(
+      {
+        cx: (unzoomedX - bounds.dx) / bounds.dw,
+        cy: (unzoomedY - bounds.dy) / bounds.dh,
+      },
+      ZOOM_DEPTH_SCALES[selected.depth],
+    );
+  };
+
+  const scheduleDraftFocus = (event: PointerEvent) => {
+    pendingFocusPoint = { x: event.clientX, y: event.clientY };
+    if (zoomDragFrame !== null) return;
+    zoomDragFrame = requestAnimationFrame(() => {
+      zoomDragFrame = null;
+      if (!pendingFocusPoint) return;
+      const focus = focusAt(pendingFocusPoint);
+      pendingFocusPoint = null;
+      if (focus) draftFocus.value = focus;
+    });
+  };
+
+  const beginSelectionMove = (event: PointerEvent) => {
+    if (event.button !== 0) return;
+    const selectedZoom = options.selectedZoom();
+    const isManualZoom = selectedZoom?.mode === 'manual' && selectedZoom.effect !== 'glass';
+    if (isManualZoom) {
+      zoomDragGeometry = createZoomDragGeometry();
+      if (!zoomDragGeometry) return;
+      isMovingSelection.value = true;
+      const target = (event.currentTarget as HTMLElement) ?? options.canvasRef();
+      if (target?.setPointerCapture) target.setPointerCapture(event.pointerId);
+      scheduleDraftFocus(event);
+      return;
+    }
+
+    if (options.selectVisualAt(event)) return;
+    const canvas = options.canvasRef();
+    const bounds = screenHitBounds.value ?? videoWindowBounds.value;
+    if (canvas && bounds) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleRatio = rect.width / (canvas.clientWidth || 1);
+      const x = (event.clientX - rect.left) / (scaleRatio || 1);
+      const y = (event.clientY - rect.top) / (scaleRatio || 1);
+      if (x >= bounds.dx && x <= bounds.dx + bounds.dw && y >= bounds.dy && y <= bounds.dy + bounds.dh) {
+        const screen = screenClip();
+        if (screen) options.onSelectScreenClip(screen.id, event);
+        return;
+      }
+    }
+    options.onSelectCanvas();
+    if (options.selectedTransformClipExists()) options.onDeselectTransformClip();
+    if (selectedZoom) options.onDeselectZoom();
+  };
+  const moveSelection = (event: PointerEvent) => {
+    if (isMovingSelection.value) scheduleDraftFocus(event);
+  };
+  const endSelectionMove = (event: PointerEvent) => {
+    if (isMovingSelection.value) {
+      if (zoomDragFrame !== null) cancelAnimationFrame(zoomDragFrame);
+      zoomDragFrame = null;
+      pendingFocusPoint = null;
+      const selected = options.selectedZoom();
+      const focus = focusAt({ x: event.clientX, y: event.clientY });
+      isMovingSelection.value = false;
+      draftFocus.value = null;
+      zoomDragGeometry = null;
+      if (selected?.mode === 'manual' && focus) {
+        options.onUpdateZoom({ ...selected, focus });
+        options.onDeselectZoom();
+      }
+      const target = (event.currentTarget as HTMLElement) ?? options.canvasRef();
+      if (target?.hasPointerCapture?.(event.pointerId)) target.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  if (getCurrentScope()) {
+    onScopeDispose(() => {
+      if (zoomDragFrame !== null) cancelAnimationFrame(zoomDragFrame);
+    });
+  }
+
+  const drawVideoWindow = (
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    frame: MediaFrame | null,
+    resolvedLayers?: CompositionSceneLayers,
+    paint = true,
+  ): RenderedVideoWindow | null => {
+    const output = options.outputCanvas();
+    const preview = outputPreviewRect(width, height, output);
+    const sceneLayers = resolvedLayers ?? sceneLayersAt(options.currentTime() * 1_000);
+    const screen = sceneLayers.screen;
+    const hasCameraVisual = sceneLayers.cameraVisuals.length > 0;
+    if (!hasCameraVisual) {
+      videoWindowBounds.value = null;
+      screenHitBounds.value = null;
+      overlayWindowBounds.value = null;
+      return null;
+    }
+    const asset = screen ? options.composition().assets.find((entry) => entry.id === screen.assetId) : null;
+    const videoWidth = screen ? (frame?.width ?? asset?.width ?? 0) : output.width;
+    const videoHeight = screen ? (frame?.height ?? asset?.height ?? 0) : output.height;
+    if (screen && (videoWidth <= 0 || videoHeight <= 0)) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(preview.x, preview.y, preview.width, preview.height, OUTPUT_PREVIEW_RADIUS);
+      ctx.clip();
+      ctx.fillStyle = 'rgba(15,23,42,.85)';
+      ctx.fillRect(preview.x, preview.y, preview.width, preview.height);
+      ctx.restore();
+      videoWindowBounds.value = null;
+      screenHitBounds.value = null;
+      overlayWindowBounds.value = null;
+      return null;
+    }
+    const { x: dx, y: dy, width: dw, height: dh } = preview;
+    const screenTransform = options.screenTransformDraft?.() ??
+      screen?.transform ?? { x: 0, y: 0, width: 1, height: 1 };
+    const editingPhoneCrop = Boolean(options.isCropping?.() && screen && isPhoneFrame(screen.appearance.frame));
+    const screenGeometry = screen
+      ? resolveScreenRenderGeometry(
+          screen,
+          videoWidth,
+          videoHeight,
+          dw,
+          dh,
+          output.showBackground,
+          screenTransform,
+          options.isCropping?.() ? { x: 0, y: 0, width: 1, height: 1 } : screen.crop,
+          editingPhoneCrop ? 'fit' : options.isCropping?.() ? 'custom' : (screen.cameraFramingPreset ?? 'custom'),
+        )
+      : null;
+    const source = screenGeometry?.source ?? { x: 0, y: 0, width: videoWidth, height: videoHeight };
+    const media = screenGeometry?.media ?? { x: 0, y: 0, width: dw, height: dh };
+    const positioned = screenGeometry?.positioned ?? media;
+    const cropFrame =
+      editingPhoneCrop && screen ? transformedFrameOuterRect(media, screenTransform, screen.appearance.frame) : null;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(dx, dy, dw, dh, OUTPUT_PREVIEW_RADIUS);
+    ctx.clip();
+    const currentTime = options.currentTime();
+    const telemetry = options.editorData()?.cursor.telemetry ?? [];
+    const composition = options.composition();
+    const selectedZoom = options.selectedZoom();
+    const zooms = options.zoomElements();
+    const evaluatorInputs = [
+      zooms,
+      telemetry,
+      composition,
+      output,
+      screen,
+      selectedZoom?.id,
+      selectedZoom?.mode,
+      options.zoomAutoFollow?.(),
+      options.isPlaying(),
+      videoWidth,
+      videoHeight,
+      dw,
+      dh,
+    ] as const;
+    const inputsChanged = evaluatorInputs.some((value, index) => value !== cameraEvaluatorInputs?.[index]);
+    if (!cameraEvaluator || !cameraEvaluatorInputs || inputsChanged) {
+      cameraEvaluatorInputs = evaluatorInputs;
+      const previewZooms =
+        !options.isPlaying() && selectedZoom?.mode === 'manual' && selectedZoom.effect !== 'glass'
+          ? zooms.filter((zoom) => zoom.id !== selectedZoom.id)
+          : zooms;
+      cameraEvaluator = createCompositionCameraEvaluator({
+        zooms: previewZooms,
+        telemetry,
+        autoFollow: options.zoomAutoFollow?.(),
+        mapTelemetryTime: (timeMs) => {
+          const activeScreen = screens.at(timeMs);
+          return activeScreen ? (sessionTimeAt(activeScreen, timeMs, composition) ?? timeMs) : timeMs;
+        },
+        mapFocus: (focus, zoom, timeMs) => {
+          const activeScreen = screens.at(timeMs);
+          if (!activeScreen || zoom.mode !== 'auto') return focus;
+          const activeGeometry = resolveScreenRenderGeometry(
+            activeScreen,
+            videoWidth,
+            videoHeight,
+            dw,
+            dh,
+            output.showBackground,
+          );
+          const positioned = isPhoneFrame(activeScreen.appearance.frame)
+            ? frameMediaRect(
+                activeGeometry.positioned,
+                activeScreen.appearance.frame,
+                activeGeometry.source.width,
+                activeGeometry.source.height,
+              )
+            : activeGeometry.positioned;
+          return mapSourcePointToScreen(focus, videoWidth, videoHeight, dw, dh, { ...activeGeometry, positioned });
+        },
+      });
+    }
+    const sample = cameraEvaluator.sample(currentTime * 1_000);
+    const selectedPerspectivePreview = selectedZoomPreviewTilt(selectedZoom, options.isPlaying());
+    const camera = {
+      focusX: dx + sample.focus.cx * dw,
+      focusY: dy + sample.focus.cy * dh,
+      scale: sample.scale,
+      tiltX: selectedPerspectivePreview?.tiltX ?? sample.tiltX ?? 0,
+      tiltY: selectedPerspectivePreview?.tiltY ?? sample.tiltY ?? 0,
+    };
+    const renderedWindow: RenderedVideoWindow = {
+      dx,
+      dy,
+      dw,
+      dh,
+      scale: camera.scale,
+      focusX: camera.focusX,
+      focusY: camera.focusY,
+      tiltX: camera.tiltX,
+      tiltY: camera.tiltY,
+    };
+    if (paint) {
+      const drawScreen = (target = ctx) => {
+        if (!screen) return;
+        if (frame) {
+          drawDecoratedMedia(target, {
+            source: frame.bitmap,
+            sourceRect: source,
+            rect: { x: dx + positioned.x, y: dy + positioned.y, width: positioned.width, height: positioned.height },
+            appearance: editingPhoneCrop
+              ? { ...screen.appearance, frame: 'none' }
+              : (screen.appearance ?? createDefaultClipAppearance('screen', output.showBackground)),
+            shadowScale: Math.min(dw / Math.max(1, output.width), dh / Math.max(1, output.height)),
+            title: screen.name,
+            mirrored: screen.isMirrored,
+            mirroredY: screen.isMirroredY,
+            rotation: screen.rotation,
+            mask: screenGeometry?.mask,
+          });
+          if (cropFrame)
+            drawFrameOverlay(
+              target,
+              {
+                x: dx + cropFrame.x,
+                y: dy + cropFrame.y,
+                width: cropFrame.width,
+                height: cropFrame.height,
+              },
+              screen.appearance.frame,
+              screen.name,
+              screen.appearance.frameColor,
+              {
+                showMenu: screen.appearance.frameShowMenu,
+                showScrollbars: screen.appearance.frameShowScrollbars,
+                chromeScale: screen.appearance.frameChromeScale,
+                ...(screen.appearance.frameTheme !== undefined ? { theme: screen.appearance.frameTheme } : {}),
+              },
+            );
+        }
+      };
+      const blurSettings = options.zoomMotionBlur?.();
+      const blurIntensity = blurSettings?.enabled ? blurSettings.intensity : 0;
+      const blurPlan = createCameraMotionBlurPlan({
+        sampleAt: (timeMs) => cameraEvaluator!.sample(timeMs),
+        center: sample,
+        timeMs: currentTime * 1_000,
+        intensity: blurIntensity,
+        sampleCount: options.isPlaying() ? 3 : undefined,
+        viewportWidth: dw,
+        viewportHeight: dh,
+      });
+      const drawSample = (target: CanvasRenderingContext2D, blurSample: (typeof blurPlan)[number]) => {
+        const projectedCamera = {
+          focusX: dx + blurSample.camera.focusX * dw,
+          focusY: dy + blurSample.camera.focusY * dh,
+          scale: blurSample.camera.scale,
+          tiltX: blurSample.camera.tiltX ?? 0,
+          tiltY: blurSample.camera.tiltY ?? 0,
+        };
+        const sampleWindow = { ...renderedWindow, ...projectedCamera };
+        target.save();
+        target.beginPath();
+        target.roundRect(dx, dy, dw, dh, OUTPUT_PREVIEW_RADIUS);
+        target.clip();
+        target.translate(dx + dw / 2, dy + dh / 2);
+        target.scale(projectedCamera.scale, projectedCamera.scale);
+        target.translate(-projectedCamera.focusX, -projectedCamera.focusY);
+        options.drawBackground(target, { x: dx, y: dy, width: dw, height: dh });
+        if (options.renderVisualStack)
+          options.renderVisualStack(target, sampleWindow, () => drawScreen(target), sceneLayers);
+        else drawScreen(target);
+        target.restore();
+      };
+      if (blurPlan.length === 1) {
+        drawSample(ctx, blurPlan[0]!);
+      } else {
+        const canvasPixelScale = Math.max(1, options.canvasRef()?.width ?? width) / Math.max(1, width);
+        const pixelScale = Math.min(1.25, canvasPixelScale);
+        motionBlurSurface ??= createMotionBlurSurface(
+          Math.max(1, Math.round(width * pixelScale)),
+          Math.max(1, Math.round(height * pixelScale)),
+        );
+        if (!motionBlurSurface) {
+          drawSample(ctx, blurPlan[Math.floor(blurPlan.length / 2)]!);
+        } else {
+          resizeMotionBlurSurface(
+            motionBlurSurface,
+            Math.max(1, Math.round(width * pixelScale)),
+            Math.max(1, Math.round(height * pixelScale)),
+          );
+          let accumulatedWeight = 0;
+          let composited = false;
+          for (const blurSample of blurPlan) {
+            const rendered = compositeIsolatedMotionBlurSample({
+              target: ctx,
+              surface: motionBlurSurface,
+              logicalWidth: width,
+              logicalHeight: height,
+              pixelScale,
+              sample: blurSample,
+              accumulatedWeight,
+              draw: (target, sampleToDraw) => drawSample(target as CanvasRenderingContext2D, sampleToDraw),
+            });
+            if (rendered) {
+              composited = true;
+              accumulatedWeight += blurSample.weight;
+            }
+          }
+          if (!composited) drawSample(ctx, blurPlan[Math.floor(blurPlan.length / 2)]!);
+        }
+      }
+    }
+    ctx.restore();
+
+    videoWindowBounds.value = {
+      dx: dx + media.x,
+      dy: dy + media.y,
+      dw: media.width,
+      dh: media.height,
+      scale: camera.scale,
+      focusX: camera.focusX,
+      focusY: camera.focusY,
+      tiltX: camera.tiltX,
+      tiltY: camera.tiltY,
+    };
+    const screenBounds = screen
+      ? editingPhoneCrop
+        ? positioned
+        : frameOuterRect(positioned, screen.appearance.frame)
+      : null;
+    screenHitBounds.value = screenBounds
+      ? {
+          dx: dx + screenBounds.x,
+          dy: dy + screenBounds.y,
+          dw: screenBounds.width,
+          dh: screenBounds.height,
+        }
+      : null;
+    overlayWindowBounds.value = {
+      dx,
+      dy,
+      dw,
+      dh,
+      scale: camera.scale,
+      focusX: camera.focusX,
+      focusY: camera.focusY,
+      tiltX: camera.tiltX,
+      tiltY: camera.tiltY,
+    };
+    return renderedWindow;
+  };
+
+  return {
+    videoWindowBounds,
+    overlayWindowBounds,
+    focusTargetStyle,
+    resetCamera,
+    resetCameraUnlessDragging,
+    beginSelectionMove,
+    moveSelection,
+    endSelectionMove,
+    drawVideoWindow,
+    drawInCameraSpace,
+  };
+}

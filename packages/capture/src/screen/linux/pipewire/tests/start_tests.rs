@@ -30,6 +30,7 @@ fn fixture(capacity: usize) -> Fixture {
         ),
         last_announced: None,
         cursor: CursorState::new("test-stream"),
+        native_cursor: NativeCursorOverlay::new(false, 60),
         timestamp: TimestampMapper::new(0),
         start_gate,
         active: true,

@@ -1,6 +1,6 @@
 use crate::model::SessionManifest;
 
-use super::SessionLayout;
+use super::{SessionLayout, read_json};
 
 #[derive(Debug, Clone)]
 pub struct RecoveryReport {
@@ -19,9 +19,7 @@ pub fn recover_session(layout: &SessionLayout) -> Result<RecoveryReport, crate::
             path.display().to_string(),
         ));
     }
-    let mut manifest: SessionManifest = serde_json::from_slice(
-        &std::fs::read(&path).map_err(|e| crate::CaptureError::storage(&path, e))?,
-    )?;
+    let mut manifest: SessionManifest = read_json(&path)?;
     manifest.completed = layout.manifest().exists();
     if !manifest.completed {
         for track in &mut manifest.tracks {
