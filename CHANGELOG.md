@@ -8,6 +8,7 @@ User-facing changes to Beam are documented in this file.
 
 - Arrows can be drawn by placing anchors manually: click for corners, drag for Bézier curves, and finish with Enter or a double-click. Only authored anchors are retained in screenshot and video projects.
 - Screenshot and video editors offer a searchable library of 30 arrow presets with previews and editable vector points with Bézier handles, corner/smooth modes and point insertion/removal. Canvas drawing offers a visible confirmation action and Enter shortcut. Custom paths survive project saves and use the same preview/export renderer.
+- Hyprland can record a separate cursor for monitor and region captures through compositor IPC when its portal provides no cursor metadata.
 
 - Recording and editor settings offer a shared project location preserving `projects/studio`, `projects/instant` and `projects/screenshot`. New captures use the chosen root immediately; the project picker retains previous locations and refreshes when they change.
 - Video and image exports share a separate folder preference, with a fixed destination or the last successfully used folder and a searchable list of recent folders.
@@ -181,6 +182,9 @@ User-facing changes to Beam are documented in this file.
 - Shape and arrow inspectors show border color and width in a dedicated Border section with a visible color label in all 15 supported languages. Arrow selector chevrons and project icons align with the visible text.
 
 - Arrow tips now terminate the visible shaft cleanly, without a rounded stroke protruding past the tip. All canvas anchors and transform handles share one adaptive neutral color across the selection.
+- Hyprland recording overlays no longer inherit compositor borders and shadows; editor, settings and project windows keep their normal decorations.
+
+- Restored the GitHub star count in the community panel and protected shutdown against late events from destroyed windows.
 
 - Video export reuses the last successfully used destination across projects and application restarts instead of always returning to the OS Videos folder.
 - Screenshot project thumbnails now show the edited composition, including HTML layers, gradients and text, and refresh automatically in the background after edits.

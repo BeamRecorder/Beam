@@ -25,6 +25,8 @@ pub(super) struct PreparedPortal {
     pub source_type: Option<SourceType>,
     pub position: Option<(i32, i32)>,
     pub size: Option<(i32, i32)>,
+    pub mapping_id: Option<String>,
+    pub hyprland_cursor: bool,
     control: PortalControl,
 }
 
@@ -89,6 +91,8 @@ struct PortalReady {
     source_type: Option<SourceType>,
     position: Option<(i32, i32)>,
     size: Option<(i32, i32)>,
+    mapping_id: Option<String>,
+    hyprland_cursor: bool,
 }
 
 struct PortalControl {
@@ -161,6 +165,8 @@ pub(super) fn prepare_portal(
         source_type: ready.source_type,
         position: ready.position,
         size: ready.size,
+        mapping_id: ready.mapping_id,
+        hyprland_cursor: ready.hyprland_cursor,
         control: PortalControl {
             commands: Some(commands),
             thread: Some(thread),
@@ -252,13 +258,31 @@ async fn prepare_session(
     kind: PortalSourceKind,
     cursor: CursorSelection,
 ) -> Result<PortalReady, CaptureError> {
+    let modes = proxy
+        .available_cursor_modes()
+        .await
+        .map_err(map_portal_error)?;
+    let selected_mode = cursor_mode(cursor, &modes);
+    let hyprland_cursor =
+        matches!(cursor, CursorSelection::Separate { .. }) && selected_mode == CursorMode::Hidden;
+    if hyprland_cursor && matches!(kind, PortalSourceKind::Window) {
+        return Err(CaptureError::native(
+            NativeCaptureErrorCode::PortalCursorMetadataUnavailable,
+            "Select a monitor to record a separate cursor on Hyprland",
+        ));
+    }
+    let sources = if hyprland_cursor {
+        SourceType::Monitor.into()
+    } else {
+        source_type(kind)
+    };
     let request = proxy
         .select_sources(
             session,
             SelectSourcesOptions::default()
-                .set_sources(source_type(kind))
+                .set_sources(sources)
                 .set_multiple(false)
-                .set_cursor_mode(cursor_mode(cursor))
+                .set_cursor_mode(selected_mode)
                 .set_persist_mode(PersistMode::DoNot),
         )
         .await
@@ -289,6 +313,8 @@ async fn prepare_session(
         source_type: stream.source_type(),
         position: stream.position(),
         size: stream.size(),
+        mapping_id: stream.mapping_id().map(ToOwned::to_owned),
+        hyprland_cursor,
     })
 }
 
@@ -312,7 +338,7 @@ async fn verify_capabilities(
         .available_cursor_modes()
         .await
         .map_err(map_portal_error)?;
-    let requested_cursor = cursor_mode(cursor);
+    let requested_cursor = cursor_mode(cursor, &modes);
     if !modes.contains(requested_cursor) {
         return Err(CaptureError::native(
             NativeCaptureErrorCode::PortalCursorMetadataUnavailable,
@@ -330,13 +356,38 @@ fn source_type(kind: PortalSourceKind) -> ashpd::enumflags2::BitFlags<SourceType
     }
 }
 
-fn cursor_mode(cursor: CursorSelection) -> CursorMode {
+/// Selects the portal cursor mode for the requested cursor capture configuration,
+/// falling back to Hidden mode on Hyprland when Metadata mode is not supported.
+fn cursor_mode(
+    cursor: CursorSelection,
+    modes: &ashpd::enumflags2::BitFlags<CursorMode>,
+) -> CursorMode {
+    select_cursor_mode(cursor, modes, super::hyprland::is_hyprland())
+}
+
+fn select_cursor_mode(
+    cursor: CursorSelection,
+    modes: &ashpd::enumflags2::BitFlags<CursorMode>,
+    hyprland_available: bool,
+) -> CursorMode {
     match cursor {
         CursorSelection::Disabled => CursorMode::Hidden,
         CursorSelection::Embedded => CursorMode::Embedded,
-        CursorSelection::Separate { .. } => CursorMode::Metadata,
+        CursorSelection::Separate { .. } => {
+            if modes.contains(CursorMode::Metadata) {
+                CursorMode::Metadata
+            } else if modes.contains(CursorMode::Hidden) && hyprland_available {
+                CursorMode::Hidden
+            } else {
+                CursorMode::Metadata
+            }
+        }
     }
 }
+
+#[cfg(test)]
+#[path = "portal_cursor_tests.rs"]
+mod cursor_tests;
 
 fn map_portal_error(error: ashpd::Error) -> CaptureError {
     let code = match error {

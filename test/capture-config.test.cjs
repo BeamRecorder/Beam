@@ -196,6 +196,24 @@ test('enables clicks and shortcuts on Linux only when interaction recording is o
   });
 });
 
+test('Hyprland cursor positions remain separate without requesting unavailable native shapes', () => {
+  const hyprland = {
+    capabilities: { separateCursor: true, cursorShapes: false, cursorClicks: true, inputShortcuts: true },
+    sources: [{ id: 'portal:monitor', kind: 'display', isDefault: true, selectionMode: 'portal' }],
+  };
+  for (const recordInteractions of [false, true]) {
+    const config = buildDefaultCaptureConfig(hyprland, { recordInteractions }, { ...environment, platform: 'linux' });
+    assert.deepEqual(config.cursor, {
+      mode: 'separate',
+      captureShape: false,
+      captureClicks: recordInteractions,
+      captureShortcuts: recordInteractions,
+    });
+  }
+  const hidden = buildDefaultCaptureConfig(hyprland, { cursor: false }, { ...environment, platform: 'linux' });
+  assert.equal(hidden.cursor.mode, 'disabled');
+});
+
 test('keeps a region for Linux Portal monitors and rejects it for windows', () => {
   const portalCatalog = {
     capabilities: { portalSelection: true },
