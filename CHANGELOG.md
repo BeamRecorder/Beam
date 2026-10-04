@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Added a reusable HTML Recorder demo showing full-screen, region and window capture choices, capture modes and recording controls, with Beautiful Captures cursor artwork and themed website videos.
+
 - Private website AI native demo now uses a lightweight Zaro recreation with sound disabled by default, playback controls and a tooltip explaining HTML/GSAP authoring and Beam CLI rendering.
 - Added reusable HTML/GSAP launch-video templates for typewriter sentences, prompt fields, macOS cursors and smooth camera moves, with a complete example and customization guide.
 
