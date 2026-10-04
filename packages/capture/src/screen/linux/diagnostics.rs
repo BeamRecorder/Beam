@@ -6,8 +6,8 @@ use crate::model::{
 };
 
 use super::{
-    FfmpegCapabilities, LinuxNativeCapabilities, PortalProperties, evaluate_capabilities,
-    probe_ffmpeg, probe_pipewire, probe_portal_properties,
+    FfmpegCapabilities, LinuxNativeCapabilities, PortalProperties,
+    evaluate_capabilities_with_compositor, probe_ffmpeg, probe_pipewire, probe_portal_properties,
 };
 
 pub(crate) struct LinuxCaptureProbe {
@@ -21,8 +21,12 @@ pub(crate) fn probe_capture_environment(timeout: Duration) -> LinuxCaptureProbe 
     let pipewire_available = probe_pipewire();
     let ffmpeg_result = probe_ffmpeg();
     let portal_properties = portal_result.as_ref().copied().unwrap_or_default();
-    let capabilities =
-        evaluate_capabilities(portal_properties, pipewire_available, ffmpeg_result.is_ok());
+    let capabilities = evaluate_capabilities_with_compositor(
+        portal_properties,
+        pipewire_available,
+        ffmpeg_result.is_ok(),
+        super::hyprland::is_hyprland(),
+    );
     let recording_available = capabilities.recording_available;
     let portal = match portal_result {
         Ok(properties) => portal_diagnostic(properties),

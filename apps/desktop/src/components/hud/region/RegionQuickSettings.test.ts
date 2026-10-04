@@ -18,7 +18,11 @@ const settings = {
   zoomMode: '2d' as const,
 };
 const Popover = { template: '<div><slot name="trigger" :is-open="true" /><slot /></div>' };
-const Select = { props: ['modelValue', 'options', 'label'], emits: ['update:modelValue'], template: '<button />' };
+const Select = {
+  props: ['modelValue', 'options', 'label', 'disabled'],
+  emits: ['update:modelValue', 'toggle'],
+  template: '<button />',
+};
 const Switch = {
   props: ['modelValue', 'disabled'],
   emits: ['update:modelValue'],
@@ -40,13 +44,24 @@ it.each([0, 1, 10])('offers every countdown and saves %s', (seconds) => {
   expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([{ ...settings, countdownSeconds: seconds }]);
   wrapper.unmount();
 });
-it.each(['off', '2d', '3d'])('shares the %s zoom preference with the region toolbar', (zoomMode) => {
+it.each(['off', '2d', '3d', 'glass'])('shares the %s zoom preference with the region toolbar', (zoomMode) => {
   const wrapper = mountSettings();
   wrapper
     .findAllComponents(Select)
     .find((select) => select.props('label') === 'zoom')!
     .vm.$emit('update:modelValue', zoomMode);
   expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([{ ...settings, zoomMode }]);
+  wrapper.unmount();
+});
+it('offers the shared Loupe algorithm alongside OFF, 2D and 3D', () => {
+  const wrapper = mountSettings();
+  const zoom = wrapper.findAllComponents(Select).find((select) => select.props('label') === 'zoom')!;
+  expect(zoom.props('options')).toEqual([
+    { value: 'off', label: 'off' },
+    { value: '2d', label: '2D' },
+    { value: '3d', label: '3D' },
+    { value: 'glass', label: 'loupe' },
+  ]);
   wrapper.unmount();
 });
 it('reserves presets for Quick Snip and passes ten example presets to the shared scrollable Select', () => {
@@ -92,5 +107,45 @@ it('hides recording controls for screenshots while retaining presets and desktop
   });
   expect(wrapper.findAllComponents(Select).map((control) => control.props('label'))).toEqual(['preset', 'countdown']);
   expect(wrapper.findAllComponents(Switch)).toHaveLength(2);
+  wrapper.unmount();
+});
+it('forwards open menus and dismisses on Escape unless a nested control already handled it', async () => {
+  const wrapper = mount(CaptureQuickSettingsPanel, {
+    props: { modelValue: settings, showPreset: true },
+    global: { stubs: { Select, Switch } },
+  });
+  for (const select of wrapper.findAllComponents(Select)) {
+    select.vm.$emit('toggle', true);
+    select.vm.$emit('toggle', false);
+  }
+  expect(wrapper.emitted('toggle')).toEqual([[true], [false], [true], [false], [true], [false]]);
+  await wrapper.trigger('keydown', { key: 'Enter' });
+  expect(wrapper.emitted('dismiss')).toBeUndefined();
+  const handled = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+  handled.preventDefault();
+  wrapper.element.dispatchEvent(handled);
+  expect(wrapper.emitted('dismiss')).toBeUndefined();
+  await wrapper.trigger('keydown', { key: 'Escape' });
+  expect(wrapper.emitted('dismiss')).toEqual([[]]);
+  wrapper.unmount();
+});
+it.each(['hideTaskbar', 'hideDesktopIcons'] as const)('updates the shared %s preference', (key) => {
+  const wrapper = mount(CaptureQuickSettingsPanel, {
+    props: { modelValue: settings },
+    global: { stubs: { Select, Switch } },
+  });
+  wrapper.findAllComponents(Switch)[key === 'hideTaskbar' ? 1 : 2].vm.$emit('update:modelValue', true);
+  expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([{ ...settings, [key]: true }]);
+  wrapper.unmount();
+});
+it('keeps 2D as the initial choice and disables all selectors during a settings update', () => {
+  const wrapper = mount(CaptureQuickSettingsPanel, {
+    props: { modelValue: { ...settings, zoomMode: undefined }, showPreset: true, disabled: true },
+    global: { stubs: { Select, Switch } },
+  });
+  const selects = wrapper.findAllComponents(Select);
+  expect(selects.find((select) => select.props('label') === 'zoom')!.props('modelValue')).toBe('2d');
+  expect(selects.find((select) => select.props('label') === 'preset')!.props('modelValue')).toBe('default');
+  expect(selects.every((select) => select.props('disabled'))).toBe(true);
   wrapper.unmount();
 });

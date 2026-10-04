@@ -12,6 +12,21 @@ User-facing changes to Beam are documented in this file.
 - Added `examples/ai-native-zaro/`, a separate Beam CLI project reconstructing the supplied 68.6-second Zaro film in HTML/GSAP, with local reference assets, its original soundtrack, reversible seeks and frame verification.
 - Added the reusable `examples/ai-edits/` HTML/GSAP announcement composition, with official Edits references, the supplied iPhone frame, verified CC0 music/impacts and Beam CLI project publication/export.
 - Private website AI native documentation covers live video and Screenshot editing, HTML/TypeScript publication, live code previews, native text/fonts and CLI exports with copyable examples and product-media instructions.
+
+- Arrows can be drawn by placing anchors manually: click for corners, drag for Bézier curves, and finish with Enter or a double-click. Only authored anchors are retained in screenshot and video projects.
+- Screenshot and video editors offer a searchable library of 30 arrow presets with previews and editable vector points with Bézier handles, corner/smooth modes and point insertion/removal. Canvas drawing offers a visible confirmation action and Enter shortcut. Custom paths survive project saves and use the same preview/export renderer.
+- Region and Quick Snip settings offer automatic Loupe zooms using recorded clicks, with matching editable timeline lenses and video exports. The default zoom mode remains 2D.
+- Hyprland can record a separate cursor for monitor and region captures through compositor IPC when its portal provides no cursor metadata.
+
+- Recording and editor settings offer a shared project location preserving `projects/studio`, `projects/instant` and `projects/screenshot`. New captures use the chosen root immediately; the project picker retains previous locations and refreshes when they change.
+- Video and image exports share a separate folder preference, with a fixed destination or the last successfully used folder and a searchable list of recent folders.
+- Safari frames offer Auto, Light and Dark browser chrome independently of the frame color, with matching previews, screenshots and video exports.
+
+- Screenshot copy and image exports provide a timing report for resource loading, rendering, encoding, caching and native clipboard/file publication, available from the result toast and developer console.
+
+- Screenshot Composition shows expandable groups with their member layers together, including the logo and editable text in a brand group.
+- Screenshot Composition adds a Group shortcut beside effects, precise drag-and-drop into and out of groups, and fading layer names that scroll on sustained hover without horizontal scrollbars.
+- Screenshot group members can be selected individually from Composition, while group headers select all members; dropping above or between groups keeps layers in the root list.
 - Screenshot groups and multiple selections expose shared position, alignment, size and rotation controls in the Placement inspector, with proportional native text resizing and undo/redo.
 - Screenshot layers support native X/Y 3D rotation with a shared perspective for preview, editable text, thumbnails and PNG export.
 - Screenshot supports left-drag selection on empty canvas, right-drag selection, persistent groups with shared move/resize bounds, Ctrl/Cmd+G and Ctrl/Cmd+Shift+G, and alignment guides with document-pixel dimensions and spacing.
@@ -59,7 +74,7 @@ User-facing changes to Beam are documented in this file.
 - Added a shared screen/window chooser for Windows and macOS with searchable thumbnails and keyboard navigation. Development launches can supply 3 simulated displays and 21 windows through `DEV_CROSSPLATFORM=1`, including on Linux; normal Linux capture retains the Portal.
 - Beamy appears centered during loading with translated tips, then disappears when the recorder is ready. Clicking the Beam wordmark plays one of twelve text effects before returning to plain text.
 - The recorder shows a lightweight animated Beamy while its interface loads, with a retry action if startup fails.
-- Instant capture now has a small Beamy mascot that accompanies recording, dances and morphs during export, and briefly celebrates completed videos, respecting reduced-motion preferences.
+- Instant export shows the shared Beamy loading animation and celebrates completed videos, respecting reduced-motion preferences.
 - Region recording now offers a desktop magnifier, live pixel dimensions, Full screen and size presets, teleprompter, device controls and a 0–10 second countdown. Controls hide during dragging and return with a spring animation. Desktop icons and the taskbar/Dock can be hidden from capture on supported platforms.
 - Capture problems now appear in the toolbar with a count and a scrollable hover panel, including individual copy actions.
 - Settings and Projects now open in separate, resizable desktop windows.
@@ -70,6 +85,21 @@ User-facing changes to Beam are documented in this file.
 - Linux GPU export helpers are built and packaged only against dynamically linked LGPL FFmpeg libraries. CI uses a pinned LGPL-only build dependency; FFmpeg executables and libraries remain external to this backend.
 - CLI project opening creates an independent video or Screenshot editor by default, preserving existing projects; `disposition: "reuse"` optionally replaces the active editor in development and installed releases.
 - Private website Screenshot documentation explains selection groups, 3D perspective, gradient/color effects and native CLI capture.
+
+- Drawing and arrow inspectors now use compact Path, Appearance and Text sections. Double-clicking a drawing or arrow edits its anchors directly; clicks insert smooth points and anchor alignment guides assist placement. Freehand strokes retain fewer meaningful editable points.
+
+- Anchor points and resize handles use a shared neutral light/dark tone sampled across the selection, with an opposing outline to remain visible on textured images.
+- Shape inspectors share compact placement, path, appearance, text, opacity and shadow accordions, with native editable text labels and controls translated into all 15 languages.
+
+- Beam's onboarding has a taller, centered welcome inspired by the website, with offline landscape photography, interactive Recorder and Quick Snip introductions, video and screenshot feature previews, clickable step navigation, shared theme and language controls, and a project-folder choice in all 15 languages. Interaction permissions remain optional and show their actual status.
+
+- Quick Snip recording uses the standard recording controls. Its export mascot keeps the shared loading animation through preparation and export, then turns green with one confetti burst and natural blinking on success.
+- Screenshot and video editors reuse background/cursor catalogues, presets and decoded images when switching projects in the same window, while keeping document state and media decoders separate.
+- Video undo/redo controls sit next to timeline snapping; editor search stays in the titlebar.
+
+- Screenshot startup overlaps editor module loading with project reads, retains scene images in a bounded LRU cache, loads imported fonts concurrently and defers layer thumbnails until the first preview. Per-stage loading measurements are emitted to the development console.
+- Screenshot copy overlaps document saving with image encoding, loads fonts and images in parallel, and confirms copy/export completion with an output thumbnail and green success or red failure badge.
+
 - The Beautiful Captures promo keeps secondary feature labels and icons more visible while retaining the slot-machine hierarchy.
 - The Beautiful Captures promo composition uses Beam’s capture icons, the supplied rounded cursor SVG and a tighter layout with larger editable labels and one dashed Captures region.
 
@@ -191,6 +221,21 @@ User-facing changes to Beam are documented in this file.
 
 - Private website links reset scroll before showing a new page, avoiding a flash of the large footer wordmark while preserving section scrolling and browser history positions.
 - Long private website guide contents stay accessible through an independently scrollable desktop summary.
+
+- Shape and arrow inspectors show border color and width in a dedicated Border section with a visible color label in all 15 supported languages. Arrow selector chevrons and project icons align with the visible text.
+
+- Arrow tips now terminate the visible shaft cleanly, without a rounded stroke protruding past the tip. All canvas anchors and transform handles share one adaptive neutral color across the selection.
+- Hyprland recording overlays no longer inherit compositor borders and shadows; editor, settings and project windows keep their normal decorations.
+
+- Restored the GitHub star count in the community panel and protected shutdown against late events from destroyed windows.
+
+- Linux interaction recording keeps its saved activation across helper restarts, updates and failed authorization. Quick Snip starts interaction access automatically before recording, shares one authorization request across windows and reports failures instead of silently losing click data and automatic zooms.
+- Recording controls show a persistent warning if Linux interaction access, input devices or the event stream fail during recording. Video capture continues, the project keeps the diagnostic, and idle periods without clicks do not trigger false errors.
+- Video export reuses the last successfully used destination across projects and application restarts instead of always returning to the OS Videos folder.
+- Screenshot project thumbnails now show the edited composition, including HTML layers, gradients and text, and refresh automatically in the background after edits.
+- Moving a selected Screenshot group member changes only that layer; selecting the group header still moves all members together.
+- Screenshot canvas clicks select a group first, then its clicked member; double and triple clicks edit that member without expanding the selection.
+
 - Screenshot rectangle selection can start in the workspace outside the canvas and remains accurate when the preview is zoomed, panned or UI-scaled.
 - Editable text keeps the same vertical position when leaving inline editing, including centered text beside a logo, with matching preview and export.
 

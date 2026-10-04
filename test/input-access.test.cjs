@@ -4,7 +4,7 @@ const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 
-const { InputAccess } = require('../apps/desktop/electron/input/input-access.cjs');
+const { InputAccess, registerInputAccessIpc } = require('../apps/desktop/electron/input/input-access.cjs');
 const { prebuiltInputHelperPath, packagedInputHelperPath } = require('@beam/native-client/capture-engine-path');
 
 const version = '1.2.3';
@@ -361,5 +361,182 @@ test('finds the Linux input helper alongside shared Cargo outputs and caches the
     assert.equal(queries, 1);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('coalesces authorization requests from multiple windows and persists success once', async () => {
+  let resolve;
+  let requests = 0;
+  let persisted = 0;
+  const { inputAccess, cleanup } = createLinuxInputAccess(() => {
+    requests++;
+    return new Promise((done) => {
+      resolve = done;
+    });
+  });
+  inputAccess.onAvailable = () => {
+    persisted++;
+  };
+  try {
+    const first = inputAccess.request();
+    const second = inputAccess.request();
+    assert.equal(first, second);
+    assert.equal(requests, 1);
+    resolve(available);
+    assert.deepEqual(await first, available);
+    assert.deepEqual(await second, available);
+    assert.equal(persisted, 1);
+  } finally {
+    cleanup();
+  }
+});
+
+test('clears a failed shared request so authorization can be retried', async () => {
+  let requests = 0;
+  const { inputAccess, cleanup } = createLinuxInputAccess(async () => {
+    if (++requests === 1) throw new Error('helper stopped');
+    return available;
+  });
+  try {
+    const first = inputAccess.request();
+    const second = inputAccess.request();
+    await assert.rejects(first, /helper stopped/);
+    await assert.rejects(second, /helper stopped/);
+    assert.deepEqual(await inputAccess.request(), available);
+    assert.equal(requests, 2);
+  } finally {
+    cleanup();
+  }
+});
+
+test('does not persist authorization when Polkit is cancelled', async () => {
+  let persisted = 0;
+  const { inputAccess, cleanup } = createLinuxInputAccess(async () => permissionRequired);
+  inputAccess.onAvailable = () => {
+    persisted++;
+  };
+  try {
+    assert.deepEqual(await inputAccess.request(), permissionRequired);
+    assert.equal(persisted, 0);
+  } finally {
+    cleanup();
+  }
+});
+
+test('available input access allows recording without another authorization', async () => {
+  const commands = [];
+  const { inputAccess, cleanup } = createLinuxInputAccess(async (command) => {
+    commands.push(command);
+    return available;
+  });
+  try {
+    await inputAccess.ensureReady({ captureClicks: true, captureShortcuts: true });
+    assert.deepEqual(commands, ['input-access-status']);
+  } finally {
+    cleanup();
+  }
+});
+
+for (const state of ['permission-required', 'installation-required', 'unavailable']) {
+  test(`recording starts the Linux helper automatically from ${state}`, async () => {
+    const commands = [];
+    const { inputAccess, cleanup } = createLinuxInputAccess(async (command) => {
+      commands.push(command);
+      return command === 'input-access-status' ? { ...permissionRequired, state } : available;
+    });
+    try {
+      await inputAccess.ensureReady({ captureClicks: true, captureShortcuts: false });
+      assert.deepEqual(commands, ['input-access-status', 'request-input-access']);
+    } finally {
+      cleanup();
+    }
+  });
+}
+
+test('recording preparation is cancelled when Polkit authorization is dismissed', async () => {
+  const { inputAccess, cleanup } = createLinuxInputAccess(async () => permissionRequired);
+  try {
+    await assert.rejects(inputAccess.ensureReady({ captureClicks: true }), { code: 'cancelled' });
+  } finally {
+    cleanup();
+  }
+});
+
+test('recording exposes the helper startup failure instead of proceeding without clicks', async () => {
+  const failure = { code: 'input-broker-start-failed', message: 'Protected helper failed to start.' };
+  const { inputAccess, cleanup } = createLinuxInputAccess(async (command) =>
+    command === 'input-access-status'
+      ? permissionRequired
+      : { ...permissionRequired, state: 'unavailable', error: failure },
+  );
+  try {
+    await assert.rejects(inputAccess.ensureReady({ captureClicks: true }), failure);
+  } finally {
+    cleanup();
+  }
+});
+
+test('recording does not retry unsupported Linux input access', async () => {
+  const commands = [];
+  const { inputAccess, cleanup } = createLinuxInputAccess(async (command) => {
+    commands.push(command);
+    return { ...permissionRequired, state: 'unavailable', canRequest: false };
+  });
+  try {
+    await assert.rejects(inputAccess.ensureReady({ captureClicks: true }), { code: 'input-access-unavailable' });
+    assert.deepEqual(commands, ['input-access-status']);
+  } finally {
+    cleanup();
+  }
+});
+
+for (const missing of ['clicks', 'shortcuts']) {
+  test(`recording does not silently proceed when ${missing} devices are unavailable`, async () => {
+    const { inputAccess, cleanup } = createLinuxInputAccess(async () => ({ ...available, [missing]: false }));
+    try {
+      await assert.rejects(inputAccess.ensureReady({ captureClicks: true, captureShortcuts: true }), {
+        code: 'input-devices-unavailable',
+      });
+    } finally {
+      cleanup();
+    }
+  });
+}
+
+test('click-only recording does not require a keyboard device', async () => {
+  const { inputAccess, cleanup } = createLinuxInputAccess(async () => ({ ...available, shortcuts: false }));
+  try {
+    await inputAccess.ensureReady({ captureClicks: true, captureShortcuts: false });
+  } finally {
+    cleanup();
+  }
+});
+
+test('input authorization IPC saves activation and broadcasts it to other windows', async () => {
+  const handlers = new Map();
+  const patches = [];
+  const broadcasts = [];
+  const { inputAccess, cleanup } = createLinuxInputAccess(async () => available);
+  const preferences = { recordingInteractions: { enabled: true, noticeDismissed: true } };
+  try {
+    registerInputAccessIpc({ handle: (channel, handler) => handlers.set(channel, handler) }, inputAccess, {
+      store: {
+        read: () => ({ recordingInteractions: { enabled: false, noticeDismissed: false } }),
+        patchBatch: (patch) => {
+          patches.push(patch);
+          return { preferences };
+        },
+      },
+      BrowserWindow: {
+        getAllWindows: () => [{ isDestroyed: () => false, webContents: { send: (...args) => broadcasts.push(args) } }],
+      },
+    });
+    assert.deepEqual(await handlers.get('input-access:request')(), available);
+    assert.deepEqual(patches, [[{ recordingInteractions: { enabled: true, noticeDismissed: true } }]]);
+    assert.deepEqual(broadcasts, [['preferences:changed', preferences]]);
+    assert.deepEqual(await handlers.get('input-access:status')(), available);
+    assert.equal(patches.length, 1);
+  } finally {
+    cleanup();
   }
 });

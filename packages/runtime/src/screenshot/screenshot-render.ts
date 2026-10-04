@@ -3,7 +3,7 @@ import { screenshotLayers } from '@beam/engine/screenshot/screenshot-layers';
 import { renderCompositedLayer } from '../composition/render-composited-layer';
 import type { Canvas2DContext } from '../canvas-types';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
-import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot-types';
+import type { ScreenshotRenderAssets, ScreenshotLayerPaintObserver } from '@beam/runtime/screenshot/screenshot-types';
 
 export function drawScreenshot(
   ctx: Canvas2DContext,
@@ -12,12 +12,18 @@ export function drawScreenshot(
   width: number,
   height: number,
   editingId?: string,
+  onLayerPaint?: ScreenshotLayerPaintObserver,
 ) {
   ctx.clearRect(0, 0, width, height);
   for (const layer of screenshotLayers(state)) {
     if (!layer.visible) continue;
-    renderCompositedLayer(ctx, layer, width, height, (target, backdrop) => {
-      drawScreenshotLayer(target, state, layer, assets, width, height, backdrop, editingId);
-    });
+    const started = onLayerPaint ? performance.now() : 0;
+    try {
+      renderCompositedLayer(ctx, layer, width, height, (target, backdrop) => {
+        drawScreenshotLayer(target, state, layer, assets, width, height, backdrop, editingId);
+      });
+    } finally {
+      if (onLayerPaint) onLayerPaint(layer, performance.now() - started);
+    }
   }
 }

@@ -29,6 +29,11 @@
   cursor: grab;
   user-select: none;
 }
+.crop-bar.embedded,
+.embedded .drag-handle {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
 .control-slot {
   -webkit-app-region: no-drag;
   app-region: no-drag;

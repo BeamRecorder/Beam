@@ -83,6 +83,7 @@ const createInteractionAccess = (
     noticeDismissed,
     requesting,
     recordingEnabled: computed(() => enabled.value && status.value.state === 'available'),
+    recordingRequested: computed(() => enabled.value && noticeDismissed.value),
     hydrate: (_nextPreferences: PreferenceSettings) => {},
     refresh: async () => {},
     request: async () => {

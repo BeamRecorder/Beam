@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { defineComponent, h, ref } from 'vue';
+import { defineComponent, h, nextTick, ref } from 'vue';
+import { provideElementEditor } from '../useElementEditor';
 import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import type { ElementText } from '@beam/engine/shared/element-types';
 import { createElementText } from '@beam/engine/shared/element-text';
@@ -131,6 +132,42 @@ afterEach(() => {
 });
 
 describe('ElementTextControls', () => {
+  it('shows and styles the active inline draft, committing it only when editing finishes', async () => {
+    const layer = ref(clipWithText());
+    let editor!: ReturnType<typeof provideElementEditor>;
+    const Host = defineComponent({
+      setup() {
+        editor = provideElementEditor({
+          layers: () => [layer.value],
+          selectedId: () => layer.value.id,
+          select: () => {},
+          insert: () => {},
+          remove: () => {},
+          timing: () => ({ startMs: 0, durationMs: 1000 }),
+          update: (_id, patch) => {
+            layer.value = { ...layer.value, ...patch };
+          },
+        });
+        editor.beginText(layer.value.id);
+        return () => h(ElementTextControls, { clip: layer.value, onUpdate: (text) => editor.update({ text }) });
+      },
+    });
+    const wrapper = mount(Host, { global: { stubs: uiStubs } });
+    await flushPromises();
+    editor.updateText('Draft content');
+    await nextTick();
+    expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe('Draft content');
+    await wrapper.get('.caption-style-controls-stub').trigger('click');
+    expect(editor.editing.value?.text?.style.fontFamily).toBe('Beam Display');
+    expect(layer.value.text?.content).toBe('Original text');
+    editor.finishText();
+    await nextTick();
+    expect(layer.value.text).toMatchObject({
+      content: 'Draft content',
+      style: { fontFamily: 'Beam Display', fontAssetId: importedFontId },
+    });
+    wrapper.unmount();
+  });
   it('keeps content, padding, alignment, and paired font updates in one local text draft', async () => {
     const clip = ref(clipWithText());
     const updates: ElementText[] = [];
@@ -198,14 +235,41 @@ describe('ElementTextControls', () => {
   );
 });
 
-describe('element text inspector polish',()=>{
- it('uses the content field without a redundant edit button',async()=>{
-  const wrapper=mount(ElementTextControls,{props:{clip:clipWithText()},global:{stubs:uiStubs}});await flushPromises();expect(wrapper.find('textarea').exists()).toBe(true);expect(wrapper.text()).not.toContain('translated:editText');expect(wrapper.text()).not.toContain('translated:addText');wrapper.unmount();
- });
- it('keeps the add-text action for an element without text',async()=>{
-  const clip=clipWithText();delete clip.text;const wrapper=mount(ElementTextControls,{props:{clip},global:{stubs:uiStubs}});await flushPromises();expect(wrapper.text()).toContain('translated:addText');expect(wrapper.find('textarea').exists()).toBe(false);wrapper.unmount();
- });
- it('uses neutral alignment choices with clearly visible icons',async()=>{
-  const wrapper=mount(ElementTextControls,{props:{clip:clipWithText()},global:{stubs:{...uiStubs,ButtonGroup:false}}});await flushPromises();expect(wrapper.getComponent(ButtonGroup).props('variant')).toBe('neutral');expect(wrapper.getComponent(ButtonGroup).findAll('svg')).toHaveLength(3);for(const svg of wrapper.getComponent(ButtonGroup).findAll('svg')){expect(svg.attributes('width')).toBe('20');expect(svg.attributes('stroke-width')).toBe('2.25');}wrapper.unmount();
- });
+describe('element text inspector polish', () => {
+  it('uses the content field without a redundant edit button', async () => {
+    const wrapper = mount(ElementTextControls, { props: { clip: clipWithText() }, global: { stubs: uiStubs } });
+    await flushPromises();
+    expect(wrapper.find('textarea').exists()).toBe(true);
+    expect(wrapper.text()).not.toContain('translated:editText');
+    expect(wrapper.text()).not.toContain('translated:addText');
+    wrapper.unmount();
+  });
+  it('offers an empty text category without changing the document until typing', async () => {
+    const clip = clipWithText();
+    delete clip.text;
+    const wrapper = mount(ElementTextControls, { props: { clip }, global: { stubs: uiStubs } });
+    await flushPromises();
+    expect(wrapper.text()).not.toContain('translated:addText');
+    expect(wrapper.emitted('update')).toBeUndefined();
+    await wrapper.get('.accordion-trigger').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('textarea').exists()).toBe(true);
+    await wrapper.get('textarea').setValue('New label');
+    expect(wrapper.emitted('update')?.[0]?.[0]).toMatchObject({ content: 'New label' });
+    wrapper.unmount();
+  });
+  it('uses neutral alignment choices with clearly visible icons', async () => {
+    const wrapper = mount(ElementTextControls, {
+      props: { clip: clipWithText() },
+      global: { stubs: { ...uiStubs, ButtonGroup: false } },
+    });
+    await flushPromises();
+    expect(wrapper.getComponent(ButtonGroup).props('variant')).toBe('neutral');
+    expect(wrapper.getComponent(ButtonGroup).findAll('svg')).toHaveLength(3);
+    for (const svg of wrapper.getComponent(ButtonGroup).findAll('svg')) {
+      expect(svg.attributes('width')).toBe('20');
+      expect(svg.attributes('stroke-width')).toBe('2.25');
+    }
+    wrapper.unmount();
+  });
 });

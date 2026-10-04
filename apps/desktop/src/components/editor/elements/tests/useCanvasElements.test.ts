@@ -65,7 +65,9 @@ const mountCanvasElements = (configuration: HarnessOptions = {}) => {
     layers: computed(() => layers.value),
     editing,
     drawingMode,
-    beginText: vi.fn(() => true),
+    vectorEditing: ref(null),
+    finishVector: vi.fn(),
+    beginElement: vi.fn(() => true),
     finishText: vi.fn(() => {
       editing.value = null;
     }),
@@ -182,7 +184,7 @@ describe('useCanvasElements', () => {
     mocks.loadElementFonts.mockReturnValueOnce(new Promise<void>((resolve) => (resolveLoad = resolve)));
     const state = mountCanvasElements({ initialLayers: [layer] });
 
-    expect(mocks.loadElementFonts).toHaveBeenCalledWith([layer]);
+    expect(mocks.loadElementFonts).toHaveBeenCalledWith([layer], expect.any(Function));
     expect(state.render).not.toHaveBeenCalled();
 
     resolveLoad();
@@ -214,7 +216,7 @@ describe('useCanvasElements', () => {
     expect(state.canvasElements.begin(new MouseEvent('mousedown', { button: 0 }))).toBe(false);
     expect(state.canEdit).toHaveBeenCalledOnce();
     expect(state.clipIdAt).not.toHaveBeenCalled();
-    expect(state.editor.beginText).not.toHaveBeenCalled();
+    expect(state.editor.beginElement).not.toHaveBeenCalled();
 
     state.canEditValue.value = true;
     await nextTick();
@@ -223,12 +225,12 @@ describe('useCanvasElements', () => {
     expect(state.canvasElements.begin(new MouseEvent('mousedown', { button: 0 }))).toBe(false);
     expect(state.canEdit).toHaveBeenCalledOnce();
     expect(state.clipIdAt).toHaveBeenCalledOnce();
-    expect(state.editor.beginText).not.toHaveBeenCalled();
+    expect(state.editor.beginElement).not.toHaveBeenCalled();
 
     state.clipIdAt.mockReturnValue('target');
     expect(state.canvasElements.begin(new MouseEvent('mousedown', { button: 0 }))).toBe(true);
     expect(state.clipIdAt).toHaveBeenCalledTimes(2);
-    expect(state.editor.beginText).toHaveBeenCalledWith('target');
+    expect(state.editor.beginElement).toHaveBeenCalledWith('target');
   });
 
   it('finishes text editing and exits drawing mode when editing becomes unavailable', async () => {

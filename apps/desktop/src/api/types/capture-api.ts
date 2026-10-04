@@ -24,7 +24,7 @@ import type {
   ProjectZoomState,
 } from '@beam/engine/capture/capture-session';
 import type { ClipComposition, MediaAsset } from '@beam/engine/shared/composition-types';
-import type { BackgroundMedia, BackgroundValue, GradientBackground } from '@beam/engine/shared/background-types';
+import type { BackgroundMedia, BackgroundValue } from '@beam/engine/shared/background-types';
 import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 import type { CursorPresentationSettings } from '@beam/engine/capture/cursor-presentation';
 import type { CursorPackDescriptor, CursorPackImportResult } from '@beam/engine/capture/cursor-pack';
@@ -33,14 +33,15 @@ import type {
   TeleprompterViewState,
   TeleprompterSessionContext,
 } from '../../components/hud/teleprompter/teleprompter-types';
-import type { RecordingBarVisibility } from '../../components/hud/recorder/recording-types';
 import type {
   EditorLoadingProgress,
   EditorLoadingStage,
   EditorOpenOptions,
   RecorderLauncherContext,
 } from './editor-window';
-import type { AppearanceSettings } from '~/types/appearance';
+import type { PreferenceSettings, PreferencePatch } from './preferences';
+import type { StorageDirectoryApi } from './storage-directories';
+export type * from './preferences';
 import type {
   CameraRecordingCommand,
   CameraRecordingCommandResult,
@@ -99,7 +100,15 @@ export interface CaptureApi {
 }
 
 export interface DesktopCaptureApi
-  extends CaptureApi, ScreenshotApi, QuickSnipApi, HudPanelApi, SourcePickerApi, DesktopExportApi, AuthoringApi {
+  extends
+    StorageDirectoryApi,
+    CaptureApi,
+    ScreenshotApi,
+    QuickSnipApi,
+    HudPanelApi,
+    SourcePickerApi,
+    DesktopExportApi,
+    AuthoringApi {
   close(): void;
   quit(): void;
   minimize(): void;
@@ -168,6 +177,7 @@ export interface DesktopCaptureApi
   updatePreferencesBatch(patches: PreferencePatch[]): Promise<PreferenceSettings>;
   resetPreferences(keys?: Array<keyof PreferenceSettings>): Promise<PreferenceSettings>;
   onPreferencesChanged(listener: (preferences: PreferenceSettings) => void): () => void;
+  onProjectLocationsChanged(listener: () => void): () => void;
   onPreferenceShortcut(listener: (id: string) => void): () => void;
   getEditorPresets(kind?: PresetKind): Promise<EditorPresetDocument>;
   createEditorPreset(name: string, kind?: PresetKind): Promise<EditorPresetDocument>;
@@ -302,43 +312,6 @@ export interface AppUpdateState {
   percent: number | null;
   message: string | null;
 }
-
-export interface PreferenceShortcut {
-  keys: string;
-  scope: 'global' | 'application';
-  category: string;
-}
-export interface PreferenceSettings {
-  alwaysOnTop?: boolean;
-  launchAtStartup?: boolean;
-  schemaVersion: 3;
-  theme: 'light' | 'dark' | 'system';
-  appearance?: AppearanceSettings;
-  hudWindow?: { width: number; height: number };
-  recordingBar: { visibility: RecordingBarVisibility };
-  recordingInteractions: { enabled: boolean; noticeDismissed: boolean };
-  voiceover?: { countdownSeconds: 0 | 3 | 5 | 10; monitorProjectAudio: boolean };
-  spellCheck?: { enabled: boolean };
-  onboardingCompleted?: boolean;
-  devices: {
-    cameraId?: string;
-    micId?: string;
-    systemAudioMode?: string;
-    [key: string]: unknown;
-  };
-  shortcuts: Record<string, PreferenceShortcut>;
-  backgroundPresets: { colors: string[]; gradients: GradientBackground[] };
-  extras: Record<string, unknown>;
-}
-
-export type PreferencePatch = Partial<
-  Omit<PreferenceSettings, 'recordingInteractions' | 'spellCheck' | 'appearance' | 'voiceover'>
-> & {
-  recordingInteractions?: Partial<PreferenceSettings['recordingInteractions']>;
-  spellCheck?: Partial<PreferenceSettings['spellCheck']>;
-  appearance?: Partial<AppearanceSettings>;
-  voiceover?: Partial<NonNullable<PreferenceSettings['voiceover']>>;
-};
 
 export interface ProjectEditorPresentation {
   canvas: OutputCanvasSettings;

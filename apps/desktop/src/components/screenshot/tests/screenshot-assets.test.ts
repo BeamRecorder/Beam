@@ -12,6 +12,8 @@ let assignments: string[] = [];
 let decodeImage: (image: ImageLike) => Promise<void> = async () => undefined;
 
 class TestImage {
+  naturalWidth = 100;
+  naturalHeight = 100;
   private currentCrossOrigin: string | null = null;
   private currentSrc = '';
   decode = vi.fn(() => decodeImage(this as unknown as ImageLike));
@@ -48,6 +50,56 @@ afterEach(() => {
 });
 
 describe('createScreenshotImageLoader', () => {
+  it('shares raw pending images without assigning consumer callbacks to them', async () => {
+    const load = createScreenshotImageLoader();
+    const request = load.request('photo');
+    expect(load('photo')).toBe(request.ready);
+    expect(await request.ready).toBe(request.image);
+    expect(load.request('photo')).toBe(request);
+  });
+  it('ignores a late decode from before clearing and keeps the new request', async () => {
+    const finish: Array<() => void> = [];
+    decodeImage = () => new Promise<void>((resolve) => finish.push(resolve));
+    const load = createScreenshotImageLoader();
+    const first = load('photo');
+    load.clear();
+    const second = load('photo');
+    finish[0]!();
+    await first;
+    expect(load('photo')).toBe(second);
+    finish[1]!();
+    expect(await second).not.toBe(await first);
+    expect(load('photo')).toBe(second);
+  });
+  it('clears retained pixels and images while preserving pixels already borrowed by a painter', async () => {
+    const load = createScreenshotImageLoader({ maxDecodedPixels: 10_000 });
+    const first = await load('photo');
+    load.clear();
+    load.clear();
+    const second = await load('photo');
+    expect(second).not.toBe(first);
+    expect(first.src).toBe('photo');
+    expect(await load('photo')).toBe(second);
+  });
+  it('keeps the current decode in flight when a cleared request for the same URL later rejects', async () => {
+    const finish: Array<() => void> = [],
+      fail: Array<(reason: unknown) => void> = [];
+    decodeImage = () =>
+      new Promise<void>((resolve, reject) => {
+        finish.push(resolve);
+        fail.push(reject);
+      });
+    const load = createScreenshotImageLoader();
+    const first = load('photo');
+    load.clear();
+    const second = load('photo');
+    fail[0]!(new Error('obsolete decode failed'));
+    await expect(first).rejects.toThrow('obsolete decode failed');
+    expect(load('photo')).toBe(second);
+    expect(instances).toHaveLength(2);
+    finish[1]!();
+    expect(await second).toBe(instances[1]);
+  });
   it('does not evict in-flight decodes when a scene requests more than three distinct images', async () => {
     const finish = new Map<string, () => void>();
     decodeImage = (image) => new Promise<void>((resolve) => finish.set(image.src, resolve));
@@ -87,8 +139,8 @@ describe('createScreenshotImageLoader', () => {
     expect(image.src).toBe('https://cdn.example.test/source.png');
   });
 
-  it('keeps at most three decoded URLs and evicts the oldest cache entry', async () => {
-    const load = createScreenshotImageLoader();
+  it('evicts the least recently used URL at the configured entry bound', async () => {
+    const load = createScreenshotImageLoader({ maxEntries: 3 });
     const first = await load('source-1.png');
     const second = await load('source-2.png');
     await load('source-3.png');
@@ -96,12 +148,36 @@ describe('createScreenshotImageLoader', () => {
 
     await load('source-4.png');
     expect(instances).toHaveLength(4);
-    expect(await load('source-2.png')).toBe(second);
-    const reloadedFirst = await load('source-1.png');
+    expect(await load('source-1.png')).toBe(first);
+    const reloadedSecond = await load('source-2.png');
 
     expect(instances).toHaveLength(5);
-    expect(reloadedFirst).not.toBe(first);
+    expect(reloadedSecond).not.toBe(second);
   });
+
+  it('retains all images of a complex scene across later resource preparations', async () => {
+    const load = createScreenshotImageLoader();
+    const urls = Array.from({ length: 30 }, (_, index) => `layer-${index}.png`);
+    await Promise.all(urls.map(load));
+    await Promise.all(urls.map(load));
+    expect(instances).toHaveLength(30);
+  });
+  it('limits retained decoded pixels and does not retain an oversized source', async () => {
+    const load = createScreenshotImageLoader({ maxDecodedPixels: 20_000 });
+    const first = await load('first');
+    await load('second');
+    await load('third');
+    expect(await load('first')).not.toBe(first);
+    const small = createScreenshotImageLoader({ maxDecodedPixels: 100 });
+    const large = await small('large');
+    expect(await small('large')).not.toBe(large);
+  });
+  it.each([{ maxEntries: 0 }, { maxEntries: 1.5 }, { maxDecodedPixels: -1 }, { maxDecodedPixels: NaN }])(
+    'rejects invalid cache limits %s',
+    (options) => {
+      expect(() => createScreenshotImageLoader(options)).toThrow('cache limits');
+    },
+  );
 
   it('drops a rejected decode from cache so a later request retries', async () => {
     let shouldFail = true;

@@ -6,6 +6,15 @@ enableAutoUnmount(afterEach);
 
 describe('ScrollShadow.vue', () => {
   it.each(['vertical', 'horizontal', 'both'] as const)(
+    'clips %s overflow when scrolling is disabled while retaining its fade',
+    async (orientation) => {
+      const wrapper = mount(ScrollShadow, { props: { orientation, scrollable: false } });
+      expect(wrapper.get('.scroll-shadow-viewport').classes()).toContain('clip-overflow');
+      await wrapper.setProps({ scrollable: true });
+      expect(wrapper.get('.scroll-shadow-viewport').classes()).not.toContain('clip-overflow');
+    },
+  );
+  it.each(['vertical', 'horizontal', 'both'] as const)(
     'fades both ends while scrolling within the %s content',
     async (orientation) => {
       const wrapper = mount(ScrollShadow, { props: { orientation, size: '16px' } });

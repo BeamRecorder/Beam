@@ -1,10 +1,11 @@
-import { computed } from 'vue';
+import { computed, onScopeDispose } from 'vue';
 import { capture } from '~/api/capture';
 import { screenshotState, screenshotPresetSettings } from './screenshot-state';
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
 import type { ScreenshotPresetHost } from './screenshot-preset-types';
+import type { EditorResources } from '../editor/resources/editor-resource-types';
 
-export function useScreenshotPresets(host: ScreenshotPresetHost) {
+export function useScreenshotPresets(host: ScreenshotPresetHost, resources: EditorResources) {
   const { document, state, presets, backgroundLibrary, busy, t, fail } = host;
   const plain = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
   let baseline = '',
@@ -17,12 +18,14 @@ export function useScreenshotPresets(host: ScreenshotPresetHost) {
     const next = plain(settings());
     const id = activePreset.value.id;
     const updated = await capture.updateEditorPreset(id, next, 'screenshot');
+    resources.rememberPresets('screenshot', updated);
     if (activePreset.value?.id === id) {
       presets.value = updated;
       baseline = JSON.stringify(next);
     }
   };
   const applyPreset = (next: EditorPresetDocument) => {
+    resources.rememberPresets('screenshot', next);
     presets.value = next;
     const selected = next.presets.find((item) => item.id === next.activePresetId);
     if (!document.value || !state.value || !selected) return;
@@ -49,9 +52,10 @@ export function useScreenshotPresets(host: ScreenshotPresetHost) {
         if (window.confirm(t('savePreset'))) await savePreset();
         else if (!window.confirm(t('discardPreset'))) return;
       }
-      if (action === 'rename' && activePreset.value)
+      if (action === 'rename' && activePreset.value) {
         presets.value = await capture.renameEditorPreset(activePreset.value.id, value, 'screenshot');
-      else if (action === 'add') {
+        resources.rememberPresets('screenshot', presets.value);
+      } else if (action === 'add') {
         const current = plain(settings());
         const next = await capture.createEditorPreset(value, 'screenshot');
         applyPreset(await capture.updateEditorPreset(next.activePresetId, current, 'screenshot'));
@@ -70,6 +74,13 @@ export function useScreenshotPresets(host: ScreenshotPresetHost) {
       busy.value = false;
     }
   };
+  onScopeDispose(
+    resources.onPresetsChanged('screenshot', (next) => {
+      if (busy.value || dirty.value || !presets.value) return;
+      presets.value = next;
+      if (state.value) baseline = JSON.stringify(settings());
+    }),
+  );
   return {
     activePreset,
     dirty,

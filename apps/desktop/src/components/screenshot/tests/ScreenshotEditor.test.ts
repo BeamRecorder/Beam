@@ -16,6 +16,8 @@ const capture = vi.hoisted(() => ({
   registerAuthoringDocument: vi.fn(async () => {}),
   replyAuthoringRequest: vi.fn(),
   getScreenshot: vi.fn(),
+  onBackgroundLibraryChanged: vi.fn(() => vi.fn()),
+  onEditorPresetsChanged: vi.fn(() => vi.fn()),
   listBackgroundLibrary: vi.fn(),
   listCursorPacks: vi.fn(),
   onCursorPacksChanged: vi.fn(),
@@ -34,6 +36,9 @@ const capture = vi.hoisted(() => ({
 }));
 const renderer = vi.hoisted(() => ({ encodeScreenshot: vi.fn() }));
 const clipboardRaster = vi.hoisted(() => ({ rasterize: vi.fn() }));
+vi.mock('../export/useScreenshotProjectThumbnail', () => ({
+  useScreenshotProjectThumbnail: () => ({ flush: async () => {} }),
+}));
 vi.mock('../export/useScreenshotExport', () => ({ useScreenshotExport: () => renderer.encodeScreenshot }));
 let screenshotCanvasEditor: ElementEditorContext | null = null;
 
@@ -78,7 +83,11 @@ describe('ScreenshotEditor', () => {
     capture.getEditorPresets.mockResolvedValue(presetFixture());
     capture.reportEditorLoadingStage.mockImplementation(() => undefined);
     capture.saveScreenshot.mockResolvedValue(undefined);
-    capture.exportScreenshot.mockResolvedValue(null);
+    capture.exportScreenshot.mockImplementation(async (_id, _bytes, _format, copy) => ({
+      status: copy ? 'copied' : 'saved',
+      path: copy ? null : '/tmp/screenshot.png',
+      timings: {},
+    }));
     capture.updateEditorPreset.mockResolvedValue(presetFixture());
     capture.renameEditorPreset.mockResolvedValue(presetFixture());
     capture.createEditorPreset.mockResolvedValue(presetFixture());
@@ -518,6 +527,7 @@ describe('ScreenshotEditor', () => {
       expect.objectContaining({
         canvas: expect.objectContaining({ width: 1400, height: 800 }),
       }),
+      expect.objectContaining({ includePreview: true, signal: expect.any(AbortSignal) }),
     );
     expect(capture.saveScreenshot).toHaveBeenCalledWith(
       'screen-1',
@@ -556,6 +566,7 @@ describe('ScreenshotEditor', () => {
       1,
       'project-media://screenshot/screen-1/source.png',
       expect.objectContaining({ format: 'png' }),
+      expect.objectContaining({ includePreview: true, signal: expect.any(AbortSignal) }),
     );
     expect(capture.saveScreenshot).toHaveBeenCalledWith(
       'screen-1',
@@ -572,6 +583,7 @@ describe('ScreenshotEditor', () => {
       2,
       'project-media://screenshot/screen-1/source.png',
       expect.objectContaining({ format: 'webp' }),
+      expect.objectContaining({ includePreview: true, signal: expect.any(AbortSignal) }),
     );
     expect(capture.exportScreenshot).toHaveBeenNthCalledWith(2, 'screen-1', new ArrayBuffer(4), 'webp', false);
     wrapper.unmount();
@@ -1093,7 +1105,7 @@ describe('ScreenshotEditor', () => {
     composition.vm.$emit('select', 'inspector-b', 'toggle');
     canvas.vm.$emit('selectionBounds', { x: 0.2, y: 0.2, width: 0.6, height: 0.6 });
     await flushPromises();
-    expect(wrapper.get('[data-screenshot-group-inspector]').exists()).toBe(true);
+    expect(wrapper.find('[data-screenshot-group-inspector]').exists()).toBe(true);
     expect(wrapper.findComponent(ShapePropertiesStub).exists()).toBe(false);
     expect(wrapper.findComponent(ClipPropertiesStub).exists()).toBe(false);
     expect(wrapper.find('.screenshot-properties-title input').exists()).toBe(false);
@@ -1440,6 +1452,7 @@ describe('ScreenshotEditor', () => {
           crop: { x: 0.2, y: 0.1, width: 0.6, height: 0.7 },
         }),
       }),
+      expect.objectContaining({ includePreview: true, signal: expect.any(AbortSignal) }),
     );
     wrapper.unmount();
   });
@@ -1468,6 +1481,7 @@ describe('ScreenshotEditor', () => {
       expect.objectContaining({
         canvas: expect.objectContaining({ width: 2048, height: 2048 }),
       }),
+      expect.objectContaining({ includePreview: true, signal: expect.any(AbortSignal) }),
     );
     wrapper.unmount();
   });
@@ -1498,6 +1512,7 @@ describe('ScreenshotEditor', () => {
       expect.objectContaining({
         canvas: expect.objectContaining({ width: 600, height: 400 }),
       }),
+      expect.objectContaining({ includePreview: true, signal: expect.any(AbortSignal) }),
     );
     wrapper.unmount();
   });
@@ -1540,7 +1555,8 @@ describe('ScreenshotEditor', () => {
     await clickText(wrapper, 'Copy');
     await flushPromises();
     expect(wrapper.get('[role="alert"]').text()).toBe('Clipboard unavailable');
-    expect(useToastStore().toasts).toHaveLength(0);
+    expect(useToastStore().toasts).toHaveLength(1);
+    expect(useToastStore().toasts[0]).toMatchObject({ type: 'error', message: 'Image copy failed' });
     wrapper.unmount();
   });
   it('shares the ambient canvas background and centers project navigation with presets on the left', async () => {

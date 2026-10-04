@@ -278,3 +278,24 @@ describe('drawFreehand', () => {
     expect(ctx.shadowColor).toBe('transparent');
   });
 });
+
+it.each([0, 6])('respects disabled drawing fill while retaining border width %s', (borderWidth) => {
+  const ctx = makeContext(),
+    clip = shapeClip({
+      family: 'drawing',
+      preset: 'freehand',
+      fillEnabled: false,
+      borderWidth,
+      drawing: {
+        points: [
+          { x: 0, y: 0 },
+          { x: 1, y: 1 },
+        ],
+        strokeWidth: 8,
+        smoothing: 65,
+      },
+    });
+  drawFreehand(ctx as unknown as Canvas2DContext, clip, { x: 0, y: 0, width: 200, height: 100 }, 1);
+  expect(ctx.stroke).toHaveBeenCalledTimes(borderWidth > 0 ? 1 : 0);
+  expect(ctx.restore).toHaveBeenCalledOnce();
+});

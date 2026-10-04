@@ -63,6 +63,7 @@ pub(super) struct ProcessState {
     pub repair_window_crop: bool,
     pub region: Option<ScreenRegion>,
     pub dmabuf_importer: DmaBufImporter,
+    pub hyprland_cursor: Option<super::super::hyprland::HyprlandCursor>,
 }
 
 pub(super) fn should_defer_timestamp_origin(
@@ -96,7 +97,9 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         return;
     };
     let header = metadata::header(&buffer);
-    let cursor = metadata::cursor(&buffer, state.cursor.classifier_mut());
+    let transform = metadata::transform(&buffer);
+    let cursor = metadata::cursor(&buffer, state.cursor.classifier_mut())
+        .or_else(|| state.hyprland_cursor.as_ref()?.metadata(format, transform));
     let bitmap = if state.native_cursor.enabled() {
         metadata::native_bitmap(&buffer)
     } else {
@@ -105,7 +108,6 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
     state.native_cursor.update(cursor, bitmap);
     let has_cursor_metadata = cursor.as_ref().is_some_and(|cursor| cursor.id != 0);
     let reported_crop = metadata::crop(&buffer);
-    let transform = metadata::transform(&buffer);
     // Mutter may publish cursor-only buffers before the first window frame.
     // They cannot be mapped without frame geometry and must not establish the
     // session clock origin, otherwise the cursor timeline starts ahead of the

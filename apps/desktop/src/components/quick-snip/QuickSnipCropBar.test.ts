@@ -2,6 +2,7 @@ import { enableAutoUnmount, mount } from '@vue/test-utils';
 import { nextTick, ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import QuickSnipCropBar from './QuickSnipCropBar.vue';
+import RecorderBar from '../hud/recorder/RecorderBar.vue';
 
 const mock = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
 vi.mock('~/api/capture', () => ({ capture: {} }));
@@ -27,7 +28,7 @@ beforeEach(() => {
     recording,
     mode,
     displayMode,
-    recorder: { recorderHoverOnlyActive: ref(false), phase: ref('idle') },
+    recorder: { recorderHoverOnlyActive: ref(false), phase: ref('idle'), error: ref('') },
     compact: false,
     settingsDisabled: false,
     selectedPresetId: 'default',
@@ -63,6 +64,37 @@ const mountBar = () =>
   });
 
 describe('Quick Snip capture assets', () => {
+  it('forwards live input failure warnings to the shared controls and clears them on recovery', async () => {
+    mock.current.compact = true;
+    const recorder = mock.current.recorder as { phase: ReturnType<typeof ref>; error: ReturnType<typeof ref> };
+    recorder.phase.value = 'recording';
+    const wrapper = mount(QuickSnipCropBar);
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    recorder.error.value = 'Input capture stopped';
+    await nextTick();
+    expect(wrapper.get('[role="alert"]').attributes('title')).toBe('Input capture stopped');
+    recorder.error.value = '';
+    await nextTick();
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+  });
+  it.each(['recording', 'paused', 'finalizing'] as const)(
+    'uses the standard recording controls during %s',
+    async (phase) => {
+      mode.value = 'instant';
+      displayMode.value = 'studio';
+      recording.value = true;
+      mock.current.compact = true;
+      (mock.current.recorder as { phase: ReturnType<typeof ref> }).phase.value = phase;
+      const wrapper = mount(QuickSnipCropBar);
+      const standard = mount(RecorderBar, {
+        props: { phase, recordingTime: '00:00', visibility: 'always' },
+      });
+      expect(wrapper.get('.recorder-bar').element.innerHTML).toBe(standard.element.innerHTML);
+      expect(wrapper.find('.beam-mascot').exists()).toBe(false);
+      await wrapper.get('button[aria-label="Stop recording"]').trigger('click');
+      expect(toggle).toHaveBeenCalledTimes(phase === 'finalizing' ? 0 : 1);
+    },
+  );
   it('uses the Screenshot asset in the preset and capture action', async () => {
     const wrapper = mountBar();
     for (const selector of ['[data-mode="screenshot"]', '.capture-actions .capture-mode-icon']) {
@@ -194,4 +226,55 @@ it('retains the close intent if native blur arrives between pressing and releasi
   await button.trigger('click');
   expect(mock.current.dismissSettings).toHaveBeenCalledOnce();
   expect(mock.current.openSettings).not.toHaveBeenCalled();
+});
+
+it('keeps selection controls usable through hover, mode changes and cancellation', async () => {
+  mock.current.pointerOver = ref(false);
+  const wrapper = mountBar();
+  const bar = wrapper.get('.crop-bar');
+  await bar.trigger('pointerenter');
+  expect((mock.current.pointerOver as ReturnType<typeof ref>).value).toBe(true);
+  await bar.trigger('pointerleave');
+  expect((mock.current.pointerOver as ReturnType<typeof ref>).value).toBe(false);
+  await wrapper.get('button[aria-label="Video"]').trigger('click');
+  expect(displayMode.value).toBe('studio');
+  await wrapper.get('button[aria-label="Image"]').trigger('click');
+  expect(displayMode.value).toBe('screenshot');
+  await wrapper.get('button[aria-label="Cancel"]').trigger('click');
+  expect(mock.current.cancel).toHaveBeenCalledOnce();
+});
+
+it.each([
+  ['microphone', 'Microphone'],
+  ['systemAudio', 'System audio'],
+  ['camera', 'Camera'],
+])('opens %s devices from click, context menu and keyboard and reports device errors', async (kind, label) => {
+  mode.value = displayMode.value = 'studio';
+  const keyboardMenu = vi.fn().mockResolvedValue(undefined);
+  mock.current.onDeviceKeydown = keyboardMenu;
+  const wrapper = mountBar();
+  const button = wrapper.get(`button[aria-label="${label}"]`);
+  await button.trigger('click');
+  await button.trigger('contextmenu');
+  expect(mock.current.chooseDevice).toHaveBeenCalledTimes(2);
+  expect(mock.current.chooseDevice).toHaveBeenCalledWith(kind, { x: 0, y: 0 });
+  await button.trigger('keydown', { key: 'F10', shiftKey: true });
+  expect(keyboardMenu).toHaveBeenCalledWith(kind, expect.objectContaining({ key: 'F10', shiftKey: true }));
+  const reason = new Error('Device unavailable');
+  keyboardMenu.mockRejectedValueOnce(reason);
+  await button.trigger('keydown', { key: 'ContextMenu' });
+  expect(mock.current.reportFailure).toHaveBeenCalledWith(reason);
+});
+
+it('drops an interrupted Settings click so the next keyboard activation uses the current state', async () => {
+  (mock.current.settingsOpen as ReturnType<typeof ref>).value = true;
+  const wrapper = mountBar();
+  const button = wrapper.get('button[aria-haspopup="dialog"]');
+  await button.trigger('pointerdown');
+  await button.trigger('pointercancel');
+  (mock.current.settingsOpen as ReturnType<typeof ref>).value = false;
+  await nextTick();
+  await button.trigger('click');
+  expect(mock.current.openSettings).toHaveBeenCalledOnce();
+  expect(mock.current.dismissSettings).not.toHaveBeenCalled();
 });

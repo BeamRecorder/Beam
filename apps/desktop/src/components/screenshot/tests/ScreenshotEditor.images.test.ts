@@ -13,7 +13,12 @@ import {
 } from './screenshot-editor-test-helpers';
 
 const capture = vi.hoisted(() => ({
+  onAuthoringRequest: vi.fn(() => vi.fn()),
+  registerAuthoringDocument: vi.fn(async () => {}),
+  replyAuthoringRequest: vi.fn(),
   getScreenshot: vi.fn(),
+  onBackgroundLibraryChanged: vi.fn(() => vi.fn()),
+  onEditorPresetsChanged: vi.fn(() => vi.fn()),
   listBackgroundLibrary: vi.fn(),
   listCursorPacks: vi.fn(),
   onCursorPacksChanged: vi.fn(),
@@ -34,6 +39,9 @@ const capture = vi.hoisted(() => ({
 }));
 const renderer = vi.hoisted(() => ({ encodeScreenshot: vi.fn() }));
 const imageLoader = vi.hoisted(() => ({ load: vi.fn() }));
+vi.mock('../export/useScreenshotProjectThumbnail', () => ({
+  useScreenshotProjectThumbnail: () => ({ flush: async () => {} }),
+}));
 vi.mock('../export/useScreenshotExport', () => ({ useScreenshotExport: () => renderer.encodeScreenshot }));
 
 vi.mock('~/api/capture', () => ({ capture }));
@@ -42,9 +50,7 @@ vi.mock('../screenshot-render', () => ({
   loadScreenshotAssets: vi.fn(),
   drawScreenshot: vi.fn(),
 }));
-vi.mock('@beam/runtime/screenshot/screenshot-image-loader', () => ({
-  createScreenshotImageLoader: () => imageLoader.load,
-}));
+vi.mock('../../editor/resources/editor-image-cache', () => ({ loadEditorImage: imageLoader.load }));
 
 const harness = createScreenshotEditorTestHarness(ScreenshotEditor, () => {});
 const { mountEditor, ScreenshotCanvasStub, ScreenshotCompositionStub, compositionLayers } = harness;

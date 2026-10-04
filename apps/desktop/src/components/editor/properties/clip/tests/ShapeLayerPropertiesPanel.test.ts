@@ -1,466 +1,196 @@
-import { mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ShapeClip } from '@beam/engine/shared/composition-types';
-import DrawingControls from '~/components/editor/elements/DrawingControls.vue';
-import ElementTextControls from '~/components/editor/elements/ElementTextControls.vue';
-import ShadowDirectionGroup from '../../cursor/ShadowDirectionGroup.vue';
-import { createElementText } from '@beam/engine/shared/element-text';
+import { mount, type VueWrapper } from '@vue/test-utils';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ShapeLayerPropertiesPanel from '../ShapeLayerPropertiesPanel.vue';
-
-const { capture } = vi.hoisted(() => ({
-  capture: {
-    getPreferences: vi.fn(),
-    updatePreferences: vi.fn(),
-    onPreferencesChanged: vi.fn(),
-  },
+import ShapeGeometryControls from '../ShapeGeometryControls.vue';
+import ElementTextControls from '../../../elements/ElementTextControls.vue';
+import TransformControls from '../../shared/TransformControls.vue';
+import MediaOrientationControls from '../../shared/MediaOrientationControls.vue';
+import { shape } from '@beam/runtime/composition/shape/tests/gpu-shape.fixtures';
+import { createElementText } from '@beam/engine/shared/element-text';
+import ColorFillPresetControls from '../../ColorFillPresetControls.vue';
+import Input from '~/ui/input/Input.vue';
+vi.mock('~/api/capture', () => ({
+  capture: { getPreferences: vi.fn(), updatePreferences: vi.fn(), onPreferencesChanged: vi.fn() },
 }));
-
-vi.mock('../../../../../api/capture', () => ({ capture }));
-
-type ShapeClipOverrides = Partial<ShapeClip> & {
-  opacityEnabled?: boolean;
-  backdropBlur?: number;
-};
-
-const clip = (overrides: ShapeClipOverrides = {}): ShapeClip =>
-  ({
-    id: 'shape',
-    trackId: 'shape-track',
-    kind: 'shape',
-    name: 'Shape',
-    assetId: '',
-    timelineStartMs: 0,
-    timelineDurationMs: 1_000,
-    sourceInMs: 0,
-    sourceDurationMs: 1_000,
-    playbackRate: 1,
-    transitions: { entry: null, exit: null },
-    enabled: true,
-    order: 0,
-    transform: { x: 0.3, y: 0.3, width: 0.4, height: 0.4 },
-    family: 'shape',
-    preset: 'rounded-rectangle',
-    fillColor: '#ff5a1f',
-    borderColor: '#ffffff',
-    borderWidth: 0,
-    cornerRadius: 16,
-    arrowThickness: 36,
-    arrowHeadSize: 38,
-    rotation: 0,
-    opacityEnabled: false,
-    opacity: 70,
-    backdropBlur: 35,
-    shadowEnabled: false,
-    shadowColor: '#000000',
-    shadowBlur: 32,
-    shadowDirection: 'bottom-right',
-    ...overrides,
-  }) as ShapeClip;
-
-const ColorPickerStub = {
-  name: 'ColorPickerStub',
-  props: ['label', 'modelValue', 'formatValue'],
-  emits: ['update:modelValue'],
-  template: '<div class="color-picker-stub" :data-label="label" :data-value="modelValue" />',
-};
-
-const ColorFillPresetControlsStub = {
-  name: 'ColorFillPresetControlsStub',
-  props: ['modelValue', 'label'],
-  emits: ['update:modelValue'],
-  template: '<div class="color-fill-preset-controls-stub" :data-label="label" :data-kind="modelValue.kind" />',
-};
-
-const BigSliderStub = {
-  name: 'BigSliderStub',
-  props: ['label', 'modelValue', 'formatValue'],
-  emits: ['update:modelValue'],
-  template: '<div class="slider-stub" :data-label="label" :data-value="modelValue" />',
-};
-
-const ShapePickerStub = {
-  name: 'ShapePickerStub',
-  props: ['modelValue'],
-  emits: ['update:modelValue'],
-  template:
-    '<button class="shape-picker-stub" :data-model-value="modelValue" @click="$emit(\'update:modelValue\', \'heart\')" />',
-};
-
+const wrappers: VueWrapper[] = [];
 const stubs = {
-  Button: {
-    props: {
-      block: Boolean,
-      icon: [Object, Function],
-      iconOnly: Boolean,
-      tooltip: String,
-      variant: String,
-    },
-    emits: ['click'],
-    template:
-      '<button :data-block="block || undefined" :data-icon-only="iconOnly || undefined" @click="$emit(\'click\')"><slot /></button>',
+  ColorFillPresetControls: {
+    props: ['modelValue', 'label'],
+    emits: ['update:modelValue'],
+    template: '<div class="fill" />',
   },
-  ButtonGroup: {
-    props: { full: Boolean, columns: Number },
-    template: '<div class="button-group-stub" :class="{ \'is-full\': full }" :data-columns="columns"><slot /></div>',
+  ColorPicker: {
+    props: { modelValue: String, label: String, showLabel: Boolean },
+    emits: ['update:modelValue'],
+    template: '<div class="color" />',
   },
-  BigSlider: BigSliderStub,
-  ColorPicker: ColorPickerStub,
-  ColorFillPresetControls: ColorFillPresetControlsStub,
-  Divider: { template: '<hr />' },
   Switch: {
-    props: { modelValue: Boolean, ariaLabel: String },
+    props: ['modelValue', 'ariaLabel', 'size'],
     emits: ['update:modelValue'],
-    template:
-      '<button class="switch-stub" :aria-label="ariaLabel" :aria-pressed="modelValue" @click="$emit(\'update:modelValue\', !modelValue)" />',
+    template: '<button class="toggle" :aria-label="ariaLabel" @click="$emit(\'update:modelValue\', !modelValue)" />',
   },
-  ShadowDirectionGroup: {
-    props: ['modelValue'],
+  Input: {
+    props: ['modelValue', 'ariaLabel', 'size'],
     emits: ['update:modelValue'],
-    template: '<div class="direction-stub" />',
+    template: '<div :aria-label="ariaLabel"><slot name="prefix"/><input/><slot name="suffix"/></div>',
   },
-  ShapePicker: ShapePickerStub,
+  ShadowDirectionGroup: true,
+  ShapeGeometryControls: true,
+  ElementTextControls: true,
+  TransformControls: true,
+  MediaOrientationControls: true,
 };
-
-const sliderLabels = (wrapper: ReturnType<typeof mount>) =>
-  wrapper.findAll('.slider-stub').map((slider) => slider.attributes('data-label'));
-
-beforeEach(() => {
-  capture.getPreferences.mockResolvedValue({
-    backgroundPresets: { colors: [], gradients: [] },
-    extras: {},
+const mountPanel = (patch = {}) => {
+  const wrapper = mount(ShapeLayerPropertiesPanel, {
+    props: { clip: shape(patch), canvasSize: { width: 1600, height: 1000 } },
+    global: { stubs },
   });
-  capture.updatePreferences.mockResolvedValue({
-    backgroundPresets: { colors: [], gradients: [] },
-    extras: {},
+  wrappers.push(wrapper);
+  return wrapper;
+};
+afterEach(() => wrappers.splice(0).forEach((w) => w.unmount()));
+describe('shared shape inspector', () => {
+  it('groups all appearance controls in flat inspector accordions with toggles inside', () => {
+    const wrapper = mountPanel({ fillEnabled: true, opacityEnabled: true, shadowEnabled: true });
+    expect(wrapper.findAll('.accordion-inspector')).toHaveLength(6);
+    expect(wrapper.find('[data-element-section="placement"]').exists()).toBe(true);
+    expect(wrapper.find('[data-element-section="geometry"]').exists()).toBe(true);
+    expect(wrapper.find('[data-element-section="fill"] .property-toggle').exists()).toBe(true);
+    expect(wrapper.find('[data-element-section="opacity"] .property-toggle').exists()).toBe(true);
+    expect(wrapper.find('[data-element-section="shadow"] .property-toggle').exists()).toBe(true);
+    expect(wrapper.findComponent(ElementTextControls).exists()).toBe(true);
+    expect(wrapper.findComponent(ShapeGeometryControls).exists()).toBe(true);
   });
-  capture.onPreferencesChanged.mockReturnValue(vi.fn());
-});
-
-describe('ShapeLayerPropertiesPanel', () => {
-  it('groups shape appearance and text in inspector accordions and forwards editable properties', async () => {
-    const wrapper = mount(ShapeLayerPropertiesPanel, {
-      props: { clip: clip({ opacityEnabled: true, shadowEnabled: true }) },
-      global: { stubs },
-    });
-    try {
-      expect(wrapper.find('[data-editor-property-section="appearance"]').exists()).toBe(false);
-      expect(wrapper.findAll('.accordion-inspector').length).toBeGreaterThanOrEqual(6);
-      const text = createElementText('Annotation');
-      wrapper.findComponent(ElementTextControls).vm.$emit('update', text);
-      expect(wrapper.emitted('update')).toContainEqual([{ text }]);
-      for (const control of wrapper.findAllComponents(BigSliderStub)) {
-        control.vm.$emit('update:modelValue', 20);
-      }
-      for (const picker of wrapper.findAllComponents(ColorPickerStub)) picker.vm.$emit('update:modelValue', '#112233');
-      wrapper
-        .findComponent(ColorFillPresetControlsStub)
-        .vm.$emit('update:modelValue', { kind: 'color', color: '#334455' });
-      wrapper.findComponent(ShadowDirectionGroup).vm.$emit('update:modelValue', 'all');
-      for (const toggle of wrapper.findAll('.switch-stub')) await toggle.trigger('click');
-      for (const patch of [
-        { cornerRadius: 20 },
-        { borderWidth: 20 },
-        { opacity: 20 },
-        { backdropBlur: 20 },
-        { shadowBlur: 20 },
-        { borderColor: '#112233' },
-        { shadowColor: '#112233' },
-        { shadowDirection: 'all' },
-        { shadowEnabled: false },
-        { fillEnabled: false },
-      ])
-        expect(wrapper.emitted('update')).toContainEqual([patch]);
-      await wrapper.setProps({ clip: clip({ family: 'arrow', preset: 'arrow' }) });
-      for (const control of wrapper.findAllComponents(BigSliderStub)) control.vm.$emit('update:modelValue', 30);
-      expect(wrapper.emitted('update')).toContainEqual([{ arrowThickness: 30 }]);
-      expect(wrapper.emitted('update')).toContainEqual([{ arrowHeadSize: 30 }]);
-      await wrapper
-        .findAll('button')
-        .find((button) => button.text() === 'Shapes')!
-        .trigger('click');
-      expect(wrapper.emitted('update')).toContainEqual([{ family: 'shape', preset: 'rounded-rectangle' }]);
-    } finally {
-      wrapper.unmount();
-    }
+  it('keeps named border controls in a separate disclosure, independent of fill', async () => {
+    const wrapper = mountPanel({ fillEnabled: false, borderColor: '#123456', borderWidth: 4 });
+    const border = wrapper.get('[data-element-section="border"]');
+    const trigger = border.get('.accordion-trigger');
+    expect(trigger.text()).toBe('Border');
+    expect(trigger.attributes('aria-expanded')).toBe('false');
+    await trigger.trigger('click');
+    expect(trigger.attributes('aria-expanded')).toBe('true');
+    const color = border.getComponent(stubs.ColorPicker);
+    expect(color.props()).toMatchObject({ modelValue: '#123456', label: 'Border color', showLabel: true });
+    expect(border.getComponent(Input).props('modelValue')).toBe(4);
+    expect(wrapper.get('[data-element-section="fill"]').find('.color').exists()).toBe(false);
+    color.vm.$emit('update:modelValue', '#abcdef');
+    expect(wrapper.emitted('update')).toEqual([[{ borderColor: '#abcdef' }]]);
   });
-  it('switches between shape and arrow families using family defaults', async () => {
-    const wrapper = mount(ShapeLayerPropertiesPanel, {
-      props: { clip: clip() },
-      global: { stubs },
-    });
-    const arrows = wrapper.findAll('button').find((button) => button.text() === 'Arrows');
-
-    expect(arrows).toBeDefined();
-    expect(wrapper.findAll('.button-group-stub').every((group) => group.classes('is-full'))).toBe(true);
-    const picker = wrapper.get('.shape-picker-stub');
-    expect(picker.attributes('data-model-value')).toBe('rounded-rectangle');
-    await picker.trigger('click');
-    expect(wrapper.emitted('update')).toContainEqual([{ preset: 'heart' }]);
-    await arrows!.trigger('click');
-    expect(wrapper.emitted('update')).toContainEqual([{ family: 'arrow', preset: 'arrow' }]);
-    await wrapper.setProps({
-      clip: clip({ family: 'arrow', preset: 'arrow' }),
-    });
-    expect(wrapper.find('[aria-label="Arrow"]').exists()).toBe(false);
+  it('offers full canvas placement with one rotation row and emits transform updates', () => {
+    const wrapper = mountPanel(),
+      placement = wrapper.findComponent(TransformControls);
+    expect(placement.props('canvasSize')).toEqual({ width: 1600, height: 1000 });
+    const transform = { x: 0.2, y: 0.3, width: 0.4, height: 0.5 };
+    placement.vm.$emit('update:modelValue', transform);
+    expect(wrapper.emitted('update')).toContainEqual([{ transform }]);
+    wrapper.findComponent(MediaOrientationControls).vm.$emit('update:rotation', 32.75);
+    expect(wrapper.emitted('update')).toContainEqual([{ rotation: 32.75 }]);
+    expect(wrapper.findAll('.rotation-row')).toHaveLength(1);
   });
-
-  it('shows shadow controls only when shadow is enabled', async () => {
-    const wrapper = mount(ShapeLayerPropertiesPanel, {
-      props: { clip: clip({ shadowEnabled: false }) },
-      global: { stubs },
-    });
-
-    expect(wrapper.find('.direction-stub').exists()).toBe(false);
-    await wrapper.setProps({ clip: clip({ shadowEnabled: true }) });
-    expect(wrapper.find('.direction-stub').exists()).toBe(true);
+  it('forwards geometry, fill and existing native text changes independently', () => {
+    const wrapper = mountPanel({ text: createElementText('Label'), fillEnabled: true });
+    wrapper.findComponent(ShapeGeometryControls).vm.$emit('update', { preset: 'heart', vector: null });
+    const text = createElementText('Updated');
+    wrapper.findComponent(ElementTextControls).vm.$emit('update', text);
+    wrapper.findComponent(ColorFillPresetControls).vm.$emit('update:modelValue', { kind: 'color', color: '#123456' });
+    expect(wrapper.emitted('update')).toContainEqual([{ preset: 'heart', vector: null }]);
+    expect(wrapper.emitted('update')).toContainEqual([{ text }]);
+    expect(wrapper.emitted('update')).toContainEqual([
+      { fill: { kind: 'color', color: '#123456' }, fillColor: '#123456' },
+    ]);
   });
-
-  it.each(['shape', 'text'] as const)(
-    'offers one precise rotation row for %s elements in either tab',
-    async (family) => {
-      const wrapper = mount(ShapeLayerPropertiesPanel, {
-        props: { clip: clip({ family, rotation: 32.75 }) },
-        global: { stubs },
-      });
-      const controls = wrapper.findComponent({ name: 'MediaOrientationControls' });
-      expect(controls.exists()).toBe(true);
-      expect(controls.props('showMirroring')).toBe(false);
-      expect(controls.props('rotation')).toBe(32.75);
-      controls.vm.$emit('update:rotation', 18.25);
-      expect(wrapper.emitted('update')).toContainEqual([{ rotation: 18.25 }]);
-      expect(wrapper.findAll('.rotation-row')).toHaveLength(1);
+  it('keeps text elements in their native text inspector without geometric fill sections', () => {
+    const wrapper = mountPanel({ family: 'text', preset: 'text', text: createElementText('Beam') });
+    expect(wrapper.findComponent(ElementTextControls).exists()).toBe(true);
+    expect(wrapper.findComponent(ShapeGeometryControls).exists()).toBe(false);
+    expect(wrapper.find('[data-element-section="fill"]').exists()).toBe(false);
+    expect(wrapper.find('[data-element-section="border"]').exists()).toBe(false);
+  });
+  it.each(['fillEnabled', 'opacityEnabled', 'shadowEnabled'] as const)(
+    'toggles %s in its accordion body',
+    async (key) => {
+      const wrapper = mountPanel({ [key]: true });
+      const label = { fillEnabled: 'Fill color', opacityEnabled: 'Item opacity', shadowEnabled: 'Shadow' }[key];
+      await wrapper.get(`.toggle[aria-label="${label}"]`).trigger('click');
+      expect(wrapper.emitted('update')).toContainEqual([{ [key]: false }]);
     },
   );
-
-  it('does not expose filter controls', () => {
-    const wrapper = mount(ShapeLayerPropertiesPanel, {
-      props: { clip: clip() },
-      global: { stubs },
-    });
-
-    expect(wrapper.find('[aria-label="Filter"]').exists()).toBe(false);
-    expect(wrapper.text()).not.toContain('Grayscale');
-    expect(wrapper.text()).not.toContain('Sepia');
+  it.each([
+    ['Border width', 'borderWidth', 40],
+    ['Item opacity', 'opacity', 100],
+    ['Background blur', 'backdropBlur', 100],
+    ['Shadow Blur', 'shadowBlur', 96],
+  ] as const)('edits compact %s values and rejects invalid numbers', (label, key, max) => {
+    const wrapper = mountPanel({ opacityEnabled: true, shadowEnabled: true });
+    const field = wrapper.findAllComponents(Input).find((c) => c.attributes('aria-label') === label)!;
+    field.vm.$emit('update:modelValue', 12.25);
+    expect(wrapper.emitted('update')).toContainEqual([{ [key]: 12.25 }]);
+    for (const value of ['', NaN, -1, max + 1, 'bad']) field.vm.$emit('update:modelValue', value);
+    expect(wrapper.emitted('update')).toHaveLength(1);
   });
-
-  it('toggles opacity and only shows opacity-related sliders when enabled', async () => {
-    const wrapper = mount(ShapeLayerPropertiesPanel, {
-      props: { clip: clip({ opacityEnabled: false }) },
-      global: { stubs },
+  it('reveals enabled appearance controls without duplicate drawing fill pickers', async () => {
+    const wrapper = mountPanel({ fillEnabled: false, opacityEnabled: false, shadowEnabled: false });
+    expect(wrapper.find('.fill').exists()).toBe(false);
+    expect(wrapper.find('[aria-label="Background blur"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-label="Shadow Blur"]').exists()).toBe(false);
+    await wrapper.setProps({
+      clip: shape({
+        family: 'drawing',
+        preset: 'freehand',
+        fillEnabled: true,
+        drawing: {
+          points: [
+            { x: 0, y: 0 },
+            { x: 1, y: 1 },
+          ],
+          strokeWidth: 8,
+          smoothing: 65,
+        },
+        opacityEnabled: true,
+        shadowEnabled: true,
+      }),
     });
-
-    const opacityToggle = wrapper.get('.switch-stub[aria-label="Item opacity"]');
-    expect(opacityToggle.attributes('aria-pressed')).toBe('false');
-    expect(sliderLabels(wrapper)).not.toContain('Item opacity');
-    expect(sliderLabels(wrapper)).not.toContain('Background blur');
-
-    await opacityToggle.trigger('click');
-    expect(wrapper.emitted('update')).toContainEqual([{ opacityEnabled: true }]);
-
-    await wrapper.setProps({ clip: clip({ opacityEnabled: true }) });
-    expect(sliderLabels(wrapper)).toContain('Item opacity');
-    expect(sliderLabels(wrapper)).toContain('Background blur');
+    expect(wrapper.findAll('.fill')).toHaveLength(1);
+    expect(wrapper.find('[aria-label="Background blur"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-label="Shadow Blur"]').exists()).toBe(true);
   });
+});
 
-  it('labels the shape fill controls and keeps the border picker separate', () => {
-    const wrapper = mount(ShapeLayerPropertiesPanel, {
-      props: { clip: clip() },
-      global: { stubs },
-    });
-    const fillControls = wrapper.findComponent(ColorFillPresetControlsStub);
-
-    expect(fillControls.props('label')).toBe('Fill color');
-    expect(fillControls.props('modelValue')).toEqual({
-      kind: 'color',
-      color: '#ff5a1f',
-    });
-    expect(wrapper.findAllComponents(ColorPickerStub).map((picker) => picker.props('label'))).toEqual(['Border color']);
-    expect(wrapper.find('.color-row').exists()).toBe(false);
-  });
-
-  it('shows drawing stroke fill controls with separate border color and width controls', async () => {
-    const drawing = {
-      points: [
-        { x: 0.1, y: 0.2 },
-        { x: 0.9, y: 0.8 },
-      ],
-      smoothing: 45,
-      strokeWidth: 12,
-    };
-    const gradientFill = {
+describe('inspector drafts and disclosures', () => {
+  it('retains controls when toggling every disclosure and forwards colors, gradients and shadow direction', async () => {
+    const wrapper = mountPanel({ fillEnabled: true, opacityEnabled: true, shadowEnabled: true });
+    for (const trigger of wrapper.findAll('.accordion-trigger')) {
+      await trigger.trigger('click');
+      await trigger.trigger('click');
+    }
+    for (const color of wrapper.findAllComponents(stubs.ColorPicker)) color.vm.$emit('update:modelValue', '#112233');
+    wrapper.findComponent({ name: 'ShadowDirectionGroup' }).vm.$emit('update:modelValue', 'all');
+    const fill = {
       kind: 'gradient' as const,
       gradient: {
         type: 'linear' as const,
         angle: 90,
         stops: [
-          { id: 'stroke-start', position: 0, color: '#123456', alpha: 1 },
-          { id: 'stroke-end', position: 1, color: '#abcdef', alpha: 0.5 },
+          { id: 'a', position: 0, color: '#112233', alpha: 1 },
+          { id: 'b', position: 1, color: '#abcdef', alpha: 1 },
         ],
       },
     };
+    wrapper.findComponent(ColorFillPresetControls).vm.$emit('update:modelValue', fill);
+    expect(wrapper.emitted('update')).toContainEqual([{ borderColor: '#112233' }]);
+    expect(wrapper.emitted('update')).toContainEqual([{ shadowColor: '#112233' }]);
+    expect(wrapper.emitted('update')).toContainEqual([{ shadowDirection: 'all' }]);
+    expect(wrapper.emitted('update')).toContainEqual([{ fill }]);
+  });
+  it('forwards edits from native text and renders no pixel size controls without canvas metadata', () => {
     const wrapper = mount(ShapeLayerPropertiesPanel, {
-      props: {
-        clip: clip({
-          family: 'drawing',
-          preset: 'freehand',
-          fillColor: '#123456',
-          borderColor: '#654321',
-          borderWidth: 7,
-          drawing,
-        }),
-      },
+      props: { clip: shape({ family: 'text', preset: 'text', text: createElementText('Beam') }) },
       global: { stubs },
     });
-    const drawingControls = wrapper.findComponent(DrawingControls);
-    const strokeFillControls = drawingControls.findComponent(ColorFillPresetControlsStub);
-
-    expect(strokeFillControls.props('label')).toBe('Stroke color');
-    expect(strokeFillControls.props('modelValue')).toEqual({
-      kind: 'color',
-      color: '#123456',
-    });
-    expect(wrapper.findAllComponents(ColorFillPresetControlsStub)).toHaveLength(1);
-    const borderPicker = wrapper.findComponent(ColorPickerStub);
-    expect(borderPicker.props('label')).toBe('Border color');
-    expect(borderPicker.props('modelValue')).toBe('#654321');
-    const borderWidth = wrapper
-      .findAllComponents(BigSliderStub)
-      .find((control) => control.props('label') === 'Border width');
-    expect(borderWidth).toBeDefined();
-    expect(borderWidth!.props('modelValue')).toBe(7);
-    expect(wrapper.text()).not.toContain('Fill color');
-    expect(wrapper.findAllComponents(ColorFillPresetControlsStub).map((control) => control.props('label'))).toEqual([
-      'Stroke color',
-    ]);
-
-    await wrapper.setProps({
-      clip: clip({
-        family: 'drawing',
-        preset: 'freehand',
-        fill: gradientFill,
-        fillColor: '#123456',
-        borderColor: '#654321',
-        borderWidth: 7,
-        drawing,
-      }),
-    });
-    const gradientStrokeFillControls = wrapper
-      .findComponent(DrawingControls)
-      .findComponent(ColorFillPresetControlsStub);
-    expect(gradientStrokeFillControls.props('label')).toBe('Stroke color');
-    expect(gradientStrokeFillControls.props('modelValue')).toEqual(gradientFill);
-    expect(wrapper.findAllComponents(ColorFillPresetControlsStub)).toHaveLength(1);
-    expect(wrapper.findAllComponents(ColorPickerStub).map((picker) => picker.props('label'))).toEqual(['Border color']);
-    expect(
-      wrapper
-        .findAllComponents(BigSliderStub)
-        .find((control) => control.props('label') === 'Border width')
-        ?.props('modelValue'),
-    ).toBe(7);
-    expect(wrapper.text()).not.toContain('Fill color');
-    expect(wrapper.findAllComponents(ColorFillPresetControlsStub).map((control) => control.props('label'))).toEqual([
-      'Stroke color',
-    ]);
-
-    gradientStrokeFillControls.vm.$emit('update:modelValue', gradientFill);
-    expect(wrapper.emitted('update')).toEqual([
-      [
-        {
-          fill: gradientFill,
-          drawing: { ...drawing, smoothing: 45, strokeWidth: 12 },
-        },
-      ],
-    ]);
-
-    gradientStrokeFillControls.vm.$emit('update:modelValue', {
-      kind: 'color',
-      color: '#abcdef',
-    });
-    expect(wrapper.emitted('update')).toEqual([
-      [
-        {
-          fill: gradientFill,
-          drawing: { ...drawing, smoothing: 45, strokeWidth: 12 },
-        },
-      ],
-      [
-        {
-          fill: { kind: 'color', color: '#abcdef' },
-          fillColor: '#abcdef',
-          drawing: { ...drawing, smoothing: 45, strokeWidth: 12 },
-        },
-      ],
-    ]);
-
-    wrapper.findComponent(ColorPickerStub).vm.$emit('update:modelValue', '#fedcba');
-    const updatedBorderWidth = wrapper
-      .findAllComponents(BigSliderStub)
-      .find((control) => control.props('label') === 'Border width');
-    updatedBorderWidth!.vm.$emit('update:modelValue', 11);
-    expect(wrapper.emitted('update')).toEqual([
-      [
-        {
-          fill: gradientFill,
-          drawing: { ...drawing, smoothing: 45, strokeWidth: 12 },
-        },
-      ],
-      [
-        {
-          fill: { kind: 'color', color: '#abcdef' },
-          fillColor: '#abcdef',
-          drawing: { ...drawing, smoothing: 45, strokeWidth: 12 },
-        },
-      ],
-      [{ borderColor: '#fedcba' }],
-      [{ borderWidth: 11 }],
-    ]);
+    wrappers.push(wrapper);
+    expect(wrapper.findComponent(TransformControls).exists()).toBe(false);
+    const text = createElementText('Label');
+    wrapper.findComponent(ElementTextControls).vm.$emit('update', text);
+    expect(wrapper.emitted('update')).toContainEqual([{ text }]);
   });
-
-  it.each(['shape', 'arrow'] as const)('keeps the %s fill and border controls independent', (family) => {
-    const gradientFill = {
-      kind: 'gradient' as const,
-      gradient: {
-        type: 'radial' as const,
-        angle: 180,
-        stops: [
-          { id: 'shape-center', position: 0, color: '#ffffff', alpha: 1 },
-          { id: 'shape-edge', position: 1, color: '#123456', alpha: 0.75 },
-        ],
-      },
-    };
-    const wrapper = mount(ShapeLayerPropertiesPanel, {
-      props: {
-        clip: clip({
-          family,
-          preset: family === 'arrow' ? 'arrow' : 'rounded-rectangle',
-          fillColor: '#abcdef',
-          borderColor: '#654321',
-        }),
-      },
-      global: { stubs },
-    });
-    const fillControls = wrapper.findComponent(ColorFillPresetControlsStub);
-    const borderPicker = wrapper.findComponent(ColorPickerStub);
-
-    expect(fillControls.props('label')).toBe('Fill color');
-    expect(fillControls.props('modelValue')).toEqual({
-      kind: 'color',
-      color: '#abcdef',
-    });
-    expect(borderPicker.props('label')).toBe('Border color');
-    expect(borderPicker.props('modelValue')).toBe('#654321');
-
-    fillControls.vm.$emit('update:modelValue', gradientFill);
-    expect(wrapper.emitted('update')).toEqual([[{ fill: gradientFill }]]);
-
-    borderPicker.vm.$emit('update:modelValue', '#fedcba');
-    expect(wrapper.emitted('update')).toEqual([[{ fill: gradientFill }], [{ borderColor: '#fedcba' }]]);
-  });
-});
-
-it('keeps the element-opacity switch inside the accordion body', () => {
- const wrapper=mount(ShapeLayerPropertiesPanel,{props:{clip:clip({family:'text',preset:'text'})}});
- const section=wrapper.get('[data-element-section="opacity"]');
- expect(section.get('[role="switch"]').element.closest('.accordion-content')).not.toBeNull();
- expect(section.get('.accordion-trigger').find('[role="switch"]').exists()).toBe(false);wrapper.unmount();
 });

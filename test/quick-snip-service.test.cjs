@@ -277,7 +277,9 @@ test('validates Instant project output paths before delegating to the file clipb
     path = require('node:path');
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'snip-copy-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const file = path.join(root, 'my video.webm');
+  const instantRoot = path.join(root, 'instant');
+  fs.mkdirSync(instantRoot);
+  const file = path.join(instantRoot, 'my video.webm');
   fs.writeFileSync(file, 'video');
   const outsideRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'snip-copy-outside-'));
   t.after(() => fs.rmSync(outsideRoot, { recursive: true, force: true }));
@@ -286,7 +288,8 @@ test('validates Instant project output paths before delegating to the file clipb
   const copied = [];
   const f = fixture(undefined, {
     platform: 'linux',
-    userPaths: { instantProjects: root },
+    userPaths: { instantProjects: instantRoot },
+    projectStore: { rootDirectories: [root] },
     copyFile: async (target, options) => {
       copied.push({ target, platform: options.platform });
       return { native: true, fallback: null };

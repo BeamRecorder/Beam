@@ -16,14 +16,14 @@ export const BEAMY_CELEBRATION_SECONDS = 1.9;
 export const BEAMY_SETTLE_SECONDS = 0.65;
 export const BEAMY_ACTION_COUNT = 12;
 
-export function beamyIsAnimated(phase: BeamyPhase, elapsed: number, reducedMotion: boolean): boolean {
+export function beamyIsAnimated(phase: BeamyPhase, reducedMotion: boolean): boolean {
   return (
     !reducedMotion &&
     (phase === 'loading' ||
       phase === 'preparing' ||
       phase === 'processing' ||
       phase === 'failed' ||
-      (phase === 'completed' && elapsed < BEAMY_CELEBRATION_SECONDS))
+      phase === 'completed')
   );
 }
 
@@ -59,16 +59,16 @@ export function createBeamyMotion(phase: BeamyPhase, cycleOffset = 0) {
     const mix = reducedMotion ? 1 : smooth(transition);
     const shape = target.map((radius, point) => fromShape[point]! + (radius - fromShape[point]!) * mix);
     engine.setShape(shape, -1);
-    const frame = engine.sample(phase === 'failed' && !reducedMotion ? time : 0);
+    const frame = engine.sample((phase === 'failed' || phase === 'completed') && !reducedMotion ? time : 0);
     if (!reducedMotion && phase === 'completed' && time < BEAMY_CELEBRATION_SECONDS) {
       const progress = time / BEAMY_CELEBRATION_SECONDS;
       frame.dots = Array.from({ length: 12 }, (_, index) => {
         const angle = (index / 12) * Math.PI * 2;
-        const distance = 30 + 100 * progress;
+        const distance = 108 + 35 * progress;
         return {
           x: Math.cos(angle) * distance,
           y: Math.sin(angle) * distance,
-          r: 3 * Math.sin(progress * Math.PI),
+          r: 7 * Math.sin(progress * Math.PI),
           opacity: Math.sin(progress * Math.PI) ** 2,
           color: ['var(--color-primary)', 'var(--color-warning)', 'var(--color-success)'][index % 3],
         };

@@ -6,6 +6,8 @@ import { drawPhoneFrame } from '@beam/runtime/composition/appearance/phone-frame
 import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
 
 import { frameContentRect, type WindowsFrameOptions } from '@beam/engine/shared/frame-layout';
+import { safariFramePalette } from './safari-frame-palette';
+import type { ClipFrameTheme } from '@beam/engine/shared/composition-types';
 
 function safariPath(ctx: Canvas2DContext, points: Array<[number, number]>, close = false) {
   ctx.beginPath();
@@ -21,7 +23,9 @@ function drawSafariToolbar(
   paintBackground: boolean,
   frameColor: string,
   chromeScale = 1,
+  theme?: ClipFrameTheme,
 ) {
+  const palette = safariFramePalette(frameColor, theme);
   const geometry = resolveSafariFrameGeometry(rect, chromeScale);
   const { header, unit, detail, radius, showText } = geometry;
   const x = (value: number) => rect.x + value * unit;
@@ -40,7 +44,7 @@ function drawSafariToolbar(
 
   ctx.save();
   ctx.lineWidth = line;
-  ctx.strokeStyle = 'rgba(75, 75, 75, .93)';
+  ctx.strokeStyle = palette.icons;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   const circle = (cx: number, color: string) => {
@@ -51,7 +55,7 @@ function drawSafariToolbar(
     ctx.strokeStyle = 'rgba(0, 0, 0, .08)';
     ctx.lineWidth = Math.max(0.5, 0.75 * unit);
     ctx.stroke();
-    ctx.strokeStyle = 'rgba(75, 75, 75, .93)';
+    ctx.strokeStyle = palette.icons;
     ctx.lineWidth = line;
   };
   circle(31, '#ff5f57');
@@ -104,16 +108,16 @@ function drawSafariToolbar(
   const addressWidth = Math.max(12 * unit, addressRight - addressLeft);
   const addressHeight = Math.min(header - 6 * unit, 34 * unit);
   const addressY = rect.y + (header - addressHeight) / 2;
-  ctx.fillStyle = '#f7f7f7';
+  ctx.fillStyle = palette.address;
   ctx.beginPath();
   ctx.roundRect(addressLeft, addressY, addressWidth, addressHeight, Math.min(addressHeight / 2, 9 * unit));
   ctx.fill();
-  ctx.strokeStyle = '#d2d2d2';
+  ctx.strokeStyle = palette.border;
   ctx.lineWidth = line;
   ctx.stroke();
   if (showText) {
     const addressTitle = title || 'website.com';
-    ctx.fillStyle = '#565656';
+    ctx.fillStyle = palette.text;
     ctx.font = `${Math.max(7, 16 * unit)}px -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -127,7 +131,7 @@ function drawSafariToolbar(
   ctx.restore();
 
   ctx.save();
-  ctx.strokeStyle = 'rgba(213, 213, 213, .75)';
+  ctx.strokeStyle = palette.divider;
   ctx.lineWidth = line;
   ctx.beginPath();
   ctx.moveTo(rect.x + line / 2, rect.y + header - line / 2);
@@ -328,9 +332,9 @@ export function drawFrameChrome(
     return;
   }
   if (frame === 'safari') {
-    drawSafariToolbar(ctx, rect, title, paintBackground, frameColor, windows.chromeScale);
+    drawSafariToolbar(ctx, rect, title, paintBackground, frameColor, windows.chromeScale, windows.theme);
     ctx.save();
-    ctx.strokeStyle = 'rgba(169, 169, 169, .75)';
+    ctx.strokeStyle = safariFramePalette(frameColor, windows.theme).outline;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.roundRect(

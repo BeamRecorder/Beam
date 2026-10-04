@@ -224,6 +224,40 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('drawScreenshot', () => {
+  it('measures completed visible layers without including hidden layers', () => {
+    const shape = screenshotShape('ellipse', 'visible');
+    const state = screenshot({ shapes: [shape, { ...shape, id: 'hidden', enabled: false }] });
+    const observe = vi.fn();
+    drawScreenshot(context(), state, assets(), 1000, 500, undefined, observe);
+    expect(observe).toHaveBeenCalledWith(expect.objectContaining({ id: 'visible' }), expect.any(Number));
+    expect(observe.mock.calls.some(([layer]) => layer.id === 'hidden')).toBe(false);
+  });
+  it('retains a failed layer measurement while preserving the rendering error', () => {
+    const shape = screenshotShape('ellipse', 'failed');
+    const observe = vi.fn();
+    renderers.drawShapeClip.mockImplementationOnce(() => {
+      throw new Error('shader failed');
+    });
+    expect(() =>
+      drawScreenshot(context(), screenshot({ shapes: [shape] }), assets(), 1000, 500, undefined, observe),
+    ).toThrow('shader failed');
+    expect(observe).toHaveBeenCalledWith(expect.objectContaining({ id: 'failed' }), expect.any(Number));
+  });
+  it('skips disabled image resources and measures asset groups without loading extra layers', async () => {
+    const base = screenshot(),
+      state = screenshot({
+        images: [
+          { ...base.image, kind: 'image', id: 'hidden', enabled: false, source: 'hidden.png', width: 1, height: 1 },
+        ],
+      });
+    const load = vi.fn(async () => ({ naturalWidth: 1000, naturalHeight: 500 }) as HTMLImageElement);
+    const timing = vi.fn();
+    const loaded = await loadScreenshotAssets('capture.png', state, [], load, timing);
+    expect(load).not.toHaveBeenCalledWith('hidden.png');
+    expect(loaded.images).toBeUndefined();
+    for (const stage of ['sourceImage', 'watermarkImage', 'layerImages', 'fonts'])
+      expect(timing).toHaveBeenCalledWith(stage, expect.any(Number));
+  });
   it('clears to transparency and composes shared image, shape and watermark renderers', () => {
     const ctx = context();
     const visibleShape = screenshotShape('arrow', 'visible-arrow');

@@ -16,6 +16,9 @@ use super::{
     recording_support::*,
 };
 
+#[path = "recording_input_health.rs"]
+mod input_health;
+
 /// A prepared native recording session controlled by the JSONL engine.
 pub struct RecordingSession {
     request: CaptureRequest,
@@ -31,6 +34,7 @@ pub struct RecordingSession {
     state: super::SessionState,
     generation: u32,
     active: ActiveRecordings,
+    input_capture_error: Option<crate::input::InputAccessError>,
     project_layout: ProjectLayout,
     project_existed: bool,
     prepared_start_gate: Option<Arc<super::StartGate>>,
@@ -108,6 +112,7 @@ impl RecordingSession {
             state: super::SessionState::Armed,
             generation: 0,
             active: ActiveRecordings::default(),
+            input_capture_error: None,
             project_layout,
             project_existed,
             prepared_start_gate: None,
@@ -318,6 +323,7 @@ impl RecordingSession {
         if self.state == super::SessionState::Completed {
             return Ok(self.layout.manifest());
         }
+        let _input_error = self.input_capture_error()?;
         let now = self.session_ns();
         let close_error = if self.state == super::SessionState::Recording
             || (cfg!(target_os = "linux")

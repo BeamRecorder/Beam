@@ -4,6 +4,7 @@ const path = require('path');
 const { randomUUID } = require('crypto');
 const { dimensions: validDimensions, validateScreenshotState } = require('./screenshot-validation.cjs');
 const { validateScreenshotHistory } = require('./screenshot-history.cjs');
+const { screenshotThumbnailUrl } = require('./screenshot-thumbnail.cjs');
 const { importMedia, importImageBuffer } = require('../projects/composition-project-media.cjs');
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const screenshotName = (value) => {
@@ -12,10 +13,13 @@ const screenshotName = (value) => {
   return name;
 };
 
-function createScreenshotStore(root) {
+function createScreenshotStore(root, { roots = () => [root], writeRoot = () => root } = {}) {
   const directory = (id) => {
     if (typeof id !== 'string' || !UUID.test(id)) throw new Error('Invalid screenshot identifier.');
-    const target = path.join(root, id);
+    const matches = roots()
+      .map((root) => path.join(root, id))
+      .filter((target) => fs.existsSync(target));
+    const target = matches[0] ?? path.join(writeRoot(), id);
     if (fs.existsSync(target) && fs.lstatSync(target).isSymbolicLink())
       throw new Error('Invalid screenshot directory.');
     return target;
@@ -46,7 +50,7 @@ function createScreenshotStore(root) {
       mode: 'screenshot',
       sessionCount: 0,
       previewSrc: null,
-      thumbnailSrc: `project-media://screenshot/${id}/source.png`,
+      thumbnailSrc: screenshotThumbnailUrl(directory(id), id),
     };
   };
   const read = (id) => {
@@ -130,9 +134,7 @@ function createScreenshotStore(root) {
       write(id, { ...document, state, history });
     },
     list() {
-      if (!fs.existsSync(root)) return [];
-      return fs
-        .readdirSync(root)
+      return [...new Set(roots().flatMap((root) => (fs.existsSync(root) ? fs.readdirSync(root) : [])))]
         .filter((id) => UUID.test(id))
         .flatMap((id) => {
           try {
@@ -146,7 +148,9 @@ function createScreenshotStore(root) {
     fileForUrl(value) {
       try {
         const url = new URL(value);
-        const match = /^\/([^/]+)\/(source\.png|media\/[0-9a-f-]{36}\.(?:png|jpg|jpeg|webp))$/.exec(url.pathname);
+        const match = /^\/([^/]+)\/(source\.png|thumbnail\.webp|media\/[0-9a-f-]{36}\.(?:png|jpg|jpeg|webp))$/.exec(
+          url.pathname,
+        );
         if (url.protocol !== 'project-media:' || url.hostname !== 'screenshot' || !match) return null;
         const file = path.join(directory(match[1]), match[2]);
         if (match[2].startsWith('media/') && fs.lstatSync(path.dirname(file)).isSymbolicLink()) return null;

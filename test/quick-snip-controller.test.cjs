@@ -241,6 +241,14 @@ async function selectAndStart(controller, mode = 'studio') {
   await controller.toggle();
 }
 
+for (const value of [undefined, null, '4d'])
+  test(`Quick Snip defaults to 2D when the recording zoom preference is ${value}`, async () => {
+    const f = harness({ preferences: { extras: { recordingZoomMode: value } } });
+    await f.controller.toggle();
+    assert.equal(f.controller.state().job.zoomMode, '2d');
+    assert.equal(f.controller.state().job.automaticZoom, true);
+  });
+
 test('Quick Snip inherits shared recording desktop and real cursor defaults', async () => {
   const f = harness({
     preferences: {
@@ -361,7 +369,7 @@ for (const target of ['screen', 'window'])
     await f.controller.start();
     assert.equal(f.controller.state().state, 'preparing');
   });
-for (const zoomMode of ['off', '2d', '3d'])
+for (const zoomMode of ['off', '2d', '3d', 'glass'])
   test(`persists the shared ${zoomMode} zoom preference and countdown`, async () => {
     const f = harness();
     await f.controller.toggle();
@@ -370,7 +378,21 @@ for (const zoomMode of ['off', '2d', '3d'])
     assert.equal(f.controller.state().job.automaticZoom, zoomMode !== 'off');
     assert.equal(f.preferenceState.extras.recordingZoomMode, zoomMode);
     assert.equal(f.preferenceState.extras.recordingCountdownSeconds, 10);
+    await f.controller.cancel();
+    await f.controller.toggle();
+    assert.equal(f.controller.state().job.zoomMode, zoomMode);
+    assert.equal(f.controller.state().job.automaticZoom, zoomMode !== 'off');
   });
+test('carries the saved Loupe preference from selection through the Instant export job', async () => {
+  const f = harness({ preferences: { extras: { recordingZoomMode: 'glass' } } });
+  await selectAndStart(f.controller, 'instant');
+  assert.equal(f.controller.state().job.zoomMode, 'glass');
+  await f.controller.report({ type: 'recording' });
+  await f.controller.stop();
+  await f.controller.report({ type: 'completed', session: { projectId: 'project' } });
+  assert.equal(f.finalizeCalls[0].configuration.zoomMode, 'glass');
+  assert.equal(f.finalizeCalls[0].configuration.automaticZoom, true);
+});
 test('rejects invalid source, countdown and zoom options', async () => {
   const f = harness();
   await f.controller.toggle();

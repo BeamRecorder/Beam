@@ -33,6 +33,13 @@ fn idle_status_reports_screen_available() {
             .and_then(serde_json::Value::as_bool),
         Some(true)
     );
+    assert!(
+        response
+            .result
+            .as_ref()
+            .and_then(|result| result.get("inputCaptureError"))
+            .is_some_and(serde_json::Value::is_null)
+    );
 }
 
 #[cfg(target_os = "linux")]

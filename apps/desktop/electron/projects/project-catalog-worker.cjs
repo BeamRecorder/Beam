@@ -1,6 +1,6 @@
 const { parentPort, workerData } = require('node:worker_threads');
 const { createProjectCatalogIndex } = require('./project-catalog-index.cjs');
-const index = createProjectCatalogIndex(workerData.root);
+const index = createProjectCatalogIndex(workerData.root, { roots: workerData.roots });
 let queue = Promise.resolve();
 parentPort.on('message', ({ id, request }) => {
   queue = queue.then(async () => {

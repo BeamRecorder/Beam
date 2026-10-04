@@ -31,7 +31,7 @@ export function useBeamy(
     active.value &&
     !document.hidden &&
     !reducedMotion.value &&
-    (settling || beamyIsAnimated(phase.value, elapsed, reducedMotion.value));
+    (settling || beamyIsAnimated(phase.value, reducedMotion.value));
   const tick = (ms: number) => {
     elapsed += last === null ? 0 : Math.min(Math.max(0, ms - last) / 1000, 0.1);
     last = ms;

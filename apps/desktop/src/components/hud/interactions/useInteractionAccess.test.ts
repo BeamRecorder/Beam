@@ -57,7 +57,7 @@ const preferences = (enabled: boolean, noticeDismissed = false): PreferenceSetti
   extras: {},
 });
 
-const mountAccess = (platform: string) => {
+const mountAccess = (platform?: string) => {
   let access!: ReturnType<typeof useInteractionAccess>;
   const wrapper = mount(
     defineComponent({
@@ -139,18 +139,18 @@ describe('useInteractionAccess', () => {
     wrapper.unmount();
   });
 
-  it('waits for an explicit click when the Linux helper must be installed or updated', async () => {
+  it('automatically installs or updates the Linux helper after saved consent', async () => {
     capture.inputAccessStatus.mockResolvedValueOnce(installationRequired);
     const { access, wrapper } = mountAccess('linux');
     access.hydrate(preferences(true, true));
 
     await access.refresh();
 
-    expect(capture.requestInputAccess).not.toHaveBeenCalled();
-    expect(access.status.value).toEqual(installationRequired);
-    expect(access.enabled.value).toBe(false);
+    expect(capture.requestInputAccess).toHaveBeenCalledOnce();
+    expect(access.status.value).toEqual(available);
+    expect(access.enabled.value).toBe(true);
     expect(capture.updatePreferences).toHaveBeenCalledWith({
-      recordingInteractions: { enabled: false },
+      recordingInteractions: { enabled: true, noticeDismissed: true },
     });
     wrapper.unmount();
   });
@@ -170,7 +170,7 @@ describe('useInteractionAccess', () => {
     wrapper.unmount();
   });
 
-  it('preserves a structured Linux startup failure and clears enabled consent', async () => {
+  it('preserves a structured Linux startup failure and saved consent for the next recording', async () => {
     capture.inputAccessStatus.mockResolvedValueOnce(brokerUnavailable);
     const { access, wrapper } = mountAccess('linux');
     access.hydrate(preferences(true, true));
@@ -179,12 +179,11 @@ describe('useInteractionAccess', () => {
 
     expect(capture.requestInputAccess).not.toHaveBeenCalled();
     expect(access.status.value).toEqual(brokerUnavailable);
-    expect(access.enabled.value).toBe(false);
-    expect(access.noticeDismissed.value).toBe(false);
-    expect(capture.updatePreferences).toHaveBeenCalledWith({
-      recordingInteractions: { enabled: false, noticeDismissed: false },
-    });
+    expect(access.enabled.value).toBe(true);
+    expect(access.noticeDismissed.value).toBe(true);
+    expect(capture.updatePreferences).not.toHaveBeenCalled();
     expect(access.recordingEnabled.value).toBe(false);
+    expect(access.recordingRequested.value).toBe(true);
     wrapper.unmount();
   });
 
@@ -196,18 +195,16 @@ describe('useInteractionAccess', () => {
     await access.request();
 
     expect(access.status.value).toEqual(brokerUnavailable);
-    expect(access.enabled.value).toBe(false);
-    expect(access.noticeDismissed.value).toBe(false);
-    expect(capture.updatePreferences).toHaveBeenNthCalledWith(1, {
-      recordingInteractions: { enabled: false, noticeDismissed: false },
-    });
+    expect(access.enabled.value).toBe(true);
+    expect(access.noticeDismissed.value).toBe(true);
+    expect(capture.updatePreferences).not.toHaveBeenCalled();
 
     await access.request();
 
     expect(capture.requestInputAccess).toHaveBeenCalledTimes(2);
     expect(access.status.value).toEqual(available);
     expect(access.recordingEnabled.value).toBe(true);
-    expect(capture.updatePreferences).toHaveBeenNthCalledWith(2, {
+    expect(capture.updatePreferences).toHaveBeenCalledWith({
       recordingInteractions: { enabled: true, noticeDismissed: true },
     });
     wrapper.unmount();
@@ -230,10 +227,9 @@ describe('useInteractionAccess', () => {
       },
     });
     expect(access.recordingEnabled.value).toBe(false);
-    expect(access.noticeDismissed.value).toBe(false);
-    expect(capture.updatePreferences).toHaveBeenCalledWith({
-      recordingInteractions: { enabled: false, noticeDismissed: false },
-    });
+    expect(access.noticeDismissed.value).toBe(true);
+    expect(access.enabled.value).toBe(true);
+    expect(capture.updatePreferences).not.toHaveBeenCalled();
     wrapper.unmount();
   });
 
@@ -250,8 +246,8 @@ describe('useInteractionAccess', () => {
       canRequest: true,
       error: { code: 'input-access-failed', message: 'input helper crashed' },
     });
-    expect(access.enabled.value).toBe(false);
-    expect(access.noticeDismissed.value).toBe(false);
+    expect(access.enabled.value).toBe(true);
+    expect(access.noticeDismissed.value).toBe(true);
 
     await access.request();
 
@@ -259,10 +255,8 @@ describe('useInteractionAccess', () => {
     expect(access.status.value).toEqual(available);
     expect(access.enabled.value).toBe(true);
     expect(access.recordingEnabled.value).toBe(true);
-    expect(capture.updatePreferences).toHaveBeenNthCalledWith(1, {
-      recordingInteractions: { enabled: false, noticeDismissed: false },
-    });
-    expect(capture.updatePreferences).toHaveBeenNthCalledWith(2, {
+    expect(capture.updatePreferences).toHaveBeenCalledTimes(1);
+    expect(capture.updatePreferences).toHaveBeenCalledWith({
       recordingInteractions: { enabled: true, noticeDismissed: true },
     });
     wrapper.unmount();
@@ -279,6 +273,8 @@ describe('useInteractionAccess', () => {
     expect(access.status.value.canRequest).toBe(true);
     expect(access.status.value.error).toBeUndefined();
     expect(access.noticeDismissed.value).toBe(true);
+    expect(access.enabled.value).toBe(true);
+    expect(capture.updatePreferences).not.toHaveBeenCalled();
 
     await access.request();
     expect(access.status.value).toEqual(installationRequired);
@@ -371,6 +367,155 @@ describe('useInteractionAccess', () => {
     expect(access.enabled.value).toBe(true);
     expect(access.recordingEnabled.value).toBe(true);
     expect(access.requesting.value).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('does not resume Linux access until the initial consent has been given', async () => {
+    const { access, wrapper } = mountAccess('linux');
+    access.hydrate(preferences(true, false));
+
+    await access.refresh();
+
+    expect(access.enabled.value).toBe(true);
+    expect(access.recordingRequested.value).toBe(false);
+    expect(capture.requestInputAccess).not.toHaveBeenCalled();
+    expect(capture.updatePreferences).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('does not repeatedly prompt on refresh after cancelled automatic authorization', async () => {
+    capture.requestInputAccess.mockResolvedValueOnce(permissionRequired);
+    const { access, wrapper } = mountAccess('linux');
+    access.hydrate(preferences(true, true));
+
+    await access.refresh();
+    await access.refresh();
+    await access.refresh();
+
+    expect(capture.requestInputAccess).toHaveBeenCalledOnce();
+    expect(access.enabled.value).toBe(true);
+    expect(access.noticeDismissed.value).toBe(true);
+    expect(capture.updatePreferences).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('allows manual activation to be retried after a cancelled automatic authorization', async () => {
+    capture.requestInputAccess.mockResolvedValueOnce(permissionRequired);
+    const { access, wrapper } = mountAccess('linux');
+    access.hydrate(preferences(true, true));
+
+    await access.refresh();
+    await access.request();
+
+    expect(capture.requestInputAccess).toHaveBeenCalledTimes(2);
+    expect(access.recordingEnabled.value).toBe(true);
+    expect(access.recordingRequested.value).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('keeps saved Linux consent when the input API is unavailable', async () => {
+    delete window.capture;
+    const { access, wrapper } = mountAccess('linux');
+    access.hydrate(preferences(true, true));
+
+    await access.refresh();
+    await access.request();
+
+    expect(access.status.value.state).toBe('unavailable');
+    expect(access.enabled.value).toBe(true);
+    expect(access.noticeDismissed.value).toBe(true);
+    expect(access.recordingEnabled.value).toBe(false);
+    expect(capture.updatePreferences).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('retains the enabled switch on refresh when access is available', async () => {
+    capture.inputAccessStatus.mockResolvedValueOnce(available);
+    const { access, wrapper } = mountAccess('darwin');
+    access.hydrate(preferences(true, true));
+
+    await access.refresh();
+
+    expect(access.recordingRequested.value).toBe(true);
+    expect(capture.updatePreferences).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('saves an explicit disabled choice and does not resume Linux access afterwards', async () => {
+    const { access, wrapper } = mountAccess('linux');
+    access.hydrate(preferences(true, true));
+    await access.request();
+
+    await access.setEnabled(false);
+    await access.refresh();
+
+    expect(access.enabled.value).toBe(false);
+    expect(access.recordingRequested.value).toBe(false);
+    expect(capture.requestInputAccess).toHaveBeenCalledOnce();
+    expect(capture.updatePreferences).toHaveBeenLastCalledWith({ recordingInteractions: { enabled: false } });
+    wrapper.unmount();
+  });
+
+  it('enables an available switch but refuses to enable unavailable capture through the switch', async () => {
+    const { access, wrapper } = mountAccess('darwin');
+    await access.setEnabled(true);
+    expect(access.enabled.value).toBe(false);
+
+    capture.inputAccessStatus.mockResolvedValueOnce(available);
+    await access.refresh();
+    await access.setEnabled(true);
+
+    expect(access.enabled.value).toBe(true);
+    expect(access.recordingRequested.value).toBe(true);
+    expect(capture.updatePreferences).toHaveBeenLastCalledWith({ recordingInteractions: { enabled: true } });
+    wrapper.unmount();
+  });
+
+  it('uses the platform exposed by the preload when no platform is supplied', async () => {
+    const { access, wrapper } = mountAccess();
+    access.hydrate(preferences(true, true));
+
+    await access.refresh();
+
+    expect(capture.requestInputAccess).toHaveBeenCalledOnce();
+    expect(access.recordingRequested.value).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('uses an unknown platform when no preload is available', async () => {
+    delete window.capture;
+    const { access, wrapper } = mountAccess();
+
+    await access.refresh();
+
+    expect(access.recordingRequested.value).toBe(false);
+    expect(access.status.value.state).toBe('unavailable');
+    wrapper.unmount();
+  });
+
+  it('clears saved consent after an actual macOS permission denial', async () => {
+    capture.inputAccessStatus.mockResolvedValueOnce({ ...permissionRequired, state: 'denied' });
+    const { access, wrapper } = mountAccess('darwin');
+    access.hydrate(preferences(true, true));
+
+    await access.refresh();
+
+    expect(access.noticeDismissed.value).toBe(false);
+    expect(access.recordingRequested.value).toBe(false);
+    expect(capture.updatePreferences).toHaveBeenCalledWith({
+      recordingInteractions: { enabled: false, noticeDismissed: false },
+    });
+    wrapper.unmount();
+  });
+
+  it('does not rewrite an already disabled macOS preference on refresh', async () => {
+    const { access, wrapper } = mountAccess('darwin');
+    access.hydrate(preferences(false, true));
+
+    await access.refresh();
+
+    expect(capture.updatePreferences).not.toHaveBeenCalled();
+    expect(access.recordingRequested.value).toBe(false);
     wrapper.unmount();
   });
 });

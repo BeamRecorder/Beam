@@ -404,6 +404,7 @@ const dismissRecorderLauncher = async () => {
         :visibility="recordingBarVisibility"
         :hover-only-active="recording.recorderHoverOnlyActive.value"
         :busy="isRestartingRecording"
+        :warning="recording.error.value"
         @stop="cancelOrStopRecording"
         @cancel="cancelRecording"
         @pause="recording.togglePause"

@@ -448,6 +448,38 @@ describe('toolbar diagnostics and CSS menu lifetime', () => {
 });
 
 describe('Linux toolbar authorization', () => {
+  it.each([
+    { enabled: true, noticeDismissed: true, requested: true },
+    { enabled: false, noticeDismissed: true, requested: false },
+    { enabled: true, noticeDismissed: false, requested: false },
+  ])(
+    'passes the saved Linux interaction choice to recording preparation: $enabled/$noticeDismissed',
+    async ({ enabled, noticeDismissed, requested }) => {
+      capture.platform = 'linux';
+      capture.getPreferences.mockResolvedValue({
+        ...preferences,
+        recordingInteractions: { enabled, noticeDismissed },
+      });
+      capture.inputAccessStatus.mockResolvedValue({
+        state: 'unavailable',
+        canRequest: true,
+        clicks: false,
+        shortcuts: false,
+        recordsText: false,
+        error: { code: 'input-broker-start-failed', message: 'The helper stopped.' },
+      });
+      const hud = await createHud();
+
+      await hud.get('[aria-label="Full screen"]').trigger('click');
+      await flushPromises();
+
+      expect(hud.emitted('start-recording')?.[0]?.[0]).toMatchObject({ recordInteractions: requested });
+      expect(capture.updatePreferences).not.toHaveBeenCalledWith({
+        recordingInteractions: { enabled: false, noticeDismissed: false },
+      });
+    },
+  );
+
   it('authorizes interaction access from the toolbar popup', async () => {
     capture.platform = 'linux';
     capture.inputAccessStatus.mockResolvedValue({

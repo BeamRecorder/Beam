@@ -62,6 +62,8 @@ Catalogue deletion uses `ConfirmDialog`’s preview slot to identify the real se
 
 ## Visual behavior
 
+Canvas anchors, resize handles and transform controls use the shared neutral contrast directive. Every control in the selection shares one tone, calculated from the combined luminance of their local patches. The preview host requests a refresh after painting; control updates request one after moving. A single 64 px probe per canvas samples at most eight times a second and remains idle between updates. Keep the opposing outline for textured or unavailable pixels, and dispose pending frames/timers with the view.
+
 Timeline lanes share a 32–56 px row height across all categories. Items fill the lane's content height and use the same `--radius-sm` for their canvas body, semantic control and shared `TimelineTrimHandle`. Keep type backgrounds and readable foregrounds in the timeline theme, with rose zooms and gold captions. Reveal handles on track hover or keyboard focus and retain the active handle during trimming. Move clips, captions, hover previews, markers and rows with `translate3d`; duration changes still resize width. Insertions and virtual-window membership changes appear immediately; actual row reorder animations keep canvas artwork synchronized with DOM movement through the shared frame queue.
 
 Keep the neutral lane grid on the timeline stack, behind the shared bitmap. Transformed semantic rows remain transparent and sit above the bitmap so native labels, waveforms, focus rings and trim handles stay visible. During overlapping row moves, canvas painting follows DOM order and the dragged row's stacking priority.

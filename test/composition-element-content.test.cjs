@@ -160,3 +160,45 @@ test('preserves supported text decorations and resets unsupported values', () =>
   assert.equal(valid.text.style.textDecoration, 'underline line-through');
   assert.equal(invalid.text.style.textDecoration, 'none');
 });
+
+const vector = () => ({
+  version: 1,
+  contours: [
+    {
+      closed: false,
+      nodes: [
+        { id: 'a', x: 0, y: 0, mode: 'smooth', out: { x: 0.3, y: 0.2 } },
+        { id: 'b', x: 1, y: 1, mode: 'corner', in: { x: 0.7, y: 0.8 } },
+      ],
+    },
+  ],
+  fillRule: 'nonzero',
+  strokeWidth: 8,
+  startMarker: 'none',
+  endMarker: 'triangle',
+  markerSize: 18,
+});
+test('round-trips editable vector arrows through desktop project persistence', () => {
+  const source = { family: 'arrow', preset: 'arrow', vector: vector() };
+  const normalized = normalizeShapeLayerStyle(source);
+  const reopened = normalizeShapeLayerStyle(JSON.parse(JSON.stringify(normalized)));
+  assert.deepEqual(reopened.vector, source.vector);
+  assert.notEqual(reopened.vector, source.vector);
+  normalized.vector.contours[0].nodes[0].out.x = 0.4;
+  assert.equal(source.vector.contours[0].nodes[0].out.x, 0.3);
+});
+test('rejects malformed vector documents at the project storage boundary', () => {
+  for (const patch of [
+    { version: 2 },
+    { strokeWidth: 0 },
+    { endMarker: 'bad' },
+    { contours: [] },
+    { markerSize: Infinity },
+  ]) {
+    assert.throws(() => normalizeElementContent({ vector: { ...vector(), ...patch } }), /Invalid vector shape/);
+  }
+});
+test('keeps absent and explicitly reset vector paths out of normalized legacy styles', () => {
+  assert.equal(Object.hasOwn(normalizeElementContent({}), 'vector'), false);
+  assert.equal(Object.hasOwn(normalizeElementContent({ vector: null }), 'vector'), false);
+});

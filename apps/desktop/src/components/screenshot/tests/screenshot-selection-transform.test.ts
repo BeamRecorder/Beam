@@ -202,6 +202,31 @@ const expectTranslatedTransform = (
 };
 
 describe('screenshot selection translation', () => {
+  it('does not invent cursor alignment bounds before its artwork has loaded', () => {
+    const state = makeState();
+    const selected = ['cursor-moving'];
+    const delta = { x: 0.1, y: 0.1 };
+    expect(constrainScreenshotTranslation(state, selected, delta, null)).toEqual({ x: 0, y: 0 });
+    expect(snapScreenshotTranslation(state, selected, delta, null)).toEqual({
+      translation: { x: 0, y: 0 },
+      guides: [],
+    });
+  });
+
+  it('moves the source image before optional image, effect and cursor collections exist', () => {
+    const state = screenshotState(documentFixture());
+    delete state.images;
+    delete state.effects;
+    delete state.cursors;
+    const delta = { x: 0.04, y: -0.02 };
+    const preview = withScreenshotTranslation(state, [state.image.id], delta);
+    expect(preview.images).toBeUndefined();
+    expect(preview.effects).toBeUndefined();
+    expect(preview.cursors).toBeUndefined();
+    applyScreenshotTranslation(state, [state.image.id], delta);
+    expect(state.image.transform).toEqual(preview.image.transform);
+  });
+
   it('snaps the group envelope to alignment guides without changing member spacing', () => {
     const state = makeState();
     const selected = ['shape-moving', 'effect-moving'];
@@ -416,17 +441,50 @@ describe('screenshot selection translation', () => {
   });
 });
 
-it('moves hidden group members with their visible siblings and blocks a partially locked group', () => {
+it('moves only the selected group member in the preview and committed document', () => {
+  const state = makeState();
+  const a = state.shapes[0]!,
+    b = state.shapes[1]!;
+  state.composition = screenshotLayers(state).map(({ id }) => defaultLayerCompositing(id));
+  for (const id of [a.id, b.id]) state.composition.find((r) => r.id === id)!.groupId = 'pair';
+  const initial = structuredClone(state);
+  const delta = { x: 0.05, y: 0.04 };
+  expect(movableScreenshotSelection(state, [a.id]).map((r) => r.id)).toEqual([a.id]);
+  const preview = withScreenshotTranslation(state, [a.id], delta);
+  expectTranslatedTransform(preview.shapes[0]!.transform, initial.shapes[0]!.transform, delta);
+  expect(preview.shapes[1]).toBe(b);
+  expect(state).toEqual(initial);
+  applyScreenshotTranslation(state, [a.id], delta);
+  expect(state.shapes).toEqual(preview.shapes);
+  expect(state.shapes[1]).toEqual(initial.shapes[1]);
+});
+
+it('allows an unlocked child to move independently of a locked sibling', () => {
+  const state = makeState();
+  const a = state.shapes[0]!,
+    b = state.shapes[1]!;
+  state.composition = screenshotLayers(state).map(({ id }) => defaultLayerCompositing(id));
+  for (const id of [a.id, b.id]) state.composition.find((r) => r.id === id)!.groupId = 'pair';
+  state.composition.find((r) => r.id === b.id)!.locked = true;
+  expect(movableScreenshotSelection(state, [a.id]).map((r) => r.id)).toEqual([a.id]);
+  expect(movableScreenshotSelection(state, [b.id])).toEqual([]);
+  const preview = withScreenshotTranslation(state, [a.id], { x: 0.05, y: 0.04 });
+  expect(preview.shapes[0]!.transform.x).toBeCloseTo(a.transform.x + 0.05);
+  expect(preview.shapes[1]).toBe(b);
+});
+
+it('moves explicitly selected hidden group members and blocks a partially locked group', () => {
   const state = makeState(),
     a = state.shapes[0]!,
     b = state.shapes[1]!;
   state.composition = screenshotLayers(state).map(({ id }) => defaultLayerCompositing(id));
   for (const id of [a.id, b.id]) state.composition!.find((r) => r.id === id)!.groupId = 'pair';
   b.enabled = false;
-  expect(movableScreenshotSelection(state, [a.id]).map((r) => r.id)).toEqual([a.id, b.id]);
-  const next = withScreenshotTranslation(state, [a.id], { x: 0.05, y: 0.04 });
+  const selected = [a.id, b.id];
+  expect(movableScreenshotSelection(state, selected).map((r) => r.id)).toEqual(selected);
+  const next = withScreenshotTranslation(state, selected, { x: 0.05, y: 0.04 });
   expect(next.shapes[1]!.transform.x).toBeCloseTo(b.transform.x + 0.05);
   state.composition!.find((r) => r.id === b.id)!.locked = true;
-  expect(movableScreenshotSelection(state, [a.id])).toEqual([]);
-  expect(withScreenshotTranslation(state, [a.id], { x: 0.05, y: 0.04 }).shapes).toEqual(state.shapes);
+  expect(movableScreenshotSelection(state, selected)).toEqual([]);
+  expect(withScreenshotTranslation(state, selected, { x: 0.05, y: 0.04 }).shapes).toEqual(state.shapes);
 });

@@ -1,16 +1,20 @@
 import type { ComputedRef, Ref } from 'vue';
 import type { NormalizedTransform, ShapeClip } from '@beam/engine/shared/composition-types';
 import type { ShapeLayerFamily, ShapeLayerStyle } from '@beam/engine/shared/shape-layer-types';
+import type { ArrowPreset, VectorNode, VectorNodeSelection } from '@beam/engine/shared/shape-vector-types';
 import type { DrawingSettings, DrawnElement } from '@beam/engine/shared/element-types';
+
+export type ElementLayerPatch = Partial<ShapeLayerStyle> & { transform?: NormalizedTransform };
 
 export interface ElementEditorOptions {
   layers: () => ShapeClip[];
   selectedId: () => string | null;
   select: (id: string) => void;
   insert: (clip: ShapeClip) => void;
-  update: (id: string, patch: Partial<ShapeLayerStyle>) => void;
+  update: (id: string, patch: ElementLayerPatch) => void;
   remove: (id: string) => void;
   timing: () => { startMs: number; durationMs: number };
+  canvasSize?: () => { width: number; height: number } | null;
   showLayers?: boolean;
   canInteract?: () => boolean;
   addHighlight?: () => void | Promise<void>;
@@ -23,6 +27,16 @@ export interface ElementEditorContext {
   layers: ComputedRef<ShapeClip[]>;
   selected: ComputedRef<ShapeClip | null>;
   editing: Ref<ShapeClip | null>;
+  canvasSize: ComputedRef<{ width: number; height: number } | null>;
+  vectorEditing: Ref<string | null>;
+  selectedNode: Ref<VectorNodeSelection | null>;
+  beginVector: (id?: string) => boolean;
+  finishVector: () => void;
+  addArrow: (preset: ArrowPreset) => void;
+  drawArrow: () => void;
+  anchorDraft: Ref<VectorNode[] | null>;
+  finishDrawing: () => void;
+  drawingArrow: Ref<boolean>;
   drawingMode: Ref<boolean>;
   drawingSettings: Ref<DrawingSettings>;
   showLayers: boolean;
@@ -34,9 +48,10 @@ export interface ElementEditorContext {
   addDrawing: (value: DrawnElement) => void;
   updateDrawingSettings: (settings: DrawingSettings) => void;
   select: (id: string) => void;
-  update: (patch: Partial<ShapeLayerStyle>) => void;
+  update: (patch: ElementLayerPatch) => void;
   remove: () => void;
   beginText: (id: string) => boolean;
+  beginElement: (id: string) => boolean;
   updateText: (content: string) => void;
   finishText: () => void;
   cancelText: () => void;

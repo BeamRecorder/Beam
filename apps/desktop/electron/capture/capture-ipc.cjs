@@ -81,6 +81,7 @@ function registerCaptureIpc({
   screen,
   app,
   captureEngine,
+  inputAccess,
   userPaths,
   trackStorages,
   teleprompterWindow,
@@ -108,6 +109,14 @@ function registerCaptureIpc({
   const requestEngine = async (command, payload = {}) => {
     if (command === 'prepare') systemAudioPreview?.invalidate();
     try {
+      const cursor = payload.config?.cursor;
+      if (
+        command === 'prepare' &&
+        platform === 'linux' &&
+        cursor?.mode === 'separate' &&
+        (cursor.captureClicks === true || cursor.captureShortcuts === true)
+      )
+        await inputAccess.ensureReady(cursor);
       // A poisoned engine respawns a fresh process on its next request; the
       // previous (timed out) session is gone and must not be completed.
       return await captureEngine.request(command, payload);

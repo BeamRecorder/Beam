@@ -6,10 +6,11 @@ class Surface {
   readonly context = { drawImage: vi.fn() };
   readonly getContext = vi.fn(() => this.context);
   readonly convertToBlob = vi.fn(async () => new Blob([new Uint8Array([0, 1, 254, 255])]));
-  constructor(
-    public width: number,
-    public height: number,
-  ) {
+  width: number;
+  height: number;
+  constructor(width: number, height: number) {
+    this.width = width;
+    this.height = height;
     Surface.instances.push(this);
   }
 }
@@ -106,12 +107,11 @@ describe('export preview', () => {
         surface = Surface.instances[0]!;
       const failure = new Error('thumbnail failed');
       if (stage === 'blob') surface.convertToBlob.mockRejectedValueOnce(failure);
-      else
-        surface.convertToBlob.mockResolvedValueOnce({
-          arrayBuffer: async () => {
-            throw failure;
-          },
-        } as Blob);
+      else {
+        const blob = new Blob();
+        vi.spyOn(blob, 'arrayBuffer').mockRejectedValueOnce(failure);
+        surface.convertToBlob.mockResolvedValueOnce(blob);
+      }
       preview.capture(source);
       await expect(preview.settle()).rejects.toBe(failure);
       expect(() => preview.capture(source)).toThrow(failure);

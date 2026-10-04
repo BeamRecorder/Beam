@@ -66,6 +66,14 @@ const gradientFill: ColorFill = {
 };
 
 describe('DrawingControls', () => {
+  it('hides automatic smoothing for manually authored anchor curves', async () => {
+    const wrapper = mountControls(drawingSettings());
+    expect(wrapper.findAllComponents(BigSliderStub)).toHaveLength(2);
+    await wrapper.setProps({ hideSmoothing: true });
+    expect(wrapper.findAllComponents(BigSliderStub)).toHaveLength(1);
+    expect(wrapper.findComponent(BigSliderStub).props('label')).toBe('strokeWidth');
+    wrapper.unmount();
+  });
   it('shows Stroke color with the legacy color as a solid-fill fallback', () => {
     const settings = drawingSettings();
     const wrapper = mountControls(settings);

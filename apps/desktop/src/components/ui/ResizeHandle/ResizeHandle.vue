@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { CSSProperties } from 'vue';
 import type { ResizeCorner, ResizeHandlePositions } from './types';
+import { useCanvasControlContrast } from './useCanvasControlContrast';
+const vCanvasControlContrast = useCanvasControlContrast();
 export type { ResizeCorner };
 
 const props = withDefaults(
@@ -44,6 +46,7 @@ const positionStyle = (corner: ResizeCorner): CSSProperties | undefined => {
 
 <template>
   <button
+    v-canvas-control-contrast
     v-for="corner in corners"
     :key="corner"
     type="button"
@@ -66,9 +69,10 @@ const positionStyle = (corner: ResizeCorner): CSSProperties | undefined => {
   width: 14px;
   height: 14px;
   padding: 0;
-  border: 2px solid var(--color-bg-element);
+  border: 2px solid var(--canvas-control-halo, var(--color-bg-surface));
   border-radius: 3px;
-  background: var(--color-primary);
+  background: var(--canvas-control-ink, var(--text-primary));
+  box-shadow: 0 0 0 1px var(--canvas-control-ink, var(--text-primary));
   z-index: 1;
   pointer-events: auto;
 }

@@ -253,10 +253,12 @@ describe('export worker', () => {
     vi.stubGlobal(
       'OffscreenCanvas',
       class {
-        constructor(
-          public width: number,
-          public height: number,
-        ) {}
+        width: number;
+        height: number;
+        constructor(width: number, height: number) {
+          this.width = width;
+          this.height = height;
+        }
         getContext() {
           return context;
         }
@@ -283,10 +285,12 @@ describe('export worker', () => {
     vi.stubGlobal(
       'OffscreenCanvas',
       class {
-        constructor(
-          public width: number,
-          public height: number,
-        ) {}
+        width: number;
+        height: number;
+        constructor(width: number, height: number) {
+          this.width = width;
+          this.height = height;
+        }
         getContext() {
           return { drawImage: vi.fn() };
         }

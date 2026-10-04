@@ -46,7 +46,7 @@ describe('Beamy action motion', () => {
     expect(sample(3.7).frame.dots).toHaveLength(0);
     expect(sample(5).frame.eyes).toHaveLength(0);
     expect(sample(5).frame.dots).toHaveLength(2);
-    expect(beamyIsAnimated('loading', 400, false)).toBe(true);
+    expect(beamyIsAnimated('loading', false)).toBe(true);
   });
   it('keeps the rounded eyes while lowering the gaze on failure and recovering', () => {
     const failed = createBeamyMotion('failed')(0);
@@ -66,7 +66,7 @@ describe('Beamy action motion', () => {
     expect(Math.abs(matrix(1.481)[3]!)).toBeLessThan(Math.abs(matrix(0)[3]!) / 10);
     expect(Math.abs(matrix(1.6)[3]!)).toBeGreaterThan(Math.abs(matrix(1.481)[3]!) * 10);
     expect(matrix(3).slice(4)).not.toEqual(matrix(0).slice(4));
-    expect(beamyIsAnimated('failed', 400, false)).toBe(true);
+    expect(beamyIsAnimated('failed', false)).toBe(true);
   });
   it('uses exactly the shared Mascot Lab circle as its resting silhouette', () => {
     expect(createBeamyMotion('idle')(0).shape).toEqual(SHAPE_BY_ID.get(DEFAULT_SHAPE)!.radii);
@@ -88,12 +88,12 @@ describe('Beamy action motion', () => {
     expect(sample(0, true).frame.eyes).toEqual(createBeamyMotion(phase)(0).frame.eyes);
     expect(sample(0, true).shape).toEqual(SHAPE_BY_ID.get(DEFAULT_SHAPE)!.radii);
     expect(sample(0, true).frame.dots).toHaveLength(phase === 'loading' ? 2 : 0);
-    expect(beamyIsAnimated(phase, 0, true)).toBe(false);
+    expect(beamyIsAnimated(phase, true)).toBe(false);
   });
   it.each(['idle', 'recording', 'paused'] as const)('keeps %s at its circle without an idle loop', (phase) => {
     const sample = createBeamyMotion(phase);
     expect(sample(0)).toEqual(sample(100));
-    expect(beamyIsAnimated(phase, 0, false)).toBe(false);
+    expect(beamyIsAnimated(phase, false)).toBe(false);
   });
   it.each(['processing', 'preparing'] as const)('morphs continuously through every engine shape during %s', (phase) => {
     const sample = createBeamyMotion(phase);
@@ -105,7 +105,7 @@ describe('Beamy action motion', () => {
     const before = sample(interval - 0.00001).shape;
     const after = sample(interval + 0.00001).shape;
     expect(Math.max(...before.map((radius, index) => Math.abs(radius - after[index]!)))).toBeLessThan(0.0001);
-    expect(beamyIsAnimated(phase, 500, false)).toBe(true);
+    expect(beamyIsAnimated(phase, false)).toBe(true);
   });
   it('preserves an interrupted silhouette then eases back into the exact resting circle', () => {
     const displayed = createBeamyMotion('processing')(1.3);
@@ -119,9 +119,34 @@ describe('Beamy action motion', () => {
     expect(sample(0.3).frame.dots.length).toBeGreaterThan(0);
     expect(sample(0.3).frame.dots.every((dot) => dot.color?.startsWith('var(--color-'))).toBe(true);
     expect(sample(BEAMY_CELEBRATION_SECONDS).frame.dots).toHaveLength(0);
-    expect(sample(BEAMY_CELEBRATION_SECONDS)).toEqual(sample(500));
-    expect(beamyIsAnimated('completed', BEAMY_CELEBRATION_SECONDS - 0.001, false)).toBe(true);
-    expect(beamyIsAnimated('completed', BEAMY_CELEBRATION_SECONDS, false)).toBe(false);
+    expect(sample(500).frame.dots).toHaveLength(0);
+    expect(sample(BEAMY_CELEBRATION_SECONDS).shape).toEqual(sample(500).shape);
+    expect(beamyIsAnimated('completed', false)).toBe(true);
+  });
+  it('keeps success confetti outside the face, visible at status size and inside its artwork bounds', () => {
+    const sample = createBeamyMotion('completed');
+    const particles = sample(BEAMY_CELEBRATION_SECONDS / 2).frame.dots;
+    expect(particles).toHaveLength(12);
+    for (const dot of particles) {
+      expect(Math.hypot(dot.x, dot.y) - dot.r).toBeGreaterThan(RAYON);
+      expect((dot.r * 2 * 52) / 316).toBeGreaterThan(2);
+    }
+    for (const time of [0.1, 0.7, 1.4, 1.89]) {
+      for (const dot of sample(time).frame.dots) expect(Math.hypot(dot.x, dot.y) + dot.r).toBeLessThan(158);
+    }
+  });
+  it('keeps the happy face blinking and looking around after its confetti ends', () => {
+    const sample = createBeamyMotion('completed');
+    const matrix = (time: number) =>
+      sample(time)
+        .frame.eyes[0]!.matrix.match(/-?\d+(?:\.\d+)?/g)!
+        .map(Number);
+    expect(Math.abs(matrix(1.481)[3]!)).toBeLessThan(Math.abs(matrix(0)[3]!) / 10);
+    expect(Math.abs(matrix(1.6)[3]!)).toBeGreaterThan(Math.abs(matrix(1.481)[3]!) * 10);
+    const later = Array.from({ length: 700 }, (_, index) => matrix(2 + index / 100));
+    expect(Math.min(...later.map((values) => Math.abs(values[3]!)))).toBeLessThan(Math.abs(matrix(2)[3]!) / 5);
+    expect(matrix(3).slice(4)).not.toEqual(matrix(2).slice(4));
+    expect(sample(3).frame.dots).toHaveLength(0);
   });
   it.each([NaN, Infinity, -Infinity, -5])('clamps unusable elapsed time %s', (time) => {
     const sample = createBeamyMotion('processing');

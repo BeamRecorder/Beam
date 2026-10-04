@@ -7,6 +7,7 @@ const dependencies = vi.hoisted(() => ({
   release: vi.fn(),
   assets: vi.fn(),
   dispose: vi.fn(),
+  preview: vi.fn(),
 }));
 vi.mock('@beam/runtime/screenshot/screenshot-render', () => ({ drawScreenshot: dependencies.draw }));
 vi.mock('@beam/runtime/shared/element-font-loader', () => ({ loadElementFonts: dependencies.fonts }));
@@ -16,6 +17,7 @@ vi.mock('@beam/runtime/composition/render-composited-layer', () => ({
 vi.mock('../screenshot-export-images', () => ({
   createScreenshotExportImages: () => ({ assets: dependencies.assets, dispose: dependencies.dispose }),
 }));
+vi.mock('../screenshot-export-preview', () => ({ screenshotExportPreview: dependencies.preview }));
 import { renderScreenshotExport, runScreenshotExport } from '../screenshot-export-worker';
 
 let context: Canvas2DContext | null;
@@ -34,6 +36,7 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue({ image: bitmap(), background: null, logo: null, width: 1000, height: 500 });
   dependencies.dispose.mockResolvedValue(undefined);
+  dependencies.preview.mockReset().mockResolvedValue('data:image/png;base64,preview');
   vi.stubGlobal(
     'OffscreenCanvas',
     class {
@@ -116,15 +119,80 @@ it('reports an unavailable context and a mismatched encoder format', async () =>
 it('transfers successful bytes and exposes errors instead of a fake success', async () => {
   const post = vi.fn();
   await runScreenshotExport(requestFixture(), post);
-  expect(post).toHaveBeenLastCalledWith({ bytes }, [bytes]);
+  expect(post).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      bytes,
+      timings: expect.objectContaining({
+        render: expect.any(Number),
+        encode: expect.any(Number),
+        total: expect.any(Number),
+      }),
+    }),
+    [bytes],
+  );
   dependencies.draw.mockImplementationOnce(() => {
     throw new Error('bad shape');
   });
   await runScreenshotExport(requestFixture(), post);
-  expect(post).toHaveBeenLastCalledWith({ error: 'bad shape' }, []);
+  expect(post).toHaveBeenLastCalledWith(
+    expect.objectContaining({ error: 'bad shape', timings: expect.objectContaining({ render: expect.any(Number) }) }),
+    [],
+  );
   dependencies.draw.mockImplementationOnce(() => {
     throw 'invalid';
   });
   await runScreenshotExport(requestFixture(), post);
-  expect(post).toHaveBeenLastCalledWith({ error: 'invalid' }, []);
+  expect(post).toHaveBeenLastCalledWith(expect.objectContaining({ error: 'invalid', timings: expect.any(Object) }), []);
+});
+
+it('loads fonts and images concurrently while reporting each completed phase', async () => {
+  let finish!: () => void;
+  dependencies.fonts.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const onTiming = vi.fn();
+  const pending = renderScreenshotExport(requestFixture(), { onTiming });
+  expect(dependencies.assets).toHaveBeenCalledOnce();
+  expect(dependencies.draw).not.toHaveBeenCalled();
+  finish();
+  await pending;
+  for (const stage of ['fonts', 'images', 'render', 'encode', 'bytes', 'cleanup'])
+    expect(onTiming).toHaveBeenCalledWith(stage, expect.any(Number));
+});
+it('renders a project thumbnail at the requested output size with the original layout and typography', async () => {
+  const request = requestFixture();
+  request.outputSize = { width: 480, height: 240 };
+  request.state.format = 'webp';
+  await renderScreenshotExport(request);
+  expect(dependencies.draw).toHaveBeenCalledWith(context, request.state, expect.any(Object), 480, 240);
+  expect(encode).toHaveBeenCalledWith({ type: 'image/webp', quality: 0.9 });
+  request.outputSize.width = 20000;
+  await expect(renderScreenshotExport(request)).rejects.toThrow();
+});
+it('includes the completed output preview even if the final image encoder fails', async () => {
+  const request = requestFixture();
+  request.includePreview = true;
+  encode.mockRejectedValueOnce(new Error('PNG failed'));
+  const post = vi.fn();
+  await runScreenshotExport(request, post);
+  expect(post).toHaveBeenCalledWith(
+    expect.objectContaining({
+      error: 'PNG failed',
+      preview: 'data:image/png;base64,preview',
+      timings: expect.objectContaining({ thumbnail: expect.any(Number), encode: expect.any(Number) }),
+    }),
+    [],
+  );
+});
+it('does not fail a copy when its optional output thumbnail is unavailable', async () => {
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  dependencies.preview.mockRejectedValueOnce(new Error('Preview failed'));
+  const request = requestFixture();
+  request.includePreview = true;
+  await expect(renderScreenshotExport(request, { onPreview: vi.fn() })).resolves.toBe(bytes);
+  expect(warning).toHaveBeenCalledWith('Screenshot export preview unavailable.', expect.any(Error));
+  warning.mockRestore();
 });

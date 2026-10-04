@@ -3,6 +3,10 @@ import type { Ref } from 'vue';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import { screenshotLayers } from '@beam/engine/screenshot/screenshot-layers';
 import { groupScreenshotLayers, ungroupScreenshotLayers } from '@beam/engine/screenshot/screenshot-groups';
+import {
+  canMoveScreenshotLayersToGroup,
+  moveScreenshotLayersToGroup,
+} from '@beam/engine/screenshot/screenshot-group-transfer';
 import { beginPropertyInteraction, endPropertyInteraction } from '~/composables/property-interaction';
 export function useScreenshotGroups(
   state: Ref<ScreenshotState | null>,
@@ -34,5 +38,25 @@ export function useScreenshotGroups(
     }
     return true;
   };
-  return { canGroup, canUngroup, group: () => perform(false), ungroup: () => perform(true) };
+  const canMoveToGroup = (id: string, groupId: string | null) =>
+    !disabled() && Boolean(state.value && canMoveScreenshotLayersToGroup(state.value, [id], groupId));
+  const moveToGroup = (id: string, groupId: string | null, frontIndex: number) => {
+    if (!state.value || !canMoveToGroup(id, groupId)) return false;
+    beginPropertyInteraction();
+    try {
+      state.value = moveScreenshotLayersToGroup(state.value, [id], groupId, frontIndex);
+    } finally {
+      endPropertyInteraction();
+    }
+    selected.value = [id];
+    return true;
+  };
+  return {
+    canGroup,
+    canUngroup,
+    canMoveToGroup,
+    moveToGroup,
+    group: () => perform(false),
+    ungroup: () => perform(true),
+  };
 }

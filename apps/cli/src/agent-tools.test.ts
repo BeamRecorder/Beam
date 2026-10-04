@@ -42,8 +42,11 @@ describe('discoverable agent tools', () => {
     const session = createAuthoringSession(createStillDocument('test', 'source.png', 100, 100));
     session.execute(command);
     expect(
-      session.document.state.composition!.find((layer) => layer.id === '__background__')!.effects![0]!.recipe.mode,
-    ).toBe('flow');
+      session.document.state.composition!.find((layer) => layer.id === '__background__')!.effects![0],
+    ).toMatchObject({
+      kind: 'gradient',
+      recipe: { mode: 'flow' },
+    });
   });
   it('advertises schemas offline and documents HTML without requiring a desktop instance', async () => {
     expect(await runAgentCommand(['tools', 'list'])).toMatchObject({ tools: TOOL_CATALOG });

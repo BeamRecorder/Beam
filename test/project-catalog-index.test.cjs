@@ -45,6 +45,26 @@ function fixture(t, count = 6) {
   };
 }
 
+test('refreshes screenshot thumbnails after file creation and replacement without changing metadata', async (t) => {
+  const f = fixture(t, 0),
+    pending = f.shots.create();
+  f.shots.complete(pending.id, { width: 1920, height: 1080 }, {}, 'Beautiful Captures');
+  const original = (await f.catalog.page()).projects[0].thumbnailSrc;
+  assert.match(original, /source\.png$/);
+  const file = path.join(f.shots.directoryFor(pending.id), 'thumbnail.webp');
+  fs.writeFileSync(file, 'first thumbnail');
+  const first = (await f.catalog.page()).projects[0].thumbnailSrc;
+  assert.match(first, /thumbnail\.webp\?v=/);
+  assert.notEqual(first, original);
+  fs.writeFileSync(file, 'updated composition thumbnail');
+  fs.utimesSync(file, new Date(0), new Date(0));
+  const next = (await f.catalog.page()).projects[0].thumbnailSrc;
+  assert.notEqual(next, first);
+  assert.equal(f.catalog.metrics().rebuilt, 1);
+  assert.equal((await f.reopen().page()).projects[0].thumbnailSrc, next);
+  assert.equal(f.catalog.metrics().reused, 1);
+});
+
 test('pages the first catalogue in date order without dropping or duplicating projects', async (t) => {
   const f = fixture(t);
   let page = await f.catalog.page({ limit: 2 });

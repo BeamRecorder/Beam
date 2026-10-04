@@ -52,8 +52,9 @@ describe('persisted screenshot groups', () => {
     expect(expandScreenshotGroups(joined, ['c'])).toEqual(['c', 'a', 'b']);
     expect(() => groupScreenshotLayers(state, ['image', 'c'], 'pair')).toThrow('identifier');
   });
-  it.each([[], ['a'], ['unknown', 'a'], ['__background__', 'a']])('rejects invalid selections %j', (ids) =>
-    expect(() => groupScreenshotLayers(fixture().state, ids, 'pair')).toThrow(),
+  it.each([[], ['a'], ['unknown', 'a'], ['__background__', 'a']].map((ids) => ({ ids })))(
+    'rejects invalid selections $ids',
+    ({ ids }) => expect(() => groupScreenshotLayers(fixture().state, ids, 'pair')).toThrow(),
   );
   it.each(['', '   ', 'x'.repeat(201)])('rejects an invalid group identifier', (id) =>
     expect(() => groupScreenshotLayers(fixture().state, ['a', 'b'], id)).toThrow(),
@@ -226,11 +227,13 @@ it('keeps real groups while pruning orphan members and rejects malformed persist
   pruneScreenshotGroups(state);
   expect(expandScreenshotGroups(state, ['a'])).toEqual(['a', 'b']);
   for (const groupId of [1, '', ' ', 'x'.repeat(201)])
-    expect(() => validateScreenshotGroups([{ id: 'a', groupId }])).toThrow('Invalid');
+    expect(() =>
+      validateScreenshotGroups(JSON.parse(JSON.stringify([{ ...state.composition![0]!, id: 'a', groupId }]))),
+    ).toThrow('Invalid');
   expect(() =>
     validateScreenshotGroups([
-      { id: '__background__', groupId: 'pair' },
-      { id: 'a', groupId: 'pair' },
+      { ...state.composition![0]!, id: '__background__', groupId: 'pair' },
+      { ...state.composition![0]!, id: 'a', groupId: 'pair' },
     ]),
   ).toThrow('Invalid');
 });

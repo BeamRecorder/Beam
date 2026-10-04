@@ -169,6 +169,12 @@ export function validateComposition(composition: ClipComposition): void {
     }
     if (
       isVisualClip(clip) &&
+      clip.appearance.frameTheme !== undefined &&
+      !['auto', 'light', 'dark'].includes(clip.appearance.frameTheme)
+    )
+      throw new CompositionEngineError('Invalid frame theme.');
+    if (
+      isVisualClip(clip) &&
       clip.appearance.phoneFrameFill !== undefined &&
       !isPhoneFrameFill(clip.appearance.phoneFrameFill)
     )

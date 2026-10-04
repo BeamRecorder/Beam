@@ -1,13 +1,14 @@
 import { watch } from 'vue';
 import type { Ref } from 'vue';
 import { isShapeClip, type ClipComposition } from '@beam/engine/shared/composition-types';
-import { addClip, deleteClip, setShapeLayerStyle } from '@beam/engine/commands/clip-engine';
+import { addClip, deleteClip, setShapeLayerStyle, setTransform } from '@beam/engine/commands/clip-engine';
 import { provideElementEditor } from './useElementEditor';
 
 export function useVideoElements(options: {
   composition: Ref<ClipComposition>;
   selectedId: Ref<string | null>;
   activeTab: Ref<string>;
+  canvasSize?: () => { width: number; height: number };
   currentTime: Ref<number>;
   isPlaying: Ref<boolean>;
   select: (id: string) => void;
@@ -18,6 +19,7 @@ export function useVideoElements(options: {
   addImage?: () => void | Promise<void>;
 }) {
   const editor = provideElementEditor({
+    canvasSize: options.canvasSize,
     addImage: options.addImage,
     addHighlight: options.addHighlight,
     addBlur: options.addBlur,
@@ -36,7 +38,11 @@ export function useVideoElements(options: {
       });
     },
     update: (id, patch) => {
-      options.composition.value = setShapeLayerStyle(options.composition.value, id, patch);
+      const { transform, ...style } = patch;
+      const composition = transform
+        ? setTransform(options.composition.value, id, transform)
+        : options.composition.value;
+      options.composition.value = setShapeLayerStyle(composition, id, style);
     },
     remove: (id) => {
       options.composition.value = deleteClip(options.composition.value, id);
@@ -50,7 +56,10 @@ export function useVideoElements(options: {
       !options.composition.value.clips.find((clip) => clip.id === options.selectedId.value)?.locked,
   });
   watch(options.activeTab, (tab) => {
-    if (tab !== 'clip') editor.drawingMode.value = false;
+    if (tab !== 'clip') {
+      editor.drawingMode.value = false;
+      editor.finishVector();
+    }
   });
   return editor;
 }

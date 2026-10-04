@@ -3,6 +3,7 @@ import type {
   BlurEffectMode,
   BlurEffectShape,
   ClipFrame,
+  ClipFrameTheme,
   ClipShadowMode,
   NormalizedCrop,
   NormalizedTransform,
@@ -34,6 +35,7 @@ export interface SelectedClipProperties {
   frame?: ClipFrame;
   frameTitle?: string;
   frameColor?: string;
+  frameTheme?: ClipFrameTheme;
   frameShowMenu?: boolean;
   frameShowScrollbars?: boolean;
   frameChromeScale?: number;

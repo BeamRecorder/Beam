@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { Pause, Play, RotateCcw, Square, Trash2 } from '@lucide/vue';
+import { Pause, Play, RotateCcw, Square, Trash2, TriangleAlert } from '@lucide/vue';
 import { computed, nextTick, ref, watch } from 'vue';
 import type { RecordingBarVisibility, RecordingPhase } from './recording-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import Button from '~/ui/button/Button.vue';
 import Throbber from '~/ui/throbber/Throbber.vue';
-import Beamy from '../../brand/Beamy/Beamy.vue';
 
 const { t } = useTranslate('RecorderBar');
 const props = withDefaults(
@@ -15,22 +14,18 @@ const props = withDefaults(
     visibility: RecordingBarVisibility;
     hoverOnlyActive?: boolean;
     busy?: boolean;
-    mascot?: boolean;
     preview?: boolean;
+    warning?: string;
   }>(),
-  { busy: false, mascot: false },
+  { busy: false, warning: '' },
 );
 const emit = defineEmits<{ stop: []; cancel: []; pause: []; restart: [] }>();
 const isPointerOver = ref(false);
-const isFocused = ref(false);
 const confirmingRestart = ref(false);
 const restartControl = ref<HTMLElement | null>(null);
 const confirmation = ref<HTMLElement | null>(null);
 const canPause = computed(() => !props.busy && ['recording', 'paused'].includes(props.phase));
 const finalizing = computed(() => props.busy || props.phase === 'finalizing');
-const mascotPhase = computed(() =>
-  canPause.value ? (props.phase === 'paused' ? 'paused' : 'recording') : 'preparing',
-);
 const askRestart = async () => {
   if (!canPause.value) return;
   confirmingRestart.value = true;
@@ -43,12 +38,6 @@ const closeConfirmation = async (restart = false) => {
   await nextTick();
   restartControl.value?.querySelector<HTMLButtonElement>('button')?.focus();
   if (accepted) emit('restart');
-};
-const focusOut = (event: FocusEvent) => {
-  isFocused.value =
-    event.relatedTarget instanceof Node &&
-    event.currentTarget instanceof HTMLElement &&
-    event.currentTarget.contains(event.relatedTarget);
 };
 watch(
   () => props.phase,
@@ -66,13 +55,12 @@ watch(
       'hover-only': visibility === 'hover-only' && hoverOnlyActive,
       'pointer-over': isPointerOver,
       confirming: confirmingRestart,
+      'has-warning': Boolean(warning),
       'is-preview': preview,
     }"
     :aria-label="t('recordingControls')"
     @pointerenter="isPointerOver = true"
     @pointerleave="isPointerOver = false"
-    @focusin="isFocused = true"
-    @focusout="focusOut"
     @keydown.esc.prevent="closeConfirmation()"
   >
     <div
@@ -140,7 +128,13 @@ watch(
           color="muted"
           size="xs"
         />
-        <template v-else>{{ recordingTime }}</template>
+        <template v-else>
+          {{ recordingTime }}
+          <span v-if="warning" class="recording-warning" role="alert" :title="warning" :aria-label="warning">
+            <TriangleAlert :size="12" class="warning-icon" aria-hidden="true" />
+            <span class="warning-label">{{ t('captureIssue') }}</span>
+          </span>
+        </template>
       </p>
       <div class="control-slot stop-slot">
         <Button
@@ -153,12 +147,6 @@ watch(
           @click="emit('stop')"
         >
           <template #icon>
-            <Beamy
-              v-if="mascot"
-              :phase="mascotPhase"
-              :size="36"
-              :active="visibility !== 'hover-only' || !hoverOnlyActive || isPointerOver || isFocused"
-            />
             <Square :size="18" aria-hidden="true" />
           </template>
         </Button>
@@ -217,6 +205,24 @@ watch(
   gap: 6px;
   width: 100%;
 }
+.recording-warning {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--color-error);
+  font-size: 10px;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+.warning-icon {
+  flex: none;
+}
+.warning-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .restart-prompt p {
   flex: 1;
   margin: 0;
@@ -240,6 +246,9 @@ watch(
 .recorder-bar.pointer-over,
 .recorder-bar:focus-within,
 .recorder-bar.confirming {
+  opacity: 1;
+}
+.recorder-bar.has-warning {
   opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {

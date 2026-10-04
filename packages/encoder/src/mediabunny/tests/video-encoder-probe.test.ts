@@ -66,7 +66,7 @@ beforeEach(() => {
   runtime.add.mockResolvedValue(undefined);
   runtime.finalize.mockImplementation(async () => {
     for (let i = 0; i < runtime.packets; i++)
-      runtime.options?.onEncodedPacket?.({} as import('mediabunny').EncodedPacket);
+      runtime.options?.onEncodedPacket?.({} as import('mediabunny').EncodedPacket, undefined);
     runtime.state = 'finalized';
   });
   runtime.cancel.mockImplementation(async () => {
@@ -75,10 +75,12 @@ beforeEach(() => {
   vi.stubGlobal(
     'OffscreenCanvas',
     class {
-      constructor(
-        readonly width: number,
-        readonly height: number,
-      ) {}
+      readonly width: number;
+      readonly height: number;
+      constructor(width: number, height: number) {
+        this.width = width;
+        this.height = height;
+      }
       getContext = runtime.getContext;
     },
   );

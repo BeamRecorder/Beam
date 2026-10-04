@@ -189,6 +189,7 @@ const captionEditing = useCaptionInlineEditing({
   onRender: renderOnce,
 });
 const elements = useCanvasElements({
+  canvas: () => canvasRef.value,
   bounds: () => cameraZoom.overlayWindowBounds.value,
   preview: () => outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas),
   clipIdAt: (event) => transformAndCrop.clipIdAt(event, canvasRef.value),
@@ -317,6 +318,7 @@ const renderCanvas = () => {
     drawCanvasScene(ctx);
     clipToggleTransition.blendPreviousFrame(ctx, logicalSize.value.width, logicalSize.value.height);
     engineMetrics.count('frames');
+    elements.refreshContrast();
   } finally {
     endMeasurement();
   }
@@ -354,13 +356,10 @@ const editCanvasContent = (event: MouseEvent) =>
     clipIdAt: (event) => transformAndCrop.clipIdAt(event, canvasRef.value, true),
     composition: () => props.composition,
     crop: (id) => emit('request:crop', id),
-    add: (event) => {
-      void addMenu.value?.open(event);
-    },
+    add: (event) => void addMenu.value?.open(event),
   });
-onUnmounted(() => frameScheduler.dispose());
-onUnmounted(() => runtimePreview.dispose());
 onUnmounted(() => {
+  [frameScheduler, runtimePreview].forEach((renderer) => renderer.dispose());
   const context = canvasRef.value?.getContext('2d') ?? null;
   disposeMediaShadowCache(context);
   disposeBlurEffect(context);
@@ -401,7 +400,7 @@ defineExpose({ viewportZoom, captureCurrentFrame });
       :targets="() => transformAndCrop.marqueeTargets.value"
       :selection="selectedClipIds"
       :show-selection-outlines="!isPlaying"
-      :disabled="isPlaying || isCropping || selectedZoom?.mode === 'manual'"
+      :disabled="elements.selectionDisabled.value"
       @select="emit('select:clips', $event)"
     >
       <div class="preview-frame" :style="{ '--preview-aspect-ratio': outputAspectRatio }">
@@ -420,7 +419,7 @@ defineExpose({ viewportZoom, captureCurrentFrame });
           'is-format-transitioning': isFormatTransitioning,
           'is-loading-covered': isCanvasCovered,
         }"
-      ></canvas>
+      />
       <slot name="composition-preview" :bounds="previewFrameStyle" />
       <EditorCanvasGuides :grid-visible="isGridVisible" :grid-style="previewFrameStyle" :guides="renderGuideLines" />
       <GlassHighlightSelection
@@ -466,7 +465,7 @@ defineExpose({ viewportZoom, captureCurrentFrame });
       />
       <EditorCanvasLayerSelection
         :clip="selectedTransformClip"
-        :editing-id="elements.editingId.value ?? captionEditing.editingCaptionId.value"
+        :editing-id="elements.selectionEditingId.value ?? captionEditing.editingCaptionId.value"
         :cropping="isCropping"
         :manual-zoom="selectedZoom?.mode === 'manual'"
         :muted="transformHandlesMuted"

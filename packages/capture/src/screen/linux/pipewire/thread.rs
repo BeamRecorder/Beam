@@ -55,6 +55,7 @@ pub(crate) struct PipewireCaptureRequest {
     pub(crate) metrics: Arc<ScreenCaptureMetrics>,
     pub(crate) repair_window_crop: bool,
     pub(crate) region: Option<ScreenRegion>,
+    pub(crate) hyprland_cursor: Option<super::super::hyprland::HyprlandCursor>,
     pub(crate) show_real_cursor: bool,
     pub(crate) target_fps: u32,
 }
@@ -72,6 +73,7 @@ impl PipewireCapture {
             metrics,
             repair_window_crop,
             region,
+            hyprland_cursor,
             show_real_cursor,
             target_fps,
         } = request;
@@ -115,6 +117,7 @@ impl PipewireCapture {
                     region,
                     show_real_cursor,
                     target_fps,
+                    hyprland_cursor,
                 );
                 let _ = finish_sender.send(SinkMessage::Finish);
                 result

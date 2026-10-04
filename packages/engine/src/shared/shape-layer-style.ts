@@ -1,5 +1,6 @@
 import { isElementText } from '@beam/engine/shared/element-text';
 import { isFreehandDrawing } from '@beam/engine/shared/freehand';
+import { isShapeVector } from './shape-vector-schema';
 import { isColorFill, type ColorFill } from '@beam/engine/shared/color-fill-types';
 import { SHAPE_CATALOG } from '@beam/engine/shared/shape-catalog';
 import type { ShapeLayerFamily, ShapeLayerPreset, ShapeLayerStyle } from '@beam/engine/shared/shape-layer-types';
@@ -51,9 +52,13 @@ export const shapeLayerFill = (value: Pick<ShapeLayerStyle, 'fill' | 'fillColor'
 export const normalizeShapeLayerStyle = (
   value: Partial<ShapeLayerStyle> | null | undefined,
 ): ShapeLayerStyle & { fillEnabled: boolean } => {
+  if (value?.vector != null && !isShapeVector(value.vector)) throw new TypeError('Invalid vector shape.');
   const family = value?.family && ['arrow', 'text', 'drawing'].includes(value.family) ? value.family : 'shape';
   const presets = family === 'shape' ? SHAPE_PRESETS : [defaultShapePresetFor(family)];
   return {
+    ...(value?.vector !== undefined
+      ? { vector: value.vector && isShapeVector(value.vector) ? value.vector : null }
+      : {}),
     ...(value?.text ? { text: value.text } : {}),
     ...(value?.drawing ? { drawing: value.drawing } : {}),
     family,
@@ -80,6 +85,7 @@ export const normalizeShapeLayerStyle = (
 };
 
 export const isShapeLayerStyle = (value: Partial<ShapeLayerStyle>) => {
+  if (value.vector != null && !isShapeVector(value.vector)) return false;
   if (value.text !== undefined && !isElementText(value.text)) return false;
   if (value.drawing !== undefined && !isFreehandDrawing(value.drawing)) return false;
   if (value.fill !== undefined && !isColorFill(value.fill)) return false;

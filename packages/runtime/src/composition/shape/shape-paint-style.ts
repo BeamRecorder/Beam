@@ -8,6 +8,7 @@ const fields: readonly (keyof ShapeLayerStyle)[] = [
   'fill',
   'text',
   'drawing',
+  'vector',
 ];
 const styles = new WeakMap<ShapeClip, CachedShapePaintStyle>();
 

@@ -67,8 +67,7 @@ impl FfmpegScreenSink {
             .as_ref()
             .filter(|_| capture_interactions)
             .map(|directory| InputTimeline::new(directory.clone()))
-            .transpose()?
-            .flatten();
+            .transpose()?;
         Ok(Self {
             capabilities,
             recording,

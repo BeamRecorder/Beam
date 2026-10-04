@@ -82,7 +82,7 @@ it('subscribes before declaring readiness and shares settings with presets enabl
   expect(panel.props('modelValue')).toMatchObject({ zoomMode: '3d', countdownSeconds: 3 });
   expect(panel.props('presets')).toEqual([{ value: 'default', label: 'defaultPreset' }]);
 });
-it.each(['off', '2d', '3d'] as const)(
+it.each(['off', '2d', '3d', 'glass'] as const)(
   'persists %s and desktop/countdown options through the owned IPC',
   async (zoomMode) => {
     const { panel } = await mountSettings();

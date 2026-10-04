@@ -18,10 +18,12 @@ mod linux {
         io::{self, BufWriter, Write},
         path::PathBuf,
         thread,
-        time::Duration,
+        time::{Duration, Instant},
     };
 
-    use capture::input::{InputKey, InputModifier, NativeInputEvent};
+    use capture::input::{
+        INPUT_HEARTBEAT_INTERVAL, InputHelperHeartbeat, InputKey, InputModifier, NativeInputEvent,
+    };
     use evdev::{Device, EventSummary, KeyCode, SynchronizationCode};
     use serde::Serialize;
 
@@ -132,6 +134,7 @@ mod linux {
         )?;
         output.write_all(b"\n")?;
         output.flush()?;
+        let mut last_heartbeat = Instant::now();
         loop {
             let mut emitted = false;
             for (device, motion) in &mut devices {
@@ -182,6 +185,11 @@ mod linux {
                     Err(error) if error.kind() == io::ErrorKind::WouldBlock => {}
                     Err(error) => return Err(error.into()),
                 }
+            }
+            if last_heartbeat.elapsed() >= INPUT_HEARTBEAT_INTERVAL {
+                write_stream_event(&mut output, &InputHelperHeartbeat::Heartbeat)?;
+                last_heartbeat = Instant::now();
+                emitted = true;
             }
             if emitted {
                 output.flush()?;
@@ -272,7 +280,7 @@ mod linux {
 
     fn write_stream_event(
         output: &mut impl Write,
-        event: &NativeInputEvent,
+        event: &impl Serialize,
     ) -> Result<(), Box<dyn std::error::Error>> {
         serde_json::to_writer(&mut *output, event)?;
         output.write_all(b"\n")?;

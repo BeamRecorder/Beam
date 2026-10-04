@@ -4,4 +4,5 @@ export interface ScreenshotAssetServices {
   fontSource(id: string): string;
   cursorPacks: readonly CursorPackDescriptor[];
   watermarkSource: string;
+  onTiming?(stage: string, durationMs: number): void;
 }

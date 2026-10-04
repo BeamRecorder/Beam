@@ -25,16 +25,14 @@ pub(super) struct InputTimeline {
 }
 
 impl InputTimeline {
-    pub(super) fn new(directory: PathBuf) -> Result<Option<Self>, CaptureError> {
-        let Some(monitor) = LinuxInputMonitor::start()? else {
-            return Ok(None);
-        };
-        Ok(Some(Self {
+    pub(super) fn new(directory: PathBuf) -> Result<Self, CaptureError> {
+        let monitor = LinuxInputMonitor::start()?;
+        Ok(Self {
             directory,
             monitor: Some(monitor),
             anchor: None,
             events: Vec::new(),
-        }))
+        })
     }
 
     pub(super) fn drain(

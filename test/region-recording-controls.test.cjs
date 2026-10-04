@@ -34,6 +34,11 @@ test('Linux settings explicitly disable unavailable shell hiding', () => {
     hideDesktopIcons: false,
   });
 });
+for (const zoomMode of ['off', '2d', '3d', 'glass'])
+  test(`accepts the ${zoomMode} region zoom algorithm through IPC`, () => {
+    const next = { ...settings, zoomMode };
+    assert.deepEqual(regionRecordingSettings(next, 'win32'), next);
+  });
 test('settings rejects malformed IPC values', () => {
   for (const value of [
     false,
@@ -42,6 +47,7 @@ test('settings rejects malformed IPC values', () => {
     {},
     { ...settings, cameraId: '' },
     { ...settings, microphoneId: 'a'.repeat(257) },
+    ...['4d', '', null, 1, {}].map((zoomMode) => ({ ...settings, zoomMode })),
     ...[-1, 11, 0.5, NaN, '3'].map((countdownSeconds) => ({
       ...settings,
       countdownSeconds,

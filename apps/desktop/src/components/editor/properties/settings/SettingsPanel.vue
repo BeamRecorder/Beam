@@ -5,6 +5,7 @@ import Select from '~/ui/select/Select.vue';
 import SettingsSection from '~/components/settings/SettingsSection.vue';
 import AppearanceSettings from '~/components/settings/AppearanceSettings.vue';
 import SpellCheckPreference from '~/components/settings/SpellCheckPreference.vue';
+import StoragePreferences from '~/components/settings/StoragePreferences.vue';
 import UpdateControls from '~/components/updates/UpdateControls.vue';
 import SocialLinks from '~/components/socials/SocialLinks.vue';
 import { useLocaleStore } from '~/stores/locale';
@@ -39,6 +40,7 @@ const { copied: isCopiedSysInfo, copy: copySystemInfo } = useCopySystemInformati
           @update:model-value="updateLocale"
         />
       </div>
+      <StoragePreferences />
     </SettingsSection>
     <SettingsSection :title="appearance('title')" :icon="Palette" class="appearance-setting">
       <AppearanceSettings :show-title="false" compact />

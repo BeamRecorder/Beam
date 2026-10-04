@@ -57,6 +57,14 @@ describe('Beamy lifecycle', () => {
     expect(artwork.props('blush')).toBe(false);
     expect(artwork.props('eyeColor')).toBeUndefined();
   });
+  it('turns green only on success and restores the accent on loading or failure', async () => {
+    const wrapper = setup('completed');
+    expect(wrapper.getComponent(BeamySvg).props('color')).toBe('var(--color-success)');
+    await wrapper.setProps({ phase: 'failed' });
+    expect(wrapper.getComponent(BeamySvg).props('color')).toBe('var(--color-primary)');
+    await wrapper.setProps({ phase: 'loading' });
+    expect(wrapper.getComponent(BeamySvg).props('color')).toBe('var(--color-primary)');
+  });
   it('keeps the SVG decorative, bounded and separate from its red recording light', async () => {
     const wrapper = setup('recording');
     expect(wrapper.attributes('aria-hidden')).toBe('true');
@@ -122,12 +130,18 @@ describe('Beamy lifecycle', () => {
     const wrapper = setup('completed');
     for (let ms = 0; ms <= 2200; ms += 50) tick(ms);
     await nextTick();
-    const settled = wrapper.html();
-    expect(callbacks.size).toBe(0);
+    const settled = wrapper.getComponent(BeamySvg).props('frame');
+    expect(settled.dots).toHaveLength(0);
+    expect(callbacks.size).toBe(1);
     await wrapper.setProps({ phase: 'completed' });
     document.dispatchEvent(new Event('visibilitychange'));
-    expect(callbacks.size).toBe(0);
-    expect(wrapper.html()).toBe(settled);
+    expect(callbacks.size).toBe(1);
+    expect(wrapper.getComponent(BeamySvg).props('frame')).toEqual(settled);
+    for (let ms = 2250; ms <= 4000; ms += 50) tick(ms);
+    await nextTick();
+    const alive = wrapper.getComponent(BeamySvg).props('frame');
+    expect(alive.eyes).not.toEqual(settled.eyes);
+    expect(alive.dots).toHaveLength(0);
     await wrapper.setProps({ phase: 'processing' });
     expect(callbacks.size).toBe(1);
     await wrapper.setProps({ phase: 'completed' });
@@ -138,7 +152,11 @@ describe('Beamy lifecycle', () => {
     const wrapper = setup('completed');
     expect(callbacks.size).toBe(0);
     motionChanged({ matches: false } as MediaQueryListEvent);
-    expect(callbacks.size).toBe(0);
+    expect(callbacks.size).toBe(1);
+    for (let ms = 0; ms <= 500; ms += 50) tick(ms);
+    await nextTick();
+    expect(wrapper.getComponent(BeamySvg).props('frame').dots).toHaveLength(0);
+    expect(wrapper.getComponent(BeamySvg).props('color')).toBe('var(--color-success)');
     await wrapper.setProps({ phase: 'processing' });
     expect(callbacks.size).toBe(1);
     motionChanged({ matches: true } as MediaQueryListEvent);

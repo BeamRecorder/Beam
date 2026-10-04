@@ -8,6 +8,8 @@ withDefaults(defineProps<{ mode?: CaptureMode }>(), { mode: 'studio' });
 </template>
 <style scoped>
 .project-mode-icon {
+  display: block;
+  align-self: center;
   width: 16px;
   height: 16px;
   flex: 0 0 16px;

@@ -56,6 +56,10 @@ export function drawFreehand(
     ctx.stroke();
     ctx.shadowColor = 'transparent';
   }
+  if (clip.fillEnabled === false) {
+    ctx.restore();
+    return;
+  }
   ctx.strokeStyle = backgroundFillStyle(ctx, shapeLayerFill(clip), {
     x: 0,
     y: 0,

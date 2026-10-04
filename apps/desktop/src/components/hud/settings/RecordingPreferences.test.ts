@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 vi.mock('~/api/capture', () => ({ capture: { platform: 'win32' } }));
+vi.mock('~/components/settings/StoragePreferences.vue', () => ({ default: { template: '<div />' } }));
 import { setCurrentLocale } from '~/i18n';
 import RecordingPreferences from './RecordingPreferences.vue';
 import Select from '~/ui/select/Select.vue';

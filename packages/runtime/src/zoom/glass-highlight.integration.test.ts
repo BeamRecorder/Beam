@@ -184,9 +184,9 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('glass zoom pixels in rea
       renderCompositionFrame(ca, null, snapshot, 0.5, { source, width: 256, height: 144, preRendered: true });
       const state = createStillDocument('still', 'source.png', 256, 144).state;
       state.canvas.watermark!.enabled = false;
-      state.image.appearance.shadowEnabled = false;
+      state.image.appearance.shadowSize = 'none';
       state.image.appearance.cornerRadius = 0;
-      state.zooms = [{ ...zoom, kind: 'zoom', name: 'Lens', mode: 'manual', endMs: 1 }];
+      state.zooms = [{ ...zoom, kind: 'zoom', name: 'Lens', enabled: true, mode: 'manual', endMs: 1 }];
       insertScreenshotLayer(state, 'lens');
       const b = new OffscreenCanvas(256, 144),
         cb = b.getContext('2d')!;

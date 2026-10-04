@@ -38,6 +38,7 @@ function shortcutPreferences() {
         category: 'teleprompter',
       },
     },
+    directories: require('../../apps/desktop/electron/storage/directory-settings.cjs').normalizeDirectorySettings(),
     backgroundPresets: { colors: [], gradients: [] },
     extras: {},
   };
@@ -417,5 +418,34 @@ test('unrelated or identical preference edits do not touch OS startup registrati
   await handlers.get('preferences:update')({}, { theme: 'dark' });
   await handlers.get('preferences:update')({}, { launchAtStartup: true });
   await handlers.get('preferences:reset')({}, ['alwaysOnTop']);
+  await cleanup();
+});
+
+test('ordinary preference IPC cannot bypass the native directory picker and resets preserve registered roots', async () => {
+  const handlers = new Map(),
+    preferences = shortcutPreferences();
+  preferences.directories.projects = { directory: '/library', recent: ['/library'] };
+  preferences.directories.exports = {
+    directory: '/exports',
+    lastDirectory: '/previous',
+    recent: ['/exports', '/previous'],
+  };
+  const store = storeWith(preferences);
+  const cleanup = registerPreferencesIpc({
+    ipcMain: ipcMainWith(handlers),
+    BrowserWindow: { getAllWindows: () => [] },
+    globalShortcut: { unregisterAll() {}, register() {} },
+    store,
+  });
+  await assert.rejects(handlers.get('preferences:update')({}, { directories: {} }), /directory picker/);
+  await assert.rejects(
+    handlers.get('preferences:update-batch')({}, [{ theme: 'dark' }, { directories: {} }]),
+    /directory picker/,
+  );
+  assert.equal(store.read().theme, preferences.theme);
+  for (const keys of [['directories'], undefined]) {
+    const saved = await handlers.get('preferences:reset')({}, keys);
+    assert.deepEqual(saved.directories, preferences.directories);
+  }
   await cleanup();
 });

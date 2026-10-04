@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import type { CaptureMode } from '@beam/engine/capture/capture-mode';
 import { Camera, CameraOff, ScrollText } from '@lucide/vue';
 import type { EditorLoadingProgress, RecorderLauncherContext } from '~/api/types/capture-api';
 import Button from '~/ui/button/Button.vue';
@@ -21,6 +22,7 @@ import { useHudPopoverViewport } from './useHudPopoverViewport';
 const props = withDefaults(
   defineProps<{
     embedded?: boolean;
+    embeddedCaptureMode?: CaptureMode;
     showTopbar?: boolean;
     preparingEditor?: boolean;
     editorLoadingProgress?: EditorLoadingProgress;
@@ -43,6 +45,7 @@ const emit = defineEmits([
   'dismiss-launcher',
   'popover-toggle',
   'cancel-editor-opening',
+  'update:capture-mode',
 ]);
 const popoverViewport = useHudPopoverViewport(props.embedded);
 const presetError = ref('');
@@ -109,6 +112,18 @@ const issues = computed(() => {
 const captureDisabled = computed(
   () => isBusy.value || choosingSource.value || isRecording.value || interactionAccess.requesting.value,
 );
+const embeddedTarget = ref<HudCaptureTarget>('screen');
+watch(
+  () => props.embeddedCaptureMode,
+  (mode) => {
+    if (props.embedded && mode) captureMode.value = mode;
+  },
+  { immediate: true },
+);
+const changeMode = (mode: CaptureMode) => {
+  emit('focus-feature', 'tabs');
+  emit('update:capture-mode', mode);
+};
 const togglePopover = (opened: boolean) => {
   handleDropdownToggle(opened);
   emit('popover-toggle', activeDropdowns.value > 0);
@@ -116,6 +131,10 @@ const togglePopover = (opened: boolean) => {
 onBeforeUnmount(() => emit('popover-toggle', false));
 const choose = (target: HudCaptureTarget) => {
   emit('focus-feature', 'source');
+  if (props.embedded) {
+    embeddedTarget.value = target;
+    emit('focus-feature', target);
+  }
   if (!props.embedded)
     void chooseCapture(target).catch((reason) => {
       presetError.value = reason instanceof Error ? reason.message : String(reason);
@@ -185,16 +204,25 @@ const choose = (target: HudCaptureTarget) => {
             labels
             stacked
             :disabled="isBusy || choosingSource || Boolean(recorderLauncherContext)"
-            @update:model-value="emit('focus-feature', 'tabs')"
+            @update:model-value="changeMode"
           />
-          <HudCaptureCards :selected="captureTarget" :disabled="captureDisabled" @choose="choose" />
+          <HudCaptureCards
+            :selected="embedded ? embeddedTarget : captureTarget"
+            :disabled="captureDisabled"
+            @choose="choose"
+          />
         </section>
         <aside class="hud-devices" :class="{ instant: captureMode === 'instant' }">
           <template v-if="captureMode !== 'screenshot'">
             <Select
               size="compact"
               :option-height="28"
-              @toggle="togglePopover"
+              @toggle="
+                (opened) => {
+                  togglePopover(opened);
+                  if (opened) emit('focus-feature', 'camera');
+                }
+              "
               v-model="selectedCameraId"
               :options="cameraOptions"
               :label="t('camera')"
@@ -211,7 +239,12 @@ const choose = (target: HudCaptureTarget) => {
             <Select
               size="compact"
               :option-height="28"
-              @toggle="togglePopover"
+              @toggle="
+                (opened) => {
+                  togglePopover(opened);
+                  if (opened) emit('focus-feature', 'mic');
+                }
+              "
               v-model="selectedMicId"
               :options="micOptions"
               :label="t('microphone')"
@@ -229,7 +262,12 @@ const choose = (target: HudCaptureTarget) => {
             <Select
               size="compact"
               :option-height="28"
-              @toggle="togglePopover"
+              @toggle="
+                (opened) => {
+                  togglePopover(opened);
+                  if (opened) emit('focus-feature', 'systemAudio');
+                }
+              "
               v-model="systemAudioMode"
               :options="systemAudioOptions"
               :label="t('systemAudio')"

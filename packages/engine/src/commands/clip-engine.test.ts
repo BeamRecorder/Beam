@@ -230,6 +230,18 @@ describe('color layer engine operations', () => {
 });
 
 describe('phone frame fill validation', () => {
+  it.each(['auto', 'light', 'dark'] as const)('accepts a persisted %s Safari appearance', (frameTheme) => {
+    const composition = visualPresetComposition();
+    const clip = composition.clips.find((entry): entry is VisualClip => entry.id === 'video-clip')!;
+    clip.appearance = { ...clip.appearance, frame: 'safari', frameTheme };
+    expect(() => validateComposition(composition)).not.toThrow();
+  });
+  it('rejects an invalid persisted browser theme', () => {
+    const composition = visualPresetComposition();
+    const clip = composition.clips.find((entry): entry is VisualClip => entry.id === 'video-clip')!;
+    Object.assign(clip.appearance, { frameTheme: 'system' });
+    expect(() => validateComposition(composition)).toThrow('Invalid frame theme');
+  });
   const validFills: Array<[string, PhoneFrameFill]> = [
     ['color', { kind: 'color', color: '#0f172a' }],
     [

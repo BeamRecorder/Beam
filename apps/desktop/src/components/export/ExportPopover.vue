@@ -19,6 +19,7 @@ import { safeExportErrorMessage, technicalExportError } from '@beam/encoder/medi
 import { buildBeamExportReport } from '@beam/encoder/export-diagnostics';
 import type { DesktopExportRequest } from './experimental-export-types';
 import { useExportBackendPreference } from './useExportBackendPreference';
+import DirectoryPreference from '~/components/settings/DirectoryPreference.vue';
 
 const { t, locale } = useTranslate('ExportPopover');
 
@@ -299,6 +300,7 @@ const run = async () => {
         </div>
 
         <template v-else>
+          <DirectoryPreference kind="exports" compact :disabled="isChoosingDestination" />
           <div class="field">
             <span class="field-label">{{ t('format') }}</span>
             <ButtonGroup full>

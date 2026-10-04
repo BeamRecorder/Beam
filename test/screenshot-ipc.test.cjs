@@ -36,17 +36,6 @@ const validScreenshotState = (patch = {}) => {
     canvas: patch.canvas === undefined ? state.canvas : { ...state.canvas, ...patch.canvas },
   };
 };
-const validShape = (patch = {}) => ({
-  kind: 'shape',
-  family: 'arrow',
-  id: 'shape-1',
-  transform: { x: 0.3, y: 0.3, width: 0.4, height: 0.16 },
-  enabled: true,
-  rotation: 0,
-  borderWidth: 0,
-  shadowBlur: 32,
-  ...patch,
-});
 const catalog = {
   sources: [{ id: 'display-1', kind: 'display', isDefault: true }],
   capabilities: {
@@ -541,13 +530,15 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
     const webp = asArrayBuffer(webpBytes);
 
     assert.equal(
-      await fixture.invoke('screenshot:export', {
-        id: screenshot.id,
-        bytes: png,
-        format: 'png',
-        copy: true,
-      }),
-      null,
+      (
+        await fixture.invoke('screenshot:export', {
+          id: screenshot.id,
+          bytes: png,
+          format: 'png',
+          copy: true,
+        })
+      ).status,
+      'copied',
     );
     assert.deepEqual(fixture.calls.imageBuffers[0], pngBytes);
     assert.equal(fixture.calls.clipboardWrites.length, 1);
@@ -600,12 +591,14 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
     const outputFile = path.join(fixture.outputDirectory, 'final.png');
     fixture.setDialogResult({ canceled: false, filePath: outputFile });
     assert.equal(
-      await fixture.invoke('screenshot:export', {
-        id: screenshot.id,
-        bytes: png,
-        format: 'png',
-        copy: false,
-      }),
+      (
+        await fixture.invoke('screenshot:export', {
+          id: screenshot.id,
+          bytes: png,
+          format: 'png',
+          copy: false,
+        })
+      ).path,
       outputFile,
     );
     assert.deepEqual(fs.readFileSync(outputFile), pngBytes);
@@ -616,12 +609,14 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
     const outputWebpFile = path.join(fixture.outputDirectory, 'final.webp');
     fixture.setDialogResult({ canceled: false, filePath: outputWebpFile });
     assert.equal(
-      await fixture.invoke('screenshot:export', {
-        id: screenshot.id,
-        bytes: webp,
-        format: 'webp',
-        copy: false,
-      }),
+      (
+        await fixture.invoke('screenshot:export', {
+          id: screenshot.id,
+          bytes: webp,
+          format: 'webp',
+          copy: false,
+        })
+      ).path,
       outputWebpFile,
     );
     assert.deepEqual(fs.readFileSync(outputWebpFile), webpBytes);
@@ -630,13 +625,15 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
     const canceledFile = path.join(fixture.outputDirectory, 'canceled.webp');
     fixture.setDialogResult({ canceled: true, filePath: undefined });
     assert.equal(
-      await fixture.invoke('screenshot:export', {
-        id: screenshot.id,
-        bytes: webp,
-        format: 'webp',
-        copy: false,
-      }),
-      null,
+      (
+        await fixture.invoke('screenshot:export', {
+          id: screenshot.id,
+          bytes: webp,
+          format: 'webp',
+          copy: false,
+        })
+      ).status,
+      'cancelled',
     );
     assert.equal(fs.existsSync(canceledFile), false);
     assert.equal(fixture.calls.dialogs.length, 3);
@@ -672,7 +669,7 @@ test('does not resolve image copy before the asynchronous clipboard write comple
     assert.equal(completed, false);
     assert.equal(fixture.calls.clipboardWrites.length, 0);
     release();
-    assert.equal(await pending, null);
+    assert.equal((await pending).status, 'copied');
     assert.equal(fixture.calls.clipboardWrites.length, 1);
   } finally {
     release?.();

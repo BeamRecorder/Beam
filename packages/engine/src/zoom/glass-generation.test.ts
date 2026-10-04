@@ -3,7 +3,12 @@ import { buildAutomaticGlassElements, isAutomaticZoom } from './glass-generation
 import { createManualZoom } from './manual-zoom';
 import { ZOOM_DEPTH_SCALES } from './zoom-types';
 import type { GlassGenerationInputs } from './glass-generation-types';
-const click = (timeMs: number, cx = 0.5, cy = 0.5, interactionType = 'click') => ({ timeMs, cx, cy, interactionType });
+const click = (
+  timeMs: number,
+  cx = 0.5,
+  cy = 0.5,
+  interactionType: GlassGenerationInputs['telemetry'][number]['interactionType'] = 'click',
+): GlassGenerationInputs['telemetry'][number] => ({ timeMs, cx, cy, interactionType });
 const inputs = (telemetry: GlassGenerationInputs['telemetry']): GlassGenerationInputs => ({
   telemetry,
   sessionId: 'test',

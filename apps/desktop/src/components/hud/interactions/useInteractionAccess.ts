@@ -18,10 +18,12 @@ export function useInteractionAccess(platform: string = window.capture?.platform
   const enabled = ref(false);
   const noticeDismissed = ref(false);
   const requesting = ref(false);
+  let autoResumeAttempted = false;
 
   const hydrate = (preferences: PreferenceSettings) => {
     enabled.value = preferences.recordingInteractions.enabled;
     noticeDismissed.value = preferences.recordingInteractions.noticeDismissed;
+    if (!enabled.value) autoResumeAttempted = false;
   };
 
   const refresh = async () => {
@@ -33,7 +35,6 @@ export function useInteractionAccess(platform: string = window.capture?.platform
         shortcuts: false,
         recordsText: false,
       };
-      enabled.value = false;
       return;
     }
     status.value = await window.capture.inputAccessStatus();
@@ -41,11 +42,15 @@ export function useInteractionAccess(platform: string = window.capture?.platform
       platform === 'linux' &&
       enabled.value &&
       noticeDismissed.value &&
-      status.value.state === 'permission-required'
+      !autoResumeAttempted &&
+      ['permission-required', 'installation-required'].includes(status.value.state)
     ) {
+      autoResumeAttempted = true;
       await request();
       return;
     }
+    // A stopped Linux broker does not revoke the user's saved recording choice.
+    if (platform === 'linux') return;
     if (status.value.state !== 'available' && enabled.value) {
       enabled.value = false;
       const failed = status.value.state === 'denied' || Boolean(status.value.error);
@@ -61,6 +66,7 @@ export function useInteractionAccess(platform: string = window.capture?.platform
 
   const request = async () => {
     if (!window.capture?.requestInputAccess || requesting.value) return;
+    if (platform === 'linux') autoResumeAttempted = true;
     requesting.value = true;
     try {
       status.value = await window.capture.requestInputAccess();
@@ -76,20 +82,11 @@ export function useInteractionAccess(platform: string = window.capture?.platform
           message: error instanceof Error ? error.message : t('inputAccessFailed'),
         },
       };
-      enabled.value = false;
-      noticeDismissed.value = false;
-      try {
-        await capture.updatePreferences({
-          recordingInteractions: { enabled: false, noticeDismissed: false },
-        });
-      } catch {
-        // Preserve the access failure even if preference persistence also fails.
-      }
-      return;
     } finally {
       requesting.value = false;
     }
     const available = status.value.state === 'available';
+    if (!available && platform === 'linux') return;
     enabled.value = available;
     if (available) noticeDismissed.value = true;
     else if (status.value.state === 'denied' || status.value.error) noticeDismissed.value = false;
@@ -116,6 +113,9 @@ export function useInteractionAccess(platform: string = window.capture?.platform
   };
 
   const recordingEnabled = computed(() => enabled.value && status.value.state === 'available');
+  const recordingRequested = computed(() =>
+    platform === 'linux' ? enabled.value && noticeDismissed.value : recordingEnabled.value,
+  );
 
   return {
     status,
@@ -123,6 +123,7 @@ export function useInteractionAccess(platform: string = window.capture?.platform
     noticeDismissed,
     requesting,
     recordingEnabled,
+    recordingRequested,
     hydrate,
     refresh,
     request,

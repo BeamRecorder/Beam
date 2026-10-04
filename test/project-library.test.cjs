@@ -178,3 +178,12 @@ function expectProject(project, mode) {
     hasMicrophone: false,
   };
 }
+
+test('lists and renames screenshots with the current composition thumbnail instead of the source', (t) => {
+  const { library, screenshots, screenshot } = fixture(t);
+  fs.writeFileSync(path.join(screenshots.directoryFor(screenshot.id), 'thumbnail.webp'), 'edited composition');
+  const expected = screenshots.readSummary(screenshot.id).thumbnailSrc;
+  assert.match(expected, /thumbnail\.webp\?v=/);
+  assert.equal(library.list().find((project) => project.id === screenshot.id).thumbnailSrc, expected);
+  assert.equal(library.rename(screenshot.id, 'Updated', 'screenshot').thumbnailSrc, expected);
+});

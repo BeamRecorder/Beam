@@ -6,31 +6,50 @@ const { createScreenshotStore } = require('../screenshot/screenshot-store.cjs');
 const { createCatalogDatabase } = require('./project-catalog-database.cjs');
 const { validatePageRequest, validSummary, UUID } = require('./project-catalog-page.cjs');
 const { fileStamp, watchPaths, validWatchPaths, dependencyStamp } = require('./project-catalog-files.cjs');
+const { rootKey, safePath } = require('./project-media-locations.cjs');
 
-function createProjectCatalogIndex(root) {
+function createProjectCatalogIndex(root, { roots = [root] } = {}) {
   const database = createCatalogDatabase(root);
   // The main process owns startup repairs. This worker only indexes metadata.
-  const videos = createProjectStore(root, { category: 'studio', repairMetadata: false });
-  const screenshots = createScreenshotStore(path.join(root, 'screenshot'));
+  const videos = createProjectStore(root, { category: 'studio', repairMetadata: false, roots: () => roots });
+  const screenshots = createScreenshotStore(path.join(root, 'screenshot'), {
+    roots: () => roots.map((root) => path.join(root, 'screenshot')),
+  });
   let lastRefresh = 0;
   let metrics = { scanned: 0, rebuilt: 0, reused: 0 };
+  const candidateRoot = (directory) =>
+    roots
+      .filter((root) => safePath(root, path.relative(root, directory)) === directory)
+      .sort((a, b) => b.length - a.length)[0];
+  const candidateKey = (candidate) =>
+    candidate.root === root
+      ? path.relative(root, candidate.file)
+      : `${rootKey(candidate.root)}/${path.relative(candidate.root, candidate.file)}`;
   const candidates = async () => {
     const entries = videos
       .listDirectories()
-      .map((directory) => ({ directory, file: path.join(directory, 'project.json') }));
-    try {
-      for (const entry of await fs.readdir(path.join(root, 'screenshot'), { withFileTypes: true })) {
-        if (!entry.isDirectory() || !UUID.test(entry.name)) continue;
-        const directory = screenshots.directoryFor(entry.name);
-        entries.push({ directory, file: path.join(directory, 'screenshot.json'), screenshotId: entry.name });
+      .map((directory) => ({ directory, root: candidateRoot(directory), file: path.join(directory, 'project.json') }));
+    const screenshotIds = new Set();
+    for (const directoryRoot of roots)
+      try {
+        for (const entry of await fs.readdir(path.join(directoryRoot, 'screenshot'), { withFileTypes: true })) {
+          if (!entry.isDirectory() || !UUID.test(entry.name) || screenshotIds.has(entry.name)) continue;
+          screenshotIds.add(entry.name);
+          const directory = screenshots.directoryFor(entry.name);
+          entries.push({
+            directory,
+            root: directoryRoot,
+            file: path.join(directory, 'screenshot.json'),
+            screenshotId: entry.name,
+          });
+        }
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
       }
-    } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
-    }
     return entries;
   };
   const updateCandidate = async (candidate, force) => {
-    const key = path.relative(root, candidate.file);
+    const key = candidateKey(candidate);
     let sourceStamp = await fileStamp(candidate.file, true);
     if (!sourceStamp) return { removed: key };
     const cached = database.get(key);
@@ -39,9 +58,9 @@ function createProjectCatalogIndex(root) {
         const paths = JSON.parse(cached.dependency_paths);
         if (
           paths !== null &&
-          validWatchPaths(root, paths) &&
+          validWatchPaths(candidate.root, paths) &&
           validSummary(JSON.parse(cached.summary)) &&
-          cached.dependency_stamp === (await dependencyStamp(root, paths))
+          cached.dependency_stamp === (await dependencyStamp(candidate.root, paths))
         ) {
           metrics.reused++;
           return {};
@@ -71,17 +90,23 @@ function createProjectCatalogIndex(root) {
       sourceStamp = after;
     }
     if (!validSummary(summary)) return { removed: key };
-    const paths = watchPaths(root, candidate.directory, manifest);
+    const paths = watchPaths(candidate.root, candidate.directory, manifest);
     metrics.rebuilt++;
     return {
-      update: { key, summary, sourceStamp, watchPaths: paths, dependencyStamp: await dependencyStamp(root, paths) },
+      update: {
+        key,
+        summary,
+        sourceStamp,
+        watchPaths: paths,
+        dependencyStamp: await dependencyStamp(candidate.root, paths),
+      },
     };
   };
   const refresh = async (force) => {
     metrics = { scanned: 0, rebuilt: 0, reused: 0 };
     const previous = database.keys();
     const entries = await candidates();
-    const present = new Set(entries.map((entry) => path.relative(root, entry.file)));
+    const present = new Set(entries.map(candidateKey));
     for (let offset = 0; offset < entries.length; offset += 4) {
       const batch = await Promise.all(
         entries.slice(offset, offset + 4).map(async (candidate) => {
@@ -95,7 +120,7 @@ function createProjectCatalogIndex(root) {
               error instanceof SyntaxError ||
               error.message.startsWith('Invalid screenshot')
             )
-              return { removed: path.relative(root, candidate.file) };
+              return { removed: candidateKey(candidate) };
             throw error;
           }
         }),

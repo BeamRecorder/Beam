@@ -70,6 +70,7 @@ const select = (id: string, close: () => void) => {
         ><PopoverMenuList :items="menu.items" @select="select($event, close)" @dismiss="close"
       /></template>
     </Popover>
+    <slot />
   </div>
 </template>
 <style scoped>

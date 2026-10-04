@@ -8,6 +8,17 @@ describe('toastStore', () => {
     vi.useFakeTimers();
   });
 
+  it('keeps different output status badges separate while deduplicating matching previews', () => {
+    const store = useToastStore();
+    const preview = { kind: 'image', src: 'output.png', alt: 'Output', status: 'success' } as const;
+    store.success('Output', 0, undefined, { preview });
+    store.success('Output', 0, undefined, { preview });
+    store.success('Output', 0, undefined, { preview: { ...preview, status: 'error' } });
+    expect(store.toasts).toHaveLength(2);
+    expect(store.toasts[0].count).toBe(2);
+    expect(store.toasts[1].preview?.status).toBe('error');
+  });
+
   it('adds all supported toast types and removes them automatically', () => {
     const store = useToastStore();
     store.add('Info', 'info', 1000);

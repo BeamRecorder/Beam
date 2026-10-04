@@ -138,6 +138,9 @@ contextBridge.exposeInMainWorld(
     cancelScreenRegion: () => ipcRenderer.send('screen-region:cancel'),
     getWindowBounds: () => ipcRenderer.invoke('window:bounds'),
     getPreferences: () => ipcRenderer.invoke('preferences:get'),
+    getDirectories: () => ipcRenderer.invoke('directories:get'),
+    chooseDirectory: (kind) => ipcRenderer.invoke('directories:choose', kind),
+    selectDirectory: (request) => ipcRenderer.invoke('directories:select', request),
     updateBackgroundCatalog: (request) => ipcRenderer.invoke('preferences:background-catalog', request),
     updatePreferences: (patch) => ipcRenderer.invoke('preferences:update', patch),
     updatePreferencesBatch: (patches) => ipcRenderer.invoke('preferences:update-batch', patches),
@@ -152,11 +155,17 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.on('preferences:shortcut', callback);
       return () => ipcRenderer.removeListener('preferences:shortcut', callback);
     },
+    onProjectLocationsChanged: (listener) => {
+      const callback = () => listener();
+      ipcRenderer.on('projects:locations-changed', callback);
+      return () => ipcRenderer.removeListener('projects:locations-changed', callback);
+    },
     captureScreenshot: (options) => ipcRenderer.invoke('screenshot:capture', options),
     createScreenshotFromCanvas: (input) => ipcRenderer.invoke('screenshot:create-from-canvas', input),
     getScreenshot: (id) => ipcRenderer.invoke('screenshot:get', id),
     listScreenshots: () => ipcRenderer.invoke('screenshot:list'),
     saveScreenshot: (id, state, history) => ipcRenderer.invoke('screenshot:save', { id, state, history }),
+    saveScreenshotThumbnail: (id, input) => ipcRenderer.invoke('screenshot:save-thumbnail', { id, ...input }),
     openScreenshot: (id, options) => ipcRenderer.invoke('screenshot:open', id, options),
     exportScreenshot: (id, bytes, format, copy) => ipcRenderer.invoke('screenshot:export', { id, bytes, format, copy }),
     getEditorPresets: (kind = 'video') =>

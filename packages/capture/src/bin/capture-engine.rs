@@ -333,13 +333,22 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
                 "manifestPath": manifest_path,
             }))
         }
-        Command::Status => Ok(serde_json::json!({
-            "state": engine.state(),
-            "sessionId": engine.session.as_ref().map(RecordingSession::session_id),
-            "manifestPath": engine.session.as_ref().map(RecordingSession::manifest_path),
-            "systemAudioLevel": engine.session.as_ref().and_then(RecordingSession::system_audio_level),
-            "screenAvailable": engine.session.as_ref().is_none_or(RecordingSession::screen_available),
-        })),
+        Command::Status => {
+            let input_capture_error = engine
+                .session
+                .as_mut()
+                .map(RecordingSession::input_capture_error)
+                .transpose()?
+                .flatten();
+            Ok(serde_json::json!({
+                "state": engine.state(),
+                "sessionId": engine.session.as_ref().map(RecordingSession::session_id),
+                "manifestPath": engine.session.as_ref().map(RecordingSession::manifest_path),
+                "systemAudioLevel": engine.session.as_ref().and_then(RecordingSession::system_audio_level),
+                "screenAvailable": engine.session.as_ref().is_none_or(RecordingSession::screen_available),
+                "inputCaptureError": input_capture_error,
+            }))
+        }
         Command::StartSystemAudioPreview => {
             if !matches!(
                 engine.state(),

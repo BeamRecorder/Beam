@@ -14,6 +14,7 @@ export function useRecordingHealth(
   let polling = false;
   let generation = 0;
   let failureHandled = false;
+  let inputFailureHandled = false;
 
   const handleFailure = (message: string) => {
     if (failureHandled || phase.value === 'idle' || phase.value === 'finalizing') return;
@@ -37,6 +38,10 @@ export function useRecordingHealth(
       const status = await capture.status();
       if (currentGeneration !== generation) return;
       if (status.screenAvailable === false) handleFailure('Screen sharing ended.');
+      else if (status.inputCaptureError && !inputFailureHandled) {
+        inputFailureHandled = true;
+        error.value = status.inputCaptureError.message;
+      }
     } catch {
       // A transient status failure must not interrupt an otherwise healthy recording.
     } finally {
@@ -48,6 +53,7 @@ export function useRecordingHealth(
     if (timer !== null) return;
     generation += 1;
     failureHandled = false;
+    inputFailureHandled = false;
     timer = window.setInterval(() => void check(), 250);
     void check();
   };
@@ -57,6 +63,7 @@ export function useRecordingHealth(
     if (timer !== null) window.clearInterval(timer);
     timer = null;
     failureHandled = false;
+    inputFailureHandled = false;
   };
 
   return { registerSystemAudioRecorder, start, reset };

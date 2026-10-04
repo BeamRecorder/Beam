@@ -34,6 +34,16 @@ const regionKeys = [
   'captureOnly',
 ];
 describe.each(SUPPORTED_LOCALES)('%s recorder translations', (locale) => {
+  it('uses the editor Loupe label in the shared capture settings', () => {
+    const label = messages[`./${locale}/core.json`].default.QuickSnipCropBar.loupe;
+    expect(label).toBeTruthy();
+    expect(label).toBe(messages[`./${locale}/editor.json`].default.GlassHighlight.loupe);
+  });
+  it('translates the compact recording issue warning', () => {
+    const text = messages[`./${locale}/core.json`].default.RecorderBar;
+    expect(text.captureIssue).toBeTruthy();
+    if (locale !== 'en') expect(text.captureIssue).not.toBe('Capture issue');
+  });
   it('translates the countdown Cancel button', () => {
     const text = messages[`./${locale}/core.json`].default.RecorderBar;
     expect(text.cancelCountdown).toBeTruthy();

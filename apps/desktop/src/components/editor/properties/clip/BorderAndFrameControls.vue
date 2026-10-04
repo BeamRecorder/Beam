@@ -7,7 +7,7 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import Input from '~/ui/input/Input.vue';
 import Accordion from '~/ui/accordion/Accordion.vue';
-import type { ClipFrame } from '@beam/engine/shared/composition-types';
+import type { ClipFrame, ClipFrameTheme } from '@beam/engine/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
 import PhoneFrameFillControls from './PhoneFrameFillControls.vue';
@@ -22,6 +22,7 @@ const props = defineProps<{
   frame?: ClipFrame;
   frameTitle?: string;
   frameColor?: string;
+  frameTheme?: ClipFrameTheme;
   frameShowMenu?: boolean;
   frameShowScrollbars?: boolean;
   frameChromeScale?: number;
@@ -37,6 +38,7 @@ const emit = defineEmits<{
       frame?: ClipFrame;
       frameTitle?: string;
       frameColor?: string;
+      frameTheme?: ClipFrameTheme;
       frameShowMenu?: boolean;
       frameShowScrollbars?: boolean;
       frameChromeScale?: number;
@@ -125,6 +127,20 @@ const selectFrameType = (type: 'desktop' | 'phone') =>
               >{{ item.label }}</Button
             >
           </ButtonGroup>
+          <template v-if="activeFrame === 'safari'">
+            <span class="sub-label">{{ t('frameTheme') }}</span>
+            <ButtonGroup full variant="neutral" size="xs" role="group" :aria-label="t('frameTheme')">
+              <Button
+                v-for="mode in ['auto', 'light', 'dark'] as const"
+                :key="mode"
+                :variant="(frameTheme ?? 'auto') === mode ? 'selected' : 'ghost'"
+                size="xs"
+                :aria-pressed="(frameTheme ?? 'auto') === mode"
+                @click="emit('update', { frameTheme: mode })"
+                >{{ t(mode) }}</Button
+              >
+            </ButtonGroup>
+          </template>
           <span class="sub-label">{{ t('frameColor') }}</span>
           <ColorPicker
             :model-value="frameColor ?? '#c0c0c0'"

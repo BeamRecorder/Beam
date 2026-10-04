@@ -40,6 +40,7 @@ pub(super) fn pipewire_worker(
     region: Option<ScreenRegion>,
     show_real_cursor: bool,
     target_fps: u32,
+    hyprland_cursor: Option<super::super::hyprland::HyprlandCursor>,
 ) -> Result<(), CaptureError> {
     pw::init();
     let mainloop = pw::main_loop::MainLoopRc::new(None).map_err(pipewire_error)?;
@@ -78,6 +79,7 @@ pub(super) fn pipewire_worker(
         repair_window_crop,
         region,
         dmabuf_importer: DmaBufImporter::new(),
+        hyprland_cursor,
     }));
     let ready = Rc::new(RefCell::new(Some(ready)));
     let negotiation_stopped = Rc::new(Cell::new(false));

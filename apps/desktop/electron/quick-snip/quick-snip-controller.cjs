@@ -70,7 +70,7 @@ function createQuickSnipController(dependencies) {
       format,
       name: `Quick Snip ${new Date().toISOString().replace(/[:.]/g, '-')}`,
       preset,
-      zoomMode: ['off', '2d', '3d'].includes(preferences.extras.recordingZoomMode)
+      zoomMode: ['off', '2d', '3d', 'glass'].includes(preferences.extras.recordingZoomMode)
         ? preferences.extras.recordingZoomMode
         : '2d',
       automaticZoom: preferences.extras.recordingZoomMode !== 'off',
@@ -168,7 +168,7 @@ function createQuickSnipController(dependencies) {
     const changedMode = mode !== snapshot.job.mode;
     const changedPresetKind = (mode === 'screenshot') !== (snapshot.job.mode === 'screenshot');
     const preset = selectedPreset(mode);
-    if (overrides.zoomMode !== undefined && !['off', '2d', '3d'].includes(overrides.zoomMode))
+    if (overrides.zoomMode !== undefined && !['off', '2d', '3d', 'glass'].includes(overrides.zoomMode))
       throw new Error('Invalid zoom preference.');
     if (
       overrides.countdownSeconds !== undefined &&

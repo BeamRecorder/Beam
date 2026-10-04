@@ -6,6 +6,7 @@ import RecordingDesktopPreferences from '../settings/RecordingDesktopPreferences
 import { useTranslate } from '~/i18n/useTranslate';
 import type { RegionRecordingSettings } from '~/api/types/screen-region';
 import type { SelectOption } from '~/ui/select/select-types';
+import { recordingZoomMode } from '@beam/engine/zoom/recording-zoom-preference';
 const settings = defineModel<RegionRecordingSettings>({ required: true });
 const props = defineProps<{
   showPreset?: boolean;
@@ -27,6 +28,7 @@ const zoomOptions = computed(() => [
   { value: 'off', label: t('off') },
   { value: '2d', label: '2D' },
   { value: '3d', label: '3D' },
+  { value: 'glass', label: quickT('loupe') },
 ]);
 </script>
 <template>
@@ -70,7 +72,7 @@ const zoomOptions = computed(() => [
         :option-height="28"
         :label="quickT('zoom')"
         :disabled="disabled"
-        @update:model-value="settings = { ...settings, zoomMode: $event as 'off' | '2d' | '3d' }"
+        @update:model-value="settings = { ...settings, zoomMode: recordingZoomMode($event) }"
         @toggle="emit('toggle', $event)"
       />
     </label>

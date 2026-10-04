@@ -3,6 +3,7 @@ import { ArrowRight, Shapes, Type, Pencil, MousePointer2, Image, Focus, CircleDa
 import Button from '~/ui/button/Button.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import ShapeLayerPropertiesPanel from '../properties/clip/ShapeLayerPropertiesPanel.vue';
+import ArrowPicker from './ArrowPicker.vue';
 import DrawingControls from './DrawingControls.vue';
 import { useElementEditor } from './useElementEditor';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -14,7 +15,6 @@ const { t: tTimeline } = useTranslate('TimelineToolbar');
 const { t: tCanvas } = useTranslate('CanvasPanel');
 const tools = [
   { family: 'shape', icon: Shapes },
-  { family: 'arrow', icon: ArrowRight },
   { family: 'text', icon: Type },
   { family: 'drawing', icon: Pencil },
 ] as const;
@@ -31,10 +31,19 @@ const icons = { shape: Shapes, arrow: ArrowRight, text: Type, drawing: Pencil };
         size="sm"
         :icon="tool.icon"
         :disabled="disabled || !editor.canInteract.value"
-        :variant="tool.family === 'drawing' && editor.drawingMode.value ? 'primary' : 'secondary'"
+        :variant="
+          tool.family === 'drawing' && editor.drawingMode.value && !editor.drawingArrow.value ? 'primary' : 'secondary'
+        "
         @click="editor.add(tool.family)"
         >{{ t(tool.family) }}</Button
       >
+      <ArrowPicker
+        :active="editor.drawingMode.value && editor.drawingArrow.value"
+        :disabled="disabled || !editor.canInteract.value"
+        allow-drawing
+        @update:model-value="editor.addArrow"
+        @draw="editor.drawArrow"
+      />
       <Button
         v-if="editor.addHighlight"
         block
@@ -76,9 +85,15 @@ const icons = { shape: Shapes, arrow: ArrowRight, text: Type, drawing: Pencil };
       >
     </div>
     <template v-if="editor.drawingMode.value">
-      <p class="hint">{{ t('drawHint') }}</p>
-      <DrawingControls :model-value="editor.drawingSettings.value" @update:model-value="editor.updateDrawingSettings" />
-      <Button :icon="MousePointer2" size="sm" variant="secondary" @click="editor.drawingMode.value = false">{{
+      <p class="hint">
+        {{ t(editor.anchorDraft.value !== null ? 'drawArrowHint' : 'drawHint') }}
+      </p>
+      <DrawingControls
+        :hide-smoothing="editor.anchorDraft.value !== null"
+        :model-value="editor.drawingSettings.value"
+        @update:model-value="editor.updateDrawingSettings"
+      />
+      <Button :icon="MousePointer2" size="sm" variant="secondary" @click="editor.finishDrawing">{{
         t('finishDrawing')
       }}</Button>
     </template>

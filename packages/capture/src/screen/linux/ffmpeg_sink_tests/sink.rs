@@ -64,7 +64,7 @@ fn sink_rotates_atomic_segments_and_finalizes_cursor_sidecars() {
 }
 
 #[test]
-fn sink_without_an_active_input_broker_keeps_video_and_cursor_sidecars_without_input_json() {
+fn sink_rejects_requested_interactions_without_an_active_input_broker() {
     let _lock = owned_child::test_lock();
     crate::screen::linux::shutdown_linux_input_access();
 
@@ -73,7 +73,7 @@ fn sink_without_an_active_input_broker_keeps_video_and_cursor_sidecars_without_i
     let screen = temporary.path().join("screen");
     let cursor = temporary.path().join("cursor");
     let output = screen.join("segment-0001.mp4");
-    let mut sink = FfmpegScreenSink::new(
+    let result = FfmpegScreenSink::new(
         FfmpegCapabilities {
             executable,
             encoder: FfmpegEncoder::software("libopenh264"),
@@ -89,18 +89,12 @@ fn sink_without_an_active_input_broker_keeps_video_and_cursor_sidecars_without_i
         },
         Some(cursor.clone()),
         true,
-    )
-    .expect("create FFmpeg sink");
+    );
 
-    sink.format_changed(video_format())
-        .expect("announce format");
-    sink.push(sample(10)).expect("write sample");
-    sink.finish().expect("finalize sink");
-
-    assert_eq!(fs::read(output).expect("video segment"), b"fake-mp4");
-    assert!(cursor.join("cursor.json").is_file());
-    assert!(cursor.join("telemetry.json").is_file());
-    assert!(cursor.join("shapes.json").is_file());
+    assert!(
+        matches!(result, Err(crate::CaptureError::Backend(message)) if message.contains("input capture is unavailable"))
+    );
+    assert!(!output.exists());
     assert!(!cursor.join("input.json").exists());
 }
 

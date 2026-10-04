@@ -83,10 +83,10 @@ describe('indexed bilingual settings search', () => {
     expect(new Set(localized.map(({ id }) => id)).size).toBe(localized.length);
     for (const entry of localized) {
       expect(entry.title).not.toMatch(
-        /^(HudPreferences|AppearanceSettings|ShortcutPreferences|SettingsPanel|Socials|Updates)\./,
+        /^(HudPreferences|AppearanceSettings|ShortcutPreferences|SettingsPanel|Socials|Updates|DirectoryPreferences)\./,
       );
       expect(entry.description).not.toMatch(
-        /^(HudPreferences|AppearanceSettings|ShortcutPreferences|SettingsPanel|Socials|Updates)\./,
+        /^(HudPreferences|AppearanceSettings|ShortcutPreferences|SettingsPanel|Socials|Updates|DirectoryPreferences)\./,
       );
     }
     const index = createSettingsSearch(localized);

@@ -5,6 +5,7 @@ import type {
   BlurEffectShape,
   CaptionClip,
   ClipFrame,
+  ClipFrameTheme,
   ClipComposition,
   NormalizedTransform,
   NormalizedCrop,
@@ -126,6 +127,7 @@ export interface PropertiesPanelEmits {
       frame?: ClipFrame;
       frameTitle?: string;
       frameColor?: string;
+      frameTheme?: ClipFrameTheme;
       frameShowMenu?: boolean;
       frameShowScrollbars?: boolean;
       frameChromeScale?: number;

@@ -54,9 +54,12 @@ describe('shared screenshot rotation', () => {
     expect(next.composition).toBe(state.composition);
     expect(next.shapes[1]!.enabled).toBe(false);
   });
-  it.each([[], ['a'], ['a', 'unknown'], ['a', '__background__']])('rejects invalid selections %j', (ids) => {
-    expect(() => rotateScreenshotGroup(fixture().state, ids, bounds, 90)).toThrow('selection');
-  });
+  it.each([[], ['a'], ['a', 'unknown'], ['a', '__background__']].map((ids) => ({ ids })))(
+    'rejects invalid selections $ids',
+    ({ ids }) => {
+      expect(() => rotateScreenshotGroup(fixture().state, ids, bounds, 90)).toThrow('selection');
+    },
+  );
   it('rejects locked groups and blur regions without changing any member', () => {
     const state = fixture().state,
       before = structuredClone(state);

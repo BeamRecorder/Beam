@@ -25,6 +25,14 @@ import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/en
 import CanvasMarqueeSurface from '../CanvasMarqueeSurface.vue';
 import type { RuntimePreviewOptions } from '../runtime-preview-types';
 
+vi.mock('../../resources/editor-image-cache', () => ({
+  requestEditorImage: (src: string) => {
+    const image = document.createElement('img');
+    image.src = src;
+    return { image, ready: Promise.resolve(image) };
+  },
+}));
+
 const { state } = vi.hoisted(() => ({
   state: {
     drawVideoWindow: vi.fn(),
@@ -518,10 +526,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const mountEditor = (overrides: Record<string, unknown> = {}) => {
+const mountEditor = (overrides: Record<string, unknown> = {}, slots: Record<string, string> = {}) => {
   const editorProps = { ...props(), ...overrides };
   wrapper = mount(EditorCanvas, {
     props: editorProps,
+    slots,
     global: {
       plugins: [MotionPlugin],
       provide: {
@@ -655,6 +664,20 @@ describe('EditorCanvas', () => {
     await mounted.setProps({ domPreviewActive: false });
     while (frames.length) runFrame();
     expect(state.runtimeDraw).toHaveBeenCalled();
+  });
+  it('keeps the HTML composition surface above the hidden canvas after merging canvas controls', async () => {
+    const mounted = mountEditor(
+      { domPreviewActive: true, isPlaying: true, playbackState: 'playing' },
+      { 'composition-preview': '<div data-html-preview />' },
+    );
+    await flushPromises();
+    expect(mounted.get('[data-html-preview]').element.previousElementSibling).toBe(
+      mounted.get('canvas.editor-canvas').element,
+    );
+    expect(state.runtimeDraw).not.toHaveBeenCalled();
+    await mounted.setProps({ currentTime: 5, isPlaying: false, playbackState: 'paused' });
+    expect(mounted.find('[data-html-preview]').exists()).toBe(true);
+    expect(state.runtimeDraw).not.toHaveBeenCalled();
   });
   it('uses exact HTML capture for screenshot actions without waking the hidden painter', async () => {
     const capture = vi.fn(async () => ({ bytes: new ArrayBuffer(3), width: 1920, height: 1080 }));

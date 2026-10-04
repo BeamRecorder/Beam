@@ -28,12 +28,14 @@ import { useToastStore } from '~/ui/toast/toastStore';
 import { normalizeEditorPreferenceDefaults } from './editor-defaults';
 import { useEditorPresets } from './useEditorPresets';
 import type { TimelineElementKind } from '../timeline/timeline-element-types';
+import { useEditorResources } from '../resources/useEditorResources';
 
 export function useVideoEditor(options: {
   project: Ref<CaptureProject | null | undefined>;
   editorData: Ref<ProjectEditorData | null | undefined>;
 }) {
   const { project, editorData } = options;
+  const resources = useEditorResources();
   const toastStore = useToastStore();
   const activeTab = ref('canvas');
   const outputCanvas = ref<OutputCanvasSettings>({ ...DEFAULT_OUTPUT_CANVAS });
@@ -131,8 +133,9 @@ export function useVideoEditor(options: {
     selectedClip: compositionState.selectedClip,
     selectedZoom: zoomState.selectedZoom,
   });
-  const editorPresets = useEditorPresets(editorDefaults);
+  const editorPresets = useEditorPresets(editorDefaults, resources);
   const elements = useVideoElements({
+    canvasSize: () => outputCanvas.value,
     addBlur: async () => {
       await compositionState.addElement('blur').catch((error) => {
         toastStore.error(String(error));
@@ -163,20 +166,32 @@ export function useVideoEditor(options: {
     },
   });
 
-  const refreshBackgroundLibrary = async () => player.setUserBackgrounds(await capture.listBackgroundLibrary());
+  let librariesDisposed = false;
+  let backgroundRequest = 0,
+    cursorRequest = 0;
+  const refreshBackgroundLibrary = async () => {
+    const current = ++backgroundRequest;
+    const next = await resources.backgrounds();
+    if (!librariesDisposed && current === backgroundRequest) player.setUserBackgrounds(next);
+  };
   void refreshBackgroundLibrary().catch(() => console.error('Failed to load background library.'));
-  const stopBackgroundSubscription = capture.onBackgroundLibraryChanged(() => {
+  const stopBackgroundSubscription = resources.onBackgroundsChanged(() => {
     void refreshBackgroundLibrary().catch(() => console.error('Failed to refresh background library.'));
   });
   onScopeDispose(stopBackgroundSubscription);
   const refreshCursorPacks = async () => {
-    cursor.importedPacks.value = await capture.listCursorPacks();
+    const current = ++cursorRequest;
+    const next = await resources.cursors();
+    if (!librariesDisposed && current === cursorRequest) cursor.importedPacks.value = next;
   };
   void refreshCursorPacks().catch(() => console.error('Failed to load cursor packs.'));
-  const stopCursorSubscription = capture.onCursorPacksChanged(() => {
+  const stopCursorSubscription = resources.onCursorsChanged(() => {
     void refreshCursorPacks().catch(() => console.error('Failed to refresh cursor packs.'));
   });
   onScopeDispose(stopCursorSubscription);
+  onScopeDispose(() => {
+    librariesDisposed = true;
+  });
 
   const sourceFps = computed(() => {
     const screen = editorData.value?.tracks.find((track) => track.kind === 'screen');

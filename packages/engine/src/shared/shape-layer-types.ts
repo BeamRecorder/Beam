@@ -1,10 +1,13 @@
 import type { ElementText, FreehandDrawing } from '@beam/engine/shared/element-types';
 import type { ColorFill } from '@beam/engine/shared/color-fill-types';
 import type { ShapeKind } from '@beam/engine/shared/shape-catalog';
+import type { ShapeVector } from './shape-vector-types';
 
 export type ShapeLayerFamily = 'shape' | 'arrow' | 'text' | 'drawing';
 export type ShapeLayerPreset = ShapeKind | 'arrow' | 'text' | 'freehand';
 export interface ShapeLayerStyle {
+  /** Null resets an edited path to its original shape preset. */
+  vector?: ShapeVector | null;
   text?: ElementText;
   drawing?: FreehandDrawing;
   family: ShapeLayerFamily;
