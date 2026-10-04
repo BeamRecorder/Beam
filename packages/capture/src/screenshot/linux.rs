@@ -53,7 +53,9 @@ pub(super) fn capture(
         hide_desktop_icons: false,
         region_selection: selection,
         recording: &RecordingSettings::default(),
-        region: request.region,
+        // Still images keep odd dimensions and all selected edge pixels.
+        // Crop after receiving the frame, independently of H.264 alignment.
+        region: None,
         cursor: CursorSelection::Disabled,
         show_real_cursor: false,
         excluded_window_handles: &request.excluded_window_handles,

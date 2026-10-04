@@ -66,6 +66,11 @@ impl ScreenRegion {
         height: u32,
     ) -> Result<(u32, u32, u32, u32), crate::CaptureError> {
         self.validate()?;
+        if width == 0 || height == 0 {
+            return Err(crate::CaptureError::InvalidConfiguration(
+                "screen region requires nonzero frame dimensions".into(),
+            ));
+        }
         let x = (self.x * f64::from(width))
             .round()
             .clamp(0.0, f64::from(width.saturating_sub(1))) as u32;

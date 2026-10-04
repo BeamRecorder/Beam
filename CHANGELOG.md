@@ -243,6 +243,9 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Region selection stays aligned with the full display on GNOME without panel-induced offsets, including at the bottom-right edge. Its visible frame and pixel dimensions now match Screenshot, Studio and Instant captures at different display scales.
+- Screenshot region captures preserve odd dimensions and the last selected row and column through a shared native crop on Linux, Windows and macOS.
+
 - Developer Mode's demo webcam imports correctly through the native bridge, saves repeated fragments without rounding overlaps, and retains its recording link and zoom reactions after reopening a project.
 
 - Russian and Bulgarian website FAQs now display their translated questions and answers, including the current source license, instead of internal category identifiers.

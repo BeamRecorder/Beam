@@ -11,6 +11,7 @@ import RegionDimensions from './RegionDimensions.vue';
 import RegionMagnifier from './RegionMagnifier.vue';
 import RegionRecordingToolbar from './RegionRecordingToolbar.vue';
 import { regionControlPosition } from './region-overlay-layout';
+import { alignRegionToPixels, regionPixelRect } from './region-pixels';
 import type { RegionInteraction, RegionHandle, RegionPointer } from './region-overlay-types';
 import type { RegionRecordingSettings } from '../../../api/types/screen-region';
 import { SCREEN_REGION_PRESETS, computePresetRegion, findMatchingPreset } from './screen-region-presets';
@@ -19,7 +20,14 @@ const { t } = useTranslate('ScreenRegionOverlay');
 const { t: quickT } = useTranslate('QuickSnipCropBar');
 
 const options = ref<(ScreenRegionOverlayOptions & { mode?: 'select' | 'record' }) | null>(null);
-const region = ref<ScreenRegion | null>(null);
+const draftRegion = ref<ScreenRegion | null>(null);
+const region = computed({
+  get: () =>
+    draftRegion.value && options.value?.mode === 'select'
+      ? alignRegionToPixels(draftRegion.value, pixelBounds.value, options.value.captureMode !== 'screenshot')
+      : draftRegion.value,
+  set: (value: ScreenRegion | null) => (draftRegion.value = value),
+});
 const selectionError = ref('');
 let userInteracted = false;
 const selectedPreset = ref<string | null>(null);
@@ -45,6 +53,7 @@ const pixelBounds = computed(() => ({
   ...getEffectiveBounds(),
   ...options.value?.pixelSize,
 }));
+const pixelRect = computed(() => (region.value ? regionPixelRect(region.value, pixelBounds.value) : null));
 let unsubscribe: (() => void) | null = null;
 useResizeObserver(topControls, () => {
   if (pointer.value || !topControls.value) return;
@@ -82,8 +91,12 @@ const normalize = (x1: number, y1: number, x2: number, y2: number): ScreenRegion
 });
 
 const isFullScreenRegion = (r: ScreenRegion | null): boolean => {
-  if (!r) return false;
-  return r.x === 0 && r.y === 0 && r.width === 1 && r.height === 1;
+  if (!r || r.x !== 0 || r.y !== 0) return false;
+  if (r.width === 1 && r.height === 1) return true;
+  if (options.value?.captureMode === 'screenshot') return false;
+  // An even full-screen crop can return from saved selection on an odd display.
+  const full = alignRegionToPixels(FULL_SCREEN_REGION, pixelBounds.value, true);
+  return r.width === full.width && r.height === full.height;
 };
 
 const getEffectiveBounds = () =>
@@ -114,14 +127,16 @@ const updatePresetMatch = () => {
     return;
   }
   const bounds = pixelBounds.value;
-  selectedPreset.value = findMatchingPreset(region.value, bounds);
+  selectedPreset.value = isFullScreenRegion(draftRegion.value)
+    ? 'fullscreen'
+    : findMatchingPreset(region.value, bounds);
 };
 
 const applyPreset = (presetValue: string | number) => {
   userInteracted = true;
   const value = String(presetValue);
   const bounds = pixelBounds.value;
-  const nextRegion = computePresetRegion(value, bounds, region.value, isFullScreenRegion(region.value));
+  const nextRegion = computePresetRegion(value, bounds, region.value, isFullScreenRegion(draftRegion.value));
   if (nextRegion) {
     region.value = nextRegion;
     selectedPreset.value = value;
@@ -147,7 +162,7 @@ const begin = (event: PointerEvent) => {
     };
   } else if (
     current &&
-    !isFullScreenRegion(current) &&
+    !isFullScreenRegion(draftRegion.value) &&
     next.x >= current.x &&
     next.x <= current.x + current.width &&
     next.y >= current.y &&
@@ -164,7 +179,7 @@ const begin = (event: PointerEvent) => {
       kind: 'draw',
       startX: next.x,
       startY: next.y,
-      previous: current ? { ...current } : null,
+      previous: draftRegion.value ? { ...draftRegion.value } : null,
     };
   }
   (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
@@ -369,8 +384,8 @@ onBeforeUnmount(() => {
       @pointerdown.stop
     >
       <RegionDimensions
-        :width="Math.round(region.width * pixelBounds.width)"
-        :height="Math.round(region.height * pixelBounds.height)"
+        :width="pixelRect!.right - pixelRect!.left"
+        :height="pixelRect!.bottom - pixelRect!.top"
         :live="Boolean(pointer)"
       />
       <Transition name="region-controls">

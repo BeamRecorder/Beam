@@ -18,21 +18,18 @@ pub(super) fn capture(request: &ScreenshotRequest) -> Result<OwnedVideoFrame, Ca
         ));
     };
     let content = SCShareableContent::get().map_err(backend_error)?;
-    let (filter, width, height, source_rect) = crate::screen::mac::resolve_filter(
+    let (filter, width, height, _) = crate::screen::mac::resolve_filter(
         &content,
         source_id,
-        request.region,
+        None,
         &request.excluded_window_handles,
         false,
         false,
     )?;
-    let mut config = SCStreamConfiguration::new()
+    let config = SCStreamConfiguration::new()
         .with_width(width)
         .with_height(height)
         .with_shows_cursor(false);
-    if let Some(rect) = source_rect {
-        config = config.with_source_rect(rect);
-    }
     let image = SCScreenshotManager::capture_image(&filter, &config).map_err(backend_error)?;
     Ok(OwnedVideoFrame {
         width: u32::try_from(image.width()).map_err(backend_error)?,
