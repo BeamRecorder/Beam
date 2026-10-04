@@ -125,6 +125,7 @@ export function useVideoEditor(options: {
   });
   const editorPresets = useEditorPresets(editorDefaults, resources);
   const elements = useVideoElements({
+    canvasSize: () => outputCanvas.value,
     addBlur: async () => {
       await compositionState.addElement('blur').catch((error) => {
         toastStore.error(String(error));

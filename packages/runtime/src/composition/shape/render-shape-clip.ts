@@ -9,6 +9,7 @@ import type { EffectRect } from '@beam/runtime/composition/effects/effect-types'
 import { backgroundFillStyle } from '@beam/runtime/composition/background/render-background';
 import { cachedShapePath } from '@beam/runtime/composition/shape/shape-path-cache';
 import { shapePaintStyle } from './shape-paint-style';
+import { drawVector, vectorPaintPaths } from './render-vector';
 
 const shadowOffset = (direction: ShapeClip['shadowDirection'], scale: number) => {
   const distance = 12 * scale;
@@ -112,6 +113,11 @@ const transformedCatalogPath = (clip: ShapeClip, rect: EffectRect, style: ShapeL
 };
 
 const maskShapeInRect = (ctx: Canvas2DContext, clip: ShapeClip, rect: EffectRect, style: ShapeLayerStyle) => {
+  if (style.vector) {
+    ctx.fill(vectorPaintPaths(clip, rect, style, 1).closed, style.vector.fillRule);
+    ctx.beginPath();
+    return;
+  }
   if (!usesCatalogPath(style.preset)) {
     traceShapeInRect(ctx, rect, style);
     return;
@@ -173,6 +179,7 @@ export function drawShapeClip(
         style.cornerRadius,
         style.arrowThickness,
         style.arrowHeadSize,
+        style.vector,
       ]),
     });
   }
@@ -185,7 +192,8 @@ export function drawShapeClip(
     ctx.shadowOffsetX = offset.x;
     ctx.shadowOffsetY = offset.y;
   }
-  if (style.family === 'drawing') drawFreehand(ctx, clip, rect, scale);
+  if (style.vector) drawVector(ctx, clip, rect, style, scale);
+  else if (style.family === 'drawing') drawFreehand(ctx, clip, rect, scale);
   else if (style.family !== 'text') {
     const fillStyle = backgroundFillStyle(ctx, shapeLayerFill(style), rect);
     if (usesCatalogPath(style.preset)) {

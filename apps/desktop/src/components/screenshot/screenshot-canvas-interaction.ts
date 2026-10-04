@@ -32,7 +32,7 @@ export function screenshotCanvasInteraction(options: ScreenshotCanvasInteraction
     const layer = screenshotLayers(options.state()).find((item) => item.id === id);
     if (!layer || layer.locked) return;
     options.select(id, 'individual');
-    if (options.beginText(id)) return;
+    if (options.beginElement(id)) return;
     if (layer.kind === 'image') options.crop(id);
   };
   return { layerAt, selectHit, select, editLayer };

@@ -8,7 +8,7 @@ export interface ScreenshotCanvasInteractionOptions {
   blocked: () => boolean;
   selectedIds: () => readonly string[];
   select: (id: string | null, mode?: ScreenshotSelectionMode) => void;
-  beginText: (id: string) => boolean | undefined;
+  beginElement: (id: string) => boolean | undefined;
   crop: (id: string) => void;
   add: (event: MouseEvent) => void;
 }

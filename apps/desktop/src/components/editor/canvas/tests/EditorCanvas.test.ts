@@ -25,6 +25,14 @@ import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/en
 import CanvasMarqueeSurface from '../CanvasMarqueeSurface.vue';
 import type { RuntimePreviewOptions } from '../runtime-preview-types';
 
+vi.mock('../../resources/editor-image-cache', () => ({
+  requestEditorImage: (src: string) => {
+    const image = document.createElement('img');
+    image.src = src;
+    return { image, ready: Promise.resolve(image) };
+  },
+}));
+
 const { state } = vi.hoisted(() => ({
   state: {
     drawVideoWindow: vi.fn(),

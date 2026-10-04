@@ -5,6 +5,7 @@ import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import { createElementText } from '@beam/engine/shared/element-text';
 import type { ShapeLayerStyle } from '@beam/engine/shared/shape-layer-types';
 import { normalizeShapeLayerStyle } from '@beam/engine/shared/shape-layer-style';
+import { ARROW_CATALOG, arrowDefinition } from '@beam/engine/shared/arrow-catalog';
 import type { ColorFill } from '@beam/engine/shared/color-fill-types';
 import type { DrawingSettings, DrawnElement } from '@beam/engine/shared/element-types';
 import type { ElementEditorContext, ElementEditorOptions } from '../element-editor-types';
@@ -37,6 +38,7 @@ interface HarnessOptions {
   initialLayers?: ShapeClip[];
   selectedId?: string | null;
   canInteract?: boolean | null;
+  canvasSize?: boolean;
   showLayers?: boolean;
   timing?: { startMs: number; durationMs: number };
 }
@@ -62,6 +64,7 @@ const mountEditor = (configuration: HarnessOptions = {}) => {
     if (selectedId.value === id) selectedId.value = null;
   });
   const options: ElementEditorOptions = {
+    canvasSize: () => (configuration.canvasSize === false ? null : { width: 1920, height: 1080 }),
     layers: () => layers.value,
     selectedId: () => selectedId.value,
     select,
@@ -340,6 +343,7 @@ describe('useElementEditor', () => {
     expect(editor.update).toHaveBeenNthCalledWith(1, latestId, {
       fill: gradientFill,
       drawing: { ...firstDrawing.drawing, smoothing: 78, strokeWidth: 24 },
+      vector: expect.objectContaining({ strokeWidth: 24, endMarker: 'none' }),
     });
     expect(editor.context.selected.value).toMatchObject({
       id: latestId,
@@ -363,6 +367,7 @@ describe('useElementEditor', () => {
       fill: solidFill,
       fillColor: solidFill.color,
       drawing: { ...firstDrawing.drawing, smoothing: 32, strokeWidth: 16 },
+      vector: expect.objectContaining({ strokeWidth: 16, endMarker: 'none' }),
     });
     expect(editor.context.selected.value).toMatchObject({
       id: latestId,
@@ -708,5 +713,203 @@ describe('useElementEditor', () => {
     expect(editor.remove).toHaveBeenCalledOnce();
     editor.context.select('another-layer');
     expect(editor.select).toHaveBeenLastCalledWith('another-layer');
+  });
+});
+
+describe('vector editing and arrows', () => {
+  it('commits only manual anchors as one arrow insertion and returns to normal selection', () => {
+    const s = mountEditor();
+    s.context.drawArrow();
+    s.context.anchorDraft.value = [
+      { id: 'a', x: 0.1, y: 0.3, mode: 'corner' },
+      { id: 'b', x: 0.7, y: 0.5, mode: 'smooth', in: { x: 0.6, y: 0.2 }, out: { x: 0.8, y: 0.8 } },
+    ];
+    s.context.updateDrawingSettings({ color: '#112233', strokeWidth: 12, smoothing: 80 });
+    expect(s.insert).not.toHaveBeenCalled();
+    s.context.finishDrawing();
+    const clip = s.insert.mock.calls[0]![0];
+    expect(s.insert).toHaveBeenCalledOnce();
+    expect(clip).toMatchObject({
+      family: 'arrow',
+      fillColor: '#112233',
+      vector: { endMarker: 'triangle', strokeWidth: 12 },
+    });
+    expect(clip.vector!.contours[0]!.nodes.map((n) => n.id)).toEqual(['a', 'b']);
+    expect(clip.drawing).toBeUndefined();
+    expect(s.context.vectorEditing.value).toBeNull();
+    expect(s.context.selectedNode.value).toBeNull();
+    expect(s.selectedId.value).toBe(clip.id);
+    expect(s.context.anchorDraft.value).toBeNull();
+    expect(s.context.drawingMode.value).toBe(false);
+  });
+  it('does not insert unfinished paths, disabled documents or missing output dimensions', () => {
+    for (const configuration of [{}, { canInteract: false }, { canvasSize: false }]) {
+      const s = mountEditor(configuration);
+      s.context.drawArrow();
+      s.context.finishDrawing();
+      expect(s.insert).not.toHaveBeenCalled();
+      expect(s.context.drawingMode.value).toBe(false);
+    }
+  });
+  it('discards manual drafts on cancellation, freehand switches or a document lock', async () => {
+    const s = mountEditor();
+    s.context.drawArrow();
+    s.context.drawingMode.value = false;
+    expect(s.context.anchorDraft.value).toBeNull();
+    s.context.drawArrow();
+    s.context.drawArrow();
+    expect(s.context.anchorDraft.value).toEqual([]);
+    s.context.drawArrow();
+    s.context.add('drawing');
+    expect(s.context.anchorDraft.value).toBeNull();
+    s.context.drawArrow();
+    s.canInteract!.value = false;
+    await nextTick();
+    expect(s.context.anchorDraft.value).toBeNull();
+    expect(s.insert).not.toHaveBeenCalled();
+  });
+  it('retains a gradient when validating a manual arrow', () => {
+    const s = mountEditor();
+    s.context.drawArrow();
+    s.context.anchorDraft.value = [
+      { id: 'a', x: 0, y: 0, mode: 'corner' },
+      { id: 'b', x: 1, y: 1, mode: 'corner' },
+    ];
+    const fill = {
+      kind: 'gradient' as const,
+      gradient: {
+        type: 'linear' as const,
+        angle: 0,
+        stops: [
+          { id: 'a', position: 0, color: '#000000', alpha: 1 },
+          { id: 'b', position: 1, color: '#ffffff', alpha: 1 },
+        ],
+      },
+    };
+    s.context.updateDrawingSettings({ fill, color: '#123456', strokeWidth: 8, smoothing: 0 });
+    s.context.finishDrawing();
+    expect(s.insert.mock.calls[0]![0]).toMatchObject({ fill, fillColor: '#123456' });
+  });
+  it.each(ARROW_CATALOG.map((d) => d.id))('inserts %s arrows as portable editable geometry', (preset) => {
+    const state = mountEditor();
+    state.context.addArrow(preset);
+    expect(state.insert).toHaveBeenCalledOnce();
+    const clip = state.insert.mock.calls[0]![0];
+    expect(clip.family).toBe('arrow');
+    expect(clip.vector?.arrowPreset).toBe(preset);
+    expect((clip.transform.width * 1920) / (clip.transform.height * 1080)).toBeCloseTo(
+      arrowDefinition(preset).aspectRatio,
+    );
+    expect(state.context.drawingMode.value).toBe(false);
+  });
+  it('leaves locked documents unchanged for arrow and point actions', () => {
+    const state = mountEditor({ initialLayers: [createClip('a')], selectedId: 'a', canInteract: false });
+    state.context.addArrow('curved');
+    state.context.drawArrow();
+    state.context.beginVector();
+    expect(state.insert).not.toHaveBeenCalled();
+    expect(state.update).not.toHaveBeenCalled();
+    expect(state.context.vectorEditing.value).toBeNull();
+    expect(state.context.drawingMode.value).toBe(false);
+  });
+  it('converts native shapes once and exits when selection changes or interaction locks', async () => {
+    const state = mountEditor({ initialLayers: [createClip('a'), createClip('b')], selectedId: 'a' });
+    state.context.beginVector();
+    expect(state.update).toHaveBeenCalledOnce();
+    expect(state.context.vectorEditing.value).toBe('a');
+    expect(state.context.selectedNode.value).toEqual({ contour: 0, node: 0 });
+    state.context.beginVector();
+    expect(state.update).toHaveBeenCalledOnce();
+    state.selectedId.value = 'b';
+    await nextTick();
+    expect(state.context.vectorEditing.value).toBeNull();
+    state.context.beginVector();
+    state.canInteract!.value = false;
+    await nextTick();
+    expect(state.context.vectorEditing.value).toBeNull();
+  });
+  it('ignores absent canvas, selection and native text in node editing', () => {
+    for (const configuration of [
+      {},
+      { initialLayers: [createClip('a')], selectedId: 'a', canvasSize: false },
+      { initialLayers: [createClip('a', { family: 'text', text: createElementText() })], selectedId: 'a' },
+    ]) {
+      const state = mountEditor(configuration);
+      state.context.beginVector();
+      expect(state.update).not.toHaveBeenCalled();
+    }
+  });
+  it('finishes text and point editing before entering a different drawing tool', () => {
+    const state = mountEditor({ initialLayers: [createClip('a')], selectedId: 'a' });
+    state.context.beginVector();
+    state.context.drawArrow();
+    expect(state.context.vectorEditing.value).toBeNull();
+    expect(state.context.drawingArrow.value).toBe(true);
+    state.context.add('drawing');
+    expect(state.context.drawingArrow.value).toBe(false);
+    state.context.drawingMode.value = false;
+    state.context.beginText('a');
+    expect(state.context.drawingMode.value).toBe(false);
+  });
+  it('adds a simplified freehand stroke and updates smoothing and color live', () => {
+    const state = mountEditor();
+    state.context.add('drawing');
+    const drawing = {
+      transform: { x: 0.1, y: 0.1, width: 0.5, height: 0.2 },
+      drawing: {
+        points: [
+          { x: 0, y: 0 },
+          { x: 0.3, y: 0.6 },
+          { x: 1, y: 1 },
+        ],
+        smoothing: 65,
+        strokeWidth: 8,
+      },
+    };
+    state.context.addDrawing(drawing);
+    expect(state.insert.mock.calls[0]![0].vector?.endMarker).toBe('none');
+    state.context.updateDrawingSettings({ smoothing: 0, strokeWidth: 12, color: '#112233' });
+    expect(state.update.mock.calls[0]![1]).toMatchObject({
+      fill: { kind: 'color', color: '#112233' },
+      vector: { strokeWidth: 12, endMarker: 'none' },
+    });
+  });
+  it('routes double-click editing to anchors for drawings and arrows, and to native text otherwise', () => {
+    for (const family of ['drawing', 'arrow', 'text', 'shape'] as const) {
+      const clip = createClip('a', {
+        family,
+        ...(family === 'drawing'
+          ? {
+              drawing: {
+                points: [
+                  { x: 0, y: 0 },
+                  { x: 1, y: 1 },
+                ],
+                smoothing: 65,
+                strokeWidth: 8,
+              },
+            }
+          : {}),
+      });
+      const state = mountEditor({ initialLayers: [clip] });
+      expect(state.context.beginElement('a')).toBe(true);
+      expect(state.context.vectorEditing.value).toBe(family === 'drawing' || family === 'arrow' ? 'a' : null);
+      expect(state.context.editing.value?.id ?? null).toBe(family === 'text' || family === 'shape' ? 'a' : null);
+    }
+  });
+  it('rejects missing, locked and actively drawn elements during double-click editing', () => {
+    const state = mountEditor({
+      initialLayers: [createClip('locked', { locked: true }), createClip('a', { family: 'arrow' })],
+    });
+    expect(state.context.beginElement('missing')).toBe(false);
+    expect(state.context.beginElement('locked')).toBe(false);
+    expect(state.context.beginVector('locked')).toBe(false);
+    state.context.drawArrow();
+    expect(state.context.beginElement('a')).toBe(false);
+    state.context.addDrawing({
+      transform: { x: 0, y: 0, width: 1, height: 1 },
+      drawing: { points: [{ x: 0, y: 0 }], smoothing: 0, strokeWidth: 8 },
+    });
+    expect(state.insert).not.toHaveBeenCalled();
   });
 });

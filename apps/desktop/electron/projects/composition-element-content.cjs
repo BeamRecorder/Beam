@@ -1,4 +1,5 @@
 const { normalizeCaptionStyle } = require('./composition-captions.cjs');
+const { isShapeVector } = require('../../../../packages/engine/src/shared/shape-vector-schema.js');
 const finite = (v) => typeof v === 'number' && Number.isFinite(v);
 
 function normalizeElementContent(value) {
@@ -43,6 +44,10 @@ function normalizeElementContent(value) {
       smoothing: drawing.smoothing,
       strokeWidth: drawing.strokeWidth,
     };
+  }
+  if (value.vector !== undefined && value.vector !== null) {
+    if (!isShapeVector(value.vector)) throw new Error('Invalid vector shape.');
+    result.vector = structuredClone(value.vector);
   }
   if ((value.family === 'text' && !result.text) || (value.family === 'drawing' && !result.drawing))
     throw new Error('Missing element content.');

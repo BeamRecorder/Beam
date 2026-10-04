@@ -305,6 +305,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
                   (isColorClip(selectedDomainClip) || isShapeClip(selectedDomainClip))
                 "
                 :composition="composition"
+                :canvas-size="canvas"
                 :clip="selectedDomainClip"
                 @update="emit('update:composition', $event)"
                 @corner-radius-interaction="emit('corner-radius-interaction', $event)"

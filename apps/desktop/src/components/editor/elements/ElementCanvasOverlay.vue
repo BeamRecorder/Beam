@@ -3,6 +3,9 @@ import type { LayerRotation3d } from '@beam/engine/layout/layer-perspective-type
 
 import { beginPropertyInteraction, endPropertyInteraction } from '~/composables/property-interaction';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import VectorCanvasOverlay from './VectorCanvasOverlay.vue';
+import AnchorDrawingOverlay from './AnchorDrawingOverlay.vue';
+import DrawingToolbar from './DrawingToolbar.vue';
 import CaptionInlineEditor from '../canvas/CaptionInlineEditor.vue';
 import { useElementEditor } from './useElementEditor';
 import { elementTextCaption, elementTextLayout } from '@beam/engine/shared/element-text';
@@ -162,9 +165,14 @@ const cancel = () => {
   paint();
 };
 const keydown = (event: KeyboardEvent) => {
-  if (event.key !== 'Escape') return;
+  if (event.key !== 'Escape' && event.key !== 'Enter') return;
   event.stopPropagation();
   event.preventDefault();
+  if (event.key === 'Enter') {
+    end();
+    editor?.finishDrawing();
+    return;
+  }
   if (pointerId !== null) cancel();
   else if (editor) editor.drawingMode.value = false;
 };
@@ -178,8 +186,15 @@ onBeforeUnmount(cancel);
 </script>
 <template>
   <div ref="surface" class="element-overlay">
+    <VectorCanvasOverlay
+      v-if="editor?.vectorEditing.value"
+      :viewport="viewport"
+      :camera="camera"
+      :rotation3d="rotation3d"
+      :surface-size="surfaceSize"
+    />
     <div
-      v-if="editor?.drawingMode.value"
+      v-if="editor?.drawingMode.value && editor.anchorDraft.value === null"
       class="drawing-input"
       tabindex="0"
       role="application"
@@ -193,6 +208,25 @@ onBeforeUnmount(cancel);
     >
       <canvas ref="preview" class="drawing-preview" :style="drawingStyle" />
     </div>
+    <AnchorDrawingOverlay
+      v-if="editor?.drawingMode.value && editor.anchorDraft.value !== null"
+      :viewport="viewport"
+      :camera="camera"
+      :surface-size="surfaceSize"
+    />
+    <DrawingToolbar
+      v-if="editor?.drawingMode.value"
+      :hint="t(editor.anchorDraft.value !== null ? 'anchorToolbarHint' : 'freehandToolbarHint')"
+      :disabled="editor.anchorDraft.value !== null && editor.anchorDraft.value.length < 2"
+      @confirm="
+        end();
+        editor.finishDrawing();
+      "
+      @cancel="
+        cancel();
+        editor.drawingMode.value = false;
+      "
+    />
     <div v-if="textLayout && editor" class="text-frame" :style="textLayout.frame">
       <CaptionInlineEditor
         :max-length="10000"

@@ -15,6 +15,7 @@ import {
   propertyInteractionActive,
   resetPropertyInteractions,
 } from '~/composables/property-interaction';
+vi.mock('@beam/runtime/composition/shape/render-vector', () => ({ drawVector: vi.fn() }));
 
 const createTextClip = (id: string, content = 'Original'): ShapeClip => ({
   ...normalizeShapeLayerStyle({
@@ -76,6 +77,7 @@ const mountOverlay = (startEditing = false, viewport = { x: 0, y: 0, width: 1_00
         update,
         remove,
         timing: () => ({ startMs: 0, durationMs: 1_000 }),
+        canvasSize: () => ({ width: 1000, height: 500 }),
       });
       if (startEditing) editor.beginText(initial.id);
       return () => {
@@ -186,6 +188,87 @@ afterEach(() => {
 });
 
 describe('ElementCanvasOverlay', () => {
+  it.each(['Enter', 'button', 'dblclick'])(
+    'finishes manual anchors with %s and returns to selection',
+    async (action) => {
+      const { wrapper, editor, insert } = mountOverlay();
+      editor.drawArrow();
+      await nextTick();
+      const input = wrapper.get('.anchor-input').element;
+      expect(wrapper.find('.drawing-input').exists()).toBe(false);
+      expect(wrapper.get('.drawing-toolbar button').attributes('disabled')).toBeDefined();
+      vi.spyOn(input, 'getBoundingClientRect').mockReturnValue({
+        left: 0,
+        top: 0,
+        width: 1000,
+        height: 500,
+      } as DOMRect);
+      Object.defineProperty(input, 'hasPointerCapture', { value: () => false });
+      for (const [clientX, clientY] of [
+        [100, 100],
+        [700, 300],
+      ]) {
+        dispatch(input, 'pointerdown', { button: 0, pointerId: 5, clientX, clientY });
+        dispatch(input, 'pointerup', { pointerId: 5, clientX, clientY });
+      }
+      await nextTick();
+      if (action === 'Enter') dispatch(input, 'keydown', { key: 'Enter' });
+      else if (action === 'button') await wrapper.get('.drawing-toolbar button').trigger('click');
+      else dispatch(input, 'dblclick');
+      await nextTick();
+      expect(insert).toHaveBeenCalledOnce();
+      expect(insert.mock.calls[0]![0].vector!.contours[0]!.nodes).toHaveLength(2);
+      expect(editor.drawingMode.value).toBe(false);
+      expect(editor.vectorEditing.value).toBeNull();
+      expect(wrapper.find('.anchor-input').exists()).toBe(false);
+    },
+  );
+  it('validates a freehand gesture with Enter and exits the tool immediately', async () => {
+    const { wrapper, editor, insert } = mountOverlay();
+    editor.add('drawing');
+    await nextTick();
+    setSurfaceBounds(wrapper);
+    const input = wrapper.get('.drawing-input').element;
+    dispatch(input, 'pointerdown', { button: 0, pointerId: 5, clientX: 35, clientY: 45 });
+    dispatch(input, 'pointermove', { pointerId: 5, clientX: 100, clientY: 80 });
+    dispatch(input, 'keydown', { key: 'Enter' });
+    expect(insert).toHaveBeenCalledOnce();
+    expect(editor.drawingMode.value).toBe(false);
+    expect(propertyInteractionActive.value).toBe(false);
+  });
+  it('validates a completed stroke or exits an empty tool from the canvas toolbar', async () => {
+    const { wrapper, editor, insert } = mountOverlay();
+    editor.add('drawing');
+    await nextTick();
+    setSurfaceBounds(wrapper);
+    const input = wrapper.get('.drawing-input').element;
+    dispatch(input, 'pointerdown', { button: 0, pointerId: 5, clientX: 35, clientY: 45 });
+    dispatch(input, 'pointerup', { pointerId: 5, clientX: 100, clientY: 80 });
+    await wrapper.get('.drawing-toolbar button').trigger('click');
+    expect(insert).toHaveBeenCalledOnce();
+    expect(editor.drawingMode.value).toBe(false);
+    editor.add('drawing');
+    await nextTick();
+    dispatch(wrapper.get('.drawing-input').element, 'keydown', { key: 'Enter' });
+    expect(insert).toHaveBeenCalledOnce();
+    expect(editor.drawingMode.value).toBe(false);
+  });
+  it('cancels a freehand draft from the on-canvas cancel action', async () => {
+    const { wrapper, editor, insert } = mountOverlay();
+    editor.add('drawing');
+    await nextTick();
+    setSurfaceBounds(wrapper);
+    dispatch(wrapper.get('.drawing-input').element, 'pointerdown', {
+      button: 0,
+      pointerId: 5,
+      clientX: 35,
+      clientY: 45,
+    });
+    await wrapper.get('[aria-label="Cancel · Escape"]').trigger('click');
+    expect(insert).not.toHaveBeenCalled();
+    expect(editor.drawingMode.value).toBe(false);
+    expect(propertyInteractionActive.value).toBe(false);
+  });
   it('stays inert when mounted without an editor provider', () => {
     const wrapper = mount(ElementCanvasOverlay, {
       props: {

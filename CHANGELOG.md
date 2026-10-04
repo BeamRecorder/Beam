@@ -6,6 +6,9 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Arrows can be drawn by placing anchors manually: click for corners, drag for Bézier curves, and finish with Enter or a double-click. Only authored anchors are retained in screenshot and video projects.
+- Screenshot and video editors offer a searchable library of 30 arrow presets with previews and editable vector points with Bézier handles, corner/smooth modes and point insertion/removal. Canvas drawing offers a visible confirmation action and Enter shortcut. Custom paths survive project saves and use the same preview/export renderer.
+
 - Recording and editor settings offer a shared project location preserving `projects/studio`, `projects/instant` and `projects/screenshot`. New captures use the chosen root immediately; the project picker retains previous locations and refreshes when they change.
 - Video and image exports share a separate folder preference, with a fixed destination or the last successfully used folder and a searchable list of recent folders.
 - Safari frames offer Auto, Light and Dark browser chrome independently of the frame color, with matching previews, screenshots and video exports.
@@ -65,6 +68,11 @@ User-facing changes to Beam are documented in this file.
 - Settings and Projects now open in separate, resizable desktop windows.
 
 ### Changed
+
+- Drawing and arrow inspectors now use compact Path, Appearance and Text sections. Double-clicking a drawing or arrow edits its anchors directly; clicks insert smooth points and anchor alignment guides assist placement. Freehand strokes retain fewer meaningful editable points.
+
+- Anchor points and resize handles use a shared neutral light/dark tone sampled across the selection, with an opposing outline to remain visible on textured images.
+- Shape inspectors share compact placement, path, appearance, text, opacity and shadow accordions, with native editable text labels and controls translated into all 15 languages.
 
 - Beam's onboarding has a taller, centered welcome inspired by the website, with offline landscape photography, interactive Recorder and Quick Snip introductions, video and screenshot feature previews, clickable step navigation, shared theme and language controls, and a project-folder choice in all 15 languages. Interaction permissions remain optional and show their actual status.
 
@@ -169,6 +177,10 @@ User-facing changes to Beam are documented in this file.
 - Refreshed the default light and dark surfaces, typography and control shapes, with bundled Hanken Grotesk and themed device/preset menus.
 
 ### Fixed
+
+- Shape and arrow inspectors show border color and width in a dedicated Border section with a visible color label in all 15 supported languages. Arrow selector chevrons and project icons align with the visible text.
+
+- Arrow tips now terminate the visible shaft cleanly, without a rounded stroke protruding past the tip. All canvas anchors and transform handles share one adaptive neutral color across the selection.
 
 - Video export reuses the last successfully used destination across projects and application restarts instead of always returning to the OS Videos folder.
 - Screenshot project thumbnails now show the edited composition, including HTML layers, gradients and text, and refresh automatically in the background after edits.

@@ -127,6 +127,7 @@ export function useScreenshotEditor(
     select,
     finishDrawing: () => {
       elements.finishText();
+      elements.finishVector();
       elements.drawingMode.value = false;
     },
   });
@@ -218,6 +219,7 @@ export function useScreenshotEditor(
     () => !busy.value && !cropping.value && !selectedLayer.value?.locked,
   );
   const elements = provideElementEditor({
+    canvasSize: () => state.value?.canvas ?? null,
     addBlur: () => {
       elements.finishText();
       elements.drawingMode.value = false;
@@ -284,7 +286,8 @@ export function useScreenshotEditor(
     cropping.value ||
     previewFullscreen() ||
     Boolean(elements.editing.value) ||
-    elements.drawingMode.value;
+    elements.drawingMode.value ||
+    Boolean(elements.vectorEditing.value);
   const groups = useScreenshotGroups(state, selectedIds, shortcutsDisabled);
   const resizeSelection = (from: NormalizedTransform, to: NormalizedTransform) => {
     if (state.value && !shortcutsDisabled())

@@ -4,6 +4,8 @@ import { RotateCw } from '@lucide/vue';
 import ResizeHandle from '~/ui/ResizeHandle/ResizeHandle.vue';
 import type { ResizeCorner, ResizeHandlePosition, ResizeHandlePositions } from '~/ui/ResizeHandle/types';
 import { rotationFromPointer, rotationPointerAngle } from './rotation-gesture';
+import { useCanvasControlContrast } from '~/ui/ResizeHandle/useCanvasControlContrast';
+const vCanvasControlContrast = useCanvasControlContrast();
 
 const props = defineProps<{
   viewportStyle: CSSProperties;
@@ -87,6 +89,7 @@ onBeforeUnmount(() => {
   <div class="transform-selection-viewport" :style="viewportStyle">
     <div
       ref="selection"
+      v-canvas-control-contrast
       class="webcam-selection"
       :class="{ 'is-muted': muted, 'has-perspective': perspectiveCorners }"
       :style="handleStyle"
@@ -109,6 +112,7 @@ onBeforeUnmount(() => {
       </svg>
       <button
         v-if="rotatable && !perspectiveCorners"
+        v-canvas-control-contrast
         type="button"
         class="rotation-handle"
         :aria-label="rotateLabel"
@@ -141,7 +145,8 @@ onBeforeUnmount(() => {
 }
 .webcam-selection {
   position: absolute;
-  border: 2px solid var(--color-primary);
+  border: 1px solid var(--canvas-control-ink, var(--text-primary));
+  box-shadow: 0 0 0 1px var(--canvas-control-halo, var(--color-bg-surface));
   box-sizing: border-box;
   cursor: move;
   pointer-events: auto;
@@ -169,8 +174,8 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 .perspective-border polygon {
-  fill: color-mix(in srgb, var(--color-primary) 5%, transparent);
-  stroke: var(--color-primary);
+  fill: none;
+  stroke: var(--canvas-control-ink, var(--text-primary));
   stroke-width: 2px;
 }
 .rotation-handle {
@@ -182,10 +187,11 @@ onBeforeUnmount(() => {
   display: grid;
   place-items: center;
   padding: 0;
-  border: 2px solid var(--color-bg-element);
+  border: 2px solid var(--canvas-control-halo, var(--color-bg-surface));
   border-radius: var(--radius-full);
-  background: var(--color-primary);
-  color: var(--color-primary-foreground, #fff);
+  background: var(--canvas-control-ink, var(--text-primary));
+  color: var(--canvas-control-halo, var(--color-bg-surface));
+  box-shadow: 0 0 0 1px var(--canvas-control-ink, var(--text-primary));
   transform: translateX(-50%);
   cursor: grab;
   pointer-events: auto;
@@ -198,7 +204,7 @@ onBeforeUnmount(() => {
   top: 100%;
   width: 2px;
   height: 14px;
-  background: var(--color-primary);
+  background: var(--canvas-control-ink, var(--text-primary));
   transform: translateX(-50%);
 }
 .rotation-handle:active {

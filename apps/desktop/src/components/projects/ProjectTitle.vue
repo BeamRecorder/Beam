@@ -16,6 +16,7 @@ const { t } = useTranslate('ProjectPicker');
       size="xs"
       block
       align="start"
+      content-layout="custom"
       class="project-card-name"
       :style="{
         height: '18px',
@@ -32,13 +33,15 @@ const { t } = useTranslate('ProjectPicker');
       @dblclick.stop
       @keydown.enter.stop
       @keydown.space.stop
-      >{{ project.name }}</Button
+      ><span class="project-name-label">{{ project.name }}</span></Button
     >
   </div>
 </template>
 
 <style scoped>
 .project-name-control {
+  display: flex;
+  align-items: center;
   flex: 1;
   min-width: 0;
 }
@@ -51,5 +54,10 @@ const { t } = useTranslate('ProjectPicker');
   font-size: 11px;
   font-weight: 700;
   line-height: 1.2;
+}
+.project-name-label,
+span.project-card-name {
+  display: block;
+  text-box: trim-both cap alphabetic;
 }
 </style>

@@ -44,6 +44,7 @@ import { screenshotPreviewSize } from './screenshot-preview-resolution';
 import { useScreenshotViewport } from './useScreenshotViewport';
 import { screenshotCanvasInteraction } from './screenshot-canvas-interaction';
 import CanvasAddMenu from '../editor/search/CanvasAddMenu.vue';
+import { provideCanvasControlContrast } from '~/ui/ResizeHandle/useCanvasControlContrast';
 const { t } = useTranslate('ScreenshotEditor');
 const { t: canvasText } = useTranslate('CanvasPanel');
 const elements = useElementEditor();
@@ -65,6 +66,7 @@ const viewport = useScreenshotViewport(
 const { available, stageSize, stageStyle } = viewport;
 defineExpose({ resetView: viewport.viewport.resetZoom, zoomPercent: viewport.viewport.zoomPercent });
 const canvas = ref<HTMLCanvasElement | null>(null);
+const contrast = provideCanvasControlContrast(() => canvas.value);
 const initialFramePending = ref(true);
 const startup = injectScreenshotStartup();
 const resources = useScreenshotCanvasAssets(
@@ -119,7 +121,7 @@ const { selections, selectionBounds, marqueeTargets, editingRotation3d } = useSc
   previewState,
   assets,
   stageSize,
-  () => elements?.editing.value?.id,
+  () => elements?.editing.value?.id ?? elements?.vectorEditing.value ?? undefined,
   (bounds) => emit('selectionBounds', bounds),
 );
 const paint = () => {
@@ -166,6 +168,7 @@ const paint = () => {
       if (!painted && startup) startup.time('firstRender', render);
       else render();
     }
+    contrast.refresh();
     if (!painted) {
       startup?.finish(width, height);
       painted = true;
@@ -185,7 +188,7 @@ const frames = createCanvasFrameScheduler(
   },
   () => false,
 );
-watch(() => elements?.editing.value?.id, frames.requestRender);
+watch(() => elements?.editing.value?.id ?? elements?.vectorEditing.value ?? undefined, frames.requestRender);
 watch(
   [canvas, stageSize, () => props.state, () => props.cropping],
   () => {
@@ -206,14 +209,19 @@ const { layerAt, selectHit, select, editLayer } = screenshotCanvasInteraction({
   blocked: () => {
     const { isPanning, isSpacePressed } = viewport.viewport;
     return Boolean(
-      props.cropping || props.disabled || isPanning.value || isSpacePressed.value || elements?.drawingMode.value,
+      props.cropping ||
+      props.disabled ||
+      isPanning.value ||
+      isSpacePressed.value ||
+      elements?.drawingMode.value ||
+      elements?.vectorEditing.value,
     );
   },
   select: (id, mode) => {
     if (mode) emit('select', id, mode);
     else emit('select', id);
   },
-  beginText: (id) => elements?.beginText(id),
+  beginElement: (id) => elements?.beginElement(id),
   crop: (id) => emit('cropRequest', id),
   add: (event) => void addMenu.value?.open(event),
 });
@@ -394,7 +402,11 @@ onBeforeUnmount(() => {
         :selection="selectedIds"
         :layer-at="layerAt"
         :space-pressed="viewport.viewport.isSpacePressed.value"
-        :disabled="disabled || cropping || Boolean(elements?.editing.value || elements?.drawingMode.value)"
+        :disabled="
+          disabled ||
+          cropping ||
+          Boolean(elements?.editing.value || elements?.drawingMode.value || elements?.vectorEditing.value)
+        "
         @select="emit('selectMany', $event)"
       >
         <div class="image-stage" :style="stageStyle">
@@ -416,7 +428,7 @@ onBeforeUnmount(() => {
             :measurements="dragging && translationDraft ? activeMeasurements : []"
           />
           <CanvasLayerSelection
-            v-for="selection in cropping ? [] : selections"
+            v-for="selection in cropping || elements?.vectorEditing.value ? [] : selections"
             :key="selection.id"
             :data-layer-id="selection.id"
             :viewport-style="{ inset: '0' }"
@@ -437,7 +449,7 @@ onBeforeUnmount(() => {
             @rotate-end="endRotation"
           />
           <ScreenshotGroupSelection
-            v-if="selectionBounds && !cropping"
+            v-if="selectionBounds && !cropping && !elements?.vectorEditing.value"
             :bounds="selectionBounds"
             :viewport="stageSize"
             :muted="handlesMuted"

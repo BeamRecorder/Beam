@@ -16,7 +16,7 @@ const fixture = () => {
     blocked: vi.fn(() => false),
     selectedIds: vi.fn((): string[] => []),
     select: vi.fn(),
-    beginText: vi.fn(() => false),
+    beginElement: vi.fn(() => false),
     crop: vi.fn(),
     add: vi.fn(),
   };
@@ -98,11 +98,11 @@ it('keeps double and triple click editing on the individual child', () => {
 });
 it('selects only the text child before beginning its inline editor', () => {
   const f = fixture();
-  f.options.beginText.mockReturnValue(true);
+  f.options.beginElement.mockReturnValue(true);
   f.options.selectedIds.mockReturnValue(['image', 'group-sibling']);
   f.interaction.editLayer(click({ detail: 2 }));
   expect(f.options.select).toHaveBeenCalledWith('image', 'individual');
-  expect(f.options.beginText).toHaveBeenCalledWith('image');
+  expect(f.options.beginElement).toHaveBeenCalledWith('image');
   expect(f.options.crop).not.toHaveBeenCalled();
 });
 it('opens Add in empty space and keeps image crop and text editing on their own hits', () => {
@@ -112,7 +112,7 @@ it('opens Add in empty space and keeps image crop and text editing on their own 
   expect(f.options.add).toHaveBeenCalledWith(empty);
   f.interaction.editLayer(click());
   expect(f.options.crop).toHaveBeenCalledWith('image');
-  f.options.beginText.mockReturnValue(true);
+  f.options.beginElement.mockReturnValue(true);
   f.interaction.editLayer(click());
   expect(f.options.crop).toHaveBeenCalledOnce();
 });

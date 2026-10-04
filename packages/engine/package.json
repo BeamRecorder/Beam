@@ -5,10 +5,16 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./*": "./src/*.ts"
+    "./*": "./src/*.ts",
+    "./shared/shape-vector-schema": {
+      "types": "./src/shared/shape-vector-schema.d.ts",
+      "default": "./src/shared/shape-vector-schema.js"
+    }
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "dependencies": {}
+  "dependencies": {
+    "svg-pathdata": "9.0.0"
+  }
 }

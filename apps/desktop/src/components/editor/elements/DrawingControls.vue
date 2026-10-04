@@ -8,6 +8,7 @@ import ColorFillPresetControls from '../properties/ColorFillPresetControls.vue';
 const props = defineProps<{
   modelValue: DrawingSettings;
   hideColor?: boolean;
+  hideSmoothing?: boolean;
 }>();
 const emit = defineEmits<{ 'update:modelValue': [value: DrawingSettings] }>();
 const { t } = useTranslate('Elements');
@@ -37,6 +38,7 @@ const updateFill = (value: ColorFill) =>
       @update:model-value="update({ strokeWidth: $event })"
     />
     <BigSlider
+      v-if="!hideSmoothing"
       :model-value="modelValue.smoothing"
       :label="t('smoothing')"
       :min="0"

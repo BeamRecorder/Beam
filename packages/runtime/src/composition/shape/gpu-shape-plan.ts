@@ -59,6 +59,7 @@ export function gpuShapePlan(
     style.preset === 'rectangle' &&
     style.rotation === 0 &&
     !clip.text &&
+    !style.vector &&
     !style.shadowEnabled &&
     (!style.opacityEnabled || (style.opacity === 100 && style.backdropBlur === 0)) &&
     fill.kind === 'color'

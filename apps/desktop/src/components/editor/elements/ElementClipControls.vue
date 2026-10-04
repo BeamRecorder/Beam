@@ -15,9 +15,15 @@ const { t } = useTranslate('Elements');
 <template>
   <section v-if="editor" class="element-clip-controls">
     <template v-if="editor.drawingMode.value">
-      <p>{{ t('drawHint') }}</p>
-      <DrawingControls :model-value="editor.drawingSettings.value" @update:model-value="editor.updateDrawingSettings" />
-      <Button :icon="MousePointer2" size="sm" variant="secondary" @click="editor.drawingMode.value = false">{{
+      <p>
+        {{ t(editor.anchorDraft.value !== null ? 'drawArrowHint' : 'drawHint') }}
+      </p>
+      <DrawingControls
+        :hide-smoothing="editor.anchorDraft.value !== null"
+        :model-value="editor.drawingSettings.value"
+        @update:model-value="editor.updateDrawingSettings"
+      />
+      <Button :icon="MousePointer2" size="sm" variant="secondary" @click="editor.finishDrawing">{{
         t('finishDrawing')
       }}</Button>
     </template>

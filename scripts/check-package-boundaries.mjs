@@ -10,7 +10,8 @@ const allowed = {
   'native-client': new Set(['@beam/native-client']),
   'system-metrics': new Set(['@beam/system-metrics']),
   'electron-export': new Set(['@beam/electron-export', 'electron']),
-  engine: new Set(['@beam/engine']),
+  // SVG command normalization is pure geometry; it introduces no browser or native host APIs.
+  engine: new Set(['@beam/engine', 'svg-pathdata']),
   runtime: new Set(['@beam/engine', '@beam/runtime', 'mediabunny']),
   encoder: new Set([
     '@beam/engine',
