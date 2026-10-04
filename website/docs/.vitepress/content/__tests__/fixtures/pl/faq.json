@@ -28,7 +28,7 @@
     ],
     [
       "Czy Beam jest naprawdę darmowy i otwartoźródłowy?",
-      "Tak. Beam jest wydawany na licencji MIT i nie wymaga subskrypcji. Publiczne repozytorium na GitHubie pozwala społeczności przeglądać kod, zgłaszać błędy, proponować funkcje i współtworzyć ulepszenia.",
+      "Tak. Kod źródłowy Beam jest dostępny na licencji MPL-2.0, a obecne funkcje aplikacji desktopowej są bezpłatne. Planowane są osobna subskrypcja Desktop Pro i usługi w chmurze. Publiczne repozytorium GitHub pozwala społeczności przeglądać kod i rozwijać projekt.",
       "Zobacz Beam na GitHubie"
     ],
     [

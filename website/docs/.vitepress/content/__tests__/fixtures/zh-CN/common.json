@@ -39,5 +39,5 @@
   ],
   "social": { "github": "在 GitHub 上查看 Beam", "discord": "加入 Beam Discord" },
   "theme": { "switchToLight": "切换到浅色主题", "switchToDark": "切换到深色主题" },
-  "footer": { "message": "开源屏幕录制与编辑工具。", "copyright": "依据 MIT 许可证发布。" }
+  "footer": { "message": "开源屏幕录制与编辑工具。", "copyright": "依据 MPL-2.0 许可证发布。" }
 }

@@ -32,7 +32,7 @@ const catalog = (overrides: Partial<DocsLocaleCatalogs> = {}): DocsLocaleCatalog
     sidebar: [],
     social: { github: 'GitHub', discord: 'Discord' },
     theme: { switchToLight: 'Light theme', switchToDark: 'Dark theme' },
-    footer: { message: 'Beam', copyright: 'MIT' },
+    footer: { message: 'Beam', copyright: 'MPL-2.0' },
   },
   home: {
     title: 'Beam documentation',

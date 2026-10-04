@@ -66,6 +66,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Beam source is now licensed under MPL-2.0, with existing MIT grants and third-party licenses preserved. Licensing documentation distinguishes open-source rights from planned Desktop Pro subscriptions and cloud services; activation is not introduced in this release.
 - Linux GPU export helpers are built and packaged only against dynamically linked LGPL FFmpeg libraries. CI uses a pinned LGPL-only build dependency; FFmpeg executables and libraries remain external to this backend.
 - CLI project opening creates an independent video or Screenshot editor by default, preserving existing projects; `disposition: "reuse"` optionally replaces the active editor in development and installed releases.
 - Private website Screenshot documentation explains selection groups, 3D perspective, gradient/color effects and native CLI capture.
@@ -177,6 +178,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Russian and Bulgarian website FAQs now display their translated questions and answers, including the current source license, instead of internal category identifiers.
 - Linux CI and release packages now compile and verify the experimental GPU export backend. Packages include only Beam native artifacts and use system FFmpeg libraries, preventing the backend from being omitted without bundling FFmpeg.
 
 - HTML playback and scrubbing now follow the shared runtime clock directly, skip the hidden canvas, and continue low-frequency thumbnail captures during interaction, with full-size refinement afterward. HTML timeline thumbnails decode and resize in a background worker, using smaller isolated render surfaces.

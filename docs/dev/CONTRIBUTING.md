@@ -2,6 +2,11 @@
 
 This document explains how to contribute to **Beam**, either using an AI assistant in autonomous mode or following the manual step-by-step developer guide.
 
+Original contributions are licensed under MPL-2.0, as described in
+[Beam licensing](../../LICENSING.md). You retain your copyright. Preserve
+third-party notices and identify imported material and its original license;
+do not apply Beam's license to assets or code you cannot license.
+
 ---
 
 ## 🤖 AI Assistant Prompt (Copy & Paste)

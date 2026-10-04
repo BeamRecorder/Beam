@@ -70,9 +70,7 @@ const importantLinks = computed(() => {
 
     <div class="docs-footer__bottom">
       <span>{{ theme.footer?.copyright }}</span>
-      <a href="https://github.com/BeamRecorder/Beam/blob/master/LICENSE" target="_blank" rel="noreferrer">
-        MIT License
-      </a>
+      <a href="https://github.com/BeamRecorder/Beam/blob/master/LICENSE" target="_blank" rel="noreferrer"> MPL-2.0 </a>
     </div>
   </footer>
 </template>

@@ -85,6 +85,6 @@
   },
   "footer": {
     "message": "Open-source screen recording and editing.",
-    "copyright": "Released under the MIT License."
+    "copyright": "Released under the MPL-2.0 License."
   }
 }

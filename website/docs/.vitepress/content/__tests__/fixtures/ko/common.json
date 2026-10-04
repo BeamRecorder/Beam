@@ -39,5 +39,5 @@
   ],
   "social": { "github": "GitHub에서 Beam 보기", "discord": "Beam Discord 참여" },
   "theme": { "switchToLight": "밝은 테마로 전환", "switchToDark": "어두운 테마로 전환" },
-  "footer": { "message": "오픈 소스 화면 녹화 및 편집 도구.", "copyright": "MIT 라이선스로 배포됩니다." }
+  "footer": { "message": "오픈 소스 화면 녹화 및 편집 도구.", "copyright": "MPL-2.0 라이선스로 배포됩니다." }
 }

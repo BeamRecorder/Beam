@@ -62,7 +62,12 @@ describe('website JSON-LD', () => {
         catalog.items.every((item) => item.question.trim() && item.answer.trim()),
         `${locale} FAQ copy`,
       ).toBe(true);
+      const licensingAnswer = catalog.items.find((item) => item.id === 'free-open-source')?.answer;
+      expect(licensingAnswer, `${locale} current source license`).toContain('MPL-2.0');
+      expect(licensingAnswer, `${locale} planned paid distribution`).toMatch(/Desktop[- ]Pro/);
       for (const item of catalog.items) {
+        expect(item.question, `${locale} ${item.id} displayed question`).not.toBe(item.id);
+        expect(item.answer, `${locale} ${item.id} displayed answer`).not.toBe(item.category);
         if (item.sourceUrl) expect(item.sourceLabel?.trim(), `${locale} ${item.id} source label`).not.toBe('');
       }
       if (locale !== 'en') {

@@ -39,5 +39,5 @@
   ],
   "social": { "github": "Zobacz Beam na GitHubie", "discord": "Dołącz do Discorda Beam" },
   "theme": { "switchToLight": "Przełącz na jasny motyw", "switchToDark": "Przełącz na ciemny motyw" },
-  "footer": { "message": "Otwartoźródłowe nagrywanie i edycja ekranu.", "copyright": "Wydano na licencji MIT." }
+  "footer": { "message": "Otwartoźródłowe nagrywanie i edycja ekranu.", "copyright": "Wydano na licencji MPL-2.0." }
 }

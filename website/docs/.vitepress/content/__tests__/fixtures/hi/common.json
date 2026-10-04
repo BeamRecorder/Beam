@@ -39,5 +39,5 @@
   ],
   "social": { "github": "GitHub पर Beam देखें", "discord": "Beam Discord से जुड़ें" },
   "theme": { "switchToLight": "लाइट थीम पर जाएँ", "switchToDark": "डार्क थीम पर जाएँ" },
-  "footer": { "message": "ओपन-सोर्स स्क्रीन रिकॉर्डिंग और एडिटिंग।", "copyright": "MIT लाइसेंस के तहत जारी।" }
+  "footer": { "message": "ओपन-सोर्स स्क्रीन रिकॉर्डिंग और एडिटिंग।", "copyright": "MPL-2.0 लाइसेंस के तहत जारी।" }
 }

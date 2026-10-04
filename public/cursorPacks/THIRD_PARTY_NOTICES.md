@@ -1,6 +1,6 @@
 # Third-party cursor packs
 
-The cursor artwork generated from this directory is distributed separately from Beam's MIT-licensed source code. All
+The cursor artwork generated from this directory is distributed separately from Beam's MPL-2.0-licensed source code. All
 rights in the artwork remain with its respective authors.
 
 ## Material Bibata Noir and Material Bibata White
@@ -18,7 +18,7 @@ Redistribution permission must be confirmed before a public release.
 ## Moga Dark and Moga White
 
 Created by Moyash, copyright 2026. The downloaded archives identify the artwork as CC BY-NC-ND. These assets are not
-covered by Beam's MIT license and must not be used commercially or distributed in modified form without separate
+covered by Beam's MPL-2.0 license and must not be used commercially or distributed in modified form without separate
 permission from the author.
 
 Beam stores static XCursor frames as lossless PNG files for browser rendering. Animated roles are not included.

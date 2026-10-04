@@ -39,5 +39,5 @@
   ],
   "social": { "github": "在 GitHub 上查看 Beam", "discord": "加入 Beam Discord" },
   "theme": { "switchToLight": "切換至淺色主題", "switchToDark": "切換至深色主題" },
-  "footer": { "message": "開源螢幕錄影與編輯工具。", "copyright": "依 MIT 授權條款發布。" }
+  "footer": { "message": "開源螢幕錄影與編輯工具。", "copyright": "依 MPL-2.0 授權條款發布。" }
 }

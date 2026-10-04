@@ -38,7 +38,7 @@ const englishFaqItems: readonly FaqItem[] = [
     category: 'application',
     question: 'Is Beam really free and open source?',
     answer:
-      'Yes. Beam is released under the MIT License with no subscription required. Its public GitHub repository lets the community inspect the code, report bugs, request features, and contribute improvements.',
+      'Yes. Beam source is released under MPL-2.0, and current desktop features are free. A separate Desktop Pro subscription and cloud services are planned. Its public GitHub repository lets the community inspect the code, report bugs, request features, and contribute improvements.',
     sourceUrl: 'https://github.com/BeamRecorder/Beam',
     sourceLabel: 'View Beam on GitHub',
   },
@@ -145,7 +145,7 @@ const frenchFaqItems: readonly FaqItem[] = [
     category: 'application',
     question: 'Beam est-il vraiment gratuit et open source ?',
     answer:
-      'Oui. Beam est publié sous licence MIT et ne nécessite aucun abonnement. Son dépôt GitHub public permet à la communauté de consulter le code, signaler des bugs, proposer des fonctionnalités et contribuer.',
+      'Oui. Le code source de Beam est publié sous MPL-2.0 et les fonctionnalités actuelles sont gratuites. Un abonnement Desktop Pro distinct et des services cloud sont prévus. Son dépôt GitHub public permet à la communauté de consulter le code, signaler des bugs, proposer des fonctionnalités et contribuer.',
     sourceUrl: 'https://github.com/BeamRecorder/Beam',
     sourceLabel: 'Voir Beam sur GitHub',
   },

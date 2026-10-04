@@ -41,6 +41,6 @@
   "theme": { "switchToLight": "Zum hellen Design wechseln", "switchToDark": "Zum dunklen Design wechseln" },
   "footer": {
     "message": "Open-Source-Bildschirmaufnahme und -bearbeitung.",
-    "copyright": "Unter der MIT-Lizenz veröffentlicht."
+    "copyright": "Unter der MPL-2.0-Lizenz veröffentlicht."
   }
 }

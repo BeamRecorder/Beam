@@ -45,7 +45,7 @@ const comparisonLinks = [
         <a :href="`${REPOSITORY_URL}/issues`" target="_blank" rel="noreferrer">
           {{ isFrench ? 'Signaler un bug' : 'Report an issue' }} <ExternalLink aria-hidden="true" />
         </a>
-        <a :href="`${REPOSITORY_URL}/blob/master/LICENSE`" target="_blank" rel="noreferrer">MIT License</a>
+        <a :href="`${REPOSITORY_URL}/blob/master/LICENSE`" target="_blank" rel="noreferrer">MPL-2.0</a>
       </nav>
     </div>
   </footer>

@@ -152,4 +152,8 @@ Have feedback, ideas, or questions? Join the Beam community on Discord and follo
 
 Beam takes inspiration from [Recordly](https://github.com/webadderallorg/Recordly/). Some ideas are inspired by it; Beam is not a fork, it is a complete rewrite.
 
-Released under the [MIT License](./LICENSE).
+Beam's source code is released under [MPL-2.0](./LICENSE). See
+[Beam licensing](./LICENSING.md) for commercial use, forks, third-party material
+and earlier MIT versions. The planned [Desktop Pro policy](./docs/licensing/DESKTOP-PRO.md)
+covers subscriptions and future paid features and cloud services; it does not
+introduce an activation system or change current Free features.

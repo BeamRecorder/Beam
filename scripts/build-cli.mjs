@@ -52,6 +52,13 @@ if (!gpuHost.success) throw new AggregateError(gpuHost.logs, 'GPU export host co
 await cp(resolve(root, 'packages/electron-export/src/gpu-preload.cjs'), resolve(output, 'gpu-preload.cjs'));
 await packageCliCompiler(root, output);
 for (const file of [
+  'LICENSE',
+  'LICENSING.md',
+  'docs/licensing/LEGACY-MIT.txt',
+  'docs/licensing/DESKTOP-PRO.md',
+  'apps/desktop/src/components/brand/Beamy/engine/LICENSE',
+  'apps/desktop/src/components/brand/Beamy/engine/NOTICE.md',
+  'public/cursorPacks/THIRD_PARTY_NOTICES.md',
   'docs/agent/README.md',
   'docs/agent/html-compositions.md',
   'docs/architecture/gradient-effects.md',
