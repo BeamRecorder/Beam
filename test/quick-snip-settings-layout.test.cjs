@@ -1,6 +1,9 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { settingsLayout, validateSettingsAnchor } = require('../apps/desktop/electron/quick-snip/quick-snip-settings-layout.cjs');
+const {
+  settingsLayout,
+  validateSettingsAnchor,
+} = require('../apps/desktop/electron/quick-snip/quick-snip-settings-layout.cjs');
 const area = { x: -1920, y: -100, width: 1920, height: 1080 };
 const anchor = { x: 500, y: 26, width: 32, height: 32 };
 for (const bar of [

@@ -126,7 +126,9 @@ export function pasteScreenshotLayerSelection(
   initializeScreenshotComposition(next);
   const names: string[] = [];
   const groups = new Map<string, string>();
-  for (const entry of clipboard.entries) if (entry.groupId && clipboard.entries.filter((r) => r.groupId === entry.groupId).length > 1) groups.set(entry.groupId, groups.get(entry.groupId) ?? crypto.randomUUID());
+  for (const entry of clipboard.entries)
+    if (entry.groupId && clipboard.entries.filter((r) => r.groupId === entry.groupId).length > 1)
+      groups.set(entry.groupId, groups.get(entry.groupId) ?? crypto.randomUUID());
   clipboard.entries.forEach((entry, index) => {
     const id = ids[index]!;
     if (entry.layer.type === 'cursor') {

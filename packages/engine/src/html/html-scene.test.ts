@@ -71,7 +71,7 @@ describe('direct HTML scene eligibility', () => {
       { rotation: 2 },
       { isMirrored: true },
       { isMirroredY: true },
-      { transitions: { entry: { preset: 'fade', durationMs: 100 }, exit: null } },
+      { transitions: { entry: { preset: { kind: 'fade' }, durationMs: 100 }, exit: null } },
     ]) {
       const f = htmlSceneFixture();
       Object.assign(f.clip, patch);
@@ -83,7 +83,7 @@ describe('direct HTML scene eligibility', () => {
   });
   it('retains document animations, captions and output transitions in the compositor', () => {
     const f = htmlSceneFixture();
-    const transition = { preset: 'fade' as const, durationMs: 100 };
+    const transition = { preset: { kind: 'fade' as const }, durationMs: 100 };
     expect(
       htmlDomPreviewAt(f.composition, 2000, { ...f.canvas, transitions: { entry: transition, exit: null } }, false),
     ).toBeNull();

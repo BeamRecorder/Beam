@@ -1,5 +1,5 @@
-import type { gsap } from "gsap";
-import type { BackgroundKind } from "../../../packages/engine/src/shared/background-types";
+import type { gsap } from 'gsap';
+import type { BackgroundKind } from '../../../packages/engine/src/shared/background-types';
 
 export interface CanvasPose {
   time: number;

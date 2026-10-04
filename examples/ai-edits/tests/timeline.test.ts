@@ -15,7 +15,7 @@ describe('Ai-Native choreography', () => {
     expect(timeline.paused()).toBe(true);
     expect(timeline.duration()).toBe(15);
     expect(document.querySelectorAll('.official-plate')).toHaveLength(3);
-    expect(timeline.getChildren().every(tween => tween.repeat() !== -1)).toBe(true);
+    expect(timeline.getChildren().every((tween) => tween.repeat() !== -1)).toBe(true);
   });
   it('keeps the exact same official interfaces through the question and analysis', () => {
     const timeline = createTimeline();

@@ -1,8 +1,5 @@
-import type {
-  TimelineCanvasArtwork,
-  TimelineCanvasItem,
-} from "@beam/runtime/timeline/timeline-canvas-types";
-import type { createMotion } from "./motion";
+import type { TimelineCanvasArtwork, TimelineCanvasItem } from '@beam/runtime/timeline/timeline-canvas-types';
+import type { createMotion } from './motion';
 
 export interface DemoPose {
   trim: number;
@@ -15,9 +12,9 @@ export interface DemoPose {
   snapOpacity: number;
   camera: number;
 }
-export type DemoCursorRole = "default" | "resizewesteast";
+export type DemoCursorRole = 'default' | 'resizewesteast';
 export interface DemoLane {
-  id: "titles" | "screen" | "zoom" | "audio";
+  id: 'titles' | 'screen' | 'zoom' | 'audio';
   title: string;
   items: TimelineCanvasItem[];
 }

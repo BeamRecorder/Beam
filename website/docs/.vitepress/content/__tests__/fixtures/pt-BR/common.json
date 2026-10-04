@@ -39,5 +39,8 @@
   ],
   "social": { "github": "Ver o Beam no GitHub", "discord": "Entrar no Discord do Beam" },
   "theme": { "switchToLight": "Mudar para o tema claro", "switchToDark": "Mudar para o tema escuro" },
-  "footer": { "message": "Gravação e edição de tela de código aberto.", "copyright": "Distribuído sob a licença MPL-2.0." }
+  "footer": {
+    "message": "Gravação e edição de tela de código aberto.",
+    "copyright": "Distribuído sob a licença MPL-2.0."
+  }
 }

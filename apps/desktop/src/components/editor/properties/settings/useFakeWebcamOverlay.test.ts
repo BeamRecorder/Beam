@@ -73,16 +73,14 @@ beforeEach(() => {
   inspect.inspectDroppedMedia
     .mockReset()
     .mockResolvedValue({ kind: 'video', durationMs: 8000, width: 640, height: 360 });
-  capture.importDemoWebcamMedia
-    .mockReset()
-    .mockResolvedValue({
-      ...media,
-      id: 'import',
-      src: 'project-media://asset/demo.mp4',
-      origin: 'project',
-      durationMs: 0,
-      sessionId: undefined,
-    });
+  capture.importDemoWebcamMedia.mockReset().mockResolvedValue({
+    ...media,
+    id: 'import',
+    src: 'project-media://asset/demo.mp4',
+    origin: 'project',
+    durationMs: 0,
+    sessionId: undefined,
+  });
 });
 afterEach(() => {
   vi.unstubAllGlobals();

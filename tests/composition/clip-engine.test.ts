@@ -192,18 +192,18 @@ describe('clip composition engine', () => {
     const trimmed = trimClip(composition, 'source', 'end', 3_000);
     const trimmedClip = trimmed.clips[0]!;
     expect(trimmedClip.timelineDurationMs).toBe(2_000);
-    expect(
-      (trimmedClip.transitions?.entry?.durationMs ?? 0) + (trimmedClip.transitions?.exit?.durationMs ?? 0),
-    ).toBe(2_000);
+    expect((trimmedClip.transitions?.entry?.durationMs ?? 0) + (trimmedClip.transitions?.exit?.durationMs ?? 0)).toBe(
+      2_000,
+    );
     expect(trimmedClip.transitions?.entry?.preset).toEqual({ kind: 'fade' });
     expect(trimmedClip.transitions?.exit?.preset).toEqual({ kind: 'blur' });
 
     const retimed = setPlaybackRate(composition, 'source', 2);
     const retimedClip = retimed.clips[0]!;
     expect(retimedClip.timelineDurationMs).toBe(2_000);
-    expect(
-      (retimedClip.transitions?.entry?.durationMs ?? 0) + (retimedClip.transitions?.exit?.durationMs ?? 0),
-    ).toBe(2_000);
+    expect((retimedClip.transitions?.entry?.durationMs ?? 0) + (retimedClip.transitions?.exit?.durationMs ?? 0)).toBe(
+      2_000,
+    );
   });
 
   it('keeps only the left entry and right exit transition when splitting', () => {
@@ -298,8 +298,7 @@ describe('clip composition engine', () => {
     const trimmed = trimClip(linked(), 'screen', 'end', 3_000);
     expect(
       trimmed.clips.every(
-        (entry) =>
-          entry.timelineDurationMs === 2_000 && entry.sourceDurationMs === 2_000 && entry.sourceInMs === 200,
+        (entry) => entry.timelineDurationMs === 2_000 && entry.sourceDurationMs === 2_000 && entry.sourceInMs === 200,
       ),
     ).toBe(true);
   });
@@ -309,9 +308,9 @@ describe('clip composition engine', () => {
     let cursor = 0;
     const split = splitClip(linked(), 'screen', 3_000, () => ids[cursor++]!);
     expect(split.clips).toHaveLength(6);
-    expect(
-      new Set(split.clips.filter((entry) => entry.timelineStartMs < 3_000).map((entry) => entry.groupId)),
-    ).toEqual(new Set(['recording']));
+    expect(new Set(split.clips.filter((entry) => entry.timelineStartMs < 3_000).map((entry) => entry.groupId))).toEqual(
+      new Set(['recording']),
+    );
     expect(
       new Set(split.clips.filter((entry) => entry.timelineStartMs === 3_000).map((entry) => entry.groupId)),
     ).toEqual(new Set(['right-group']));
@@ -390,9 +389,7 @@ describe('clip composition engine', () => {
     ]);
     const split = splitClip(source, 'front', 3_000, () => 'front-right');
     const reordered = reorderClip(split, 'front', 1);
-    const frontOrders = reordered.clips
-      .filter((clip) => clip.trackId === 'front-track')
-      .map((clip) => clip.order);
+    const frontOrders = reordered.clips.filter((clip) => clip.trackId === 'front-track').map((clip) => clip.order);
     const backOrder = reordered.clips.find((clip) => clip.trackId === 'back-track')!.order;
 
     expect(new Set(frontOrders).size).toBe(1);

@@ -1,10 +1,7 @@
-import type {
-  CursorEvent,
-  CursorKind,
-} from "../../../packages/engine/src/capture/capture-session";
-import { createCursorMotionPlayer } from "../../../packages/engine/src/cursor/cursor-motion";
-import { cursorStateAt } from "../../../packages/engine/src/cursor/cursorPlayback";
-import { CLICKS, MOTION, actionAt, stepAt } from "./motion";
+import type { CursorEvent, CursorKind } from '../../../packages/engine/src/capture/capture-session';
+import { createCursorMotionPlayer } from '../../../packages/engine/src/cursor/cursor-motion';
+import { cursorStateAt } from '../../../packages/engine/src/cursor/cursorPlayback';
+import { CLICKS, MOTION, actionAt, stepAt } from './motion';
 
 const PARK = { x: 337, y: 139 };
 const anchors = [
@@ -51,7 +48,7 @@ for (let i = 0; i <= 720; i++) {
   if (at >= 8.55 && at <= 9.2) x = 170 + actionAt(at).width;
   const sessionNs = Math.round(at * 1e9);
   events.push({
-    event: "move",
+    event: 'move',
     sessionNs,
     pixelX: x,
     pixelY: y,
@@ -59,11 +56,11 @@ for (let i = 0; i <= 720; i++) {
     normalizedY: y / 400,
     visible: true,
   });
-  const role: CursorKind = x > 430 ? "handpointing" : stepAt(at).role;
+  const role: CursorKind = x > 430 ? 'handpointing' : stepAt(at).role;
   if (role !== previousRole) {
     previousRole = role;
     events.push({
-      event: "shape",
+      event: 'shape',
       sessionNs,
       cursorKind: role,
       hotspot: { x: 0, y: 0 },
@@ -73,7 +70,7 @@ for (let i = 0; i <= 720; i++) {
 for (const click of CLICKS) {
   for (const pressed of [true, false])
     events.push({
-      event: "button",
+      event: 'button',
       sessionNs: Math.round((click.at + (pressed ? 0 : 0.08)) * 1e9),
       button: 1,
       pressed,

@@ -4,6 +4,8 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-04
+
 ### Added
 
 - The private website’s Edit transitions and export sections now show eight-second, 60 fps light/dark loops with native transition previews, editable title layers, export settings and local-file progress. Reusable source lives in `examples/website-finishing-loops/`.

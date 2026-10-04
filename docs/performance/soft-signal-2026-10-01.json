@@ -21,10 +21,7 @@
       "electron": "44.5.1",
       "chromium": "152.0.7977.130"
     },
-    "windowContentSize": [
-      1280,
-      800
-    ],
+    "windowContentSize": [1280, 800],
     "gpuFeatures": {
       "2d_canvas": "enabled",
       "direct_rendering_display_compositor": "disabled_off_ok",
@@ -45,10 +42,7 @@
     }
   },
   "sharedDecoderPolicy": {
-    "codecs": [
-      "AV1",
-      "VP9"
-    ],
+    "codecs": ["AV1", "VP9"],
     "platform": "Linux",
     "hardwareAcceleration": "prefer-software",
     "optimizeForLatency": false
@@ -59,14 +53,8 @@
     "exactSeeks": 40,
     "wideScrubRequests": 120,
     "requestedScrubIntervalMs": 16.666666666666668,
-    "exactSeekRangeSeconds": [
-      0,
-      7.8
-    ],
-    "scrubRangeSeconds": [
-      0,
-      7.933333333333334
-    ],
+    "exactSeekRangeSeconds": [0, 7.8],
+    "scrubRangeSeconds": [0, 7.933333333333334],
     "note": "Wall times include real decoding/rendering and event-loop delay; scrub ends with an exact seek at 4 seconds."
   },
   "trials": [
@@ -76,13 +64,7 @@
       "success": true,
       "visiblePreviewMs": 1771.9403119999997,
       "nativePresentationMs": 690.9279529999999,
-      "startupLongTasksMs": [
-        113,
-        228,
-        249,
-        224,
-        120
-      ],
+      "startupLongTasksMs": [113, 228, 249, 224, 120],
       "shapeThumbnailRenders": 61,
       "phases": {
         "playback": {
@@ -101,13 +83,7 @@
             "max": 160.59999999999945
           },
           "playbackError": null,
-          "longTasksMs": [
-            64,
-            66,
-            152,
-            72,
-            162
-          ],
+          "longTasksMs": [64, 66, 152, 72, 162],
           "audioMetrics": {
             "schedulePasses": 57,
             "scheduledBuffers": 139,
@@ -148,13 +124,7 @@
           },
           "failures": [],
           "playbackError": null,
-          "longTasksMs": [
-            111,
-            56,
-            67,
-            82,
-            54
-          ],
+          "longTasksMs": [111, 56, 67, 82, 54],
           "audioMetrics": {
             "schedulePasses": 59,
             "scheduledBuffers": 145,
@@ -190,15 +160,7 @@
           },
           "requests": 120,
           "playbackError": null,
-          "longTasksMs": [
-            52,
-            60,
-            66,
-            73,
-            81,
-            65,
-            61
-          ],
+          "longTasksMs": [52, 60, 66, 73, 81, 65, 61],
           "audioMetrics": {
             "schedulePasses": 59,
             "scheduledBuffers": 145,
@@ -225,17 +187,7 @@
       "success": true,
       "visiblePreviewMs": 2150.700617,
       "nativePresentationMs": 711.2483849999999,
-      "startupLongTasksMs": [
-        99,
-        237,
-        247,
-        261,
-        226,
-        104,
-        68,
-        74,
-        58
-      ],
+      "startupLongTasksMs": [99, 237, 247, 261, 226, 104, 68, 74, 58],
       "shapeThumbnailRenders": 61,
       "phases": {
         "playback": {
@@ -254,20 +206,7 @@
             "max": 137.40000000000055
           },
           "playbackError": null,
-          "longTasksMs": [
-            58,
-            58,
-            50,
-            146,
-            59,
-            81,
-            95,
-            55,
-            60,
-            56,
-            60,
-            58
-          ],
+          "longTasksMs": [58, 58, 50, 146, 59, 81, 95, 55, 60, 56, 60, 58],
           "audioMetrics": {
             "schedulePasses": 59,
             "scheduledBuffers": 144,
@@ -308,11 +247,7 @@
           },
           "failures": [],
           "playbackError": null,
-          "longTasksMs": [
-            140,
-            50,
-            62
-          ],
+          "longTasksMs": [140, 50, 62],
           "audioMetrics": {
             "schedulePasses": 60,
             "scheduledBuffers": 145,
@@ -348,20 +283,7 @@
           },
           "requests": 120,
           "playbackError": null,
-          "longTasksMs": [
-            54,
-            72,
-            93,
-            51,
-            56,
-            67,
-            53,
-            50,
-            82,
-            64,
-            52,
-            59
-          ],
+          "longTasksMs": [54, 72, 93, 51, 56, 67, 53, 50, 82, 64, 52, 59],
           "audioMetrics": {
             "schedulePasses": 60,
             "scheduledBuffers": 145,
@@ -388,14 +310,7 @@
       "success": true,
       "visiblePreviewMs": 1885.8744699999997,
       "nativePresentationMs": 690.444982,
-      "startupLongTasksMs": [
-        70,
-        282,
-        259,
-        198,
-        116,
-        210
-      ],
+      "startupLongTasksMs": [70, 282, 259, 198, 116, 210],
       "shapeThumbnailRenders": 61,
       "phases": {
         "playback": {
@@ -414,21 +329,7 @@
             "max": 164.19999999999982
           },
           "playbackError": null,
-          "longTasksMs": [
-            60,
-            59,
-            83,
-            71,
-            52,
-            164,
-            84,
-            101,
-            81,
-            74,
-            120,
-            60,
-            61
-          ],
+          "longTasksMs": [60, 59, 83, 71, 52, 164, 84, 101, 81, 74, 120, 60, 61],
           "audioMetrics": {
             "schedulePasses": 53,
             "scheduledBuffers": 140,
@@ -469,10 +370,7 @@
           },
           "failures": [],
           "playbackError": null,
-          "longTasksMs": [
-            165,
-            52
-          ],
+          "longTasksMs": [165, 52],
           "audioMetrics": {
             "schedulePasses": 55,
             "scheduledBuffers": 146,
@@ -508,15 +406,7 @@
           },
           "requests": 120,
           "playbackError": null,
-          "longTasksMs": [
-            89,
-            50,
-            53,
-            54,
-            80,
-            74,
-            87
-          ],
+          "longTasksMs": [89, 50, 53, 54, 80, 74, 87],
           "audioMetrics": {
             "schedulePasses": 55,
             "scheduledBuffers": 146,
@@ -543,14 +433,7 @@
       "success": true,
       "visiblePreviewMs": 2027.9323839999997,
       "nativePresentationMs": 875.245876,
-      "startupLongTasksMs": [
-        69,
-        405,
-        260,
-        130,
-        152,
-        114
-      ],
+      "startupLongTasksMs": [69, 405, 260, 130, 152, 114],
       "shapeThumbnailRenders": 3,
       "phases": {
         "playback": {
@@ -569,11 +452,7 @@
             "max": 116.69999999999982
           },
           "playbackError": null,
-          "longTasksMs": [
-            50,
-            116,
-            96
-          ],
+          "longTasksMs": [50, 116, 96],
           "audioMetrics": {
             "schedulePasses": 59,
             "scheduledBuffers": 143,
@@ -614,9 +493,7 @@
           },
           "failures": [],
           "playbackError": null,
-          "longTasksMs": [
-            126
-          ],
+          "longTasksMs": [126],
           "audioMetrics": {
             "schedulePasses": 60,
             "scheduledBuffers": 145,
@@ -679,15 +556,7 @@
       "success": true,
       "visiblePreviewMs": 2077.7191189999994,
       "nativePresentationMs": 792.5535959999997,
-      "startupLongTasksMs": [
-        90,
-        321,
-        260,
-        228,
-        177,
-        88,
-        55
-      ],
+      "startupLongTasksMs": [90, 321, 260, 228, 177, 88, 55],
       "shapeThumbnailRenders": 3,
       "phases": {
         "playback": {
@@ -706,14 +575,7 @@
             "max": 456.10000000000036
           },
           "playbackError": null,
-          "longTasksMs": [
-            76,
-            68,
-            51,
-            50,
-            443,
-            99
-          ],
+          "longTasksMs": [76, 68, 51, 50, 443, 99],
           "audioMetrics": {
             "schedulePasses": 55,
             "scheduledBuffers": 142,
@@ -754,9 +616,7 @@
           },
           "failures": [],
           "playbackError": null,
-          "longTasksMs": [
-            247
-          ],
+          "longTasksMs": [247],
           "audioMetrics": {
             "schedulePasses": 56,
             "scheduledBuffers": 144,
@@ -819,14 +679,7 @@
       "success": true,
       "visiblePreviewMs": 1675.2189899999998,
       "nativePresentationMs": 663.4486309999998,
-      "startupLongTasksMs": [
-        63,
-        220,
-        228,
-        148,
-        205,
-        54
-      ],
+      "startupLongTasksMs": [63, 220, 228, 148, 205, 54],
       "shapeThumbnailRenders": 3,
       "phases": {
         "playback": {
@@ -845,12 +698,7 @@
             "max": 439.10000000000036
           },
           "playbackError": null,
-          "longTasksMs": [
-            448,
-            55,
-            324,
-            52
-          ],
+          "longTasksMs": [448, 55, 324, 52],
           "audioMetrics": {
             "schedulePasses": 54,
             "scheduledBuffers": 144,
@@ -891,9 +739,7 @@
           },
           "failures": [],
           "playbackError": null,
-          "longTasksMs": [
-            139
-          ],
+          "longTasksMs": [139],
           "audioMetrics": {
             "schedulePasses": 54,
             "scheduledBuffers": 144,

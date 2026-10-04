@@ -1,21 +1,21 @@
-import { createDefaultCaptionStyle } from "../../../packages/engine/src/shared/composition-defaults";
-import { captionContentAt } from "../../../packages/engine/src/shared/caption-text-layout";
-import { drawCaptionText } from "../../../packages/runtime/src/composition/captions/render-caption-text";
-import type { CaptionClip } from "@beam/engine/shared/composition-types";
-import { captionState } from "./motion";
+import { createDefaultCaptionStyle } from '../../../packages/engine/src/shared/composition-defaults';
+import { captionContentAt } from '../../../packages/engine/src/shared/caption-text-layout';
+import { drawCaptionText } from '../../../packages/runtime/src/composition/captions/render-caption-text';
+import type { CaptionClip } from '@beam/engine/shared/composition-types';
+import { captionState } from './motion';
 
 export const SENTENCES = [
-  { text: "Every word, beautifully clear.", start: 0, end: 2400 },
-  { text: "Make your story stand out.", start: 2400, end: 5000 },
-  { text: "Created with Beam.", start: 5000, end: 8000 },
+  { text: 'Every word, beautifully clear.', start: 0, end: 2400 },
+  { text: 'Make your story stand out.', start: 2400, end: 5000 },
+  { text: 'Created with Beam.', start: 5000, end: 8000 },
 ];
 export function captionClip(time: number): CaptionClip {
   const state = captionState(time),
     defaults = createDefaultCaptionStyle(state.fontSize);
   return {
-    id: "caption",
-    kind: "caption",
-    name: "Captions",
+    id: 'caption',
+    kind: 'caption',
+    name: 'Captions',
     enabled: true,
     order: 0,
     timelineStartMs: 0,
@@ -25,9 +25,9 @@ export function captionClip(time: number): CaptionClip {
     playbackRate: 1,
     transform: { x: 0.08, y: 0.3, width: 0.84, height: 0.4 },
     caption: {
-      type: "text",
+      type: 'text',
       sentences: SENTENCES.map((sentence, index) => {
-        const words = sentence.text.split(" "),
+        const words = sentence.text.split(' '),
           step = (sentence.end - sentence.start) / words.length;
         return {
           id: `sentence-${index}`,
@@ -43,12 +43,12 @@ export function captionClip(time: number): CaptionClip {
       }),
       style: {
         ...defaults,
-        fontFamily: "Hanken Grotesk",
+        fontFamily: 'Hanken Grotesk',
         fontWeight: 800,
         outlineWidth: 0,
         extrusionDepth: 0,
         shadowBlur: 8,
-        placement: "center",
+        placement: 'center',
         shape: {
           ...defaults.shape,
           opacity: state.background ? 65 : 0,
@@ -58,9 +58,9 @@ export function captionClip(time: number): CaptionClip {
         wordHighlight: {
           ...defaults.wordHighlight,
           enabled: state.highlight,
-          color: "#ffd29c",
+          color: '#ffd29c',
           inactiveOpacity: 85,
-          effect: "pop",
+          effect: 'pop',
         },
       },
     },

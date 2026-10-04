@@ -39,9 +39,7 @@ class NativeCaptureClient {
   ensureStarted() {
     if (this.terminating) throw new Error('capture-engine: the previous process is still terminating');
     if (this.unconfirmedExit)
-      throw new Error(
-        `capture-engine: previous process exit was not confirmed (${this.unconfirmedExit.reason})`,
-      );
+      throw new Error(`capture-engine: previous process exit was not confirmed (${this.unconfirmedExit.reason})`);
     if (this.process && !this.process.killed) return;
     if (this.shuttingDown) throw new Error('capture-engine: respawn is disabled during application shutdown');
     const child = spawn(this.resolveExecutable(), [], {
@@ -105,8 +103,12 @@ class NativeCaptureClient {
   request(command, payload = {}, options = {}) {
     if (typeof command !== 'string' || command.trim().length === 0)
       return Promise.reject(new TypeError('capture-engine: command must be a non-empty string'));
-    if (!payload || typeof payload !== 'object' || Array.isArray(payload) ||
-      ['id', 'requestId', 'command'].some((key) => Object.hasOwn(payload, key)))
+    if (
+      !payload ||
+      typeof payload !== 'object' ||
+      Array.isArray(payload) ||
+      ['id', 'requestId', 'command'].some((key) => Object.hasOwn(payload, key))
+    )
       return Promise.reject(new TypeError('capture-engine: payload cannot override the request envelope'));
     if (this.terminating) {
       const termination = this.terminating.promise;
@@ -128,8 +130,7 @@ class NativeCaptureClient {
         'screenshot',
         'request-input-access',
       ].includes(command);
-      const timeoutMs =
-        options.timeoutMs ?? (interactive ? INTERACTIVE_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS);
+      const timeoutMs = options.timeoutMs ?? (interactive ? INTERACTIVE_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS);
       const timeout = setTimeout(() => {
         void this.terminateProcess(new Error(`Délai dépassé pour la commande de capture "${command}"`));
       }, timeoutMs);

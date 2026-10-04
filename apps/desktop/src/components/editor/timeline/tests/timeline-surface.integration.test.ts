@@ -57,13 +57,19 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
           transform(code, id) {
             if (process.env.BEAM_TIMELINE_BASELINE !== '1' || !id.endsWith('/useTimelineVirtualization.ts')) return;
             // Isolated benchmark of the pre-change window computation; production contains no profiling flag.
-            code = code.replace(/  const rows = computed\([\s\S]*?\n  const visibleIds/, `  const rows = computed(() => visibleTimelineRows(layout.value, viewport.top, viewport.height, pinnedRow.value ?? focusedRow.value));\n  const visibleIds`);
+            code = code.replace(
+              /  const rows = computed\([\s\S]*?\n  const visibleIds/,
+              `  const rows = computed(() => visibleTimelineRows(layout.value, viewport.top, viewport.height, pinnedRow.value ?? focusedRow.value));\n  const visibleIds`,
+            );
             const split = code.indexOf('export function useVirtualTimelineItems');
-            return code.slice(0, split) + `export function useVirtualTimelineItems<T>(items: () => readonly T[], id: (item: T) => string) {
+            return (
+              code.slice(0, split) +
+              `export function useVirtualTimelineItems<T>(items: () => readonly T[], id: (item: T) => string) {
               const window = useTimelineVirtualWindow();
               const index = computed(() => new Map(items().map(item => [id(item), item])));
               return computed(() => window ? window.rows.value.flatMap(row => { const item = index.value.get(row.id); return item ? [item] : []; }) : [...items()]);
-            }`;
+            }`
+            );
           },
           configureServer(server) {
             server.middlewares.use('/beam-timeline-test', (_req, res) => {
@@ -108,49 +114,115 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
     await server?.close();
     if (temporary) await rm(temporary, { recursive: true, force: true });
   });
-  it.each([false, true])('reserves AI icon space before the painted caption label (locked: %s)', async locked => {
-    const composition: ClipComposition = { schemaVersion: 14, assets: [], keyboardCaptionSessions: [], clips: [{ ...caption, name: 'AI caption', locked, isAiGenerated: true }] };
-    const result = await page.evaluate(async composition => {
-      const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
-      const host = await load('/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts') as typeof import('./timeline-browser-host');
-      const { canvas, state, settle, dispose } = await host.mountTimeline(composition, 10, 100);
-      const ctx = canvas.getContext('2d')!, fill = ctx.fillText.bind(ctx), positions: number[] = [];
-      ctx.fillText = (text, x, y, maxWidth) => { if (text === 'AI caption') positions.push(canvas.getBoundingClientRect().left + ctx.getTransform().transformPoint(new DOMPoint(x, y)).x); fill(text, x, y, maxWidth); };
-      state.composition = { ...composition, clips: composition.clips.map(clip => ({ ...clip, enabled: false })) }; await settle();
-      const icons = document.querySelector<HTMLElement>('.text-caption-track .clip-center-title')!.getBoundingClientRect();
-      const result = { iconRight: icons.right, labels: positions, count: document.querySelectorAll('.text-caption-track .clip-center-title svg').length };
-      dispose(); return result;
-    }, composition);
-    expect(result.count).toBe(locked ? 2 : 1); expect(result.labels.length).toBeGreaterThan(0);
-    expect(result.labels.every(left => left >= result.iconRight)).toBe(true);
-  }, 30000);
+  it.each([false, true])(
+    'reserves AI icon space before the painted caption label (locked: %s)',
+    async (locked) => {
+      const composition: ClipComposition = {
+        schemaVersion: 14,
+        assets: [],
+        keyboardCaptionSessions: [],
+        clips: [{ ...caption, name: 'AI caption', locked, isAiGenerated: true }],
+      };
+      const result = await page.evaluate(async (composition) => {
+        const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+        const host = (await load(
+          '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
+        )) as typeof import('./timeline-browser-host');
+        const { canvas, state, settle, dispose } = await host.mountTimeline(composition, 10, 100);
+        const ctx = canvas.getContext('2d')!,
+          fill = ctx.fillText.bind(ctx),
+          positions: number[] = [];
+        ctx.fillText = (text, x, y, maxWidth) => {
+          if (text === 'AI caption')
+            positions.push(
+              canvas.getBoundingClientRect().left + ctx.getTransform().transformPoint(new DOMPoint(x, y)).x,
+            );
+          fill(text, x, y, maxWidth);
+        };
+        state.composition = { ...composition, clips: composition.clips.map((clip) => ({ ...clip, enabled: false })) };
+        await settle();
+        const icons = document
+          .querySelector<HTMLElement>('.text-caption-track .clip-center-title')!
+          .getBoundingClientRect();
+        const result = {
+          iconRight: icons.right,
+          labels: positions,
+          count: document.querySelectorAll('.text-caption-track .clip-center-title svg').length,
+        };
+        dispose();
+        return result;
+      }, composition);
+      expect(result.count).toBe(locked ? 2 : 1);
+      expect(result.labels.length).toBeGreaterThan(0);
+      expect(result.labels.every((left) => left >= result.iconRight)).toBe(true);
+    },
+    30000,
+  );
 
   it('bounds icons and handles during rapid diagonal scrolling over 10000 items', async () => {
-    const composition: ClipComposition = { schemaVersion: 14, assets: [], keyboardCaptionSessions: [], clips: Array.from({ length: 10000 }, (_, i) => ({
-      ...(i % 100 === 1 ? caption : colorClip(String(i))), id: String(i), name: `Item ${i}`, locked: true,
-      ...(i % 100 === 1 ? { isAiGenerated: true, captionLayerId: `caption-${Math.floor(i / 50)}` } : { trackId: `track-${Math.floor(i / 50)}` }),
-      timelineStartMs: (i % 50) * 1000, order: Math.floor(i / 50),
-    })) };
-    const result = await page.evaluate(async composition => {
+    const composition: ClipComposition = {
+      schemaVersion: 14,
+      assets: [],
+      keyboardCaptionSessions: [],
+      clips: Array.from({ length: 10000 }, (_, i) => ({
+        ...(i % 100 === 1 ? caption : colorClip(String(i))),
+        id: String(i),
+        name: `Item ${i}`,
+        locked: true,
+        ...(i % 100 === 1
+          ? { isAiGenerated: true, captionLayerId: `caption-${Math.floor(i / 50)}` }
+          : { trackId: `track-${Math.floor(i / 50)}` }),
+        timelineStartMs: (i % 50) * 1000,
+        order: Math.floor(i / 50),
+      })),
+    };
+    const result = await page.evaluate(async (composition) => {
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
-      const host = await load('/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts') as typeof import('./timeline-browser-host');
+      const host = (await load(
+        '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
+      )) as typeof import('./timeline-browser-host');
       const { scroll, frame, nextTick, dispose, canvas } = await host.mountTimeline(composition, 50, 2000);
-      const times: number[] = [], nodes: number[] = [], handles: number[] = [];
+      const times: number[] = [],
+        nodes: number[] = [],
+        handles: number[] = [];
       for (let i = 0; i < 60; i++) {
-        await frame(); const start = performance.now();
-        scroll.scrollLeft = (i % 5) * 2600; scroll.scrollTop = (i % 7) * 1400;
-        scroll.dispatchEvent(new Event('scroll')); await nextTick(); times.push(performance.now() - start);
+        await frame();
+        const start = performance.now();
+        scroll.scrollLeft = (i % 5) * 2600;
+        scroll.scrollTop = (i % 7) * 1400;
+        scroll.dispatchEvent(new Event('scroll'));
+        await nextTick();
+        times.push(performance.now() - start);
         nodes.push(document.querySelectorAll('.timeline-selection-surface *').length);
         handles.push(document.querySelectorAll('.trim-handle').length);
       }
       const controls = [...document.querySelectorAll<HTMLElement>('[data-timeline-clip-id]')];
-      const result = { medianMs: times.sort((a,b) => a-b)[30]!, p95Ms: times[57]!, maxNodes: Math.max(...nodes), maxHandles: Math.max(...handles), icons: document.querySelectorAll('.clip-center-title svg, .canvas-clip-icons svg').length, transformed: controls.every(control => control.style.transform.startsWith('translate3d(')), canvasWidth: canvas.width, viewportWidth: scroll.clientWidth };
-      dispose(); return result;
+      const result = {
+        medianMs: times.sort((a, b) => a - b)[30]!,
+        p95Ms: times[57]!,
+        maxNodes: Math.max(...nodes),
+        maxHandles: Math.max(...handles),
+        icons: document.querySelectorAll('.clip-center-title svg, .canvas-clip-icons svg').length,
+        transformed: controls.every((control) => control.style.transform.startsWith('translate3d(')),
+        canvasWidth: canvas.width,
+        viewportWidth: scroll.clientWidth,
+      };
+      dispose();
+      return result;
     }, composition);
-    await writeFile(`/tmp/beam-timeline-${process.env.BEAM_TIMELINE_BASELINE === '1' ? 'before' : 'after'}.json`, JSON.stringify(result));
-    console.info('Rapid scroll DOM benchmark:', process.env.BEAM_TIMELINE_BASELINE === '1' ? 'before' : 'after', result);
-    expect(result.transformed).toBe(true); expect(result.icons).toBeGreaterThan(0);
-    expect(result.maxNodes).toBeLessThan(2500); expect(result.maxHandles).toBeLessThan(500);
+    await writeFile(
+      `/tmp/beam-timeline-${process.env.BEAM_TIMELINE_BASELINE === '1' ? 'before' : 'after'}.json`,
+      JSON.stringify(result),
+    );
+    console.info(
+      'Rapid scroll DOM benchmark:',
+      process.env.BEAM_TIMELINE_BASELINE === '1' ? 'before' : 'after',
+      result,
+    );
+    expect(result.transformed).toBe(true);
+    expect(result.icons).toBeGreaterThan(0);
+    expect(result.maxNodes).toBeLessThan(2500);
+    expect(result.maxHandles).toBeLessThan(500);
     expect(result.canvasWidth).toBe(result.viewportWidth);
   }, 60000);
 

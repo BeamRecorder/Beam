@@ -157,10 +157,7 @@
   "releaseNotes": "We\u2019re working fast to regularly update Edits and we\u2019ve introduced some new features. Download the latest version of the app to try them.\n\u2022 Improved overall stability and performance",
   "primaryGenreName": "Photo & Video",
   "primaryGenreId": 6008,
-  "genreIds": [
-    "6008",
-    "6007"
-  ],
+  "genreIds": ["6008", "6007"],
   "bundleId": "com.burbn.basel",
   "releaseDate": "2025-04-22T07:00:00Z",
   "trackId": 6738967378,
@@ -215,10 +212,7 @@
   "trackContentRating": "4+",
   "sellerUrl": "https://creators.instagram.com/edits/",
   "averageUserRatingForCurrentVersion": 4.78727,
-  "genres": [
-    "Photo & Video",
-    "Productivity"
-  ],
+  "genres": ["Photo & Video", "Productivity"],
   "price": 0.0,
   "userRatingCount": 89917
 }

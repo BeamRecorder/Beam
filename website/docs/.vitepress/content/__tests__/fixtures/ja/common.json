@@ -39,5 +39,8 @@
   ],
   "social": { "github": "GitHubでBeamを見る", "discord": "Beam Discordに参加" },
   "theme": { "switchToLight": "ライトテーマに切り替える", "switchToDark": "ダークテーマに切り替える" },
-  "footer": { "message": "オープンソースの画面録画・編集ツール。", "copyright": "MPL-2.0ライセンスで公開されています。" }
+  "footer": {
+    "message": "オープンソースの画面録画・編集ツール。",
+    "copyright": "MPL-2.0ライセンスで公開されています。"
+  }
 }

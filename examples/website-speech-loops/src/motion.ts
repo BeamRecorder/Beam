@@ -1,24 +1,24 @@
-import { gsap } from "gsap";
-import { cursorClickSpringScale } from "../../../packages/engine/src/cursor/cursor-click-spring";
-import { cursorRippleAt } from "../../../packages/engine/src/cursor/cursor-ripple";
-import type { CursorPoint, DemoClick, DemoMode, Pose } from "./demo-types";
+import { gsap } from 'gsap';
+import { cursorClickSpringScale } from '../../../packages/engine/src/cursor/cursor-click-spring';
+import { cursorRippleAt } from '../../../packages/engine/src/cursor/cursor-ripple';
+import type { CursorPoint, DemoClick, DemoMode, Pose } from './demo-types';
 
 export const DURATION_MS = 8000;
 export const CLICKS: Record<DemoMode, DemoClick[]> = {
   captions: [
-    { at: 0.75, x: 498, y: 319, target: "generate" },
-    { at: 2.1, x: 551, y: 104, target: "style" },
-    { at: 3.05, x: 590, y: 249, target: "highlight" },
-    { at: 4.05, x: 472, y: 211, target: "font-size" },
-    { at: 5.1, x: 590, y: 283, target: "background" },
-    { at: 6.2, x: 496, y: 356, target: "transcript" },
+    { at: 0.75, x: 498, y: 319, target: 'generate' },
+    { at: 2.1, x: 551, y: 104, target: 'style' },
+    { at: 3.05, x: 590, y: 249, target: 'highlight' },
+    { at: 4.05, x: 472, y: 211, target: 'font-size' },
+    { at: 5.1, x: 590, y: 283, target: 'background' },
+    { at: 6.2, x: 496, y: 356, target: 'transcript' },
   ],
   audio: [
-    { at: 0.75, x: 263, y: 240, target: "record" },
-    { at: 2.4, x: 228, y: 240, target: "stop" },
-    { at: 3.1, x: 242, y: 365, target: "voiceover" },
-    { at: 3.95, x: 498.5, y: 125, target: "volume" },
-    { at: 5.15, x: 590, y: 169, target: "normalize" },
+    { at: 0.75, x: 263, y: 240, target: 'record' },
+    { at: 2.4, x: 228, y: 240, target: 'stop' },
+    { at: 3.1, x: 242, y: 365, target: 'voiceover' },
+    { at: 3.95, x: 498.5, y: 125, target: 'volume' },
+    { at: 5.15, x: 590, y: 169, target: 'normalize' },
   ],
 };
 const PATHS: Record<DemoMode, CursorPoint[]> = {
@@ -57,9 +57,7 @@ const PATHS: Record<DemoMode, CursorPoint[]> = {
   ],
 };
 export function clampTime(ms: number) {
-  return Number.isFinite(ms)
-    ? Math.min(DURATION_MS, Math.max(0, ms)) / 1000
-    : 0;
+  return Number.isFinite(ms) ? Math.min(DURATION_MS, Math.max(0, ms)) / 1000 : 0;
 }
 export function smooth(value: number) {
   const p = Math.max(0, Math.min(1, value));
@@ -74,9 +72,7 @@ export function contentOpacity(time: number) {
   return smooth((time - 7.65) / 0.35);
 }
 export function createMotion(pose: Pose) {
-  return gsap
-    .timeline({ paused: true })
-    .to(pose, { time: 8, duration: 8, ease: "none" });
+  return gsap.timeline({ paused: true }).to(pose, { time: 8, duration: 8, ease: 'none' });
 }
 export function pointerAt(mode: DemoMode, time: number) {
   const t = phaseTime(time),
@@ -96,7 +92,7 @@ export function pointerAt(mode: DemoMode, time: number) {
   };
 }
 export function rippleFor(time: number, click: DemoClick) {
-  return cursorRippleAt(phaseTime(time) - click.at, 17, "single");
+  return cursorRippleAt(phaseTime(time) - click.at, 17, 'single');
 }
 export function captionState(time: number) {
   const t = phaseTime(time);
@@ -114,7 +110,7 @@ export function captionState(time: number) {
 export function audioState(time: number) {
   const t = phaseTime(time);
   return {
-    phase: t >= 0.75 && t < 2.4 ? ("recording" as const) : ("idle" as const),
+    phase: t >= 0.75 && t < 2.4 ? ('recording' as const) : ('idle' as const),
     recorded: t >= 2.4,
     selected: t >= 3.1,
     volume: 100 - 22 * smooth((t - 3.95) / 0.5),

@@ -1,5 +1,5 @@
-import type { gsap } from "gsap";
-import type { CursorKind } from "../../../packages/engine/src/capture/capture-session";
+import type { gsap } from 'gsap';
+import type { CursorKind } from '../../../packages/engine/src/capture/capture-session';
 
 export interface CursorPose {
   time: number;
@@ -8,14 +8,13 @@ export interface DemoClick {
   at: number;
   x: number;
   y: number;
-  target: "action" | "pack";
+  target: 'action' | 'pack';
 }
 export interface ShowcaseStep {
   at: number;
   role: CursorKind;
   label: string;
-  action:
-    "button" | "text" | "move" | "resize" | "select" | "disabled" | "help";
+  action: 'button' | 'text' | 'move' | 'resize' | 'select' | 'disabled' | 'help';
 }
 export interface CursorScene {
   ready: Promise<void>;

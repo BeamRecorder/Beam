@@ -386,15 +386,21 @@ describe('useScreenshotLayerShortcuts', () => {
   });
 });
 
-describe('screenshot group shortcuts',()=>{
- it.each(['ctrlKey','metaKey'] as const)('groups with %s+G and detaches with Shift',modifier=>{
-  const {wrapper,group,ungroup}=mountShortcuts(makeLayer());const target=wrapper.get('[data-testid="plain-target"]').element;
-  expect(dispatchKey(target,'g',{[modifier]:true}).defaultPrevented).toBe(true);expect(group).toHaveBeenCalledOnce();
-  expect(dispatchKey(target,'G',{[modifier]:true,shiftKey:true}).defaultPrevented).toBe(true);expect(ungroup).toHaveBeenCalledOnce();
- });
- it('keeps browser and text-editing shortcuts when grouping is unavailable',()=>{
-  const {wrapper,group}=mountShortcuts(makeLayer(),false,{group:false});
-  expect(dispatchKey(wrapper.get('[data-testid="plain-target"]').element,'g',{ctrlKey:true}).defaultPrevented).toBe(false);
-  dispatchKey(wrapper.get('input').element,'g',{ctrlKey:true});expect(group).toHaveBeenCalledOnce();
- });
+describe('screenshot group shortcuts', () => {
+  it.each(['ctrlKey', 'metaKey'] as const)('groups with %s+G and detaches with Shift', (modifier) => {
+    const { wrapper, group, ungroup } = mountShortcuts(makeLayer());
+    const target = wrapper.get('[data-testid="plain-target"]').element;
+    expect(dispatchKey(target, 'g', { [modifier]: true }).defaultPrevented).toBe(true);
+    expect(group).toHaveBeenCalledOnce();
+    expect(dispatchKey(target, 'G', { [modifier]: true, shiftKey: true }).defaultPrevented).toBe(true);
+    expect(ungroup).toHaveBeenCalledOnce();
+  });
+  it('keeps browser and text-editing shortcuts when grouping is unavailable', () => {
+    const { wrapper, group } = mountShortcuts(makeLayer(), false, { group: false });
+    expect(
+      dispatchKey(wrapper.get('[data-testid="plain-target"]').element, 'g', { ctrlKey: true }).defaultPrevented,
+    ).toBe(false);
+    dispatchKey(wrapper.get('input').element, 'g', { ctrlKey: true });
+    expect(group).toHaveBeenCalledOnce();
+  });
 });

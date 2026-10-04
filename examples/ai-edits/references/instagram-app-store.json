@@ -30,9 +30,7 @@
   "artistViewUrl": "https://apps.apple.com/us/developer/instagram-inc/id389801255?uo=4",
   "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/3a/3d/fa/3a3dfa81-9e7a-f495-f177-04fbabc23f32/Prod-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/60x60bb.jpg",
   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/3a/3d/fa/3a3dfa81-9e7a-f495-f177-04fbabc23f32/Prod-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/100x100bb.jpg",
-  "features": [
-    "iosUniversal"
-  ],
+  "features": ["iosUniversal"],
   "supportedDevices": [
     "iPhone5s-iPhone5s",
     "iPadAir-iPadAir",
@@ -214,17 +212,11 @@
   "sellerUrl": "http://instagram.com/",
   "isVppDeviceBasedLicensingEnabled": true,
   "currentVersionReleaseDate": "2026-10-02T22:32:18Z",
-  "genres": [
-    "Photo & Video",
-    "Social Networking"
-  ],
+  "genres": ["Photo & Video", "Social Networking"],
   "price": 0.0,
   "primaryGenreName": "Photo & Video",
   "primaryGenreId": 6008,
-  "genreIds": [
-    "6008",
-    "6005"
-  ],
+  "genreIds": ["6008", "6005"],
   "sellerName": "Instagram, Inc.",
   "releaseDate": "2010-10-06T08:12:41Z",
   "trackName": "Instagram",

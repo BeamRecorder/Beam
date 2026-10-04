@@ -70,7 +70,12 @@ export function screenshotLayerAt(
     if (layer.kind === 'background') continue;
     const rect = screenshotLayerTransform(state, assets, layer.id);
     if (!rect) continue;
-    const bounds = { x: rect.x * state.canvas.width, y: rect.y * state.canvas.height, width: rect.width * state.canvas.width, height: rect.height * state.canvas.height };
+    const bounds = {
+      x: rect.x * state.canvas.width,
+      y: rect.y * state.canvas.height,
+      width: rect.width * state.canvas.width,
+      height: rect.height * state.canvas.height,
+    };
     const corners = layerPerspectiveCorners(bounds, layer.rotation3d, screenshotLayerRotation(state, layer.id));
     if (pointInsideLayerQuad({ x: x * state.canvas.width, y: y * state.canvas.height }, corners)) return layer.id;
   }
@@ -78,12 +83,27 @@ export function screenshotLayerAt(
 }
 
 /** Projected bounds shared by marquee selection and alignment measurements. */
-export function screenshotLayerBounds(state: ScreenshotState, assets: ScreenshotRenderAssets | null, id: string): NormalizedTransform | null {
+export function screenshotLayerBounds(
+  state: ScreenshotState,
+  assets: ScreenshotRenderAssets | null,
+  id: string,
+): NormalizedTransform | null {
   const t = screenshotLayerTransform(state, assets, id);
   if (!t) return null;
-  const rect = { x: t.x * state.canvas.width, y: t.y * state.canvas.height, width: t.width * state.canvas.width, height: t.height * state.canvas.height };
+  const rect = {
+    x: t.x * state.canvas.width,
+    y: t.y * state.canvas.height,
+    width: t.width * state.canvas.width,
+    height: t.height * state.canvas.height,
+  };
   const rotation3d = state.composition?.find((layer) => layer.id === id)?.rotation3d;
   const corners = layerPerspectiveCorners(rect, rotation3d, screenshotLayerRotation(state, id));
-  const x = Math.min(...corners.map((p) => p.x)), y = Math.min(...corners.map((p) => p.y));
-  return { x: x / state.canvas.width, y: y / state.canvas.height, width: (Math.max(...corners.map((p) => p.x)) - x) / state.canvas.width, height: (Math.max(...corners.map((p) => p.y)) - y) / state.canvas.height };
+  const x = Math.min(...corners.map((p) => p.x)),
+    y = Math.min(...corners.map((p) => p.y));
+  return {
+    x: x / state.canvas.width,
+    y: y / state.canvas.height,
+    width: (Math.max(...corners.map((p) => p.x)) - x) / state.canvas.width,
+    height: (Math.max(...corners.map((p) => p.y)) - y) / state.canvas.height,
+  };
 }

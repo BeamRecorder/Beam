@@ -249,23 +249,33 @@ describe('CanvasMarqueeSurface', () => {
   });
 });
 
-describe('optional left-button marquee',()=>{
-  it('selects multiple foreground layers by dragging from empty canvas space',async()=>{
-    const surface=mountSurface();await surface.setProps({canStartLeft:()=>true});
-    await drag(surface.get('canvas').element,[110,210],[385,365],{button:0});
-    expect((surface.emitted('select')!.at(-1)![0] as {ids:string[]}).ids).toEqual(['backdrop','shape','image']);
+describe('optional left-button marquee', () => {
+  it('selects multiple foreground layers by dragging from empty canvas space', async () => {
+    const surface = mountSurface();
+    await surface.setProps({ canStartLeft: () => true });
+    await drag(surface.get('canvas').element, [110, 210], [385, 365], { button: 0 });
+    expect((surface.emitted('select')!.at(-1)![0] as { ids: string[] }).ids).toEqual(['backdrop', 'shape', 'image']);
     expect(surface.find('.canvas-marquee-box').exists()).toBe(false);
   });
-  it('retains normal element dragging when the left gesture predicate refuses it',async()=>{
-    const surface=mountSurface(['shape']);await surface.setProps({canStartLeft:()=>false});
-    await drag(surface.get('canvas').element,[110,210],[385,365],{button:0});expect(surface.emitted('select')).toBeUndefined();
+  it('retains normal element dragging when the left gesture predicate refuses it', async () => {
+    const surface = mountSurface(['shape']);
+    await surface.setProps({ canStartLeft: () => false });
+    await drag(surface.get('canvas').element, [110, 210], [385, 365], { button: 0 });
+    expect(surface.emitted('select')).toBeUndefined();
   });
-  it('clears empty-space clicks without replaying a right-click context menu',async()=>{
-    const surface=mountSurface(['shape']);await surface.setProps({canStartLeft:()=>true});const context=vi.fn();surface.element.addEventListener('contextmenu',context);
-    await drag(surface.get('canvas').element,[110,210],[110,210],{button:0});
-    expect(surface.emitted('select')).toEqual([[{ids:[],primaryId:null,additive:false}]]);expect(context).not.toHaveBeenCalled();
+  it('clears empty-space clicks without replaying a right-click context menu', async () => {
+    const surface = mountSurface(['shape']);
+    await surface.setProps({ canStartLeft: () => true });
+    const context = vi.fn();
+    surface.element.addEventListener('contextmenu', context);
+    await drag(surface.get('canvas').element, [110, 210], [110, 210], { button: 0 });
+    expect(surface.emitted('select')).toEqual([[{ ids: [], primaryId: null, additive: false }]]);
+    expect(context).not.toHaveBeenCalled();
   });
-  it('keeps an additive selection on an empty left click',async()=>{
-    const surface=mountSurface(['shape']);await surface.setProps({canStartLeft:()=>true});await drag(surface.get('canvas').element,[110,210],[110,210],{button:0,shiftKey:true});expect(surface.emitted('select')).toBeUndefined();
+  it('keeps an additive selection on an empty left click', async () => {
+    const surface = mountSurface(['shape']);
+    await surface.setProps({ canStartLeft: () => true });
+    await drag(surface.get('canvas').element, [110, 210], [110, 210], { button: 0, shiftKey: true });
+    expect(surface.emitted('select')).toBeUndefined();
   });
 });

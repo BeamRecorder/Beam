@@ -1,6 +1,6 @@
-import type { gsap } from "gsap";
+import type { gsap } from 'gsap';
 
-export type DemoMode = "captions" | "audio";
+export type DemoMode = 'captions' | 'audio';
 export interface Pose {
   time: number;
 }

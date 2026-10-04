@@ -13,7 +13,7 @@ describe('Beam composition clock', () => {
     expect(compositionTime(15_000)).toBe(15);
     expect(compositionTime(90_000)).toBe(15);
   });
-  it.each([NaN, Infinity, -Infinity])('rejects the invalid timestamp %s', timestamp => {
+  it.each([NaN, Infinity, -Infinity])('rejects the invalid timestamp %s', (timestamp) => {
     expect(() => compositionTime(timestamp)).toThrow(RangeError);
   });
 });
