@@ -107,6 +107,7 @@ impl LinuxRecording {
             metrics: metrics.clone(),
             repair_window_crop,
             region: request.region,
+            hyprland_cursor: super::hyprland::HyprlandCursor::for_portal(&portal)?,
             target_fps: request.recording.target_fps,
             show_real_cursor: request.show_real_cursor
                 && matches!(request.cursor, CursorSelection::Separate { .. }),

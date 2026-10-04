@@ -114,3 +114,18 @@ test('silent IPC is bounded and cannot hold application startup', async (t) => {
   assert.equal(await applyHyprlandWindowRules(f.env, 'linux', 20), false);
   assert.equal(f.calls.length, 1);
 });
+
+test('modern Hyprland using hyprlang selects match rules after the explicit config-manager response', async (t) => {
+  const f = await fixture(t, (client, command) => {
+    client.end(
+      command === 'j/version'
+        ? '{"tag":"v0.56.2"}'
+        : command.startsWith('/eval ')
+          ? 'eval is only supported with the lua config manager'
+          : 'ok',
+    );
+  });
+  assert.equal(await applyHyprlandWindowRules(f.env, 'linux'), true);
+  assert.equal(f.calls.length, 3);
+  assert.match(f.calls[2], /^\/keyword windowrule border_size 0, no_shadow on, match:class/);
+});

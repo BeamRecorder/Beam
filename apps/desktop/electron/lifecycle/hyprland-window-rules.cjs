@@ -3,6 +3,7 @@ const path = require('node:path');
 
 const APP_CLASS = '^com\\.beam\\.app$';
 const OVERLAY_TITLE = '^Beam (Recorder|Countdown|Quick Snip|Region Selection|Recording Region|Teleprompter)$';
+const MATCH_RULE = `/keyword windowrule border_size 0, no_shadow on, match:class ${APP_CLASS}, match:title ${OVERLAY_TITLE}`;
 
 function hyprlandRequest(socketPath, command, timeoutMs) {
   return new Promise((resolve, reject) => {
@@ -35,7 +36,7 @@ function overlayCommands(tag) {
     ];
   }
   if (minor >= 53) {
-    return [`/keyword windowrule border_size 0, no_shadow on, match:class ${APP_CLASS}, match:title ${OVERLAY_TITLE}`];
+    return [MATCH_RULE];
   }
   return ['noborder', 'noshadow'].map(
     (rule) => `/keyword windowrulev2 ${rule}, class:${APP_CLASS}, title:${OVERLAY_TITLE}`,
@@ -51,7 +52,10 @@ async function applyHyprlandWindowRules(env = process.env, platform = process.pl
     const commands = overlayCommands(version.tag);
     if (!commands.length) return false;
     for (const command of commands) {
-      if ((await hyprlandRequest(socketPath, command, timeoutMs)) !== 'ok') return false;
+      const response = await hyprlandRequest(socketPath, command, timeoutMs);
+      if (command.startsWith('/eval ') && response === 'eval is only supported with the lua config manager') {
+        if ((await hyprlandRequest(socketPath, MATCH_RULE, timeoutMs)) !== 'ok') return false;
+      } else if (response !== 'ok') return false;
     }
     return true;
   } catch {

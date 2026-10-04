@@ -86,6 +86,7 @@ impl LinuxRegionSelection {
             region: None,
             show_real_cursor: false,
             target_fps: 60,
+            hyprland_cursor: None,
         })?;
         let frame = (|| {
             gate.release(0)?;

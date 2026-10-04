@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Hyprland can record a separate cursor for monitor and region captures through compositor IPC when its portal provides no cursor metadata.
+
 - Recording and editor settings offer a shared project location preserving `projects/studio`, `projects/instant` and `projects/screenshot`. New captures use the chosen root immediately; the project picker retains previous locations and refreshes when they change.
 - Video and image exports share a separate folder preference, with a fixed destination or the last successfully used folder and a searchable list of recent folders.
 - Safari frames offer Auto, Light and Dark browser chrome independently of the frame color, with matching previews, screenshots and video exports.

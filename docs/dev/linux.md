@@ -6,6 +6,10 @@ Electron windows use X11 (`--ozone-platform=x11`) on Linux, including XWayland o
 
 Video editor export uses WebCodecs, independently of the native capture backend. See [GPU drivers and WebCodecs export](gpu-drivers.md) for driver packages, codec/buffer checks and measured Intel results.
 
+### Hyprland
+
+When the portal cannot supply cursor metadata, monitor and region recording use Hidden cursor mode plus Hyprland IPC position sampling. The portal mapping ID selects the captured output, including fractional scaling, offsets and rotation. Older portals without a mapping ID require one monitor or a uniquely sized output; ambiguous outputs fail with a diagnostic rather than guessing from focus. IPC sampling runs outside the PipeWire frame callback and stops with the capture; stale positions are discarded. Native cursor shapes and separate-cursor window capture still require portal metadata. Clicks and shortcuts use the protected input helper independently.
+
 ### Cinnamon on X11
 
 Linux Mint's default Cinnamon/X11 session uses the XApp portal backend, which does not implement the ScreenCast interface. Installing or restarting `xdg-desktop-portal` or `xdg-desktop-portal-xapp` alone cannot make Beam record in that session. Beam currently has no direct X11 capture backend.
