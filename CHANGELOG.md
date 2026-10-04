@@ -6,6 +6,14 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- The private website’s AI-native section demonstrates live HTML-to-canvas editing with Beam’s native controls and two 2D zooms, in both system themes. Reusable source lives in `examples/website-html-canvas-loop/`.
+
+- The website's Edit Cursor section shows a seamless light/dark demo of complete native macOS/Bibata packs, enlarged role previews, text/move/resize interactions, smoothing, cursor size and spring/ripple click effects, rendered with Beam CLI. Its reusable source is in `examples/website-cursor-loop/`.
+
+- The private website's Edit Canvas section shows a seven-second loop selecting real image, video, color and gradient backgrounds with Beam's native controls, Safari frame and macOS pointer spring/click effects. The light/dark videos support pause and reduced motion; reusable HTML/GSAP source lives in `examples/website-canvas-loop/` and publishes through Beam CLI.
+
+- The private website's Edit timeline section shows a five-second cursor-driven trim and arrange loop, using Beam's real UI and timeline renderer, with light/dark themes and pause/reduced-motion support. Its HTML/GSAP source is reusable in `examples/website-editing-loop/` and publishes through the Beam CLI.
+
 - Private website AI native demo now uses a lightweight Zaro recreation with sound disabled by default, playback controls and a tooltip explaining HTML/GSAP authoring and Beam CLI rendering.
 - Added reusable HTML/GSAP launch-video templates for typewriter sentences, prompt fields, macOS cursors and smooth camera moves, with a complete example and customization guide.
 
@@ -80,6 +88,12 @@ User-facing changes to Beam are documented in this file.
 - Settings and Projects now open in separate, resizable desktop windows.
 
 ### Changed
+
+- Website feature demos use distinct fixed Beam gradient presets: Ember for the timeline, Bloom for canvas styling and Tide for the complete cursor-pack showcase.
+
+- The website's “Shape the pace” loop uses Beam's macOS arrow and horizontal-resize cursors, switching on the trim edge with correctly aligned native hotspots.
+
+- The website timeline demo now uses Beam's fixed Ember gradient behind the editor instead of an ambient glow.
 
 - Beam source is now licensed under MPL-2.0, with existing MIT grants and third-party licenses preserved. Licensing documentation distinguishes open-source rights from planned Desktop Pro subscriptions and cloud services; activation is not introduced in this release.
 - Linux GPU export helpers are built and packaged only against dynamically linked LGPL FFmpeg libraries. CI uses a pinned LGPL-only build dependency; FFmpeg executables and libraries remain external to this backend.

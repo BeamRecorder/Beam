@@ -1,0 +1,224 @@
+@import "../../../apps/desktop/src/theme/palette.css";
+@import "../../../apps/desktop/src/theme/surfaces.css";
+@font-face {
+  font-family: "Hanken Grotesk";
+  src: url("../assets/HankenGrotesk.ttf") format("truetype");
+  font-weight: 100 900;
+  font-display: block;
+}
+:root {
+  --font-sans: "Hanken Grotesk", sans-serif;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-full: 999px;
+  --fast: 0s;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+body {
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--color-bg-surface);
+  -webkit-font-smoothing: antialiased;
+}
+#app {
+  position: absolute;
+  inset: 0;
+}
+.design-stage {
+  position: absolute;
+  width: 640px;
+  height: 400px;
+  transform: scale(2);
+  transform-origin: 0 0;
+}
+.editor-card {
+  position: absolute;
+  left: 24px;
+  top: 24px;
+  width: 592px;
+  height: 352px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--color-bg-app);
+  box-shadow:
+    0 15px 35px #00000028,
+    0 2px 5px #00000012;
+}
+.project-bar {
+  display: flex;
+  height: 30px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.project-format {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 500;
+}
+.workspace {
+  display: flex;
+  height: 320px;
+}
+.preview-area {
+  position: relative;
+  width: 394px;
+  flex-shrink: 0;
+  height: 100%;
+  background: var(--color-bg-well);
+}
+/* The complete pack stays visible while one shape is demonstrated above it. */
+.role-spotlight {
+  position: absolute;
+  left: 18px;
+  top: 10px;
+  width: 110px;
+  height: 96px;
+  text-align: center;
+}
+.spotlight-art {
+  will-change: opacity;
+  position: absolute;
+  left: 23px;
+  top: 0;
+  width: 64px;
+  height: 64px;
+}
+.spotlight-art img {
+  display: block;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+.role-spotlight strong {
+  position: absolute;
+  top: 72px;
+  left: 0;
+  right: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.action-card {
+  position: absolute;
+  left: 145px;
+  top: 33px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+  font-size: 11px;
+  font-weight: 500;
+}
+.action-card[data-action="move"],
+.action-card[data-action="resize"] {
+  border-color: var(--color-primary);
+}
+.action-card .handle {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border: 1px solid var(--color-primary);
+  background: var(--color-bg-surface);
+}
+.corner-1 {
+  left: -3px;
+  top: -3px;
+}
+.corner-2 {
+  right: -3px;
+  top: -3px;
+}
+.corner-3 {
+  left: -3px;
+  bottom: -3px;
+}
+.corner-4 {
+  right: -3px;
+  bottom: -3px;
+}
+.selection-box {
+  position: absolute;
+  left: 58px;
+  top: 9px;
+  border: 1px dashed var(--color-primary);
+  background: var(--color-bg-surface-hover);
+}
+.gallery-caption {
+  position: absolute;
+  left: 23px;
+  right: 23px;
+  top: 112px;
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.cursor-gallery {
+  transform: translate3d(0, 0, 0);
+  will-change: opacity;
+  position: absolute;
+  left: 23px;
+  top: 134px;
+  width: 347px;
+  display: grid;
+  grid-template-columns: repeat(10, 32px);
+  gap: 2px 3px;
+}
+.cursor-tile.btn.btn-xs {
+  width: 32px;
+  height: 27px;
+  min-height: 27px;
+  padding: 0;
+  border-radius: 5px;
+}
+.cursor-tile img {
+  display: block;
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+.cursor-tile.highlighted {
+  background: var(--color-bg-surface-hover);
+  outline: 1px solid var(--color-primary);
+}
+.click-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  border: 2.5px solid var(--color-primary);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+}
+.demo-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 4;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 3px #00000070);
+}

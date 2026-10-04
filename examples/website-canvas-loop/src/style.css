@@ -1,0 +1,142 @@
+@import "../../../apps/desktop/src/theme/palette.css";
+@import "../../../apps/desktop/src/theme/surfaces.css";
+@import "../../../apps/desktop/src/components/editor/properties/canvas/canvas-panel.css";
+@font-face {
+  font-family: "Hanken Grotesk";
+  src: url("../assets/HankenGrotesk.ttf") format("truetype");
+  font-weight: 100 900;
+  font-display: block;
+}
+:root {
+  --font-sans: "Hanken Grotesk", sans-serif;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-full: 999px;
+  --fast: 0s;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+body {
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--color-bg-surface);
+  -webkit-font-smoothing: antialiased;
+}
+#app {
+  position: absolute;
+  inset: 0;
+}
+.design-stage {
+  position: absolute;
+  width: 640px;
+  height: 400px;
+  transform: scale(2);
+  transform-origin: 0 0;
+}
+.world {
+  position: absolute;
+  inset: 0;
+  transform-origin: 70% 50%;
+}
+.editor-card {
+  position: absolute;
+  left: 24px;
+  top: 24px;
+  width: 592px;
+  height: 352px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--color-bg-app);
+  box-shadow:
+    0 15px 35px #00000028,
+    0 2px 5px #00000012;
+}
+.project-bar {
+  display: flex;
+  height: 30px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.project-format {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 500;
+}
+.workspace {
+  display: flex;
+  height: 320px;
+}
+.preview-area {
+  position: relative;
+  width: 290px;
+  flex-shrink: 0;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: var(--color-bg-well);
+}
+.composition-preview {
+  width: 264px;
+  height: 165px;
+  display: block;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px #0000001c;
+}
+.preview-tools {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+.zoom-tools {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+.click-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--color-primary);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--color-bg-surface);
+  pointer-events: none;
+  z-index: 3;
+}
+.demo-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 4;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 3px #00000070);
+}
+.demo-cursor img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
