@@ -168,6 +168,10 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Hyprland recording overlays no longer inherit compositor borders and shadows; editor, settings and project windows keep their normal decorations.
+
+- Restored the GitHub star count in the community panel and protected shutdown against late events from destroyed windows.
+
 - Video export reuses the last successfully used destination across projects and application restarts instead of always returning to the OS Videos folder.
 - Screenshot project thumbnails now show the edited composition, including HTML layers, gradients and text, and refresh automatically in the background after edits.
 - Moving a selected Screenshot group member changes only that layer; selecting the group header still moves all members together.
