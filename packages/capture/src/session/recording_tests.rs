@@ -73,6 +73,89 @@ fn screen_availability_is_false_for_an_active_unavailable_screen_recording() {
 }
 
 #[test]
+fn input_failure_is_latched_and_saved_once_without_stopping_video() {
+    let (_temporary, mut session) = prepared_session_without_screen();
+    session.request.cursor = CursorSelection::Separate {
+        capture_clicks: true,
+        capture_shortcuts: true,
+        capture_shape: true,
+    };
+    session.state = SessionState::Recording;
+    let failure = crate::input::InputAccessStatus::failed(&crate::CaptureError::Backend(
+        "Helper stopped".into(),
+    ));
+
+    let first = session
+        .update_input_health(&failure)
+        .expect("persist input failure")
+        .expect("input failure");
+    let second = session
+        .update_input_health(&crate::input::InputAccessStatus::available(
+            Some(1),
+            Some(1),
+        ))
+        .expect("read latched failure");
+    assert_eq!(second, Some(first));
+    assert_eq!(session.state(), SessionState::Recording);
+    assert_eq!(session.manifest.warnings.len(), 1);
+    let health = std::fs::read_to_string(session.layout.health()).expect("health log");
+    assert_eq!(health.lines().count(), 1);
+    let manifest: crate::model::SessionManifest =
+        crate::storage::read_json(&session.layout.partial_manifest())
+            .expect("checkpointed manifest");
+    assert!(manifest.warnings[0].contains("Helper stopped"));
+}
+
+#[test]
+fn paused_input_failures_remain_visible_and_completed_projects_keep_the_diagnostic() {
+    let (_temporary, mut session) = prepared_session_without_screen();
+    session.request.cursor = CursorSelection::Separate {
+        capture_clicks: true,
+        capture_shortcuts: false,
+        capture_shape: true,
+    };
+    session.state = SessionState::Paused;
+    assert!(
+        session
+            .update_input_health(&crate::input::InputAccessStatus::required())
+            .expect("persist paused failure")
+            .is_some()
+    );
+    let manifest_path = session
+        .stop()
+        .expect("complete video despite input failure");
+    let manifest: crate::model::SessionManifest =
+        crate::storage::read_json(&manifest_path).expect("completed manifest");
+    assert!(manifest.completed);
+    assert!(
+        manifest
+            .warnings
+            .iter()
+            .any(|message| message.contains("Automatic zooms"))
+    );
+}
+
+#[test]
+fn prepared_and_completed_sessions_do_not_monitor_input_access() {
+    let (_temporary, mut session) = prepared_session_without_screen();
+    session.request.cursor = CursorSelection::Separate {
+        capture_clicks: true,
+        capture_shortcuts: true,
+        capture_shape: true,
+    };
+    for state in [SessionState::Armed, SessionState::Completed] {
+        session.state = state;
+        assert!(
+            session
+                .update_input_health(&crate::input::InputAccessStatus::required())
+                .expect("ignore inactive input failure")
+                .is_none()
+        );
+    }
+    assert!(session.manifest.warnings.is_empty());
+}
+
+#[test]
 fn cancelling_a_failed_session_removes_project_and_session_artifacts() {
     let (temporary, mut session) = prepared_session_without_screen();
     session.state = SessionState::Failed;

@@ -30,7 +30,7 @@ const { motion } = useBeamy(toRef(props, 'phase'), toRef(props, 'active'), toRef
       :frame="motion.frame"
       :size="size"
       :portrait="portrait"
-      color="var(--color-primary)"
+      :color="phase === 'completed' ? 'var(--color-success)' : 'var(--color-primary)'"
       paper="var(--color-bg-element)"
     />
     <span v-if="phase === 'recording'" class="recording-light" />

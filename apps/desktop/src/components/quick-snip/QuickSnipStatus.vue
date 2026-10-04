@@ -59,9 +59,8 @@ const error = computed(
 const mascotPhase = computed<BeamyPhase>(() => {
   if (error.value || failed.value) return 'failed';
   if (completed.value) return 'completed';
-  if (status.value?.state === 'processing') return 'processing';
   if (status.value?.state === 'recording') return 'recording';
-  return 'preparing';
+  return 'loading';
 });
 const expanded = computed(
   () => hovered.value || focused.value || pending.value || failed.value || Boolean(error.value),
@@ -220,7 +219,7 @@ onBeforeUnmount(() => {
     class="status-shell"
     :class="{
       expanded,
-      completed,
+      completed: completed && !error,
       failed,
       'opens-below': status?.popoverSide === 'below',
     }"
@@ -296,7 +295,7 @@ onBeforeUnmount(() => {
         <div class="thumbnail" aria-hidden="true">
           <img v-if="preview" :src="preview" alt="" />
           <Film v-else :size="22" />
-          <span v-if="completed" class="success-mark"><Check :size="13" /></span>
+          <span v-if="completed && !error" class="success-mark"><Check :size="13" /></span>
         </div>
         <div class="status-copy">
           <strong role="status">{{ label }}</strong>

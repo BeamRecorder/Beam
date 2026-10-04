@@ -8,6 +8,7 @@ User-facing changes to Beam are documented in this file.
 
 - Arrows can be drawn by placing anchors manually: click for corners, drag for Bézier curves, and finish with Enter or a double-click. Only authored anchors are retained in screenshot and video projects.
 - Screenshot and video editors offer a searchable library of 30 arrow presets with previews and editable vector points with Bézier handles, corner/smooth modes and point insertion/removal. Canvas drawing offers a visible confirmation action and Enter shortcut. Custom paths survive project saves and use the same preview/export renderer.
+- Region and Quick Snip settings offer automatic Loupe zooms using recorded clicks, with matching editable timeline lenses and video exports. The default zoom mode remains 2D.
 - Hyprland can record a separate cursor for monitor and region captures through compositor IPC when its portal provides no cursor metadata.
 
 - Recording and editor settings offer a shared project location preserving `projects/studio`, `projects/instant` and `projects/screenshot`. New captures use the chosen root immediately; the project picker retains previous locations and refreshes when they change.
@@ -63,7 +64,7 @@ User-facing changes to Beam are documented in this file.
 - Added a shared screen/window chooser for Windows and macOS with searchable thumbnails and keyboard navigation. Development launches can supply 3 simulated displays and 21 windows through `DEV_CROSSPLATFORM=1`, including on Linux; normal Linux capture retains the Portal.
 - Beamy appears centered during loading with translated tips, then disappears when the recorder is ready. Clicking the Beam wordmark plays one of twelve text effects before returning to plain text.
 - The recorder shows a lightweight animated Beamy while its interface loads, with a retry action if startup fails.
-- Instant capture now has a small Beamy mascot that accompanies recording, dances and morphs during export, and briefly celebrates completed videos, respecting reduced-motion preferences.
+- Instant export shows the shared Beamy loading animation and celebrates completed videos, respecting reduced-motion preferences.
 - Region recording now offers a desktop magnifier, live pixel dimensions, Full screen and size presets, teleprompter, device controls and a 0–10 second countdown. Controls hide during dragging and return with a spring animation. Desktop icons and the taskbar/Dock can be hidden from capture on supported platforms.
 - Capture problems now appear in the toolbar with a count and a scrollable hover panel, including individual copy actions.
 - Settings and Projects now open in separate, resizable desktop windows.
@@ -77,6 +78,7 @@ User-facing changes to Beam are documented in this file.
 
 - Beam's onboarding has a taller, centered welcome inspired by the website, with offline landscape photography, interactive Recorder and Quick Snip introductions, video and screenshot feature previews, clickable step navigation, shared theme and language controls, and a project-folder choice in all 15 languages. Interaction permissions remain optional and show their actual status.
 
+- Quick Snip recording uses the standard recording controls. Its export mascot keeps the shared loading animation through preparation and export, then turns green with one confetti burst and natural blinking on success.
 - Screenshot and video editors reuse background/cursor catalogues, presets and decoded images when switching projects in the same window, while keeping document state and media decoders separate.
 - Video undo/redo controls sit next to timeline snapping; editor search stays in the titlebar.
 
@@ -186,6 +188,8 @@ User-facing changes to Beam are documented in this file.
 
 - Restored the GitHub star count in the community panel and protected shutdown against late events from destroyed windows.
 
+- Linux interaction recording keeps its saved activation across helper restarts, updates and failed authorization. Quick Snip starts interaction access automatically before recording, shares one authorization request across windows and reports failures instead of silently losing click data and automatic zooms.
+- Recording controls show a persistent warning if Linux interaction access, input devices or the event stream fail during recording. Video capture continues, the project keeps the diagnostic, and idle periods without clicks do not trigger false errors.
 - Video export reuses the last successfully used destination across projects and application restarts instead of always returning to the OS Videos folder.
 - Screenshot project thumbnails now show the edited composition, including HTML layers, gradients and text, and refresh automatically in the background after edits.
 - Moving a selected Screenshot group member changes only that layer; selecting the group header still moves all members together.

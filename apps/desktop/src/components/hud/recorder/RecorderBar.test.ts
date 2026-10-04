@@ -21,6 +21,39 @@ afterEach(() => wrappers.splice(0).forEach((wrapper) => wrapper.unmount()));
 const restartButton = (wrapper: ReturnType<typeof mount>) => wrapper.get('button[aria-label="Restart recording"]');
 
 describe('compact RecorderBar', () => {
+  it('shows a capture warning alongside elapsed time without removing the recording controls', () => {
+    const warning = 'Interaction capture stopped. Automatic zooms may be incomplete.';
+    const wrapper = setup({ warning });
+    expect(wrapper.get('[role="alert"]').attributes('title')).toBe(warning);
+    expect(wrapper.get('[role="alert"]').attributes('aria-label')).toBe(warning);
+    expect(wrapper.get('[role="alert"]').text()).toBe('Capture issue');
+    expect(wrapper.get('.recording-time').text()).toContain('00:12.3');
+    expect(wrapper.findAll('button')).toHaveLength(4);
+    expect(wrapper.get('.recorder-bar').classes()).toContain('has-warning');
+  });
+
+  it('keeps a paused capture warning visible when controls normally fade or hide', async () => {
+    const wrapper = setup({
+      phase: 'paused',
+      warning: 'Input stream stopped',
+      visibility: 'hover-only',
+      hoverOnlyActive: true,
+    });
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+    expect(wrapper.get('.recorder-bar').classes()).toContain('has-warning');
+    await wrapper.setProps({ visibility: 'auto-fade' });
+    expect(wrapper.get('.recorder-bar').classes()).toContain('has-warning');
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+  });
+
+  it('clears the warning and its forced visibility for a healthy new recording', async () => {
+    const wrapper = setup({ warning: 'Input stream stopped' });
+    await wrapper.setProps({ warning: '' });
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    expect(wrapper.get('.recorder-bar').classes()).not.toContain('has-warning');
+    expect(wrapper.get('.recording-time').text()).toBe('00:12.3');
+  });
+
   it('renders Delete, Restart, Pause and Stop in order and emits the capture actions', async () => {
     const wrapper = setup();
     const buttons = wrapper.findAll('button');
@@ -87,18 +120,19 @@ describe('compact RecorderBar', () => {
       expect(wrapper.get('.recording-time').text()).toContain(phase === 'starting' ? 'Preparing' : 'Ready');
     },
   );
-  it('uses a paused cloud and a Resume control while paused', async () => {
-    const wrapper = setup({ mascot: true, phase: 'paused' });
+  it('uses the same Stop icon and a Resume control while paused', async () => {
+    const wrapper = setup({ phase: 'paused' });
     expect(wrapper.find('button[aria-label="Resume recording"]').exists()).toBe(true);
-    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe('paused');
+    expect(wrapper.find('.stop-slot .lucide-square').exists()).toBe(true);
+    expect(wrapper.find('.beam-mascot').exists()).toBe(false);
     await wrapper.setProps({ phase: 'starting' });
-    expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe('preparing');
+    expect(wrapper.find('.stop-slot .lucide-square').exists()).toBe(true);
+    expect(wrapper.find('.beam-mascot').exists()).toBe(false);
   });
   it('reveals hover-only controls for pointer, keyboard focus and restart confirmation', async () => {
     const wrapper = setup({
       visibility: 'hover-only',
       hoverOnlyActive: true,
-      mascot: true,
     });
     const bar = wrapper.get('.recorder-bar');
     expect(bar.classes()).toContain('hover-only');

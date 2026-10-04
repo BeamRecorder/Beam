@@ -704,6 +704,7 @@
     "selectionAndMore": "… i jeszcze {count}"
   },
   "RecorderBar": {
+    "captureIssue": "Problem",
     "recordingControls": "Sterowanie nagrywaniem",
     "moveRecorderBar": "Przenieś pasek nagrywania",
     "ready": "Gotowe",
@@ -933,7 +934,8 @@
     "defaultSystemAudio": "Domyślne wyjście systemowe",
     "video": "Wideo",
     "image": "Obraz",
-    "zoom": "Zoom"
+    "zoom": "Zoom",
+    "loupe": "Lupa"
   },
   "ScreenshotEditor": {
     "tools": "Narzędzia",

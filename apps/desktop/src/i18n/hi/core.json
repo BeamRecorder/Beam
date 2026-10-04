@@ -704,6 +704,7 @@
     "selectionAndMore": "… और {count} अन्य"
   },
   "RecorderBar": {
+    "captureIssue": "रिकॉर्डिंग समस्या",
     "recordingControls": "रिकॉर्डिंग नियंत्रण",
     "moveRecorderBar": "रिकॉर्डर बार खिसकाएँ",
     "ready": "तैयार",
@@ -933,7 +934,8 @@
     "defaultSystemAudio": "डिफ़ॉल्ट सिस्टम आउटपुट",
     "video": "वीडियो",
     "image": "चित्र",
-    "zoom": "ज़ूम"
+    "zoom": "ज़ूम",
+    "loupe": "आवर्धक"
   },
   "ScreenshotEditor": {
     "tools": "टूल",

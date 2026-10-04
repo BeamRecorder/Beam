@@ -1,3 +1,6 @@
+import type { ZoomElement } from '../zoom/zoom-types';
+export type { ZoomElement, ZoomFocus } from '../zoom/zoom-types';
+
 export type CaptureState =
   | 'idle'
   | 'discovering'
@@ -20,6 +23,7 @@ export interface CaptureSession {
   videoSrc?: string | null;
   systemAudioLevel?: number | null;
   screenAvailable?: boolean;
+  inputCaptureError?: { code: string; message: string } | null;
 }
 
 export interface CaptureProject {
@@ -188,40 +192,6 @@ export type InputEvent =
 export interface InputEventSidecar {
   version: 1;
   events: InputEvent[];
-}
-
-export interface ZoomFocus {
-  cx: number;
-  cy: number;
-}
-
-export interface ZoomElement {
-  linkedClipId?: string | null;
-  id: string;
-  sessionId: string;
-  startMs: number;
-  endMs: number;
-  focus: ZoomFocus;
-  depth: 1 | 2 | 3 | 4 | 5 | 6;
-  mode: 'auto' | 'manual';
-  /** Missing only in projects saved before zoom toggles were introduced. */
-  enabled?: boolean;
-  /** Missing only in projects saved before perspective zooms were introduced. */
-  projection?: '2d' | '3d';
-  tiltIntensity?: number;
-  tiltHorizontal?: number;
-  tiltVertical?: number;
-  tiltPreset?:
-    | 'small'
-    | 'medium'
-    | 'large'
-    | 'custom'
-    | 'tilt-back'
-    | 'tilt-front'
-    | 'tilt-left'
-    | 'tilt-right'
-    | 'pull-back'
-    | 'pull-front';
 }
 
 export interface ProjectZoomState {

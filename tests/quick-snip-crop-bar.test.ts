@@ -40,6 +40,7 @@ const mocks = vi.hoisted(() => ({
     recordingTime: { value: string };
     systemAudioLevel: { value: number };
     recorderHoverOnlyActive: { value: boolean };
+    error: { value: string };
     start: ReturnType<typeof vi.fn>;
     stop: ReturnType<typeof vi.fn>;
     cancel: ReturnType<typeof vi.fn>;
@@ -123,6 +124,7 @@ vi.mock('~/components/hud/recorder/useRecordingController', async () => {
         recordingTime: ref('00:00.0'),
         systemAudioLevel: ref(0),
         recorderHoverOnlyActive: ref(false),
+        error: ref(''),
         start: vi.fn().mockResolvedValue(undefined),
         stop: vi.fn().mockResolvedValue(undefined),
         cancel: vi.fn().mockResolvedValue(undefined),

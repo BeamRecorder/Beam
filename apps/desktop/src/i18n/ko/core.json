@@ -704,6 +704,7 @@
     "selectionAndMore": "… 외 {count}개"
   },
   "RecorderBar": {
+    "captureIssue": "녹화 문제",
     "recordingControls": "녹화 컨트롤",
     "moveRecorderBar": "녹화 막대 이동",
     "ready": "준비됨",
@@ -933,7 +934,8 @@
     "defaultSystemAudio": "기본 시스템 출력",
     "video": "동영상",
     "image": "이미지",
-    "zoom": "줌"
+    "zoom": "줌",
+    "loupe": "돋보기"
   },
   "ScreenshotEditor": {
     "tools": "도구",

@@ -223,7 +223,7 @@ export function useHudState(props: HudProps, emit: HudEmit) {
           hideDesktopIcons: regionSettings.hideDesktopIcons.value,
           showRealCursor: regionSettings.showRealCursor.value,
           recordingBarVisibility: recordingBarVisibility.value,
-          recordInteractions: interactionAccess.recordingEnabled.value,
+          recordInteractions: interactionAccess.recordingRequested.value,
           region: activeTab.value === 'screen' && selectedScreenRegion.value ? { ...selectedScreenRegion.value } : null,
           regionOverlay:
             activeTab.value === 'screen' && selectedScreenOverlay.value

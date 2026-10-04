@@ -73,6 +73,16 @@ it('surfaces persistence failures while keeping the chosen recording settings', 
   expect(settings.snapshot().countdownSeconds).toBe(1);
 });
 describe('hydrate', () => {
+  it.each(['off', '2d', '3d', 'glass'] as const)('persists and restores the shared %s zoom algorithm', async (mode) => {
+    const settings = useRegionRecordingSettings(state());
+    settings.apply({ ...settings.snapshot(), zoomMode: mode });
+    await flushPromises();
+    const saved = updatePreferences.mock.calls[0][0];
+    expect(saved.extras.recordingZoomMode).toBe(mode);
+    const restored = useRegionRecordingSettings(state());
+    restored.hydrate(prefs(saved.extras));
+    expect(restored.snapshot().zoomMode).toBe(mode);
+  });
   it.each([0, 1, 4, 10])('restores supported countdown %s', (seconds) => {
     const settings = useRegionRecordingSettings(state());
     settings.hydrate(

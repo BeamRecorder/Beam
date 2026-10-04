@@ -20,6 +20,7 @@ mod input_helper_executable_tests;
 mod input_monitor;
 #[cfg(test)]
 mod input_monitor_tests;
+mod input_stream_health;
 mod input_timeline;
 mod owned_child;
 mod pipewire;

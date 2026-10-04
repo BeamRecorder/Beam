@@ -71,7 +71,7 @@ const closeSettingsOutsideTrigger = (event: PointerEvent) => {
       :visibility="visibility"
       :hover-only-active="recording || recorder.recorderHoverOnlyActive.value"
       :busy="actionPending && recorder.phase.value !== 'starting'"
-      :mascot="mode === 'instant'"
+      :warning="recorder.error.value"
       @stop="recording ? toggleFromControls() : cancel()"
       @cancel="cancel"
       @pause="recorder.togglePause"

@@ -13,7 +13,7 @@ const zoom: ZoomElement = {
   tiltVertical: -0.4,
 };
 describe('recording zoom preference', () => {
-  it.each(['off', '2d', '3d'] as const)('restores %s', (mode) => {
+  it.each(['off', '2d', '3d', 'glass'] as const)('restores %s', (mode) => {
     expect(recordingZoomMode(mode)).toBe(mode);
   });
   it.each([undefined, null, '', '4d', 3, {}, false])('uses the 2D default for %j', (value) => {

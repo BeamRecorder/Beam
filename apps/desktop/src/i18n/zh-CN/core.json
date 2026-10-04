@@ -704,6 +704,7 @@
     "selectionAndMore": "… 及其他 {count} 项"
   },
   "RecorderBar": {
+    "captureIssue": "录制问题",
     "recordingControls": "录制控制",
     "moveRecorderBar": "移动录制栏",
     "ready": "准备就绪",
@@ -933,7 +934,8 @@
     "defaultSystemAudio": "默认系统输出",
     "video": "视频",
     "image": "图片",
-    "zoom": "缩放"
+    "zoom": "缩放",
+    "loupe": "放大镜"
   },
   "ScreenshotEditor": {
     "tools": "工具",

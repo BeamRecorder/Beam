@@ -74,8 +74,8 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--color-primary);
-  color: white;
+  background: var(--color-success);
+  color: var(--text-light);
   border: 2px solid var(--color-bg-element);
 }
 .status-copy {
@@ -133,7 +133,7 @@
   font-size: inherit;
 }
 .completed .status-value {
-  color: var(--color-primary);
+  color: var(--color-success);
 }
 .failed .status-value,
 .status-error {

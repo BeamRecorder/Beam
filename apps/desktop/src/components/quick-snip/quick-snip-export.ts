@@ -1,4 +1,5 @@
 import { applyRecordingZoomMode, recordingZoomMode } from '@beam/engine/zoom/recording-zoom-preference';
+import { generateRecordingZooms } from '@beam/engine/zoom/recording-zoom-generation';
 import { capture } from '~/api/capture';
 import type { QuickSnipRenderTask } from '~/api/types/quick-snip';
 import type { CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
@@ -44,14 +45,22 @@ export function quickSnipExportRequest(
   if (!state.composition.clips.some((clip) => clip.kind === 'screen' && clip.enabled && clip.timelineDurationMs > 0))
     throw new Error('Quick Snip has no active screen video to export.');
   const durationMs = compositionDurationMs(state.composition);
-  state.zoom.elements = editorData.cursor.available
-    ? buildAutomaticZoomElements({
-        telemetry: editorData.cursor.telemetry,
-        sessionId: editorData.sessionId,
-        durationMs,
-        reserved: [],
-      }).map((zoom) => applyRecordingZoomMode(zoom, config.automaticZoom ? recordingZoomMode(config.zoomMode) : 'off'))
-    : [];
+  const zoomMode = config.automaticZoom ? recordingZoomMode(config.zoomMode) : 'off';
+  state.zoom.elements = [];
+  if (editorData.cursor.available) {
+    state.zoom.elements =
+      zoomMode === 'glass'
+        ? generateRecordingZooms(state.composition, editorData.sessionId, editorData.cursor.telemetry, [], {
+            style: 'glass',
+            canvas: state.presentation.canvas,
+          })
+        : buildAutomaticZoomElements({
+            telemetry: editorData.cursor.telemetry,
+            sessionId: editorData.sessionId,
+            durationMs,
+            reserved: [],
+          }).map((zoom) => applyRecordingZoomMode(zoom, zoomMode));
+  }
   state.zoom.generatedSessions = [
     {
       sessionId: editorData.sessionId,

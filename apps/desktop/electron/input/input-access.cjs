@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { resolveCargoTargetDirectory } = require('@beam/native-client/cargo-build-paths');
 const { packagedInputHelperPath, prebuiltInputHelperPath } = require('@beam/native-client/capture-engine-path');
+const { createInputAccessPreferenceWriter } = require('./input-access-preferences.cjs');
 
 const INSTALLED_HELPER = '/usr/libexec/beam-input-helper';
 
@@ -20,6 +21,8 @@ class InputAccess {
     this.lastError = null;
     this.resolveTargetDirectory = resolveTargetDirectory;
     this.targetDirectory = undefined;
+    this.pendingRequest = null;
+    this.onAvailable = null;
   }
 
   helperForCapture() {
@@ -41,13 +44,44 @@ class InputAccess {
     }
   }
 
-  async request() {
+  request() {
+    if (this.pendingRequest) return this.pendingRequest;
+    const promise = this.requestNativeAccess();
+    this.pendingRequest = promise;
+    const clear = () => {
+      if (this.pendingRequest === promise) this.pendingRequest = null;
+    };
+    void promise.then(clear, clear);
+    return promise;
+  }
+
+  async requestNativeAccess() {
     this.lastError = null;
     if (this.platform === 'linux' && !this.helperForCapture()) return unavailableStatus('input-helper-unavailable');
     try {
-      return await this.nativeRequest('request-input-access');
+      const status = await this.nativeRequest('request-input-access');
+      if (status.state === 'available') await this.onAvailable?.();
+      return status;
     } catch (error) {
       this.lastError = accessError(error);
+      throw error;
+    }
+  }
+
+  async ensureReady(cursor) {
+    let status = await this.status();
+    if (status.state !== 'available' && status.canRequest) status = await this.request();
+    if (status.state !== 'available') {
+      const cancelled = !status.error && ['permission-required', 'installation-required'].includes(status.state);
+      const error = new Error(
+        status.error?.message || 'Linux input access is required to record clicks and shortcuts.',
+      );
+      error.code = cancelled ? 'cancelled' : status.error?.code || 'input-access-unavailable';
+      throw error;
+    }
+    if ((cursor.captureClicks && !status.clicks) || (cursor.captureShortcuts && !status.shortcuts)) {
+      const error = new Error('The Linux input helper could not access the required mouse or keyboard devices.');
+      error.code = 'input-devices-unavailable';
       throw error;
     }
   }
@@ -110,7 +144,8 @@ function executable(candidate) {
   }
 }
 
-function registerInputAccessIpc(ipcMain, inputAccess) {
+function registerInputAccessIpc(ipcMain, inputAccess, { store, BrowserWindow }) {
+  inputAccess.onAvailable = createInputAccessPreferenceWriter({ store, BrowserWindow });
   ipcMain.handle('input-access:status', () => inputAccess.status());
   ipcMain.handle('input-access:request', () => inputAccess.request());
 }

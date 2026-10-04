@@ -704,6 +704,7 @@
     "selectionAndMore": "… và {count} mục khác"
   },
   "RecorderBar": {
+    "captureIssue": "Sự cố",
     "recordingControls": "Điều khiển ghi hình",
     "moveRecorderBar": "Di chuyển thanh ghi hình",
     "ready": "Sẵn sàng",
@@ -933,7 +934,8 @@
     "defaultSystemAudio": "Đầu ra hệ thống mặc định",
     "video": "Video",
     "image": "Ảnh",
-    "zoom": "Thu phóng"
+    "zoom": "Thu phóng",
+    "loupe": "Kính lúp"
   },
   "ScreenshotEditor": {
     "tools": "Công cụ",

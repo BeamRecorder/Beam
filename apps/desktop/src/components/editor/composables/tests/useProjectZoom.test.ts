@@ -128,6 +128,12 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('useProjectZoom', () => {
+  it('generates automatic 2D zooms for a recording without a custom zoom preference', () => {
+    const { state } = create();
+    state.ensureAutomaticZooms();
+    expect(state.zoomElements.value.length).toBeGreaterThan(0);
+    expect(state.zoomElements.value.every((item) => item.enabled && item.projection === '2d')).toBe(true);
+  });
   it.each([
     ['2d', '3d'],
     ['3d', '2d'],
@@ -137,7 +143,7 @@ describe('useProjectZoom', () => {
     expect(state.zoomElements.value.length).toBeGreaterThan(0);
     expect(state.zoomElements.value.every((item) => item.projection === style)).toBe(true);
   });
-  it.each(['off', '2d', '3d'] as const)(
+  it.each(['off', '2d', '3d', 'glass'] as const)(
     'keeps generated glass lenses independent of the %s recording preference',
     (mode) => {
       const { state } = create(data(), 5000, undefined, mode, DEFAULT_OUTPUT_CANVAS);
@@ -151,6 +157,24 @@ describe('useProjectZoom', () => {
       expect(state.hasAutomaticZooms.value).toBe(true);
     },
   );
+  it('generates and regenerates editable timeline lenses from the saved Loupe preference', () => {
+    const { state } = create(data(), 5000, undefined, 'glass', DEFAULT_OUTPUT_CANVAS);
+    state.ensureAutomaticZooms();
+    const generated = [...state.zoomElements.value];
+    expect(generated.length).toBeGreaterThan(0);
+    expect(generated[0]).toMatchObject({
+      effect: 'glass',
+      generation: 'automatic',
+      mode: 'manual',
+      enabled: true,
+      linkedClipId: 'screen',
+    });
+    expect(state.canGenerateZooms.value).toBe(true);
+    expect(state.hasAutomaticZooms.value).toBe(true);
+    state.generateZooms(true);
+    expect(state.zoomElements.value).toEqual(generated);
+    expect(state.generatedSessions.value).toHaveLength(1);
+  });
   it('keeps OFF recordings without generated zooms but permits explicit regeneration from clicks', () => {
     const { state } = create(data(), 5000, undefined, 'off');
     expect(state.canGenerateZooms.value).toBe(true);

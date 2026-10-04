@@ -704,6 +704,7 @@
     "selectionAndMore": "… 他{count}件"
   },
   "RecorderBar": {
+    "captureIssue": "録画の問題",
     "recordingControls": "録画コントロール",
     "moveRecorderBar": "録画バーを移動",
     "ready": "準備完了",
@@ -933,7 +934,8 @@
     "defaultSystemAudio": "既定のシステム出力",
     "video": "動画",
     "image": "画像",
-    "zoom": "ズーム"
+    "zoom": "ズーム",
+    "loupe": "ルーペ"
   },
   "ScreenshotEditor": {
     "tools": "ツール",

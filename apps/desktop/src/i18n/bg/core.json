@@ -704,6 +704,7 @@
     "selectionAndMore": "… и още {count}"
   },
   "RecorderBar": {
+    "captureIssue": "Проблем",
     "recordingControls": "Контроли за запис",
     "moveRecorderBar": "Преместване на лентата за запис",
     "ready": "Готово",
@@ -933,7 +934,8 @@
     "defaultSystemAudio": "Системен изход по подразбиране",
     "video": "Видео",
     "image": "Изображение",
-    "zoom": "Мащаб"
+    "zoom": "Мащаб",
+    "loupe": "Лупа"
   },
   "ScreenshotEditor": {
     "tools": "Инструменти",

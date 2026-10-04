@@ -704,6 +704,7 @@
     "selectionAndMore": "… и ещё {count}"
   },
   "RecorderBar": {
+    "captureIssue": "Проблема",
     "recordingControls": "Управление записью",
     "moveRecorderBar": "Переместить панель записи",
     "ready": "Готово",
@@ -933,7 +934,8 @@
     "defaultSystemAudio": "Системный выход по умолчанию",
     "video": "Видео",
     "image": "Изображение",
-    "zoom": "Масштаб"
+    "zoom": "Масштаб",
+    "loupe": "Лупа"
   },
   "ScreenshotEditor": {
     "tools": "Инструменты",

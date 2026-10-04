@@ -334,6 +334,65 @@ describe('Quick Snip composition export', () => {
       projection: zoomMode === '3d' ? '3d' : '2d',
     });
   });
+  it.each(['studio', 'instant'] as const)('exports editable automatic Loupe lenses for %s captures', (mode) => {
+    const input = task();
+    input.configuration.mode = mode;
+    input.configuration.zoomMode = 'glass';
+    input.configuration.automaticZoom = true;
+    input.editorData.cursor.available = true;
+    input.editorData.cursor.telemetry = [{ timeMs: 1000, cx: 0.5, cy: 0.5, interactionType: 'click' }];
+    const { state, request } = quickSnipExportRequest(input, [], []);
+    const screen = state.composition.clips.find((clip) => clip.kind === 'screen')!;
+    expect(state.zoom.elements).toHaveLength(1);
+    expect(state.zoom.elements[0]).toMatchObject({
+      sessionId: 'session',
+      effect: 'glass',
+      generation: 'automatic',
+      mode: 'manual',
+      enabled: true,
+      linkedClipId: screen.id,
+      focus: { cx: 0.5, cy: 0.5 },
+    });
+    expect(state.zoom.elements[0].glass).toBeDefined();
+    expect(state.zoom.generatedSessions).toHaveLength(1);
+    expect(request.snapshot.zooms).toEqual(state.zoom.elements);
+    expect(input.editorState.zoom.elements).toEqual([]);
+  });
+  it('places automatic Loupe lenses on the transformed recording in the preset canvas', () => {
+    const input = task();
+    input.editorState = quickSnipExportRequest(input, [], []).state;
+    const screen = input.editorState.composition.clips.find((clip) => clip.kind === 'screen')!;
+    if (screen.kind !== 'screen') throw new Error('screen clip fixture missing');
+    screen.transform = { x: 0.2, y: 0.3, width: 0.5, height: 0.4 };
+    input.configuration.preset.settings.editor.presentation = {
+      ...input.editorState.presentation,
+      canvas: { ...DEFAULT_OUTPUT_CANVAS, showBackground: false },
+    };
+    input.configuration.zoomMode = 'glass';
+    input.configuration.automaticZoom = true;
+    input.editorData.cursor.available = true;
+    input.editorData.cursor.telemetry = [{ timeMs: 1000, cx: 0.5, cy: 0.5, interactionType: 'click' }];
+    const { state, request } = quickSnipExportRequest(input, [], []);
+    expect(state.zoom.elements).toHaveLength(1);
+    expect(state.zoom.elements[0].focus.cx).toBeCloseTo(0.45);
+    expect(state.zoom.elements[0].focus.cy).toBeCloseTo(0.5);
+    expect(request.snapshot.zooms).toEqual(state.zoom.elements);
+  });
+  it.each(['unavailable cursor', 'no clicks', 'disabled automatic zoom'] as const)(
+    'does not fabricate Loupe lenses with %s',
+    (reason) => {
+      const input = task();
+      input.configuration.zoomMode = 'glass';
+      input.configuration.automaticZoom = reason !== 'disabled automatic zoom';
+      input.editorData.cursor.available = reason !== 'unavailable cursor';
+      input.editorData.cursor.telemetry = [
+        { timeMs: 1000, cx: 0.5, cy: 0.5, interactionType: reason === 'no clicks' ? 'move' : 'click' },
+      ];
+      const { state } = quickSnipExportRequest(input, [], []);
+      expect(state.zoom.elements.some((zoom) => zoom.effect === 'glass')).toBe(false);
+      expect(state.zoom.elements.every((zoom) => !zoom.enabled)).toBe(true);
+    },
+  );
 
   it('disables automatic zoom while preserving preset canvas, cursor effects and clip appearance', () => {
     const input = task();

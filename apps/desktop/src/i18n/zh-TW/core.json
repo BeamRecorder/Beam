@@ -704,6 +704,7 @@
     "selectionAndMore": "… 以及其他 {count} 個"
   },
   "RecorderBar": {
+    "captureIssue": "錄製問題",
     "recordingControls": "錄影控制",
     "moveRecorderBar": "移動錄影列",
     "ready": "準備就緒",
@@ -933,7 +934,8 @@
     "defaultSystemAudio": "預設系統輸出",
     "video": "影片",
     "image": "圖片",
-    "zoom": "縮放"
+    "zoom": "縮放",
+    "loupe": "放大鏡"
   },
   "ScreenshotEditor": {
     "tools": "工具",

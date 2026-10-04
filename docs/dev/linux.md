@@ -111,7 +111,7 @@ Quick Snip publishes completed files through `wl-copy` on Wayland and `xclip` on
 
 On Wayland compositors without a data-control protocol, `wl-copy` obtains selection access through a temporary native surface. The compositor may briefly focus that surface. Beam bounds acquisition to ten seconds and reports failure if ownership cannot be obtained; this deadline never expires a successful copy.
 
-Click and shortcut metadata also requires explicit Polkit consent. Use **Record keyboard shortcuts** in HUD preferences. On Linux, turning this setting off disables both keyboard shortcuts and click metadata. Do not add the developer account to the `input` group: that would grant the entire Electron process broad access to every raw input device. Development, AppImage, RPM and DEB use the same filtered helper protocol and write structured events to `cursor/input.json`.
+Click and shortcut metadata also requires Polkit authorization. Enable interaction recording once in HUD preferences; Beam retains that choice and resumes the helper automatically, including after helper updates. Quick Snip recording starts the helper as part of preparation when it requests interactions. Cancelling authorization cancels preparation, and failures remain visible without erasing saved consent. On Linux, turning this setting off disables both keyboard shortcuts and click metadata for normal recordings. Do not add the developer account to the `input` group: that would grant the entire Electron process broad access to every raw input device. Development, AppImage, RPM and DEB use the same filtered helper protocol and write structured events to `cursor/input.json`.
 
 Repository rules still apply to documentation and non-capture changes:
 

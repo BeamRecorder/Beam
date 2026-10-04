@@ -119,7 +119,6 @@ function initializeApplication() {
       configureMediaPermission();
       logStartup('Media permission policy registered.');
       configureDesktopLoopback();
-      registerInputAccessIpc(applicationIpc, inputAccess);
       const storage = initializeDesktopStorage({
         app,
         ipcMain: applicationIpc,
@@ -129,6 +128,7 @@ function initializeApplication() {
       });
       const { userPaths, projectStore, directories, screenshotStore } = storage;
       const { preferencesStore, startupPreferences, launchAtStartup } = storage;
+      registerInputAccessIpc(applicationIpc, inputAccess, { store: preferencesStore, BrowserWindow });
       const { editorPresetStore, screenshotPresetStore } = storage;
       let screenshotService = null;
       let quickSnipController = null;
@@ -199,6 +199,7 @@ function initializeApplication() {
         BrowserWindow,
         screen,
         captureEngine,
+        inputAccess,
         app,
         userPaths,
         teleprompterWindow,

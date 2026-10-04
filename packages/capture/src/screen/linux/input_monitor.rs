@@ -7,16 +7,20 @@ use std::{
         atomic::{AtomicBool, AtomicUsize, Ordering},
     },
     thread::JoinHandle,
+    time::Instant,
 };
 
 use crate::{
     CaptureError,
-    input::{InputAccessStatus, InputAccessUnavailableReason, NativeInputEvent},
+    input::{
+        InputAccessStatus, InputAccessUnavailableReason, InputHelperMessage, NativeInputEvent,
+    },
 };
 
 use super::{
     input_helper_diagnostics::{HelperDiagnostics, startup_error},
     input_helper_executable::{command_on_path, helper_launch, input_helper_path},
+    input_stream_health::InputStreamHealth,
     owned_child,
 };
 
@@ -38,6 +42,7 @@ impl Default for InputEventQueue {
 
 struct BrokerShared {
     ready: AtomicBool,
+    health: InputStreamHealth,
     mouse_devices: AtomicUsize,
     keyboard_devices: AtomicUsize,
     subscribers: Mutex<Vec<Weak<Mutex<InputEventQueue>>>>,
@@ -47,6 +52,7 @@ impl Default for BrokerShared {
     fn default() -> Self {
         Self {
             ready: AtomicBool::new(false),
+            health: InputStreamHealth::default(),
             mouse_devices: AtomicUsize::new(0),
             keyboard_devices: AtomicUsize::new(0),
             subscribers: Mutex::new(Vec::new()),
@@ -70,12 +76,17 @@ pub(crate) struct LinuxInputMonitor {
 }
 
 impl LinuxInputMonitor {
-    pub(crate) fn start() -> Result<Option<Self>, CaptureError> {
+    pub(crate) fn start() -> Result<Self, CaptureError> {
         let broker = broker()
             .lock()
             .map_err(|_| CaptureError::Backend("input broker lock was poisoned".into()))?;
-        if !broker.shared.ready.load(Ordering::Acquire) {
-            return Ok(None);
+        if !broker.shared.ready.load(Ordering::Acquire)
+            || !broker.shared.health.responsive(Instant::now())
+        {
+            return Err(CaptureError::Backend(
+                "Linux input capture is unavailable; restore interaction access before recording."
+                    .into(),
+            ));
         }
         let queue = Arc::new(Mutex::new(InputEventQueue::default()));
         broker
@@ -84,7 +95,7 @@ impl LinuxInputMonitor {
             .lock()
             .map_err(|_| CaptureError::Backend("input subscriber lock was poisoned".into()))?
             .push(Arc::downgrade(&queue));
-        Ok(Some(Self { queue }))
+        Ok(Self { queue })
     }
 
     pub(crate) fn drain(&self) -> Vec<NativeInputEvent> {
@@ -122,10 +133,7 @@ pub fn linux_input_access_status() -> InputAccessStatus {
         );
     };
     if broker.shared.ready.load(Ordering::Acquire) {
-        return InputAccessStatus::available(
-            Some(broker.shared.mouse_devices.load(Ordering::Acquire)),
-            Some(broker.shared.keyboard_devices.load(Ordering::Acquire)),
-        );
+        return linux_input_access_status_from(&broker);
     }
     if let Some(failure) = &broker.last_failure {
         return failure.clone();
@@ -195,7 +203,9 @@ fn try_request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
     let mut broker = broker()
         .lock()
         .map_err(|_| CaptureError::Backend("input broker lock was poisoned".into()))?;
-    if broker.shared.ready.load(Ordering::Acquire) {
+    if broker.shared.ready.load(Ordering::Acquire)
+        && broker.shared.health.responsive(Instant::now())
+    {
         return Ok(linux_input_access_status_from(&broker));
     }
     broker.stop();
@@ -284,6 +294,7 @@ fn try_request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
         .shared
         .keyboard_devices
         .store(keyboard_devices, Ordering::Release);
+    broker.shared.health.received(Instant::now());
     broker.shared.ready.store(true, Ordering::Release);
 
     let shared = broker.shared.clone();
@@ -291,7 +302,11 @@ fn try_request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
         .name("beam-linux-input-broker".into())
         .spawn(move || {
             for line in reader.lines().map_while(Result::ok) {
-                let Ok(event) = serde_json::from_str::<NativeInputEvent>(&line) else {
+                let Ok(message) = serde_json::from_str::<InputHelperMessage>(&line) else {
+                    continue;
+                };
+                shared.health.received(Instant::now());
+                let InputHelperMessage::Event(event) = message else {
                     continue;
                 };
                 if let Ok(mut subscribers) = shared.subscribers.lock() {
@@ -411,6 +426,12 @@ fn broker() -> &'static Mutex<LinuxInputBroker> {
 }
 
 fn linux_input_access_status_from(broker: &LinuxInputBroker) -> InputAccessStatus {
+    if !broker.shared.health.responsive(Instant::now()) {
+        return InputAccessStatus::failed(&CaptureError::Backend(
+            "Linux input stream stopped responding: no valid event or heartbeat for 3 seconds."
+                .into(),
+        ));
+    }
     InputAccessStatus::available(
         Some(broker.shared.mouse_devices.load(Ordering::Acquire)),
         Some(broker.shared.keyboard_devices.load(Ordering::Acquire)),
@@ -420,3 +441,7 @@ fn linux_input_access_status_from(broker: &LinuxInputBroker) -> InputAccessStatu
 #[cfg(test)]
 #[path = "input_monitor_startup_tests.rs"]
 mod startup_tests;
+
+#[cfg(test)]
+#[path = "input_monitor_health_tests.rs"]
+mod health_tests;

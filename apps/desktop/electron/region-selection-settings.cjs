@@ -9,7 +9,7 @@ function regionRecordingSettings(value, platform) {
     throw new TypeError('Invalid region countdown');
   for (const key of ['systemAudio', 'hideTaskbar', 'hideDesktopIcons', 'showRealCursor'])
     if (typeof value[key] !== 'boolean') throw new TypeError(`Invalid region ${key}`);
-  if (value.zoomMode !== undefined && !['off', '2d', '3d'].includes(value.zoomMode))
+  if (value.zoomMode !== undefined && !['off', '2d', '3d', 'glass'].includes(value.zoomMode))
     throw new TypeError('Invalid region zoom preference');
   const desktopSupported = platform === 'win32' || platform === 'darwin';
   return {
