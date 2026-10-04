@@ -1,3 +1,5 @@
+import { DEFAULT_ANIMATED_FRAME } from '@beam/engine/shared/animated-frame-types';
+import { drawAnimatedFrame } from './animated-frame';
 import type { ClipAppearance } from '@beam/engine/shared/composition-types';
 import type { DecoratedMediaOptions, MediaRect } from '@beam/runtime/composition/appearance/appearance-types';
 import { drawFrameChrome } from '@beam/runtime/composition/appearance/frames';
@@ -270,7 +272,9 @@ function drawOrientedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions)
   let sourceDrawn = false;
   if (shadowBlur > 0) {
     const alphaSurface =
-      options.shadowFollowsSourceAlpha && appearance.frame === 'none' ? alphaShadowSurface(options, outerRadius) : null;
+      options.shadowFollowsSourceAlpha && (appearance.frame === 'none' || appearance.frame === 'animated')
+        ? alphaShadowSurface(options, outerRadius)
+        : null;
     if (alphaSurface) {
       ctx.save();
       applyClipShadow(ctx, appearance, options.source, options.sourceRect, options.shadowScale);
@@ -328,6 +332,18 @@ function drawOrientedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions)
   if (appearance.frame !== 'none')
     drawFrameChrome(ctx, outer, appearance.frame, title, false, appearance.frameColor, windowsOptions);
   ctx.restore();
+  if (appearance.frame === 'animated' && appearanceScale > 0) {
+    const matrix = ctx.getTransform();
+    drawAnimatedFrame(ctx, {
+      rect: outer,
+      radius: outerRadius,
+      mask,
+      settings: appearance.animatedFrame ?? DEFAULT_ANIMATED_FRAME,
+      timeMs: options.timeMs ?? 0,
+      appearanceScale,
+      pixelScale: Math.max(Math.hypot(matrix.a, matrix.b), Math.hypot(matrix.c, matrix.d), 0.01),
+    });
+  }
   if (appearance.borderEnabled && appearance.borderWidth > 0) {
     ctx.save();
     ctx.strokeStyle = appearance.borderColor;

@@ -10,6 +10,14 @@
     "./shared/shape-vector-schema": {
       "types": "./src/shared/shape-vector-schema.d.ts",
       "default": "./src/shared/shape-vector-schema.js"
+    },
+    "./shared/animated-frame-schema": {
+      "types": "./src/shared/animated-frame-schema.d.ts",
+      "default": "./src/shared/animated-frame-schema.js"
+    },
+    "./capture/cursor-click-schema": {
+      "types": "./src/capture/cursor-click-schema.d.ts",
+      "default": "./src/capture/cursor-click-schema.js"
     }
   },
   "scripts": {

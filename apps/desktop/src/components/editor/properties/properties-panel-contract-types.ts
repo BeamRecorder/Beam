@@ -20,6 +20,7 @@ import type {
 } from '@beam/engine/capture/cursor-settings';
 import type { SelectedClipProperties } from './properties-panel-types';
 import type { CameraFramingPreset, CameraLayoutPreset } from '@beam/engine/shared/camera-layout-types';
+import type { AnimatedFrameSettings } from '@beam/engine/shared/animated-frame-types';
 import type { PhoneFrameFill } from '@beam/engine/shared/color-fill-types';
 import type { ZoomAutoFollowSettings, ZoomElement, ZoomMotionBlurSettings } from '@beam/engine/zoom/zoom-types';
 
@@ -132,6 +133,7 @@ export interface PropertiesPanelEmits {
       frameShowScrollbars?: boolean;
       frameChromeScale?: number;
       phoneFrameFill?: PhoneFrameFill;
+      animatedFrame?: AnimatedFrameSettings;
     },
   ): void;
   (event: 'update:clip-crop', crop: NormalizedCrop): void;

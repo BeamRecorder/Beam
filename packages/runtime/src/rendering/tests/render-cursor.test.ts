@@ -364,7 +364,7 @@ describe('cursor and ripple composition rendering', () => {
       expect(transitioned.rippleAlphas).toHaveLength(expectedRings.length);
       expect(transitioned.cursorAlphas).toEqual([expect.closeTo(baseline.cursorAlphas[0]! * expectedAlpha, 8)]);
       transitioned.rippleAlphas.forEach((alpha, index) =>
-        expect(alpha).toBeCloseTo(expectedAlpha * expectedRings[index]!.opacity, 8),
+        expect(alpha).toBeCloseTo(expectedAlpha * expectedRings[index]!.opacity * 0.65, 8),
       );
     },
   );
@@ -438,4 +438,44 @@ it('does not render Beam cursor or ripples when its overlay is disabled, retaini
   renderCompositionFrame(ctx, { source: {} as CanvasImageSource, width: 100, height: 50 }, value, 0.1);
   expect(ctx.arc).not.toHaveBeenCalled();
   expect(value.cursor.events).toHaveLength(2);
+});
+
+describe('independent ring appearance and lifetime', () => {
+  it('renders clicks at session zero and retains a long ring beyond the old half-second window', () => {
+    const value = snapshot();
+    value.cursor.available = true;
+    value.cursor.events = [
+      { event: 'move', sessionNs: 0, pixelX: 50, pixelY: 25, normalizedX: 0.5, normalizedY: 0.5, visible: true },
+      { event: 'button', sessionNs: 0, button: 2, pressed: true, normalizedX: 0.5, normalizedY: 0.5 },
+    ];
+    value.cursorSettings.clickEffects.left = {
+      ...value.cursorSettings.clickEffects.left,
+      rippleStyle: 'water',
+      rippleEnabled: true,
+    };
+    value.cursorSettings.clickEffects.right = {
+      ...value.cursorSettings.clickEffects.right,
+      rippleEnabled: true,
+      rippleStyle: 'double',
+      rippleWidth: 0.5,
+      rippleDurationMs: 1500,
+      rippleOpacity: 10,
+    };
+    const ctx = transitionContext(),
+      alphas: number[] = [],
+      widths: number[] = [];
+    (ctx.stroke as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      alphas.push(ctx.globalAlpha);
+      widths.push(ctx.lineWidth);
+    });
+    renderCompositionFrame(ctx, { source: {} as CanvasImageSource, width: 100, height: 50 }, value, 0.8);
+    expect(ctx.arc).toHaveBeenCalledTimes(2);
+    expect(widths).toEqual([0.5, 0.5]);
+    expect(alphas).toEqual(
+      cursorRippleAt(0.8, 22, 'double', 1.5)!.rings.map((ring) => expect.closeTo(ring.opacity * 0.1)),
+    );
+    const expired = context();
+    renderCompositionFrame(expired, { source: {} as CanvasImageSource, width: 100, height: 50 }, value, 1.6);
+    expect(expired.arc).not.toHaveBeenCalled();
+  });
 });

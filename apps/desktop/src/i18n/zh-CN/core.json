@@ -77,7 +77,19 @@
     "frameTheme": "浏览器外观",
     "auto": "自动",
     "light": "浅色",
-    "dark": "深色"
+    "dark": "深色",
+    "animatedBorder": "动态边框",
+    "frameStyle": "边框样式",
+    "preset": "预设",
+    "animationSpeed": "动画速度",
+    "animatedHint": "跟随片段的圆角。将速度设为0可冻结效果。",
+    "presets": {
+      "purple-haze": "Purple Haze",
+      "neon-duo": "Neon Duo",
+      "aurora": "Aurora",
+      "ember": "Ember",
+      "electric": "Electric"
+    }
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "正在加载摄像头预览",
@@ -427,7 +439,54 @@
     "presetSingle": "单环",
     "presetDouble": "双波",
     "presetSolid": "爆发",
-    "rippleStyle": "涟漪风格"
+    "presetWater": "水滴",
+    "waterRippleSpread": "波纹范围",
+    "waterRippleHint": "每次点击都会产生一道柔和的波纹，使屏幕发生折射。",
+    "rippleStyle": "涟漪风格",
+    "rippleOpacity": "不透明度",
+    "rippleDuration": "持续时间",
+    "rippleWidth": "线条粗细",
+    "waterRippleIntensity": "折射强度",
+    "waterRippleSoftness": "波纹柔和度",
+    "visibility": "自动隐藏",
+    "cursorLabels": {
+      "default": "指针",
+      "beachball": "加载中",
+      "busy": "忙碌",
+      "cell": "选择单元格",
+      "contextualmenu": "上下文菜单",
+      "copy": "复制",
+      "cross": "十字准星",
+      "handgrabbing": "抓握手形",
+      "handopen": "张开手形",
+      "handpointing": "指向手形",
+      "help": "帮助",
+      "makealias": "创建快捷方式",
+      "move": "移动",
+      "notallowed": "禁止",
+      "poof": "消失",
+      "textcursor": "文本",
+      "textcursorvertical": "竖排文本",
+      "screenshotselection": "选择区域",
+      "screenshotwindow": "选择窗口",
+      "zoomin": "放大",
+      "zoomout": "缩小"
+    },
+    "cursorDirections": {
+      "north": "向上",
+      "northeast": "向右上",
+      "east": "向右",
+      "southeast": "向右下",
+      "south": "向下",
+      "southwest": "向左下",
+      "west": "向左",
+      "northwest": "向左上",
+      "vertical": "垂直",
+      "horizontal": "水平",
+      "diagonalUp": "对角线 ↗",
+      "diagonalDown": "对角线 ↘"
+    },
+    "cursorResize": "调整大小：{direction}"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "正在加载视频预览",
@@ -765,7 +824,14 @@
     "copied": "已复制！",
     "devToolsTool": "开发者工具",
     "devToolsDesc": "在 Electron 窗口中切换 Chrome DevTools",
-    "openDevTools": "DevTools"
+    "openDevTools": "DevTools",
+    "fakeWebcamTitle": "演示摄像头",
+    "addFakeWebcamOverlay": "添加模拟摄像头叠加层",
+    "fakeWebcamDescription": "为屏幕录制添加轻量的 CC0 办公视频，并应用摄像头缩放设置。",
+    "fakeWebcamNoRecording": "请先添加屏幕录制。",
+    "fakeWebcamLocked": "请先解锁屏幕录制。",
+    "fakeWebcamExists": "此录制已有摄像头。",
+    "fakeWebcamLoadFailed": "无法添加演示摄像头。"
   },
   "AppearanceSettings": {
     "uiScale": "界面缩放",

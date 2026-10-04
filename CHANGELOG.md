@@ -6,6 +6,13 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Project thumbnails reveal a translated Open project action at the bottom right on hover or keyboard focus, with batch selection preserved.
+- Video editor Developer Mode can add a lightweight CC0 demo webcam linked to an existing screen recording. One repeated webcam lane covers the recording and supports zoom reactions, camera layouts, project saves and undo/redo; the action is translated into all fifteen languages.
+
+- Cursor click effects offer a Water Drop mode that refracts the screen with a single soft wave and adjustable intensity, spread, duration and softness. Left and right clicks keep independent styles and settings; ring modes support size, opacity, duration, stroke and color. Illustrated choices show actual effects with the macOS pointer and appear only when enabled. The cursor inspector uses compact accordions and fully translated controls and builtin cursor names in all fifteen languages.
+
+- Screen, camera, video and image clips offer five animated border presets that follow their rounded, circular or squircle contours, with adjustable thickness and speed and matching timeline previews/exports. Frame styles and animation presets use thumbnail selectors alongside Safari, Windows 95 and phone frames.
+
 - The private website’s AI-native section demonstrates live HTML-to-canvas editing with Beam’s native controls and two 2D zooms, in both system themes. Reusable source lives in `examples/website-html-canvas-loop/`.
 
 - The website's Edit Cursor section shows a seamless light/dark demo of complete native macOS/Bibata packs, enlarged role previews, text/move/resize interactions, smoothing, cursor size and spring/ripple click effects, rendered with Beam CLI. Its reusable source is in `examples/website-cursor-loop/`.
@@ -88,6 +95,13 @@ User-facing changes to Beam are documented in this file.
 - Settings and Projects now open in separate, resizable desktop windows.
 
 ### Changed
+
+- Cursor accordion headers contain only the section title and chevron; shadow and auto-hide switches and Advanced controls sit beside their related settings inside each section.
+- The Water Drop click thumbnail magnifies the actual single-wave refraction over a contrasting cyan grid so the effect remains visible in the selector.
+
+- Border and frame settings have clearer spacing, and linked recording tracks no longer add a second divider below playback speed.
+
+- Media framing keeps rounded corners and shadow sizes proportional between reduced editor previews and full-resolution exports.
 
 - The complete native cursor-pack showcase uses a light presentation surface in both themes so dark artwork stays legible, while editor controls keep their system theme and macOS pointer.
 

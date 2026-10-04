@@ -8,6 +8,8 @@ import {
 } from '@beam/runtime/composition/appearance/render-decorated-media';
 import { adaptivePhoneFillColors } from '@beam/runtime/composition/appearance/phone-frame-fill';
 import type { ClipAppearance } from '@beam/engine/shared/composition-types';
+import * as animatedFrame from './animated-frame';
+import { DEFAULT_ANIMATED_FRAME } from '@beam/engine/shared/animated-frame-types';
 import * as mediaShadows from '@beam/runtime/composition/appearance/media-shadow-cache';
 
 const appearance = (patch: Partial<ClipAppearance> = {}): ClipAppearance => ({
@@ -55,6 +57,7 @@ const context = () => {
     drawImage: vi.fn(),
     clearRect: vi.fn(),
     setTransform: vi.fn(),
+    getTransform: vi.fn(() => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 })),
     fillRect: vi.fn(),
     fillText: vi.fn(),
     arc: vi.fn(),
@@ -832,5 +835,84 @@ describe('media orientation', () => {
       }),
     ).toThrow('context lost');
     expect(ctx.restore).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('animated decorated media', () => {
+  it.each(['circle', 'squircle', undefined] as const)(
+    'passes the actual %s mask, radius and timeline clock to the border',
+    (mask) => {
+      const ctx = context();
+      const draw = vi.spyOn(animatedFrame, 'drawAnimatedFrame').mockImplementation(() => {});
+      try {
+        const rect = { x: 20, y: 30, width: 240, height: 120 };
+        drawDecoratedMedia(ctx, {
+          source: {} as CanvasImageSource,
+          rect,
+          title: 'Media',
+          mask,
+          timeMs: 2200,
+          appearance: appearance({ frame: 'animated', cornerRadius: 24 }),
+        });
+        expect(draw).toHaveBeenCalledWith(ctx, {
+          rect,
+          radius: mask === 'circle' ? 60 : 24,
+          mask,
+          settings: DEFAULT_ANIMATED_FRAME,
+          timeMs: 2200,
+          appearanceScale: 1,
+          pixelScale: 1,
+        });
+        // Animated framing keeps the full viewport and draws no window chrome.
+        expect(ctx.drawImage).toHaveBeenCalledWith({}, 20, 30, 240, 120);
+        expect(ctx.fillRect).not.toHaveBeenCalled();
+        expect(ctx.fillText).not.toHaveBeenCalled();
+      } finally {
+        draw.mockRestore();
+      }
+    },
+  );
+  it('scales border thickness and rounding together and keeps the frozen settings for stills', () => {
+    const ctx = context();
+    ctx.getTransform.mockReturnValue({ a: 2, b: 0, c: 0, d: 2, e: 0, f: 0 });
+    const draw = vi.spyOn(animatedFrame, 'drawAnimatedFrame').mockImplementation(() => {});
+    try {
+      const settings = { preset: 'neon-duo' as const, width: 8, speed: 0 };
+      drawDecoratedMedia(ctx, {
+        source: {} as CanvasImageSource,
+        rect: { x: 0, y: 0, width: 200, height: 100 },
+        title: '',
+        shadowScale: 0.5,
+        appearance: appearance({ frame: 'animated', cornerRadius: 24, animatedFrame: settings }),
+      });
+      expect(draw.mock.calls[0]![1]).toMatchObject({
+        radius: 12,
+        settings,
+        timeMs: 0,
+        appearanceScale: 0.5,
+        pixelScale: 2,
+      });
+    } finally {
+      draw.mockRestore();
+    }
+  });
+  it('retains rotation and an independent solid border without painting an invisible animation', () => {
+    const ctx = context();
+    const draw = vi.spyOn(animatedFrame, 'drawAnimatedFrame').mockImplementation(() => {});
+    try {
+      drawDecoratedMedia(ctx, {
+        source: {} as CanvasImageSource,
+        rect: { x: 20, y: 30, width: 240, height: 120 },
+        title: '',
+        rotation: 90,
+        shadowScale: 0,
+        appearance: appearance({ frame: 'animated', borderEnabled: true, borderWidth: 2 }),
+      });
+      expect(ctx.rotate).toHaveBeenCalledWith(Math.PI / 2);
+      expect(draw).not.toHaveBeenCalled();
+      expect(ctx.stroke).toHaveBeenCalled();
+    } finally {
+      draw.mockRestore();
+    }
   });
 });

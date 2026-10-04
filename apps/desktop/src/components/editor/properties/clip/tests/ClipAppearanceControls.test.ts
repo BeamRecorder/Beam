@@ -124,6 +124,7 @@ const BorderAndFrameControls = defineComponent({
     frameShowMenu: Boolean,
     frameShowScrollbars: Boolean,
     frameChromeScale: Number,
+    animatedFrame: Object,
   },
   emits: ['update'],
   setup(_, { emit }) {
@@ -388,6 +389,7 @@ describe('ClipAppearanceControls', () => {
         frameShowMenu: false,
         frameShowScrollbars: true,
         frameChromeScale: 1.4,
+        animatedFrame: { preset: 'aurora', width: 5, speed: 0 },
       }),
     );
 
@@ -411,11 +413,13 @@ describe('ClipAppearanceControls', () => {
     expect(frame.props('frameShowMenu')).toBe(false);
     expect(frame.props('frameShowScrollbars')).toBe(true);
     expect(frame.props('frameChromeScale')).toBe(1.4);
+    expect(frame.props('animatedFrame')).toEqual({ preset: 'aurora', width: 5, speed: 0 });
 
     const appearance = {
       borderEnabled: false,
       frame: 'windows-95' as const,
       frameChromeScale: 1.25,
+      animatedFrame: { preset: 'electric' as const, width: 3, speed: 1.5 },
     };
     frame.vm.$emit('update', appearance);
     expect(wrapper.emitted('update:appearance')).toEqual([[appearance]]);

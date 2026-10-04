@@ -5,3 +5,9 @@ export interface RenderableMedia {
   preRendered?: boolean;
 }
 export type CompositionVisuals = ReadonlyMap<string, RenderableMedia>;
+
+export interface MediaRenderCamera {
+  scale: number;
+  focusX: number;
+  focusY: number;
+}

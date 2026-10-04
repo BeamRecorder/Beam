@@ -1,4 +1,13 @@
-export type CursorClickButton = 'left' | 'right';
+import { createDefaultCursorClickEffects, normalizeCursorClickEffect } from './cursor-click-schema.js';
+import type { CursorClickButton, CursorClickEffects } from './cursor-click-types';
+export type {
+  CursorClickButton,
+  CursorClickEffectSettings,
+  CursorClickEffects,
+  CursorWaterRippleSettings,
+} from './cursor-click-types';
+export { createDefaultCursorClickEffects } from './cursor-click-schema.js';
+export type { CursorRippleStyle } from '../cursor/cursor-ripple-types';
 
 export type CursorMotionPreset = 'focused' | 'smooth' | 'custom';
 
@@ -15,7 +24,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(v
 const finiteNumber = (value: unknown, fallback: number) =>
   typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 const booleanValue = (value: unknown, fallback: boolean) => (typeof value === 'boolean' ? value : fallback);
-const stringValue = (value: unknown, fallback: string) => (typeof value === 'string' && value ? value : fallback);
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 export const CURSOR_AUTO_HIDE_DELAY_DEFAULT = 2;
@@ -97,76 +105,12 @@ export const normalizeCursorMotionSettings = (value: unknown): CursorMotionSetti
   };
 };
 
-export type CursorRippleStyle = 'none' | 'single' | 'double' | 'solid';
-
-export interface CursorClickEffectSettings {
-  springEnabled: boolean;
-  springIntensity: number;
-  rippleEnabled: boolean;
-  rippleStyle?: CursorRippleStyle;
-  rippleSize: number;
-  rippleColor: string;
-}
-
-export interface CursorClickEffects {
-  left: CursorClickEffectSettings;
-  right: CursorClickEffectSettings;
-}
-
-const DEFAULT_LEFT: CursorClickEffectSettings = {
-  springEnabled: true,
-  springIntensity: 50,
-  rippleEnabled: false,
-  rippleStyle: 'single',
-  rippleSize: 30,
-  rippleColor: '#ff5a1f',
-};
-
-const DEFAULT_RIGHT: CursorClickEffectSettings = {
-  springEnabled: true,
-  springIntensity: 50,
-  rippleEnabled: false,
-  rippleStyle: 'single',
-  rippleSize: 30,
-  rippleColor: '#6366f1',
-};
-
-export const createDefaultCursorClickEffects = (): CursorClickEffects => ({
-  left: { ...DEFAULT_LEFT },
-  right: { ...DEFAULT_RIGHT },
-});
-
-const normalizeEffect = (value: unknown, fallback: CursorClickEffectSettings): CursorClickEffectSettings => {
-  const input = isRecord(value) ? value : {};
-  const rawStyle = typeof input.rippleStyle === 'string' ? input.rippleStyle : undefined;
-  const rippleStyle: CursorRippleStyle =
-    rawStyle === 'none' || rawStyle === 'single' || rawStyle === 'double' || rawStyle === 'solid'
-      ? rawStyle
-      : (fallback.rippleStyle ?? (booleanValue(input.rippleEnabled, fallback.rippleEnabled) ? 'single' : 'none'));
-  const rippleEnabled = booleanValue(input.rippleEnabled, fallback.rippleEnabled);
-
-  return {
-    springEnabled: booleanValue(input.springEnabled, fallback.springEnabled),
-    springIntensity: Math.min(100, Math.max(0, finiteNumber(input.springIntensity, fallback.springIntensity))),
-    rippleEnabled,
-    rippleStyle,
-    rippleSize: Math.min(80, Math.max(10, finiteNumber(input.rippleSize, fallback.rippleSize))),
-    rippleColor: stringValue(input.rippleColor, fallback.rippleColor),
-  };
-};
-
 export const normalizeCursorClickEffects = (value: unknown): CursorClickEffects => {
   const input = isRecord(value) ? value : {};
-  const left = normalizeEffect(input.left, DEFAULT_LEFT);
-  const right = normalizeEffect(input.right, DEFAULT_RIGHT);
-  const sharedStyle =
-    [left.rippleStyle, right.rippleStyle].find(
-      (style): style is Exclude<CursorRippleStyle, 'none'> =>
-        style === 'single' || style === 'double' || style === 'solid',
-    ) ?? 'single';
+  const defaults = createDefaultCursorClickEffects();
   return {
-    left: { ...left, rippleStyle: sharedStyle },
-    right: { ...right, rippleStyle: sharedStyle },
+    left: normalizeCursorClickEffect(input.left, defaults.left),
+    right: normalizeCursorClickEffect(input.right, defaults.right),
   };
 };
 

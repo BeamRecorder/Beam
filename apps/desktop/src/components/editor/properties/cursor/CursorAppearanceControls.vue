@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { FolderUp, Info, Search } from '@lucide/vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import Select from '~/ui/select/Select.vue';
 import ColorInput from '~/ui/input/ColorInput.vue';
 import Button from '~/ui/button/Button.vue';
+import Accordion from '~/ui/accordion/Accordion.vue';
 import AdvancedButton from '~/ui/button/AdvancedButton.vue';
 import RafRevealTransition from '~/ui/transitions/RafRevealTransition.vue';
 import Popover from '~/ui/popover/Popover.vue';
+import { localizedCursorLabel } from './cursor-labels';
 import ShadowDirectionGroup from './ShadowDirectionGroup.vue';
 import { cursorAssetSupportsTint } from '@beam/engine/shared/cursor-assets';
 import { capture } from '~/api/capture';
@@ -21,6 +23,7 @@ const emit = defineEmits<CursorAppearanceEmits>();
 const { t } = useTranslate('CursorPanel');
 const toast = useToastStore();
 const cursorAdvancedOpen = ref(false);
+const sections = reactive({ appearance: true, shadow: false });
 const importing = ref(false);
 const selectedPack = computed(() => props.packs.find((pack) => pack.id === props.selection.packId) ?? null);
 const packOptions = computed(() =>
@@ -42,7 +45,7 @@ const cursorOptions = computed(() => [
       ]),
   ...(selectedPack.value?.cursors.map((cursor) => ({
     value: cursor.id,
-    label: cursor.label,
+    label: localizedCursorLabel(selectedPack.value!, cursor, t),
     thumbnail: cursor.url,
   })) ?? []),
 ]);
@@ -118,155 +121,166 @@ const openDiscovery = () => {
 </script>
 <template>
   <div class="appearance-options">
-    <section class="cursor-section" :aria-label="t('appearance')">
-      <div class="section-control-heading">
-        <h3 class="section-title">{{ t('appearance') }}</h3>
-        <AdvancedButton
-          v-if="!still"
-          :open="cursorAdvancedOpen"
-          controls="cursor-advanced-panel"
-          :label="t('advanced')"
-          @update:open="cursorAdvancedOpen = $event"
-        />
-      </div>
-      <div class="prop-item pack-section">
-        <div class="pack-heading">
-          <span class="prop-label">{{ t('cursorPack') }}</span>
-          <div class="heading-actions">
-            <Popover interaction="hover-focus-click" :match-trigger-width="false" align="right">
-              <template #trigger>
-                <button type="button" class="info-button" :aria-label="t('packInfo')">
-                  <Info :size="14" />
-                </button>
-              </template>
-              <div class="discovery-popover">
-                <p>{{ t('packDescription') }}</p>
-                <Button size="sm" :icon="Search" @click="openDiscovery">{{ t('findCursorPacks') }}</Button>
-                <a
-                  href="https://github.com/KDE/breeze/blob/master/cursors/svg-cursor-format.md"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {{ t('compatibleFormat') }}
-                </a>
-              </div>
-            </Popover>
+    <Accordion
+      v-model="sections.appearance"
+      appearance="inspector"
+      :title="t('appearance')"
+      data-cursor-section="appearance"
+    >
+      <div class="cursor-section">
+        <div class="prop-item pack-section">
+          <div class="pack-heading">
+            <span class="prop-label">{{ t('cursorPack') }}</span>
+            <div class="heading-actions">
+              <AdvancedButton
+                v-if="!still"
+                v-model:open="cursorAdvancedOpen"
+                controls="cursor-advanced-panel"
+                :label="t('advanced')"
+              />
+              <Popover interaction="hover-focus-click" :match-trigger-width="false" align="right">
+                <template #trigger>
+                  <button type="button" class="info-button" :aria-label="t('packInfo')">
+                    <Info :size="14" />
+                  </button>
+                </template>
+                <div class="discovery-popover">
+                  <p>{{ t('packDescription') }}</p>
+                  <Button size="sm" :icon="Search" @click="openDiscovery">{{ t('findCursorPacks') }}</Button>
+                  <a
+                    href="https://github.com/KDE/breeze/blob/master/cursors/svg-cursor-format.md"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {{ t('compatibleFormat') }}
+                  </a>
+                </div>
+              </Popover>
+            </div>
           </div>
-        </div>
-        <div class="pack-row">
-          <Select
-            class="pack-select"
-            :model-value="selection.packId"
-            :options="packOptions"
-            :aria-label="t('cursorPack')"
-            @update:model-value="selectPack"
-          />
-          <Button
-            class="pack-import-button"
-            size="sm"
-            variant="outline"
-            :icon="FolderUp"
-            icon-only
-            :tooltip="t('import')"
-            :aria-label="t('import')"
-            :loading="importing"
-            @click="importPack"
-          />
-        </div>
-        <div v-if="!selectedPack" class="missing-pack" role="alert">
-          {{ t('missingPack') }}
-          <Button size="xs" variant="link" @click="importPack">{{ t('importPack') }}</Button>
-        </div>
-      </div>
-      <RafRevealTransition>
-        <div v-if="still || cursorAdvancedOpen" id="cursor-advanced-panel" class="prop-item">
-          <span class="prop-label">{{ t('cursorStyle') }}</span>
-          <Select
-            :aria-label="t('cursorStyle')"
-            :model-value="selectedCursorOption"
-            :options="cursorOptions"
-            :show-preview-indicator="!still"
-            :disabled="!selectedPack"
-            @preview:model-value="
-              (value) =>
-                emit(
-                  'preview:selection',
-                  typeof value === 'string' && value !== '__automatic__'
-                    ? {
-                        packId: selection.packId,
-                        mode: 'fixed',
-                        cursorId: value,
-                      }
-                    : null,
-                )
-            "
-            @update:model-value="selectCursor"
-          />
-        </div>
-      </RafRevealTransition>
-      <BigSlider
-        class="cursor-size-control"
-        :model-value="cursorSize"
-        :default-value="CURSOR_SIZE_DEFAULT"
-        :min="CURSOR_SIZE_MIN"
-        :max="CURSOR_SIZE_MAX"
-        :label="t('cursorSize')"
-        :format-value="(value) => `${value}px`"
-        @update:model-value="emit('update:cursorSize', $event)"
-      />
-
-      <div v-if="cursorColorAvailable" class="prop-item">
-        <span class="prop-label">{{ t('cursorColor') }}</span>
-        <ColorInput
-          :label="t('cursorColor')"
-          :aria-label="t('cursorColor')"
-          :show-label="false"
-          :model-value="cursorColor"
-          @update:model-value="emit('update:cursorColor', $event)"
-        />
-      </div>
-      <slot name="appearance" />
-    </section>
-
-    <section class="cursor-section shadow-options" :aria-label="t('dropShadow')">
-      <div class="section-control-heading">
-        <h3 class="section-title">{{ t('dropShadow') }}</h3>
-        <Switch
-          :model-value="enableShadow"
-          :aria-label="t('dropShadow')"
-          @update:model-value="emit('update:enableShadow', $event)"
-        />
-      </div>
-      <RafRevealTransition>
-        <div v-if="enableShadow" id="cursor-shadow-options" class="advanced-options">
-          <BigSlider
-            :model-value="shadowBlur"
-            :min="1"
-            :max="24"
-            :label="t('shadowBlur')"
-            :format-value="(value) => `${value}px`"
-            @update:model-value="emit('update:shadowBlur', $event)"
-          />
-          <div class="prop-item">
-            <span class="prop-label">{{ t('shadowColor') }}</span>
-            <ColorInput
-              :label="t('shadowColor')"
-              :aria-label="t('shadowColor')"
-              :show-label="false"
-              :model-value="shadowColor"
-              @update:model-value="emit('update:shadowColor', $event)"
+          <div class="pack-row">
+            <Select
+              class="pack-select"
+              :model-value="selection.packId"
+              :options="packOptions"
+              :aria-label="t('cursorPack')"
+              @update:model-value="selectPack"
+            />
+            <Button
+              class="pack-import-button"
+              size="sm"
+              variant="outline"
+              :icon="FolderUp"
+              icon-only
+              :tooltip="t('import')"
+              :aria-label="t('import')"
+              :loading="importing"
+              @click="importPack"
             />
           </div>
-          <div class="prop-item">
-            <span class="prop-label">{{ t('direction') }}</span>
-            <ShadowDirectionGroup
-              :model-value="shadowDirection"
-              @update:model-value="emit('update:shadowDirection', $event)"
-            />
+          <div v-if="!selectedPack" class="missing-pack" role="alert">
+            {{ t('missingPack') }}
+            <Button size="xs" variant="link" @click="importPack">{{ t('importPack') }}</Button>
           </div>
         </div>
-      </RafRevealTransition>
-    </section>
+        <RafRevealTransition>
+          <div v-if="still || cursorAdvancedOpen" id="cursor-advanced-panel" class="prop-item">
+            <span class="prop-label">{{ t('cursorStyle') }}</span>
+            <Select
+              :aria-label="t('cursorStyle')"
+              :model-value="selectedCursorOption"
+              :options="cursorOptions"
+              :show-preview-indicator="!still"
+              :disabled="!selectedPack"
+              @preview:model-value="
+                (value) =>
+                  emit(
+                    'preview:selection',
+                    typeof value === 'string' && value !== '__automatic__'
+                      ? {
+                          packId: selection.packId,
+                          mode: 'fixed',
+                          cursorId: value,
+                        }
+                      : null,
+                  )
+              "
+              @update:model-value="selectCursor"
+            />
+          </div>
+        </RafRevealTransition>
+        <BigSlider
+          class="cursor-size-control"
+          :model-value="cursorSize"
+          :default-value="CURSOR_SIZE_DEFAULT"
+          :min="CURSOR_SIZE_MIN"
+          :max="CURSOR_SIZE_MAX"
+          :label="t('cursorSize')"
+          :format-value="(value) => `${value}px`"
+          @update:model-value="emit('update:cursorSize', $event)"
+        />
+
+        <div v-if="cursorColorAvailable" class="prop-item">
+          <span class="prop-label">{{ t('cursorColor') }}</span>
+          <ColorInput
+            :label="t('cursorColor')"
+            :aria-label="t('cursorColor')"
+            :show-label="false"
+            :model-value="cursorColor"
+            @update:model-value="emit('update:cursorColor', $event)"
+          />
+        </div>
+        <slot name="appearance" />
+      </div>
+    </Accordion>
+
+    <Accordion
+      v-model="sections.shadow"
+      appearance="inspector"
+      class="shadow-options"
+      :title="t('dropShadow')"
+      data-cursor-section="shadow"
+    >
+      <div class="cursor-section">
+        <div class="prop-row">
+          <span class="prop-label">{{ t('dropShadow') }}</span>
+          <Switch
+            :model-value="enableShadow"
+            :aria-label="t('dropShadow')"
+            @update:model-value="emit('update:enableShadow', $event)"
+          />
+        </div>
+        <RafRevealTransition>
+          <div v-if="enableShadow" id="cursor-shadow-options" class="advanced-options">
+            <BigSlider
+              :model-value="shadowBlur"
+              :min="1"
+              :max="24"
+              :label="t('shadowBlur')"
+              :format-value="(value) => `${value}px`"
+              @update:model-value="emit('update:shadowBlur', $event)"
+            />
+            <div class="prop-item">
+              <span class="prop-label">{{ t('shadowColor') }}</span>
+              <ColorInput
+                :label="t('shadowColor')"
+                :aria-label="t('shadowColor')"
+                :show-label="false"
+                :model-value="shadowColor"
+                @update:model-value="emit('update:shadowColor', $event)"
+              />
+            </div>
+            <div class="prop-item">
+              <span class="prop-label">{{ t('direction') }}</span>
+              <ShadowDirectionGroup
+                :model-value="shadowDirection"
+                @update:model-value="emit('update:shadowDirection', $event)"
+              />
+            </div>
+          </div>
+        </RafRevealTransition>
+      </div>
+    </Accordion>
   </div>
 </template>
 <style scoped src="./cursor-panel.css"></style>

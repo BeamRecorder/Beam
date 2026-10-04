@@ -77,7 +77,19 @@
     "frameTheme": "브라우저 모양",
     "auto": "자동",
     "light": "라이트",
-    "dark": "다크"
+    "dark": "다크",
+    "animatedBorder": "애니메이션 테두리",
+    "frameStyle": "프레임 스타일",
+    "preset": "프리셋",
+    "animationSpeed": "애니메이션 속도",
+    "animatedHint": "클립의 모서리에 맞춰집니다. 속도를 0으로 설정하면 효과가 멈춥니다.",
+    "presets": {
+      "purple-haze": "Purple Haze",
+      "neon-duo": "Neon Duo",
+      "aurora": "Aurora",
+      "ember": "Ember",
+      "electric": "Electric"
+    }
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "카메라 미리 보기 로드 중",
@@ -427,7 +439,54 @@
     "presetSingle": "단일 링",
     "presetDouble": "더블 웨이브",
     "presetSolid": "버스트",
-    "rippleStyle": "잔물결 스타일"
+    "presetWater": "물방울",
+    "waterRippleSpread": "물결 범위",
+    "waterRippleHint": "클릭할 때마다 하나의 부드러운 물결이 화면을 굴절시킵니다.",
+    "rippleStyle": "잔물결 스타일",
+    "rippleOpacity": "불투명도",
+    "rippleDuration": "지속 시간",
+    "rippleWidth": "선 두께",
+    "waterRippleIntensity": "왜곡 강도",
+    "waterRippleSoftness": "물결의 부드러움",
+    "visibility": "자동 숨기기",
+    "cursorLabels": {
+      "default": "포인터",
+      "beachball": "로딩 중",
+      "busy": "사용 중",
+      "cell": "셀 선택",
+      "contextualmenu": "상황별 메뉴",
+      "copy": "복사",
+      "cross": "십자선",
+      "handgrabbing": "쥔 손",
+      "handopen": "편 손",
+      "handpointing": "가리키는 손",
+      "help": "도움말",
+      "makealias": "바로가기 만들기",
+      "move": "이동",
+      "notallowed": "허용 안 됨",
+      "poof": "사라짐",
+      "textcursor": "텍스트",
+      "textcursorvertical": "세로 텍스트",
+      "screenshotselection": "영역 선택",
+      "screenshotwindow": "창 선택",
+      "zoomin": "확대",
+      "zoomout": "축소"
+    },
+    "cursorDirections": {
+      "north": "위쪽",
+      "northeast": "오른쪽 위",
+      "east": "오른쪽",
+      "southeast": "오른쪽 아래",
+      "south": "아래쪽",
+      "southwest": "왼쪽 아래",
+      "west": "왼쪽",
+      "northwest": "왼쪽 위",
+      "vertical": "세로",
+      "horizontal": "가로",
+      "diagonalUp": "대각선 ↗",
+      "diagonalDown": "대각선 ↘"
+    },
+    "cursorResize": "크기 조절: {direction}"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "비디오 미리보기 로드 중",
@@ -765,7 +824,14 @@
     "copied": "복사됨!",
     "devToolsTool": "개발자 도구",
     "devToolsDesc": "Electron 창에서 Chrome DevTools 전환",
-    "openDevTools": "DevTools"
+    "openDevTools": "DevTools",
+    "fakeWebcamTitle": "데모 웹캠",
+    "addFakeWebcamOverlay": "가상 웹캠 오버레이 추가",
+    "fakeWebcamDescription": "화면 녹화에 용량이 작은 CC0 사무실 영상을 연결합니다. 웹캠 확대/축소 설정을 따릅니다.",
+    "fakeWebcamNoRecording": "먼저 화면 녹화를 추가하세요.",
+    "fakeWebcamLocked": "먼저 화면 녹화의 잠금을 해제하세요.",
+    "fakeWebcamExists": "이 녹화에는 이미 웹캠이 있습니다.",
+    "fakeWebcamLoadFailed": "데모 웹캠을 추가할 수 없습니다."
   },
   "AppearanceSettings": {
     "uiScale": "UI 크기 조정",

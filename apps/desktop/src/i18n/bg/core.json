@@ -77,7 +77,19 @@
     "frameTheme": "Облик на браузъра",
     "auto": "Авто",
     "light": "Светъл",
-    "dark": "Тъмен"
+    "dark": "Тъмен",
+    "animatedBorder": "Анимирана рамка",
+    "frameStyle": "Стил на рамката",
+    "preset": "Предварителна настройка",
+    "animationSpeed": "Скорост на анимацията",
+    "animatedHint": "Следва ъглите на клипа. Задайте скорост 0, за да спрете ефекта.",
+    "presets": {
+      "purple-haze": "Purple Haze",
+      "neon-duo": "Neon Duo",
+      "aurora": "Aurora",
+      "ember": "Ember",
+      "electric": "Electric"
+    }
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Зареждане на визуализацията от камерата",
@@ -427,7 +439,54 @@
     "presetSingle": "Единичен пръстен",
     "presetDouble": "Двойна вълна",
     "presetSolid": "Избухване",
-    "rippleStyle": "Рипъл стил"
+    "presetWater": "Водна капка",
+    "waterRippleSpread": "Обхват на вълните",
+    "waterRippleHint": "Всяко щракване изкривява екрана с една плавна вълна.",
+    "rippleStyle": "Рипъл стил",
+    "rippleOpacity": "Непрозрачност",
+    "rippleDuration": "Продължителност",
+    "rippleWidth": "Дебелина на линията",
+    "waterRippleIntensity": "Сила на изкривяването",
+    "waterRippleSoftness": "Мекота на вълната",
+    "visibility": "Автоматично скриване",
+    "cursorLabels": {
+      "default": "Показалец",
+      "beachball": "Зареждане",
+      "busy": "Зает",
+      "cell": "Избор на клетка",
+      "contextualmenu": "Контекстно меню",
+      "copy": "Копиране",
+      "cross": "Мерник",
+      "handgrabbing": "Затворена ръка",
+      "handopen": "Отворена ръка",
+      "handpointing": "Сочеща ръка",
+      "help": "Помощ",
+      "makealias": "Създаване на пряк път",
+      "move": "Преместване",
+      "notallowed": "Забранено",
+      "poof": "Изчезване",
+      "textcursor": "Текст",
+      "textcursorvertical": "Вертикален текст",
+      "screenshotselection": "Избор на област",
+      "screenshotwindow": "Избор на прозорец",
+      "zoomin": "Увеличаване",
+      "zoomout": "Намаляване"
+    },
+    "cursorDirections": {
+      "north": "нагоре",
+      "northeast": "нагоре надясно",
+      "east": "надясно",
+      "southeast": "надолу надясно",
+      "south": "надолу",
+      "southwest": "надолу наляво",
+      "west": "наляво",
+      "northwest": "нагоре наляво",
+      "vertical": "вертикално",
+      "horizontal": "хоризонтално",
+      "diagonalUp": "диагонално ↗",
+      "diagonalDown": "диагонално ↘"
+    },
+    "cursorResize": "Преоразмеряване {direction}"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Зареждане на видео визуализация",
@@ -765,7 +824,14 @@
     "copied": "Копирано!",
     "devToolsTool": "Инструменти за разработчици",
     "devToolsDesc": "Превключване на Chrome DevTools в прозореца на Electron",
-    "openDevTools": "DevTools"
+    "openDevTools": "DevTools",
+    "fakeWebcamTitle": "Демонстрационна уебкамера",
+    "addFakeWebcamOverlay": "Добавяне на симулирана уебкамера",
+    "fakeWebcamDescription": "Добавя малко офисно видео с лиценз CC0 към записа на екрана. Следва настройките за мащабиране на уебкамерата.",
+    "fakeWebcamNoRecording": "Първо добавете запис на екрана.",
+    "fakeWebcamLocked": "Първо отключете записа на екрана.",
+    "fakeWebcamExists": "Този запис вече има уебкамера.",
+    "fakeWebcamLoadFailed": "Демонстрационната уебкамера не може да бъде добавена."
   },
   "AppearanceSettings": {
     "uiScale": "Мащаб на интерфейса",

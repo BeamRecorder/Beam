@@ -1,4 +1,5 @@
 const { normalizePhoneFrameFill } = require('./composition-phone-frame-fill.cjs');
+const { validateAnimatedFrame } = require('../../../../packages/engine/src/shared/animated-frame-schema.js');
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const text = (value, max) => (typeof value === 'string' ? value.slice(0, max) : '');
 const color = (value, fallback) =>
@@ -39,7 +40,7 @@ const normalizeAppearance = (value) => {
     typeof value.borderEnabled !== 'boolean' ||
     color(value.borderColor, null) === null ||
     !finite(value.borderWidth) ||
-    !['none', 'safari', 'windows-95', 'iphone-16-max', 'pixel-9-pro'].includes(value.frame) ||
+    !['none', 'safari', 'windows-95', 'animated', 'iphone-16-max', 'pixel-9-pro'].includes(value.frame) ||
     color(value.frameColor, null) === null ||
     (value.frameTheme !== undefined && !['auto', 'light', 'dark'].includes(value.frameTheme)) ||
     typeof value.frameShowMenu !== 'boolean' ||
@@ -47,7 +48,9 @@ const normalizeAppearance = (value) => {
     !finite(value.frameChromeScale)
   )
     throw new Error('Apparence de clip invalide');
+  if (value.animatedFrame !== undefined) validateAnimatedFrame(value.animatedFrame);
   return {
+    ...(value.animatedFrame !== undefined ? { animatedFrame: { ...value.animatedFrame } } : {}),
     cornerRadius: radius,
     shadowSize: value.shadowSize,
     shadowBlur: Math.max(0, Math.min(96, value.shadowBlur)),

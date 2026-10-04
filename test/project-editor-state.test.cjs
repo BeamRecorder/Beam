@@ -70,24 +70,10 @@ const balancedAutoFollow = () => ({
 test('defaults new cursor presentations to spring-on and ripple-off for both buttons', () => {
   const state = createDefaultPresentation();
 
-  assert.deepEqual(state.cursor.clickEffects, {
-    left: {
-      springEnabled: true,
-      springIntensity: 50,
-      rippleEnabled: false,
-      rippleStyle: 'single',
-      rippleSize: 30,
-      rippleColor: '#ff5a1f',
-    },
-    right: {
-      springEnabled: true,
-      springIntensity: 50,
-      rippleEnabled: false,
-      rippleStyle: 'single',
-      rippleSize: 30,
-      rippleColor: '#6366f1',
-    },
-  });
+  const { createDefaultCursorClickEffects } = require('../packages/engine/src/capture/cursor-click-schema.js');
+  assert.deepEqual(state.cursor.clickEffects, createDefaultCursorClickEffects());
+  assert.equal(state.cursor.clickEffects.left.water.intensity, 25);
+  assert.equal(state.cursor.clickEffects.left.rippleSize, 22);
 });
 
 test('defaults the stop spring for older projects and preserves an explicit disabled setting', () => {
@@ -708,9 +694,61 @@ test('persists the custom cursor toggle and preserves enabled cursors from older
 
 test('preserves glass settings and automatic provenance through desktop JSON storage', () => {
   const { DEFAULT_GLASS_HIGHLIGHT } = require('../packages/engine/src/zoom/glass-highlight-schema.js');
-  const lens = { id: 'lens', sessionId: 'recording', startMs: 0, endMs: 2000, depth: 4, mode: 'manual', effect: 'glass', generation: 'automatic', focus: { cx: .5, cy: .5 }, glass: { ...DEFAULT_GLASS_HIGHLIGHT, shape: 'freehand', path: [{ x: -1, y: -1 }, { x: 1, y: -1 }, { x: 0, y: 1 }] } };
+  const lens = {
+    id: 'lens',
+    sessionId: 'recording',
+    startMs: 0,
+    endMs: 2000,
+    depth: 4,
+    mode: 'manual',
+    effect: 'glass',
+    generation: 'automatic',
+    focus: { cx: 0.5, cy: 0.5 },
+    glass: {
+      ...DEFAULT_GLASS_HIGHLIGHT,
+      shape: 'freehand',
+      path: [
+        { x: -1, y: -1 },
+        { x: 1, y: -1 },
+        { x: 0, y: 1 },
+      ],
+    },
+  };
   const saved = zoomState({ elements: [lens], generatedSessions: [] }).elements[0];
-  assert.deepEqual(saved.glass, lens.glass); assert.equal(saved.generation, 'automatic');
+  assert.deepEqual(saved.glass, lens.glass);
+  assert.equal(saved.generation, 'automatic');
   assert.notEqual(saved.glass.path, lens.glass.path);
-  for (const patch of [{ generation: 'bad' }, { mode: 'auto' }, { glass: { ...lens.glass, size: 0 } }]) assert.throws(() => zoomState({ elements: [{ ...lens, ...patch }], generatedSessions: [] }));
+  for (const patch of [{ generation: 'bad' }, { mode: 'auto' }, { glass: { ...lens.glass, size: 0 } }])
+    assert.throws(() => zoomState({ elements: [{ ...lens, ...patch }], generatedSessions: [] }));
+});
+
+test('preserves Water Drop ripple style, spread and per-button activation through project save/load', () => {
+  const state = createDefaultPresentation();
+  state.cursor.clickEffects.left = {
+    ...state.cursor.clickEffects.left,
+    rippleStyle: 'water',
+    rippleEnabled: true,
+    water: { intensity: 8, spread: 1, durationMs: 2400, width: 2 },
+    rippleOpacity: 40,
+    rippleWidth: 1,
+    rippleDurationMs: 1200,
+  };
+  state.cursor.clickEffects.right.rippleStyle = 'double';
+  const saved = presentationState(JSON.parse(JSON.stringify(state)));
+  assert.deepEqual(saved.cursor.clickEffects, state.cursor.clickEffects);
+  assert.deepEqual(migratePresentation(saved).cursor.clickEffects, state.cursor.clickEffects);
+});
+
+test('rejects malformed optional cursor effect controls on save', () => {
+  for (const patch of [
+    { water: {} },
+    { water: null },
+    { rippleOpacity: 'bad' },
+    { rippleDurationMs: Infinity },
+    { rippleWidth: NaN },
+  ]) {
+    const state = createDefaultPresentation();
+    Object.assign(state.cursor.clickEffects.right, patch);
+    assert.throws(() => presentationState(state), /cursor click effect/);
+  }
 });

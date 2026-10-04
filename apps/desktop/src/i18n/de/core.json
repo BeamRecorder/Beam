@@ -77,7 +77,19 @@
     "frameTheme": "Browserdarstellung",
     "auto": "Auto",
     "light": "Hell",
-    "dark": "Dunkel"
+    "dark": "Dunkel",
+    "animatedBorder": "Animierter Rand",
+    "frameStyle": "Rahmenstil",
+    "preset": "Vorlage",
+    "animationSpeed": "Animationsgeschwindigkeit",
+    "animatedHint": "Folgt den Clipecken. Mit Geschwindigkeit 0 wird der Effekt angehalten.",
+    "presets": {
+      "purple-haze": "Purple Haze",
+      "neon-duo": "Neon Duo",
+      "aurora": "Aurora",
+      "ember": "Ember",
+      "electric": "Electric"
+    }
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Kameravorschau wird geladen",
@@ -427,7 +439,54 @@
     "presetSingle": "Einzelring",
     "presetDouble": "Doppelte Welle",
     "presetSolid": "Platzen",
-    "rippleStyle": "Ripple-Stil"
+    "presetWater": "Wassertropfen",
+    "waterRippleSpread": "Wellenausbreitung",
+    "waterRippleHint": "Ein einzelner sanfter Welleneffekt verzerrt bei jedem Klick den Bildschirm.",
+    "rippleStyle": "Ripple-Stil",
+    "rippleOpacity": "Deckkraft",
+    "rippleDuration": "Dauer",
+    "rippleWidth": "Linienstärke",
+    "waterRippleIntensity": "Stärke der Verzerrung",
+    "waterRippleSoftness": "Weichheit der Welle",
+    "visibility": "Automatisch ausblenden",
+    "cursorLabels": {
+      "default": "Zeiger",
+      "beachball": "Laden",
+      "busy": "Beschäftigt",
+      "cell": "Zellenauswahl",
+      "contextualmenu": "Kontextmenü",
+      "copy": "Kopieren",
+      "cross": "Fadenkreuz",
+      "handgrabbing": "Greifende Hand",
+      "handopen": "Offene Hand",
+      "handpointing": "Zeigende Hand",
+      "help": "Hilfe",
+      "makealias": "Verknüpfung erstellen",
+      "move": "Verschieben",
+      "notallowed": "Nicht erlaubt",
+      "poof": "Verschwinden",
+      "textcursor": "Text",
+      "textcursorvertical": "Vertikaler Text",
+      "screenshotselection": "Bereichsauswahl",
+      "screenshotwindow": "Fensterauswahl",
+      "zoomin": "Vergrößern",
+      "zoomout": "Verkleinern"
+    },
+    "cursorDirections": {
+      "north": "nach oben",
+      "northeast": "nach rechts oben",
+      "east": "nach rechts",
+      "southeast": "nach rechts unten",
+      "south": "nach unten",
+      "southwest": "nach links unten",
+      "west": "nach links",
+      "northwest": "nach links oben",
+      "vertical": "vertikal",
+      "horizontal": "horizontal",
+      "diagonalUp": "diagonal ↗",
+      "diagonalDown": "diagonal ↘"
+    },
+    "cursorResize": "Größe ändern {direction}"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Videovorschau wird geladen",
@@ -765,7 +824,14 @@
     "copied": "Kopiert!",
     "devToolsTool": "Entwicklertools",
     "devToolsDesc": "Chrome DevTools im Electron-Fenster umschalten",
-    "openDevTools": "DevTools"
+    "openDevTools": "DevTools",
+    "fakeWebcamTitle": "Demo-Webcam",
+    "addFakeWebcamOverlay": "Simulierte Webcam hinzufügen",
+    "fakeWebcamDescription": "Füge der Bildschirmaufnahme ein kleines CC0-Bürovideo hinzu. Es folgt den Zoom-Einstellungen der Webcam.",
+    "fakeWebcamNoRecording": "Füge zuerst eine Bildschirmaufnahme hinzu.",
+    "fakeWebcamLocked": "Entsperre zuerst die Bildschirmaufnahme.",
+    "fakeWebcamExists": "Diese Aufnahme hat bereits eine Webcam.",
+    "fakeWebcamLoadFailed": "Die Demo-Webcam konnte nicht hinzugefügt werden."
   },
   "AppearanceSettings": {
     "uiScale": "UI-Skalierung",

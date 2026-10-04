@@ -9,6 +9,8 @@ export function drawScreenMedia(
   clip: VisualClip,
   media: RenderableMedia,
   canvas: { width: number; height: number; showBackground: boolean },
+  timeMs = 0,
+  appearanceScale = 1,
 ) {
   const geometry = resolveScreenRenderGeometry(
     clip,
@@ -19,6 +21,8 @@ export function drawScreenMedia(
     canvas.showBackground,
   );
   drawDecoratedMedia(context, {
+    timeMs,
+    shadowScale: appearanceScale,
     source: media.source,
     sourceRect: geometry.source,
     rect: geometry.positioned,

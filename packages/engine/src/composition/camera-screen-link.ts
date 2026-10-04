@@ -1,3 +1,4 @@
+import { recordingMediaOwner } from './recording-media-links';
 import type { ClipComposition, VisualClip } from '@beam/engine/shared/composition-types';
 
 export const cameraScreenCanShareGroup = (left: VisualClip, right: VisualClip) =>
@@ -14,7 +15,11 @@ export function cameraScreenPartner(
   camera: VisualClip,
   includeCompatibleRecording = false,
 ): VisualClip | undefined {
-  if (camera.kind !== 'webcam') return undefined;
+  if (camera.kind !== 'webcam' || camera.recordingClipId === null) return undefined;
+  if (camera.recordingClipId) {
+    const owner = recordingMediaOwner(composition, camera);
+    if (owner) return owner;
+  }
   const linked = camera.groupId
     ? composition.clips.find((clip): clip is VisualClip => clip.kind === 'screen' && clip.groupId === camera.groupId)
     : undefined;

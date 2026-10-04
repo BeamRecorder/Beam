@@ -3,7 +3,6 @@ import { computed } from 'vue';
 import { Link, Unlink, Video, ZoomIn } from '@lucide/vue';
 import Button from '~/components/ui/button/Button.vue';
 import Popover from '~/components/ui/popover/Popover.vue';
-import Divider from '~/components/ui/divider/Divider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { ClipComposition } from '@beam/engine/shared/composition-types';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
@@ -25,7 +24,6 @@ const unlink = (clipIds: string[], zoomIds: string[]) => {
 </script>
 <template>
   <div v-if="linked.clips.length || linked.zooms.length" class="sidecar-links">
-    <Divider spacing="xs" />
     <Popover align="right" :match-trigger-width="false">
       <template #trigger>
         <Button variant="outline" size="sm" :icon="Link">{{ t('title') }}</Button>
@@ -92,6 +90,7 @@ const unlink = (clipIds: string[], zoomIds: string[]) => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding-top: 14px;
 }
 .sidecar-popover {
   width: min(340px, calc(100vw - 32px));

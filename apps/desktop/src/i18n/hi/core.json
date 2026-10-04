@@ -77,7 +77,19 @@
     "frameTheme": "ब्राउज़र का रूप",
     "auto": "स्वचालित",
     "light": "हल्का",
-    "dark": "गहरा"
+    "dark": "गहरा",
+    "animatedBorder": "एनिमेटेड बॉर्डर",
+    "frameStyle": "फ़्रेम शैली",
+    "preset": "प्रीसेट",
+    "animationSpeed": "एनिमेशन की गति",
+    "animatedHint": "क्लिप के कोनों का अनुसरण करता है। प्रभाव रोकने के लिए गति 0 रखें।",
+    "presets": {
+      "purple-haze": "Purple Haze",
+      "neon-duo": "Neon Duo",
+      "aurora": "Aurora",
+      "ember": "Ember",
+      "electric": "Electric"
+    }
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "कैमरा प्रीव्यू लोड हो रहा है",
@@ -427,7 +439,54 @@
     "presetSingle": "एकल अंगूठी",
     "presetDouble": "दोहरी लहर",
     "presetSolid": "फटना",
-    "rippleStyle": "तरंग शैली"
+    "presetWater": "पानी की बूंद",
+    "waterRippleSpread": "लहरों का फैलाव",
+    "waterRippleHint": "हर क्लिक स्क्रीन को एक ही कोमल लहर से विकृत करता है।",
+    "rippleStyle": "तरंग शैली",
+    "rippleOpacity": "अपारदर्शिता",
+    "rippleDuration": "अवधि",
+    "rippleWidth": "रेखा की मोटाई",
+    "waterRippleIntensity": "विकृति की तीव्रता",
+    "waterRippleSoftness": "लहर की कोमलता",
+    "visibility": "अपने-आप छिपाना",
+    "cursorLabels": {
+      "default": "पॉइंटर",
+      "beachball": "लोड हो रहा है",
+      "busy": "व्यस्त",
+      "cell": "सेल चयन",
+      "contextualmenu": "संदर्भ मेन्यू",
+      "copy": "कॉपी",
+      "cross": "क्रॉसहेयर",
+      "handgrabbing": "बंद हाथ",
+      "handopen": "खुला हाथ",
+      "handpointing": "इशारा करता हाथ",
+      "help": "सहायता",
+      "makealias": "शॉर्टकट बनाएँ",
+      "move": "स्थानांतरित करें",
+      "notallowed": "अनुमति नहीं",
+      "poof": "गायब होना",
+      "textcursor": "टेक्स्ट",
+      "textcursorvertical": "लंबवत टेक्स्ट",
+      "screenshotselection": "क्षेत्र चयन",
+      "screenshotwindow": "विंडो चयन",
+      "zoomin": "ज़ूम इन",
+      "zoomout": "ज़ूम आउट"
+    },
+    "cursorDirections": {
+      "north": "ऊपर",
+      "northeast": "ऊपर दाएँ",
+      "east": "दाएँ",
+      "southeast": "नीचे दाएँ",
+      "south": "नीचे",
+      "southwest": "नीचे बाएँ",
+      "west": "बाएँ",
+      "northwest": "ऊपर बाएँ",
+      "vertical": "लंबवत",
+      "horizontal": "क्षैतिज",
+      "diagonalUp": "तिरछे ↗",
+      "diagonalDown": "तिरछे ↘"
+    },
+    "cursorResize": "आकार बदलें: {direction}"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "वीडियो पूर्वावलोकन लोड हो रहा है",
@@ -765,7 +824,14 @@
     "copied": "कॉपी किया गया!",
     "devToolsTool": "डेवलपर टूल",
     "devToolsDesc": "Electron विंडो में Chrome DevTools टॉगल करें",
-    "openDevTools": "DevTools"
+    "openDevTools": "DevTools",
+    "fakeWebcamTitle": "डेमो वेबकैम",
+    "addFakeWebcamOverlay": "नकली वेबकैम ओवरले जोड़ें",
+    "fakeWebcamDescription": "स्क्रीन रिकॉर्डिंग में CC0 लाइसेंस वाला छोटा ऑफ़िस वीडियो जोड़ता है। यह वेबकैम की ज़ूम सेटिंग का उपयोग करता है।",
+    "fakeWebcamNoRecording": "पहले स्क्रीन रिकॉर्डिंग जोड़ें।",
+    "fakeWebcamLocked": "पहले स्क्रीन रिकॉर्डिंग का लॉक हटाएँ।",
+    "fakeWebcamExists": "इस रिकॉर्डिंग में पहले से वेबकैम है।",
+    "fakeWebcamLoadFailed": "डेमो वेबकैम नहीं जोड़ा जा सका।"
   },
   "AppearanceSettings": {
     "uiScale": "यूआई स्केलिंग",

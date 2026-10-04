@@ -9,6 +9,7 @@ import type {
   NormalizedTransform,
 } from '@beam/engine/shared/composition-types';
 import type { CameraFramingPreset, CameraLayoutPreset } from '@beam/engine/shared/camera-layout-types';
+import type { AnimatedFrameSettings } from '@beam/engine/shared/animated-frame-types';
 import type { PhoneFrameFill } from '@beam/engine/shared/color-fill-types';
 import type { AudioNormalization } from '@beam/engine/shared/audio-normalization-types';
 
@@ -40,6 +41,7 @@ export interface SelectedClipProperties {
   frameShowScrollbars?: boolean;
   frameChromeScale?: number;
   phoneFrameFill?: PhoneFrameFill;
+  animatedFrame?: AnimatedFrameSettings;
   clipTransform?: NormalizedTransform;
   isMirrored?: boolean;
   isMirroredY?: boolean;

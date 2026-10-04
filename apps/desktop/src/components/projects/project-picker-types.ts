@@ -21,3 +21,14 @@ export type ProjectTitleProps = {
 export interface ProjectPickerSearchInput {
   inputRef: HTMLInputElement | null;
 }
+
+export type ProjectCardPreviewProps = {
+  project: CaptureProject;
+  thumbnailSrc?: string | null;
+  hovered: boolean;
+  loaded: boolean;
+  current: boolean;
+  selected: boolean;
+  selectionMode: boolean;
+  progress?: { current: number; total: number };
+};

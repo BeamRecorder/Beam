@@ -113,6 +113,8 @@
       "apps/desktop/electron/**/*",
       "packages/engine/src/scene/scene-schema.js",
       "packages/engine/src/shared/shape-vector-schema.js",
+      "packages/engine/src/shared/animated-frame-schema.js",
+      "packages/engine/src/capture/cursor-click-schema.js",
       "packages/engine/src/zoom/glass-highlight-schema.js",
       "packages/engine/src/zoom/zoom-schema.js",
       "packages/engine/src/html/html-schema.js",

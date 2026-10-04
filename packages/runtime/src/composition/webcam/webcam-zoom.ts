@@ -192,6 +192,7 @@ export function drawWebcamOverlay(
   title = 'Camera',
   shadowScale = 1,
   framingPreset: CameraFramingPreset = 'custom',
+  timeMs = 0,
 ) {
   const layout = computeWebcamLayout(canvasWidth, canvasHeight, appliedZoomScale, settings, transform);
   const sourceWidth = sourceDimensions.width;
@@ -207,6 +208,7 @@ export function drawWebcamOverlay(
   );
   const sourceRect: MediaRect | undefined = framing.sourceRect;
   drawDecoratedMedia(ctx, {
+    timeMs,
     source,
     sourceRect,
     rect: framingPreset === 'custom' && appearance && isPhoneFrame(appearance.frame) ? layout : framing.rect,

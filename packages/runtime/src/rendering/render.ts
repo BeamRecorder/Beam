@@ -1,4 +1,7 @@
+import { disposeAnimatedFrameRenderer } from '../composition/appearance/animated-frame';
+import { drawVisualClip, drawWebcamClip } from './render-media';
 import { drawScreenMedia } from './render-screen';
+import { disposeWaterRippleRenderer, screenWithWaterRipples } from './render-water-ripple';
 import { drawSceneStack } from './scene-stack';
 import { createSnapshotCameraEvaluator } from './snapshot-camera';
 import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
@@ -8,19 +11,9 @@ import {
   isShapeClip,
   type BlurClip,
   type CaptionClip,
-  type VisualClip,
 } from '@beam/engine/shared/composition-types';
-import {
-  drawWebcamOverlay,
-  webcamReactsToZoom,
-  webcamSettingsForAppearance,
-} from '@beam/runtime/composition/webcam/webcam-zoom';
-import { drawDecoratedMedia } from '@beam/runtime/composition/appearance/render-decorated-media';
 import { primeAdaptiveShadowColors } from '@beam/runtime/composition/appearance/adaptive-shadow';
-import {
-  visualAdaptiveShadowRequests,
-  visualMediaOptions,
-} from '@beam/runtime/composition/appearance/visual-media-options';
+import { visualAdaptiveShadowRequests } from '@beam/runtime/composition/appearance/visual-media-options';
 import { createCursorMotionPlayer } from '@beam/engine/cursor/cursor-motion';
 import { cursorStateAt } from '@beam/engine/cursor/cursorPlayback';
 import { cursorPositionForKeyboardCaption, drawCursorLayer } from '@beam/runtime/rendering/cursor-render';
@@ -100,15 +93,6 @@ function drawCaption(
   });
 }
 
-function drawVisualClip(
-  ctx: Canvas2DContext,
-  clip: VisualClip,
-  media: RenderableMedia,
-  canvas: { width: number; height: number },
-) {
-  drawDecoratedMedia(ctx, visualMediaOptions(clip, media, canvas));
-}
-
 function drawBlurClip(ctx: Canvas2DContext, clip: BlurClip, canvas: { width: number; height: number }) {
   applyBlurEffect(ctx, clip, {
     x: clip.transform.x * canvas.width,
@@ -118,42 +102,6 @@ function drawBlurClip(ctx: Canvas2DContext, clip: BlurClip, canvas: { width: num
   });
 }
 
-function drawWebcamClip(
-  ctx: Canvas2DContext,
-  clip: VisualClip,
-  media: RenderableMedia,
-  canvas: { width: number; height: number },
-  camera?: { scale: number; focusX: number; focusY: number },
-) {
-  const scale = camera?.scale || 1;
-  ctx.save();
-  if (camera) {
-    ctx.translate(camera.focusX, camera.focusY);
-    ctx.scale(1 / scale, 1 / scale);
-    ctx.translate(-canvas.width / 2, -canvas.height / 2);
-  }
-  drawWebcamOverlay(
-    ctx,
-    media.source,
-    { width: media.width, height: media.height },
-    canvas.width,
-    canvas.height,
-    scale,
-    {
-      ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
-      rotation: clip.rotation,
-      reactToZoom: webcamReactsToZoom(clip),
-    },
-    clip.transform,
-    clip.crop,
-    clip.appearance,
-    clip.name,
-    1,
-    clip.cameraFramingPreset ?? 'custom',
-  );
-  ctx.restore();
-}
-
 export function drawCompositionLayers(
   ctx: Canvas2DContext,
   snapshot: CompositionSnapshot,
@@ -161,6 +109,8 @@ export function drawCompositionLayers(
   visuals: CompositionVisuals = new Map(),
 ) {
   const timeMs = time * 1_000;
+  const reference = snapshot.referenceCanvas ?? snapshot.canvas;
+  const appearanceScale = Math.min(snapshot.canvas.width / reference.width, snapshot.canvas.height / reference.height);
   const layers = resolveCompositionSceneLayers(snapshot.composition, timeMs);
   primeAdaptiveShadowColors(visualAdaptiveShadowRequests(layers.visualStack, visuals, snapshot.canvas));
   drawSceneStack(ctx, layers.visualStack, layers.scene, snapshot.canvas, (ctx, clips) =>
@@ -188,11 +138,11 @@ export function drawCompositionLayers(
         if (!media) continue;
         if (clip.kind === 'webcam') {
           drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
-            drawWebcamClip(ctx, clip, media, snapshot.canvas),
+            drawWebcamClip(ctx, clip, media, snapshot.canvas, timeMs, appearanceScale),
           );
         } else
           drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
-            drawVisualClip(ctx, clip, media, snapshot.canvas),
+            drawVisualClip(ctx, clip, media, snapshot.canvas, timeMs, appearanceScale),
           );
       }
     }),
@@ -219,10 +169,13 @@ function renderCompositionFrameContent(
   ctx.fillStyle = OUTPUT_FALLBACK_COLOR;
   ctx.fillRect(0, 0, width, height);
   const timeMs = time * 1_000;
+  const reference = snapshot.referenceCanvas ?? snapshot.canvas;
+  const appearanceScale = Math.min(snapshot.canvas.width / reference.width, snapshot.canvas.height / reference.height);
   const layers = resolvedLayers ?? resolveCompositionSceneLayers(snapshot.composition, timeMs);
   primeAdaptiveShadowColors(visualAdaptiveShadowRequests(layers.visualStack, visuals, snapshot.canvas));
   const screen = layers.screen;
   const screenTime = screen ? (sessionTimeAt(screen, timeMs, snapshot.composition) ?? timeMs) / 1_000 : time;
+  const screenMedia = screen && video ? screenWithWaterRipples(video, snapshot, screenTime) : video;
   const sourceWidth = video?.width ?? width;
   const sourceHeight = video?.height ?? height;
   const screenGeometry = screen
@@ -264,10 +217,10 @@ function renderCompositionFrameContent(
             continue;
           batch.flush();
           if (clip.kind === 'screen') {
-            const media = clip.id === screen?.id ? video : visuals?.get(clip.id);
+            const media = clip.id === screen?.id ? screenMedia : visuals?.get(clip.id);
             if (!media) continue;
             drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () => {
-              drawScreenMedia(target, clip, media, snapshot.canvas);
+              drawScreenMedia(target, clip, media, snapshot.canvas, timeMs, appearanceScale);
               if (layers.scene && clip.id === screen?.id && resolvedCursorMotionPlayer)
                 drawCursorLayer(
                   target,
@@ -299,7 +252,7 @@ function renderCompositionFrameContent(
           if (!sourceVisual) continue;
           if (clip.kind === 'webcam')
             drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
-              drawWebcamClip(target, clip, sourceVisual, snapshot.canvas, {
+              drawWebcamClip(target, clip, sourceVisual, snapshot.canvas, timeMs, appearanceScale, {
                 scale: sampleCamera.scale,
                 focusX: sampleCamera.focusX * width,
                 focusY: sampleCamera.focusY * height,
@@ -307,7 +260,7 @@ function renderCompositionFrameContent(
             );
           else
             drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
-              drawVisualClip(target, clip, sourceVisual, snapshot.canvas),
+              drawVisualClip(target, clip, sourceVisual, snapshot.canvas, timeMs, appearanceScale),
             );
         }
       }),
@@ -415,6 +368,8 @@ function renderCompositionFrameContent(
 }
 
 export function disposeCompositionRenderer() {
+  disposeWaterRippleRenderer();
+  disposeAnimatedFrameRenderer();
   disposeGlassHighlights();
   disposePerspectiveRenderer();
   gpuShapes.dispose();

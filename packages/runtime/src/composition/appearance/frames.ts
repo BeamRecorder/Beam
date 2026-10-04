@@ -326,7 +326,7 @@ export function drawFrameChrome(
   frameColor = '#c0c0c0',
   windows: WindowsFrameOptions = {},
 ) {
-  if (frame === 'none') return;
+  if (frame === 'none' || frame === 'animated') return;
   if (isPhoneFrame(frame)) {
     drawPhoneFrame(ctx, rect, frame, paintBackground, frameColor);
     return;
@@ -359,7 +359,7 @@ export function drawFrameOverlay(
   frameColor = '#c0c0c0',
   windows: WindowsFrameOptions = {},
 ) {
-  if (frame === 'none') return;
+  if (frame === 'none' || frame === 'animated') return;
   const content = frameContentRect(rect, frame, windows);
   ctx.save();
   ctx.beginPath();

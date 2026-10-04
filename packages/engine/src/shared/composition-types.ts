@@ -142,9 +142,10 @@ export interface ClipAppearance extends WebcamAppearance {
   frameShowScrollbars: boolean;
   frameChromeScale: number;
   phoneFrameFill?: PhoneFrameFill;
+  animatedFrame?: import('./animated-frame-types').AnimatedFrameSettings;
 }
 
-export type ClipFrame = 'none' | 'safari' | 'windows-95' | 'iphone-16-max' | 'pixel-9-pro';
+export type ClipFrame = 'none' | 'safari' | 'windows-95' | 'animated' | 'iphone-16-max' | 'pixel-9-pro';
 export type ClipFrameTheme = 'auto' | 'light' | 'dark';
 
 export interface MediaAsset {

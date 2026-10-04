@@ -156,6 +156,7 @@ describe('RecordingSidecarLinks', () => {
 
     await wrapper.get('[data-kind="trigger"]').trigger('click');
     expect(wrapper.findAll('.sidecar-row')).toHaveLength(2);
+    expect(wrapper.findComponent({ name: 'Divider' }).exists()).toBe(false);
 
     const individualButtons = wrapper.findAll('[data-kind="one"]');
     await individualButtons[0]!.trigger('click');
