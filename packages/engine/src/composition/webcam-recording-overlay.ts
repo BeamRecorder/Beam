@@ -44,17 +44,20 @@ export function attachWebcamRecordingOverlay(composition: ClipComposition, reque
     request.asset.durationMs / screen.playbackRate < MIN_CLIP_DURATION_MS * 2
   )
     throw new CompositionEngineError('A webcam overlay requires a playable video.');
-  const sourceDuration = screen.timelineDurationMs * screen.playbackRate;
-  const count = Math.ceil(sourceDuration / request.asset.durationMs);
-  const duration = screen.timelineDurationMs / count;
+  // Project storage rounds milliseconds. Split on that same clock so rounding
+  // each fragment cannot turn a shared boundary into a one-millisecond overlap.
+  const timelineStartMs = Math.round(screen.timelineStartMs);
+  const timelineDurationMs = Math.round(screen.timelineDurationMs);
+  const maxDurationMs = Math.floor(request.asset.durationMs / screen.playbackRate);
+  const count = Math.ceil(timelineDurationMs / maxDurationMs);
   const trackId = `webcam:${crypto.randomUUID()}`;
   const asset = { ...request.asset, id: `webcam-asset:${crypto.randomUUID()}`, sessionId };
   const order = Math.min(0, ...composition.clips.filter(isCompositingClip).map((clip) => clip.order)) - 1;
-  let timelineStartMs = screen.timelineStartMs;
   const clips: VisualClip[] = Array.from({ length: count }, (_, index) => {
-    const startMs = timelineStartMs;
-    const durationMs = index === count - 1 ? screen.timelineStartMs + screen.timelineDurationMs - startMs : duration;
-    timelineStartMs += durationMs;
+    const startOffsetMs = Math.round((index * timelineDurationMs) / count);
+    const endOffsetMs = Math.round(((index + 1) * timelineDurationMs) / count);
+    const startMs = timelineStartMs + startOffsetMs;
+    const durationMs = endOffsetMs - startOffsetMs;
     return {
       id: crypto.randomUUID(),
       kind: 'webcam',

@@ -96,6 +96,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Developer Mode's demo webcam now uses a cropped, lightweight CC0 interview with an unobscured speaker instead of finger-counting footage.
 - Cursor accordion headers contain only the section title and chevron; shadow and auto-hide switches and Advanced controls sit beside their related settings inside each section.
 - The Water Drop click thumbnail magnifies the actual single-wave refraction over a contrasting cyan grid so the effect remains visible in the selector.
 
@@ -237,6 +238,8 @@ User-facing changes to Beam are documented in this file.
 - Refreshed the default light and dark surfaces, typography and control shapes, with bundled Hanken Grotesk and themed device/preset menus.
 
 ### Fixed
+
+- Developer Mode's demo webcam imports correctly through the native bridge, saves repeated fragments without rounding overlaps, and retains its recording link and zoom reactions after reopening a project.
 
 - Russian and Bulgarian website FAQs now display their translated questions and answers, including the current source license, instead of internal category identifiers.
 - Linux CI and release packages now compile and verify the experimental GPU export backend. Packages include only Beam native artifacts and use system FFmpeg libraries, preventing the backend from being omitted without bundling FFmpeg.

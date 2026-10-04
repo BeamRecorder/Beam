@@ -5,7 +5,7 @@ import { createComposition } from '@beam/engine/commands/clip-engine';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import type { MediaAsset, VisualClip } from '@beam/engine/shared/composition-types';
 import { useFakeWebcamOverlay } from './useFakeWebcamOverlay';
-const capture = vi.hoisted(() => ({ importDroppedProjectMedia: vi.fn() }));
+const capture = vi.hoisted(() => ({ importDemoWebcamMedia: vi.fn() }));
 const inspect = vi.hoisted(() => ({ inspectDroppedMedia: vi.fn() }));
 vi.mock('~/api/capture', () => ({ capture }));
 vi.mock('@beam/runtime/shared/dropped-media', () => inspect);
@@ -67,16 +67,27 @@ const create = (patch: Partial<VisualClip> = {}) => {
   return { action, composition, projectId, wrapper, onAdded };
 };
 beforeEach(() => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
   vi.stubGlobal('fetch', fetchMock);
   fetchMock.mockReset().mockResolvedValue(response());
   inspect.inspectDroppedMedia
     .mockReset()
     .mockResolvedValue({ kind: 'video', durationMs: 8000, width: 640, height: 360 });
-  capture.importDroppedProjectMedia
+  capture.importDemoWebcamMedia
     .mockReset()
-    .mockResolvedValue({ ...media, id: 'import', origin: 'project', durationMs: 0, sessionId: undefined });
+    .mockResolvedValue({
+      ...media,
+      id: 'import',
+      src: 'project-media://asset/demo.mp4',
+      origin: 'project',
+      durationMs: 0,
+      sessionId: undefined,
+    });
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe('developer demo webcam import', () => {
   it('loads only on demand, copies the fixture into the project and commits one complete linked camera lane', async () => {
@@ -84,9 +95,9 @@ describe('developer demo webcam import', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(action.unavailable.value).toBe('');
     await action.add();
-    expect(fetchMock.mock.calls[0]?.[0]).toMatch(/\/dev-media\/demo-webcam.mp4$/);
-    expect(capture.importDroppedProjectMedia).toHaveBeenCalledWith('project', expect.any(File), 'video');
-    expect(capture.importDroppedProjectMedia.mock.calls[0]?.[1]).toMatchObject({
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('project-media://asset/demo.mp4');
+    expect(capture.importDemoWebcamMedia).toHaveBeenCalledWith('project');
+    expect(inspect.inspectDroppedMedia.mock.calls[0]?.[0]).toMatchObject({
       name: 'demo-webcam.mp4',
       type: 'video/mp4',
     });
@@ -137,7 +148,7 @@ describe('developer demo webcam import', () => {
       if (failure === 'network') fetchMock.mockRejectedValueOnce(new Error('offline'));
       if (failure === 'http') fetchMock.mockResolvedValueOnce({ ok: false });
       if (failure === 'inspection') inspect.inspectDroppedMedia.mockRejectedValueOnce(new Error('invalid'));
-      if (failure === 'import') capture.importDroppedProjectMedia.mockRejectedValueOnce(new Error('disk full'));
+      if (failure === 'import') capture.importDemoWebcamMedia.mockRejectedValueOnce(new Error('disk full'));
       const { action, composition, onAdded } = create();
       const before = composition.value;
       await action.add();
@@ -145,6 +156,10 @@ describe('developer demo webcam import', () => {
       expect(action.error.value).toBe('Could not add the demo webcam.');
       expect(action.busy.value).toBe(false);
       expect(onAdded).not.toHaveBeenCalled();
+      expect(console.error).toHaveBeenCalledWith(
+        '[Beam demo webcam] Could not attach the bundled video.',
+        expect.any(Error),
+      );
       await action.add();
       expect(action.error.value).toBe('');
       expect(onAdded).toHaveBeenCalledOnce();
@@ -161,6 +176,7 @@ describe('developer demo webcam import', () => {
       );
       const { action, projectId, wrapper, composition, onAdded } = create();
       const pending = action.add();
+      await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
       const signal = fetchMock.mock.calls[0]?.[1]?.signal as AbortSignal;
       if (change === 'project') projectId.value = 'other-project';
       if (change === 'unmount') wrapper.unmount();
@@ -179,14 +195,14 @@ describe('developer demo webcam import', () => {
   );
   it('does not publish a late native import into another project', async () => {
     let resolve!: (value: MediaAsset) => void;
-    capture.importDroppedProjectMedia.mockReturnValueOnce(
+    capture.importDemoWebcamMedia.mockReturnValueOnce(
       new Promise((done) => {
         resolve = done;
       }),
     );
     const { action, projectId, onAdded } = create();
     const pending = action.add();
-    await vi.waitFor(() => expect(capture.importDroppedProjectMedia).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(capture.importDemoWebcamMedia).toHaveBeenCalledOnce());
     projectId.value = 'other';
     resolve(media);
     await pending;

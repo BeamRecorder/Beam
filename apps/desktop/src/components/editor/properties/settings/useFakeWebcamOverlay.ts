@@ -6,7 +6,6 @@ import {
 } from '@beam/engine/composition/webcam-recording-overlay';
 import { inspectDroppedMedia } from '@beam/runtime/shared/dropped-media';
 import { capture } from '~/api/capture';
-import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { FakeWebcamOverlayOptions } from './fake-webcam-types';
 
@@ -37,12 +36,12 @@ export function useFakeWebcamOverlay(options: FakeWebcamOverlayOptions) {
     error.value = '';
     controller = new AbortController();
     try {
-      const response = await fetch(resolvePublicAssetUrl('./dev-media/demo-webcam.mp4'), { signal: controller.signal });
+      const imported = await capture.importDemoWebcamMedia(projectId);
+      if (disposed || options.projectId() !== projectId) return;
+      const response = await fetch(imported.src, { signal: controller.signal });
       if (!response.ok) throw new Error(t('fakeWebcamLoadFailed'));
       const file = new File([await response.blob()], 'demo-webcam.mp4', { type: 'video/mp4' });
       const inspection = await inspectDroppedMedia(file, file.name);
-      if (disposed || options.projectId() !== projectId) return;
-      const imported = await capture.importDroppedProjectMedia(projectId, file, 'video');
       if (disposed || options.projectId() !== projectId) return;
       const asset = {
         ...imported,
@@ -57,7 +56,8 @@ export function useFakeWebcamOverlay(options: FakeWebcamOverlayOptions) {
         appearance: options.appearance(),
       });
       options.onAdded();
-    } catch {
+    } catch (cause) {
+      console.error('[Beam demo webcam] Could not attach the bundled video.', cause);
       if (!disposed) error.value = t('fakeWebcamLoadFailed');
     } finally {
       busy.value = false;

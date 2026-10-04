@@ -10,7 +10,7 @@ import { provideEditorWorkspace } from '../../workspace/workspace-context';
 import type { EditorWorkspaceContext } from '../../workspace/workspace-types';
 import { normalizeEditorPreferenceDefaults } from '../../composables/editor-defaults';
 import EditorDeveloperSettings from './EditorDeveloperSettings.vue';
-const capture = vi.hoisted(() => ({ importDroppedProjectMedia: vi.fn() }));
+const capture = vi.hoisted(() => ({ importDemoWebcamMedia: vi.fn() }));
 const inspect = vi.hoisted(() => ({ inspectDroppedMedia: vi.fn() }));
 vi.mock('~/api/capture', () => ({ capture }));
 vi.mock('@beam/runtime/shared/dropped-media', () => inspect);
@@ -72,7 +72,7 @@ beforeEach(() => {
   localStorage.clear();
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(['demo']) }));
   inspect.inspectDroppedMedia.mockResolvedValue({ kind: 'video', durationMs: 8000, width: 640, height: 360 });
-  capture.importDroppedProjectMedia.mockResolvedValue({ ...asset, id: 'import', origin: 'project' });
+  capture.importDemoWebcamMedia.mockResolvedValue({ ...asset, id: 'import', origin: 'project' });
 });
 afterEach(() => vi.unstubAllGlobals());
 

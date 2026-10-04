@@ -132,10 +132,33 @@ describe('recording webcam attachment', () => {
   it('keeps near-boundary repeats above the minimum clip duration', () => {
     const next = attachWebcamRecordingOverlay(create({ timelineDurationMs: 8001, sourceDurationMs: 8001 }), request);
     expect(next.clips.filter((clip) => clip.kind === 'webcam').map((clip) => clip.timelineDurationMs)).toEqual([
-      4000.5, 4000.5,
+      4001, 4000,
     ]);
     const short = attachWebcamRecordingOverlay(create({ timelineDurationMs: 40, sourceDurationMs: 40 }), request);
     expect(short.clips.find((clip) => clip.kind === 'webcam')?.timelineDurationMs).toBe(40);
+  });
+
+  it.each([
+    { timelineStartMs: 0, timelineDurationMs: 18425, playbackRate: 1, mediaDurationMs: 8000 },
+    { timelineStartMs: 2000.6, timelineDurationMs: 65432.1, playbackRate: 1.37, mediaDurationMs: 8000 },
+    { timelineStartMs: 0.4, timelineDurationMs: 7999.6, playbackRate: 1, mediaDurationMs: 7999.6 },
+    { timelineStartMs: 0, timelineDurationMs: 16000, playbackRate: 1.00001, mediaDurationMs: 8000 },
+  ])('keeps rounded repeat boundaries contiguous and inside the media: %j', (timing) => {
+    const { mediaDurationMs, ...screenTiming } = timing;
+    const next = attachWebcamRecordingOverlay(
+      create({ ...screenTiming, sourceDurationMs: timing.timelineDurationMs * timing.playbackRate }),
+      { ...request, asset: { ...demo, durationMs: mediaDurationMs } },
+    );
+    const cameras = next.clips.filter((clip): clip is VisualClip => clip.kind === 'webcam');
+    expect(cameras[0]!.timelineStartMs).toBe(Math.round(timing.timelineStartMs));
+    let endMs = Math.round(timing.timelineStartMs);
+    for (const camera of cameras) {
+      expect(Math.round(camera.timelineStartMs)).toBe(endMs);
+      expect(camera.timelineDurationMs).toBeGreaterThanOrEqual(40);
+      expect(camera.sourceDurationMs).toBeLessThanOrEqual(mediaDurationMs);
+      endMs = Math.round(camera.timelineStartMs) + Math.round(camera.timelineDurationMs);
+    }
+    expect(endMs).toBe(Math.round(timing.timelineStartMs) + Math.round(timing.timelineDurationMs));
   });
 
   it('retains document extensions and creates an independent asset association on save and restore', () => {
