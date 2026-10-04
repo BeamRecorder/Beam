@@ -7,7 +7,9 @@ role previews accompany point/click, text, move, resize, selection, locked and h
 interactions. Beam's engine evaluates movement, original hotspots, click spring,
 motion blur and single/double rings. Tide is painted once by the actual gradient
 renderer. All artwork is preloaded, with no network dependencies. Both themes
-are rendered at 60 fps.
+are rendered at 60 fps. Original dark artwork stays readable on a light native
+presentation surface; inspector and titlebar follow the delivery theme. The
+inspector pointer retains its native macOS appearance.
 
 ```sh
 bun install

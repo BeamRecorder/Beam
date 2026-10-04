@@ -6,8 +6,6 @@ export const PACKS = BUILTIN_CURSOR_PACKS.filter((pack) =>
 export const PACK_OPTIONS = PACKS.map((pack) => ({
   value: pack.id,
   label: pack.id === "builtin:bibata-material-noir" ? "Bibata Noir" : pack.name,
-  thumbnail: pack.cursors.find((cursor) => cursor.id === pack.defaultCursorId)!
-    .url,
 }));
 export const CURSOR_IMAGES = PACKS.flatMap((pack) => [
   ...new Map(pack.cursors.map((cursor) => [cursor.url, cursor])).values(),

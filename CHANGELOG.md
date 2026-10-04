@@ -89,6 +89,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- The complete native cursor-pack showcase uses a light presentation surface in both themes so dark artwork stays legible, while editor controls keep their system theme and macOS pointer.
+
 - Website feature demos use distinct fixed Beam gradient presets: Ember for the timeline, Bloom for canvas styling and Tide for the complete cursor-pack showcase.
 
 - The website's “Shape the pace” loop uses Beam's macOS arrow and horizontal-resize cursors, switching on the trim edge with correctly aligned native hotspots.

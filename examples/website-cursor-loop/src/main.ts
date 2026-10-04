@@ -25,6 +25,15 @@ host.beamComposition = {
     await scene.ready;
     timeline.seek(clampTime(timeMs), false);
     await nextTick();
-    await Promise.all(Array.from(document.images, (image) => image.decode()));
+    // Galleries are static and decoded once by scene.ready. Only moving sprites
+    // and role spotlights can change their source during a seek.
+    await Promise.all(
+      Array.from(
+        document.querySelectorAll<HTMLImageElement>(
+          ".demo-cursor, .spotlight-art img",
+        ),
+        (image) => image.decode(),
+      ),
+    );
   },
 };

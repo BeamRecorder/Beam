@@ -102,6 +102,14 @@ try {
       page.$eval(".static-gradient", (canvas) => canvas.toDataURL());
     await seek(0);
     const fixed = digest(await background());
+    const paper = await page.$eval(".preview-area", (element) => ({
+      bg: getComputedStyle(element).backgroundColor,
+      text: getComputedStyle(element).color,
+    }));
+    if (paper.bg !== "rgb(247, 247, 248)" || paper.text !== "rgb(22, 22, 26)")
+      throw new Error(
+        "The complete native artwork needs its contrast surface.",
+      );
     const gallery = await page.evaluate(() =>
       [...document.querySelectorAll(".cursor-gallery")].map((element) => ({
         pack: element.dataset.galleryPack,

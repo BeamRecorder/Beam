@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick } from "vue";
+import { SURFACE_TONES } from "../../../apps/desktop/src/types/appearance";
 import {
   MousePointer2,
   Move,
@@ -32,7 +33,18 @@ import { pointerAt } from "./telemetry";
 import type { CursorPose } from "./demo-types";
 const props = defineProps<{ pose: CursorPose }>();
 // Render this thin monochrome shape with Beam's existing tint function.
-const selectionUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgAtRasterSize(selectionSvg, 32, 32, getComputedStyle(document.documentElement).getPropertyValue("--text-primary").trim(), true))}`;
+const selectionUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgAtRasterSize(selectionSvg, 32, 32, getComputedStyle(document.documentElement).getPropertyValue("--canvas-control-dark").trim(), true))}`;
+const light = SURFACE_TONES.default.light;
+const paperStyle = {
+  "--text-primary": "var(--canvas-control-dark)",
+  "--text-secondary": "var(--canvas-control-dark)",
+  "--color-bg-well": light.bgSurface,
+  "--color-bg-surface": light.bgElement,
+  "--color-bg-surface-hover": light.bgSurfaceHover,
+  "--color-bg-field": light.bgSurface,
+  "--color-border": light.border,
+  "--color-border-strong": light.borderStrong,
+};
 const state = computed(() => settingsAt(props.pose.time));
 const action = computed(() => actionAt(props.pose.time));
 const sample = computed(() => pointerAt(props.pose.time));
@@ -45,7 +57,9 @@ const resolveRole = (pack: (typeof PACKS)[number], role: string | null) =>
     { packId: pack.id, mode: "automatic", cursorId: null },
     role,
   );
-const asset = computed(() => resolveRole(pack.value, sample.value.cursorKind));
+// A custom pack is shown on the canvas; inspector interactions use the system pointer.
+const pointerPack = computed(() => sample.value.x * 640 > 430 ? PACKS[0] : pack.value);
+const asset = computed(() => resolveRole(pointerPack.value, sample.value.cursorKind));
 const geometry = computed(() => cursorGeometry(asset.value, state.value.size));
 const trail = computed(() =>
   cursorMotionBlurTrail(sample.value, MOTION.motionBlur, {
@@ -89,6 +103,7 @@ defineExpose({ ready });
         <section
           class="preview-area"
           aria-label="Complete cursor pack showcase"
+          :style="paperStyle"
         >
           <div class="role-spotlight" :data-role="action.step.role">
             <div
@@ -222,7 +237,7 @@ defineExpose({ ready });
       :class="{ primary: index === trail.length - 1 }"
       :src="asset.url"
       :style="spriteStyle(point)"
-      :data-pack="pack.id"
+      :data-pack="pointerPack.id"
       :data-role="sample.cursorKind"
       data-layout-allow-occlusion="true"
       alt=""
