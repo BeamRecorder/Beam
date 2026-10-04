@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- The private website’s Edit transitions and export sections now show eight-second, 60 fps light/dark loops with native transition previews, editable title layers, export settings and local-file progress. Reusable source lives in `examples/website-finishing-loops/`.
+
 - The private website’s Edit captions and voiceover sections show eight-second, 60 fps light/dark loops using native Beam controls, timed words, audio waveforms and macOS cursor interactions. Reusable source lives in `examples/website-speech-loops/`.
 
 - Project thumbnails reveal a translated Open project action at the bottom right on hover or keyboard focus, with batch selection preserved.

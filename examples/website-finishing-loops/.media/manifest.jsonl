@@ -1,0 +1,4 @@
+{"id":"image_001","type":"image","path":"assets/beautiful-captures.webp","source":"existing","description":"beautiful captures","width":1280,"height":720,"provenance":{"provider":"local","adopted":true}}
+{"id":"icon_001","type":"icon","path":"assets/macos-arrow.svg","source":"existing","description":"macos arrow","provenance":{"provider":"local","adopted":true}}
+{"id":"icon_002","type":"icon","path":"assets/macos-hand.svg","source":"existing","description":"macos hand","provenance":{"provider":"local","adopted":true}}
+{"id":"image_002","type":"image","path":"assets/tahoe-light.webp","source":"existing","description":"tahoe light","width":1024,"height":1024,"provenance":{"provider":"local","adopted":true}}

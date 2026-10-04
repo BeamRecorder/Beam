@@ -1,0 +1,46 @@
+{
+  "duration": 8,
+  "width": 1280,
+  "height": 800,
+  "fps": 60,
+  "category": "webpage",
+  "asset_needs": [],
+  "content": {
+    "source": "Beam desktop UI and engine/runtime painters",
+    "customize": {
+      "themes": ["light", "dark"],
+      "backgrounds": {
+        "transitions": "Aurora",
+        "export": "Ember"
+      },
+      "cursor": "unchanged macOS arrow/hand; native spring/ripple",
+      "audio": "silent"
+    }
+  },
+  "beats": {
+    "transitions": [
+      [0.75, "Slide left"],
+      [1.7, "Duration: 500 \u2192 900 ms"],
+      [2.8, "Zoom in"],
+      [4, "Blur"],
+      [5.1, "Canvas entry"],
+      [5.65, "Canvas zoom"],
+      [6.2, "Editable shape + title"]
+    ],
+    "export": [
+      [0.7, "Open native export controls"],
+      [1.45, "WebM"],
+      [2, "MP4"],
+      [2.7, "Maximum: 4K"],
+      [3.4, "60 fps"],
+      [4.1, "High quality"],
+      [4.8, "Illustrated encoding progress"],
+      [6.35, "Local file ready"]
+    ],
+    "seam": [
+      [7.2, "Fade editor"],
+      [7.6, "Hidden deterministic reset"],
+      [8, "Initial state restored"]
+    ]
+  }
+}
