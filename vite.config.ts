@@ -102,6 +102,7 @@ export default defineConfig({
   },
   server: {
     port: 6500,
+    strictPort: true,
   },
   test: {
     root: fileURLToPath(new URL('./', import.meta.url)),
