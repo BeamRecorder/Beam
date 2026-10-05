@@ -1,0 +1,74 @@
+[
+  {
+    "id": "210bae5c-6f43-44fa-8eef-4dd8f87d82f5",
+    "name": "website-demo",
+    "createdAt": "2026-08-19T18:07:06.194700162Z",
+    "updatedAt": "2026-08-24T08:59:30.399Z",
+    "sessionCount": 1,
+    "mode": "studio",
+    "previewSrc": null,
+    "hasScreen": true,
+    "hasCamera": false,
+    "hasMicrophone": false,
+    "image": "project-0.webp"
+  },
+  {
+    "id": "8e0b32bd-20a8-4fa2-be3e-5b89b5400247",
+    "name": "Website \u2014 Your screen, your framing \u00b7 dark",
+    "createdAt": "2026-10-04T15:54:34.265Z",
+    "updatedAt": "2026-10-04T16:02:08.145Z",
+    "sessionCount": 0,
+    "mode": "studio",
+    "previewSrc": null,
+    "hasScreen": false,
+    "hasCamera": false,
+    "hasMicrophone": false,
+    "image": "project-1.webp"
+  },
+  {
+    "id": "97a67fdc-de5d-4639-a26c-f72d9332c198",
+    "name": "Website \u2014 Take a breath \u00b7 dark",
+    "createdAt": "2026-10-04T17:20:29.991Z",
+    "updatedAt": "2026-10-04T17:36:26.761Z",
+    "sessionCount": 0,
+    "mode": "studio",
+    "previewSrc": null,
+    "hasScreen": false,
+    "hasCamera": true,
+    "hasMicrophone": true,
+    "image": "project-2.webp"
+  },
+  {
+    "id": "eadd1385-9cc5-45c8-b5f0-9ebd974a5bd6",
+    "name": "Website \u2014 Your words, beautifully readable \u00b7 dark",
+    "createdAt": "2026-10-04T16:54:07.139Z",
+    "updatedAt": "2026-10-04T17:01:22.950Z",
+    "sessionCount": 0,
+    "mode": "studio",
+    "previewSrc": null,
+    "hasScreen": false,
+    "hasCamera": false,
+    "hasMicrophone": false,
+    "image": "project-3.webp"
+  },
+  {
+    "id": "2d1ab2b2-20f7-4222-9bf9-7214fc23689c",
+    "name": "Website \u2014 Your canvas can be code \u00b7 dark",
+    "createdAt": "2026-10-04T15:11:16.972Z",
+    "updatedAt": "2026-10-04T15:45:36.661Z",
+    "sessionCount": 0,
+    "mode": "studio",
+    "previewSrc": null,
+    "image": "project-4.webp"
+  },
+  {
+    "id": "5a8b440c-2b44-4748-a2c1-f004c18fff49",
+    "name": "Website \u2014 A cursor that feels considered \u00b7 dark",
+    "createdAt": "2026-10-04T15:31:16.903Z",
+    "updatedAt": "2026-10-04T16:12:19.625Z",
+    "sessionCount": 0,
+    "mode": "studio",
+    "previewSrc": null,
+    "image": "project-5.webp"
+  }
+]

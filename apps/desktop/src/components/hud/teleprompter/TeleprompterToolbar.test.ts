@@ -18,7 +18,7 @@ beforeEach(() => vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnV
 afterEach(() => vi.restoreAllMocks());
 const mountToolbar = (editing = true, playing = false) =>
   mount(TeleprompterToolbar, {
-    props: { document: createDefaultTeleprompterDocument(), editing, playing },
+    props: { document: createDefaultTeleprompterDocument(), editing, playing, defaultTextColor: '#1e1e1e' },
     global: { plugins: [createPinia()] },
   });
 

@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Added editable HTML demonstrations for teleprompter playback/speed and local projects, sharing the native Teleprompter view and Project Picker controls with themed compressed website loops.
+
 - Added the editable “Take a breath” Recorder demo with supplied facecam footage, the Beautiful Captures pointer, native pause/resume controls and compressed website videos.
 
 - Added a reusable HTML Recorder demo showing full-screen, region and window capture choices, capture modes and recording controls, with Beautiful Captures cursor artwork and themed website videos.
