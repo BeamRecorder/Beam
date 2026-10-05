@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { projectCameraSnapshot } from './project-camera.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const kind = process.argv[2];
@@ -24,6 +25,7 @@ writeFileSync(
       fps: 30,
       format: 'mp4',
       preset: 'high',
+      ...(kind === 'projects' ? { snapshot: projectCameraSnapshot(theme) } : {}),
     },
     null,
     2,

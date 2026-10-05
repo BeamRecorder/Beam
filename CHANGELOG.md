@@ -87,6 +87,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- The local-project website demonstration zooms into Projects actions and pulls back as the file browser opens, using Beam’s editable native 2D camera in both themes.
+
 - The website teleprompter demonstration now enlarges the script and changes its text color with native controls while recording continues, in both themes.
 
 - Beam source is now licensed under MPL-2.0, with existing MIT grants and third-party licenses preserved. Licensing documentation distinguishes open-source rights from planned Desktop Pro subscriptions and cloud services; activation is not introduced in this release.

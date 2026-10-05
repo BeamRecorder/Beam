@@ -20,8 +20,13 @@ actual thumbnail. Its original file tree is illustrated in HTML after Explore.
 The file browser is an authored demonstration, not an operating-system recording.
 
 Both use the existing Beautiful Captures Figma artwork and Beam’s Sonoma Horizon
-background. A 1.8% camera move, eased cursor travel and native click spring keep
-the motion light. The final fade resets all state before the next iteration.
+background. The teleprompter uses a 1.8% camera move. Projects adds an editable
+native Beam 2D zoom up to 1.8×, focused on the selected card and its Explore menu.
+It pulls back when the file browser opens and settles before the original-file
+click. `assets/project-camera.json` supplies the same camera to saved Beam
+projects and motion export snapshots; the complete native popover and pointer
+are zoomed together. Eased cursor travel and the native click spring keep the
+motion light. The final fade resets all state before the next iteration.
 All assets are local. No original project or recording is changed.
 
 ```sh
@@ -32,10 +37,12 @@ bunx vue-tsc -p examples/website-recording-final-loops/tsconfig.json --noEmit
 BEAM_CHROMIUM_EXECUTABLE=/path/to/chrome bun run --cwd examples/website-recording-final-loops verify
 BEAM_INSTANCE=<pid> bun run --cwd examples/website-recording-final-loops publish teleprompter dark
 BEAM_INSTANCE=<pid> bun run --cwd examples/website-recording-final-loops publish projects dark
+BEAM_INSTANCE=<pid> bun run --cwd examples/website-recording-final-loops publish projects light
 BEAM_CHROMIUM_GPU=hardware bun run --cwd examples/website-recording-final-loops render teleprompter dark
 BEAM_CHROMIUM_GPU=hardware bun run --cwd examples/website-recording-final-loops render teleprompter light
 BEAM_CHROMIUM_GPU=hardware bun run --cwd examples/website-recording-final-loops render projects dark
 BEAM_CHROMIUM_GPU=hardware bun run --cwd examples/website-recording-final-loops render projects light
+BEAM_INSTANCE=<pid> bun run --cwd examples/website-recording-final-loops verify:camera
 bun run --cwd examples/website-recording-final-loops website /path/to/website-private
 ```
 
@@ -50,3 +57,6 @@ pausable player with reduced-motion support.
 reverse seeks, the loop seam and asset availability. It permits at most 64
 Chromium antialias edge pixels with a channel delta no greater than 12, across
 the complete 1,024,000-pixel frame; no regions are masked.
+`verify:camera` checks the saved native Projects camera and decodes its Beam
+exports in both themes at the menu, Explore and full file-browser poses. Focused tests verify camera scale,
+visible click positions, the pullback, reverse seeks and the wide loop seam.

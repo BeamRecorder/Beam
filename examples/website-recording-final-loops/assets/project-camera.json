@@ -1,0 +1,15 @@
+[
+  {
+    "id": "website-project-actions",
+    "sessionId": "manual",
+    "linkedClipId": null,
+    "startMs": 500,
+    "endMs": 3600,
+    "focus": { "cx": 0.32, "cy": 0.48 },
+    "depth": 3,
+    "mode": "manual",
+    "enabled": true,
+    "effect": "camera",
+    "projection": "2d"
+  }
+]

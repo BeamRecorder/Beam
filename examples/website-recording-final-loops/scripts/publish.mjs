@@ -3,6 +3,7 @@ import { cp, mkdir, rm } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { call, root } from './beam-cli.mjs';
+import { projectZooms, projectZoomMotionBlur } from './project-camera.mjs';
 
 const kind = process.argv[2];
 if (!['teleprompter', 'projects'].includes(kind)) throw new Error('Choose teleprompter or projects.');
@@ -80,7 +81,8 @@ call('documents.transact', {
           transitions: { entry: null, exit: null },
         },
         blurPercent: 0,
-        zooms: [],
+        zooms: kind === 'projects' ? projectZooms : [],
+        ...(kind === 'projects' ? { zoomMotionBlur: projectZoomMotionBlur } : {}),
       },
     },
     {

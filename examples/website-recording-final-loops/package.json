@@ -7,6 +7,7 @@
     "build": "node scripts/build.mjs",
     "test": "vitest run --config vitest.config.ts",
     "verify": "node scripts/verify.mjs",
+    "verify:camera": "node scripts/verify-project-camera.mjs",
     "render": "node scripts/render.mjs",
     "website": "node scripts/optimize.mjs",
     "publish": "node scripts/publish.mjs",

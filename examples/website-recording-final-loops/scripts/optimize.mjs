@@ -57,6 +57,6 @@ for (const kind of kinds) {
 
   writeFileSync(
     resolve(media, `recording-${kind}.NOTICE.txt`),
-    `Beam — ${kind}\n8 seconds, 1280 x 800, 30 fps, silent VP9. Light and dark.\nAuthored demonstration rendered in Beam from HTML and actual native Vue components.\nBeautiful Captures Figma pointer. Sonoma Horizon from Beam background catalog.\nHanken Grotesk, SIL OFL 1.1. Components and source: MPL-2.0.\nSource: examples/website-recording-final-loops/.\n${kind === 'teleprompter' ? 'Teleprompter: continuous reading, text size from 26 to 34 px, native color picker and readable coral text.\n' : 'Projects: frozen real local catalog; illustrative HTML file browser, not an OS capture.\n'}No project or original recording is modified by this demonstration.\n`,
+    `Beam — ${kind}\n8 seconds, 1280 x 800, 30 fps, silent VP9. Light and dark.\nAuthored demonstration rendered in Beam from HTML and actual native Vue components.\nBeautiful Captures Figma pointer. Sonoma Horizon from Beam background catalog.\nHanken Grotesk, SIL OFL 1.1. Components and source: MPL-2.0.\nSource: examples/website-recording-final-loops/.\n${kind === 'teleprompter' ? 'Teleprompter: continuous reading, text size from 26 to 34 px, native color picker and readable coral text.\n' : 'Projects: frozen real local catalog; illustrative HTML file browser, not an OS capture.\nNative Beam 2D camera: zoom up to 1.8x on project actions, pull back as the file browser opens.\n'}No project or original recording is modified by this demonstration.\n`,
   );
 }
