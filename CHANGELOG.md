@@ -4,6 +4,8 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-05
+
 ### Fixed
 
 - Moving split recording fragments reuses unaffected zoom history instead of recalculating the entire recording on every pointer update, keeping the editor responsive. Narrow timeline gaps retain their Remove gap action, including two-second cuts in long recordings.
@@ -12,7 +14,6 @@ User-facing changes to Beam are documented in this file.
 - Circular and freehand Loupe zooms retain finer text detail by rendering original sources at lens density, with matching Screenshot/video exports and HiDPI previews.
 - Windows region selection resolves native monitor IDs correctly at 150% scaling and on mixed-DPI desktops, restores the saved crop visibly, and accepts the recording shortcut with the current toolbar settings.
 - The Recorder stays loaded while a region is being selected, so a long selection cannot lose its capture request or saved settings to background standby.
-
 - Long recordings keep bounded screen and camera/audio write queues; Windows limits retained video surfaces and capture frame rate, and macOS uses a smaller resolution-aware surface queue.
 - Recording writes and final file synchronization keep the desktop responsive. Encoder stalls and missing camera/audio finalization events have deadlines; Stop no longer resumes a recording counter after the native recording has ended.
 - Camera previews show the complete image without cropping it to the overlay shape, keep recording when their window is hidden, and avoid accumulating status requests when capture is busy.
