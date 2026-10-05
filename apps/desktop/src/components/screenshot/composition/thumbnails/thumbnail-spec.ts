@@ -81,7 +81,14 @@ export function screenshotThumbnailSpecs(
           return {
             ...base,
             id: effectThumbnailId(layer.id, attached.id),
-            key: JSON.stringify([state.canvas.width, state.canvas.height, sourceUrl, layer.rotation3d, visual, effects]),
+            key: JSON.stringify([
+              state.canvas.width,
+              state.canvas.height,
+              sourceUrl,
+              layer.rotation3d,
+              visual,
+              effects,
+            ]),
             layer: { ...layer, effects },
           };
         }),

@@ -175,7 +175,12 @@ const end = (event: PointerEvent) => {
 };
 const begin = (event: PointerEvent) => {
   suppressContextMenu = false;
-  if (props.disabled || !(event.target instanceof Element) || (event.button !== 2 && !(event.button === 0 && props.canStartLeft?.(event)))) return;
+  if (
+    props.disabled ||
+    !(event.target instanceof Element) ||
+    (event.button !== 2 && !(event.button === 0 && props.canStartLeft?.(event)))
+  )
+    return;
   event.preventDefault();
   event.stopPropagation();
   cancel();

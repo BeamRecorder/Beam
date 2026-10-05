@@ -77,7 +77,19 @@
     "frameTheme": "Внешний вид браузера",
     "auto": "Авто",
     "light": "Светлый",
-    "dark": "Тёмный"
+    "dark": "Тёмный",
+    "animatedBorder": "Анимированная рамка",
+    "frameStyle": "Стиль рамки",
+    "preset": "Пресет",
+    "animationSpeed": "Скорость анимации",
+    "animatedHint": "Повторяет углы клипа. Установите скорость 0, чтобы остановить эффект.",
+    "presets": {
+      "purple-haze": "Purple Haze",
+      "neon-duo": "Neon Duo",
+      "aurora": "Aurora",
+      "ember": "Ember",
+      "electric": "Electric"
+    }
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Загрузка предпросмотра камеры",
@@ -427,7 +439,54 @@
     "presetSingle": "Одиночное кольцо",
     "presetDouble": "Двойная волна",
     "presetSolid": "Взрыв",
-    "rippleStyle": "Пульсирующий стиль"
+    "presetWater": "Капля воды",
+    "waterRippleSpread": "Дальность волн",
+    "waterRippleHint": "Каждый щелчок искажает экран одной плавной волной.",
+    "rippleStyle": "Пульсирующий стиль",
+    "rippleOpacity": "Непрозрачность",
+    "rippleDuration": "Длительность",
+    "rippleWidth": "Толщина линии",
+    "waterRippleIntensity": "Сила искажения",
+    "waterRippleSoftness": "Мягкость волны",
+    "visibility": "Автоматическое скрытие",
+    "cursorLabels": {
+      "default": "Указатель",
+      "beachball": "Загрузка",
+      "busy": "Занят",
+      "cell": "Выбор ячейки",
+      "contextualmenu": "Контекстное меню",
+      "copy": "Копировать",
+      "cross": "Прицел",
+      "handgrabbing": "Сжатая рука",
+      "handopen": "Открытая рука",
+      "handpointing": "Указывающая рука",
+      "help": "Справка",
+      "makealias": "Создать ярлык",
+      "move": "Переместить",
+      "notallowed": "Запрещено",
+      "poof": "Исчезновение",
+      "textcursor": "Текст",
+      "textcursorvertical": "Вертикальный текст",
+      "screenshotselection": "Выбор области",
+      "screenshotwindow": "Выбор окна",
+      "zoomin": "Приблизить",
+      "zoomout": "Отдалить"
+    },
+    "cursorDirections": {
+      "north": "вверх",
+      "northeast": "вверх вправо",
+      "east": "вправо",
+      "southeast": "вниз вправо",
+      "south": "вниз",
+      "southwest": "вниз влево",
+      "west": "влево",
+      "northwest": "вверх влево",
+      "vertical": "по вертикали",
+      "horizontal": "по горизонтали",
+      "diagonalUp": "по диагонали ↗",
+      "diagonalDown": "по диагонали ↘"
+    },
+    "cursorResize": "Изменить размер {direction}"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Загрузка предпросмотра видео",
@@ -765,7 +824,14 @@
     "copied": "Скопировано!",
     "devToolsTool": "Инструменты разработчика",
     "devToolsDesc": "Переключить Chrome DevTools в окне Electron",
-    "openDevTools": "DevTools"
+    "openDevTools": "DevTools",
+    "fakeWebcamTitle": "Демонстрационная веб-камера",
+    "addFakeWebcamOverlay": "Добавить имитацию веб-камеры",
+    "fakeWebcamDescription": "Добавляет к записи экрана небольшое офисное видео с лицензией CC0. Оно учитывает настройки масштабирования веб-камеры.",
+    "fakeWebcamNoRecording": "Сначала добавьте запись экрана.",
+    "fakeWebcamLocked": "Сначала разблокируйте запись экрана.",
+    "fakeWebcamExists": "В этой записи уже есть веб-камера.",
+    "fakeWebcamLoadFailed": "Не удалось добавить демонстрационную веб-камеру."
   },
   "AppearanceSettings": {
     "uiScale": "Масштаб интерфейса",

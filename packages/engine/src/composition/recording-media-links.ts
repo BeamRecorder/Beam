@@ -6,11 +6,13 @@ export function recordingMediaOwner(composition: ClipComposition, clip: Clip): V
     !(clip.kind === 'webcam' || (clip.kind === 'audio' && ['microphone', 'system'].includes(clip.role)))
   )
     return null;
-  const session = composition.assets.find((asset) => asset.id === clip.assetId)?.sessionId;
-  if (!session) return null;
+  const asset = composition.assets.find((asset) => asset.id === clip.assetId);
+  const session = asset?.sessionId;
+  const projectWebcam = clip.kind === 'webcam' && asset?.origin === 'project' && Boolean(clip.recordingClipId);
+  if (!session && !projectWebcam) return null;
   const assets = new Set(composition.assets.filter((asset) => asset.sessionId === session).map((asset) => asset.id));
   const screens = composition.clips.filter(
-    (item): item is VisualClip => item.kind === 'screen' && assets.has(item.assetId),
+    (item): item is VisualClip => item.kind === 'screen' && (projectWebcam || assets.has(item.assetId)),
   );
   if (clip.recordingClipId) {
     const explicit = screens.find((screen) => screen.id === clip.recordingClipId);

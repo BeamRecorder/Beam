@@ -5,6 +5,7 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufWriter, path::PathBuf};
+mod crop;
 
 #[cfg(target_os = "linux")]
 mod linux;
@@ -75,6 +76,7 @@ pub fn capture_with_selection(
     let frame = mac::capture(&request)?;
     #[cfg(windows)]
     let frame = win::capture(&request)?;
+    let frame = crop::crop_frame(frame, request.region)?;
     write_png(&frame, &request.output)
 }
 
@@ -107,6 +109,22 @@ pub(crate) fn write_png(
 }
 
 fn rgba_pixels(frame: &OwnedVideoFrame) -> Result<Vec<u8>, CaptureError> {
+    validate_frame(frame)?;
+    let row = frame.width as usize * 4;
+    let mut output = Vec::with_capacity(row * frame.height as usize);
+    for scanline in frame
+        .pixels
+        .chunks(frame.stride)
+        .take(frame.height as usize)
+    {
+        for pixel in scanline[..row].as_chunks::<4>().0 {
+            output.extend_from_slice(&[pixel[2], pixel[1], pixel[0], 255]);
+        }
+    }
+    Ok(output)
+}
+
+fn validate_frame(frame: &OwnedVideoFrame) -> Result<(), CaptureError> {
     let row = frame.width as usize * 4;
     let bytes = frame.stride.checked_mul(frame.height as usize);
     if frame.width == 0
@@ -121,17 +139,7 @@ fn rgba_pixels(frame: &OwnedVideoFrame) -> Result<Vec<u8>, CaptureError> {
             "Invalid screenshot pixel buffer".into(),
         ));
     }
-    let mut output = Vec::with_capacity(row * frame.height as usize);
-    for scanline in frame
-        .pixels
-        .chunks(frame.stride)
-        .take(frame.height as usize)
-    {
-        for pixel in scanline[..row].as_chunks::<4>().0 {
-            output.extend_from_slice(&[pixel[2], pixel[1], pixel[0], 255]);
-        }
-    }
-    Ok(output)
+    Ok(())
 }
 
 fn backend_error(error: impl std::fmt::Display) -> CaptureError {

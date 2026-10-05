@@ -1,0 +1,124 @@
+@import '../../../apps/desktop/src/theme/palette.css';
+@import '../../../apps/desktop/src/theme/surfaces.css';
+@import '../../../apps/desktop/src/theme/timeline.css';
+@import '../../../apps/desktop/src/components/editor/layout/editor-preview-layout.css';
+@font-face {
+  font-family: 'Hanken Grotesk';
+  src: url('../assets/HankenGrotesk.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Noto Sans Mono';
+  src: url('../assets/NotoSansMono.ttf') format('truetype');
+  font-weight: 400;
+  font-display: block;
+}
+:root {
+  --font-sans: 'Hanken Grotesk', sans-serif;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+  --fast: 0s;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+body {
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--color-bg-app);
+  -webkit-font-smoothing: antialiased;
+}
+.world {
+  width: 1280px;
+  height: 800px;
+  position: absolute;
+  transform: scale(var(--capture-scale, 1));
+  transform-origin: 0 0;
+}
+.caption {
+  position: absolute;
+  left: 32px;
+  right: 32px;
+  top: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 18px;
+  font-weight: 500;
+}
+.caption-note {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.editor-window {
+  position: absolute;
+  inset: 65px 24px 26px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-app);
+}
+.brand {
+  width: 22px;
+  height: 22px;
+}
+.project-name {
+  font-size: 12px;
+  font-weight: 500;
+}
+.native-inspector {
+  width: var(--editor-video-inspector-width);
+  flex: none;
+  padding: 14px 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-sm);
+}
+.native-inspector h2 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.canvas-island {
+  margin: 0;
+}
+.timeline {
+  height: 174px;
+  flex: none;
+}
+
+.artwork-fit {
+  width: 470px;
+  height: 293.75px;
+  flex: none;
+}
+.artwork-fit > .artwork {
+  transform: scale(0.94);
+  transform-origin: 0 0;
+}
+
+.native-inspector::-webkit-scrollbar {
+  width: 5px;
+}
+.native-inspector::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: var(--radius-full);
+}

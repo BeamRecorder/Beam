@@ -104,6 +104,9 @@ function createScreenRegionOverlayWindow({
     if (window && !window.isDestroyed()) return window;
     const target = new BrowserWindow({
       ...bounds,
+      // Normal X11 windows can be moved into the work area by GNOME, leaving
+      // the selector below the panel while native capture still starts at y=0.
+      ...(platform === 'linux' ? { type: 'dock' } : {}),
       frame: false,
       thickFrame: false,
       transparent: true,

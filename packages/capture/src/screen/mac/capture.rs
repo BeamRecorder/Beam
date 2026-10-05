@@ -22,7 +22,10 @@ use screencapturekit::{
 use crate::{
     CaptureError,
     model::{ScreenRegion, SourceId},
-    screen::{ScreenCaptureMetrics, ScreenConsumer, ScreenOpenRequest},
+    screen::{
+        ScreenCaptureMetrics, ScreenConsumer, ScreenOpenRequest,
+        recording_queue::frame_queue_capacity,
+    },
     session::StartGate,
 };
 
@@ -93,7 +96,7 @@ impl MacRecording {
             .with_width(width)
             .with_height(height)
             .with_minimum_frame_interval(&CMTime::new(1, timescale))
-            .with_queue_depth(8)
+            .with_queue_depth(frame_queue_capacity(width, height)? as u32)
             .with_shows_cursor(!exclude_cursor)
             .with_captures_audio(false);
         if let Some(source_rect) = source_rect {

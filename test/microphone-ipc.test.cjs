@@ -25,7 +25,7 @@ function sessionFixture() {
   return { directory, manifestPath, sessionId };
 }
 
-test('finalizes ordered Opus WebM chunks and merges a completed microphone track', () => {
+test('finalizes ordered Opus WebM chunks and merges a completed microphone track', async () => {
   const storage = createMicrophoneStorage({});
   const session = sessionFixture();
   storage.registerSession(session);
@@ -35,17 +35,17 @@ test('finalizes ordered Opus WebM chunks and merges a completed microphone track
     format,
     startNs: 100,
   });
-  storage.write(21, {
+  await storage.write(21, {
     jobId: opened.jobId,
     sequence: 0,
     data: new Uint8Array([1, 2]),
   });
-  storage.write(21, {
+  await storage.write(21, {
     jobId: opened.jobId,
     sequence: 1,
     data: new Uint8Array([3, 4]),
   });
-  storage.finalize(21, {
+  await storage.finalize(21, {
     jobId: opened.jobId,
     endNs: 200,
     metrics: { samplesReceived: 2 },
@@ -73,7 +73,7 @@ test('finalizes ordered Opus WebM chunks and merges a completed microphone track
   );
 });
 
-test('persists a denied microphone without inventing samples or device settings', () => {
+test('persists a denied microphone without inventing samples or device settings', async () => {
   const storage = createMicrophoneStorage({});
   const session = sessionFixture();
   storage.registerSession(session);
@@ -92,7 +92,7 @@ test('persists a denied microphone without inventing samples or device settings'
   assert.match(manifest.warnings[0], /Microphone recording failed/);
 });
 
-test('rejects malformed sources, cross-renderer writes, invalid formats and out-of-order chunks', () => {
+test('rejects malformed sources, cross-renderer writes, invalid formats and out-of-order chunks', async () => {
   const storage = createMicrophoneStorage({});
   const session = sessionFixture();
   storage.registerSession(session);

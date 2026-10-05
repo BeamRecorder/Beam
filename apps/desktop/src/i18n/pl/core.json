@@ -77,7 +77,19 @@
     "frameTheme": "Wygląd przeglądarki",
     "auto": "Auto",
     "light": "Jasny",
-    "dark": "Ciemny"
+    "dark": "Ciemny",
+    "animatedBorder": "Animowana ramka",
+    "frameStyle": "Styl ramki",
+    "preset": "Ustawienie",
+    "animationSpeed": "Szybkość animacji",
+    "animatedHint": "Dopasowuje się do narożników klipu. Ustaw szybkość na 0, aby zatrzymać efekt.",
+    "presets": {
+      "purple-haze": "Purple Haze",
+      "neon-duo": "Neon Duo",
+      "aurora": "Aurora",
+      "ember": "Ember",
+      "electric": "Electric"
+    }
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Ładowanie podglądu kamery",
@@ -427,7 +439,54 @@
     "presetSingle": "Pojedynczy pierścień",
     "presetDouble": "Podwójna fala",
     "presetSolid": "Wybuch",
-    "rippleStyle": "Styl falowania"
+    "presetWater": "Kropla wody",
+    "waterRippleSpread": "Zasięg fal",
+    "waterRippleHint": "Każde kliknięcie zniekształca ekran jedną łagodną falą.",
+    "rippleStyle": "Styl falowania",
+    "rippleOpacity": "Krycie",
+    "rippleDuration": "Czas trwania",
+    "rippleWidth": "Grubość linii",
+    "waterRippleIntensity": "Siła zniekształcenia",
+    "waterRippleSoftness": "Łagodność fali",
+    "visibility": "Automatyczne ukrywanie",
+    "cursorLabels": {
+      "default": "Wskaźnik",
+      "beachball": "Ładowanie",
+      "busy": "Zajęty",
+      "cell": "Wybór komórki",
+      "contextualmenu": "Menu kontekstowe",
+      "copy": "Kopiuj",
+      "cross": "Celownik",
+      "handgrabbing": "Zamknięta dłoń",
+      "handopen": "Otwarta dłoń",
+      "handpointing": "Wskazująca dłoń",
+      "help": "Pomoc",
+      "makealias": "Utwórz skrót",
+      "move": "Przenieś",
+      "notallowed": "Niedozwolone",
+      "poof": "Znikanie",
+      "textcursor": "Tekst",
+      "textcursorvertical": "Tekst pionowy",
+      "screenshotselection": "Wybór obszaru",
+      "screenshotwindow": "Wybór okna",
+      "zoomin": "Przybliż",
+      "zoomout": "Oddal"
+    },
+    "cursorDirections": {
+      "north": "w górę",
+      "northeast": "w prawo i w górę",
+      "east": "w prawo",
+      "southeast": "w prawo i w dół",
+      "south": "w dół",
+      "southwest": "w lewo i w dół",
+      "west": "w lewo",
+      "northwest": "w lewo i w górę",
+      "vertical": "w pionie",
+      "horizontal": "w poziomie",
+      "diagonalUp": "po przekątnej ↗",
+      "diagonalDown": "po przekątnej ↘"
+    },
+    "cursorResize": "Zmień rozmiar {direction}"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Ładowanie podglądu wideo",
@@ -765,7 +824,14 @@
     "copied": "Skopiowano!",
     "devToolsTool": "Narzędzia deweloperskie",
     "devToolsDesc": "Przełącz Chrome DevTools w oknie Electron",
-    "openDevTools": "DevTools"
+    "openDevTools": "DevTools",
+    "fakeWebcamTitle": "Kamera demonstracyjna",
+    "addFakeWebcamOverlay": "Dodaj symulowaną kamerę",
+    "fakeWebcamDescription": "Dodaje do nagrania ekranu niewielki film biurowy na licencji CC0. Korzysta z ustawień powiększenia kamery.",
+    "fakeWebcamNoRecording": "Najpierw dodaj nagranie ekranu.",
+    "fakeWebcamLocked": "Najpierw odblokuj nagranie ekranu.",
+    "fakeWebcamExists": "To nagranie ma już kamerę.",
+    "fakeWebcamLoadFailed": "Nie udało się dodać kamery demonstracyjnej."
   },
   "AppearanceSettings": {
     "uiScale": "Skalowanie interfejsu",

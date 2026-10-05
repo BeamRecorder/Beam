@@ -257,6 +257,7 @@ const handleShadowColorChange = (color: string) => {
       :frame-show-scrollbars="selectedClip.frameShowScrollbars"
       :frame-chrome-scale="selectedClip.frameChromeScale"
       :phone-frame-fill="selectedClip.phoneFrameFill"
+      :animated-frame="selectedClip.animatedFrame"
       @update="emit('update:appearance', $event)"
     />
   </div>

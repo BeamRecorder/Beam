@@ -19,6 +19,7 @@ import {
 } from '@beam/engine/shared/camera-layout-types';
 import { assertValidVisualTracks } from '@beam/engine/commands/visual-track-layout';
 import { validateSceneExtensions } from '../scene/scene-schema.js';
+import { validateAnimatedFrame } from '../shared/animated-frame-schema.js';
 import { validateHtmlComposition } from '../html/html-schema.js';
 
 export const MIN_PLAYBACK_RATE = 0.25;
@@ -179,6 +180,8 @@ export function validateComposition(composition: ClipComposition): void {
       !isPhoneFrameFill(clip.appearance.phoneFrameFill)
     )
       throw new CompositionEngineError('Invalid phone frame fill.');
+    if (isVisualClip(clip) && clip.appearance.animatedFrame !== undefined)
+      validateAnimatedFrame(clip.appearance.animatedFrame);
     if (isBlurClip(clip)) {
       if (
         !['rectangle', 'square', 'circle'].includes(clip.shape) ||

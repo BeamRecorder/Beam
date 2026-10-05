@@ -130,6 +130,36 @@ describe('recording media links', () => {
     expect(recordingMediaOwner(composition([movedOwner, timelineCandidate, missingOwner]), missingOwner)).toBeNull();
   });
 
+  it('keeps a project-owned webcam explicitly linked after storage removes its session metadata', () => {
+    const owner = screen('owner');
+    const camera = webcam('camera', { recordingClipId: owner.id });
+    const next = composition([owner, camera]);
+    const cameraAsset = next.assets.find((asset) => asset.id === camera.assetId)!;
+    cameraAsset.origin = 'project';
+    delete cameraAsset.sessionId;
+    expect(recordingMediaOwner(next, camera)).toBe(owner);
+    expect(recordingLinkedClipIds(next, [owner.id])).toEqual([owner.id, camera.id]);
+    expect(recordingMediaOwner(next, { ...camera, recordingClipId: null })).toBeNull();
+    expect(recordingMediaOwner(next, { ...camera, recordingClipId: undefined })).toBeNull();
+    expect(recordingMediaOwner(next, { ...camera, recordingClipId: 'missing' })).toBeNull();
+  });
+
+  it('preserves the split group owner for a project webcam without changing session or audio inference', () => {
+    const left = screen('left', { groupId: 'left-group' });
+    const right = screen('right', { groupId: 'right-group', timelineStartMs: 10000 });
+    const camera = webcam('camera', { groupId: 'right-group', recordingClipId: left.id });
+    const microphone = audio('microphone', 'microphone', { recordingClipId: left.id });
+    const next = composition([left, right, camera, microphone]);
+    for (const asset of next.assets.filter((asset) => [camera.assetId, microphone.assetId].includes(asset.id))) {
+      asset.origin = 'project';
+      delete asset.sessionId;
+    }
+    expect(recordingMediaOwner(next, camera)).toBe(right);
+    expect(recordingMediaOwner(next, microphone)).toBeNull();
+    next.assets = next.assets.filter((asset) => asset.id !== camera.assetId);
+    expect(recordingMediaOwner(next, camera)).toBeNull();
+  });
+
   it('recovers the grouped right-hand owner when a split sidecar still points to the left screen', () => {
     const leftScreen = screen('left-screen', {
       assetId: 'left-screen-asset',

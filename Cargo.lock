@@ -211,6 +211,7 @@ dependencies = [
  "walkdir",
  "windows",
  "windows-capture",
+ "windows-future",
  "xcursor",
 ]
 

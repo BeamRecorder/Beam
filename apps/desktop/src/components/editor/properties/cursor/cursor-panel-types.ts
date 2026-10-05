@@ -35,4 +35,4 @@ export type CursorPanelEmits = {
   'update:autoHide': [value: CursorAutoHideSettings];
 };
 
-export type GlobalRippleStyle = Exclude<CursorRippleStyle, 'none'>;
+export type SelectableRippleStyle = Exclude<CursorRippleStyle, 'none'>;

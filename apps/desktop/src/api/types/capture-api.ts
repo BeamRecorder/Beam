@@ -215,6 +215,7 @@ export interface DesktopCaptureApi
   pickProjectMedia(projectId: string, kind: 'video' | 'image' | 'audio'): Promise<MediaAsset | null>;
   pasteProjectClipboardImage(projectId: string): Promise<MediaAsset | null>;
   importDroppedProjectMedia(projectId: string, file: File, kind: 'video' | 'image' | 'audio'): Promise<MediaAsset>;
+  importDemoWebcamMedia(projectId: string): Promise<MediaAsset>;
   beginProjectVoiceover(payload: ProjectVoiceoverStart): Promise<{ recordingId: string }>;
   writeProjectVoiceoverChunk(payload: ProjectVoiceoverChunk): Promise<void>;
   finalizeProjectVoiceover(payload: ProjectVoiceoverFinish): Promise<MediaAsset>;

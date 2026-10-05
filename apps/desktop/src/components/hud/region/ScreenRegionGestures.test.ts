@@ -42,7 +42,7 @@ const Select = {
 };
 const toolbar = {
   props: ['modelValue'],
-  emits: ['record', 'cancel', 'resize'],
+  emits: ['record', 'cancel', 'resize', 'update:modelValue'],
   template: '<aside class="region-recording-toolbar" />',
 };
 let resizedTop: ResizeObserverCallback;
@@ -228,10 +228,10 @@ it.each([
     });
     const element = wrapper.get('.region-recording-toolbar').element as HTMLElement;
     expect(element.style.left).toBe(left);
-    expect(element.style[edge]).toBe(position);
+    expect(parseFloat(element.style[edge])).toBeCloseTo(parseFloat(position));
     await triggerPointer(main, 'pointerup');
     expect(element.style.left).toBe(left);
-    expect(element.style[edge]).toBe(position);
+    expect(parseFloat(element.style[edge])).toBeCloseTo(parseFloat(position));
     wrapper.unmount();
   },
 );
@@ -410,5 +410,88 @@ it('keeps the desktop live by rendering the snapshot only inside the drag magnif
   expect(wrapper.findAll('main > img')).toHaveLength(0);
   await triggerPointer(main, 'pointerup', { pointerId: 1 });
   expect(wrapper.find('.region-magnifier').exists()).toBe(false);
+  wrapper.unmount();
+});
+
+it.each(['studio', 'instant', 'screenshot'] as const)(
+  'displays and confirms the same pixel-aligned rectangle in %s',
+  async (captureMode) => {
+    const { wrapper, main } = await setup(crop, { captureMode, context: 'quick-snip', drawOnly: true });
+    await triggerPointer(main, 'pointerdown', { clientX: 101, clientY: 51, pointerId: 1 });
+    await triggerPointer(main, 'pointermove', { clientX: 602, clientY: 304, pointerId: 1 });
+    await triggerPointer(main, 'pointerup');
+    const expected =
+      captureMode === 'screenshot'
+        ? { x: 0.101, y: 0.102, width: 0.501, height: 0.506 }
+        : { x: 0.101, y: 0.102, width: 0.5, height: 0.504 };
+    expect(wrapper.get('.region-size').attributes('aria-label')).toBe(
+      captureMode === 'screenshot' ? '501 × 253' : '500 × 252',
+    );
+    const frame = wrapper.get('.region-frame').element as HTMLElement;
+    expect(parseFloat(frame.style.width)).toBeCloseTo(expected.width * 100);
+    expect(parseFloat(frame.style.height)).toBeCloseTo(expected.height * 100);
+    await main.trigger('keydown', { key: 'Enter' });
+    expect(capture.confirmScreenRegion).toHaveBeenCalledWith(expected);
+    expect(capture.updateScreenRegion).toHaveBeenLastCalledWith(expected);
+    wrapper.unmount();
+  },
+);
+
+it('does not quantize an existing recording marker using logical display dimensions', async () => {
+  const { wrapper, configure } = await setup();
+  configure({
+    mode: 'record',
+    bounds: { x: 0, y: 0, width: 1000, height: 500 },
+    region: { x: 0.1005, y: 0.1005, width: 0.501, height: 0.501 },
+  });
+  await wrapper.vm.$nextTick();
+  expect((wrapper.get('.region-frame').element as HTMLElement).style.left).toBe('10.05%');
+  wrapper.unmount();
+});
+
+it.each([
+  ['studio', { x: 0, y: 0, width: 1, height: 1 }],
+  ['instant', { x: 0, y: 0, width: 1, height: 1 }],
+  ['studio', { x: 0, y: 0, width: 2000 / 2001, height: 1000 / 1001 }],
+  ['instant', { x: 0, y: 0, width: 2000 / 2001, height: 1000 / 1001 }],
+] as const)(
+  'allows drawing over a full-screen %s crop with odd source dimensions (%j)',
+  async (captureMode, initialRegion) => {
+    const { wrapper, main } = await setup(initialRegion, { captureMode, pixelSize: { width: 2001, height: 1001 } });
+    expect(wrapper.findComponent(Select).props('modelValue')).toBe('fullscreen');
+    await triggerPointer(main, 'pointerdown', { clientX: 101, clientY: 51, pointerId: 1 });
+    await triggerPointer(main, 'pointermove', { clientX: 602, clientY: 51, pointerId: 1 });
+    await triggerPointer(main, 'pointerup');
+    expect(wrapper.findComponent(Select).props('modelValue')).toBe('fullscreen');
+    await triggerPointer(main, 'pointerdown', { clientX: 101, clientY: 51, pointerId: 1 });
+    await triggerPointer(main, 'pointermove', { clientX: 602, clientY: 304, pointerId: 1 });
+    await triggerPointer(main, 'pointerup');
+    await main.trigger('keydown', { key: 'Enter' });
+    const selected = capture.confirmScreenRegion.mock.calls[0]![0];
+    expect(Math.round(selected.x * 2001)).toBe(202);
+    expect(Math.round(selected.y * 1001)).toBe(102);
+    expect(Math.round(selected.width * 2001)).toBe(1002);
+    expect(Math.round(selected.height * 1001)).toBe(506);
+    wrapper.unmount();
+  },
+);
+
+it('confirms updated recording settings with the displayed pixel-aligned region', async () => {
+  const { wrapper } = await setup(crop, { recording });
+  const nextRecording = { ...recording, countdownSeconds: 0, showRealCursor: true };
+  wrapper.findComponent(toolbar).vm.$emit('update:modelValue', nextRecording);
+  await wrapper.vm.$nextTick();
+  wrapper.findComponent(toolbar).vm.$emit('record');
+  expect(capture.confirmScreenRegion).toHaveBeenCalledWith(crop, nextRecording);
+  wrapper.unmount();
+});
+
+it('reports a teleprompter placement failure while retaining the selectable region', async () => {
+  capture.updateTeleprompterRegion.mockRejectedValueOnce(new Error('No space outside the region'));
+  const { wrapper } = await setup(crop, { recording });
+  expect(wrapper.get('[role="alert"]').text()).toContain('No space outside the region');
+  expect(wrapper.get('.region-size').attributes('aria-label')).toBe('400 × 200');
+  wrapper.findComponent(toolbar).vm.$emit('record');
+  expect(capture.confirmScreenRegion).toHaveBeenCalledWith(crop, recording);
   wrapper.unmount();
 });

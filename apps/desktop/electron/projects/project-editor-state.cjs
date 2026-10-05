@@ -1,3 +1,8 @@
+const {
+  createDefaultCursorClickEffects,
+  normalizeCursorClickEffect,
+  validateCursorClickEffect,
+} = require('../../../../packages/engine/src/capture/cursor-click-schema.js');
 const { validateGlassHighlight } = require('../../../../packages/engine/src/zoom/glass-highlight-schema.js');
 const CURSOR_TYPES = new Set([
   'automatic',
@@ -99,24 +104,7 @@ const defaultCursor = () => ({
   size: 45,
   color: '#000000',
   shadow: { enabled: true, blur: 6, color: '#000000', direction: 'bottom' },
-  clickEffects: {
-    left: {
-      springEnabled: true,
-      springIntensity: 50,
-      rippleEnabled: false,
-      rippleStyle: 'single',
-      rippleSize: 30,
-      rippleColor: '#ff5a1f',
-    },
-    right: {
-      springEnabled: true,
-      springIntensity: 50,
-      rippleEnabled: false,
-      rippleStyle: 'single',
-      rippleSize: 30,
-      rippleColor: '#6366f1',
-    },
-  },
+  clickEffects: createDefaultCursorClickEffects(),
   motion: {
     preset: 'smooth',
     smoothing: 0.67,
@@ -244,28 +232,6 @@ const zoomState = (value) => {
   };
 };
 
-const clickEffect = (value) => {
-  if (
-    !value ||
-    typeof value.springEnabled !== 'boolean' ||
-    !finite(value.springIntensity) ||
-    typeof value.rippleEnabled !== 'boolean' ||
-    !finite(value.rippleSize) ||
-    typeof value.rippleColor !== 'string' ||
-    !value.rippleColor
-  )
-    throw new Error('Effet de clic curseur invalide');
-  const rippleStyle = ['none', 'single', 'double', 'solid'].includes(value.rippleStyle) ? value.rippleStyle : 'single';
-  return {
-    springEnabled: value.springEnabled,
-    springIntensity: clamp(value.springIntensity, 0, 100),
-    rippleEnabled: value.rippleEnabled,
-    rippleStyle,
-    rippleSize: clamp(value.rippleSize, 10, 80),
-    rippleColor: value.rippleColor,
-  };
-};
-
 const cursorState = (value) => {
   if (value?.enabled !== undefined && typeof value.enabled !== 'boolean')
     throw new Error('Invalid cursor enabled state');
@@ -305,12 +271,9 @@ const cursorState = (value) => {
     !finite(value.motion.motionBlur)
   )
     throw new Error('Présentation du curseur invalide');
-  const leftClickEffect = clickEffect(value.clickEffects.left);
-  const rightClickEffect = clickEffect(value.clickEffects.right);
-  const sharedRippleStyle =
-    [leftClickEffect.rippleStyle, rightClickEffect.rippleStyle].find(
-      (style) => style === 'single' || style === 'double' || style === 'solid',
-    ) || 'single';
+  validateCursorClickEffect(value.clickEffects.left);
+  validateCursorClickEffect(value.clickEffects.right);
+  const defaults = createDefaultCursorClickEffects();
   return {
     enabled: value.enabled !== false,
     selection: {
@@ -327,8 +290,8 @@ const cursorState = (value) => {
       direction: value.shadow.direction,
     },
     clickEffects: {
-      left: { ...leftClickEffect, rippleStyle: sharedRippleStyle },
-      right: { ...rightClickEffect, rippleStyle: sharedRippleStyle },
+      left: normalizeCursorClickEffect(value.clickEffects.left, defaults.left),
+      right: normalizeCursorClickEffect(value.clickEffects.right, defaults.right),
     },
     motion: {
       preset: value.motion.preset,

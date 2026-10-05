@@ -77,7 +77,19 @@
     "frameTheme": "ブラウザーの外観",
     "auto": "自動",
     "light": "ライト",
-    "dark": "ダーク"
+    "dark": "ダーク",
+    "animatedBorder": "アニメーション枠",
+    "frameStyle": "フレームスタイル",
+    "preset": "プリセット",
+    "animationSpeed": "アニメーション速度",
+    "animatedHint": "クリップの角に合わせます。速度を0にすると停止します。",
+    "presets": {
+      "purple-haze": "Purple Haze",
+      "neon-duo": "Neon Duo",
+      "aurora": "Aurora",
+      "ember": "Ember",
+      "electric": "Electric"
+    }
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "カメラプレビューを読み込み中",
@@ -427,7 +439,54 @@
     "presetSingle": "シングルリング",
     "presetDouble": "ダブルウェーブ",
     "presetSolid": "バースト",
-    "rippleStyle": "リップルスタイル"
+    "presetWater": "水滴",
+    "waterRippleSpread": "波の広がり",
+    "waterRippleHint": "クリックするたびに、1つの柔らかな波で画面が屈折します。",
+    "rippleStyle": "リップルスタイル",
+    "rippleOpacity": "不透明度",
+    "rippleDuration": "持続時間",
+    "rippleWidth": "線の太さ",
+    "waterRippleIntensity": "屈折の強さ",
+    "waterRippleSoftness": "波の柔らかさ",
+    "visibility": "自動非表示",
+    "cursorLabels": {
+      "default": "ポインター",
+      "beachball": "読み込み中",
+      "busy": "処理中",
+      "cell": "セル選択",
+      "contextualmenu": "コンテキストメニュー",
+      "copy": "コピー",
+      "cross": "十字線",
+      "handgrabbing": "つかむ手",
+      "handopen": "開いた手",
+      "handpointing": "指さす手",
+      "help": "ヘルプ",
+      "makealias": "ショートカット作成",
+      "move": "移動",
+      "notallowed": "禁止",
+      "poof": "消去",
+      "textcursor": "テキスト",
+      "textcursorvertical": "縦書きテキスト",
+      "screenshotselection": "領域選択",
+      "screenshotwindow": "ウィンドウ選択",
+      "zoomin": "拡大",
+      "zoomout": "縮小"
+    },
+    "cursorDirections": {
+      "north": "上方向",
+      "northeast": "右上方向",
+      "east": "右方向",
+      "southeast": "右下方向",
+      "south": "下方向",
+      "southwest": "左下方向",
+      "west": "左方向",
+      "northwest": "左上方向",
+      "vertical": "縦方向",
+      "horizontal": "横方向",
+      "diagonalUp": "斜め ↗",
+      "diagonalDown": "斜め ↘"
+    },
+    "cursorResize": "サイズ変更（{direction}）"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "動画プレビューを読み込み中",
@@ -765,7 +824,14 @@
     "copied": "コピーしました！",
     "devToolsTool": "開発者ツール",
     "devToolsDesc": "ElectronウィンドウのChrome DevToolsを切り替え",
-    "openDevTools": "DevTools"
+    "openDevTools": "DevTools",
+    "fakeWebcamTitle": "デモ用ウェブカメラ",
+    "addFakeWebcamOverlay": "仮想ウェブカメラを追加",
+    "fakeWebcamDescription": "軽量なCC0ライセンスのオフィス動画を画面録画に追加し、ウェブカメラのズーム設定を適用します。",
+    "fakeWebcamNoRecording": "まず画面録画を追加してください。",
+    "fakeWebcamLocked": "まず画面録画のロックを解除してください。",
+    "fakeWebcamExists": "この録画にはすでにウェブカメラがあります。",
+    "fakeWebcamLoadFailed": "デモ用ウェブカメラを追加できませんでした。"
   },
   "AppearanceSettings": {
     "uiScale": "UIの拡大率",

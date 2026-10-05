@@ -15,6 +15,7 @@ import { cursorShadowOffset } from '@beam/runtime/cursor/cursor-shadow';
 import { cursorAssetAt, cursorGeometryAtSize, cursorPositionAt } from '@beam/runtime/cursor/cursor-rendering';
 import { effectButtonForRecordedButton, type CursorClickEffectSettings } from '@beam/engine/capture/cursor-settings';
 import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
+import { CURSOR_CLICK_LIMITS, CURSOR_RING_DEFAULTS } from '@beam/engine/capture/cursor-click-schema';
 import { cursorRippleAt } from '@beam/engine/cursor/cursor-ripple';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import { transitionPointWithClip } from '@beam/runtime/composition/transitions/render-transition';
@@ -103,7 +104,11 @@ export function drawCursorLayer(
       screen,
     );
 
-  for (const click of buttonEventsBetween(snapshot.cursor.events, Math.max(0, time - 0.5), time)) {
+  for (const click of buttonEventsBetween(
+    snapshot.cursor.events,
+    time - CURSOR_CLICK_LIMITS.rippleDurationMs.max / 1000,
+    time,
+  )) {
     const effect = settingsForButton(click.button);
     if (!effect?.rippleEnabled) continue;
     const state = cursorStateAt(snapshot.cursor.events, click.sessionNs / 1_000_000_000);
@@ -112,12 +117,17 @@ export function drawCursorLayer(
     const position = positionAt(target ? { ...state, x: target.x, y: target.y } : state);
     const age = Math.max(0, time - click.sessionNs / 1_000_000_000);
     const style = effect.rippleStyle ?? 'single';
-    const ripple = cursorRippleAt(age, effect.rippleSize, style);
+    const ripple = cursorRippleAt(
+      age,
+      effect.rippleSize,
+      style,
+      (effect.rippleDurationMs ?? CURSOR_RING_DEFAULTS.rippleDurationMs) / 1000,
+    );
     if (!ripple) continue;
     ctx.save();
     const baseAlpha = ctx.globalAlpha;
     for (const ring of ripple.rings) {
-      ctx.globalAlpha = baseAlpha * ring.opacity;
+      ctx.globalAlpha = (baseAlpha * ring.opacity * (effect.rippleOpacity ?? CURSOR_RING_DEFAULTS.rippleOpacity)) / 100;
       if (ring.filled) {
         ctx.fillStyle = effect.rippleColor;
         ctx.beginPath();
@@ -125,7 +135,7 @@ export function drawCursorLayer(
         ctx.fill();
       } else {
         ctx.strokeStyle = effect.rippleColor;
-        ctx.lineWidth = 2.5 * pixelScale;
+        ctx.lineWidth = (effect.rippleWidth ?? CURSOR_RING_DEFAULTS.rippleWidth) * pixelScale;
         ctx.beginPath();
         ctx.arc(position.x, position.y, ring.radius * pixelScale, 0, Math.PI * 2);
         ctx.stroke();

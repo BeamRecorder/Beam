@@ -171,14 +171,13 @@ describe('BrowserSystemAudioRecorder', () => {
 
     FakeMediaRecorder.instances[0].error();
     audioTrack.dispatchEvent(new Event('ended'));
-    expect(fatal).toHaveBeenCalledTimes(2);
+    expect(fatal).toHaveBeenCalledOnce();
     expect(fatal).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('encoding') }));
-    expect(fatal).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('sharing') }));
 
     await recorder.stop();
     FakeMediaRecorder.instances[0].error();
     audioTrack.dispatchEvent(new Event('ended'));
-    expect(fatal).toHaveBeenCalledTimes(2);
+    expect(fatal).toHaveBeenCalledOnce();
   });
 
   it('pauses and resumes as separate audio segments', async () => {
@@ -265,5 +264,22 @@ describe('BrowserSystemAudioRecorder', () => {
     await expect(recordSystemAudioFailure('session-6', 'permission denied')).rejects.toThrow(
       'unavailable outside Electron',
     );
+  });
+  it('rejects overlapping segments and starting an already stopped source', async () => {
+    const recorder = await BrowserSystemAudioRecorder.request();
+    await recorder.pause();
+    await recorder.start('session');
+    await expect(recorder.resume('session')).rejects.toThrow('already recording');
+    await recorder.stop();
+    await expect(recorder.resume('session')).rejects.toThrow('already stopped');
+  });
+  it('releases sharing even if the Chromium encoder refuses to stop', async () => {
+    const recorder = await BrowserSystemAudioRecorder.request();
+    await recorder.start('session');
+    vi.spyOn(FakeMediaRecorder.instances[0], 'stop').mockImplementation(() => {
+      throw new Error('driver failed');
+    });
+    await expect(recorder.stop()).rejects.toThrow('driver failed');
+    expect(audioTrack.stop).toHaveBeenCalledOnce();
   });
 });

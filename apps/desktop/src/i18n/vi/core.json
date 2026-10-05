@@ -77,7 +77,19 @@
     "frameTheme": "Giao diện trình duyệt",
     "auto": "Tự động",
     "light": "Sáng",
-    "dark": "Tối"
+    "dark": "Tối",
+    "animatedBorder": "Viền động",
+    "frameStyle": "Kiểu khung",
+    "preset": "Mẫu",
+    "animationSpeed": "Tốc độ chuyển động",
+    "animatedHint": "Theo các góc của clip. Đặt tốc độ về 0 để dừng hiệu ứng.",
+    "presets": {
+      "purple-haze": "Purple Haze",
+      "neon-duo": "Neon Duo",
+      "aurora": "Aurora",
+      "ember": "Ember",
+      "electric": "Electric"
+    }
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "Đang tải xem trước camera",
@@ -427,7 +439,54 @@
     "presetSingle": "Nhẫn đơn",
     "presetDouble": "Sóng đôi",
     "presetSolid": "bùng nổ",
-    "rippleStyle": "Kiểu gợn sóng"
+    "presetWater": "Giọt nước",
+    "waterRippleSpread": "Phạm vi sóng",
+    "waterRippleHint": "Mỗi lần nhấp tạo một gợn sóng nhẹ làm biến dạng màn hình.",
+    "rippleStyle": "Kiểu gợn sóng",
+    "rippleOpacity": "Độ mờ đục",
+    "rippleDuration": "Thời lượng",
+    "rippleWidth": "Độ dày nét",
+    "waterRippleIntensity": "Cường độ biến dạng",
+    "waterRippleSoftness": "Độ mềm của sóng",
+    "visibility": "Tự động ẩn",
+    "cursorLabels": {
+      "default": "Con trỏ",
+      "beachball": "Đang tải",
+      "busy": "Đang bận",
+      "cell": "Chọn ô",
+      "contextualmenu": "Menu ngữ cảnh",
+      "copy": "Sao chép",
+      "cross": "Tâm ngắm",
+      "handgrabbing": "Bàn tay nắm",
+      "handopen": "Bàn tay mở",
+      "handpointing": "Bàn tay chỉ",
+      "help": "Trợ giúp",
+      "makealias": "Tạo lối tắt",
+      "move": "Di chuyển",
+      "notallowed": "Không cho phép",
+      "poof": "Biến mất",
+      "textcursor": "Văn bản",
+      "textcursorvertical": "Văn bản dọc",
+      "screenshotselection": "Chọn vùng",
+      "screenshotwindow": "Chọn cửa sổ",
+      "zoomin": "Phóng to",
+      "zoomout": "Thu nhỏ"
+    },
+    "cursorDirections": {
+      "north": "lên trên",
+      "northeast": "lên trên bên phải",
+      "east": "sang phải",
+      "southeast": "xuống dưới bên phải",
+      "south": "xuống dưới",
+      "southwest": "xuống dưới bên trái",
+      "west": "sang trái",
+      "northwest": "lên trên bên trái",
+      "vertical": "theo chiều dọc",
+      "horizontal": "theo chiều ngang",
+      "diagonalUp": "theo đường chéo ↗",
+      "diagonalDown": "theo đường chéo ↘"
+    },
+    "cursorResize": "Đổi kích thước {direction}"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Đang tải xem trước video",
@@ -765,7 +824,14 @@
     "copied": "Đã sao chép!",
     "devToolsTool": "Công cụ nhà phát triển",
     "devToolsDesc": "Bật/tắt Chrome DevTools trong cửa sổ Electron",
-    "openDevTools": "DevTools"
+    "openDevTools": "DevTools",
+    "fakeWebcamTitle": "Webcam minh họa",
+    "addFakeWebcamOverlay": "Thêm lớp phủ webcam giả lập",
+    "fakeWebcamDescription": "Thêm video văn phòng dung lượng nhỏ có giấy phép CC0 vào bản ghi màn hình. Video sử dụng cài đặt thu phóng của webcam.",
+    "fakeWebcamNoRecording": "Hãy thêm bản ghi màn hình trước.",
+    "fakeWebcamLocked": "Hãy mở khóa bản ghi màn hình trước.",
+    "fakeWebcamExists": "Bản ghi này đã có webcam.",
+    "fakeWebcamLoadFailed": "Không thể thêm webcam minh họa."
   },
   "AppearanceSettings": {
     "title": "Giao diện",

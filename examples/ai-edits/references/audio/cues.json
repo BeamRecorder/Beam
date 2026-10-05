@@ -2,19 +2,8 @@
   "durationSeconds": 15,
   "animationBpm": 128,
   "voiceover": false,
-  "whooshSeconds": [
-    1.655,
-    3.53,
-    5.405,
-    7.28,
-    9.155,
-    11.03
-  ],
-  "impactSeconds": [
-    1.875,
-    7.5,
-    11.25
-  ],
+  "whooshSeconds": [1.655, 3.53, 5.405, 7.28, 9.155, 11.03],
+  "impactSeconds": [1.875, 7.5, 11.25],
   "music": "Empacotatron \u2014 Fupi (CC0)",
   "mixTargetLufs": -14
 }

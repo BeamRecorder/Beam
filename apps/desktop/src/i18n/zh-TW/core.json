@@ -77,7 +77,19 @@
     "frameTheme": "瀏覽器外觀",
     "auto": "自動",
     "light": "淺色",
-    "dark": "深色"
+    "dark": "深色",
+    "animatedBorder": "動態邊框",
+    "frameStyle": "邊框樣式",
+    "preset": "預設",
+    "animationSpeed": "動畫速度",
+    "animatedHint": "跟隨片段的圓角。將速度設為0可凍結效果。",
+    "presets": {
+      "purple-haze": "Purple Haze",
+      "neon-duo": "Neon Duo",
+      "aurora": "Aurora",
+      "ember": "Ember",
+      "electric": "Electric"
+    }
   },
   "CameraPreviewOverlay": {
     "loadingCameraPreview": "正在載入相機預覽",
@@ -427,7 +439,54 @@
     "presetSingle": "單環",
     "presetDouble": "雙波",
     "presetSolid": "爆發",
-    "rippleStyle": "漣漪風格"
+    "presetWater": "水滴",
+    "waterRippleSpread": "波紋範圍",
+    "waterRippleHint": "每次點擊都會產生一道柔和的波紋，使畫面發生折射。",
+    "rippleStyle": "漣漪風格",
+    "rippleOpacity": "不透明度",
+    "rippleDuration": "持續時間",
+    "rippleWidth": "線條粗細",
+    "waterRippleIntensity": "折射強度",
+    "waterRippleSoftness": "波紋柔和度",
+    "visibility": "自動隱藏",
+    "cursorLabels": {
+      "default": "指標",
+      "beachball": "載入中",
+      "busy": "忙碌",
+      "cell": "選取儲存格",
+      "contextualmenu": "快顯功能表",
+      "copy": "複製",
+      "cross": "十字準星",
+      "handgrabbing": "抓握手形",
+      "handopen": "張開手形",
+      "handpointing": "指向手形",
+      "help": "說明",
+      "makealias": "建立捷徑",
+      "move": "移動",
+      "notallowed": "禁止",
+      "poof": "消失",
+      "textcursor": "文字",
+      "textcursorvertical": "直排文字",
+      "screenshotselection": "選取區域",
+      "screenshotwindow": "選取視窗",
+      "zoomin": "放大",
+      "zoomout": "縮小"
+    },
+    "cursorDirections": {
+      "north": "向上",
+      "northeast": "向右上",
+      "east": "向右",
+      "southeast": "向右下",
+      "south": "向下",
+      "southwest": "向左下",
+      "west": "向左",
+      "northwest": "向左上",
+      "vertical": "垂直",
+      "horizontal": "水平",
+      "diagonalUp": "對角線 ↗",
+      "diagonalDown": "對角線 ↘"
+    },
+    "cursorResize": "調整大小：{direction}"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "正在載入影片預覽",
@@ -765,7 +824,14 @@
     "copied": "已複製！",
     "devToolsTool": "開發人員工具",
     "devToolsDesc": "在 Electron 視窗中切換 Chrome DevTools",
-    "openDevTools": "DevTools"
+    "openDevTools": "DevTools",
+    "fakeWebcamTitle": "示範攝影機",
+    "addFakeWebcamOverlay": "新增模擬攝影機疊加層",
+    "fakeWebcamDescription": "為螢幕錄製新增輕量的 CC0 辦公室影片，並套用攝影機縮放設定。",
+    "fakeWebcamNoRecording": "請先新增螢幕錄製。",
+    "fakeWebcamLocked": "請先解鎖螢幕錄製。",
+    "fakeWebcamExists": "此錄製已有攝影機。",
+    "fakeWebcamLoadFailed": "無法新增示範攝影機。"
   },
   "AppearanceSettings": {
     "uiScale": "介面縮放",

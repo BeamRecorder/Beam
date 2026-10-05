@@ -2,492 +2,252 @@
   {
     "file": "dashboard.png",
     "sourceFrame": 450,
-    "crop": [
-      193,
-      98,
-      1727,
-      982
-    ]
+    "crop": [193, 98, 1727, 982]
   },
   {
     "file": "chat-background.png",
     "sourceFrame": 480,
-    "crop": [
-      0,
-      0,
-      1724,
-      894
-    ]
+    "crop": [0, 0, 1724, 894]
   },
   {
     "file": "chat-header.png",
     "sourceFrame": 480,
-    "crop": [
-      338,
-      0,
-      1698,
-      430
-    ]
+    "crop": [338, 0, 1698, 430]
   },
   {
     "file": "chat-toolbar.png",
     "sourceFrame": 510,
-    "crop": [
-      420,
-      733,
-      1626,
-      818
-    ]
+    "crop": [420, 733, 1626, 818]
   },
   {
     "file": "agents-result.png",
     "sourceFrame": 750,
-    "crop": [
-      979,
-      0,
-      1890,
-      966
-    ]
+    "crop": [979, 0, 1890, 966]
   },
   {
     "file": "charts.png",
     "sourceFrame": 810,
-    "crop": [
-      0,
-      0,
-      1920,
-      1080
-    ]
+    "crop": [0, 0, 1920, 1080]
   },
   {
     "file": "files-browser.png",
     "sourceFrame": 1200,
-    "crop": [
-      174,
-      93,
-      1754,
-      991
-    ]
+    "crop": [174, 93, 1754, 991]
   },
   {
     "file": "file-list.png",
     "sourceFrame": 1260,
-    "crop": [
-      0,
-      0,
-      1920,
-      1080
-    ]
+    "crop": [0, 0, 1920, 1080]
   },
   {
     "file": "answer-browser.png",
     "sourceFrame": 1530,
-    "crop": [
-      154,
-      68,
-      1787,
-      1010
-    ]
+    "crop": [154, 68, 1787, 1010]
   },
   {
     "file": "assets-panel.png",
     "sourceFrame": 1590,
-    "crop": [
-      1071,
-      79,
-      1920,
-      1080
-    ]
+    "crop": [1071, 79, 1920, 1080]
   },
   {
     "file": "deal-card.png",
     "sourceFrame": 1800,
-    "crop": [
-      769,
-      335,
-      1152,
-      748
-    ]
+    "crop": [769, 335, 1152, 748]
   },
   {
     "file": "mini-dashboard.png",
     "sourceFrame": 1800,
-    "crop": [
-      787,
-      349,
-      1133,
-      549
-    ]
+    "crop": [787, 349, 1133, 549]
   },
   {
     "file": "logo-mark.png",
     "sourceFrame": 210,
-    "crop": [
-      625,
-      438,
-      815,
-      642
-    ],
+    "crop": [625, 438, 815, 642],
     "alphaMode": "paper-logo"
   },
   {
     "file": "logo-word.png",
     "sourceFrame": 210,
-    "crop": [
-      880,
-      450,
-      1361,
-      631
-    ],
+    "crop": [880, 450, 1361, 631],
     "alphaMode": "paper-logo"
   },
   {
     "file": "agent-purple.png",
     "sourceFrame": 690,
-    "crop": [
-      608,
-      340,
-      685,
-      419
-    ]
+    "crop": [608, 340, 685, 419]
   },
   {
     "file": "agent-yellow.png",
     "sourceFrame": 690,
-    "crop": [
-      608,
-      478,
-      685,
-      556
-    ]
+    "crop": [608, 478, 685, 556]
   },
   {
     "file": "agent-green.png",
     "sourceFrame": 690,
-    "crop": [
-      608,
-      615,
-      685,
-      694
-    ]
+    "crop": [608, 615, 685, 694]
   },
   {
     "file": "agent-aqua.png",
     "sourceFrame": 690,
-    "crop": [
-      608,
-      751,
-      685,
-      830
-    ]
+    "crop": [608, 751, 685, 830]
   },
   {
     "file": "notion.png",
     "sourceFrame": 1020,
-    "crop": [
-      129,
-      407,
-      312,
-      591
-    ]
+    "crop": [129, 407, 312, 591]
   },
   {
     "file": "mailchimp.png",
     "sourceFrame": 1020,
-    "crop": [
-      1470,
-      133,
-      1596,
-      258
-    ]
+    "crop": [1470, 133, 1596, 258]
   },
   {
     "file": "notes.png",
     "sourceFrame": 1020,
-    "crop": [
-      409,
-      806,
-      643,
-      1080
-    ]
+    "crop": [409, 806, 643, 1080]
   },
   {
     "file": "sticky-note.png",
     "sourceFrame": 1020,
-    "crop": [
-      81,
-      612,
-      240,
-      782
-    ]
+    "crop": [81, 612, 240, 782]
   },
   {
     "file": "granola.png",
     "sourceFrame": 1080,
-    "crop": [
-      118,
-      231,
-      238,
-      351
-    ]
+    "crop": [118, 231, 238, 351]
   },
   {
     "file": "clickup.png",
     "sourceFrame": 1050,
-    "crop": [
-      1585,
-      218,
-      1654,
-      284
-    ]
+    "crop": [1585, 218, 1654, 284]
   },
   {
     "file": "docs.png",
     "sourceFrame": 1800,
-    "crop": [
-      1189,
-      205,
-      1224,
-      252
-    ],
+    "crop": [1189, 205, 1224, 252],
     "alphaMode": "brown-key"
   },
   {
     "file": "drive.png",
     "sourceFrame": 1800,
-    "crop": [
-      900,
-      125,
-      945,
-      175
-    ],
+    "crop": [900, 125, 945, 175],
     "alphaMode": "brown-key"
   },
   {
     "file": "gmail.png",
     "sourceFrame": 1800,
-    "crop": [
-      639,
-      276,
-      679,
-      304
-    ],
+    "crop": [639, 276, 679, 304],
     "alphaMode": "brown-key"
   },
   {
     "file": "slack.png",
     "sourceFrame": 1800,
-    "crop": [
-      975,
-      908,
-      1024,
-      954
-    ],
+    "crop": [975, 908, 1024, 954],
     "alphaMode": "brown-key"
   },
   {
     "file": "excel.png",
     "sourceFrame": 1800,
-    "crop": [
-      553,
-      560,
-      590,
-      598
-    ],
+    "crop": [553, 560, 590, 598],
     "alphaMode": "brown-key"
   },
   {
     "file": "folder.png",
     "sourceFrame": 1800,
-    "crop": [
-      1240,
-      769,
-      1288,
-      811
-    ],
+    "crop": [1240, 769, 1288, 811],
     "alphaMode": "brown-key"
   },
   {
     "file": "plain-file.png",
     "sourceFrame": 1800,
-    "crop": [
-      698,
-      822,
-      726,
-      862
-    ],
+    "crop": [698, 822, 726, 862],
     "alphaMode": "brown-key"
   },
   {
     "file": "chaos-type.png",
     "sourceFrame": 1140,
-    "crop": [
-      280,
-      186,
-      1610,
-      900
-    ]
+    "crop": [280, 186, 1610, 900]
   },
   {
     "file": "send.png",
     "sourceFrame": 1440,
-    "crop": [
-      1519,
-      498,
-      1605,
-      583
-    ]
+    "crop": [1519, 498, 1605, 583]
   },
   {
     "file": "folder-icon.png",
     "sourceFrame": 1230,
-    "crop": [
-      36,
-      45,
-      96,
-      106
-    ]
+    "crop": [36, 45, 96, 106]
   },
   {
     "file": "file-icon.png",
     "sourceFrame": 1260,
-    "crop": [
-      754,
-      294,
-      795,
-      338
-    ]
+    "crop": [754, 294, 795, 338]
   },
   {
     "file": "answer-tools.png",
     "sourceFrame": 1560,
-    "crop": [
-      1455,
-      204,
-      1728,
-      312
-    ]
+    "crop": [1455, 204, 1728, 312]
   },
   {
     "file": "teams.png",
     "sourceFrame": 1680,
-    "crop": [
-      347,
-      552,
-      382,
-      588
-    ]
+    "crop": [347, 552, 382, 588]
   },
   {
     "file": "telegram.png",
     "sourceFrame": 1680,
-    "crop": [
-      493,
-      553,
-      532,
-      589
-    ]
+    "crop": [493, 553, 532, 589]
   },
   {
     "file": "asana.png",
     "sourceFrame": 1200,
-    "crop": [
-      598,
-      293,
-      619,
-      318
-    ]
+    "crop": [598, 293, 619, 318]
   },
   {
     "file": "intro-marketing.png",
     "sourceFrame": 30,
-    "crop": [
-      638,
-      445,
-      763,
-      563
-    ]
+    "crop": [638, 445, 763, 563]
   },
   {
     "file": "intro-finance.png",
     "sourceFrame": 45,
-    "crop": [
-      625,
-      439,
-      757,
-      563
-    ]
+    "crop": [625, 439, 757, 563]
   },
   {
     "file": "salesforce.png",
     "sourceFrame": 360,
-    "crop": [
-      1295,
-      492,
-      1384,
-      587
-    ]
+    "crop": [1295, 492, 1384, 587]
   },
   {
     "file": "mission-card.png",
     "sourceFrame": 1860,
-    "crop": [
-      142,
-      796,
-      354,
-      1026
-    ]
+    "crop": [142, 796, 354, 1026]
   },
   {
     "file": "pixel-card.png",
     "sourceFrame": 1890,
-    "crop": [
-      463,
-      56,
-      620,
-      252
-    ]
+    "crop": [463, 56, 620, 252]
   },
   {
     "file": "map.png",
     "sourceFrame": 90,
-    "crop": [
-      0,
-      0,
-      1920,
-      1080
-    ],
+    "crop": [0, 0, 1920, 1080],
     "alphaMode": "map-dark"
   },
   {
     "file": "end-map.png",
     "sourceFrame": 2040,
-    "crop": [
-      0,
-      0,
-      1920,
-      1080
-    ],
+    "crop": [0, 0, 1920, 1080],
     "alphaMode": "map-paper"
   },
   {
     "file": "dashboard-empty.png",
     "sourceFrame": 420,
-    "crop": [
-      193,
-      98,
-      1727,
-      982
-    ]
+    "crop": [193, 98, 1727, 982]
   },
   {
     "file": "connection-badges.png",
     "sourceFrame": 1305,
-    "crop": [
-      302,
-      570,
-      1203,
-      841
-    ]
+    "crop": [302, 570, 1203, 841]
   }
 ]

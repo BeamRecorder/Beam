@@ -6,8 +6,11 @@ import type { PlaybackEventMap } from '../playback/playback-types';
 
 function setup() {
   const listeners = new Map<keyof PlaybackEventMap, Set<(value: never) => void>>();
+  const time = { value: 1 };
   const engine = {
-    currentTime: 1,
+    get currentTime() {
+      return time.value;
+    },
     on(event, listener) {
       let entries = listeners.get(event);
       if (!entries) listeners.set(event, (entries = new Set()));
@@ -21,7 +24,7 @@ function setup() {
   const emit = <K extends keyof PlaybackEventMap>(event: K, value: PlaybackEventMap[K]) => {
     for (const listener of listeners.get(event) ?? []) listener(value as never);
   };
-  return { engine, clock, emit, listeners };
+  return { engine, time, clock, emit, listeners };
 }
 describe('HTML playback driven by the runtime', () => {
   it('forwards engine time immediately, independently of Vue or a second animation clock', () => {
@@ -39,7 +42,7 @@ describe('HTML playback driven by the runtime', () => {
     const f = setup(),
       listener = vi.fn();
     const stop = f.clock.subscribe(listener);
-    f.engine.currentTime = 4.25;
+    f.time.value = 4.25;
     f.emit('state', 'paused');
     expect(listener).toHaveBeenLastCalledWith(4.25);
     stop();

@@ -1,142 +1,59 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+vi.mock('~/api/capture', () => ({ capture: {} }));
 import CursorClickEffectsPanel from '../CursorClickEffectsPanel.vue';
-
-const BigSlider = {
-  props: ['modelValue', 'formatValue'],
-  emits: ['update:modelValue'],
-  template:
-    '<button class="effect-slider" @click="$emit(\'update:modelValue\', 55)">{{ formatValue(modelValue) }}</button>',
+import CursorRippleControls from '../CursorRippleControls.vue';
+import { createDefaultCursorClickEffects } from '@beam/engine/capture/cursor-settings';
+import { global } from './cursor-panel-test-helpers';
+const build = () => {
+  const value = createDefaultCursorClickEffects();
+  return { value, wrapper: mount(CursorClickEffectsPanel, { props: { modelValue: value }, global }) };
 };
-const Switch = {
-  props: ['modelValue'],
-  emits: ['update:modelValue'],
-  template: '<button class="effect-switch" @click="$emit(\'update:modelValue\', !modelValue)">Switch</button>',
-};
-const ColorInput = {
-  emits: ['update:modelValue'],
-  template: '<button class="effect-color" @click="$emit(\'update:modelValue\', \'#abcdef\')">Color</button>',
-};
-
-const effects = {
-  left: {
-    springEnabled: true,
-    springIntensity: 25,
-    rippleEnabled: true,
-    rippleStyle: 'single' as const,
-    rippleSize: 30,
-    rippleColor: '#111111',
-  },
-  right: {
-    springEnabled: false,
-    springIntensity: 40,
-    rippleEnabled: false,
-    rippleStyle: 'single' as const,
-    rippleSize: 35,
-    rippleColor: '#222222',
-  },
-};
-
-describe('CursorClickEffectsPanel', () => {
-  it('renders per-button spring and ripple controls and emits patches', async () => {
-    const wrapper = mount(CursorClickEffectsPanel, {
-      props: { modelValue: effects },
-      global: { stubs: { BigSlider, Switch, ColorInput } },
-    });
-    expect(wrapper.findAll('.click-card')).toHaveLength(2);
-    expect(wrapper.findAll('.effect-slider')).toHaveLength(2);
-    expect(wrapper.findAll('.effect-color')).toHaveLength(1);
-    await wrapper.find('.effect-color').trigger('click');
-    await wrapper.findAll('.effect-switch')[0].trigger('click');
-    await wrapper.find('.effect-slider').trigger('click');
-    expect(wrapper.emitted('update:modelValue')).toHaveLength(3);
-    expect(wrapper.emitted('update:modelValue')?.[0][0]).toMatchObject({
-      left: { rippleColor: '#abcdef' },
-    });
-    expect(wrapper.findAll('.effect-button')).toHaveLength(0);
+describe('independent click accordions', () => {
+  it('starts with both sections collapsed and retains their controls while reopening', async () => {
+    const { wrapper } = build();
+    expect(wrapper.findAll('.accordion-title').map((title) => title.text())).toEqual(['Left click', 'Right click']);
+    for (const section of wrapper.findAll('.accordion')) {
+      expect(section.get('.accordion-content').attributes('inert')).toBeDefined();
+      await section.get('.accordion-trigger').trigger('click');
+      expect(section.get('.accordion-content').attributes('inert')).toBeUndefined();
+      await section.get('.accordion-trigger').trigger('click');
+    }
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
   });
-
-  it('does not render optional controls when effects are disabled', () => {
-    const wrapper = mount(CursorClickEffectsPanel, {
-      props: {
-        modelValue: {
-          left: { ...effects.left, springEnabled: false, rippleEnabled: false },
-          right: effects.right,
-        },
-      },
-      global: { stubs: { BigSlider, Switch, ColorInput } },
-    });
-    expect(wrapper.findAll('.effect-slider')).toHaveLength(0);
-    expect(wrapper.findAll('.effect-color')).toHaveLength(0);
-  });
-
-  it('edits both buttons independently and labels the color within its effect group', async () => {
-    const modelValue = {
-      left: effects.left,
-      right: { ...effects.right, springEnabled: true, rippleEnabled: true },
-    };
-    const wrapper = mount(CursorClickEffectsPanel, {
-      props: { modelValue },
-      global: { stubs: { BigSlider, Switch, ColorInput } },
-    });
-    expect(wrapper.find('.divider').exists()).toBe(false);
-    const right = wrapper.get('.click-card[aria-label="Right click"]');
-    expect(right.get('.prop-item').text()).toContain('Ripple Color');
-    await right.findAll('.effect-slider')[1]!.trigger('click');
+  it.each(['left', 'right'] as const)('changes only the %s button activation and bounce', async (button) => {
+    const { wrapper, value } = build();
+    const section = wrapper.get(`[data-cursor-section="${button}"]`);
+    await section.get('[aria-label="Click bounce"]').trigger('click');
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([
-      { left: effects.left, right: { ...modelValue.right, rippleSize: 55 } },
+      { ...value, [button]: { ...value[button], springEnabled: false } },
     ]);
-    await right.findAll('.effect-slider')[0]!.trigger('click');
+    await section.get('[aria-label="Click Ripple Effect"]').trigger('click');
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([
-      {
-        left: effects.left,
-        right: { ...modelValue.right, springIntensity: 55 },
-      },
+      { ...value, [button]: { ...value[button], rippleEnabled: true } },
     ]);
-    await right.findAll('.effect-switch')[0]!.trigger('click');
+    await section.get('[data-label="Bounce intensity"]').trigger('click');
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([
-      {
-        left: effects.left,
-        right: { ...modelValue.right, springEnabled: false },
-      },
+      { ...value, [button]: { ...value[button], springIntensity: 30 } },
     ]);
   });
-
-  it('toggles left and right ripple activation independently without changing the shared shape', async () => {
-    const wrapper = mount(CursorClickEffectsPanel, {
-      props: { modelValue: effects },
-      global: { stubs: { BigSlider, Switch, ColorInput } },
-    });
-    const switches = wrapper.findAll('.effect-switch');
-
-    await switches[1]!.trigger('click');
-    expect(wrapper.emitted('update:modelValue')?.at(-1)?.[0]).toEqual({
-      left: { ...effects.left, rippleEnabled: false },
-      right: effects.right,
-    });
-
-    await switches[3]!.trigger('click');
-    expect(wrapper.emitted('update:modelValue')?.at(-1)?.[0]).toEqual({
-      left: effects.left,
-      right: { ...effects.right, rippleEnabled: true },
-    });
+  it('forwards different modes and settings without editing the other click', () => {
+    const { wrapper, value } = build();
+    const controls = wrapper.findAllComponents(CursorRippleControls);
+    const left = { ...value.left, rippleStyle: 'water', water: { intensity: 1, spread: 1, durationMs: 400, width: 1 } };
+    controls[0]!.vm.$emit('update:modelValue', left);
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([{ ...value, left }]);
+    const right = { ...value.right, rippleStyle: 'solid', rippleOpacity: 10 };
+    controls[1]!.vm.$emit('update:modelValue', right);
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([{ ...value, right }]);
   });
-
-  it('keeps ripple shape selection global instead of adding a selector to either click card', () => {
-    const wrapper = mount(CursorClickEffectsPanel, {
-      props: { modelValue: effects },
-      global: { stubs: { BigSlider, Switch, ColorInput } },
-    });
-
-    expect(wrapper.findAll('.click-card select')).toHaveLength(0);
-    expect(wrapper.findAll('.click-card [data-ripple-style]')).toHaveLength(0);
-    expect(
-      wrapper.findAll(
-        '.click-card [aria-label="Single Ring"], .click-card [aria-label="Double Wave"], .click-card [aria-label="Burst"]',
-      ),
-    ).toHaveLength(0);
-    expect(wrapper.findAll('.click-card').every((card) => !card.text().match(/Single Ring|Double Wave|Burst/))).toBe(
-      true,
-    );
+  it.each(['none', undefined] as const)('activates the default ring from legacy style %s', async (rippleStyle) => {
+    const { wrapper, value } = build();
+    await wrapper.setProps({ modelValue: { ...value, left: { ...value.left, rippleStyle, springEnabled: false } } });
+    expect(wrapper.get('[data-cursor-section="left"]').find('[data-label="Bounce intensity"]').exists()).toBe(false);
+    await wrapper.get('[data-cursor-section="left"] [aria-label="Click Ripple Effect"]').trigger('click');
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([
+      { ...value, left: { ...value.left, springEnabled: false, rippleStyle: 'single', rippleEnabled: true } },
+    ]);
   });
 });

@@ -9,10 +9,7 @@
       "electron": "44.5.1",
       "chromium": "152.0.7977.130"
     },
-    "contentSize": [
-      1280,
-      800
-    ],
+    "contentSize": [1280, 800],
     "gpuFeatures": {
       "2d_canvas": "enabled",
       "direct_rendering_display_compositor": "disabled_off_ok",
@@ -664,13 +661,8 @@
         "bytesWritten": 13394368,
         "videoCodec": "avc",
         "audioCodec": "aac",
-        "inputVideoCodecs": [
-          "av1",
-          "vp9"
-        ],
-        "inputAudioCodecs": [
-          "pcm-f32"
-        ],
+        "inputVideoCodecs": ["av1", "vp9"],
+        "inputAudioCodecs": ["pcm-f32"],
         "engine": {
           "schemaVersion": 1,
           "enabled": true,
@@ -803,9 +795,7 @@
             "p95": 138.29999999999927,
             "max": 138.29999999999927
           },
-          "longTasks": [
-            104
-          ],
+          "longTasks": [104],
           "playbackError": null,
           "playbackMetrics": {
             "decodedFrames": 2,
@@ -815,10 +805,7 @@
             "queueSize": 0,
             "cacheBytes": 8079360,
             "disposedBitmaps": 0,
-            "seekLatencyMs": [
-              51.79999999701977,
-              29.799999997019768
-            ]
+            "seekLatencyMs": [51.79999999701977, 29.799999997019768]
           },
           "audioMetrics": {
             "schedulePasses": 0,
@@ -853,9 +840,7 @@
             "p95": 464.7999999999993,
             "max": 464.7999999999993
           },
-          "longTasks": [
-            458
-          ],
+          "longTasks": [458],
           "playbackError": null,
           "playbackMetrics": {
             "decodedFrames": 2,
@@ -865,10 +850,7 @@
             "queueSize": 0,
             "cacheBytes": 8079360,
             "disposedBitmaps": 0,
-            "seekLatencyMs": [
-              51.79999999701977,
-              29.799999997019768
-            ]
+            "seekLatencyMs": [51.79999999701977, 29.799999997019768]
           },
           "audioMetrics": {
             "schedulePasses": 0,
@@ -903,13 +885,7 @@
             "p95": 234.40000000000055,
             "max": 244
           },
-          "longTasks": [
-            64,
-            218,
-            168,
-            57,
-            60
-          ],
+          "longTasks": [64, 218, 168, 57, 60],
           "playbackError": null,
           "playbackMetrics": {
             "decodedFrames": 2,
@@ -919,10 +895,7 @@
             "queueSize": 0,
             "cacheBytes": 8079360,
             "disposedBitmaps": 0,
-            "seekLatencyMs": [
-              51.79999999701977,
-              29.799999997019768
-            ]
+            "seekLatencyMs": [51.79999999701977, 29.799999997019768]
           },
           "audioMetrics": {
             "schedulePasses": 0,
@@ -959,14 +932,7 @@
             "p95": 69.39999999702013,
             "max": 91
           },
-          "longTasks": [
-            54,
-            65,
-            98,
-            57,
-            64,
-            67
-          ],
+          "longTasks": [54, 65, 98, 57, 64, 67],
           "playbackError": null,
           "playbackMetrics": {
             "decodedFrames": 2,
@@ -976,10 +942,7 @@
             "queueSize": 0,
             "cacheBytes": 8079360,
             "disposedBitmaps": 0,
-            "seekLatencyMs": [
-              51.79999999701977,
-              29.799999997019768
-            ]
+            "seekLatencyMs": [51.79999999701977, 29.799999997019768]
           },
           "audioMetrics": {
             "schedulePasses": 0,
@@ -1000,11 +963,7 @@
           "repeats": 3,
           "before": 11013,
           "after": 14013,
-          "handlerMs": [
-            470.29999999701977,
-            244.20000000298023,
-            243.20000000298023
-          ],
+          "handlerMs": [470.29999999701977, 244.20000000298023, 243.20000000298023],
           "frames": 0,
           "draws": 2,
           "drawMs": {
@@ -1017,11 +976,7 @@
             "p95": 1197.300000000001,
             "max": 1197.300000000001
           },
-          "longTasks": [
-            707,
-            504,
-            432
-          ],
+          "longTasks": [707, 504, 432],
           "playbackError": null,
           "playbackMetrics": {
             "decodedFrames": 2,
@@ -1031,10 +986,7 @@
             "queueSize": 0,
             "cacheBytes": 8079360,
             "disposedBitmaps": 0,
-            "seekLatencyMs": [
-              51.79999999701977,
-              29.799999997019768
-            ]
+            "seekLatencyMs": [51.79999999701977, 29.799999997019768]
           },
           "audioMetrics": {
             "schedulePasses": 0,
@@ -1072,10 +1024,7 @@
             "p95": 267.3000000000002,
             "max": 267.3000000000002
           },
-          "longTasks": [
-            183,
-            113
-          ],
+          "longTasks": [183, 113],
           "playbackError": null,
           "playbackMetrics": {
             "decodedFrames": 2,
@@ -1085,10 +1034,7 @@
             "queueSize": 0,
             "cacheBytes": 8079360,
             "disposedBitmaps": 0,
-            "seekLatencyMs": [
-              800.5999999940395,
-              40.29999999701977
-            ],
+            "seekLatencyMs": [800.5999999940395, 40.29999999701977],
             "engine": {
               "schemaVersion": 1,
               "enabled": true,
@@ -1179,9 +1125,7 @@
             "p95": 871.2000000000007,
             "max": 871.2000000000007
           },
-          "longTasks": [
-            852
-          ],
+          "longTasks": [852],
           "playbackError": null,
           "playbackMetrics": {
             "decodedFrames": 2,
@@ -1191,10 +1135,7 @@
             "queueSize": 0,
             "cacheBytes": 8079360,
             "disposedBitmaps": 0,
-            "seekLatencyMs": [
-              800.5999999940395,
-              40.29999999701977
-            ],
+            "seekLatencyMs": [800.5999999940395, 40.29999999701977],
             "engine": {
               "schemaVersion": 1,
               "enabled": true,
@@ -1264,10 +1205,7 @@
             "p95": 127.5,
             "max": 208.70000000000073
           },
-          "longTasks": [
-            105,
-            75
-          ],
+          "longTasks": [105, 75],
           "playbackError": null,
           "playbackMetrics": {
             "decodedFrames": 2,
@@ -1277,10 +1215,7 @@
             "queueSize": 0,
             "cacheBytes": 8079360,
             "disposedBitmaps": 0,
-            "seekLatencyMs": [
-              800.5999999940395,
-              40.29999999701977
-            ],
+            "seekLatencyMs": [800.5999999940395, 40.29999999701977],
             "engine": {
               "schemaVersion": 1,
               "enabled": true,
@@ -1352,22 +1287,7 @@
             "p95": 109.79999999999927,
             "max": 212.4999999970205
           },
-          "longTasks": [
-            67,
-            50,
-            51,
-            125,
-            85,
-            72,
-            55,
-            66,
-            59,
-            56,
-            56,
-            70,
-            72,
-            66
-          ],
+          "longTasks": [67, 50, 51, 125, 85, 72, 55, 66, 59, 56, 56, 70, 72, 66],
           "playbackError": null,
           "playbackMetrics": {
             "decodedFrames": 2,
@@ -1377,10 +1297,7 @@
             "queueSize": 0,
             "cacheBytes": 8079360,
             "disposedBitmaps": 0,
-            "seekLatencyMs": [
-              800.5999999940395,
-              40.29999999701977
-            ],
+            "seekLatencyMs": [800.5999999940395, 40.29999999701977],
             "engine": {
               "schemaVersion": 1,
               "enabled": true,
@@ -1415,11 +1332,7 @@
           "repeats": 3,
           "before": 11013,
           "after": 14013,
-          "handlerMs": [
-            159.90000000596046,
-            177,
-            331.90000000596046
-          ],
+          "handlerMs": [159.90000000596046, 177, 331.90000000596046],
           "frames": 0,
           "draws": 2,
           "drawMs": {
@@ -1432,11 +1345,7 @@
             "p95": 796.3999999999996,
             "max": 796.3999999999996
           },
-          "longTasks": [
-            358,
-            452,
-            501
-          ],
+          "longTasks": [358, 452, 501],
           "playbackError": null,
           "playbackMetrics": {
             "decodedFrames": 2,
@@ -1446,10 +1355,7 @@
             "queueSize": 0,
             "cacheBytes": 8079360,
             "disposedBitmaps": 0,
-            "seekLatencyMs": [
-              800.5999999940395,
-              40.29999999701977
-            ],
+            "seekLatencyMs": [800.5999999940395, 40.29999999701977],
             "engine": {
               "schemaVersion": 1,
               "enabled": true,
@@ -1522,9 +1428,7 @@
             "p95": 112.10000000000036,
             "max": 112.10000000000036
           },
-          "longTasks": [
-            103
-          ],
+          "longTasks": [103],
           "playbackError": null,
           "playbackMetrics": {
             "decodedFrames": 2,
@@ -1534,10 +1438,7 @@
             "queueSize": 0,
             "cacheBytes": 8079360,
             "disposedBitmaps": 0,
-            "seekLatencyMs": [
-              55.20000000298023,
-              23.69999998807907
-            ],
+            "seekLatencyMs": [55.20000000298023, 23.69999998807907],
             "engine": {
               "schemaVersion": 1,
               "enabled": true,
@@ -1628,9 +1529,7 @@
             "p95": 652.7440000059596,
             "max": 652.7440000059596
           },
-          "longTasks": [
-            565
-          ],
+          "longTasks": [565],
           "playbackError": null,
           "playbackMetrics": {
             "decodedFrames": 2,
@@ -1640,10 +1539,7 @@
             "queueSize": 0,
             "cacheBytes": 8079360,
             "disposedBitmaps": 0,
-            "seekLatencyMs": [
-              55.20000000298023,
-              23.69999998807907
-            ],
+            "seekLatencyMs": [55.20000000298023, 23.69999998807907],
             "engine": {
               "schemaVersion": 1,
               "enabled": true,
@@ -1713,13 +1609,7 @@
             "p95": 183.5,
             "max": 559.5
           },
-          "longTasks": [
-            66,
-            80,
-            523,
-            159,
-            74
-          ],
+          "longTasks": [66, 80, 523, 159, 74],
           "playbackError": null,
           "playbackMetrics": {
             "decodedFrames": 2,
@@ -1729,10 +1619,7 @@
             "queueSize": 0,
             "cacheBytes": 8079360,
             "disposedBitmaps": 0,
-            "seekLatencyMs": [
-              55.20000000298023,
-              23.69999998807907
-            ],
+            "seekLatencyMs": [55.20000000298023, 23.69999998807907],
             "engine": {
               "schemaVersion": 1,
               "enabled": true,
@@ -1813,9 +1700,7 @@
             "p95": 88.60000000000036,
             "max": 97.90000000298096
           },
-          "longTasks": [
-            80
-          ],
+          "longTasks": [80],
           "playbackError": null,
           "playbackMetrics": {
             "decodedFrames": 2,
@@ -1825,10 +1710,7 @@
             "queueSize": 0,
             "cacheBytes": 8079360,
             "disposedBitmaps": 0,
-            "seekLatencyMs": [
-              55.20000000298023,
-              23.69999998807907
-            ],
+            "seekLatencyMs": [55.20000000298023, 23.69999998807907],
             "engine": {
               "schemaVersion": 1,
               "enabled": true,
@@ -1873,11 +1755,7 @@
           "repeats": 3,
           "before": 11013,
           "after": 14013,
-          "handlerMs": [
-            482.29999999701977,
-            487.40000000596046,
-            261.20000000298023
-          ],
+          "handlerMs": [482.29999999701977, 487.40000000596046, 261.20000000298023],
           "frames": 0,
           "draws": 2,
           "drawMs": {
@@ -1890,11 +1768,7 @@
             "p95": 1787.1000000000004,
             "max": 1787.1000000000004
           },
-          "longTasks": [
-            869,
-            931,
-            532
-          ],
+          "longTasks": [869, 931, 532],
           "playbackError": null,
           "playbackMetrics": {
             "decodedFrames": 2,
@@ -1904,10 +1778,7 @@
             "queueSize": 0,
             "cacheBytes": 8079360,
             "disposedBitmaps": 0,
-            "seekLatencyMs": [
-              55.20000000298023,
-              23.69999998807907
-            ],
+            "seekLatencyMs": [55.20000000298023, 23.69999998807907],
             "engine": {
               "schemaVersion": 1,
               "enabled": true,

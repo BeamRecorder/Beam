@@ -241,6 +241,7 @@ function initializeApplication() {
         cursorLibrary,
         screenshotStore,
         require('electron').clipboard,
+        { applicationRoot, isPackaged: app.isPackaged },
       );
       require('./lifecycle/media-protocols.cjs').registerMediaProtocols({
         protocol,

@@ -2,14 +2,13 @@ import { createPinia, setActivePinia } from 'pinia';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CursorPanel from '../CursorPanel.vue';
-import { MACOS_CURSOR_PACK, orderedCursorPacks } from '../cursor-packs';
+import { MACOS_CURSOR_PACK } from '../cursor-packs';
 import {
   createDefaultCursorAutoHideSettings,
   createDefaultCursorClickEffects,
   createDefaultCursorMotionSettings,
   cursorMotionPreset,
 } from '@beam/engine/capture/cursor-settings';
-import type { CursorClickEffects } from '@beam/engine/capture/cursor-settings';
 import { useToastStore } from '~/ui/toast/toastStore';
 import {
   Select,
@@ -35,77 +34,87 @@ describe('CursorPanel', () => {
     capture.openCursorPackDiscovery.mockReset();
   });
 
-  it('keeps macOS first and starts with clearly grouped, collapsed advanced controls', () => {
-    const packs = orderedCursorPacks([importedPack('pack:zeta', 'Zeta'), importedPack('pack:alpha', 'Alpha')]);
-    const wrapper = mountPanel({ packs });
-
-    const packSelect = wrapper.findAll('.cursor-select')[0]!;
-    expect(packSelect.attributes('data-model-value')).toBe(MACOS_CURSOR_PACK.id);
-    expect(packSelect.text().startsWith('macOS')).toBe(true);
-    expect(packSelect.text()).toContain('Alpha');
-    expect(packSelect.text()).toContain('Zeta');
-
-    const toggles = wrapper.findAll('.advanced-toggle');
-    expect(toggles).toHaveLength(3);
-    expect(toggles[0]!.attributes('aria-expanded')).toBe('false');
-    expect(toggles[0]!.attributes('aria-controls')).toBe('cursor-advanced-panel');
-    expect(toggles[1]!.attributes('aria-expanded')).toBe('false');
-    expect(toggles[1]!.attributes('aria-controls')).toBe('cursor-motion-advanced-panel');
-    expect(toggles[2]!.attributes('aria-controls')).toBe('click-effects-advanced-panel');
-    expect(wrapper.find('.shadow-options .advanced-toggle').exists()).toBe(false);
-    expect(wrapper.find('#cursor-shadow-options').exists()).toBe(true);
-    expect(toggles.every((toggle) => toggle.attributes('aria-expanded') === 'false')).toBe(true);
-    expect(wrapper.find('.divider').exists()).toBe(false);
-    expect(wrapper.findAll('.cursor-section').map((section) => section.attributes('aria-label'))).toEqual([
-      'Appearance',
-      'Drop Shadow',
-      'Cursor Motion',
-      'Clicks',
-      'Auto-hide cursor',
+  it('uses flat inspector accordions and opens only Appearance by default', async () => {
+    const wrapper = mountPanel();
+    const sections = wrapper.findAll('.accordion');
+    expect(sections.map((section) => section.attributes('data-cursor-section'))).toEqual([
+      'appearance',
+      'shadow',
+      'motion',
+      'visibility',
     ]);
-    expect(wrapper.find('#cursor-advanced-panel').exists()).toBe(false);
-    expect(wrapper.find('#click-effects-advanced-panel').exists()).toBe(false);
-    expect(wrapper.find('.cursor-size-control').exists()).toBe(true);
+    expect(sections.map((section) => section.get('.accordion-trigger').attributes('aria-expanded'))).toEqual([
+      'true',
+      'false',
+      'false',
+      'false',
+    ]);
+    expect(wrapper.find('[aria-controls="click-effects-advanced-panel"]').exists()).toBe(false);
+    expect(wrapper.findAll('.advanced-toggle')).toHaveLength(2);
+    expect(wrapper.find('.accordion-actions').exists()).toBe(false);
+    for (const section of sections) {
+      expect(section.find('.accordion-heading .cursor-switch').exists()).toBe(false);
+      expect(section.find('.accordion-heading .advanced-toggle').exists()).toBe(false);
+    }
+    await sections[0]!.get('.accordion-trigger').trigger('click');
+    expect(sections[0]!.get('.accordion-content').attributes('inert')).toBeDefined();
+    await sections[0]!.get('.accordion-trigger').trigger('click');
+    expect(sections[0]!.get('.cursor-size-control').attributes('data-model-value')).toBe('24');
+    expect(wrapper.emitted('update:selection')).toBeUndefined();
+  });
+  it('keeps Advanced beside its control inside each accordion without changing section visibility', async () => {
+    const wrapper = mountPanel();
+    for (const name of ['appearance', 'motion']) {
+      const section = wrapper.get(`[data-cursor-section="${name}"]`);
+      const trigger = section.get('.accordion-trigger');
+      if (trigger.attributes('aria-expanded') === 'false') await trigger.trigger('click');
+      expect(section.find('.accordion-content .advanced-toggle').exists()).toBe(true);
+      expect(
+        section.get('.advanced-toggle').element.closest('.pack-heading, .section-control-heading')?.textContent,
+      ).toContain(name === 'appearance' ? 'Cursor pack' : 'Motion Preset');
+      await section.get('.advanced-toggle').trigger('click');
+      expect(trigger.attributes('aria-expanded')).toBe('true');
+      expect(section.get('.advanced-toggle').attributes('aria-expanded')).toBe('true');
+      await section.get('.advanced-toggle').trigger('click');
+      expect(trigger.attributes('aria-expanded')).toBe('true');
+      expect(section.get('.advanced-toggle').attributes('aria-expanded')).toBe('false');
+    }
+    expect(wrapper.emitted('update:selection')).toBeUndefined();
+    expect(wrapper.emitted('update:motion')).toBeUndefined();
   });
 
-  it('keeps presentation controls visible and separates cursor advanced from click effects advanced', async () => {
+  it('keeps Shadow and Auto-hide switches in the retained, inert accordion contents', async () => {
+    const wrapper = mountPanel({ enableShadow: false });
+    for (const [name, event] of [
+      ['shadow', 'update:enableShadow'],
+      ['visibility', 'update:autoHide'],
+    ] as const) {
+      const section = wrapper.get(`[data-cursor-section="${name}"]`);
+      expect(section.get('.accordion-content').attributes('inert')).toBeDefined();
+      expect(section.find('.accordion-heading .cursor-switch').exists()).toBe(false);
+      const control = section.get('.accordion-content .prop-row .cursor-switch');
+      expect(control.attributes('data-model-value')).toBe('false');
+      await section.get('.accordion-trigger').trigger('click');
+      await control.trigger('click');
+      expect(wrapper.emitted(event)).toHaveLength(1);
+      expect(section.get('.accordion-trigger').attributes('aria-expanded')).toBe('true');
+      await section.get('.accordion-trigger').trigger('click');
+      expect(section.get('.accordion-content').attributes('inert')).toBeDefined();
+      expect(wrapper.emitted(event)).toHaveLength(1);
+    }
+  });
+
+  it('forwards independent click records without a global selector', async () => {
     const wrapper = mountPanel();
-    const cursorTrigger = wrapper.get('[aria-controls="cursor-advanced-panel"]');
-    const clickTrigger = wrapper.get('[aria-controls="click-effects-advanced-panel"]');
-
-    expect(wrapper.find('.cursor-size-control').exists()).toBe(true);
-    expect(wrapper.find('.motion-options').exists()).toBe(true);
-    expect(wrapper.find('.cursor-color').exists()).toBe(true);
-    expect(wrapper.find('.cursor-switch').exists()).toBe(true);
-    expect(wrapper.find('#cursor-advanced-panel').exists()).toBe(false);
-    expect(wrapper.find('#click-effects-advanced-panel').exists()).toBe(false);
-
-    // Open cursor advanced
-    await cursorTrigger!.trigger('click');
-    await flushPromises();
-
-    expect(cursorTrigger!.attributes('aria-expanded')).toBe('true');
-    expect(wrapper.get('#cursor-advanced-panel')).toBeDefined();
-    expect(wrapper.get('#cursor-advanced-panel').element.closest('.raf-reveal-transition-stub')).not.toBeNull();
-    expect(wrapper.get('#cursor-advanced-panel .cursor-select')).toBeDefined();
-    expect(wrapper.find('#cursor-advanced-panel .click-effects-stub').exists()).toBe(false);
-
-    // Open click effects advanced
-    await clickTrigger!.trigger('click');
-    await flushPromises();
-
-    expect(clickTrigger!.attributes('aria-expanded')).toBe('true');
-    expect(wrapper.get('#click-effects-advanced-panel')).toBeDefined();
-    expect(wrapper.get('#click-effects-advanced-panel').element.closest('.raf-reveal-transition-stub')).not.toBeNull();
-    expect(wrapper.get('#click-effects-advanced-panel .click-effects-stub')).toBeDefined();
-    expect(wrapper.find('#click-effects-advanced-panel .cursor-select').exists()).toBe(false);
     await wrapper.get('.click-effects-stub').trigger('click');
     expect(wrapper.emitted('update:clickEffects')?.at(-1)).toEqual([{}]);
+    expect(wrapper.find('[aria-label="Ripple style"]').exists()).toBe(false);
   });
 
   it('keeps motion sliders behind Advanced and opens Custom without discarding its values', async () => {
     const motion = { ...createDefaultCursorMotionSettings(), smoothing: 0.62, springMassMultiplier: 1.2 };
     const wrapper = mountPanel({ motion });
+    await wrapper.get('[data-cursor-section="motion"] .accordion-trigger').trigger('click');
     const preset = wrapper
       .findAllComponents(Select)
       .find((select) => select.attributes('aria-label') === 'Motion Preset')!;
@@ -176,35 +185,10 @@ describe('CursorPanel', () => {
     }
   });
 
-  it('moves the ripple selection indicator with the saved style and handles disabled ripples', async () => {
-    const defaults = createDefaultCursorClickEffects();
-    const wrapper = mountPanel({
-      clickEffects: {
-        left: { ...defaults.left, rippleStyle: 'none' },
-        right: { ...defaults.right, rippleStyle: 'double' },
-      },
-    });
-    const group = () => wrapper.get('.click-effects-control .btn-group');
-    expect(group().attributes('style')).toContain('--button-group-index: 1');
-    await wrapper.setProps({
-      clickEffects: {
-        left: { ...defaults.left, rippleStyle: 'none' },
-        right: { ...defaults.right, rippleStyle: 'solid' },
-      },
-    });
-    expect(group().attributes('style')).toContain('--button-group-index: 2');
-    await wrapper.setProps({
-      clickEffects: {
-        left: { ...defaults.left, rippleStyle: 'none' },
-        right: { ...defaults.right, rippleStyle: 'none' },
-      },
-    });
-    expect(group().attributes('style')).toContain('--button-group-index: 0');
-  });
-
   it('keeps auto-hide disabled by default and reveals its delay slider only when enabled', async () => {
     const wrapper = mountPanel();
 
+    await wrapper.get('[data-cursor-section="visibility"] .accordion-trigger').trigger('click');
     const autoHideSwitch = wrapper
       .findAll('.cursor-switch')
       .find((control) => control.attributes('aria-label') === 'Auto-hide cursor')!;
@@ -246,6 +230,7 @@ describe('CursorPanel', () => {
 
   it('enables the stop spring by default and preserves its strength when switched off', async () => {
     const wrapper = mountPanel();
+    await wrapper.get('[data-cursor-section="motion"] .accordion-trigger').trigger('click');
     await wrapper.get('[aria-controls="cursor-motion-advanced-panel"]').trigger('click');
     const stopSwitch = wrapper.get('[aria-label="Spring when stopping"]');
     expect(stopSwitch.attributes('data-model-value')).toBe('true');
@@ -346,49 +331,6 @@ describe('CursorPanel', () => {
     expect(wrapper.emitted('update:selection')?.at(-1)).toEqual([
       { packId: MACOS_CURSOR_PACK.id, mode: 'fixed', cursorId: expect.any(String) },
     ]);
-  });
-
-  it.each([
-    ['Single Ring', 'single'],
-    ['Double Wave', 'double'],
-    ['Burst', 'solid'],
-  ] as const)('applies the global %s shape without changing per-button activation', async (label, style) => {
-    const clickEffects: CursorClickEffects = {
-      left: {
-        ...createDefaultCursorClickEffects().left,
-        springEnabled: false,
-        springIntensity: 17,
-        rippleEnabled: false,
-      },
-      right: {
-        ...createDefaultCursorClickEffects().right,
-        springEnabled: true,
-        springIntensity: 83,
-        rippleEnabled: true,
-      },
-    };
-    const wrapper = mountPanel({ clickEffects });
-    const preset = wrapper.get(`button[aria-label="${label}"]`);
-
-    await preset.trigger('click');
-
-    expect(wrapper.emitted('update:clickEffects')?.at(-1)?.[0]).toEqual({
-      left: { ...clickEffects.left, rippleStyle: style },
-      right: { ...clickEffects.right, rippleStyle: style },
-    });
-    expect(wrapper.find('button[aria-label="None"]').exists()).toBe(false);
-  });
-
-  it('places Advanced controls on their section title rows', () => {
-    const wrapper = mountPanel();
-    const advancedTitleRows = wrapper
-      .findAll('.advanced-toggle')
-      .map((toggle) => toggle.element.closest('.pack-heading, .section-control-heading, .section-heading, .prop-row'));
-
-    expect(advancedTitleRows).toHaveLength(3);
-    for (const row of advancedTitleRows) {
-      expect(row?.textContent?.replace(/Advanced/g, '').trim()).not.toBe('');
-    }
   });
 
   it('resets only presentation settings and keeps the chosen pack', async () => {

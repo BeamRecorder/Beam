@@ -27,6 +27,8 @@ export interface DecoratedMediaOptions {
   shadowScale?: number;
   /** Derive the shadow silhouette from the rendered source pixels instead of its bounding box. */
   shadowFollowsSourceAlpha?: boolean;
+  /** Composition timeline clock; still renders use phase zero. */
+  timeMs?: number;
   title: string;
   mirrored?: boolean;
   mirroredY?: boolean;

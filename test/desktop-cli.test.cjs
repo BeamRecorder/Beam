@@ -1,11 +1,12 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { mkdtemp, mkdir, readFile, writeFile, symlink, rm } = require('node:fs/promises');
+const { mkdtemp, mkdir, readFile, writeFile, copyFile, symlink, rm } = require('node:fs/promises');
 const { join, resolve } = require('node:path');
 const { tmpdir } = require('node:os');
 const { execFileSync } = require('node:child_process');
 const install = require('../scripts/native/desktop-cli.cjs');
 const { verifyCliCompiler } = require('../scripts/native/cli-compiler.cjs');
+const { lgplRecords } = require('./fixtures/ffmpeg-export/licenses.cjs');
 const root = resolve(__dirname, '..');
 test('packaging maps the compiler dependency directory explicitly instead of losing node_modules', () => {
   const resources = require('../package.json').build.extraResources;
@@ -32,13 +33,29 @@ async function compiler(resources, target) {
 }
 test('Linux packaged executable dispatches CLI before the desktop and preserves quoted arguments', async () =>
   fixture(async (directory) => {
+    const project = join(directory, 'project');
+    await mkdir(join(project, 'build/cli'), { recursive: true });
+    for (const launcher of ['linux-beam', 'posix-beam-cli'])
+      await copyFile(join(root, 'build/cli', launcher), join(project, 'build/cli', launcher));
+    const native = join(project, 'build/native/ffmpeg-export');
+    await mkdir(native, { recursive: true });
+    await writeFile(
+      join(native, 'beam-ffmpeg-export'),
+      `#!/bin/sh\nprintf '%s\\n' '${JSON.stringify(lgplRecords())}'\n`,
+      { mode: 0o755 },
+    );
+    await writeFile(join(native, 'beam-gpu-transport.node'), 'test addon');
     await mkdir(join(directory, 'resources/cli'), { recursive: true });
     await writeFile(join(directory, 'beam'), '#!/bin/sh\nprintf "gui:%s" "$*"\n', { mode: 0o755 });
     await writeFile(join(directory, 'resources/cli/beam'), '#!/bin/sh\nprintf "cli:%s|%s" "$1" "$2"\n', {
       mode: 0o755,
     });
     await compiler(join(directory, 'resources'), 'linux-x64-gnu');
-    await install({ arch: 1, electronPlatformName: 'linux', appOutDir: directory, packager: { projectDir: root } });
+    await install({ arch: 1, electronPlatformName: 'linux', appOutDir: directory, packager: { projectDir: project } });
+    assert.equal(
+      await readFile(join(directory, 'resources/ffmpeg-export/beam-gpu-transport.node'), 'utf8'),
+      'test addon',
+    );
     assert.equal(
       execFileSync(join(directory, 'beam'), ['--cli', 'inspect', 'path with spaces'], { encoding: 'utf8' }),
       'cli:inspect|path with spaces',

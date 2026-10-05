@@ -20,13 +20,11 @@ import ProjectCreateDialog from './ProjectCreateDialog.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import Input from '~/ui/input/Input.vue';
 import Skeleton from '~/ui/skeleton/Skeleton.vue';
-import ProgressBar from '../ui/progressbar/ProgressBar.vue';
 import BlurRevealTransition from '~/ui/transitions/BlurRevealTransition.vue';
-import ProjectFeatureBadges from './ProjectFeatureBadges.vue';
 
 import ProjectModeIcon from './ProjectModeIcon.vue';
 import ProjectTitle from './ProjectTitle.vue';
-import ProjectPreviewImage from './ProjectPreviewImage.vue';
+import ProjectCardPreview from './ProjectCardPreview.vue';
 import ProjectCatalogError from './ProjectCatalogError.vue';
 import { useProjectPicker } from './useProjectPicker';
 import type { ProjectPickerProps, ProjectPickerEvents } from './project-picker-types';
@@ -306,42 +304,19 @@ defineExpose({ refresh: loadProjects, invalidate });
                   @keydown.enter.self="isSelectionMode ? toggleBatchSelect(project.id) : handleProjectOpen(project)"
                   @keydown.space.self="isSelectionMode ? toggleBatchSelect(project.id) : selectProject(project)"
                 >
-                  <div class="project-preview project-card-media">
-                    <ProjectPreviewImage
-                      :src="thumbnailCache[project.id] || project.thumbnailSrc"
-                      :alt="t('preview')"
-                    />
-                    <video
-                      v-if="project.previewSrc && hoveredProjectId === project.id"
-                      :src="project.previewSrc"
-                      autoplay
-                      muted
-                      loop
-                      playsinline
-                      preload="auto"
-                      class="project-preview-video"
-                      :class="{ 'is-loaded': isVideoLoaded[project.id] }"
-                      @loadeddata="isVideoLoaded[project.id] = true"
-                      @playing="isVideoLoaded[project.id] = true"
-                      @timeupdate="handleVideoTimeUpdate(project.id, $event)"
-                    />
-                    <ProjectFeatureBadges :project="project" />
-                    <template v-if="!isSelectionMode">
-                      <span v-if="project.id === currentProjectId" class="current-indicator" :aria-label="t('current')">
-                        {{ t('current') }}
-                      </span>
-                      <span
-                        v-else-if="project.id === selectedProjectId"
-                        class="selected-indicator"
-                        :aria-label="t('selected')"
-                      >
-                        <Check />
-                      </span>
-                    </template>
-                    <div v-if="project.previewSrc && videoProgress[project.id]" class="preview-progress-overlay">
-                      <ProgressBar :value="videoProgress[project.id].current" :max="videoProgress[project.id].total" />
-                    </div>
-                  </div>
+                  <ProjectCardPreview
+                    :project="project"
+                    :thumbnail-src="thumbnailCache[project.id] || project.thumbnailSrc"
+                    :hovered="hoveredProjectId === project.id"
+                    :loaded="!!isVideoLoaded[project.id]"
+                    :current="project.id === currentProjectId"
+                    :selected="project.id === selectedProjectId"
+                    :selection-mode="isSelectionMode"
+                    :progress="videoProgress[project.id]"
+                    @loaded="isVideoLoaded[project.id] = true"
+                    @timeupdate="handleVideoTimeUpdate(project.id, $event)"
+                    @open="handleProjectOpen(project)"
+                  />
                   <div class="project-card-info">
                     <div class="project-title-row">
                       <ProjectModeIcon :mode="project.mode" />

@@ -31,6 +31,17 @@ const options = () =>
     workingDirectory(): string;
     inputHelperPath(): string | null;
   };
+it.each(['linux', 'darwin', 'win32'])('uses the current release version by default on %s', async (platform) => {
+  Object.defineProperty(process, 'platform', { ...descriptor, value: platform });
+  vi.stubEnv('BEAM_APP_VERSION', undefined);
+  vi.stubEnv('BEAM_RESOURCES_PATH', '/resources');
+  state.access.mockResolvedValue(undefined);
+  await createNativeClient();
+  expect(options().executable()).toBe(
+    `/resources/capture-engine/capture-engine-0.5.0${platform === 'win32' ? '.exe' : ''}`,
+  );
+  expect(state.target).not.toHaveBeenCalled();
+});
 it.each(['linux', 'darwin', 'win32'])(
   'resolves the packaged %s executable without requiring Cargo',
   async (platform) => {

@@ -14,7 +14,9 @@
     "render": "node scripts/render.mjs",
     "export": "bun scripts/publish.ts --export"
   },
-  "dependencies": { "gsap": "3.15.0" },
+  "dependencies": {
+    "gsap": "3.15.0"
+  },
   "devDependencies": {
     "@types/node": "26.6.3",
     "@vitest/coverage-v8": "5.0.3",

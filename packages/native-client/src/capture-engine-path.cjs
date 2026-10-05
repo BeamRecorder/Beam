@@ -46,12 +46,7 @@ function inputHelperFilename(version, platform = process.platform, arch = proces
     : null;
 }
 
-function prebuiltCaptureEnginePath(
-  applicationRoot,
-  version,
-  platform = process.platform,
-  arch = process.arch,
-) {
+function prebuiltCaptureEnginePath(applicationRoot, version, platform = process.platform, arch = process.arch) {
   const directory = nativeRecorderDirectory(applicationRoot, platform, arch);
   const filename = captureEngineFilename(version, platform, arch);
   return directory && filename ? path.join(directory, filename) : null;

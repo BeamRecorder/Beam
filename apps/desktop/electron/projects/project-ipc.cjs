@@ -2,6 +2,7 @@ const fs = require('fs');
 const { createProjectLibrary } = require('./project-library.cjs');
 const { readClipboardPng } = require('../clipboard/image-clipboard.cjs');
 const { createProjectCatalogClient } = require('./project-catalog-client.cjs');
+const { registerProjectDemoWebcamIpc } = require('./project-demo-webcam-ipc.cjs');
 const CURSOR_PACK_DISCOVERY_URL = 'https://store.kde.org/browse/cat/107/';
 
 function registerProjectIpc(
@@ -15,8 +16,10 @@ function registerProjectIpc(
   cursorLibrary,
   screenshotStore,
   clipboard,
+  application = {},
 ) {
   const library = createProjectLibrary(projectStore, screenshotStore);
+  registerProjectDemoWebcamIpc({ ipcMain, projectStore, trustedRenderer, ...application });
   let catalog = null;
   let catalogRoots = '';
   ipcMain.handle('projects:list-page', (event, request) => {

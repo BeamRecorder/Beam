@@ -4,7 +4,40 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Screenshot and video editors open within the current display's usable area, including Windows 150% scaling and saved sizes from larger displays, so editor controls remain reachable.
+- Compact editor layouts keep inspector scrolling, capture/export controls and playback actions accessible; video timelines adapt to shorter windows without replacing the saved height preference.
+- Circular and freehand Loupe zooms retain finer text detail by rendering original sources at lens density, with matching Screenshot/video exports and HiDPI previews.
+- Windows region selection resolves native monitor IDs correctly at 150% scaling and on mixed-DPI desktops, restores the saved crop visibly, and accepts the recording shortcut with the current toolbar settings.
+- The Recorder stays loaded while a region is being selected, so a long selection cannot lose its capture request or saved settings to background standby.
+
+- Long recordings keep bounded screen and camera/audio write queues; Windows limits retained video surfaces and capture frame rate, and macOS uses a smaller resolution-aware surface queue.
+- Recording writes and final file synchronization keep the desktop responsive. Encoder stalls and missing camera/audio finalization events have deadlines; Stop no longer resumes a recording counter after the native recording has ended.
+- Camera previews show the complete image without cropping it to the overlay shape, keep recording when their window is hidden, and avoid accumulating status requests when capture is busy.
+
+## [0.5.0] - 2026-10-04
+
 ### Added
+
+- The private website’s Edit transitions and export sections now show eight-second, 60 fps light/dark loops with native transition previews, editable title layers, export settings and local-file progress. Reusable source lives in `examples/website-finishing-loops/`.
+
+- The private website’s Edit captions and voiceover sections show eight-second, 60 fps light/dark loops using native Beam controls, timed words, audio waveforms and macOS cursor interactions. Reusable source lives in `examples/website-speech-loops/`.
+
+- Project thumbnails reveal a translated Open project action at the bottom right on hover or keyboard focus, with batch selection preserved.
+- Video editor Developer Mode can add a lightweight CC0 demo webcam linked to an existing screen recording. One repeated webcam lane covers the recording and supports zoom reactions, camera layouts, project saves and undo/redo; the action is translated into all fifteen languages.
+
+- Cursor click effects offer a Water Drop mode that refracts the screen with a single soft wave and adjustable intensity, spread, duration and softness. Left and right clicks keep independent styles and settings; ring modes support size, opacity, duration, stroke and color. Illustrated choices show actual effects with the macOS pointer and appear only when enabled. The cursor inspector uses compact accordions and fully translated controls and builtin cursor names in all fifteen languages.
+
+- Screen, camera, video and image clips offer five animated border presets that follow their rounded, circular or squircle contours, with adjustable thickness and speed and matching timeline previews/exports. Frame styles and animation presets use thumbnail selectors alongside Safari, Windows 95 and phone frames.
+
+- The private website’s AI-native section demonstrates live HTML-to-canvas editing with Beam’s native controls and two 2D zooms, in both system themes. Reusable source lives in `examples/website-html-canvas-loop/`.
+
+- The website's Edit Cursor section shows a seamless light/dark demo of complete native macOS/Bibata packs, enlarged role previews, text/move/resize interactions, smoothing, cursor size and spring/ripple click effects, rendered with Beam CLI. Its reusable source is in `examples/website-cursor-loop/`.
+
+- The private website's Edit Canvas section shows a seven-second loop selecting real image, video, color and gradient backgrounds with Beam's native controls, Safari frame and macOS pointer spring/click effects. The light/dark videos support pause and reduced motion; reusable HTML/GSAP source lives in `examples/website-canvas-loop/` and publishes through Beam CLI.
+
+- The private website's Edit timeline section shows a five-second cursor-driven trim and arrange loop, using Beam's real UI and timeline renderer, with light/dark themes and pause/reduced-motion support. Its HTML/GSAP source is reusable in `examples/website-editing-loop/` and publishes through the Beam CLI.
 
 - Private website AI native demo now uses a lightweight Zaro recreation with sound disabled by default, playback controls and a tooltip explaining HTML/GSAP authoring and Beam CLI rendering.
 - Added reusable HTML/GSAP launch-video templates for typewriter sentences, prompt fields, macOS cursors and smooth camera moves, with a complete example and customization guide.
@@ -80,6 +113,22 @@ User-facing changes to Beam are documented in this file.
 - Settings and Projects now open in separate, resizable desktop windows.
 
 ### Changed
+
+- Developer Mode's demo webcam now uses a cropped, lightweight CC0 interview with an unobscured speaker instead of finger-counting footage.
+- Cursor accordion headers contain only the section title and chevron; shadow and auto-hide switches and Advanced controls sit beside their related settings inside each section.
+- The Water Drop click thumbnail magnifies the actual single-wave refraction over a contrasting cyan grid so the effect remains visible in the selector.
+
+- Border and frame settings have clearer spacing, and linked recording tracks no longer add a second divider below playback speed.
+
+- Media framing keeps rounded corners and shadow sizes proportional between reduced editor previews and full-resolution exports.
+
+- The complete native cursor-pack showcase uses a light presentation surface in both themes so dark artwork stays legible, while editor controls keep their system theme and macOS pointer.
+
+- Website feature demos use distinct fixed Beam gradient presets: Ember for the timeline, Bloom for canvas styling and Tide for the complete cursor-pack showcase.
+
+- The website's “Shape the pace” loop uses Beam's macOS arrow and horizontal-resize cursors, switching on the trim edge with correctly aligned native hotspots.
+
+- The website timeline demo now uses Beam's fixed Ember gradient behind the editor instead of an ambient glow.
 
 - Beam source is now licensed under MPL-2.0, with existing MIT grants and third-party licenses preserved. Licensing documentation distinguishes open-source rights from planned Desktop Pro subscriptions and cloud services; activation is not introduced in this release.
 - Linux GPU export helpers are built and packaged only against dynamically linked LGPL FFmpeg libraries. CI uses a pinned LGPL-only build dependency; FFmpeg executables and libraries remain external to this backend.
@@ -208,12 +257,11 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
-- Screenshot and video editors open within the current display's usable area, including Windows 150% scaling and saved sizes from larger displays, so editor controls remain reachable.
-- Compact editor layouts keep inspector scrolling, capture/export controls and playback actions accessible; video timelines adapt to shorter windows without replacing the saved height preference.
+- Region selection stays aligned with the full display on GNOME without panel-induced offsets, including at the bottom-right edge. Its visible frame and pixel dimensions now match Screenshot, Studio and Instant captures at different display scales.
+- Screenshot region captures preserve odd dimensions and the last selected row and column through a shared native crop on Linux, Windows and macOS.
 
-- Circular and freehand Loupe zooms retain finer text detail by rendering original sources at lens density, with matching Screenshot/video exports and HiDPI previews.
-- Windows region selection resolves native monitor IDs correctly at 150% scaling and on mixed-DPI desktops, restores the saved crop visibly, and accepts the recording shortcut with the current toolbar settings.
-- The Recorder stays loaded while a region is being selected, so a long selection cannot lose its capture request or saved settings to background standby.
+- Developer Mode's demo webcam imports correctly through the native bridge, saves repeated fragments without rounding overlaps, and retains its recording link and zoom reactions after reopening a project.
+
 - Russian and Bulgarian website FAQs now display their translated questions and answers, including the current source license, instead of internal category identifiers.
 - Linux CI and release packages now compile and verify the experimental GPU export backend. Packages include only Beam native artifacts and use system FFmpeg libraries, preventing the backend from being omitted without bundling FFmpeg.
 

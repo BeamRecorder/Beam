@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue';
 import { Video, Terminal } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
+import EditorFakeWebcamAction from './EditorFakeWebcamAction.vue';
 import TogglePreference from '~/components/settings/TogglePreference.vue';
 import RafRevealTransition from '~/ui/transitions/RafRevealTransition.vue';
 import { capture } from '~/api/capture';
@@ -76,6 +77,7 @@ const openRecorder = async () => {
               {{ t('openDevTools') }}
             </Button>
           </div>
+          <EditorFakeWebcamAction v-if="!hideRecorder" />
         </div>
       </RafRevealTransition>
     </div>

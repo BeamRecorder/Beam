@@ -166,6 +166,7 @@ function harness({
     setRecording: (active) => calls.push(`crop.recording:${active}`),
   };
   const statusWindow = {
+    prepare: () => calls.push('status.prepare'),
     hide: () => calls.push('status.hide'),
     update: (value) => calls.push(`status.${value.state}`),
     show: () => calls.push('status.show'),
@@ -328,12 +329,24 @@ test('the capture action opens the chosen region and confirmation starts the sam
   const pending = f.controller.start();
   assert.equal(f.selectCalls[0].drawOnly, true);
   assert.equal(f.selectCalls[0].region, null);
+  assert.equal(f.selectCalls[0].captureMode, f.controller.state().job.mode);
   f.resolveSelection();
   await pending;
   assert.equal(f.controller.state().state, 'preparing');
   assert.equal(f.controller.state().job.name, name);
   assert.deepEqual(f.controller.state().job.region, region);
 });
+
+for (const mode of ['studio', 'instant', 'screenshot']) {
+  test(`Quick Snip region selection forwards ${mode} pixel alignment`, async () => {
+    const f = harness();
+    await f.controller.toggle();
+    await f.controller.configure({ mode });
+    await f.controller.chooseSource('region');
+    await f.controller.start();
+    assert.equal(f.selectCalls[0].captureMode, mode);
+  });
+}
 test('canceling a region returns to the existing toolbar without starting', async () => {
   const f = harness({ pendingSelection: true });
   await f.controller.toggle();

@@ -1,0 +1,30 @@
+{
+  "name": "@beam/example-website-canvas-loop",
+  "license": "MPL-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/check.mjs",
+    "verify": "node scripts/verify.mjs",
+    "verify:website": "node scripts/verify-website.mjs",
+    "test": "vitest run --config vitest.config.ts",
+    "publish": "node scripts/publish.mjs",
+    "render": "node scripts/render.mjs",
+    "website": "node scripts/optimize.mjs"
+  },
+  "dependencies": {
+    "@lucide/vue": "1.49.0",
+    "gsap": "3.15.0",
+    "vue": "3.5.43",
+    "vue-i18n": "11.4.12",
+    "mediabunny": "1.61.0"
+  },
+  "devDependencies": {
+    "vite": "8.3.1",
+    "@vitejs/plugin-vue": "6.0.9",
+    "@vitest/coverage-v8": "5.0.3",
+    "puppeteer-core": "24.39.1",
+    "vitest": "5.0.3"
+  }
+}

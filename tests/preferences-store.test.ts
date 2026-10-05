@@ -3,17 +3,16 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-const { createPreferencesStore, normalize } =
-  require('../apps/desktop/electron/preferences/preferences-store.cjs') as {
-    createPreferencesStore: (
-      directory: string,
-      options?: { platform?: string },
-    ) => {
-      read: () => any;
-      patch: (value: unknown) => any;
-    };
-    normalize: (value: unknown) => any;
+const { createPreferencesStore, normalize } = require('../apps/desktop/electron/preferences/preferences-store.cjs') as {
+  createPreferencesStore: (
+    directory: string,
+    options?: { platform?: string },
+  ) => {
+    read: () => any;
+    patch: (value: unknown) => any;
   };
+  normalize: (value: unknown) => any;
+};
 
 const directories: string[] = [];
 const directory = () => {

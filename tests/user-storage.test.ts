@@ -124,9 +124,7 @@ describe('slugged projects', () => {
         selectedBackgroundId: 'user-wallpaper:image:global.png',
       },
     });
-    const manifest = JSON.parse(
-      fs.readFileSync(path.join(root, 'project-background', 'project.json'), 'utf8'),
-    );
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, 'project-background', 'project.json'), 'utf8'));
     expect(manifest.editor.presentation.selectedBackgroundId).toBe('user-wallpaper:image:global.png');
     expect(manifest.editor.presentation.importedBackgrounds).toEqual([]);
   });

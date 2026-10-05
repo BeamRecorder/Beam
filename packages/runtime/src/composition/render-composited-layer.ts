@@ -1,3 +1,4 @@
+import { disposeAnimatedFrameRenderer } from './appearance/animated-frame';
 import { releaseLayerPerspective } from './render-layer-perspective';
 import { releaseLayerEffects } from '../gradient/layer-effects';
 import { disposeBlurEffect } from '@beam/runtime/composition/effects/blur-effect';
@@ -10,6 +11,7 @@ const surfaces = new WeakMap<Canvas2DContext, OffscreenCanvas>();
 /** Release the scratch surface when its owning renderer has finished. */
 export function releaseCompositedLayerSurface(ctx: Canvas2DContext) {
   disposeGlassHighlights(ctx);
+  disposeAnimatedFrameRenderer();
   disposeBlurEffect(ctx);
   releaseLayerEffects(ctx);
   releaseLayerPerspective(ctx);

@@ -16,6 +16,7 @@ function createQuickSnipSourceSelection(dependencies, { selection, snapshot, pub
           region: null,
           context: 'quick-snip',
           drawOnly: true,
+          captureMode: previous.mode,
         });
         if (generation !== selection.generation || snapshot().state !== 'selecting') return snapshot();
         selection.pending = false;

@@ -7,6 +7,7 @@ import type {
   NormalizedTransform,
 } from '@beam/engine/shared/composition-types';
 import type { CameraFramingPreset, CameraLayoutPreset } from '@beam/engine/shared/camera-layout-types';
+import type { AnimatedFrameSettings } from '@beam/engine/shared/animated-frame-types';
 import type { PhoneFrameFill } from '@beam/engine/shared/color-fill-types';
 export interface ClipPropertiesEmits {
   (e: 'update:crop', crop: NormalizedCrop): void;
@@ -41,6 +42,7 @@ export interface ClipPropertiesEmits {
       frameShowScrollbars?: boolean;
       frameChromeScale?: number;
       phoneFrameFill?: PhoneFrameFill;
+      animatedFrame?: AnimatedFrameSettings;
     },
   ): void;
   (e: 'update:clipTransform', transform: NormalizedTransform): void;
@@ -84,6 +86,7 @@ export interface ClipAppearanceEmits {
       frameShowScrollbars?: boolean;
       frameChromeScale?: number;
       phoneFrameFill?: PhoneFrameFill;
+      animatedFrame?: AnimatedFrameSettings;
     },
   ): void;
 }

@@ -9,6 +9,7 @@ const capture = vi.hoisted(() => ({
   setWindowMode: vi.fn(),
   showHud: vi.fn(),
   openRecorderFromEditor: vi.fn(),
+  toggleDevTools: vi.fn(),
   getUpdateState: vi.fn(() => Promise.resolve({ currentVersion: '1.2.3' })),
   openDiscordInvite: vi.fn(),
   openGithubRepository: vi.fn(),
@@ -67,7 +68,9 @@ describe('SettingsPanel', () => {
     localStorage.setItem('dev_mode_enabled', 'true');
     const wrapper = mount(SettingsPanel, {
       props: { hideRecorder: true },
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true } },
+      global: {
+        stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true, EditorFakeWebcamAction: true },
+      },
     });
     expect(wrapper.find('.appearance-settings').exists()).toBe(true);
     expect(wrapper.findAll('.dev-option-card')).toHaveLength(1);
@@ -78,7 +81,9 @@ describe('SettingsPanel', () => {
 
   it('renders appearance controls and changes locale through the store', async () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true } },
+      global: {
+        stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true, EditorFakeWebcamAction: true },
+      },
     });
     expect(wrapper.find('.appearance-settings').exists()).toBe(true);
     const languageSetting = wrapper.get('.language-setting');
@@ -110,7 +115,9 @@ describe('SettingsPanel', () => {
 
   it('groups writing assistance in Accessibility and toggles spell check', async () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true } },
+      global: {
+        stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true, EditorFakeWebcamAction: true },
+      },
     });
 
     const spellCheck = wrapper.get('.accessibility-setting .spell-check-preference [role="switch"]');
@@ -129,7 +136,9 @@ describe('SettingsPanel', () => {
 
   it('renders the update controls section', () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true } },
+      global: {
+        stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true, EditorFakeWebcamAction: true },
+      },
     });
     expect(wrapper.find('.update-controls-stub').exists()).toBe(true);
     expect(wrapper.findAll('.category-heading').map((section) => section.text())).toEqual([
@@ -144,7 +153,9 @@ describe('SettingsPanel', () => {
 
   it('opens the community links from the socials section', async () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true } },
+      global: {
+        stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true, EditorFakeWebcamAction: true },
+      },
     });
     const socialButtons = wrapper.findAll('.social-links button');
 
@@ -159,7 +170,9 @@ describe('SettingsPanel', () => {
 
   it('opens the recorder through the editor launcher', async () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true } },
+      global: {
+        stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true, EditorFakeWebcamAction: true },
+      },
     });
 
     const switchBtn = wrapper.get('.dev-switch [role="switch"]');
@@ -185,7 +198,9 @@ describe('SettingsPanel', () => {
       }),
     );
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true } },
+      global: {
+        stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true, EditorFakeWebcamAction: true },
+      },
     });
     await wrapper.get('.dev-switch [role="switch"]').trigger('click');
     const launchButton = wrapper.findAll('.dev-action-btn')[0];
@@ -206,9 +221,41 @@ describe('SettingsPanel', () => {
     expect(launchButton.attributes('disabled')).toBeUndefined();
   });
 
+  it('opens DevTools from developer settings', async () => {
+    localStorage.setItem('dev_mode_enabled', 'true');
+    const wrapper = mount(SettingsPanel, {
+      global: {
+        stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true, EditorFakeWebcamAction: true },
+      },
+    });
+    await wrapper.findAll('.dev-action-btn')[1]!.trigger('click');
+    expect(capture.toggleDevTools).toHaveBeenCalledOnce();
+  });
+
+  it.each([false, 'denied'])('reports unsuccessful recorder launches: %s', async (result) => {
+    localStorage.setItem('dev_mode_enabled', 'true');
+    if (result === false) capture.openRecorderFromEditor.mockResolvedValueOnce(false);
+    else capture.openRecorderFromEditor.mockRejectedValueOnce(result);
+    const wrapper = mount(SettingsPanel, {
+      global: {
+        stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true, EditorFakeWebcamAction: true },
+      },
+    });
+    const button = wrapper.findAll('.dev-action-btn')[0]!;
+    (button.element as HTMLButtonElement).click();
+    (button.element as HTMLButtonElement).click();
+    await flushPromises();
+    expect(capture.openRecorderFromEditor).toHaveBeenCalledOnce();
+    expect(wrapper.get('[role="alert"]').text()).toContain(
+      result === false ? 'The recorder is already in use.' : result,
+    );
+  });
+
   it('copies system information to clipboard when clicking copy button', async () => {
     const wrapper = mount(SettingsPanel, {
-      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true } },
+      global: {
+        stubs: { Button, ButtonGroup, Select, UpdateControls, StoragePreferences: true, EditorFakeWebcamAction: true },
+      },
     });
     const copyBtn = wrapper.get('.about-setting .system-info-button');
     await copyBtn.trigger('click');

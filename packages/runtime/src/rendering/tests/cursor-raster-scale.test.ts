@@ -14,7 +14,14 @@ describe('cursor raster density', () => {
       value.cursor.available = true;
       value.cursor.events = [
         { event: 'move', sessionNs: 0, pixelX: 50, pixelY: 25, normalizedX: 0.5, normalizedY: 0.5, visible: true },
-        { event: 'button', sessionNs: 50_000_000, button: mode === 'unsupported button' ? 4 : 1, pressed: true },
+        {
+          event: 'button',
+          sessionNs: 50_000_000,
+          button: mode === 'unsupported button' ? 4 : 1,
+          pressed: true,
+          normalizedX: 0.5,
+          normalizedY: 0.5,
+        },
       ];
       value.cursorSettings.motion.motionBlur = 0;
       if (mode === 'missing pack') value.cursorPack = null;
@@ -49,6 +56,9 @@ describe('cursor raster density', () => {
       rippleEnabled: true,
       rippleStyle: 'single',
       rippleSize: 40,
+      rippleWidth: 3.5,
+      rippleOpacity: 90,
+      rippleDurationMs: 500,
     };
     const image = { width: 32, height: 32 } as ImageBitmap;
     const ctx = context();
@@ -72,7 +82,7 @@ describe('cursor raster density', () => {
     expect(width).toBe(24 * density);
     expect(height).toBe(24 * density);
     expect(ctx.shadowBlur).toBe(4 * density);
-    expect(ctx.lineWidth).toBe(2.5 * density);
+    expect(ctx.lineWidth).toBe(3.5 * density);
     const ring = cursorRippleAt(0.05, 40, 'single')!.rings[0]!;
     expect(ctx.arc).toHaveBeenCalledWith(50 * density, 25 * density, ring.radius * density, 0, Math.PI * 2);
     expect(value.cursorSettings.size).toBe(24);

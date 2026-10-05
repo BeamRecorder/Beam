@@ -1,14 +1,15 @@
 use std::{
     fs::File,
-    io::{Read, Write},
+    io::Read,
     path::{Path, PathBuf},
     process::{Child, ChildStdin, Command, Stdio},
     thread::JoinHandle,
+    time::{Duration, Instant},
 };
 
 use crate::{CaptureError, NativeCaptureErrorCode, screen::OwnedVideoFrame};
 
-use super::{FfmpegCapabilities, owned_child};
+use super::{FfmpegCapabilities, owned_child, pipe_writer};
 
 const MAX_STDERR_BYTES: usize = 64 * 1024;
 
@@ -84,6 +85,10 @@ impl FfmpegProcess {
                 "FFmpeg did not expose its diagnostic pipe",
             ));
         };
+        pipe_writer::nonblocking(&stdin).map_err(|error| {
+            owned_child::kill_and_wait(&mut child);
+            ffmpeg_write_error(error)
+        })?;
         let stderr_reader = std::thread::Builder::new()
             .name("beam-ffmpeg-stderr".into())
             .spawn(move || drain_stderr(stderr))
@@ -127,14 +132,13 @@ impl FfmpegProcess {
             .stdin
             .as_mut()
             .ok_or_else(|| ffmpeg_failed("FFmpeg input is already closed"))?;
+        let deadline = Instant::now() + Duration::from_secs(10);
         if frame.stride == row_bytes {
-            stdin
-                .write_all(&frame.pixels[..required])
+            pipe_writer::write_all(stdin, &frame.pixels[..required], deadline)
                 .map_err(ffmpeg_write_error)?;
         } else {
             for row in frame.pixels[..required].chunks_exact(frame.stride) {
-                stdin
-                    .write_all(&row[..row_bytes])
+                pipe_writer::write_all(stdin, &row[..row_bytes], deadline)
                     .map_err(ffmpeg_write_error)?;
             }
         }
@@ -148,11 +152,11 @@ impl FfmpegProcess {
 
     fn finish_inner(&mut self) -> Result<(), CaptureError> {
         drop(self.stdin.take());
-        let status = self
+        let child = self
             .child
             .as_mut()
-            .ok_or_else(|| ffmpeg_failed("FFmpeg process was already finalized"))?
-            .wait()
+            .ok_or_else(|| ffmpeg_failed("FFmpeg process was already finalized"))?;
+        let status = owned_child::wait_for_exit(child, Duration::from_secs(15))
             .map_err(ffmpeg_write_error)?;
         if let Some(child) = self.child.as_ref() {
             owned_child::unregister(child);

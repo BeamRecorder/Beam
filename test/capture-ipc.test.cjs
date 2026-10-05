@@ -83,10 +83,14 @@ test('stops native capture before completing sidecar tracks', async () => {
   assert.equal(stopped.projectId, 'project-1');
   assert.deepEqual(requests, ['stop']);
   assert.equal(completeCalls, 0);
+  await assert.rejects(() => request({}, 'start-recording', { config: {} }), /Complete the previous recording/);
+  assert.deepEqual(requests, ['stop']);
 
   const completed = await request({}, 'complete-native-recording');
   assert.equal(completeCalls, 1);
   assert.match(completed.videoSrc, /primary\.mp4$/);
+  await request({}, 'start-recording', { config: {} });
+  assert.deepEqual(requests, ['stop', 'prepare', 'start']);
   fs.rmSync(root, { recursive: true, force: true });
 });
 
@@ -358,6 +362,7 @@ test('invalidates the deferred session and rejects when the engine is poisoned',
     on: () => undefined,
   };
   let poisoned = false;
+  const forgotten = [];
   const captureEngine = {
     canCleanup: () => true,
     get isPoisoned() {
@@ -380,15 +385,17 @@ test('invalidates the deferred session and rejects when the engine is poisoned',
     captureEngine,
     app: new EventEmitter(),
     userPaths: { projects: 'recordings' },
-    trackStorages: [],
+    trackStorages: [{ registerSession: () => undefined, forgetSession: (id) => forgotten.push(id) }],
   });
 
   const request = handlers.get('capture:request');
+  await request({}, 'start-prepared-recording');
   await request({}, 'stop-native-recording');
   poisoned = true;
 
   await assert.rejects(() => request({}, 'start-prepared-recording'), /capture-engine a échoué pour "start"/);
   await assert.rejects(() => request({}, 'complete-native-recording'), /No native recording is waiting/);
+  assert.deepEqual(forgotten, ['session-1']);
 });
 
 test('does not enumerate Electron sources on the Linux Portal path', async () => {

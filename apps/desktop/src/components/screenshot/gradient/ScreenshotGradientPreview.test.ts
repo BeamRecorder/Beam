@@ -71,7 +71,19 @@ describe('procedural gradient live preview', () => {
   });
 });
 
-it('recovers from renderer allocation failure without disposing an unallocated context',async()=>{
- vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockReturnValue({drawImage:vi.fn()} as unknown as CanvasRenderingContext2D);gpu.create.mockImplementationOnce(()=>{throw new Error('GPU unavailable')});
- const wrapper=mount(ScreenshotGradientPreview,{props:{recipe:DEFAULT_GRADIENT_RECIPE}});await nextTick();expect(wrapper.find('[role="alert"]').exists()).toBe(true);expect(gpu.dispose).not.toHaveBeenCalled();await wrapper.setProps({recipe:{...DEFAULT_GRADIENT_RECIPE,seed:22}});expect(wrapper.find('[role="alert"]').exists()).toBe(false);wrapper.unmount();expect(gpu.dispose).toHaveBeenCalledOnce();
+it('recovers from renderer allocation failure without disposing an unallocated context', async () => {
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+    drawImage: vi.fn(),
+  } as unknown as CanvasRenderingContext2D);
+  gpu.create.mockImplementationOnce(() => {
+    throw new Error('GPU unavailable');
+  });
+  const wrapper = mount(ScreenshotGradientPreview, { props: { recipe: DEFAULT_GRADIENT_RECIPE } });
+  await nextTick();
+  expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+  expect(gpu.dispose).not.toHaveBeenCalled();
+  await wrapper.setProps({ recipe: { ...DEFAULT_GRADIENT_RECIPE, seed: 22 } });
+  expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+  wrapper.unmount();
+  expect(gpu.dispose).toHaveBeenCalledOnce();
 });

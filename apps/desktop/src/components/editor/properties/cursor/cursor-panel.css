@@ -10,7 +10,7 @@
 
 .cursor-panel,
 .appearance-options {
-  gap: 24px;
+  gap: 0;
 }
 
 .cursor-section {
@@ -113,5 +113,5 @@
 }
 
 .reset-automatic-button {
-  margin-top: 4px;
+  margin-top: 12px;
 }

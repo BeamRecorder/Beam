@@ -6,10 +6,7 @@
       "electron": "44.5.1",
       "chromium": "152.0.7977.130"
     },
-    "contentSize": [
-      1280,
-      800
-    ],
+    "contentSize": [1280, 800],
     "gpuFeatures": {
       "2d_canvas": "enabled",
       "direct_rendering_display_compositor": "disabled_off_ok",

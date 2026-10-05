@@ -41,3 +41,14 @@ describe('cursor ripple shapes', () => {
     expect(cursorRippleAt(0.501, 40, 'single')).toBeNull();
   });
 });
+
+describe('adjustable ring lifetime', () => {
+  it.each(['single', 'double', 'solid'] as const)('scales the whole %s effect with its duration', (style) => {
+    expect(cursorRippleAt(0.2, 40, style, 1)).toEqual(cursorRippleAt(0.1, 40, style));
+    expect(cursorRippleAt(0.7, 40, style, 1)).not.toBeNull();
+    expect(cursorRippleAt(1.01, 40, style, 1)).toBeNull();
+  });
+  it.each([0, -1, NaN, Infinity])('rejects invalid duration %s', (duration) => {
+    expect(cursorRippleAt(0.1, 30, 'single', duration)).toBeNull();
+  });
+});

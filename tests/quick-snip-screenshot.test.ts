@@ -95,10 +95,7 @@ describe('Quick screenshot pipeline', () => {
 
   it('returns Portal cancellation to the bar without processing or copying', async () => {
     mocks.capture.captureScreenshot.mockResolvedValue(null);
-    await captureQuickScreenshot(
-      { ...configuration, region: null, excludedWindowHandle: undefined },
-      () => true,
-    );
+    await captureQuickScreenshot({ ...configuration, region: null, excludedWindowHandle: undefined }, () => true);
     expect(mocks.capture.captureScreenshot).toHaveBeenCalledWith(
       expect.objectContaining({ region: null, excludedWindowHandles: [] }),
     );
@@ -120,23 +117,19 @@ describe('Quick screenshot pipeline', () => {
     expect(mocks.capture.exportScreenshot).not.toHaveBeenCalled();
   });
 
-  it.each([
-    'prepareRecordingSurface',
-    'captureScreenshot',
-    'listBackgroundLibrary',
-    'saveScreenshot',
-  ] as const)('stops after cancellation during %s', async (operation) => {
-    let current = true;
-    mocks.capture[operation].mockImplementationOnce(async () => {
-      current = false;
-      return document;
-    });
-    await captureQuickScreenshot(configuration, () => current);
-    expect(mocks.capture.exportScreenshot).not.toHaveBeenCalled();
-    expect(mocks.capture.reportQuickSnip.mock.calls.some(([event]) => event.type === 'screenshot')).toBe(
-      false,
-    );
-  });
+  it.each(['prepareRecordingSurface', 'captureScreenshot', 'listBackgroundLibrary', 'saveScreenshot'] as const)(
+    'stops after cancellation during %s',
+    async (operation) => {
+      let current = true;
+      mocks.capture[operation].mockImplementationOnce(async () => {
+        current = false;
+        return document;
+      });
+      await captureQuickScreenshot(configuration, () => current);
+      expect(mocks.capture.exportScreenshot).not.toHaveBeenCalled();
+      expect(mocks.capture.reportQuickSnip.mock.calls.some(([event]) => event.type === 'screenshot')).toBe(false);
+    },
+  );
 
   it('discards a late thumbnail and encoded result after cancellation', async () => {
     let current = true;

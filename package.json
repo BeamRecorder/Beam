@@ -1,7 +1,7 @@
 {
   "name": "beam",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "license": "MPL-2.0",
   "desktopName": "com.beam.app",
   "description": "Beam - Screen recorder to create product demos.",
@@ -113,6 +113,8 @@
       "apps/desktop/electron/**/*",
       "packages/engine/src/scene/scene-schema.js",
       "packages/engine/src/shared/shape-vector-schema.js",
+      "packages/engine/src/shared/animated-frame-schema.js",
+      "packages/engine/src/capture/cursor-click-schema.js",
       "packages/engine/src/zoom/glass-highlight-schema.js",
       "packages/engine/src/zoom/zoom-schema.js",
       "packages/engine/src/html/html-schema.js",

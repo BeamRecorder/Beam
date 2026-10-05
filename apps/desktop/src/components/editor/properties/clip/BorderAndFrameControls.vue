@@ -7,65 +7,43 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import Input from '~/ui/input/Input.vue';
 import Accordion from '~/ui/accordion/Accordion.vue';
-import type { ClipFrame, ClipFrameTheme } from '@beam/engine/shared/composition-types';
+import Select from '~/ui/select/Select.vue';
+import { DEFAULT_ANIMATED_FRAME, type AnimatedFrameSettings } from '@beam/engine/shared/animated-frame-types';
+import { ANIMATED_FRAME_PRESETS } from '@beam/engine/shared/animated-frame-schema';
+import { FRAME_MODELS, frameOptions, animatedFrameOptions } from './frame-options';
+import type { BorderAndFrameSettings } from './border-and-frame-types';
+import type { ClipFrame } from '@beam/engine/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
 import PhoneFrameFillControls from './PhoneFrameFillControls.vue';
-import type { PhoneFrameFill } from '@beam/engine/shared/color-fill-types';
 
 const { t } = useTranslate('BorderAndFrameControls');
 
-const props = defineProps<{
-  borderEnabled?: boolean;
-  borderColor?: string;
-  borderWidth?: number;
-  frame?: ClipFrame;
-  frameTitle?: string;
-  frameColor?: string;
-  frameTheme?: ClipFrameTheme;
-  frameShowMenu?: boolean;
-  frameShowScrollbars?: boolean;
-  frameChromeScale?: number;
-  phoneFrameFill?: PhoneFrameFill;
-}>();
-const emit = defineEmits<{
-  (
-    event: 'update',
-    value: {
-      borderEnabled?: boolean;
-      borderColor?: string;
-      borderWidth?: number;
-      frame?: ClipFrame;
-      frameTitle?: string;
-      frameColor?: string;
-      frameTheme?: ClipFrameTheme;
-      frameShowMenu?: boolean;
-      frameShowScrollbars?: boolean;
-      frameChromeScale?: number;
-      phoneFrameFill?: PhoneFrameFill;
-    },
-  ): void;
-}>();
+const props = defineProps<BorderAndFrameSettings>();
+const emit = defineEmits<{ (event: 'update', value: BorderAndFrameSettings): void }>();
 const sections = ref({ border: false, frame: false });
 const activeFrame = computed(() => props.frame ?? 'none');
 const frameEnabled = computed(() => activeFrame.value !== 'none');
-const activeFrameType = computed(() => (isPhoneFrame(activeFrame.value) ? 'phone' : 'desktop'));
+const phoneFrame = computed(() => isPhoneFrame(activeFrame.value));
+const animated = computed(() => activeFrame.value === 'animated');
+const animatedSettings = computed(() => props.animatedFrame ?? DEFAULT_ANIMATED_FRAME);
 const lastEnabledFrame = ref<Exclude<ClipFrame, 'none'>>(activeFrame.value === 'none' ? 'safari' : activeFrame.value);
 watch(activeFrame, (frame) => {
   if (frame !== 'none') lastEnabledFrame.value = frame;
 });
-const desktopFrames = computed(() => [
-  { id: 'safari' as ClipFrame, label: 'Safari' },
-  { id: 'windows-95' as ClipFrame, label: 'Windows 95' },
-]);
-const phoneFrames = computed(() => [
-  { id: 'iphone-16-max' as ClipFrame, label: 'iPhone 16 Pro Max' },
-  { id: 'pixel-9-pro' as ClipFrame, label: 'Pixel 9 Pro' },
-]);
-const frames = computed(() => (activeFrameType.value === 'phone' ? phoneFrames.value : desktopFrames.value));
+const models = computed(() => frameOptions(t('animatedBorder')));
+const presets = computed(() => animatedFrameOptions((key) => t(`presets.${key}`)));
 const toggleFrame = (enabled: boolean) => emit('update', { frame: enabled ? lastEnabledFrame.value : 'none' });
-const selectFrameType = (type: 'desktop' | 'phone') =>
-  emit('update', { frame: type === 'phone' ? 'iphone-16-max' : 'safari' });
+const selectFrame = (value: string | number) => {
+  const frame = FRAME_MODELS.find((model) => model === value);
+  if (frame) emit('update', { frame });
+};
+const updateAnimated = (patch: Partial<AnimatedFrameSettings>) =>
+  emit('update', { animatedFrame: { ...animatedSettings.value, ...patch } });
+const selectPreset = (value: string | number) => {
+  const preset = ANIMATED_FRAME_PRESETS.find((item) => item === value);
+  if (preset) updateAnimated({ preset });
+};
 </script>
 
 <template>
@@ -80,12 +58,14 @@ const selectFrameType = (type: 'desktop' | 'phone') =>
           />
         </div>
         <div v-if="borderEnabled" class="sub-group margin-top-sm">
-          <span class="sub-label">{{ t('borderColor') }}</span>
-          <ColorPicker
-            :model-value="borderColor ?? '#000000'"
-            :show-label="false"
-            @update:modelValue="emit('update', { borderColor: $event })"
-          />
+          <div class="frame-field">
+            <span class="sub-label">{{ t('borderColor') }}</span>
+            <ColorPicker
+              :model-value="borderColor ?? '#000000'"
+              :show-label="false"
+              @update:modelValue="emit('update', { borderColor: $event })"
+            />
+          </div>
           <BigSlider
             :model-value="borderWidth ?? 1"
             :min="1"
@@ -105,88 +85,115 @@ const selectFrameType = (type: 'desktop' | 'phone') =>
           <Switch :model-value="frameEnabled" :aria-label="t('frame')" @update:modelValue="toggleFrame" />
         </div>
         <div v-if="frameEnabled" class="sub-group margin-top-sm">
-          <span class="sub-label">{{ t('frameType') }}</span>
-          <ButtonGroup full variant="neutral" size="xs">
-            <Button
-              v-for="type in ['desktop', 'phone'] as const"
-              :key="type"
-              :variant="activeFrameType === type ? 'selected' : 'ghost'"
-              size="xs"
-              @click="selectFrameType(type)"
-              >{{ t(type) }}</Button
-            >
-          </ButtonGroup>
-          <span class="sub-label">{{ t('frameModel') }}</span>
-          <ButtonGroup full variant="neutral" size="xs">
-            <Button
-              v-for="item in frames"
-              :key="item.id"
-              :variant="activeFrame === item.id ? 'selected' : 'ghost'"
-              size="xs"
-              @click="emit('update', { frame: item.id })"
-              >{{ item.label }}</Button
-            >
-          </ButtonGroup>
-          <template v-if="activeFrame === 'safari'">
-            <span class="sub-label">{{ t('frameTheme') }}</span>
-            <ButtonGroup full variant="neutral" size="xs" role="group" :aria-label="t('frameTheme')">
-              <Button
-                v-for="mode in ['auto', 'light', 'dark'] as const"
-                :key="mode"
-                :variant="(frameTheme ?? 'auto') === mode ? 'selected' : 'ghost'"
-                size="xs"
-                :aria-pressed="(frameTheme ?? 'auto') === mode"
-                @click="emit('update', { frameTheme: mode })"
-                >{{ t(mode) }}</Button
-              >
-            </ButtonGroup>
-          </template>
-          <span class="sub-label">{{ t('frameColor') }}</span>
-          <ColorPicker
-            :model-value="frameColor ?? '#c0c0c0'"
-            :show-label="false"
-            @update:modelValue="emit('update', { frameColor: $event })"
+          <Select
+            :model-value="activeFrame"
+            :options="models"
+            :label="t('frameStyle')"
+            appearance="neutral"
+            size="sm"
+            variant="source"
+            :option-height="56"
+            @update:modelValue="selectFrame"
           />
-          <template v-if="activeFrameType === 'desktop'">
-            <label class="sub-label" for="frame-title">{{ t('windowTitle') }}</label>
-            <Input
-              id="frame-title"
+          <template v-if="animated">
+            <Select
+              :model-value="animatedSettings.preset"
+              :options="presets"
+              :label="t('preset')"
               appearance="neutral"
               size="sm"
-              :model-value="frameTitle ?? ''"
-              :placeholder="t('screenRecording')"
-              @update:modelValue="emit('update', { frameTitle: String($event) })"
+              variant="source"
+              :option-height="56"
+              @update:modelValue="selectPreset"
             />
             <BigSlider
-              :model-value="(frameChromeScale ?? 1) * 100"
-              :min="50"
-              :max="200"
-              :step="5"
-              :label="t('windowSize')"
-              :format-value="(value) => `${Math.round(value)}%`"
-              @update:modelValue="emit('update', { frameChromeScale: $event / 100 })"
+              :model-value="animatedSettings.width"
+              :min="1"
+              :max="16"
+              :step="1"
+              :label="t('width')"
+              :format-value="(value) => `${Math.round(value)}px`"
+              @update:modelValue="updateAnimated({ width: $event })"
             />
+            <BigSlider
+              :model-value="animatedSettings.speed"
+              :min="0"
+              :max="3"
+              :step="0.1"
+              :label="t('animationSpeed')"
+              :format-value="(value) => `${value.toFixed(1)}×`"
+              @update:modelValue="updateAnimated({ speed: $event })"
+            />
+            <p class="frame-hint">{{ t('animatedHint') }}</p>
           </template>
-          <PhoneFrameFillControls
-            v-else
-            :model-value="phoneFrameFill"
-            @update:modelValue="emit('update', { phoneFrameFill: $event })"
-          />
-          <template v-if="activeFrame === 'windows-95'">
-            <div class="prop-row">
-              <span class="prop-label">{{ t('menuBar') }}</span
-              ><Switch
-                :model-value="frameShowMenu ?? true"
-                @update:modelValue="emit('update', { frameShowMenu: $event })"
+          <template v-else>
+            <template v-if="activeFrame === 'safari'">
+              <div class="frame-field">
+                <span class="sub-label">{{ t('frameTheme') }}</span>
+                <ButtonGroup full variant="neutral" size="xs" role="group" :aria-label="t('frameTheme')">
+                  <Button
+                    v-for="mode in ['auto', 'light', 'dark'] as const"
+                    :key="mode"
+                    :variant="(frameTheme ?? 'auto') === mode ? 'selected' : 'ghost'"
+                    size="xs"
+                    :aria-pressed="(frameTheme ?? 'auto') === mode"
+                    @click="emit('update', { frameTheme: mode })"
+                    >{{ t(mode) }}</Button
+                  >
+                </ButtonGroup>
+              </div>
+            </template>
+            <div class="frame-field">
+              <span class="sub-label">{{ t('frameColor') }}</span>
+              <ColorPicker
+                :model-value="frameColor ?? '#c0c0c0'"
+                :show-label="false"
+                @update:modelValue="emit('update', { frameColor: $event })"
               />
             </div>
-            <div class="prop-row">
-              <span class="prop-label">{{ t('scrollbars') }}</span
-              ><Switch
-                :model-value="frameShowScrollbars ?? true"
-                @update:modelValue="emit('update', { frameShowScrollbars: $event })"
+            <template v-if="!phoneFrame">
+              <div class="frame-field">
+                <label class="sub-label" for="frame-title">{{ t('windowTitle') }}</label>
+                <Input
+                  id="frame-title"
+                  appearance="neutral"
+                  size="sm"
+                  :model-value="frameTitle ?? ''"
+                  :placeholder="t('screenRecording')"
+                  @update:modelValue="emit('update', { frameTitle: String($event) })"
+                />
+              </div>
+              <BigSlider
+                :model-value="(frameChromeScale ?? 1) * 100"
+                :min="50"
+                :max="200"
+                :step="5"
+                :label="t('windowSize')"
+                :format-value="(value) => `${Math.round(value)}%`"
+                @update:modelValue="emit('update', { frameChromeScale: $event / 100 })"
               />
-            </div>
+            </template>
+            <PhoneFrameFillControls
+              v-else
+              :model-value="phoneFrameFill"
+              @update:modelValue="emit('update', { phoneFrameFill: $event })"
+            />
+            <template v-if="activeFrame === 'windows-95'">
+              <div class="prop-row">
+                <span class="prop-label">{{ t('menuBar') }}</span
+                ><Switch
+                  :model-value="frameShowMenu ?? true"
+                  @update:modelValue="emit('update', { frameShowMenu: $event })"
+                />
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">{{ t('scrollbars') }}</span
+                ><Switch
+                  :model-value="frameShowScrollbars ?? true"
+                  @update:modelValue="emit('update', { frameShowScrollbars: $event })"
+                />
+              </div>
+            </template>
           </template>
         </div>
       </div>
@@ -203,17 +210,7 @@ const selectFrameType = (type: 'desktop' | 'phone') =>
 .section-block {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-.section-header {
-  display: flex;
-  align-items: center;
-  min-height: 20px;
-}
-.section-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  gap: 14px;
 }
 .prop-row {
   display: flex;
@@ -221,24 +218,32 @@ const selectFrameType = (type: 'desktop' | 'phone') =>
   justify-content: space-between;
 }
 .prop-label {
-  font-size: 12px;
+  font-size: var(--font-size-body);
   font-weight: 500;
   color: var(--text-primary);
 }
 .sub-group {
   display: flex;
   flex-direction: column;
+  gap: 14px;
+}
+.frame-field {
+  display: flex;
+  flex-direction: column;
   gap: 6px;
 }
 .sub-label {
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--text-muted);
 }
 .margin-top-sm {
-  margin-top: 4px;
-}
-.margin-top-md {
   margin-top: 8px;
+}
+.frame-hint {
+  margin: 4px 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  line-height: 1.5;
 }
 </style>

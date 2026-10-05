@@ -26,6 +26,12 @@ export interface RegionViewport {
   width: number;
   height: number;
 }
+export interface RegionPixelRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
 export interface RegionControlPosition {
   left: string;
   top?: string;

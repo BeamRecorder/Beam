@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { applicationPaths } from '@beam/storage/node/platform-paths';
 export async function createNativeClient() {
   const root = process.env.BEAM_APPLICATION_ROOT ?? fileURLToPath(new URL('../../../', import.meta.url));
-  const version = process.env.BEAM_APP_VERSION ?? '0.4.0';
+  const version = process.env.BEAM_APP_VERSION ?? '0.5.0';
   const extension = process.platform === 'win32' ? '.exe' : '';
   const platform = process.platform === 'darwin' ? 'mac' : process.platform === 'win32' ? 'win' : 'linux';
   const candidates = process.env.BEAM_CAPTURE_ENGINE

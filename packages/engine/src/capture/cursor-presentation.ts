@@ -1,5 +1,6 @@
 import {
   createDefaultCursorAutoHideSettings,
+  createDefaultCursorClickEffects,
   createDefaultCursorMotionSettings,
   type CursorAutoHideSettings,
   type CursorClickEffects,
@@ -71,24 +72,7 @@ export const createDefaultCursorPresentation = (): CursorPresentationSettings =>
   size: 45,
   color: '#000000',
   shadow: { enabled: true, blur: 6, color: '#000000', direction: 'bottom' },
-  clickEffects: {
-    left: {
-      springEnabled: true,
-      springIntensity: 50,
-      rippleEnabled: false,
-      rippleStyle: 'single',
-      rippleSize: 30,
-      rippleColor: '#ff5a1f',
-    },
-    right: {
-      springEnabled: true,
-      springIntensity: 50,
-      rippleEnabled: false,
-      rippleStyle: 'single',
-      rippleSize: 30,
-      rippleColor: '#6366f1',
-    },
-  },
+  clickEffects: createDefaultCursorClickEffects(),
   motion: createDefaultCursorMotionSettings(),
   autoHide: createDefaultCursorAutoHideSettings(),
 });

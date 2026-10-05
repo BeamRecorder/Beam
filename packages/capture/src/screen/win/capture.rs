@@ -10,10 +10,6 @@ use std::{
 use parking_lot::Mutex;
 use windows_capture::{
     capture::{CaptureControl, Context, GraphicsCaptureApiHandler},
-    encoder::{
-        AudioSettingsBuilder, ContainerSettingsBuilder, VideoEncoder, VideoSettingsBuilder,
-        VideoSettingsSubType,
-    },
     frame::Frame,
     graphics_capture_api::InternalCaptureControl,
     monitor::Monitor,
@@ -21,7 +17,11 @@ use windows_capture::{
     window::Window,
 };
 
-use super::compatibility::compatible_settings;
+use super::{compatibility::compatible_settings, encoder::RecordingEncoder};
+use crate::screen::{
+    frame_buffer::{flip_bgra_rows, pad_bgra_frame},
+    recording_queue::FrameCadence,
+};
 
 use crate::{
     CaptureError,
@@ -48,13 +48,14 @@ struct PendingEncoder {
 }
 
 struct CaptureHandler {
-    encoder: Option<VideoEncoder>,
+    encoder: Option<RecordingEncoder>,
     pending_encoder: Option<PendingEncoder>,
     metrics: Arc<ScreenCaptureMetrics>,
     start_gate: Arc<StartGate>,
     region: Option<ScreenRegion>,
     crop: Option<PixelCrop>,
     encoded_size: Option<(u32, u32)>,
+    cadence: FrameCadence,
     unavailable: Arc<AtomicBool>,
 }
 
@@ -66,6 +67,7 @@ impl CaptureHandler {
             fps: flags.fps,
             candidate_crop_size: None,
         };
+        let cadence = FrameCadence::new(settings.fps);
         // GetWindowRect can return DPI-virtualized bounds. Only a received WGC
         // frame supplies reliable pixel dimensions for the encoder.
         Self {
@@ -76,6 +78,7 @@ impl CaptureHandler {
             region: flags.region,
             crop: None,
             encoded_size: None,
+            cadence,
             unavailable: flags.unavailable,
         }
     }
@@ -84,18 +87,14 @@ impl CaptureHandler {
         settings: &PendingEncoder,
         width: u32,
         height: u32,
-    ) -> Result<VideoEncoder, String> {
-        let video = VideoSettingsBuilder::new(width, height)
-            .sub_type(VideoSettingsSubType::H264)
-            .bitrate(settings.bitrate)
-            .frame_rate(settings.fps);
-        VideoEncoder::new(
-            video,
-            AudioSettingsBuilder::default().disabled(true),
-            ContainerSettingsBuilder::default(),
+    ) -> Result<RecordingEncoder, String> {
+        RecordingEncoder::new(
             &settings.output,
+            width,
+            height,
+            settings.bitrate,
+            settings.fps,
         )
-        .map_err(|error| error.to_string())
     }
 
     fn finish(&mut self) -> Result<(), CaptureError> {
@@ -107,23 +106,16 @@ impl CaptureHandler {
         }
         Ok(())
     }
-}
-
-impl GraphicsCaptureApiHandler for CaptureHandler {
-    type Flags = HandlerFlags;
-    type Error = String;
-
-    fn new(context: Context<Self::Flags>) -> Result<Self, Self::Error> {
-        Ok(Self::from_flags(context.flags))
-    }
-
-    fn on_frame_arrived(
-        &mut self,
-        frame: &mut Frame,
-        _capture_control: InternalCaptureControl,
-    ) -> Result<(), Self::Error> {
+    fn process_frame(&mut self, frame: &mut Frame) -> Result<(), String> {
         if !self.start_gate.is_released() {
             self.start_gate.wait().map_err(|error| error.to_string())?;
+        }
+        let timestamp = frame
+            .timestamp()
+            .map_err(|error| error.to_string())?
+            .Duration;
+        if !self.cadence.accepts(timestamp) {
+            return Ok(());
         }
         let crop = if let Some(region) = self.region {
             let frame_crop = normalize_crop(region, frame.width(), frame.height())
@@ -183,48 +175,75 @@ impl GraphicsCaptureApiHandler for CaptureHandler {
             .encoder
             .as_mut()
             .ok_or_else(|| "video encoder was finalized".to_owned())?;
+        if !encoder.has_capacity()? {
+            self.metrics.dropped_frames(1);
+            return Ok(());
+        }
+        let crop = crop.or_else(|| {
+            self.encoded_size
+                .filter(|size| *size != (frame.width(), frame.height()))
+                .map(|(width, height)| PixelCrop {
+                    start_x: 0,
+                    start_y: 0,
+                    end_x: width.min(frame.width()),
+                    end_y: height.min(frame.height()),
+                })
+        });
         let result = if let Some(crop) = crop {
-            let timestamp = frame
-                .timestamp()
-                .map_err(|error| error.to_string())?
-                .Duration;
             let cropped = frame
                 .buffer_crop(crop.start_x, crop.start_y, crop.end_x, crop.end_y)
                 .map_err(|error| error.to_string())?;
             let mut compact = Vec::new();
             let bytes = cropped.as_nopadding_buffer(&mut compact);
-            // The raw-buffer encoder expects BGRA rows bottom-to-top, while
-            // Graphics Capture gives us the crop in the normal top-to-bottom
-            // screen order. The direct-frame path performs this conversion
-            // internally; do it explicitly for cropped frames as well.
-            let bottom_up = flip_bgra_rows(bytes, crop.width(), crop.height());
+            let (width, height) = self
+                .encoded_size
+                .ok_or("recording dimensions are unavailable")?;
+            let padded = pad_bgra_frame(bytes, crop.width(), crop.height(), width, height)
+                .map_err(|error| error.to_string())?;
+            // WinRT buffer samples use bottom-up BGRA; WGC surfaces are top-down.
+            let bottom_up = flip_bgra_rows(&padded, width, height);
             encoder.send_frame_buffer(&bottom_up, timestamp)
         } else {
             encoder.send_frame(frame)
         };
-        result.map_err(|error| {
+        let accepted = result.map_err(|error| {
+            self.unavailable.store(true, Ordering::Release);
             self.metrics.dropped_frames(1);
             error.to_string()
         })?;
-        self.metrics.received_frame(None, false);
+        if accepted {
+            self.metrics.received_frame(None, false);
+        } else {
+            self.metrics.dropped_frames(1);
+        }
         Ok(())
+    }
+}
+
+impl GraphicsCaptureApiHandler for CaptureHandler {
+    type Flags = HandlerFlags;
+    type Error = String;
+
+    fn new(context: Context<Self::Flags>) -> Result<Self, Self::Error> {
+        Ok(Self::from_flags(context.flags))
+    }
+
+    fn on_frame_arrived(
+        &mut self,
+        frame: &mut Frame,
+        _capture_control: InternalCaptureControl,
+    ) -> Result<(), Self::Error> {
+        let result = self.process_frame(frame);
+        if result.is_err() {
+            self.unavailable.store(true, Ordering::Release);
+        }
+        result
     }
 
     fn on_closed(&mut self) -> Result<(), Self::Error> {
         self.unavailable.store(true, Ordering::Release);
         self.finish().map_err(|error| error.to_string())
     }
-}
-
-fn flip_bgra_rows(bytes: &[u8], width: u32, height: u32) -> Vec<u8> {
-    let row_bytes = width as usize * 4;
-    let row_count = height as usize;
-    let mut flipped = Vec::with_capacity(bytes.len());
-    for row in (0..row_count).rev() {
-        let start = row * row_bytes;
-        flipped.extend_from_slice(&bytes[start..start + row_bytes]);
-    }
-    flipped
 }
 
 type Control = CaptureControl<CaptureHandler, String>;
@@ -349,6 +368,12 @@ impl WindowsRecording {
     }
 
     pub fn is_available(&self) -> bool {
+        if let Some(mut callback) = self.callback.try_lock()
+            && let Some(encoder) = callback.encoder.as_mut()
+            && encoder.has_capacity().is_err()
+        {
+            self.unavailable.store(true, Ordering::Release);
+        }
         !self.unavailable.load(Ordering::Acquire)
     }
 

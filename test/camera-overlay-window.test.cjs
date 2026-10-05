@@ -171,6 +171,7 @@ test('opens a new camera preview as a square near the lower-right display edge',
     });
 
     overlay.configure({ cameraId: 'camera:front' });
+    assert.equal(fixture.windows[0].options.webPreferences.backgroundThrottling, false);
     assert.deepEqual(fixture.windows[0].getBounds(), {
       x: 1680,
       y: 840,

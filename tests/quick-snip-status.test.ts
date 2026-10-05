@@ -717,12 +717,7 @@ describe('Quick Snip status pill', () => {
     expect(mocks.capture.getScreenshot).toHaveBeenCalledWith(screenshotDocument.id);
     expect(mocks.screenshotState).toHaveBeenCalledWith(screenshotDocument, []);
     expect(mocks.encodeScreenshot).toHaveBeenCalledWith(screenshotDocument.source, screenshotState);
-    expect(mocks.capture.exportScreenshot).toHaveBeenCalledWith(
-      screenshotDocument.id,
-      screenshotBytes,
-      'png',
-      true,
-    );
+    expect(mocks.capture.exportScreenshot).toHaveBeenCalledWith(screenshotDocument.id, screenshotBytes, 'png', true);
     expect(mocks.capture.copyQuickSnipFile).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('Copied to clipboard');
     wrapper.unmount();

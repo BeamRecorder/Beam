@@ -256,11 +256,10 @@ describe('background import IPC', () => {
   it.each(['font-library:list', 'font-library:pick-import'])(
     'rejects %s for an untrusted renderer',
     async (channel) => {
-      const { fontListHandler, fontImportHandler, fontList, fontImportFile, dialog, event, trustedRenderer } =
-        setup({
-          trusted: false,
-          rendererUrl: 'https://example.invalid/evil.html',
-        });
+      const { fontListHandler, fontImportHandler, fontList, fontImportFile, dialog, event, trustedRenderer } = setup({
+        trusted: false,
+        rendererUrl: 'https://example.invalid/evil.html',
+      });
       const handler = channel === 'font-library:list' ? fontListHandler : fontImportHandler;
 
       if (channel === 'font-library:list') expect(() => handler(event)).toThrow('Renderer non autorisé');

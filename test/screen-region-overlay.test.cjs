@@ -17,6 +17,8 @@ function createOverlayHarness(options = {}) {
     emit: (event, ...args) => listeners.get(event)?.(...args),
     isDestroyed: () => destroyed,
     setContentProtection: (value) => calls.push(['contentProtection', value]),
+    setVisibleOnAllWorkspaces: (...args) => calls.push(['workspaces', ...args]),
+    setAlwaysOnTop: (...args) => calls.push(['alwaysOnTop', ...args]),
     setBounds: (bounds) => calls.push(['bounds', bounds]),
     setParentWindow: (parent) => calls.push(['parent', parent]),
     setIgnoreMouseEvents: (value) => calls.push(['mouse', value]),
@@ -208,6 +210,7 @@ test('Linux region construction uses exact X11 display bounds', async () => {
   const bounds = { x: 0, y: 0, width: 1920, height: 1080 };
   const selection = overlay.select({ bounds });
   assert.equal(window.options.fullscreen, undefined);
+  assert.equal(window.options.type, 'dock');
   assert.equal(window.options.width, bounds.width);
   assert.equal(window.options.height, bounds.height);
   window.emit('ready-to-show');
@@ -228,6 +231,21 @@ test('Linux region construction uses exact X11 display bounds', async () => {
   overlay.cancel();
   assert.equal(await selection, null);
 });
+
+for (const platform of ['darwin', 'win32']) {
+  test(`${platform} region selection keeps its native window type and offset display bounds`, async () => {
+    const { overlay, window } = createOverlayHarness({ platform });
+    const bounds = { x: -1920, y: -200, width: 1920, height: 1080 };
+    const selection = overlay.select({ bounds });
+    assert.equal(window.options.type, undefined);
+    for (const property of ['x', 'y', 'width', 'height']) assert.equal(window.options[property], bounds[property]);
+    window.emit('ready-to-show');
+    overlay.markRendererReady(window.webContents);
+    overlay.confirm({ x: 0.25, y: 0.25, width: 0.5, height: 0.5 });
+    assert.deepEqual(await selection, { bounds, region: { x: 0.25, y: 0.25, width: 0.5, height: 0.5 } });
+    overlay.destroy();
+  });
+}
 
 test('renderer readiness before native readiness does not show an unpainted overlay', async () => {
   const { overlay, window, calls } = createOverlayHarness();

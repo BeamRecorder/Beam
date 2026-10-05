@@ -17,6 +17,8 @@ let unsubscribe: (() => void) | null = null;
 let unsubscribeHover: (() => void) | null = null;
 let unsubscribeRecording: (() => void) | null = null;
 let statusTimer: number | null = null;
+let pollingStatus = false;
+let disposed = false;
 let recorder: BrowserCameraRecorder | null = null;
 let activeRecordingId: string | null = null;
 let activeSessionId: string | null = null;
@@ -122,11 +124,15 @@ const executeRecordingCommand = async (command: CameraRecordingCommand) => {
 };
 
 const refreshRecordingState = async () => {
+  if (pollingStatus || disposed) return;
+  pollingStatus = true;
   try {
     const session = await capture.status();
-    isRecording.value = ['recording', 'degraded', 'paused'].includes(session.state);
+    if (!disposed) isRecording.value = ['recording', 'degraded', 'paused'].includes(session.state);
   } catch {
-    isRecording.value = false;
+    if (!disposed) isRecording.value = false;
+  } finally {
+    pollingStatus = false;
   }
 };
 
@@ -142,20 +148,32 @@ onMounted(async () => {
   });
   capture.notifyCameraOverlayReady();
   const saved = await capture.getCameraOverlayState();
+  if (disposed) return;
   if (saved) cameraId.value = saved.cameraId;
   await refreshRecordingState();
+  if (disposed) return;
   statusTimer = window.setInterval(() => {
     void refreshRecordingState();
   }, 500);
 });
 
 onBeforeUnmount(() => {
+  disposed = true;
   unsubscribe?.();
   unsubscribeHover?.();
   unsubscribeRecording?.();
   if (recorder) {
-    if (activeSessionId) void recorder.fail(activeSessionId, 'The camera overlay was closed.');
-    else void recorder.stop(0);
+    const recordingId = activeRecordingId;
+    const closing = activeSessionId
+      ? recorder.fail(activeSessionId, 'The camera overlay was closed.')
+      : recorder.stop(0);
+    void closing.catch((error: unknown) => {
+      if (recordingId)
+        capture.reportCameraRecordingFailure({
+          recordingId,
+          message: error instanceof Error ? error.message : String(error),
+        });
+    });
   }
   if (statusTimer !== null) window.clearInterval(statusTimer);
 });

@@ -99,7 +99,7 @@ describe('cursor click settings', () => {
       rippleStyle: 'single',
     });
     defaults.left.rippleSize = 42;
-    expect(defaults.right.rippleSize).toBe(30);
+    expect(defaults.right.rippleSize).toBe(22);
   });
 
   it('normalizes invalid persisted values without losing button separation', () => {
@@ -108,21 +108,21 @@ describe('cursor click settings', () => {
         left: { springIntensity: 140, rippleSize: 0 },
         right: { springEnabled: false, rippleColor: '#00ff00' },
       }),
-    ).toEqual({
+    ).toMatchObject({
       left: {
         springEnabled: true,
         springIntensity: 100,
         rippleEnabled: false,
         rippleStyle: 'single',
-        rippleSize: 10,
+        rippleSize: 1,
         rippleColor: '#ff5a1f',
       },
       right: {
         springEnabled: false,
-        springIntensity: 50,
+        springIntensity: 35,
         rippleEnabled: false,
         rippleStyle: 'single',
-        rippleSize: 30,
+        rippleSize: 22,
         rippleColor: '#00ff00',
       },
     });
@@ -143,7 +143,7 @@ describe('cursor click settings', () => {
     });
   });
 
-  it('normalizes one shared wave shape while preserving left and right activation', () => {
+  it('normalizes independent wave shapes while preserving left and right activation', () => {
     expect(
       normalizeCursorClickEffects({
         left: { rippleEnabled: false, rippleStyle: 'double' },
@@ -151,7 +151,7 @@ describe('cursor click settings', () => {
       }),
     ).toMatchObject({
       left: { rippleEnabled: false, rippleStyle: 'double' },
-      right: { rippleEnabled: true, rippleStyle: 'double' },
+      right: { rippleEnabled: true, rippleStyle: 'solid' },
     });
   });
 
