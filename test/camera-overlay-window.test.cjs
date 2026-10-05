@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const Module = require('node:module');
 const test = require('node:test');
+const { EventEmitter } = require('node:events');
 
 function createElectronFixture(savedExtras = {}) {
   const calls = [];
@@ -13,7 +14,6 @@ function createElectronFixture(savedExtras = {}) {
     constructor(options) {
       this.options = options;
       this.listeners = new Map();
-      this.contentListeners = new Map();
       this.bounds = {
         x: options.x,
         y: options.y,
@@ -22,17 +22,17 @@ function createElectronFixture(savedExtras = {}) {
       };
       this.visible = false;
       this.destroyed = false;
-      this.webContents = {
+      this.webContents = Object.assign(new EventEmitter(), {
         getURL: () => 'http://localhost:6500/html/index.html?cameraOverlay=1',
-        once: (event, listener) => this.contentListeners.set(event, listener),
-        emit: (event, ...args) => {
-          const listener = this.contentListeners.get(event);
-          if (!listener) return;
-          this.contentListeners.delete(event);
-          listener(...args);
+        isDestroyed: () => this.destroyed,
+        zoomFactor: 4,
+        setZoomLevel: (level) => calls.push(['zoomLevel', level]),
+        setZoomFactor: (factor) => {
+          this.webContents.zoomFactor = factor;
+          calls.push(['zoomFactor', factor]);
         },
         send: (...args) => calls.push(['send', ...args]),
-      };
+      });
       windows.push(this);
       calls.push(['constructor', options]);
     }
@@ -88,6 +88,7 @@ function createElectronFixture(savedExtras = {}) {
 
     showInactive() {
       this.visible = true;
+      calls.push(['showInactive', this.webContents.zoomFactor]);
       this.emit('show');
     }
 
@@ -158,6 +159,99 @@ function loadOverlayWindow() {
   delete require.cache[modulePath];
   return require(modulePath);
 }
+
+for (const platform of ['linux', 'win32', 'darwin']) {
+  test(`automatic camera startup resets browser zoom before showing on ${platform}`, () => {
+    const fixture = createElectronFixture();
+    let overlay;
+    try {
+      overlay = loadOverlayWindow().createCameraOverlayWindow({ applicationRoot: '/app', isPackaged: false, platform });
+      overlay.configure({ cameraId: 'camera:front' });
+      assert.equal(fixture.windows[0].options.webPreferences.zoomFactor, 1);
+      assert.deepEqual(
+        fixture.calls.filter((call) => call[0] === 'showInactive'),
+        [['showInactive', 1]],
+      );
+    } finally {
+      overlay?.destroy();
+      fixture.restore();
+    }
+  });
+
+  test(`camera page loading resets zoom restored by Chromium on ${platform}`, () => {
+    const fixture = createElectronFixture();
+    let overlay;
+    try {
+      overlay = loadOverlayWindow().createCameraOverlayWindow({ applicationRoot: '/app', isPackaged: true, platform });
+      overlay.configure({ cameraId: 'camera:front' });
+      const contents = fixture.windows[0].webContents;
+      contents.zoomFactor = 4;
+      contents.emit('did-finish-load');
+      assert.equal(contents.zoomFactor, 1);
+      assert.ok(fixture.calls.some((call) => call[0] === 'zoomLevel' && call[1] === 0));
+    } finally {
+      overlay?.destroy();
+      fixture.restore();
+    }
+  });
+
+  test(`reopening an existing webcam restores its preview zoom on ${platform}`, () => {
+    const fixture = createElectronFixture();
+    let overlay;
+    try {
+      overlay = loadOverlayWindow().createCameraOverlayWindow({ applicationRoot: '/app', isPackaged: false, platform });
+      overlay.configure({ cameraId: 'camera:front' });
+      overlay.setActive(false);
+      fixture.windows[0].webContents.zoomFactor = 4;
+      overlay.setActive(true);
+      assert.equal(fixture.windows.length, 1);
+      assert.equal(fixture.windows[0].webContents.zoomFactor, 1);
+      assert.deepEqual(
+        fixture.calls.filter((call) => call[0] === 'showInactive'),
+        [
+          ['showInactive', 1],
+          ['showInactive', 1],
+        ],
+      );
+    } finally {
+      overlay?.destroy();
+      fixture.restore();
+    }
+  });
+}
+
+test('camera preview blocks browser zoom shortcuts and releases the policy on destruction', () => {
+  const fixture = createElectronFixture();
+  let overlay;
+  try {
+    overlay = loadOverlayWindow().createCameraOverlayWindow({ applicationRoot: '/app', isPackaged: false });
+    overlay.configure({ cameraId: 'camera:front' });
+    const contents = fixture.windows[0].webContents;
+    contents.emit('did-finish-load');
+    for (const input of [
+      { type: 'keyDown', control: true, key: '+' },
+      { type: 'keyDown', meta: true, key: '-' },
+    ]) {
+      let prevented = false;
+      contents.emit(
+        'before-input-event',
+        {
+          preventDefault: () => {
+            prevented = true;
+          },
+        },
+        input,
+      );
+      assert.equal(prevented, true);
+    }
+    overlay.destroy();
+    for (const event of ['before-input-event', 'zoom-changed', 'did-finish-load'])
+      assert.equal(contents.listenerCount(event), 0);
+  } finally {
+    overlay?.destroy();
+    fixture.restore();
+  }
+});
 
 test('opens a new camera preview as a square near the lower-right display edge', () => {
   const fixture = createElectronFixture();

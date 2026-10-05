@@ -78,7 +78,7 @@ beforeEach(() => {
   });
 
   track = new FakeTrack();
-  stream = { getTracks: () => [track] } as unknown as MediaStream;
+  stream = { [Symbol.toStringTag]: 'MediaStream', getTracks: () => [track] } as unknown as MediaStream;
   getUserMedia = vi.fn().mockResolvedValue(stream);
   Object.defineProperty(navigator, 'mediaDevices', {
     configurable: true,
@@ -267,6 +267,8 @@ describe('CameraPreviewOverlay', () => {
 
     emitFirstFrame();
     const resolvedStream = await ready;
+    expect(resolvedStream).toBe(stream);
+    expect((wrapper.get('video').element as HTMLVideoElement).srcObject).toBe(resolvedStream);
     expect(resolvedStream.getTracks()).toEqual([track]);
     await expect(readyStream('camera:chromium:other')).rejects.toMatchObject({
       name: 'NotReadableError',

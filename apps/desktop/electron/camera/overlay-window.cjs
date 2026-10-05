@@ -1,6 +1,7 @@
 const { BrowserWindow, screen } = require('electron');
 const path = require('path');
 const { developmentRendererUrl } = require('../lifecycle/development-session.cjs');
+const { enforceDefaultZoom, installBrowserZoomPolicy } = require('../window/browser-zoom-policy.cjs');
 
 const DEFAULT_SIZE = { width: 220, height: 220 };
 const PREVIOUS_DEFAULT_SIZE = { width: 320, height: 180 };
@@ -180,12 +181,14 @@ function createCameraOverlayWindow({
       hasShadow: platform === 'linux',
       webPreferences: {
         backgroundThrottling: false,
+        zoomFactor: 1,
         preload: path.join(applicationRoot, 'apps/desktop/electron/preload.cjs'),
         nodeIntegration: false,
         contextIsolation: true,
         sandbox: false,
       },
     });
+    const cleanupBrowserZoomPolicy = installBrowserZoomPolicy(window.webContents);
     rendererReady = false;
     window.setContentProtection(true);
     window.setAlwaysOnTop(true, 'floating');
@@ -205,7 +208,10 @@ function createCameraOverlayWindow({
       stopHoverTracking();
     });
     const contents = window.webContents;
-    contents.once('destroyed', () => onWebContentsDestroyed(contents));
+    contents.once('destroyed', () => {
+      cleanupBrowserZoomPolicy();
+      onWebContentsDestroyed(contents);
+    });
     window.webContents.once('did-finish-load', () => {
       if (currentState) window?.webContents.send('camera-overlay:state', currentState);
     });
@@ -229,6 +235,7 @@ function createCameraOverlayWindow({
     }
     const overlay = create();
     if (!overlay) return false;
+    enforceDefaultZoom(overlay.webContents);
     overlay.webContents.send('camera-overlay:state', currentState);
     overlay.showInactive();
     overlay.moveTop();

@@ -15,6 +15,7 @@ User-facing changes to Beam are documented in this file.
 - Long recordings keep bounded screen and camera/audio write queues; Windows limits retained video surfaces and capture frame rate, and macOS uses a smaller resolution-aware surface queue.
 - Recording writes and final file synchronization keep the desktop responsive. Encoder stalls and missing camera/audio finalization events have deadlines; Stop no longer resumes a recording counter after the native recording has ended.
 - Camera previews show the complete image without cropping it to the overlay shape, keep recording when their window is hidden, and avoid accumulating status requests when capture is busy.
+- Automatically opened webcam previews reset saved browser zoom and prevent browser zoom shortcuts from changing the preview window.
 
 ## [0.5.0] - 2026-10-04
 
