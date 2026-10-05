@@ -2,6 +2,7 @@ const { readJsonSync, writeJsonAtomicSync } = require('@beam/storage/node/json-f
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { writeMediaChunk } = require('./media-segment-write.cjs');
 
 const MAX_CHUNK_BYTES = 32 * 1024 * 1024;
 
@@ -41,8 +42,12 @@ function createMediaSegmentStorage({
     job.handle = null;
   };
   const abort = (job) => {
-    close(job);
-    if (fsModule.existsSync(job.temporaryPath)) fsModule.unlinkSync(job.temporaryPath);
+    job.aborted = true;
+    // Do not close/reuse a descriptor while libuv still owns its write.
+    if (!job.writing && !job.finalizing) {
+      close(job);
+      if (fsModule.existsSync(job.temporaryPath)) fsModule.unlinkSync(job.temporaryPath);
+    }
     jobs.delete(job.id);
   };
   const configure = (session, payload) => {
@@ -104,45 +109,67 @@ function createMediaSegmentStorage({
         nextSequence: 0,
         position: 0,
         startNs,
+        writing: false,
+        finalizing: false,
+        aborted: false,
+        writeFailure: null,
       });
       return { jobId: id };
     },
     write(ownerId, payload = {}) {
       const job = jobFor(ownerId, payload.jobId);
+      if (job.writing || job.finalizing) throw new Error(`${trackName} chunk write is already in progress.`);
+      if (job.writeFailure) throw job.writeFailure;
       if (!Number.isSafeInteger(payload.sequence) || payload.sequence !== job.nextSequence)
         throw new Error(`Invalid ${kind} chunk sequence.`);
       const data = payload.data;
       if (!(data instanceof Uint8Array) || data.byteLength === 0 || data.byteLength > MAX_CHUNK_BYTES)
         throw new Error(`Invalid ${kind} chunk size.`);
-      fsModule.writeSync(
-        job.handle,
-        Buffer.from(data.buffer, data.byteOffset, data.byteLength),
-        0,
-        data.byteLength,
-        job.position,
-      );
-      job.position += data.byteLength;
-      job.nextSequence += 1;
+      job.writing = true;
+      return writeMediaChunk(fsModule, job, Buffer.from(data.buffer, data.byteOffset, data.byteLength))
+        .then(() => {
+          job.nextSequence += 1;
+        })
+        .catch((error) => {
+          job.writeFailure = error;
+          throw error;
+        })
+        .finally(() => {
+          job.writing = false;
+          if (job.aborted) abort(job);
+        });
     },
     finalize(ownerId, payload = {}) {
       const job = jobFor(ownerId, payload.jobId);
+      if (job.writing || job.finalizing) throw new Error(`${trackName} chunk write is still in progress.`);
+      if (job.writeFailure) throw job.writeFailure;
       const endNs = requireInteger(payload.endNs, `${trackName} segment end`);
       if (endNs < job.startNs) throw new Error(`${trackName} segment ends before it starts.`);
       const session = sessionFor(job.sessionId);
-      fsModule.fsyncSync(job.handle);
-      close(job);
-      fsModule.renameSync(job.temporaryPath, job.targetPath);
-      jobs.delete(job.id);
-      session.segments.push({
-        segmentId: crypto.randomUUID(),
-        path: `${kind}/${pathModule.basename(job.targetPath)}`,
-        startNs: job.startNs,
-        endNs,
-        complete: true,
-      });
-      const metrics = payload.metrics || {};
-      for (const key of Object.keys(session.metrics))
-        if (Number.isSafeInteger(metrics[key]) && metrics[key] >= 0) session.metrics[key] += metrics[key];
+      job.finalizing = true;
+      return new Promise((resolve, reject) => {
+        fsModule.fsync(job.handle, (error) => (error ? reject(error) : resolve()));
+      })
+        .then(() => {
+          if (job.aborted) throw new Error('Recording finalization was cancelled.');
+          close(job);
+          fsModule.renameSync(job.temporaryPath, job.targetPath);
+          jobs.delete(job.id);
+          session.segments.push({
+            segmentId: crypto.randomUUID(),
+            path: `${kind}/${pathModule.basename(job.targetPath)}`,
+            startNs: job.startNs,
+            endNs,
+            complete: true,
+          });
+          const metrics = payload.metrics || {};
+          for (const key of Object.keys(session.metrics))
+            if (Number.isSafeInteger(metrics[key]) && metrics[key] >= 0) session.metrics[key] += metrics[key];
+        })
+        .finally(() => {
+          job.finalizing = false;
+          if (job.aborted) abort(job);
+        });
     },
     fail(ownerId, payload = {}) {
       const session = sessionFor(payload.sessionId);

@@ -328,4 +328,162 @@ describe('CameraOverlayApp', () => {
 
     wrapper.unmount();
   });
+  const mountOverlay = async () => {
+    const wrapper = mount(CameraOverlayApp, { global: { stubs: { CameraPreviewOverlay } } });
+    await vi.waitFor(() => expect(capture.notifyCameraOverlayReady).toHaveBeenCalledOnce());
+    return wrapper;
+  };
+  const sendControl = async (control: CameraRecordingCommand['control'], ok = true, id = 'recording-1') => {
+    const commandId = String(capture.completeCameraOverlayRecordingCommand.mock.calls.length);
+    recordingCommand({ commandId, recordingId: id, control });
+    await vi.waitFor(() =>
+      expect(capture.completeCameraOverlayRecordingCommand).toHaveBeenCalledWith(
+        expect.objectContaining({ commandId, ok }),
+      ),
+    );
+  };
+  const prepare = () => sendControl({ action: 'prepare', sourceId: 'camera:chromium:front' });
+  const startRecording = () =>
+    sendControl({ action: 'start', recordingId: 'recording-1', sessionId: 'session-1', startNs: 0 });
+
+  it('keeps only one status request outstanding while native capture is busy', async () => {
+    vi.useFakeTimers();
+    try {
+      let resolve!: (value: { state: string }) => void;
+      capture.status.mockResolvedValueOnce({ state: 'recording' }).mockReturnValueOnce(
+        new Promise((next) => {
+          resolve = next;
+        }),
+      );
+      const wrapper = await mountOverlay();
+      await vi.advanceTimersByTimeAsync(500);
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(capture.status).toHaveBeenCalledTimes(2);
+      resolve({ state: 'paused' });
+      await vi.advanceTimersByTimeAsync(500);
+      expect(capture.status).toHaveBeenCalledTimes(3);
+      wrapper.unmount();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it.each([false, true])(
+    'does not restart polling after unmount during a pending status (failure=%s)',
+    async (failure) => {
+      vi.useFakeTimers();
+      try {
+        let finish!: () => void;
+        capture.status.mockReturnValueOnce(
+          new Promise((resolve, reject) => {
+            finish = () => (failure ? reject(new Error('closed')) : resolve({ state: 'recording' }));
+          }),
+        );
+        const wrapper = await mountOverlay();
+        await vi.advanceTimersByTimeAsync(0);
+        wrapper.unmount();
+        finish();
+        await vi.advanceTimersByTimeAsync(5000);
+        expect(capture.status).toHaveBeenCalledOnce();
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+  it('does not install a timer if the camera state arrives after unmount', async () => {
+    vi.useFakeTimers();
+    try {
+      let finish!: () => void;
+      capture.getCameraOverlayState.mockReturnValueOnce(
+        new Promise((resolve) => {
+          finish = () => resolve(null);
+        }),
+      );
+      const wrapper = await mountOverlay();
+      wrapper.unmount();
+      finish();
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(capture.status).not.toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it('rejects commands without a prepared recording and a preview without a ready stream', async () => {
+    const wrapper = await mountOverlay();
+    await sendControl({ action: 'stop', recordingId: 'missing', endNs: 0 }, false);
+    readyStream.mockResolvedValueOnce(undefined);
+    await sendControl({ action: 'prepare', sourceId: 'camera:chromium:front' }, false);
+    expect(capture.completeCameraOverlayRecordingCommand).toHaveBeenLastCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ name: 'NotReadableError' }) }),
+    );
+    wrapper.unmount();
+  });
+  it('can replace a prepared device and rejects replacement while recording', async () => {
+    const wrapper = await mountOverlay();
+    await prepare();
+    await prepare();
+    await startRecording();
+    await sendControl({ action: 'prepare', sourceId: 'camera:chromium:front' }, false);
+    await sendControl({ action: 'fail', recordingId: 'recording-1', sessionId: 'session-1', reason: 'driver stopped' });
+    expect(capture.failCamera).toHaveBeenCalledWith({ sessionId: 'session-1', reason: 'driver stopped' });
+    wrapper.unmount();
+  });
+  it('reports stop failures and releases the matching recorder', async () => {
+    const wrapper = await mountOverlay();
+    await prepare();
+    await startRecording();
+    capture.finalizeCameraSegment.mockRejectedValueOnce(new Error('disk full'));
+    await sendControl({ action: 'stop', recordingId: 'recording-1', endNs: 1 }, false);
+    expect(capture.failCamera).toHaveBeenCalledWith({ sessionId: 'session-1', reason: 'disk full' });
+    await prepare();
+    wrapper.unmount();
+  });
+  it('reports an idle device disconnect only once', async () => {
+    const wrapper = await mountOverlay();
+    await prepare();
+    sharedTrack.emit('ended');
+    await vi.waitFor(() => expect(capture.reportCameraRecordingFailure).toHaveBeenCalledOnce());
+    expect(capture.failCamera).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+  it('ignores a queued fatal notification after Stop already released its recorder', async () => {
+    const wrapper = await mountOverlay();
+    await prepare();
+    await startRecording();
+    const stopping = sendControl({ action: 'stop', recordingId: 'recording-1', endNs: 1 });
+    sharedTrack.emit('ended');
+    await stopping;
+    await Promise.resolve();
+    expect(capture.reportCameraRecordingFailure).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+  it('finalizes an active segment when its overlay unmounts', async () => {
+    const wrapper = await mountOverlay();
+    await prepare();
+    await startRecording();
+    wrapper.unmount();
+    await vi.waitFor(() =>
+      expect(capture.failCamera).toHaveBeenCalledWith({
+        sessionId: 'session-1',
+        reason: 'The camera overlay was closed.',
+      }),
+    );
+  });
+  it.each([new Error('closing IPC failed'), 'closing IPC failed'])(
+    'handles rejected teardown without an unhandled promise: %s',
+    async (reason) => {
+      const wrapper = await mountOverlay();
+      await prepare();
+      await startRecording();
+      capture.failCamera.mockRejectedValueOnce(reason);
+      wrapper.unmount();
+      await vi.waitFor(() =>
+        expect(capture.reportCameraRecordingFailure).toHaveBeenCalledWith({
+          recordingId: 'recording-1',
+          message: 'closing IPC failed',
+        }),
+      );
+    },
+  );
 });

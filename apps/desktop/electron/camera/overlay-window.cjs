@@ -179,6 +179,7 @@ function createCameraOverlayWindow({
       // part of the GTK shadow/decorations. Keep it enabled on Linux.
       hasShadow: platform === 'linux',
       webPreferences: {
+        backgroundThrottling: false,
         preload: path.join(applicationRoot, 'apps/desktop/electron/preload.cjs'),
         nodeIntegration: false,
         contextIsolation: true,

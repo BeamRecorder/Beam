@@ -1,3 +1,5 @@
+import { MediaSegmentWriter } from './media-segment-writer';
+import { stopBrowserMediaRecorder, withMediaDeadline } from './media-recorder-finalization';
 import type { CaptureSource, MediaSegmentChunk } from './types/capture-api';
 
 const MIME_TYPE = 'audio/webm;codecs=opus';
@@ -46,11 +48,10 @@ export function systemAudioSource(): CaptureSource {
 export class BrowserSystemAudioRecorder {
   private recorder: MediaRecorder | null = null;
   private jobId: string | null = null;
-  private sequence = 0;
   private startedAt = 0;
   private segmentStartNs = 0;
-  private writes: Promise<void>[] = [];
-  private writeTail: Promise<void> = Promise.resolve();
+  private writer: MediaSegmentWriter | null = null;
+  private fatalReported = false;
   private fatalHandler: ((error: Error) => void) | null = null;
   private stopped = false;
   readonly sourceId = SOURCE_ID;
@@ -102,8 +103,11 @@ export class BrowserSystemAudioRecorder {
     await this.startSegment(sessionId, this.nowNs());
   }
   async stop(endNs = this.nowNs()) {
-    if (this.recorder) await this.finishSegment(endNs);
-    this.release();
+    try {
+      if (this.recorder) await this.finishSegment(endNs);
+    } finally {
+      this.release();
+    }
   }
   async fail(sessionId: string, reason: string) {
     try {
@@ -111,13 +115,19 @@ export class BrowserSystemAudioRecorder {
     } catch {
       /* The terminal error below remains authoritative. */
     }
-    await api().failSystemAudio({
-      sessionId,
-      sourceId: this.sourceId,
-      format: this.format,
-      reason,
-    });
-    this.release();
+    try {
+      await withMediaDeadline(
+        api().failSystemAudio({
+          sessionId,
+          sourceId: this.sourceId,
+          format: this.format,
+          reason,
+        }),
+        'Recording failure reporting',
+      );
+    } finally {
+      this.release();
+    }
   }
 
   private async startSegment(sessionId: string, startNs: number) {
@@ -130,15 +140,18 @@ export class BrowserSystemAudioRecorder {
       startNs,
     });
     this.jobId = opened.jobId;
-    this.sequence = 0;
     this.segmentStartNs = startNs;
-    this.writes = [];
-    this.writeTail = Promise.resolve();
+    const jobId = opened.jobId;
+    const writer = new MediaSegmentWriter({
+      write: (data, sequence) => api().writeSystemAudioSegment({ jobId, sequence, data }),
+      onError: (error) => this.reportFatal(error),
+    });
+    this.writer = writer;
     const recorder = new MediaRecorder(this.stream, {
       mimeType: MIME_TYPE,
       audioBitsPerSecond: 128_000,
     });
-    recorder.addEventListener('dataavailable', (event) => this.queueChunk(event.data));
+    recorder.addEventListener('dataavailable', (event) => writer.enqueue(event.data));
     recorder.addEventListener(
       'error',
       () => this.reportFatal(new Error('Chromium failed while encoding system audio.')),
@@ -148,50 +161,48 @@ export class BrowserSystemAudioRecorder {
     recorder.start(1000);
   }
 
-  private queueChunk(chunk: Blob) {
-    if (!chunk.size || !this.jobId) return;
-    const sequence = this.sequence++;
-    const write = this.writeTail.then(async () =>
-      api().writeSystemAudioSegment({
-        jobId: this.jobId!,
-        sequence,
-        data: new Uint8Array(await chunk.arrayBuffer()),
-      }),
-    );
-    this.writeTail = write;
-    this.writes.push(write);
-    void write.catch((error: unknown) => this.reportFatal(error instanceof Error ? error : new Error(String(error))));
-  }
-
   private async finishSegment(endNs: number) {
     const recorder = this.recorder;
     const jobId = this.jobId;
     if (!recorder || !jobId) return;
-    await new Promise<void>((resolve, reject) => {
-      recorder.addEventListener('stop', () => resolve(), { once: true });
-      recorder.addEventListener('error', () => reject(new Error('Chromium failed while finalizing system audio.')), {
-        once: true,
-      });
-      recorder.stop();
-    });
-    await Promise.all(this.writes);
-    await api().finalizeSystemAudioSegment({
-      jobId,
-      endNs: Math.max(endNs, this.segmentStartNs),
-      metrics: {},
-    });
+    await stopBrowserMediaRecorder(recorder, 'SystemAudio encoder finalization');
+    await this.writer?.flush();
+    await withMediaDeadline(
+      api().finalizeSystemAudioSegment({
+        jobId,
+        endNs: Math.max(endNs, this.segmentStartNs),
+        metrics: {},
+      }),
+      'SystemAudio segment finalization',
+    );
     this.recorder = null;
     this.jobId = null;
+    this.writer?.abort();
+    this.writer = null;
   }
 
   private nowNs() {
     return Math.max(0, Math.round((performance.now() - this.startedAt) * 1_000_000));
   }
   private reportFatal(error: Error) {
-    if (!this.stopped) this.fatalHandler?.(error);
+    if (this.stopped || this.fatalReported) return;
+    this.fatalReported = true;
+    this.fatalHandler?.(error);
   }
   private release() {
+    if (this.stopped) return;
     this.stopped = true;
+    this.writer?.abort();
+    if (this.recorder && this.recorder.state !== 'inactive') {
+      // Finalization can fail without Chromium emitting its stop event.
+      try {
+        this.recorder.stop();
+      } catch {
+        /* Tracks are released below. */
+      }
+    }
+    this.recorder = null;
+    this.jobId = null;
     this.stream.getTracks().forEach((entry) => entry.stop());
   }
 }

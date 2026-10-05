@@ -1,8 +1,9 @@
 use std::{
     io,
     os::unix::process::CommandExt,
-    process::{Child, Command},
+    process::{Child, Command, ExitStatus},
     sync::{Mutex, OnceLock},
+    time::{Duration, Instant},
 };
 
 fn process_groups() -> &'static Mutex<Vec<libc::pid_t>> {
@@ -77,4 +78,71 @@ pub(super) fn kill_and_wait(child: &mut Child) {
     }
     let _ = child.wait();
     unregister(child);
+}
+
+pub(super) fn wait_for_exit(child: &mut Child, timeout: Duration) -> io::Result<ExitStatus> {
+    let deadline = Instant::now() + timeout;
+    loop {
+        if let Some(status) = child.try_wait()? {
+            return Ok(status);
+        }
+        if Instant::now() >= deadline {
+            kill_and_wait(child);
+            return Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                "recording encoder did not finish before its shutdown deadline",
+            ));
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+}
+
+#[cfg(test)]
+mod wait_tests {
+    #![allow(clippy::expect_used)]
+    use super::*;
+
+    #[test]
+    fn accepts_a_successfully_exited_encoder() {
+        let _lock = test_lock();
+        let mut child = Command::new("sh")
+            .args(["-c", "exit 0"])
+            .spawn()
+            .expect("child");
+        assert!(
+            wait_for_exit(&mut child, Duration::from_secs(1))
+                .expect("exit")
+                .success()
+        );
+    }
+
+    #[test]
+    fn preserves_encoder_failure_exit_status() {
+        let _lock = test_lock();
+        let mut child = Command::new("sh")
+            .args(["-c", "exit 7"])
+            .spawn()
+            .expect("child");
+        assert_eq!(
+            wait_for_exit(&mut child, Duration::from_secs(1))
+                .expect("exit")
+                .code(),
+            Some(7)
+        );
+    }
+
+    #[test]
+    fn kills_and_reaps_an_encoder_that_never_finishes() {
+        let _lock = test_lock();
+        let mut command = Command::new("sleep");
+        command.arg("30");
+        configure(&mut command);
+        let mut child = command.spawn().expect("child");
+        register(&child);
+        let started = Instant::now();
+        let error = wait_for_exit(&mut child, Duration::from_millis(30)).expect_err("timeout");
+        assert_eq!(error.kind(), io::ErrorKind::TimedOut);
+        assert!(started.elapsed() < Duration::from_secs(1));
+        assert!(child.try_wait().expect("reaped").is_some());
+    }
 }

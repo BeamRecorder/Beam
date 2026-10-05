@@ -25,17 +25,17 @@ function sessionFixture() {
   return { directory, manifestPath, sessionId };
 }
 
-test('finalizes ordered WebM chunks beside the native session and merges the camera track', () => {
+test('finalizes ordered WebM chunks beside the native session and merges the camera track', async () => {
   const storage = createCameraStorage({});
   const session = sessionFixture();
   storage.registerSession(session);
   const opened = storage.begin(11, { sessionId, sourceId, format, startNs: 0 });
-  storage.write(11, {
+  await storage.write(11, {
     jobId: opened.jobId,
     sequence: 0,
     data: new Uint8Array([1, 2, 3]),
   });
-  storage.finalize(11, {
+  await storage.finalize(11, {
     jobId: opened.jobId,
     endNs: 1_000_000_000,
     metrics: { framesAcquired: 30, framesReceived: 30 },
@@ -55,7 +55,7 @@ test('finalizes ordered WebM chunks beside the native session and merges the cam
   );
 });
 
-test('rejects out-of-order chunks and removes aborted partial files', () => {
+test('rejects out-of-order chunks and removes aborted partial files', async () => {
   const storage = createCameraStorage({});
   const session = sessionFixture();
   storage.registerSession(session);
@@ -74,7 +74,7 @@ test('rejects out-of-order chunks and removes aborted partial files', () => {
   assert.equal(fs.readdirSync(path.join(session.directory, 'camera')).length, 0);
 });
 
-test('persists an explicit camera failure without fabricating a media segment', () => {
+test('persists an explicit camera failure without fabricating a media segment', async () => {
   const storage = createCameraStorage({});
   const session = sessionFixture();
   storage.registerSession(session);
@@ -88,7 +88,7 @@ test('persists an explicit camera failure without fabricating a media segment', 
   assert.match(manifest.warnings[0], /Camera recording failed/);
 });
 
-test('persists validated camera appearance with the recorded sidecar', () => {
+test('persists validated camera appearance with the recorded sidecar', async () => {
   const storage = createCameraStorage({});
   const session = sessionFixture();
   storage.registerSession(session);
@@ -101,12 +101,12 @@ test('persists validated camera appearance with the recorded sidecar', () => {
     },
     startNs: 0,
   });
-  storage.write(14, {
+  await storage.write(14, {
     jobId: opened.jobId,
     sequence: 0,
     data: new Uint8Array([1]),
   });
-  storage.finalize(14, { jobId: opened.jobId, endNs: 1, metrics: {} });
+  await storage.finalize(14, { jobId: opened.jobId, endNs: 1, metrics: {} });
   storage.complete(session);
   const manifest = JSON.parse(fs.readFileSync(session.manifestPath, 'utf8'));
   assert.deepEqual(manifest.tracks[0].format.appearance, {
@@ -115,7 +115,7 @@ test('persists validated camera appearance with the recorded sidecar', () => {
   });
 });
 
-test('persists the normalized camera placement used by the editor', () => {
+test('persists the normalized camera placement used by the editor', async () => {
   const storage = createCameraStorage({});
   const session = sessionFixture();
   storage.registerSession(session);
@@ -128,12 +128,12 @@ test('persists the normalized camera placement used by the editor', () => {
     },
     startNs: 0,
   });
-  storage.write(15, {
+  await storage.write(15, {
     jobId: opened.jobId,
     sequence: 0,
     data: new Uint8Array([1]),
   });
-  storage.finalize(15, { jobId: opened.jobId, endNs: 1, metrics: {} });
+  await storage.finalize(15, { jobId: opened.jobId, endNs: 1, metrics: {} });
   storage.complete(session);
   const manifest = JSON.parse(fs.readFileSync(session.manifestPath, 'utf8'));
   assert.deepEqual(manifest.tracks[0].format.placement, {
@@ -144,7 +144,7 @@ test('persists the normalized camera placement used by the editor', () => {
   });
 });
 
-test('keeps an oversized camera placement inside the output frame', () => {
+test('keeps an oversized camera placement inside the output frame', async () => {
   const storage = createCameraStorage({});
   const session = sessionFixture();
   storage.registerSession(session);
@@ -157,7 +157,7 @@ test('keeps an oversized camera placement inside the output frame', () => {
     },
     startNs: 0,
   });
-  storage.finalize(16, { jobId: opened.jobId, endNs: 1, metrics: {} });
+  await storage.finalize(16, { jobId: opened.jobId, endNs: 1, metrics: {} });
   storage.complete(session);
   const manifest = JSON.parse(fs.readFileSync(session.manifestPath, 'utf8'));
   assert.deepEqual(manifest.tracks[0].format.placement, {

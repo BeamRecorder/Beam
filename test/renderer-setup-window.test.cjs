@@ -156,6 +156,7 @@ test('creates the HUD at the canonical native size with isolated renderer settin
   assert.equal(options.webPreferences.preload, path.join(fixture.applicationRoot, 'apps/desktop/electron/preload.cjs'));
   assert.equal(options.webPreferences.nodeIntegration, false);
   assert.equal(options.webPreferences.contextIsolation, true);
+  assert.equal(options.webPreferences.backgroundThrottling, false);
   assert.equal(fixture.controllers.get(fixture.window) instanceof WindowController, true);
   assert.ok(fixture.calls.some(([name, url]) => name === 'loadURL' && url === 'http://localhost:6500/html/index.html'));
 });

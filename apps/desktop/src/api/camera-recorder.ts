@@ -1,3 +1,5 @@
+import { MediaSegmentWriter } from './media-segment-writer';
+import { stopBrowserMediaRecorder, withMediaDeadline } from './media-recorder-finalization';
 import type { CaptureSource } from './types/capture-api';
 import { enumerateBrowserMediaDevices } from './browser-media-devices';
 import { waitForFirstCameraFrame } from './camera-frame-ready';
@@ -97,13 +99,12 @@ export async function listBrowserCameras(): Promise<CaptureSource[]> {
 export class BrowserCameraRecorder {
   private recorder: MediaRecorder | null = null;
   private jobId: string | null = null;
-  private sequence = 0;
   private segmentStartNs = 0;
   private timelineStartedAt = 0;
   private frameCount = 0;
   private video: HTMLVideoElement | null = null;
-  private pendingWrites: Promise<void>[] = [];
-  private writeTail: Promise<void> = Promise.resolve();
+  private writer: MediaSegmentWriter | null = null;
+  private fatalReported = false;
   private fatalHandler: ((error: Error) => void) | null = null;
   private stopped = false;
   private appearance: CameraAppearance | undefined;
@@ -197,6 +198,8 @@ export class BrowserCameraRecorder {
     timelineStartedAt = performance.now(),
     startNs?: number,
   ) {
+    if (this.stopped) throw new Error('Camera recording has already stopped.');
+    if (this.recorder) throw new Error('Camera segment is already recording.');
     this.appearance = appearance;
     this.placement = placement;
     this.timelineStartedAt = timelineStartedAt;
@@ -227,7 +230,7 @@ export class BrowserCameraRecorder {
       } catch {
         /* The explicit failure reason is persisted below. */
       }
-      await api().failCamera({ sessionId, reason });
+      await withMediaDeadline(api().failCamera({ sessionId, reason }), 'Camera failure reporting');
     } finally {
       this.release();
     }
@@ -247,30 +250,19 @@ export class BrowserCameraRecorder {
       startNs,
     });
     this.jobId = opened.jobId;
-    this.sequence = 0;
     this.segmentStartNs = startNs;
     this.frameCount = 0;
-    this.pendingWrites = [];
-    this.writeTail = Promise.resolve();
+    const jobId = opened.jobId;
+    const writer = new MediaSegmentWriter({
+      write: (data, sequence) => api().writeCameraSegment({ jobId, sequence, data }),
+      onError: (error) => this.reportFatal(error),
+    });
+    this.writer = writer;
     const recorder = new MediaRecorder(this.stream, {
       mimeType: MIME_TYPE,
       videoBitsPerSecond: 8_000_000,
     });
-    recorder.addEventListener('dataavailable', (event) => {
-      if (!event.data.size || !this.jobId) return;
-      const sequence = this.sequence++;
-      const write = this.writeTail.then(async () => {
-        const buffer = await event.data.arrayBuffer();
-        await api().writeCameraSegment({
-          jobId: this.jobId!,
-          sequence,
-          data: new Uint8Array(buffer),
-        });
-      });
-      this.writeTail = write;
-      this.pendingWrites.push(write);
-      void write.catch((error: unknown) => this.reportFatal(asError(error)));
-    });
+    recorder.addEventListener('dataavailable', (event) => writer.enqueue(event.data));
     recorder.addEventListener(
       'error',
       () => this.reportFatal(new Error('Chromium failed while encoding camera video.')),
@@ -284,25 +276,24 @@ export class BrowserCameraRecorder {
     const recorder = this.recorder;
     const jobId = this.jobId;
     if (!recorder || !jobId) return;
-    await new Promise<void>((resolve, reject) => {
-      recorder.addEventListener('stop', () => resolve(), { once: true });
-      recorder.addEventListener('error', () => reject(new Error('Chromium failed while finalizing camera video.')), {
-        once: true,
-      });
-      recorder.stop();
-    });
-    await Promise.all(this.pendingWrites);
-    await api().finalizeCameraSegment({
-      jobId,
-      endNs: Math.max(endNs, this.segmentStartNs),
-      metrics: {
-        framesAcquired: this.frameCount,
-        framesReceived: this.frameCount,
-      },
-    });
+    await stopBrowserMediaRecorder(recorder, 'Camera encoder finalization');
+    await this.writer?.flush();
+    await withMediaDeadline(
+      api().finalizeCameraSegment({
+        jobId,
+        endNs: Math.max(endNs, this.segmentStartNs),
+        metrics: {
+          framesAcquired: this.frameCount,
+          framesReceived: this.frameCount,
+        },
+      }),
+      'Camera segment finalization',
+    );
     this.frameCount = 0;
     this.recorder = null;
     this.jobId = null;
+    this.writer?.abort();
+    this.writer = null;
   }
 
   private nowNs() {
@@ -329,12 +320,25 @@ export class BrowserCameraRecorder {
   }
 
   private reportFatal(error: Error) {
-    if (this.stopped) return;
+    if (this.stopped || this.fatalReported) return;
+    this.fatalReported = true;
     this.fatalHandler?.(error);
   }
 
   private release() {
+    if (this.stopped) return;
     this.stopped = true;
+    this.writer?.abort();
+    if (this.recorder && this.recorder.state !== 'inactive') {
+      // Finalization can fail without Chromium emitting its stop event.
+      try {
+        this.recorder.stop();
+      } catch {
+        /* Tracks are released below. */
+      }
+    }
+    this.recorder = null;
+    this.jobId = null;
     this.track.removeEventListener('ended', this.trackEndedHandler);
     if (typeof window !== 'undefined') window.removeEventListener('beforeunload', this.beforeUnloadHandler);
     this.video?.pause();
@@ -476,8 +480,4 @@ export class CameraOverlayRecorder implements CameraRecorderHandle {
     this.removeFailureListener = null;
     this.fatalHandler = null;
   }
-}
-
-function asError(value: unknown) {
-  return value instanceof Error ? value : new Error(String(value));
 }

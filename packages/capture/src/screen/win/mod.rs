@@ -1,6 +1,7 @@
 mod capture;
 mod catalog;
 mod compatibility;
+mod encoder;
 mod permissions;
 mod selection;
 

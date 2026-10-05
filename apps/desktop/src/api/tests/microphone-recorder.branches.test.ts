@@ -228,11 +228,7 @@ describe('BrowserMicrophoneRecorder', () => {
     FakeMediaRecorder.instances[0].error();
     expect(fatal).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('encoding') }));
     track.dispatchEvent(new Event('ended'));
-    expect(fatal).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.stringContaining('disconnected'),
-      }),
-    );
+    expect(fatal).toHaveBeenCalledOnce();
     await recorder.stop();
   });
 
@@ -299,6 +295,42 @@ describe('BrowserMicrophoneRecorder', () => {
         sessionId: 'session-6',
         reason: 'capture failed',
       }),
+    );
+  });
+  it('rejects a second live segment and accepts pause/failure before starting', async () => {
+    const recorder = await BrowserMicrophoneRecorder.request('microphone:chromium:test');
+    await recorder.pause();
+    await recorder.start('session');
+    await expect(recorder.resume('session')).rejects.toThrow('already recording');
+    await recorder.stop();
+    const idle = await BrowserMicrophoneRecorder.request('microphone:chromium:test');
+    await idle.fail('session', 'disconnected');
+    expect(capture.failMicrophone).toHaveBeenCalledWith(expect.objectContaining({ reason: 'disconnected' }));
+  });
+  it('releases tracks even when Chromium stop throws and audio-context close rejects', async () => {
+    const recorder = await BrowserMicrophoneRecorder.request('microphone:chromium:test');
+    await recorder.start('session');
+    const context = FakeAudioContext.instances[0];
+    context.close.mockRejectedValueOnce(new Error('closing context failed'));
+    vi.spyOn(FakeMediaRecorder.instances[0], 'stop').mockImplementation(() => {
+      throw new Error('driver failed');
+    });
+    await expect(recorder.stop()).rejects.toThrow('driver failed');
+    expect(context.destinationStream.getTracks()[0].stopped).toBe(true);
+    await Promise.resolve();
+  });
+  it('does not close an audio context that Chromium has already closed', async () => {
+    const recorder = await BrowserMicrophoneRecorder.request('microphone:chromium:test');
+    FakeAudioContext.instances[0].state = 'closed';
+    await recorder.stop();
+    expect(FakeAudioContext.instances[0].close).not.toHaveBeenCalled();
+  });
+  it('reports missing Chromium access and missing Electron failure storage', async () => {
+    Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined });
+    await expect(BrowserMicrophoneRecorder.request('microphone:chromium:test')).rejects.toThrow('unavailable');
+    delete window.capture;
+    await expect(recordMicrophoneFailure('session', 'microphone:chromium:test', 'missing')).rejects.toThrow(
+      'outside Electron',
     );
   });
 });

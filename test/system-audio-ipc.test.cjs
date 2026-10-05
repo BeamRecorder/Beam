@@ -25,17 +25,17 @@ function sessionFixture() {
   return { directory, manifestPath, sessionId };
 }
 
-test('stores Chromium loopback WebM beside the session with its negotiated audio format', () => {
+test('stores Chromium loopback WebM beside the session with its negotiated audio format', async () => {
   const storage = createSystemAudioStorage({});
   const session = sessionFixture();
   storage.registerSession(session);
   const opened = storage.begin(31, { sessionId, sourceId, format, startNs: 0 });
-  storage.write(31, {
+  await storage.write(31, {
     jobId: opened.jobId,
     sequence: 0,
     data: new Uint8Array([9, 8, 7]),
   });
-  storage.finalize(31, {
+  await storage.finalize(31, {
     jobId: opened.jobId,
     endNs: 1_000_000,
     metrics: { samplesReceived: 1 },
@@ -56,7 +56,7 @@ test('stores Chromium loopback WebM beside the session with its negotiated audio
   );
 });
 
-test('records a loopback permission failure as an explicit failed optional track', () => {
+test('records a loopback permission failure as an explicit failed optional track', async () => {
   const storage = createSystemAudioStorage({});
   const session = sessionFixture();
   storage.registerSession(session);
@@ -77,7 +77,7 @@ test('records a loopback permission failure as an explicit failed optional track
   });
 });
 
-test('rejects non-loopback sources, malformed formats, and cross-renderer finalization', () => {
+test('rejects non-loopback sources, malformed formats, and cross-renderer finalization', async () => {
   const storage = createSystemAudioStorage({});
   const session = sessionFixture();
   storage.registerSession(session);

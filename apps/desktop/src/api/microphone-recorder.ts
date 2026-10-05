@@ -1,3 +1,5 @@
+import { MediaSegmentWriter } from './media-segment-writer';
+import { stopBrowserMediaRecorder, withMediaDeadline } from './media-recorder-finalization';
 import type {
   CaptureSource,
   MicrophoneFailure,
@@ -41,11 +43,10 @@ export async function listBrowserMicrophones(): Promise<CaptureSource[]> {
 export class BrowserMicrophoneRecorder {
   private recorder: MediaRecorder | null = null;
   private jobId: string | null = null;
-  private sequence = 0;
   private segmentStartNs = 0;
   private timelineStartedAt = 0;
-  private pendingWrites: Promise<void>[] = [];
-  private writeTail: Promise<void> = Promise.resolve();
+  private writer: MediaSegmentWriter | null = null;
+  private fatalReported = false;
   private fatalHandler: ((error: Error) => void) | null = null;
   private stopped = false;
   private released = false;
@@ -148,8 +149,11 @@ export class BrowserMicrophoneRecorder {
   }
 
   async stop(endNs = this.nowNs()) {
-    if (this.recorder) await this.finishSegment(endNs);
-    this.release();
+    try {
+      if (this.recorder) await this.finishSegment(endNs);
+    } finally {
+      this.release();
+    }
   }
 
   async fail(sessionId: string, reason: string) {
@@ -158,13 +162,19 @@ export class BrowserMicrophoneRecorder {
     } catch {
       /* The explicit failure is persisted below. */
     }
-    await api().failMicrophone({
-      sessionId,
-      sourceId: this.sourceId,
-      format: this.format,
-      reason,
-    });
-    this.release();
+    try {
+      await withMediaDeadline(
+        api().failMicrophone({
+          sessionId,
+          sourceId: this.sourceId,
+          format: this.format,
+          reason,
+        }),
+        'Recording failure reporting',
+      );
+    } finally {
+      this.release();
+    }
   }
 
   private async startSegment(sessionId: string, startNs: number) {
@@ -177,29 +187,18 @@ export class BrowserMicrophoneRecorder {
       startNs,
     });
     this.jobId = opened.jobId;
-    this.sequence = 0;
     this.segmentStartNs = startNs;
-    this.pendingWrites = [];
-    this.writeTail = Promise.resolve();
+    const jobId = opened.jobId;
+    const writer = new MediaSegmentWriter({
+      write: (data, sequence) => api().writeMicrophoneSegment({ jobId, sequence, data }),
+      onError: (error) => this.reportFatal(error),
+    });
+    this.writer = writer;
     const recorder = new MediaRecorder(this.stream, {
       mimeType: MIME_TYPE,
       audioBitsPerSecond: 128_000,
     });
-    recorder.addEventListener('dataavailable', (event) => {
-      if (!event.data.size || !this.jobId) return;
-      const sequence = this.sequence++;
-      const write = this.writeTail.then(async () => {
-        const buffer = await event.data.arrayBuffer();
-        await api().writeMicrophoneSegment({
-          jobId: this.jobId!,
-          sequence,
-          data: new Uint8Array(buffer),
-        });
-      });
-      this.writeTail = write;
-      this.pendingWrites.push(write);
-      void write.catch((error: unknown) => this.reportFatal(asError(error)));
-    });
+    recorder.addEventListener('dataavailable', (event) => writer.enqueue(event.data));
     recorder.addEventListener(
       'error',
       () => this.reportFatal(new Error('Chromium failed while encoding microphone audio.')),
@@ -213,23 +212,20 @@ export class BrowserMicrophoneRecorder {
     const recorder = this.recorder;
     const jobId = this.jobId;
     if (!recorder || !jobId) return;
-    await new Promise<void>((resolve, reject) => {
-      recorder.addEventListener('stop', () => resolve(), { once: true });
-      recorder.addEventListener(
-        'error',
-        () => reject(new Error('Chromium failed while finalizing microphone audio.')),
-        { once: true },
-      );
-      recorder.stop();
-    });
-    await Promise.all(this.pendingWrites);
-    await api().finalizeMicrophoneSegment({
-      jobId,
-      endNs: Math.max(endNs, this.segmentStartNs),
-      metrics: {},
-    });
+    await stopBrowserMediaRecorder(recorder, 'Microphone encoder finalization');
+    await this.writer?.flush();
+    await withMediaDeadline(
+      api().finalizeMicrophoneSegment({
+        jobId,
+        endNs: Math.max(endNs, this.segmentStartNs),
+        metrics: {},
+      }),
+      'Microphone segment finalization',
+    );
     this.recorder = null;
     this.jobId = null;
+    this.writer?.abort();
+    this.writer = null;
   }
 
   private nowNs() {
@@ -244,13 +240,26 @@ export class BrowserMicrophoneRecorder {
   }
 
   private reportFatal(error: Error) {
-    if (!this.stopped) this.fatalHandler?.(error);
+    if (this.stopped || this.fatalReported) return;
+    this.fatalReported = true;
+    this.fatalHandler?.(error);
   }
 
   private release() {
     if (this.released) return;
     this.released = true;
     this.stopped = true;
+    this.writer?.abort();
+    if (this.recorder && this.recorder.state !== 'inactive') {
+      // Finalization can fail without Chromium emitting its stop event.
+      try {
+        this.recorder.stop();
+      } catch {
+        /* Tracks are released below. */
+      }
+    }
+    this.recorder = null;
+    this.jobId = null;
     this.stream.getTracks().forEach((entry) => entry.stop());
     if (this.audioContext.state !== 'closed') void this.audioContext.close().catch(() => undefined);
   }
@@ -258,8 +267,4 @@ export class BrowserMicrophoneRecorder {
 
 export async function recordMicrophoneFailure(sessionId: string, sourceId: string, reason: string) {
   await api().failMicrophone({ sessionId, sourceId, reason });
-}
-
-function asError(value: unknown) {
-  return value instanceof Error ? value : new Error(String(value));
 }

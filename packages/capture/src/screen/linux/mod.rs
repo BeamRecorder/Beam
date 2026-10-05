@@ -23,6 +23,7 @@ mod input_monitor_tests;
 mod input_stream_health;
 mod input_timeline;
 mod owned_child;
+mod pipe_writer;
 mod pipewire;
 mod portal;
 mod recording;

@@ -10,8 +10,14 @@ class FakeMediaRecorder {
   private readonly listeners = new Map<string, Listener[]>();
   readonly stream: MediaStream;
   readonly options: MediaRecorderOptions;
-  start = vi.fn();
-  stop = vi.fn(() => this.emit('stop'));
+  state = 'inactive';
+  start = vi.fn(() => {
+    this.state = 'recording';
+  });
+  stop = vi.fn(() => {
+    this.state = 'inactive';
+    this.emit('stop');
+  });
   constructor(stream: MediaStream, options: MediaRecorderOptions) {
     this.stream = stream;
     this.options = options;
@@ -19,6 +25,12 @@ class FakeMediaRecorder {
   }
   addEventListener(type: string, listener: Listener) {
     this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
+  }
+  removeEventListener(type: string, listener: Listener) {
+    this.listeners.set(
+      type,
+      (this.listeners.get(type) ?? []).filter((entry) => entry !== listener),
+    );
   }
   emit(type: string, event: unknown = {}) {
     this.listeners.get(type)?.forEach((listener) => listener(event));
@@ -289,10 +301,10 @@ describe('BrowserCameraRecorder', () => {
     await recorder.start('session');
     track.emit('ended');
     FakeMediaRecorder.instances[0].emit('error');
-    expect(fatal).toHaveBeenCalledTimes(2);
+    expect(fatal).toHaveBeenCalledOnce();
     await recorder.stop();
     track.emit('ended');
-    expect(fatal).toHaveBeenCalledTimes(2);
+    expect(fatal).toHaveBeenCalledOnce();
   });
 
   it('persists explicit failure even when segment finalization fails', async () => {
@@ -311,6 +323,71 @@ describe('BrowserCameraRecorder', () => {
     });
     expect(track.stop).toHaveBeenCalledOnce();
     await expect(recorder.resume('session')).rejects.toThrow('already stopped');
+  });
+});
+
+describe('camera recording recovery', () => {
+  const stream = () => {
+    const track = createTrack();
+    return { track, value: { getVideoTracks: () => [track], getTracks: () => [track] } as unknown as MediaStream };
+  };
+  it('rejects missing Electron IPC and invalid overlay preparations', async () => {
+    delete window.capture;
+    await expect(CameraOverlayRecorder.request('camera:chromium:one')).rejects.toThrow('outside Electron');
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
+    await expect(CameraOverlayRecorder.request('camera:chromium:one')).rejects.toThrow('invalid preparation');
+  });
+  it('releases a device when the first video frame cannot be decoded', async () => {
+    const source = stream();
+    vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue(source.value);
+    vi.mocked(HTMLMediaElement.prototype.play).mockRejectedValueOnce(new Error('decode failed'));
+    await expect(BrowserCameraRecorder.request('camera:chromium:one')).rejects.toThrow('decode failed');
+    expect(source.track.stop).toHaveBeenCalledOnce();
+  });
+  it.each([true, false])('handles a missing ready stream track with ownsStream=%s', async (ownsStream) => {
+    const stop = vi.fn();
+    const source = { getVideoTracks: () => [], getTracks: () => [{ stop }] } as unknown as MediaStream;
+    expect(() => BrowserCameraRecorder.fromReadyStream('camera:chromium:one', source, ownsStream)).toThrow(
+      'video track',
+    );
+    expect(stop).toHaveBeenCalledTimes(ownsStream ? 1 : 0);
+  });
+  it('rejects an unsupported ready stream codec', () => {
+    FakeMediaRecorder.supported = false;
+    expect(() => BrowserCameraRecorder.fromReadyStream('camera:chromium:one', stream().value)).toThrow('VP8');
+  });
+  it('releases an active encoder on unload and ignores late frame callbacks', async () => {
+    const source = stream();
+    const recorder = BrowserCameraRecorder.fromReadyStream('camera:chromium:one', source.value, true);
+    await recorder.start('session');
+    const callback = vi.mocked(HTMLVideoElement.prototype.requestVideoFrameCallback).mock.calls.at(-1)?.[0];
+    window.dispatchEvent(new Event('beforeunload'));
+    const registered = vi.mocked(HTMLVideoElement.prototype.requestVideoFrameCallback).mock.calls.length;
+    callback?.(0, {} as VideoFrameCallbackMetadata);
+    expect(HTMLVideoElement.prototype.requestVideoFrameCallback).toHaveBeenCalledTimes(registered);
+    await recorder.stop();
+    expect(source.track.stop).toHaveBeenCalledOnce();
+    expect(FakeMediaRecorder.instances[0].stop).toHaveBeenCalledOnce();
+  });
+  it('persists a failure before a camera segment starts', async () => {
+    const recorder = BrowserCameraRecorder.fromReadyStream('camera:chromium:one', stream().value);
+    await recorder.pause();
+    await recorder.fail('session', 'device lost');
+    expect(capture.failCamera).toHaveBeenCalledWith({ sessionId: 'session', reason: 'device lost' });
+  });
+  it('releases overlay control listeners even when failure reporting rejects', async () => {
+    capture.controlCameraOverlayRecording.mockResolvedValueOnce({
+      recordingId: 'id',
+      sourceId: 'camera:chromium:one',
+      format: { codec: 'vp8', width: 640, height: 480, nominalFps: 30 },
+    });
+    const recorder = await CameraOverlayRecorder.request('camera:chromium:one');
+    capture.controlCameraOverlayRecording.mockRejectedValueOnce(new Error('overlay closed'));
+    await expect(recorder.fail('session', 'lost')).rejects.toThrow('overlay closed');
+    await recorder.fail('session', 'lost');
+    await recorder.stop();
+    await expect(recorder.resume('session')).rejects.toThrow('already stopped');
+    expect(capture.controlCameraOverlayRecording).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -9,6 +9,7 @@ import { useNativeSystemAudioLevel } from './useNativeSystemAudioLevel';
 import { recordingCameraMetadata } from './recording-camera-metadata';
 import { CaptureSelectionCancelled, prepareNativeRecording } from './recording-native-preparation';
 import { formatRecordingTime, isRecordingActivePhase } from './recording-types';
+import { finalizeRecording } from './recording-stop';
 import { createRecordingRestart } from './recording-restart';
 import { createRecordingCountdown } from './recording-countdown';
 import type { RecordingConfiguration, RecordingPhase, RecordingSessionResult } from './recording-types';
@@ -305,7 +306,7 @@ export function useRecordingController(
 
   const start = async (next: RecordingConfiguration) => {
     if (nativeCleanupBlocked) {
-      error.value ||= 'Native recording cleanup is unresolved. Restart Beam before recording again.';
+      error.value = 'Native recording cleanup is unresolved. Restart Beam before recording again.';
       return;
     }
     if (isActive.value || pendingNativeStart || prewarm) {
@@ -357,8 +358,7 @@ export function useRecordingController(
   const resetState = async (sidecarsAlreadyStopped = false) => {
     recordingGeneration += 1;
     clearCountdown();
-    await capture.cancelRegionSelection();
-    await capture.setCountdown(null);
+    await Promise.allSettled([capture.cancelRegionSelection(), capture.setCountdown(null)]);
     capture.hideScreenRegionOverlay();
     clearTimer();
     recordingHealth.reset();
@@ -414,32 +414,38 @@ export function useRecordingController(
   async function stop() {
     if (phase.value === 'countdown' || phase.value === 'starting') return cancel();
     if (phase.value !== 'recording' && phase.value !== 'paused') return;
-    const wasRecording = phase.value === 'recording';
+    const previousPhase = phase.value;
     phase.value = 'finalizing';
     clearTimer();
-    try {
-      const stopNs = timelineNowNs();
-      const nativeStop = capture.stopNativeRecording();
-      const sidecarsStop = Promise.all([
-        stopRecorder(camera, stopNs),
-        stopRecorder(microphone, stopNs),
-        stopRecorder(systemAudio, stopNs),
-      ]);
-      const results = await Promise.allSettled([nativeStop, sidecarsStop]);
-      const nativeResult = results[0];
-      const sidecarsResult = results[1];
-      if (nativeResult.status === 'rejected') throw nativeResult.reason;
-      if (sidecarsResult.status === 'rejected') throw sidecarsResult.reason;
-      const session = await capture.completeNativeRecording();
-      capture.hideScreenRegionOverlay();
-      await resetState(true);
-      onComplete(session);
-    } catch (reason) {
-      error.value = reason instanceof Error ? reason.message : String(reason);
-      phase.value = 'recording';
-      if (wasRecording && timer === null) {
-        startTimer();
-      }
+    const stopNs = timelineNowNs();
+    const result = await finalizeRecording({
+      stopNative: () => capture.stopNativeRecording(),
+      stopSidecars: async () => {
+        const results = await Promise.allSettled([
+          stopRecorderStrict(camera, stopNs),
+          stopRecorderStrict(microphone, stopNs),
+          stopRecorderStrict(systemAudio, stopNs),
+        ]);
+        const failed = results.find((entry) => entry.status === 'rejected');
+        if (failed?.status === 'rejected') throw failed.reason;
+      },
+      completeNative: () => capture.completeNativeRecording(),
+      status: () => capture.status(),
+    });
+    if (result.kind === 'active') {
+      error.value = result.error;
+      phase.value = previousPhase;
+      if (previousPhase === 'recording') startTimer();
+      return;
+    }
+    capture.setTeleprompterSession(null);
+    await resetState(true);
+    if (result.kind === 'completed') {
+      if (result.warning) error.value = result.warning;
+      onComplete(result.session);
+    } else {
+      nativeCleanupBlocked = result.cleanupBlocked;
+      error.value = result.error;
     }
   }
 

@@ -360,6 +360,7 @@ describe('useRecordingController branch behavior', () => {
     await controller.start(configuration());
     await waitForRecording(controller);
     capture.stopNativeRecording.mockRejectedValueOnce(new Error('stop failed'));
+    capture.status.mockResolvedValueOnce({ state: 'recording' });
     await controller.stop();
     expect(controller.phase.value).toBe('recording');
     expect(controller.error.value).toBe('stop failed');
@@ -383,5 +384,47 @@ describe('useRecordingController branch behavior', () => {
     const calls = capture.prepareRecording.mock.calls.length;
     await controller.start(configuration());
     expect(capture.prepareRecording).toHaveBeenCalledTimes(calls);
+  });
+  it.each(['idle', 'failed'] as const)(
+    'returns to idle when Stop discovers a terminated native recording: %s',
+    async (state) => {
+      const completed = vi.fn();
+      const controller = useRecordingController(completed);
+      await controller.start(configuration());
+      await waitForRecording(controller);
+      await vi.advanceTimersByTimeAsync(1000);
+      capture.stopNativeRecording.mockRejectedValueOnce(new Error('native process ended'));
+      capture.status.mockResolvedValue({ state });
+      await controller.stop();
+      expect(controller.phase.value).toBe('idle');
+      expect(controller.error.value).toBe('native process ended');
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(controller.recordingTime.value).toBe('00:00.0');
+      expect(completed).not.toHaveBeenCalled();
+    },
+  );
+  it('stops the UI and prevents another start if native cleanup cannot be verified', async () => {
+    const controller = useRecordingController(vi.fn());
+    await controller.start(configuration());
+    await waitForRecording(controller);
+    capture.stopNativeRecording.mockRejectedValueOnce(new Error('engine unresponsive'));
+    capture.status.mockRejectedValue(new Error('transport closed'));
+    await controller.stop();
+    expect(controller.phase.value).toBe('idle');
+    capture.startPreparedRecording.mockClear();
+    await controller.start(configuration());
+    expect(capture.startPreparedRecording).not.toHaveBeenCalled();
+    expect(controller.error.value).toContain('Restart Beam');
+  });
+  it('still publishes screen recording when the camera segment fails during Stop', async () => {
+    const completed = vi.fn();
+    const controller = useRecordingController(completed);
+    await controller.start(configuration({ cameraId: 'camera:chromium:front' }));
+    await waitForRecording(controller);
+    camera.stop.mockRejectedValueOnce(new Error('camera finalization failed'));
+    await controller.stop();
+    expect(controller.phase.value).toBe('idle');
+    expect(controller.error.value).toBe('camera finalization failed');
+    expect(completed).toHaveBeenCalledOnce();
   });
 });

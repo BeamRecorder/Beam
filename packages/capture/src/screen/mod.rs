@@ -1,8 +1,12 @@
 mod crop;
 mod desktop_policy;
 mod frame;
+#[cfg(any(windows, test))]
+mod frame_buffer;
 mod preview;
 mod recording;
+#[cfg(any(windows, target_os = "macos", test))]
+mod recording_queue;
 mod region_selection;
 mod selection;
 

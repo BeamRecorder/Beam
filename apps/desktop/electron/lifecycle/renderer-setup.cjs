@@ -116,6 +116,7 @@ function createRendererSetup({
       hasShadow: false,
       show: false,
       webPreferences: {
+        backgroundThrottling: false,
         additionalArguments: isDevelopmentSourceDataEnabled(app.isPackaged) ? ['--beam-dev-crossplatform'] : [],
         preload: path.join(applicationRoot, 'apps/desktop/electron/preload.cjs'),
         nodeIntegration: false,

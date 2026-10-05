@@ -99,14 +99,22 @@ function registerCaptureIpc({
     isTrustedRenderer,
     canAcceptWork,
   });
+  let activeSessionId = null;
   const registerSession = (session) => {
+    activeSessionId = session?.sessionId ?? null;
     for (const storage of trackStorages) storage.registerSession(session);
     return withProjectId(session);
   };
-  const completeSession = (session) => trackStorages.reduce((value, storage) => storage.complete(value), session);
+  const completeSession = (session) => {
+    const completed = trackStorages.reduce((value, storage) => storage.complete(value), session);
+    if (activeSessionId === session?.sessionId) activeSessionId = null;
+    return completed;
+  };
   let deferredStoppedSession = null;
   let systemAudioPreview;
   const requestEngine = async (command, payload = {}) => {
+    if (command === 'prepare' && deferredStoppedSession)
+      throw new Error('Complete the previous recording before starting another recording.');
     if (command === 'prepare') systemAudioPreview?.invalidate();
     try {
       const cursor = payload.config?.cursor;
@@ -122,6 +130,10 @@ function registerCaptureIpc({
       return await captureEngine.request(command, payload);
     } catch (error) {
       if (captureEngine.isPoisoned) {
+        if (activeSessionId) {
+          for (const storage of trackStorages) storage.forgetSession(activeSessionId);
+          activeSessionId = null;
+        }
         deferredStoppedSession = null;
         systemAudioPreview?.invalidate();
       }
@@ -230,6 +242,7 @@ function registerCaptureIpc({
       for (const storage of trackStorages) storage.forgetSession(payload.sessionId);
       const session = await requestEngine('discard');
       for (const storage of trackStorages) storage.forgetSession(session?.sessionId);
+      activeSessionId = null;
       return undefined;
     }
     if (command === 'start-recording') {
