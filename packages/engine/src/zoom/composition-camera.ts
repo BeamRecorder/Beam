@@ -1,10 +1,11 @@
-import type { CursorTelemetryPoint } from '@beam/engine/capture/capture-session';
-import {
-  createCameraVelocity,
-  stepCameraSpring,
-  type CameraTransform,
-  type CameraVelocity,
-} from '@beam/engine/zoom/zoom-spring';
+import type {
+  CameraCheckpointReuse,
+  CompositionCameraEvaluator,
+  CompositionCameraInputs,
+  CameraSimulationState as SimulationState,
+} from './composition-camera-types';
+export type { CameraSample, CompositionCameraEvaluator, CompositionCameraInputs } from './composition-camera-types';
+import { createCameraVelocity, stepCameraSpring, type CameraTransform } from '@beam/engine/zoom/zoom-spring';
 import { clampFocusToScale, createZoomTimeEvaluator, cursorFocusAt } from '@beam/engine/zoom/zoom-playback';
 import {
   cameraSpringOmega,
@@ -17,40 +18,11 @@ import {
   DEFAULT_ZOOM_TILT_VERTICAL,
   DEFAULT_ZOOM_AUTO_FOLLOW,
   normalizeZoomAutoFollow,
-  type AppliedZoom,
-  type ZoomAutoFollowSettings,
-  type ZoomElement,
-  type ZoomFocus,
 } from '@beam/engine/zoom/zoom-types';
-
-export interface CameraSample {
-  focus: ZoomFocus;
-  scale: number;
-  tiltX?: number;
-  tiltY?: number;
-}
-
-export interface CompositionCameraEvaluator {
-  sample(timeMs: number): CameraSample;
-  invalidate(): void;
-}
-
-export interface CompositionCameraInputs {
-  zooms: readonly ZoomElement[];
-  telemetry: readonly CursorTelemetryPoint[];
-  mapFocus?: (focus: ZoomFocus, zoom: AppliedZoom, timeMs: number) => ZoomFocus;
-  mapTelemetryTime?: (timelineTimeMs: number) => number;
-  autoFollow?: ZoomAutoFollowSettings;
-}
-
-interface SimulationState {
-  camera: CameraTransform;
-  velocity: CameraVelocity;
-  autoFollow: AutoFollowState;
-}
 
 const STEP_MS = 1_000 / 120;
 const CHECKPOINT_STEPS = 30;
+const retainedCheckpoints = new WeakMap<CompositionCameraEvaluator, ReadonlyMap<number, SimulationState>>();
 export const MAX_CAMERA_TILT_RADIANS = (62 * Math.PI) / 180;
 
 export function cameraTiltForControls(intensity: number, horizontal: number, vertical: number) {
@@ -74,7 +46,10 @@ const cloneState = (state: SimulationState): SimulationState => ({
   },
 });
 
-export function createCompositionCameraEvaluator(inputs: CompositionCameraInputs): CompositionCameraEvaluator {
+export function createCompositionCameraEvaluator(
+  inputs: CompositionCameraInputs,
+  reuse?: CameraCheckpointReuse,
+): CompositionCameraEvaluator {
   const checkpoints = new Map<number, SimulationState>();
   const zoomAt = createZoomTimeEvaluator(inputs.zooms, inputs.telemetry, inputs.mapFocus);
   const autoFollowSettings = normalizeZoomAutoFollow(inputs.autoFollow ?? DEFAULT_ZOOM_AUTO_FOLLOW);
@@ -82,7 +57,7 @@ export function createCompositionCameraEvaluator(inputs: CompositionCameraInputs
   const targetAt = (
     timeMs: number,
     autoFollow: AutoFollowState,
-  ): { camera: CameraTransform; tracksCursor: boolean } => {
+  ): { camera: Required<CameraTransform>; tracksCursor: boolean } => {
     const zoom = zoomAt(timeMs);
     if (!zoom) {
       updateAutoFollowTarget(autoFollow, null, { cx: 0.5, cy: 0.5 }, 1, 0, timeMs);
@@ -112,13 +87,20 @@ export function createCompositionCameraEvaluator(inputs: CompositionCameraInputs
     checkpoints.clear();
     checkpoints.set(0, initialState());
   };
-  reset();
+  if (reuse) {
+    // Stored states are immutable. Each simulation clones its starting state.
+    // Keep only history strictly before the edit; never borrow a changed step.
+    const before = Math.max(0, reuse.unchangedBeforeMs || 0) / STEP_MS;
+    for (const [step, state] of retainedCheckpoints.get(reuse.previous) ?? [])
+      if (step < before) checkpoints.set(step, state);
+  }
+  if (!checkpoints.has(0)) reset();
 
   const stateAtStep = (targetStep: number) => {
     const checkpointStep = Math.floor(targetStep / CHECKPOINT_STEPS) * CHECKPOINT_STEPS;
     let startStep = checkpointStep;
     while (startStep > 0 && !checkpoints.has(startStep)) startStep -= CHECKPOINT_STEPS;
-    let state = cloneState(checkpoints.get(startStep) ?? initialState());
+    let state = cloneState(checkpoints.get(startStep)!);
     for (let step = startStep + 1; step <= targetStep; step += 1) {
       const target = targetAt(step * STEP_MS, state.autoFollow);
       state.camera = stepCameraSpring(
@@ -133,7 +115,7 @@ export function createCompositionCameraEvaluator(inputs: CompositionCameraInputs
     return state.camera;
   };
 
-  return {
+  const evaluator: CompositionCameraEvaluator = {
     sample(timeMs) {
       const time = Math.max(0, Number.isFinite(timeMs) ? timeMs : 0);
       const lowerStep = Math.floor(time / STEP_MS);
@@ -143,20 +125,22 @@ export function createCompositionCameraEvaluator(inputs: CompositionCameraInputs
         return {
           focus: { cx: lower.focusX, cy: lower.focusY },
           scale: lower.scale,
-          tiltX: lower.tiltX ?? 0,
-          tiltY: lower.tiltY ?? 0,
+          tiltX: lower.tiltX,
+          tiltY: lower.tiltY,
         };
       const upper = stateAtStep(lowerStep + 1);
       const mix = (left: number, right: number) => left + (right - left) * progress;
       return {
         focus: { cx: mix(lower.focusX, upper.focusX), cy: mix(lower.focusY, upper.focusY) },
         scale: mix(lower.scale, upper.scale),
-        tiltX: mix(lower.tiltX ?? 0, upper.tiltX ?? 0),
-        tiltY: mix(lower.tiltY ?? 0, upper.tiltY ?? 0),
+        tiltX: mix(lower.tiltX, upper.tiltX),
+        tiltY: mix(lower.tiltY, upper.tiltY),
       };
     },
     invalidate: reset,
   };
+  retainedCheckpoints.set(evaluator, checkpoints);
+  return evaluator;
 }
 
 export const CAMERA_SIMULATION_HZ = 120;

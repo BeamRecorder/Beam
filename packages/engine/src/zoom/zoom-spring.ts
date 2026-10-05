@@ -25,7 +25,7 @@ export function stepCameraSpring(
   velocity: CameraVelocity,
   deltaMs: number,
   focusOmega = 10,
-): CameraTransform {
+): Required<CameraTransform> {
   const dt = Math.min(0.08, Math.max(0.001, deltaMs / 1000));
   const x = stepCritical(current.focusX, target.focusX, velocity.focusX, dt, focusOmega);
   const y = stepCritical(current.focusY, target.focusY, velocity.focusY, dt, focusOmega);

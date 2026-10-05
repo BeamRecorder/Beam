@@ -17,7 +17,7 @@ export const ZOOM_OUT_MS = 1015.05;
 const LEAD_MS = 200;
 const IN_OVERLAP_MS = 1000;
 const OUT_EARLY_MS = 500;
-const CONNECTED_GAP_MS = 1350;
+export const CONNECTED_GAP_MS = 1350;
 const CONNECTED_PAN_MS = 1000;
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 const easeOut = (value: number) => 1 - (1 - clamp01(value)) ** 3;

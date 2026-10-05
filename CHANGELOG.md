@@ -6,6 +6,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Moving split recording fragments reuses unaffected zoom history instead of recalculating the entire recording on every pointer update, keeping the editor responsive. Narrow timeline gaps retain their Remove gap action, including two-second cuts in long recordings.
 - Screenshot and video editors open within the current display's usable area, including Windows 150% scaling and saved sizes from larger displays, so editor controls remain reachable.
 - Compact editor layouts keep inspector scrolling, capture/export controls and playback actions accessible; video timelines adapt to shorter windows without replacing the saved height preference.
 - Circular and freehand Loupe zooms retain finer text detail by rendering original sources at lens density, with matching Screenshot/video exports and HiDPI previews.

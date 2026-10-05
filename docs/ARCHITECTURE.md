@@ -49,6 +49,8 @@ Linux CI builds the native exporter against a pinned LGPL-only FFmpeg dependency
 
 Composition editing uses structural sharing for clip, trim, rate, layout and hold operations; arbitrary updater callbacks receive an owned target record. Sparse timeline indexes and gesture previews remain intact. Mutable desktop presentation snapshots still use copied history. See [measured document edits](performance/document-runtime-2026-10-02.md) for the scope and before/after results.
 
+Camera previews retain deterministic spring checkpoints across immutable timeline edits. Engine determines the earliest affected screen/zoom target, including connected zoom lead time; runtime borrows only checkpoints strictly before that boundary. Global geometry, telemetry or follow-setting changes rebuild history. Desktop passes raw immutable inputs to both preview and hit-geometry evaluators so reactive proxy traversal does not repeat throughout historical simulation.
+
 The desktop workspace has separate properties, preview and timeline views. Its host composables own selection, canvas gestures, media imports, history, timeline interactions and keyboard handling; an explicitly typed Vue context connects these views. Presentation history performs its ownership copy once, without first cloning every field in the workspace. Domain operations and rendering remain in the packages above.
 
 ### CLI data and backend contract

@@ -1,7 +1,7 @@
 import { defineComponent, h, nextTick, ref } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useCameraZoom, type RenderedVideoWindow } from '../useCameraZoom';
+import { useCameraZoom, type RenderedVideoWindow, type UseCameraZoomOptions } from '../useCameraZoom';
 import * as compositionCamera from '@beam/engine/zoom/composition-camera';
 import type { ClipComposition, NormalizedTransform, VisualClip } from '@beam/engine/shared/composition-types';
 import type { MediaFrame } from '@beam/runtime/shared/index';
@@ -126,7 +126,11 @@ let options!: {
   callbacks: Record<string, ReturnType<typeof vi.fn>>;
 };
 
-const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 }, croppingEnabled = false) => {
+const mountComposable = (
+  motionBlurSettings = { enabled: false, intensity: 0.55 },
+  croppingEnabled = false,
+  overrides: Partial<UseCameraZoomOptions> = {},
+) => {
   const compositionRef = ref(composition());
   const currentTime = ref(0.5);
   const playing = ref(false);
@@ -216,6 +220,7 @@ const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 
         },
         ...callbacks,
         selectedTransformClipExists: () => true,
+        ...overrides,
       });
       return () => h('div');
     },
@@ -324,6 +329,48 @@ afterEach(() => {
 });
 
 describe('useCameraZoom', () => {
+  it('retains an empty telemetry camera and supports a preview before the host canvas exists', () => {
+    mountComposable({ enabled: true, intensity: 1 }, false, { editorData: () => null, canvasRef: () => null });
+    const factory = vi.spyOn(compositionCamera, 'createCompositionCameraEvaluator');
+    options.playing.value = true;
+    options.selected.value = null;
+    state.drawVideoWindow(context(), 800, 450, frame());
+    state.drawVideoWindow(context(), 800, 450, frame());
+    expect(factory).toHaveBeenCalledOnce();
+    expect(state.videoWindowBounds.value?.scale).toBeGreaterThan(1);
+  });
+
+  it('keeps flat camera samples valid when an evaluator omits optional tilt axes', () => {
+    vi.spyOn(compositionCamera, 'createCompositionCameraEvaluator').mockReturnValue({
+      sample: () => ({ scale: 1.5, focus: { cx: 0.5, cy: 0.5 } }),
+      invalidate: vi.fn(),
+    });
+    mountComposable();
+    options.selected.value = null;
+    const rendered = state.drawVideoWindow(context(), 800, 450, frame());
+    expect(rendered).toMatchObject({ scale: 1.5, tiltX: 0, tiltY: 0 });
+  });
+  it('keeps partially initialized camera bounds and zero-sized pointer geometry finite', () => {
+    mountComposable();
+    state.overlayWindowBounds.value = { dx: 0, dy: 0, dw: 800, dh: 450, scale: 0 };
+    Object.defineProperty(options.canvas, 'clientWidth', { configurable: true, value: 0 });
+    options.canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 0, height: 0 }) as DOMRect;
+    expect(state.focusTargetStyle.value.transform).not.toMatch(/NaN|Infinity/);
+    const pointer = (type: string) =>
+      Object.assign(new MouseEvent(type, { button: 0, clientX: 400, clientY: 225 }), { pointerId: 1 }) as PointerEvent;
+    state.resetCameraUnlessDragging();
+    state.beginSelectionMove(pointer('pointerdown'));
+    state.resetCameraUnlessDragging();
+    state.moveSelection(pointer('pointermove'));
+    state.endSelectionMove(pointer('pointerup'));
+    expect(options.callbacks.onUpdateZoom).toHaveBeenCalledWith(
+      expect.objectContaining({ focus: { cx: 0.5, cy: 0.5 } }),
+    );
+    state.videoWindowBounds.value = { dx: 0, dy: 0, dw: 800, dh: 450, scale: 1 };
+    options.selected.value = autoZoom;
+    state.beginSelectionMove(pointer('pointerdown'));
+    expect(options.callbacks.onSelectScreenClip).toHaveBeenCalledWith('screen', expect.anything());
+  });
   it('renders disabled and loading screens, then draws a ready decorated window', () => {
     mountComposable();
     const disabledContext = context();

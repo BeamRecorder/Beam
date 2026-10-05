@@ -1,4 +1,5 @@
-import { computed, getCurrentScope, onScopeDispose, ref } from 'vue';
+import { computed, getCurrentScope, onScopeDispose, ref, toRaw } from 'vue';
+import { createRetainedCamera } from '@beam/runtime/zoom/retained-camera';
 import { ZOOM_DEPTH_SCALES } from '@beam/engine/zoom/zoom-types';
 import { createCompositionCameraEvaluator } from '@beam/engine/zoom/composition-camera';
 import { clampFocusToScale } from '@beam/engine/zoom/zoom-playback';
@@ -24,9 +25,10 @@ import type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } fro
 import { selectedZoomPreviewTilt } from './camera-preview-tilt';
 import { drawInCameraSpace } from './camera-space';
 export type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
+const EMPTY_TELEMETRY = [] as const;
 export function useCameraZoom(options: UseCameraZoomOptions) {
   let cameraEvaluator: ReturnType<typeof createCompositionCameraEvaluator> | null = null;
-  let cameraEvaluatorInputs: readonly unknown[] | null = null;
+  const retainedCamera = createRetainedCamera();
   const videoWindowBounds = ref<VideoWindowBounds | null>(null);
   const screenHitBounds = ref<{ dx: number; dy: number; dw: number; dh: number } | null>(null);
   const overlayWindowBounds = ref<VideoWindowBounds | null>(null);
@@ -46,8 +48,6 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   const screens = createCurrentScreenResolver(options.composition);
   const screenClip = (): VisualClip | null => screens.at(options.currentTime() * 1_000);
   const resetCamera = () => {
-    cameraEvaluator = null;
-    cameraEvaluatorInputs = null;
     screens.invalidate();
     options.onRenderOnce?.();
   };
@@ -185,6 +185,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   if (getCurrentScope()) {
     onScopeDispose(() => {
       if (zoomDragFrame !== null) cancelAnimationFrame(zoomDragFrame);
+      retainedCamera.clear();
     });
   }
 
@@ -251,63 +252,68 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     ctx.roundRect(dx, dy, dw, dh, OUTPUT_PREVIEW_RADIUS);
     ctx.clip();
     const currentTime = options.currentTime();
-    const telemetry = options.editorData()?.cursor.telemetry ?? [];
-    const composition = options.composition();
+    const telemetry = toRaw(options.editorData()?.cursor.telemetry ?? EMPTY_TELEMETRY);
+    const composition = toRaw(options.composition());
     const selectedZoom = options.selectedZoom();
-    const zooms = options.zoomElements();
+    const zooms = toRaw(options.zoomElements());
     const evaluatorInputs = [
-      zooms,
       telemetry,
-      composition,
-      output,
-      screen,
+      toRaw(output),
       selectedZoom?.id,
       selectedZoom?.mode,
-      options.zoomAutoFollow?.(),
+      options.zoomAutoFollow?.()?.safeZone,
+      options.zoomAutoFollow?.()?.responsiveness,
+      options.zoomAutoFollow?.()?.directionLock,
       options.isPlaying(),
       videoWidth,
       videoHeight,
       dw,
       dh,
     ] as const;
-    const inputsChanged = evaluatorInputs.some((value, index) => value !== cameraEvaluatorInputs?.[index]);
-    if (!cameraEvaluator || !cameraEvaluatorInputs || inputsChanged) {
-      cameraEvaluatorInputs = evaluatorInputs;
-      const previewZooms =
-        !options.isPlaying() && selectedZoom?.mode === 'manual' && selectedZoom.effect !== 'glass'
-          ? zooms.filter((zoom) => zoom.id !== selectedZoom.id)
-          : zooms;
-      cameraEvaluator = createCompositionCameraEvaluator({
-        zooms: previewZooms,
-        telemetry,
-        autoFollow: options.zoomAutoFollow?.(),
-        mapTelemetryTime: (timeMs) => {
-          const activeScreen = screens.at(timeMs);
-          return activeScreen ? (sessionTimeAt(activeScreen, timeMs, composition) ?? timeMs) : timeMs;
-        },
-        mapFocus: (focus, zoom, timeMs) => {
-          const activeScreen = screens.at(timeMs);
-          if (!activeScreen || zoom.mode !== 'auto') return focus;
-          const activeGeometry = resolveScreenRenderGeometry(
-            activeScreen,
-            videoWidth,
-            videoHeight,
-            dw,
-            dh,
-            output.showBackground,
-          );
-          const positioned = isPhoneFrame(activeScreen.appearance.frame)
-            ? frameMediaRect(
-                activeGeometry.positioned,
-                activeScreen.appearance.frame,
-                activeGeometry.source.width,
-                activeGeometry.source.height,
-              )
-            : activeGeometry.positioned;
-          return mapSourcePointToScreen(focus, videoWidth, videoHeight, dw, dh, { ...activeGeometry, positioned });
-        },
-      });
-    }
+    cameraEvaluator = retainedCamera.get({
+      composition,
+      zooms,
+      stableInputs: evaluatorInputs,
+      create: (reuse) => {
+        const previewZooms =
+          !options.isPlaying() && selectedZoom?.mode === 'manual' && selectedZoom.effect !== 'glass'
+            ? zooms.filter((zoom) => zoom.id !== selectedZoom.id)
+            : zooms;
+        return createCompositionCameraEvaluator(
+          {
+            zooms: previewZooms,
+            telemetry,
+            autoFollow: options.zoomAutoFollow?.(),
+            mapTelemetryTime: (timeMs) => {
+              const activeScreen = screens.at(timeMs);
+              return activeScreen ? (sessionTimeAt(activeScreen, timeMs, composition) ?? timeMs) : timeMs;
+            },
+            mapFocus: (focus, zoom, timeMs) => {
+              const activeScreen = screens.at(timeMs);
+              if (!activeScreen || zoom.mode !== 'auto') return focus;
+              const activeGeometry = resolveScreenRenderGeometry(
+                activeScreen,
+                videoWidth,
+                videoHeight,
+                dw,
+                dh,
+                output.showBackground,
+              );
+              const positioned = isPhoneFrame(activeScreen.appearance.frame)
+                ? frameMediaRect(
+                    activeGeometry.positioned,
+                    activeScreen.appearance.frame,
+                    activeGeometry.source.width,
+                    activeGeometry.source.height,
+                  )
+                : activeGeometry.positioned;
+              return mapSourcePointToScreen(focus, videoWidth, videoHeight, dw, dh, { ...activeGeometry, positioned });
+            },
+          },
+          reuse,
+        );
+      },
+    });
     const sample = cameraEvaluator.sample(currentTime * 1_000);
     const selectedPerspectivePreview = selectedZoomPreviewTilt(selectedZoom, options.isPlaying());
     const camera = {

@@ -95,7 +95,7 @@ const mountButtons = (overrides: Partial<TimelineGapButtonProps> = {}) => {
 };
 
 describe('TimelineGapButtons', () => {
-  it('renders a translated trash button for a gap at least 24 pixels wide and emits its gap', async () => {
+  it('renders a translated trash button and emits its gap', async () => {
     const wrapper = mountButtons();
     const button = wrapper.get('button[aria-label="Remove gap"]');
 
@@ -109,11 +109,31 @@ describe('TimelineGapButtons', () => {
     expect(wrapper.emitted('remove')).toEqual([[{ clipIds: ['before', 'after'], startMs: 1_000, endMs: 3_000 }]]);
   });
 
-  it('keeps the gap hit area but hides the button when its rendered width is below 24 pixels', () => {
-    const wrapper = mountButtons({ widthPx: 100 });
+  it('keeps a two-second deletion accessible on a three-minute recording', async () => {
+    const wrapper = mountButtons({ durationMs: 180_000, widthPx: 1_000 });
 
     expect(wrapper.find('.timeline-gap').exists()).toBe(true);
-    expect(wrapper.find('button[aria-label="Remove gap"]').exists()).toBe(false);
+    const button = wrapper.get('button[aria-label="Remove gap"]');
+    expect(button.attributes('disabled')).toBeUndefined();
+    await button.trigger('click');
+    expect(wrapper.emitted('remove')).toHaveLength(1);
+  });
+
+  it('retains the action when zooming or resizing a narrow timeline', async () => {
+    const wrapper = mountButtons({ durationMs: 180_000, widthPx: 1_000 });
+    for (const widthPx of [100, 10_000, 500]) {
+      await wrapper.setProps({ widthPx });
+      expect(wrapper.findAll('button[aria-label="Remove gap"]')).toHaveLength(1);
+    }
+  });
+
+  it('keeps a narrow locked gap explanatory and prevents removal', async () => {
+    const clips = [visual('before', 0), visual('locked-after', 3_000, { locked: true })];
+    const wrapper = mountButtons({ clips, composition: composition(clips), durationMs: 180_000 });
+    const button = wrapper.get('button[aria-label="Cannot remove gap"]');
+    await button.trigger('click');
+    expect(button.attributes('disabled')).toBeDefined();
+    expect(wrapper.emitted('remove')).toBeUndefined();
   });
 
   it('hides every gap action while the timeline is moving', async () => {

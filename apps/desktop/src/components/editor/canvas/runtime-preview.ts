@@ -14,6 +14,8 @@ import type { MediaFrame } from '@beam/runtime/shared/index';
 import { selectedZoomPreviewTilt } from './composables/camera-preview-tilt';
 import { isVisualClip } from '@beam/engine/shared/composition-types';
 import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
+import { toRaw } from 'vue';
+import { createRetainedCamera } from '@beam/runtime/zoom/retained-camera';
 
 /** The desktop supplies decoded resources and editing drafts to the same completed-frame renderer as export. */
 export function createRuntimePreview(options: RuntimePreviewOptions) {
@@ -27,7 +29,7 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
   };
   let background: OffscreenCanvas | null = null;
   let backgroundKey: readonly unknown[] | null = null;
-  let cameraKey: readonly unknown[] = [];
+  const retainedCamera = createRetainedCamera();
   let camera: ReturnType<typeof createSnapshotCameraEvaluator> | null = null;
   let motionKey: readonly unknown[] = [];
   let motion: ReturnType<typeof createCursorMotionPlayer> | undefined;
@@ -67,7 +69,8 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
               visualStack: layers.visualStack.map(draft),
               captions: layers.captions.filter((clip) => clip.id !== editingId).map(draft),
             };
-      const cursor = props.editorData?.cursor ?? absentCursor;
+      const cursor = toRaw(props.editorData?.cursor ?? absentCursor);
+      const zoomDraft = toRaw(options.zoomDraft?.() ?? null);
       const snapshot: CompositionSnapshot = {
         duration: props.duration ?? compositionDurationMs(props.composition) / 1000,
         render: {
@@ -81,12 +84,12 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
         blurPercent: 0,
         zooms:
           !props.isPlaying && props.selectedZoom?.mode === 'manual' && props.selectedZoom.effect !== 'glass'
-            ? props.zoomElements.filter((zoom) => zoom.id !== props.selectedZoom!.id)
-            : options.zoomDraft?.()
-              ? props.zoomElements.map((zoom) => (zoom.id === props.selectedZoom?.id ? options.zoomDraft!()! : zoom))
-              : props.zoomElements,
+            ? toRaw(props.zoomElements).filter((zoom) => zoom.id !== props.selectedZoom!.id)
+            : zoomDraft
+              ? toRaw(props.zoomElements).map((zoom) => (zoom.id === props.selectedZoom?.id ? zoomDraft : zoom))
+              : toRaw(props.zoomElements),
         zoomMotionBlur: props.zoomMotionBlur,
-        zoomAutoFollow: props.zoomAutoFollow,
+        zoomAutoFollow: toRaw(props.zoomAutoFollow),
         cursor,
         cursorPack: props.cursorPack,
         cursorSettings: {
@@ -104,25 +107,29 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
           motion: props.motion,
           autoHide: props.autoHide,
         },
-        composition: props.composition,
+        composition: toRaw(props.composition),
       };
-      const key = [
-        props.composition,
-        props.zoomElements,
-        props.selectedZoom,
+      const stableInputs = [
+        props.selectedZoom?.id,
+        props.selectedZoom?.mode,
         props.isPlaying,
-        props.zoomAutoFollow,
+        props.zoomAutoFollow?.safeZone,
+        props.zoomAutoFollow?.responsiveness,
+        props.zoomAutoFollow?.directionLock,
         cursor.telemetry,
         frame?.width,
         frame?.height,
         size.width,
         size.height,
-        props.outputCanvas,
+        toRaw(props.outputCanvas),
       ];
-      if (!camera || key.some((value, index) => value !== cameraKey[index])) {
-        cameraKey = key;
-        camera = createSnapshotCameraEvaluator(snapshot, frame?.width ?? size.width, frame?.height ?? size.height);
-      }
+      camera = retainedCamera.get({
+        composition: snapshot.composition,
+        zooms: snapshot.zooms,
+        stableInputs,
+        create: (reuse) =>
+          createSnapshotCameraEvaluator(snapshot, frame?.width ?? size.width, frame?.height ?? size.height, reuse),
+      });
       const cursorKey = [
         cursor.events,
         props.motion.preset,
@@ -232,6 +239,8 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
       if (background) background.width = background.height = 0;
       background = null;
       backgroundKey = null;
+      retainedCamera.clear();
+      camera = null;
     },
   };
 }

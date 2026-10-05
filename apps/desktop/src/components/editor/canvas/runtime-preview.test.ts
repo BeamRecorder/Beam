@@ -3,6 +3,7 @@ import { createRuntimePreview } from './runtime-preview';
 import { snapshot, context } from '@beam/runtime/rendering/tests/render.test-support';
 import { resolveCompositionSceneLayers } from '@beam/engine/composition/scene-layers';
 import { createDefaultCursorPresentation } from '@beam/engine/capture/cursor-presentation';
+import { reactive, toRaw, isProxy } from 'vue';
 import type { RuntimePreviewOptions } from './runtime-preview-types';
 import type { MediaFrame } from '@beam/runtime/shared/index';
 import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
@@ -166,6 +167,70 @@ it('delegates completed frames and caches camera/motion until their inputs chang
   expect(state.motion).toHaveBeenCalledTimes(2);
   draw(null, 201, 101);
   expect(state.camera).toHaveBeenCalledTimes(2);
+});
+it('passes raw immutable capture data and borrows camera history across a late timeline draft', () => {
+  const { options, draw } = host();
+  options.props.composition = reactive(options.props.composition);
+  const clip = options.props.composition.clips[0]!;
+  clip.timelineStartMs = 120_000;
+  draw();
+  const previous = state.camera.mock.results.at(-1)!.value;
+  expect(isProxy(state.camera.mock.lastCall![0].composition)).toBe(false);
+  const raw = toRaw(options.props.composition);
+  options.props.composition = { ...raw, clips: [{ ...raw.clips[0]!, timelineStartMs: 119_000 }] };
+  draw();
+  expect(state.camera.mock.lastCall![3]).toEqual({ previous, unchangedBeforeMs: 117_650 });
+});
+it('retains a filtered manual-zoom preview and rebuilds for changed follow settings', () => {
+  const { options, draw } = host();
+  options.props.isPlaying = false;
+  options.props.selectedZoom = {
+    id: 'selected',
+    mode: 'manual',
+    sessionId: 's',
+    startMs: 0,
+    endMs: 2_000,
+    depth: 2,
+    focus: { cx: 0.5, cy: 0.5 },
+  };
+  options.props.zoomElements = [options.props.selectedZoom];
+  draw();
+  draw();
+  expect(state.camera).toHaveBeenCalledOnce();
+  options.props.zoomAutoFollow = { safeZone: 0.5, responsiveness: 0.7, directionLock: true };
+  draw();
+  expect(state.camera).toHaveBeenCalledTimes(2);
+  expect(state.camera.mock.lastCall![3]).toBeUndefined();
+});
+it('renders zoom drafts with unchanged companions and keeps edited captions out of their layer stack', () => {
+  const { options, draw, painted } = host();
+  const zoom = {
+    id: 'selected',
+    sessionId: 's',
+    startMs: 0,
+    endMs: 1000,
+    mode: 'manual' as const,
+    depth: 2 as const,
+    focus: { cx: 0.5, cy: 0.5 },
+  };
+  const companion = { ...zoom, id: 'other' };
+  const draft = { ...zoom, depth: 3 as const };
+  options.props.selectedZoom = zoom;
+  options.props.zoomElements = [zoom, companion];
+  options.zoomDraft = () => reactive(draft);
+  draw();
+  expect(painted().snapshot.zooms).toEqual([draft, companion]);
+  expect(isProxy(painted().snapshot.zooms[0])).toBe(false);
+  const screen = options.props.composition.clips[0]!;
+  const caption = { ...screen, id: 'caption', kind: 'caption' as const, captionType: 'text' as const, text: 'Hello' };
+  // Supply already evaluated layers: authoring validation is owned by engine.
+  const layers = resolveCompositionSceneLayers(options.props.composition, 500);
+  options.editingCaptionId = () => 'another-caption';
+  const evaluated = { ...layers, screen: null, captions: [caption] } as unknown as CompositionSceneLayers;
+  const preview = createRuntimePreview(options);
+  preview.draw(context(), { x: 0, y: 0, width: 100, height: 50 }, null, evaluated);
+  expect(painted().layers.captions).toHaveLength(1);
+  expect(painted().layers.screen).toBeNull();
 });
 it('borrows unchanged evaluated layers and reads host editing state once per frame', () => {
   const { options, ctx, preview } = host();

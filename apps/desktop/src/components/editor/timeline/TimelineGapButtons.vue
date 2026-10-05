@@ -44,7 +44,6 @@ const gaps = computed(() =>
     >
       <div class="gap-action" @pointerdown.stop @click.stop>
         <Button
-          v-if="((gap.endMs - gap.startMs) / durationMs) * widthPx >= 24"
           variant="ghost"
           size="xs"
           icon-only
@@ -68,11 +67,12 @@ const gaps = computed(() =>
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow: visible;
   pointer-events: auto;
   z-index: 9;
 }
 .gap-action {
+  flex-shrink: 0;
   opacity: 0;
   pointer-events: none;
   transition: opacity 100ms ease;
