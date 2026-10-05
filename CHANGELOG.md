@@ -87,6 +87,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- The website teleprompter demonstration now enlarges the script and changes its text color with native controls while recording continues, in both themes.
+
 - Beam source is now licensed under MPL-2.0, with existing MIT grants and third-party licenses preserved. Licensing documentation distinguishes open-source rights from planned Desktop Pro subscriptions and cloud services; activation is not introduced in this release.
 - Linux GPU export helpers are built and packaged only against dynamically linked LGPL FFmpeg libraries. CI uses a pinned LGPL-only build dependency; FFmpeg executables and libraries remain external to this backend.
 - CLI project opening creates an independent video or Screenshot editor by default, preserving existing projects; `disposition: "reuse"` optionally replaces the active editor in development and installed releases.

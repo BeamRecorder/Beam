@@ -19,8 +19,9 @@ Ready? Let’s make something beautiful.`;
 const document = computed(() => ({
   ...createDefaultTeleprompterDocument('2026-10-05T00:00:00Z'),
   text: script,
-  fontSize: 30,
-  scrollSpeed: state.value.speed,
+  fontSize: state.value.fontSize,
+  scrollSpeed: 42,
+  textColor: state.value.colorChanged ? (props.theme === 'dark' ? '#f59f9f' : '#993636') : undefined,
 }));
 </script>
 <template>
@@ -31,7 +32,7 @@ const document = computed(() => ({
       :playing="state.reading"
       :active-line="0"
       error=""
-      :default-text-color="theme === 'dark' ? '#f8fafc' : '#1e1e1e'"
+      :default-text-color="theme === 'dark' ? '#fafafa' : '#1e1e1e'"
       style="width: 100%; height: 100%"
     />
   </div>

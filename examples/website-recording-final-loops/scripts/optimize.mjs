@@ -14,7 +14,10 @@ function ffmpeg(args) {
   const result = spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', ...args], { stdio: 'inherit' });
   if (result.status !== 0) throw new Error('External FFmpeg optimization failed.');
 }
-for (const kind of ['teleprompter', 'projects']) {
+const kinds = process.env.BEAM_DEMO_KIND ? [process.env.BEAM_DEMO_KIND] : ['teleprompter', 'projects'];
+if (kinds.some((kind) => !['teleprompter', 'projects'].includes(kind)))
+  throw new Error('Choose teleprompter or projects.');
+for (const kind of kinds) {
   const themes = process.env.BEAM_DEMO_THEME ? [process.env.BEAM_DEMO_THEME] : ['light', 'dark'];
   if (themes.some((theme) => !['light', 'dark'].includes(theme))) throw new Error('Choose light or dark.');
   for (const theme of themes) {
@@ -54,6 +57,6 @@ for (const kind of ['teleprompter', 'projects']) {
 
   writeFileSync(
     resolve(media, `recording-${kind}.NOTICE.txt`),
-    `Beam — ${kind}\n8 seconds, 1280 x 800, 30 fps, silent VP9. Light and dark.\nAuthored demonstration rendered in Beam from HTML and actual native Vue components.\nBeautiful Captures Figma pointer. Sonoma Horizon from Beam background catalog.\nHanken Grotesk, SIL OFL 1.1. Components and source: MPL-2.0.\nSource: examples/website-recording-final-loops/.\nProjects: frozen real local catalog; illustrative HTML file browser, not an OS capture.\nNo project or original recording is modified by this demonstration.\n`,
+    `Beam — ${kind}\n8 seconds, 1280 x 800, 30 fps, silent VP9. Light and dark.\nAuthored demonstration rendered in Beam from HTML and actual native Vue components.\nBeautiful Captures Figma pointer. Sonoma Horizon from Beam background catalog.\nHanken Grotesk, SIL OFL 1.1. Components and source: MPL-2.0.\nSource: examples/website-recording-final-loops/.\n${kind === 'teleprompter' ? 'Teleprompter: continuous reading, text size from 26 to 34 px, native color picker and readable coral text.\n' : 'Projects: frozen real local catalog; illustrative HTML file browser, not an OS capture.\n'}No project or original recording is modified by this demonstration.\n`,
   );
 }

@@ -5,7 +5,9 @@ Two editable Vue / HTML / GSAP compositions rendered by Beam, each eight seconds
 
 The teleprompter imports the actual `TeleprompterView.vue` now shared with the
 native Electron window, its complete toolbar, and `RecorderBar.vue`. The reader
-scroll position and speed slider use the composition clock. The view has no
+scroll position, text-size slider (26 → 34 px) and color picker use the composition
+clock. The cursor enlarges the script, then chooses coral text with contrast
+suited to each theme while reading continues at 42 px/s. The view has no
 native API dependency; session persistence, visibility, shortcuts, resizing and
 playback remain in the native `Teleprompter.vue` controller.
 
@@ -40,10 +42,11 @@ bun run --cwd examples/website-recording-final-loops website /path/to/website-pr
 `publish` creates separate editable HTML projects in Beam; it also accepts light.
 `render` exports through the Beam CLI motion renderer. `website` uses external
 FFmpeg to compress the renders to VP9, extracts WebP posters and writes notices.
+Set `BEAM_DEMO_KIND=teleprompter` or `projects` to optimize only one demonstration.
 The site ships only those optimized videos/posters, through its existing themed,
 pausable player with reduced-motion support.
 
-`verify` checks 16 real cursor hit targets, all four variants, arbitrary and
+`verify` checks 24 real cursor hit targets, all four variants, arbitrary and
 reverse seeks, the loop seam and asset availability. It permits at most 64
 Chromium antialias edge pixels with a channel delta no greater than 12, across
 the complete 1,024,000-pixel frame; no regions are masked.

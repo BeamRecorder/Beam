@@ -1,6 +1,7 @@
 import type { gsap } from 'gsap';
 import type { CaptureProject } from '../../../packages/engine/src/capture/capture-session';
 export type DemoKind = 'teleprompter' | 'projects';
+export type DemoTheme = 'light' | 'dark';
 export interface DemoPose {
   time: number;
   x: number;

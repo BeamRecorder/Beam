@@ -90,9 +90,13 @@ try {
         kind === 'teleprompter'
           ? [
               [840, 'button[aria-label="Play"]'],
-              [2140, 'button[aria-label="Speed"]'],
-              [3140, 'input[aria-label="Speed"]'],
-              [4640, 'button[aria-label="Speed"]'],
+              [1690, 'button[aria-label="Text size"]'],
+              [2290, 'input[aria-label="Text size"]'],
+              [2990, 'input[aria-label="Text size"]'],
+              [3340, 'button[aria-label="Text size"]'],
+              [3940, 'button[aria-label="Text color"]'],
+              [4840, '.triangle-picker-container'],
+              [5740, 'button[aria-label="Text color"]'],
             ]
           : [
               [1090, '.project-card[aria-label="website-demo"]'],
@@ -117,7 +121,28 @@ try {
           throw new Error(`Cursor missed ${selector} at ${ms}ms (${kind}/${theme})`);
         }
       }
-      for (const ms of [0, 900, 2200, 3500, 5100, 6900, 7600, 8000]) {
+      if (kind === 'teleprompter') {
+        await seek(3000);
+        const size = await page.$eval('input[aria-label="Text size"]', (input) => input.value);
+        if (size !== '34') throw new Error('Native font size did not reach 34 px.');
+        await seek(4850);
+        const appearance = await page.evaluate(() => {
+          const picker = document.querySelector('.triangle-cursor').getBoundingClientRect();
+          const cursor = document.querySelector('.demo-cursor').getBoundingClientRect();
+          const color = document.querySelector('input[aria-label="HEX"]').value;
+          return {
+            color,
+            distance: Math.hypot(
+              picker.x + picker.width / 2 - cursor.x - 6.4,
+              picker.y + picker.height / 2 - cursor.y - 6.4,
+            ),
+          };
+        });
+        const expected = theme === 'dark' ? '#F59F9F' : '#993636';
+        if (appearance.color !== expected || appearance.distance > 3)
+          throw new Error(`Color gesture missed the selected native color: ${JSON.stringify(appearance)}`);
+      }
+      for (const ms of [0, 900, 2200, 2800, 3500, 4200, 5100, 6900, 7600, 8000]) {
         await seek(ms);
         const first = await page.screenshot({ path: resolve(output, `${kind}-${theme}-${ms}.png`) });
         await seek(8000);
@@ -134,7 +159,7 @@ try {
         kind,
         theme,
         pointerTargets: targets.length,
-        reverseSeeks: 8,
+        reverseSeeks: 10,
         loopSeam: 'matched within 64 native antialias pixels, channel delta <= 12',
       });
     }

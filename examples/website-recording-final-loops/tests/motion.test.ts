@@ -15,14 +15,37 @@ describe('recording loops', () => {
     expect(stateAt(0.849).reading).toBe(false);
     expect(stateAt(0.85).reading).toBe(true);
   });
-  it('opens and adjusts the native speed control while the reader progresses', () => {
-    expect(stateAt(2.149).speedOpen).toBe(false);
-    expect(stateAt(2.15).speedOpen).toBe(true);
-    expect(stateAt(3.15).speed).toBe(42);
-    expect(stateAt(3.525).speed).toBe(58);
-    expect(stateAt(3.9).speed).toBe(74);
-    expect(stateAt(4.65).speedOpen).toBe(false);
+  it('enlarges the text while reading and closes the size popover', () => {
+    expect(stateAt(1.699).fontOpen).toBe(false);
+    expect(stateAt(1.7).fontOpen).toBe(true);
+    expect(stateAt(2.3).fontSize).toBe(26);
+    expect(stateAt(2.65).fontSize).toBe(30);
+    expect(stateAt(3).fontSize).toBe(34);
+    expect(stateAt(3.35).fontOpen).toBe(false);
     expect(stateAt(6).scroll).toBeGreaterThan(stateAt(3).scroll);
+  });
+  it('chooses a text color with the native picker after enlarging the text', () => {
+    expect(stateAt(3.949).colorOpen).toBe(false);
+    expect(stateAt(3.95)).toMatchObject({ fontOpen: false, colorOpen: true, fontSize: 34 });
+    expect(stateAt(4.849).colorChanged).toBe(false);
+    expect(stateAt(4.85).colorChanged).toBe(true);
+    expect(stateAt(5.75)).toMatchObject({ colorOpen: false, colorChanged: true, reading: true });
+  });
+  it('restores both appearance settings under the loop fade', () => {
+    expect(stateAt(7.499)).toMatchObject({ fontSize: 34, colorChanged: true });
+    expect(stateAt(7.5)).toMatchObject({ fontSize: 26, colorChanged: false, colorOpen: false });
+    expect(stateAt(8)).toEqual(stateAt(0));
+  });
+  it('keeps the cursor on the size slider thumb throughout the drag', () => {
+    const pose = initialPose();
+    const timeline = createMotion(pose, 'teleprompter', 'dark');
+    for (const time of [2.3, 2.65, 3]) {
+      timeline.seek(time);
+      const progress = (stateAt(time).fontSize - 26) / 8;
+      expect(pose.x).toBeCloseTo(510.5 + progress * 52.3);
+      expect(pose.y).toBe(579.6);
+    }
+    timeline.kill();
   });
   it('reveals the selected local project then its original source file', () => {
     expect(stateAt(1.099).selected).toBe(false);
@@ -41,9 +64,14 @@ describe('recording loops', () => {
     expect(stateAt(8)).toEqual(stateAt(0));
     expect(stateAt(NaN)).toEqual(stateAt(0));
   });
-  it.each(['teleprompter', 'projects'] as const)('seeks %s deterministically in reverse', (kind) => {
+  it.each([
+    ['teleprompter', 'dark'],
+    ['teleprompter', 'light'],
+    ['projects', 'dark'],
+    ['projects', 'light'],
+  ] as const)('seeks %s/%s deterministically in reverse', (kind, theme) => {
     const pose = initialPose();
-    const timeline = createMotion(pose, kind);
+    const timeline = createMotion(pose, kind, theme);
     timeline.seek(3.5);
     const first = { ...pose };
     timeline.seek(8);
