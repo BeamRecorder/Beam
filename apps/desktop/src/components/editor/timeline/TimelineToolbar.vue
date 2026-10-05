@@ -415,7 +415,7 @@ const handleFullscreenClick = (event?: MouseEvent) => {
   }
 }
 
-@container (max-width: 430px) {
+@container (max-width: 600px) {
   .timeline-toolbar-content {
     height: 80px;
     grid-template-columns: auto minmax(0, 1fr);
@@ -426,6 +426,16 @@ const handleFullscreenClick = (event?: MouseEvent) => {
   }
   .right-section {
     grid-column: 1 / -1;
+  }
+}
+
+@container (max-width: 380px) {
+  .timeline-toolbar-content {
+    height: 116px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .center-section {
+    justify-self: center;
   }
 }
 </style>

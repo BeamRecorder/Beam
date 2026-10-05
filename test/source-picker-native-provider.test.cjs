@@ -116,7 +116,7 @@ function fixture(platform = 'win32') {
     requestNative,
     getNativePreview,
   });
-  return { provider, calls, catalog, desktopCapturer, windows };
+  return { provider, calls, catalog, desktopCapturer, windows, screen, display };
 }
 
 test('Windows resolves each display in physical coordinates and excludes HUD while keeping editors', async () => {
@@ -133,6 +133,30 @@ test('Windows resolves each display in physical coordinates and excludes HUD whi
   assert.equal(target.bounds.width, 600);
   assert.equal(target.warning, 'Permission to raise required');
   assert.ok(target.thumbnail.includes('window:42:0'));
+});
+test('150% display/window scaling keeps recording pixel dimensions separate from picker bounds', async () => {
+  const f = fixture();
+  f.display.bounds = { x: -1280, y: 0, width: 1280, height: 720 };
+  f.screen.dipToScreenPoint = (point) => ({ x: point.x * 1.5, y: point.y * 1.5 });
+  f.screen.screenToDipRect = (_window, bounds) => ({
+    ...bounds,
+    width: bounds.width / 1.5,
+    height: bounds.height / 1.5,
+  });
+  f.catalog.sources.push({
+    id: 'wgc:monitor:DISPLAY1',
+    kind: 'display',
+    label: 'Display',
+    capabilities: { formats: [{ width: 1920, height: 1080 }] },
+  });
+  const sources = await f.provider.list();
+  const monitor = sources.find((source) => source.kind === 'screen');
+  assert.equal(monitor.detail, '1920 × 1080');
+  assert.deepEqual(monitor.bounds, f.display.bounds);
+  assert.deepEqual(f.calls.find(([command]) => command === 'resolve-display')[1], { x: -960, y: 540 });
+  const window = sources.find((source) => source.id === 'wgc:window:2a');
+  assert.equal(window.detail, '1200 × 800');
+  assert.equal((await f.provider.preview(window, false)).bounds.width, 800);
 });
 test('macOS lists native capture IDs and refreshes only the hovered window preview', async () => {
   const { provider, catalog, calls } = fixture('darwin');

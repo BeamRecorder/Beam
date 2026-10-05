@@ -43,6 +43,7 @@ in vec2 v_uv;
 uniform sampler2D u_scene;
 uniform sampler2D u_mask;
 uniform vec2 u_sceneSize;
+uniform vec2 u_textureSize;
 uniform vec4 u_bounds;
 uniform vec2 u_center;
 uniform float u_radius;
@@ -64,7 +65,7 @@ float distanceAt(vec2 p) {
   return distance + length(max(abs(p) - 1., 0.));
 }
 vec4 sceneAt(vec2 p) {
-  vec2 uv = clamp(p / u_sceneSize, .5 / u_sceneSize, 1. - .5 / u_sceneSize);
+  vec2 uv = clamp(p / u_sceneSize, .5 / u_textureSize, 1. - .5 / u_textureSize);
   return texture(u_scene, vec2(uv.x, 1. - uv.y));
 }
 void main() {

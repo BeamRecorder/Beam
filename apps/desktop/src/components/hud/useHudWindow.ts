@@ -61,13 +61,7 @@ export function useHudWindow(options: HudWindowOptions) {
   const selectScreenRegion = async () => {
     if (props.embedded) return false;
     const linuxPortalSelection = desktopPlatform === 'linux';
-    if (
-      isBusy.value ||
-      isRecording.value ||
-      isRegionSelectionLeaving.value ||
-      (!linuxPortalSelection && !selectedScreenBounds.value)
-    )
-      return false;
+    if (isBusy.value || isRecording.value || isRegionSelectionLeaving.value) return false;
     const resolvedBounds = linuxPortalSelection
       ? null
       : ((await refreshSelectedScreenBounds()) ?? selectedScreenBounds.value);

@@ -1,7 +1,8 @@
 import type { Canvas2DContext } from '../canvas-types';
 import type { ScreenshotZoomLayer } from '@beam/engine/screenshot/screenshot-types';
 import { manualCameraZoom } from '@beam/engine/zoom/manual-zoom';
-import { renderGlassHighlights } from '../rendering/glass-highlight-render';
+import { renderGlassHighlights, disposeGlassHighlights } from '../rendering/glass-highlight-render';
+import type { GlassScenePainter } from '../zoom/glass-highlight-gpu-types';
 import { renderPerspectiveLayers } from '../rendering/perspective-render';
 import { createGlassCanvas } from '../zoom/glass-highlight-gpu';
 import { hasPerspectiveTilt } from '@beam/engine/zoom/perspective-projection';
@@ -17,6 +18,7 @@ export function drawScreenshotZoom(
   width: number,
   height: number,
   backdrop: CanvasImageSource,
+  drawScene?: GlassScenePainter,
 ) {
   if (zoom.effect === 'glass') {
     renderGlassHighlights(
@@ -24,6 +26,7 @@ export function drawScreenshotZoom(
       { canvas: { ...canvas, width, height }, zooms: [{ ...zoom, glass: { ...zoom.glass!, transitionMs: 0 } }] },
       0.5,
       backdrop,
+      drawScene,
     );
     return;
   }
@@ -54,6 +57,7 @@ export function drawScreenshotZoom(
 }
 
 export function disposeScreenshotZoom(target: Canvas2DContext) {
+  disposeGlassHighlights(target);
   const surface = surfaces.get(target);
   if (surface) surface.width = surface.height = 0;
   surfaces.delete(target);

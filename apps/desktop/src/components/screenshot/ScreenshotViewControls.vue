@@ -52,7 +52,7 @@ const { t } = useI18n();
           :aria-label="t('ScreenshotEditor.dimensions')"
           :tooltip="`${t('CanvasToolbar.canvasZoom')}: ${zoomPercent}%`"
         >
-          {{ canvas.width }} × {{ canvas.height }}
+          <span class="dimensions-label">{{ canvas.width }} × {{ canvas.height }}</span>
         </Button>
       </template>
       <fieldset ref="sizePanel" class="canvas-size-popover" :disabled="disabled">
@@ -95,6 +95,9 @@ const { t } = useI18n();
   display: flex;
   align-items: center;
   gap: 4px;
+}
+.dimensions-label {
+  display: var(--editor-dimensions-label-display, inline);
 }
 .canvas-size-popover {
   width: 320px;

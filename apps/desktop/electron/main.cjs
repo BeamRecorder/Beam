@@ -161,6 +161,7 @@ function initializeApplication() {
         teleprompterWindow,
         getTray: () => trayManager,
         getQuickSnip: () => quickSnipController,
+        getRegionOverlay: () => screenRegionOverlay,
         isReady: () => shortcutReady,
         pending: pendingExternalShortcuts,
       });
@@ -414,6 +415,7 @@ function initializeApplication() {
       };
       if (pendingHudRestore) restoreCanonicalHud();
       trayManager = createTrayRuntime({
+        regionOverlay: screenRegionOverlay,
         window: win,
         controller: controllers.get(win),
         showHud: showExistingHud,

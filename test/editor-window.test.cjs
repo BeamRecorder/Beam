@@ -309,6 +309,7 @@ const createThemeFixture = ({
   hudInitiallyVisible = true,
   hudAuxiliaryWindows = [],
   canAcceptWork = () => true,
+  screen = null,
 }) => {
   const calls = [];
   const windows = [];
@@ -358,6 +359,7 @@ const createThemeFixture = ({
     isDestroyed: () => false,
     isVisible: () => hudVisible,
     isMinimized: () => false,
+    getBounds: () => ({ x: 20, y: 30, width: 672, height: 268 }),
     restore: () => calls.push(['hud-restore']),
   };
   const manager = createEditorWindowManager({
@@ -369,6 +371,7 @@ const createThemeFixture = ({
     },
     hudWindow,
     hudAuxiliaryWindows,
+    screen,
     canAcceptWork,
     hudController: {
       showHud: () => calls.push(['show-hud']),
@@ -397,6 +400,34 @@ const createThemeFixture = ({
     },
   };
 };
+
+for (const kind of [undefined, 'screenshot'])
+  test(`new ${kind ?? 'video'} editor stays reachable on a 150% scaled display`, async () => {
+    const displays = [];
+    const fixture = createThemeFixture({
+      theme: 'light',
+      screen: {
+        getDisplayMatching: (bounds) => {
+          displays.push(bounds);
+          return { workArea: { x: 0, y: 0, width: 1280, height: 680 }, scaleFactor: 1.5 };
+        },
+      },
+    });
+    fixture.preferenceState.extras.editorWindow = { width: 1920, height: 1080 };
+    try {
+      await readyEditor(fixture, fixture.manager.open(projectId, { kind }));
+      const options = fixture.calls.find(([name]) => name === 'constructor')[1];
+      assert.equal(options.width, 1280);
+      assert.equal(options.height, 680);
+      assert.equal(options.x, 0);
+      assert.equal(options.y, 0);
+      assert.equal(options.webPreferences.zoomFactor, 1);
+      assert.deepEqual(displays, [fixture.hudWindow.getBounds()]);
+      fixture.manager.destroy();
+    } finally {
+      fixture.restore();
+    }
+  });
 
 for (const outcome of ['show', 'destroy', 'shutdown'])
   test(`auxiliary startup waits for the first HUD presentation (${outcome})`, () => {

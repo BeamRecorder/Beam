@@ -7,9 +7,8 @@ const { createEditorStartupGuard } = require('./editor-startup-guard.cjs');
 const { createEditorProgressReporter } = require('./editor-loading-progress.cjs');
 const { installBrowserZoomPolicy } = require('./browser-zoom-policy.cjs');
 const { scheduleHudAuxiliaryWarmup } = require('./hud-auxiliary-warmup.cjs');
+const { EDITOR_DEFAULT_SIZE, EDITOR_MIN_SIZE, editorWindowBounds } = require('./editor-window-bounds.cjs');
 
-const EDITOR_DEFAULT_SIZE = { width: 1280, height: 800 };
-const EDITOR_MIN_SIZE = { width: 960, height: 600 };
 const PROJECT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TITLEBAR_HEIGHT = 40;
 const TITLEBAR_SYMBOL_COLOR = '#7a7a7a';
@@ -166,38 +165,14 @@ function createEditorWindowManager({
     session.persistTimer = setTimeout(() => flushBounds(session), 200);
   };
 
-  const cascadedPosition = (source, width, height) => {
-    if (!isLive(source)) return {};
-    const bounds = source.window.getBounds();
-    const candidate = { x: bounds.x + 24, y: bounds.y + 24 };
-    if (!screen) return candidate;
-    const display = screen.getDisplayMatching?.(bounds) ?? screen.getDisplayNearestPoint?.(candidate);
-    const area = display?.workArea;
-    if (!area) return candidate;
-    return {
-      x: Math.min(Math.max(candidate.x, area.x), area.x + Math.max(0, area.width - width)),
-      y: Math.min(Math.max(candidate.y, area.y), area.y + Math.max(0, area.height - height)),
-    };
-  };
-
   const createSession = (source = null) => {
     if (!canAcceptWork()) throw new Error('Cannot create an editor while Beam is shutting down');
     const savedWindow = preferencesStore?.read()?.extras?.editorWindow;
-    const width =
-      typeof savedWindow?.width === 'number' && savedWindow.width >= EDITOR_MIN_SIZE.width
-        ? Math.round(savedWindow.width)
-        : EDITOR_DEFAULT_SIZE.width;
-    const height =
-      typeof savedWindow?.height === 'number' && savedWindow.height >= EDITOR_MIN_SIZE.height
-        ? Math.round(savedWindow.height)
-        : EDITOR_DEFAULT_SIZE.height;
+    const origin = isLive(source) ? source.window.getBounds() : null;
+    const area = screen?.getDisplayMatching(origin ?? hudWindow.getBounds()).workArea;
     const dark = resolveWindowDark(source);
     const window = new BrowserWindow({
-      width,
-      height,
-      ...cascadedPosition(source, width, height),
-      minWidth: EDITOR_MIN_SIZE.width,
-      minHeight: EDITOR_MIN_SIZE.height,
+      ...editorWindowBounds(savedWindow, area, origin),
       show: false,
       icon: appIconPath,
       frame: true,

@@ -146,7 +146,7 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
   container-type: inline-size;
   width: 100%;
   z-index: 3;
-  height: var(--editor-canvas-toolbar-height);
+  min-height: var(--editor-canvas-toolbar-height);
   flex: none;
   display: flex;
   align-items: center;
@@ -156,10 +156,15 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
 .toolbar-controls {
   zoom: var(--ui-scale-canvas-controls, 1);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   width: 100%;
   gap: 16px;
+}
+.canvas-format-controls,
+.canvas-view-controls {
+  flex: 0 0 auto;
 }
 .canvas-format-controls,
 .canvas-view-controls,

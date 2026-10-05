@@ -190,6 +190,11 @@ function createScreenRegionOverlayWindow({
 
   return {
     isSelecting: () => Boolean(pending),
+    handleShortcut(id) {
+      if (id !== 'hud.startStopRecording' || !pending || !current || !ready || !rendererReady) return false;
+      window.webContents.send('preferences:shortcut', id);
+      return true;
+    },
     markMarkerReady: (sender) => marker.ready(sender),
     markRendererReady(sender) {
       if (!window || window.isDestroyed() || window.webContents !== sender) return false;

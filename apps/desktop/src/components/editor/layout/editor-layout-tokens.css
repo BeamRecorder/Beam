@@ -9,3 +9,12 @@
   --editor-playback-toolbar-height: calc(48px * var(--ui-scale-canvas-controls, 1));
   --editor-timeline-resize-height: 12px;
 }
+
+@media (max-width: 1100px), (max-height: 720px) {
+  :root {
+    --editor-sidebar-width: calc(56px * var(--ui-scale-sidebar, 1));
+    --editor-video-inspector-width: min(calc(356px * var(--ui-scale-properties, 1)), 34vw);
+    --editor-workspace-inset: 8px;
+    --editor-workspace-gap: 8px;
+  }
+}

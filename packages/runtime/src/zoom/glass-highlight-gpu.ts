@@ -1,6 +1,7 @@
 import type { GlassHighlightSample } from '@beam/engine/zoom/glass-highlight-types';
 import type { GlassCanvas, GlassGpuProgram, GlassMaskTexture } from './glass-highlight-gpu-types';
 import { GLASS_VERTEX_SHADER, GLASS_MASK_SHADER, GLASS_FRAGMENT_SHADER } from './glass-highlight-shaders';
+import { glassRasterSize } from './glass-raster';
 
 export function createGlassCanvas(width: number, height: number): GlassCanvas {
   if (typeof OffscreenCanvas !== 'undefined') return new OffscreenCanvas(width, height);
@@ -57,6 +58,8 @@ export class GlassHighlightGpu {
   private readonly masks: GlassMaskTexture[] = [];
   private width = 0;
   private height = 0;
+  private sceneWidth = 0;
+  private sceneHeight = 0;
   private lost = false;
 
   constructor() {
@@ -115,7 +118,7 @@ export class GlassHighlightGpu {
     gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
   }
 
-  upload(source: TexImageSource, width: number, height: number) {
+  upload(source: TexImageSource, width: number, height: number, sceneWidth = width, sceneHeight = height) {
     const gl = this.gl;
     if (this.lost || gl.isContextLost()) throw new Error('Glass highlight WebGL context was lost.');
     if (Math.max(width, height) > gl.getParameter(gl.MAX_TEXTURE_SIZE))
@@ -130,6 +133,8 @@ export class GlassHighlightGpu {
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    this.sceneWidth = sceneWidth;
+    this.sceneHeight = sceneHeight;
   }
 
   private maskTexture(sample: GlassHighlightSample) {
@@ -165,19 +170,20 @@ export class GlassHighlightGpu {
     return texture;
   }
 
-  render(sample: GlassHighlightSample) {
+  render(sample: GlassHighlightSample, pixelScale = 1) {
     const { center, radius, settings } = sample;
     const padding = Math.max(8, radius * 0.23);
     const x = Math.max(0, Math.floor(center.x - radius - padding));
     const y = Math.max(0, Math.floor(center.y - radius - padding));
-    const width = Math.min(this.width, Math.ceil(center.x + radius + padding)) - x;
-    const height = Math.min(this.height, Math.ceil(center.y + radius + padding)) - y;
+    const width = Math.min(this.sceneWidth, Math.ceil(center.x + radius + padding)) - x;
+    const height = Math.min(this.sceneHeight, Math.ceil(center.y + radius + padding)) - y;
+    const raster = glassRasterSize(width, height, pixelScale);
     const gl = this.gl;
     const mask = settings.shape === 'freehand' ? this.maskTexture(sample) : this.scene;
-    if (this.canvas.width !== width) this.canvas.width = width;
-    if (this.canvas.height !== height) this.canvas.height = height;
+    if (this.canvas.width !== raster.width) this.canvas.width = raster.width;
+    if (this.canvas.height !== raster.height) this.canvas.height = raster.height;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, width, height);
+    gl.viewport(0, 0, raster.width, raster.height);
     this.use(this.lens);
     const u = this.lens.uniforms;
     gl.activeTexture(gl.TEXTURE0);
@@ -186,7 +192,8 @@ export class GlassHighlightGpu {
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, mask);
     gl.uniform1i(u.u_mask!, 1);
-    gl.uniform2f(u.u_sceneSize!, this.width, this.height);
+    gl.uniform2f(u.u_sceneSize!, this.sceneWidth, this.sceneHeight);
+    gl.uniform2f(u.u_textureSize!, this.width, this.height);
     gl.uniform4f(u.u_bounds!, x, y, width, height);
     gl.uniform2f(u.u_center!, center.x, center.y);
     gl.uniform1f(u.u_radius!, radius);

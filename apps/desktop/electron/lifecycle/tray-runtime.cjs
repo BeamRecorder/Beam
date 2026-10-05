@@ -13,6 +13,7 @@ function createTrayRuntime({
   applicationRoot,
   coordinator,
   isScreenshotBusy,
+  regionOverlay,
 }) {
   const idle = createIdleHudRenderer({
     window,
@@ -21,6 +22,7 @@ function createTrayRuntime({
       preferencesStore.read().onboardingCompleted &&
       !quickSnipService.isNormalRecordingActive() &&
       !isScreenshotBusy() &&
+      !regionOverlay.isSelecting() &&
       ['idle', 'completed', 'failed', 'canceled'].includes(quickSnipService.controller.state().state),
     releaseAuxiliary: async () => {
       const saved = await teleprompterWindow.suspend();

@@ -208,6 +208,12 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Screenshot and video editors open within the current display's usable area, including Windows 150% scaling and saved sizes from larger displays, so editor controls remain reachable.
+- Compact editor layouts keep inspector scrolling, capture/export controls and playback actions accessible; video timelines adapt to shorter windows without replacing the saved height preference.
+
+- Circular and freehand Loupe zooms retain finer text detail by rendering original sources at lens density, with matching Screenshot/video exports and HiDPI previews.
+- Windows region selection resolves native monitor IDs correctly at 150% scaling and on mixed-DPI desktops, restores the saved crop visibly, and accepts the recording shortcut with the current toolbar settings.
+- The Recorder stays loaded while a region is being selected, so a long selection cannot lose its capture request or saved settings to background standby.
 - Russian and Bulgarian website FAQs now display their translated questions and answers, including the current source license, instead of internal category identifiers.
 - Linux CI and release packages now compile and verify the experimental GPU export backend. Packages include only Beam native artifacts and use system FFmpeg libraries, preventing the backend from being omitted without bundling FFmpeg.
 

@@ -182,11 +182,20 @@ describe('useHudWindow', () => {
     await hud.api.selectScreenRegion();
     hud.api.isRegionSelectionLeaving.value = false;
     hud.selectedScreenPreview.value = null;
+    capture.getDisplayBounds.mockResolvedValueOnce(null);
     await hud.api.selectScreenRegion();
 
-    expect(capture.getDisplayBounds).not.toHaveBeenCalled();
+    expect(capture.getDisplayBounds).toHaveBeenCalledOnce();
     expect(capture.selectScreenRegion).not.toHaveBeenCalled();
     expect(capture.setWindowVisible).not.toHaveBeenCalled();
+  });
+
+  it('resolves the selected native display before opening a region when previews have no Electron bounds', async () => {
+    const hud = mountWindow({ screenPreview: null });
+    const selection = hud.api.selectScreenRegion();
+    await vi.advanceTimersByTimeAsync(180);
+    await selection;
+    expect(capture.selectScreenRegion).toHaveBeenCalledWith({ bounds, region: null });
   });
 
   it.each([

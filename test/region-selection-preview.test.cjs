@@ -20,7 +20,7 @@ function harness(platform = 'linux', respond = null) {
       if (result !== undefined) return result;
     }
     if (command === 'capabilities') return { separateCursor: true };
-    if (command === 'resolve-display') return { sourceId: 'wgc:monitor:123' };
+    if (command === 'resolve-display') return 'wgc:monitor:123';
     if (command === 'prepare-region-selection') {
       output = payload.config.output;
       await fs.writeFile(output, png);

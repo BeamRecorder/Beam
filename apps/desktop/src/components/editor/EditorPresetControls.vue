@@ -91,6 +91,7 @@ const confirmName = (name: string) => {
         class="preset-trigger"
         style="height: 28px; max-width: var(--editor-preset-max-width, 180px)"
         :aria-label="t('editorPreset')"
+        :tooltip="`${t('editorPreset')}: ${active?.id === 'default' ? t('defaultPreset') : (active?.name ?? t('preset'))}`"
         :aria-expanded="isOpen"
       >
         <span class="preset-name">{{
@@ -180,6 +181,7 @@ const confirmName = (name: string) => {
 
 <style scoped>
 .preset-name {
+  display: var(--editor-preset-name-display, inline);
   overflow: hidden;
   text-overflow: ellipsis;
 }

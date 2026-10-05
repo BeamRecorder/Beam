@@ -7,6 +7,37 @@ const test = require('node:test');
 
 const { registerCaptureIpc } = require('../apps/desktop/electron/capture/capture-ipc.cjs');
 
+test('display-bounds IPC matches the native Windows monitor while retaining 150% logical coordinates', async () => {
+  const handlers = new Map(),
+    requests = [];
+  const bounds = { x: -1280, y: 0, width: 1280, height: 720 };
+  registerCaptureIpc({
+    ipcMain: { handle: (channel, handler) => handlers.set(channel, handler), on: () => undefined },
+    platform: 'win32',
+    desktopCapturer: {},
+    BrowserWindow: {},
+    app: new EventEmitter(),
+    screen: {
+      getAllDisplays: () => [{ id: 7, bounds }],
+      dipToScreenPoint: (point) => ({ x: point.x * 1.5, y: point.y * 1.5 }),
+    },
+    captureEngine: {
+      request: async (command, payload) => {
+        requests.push([command, payload]);
+        return 'wgc:monitor:DISPLAY1';
+      },
+    },
+    userPaths: {},
+    trackStorages: [],
+  });
+  const getBounds = handlers.get('screen:get-display-bounds');
+  assert.deepEqual(await getBounds({}, 'DISPLAY1'), bounds);
+  assert.deepEqual(requests, [['resolve-display', { x: -960, y: 540 }]]);
+  assert.deepEqual(await getBounds({}, '7'), bounds);
+  assert.equal(requests.length, 1);
+  assert.equal(await getBounds({}, ''), null);
+});
+
 test('stops native capture before completing sidecar tracks', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-capture-ipc-'));
   const manifestPath = path.join(root, 'manifest.json');

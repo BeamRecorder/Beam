@@ -1,6 +1,7 @@
 import { releaseLayerPerspective } from './render-layer-perspective';
 import { releaseLayerEffects } from '../gradient/layer-effects';
 import { disposeBlurEffect } from '@beam/runtime/composition/effects/blur-effect';
+import { disposeGlassHighlights } from '../rendering/glass-highlight-render';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import type { LayerCompositing } from '@beam/engine/shared/layer-compositing-types';
 
@@ -8,6 +9,7 @@ const surfaces = new WeakMap<Canvas2DContext, OffscreenCanvas>();
 
 /** Release the scratch surface when its owning renderer has finished. */
 export function releaseCompositedLayerSurface(ctx: Canvas2DContext) {
+  disposeGlassHighlights(ctx);
   disposeBlurEffect(ctx);
   releaseLayerEffects(ctx);
   releaseLayerPerspective(ctx);
@@ -15,6 +17,7 @@ export function releaseCompositedLayerSurface(ctx: Canvas2DContext) {
   if (!surface) return;
   const target = surface.getContext('2d');
   if (target) {
+    disposeGlassHighlights(target);
     disposeBlurEffect(target);
     releaseLayerEffects(target);
     releaseLayerPerspective(target);

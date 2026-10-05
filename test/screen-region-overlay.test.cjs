@@ -84,6 +84,19 @@ test('failed selector loading releases its prepared monitor and disposes the nat
   assert.equal(overlay.isSelecting(), false);
   assert.equal(cancelled, 1);
 });
+test('Start/Stop is delivered only to the ready selector and stops being intercepted after selection', async () => {
+  const { overlay, window, calls } = createOverlayHarness();
+  const selection = overlay.select({ bounds: { x: 0, y: 0, width: 1280, height: 720 } });
+  assert.equal(overlay.handleShortcut('hud.startStopRecording'), false);
+  window.emit('ready-to-show');
+  overlay.markRendererReady(window.webContents);
+  assert.equal(overlay.handleShortcut('editor.play'), false);
+  assert.equal(overlay.handleShortcut('hud.startStopRecording'), true);
+  assert.deepEqual(calls.at(-1), ['send', 'preferences:shortcut', 'hud.startStopRecording']);
+  overlay.cancel();
+  assert.equal(await selection, null);
+  assert.equal(overlay.handleShortcut('hud.startStopRecording'), false);
+});
 test('loads the lightweight region entry while the native monitor preview is still preparing', async () => {
   let finish;
   const bounds = { x: 0, y: 0, width: 1000, height: 800 };

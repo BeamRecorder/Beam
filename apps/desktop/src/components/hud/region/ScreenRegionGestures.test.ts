@@ -2,11 +2,13 @@ import { triggerPointer } from '../../../../../../tests/support/pointer';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { ScreenRegionOverlayOptions } from '~/api/types/screen-region';
+import RegionRecordingToolbar from './RegionRecordingToolbar.vue';
 const { capture } = vi.hoisted(() => ({
   capture: {
     platform: 'linux',
     notifyScreenRegionReady: vi.fn(),
     onScreenRegionConfigure: vi.fn(),
+    onPreferenceShortcut: vi.fn((_listener: (id: string) => void) => vi.fn()),
     confirmScreenRegion: vi.fn(),
     cancelScreenRegion: vi.fn(),
     updateScreenRegion: vi.fn(),
@@ -111,6 +113,50 @@ it('ignores a simple click and pointer jitter instead of replacing the selected 
   await triggerPointer(main, 'pointerup');
   expect(wrapper.get('.region-frame').attributes('style')).toBe(original);
   expect((wrapper.get('.region-preset-picker').element as HTMLElement).style.display).not.toBe('none');
+  wrapper.unmount();
+});
+it('recording shortcut confirms the visible restored crop with the toolbar settings and releases its subscription', async () => {
+  const { wrapper } = await setup(crop, { recording });
+  const shortcut = capture.onPreferenceShortcut.mock.calls[0]![0] as (id: string) => void;
+  shortcut('editor.play');
+  expect(capture.confirmScreenRegion).not.toHaveBeenCalled();
+  const edited = { ...recording, countdownSeconds: 0 };
+  wrapper.getComponent(RegionRecordingToolbar).vm.$emit('update:modelValue', edited);
+  await wrapper.vm.$nextTick();
+  shortcut('hud.startStopRecording');
+  expect(capture.confirmScreenRegion).toHaveBeenCalledWith(crop, edited);
+  wrapper.unmount();
+  expect(capture.onPreferenceShortcut.mock.results[0]!.value).toHaveBeenCalledOnce();
+});
+it('recording shortcut does not confirm an unfinished gesture or a recording marker', async () => {
+  const { wrapper, main, configure } = await setup();
+  const shortcut = capture.onPreferenceShortcut.mock.calls[0]![0] as (id: string) => void;
+  await triggerPointer(main, 'pointerdown', { clientX: 300, clientY: 150, pointerId: 1 });
+  shortcut('hud.startStopRecording');
+  expect(capture.confirmScreenRegion).not.toHaveBeenCalled();
+  await triggerPointer(main, 'pointerup');
+  configure({ mode: 'record', bounds: { x: 0, y: 0, width: 1280, height: 720 }, region: crop });
+  await wrapper.vm.$nextTick();
+  shortcut('hud.startStopRecording');
+  expect(capture.confirmScreenRegion).not.toHaveBeenCalled();
+  wrapper.unmount();
+});
+it('displays a saved region in logical coordinates with physical 150% dimensions and notifies its native owner', async () => {
+  const { wrapper } = await setup(crop, {
+    bounds: { x: 0, y: 0, width: 1280, height: 720 },
+    pixelSize: { width: 1920, height: 1080 },
+  });
+  expect(wrapper.get('.region-frame').attributes('style')).toContain('width: 40%');
+  expect(wrapper.get('.region-size').attributes('aria-label')).toBe('768 × 432');
+  expect(capture.updateScreenRegion).toHaveBeenCalledWith(crop);
+  wrapper.unmount();
+});
+it('keeps the restored selection visible and reports failure to position the teleprompter', async () => {
+  capture.updateTeleprompterRegion.mockRejectedValueOnce(new Error('Teleprompter unavailable'));
+  const { wrapper } = await setup(crop, { recording });
+  expect(wrapper.get('.region-frame').isVisible()).toBe(true);
+  expect(wrapper.get('[role="alert"]').text()).toContain('Teleprompter unavailable');
+  expect(capture.updateScreenRegion).toHaveBeenCalledWith(crop);
   wrapper.unmount();
 });
 it('keeps dimensions live and aligned while presets and the recording bar are hidden during deliberate drawing', async () => {

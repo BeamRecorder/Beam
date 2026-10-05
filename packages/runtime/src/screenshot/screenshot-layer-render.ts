@@ -15,6 +15,7 @@ import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot
 import { screenshotImage } from '@beam/engine/screenshot/screenshot-images';
 import { screenshotImageRaster } from './screenshot-image-raster';
 import { drawScreenshotZoom } from './screenshot-zoom-render';
+import type { GlassScenePainter } from '../zoom/glass-highlight-gpu-types';
 
 function drawScreenshotContent(
   target: Canvas2DContext,
@@ -25,6 +26,7 @@ function drawScreenshotContent(
   height: number,
   backdrop?: CanvasImageSource,
   editingId?: string,
+  drawScene?: GlassScenePainter,
 ) {
   const viewport = { x: 0, y: 0, width, height };
   if (layer.kind === 'background')
@@ -57,7 +59,7 @@ function drawScreenshotContent(
   } else if (layer.kind === 'zoom') {
     const zoom = state.zooms?.find((item) => item.id === layer.id);
     if (!zoom) throw new Error(`Screenshot zoom unavailable: ${layer.id}`);
-    drawScreenshotZoom(target, zoom, state.canvas, width, height, backdrop ?? target.canvas);
+    drawScreenshotZoom(target, zoom, state.canvas, width, height, backdrop ?? target.canvas, drawScene);
   } else if (layer.kind === 'effect') {
     const effect = state.effects?.find((item) => item.id === layer.id);
     if (!effect) throw new Error(`Screenshot effect unavailable: ${layer.id}`);
@@ -95,10 +97,21 @@ export function drawScreenshotLayer(
   height: number,
   backdrop?: CanvasImageSource,
   editingId?: string,
+  drawScene?: GlassScenePainter,
 ) {
   const scale = Math.min(width / state.canvas.width, height / state.canvas.height);
   const draw = (context: Canvas2DContext) =>
-    drawScreenshotContent(context, state, layer, assets, width, height, backdrop ?? target.canvas, editingId);
+    drawScreenshotContent(
+      context,
+      state,
+      layer,
+      assets,
+      width,
+      height,
+      backdrop ?? target.canvas,
+      editingId,
+      drawScene,
+    );
   const active = layer.effects?.some((effect) => effect.enabled && effect.opacity > 0);
   const rect =
     active || layer.rotation3d

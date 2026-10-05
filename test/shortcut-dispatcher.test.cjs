@@ -29,6 +29,15 @@ function fixture(options = {}) {
         calls.push(['quick']);
       },
     }),
+    getRegionOverlay: () => ({
+      handleShortcut: (id) => {
+        if (options.selecting && id === 'hud.startStopRecording') {
+          calls.push(['region', id]);
+          return true;
+        }
+        return false;
+      },
+    }),
     isReady: () => options.ready !== false,
     pending,
   });
@@ -38,6 +47,19 @@ test('wakes a suspended HUD instead of broadcasting to its unloaded document', (
   const f = fixture({ sleeping: true });
   assert.equal(f.dispatcher.dispatch('hud.start'), true);
   assert.deepEqual(f.calls, [['wake', 'hud.start']]);
+});
+test('the active region selector owns Start/Stop before tray wake or broadcast', () => {
+  const f = fixture({ sleeping: true, selecting: true });
+  assert.equal(f.dispatcher.dispatch('hud.startStopRecording'), true);
+  assert.deepEqual(f.calls, [['region', 'hud.startStopRecording']]);
+});
+test('region selection leaves unrelated actions and idle recording shortcuts with their existing owners', () => {
+  const f = fixture({ selecting: true });
+  f.dispatcher.dispatch('editor.play');
+  assert.deepEqual(f.calls, [['preferences:shortcut', 'editor.play']]);
+  const idle = fixture();
+  idle.dispatcher.dispatch('hud.startStopRecording');
+  assert.deepEqual(idle.calls, [['preferences:shortcut', 'hud.startStopRecording']]);
 });
 test('dispatches Quick Snip directly without waking the HUD', () => {
   const f = fixture({ sleeping: true });

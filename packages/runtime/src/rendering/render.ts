@@ -7,7 +7,6 @@ import {
   isColorClip,
   isShapeClip,
   type BlurClip,
-  type CaptionClip,
   type VisualClip,
 } from '@beam/engine/shared/composition-types';
 import {
@@ -24,8 +23,7 @@ import {
 import { createCursorMotionPlayer } from '@beam/engine/cursor/cursor-motion';
 import { cursorStateAt } from '@beam/engine/cursor/cursorPlayback';
 import { cursorPositionForKeyboardCaption, drawCursorLayer } from '@beam/runtime/rendering/cursor-render';
-import { captionContentAt } from '@beam/engine/shared/caption-text-layout';
-import { drawCaptionText } from '@beam/runtime/composition/captions/render-caption-text';
+import { drawCaption } from './render-caption';
 import type { CompositionCameraEvaluator } from '@beam/engine/zoom/composition-camera';
 import { renderBackground } from '@beam/runtime/composition/background/render-background';
 import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '@beam/engine/composition/scene-layers';
@@ -54,6 +52,7 @@ import {
   getCanvasTransitionSurface,
 } from '@beam/runtime/rendering/canvas-transition-surface';
 import { createGpuShapeScope } from '@beam/runtime/composition/shape/ordered-gpu-shapes';
+import { releaseCompositedLayerSurface } from '../composition/render-composited-layer';
 
 import type { RenderableMedia, CompositionVisuals } from '@beam/runtime/rendering/render-types';
 export type { RenderableMedia, CompositionVisuals } from '@beam/runtime/rendering/render-types';
@@ -76,27 +75,6 @@ function drawSnapshotBackground(
     sourceSize: background ? { width: background.width, height: background.height } : undefined,
     rect: { x: 0, y: 0, width: snapshot.canvas.width, height: snapshot.canvas.height },
     blurPixels: snapshot.blurPercent * 0.48,
-  });
-}
-
-function drawCaption(
-  ctx: Canvas2DContext,
-  clip: CaptionClip,
-  timeMs: number,
-  snapshot: CompositionSnapshot,
-  cursorPosition?: { x: number; y: number } | null,
-) {
-  const { text, runs, wordHighlight } = captionContentAt(clip, timeMs);
-  if (!text) return;
-  const referenceCanvas = snapshot.referenceCanvas ?? snapshot.canvas;
-  drawCaptionText(ctx, {
-    clip,
-    text,
-    runs,
-    wordHighlight,
-    cursorPosition,
-    canvas: referenceCanvas,
-    viewport: { x: 0, y: 0, width: snapshot.canvas.width, height: snapshot.canvas.height },
   });
 }
 
@@ -214,6 +192,8 @@ function renderCompositionFrameContent(
   cursorMotionPlayer?: ReturnType<typeof createCursorMotionPlayer>,
   cameraEvaluator?: CompositionCameraEvaluator,
   resolvedLayers?: CompositionSceneLayers,
+  decorations = true,
+  pixelScale = 1,
 ) {
   const { width, height } = snapshot.canvas;
   ctx.fillStyle = OUTPUT_FALLBACK_COLOR;
@@ -281,6 +261,7 @@ function renderCompositionFrameContent(
                   cursorImages,
                   resolvedCursorMotionPlayer,
                   cursorMotion,
+                  pixelScale,
                 );
             });
             continue;
@@ -384,6 +365,7 @@ function renderCompositionFrameContent(
           cursorImages,
           resolvedCursorMotionPlayer,
           cursorMotion,
+          pixelScale,
         ),
       );
       target.restore();
@@ -405,7 +387,29 @@ function renderCompositionFrameContent(
         drawCaption(ctx, clip, timeMs, snapshot, keyboardCursorPosition),
       );
   });
-  renderGlassHighlights(ctx, snapshot, timeMs);
+  if (!decorations) return;
+  renderGlassHighlights(ctx, snapshot, timeMs, undefined, {
+    draw: (target, width, height) =>
+      renderCompositionFrameContent(
+        target,
+        video,
+        {
+          ...snapshot,
+          referenceCanvas: snapshot.referenceCanvas ?? snapshot.canvas,
+          canvas: { ...snapshot.canvas, width, height },
+        },
+        time,
+        background,
+        cursorImages,
+        visuals,
+        cursorMotionPlayer,
+        cameraEvaluator,
+        layers,
+        false,
+        width / snapshot.canvas.width,
+      ),
+    dispose: releaseCompositedLayerSurface,
+  });
   drawBeamWatermark(
     ctx,
     snapshot.canvas,

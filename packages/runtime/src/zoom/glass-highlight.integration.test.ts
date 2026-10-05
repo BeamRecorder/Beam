@@ -140,6 +140,220 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('glass zoom pixels in rea
     expect(transformed.outside).toEqual(plain.outside);
     expect(Math.abs(transformed.magnified[0]! - plain.magnified[0]!)).toBeLessThanOrEqual(1);
   });
+  it.each([false, true])(
+    'retains original fine text strokes for screenshot and video lenses (freehand=%s)',
+    async (freehand) => {
+      const result = await page.evaluate(async (freehand) => {
+        const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+        const { renderCompositionFrame, disposeCompositionRenderer } = (await load(
+          '/packages/runtime/src/rendering/render.ts',
+        )) as typeof import('../rendering/render');
+        const { drawScreenshot } = (await load(
+          '/packages/runtime/src/screenshot/screenshot-render.ts',
+        )) as typeof import('../screenshot/screenshot-render');
+        const { createRenderDocument } = (await load(
+          '/packages/engine/src/document/render-document.ts',
+        )) as typeof import('@beam/engine/document/render-document');
+        const { createStillDocument } = (await load(
+          '/packages/engine/src/screenshot/still-document.ts',
+        )) as typeof import('@beam/engine/screenshot/still-document');
+        const { createManualZoom } = (await load(
+          '/packages/engine/src/zoom/manual-zoom.ts',
+        )) as typeof import('@beam/engine/zoom/manual-zoom');
+        const { createGlassHighlight } = (await load(
+          '/packages/engine/src/zoom/glass-highlight.ts',
+        )) as typeof import('@beam/engine/zoom/glass-highlight');
+        const { insertScreenshotLayer } = (await load(
+          '/packages/engine/src/screenshot/screenshot-layers.ts',
+        )) as typeof import('@beam/engine/screenshot/screenshot-layers');
+        const source = new OffscreenCanvas(1280, 720),
+          sourceCtx = source.getContext('2d')!;
+        sourceCtx.fillStyle = 'white';
+        sourceCtx.fillRect(0, 0, 1280, 720);
+        sourceCtx.fillStyle = 'black';
+        for (let x = 0; x < 1280; x += 8) sourceCtx.fillRect(x, 0, 4, 720);
+        const lens = {
+          ...createManualZoom('lens', 0, 1000),
+          depth: 6 as const,
+          effect: 'glass' as const,
+          glass: {
+            ...createGlassHighlight(),
+            transitionMs: 0,
+            refraction: 0,
+            rim: 0,
+            shadow: 0,
+            dispersion: 0,
+            shape: freehand ? ('freehand' as const) : ('circle' as const),
+            path: freehand
+              ? [
+                  { x: -1, y: -1 },
+                  { x: 1, y: -1 },
+                  { x: 1, y: 1 },
+                  { x: -1, y: 1 },
+                ]
+              : [],
+          },
+        };
+        const snapshot = createRenderDocument(undefined, 256, 144, 30);
+        snapshot.canvas.showBackground = true;
+        snapshot.canvas.watermark!.enabled = false;
+        snapshot.zooms = [lens];
+        const video = new OffscreenCanvas(256, 144),
+          videoCtx = video.getContext('2d')!;
+        renderCompositionFrame(videoCtx, null, snapshot, 0.5, { source, width: 1280, height: 720, preRendered: true });
+        const state = createStillDocument('still', 'source.png', 1280, 720).state;
+        state.canvas.width = 256;
+        state.canvas.height = 144;
+        state.canvas.showBackground = false;
+        state.canvas.watermark!.enabled = false;
+        state.image.appearance.shadowSize = 'none';
+        state.image.appearance.cornerRadius = 0;
+        state.zooms = [{ ...lens, mode: 'manual', kind: 'zoom', name: 'Lens', enabled: true, endMs: 1 }];
+        insertScreenshotLayer(state, 'lens');
+        const still = new OffscreenCanvas(256, 144),
+          stillCtx = still.getContext('2d')!;
+        drawScreenshot(
+          stillCtx,
+          state,
+          { image: source, background: null, logo: null, width: 1280, height: 720 },
+          256,
+          144,
+        );
+        const contrast = (ctx: OffscreenCanvasRenderingContext2D) =>
+          ctx.getImageData(133, 72, 1, 1).data[0]! - ctx.getImageData(129, 72, 1, 1).data[0]!;
+        const result = { video: contrast(videoCtx), still: contrast(stillCtx) };
+        disposeCompositionRenderer();
+        return result;
+      }, freehand);
+      expect(result.video).toBeGreaterThan(220);
+      expect(result.still).toBeGreaterThan(220);
+    },
+  );
+  it('magnifies the cursor at its authored size in the high-density video scene', async () => {
+    const result = await page.evaluate(async () => {
+      const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+      const { renderCompositionFrame, disposeCompositionRenderer } = (await load(
+        '/packages/runtime/src/rendering/render.ts',
+      )) as typeof import('../rendering/render');
+      const { createRenderDocument } = (await load(
+        '/packages/engine/src/document/render-document.ts',
+      )) as typeof import('@beam/engine/document/render-document');
+      const { createDefaultClipAppearance } = (await load(
+        '/packages/engine/src/shared/composition-defaults.ts',
+      )) as typeof import('@beam/engine/shared/composition-defaults');
+      const { emptyComposition } = (await load(
+        '/packages/engine/src/shared/composition-types.ts',
+      )) as typeof import('@beam/engine/shared/composition-types');
+      const { createManualZoom } = (await load(
+        '/packages/engine/src/zoom/manual-zoom.ts',
+      )) as typeof import('@beam/engine/zoom/manual-zoom');
+      const { createGlassHighlight } = (await load(
+        '/packages/engine/src/zoom/glass-highlight.ts',
+      )) as typeof import('@beam/engine/zoom/glass-highlight');
+      const snapshot = createRenderDocument(
+        {
+          ...emptyComposition(),
+          assets: [
+            {
+              id: 'asset',
+              kind: 'video',
+              name: 'Screen',
+              fileName: null,
+              durationMs: 1000,
+              width: 200,
+              height: 100,
+              src: 'file:///test.mp4',
+              origin: 'session',
+            },
+          ],
+          clips: [
+            {
+              id: 'screen',
+              kind: 'screen',
+              trackId: 'screen-track',
+              name: 'Screen',
+              assetId: 'asset',
+              timelineStartMs: 0,
+              timelineDurationMs: 1000,
+              sourceInMs: 0,
+              sourceDurationMs: 1000,
+              playbackRate: 1,
+              enabled: true,
+              order: 0,
+              transitions: { entry: null, exit: null },
+              transform: { x: 0, y: 0, width: 1, height: 1 },
+              appearance: { ...createDefaultClipAppearance('screen'), shadowSize: 'none' },
+              isMirrored: false,
+              isMirroredY: false,
+            },
+          ],
+        },
+        200,
+        100,
+      );
+      snapshot.canvas.watermark!.enabled = false;
+      snapshot.cursor.available = true;
+      snapshot.cursor.events = [
+        { event: 'move', sessionNs: 0, pixelX: 100, pixelY: 50, normalizedX: 0.5, normalizedY: 0.5, visible: true },
+      ];
+      snapshot.cursorSettings.enabled = true;
+      snapshot.cursorSettings.size = 8;
+      snapshot.cursorSettings.shadow.enabled = false;
+      snapshot.cursorSettings.motion.motionBlur = 0;
+      snapshot.cursorSettings.selection = { packId: 'test', mode: 'fixed', cursorId: 'cursor' };
+      snapshot.cursorPack = {
+        id: 'test',
+        name: 'Test',
+        source: 'builtin',
+        colorMode: 'original',
+        defaultCursorId: 'cursor',
+        automaticMap: {},
+        cursors: [
+          {
+            id: 'cursor',
+            label: 'Cursor',
+            url: 'test.png',
+            intrinsicSize: { width: 8, height: 8 },
+            nominalSize: 8,
+            hotspot: { x: 0, y: 0 },
+          },
+        ],
+      };
+      snapshot.zooms = [
+        {
+          ...createManualZoom('lens', 0, 1000),
+          depth: 4,
+          effect: 'glass',
+          glass: { ...createGlassHighlight(), transitionMs: 0, refraction: 0, rim: 0, shadow: 0, dispersion: 0 },
+        },
+      ];
+      const source = new OffscreenCanvas(200, 100),
+        sourceCtx = source.getContext('2d')!;
+      sourceCtx.fillStyle = 'white';
+      sourceCtx.fillRect(0, 0, 200, 100);
+      const cursor = new OffscreenCanvas(8, 8),
+        cursorCtx = cursor.getContext('2d')!;
+      cursorCtx.fillStyle = '#0000ff';
+      cursorCtx.fillRect(0, 0, 8, 8);
+      const image = await createImageBitmap(cursor);
+      const output = new OffscreenCanvas(200, 100),
+        ctx = output.getContext('2d')!;
+      renderCompositionFrame(
+        ctx,
+        { source, width: 200, height: 100 },
+        snapshot,
+        0.5,
+        null,
+        new Map([['cursor', image]]),
+      );
+      const result = [...ctx.getImageData(110, 58, 1, 1).data];
+      disposeCompositionRenderer();
+      image.close();
+      return result;
+    });
+    expect(result).toEqual([0, 0, 255, 255]);
+  });
+
   it('uses the same shader for screenshot and completed video frames', async () => {
     const result = await page.evaluate(async () => {
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;

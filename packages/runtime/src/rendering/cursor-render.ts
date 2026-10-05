@@ -81,13 +81,15 @@ export function drawCursorLayer(
   cursorImages: ReadonlyMap<string, CursorImage> | undefined,
   cursorMotionPlayer: ReturnType<typeof createCursorMotionPlayer>,
   motionCursor: CursorMotionSample | null,
+  pixelScale = 1,
 ) {
   const settings = snapshot.cursorSettings;
   if (settings.enabled === false) return;
   // Cursor size and shadow blur are output pixels. Keep the value selected in
   // the editor stable when the user exports at a different video resolution.
-  const cursorSize = settings.size;
-  const shadowBlur = settings.shadow.blur;
+  // A supersampled lens pass preserves that size before the lens magnifies it.
+  const cursorSize = settings.size * pixelScale;
+  const shadowBlur = settings.shadow.blur * pixelScale;
   const settingsForButton = (button: number): CursorClickEffectSettings | null => {
     const effectButton = effectButtonForRecordedButton(button);
     return effectButton ? settings.clickEffects[effectButton] : null;
@@ -119,13 +121,13 @@ export function drawCursorLayer(
       if (ring.filled) {
         ctx.fillStyle = effect.rippleColor;
         ctx.beginPath();
-        ctx.arc(position.x, position.y, ring.radius, 0, Math.PI * 2);
+        ctx.arc(position.x, position.y, ring.radius * pixelScale, 0, Math.PI * 2);
         ctx.fill();
       } else {
         ctx.strokeStyle = effect.rippleColor;
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 2.5 * pixelScale;
         ctx.beginPath();
-        ctx.arc(position.x, position.y, ring.radius, 0, Math.PI * 2);
+        ctx.arc(position.x, position.y, ring.radius * pixelScale, 0, Math.PI * 2);
         ctx.stroke();
       }
     }

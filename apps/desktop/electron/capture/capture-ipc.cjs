@@ -9,6 +9,7 @@ const { isCaptureCancellation } = require('./capture-cancellation.cjs');
 const { createSourcePreviewService } = require('./source-preview-service.cjs');
 const { registerSourcePickerIpc } = require('../source-picker/source-picker-ipc.cjs');
 const { registerScreenColorIpc } = require('./screen-color-ipc.cjs');
+const { nativeDisplayBounds } = require('./display-coordinates.cjs');
 
 const ALLOWED_COMMANDS = new Set([
   'discover',
@@ -53,25 +54,6 @@ function withProjectId(session) {
   } catch {
     return session;
   }
-}
-
-function displayBoundsForId(screen, displayId) {
-  if (typeof displayId !== 'string' || displayId.length === 0 || displayId.length > 128) return null;
-  const display = screen.getAllDisplays().find((item) => String(item.id) === displayId);
-  const bounds = display?.bounds;
-  if (
-    !bounds ||
-    !['x', 'y', 'width', 'height'].every((key) => Number.isFinite(bounds[key])) ||
-    bounds.width <= 0 ||
-    bounds.height <= 0
-  )
-    return null;
-  return {
-    x: bounds.x,
-    y: bounds.y,
-    width: bounds.width,
-    height: bounds.height,
-  };
 }
 
 function registerCaptureIpc({
@@ -296,8 +278,10 @@ function registerCaptureIpc({
     }
     return sourcePreviews.get(request);
   });
-  ipcMain.handle('screen:get-display-bounds', (_event, displayId) => displayBoundsForId(screen, displayId));
+  ipcMain.handle('screen:get-display-bounds', (_event, displayId) =>
+    nativeDisplayBounds(screen, requestEngine, displayId, platform),
+  );
   return { sourcePicker };
 }
 
-module.exports = { displayBoundsForId, registerCaptureIpc };
+module.exports = { registerCaptureIpc };

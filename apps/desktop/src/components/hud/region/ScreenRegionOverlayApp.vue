@@ -46,6 +46,7 @@ const pixelBounds = computed(() => ({
   ...options.value?.pixelSize,
 }));
 let unsubscribe: (() => void) | null = null;
+let unsubscribeShortcut: (() => void) | null = null;
 useResizeObserver(topControls, () => {
   if (pointer.value || !topControls.value) return;
   const { offsetWidth: width, offsetHeight: height } = topControls.value;
@@ -286,6 +287,9 @@ const loadSavedPreset = async () => {
 };
 
 onMounted(() => {
+  unsubscribeShortcut = capture.onPreferenceShortcut((id) => {
+    if (id === 'hud.startStopRecording' && isSelecting.value && !interaction) confirm();
+  });
   window.addEventListener('keydown', handleKeydown);
   window.addEventListener('resize', onResize);
   unsubscribe = capture.onScreenRegionConfigure((next) => {
@@ -325,7 +329,7 @@ watch(
         .catch((reason) => {
           selectionError.value = String(reason);
         });
-    if (options.value?.context === 'quick-snip' && next?.width && next.height) {
+    if (isSelecting.value && next?.width && next.height) {
       capture.updateScreenRegion({ ...next });
     }
   },
@@ -335,6 +339,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown);
   window.removeEventListener('resize', onResize);
   unsubscribe?.();
+  unsubscribeShortcut?.();
 });
 </script>
 

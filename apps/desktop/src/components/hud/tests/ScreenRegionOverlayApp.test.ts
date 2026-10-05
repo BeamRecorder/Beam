@@ -6,6 +6,7 @@ const { capture } = vi.hoisted(() => ({
   capture: {
     notifyScreenRegionReady: vi.fn(),
     onScreenRegionConfigure: vi.fn(),
+    onPreferenceShortcut: vi.fn((_listener: (id: string) => void) => vi.fn()),
     confirmScreenRegion: vi.fn(),
     cancelScreenRegion: vi.fn(),
     updateScreenRegion: vi.fn(),

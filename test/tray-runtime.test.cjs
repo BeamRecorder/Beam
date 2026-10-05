@@ -11,7 +11,8 @@ function fixture() {
     state = 'idle',
     normal = false,
     screenshot = false,
-    onboarding = true;
+    onboarding = true,
+    selectingRegion = false;
   const window = new EventEmitter();
   window.webContents = { send: (...args) => calls.push(args) };
   const controller = { setVisible: (value) => calls.push(['visible', value]) };
@@ -73,6 +74,7 @@ function fixture() {
         },
       },
       isScreenshotBusy: () => screenshot,
+      regionOverlay: { isSelecting: () => selectingRegion },
     });
   } finally {
     Module._load = originalLoad;
@@ -92,6 +94,7 @@ function fixture() {
       if ('normal' in values) normal = values.normal;
       if ('screenshot' in values) screenshot = values.screenshot;
       if ('onboarding' in values) onboarding = values.onboarding;
+      if ('selectingRegion' in values) selectingRegion = values.selectingRegion;
     },
   };
 }
@@ -103,7 +106,7 @@ test('standby requires completed onboarding and no capture, screenshot, selectio
     assert.equal(f.idleOptions.canSuspend(), false);
   }
   f.set({ state: 'idle' });
-  for (const key of ['normal', 'screenshot']) {
+  for (const key of ['normal', 'screenshot', 'selectingRegion']) {
     f.set({ [key]: true });
     assert.equal(f.idleOptions.canSuspend(), false);
     f.set({ [key]: false });

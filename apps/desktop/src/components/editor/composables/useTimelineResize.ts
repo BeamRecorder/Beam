@@ -1,17 +1,28 @@
-import { getCurrentInstance, onMounted, onUnmounted, ref } from 'vue';
+import { computed, getCurrentInstance, onMounted, onUnmounted, ref } from 'vue';
 import { capture } from '~/api/capture';
 
 export const DEFAULT_TIMELINE_HEIGHT = 210;
 export const MIN_TIMELINE_HEIGHT = 100;
 export const MAX_TIMELINE_HEIGHT = 520;
 
-export const clampTimelineHeight = (height: number): number => {
-  if (!Number.isFinite(height)) return DEFAULT_TIMELINE_HEIGHT;
-  return Math.max(MIN_TIMELINE_HEIGHT, Math.min(MAX_TIMELINE_HEIGHT, Math.round(height)));
+export const clampTimelineHeight = (height: number, viewportHeight = Infinity): number => {
+  const preferred = Number.isFinite(height) ? height : DEFAULT_TIMELINE_HEIGHT;
+  // Reserve the titlebar, preview tools and a usable canvas instead of allowing
+  // a large saved timeline to consume a shorter, scaled display.
+  const available = Number.isFinite(viewportHeight)
+    ? Math.min(viewportHeight / 2, viewportHeight - 320)
+    : MAX_TIMELINE_HEIGHT;
+  const maximum = Math.max(MIN_TIMELINE_HEIGHT, Math.min(MAX_TIMELINE_HEIGHT, Math.floor(available)));
+  return Math.max(MIN_TIMELINE_HEIGHT, Math.min(maximum, Math.round(preferred)));
 };
 
 export function useTimelineResize(initialHeight = DEFAULT_TIMELINE_HEIGHT) {
-  const timelineHeight = ref(clampTimelineHeight(initialHeight));
+  const preferredHeight = ref(clampTimelineHeight(initialHeight));
+  const viewportHeight = ref(typeof window === 'undefined' ? Infinity : window.innerHeight);
+  const timelineHeight = computed(() => clampTimelineHeight(preferredHeight.value, viewportHeight.value));
+  const updateViewport = () => {
+    viewportHeight.value = window.innerHeight;
+  };
   const isResizingTimeline = ref(false);
 
   const loadPreferences = async () => {
@@ -19,7 +30,7 @@ export function useTimelineResize(initialHeight = DEFAULT_TIMELINE_HEIGHT) {
       const prefs = await capture.getPreferences();
       const saved = Number(prefs.extras?.timelineHeight);
       if (Number.isFinite(saved) && saved > 0) {
-        timelineHeight.value = clampTimelineHeight(saved);
+        preferredHeight.value = clampTimelineHeight(saved);
       }
     } catch {
       // Ignored if preferences are unavailable
@@ -41,8 +52,10 @@ export function useTimelineResize(initialHeight = DEFAULT_TIMELINE_HEIGHT) {
   };
 
   let activeRafId: number | null = null;
+  let cancelResize: (() => void) | null = null;
 
   const startTimelineResize = (event: PointerEvent) => {
+    cancelResize?.();
     event.preventDefault();
     isResizingTimeline.value = true;
     const startY = event.clientY;
@@ -51,10 +64,7 @@ export function useTimelineResize(initialHeight = DEFAULT_TIMELINE_HEIGHT) {
 
     const applyHeightUpdate = (clientY: number) => {
       const deltaY = startY - clientY;
-      const maxHeight =
-        typeof window !== 'undefined' ? Math.min(MAX_TIMELINE_HEIGHT, window.innerHeight * 0.6) : MAX_TIMELINE_HEIGHT;
-      const newHeight = Math.max(MIN_TIMELINE_HEIGHT, Math.min(maxHeight, startHeight + deltaY));
-      timelineHeight.value = Math.round(newHeight);
+      preferredHeight.value = clampTimelineHeight(startHeight + deltaY, viewportHeight.value);
     };
 
     const onPointerMove = (moveEvent: PointerEvent | MouseEvent) => {
@@ -72,7 +82,7 @@ export function useTimelineResize(initialHeight = DEFAULT_TIMELINE_HEIGHT) {
       }
     };
 
-    const onPointerUp = () => {
+    const stopResize = (persist: boolean) => {
       isResizingTimeline.value = false;
       if (typeof window !== 'undefined') {
         if (activeRafId !== null) {
@@ -89,8 +99,11 @@ export function useTimelineResize(initialHeight = DEFAULT_TIMELINE_HEIGHT) {
         window.removeEventListener('mousemove', onPointerMove as EventListener);
         window.removeEventListener('mouseup', onPointerUp);
       }
-      void persistHeight(timelineHeight.value);
+      cancelResize = null;
+      if (persist) void persistHeight(timelineHeight.value);
     };
+    const onPointerUp = () => stopResize(true);
+    cancelResize = () => stopResize(false);
 
     if (typeof window !== 'undefined') {
       window.addEventListener('pointermove', onPointerMove as EventListener);
@@ -104,12 +117,14 @@ export function useTimelineResize(initialHeight = DEFAULT_TIMELINE_HEIGHT) {
   let unbindPreferences: (() => void) | undefined;
   if (getCurrentInstance()) {
     onMounted(() => {
+      updateViewport();
+      window.addEventListener('resize', updateViewport);
       void loadPreferences();
       try {
         unbindPreferences = capture.onPreferencesChanged((prefs) => {
           const saved = Number(prefs.extras?.timelineHeight);
           if (Number.isFinite(saved) && saved > 0) {
-            timelineHeight.value = clampTimelineHeight(saved);
+            preferredHeight.value = clampTimelineHeight(saved);
           }
         });
       } catch {
@@ -118,11 +133,9 @@ export function useTimelineResize(initialHeight = DEFAULT_TIMELINE_HEIGHT) {
     });
 
     onUnmounted(() => {
+      window.removeEventListener('resize', updateViewport);
       unbindPreferences?.();
-      if (typeof window !== 'undefined' && activeRafId !== null) {
-        window.cancelAnimationFrame(activeRafId);
-        activeRafId = null;
-      }
+      cancelResize?.();
     });
   }
 

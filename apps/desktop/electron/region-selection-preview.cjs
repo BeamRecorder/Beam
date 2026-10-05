@@ -2,6 +2,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { captureWindowExclusions } = require('./capture/capture-window-exclusions.cjs');
+const { windowsDisplaySource } = require('./capture/display-coordinates.cjs');
 
 function portalDisplayBounds(geometry, displays) {
   const position = geometry?.position;
@@ -42,12 +43,12 @@ function createRegionSelectionPreview({
             sourceId: `sck:display:${screen.getDisplayMatching(bounds).id}`,
           };
         else {
-          const point = screen.dipToScreenPoint({
-            x: Math.round(bounds.x + bounds.width / 2),
-            y: Math.round(bounds.y + bounds.height / 2),
-          });
-          const resolved = await captureEngine.request('resolve-display', point);
-          source = { mode: 'source', sourceId: resolved.sourceId };
+          const sourceId = await windowsDisplaySource(
+            screen,
+            (command, payload) => captureEngine.request(command, payload),
+            bounds,
+          );
+          source = { mode: 'source', sourceId };
         }
         const output = path.join(directory, 'preview.png');
         const capabilities = platform === 'linux' ? await captureEngine.request('capabilities') : null;

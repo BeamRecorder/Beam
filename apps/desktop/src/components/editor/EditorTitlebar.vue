@@ -89,6 +89,16 @@ const dismissible = computed(() => openPopovers.size > 0);
   }
   .right-actions {
     --editor-copy-label-display: none;
+    --editor-dimensions-label-display: none;
+  }
+}
+@container (max-width: 900px) {
+  .left-actions {
+    --editor-preset-name-display: none;
+    gap: 4px;
+  }
+  .right-actions {
+    gap: 4px;
   }
 }
 </style>

@@ -6,7 +6,7 @@ import type { PlaybackEventMap } from '../playback/playback-types';
 
 function setup() {
   const listeners = new Map<keyof PlaybackEventMap, Set<(value: never) => void>>();
-  const engine: HtmlClockEngine = {
+  const engine = {
     currentTime: 1,
     on(event, listener) {
       let entries = listeners.get(event);
@@ -16,7 +16,7 @@ function setup() {
         entries.delete(listener as (value: never) => void);
       };
     },
-  };
+  } satisfies HtmlClockEngine;
   const clock = createHtmlPlaybackClock(() => engine);
   const emit = <K extends keyof PlaybackEventMap>(event: K, value: PlaybackEventMap[K]) => {
     for (const listener of listeners.get(event) ?? []) listener(value as never);

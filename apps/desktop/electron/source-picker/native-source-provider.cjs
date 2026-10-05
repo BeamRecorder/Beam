@@ -1,3 +1,5 @@
+const { windowsDisplaySource } = require('../capture/display-coordinates.cjs');
+
 function windowSourceId(id, platform) {
   const match = /^window:(\d+)(?::|$)/.exec(id);
   if (!match) return id;
@@ -79,11 +81,7 @@ function createNativeSourceProvider({
         if (kind === 'screen') {
           const display = screen.getAllDisplays().find((entry) => String(entry.id) === preview.display_id);
           if (!display) continue;
-          const point = screen.dipToScreenPoint({
-            x: display.bounds.x + Math.floor(display.bounds.width / 2),
-            y: display.bounds.y + Math.floor(display.bounds.height / 2),
-          });
-          id = await requestNative('resolve-display', point);
+          id = await windowsDisplaySource(screen, requestNative, display.bounds);
           bounds = validBounds(display.bounds);
         }
         if (ownIds.has(id)) continue;

@@ -4,10 +4,12 @@ function createShortcutDispatcher({
   teleprompterWindow,
   getTray,
   getQuickSnip,
+  getRegionOverlay,
   isReady,
   pending,
 }) {
   const dispatch = (id) => {
+    if (getRegionOverlay?.()?.handleShortcut(id)) return true;
     if (id.startsWith('hud.') && getTray()?.dispatchHudShortcut(id)) return true;
     if (id.startsWith('teleprompter.')) return teleprompterWindow.handleShortcut(id);
     if (id === 'quickSnip.toggle') {
