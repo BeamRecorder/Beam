@@ -174,7 +174,6 @@ const navigate = async (event: KeyboardEvent) => {
                 :data-source-id="source.id"
                 :aria-label="`${source.app} — ${source.name}`"
                 :aria-pressed="source.id === state.selectedId"
-                :title="`${source.name}\n${source.app} · ${source.detail}`"
                 @mouseenter="hoverSource(source.id)"
                 @mouseleave="leaveSource"
                 @focus="hoverSource(source.id)"

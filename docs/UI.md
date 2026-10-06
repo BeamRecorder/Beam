@@ -8,6 +8,7 @@ This document defines the visual and implementation rules for the Vue renderer.
 - Extend an existing UI primitive when the behavior is shared by multiple features.
 - Keep feature-specific composition in the feature folder, not in the shared UI primitives.
 - Use semantic HTML and preserve keyboard access, focus visibility, disabled states, and accessible names.
+- HUD controls with a visible label do not show hover tooltips, including native `title` hints. Keep hints for icon-only actions and preserve accessible names.
 - Keep interactive state in Vue components or composables; do not hide application state in CSS.
 - Keep ordinary button and select hover/open surfaces neutral, including their borders and text. Reserve the accent for primary actions and selected navigation or choices; retain a visible neutral keyboard-focus outline.
 - `ButtonGroup` uses `variant="primary"` by default for accent-colored selections. Use `variant="neutral"` for neutral selections. Both variants keep unselected hover states neutral and use the theme's matching selected-text color.

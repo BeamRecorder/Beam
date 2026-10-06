@@ -89,6 +89,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- HUD controls with visible labels no longer show redundant hover tooltips; icon-only actions retain their hints.
+
 - The local-project website demonstration zooms into Projects actions and pulls back as the file browser opens, using Beam’s editable native 2D camera in both themes.
 
 - The website teleprompter demonstration now enlarges the script and changes its text color with native controls while recording continues, in both themes.

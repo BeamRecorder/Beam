@@ -87,6 +87,7 @@ const selectSource = (value: string | number) => emit('update:modelValue', Strin
     :loading="loading"
     :disabled="disabled"
     variant="source"
+    tooltip-disabled
     @update:model-value="selectSource"
     @toggle="emit('toggle', $event)"
   />

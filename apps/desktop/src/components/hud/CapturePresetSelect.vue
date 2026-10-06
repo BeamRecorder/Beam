@@ -83,6 +83,7 @@ onBeforeUnmount(() => {
       :option-height="compact ? 32 : 38"
       :disabled="disabled || busy"
       :label="t('preset')"
+      tooltip-disabled
       @update:model-value="select"
       @toggle="emit('toggle', $event)"
     >

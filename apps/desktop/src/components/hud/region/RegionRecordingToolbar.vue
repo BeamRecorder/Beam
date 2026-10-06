@@ -122,6 +122,7 @@ onBeforeUnmount(() => {
         :model-value="settings.cameraId"
         :options="cameraOptions"
         :label="t('camera')"
+        tooltip-disabled
         @update:model-value="setCamera"
         ><template #icon><component :is="settings.cameraId === 'off' ? CameraOff : Camera" :size="14" /></template
       ></Select>
@@ -133,6 +134,7 @@ onBeforeUnmount(() => {
         :model-value="settings.microphoneId"
         :options="micOptions"
         :label="t('microphone')"
+        tooltip-disabled
         @update:model-value="settings = { ...settings, microphoneId: String($event) }"
         ><template #icon
           ><AudioIconMeter kind="mic" :enabled="settings.microphoneId !== 'no-audio'" :level="micLevel" /></template
@@ -145,6 +147,7 @@ onBeforeUnmount(() => {
         :model-value="settings.systemAudio ? 'on' : 'off'"
         :options="audioOptions"
         :label="t('systemAudio')"
+        tooltip-disabled
         @update:model-value="settings = { ...settings, systemAudio: $event === 'on' }"
         ><template #icon
           ><AudioIconMeter kind="system" :enabled="settings.systemAudio" :level="systemAudioLevel" /></template
