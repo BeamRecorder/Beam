@@ -8,6 +8,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- A discreet Recorder update action explains the available version on hover, downloads in the background, shows progress and offers Restart to update. A brief two-second shimmer highlights its first appearance and respects reduced motion. Red indicators on the settings gear and Updates category keep available updates visible, with labels translated into all fifteen languages.
+
 - The private website’s Zooms page demonstrates manual Screenshot 2D, 3D and glass layers in a nine-second, 60 fps loop, with native controls, light/dark variants and matching posters. Editable source lives in `examples/website-still-zoom-loop/`.
 
 - The private website’s Edit header has a minimal, themed three-track animation with macOS trim cursors, offscreen suspension and reduced-motion support.
@@ -27,6 +29,9 @@ User-facing changes to Beam are documented in this file.
 - The local-project website demonstration zooms into Projects actions and pulls back as the file browser opens, using Beam’s editable native 2D camera in both themes.
 
 ### Fixed
+
+- Update popovers can be dismissed by clicking anywhere in the HUD topbar; Settings places the changelog on the left and Download or Restart on the right.
+- Update downloads start only once across windows, remain available for retry after a failure, and cannot be reset by checking for updates while downloading or ready to install.
 
 - Shape thumbnails refresh after editing vector points, including speech-bubble peaks and Bézier handles.
 - Available switches in the Off state are easier to distinguish from unavailable settings, with clearer thumb contrast and muted labels for disabled preferences.

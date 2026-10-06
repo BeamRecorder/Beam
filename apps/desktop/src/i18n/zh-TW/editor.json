@@ -336,6 +336,12 @@
     }
   },
   "Updates": {
+    "downloadHint": "下載更新時，您可以繼續工作。",
+    "restartHint": "準備好安裝更新時，請重新啟動 Beam。",
+    "update": "更新",
+    "downloadProgress": "正在下載 {percent}%",
+    "restartToUpdate": "重新啟動以更新",
+    "retry": "重試更新",
     "title": "應用程式更新",
     "checkForUpdates": "檢查更新",
     "download": "下載",

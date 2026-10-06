@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
     requestInputAccess: vi.fn(),
     updatePreferences: vi.fn(),
     close: vi.fn(),
+    getUpdateState: vi.fn(),
+    onUpdateState: vi.fn(),
   },
 }));
 vi.mock('~/api/capture', () => ({ capture: mocks.capture }));
@@ -51,6 +53,8 @@ beforeEach(() => {
   mocks.preferences.settings = reactive({ ...preferences });
   mocks.preferences.update.mockResolvedValue(preferences);
   mocks.capture.onPreferencesChanged.mockReturnValue(vi.fn());
+  mocks.capture.getUpdateState.mockResolvedValue({ status: 'unsupported', currentVersion: '0.5.2' });
+  mocks.capture.onUpdateState.mockReturnValue(vi.fn());
   mocks.capture.inputAccessStatus.mockResolvedValue({
     state: 'available',
     canRequest: false,
@@ -74,6 +78,20 @@ const create = async () => {
   return wrapper;
 };
 describe('separate HUD settings', () => {
+  it('marks Updates in settings when a download or restart is available', async () => {
+    mocks.capture.getUpdateState.mockResolvedValue({
+      status: 'available',
+      currentVersion: '0.5.2',
+      availableVersion: '0.5.3',
+    });
+    const wrapper = await create();
+    const updateCategory = wrapper.findAll('nav button').find((button) => button.text() === 'Updates')!;
+    expect(updateCategory.get('.badge-inline').attributes('aria-label')).toContain('0.5.3');
+    expect(updateCategory.get('.badge-inline').attributes('title')).toBeUndefined();
+    await updateCategory.trigger('click');
+    expect(wrapper.getComponent(stub).props('view')).toBe('updates');
+    wrapper.unmount();
+  });
   it.each([true, false])('shows developer navigation only when development is %s', async (development) => {
     vi.stubEnv('DEV', development);
     const wrapper = await create();

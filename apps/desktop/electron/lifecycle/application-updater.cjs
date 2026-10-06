@@ -1,7 +1,9 @@
 const path = require('path');
 const { createAutoUpdater, registerUpdateIpc } = require('../updates/auto-updater.cjs');
 const { createUpdateCache, updaterCacheDirectory } = require('../updates/update-cache.cjs');
+const { resolveUpdatePreview } = require('../updates/update-preview.cjs');
 function initializeApplicationUpdater({ app, BrowserWindow, autoUpdater, coordinator, applicationIpc }) {
+  const resolved = resolveUpdatePreview({ app, autoUpdater, enabled: process.env.BEAM_UPDATE_PREVIEW === '1' });
   const updateCache = app.isPackaged
     ? createUpdateCache({
         stateFile: path.join(app.getPath('userData'), 'update-cache-state.json'),
@@ -18,9 +20,10 @@ function initializeApplicationUpdater({ app, BrowserWindow, autoUpdater, coordin
   const updater = createAutoUpdater({
     app,
     BrowserWindow,
-    autoUpdater,
+    autoUpdater: resolved.autoUpdater,
+    isPackaged: app.isPackaged || resolved.preview,
     openExternal: require('electron').shell.openExternal,
-    beforeQuitAndInstall: () => coordinator.requestShutdown('updater'),
+    beforeQuitAndInstall: resolved.preview ? null : () => coordinator.requestShutdown('updater'),
     onUpdateDownloaded: (targetVersion) => {
       try {
         updateCache?.markDownloaded(app.getVersion(), targetVersion);

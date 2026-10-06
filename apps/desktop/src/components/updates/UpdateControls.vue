@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import { Check, Copy, Download, ExternalLink, RefreshCw, RotateCcw } from '@lucide/vue';
 import { capture } from '~/api/capture';
-import type { AppUpdateState } from '~/api/types/capture-api';
+import { useAppUpdates } from './useAppUpdates';
 import { useTranslate } from '~/i18n/useTranslate';
 import Button from '~/ui/button/Button.vue';
 
@@ -11,23 +11,29 @@ const props = withDefaults(
     showIcon?: boolean;
     center?: boolean;
     compact?: boolean;
+    showChangelog?: boolean;
+    showHint?: boolean;
   }>(),
   {
     showIcon: false,
     center: false,
+    showChangelog: true,
+    showHint: false,
   },
 );
 
 const { t } = useTranslate('Updates');
 const { t: tHud } = useTranslate('HUD');
 const { t: preferences } = useTranslate('HudPreferences');
-const state = ref<AppUpdateState | null>(null);
+const { state, attention, pending, error, perform } = useAppUpdates();
 const copiedError = ref(false);
 let copiedErrorTimeout: ReturnType<typeof setTimeout> | undefined;
-let stopListening: (() => void) | undefined;
 
 const checkForUpdatesDisabled = computed(
-  () => !state.value || ['checking', 'downloading', 'unsupported'].includes(state.value.status),
+  () =>
+    pending.value ||
+    !state.value ||
+    ['checking', 'downloading', 'downloaded', 'unsupported'].includes(state.value.status),
 );
 
 const checkForUpdatesTooltip = computed(() => {
@@ -45,13 +51,13 @@ const checkForUpdatesTooltip = computed(() => {
 });
 
 const refresh = async () => {
-  state.value = await capture.checkForUpdates();
+  await perform('check');
 };
 const download = async () => {
-  await capture.downloadUpdate();
+  await perform('download');
 };
 const restart = async () => {
-  await capture.quitAndInstallUpdate();
+  await perform('restart');
 };
 const openChangelog = async () => {
   await capture.openUpdateChangelog();
@@ -82,14 +88,7 @@ const copyError = async () => {
   }, 2000);
 };
 
-onMounted(async () => {
-  stopListening = capture.onUpdateState((nextState) => {
-    state.value = nextState;
-  });
-  state.value = await capture.getUpdateState();
-});
 onBeforeUnmount(() => {
-  stopListening?.();
   if (copiedErrorTimeout) clearTimeout(copiedErrorTimeout);
 });
 </script>
@@ -97,13 +96,15 @@ onBeforeUnmount(() => {
 <template>
   <div class="update-controls" :class="{ 'update-centered': center, 'update-compact': compact }">
     <div class="update-header" :class="{ 'header-centered': center }">
-      <div v-if="showIcon" class="update-icon-wrap">
-        <RefreshCw class="update-top-icon" :class="{ 'icon-spin': state?.status === 'checking' }" />
-      </div>
-      <span class="update-title">
-        {{ compact ? preferences('version') : t('title') }}
+      <div class="update-heading">
+        <RefreshCw
+          v-if="showIcon || attention"
+          class="update-top-icon"
+          :class="{ 'icon-spin': state?.status === 'checking', 'has-update': attention }"
+        />
+        <span class="update-title">{{ compact ? preferences('version') : t('title') }}</span>
         <span v-if="state?.currentVersion" class="update-version">v{{ state.currentVersion }}</span>
-      </span>
+      </div>
       <p v-if="!compact || state?.status !== 'idle'" class="update-description">
         <template v-if="state?.status === 'downloaded'">{{
           t('readyToRestart', { version: state.availableVersion })
@@ -134,47 +135,22 @@ onBeforeUnmount(() => {
         {{ copiedError ? tHud('copied') : tHud('copyError') }}
       </Button>
     </div>
-    <div class="update-actions">
+    <progress
+      v-if="state?.status === 'downloading'"
+      class="update-progress"
+      :value="state.percent ?? undefined"
+      max="100"
+      :aria-label="t('downloading', { percent: state.percent ?? 0 })"
+    />
+    <p v-if="showHint && (state?.status === 'available' || state?.status === 'downloaded')" class="update-hint">
+      {{ state.status === 'downloaded' ? t('restartHint') : t('downloadHint') }}
+    </p>
+    <p v-if="error" class="update-action-error" role="alert">{{ error }}</p>
+    <div class="update-actions" :class="{ 'single-action': !showChangelog }">
       <Button
-        v-if="state?.status === 'downloaded'"
-        variant="primary"
-        :size="compact ? 'sm' : 'xs'"
-        :block="compact"
-        @click="restart"
-        class="update-btn"
-      >
-        <template #icon><RotateCcw class="button-icon" /></template>
-        {{ t('restart') }}
-      </Button>
-      <Button
-        v-else-if="state?.status === 'available'"
-        variant="primary"
-        :size="compact ? 'sm' : 'xs'"
-        :block="compact"
-        @click="download"
-        class="update-btn"
-      >
-        <template #icon><Download class="button-icon" /></template>
-        {{ t('download') }}
-      </Button>
-      <Button
-        v-else
-        variant="secondary"
-        :size="compact ? 'sm' : 'xs'"
-        :block="compact"
-        :disabled="checkForUpdatesDisabled"
-        :tooltip="checkForUpdatesTooltip"
-        @click="refresh"
-        class="update-btn"
-      >
-        <template #icon
-          ><Download v-if="state?.status === 'downloading'" class="button-icon" /><RefreshCw v-else class="button-icon"
-        /></template>
-        {{ state?.status === 'checking' ? t('checking') : compact ? t('check') : t('checkForUpdates') }}
-      </Button>
-      <Button
+        v-if="showChangelog"
         :variant="compact ? 'ghost' : 'secondary'"
-        :size="compact ? 'sm' : 'xs'"
+        size="sm"
         :block="compact"
         :disabled="!state"
         @click="openChangelog"
@@ -184,15 +160,69 @@ onBeforeUnmount(() => {
         <template #icon><ExternalLink class="button-icon" /></template>
         {{ compact ? t('changelog') : t('viewChangelog') }}
       </Button>
+      <div class="update-main-action">
+        <Button
+          v-if="state?.status === 'downloaded'"
+          variant="primary"
+          size="sm"
+          :block="compact"
+          :disabled="pending"
+          :loading="pending"
+          @click="restart"
+          class="update-btn"
+        >
+          <template #icon><RotateCcw class="button-icon" /></template>
+          {{ t('restartToUpdate') }}
+        </Button>
+        <Button
+          v-else-if="state?.status === 'available' || (state?.status === 'error' && state.availableVersion)"
+          variant="primary"
+          size="sm"
+          :block="compact"
+          :disabled="pending"
+          :loading="pending"
+          @click="download"
+          class="update-btn"
+        >
+          <template #icon><Download class="button-icon" /></template>
+          {{ state?.status === 'error' ? t('retry') : t('download') }}
+        </Button>
+        <Button
+          v-else
+          variant="secondary"
+          size="sm"
+          :block="compact"
+          :disabled="checkForUpdatesDisabled"
+          :tooltip="checkForUpdatesTooltip"
+          @click="refresh"
+          class="update-btn"
+        >
+          <template #icon
+            ><Download v-if="state?.status === 'downloading'" class="button-icon" /><RefreshCw
+              v-else
+              class="button-icon"
+          /></template>
+          {{ state?.status === 'checking' ? t('checking') : compact ? t('check') : t('checkForUpdates') }}
+        </Button>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+.update-progress {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--color-primary);
+}
+.update-action-error {
+  color: var(--color-error);
+  font-size: var(--font-size-body);
+}
 .update-controls {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
   width: 100%;
 }
 
@@ -206,71 +236,58 @@ onBeforeUnmount(() => {
 .update-header {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px;
 }
 
 .update-header.header-centered {
   align-items: center;
   text-align: center;
   gap: 5px;
-  min-height: 82px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
 }
 
-.update-icon-wrap {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--color-bg-element) 90%, transparent);
-  border: 1px solid var(--color-border);
+.update-heading {
   display: flex;
   align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.update-centered .update-heading {
   justify-content: center;
-  margin-bottom: 2px;
-  flex-shrink: 0;
 }
 
 .update-top-icon {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
+  color: var(--text-secondary);
+  flex: none;
+}
+.update-top-icon.has-update {
   color: var(--color-primary);
 }
 
 .update-title {
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 16px;
+  font-size: var(--font-size-body);
+  font-weight: var(--weight-title);
+  line-height: 1.5;
   color: var(--text-primary);
   margin: 0;
 }
 
 .update-version {
-  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--font-size-sm);
   color: var(--text-secondary);
-  background: var(--color-bg-surface-hover);
-  border: 1px solid var(--color-border);
-  padding: 1px 5px;
-  border-radius: var(--radius-sm);
-  margin-left: 6px;
-  letter-spacing: 0.2px;
-  vertical-align: middle;
-  display: inline-block;
-  line-height: 14px;
+  margin-left: auto;
 }
 
-.update-description {
-  margin: 3px 0 0;
-  font-size: 11px;
+.update-description,
+.update-hint {
+  margin: 0;
+  font-size: var(--font-size-body);
   color: var(--text-secondary);
-  line-height: 14px;
-  min-height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
+  line-height: 1.5;
   text-align: left;
 }
 .update-centered .update-description {
@@ -286,8 +303,13 @@ onBeforeUnmount(() => {
   width: 100%;
 }
 
+.update-main-action {
+  display: flex;
+  margin-left: auto;
+  min-width: 0;
+}
+
 .update-btn {
-  flex: 1 1 120px;
   min-width: 0;
   justify-content: center;
 }
@@ -305,27 +327,25 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 .update-compact .update-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   font-size: var(--font-size-body);
   font-weight: var(--weight-title);
 }
-.update-compact .update-version {
-  margin-left: 0;
-  border: 0;
-  padding: 2px 6px;
-}
-.update-compact .update-description {
+.update-compact .update-description,
+.update-compact .update-hint {
   min-height: 0;
-  margin-top: 6px;
   font-size: var(--font-size-sm);
   line-height: 1.5;
+}
+.update-compact .update-actions.single-action {
+  grid-template-columns: minmax(0, 1fr);
 }
 .update-compact .update-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
+}
+.update-compact .update-main-action {
+  width: 100%;
 }
 .update-compact .changelog-btn {
   color: var(--text-secondary);

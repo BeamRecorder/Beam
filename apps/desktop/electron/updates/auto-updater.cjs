@@ -20,6 +20,7 @@ function createAutoUpdater({
   onUpdateDownloaded = null,
 }) {
   let state = idleState(app.getVersion(), isPackaged ? 'idle' : 'unsupported');
+  let installing = false;
   const publish = () =>
     BrowserWindow.getAllWindows().forEach((window) => {
       if (!window.isDestroyed()) window.webContents.send(UPDATE_CHANNEL, state);
@@ -37,6 +38,7 @@ function createAutoUpdater({
   if (!isPackaged)
     return {
       checkForUpdates: async () => state,
+      downloadUpdate: async () => false,
       getState: () => state,
       quitAndInstall: () => false,
       openChangelog,
@@ -83,6 +85,7 @@ function createAutoUpdater({
   autoUpdater.on('error', (error) => setState({ status: 'error', percent: null, message: errorMessage(error) }));
   return {
     async checkForUpdates() {
+      if (['checking', 'downloading', 'downloaded'].includes(state.status)) return state;
       try {
         await autoUpdater.checkForUpdates();
       } catch (error) {
@@ -96,7 +99,8 @@ function createAutoUpdater({
     },
     getState: () => state,
     async downloadUpdate() {
-      if (state.status !== 'available') return false;
+      if (state.status !== 'available' && !(state.status === 'error' && state.availableVersion)) return false;
+      setState({ status: 'downloading', percent: 0, message: null });
       try {
         await autoUpdater.downloadUpdate();
         return true;
@@ -110,12 +114,18 @@ function createAutoUpdater({
       }
     },
     quitAndInstall: async () => {
-      if (state.status !== 'downloaded') return false;
+      if (state.status !== 'downloaded' || installing) return false;
+      installing = true;
       // Run the central shutdown coordinator first so the native engine and
       // every owned window are released before the installer takes over.
-      if (beforeQuitAndInstall) await beforeQuitAndInstall();
-      autoUpdater.quitAndInstall();
-      return true;
+      try {
+        if (beforeQuitAndInstall) await beforeQuitAndInstall();
+        autoUpdater.quitAndInstall();
+        return true;
+      } catch (error) {
+        installing = false;
+        throw error;
+      }
     },
     openChangelog,
   };

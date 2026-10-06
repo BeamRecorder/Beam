@@ -336,6 +336,12 @@
     }
   },
   "Updates": {
+    "downloadHint": "Bạn có thể tiếp tục làm việc trong khi tải bản cập nhật.",
+    "restartHint": "Khởi động lại Beam khi bạn sẵn sàng cài đặt bản cập nhật.",
+    "update": "Cập nhật",
+    "downloadProgress": "Đang tải {percent}%",
+    "restartToUpdate": "Khởi động lại để cập nhật",
+    "retry": "Thử cập nhật lại",
     "title": "Cập nhật ứng dụng",
     "checkForUpdates": "Kiểm tra cập nhật",
     "download": "Tải xuống",

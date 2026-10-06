@@ -10,6 +10,7 @@ import type { PreferencePatch } from '~/api/types/capture-api';
 import Button from '~/ui/button/Button.vue';
 import Input from '~/ui/input/Input.vue';
 import HudPreferences from './HudPreferences.vue';
+import UpdateAvailableBadge from '~/components/updates/UpdateAvailableBadge.vue';
 import SettingsSearchResults from './SettingsSearchResults.vue';
 import { settingsCategories, settingsSearchEntries } from './settings-catalog';
 import { createSettingsSearch, normalizeSettingsSearch } from './settings-search';
@@ -175,6 +176,7 @@ onBeforeUnmount(() => {
             ><component :is="category.icon" :size="15" aria-hidden="true" /></span
         ></template>
         {{ t(category.label) }}
+        <UpdateAvailableBadge v-if="category.id === 'updates'" inline />
       </Button>
     </nav>
     <section class="settings-content">

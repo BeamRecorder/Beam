@@ -1,5 +1,5 @@
-import { mount } from '@vue/test-utils';
-import { describe, expect, it, vi } from 'vitest';
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../../../api/capture', () => ({
   capture: {
     getUpdateState: vi.fn().mockResolvedValue({ status: 'unsupported', currentVersion: '0.1.0' }),
@@ -7,6 +7,9 @@ vi.mock('../../../api/capture', () => ({
   },
 }));
 import TopbarHUD from '../TopbarHUD.vue';
+import { defineComponent, ref } from 'vue';
+import Popover from '~/ui/popover/Popover.vue';
+enableAutoUnmount(afterEach);
 
 describe('TopbarHUD', () => {
   it('keeps contextual icons static when its title changes', async () => {
@@ -65,5 +68,64 @@ describe('TopbarHUD', () => {
     await wrapper.get('[aria-label="Close"]').trigger('click');
     expect(wrapper.emitted('close')).toEqual([[]]);
     wrapper.unmount();
+  });
+});
+
+describe('HUD topbar outside dismissal', () => {
+  const create = () =>
+    mount(TopbarHUD, {
+      props: { showSettings: false },
+      attachTo: document.body,
+      slots: {
+        issues: defineComponent({
+          components: { Popover },
+          template: `<Popover keep-mounted><template #trigger><button class="open-parent">Open</button></template>
+          <Popover><template #trigger><button class="open-child">Actions</button></template><p>Child</p></Popover>
+        </Popover>`,
+        }),
+      },
+    });
+  it('allows an outside press in the native drag area and restores dragging after dismissal', async () => {
+    const wrapper = create();
+    expect(wrapper.classes()).not.toContain('is-dismissible');
+    await wrapper.get('.open-parent').trigger('click');
+    expect(wrapper.classes()).toContain('is-dismissible');
+    await wrapper.get('.topbar-identity').trigger('pointerdown');
+    await flushPromises();
+    expect(wrapper.classes()).not.toContain('is-dismissible');
+    expect(wrapper.getComponent(Popover).vm.isOpen).toBe(false);
+  });
+  it('keeps the topbar clickable until all nested panels are closed', async () => {
+    const wrapper = create();
+    await wrapper.get('.open-parent').trigger('click');
+    document.querySelector<HTMLButtonElement>('.open-child')!.click();
+    await flushPromises();
+    const popovers = wrapper.findAllComponents(Popover);
+    popovers[1]!.vm.close();
+    await flushPromises();
+    expect(wrapper.classes()).toContain('is-dismissible');
+    popovers[0]!.vm.close();
+    await flushPromises();
+    expect(wrapper.classes()).not.toContain('is-dismissible');
+  });
+  it('restores the drag area when an open popover is removed', async () => {
+    const visible = ref(true);
+    const wrapper = mount(TopbarHUD, {
+      props: { showSettings: false },
+      attachTo: document.body,
+      slots: {
+        issues: defineComponent({
+          components: { Popover },
+          setup: () => ({ visible }),
+          template:
+            '<Popover v-if="visible"><template #trigger><button class="open-parent">Open</button></template><p>Body</p></Popover>',
+        }),
+      },
+    });
+    await wrapper.get('.open-parent').trigger('click');
+    expect(wrapper.classes()).toContain('is-dismissible');
+    visible.value = false;
+    await flushPromises();
+    expect(wrapper.classes()).not.toContain('is-dismissible');
   });
 });

@@ -336,6 +336,12 @@
     }
   },
   "Updates": {
+    "downloadHint": "Du kannst während des Downloads weiterarbeiten.",
+    "restartHint": "Starte Beam neu, wenn du das Update installieren möchtest.",
+    "update": "Update",
+    "downloadProgress": "Download {percent} %",
+    "restartToUpdate": "Zum Aktualisieren neu starten",
+    "retry": "Update erneut versuchen",
     "title": "App-Update",
     "checkForUpdates": "Nach Updates suchen",
     "download": "Herunterladen",

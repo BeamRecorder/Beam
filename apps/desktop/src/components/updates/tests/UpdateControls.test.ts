@@ -55,6 +55,39 @@ beforeEach(() => {
 });
 
 describe('UpdateControls', () => {
+  it('keeps a red indicator and shows download progress inside settings', async () => {
+    captureMock.getUpdateState.mockResolvedValue(state('downloading', { percent: 64 }));
+    const wrapper = mount(UpdateControls, { global: { stubs: { Button } } });
+    await flushPromises();
+    expect(wrapper.findAll('.update-heading .has-update')).toHaveLength(1);
+    expect(wrapper.find('.update-attention').exists()).toBe(false);
+    expect(wrapper.find('.update-icon-wrap').exists()).toBe(false);
+    expect(wrapper.get('progress').attributes('value')).toBe('64');
+    expect(wrapper.get('progress').attributes('aria-label')).toContain('64');
+    captureMock.listener?.(state('downloaded'));
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('progress').exists()).toBe(false);
+    expect(wrapper.get('.update-actions .action-button:not(.changelog-btn)').text()).toBe('Restart to update');
+  });
+  it('keeps a failed download visible and permits retry', async () => {
+    captureMock.getUpdateState.mockResolvedValue(state('error'));
+    const wrapper = mount(UpdateControls, { global: { stubs: { Button } } });
+    await flushPromises();
+    expect(wrapper.find('.update-heading .has-update').exists()).toBe(true);
+    expect(wrapper.get('.update-actions .action-button:not(.changelog-btn)').text()).toBe('Retry update');
+    await wrapper.get('.update-actions .action-button:not(.changelog-btn)').trigger('click');
+    expect(captureMock.downloadUpdate).toHaveBeenCalledOnce();
+  });
+  it('shows action failures without losing the retry action', async () => {
+    captureMock.getUpdateState.mockResolvedValue(state('available'));
+    captureMock.downloadUpdate.mockRejectedValueOnce(new Error('IPC disconnected'));
+    const wrapper = mount(UpdateControls, { global: { stubs: { Button } } });
+    await flushPromises();
+    await wrapper.get('.update-actions .action-button:not(.changelog-btn)').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('.update-action-error').text()).toBe('IPC disconnected');
+    expect(wrapper.get('.update-actions .action-button:not(.changelog-btn)').attributes('disabled')).toBeUndefined();
+  });
   it('renders the default state, refreshes, opens the changelog and follows native updates', async () => {
     captureMock.getUpdateState.mockResolvedValue(state('idle', { availableVersion: null }));
     const wrapper = mount(UpdateControls, { global: { stubs: { Button } } });
@@ -62,8 +95,8 @@ describe('UpdateControls', () => {
     expect(wrapper.get('.update-version').text()).toBe('v1.0.0');
     expect(wrapper.get('.update-description').text()).toContain('1.0.0');
     const buttons = wrapper.findAll('.action-button');
-    await buttons[1]!.trigger('click');
     await buttons[0]!.trigger('click');
+    await buttons[1]!.trigger('click');
     expect(captureMock.openUpdateChangelog).toHaveBeenCalledOnce();
     expect(captureMock.checkForUpdates).toHaveBeenCalledOnce();
 
@@ -118,7 +151,7 @@ describe('UpdateControls', () => {
     await flushPromises();
     expect(wrapper.classes()).toContain('update-compact');
     expect(wrapper.find('.update-description').exists()).toBe(false);
-    expect(wrapper.findAll('.update-actions button').map((button) => button.text())).toEqual(['Vérifier', 'Changelog']);
+    expect(wrapper.findAll('.update-actions button').map((button) => button.text())).toEqual(['Changelog', 'Vérifier']);
     expect(wrapper.get('.changelog-btn').attributes('aria-label')).toBe('Voir le changelog');
     await wrapper.get('.changelog-btn').trigger('click');
     expect(captureMock.openUpdateChangelog).toHaveBeenCalledOnce();

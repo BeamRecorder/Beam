@@ -158,6 +158,7 @@ const choose = (target: HudCaptureTarget) => {
       :disabled="isBusy || preparingEditor"
       :show-settings="!preparingEditor"
       :show-projects="!preparingEditor"
+      @popover-toggle="togglePopover"
       @open-settings="
         openPanel('settings');
         emit('focus-feature', 'topbar');
