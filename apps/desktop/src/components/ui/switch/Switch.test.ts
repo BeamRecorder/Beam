@@ -29,4 +29,22 @@ describe('Switch', () => {
     await wrapper.get('.switch-container').trigger('click');
     expect(wrapper.emitted('update:modelValue')).toBeUndefined();
   });
+  it.each([false, true])(
+    'preserves checked=%s while unavailable, and becomes interactive when enabled',
+    async (checked) => {
+      const wrapper = mount(Switch, { props: { modelValue: checked, disabled: true } });
+      const button = wrapper.get('[role="switch"]');
+      expect(button.attributes('aria-checked')).toBe(String(checked));
+      expect(button.attributes('disabled')).toBeDefined();
+      expect(wrapper.classes()).toContain('is-disabled');
+      await wrapper.get('.switch-container').trigger('click');
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+      await wrapper.setProps({ disabled: false });
+      expect(button.attributes('disabled')).toBeUndefined();
+      expect(wrapper.classes()).not.toContain('is-disabled');
+      await button.trigger('click');
+      expect(wrapper.emitted('update:modelValue')).toEqual([[!checked]]);
+      wrapper.unmount();
+    },
+  );
 });

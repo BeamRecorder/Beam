@@ -69,6 +69,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('packaged overlay styles'
         let hover: ((hovered: boolean) => void) | undefined;
         Object.defineProperty(window, 'capture', {
           value: {
+            platform: 'linux',
             getPreferences: async () => ({ theme, extras: { locale: 'en' } }),
             onPreferencesChanged: () => () => undefined,
             onCameraOverlayState: () => () => undefined,
@@ -295,6 +296,72 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('packaged overlay styles'
         expect(await page.evaluate(() => document.documentElement.dataset.deviceSelection)).toBe('off');
         await page.keyboard.press('Escape');
         expect(await page.evaluate(() => document.documentElement.dataset.deviceDismissed)).toBe('true');
+      }
+    },
+  );
+  it.each(['dark', 'light'])(
+    'distinguishes available Off switches from unavailable Linux preferences in %s',
+    async (theme) => {
+      await openOverlay(640, 480, 'quickSnipSettings=1', null, theme);
+      await page.setViewport({ width: 286, height: 420 });
+      await page.waitForFunction(() => {
+        const style = getComputedStyle(document.querySelector('.settings-shell')!);
+        return style.opacity === '1' && new DOMMatrixReadOnly(style.transform).a === 1;
+      });
+      const png = await page.screenshot();
+      if (process.env.BEAM_OVERLAY_SCREENSHOT_DIR)
+        await page.screenshot({
+          path: resolve(process.env.BEAM_OVERLAY_SCREENSHOT_DIR, `quick-snip-switches-${theme}.png`),
+        });
+      const appearance = await page.evaluate(
+        async (url) => {
+          const image = new Image();
+          image.src = url;
+          await image.decode();
+          const canvas = document.createElement('canvas');
+          canvas.width = image.width;
+          canvas.height = image.height;
+          const ctx = canvas.getContext('2d')!;
+          ctx.drawImage(image, 0, 0);
+          const luminance = (x: number, y: number) => {
+            const rgba = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1).data;
+            const channels = [...rgba].slice(0, 3).map((value) => {
+              const srgb = value / 255;
+              return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+            });
+            return channels[0]! * 0.2126 + channels[1]! * 0.7152 + channels[2]! * 0.0722;
+          };
+          return ['show-real-cursor', 'hide-taskbar', 'hide-desktop-icons'].map((setting) => {
+            const row = document.querySelector<HTMLElement>(`[data-setting="${setting}"]`)!;
+            const button = row.querySelector<HTMLButtonElement>('[role="switch"]')!;
+            const thumb = row.querySelector<HTMLElement>('.switch-thumb')!.getBoundingClientRect();
+            const track = button.getBoundingClientRect();
+            const thumbLuminance = luminance(thumb.left + thumb.width / 2, thumb.top + thumb.height / 2);
+            const trackLuminance = luminance(track.right - 8, track.top + track.height / 2);
+            return {
+              disabled: button.disabled,
+              checked: button.getAttribute('aria-checked'),
+              labelColor: getComputedStyle(row.querySelector('.preference-label')!).color,
+              contrast:
+                (Math.max(thumbLuminance, trackLuminance) + 0.05) / (Math.min(thumbLuminance, trackLuminance) + 0.05),
+            };
+          });
+        },
+        'data:image/png;base64,' + Buffer.from(png).toString('base64'),
+      );
+      expect(appearance.map((row) => row.disabled)).toEqual([false, true, true]);
+      expect(appearance.map((row) => row.checked)).toEqual(['false', 'false', 'false']);
+      expect(appearance[0]!.contrast).toBeGreaterThanOrEqual(3);
+      expect(appearance[0]!.contrast).toBeGreaterThan(appearance[1]!.contrast);
+      expect(appearance[0]!.labelColor).not.toBe(appearance[1]!.labelColor);
+      expect(appearance[1]!.labelColor).toBe(appearance[2]!.labelColor);
+      for (const selector of ['hide-taskbar', 'hide-desktop-icons']) {
+        await page.$eval(`[data-setting="${selector}"] .switch-container`, (container) =>
+          (container as HTMLElement).click(),
+        );
+        expect(
+          await page.$eval(`[data-setting="${selector}"] button`, (button) => button.getAttribute('aria-checked')),
+        ).toBe('false');
       }
     },
   );

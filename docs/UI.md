@@ -16,6 +16,7 @@ This document defines the visual and implementation rules for the Vue renderer.
 - `SelectionIndicator` shares the Recorder's movement timing and reduced-motion behavior between button groups and editor sidebars. Sidebars measure the selected button across menu separators and the Settings footer; scroll and resize updates position it instantly.
 - `Select` hides preview eyes by default. Opt into `showPreviewIndicator` only where `preview:modelValue` drives a visible preview; device and other choice-only menus keep it disabled.
 - `PopoverMenuList` choice items use `checked` for a trailing selection check and `menuitemradio` semantics. Pass a boolean for every option to reserve the same space and keep labels aligned; `icon` remains an action icon.
+- Available switches retain a contrasting thumb in the Off state. Disabled switches use muted track/thumb colors, and `TogglePreference` also mutes their labels; unavailable settings remain visually distinct from available Off settings.
 
 The shared `CommandPalette` composes editor Spotlight views with fixed-height virtual rows and `ScrollShadow`. Use `Button`'s `contentLayout="custom"` for structured rows, keeping label, metadata and chevron in explicit aligned cells. Search inputs use the rounded neutral appearance. Animate height and category changes only; typing and thumbnail completion must retain the list surface. Respect reduced motion and keep mouse Back/Forward navigation inside the palette. Domain adapters supply real editor actions and visible-row thumbnail requests.
 

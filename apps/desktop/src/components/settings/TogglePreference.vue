@@ -6,7 +6,7 @@ const enabled = defineModel<boolean>({ required: true });
 const descriptionId = useId();
 </script>
 <template>
-  <div class="toggle-preference">
+  <div class="toggle-preference" :class="{ 'is-disabled': disabled }">
     <div class="preference-copy">
       <div class="preference-label">
         <span>{{ label }}</span
@@ -52,5 +52,8 @@ const descriptionId = useId();
   font-size: var(--font-size-sm);
   font-weight: 400;
   line-height: 1.5;
+}
+.is-disabled .preference-label {
+  color: var(--text-muted);
 }
 </style>
