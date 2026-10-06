@@ -1,0 +1,31 @@
+{
+  "name": "@beam/example-website-zoom-loops",
+  "private": true,
+  "type": "module",
+  "license": "MPL-2.0",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "vue-tsc -p tsconfig.json",
+    "verify": "node scripts/verify.mjs",
+    "render": "node scripts/render.mjs",
+    "website": "node scripts/optimize.mjs",
+    "check": "node scripts/check.mjs",
+    "verify:website": "node scripts/verify-website.mjs"
+  },
+  "dependencies": {
+    "@lucide/vue": "1.49.0",
+    "gsap": "3.15.0",
+    "vue": "3.5.43",
+    "vue-i18n": "11.4.12"
+  },
+  "devDependencies": {
+    "vite": "8.3.1",
+    "@vitejs/plugin-vue": "6.0.9",
+    "@vitest/coverage-v8": "5.0.3",
+    "puppeteer-core": "24.39.1",
+    "vitest": "5.0.3",
+    "vue-tsc": "3.3.12",
+    "typescript": "npm:@typescript/typescript6@6.0.2"
+  }
+}

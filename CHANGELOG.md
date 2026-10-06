@@ -4,6 +4,16 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- The private website’s Zooms page demonstrates manual Screenshot 2D, 3D and glass layers in a nine-second, 60 fps loop, with native controls, light/dark variants and matching posters. Editable source lives in `examples/website-still-zoom-loop/`.
+
+- The private website’s Edit header has a minimal, themed three-track animation with macOS trim cursors, offscreen suspension and reduced-motion support.
+
+- The private website’s Edit page now includes themed native Beam video demonstrations for transitions and local export, with matching posters, pause controls and reduced-motion support.
+
+- The private website’s Zooms page shows two eight-second, 60 fps demonstrations of native 2D camera movement and 3D directional perspective, with light/dark variants, matching posters and pause/reduced-motion support. Editable source lives in `examples/website-zoom-loops/`.
+
 ## [0.5.1] - 2026-10-05
 
 ### Fixed
