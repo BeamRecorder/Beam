@@ -119,13 +119,14 @@ onBeforeUnmount(() => {
 <template>
   <div
     class="settings-shell"
-    :class="[content.side, { preview, presented: preview || content.visible }]"
+    :class="[content.side, { preview, presented: preview || content.visible, 'device-popover': content.device }]"
     :style="{ '--anchor-x': `${content.anchorX}px` }"
     @contextmenu.prevent
   >
     <main
       ref="panel"
       class="quick-settings-window"
+      :class="{ 'floating-surface': content.device }"
       :aria-label="t('settings')"
       :role="content.device ? undefined : 'dialog'"
     >
@@ -151,6 +152,7 @@ onBeforeUnmount(() => {
     </main>
   </div>
 </template>
+<style scoped src="../ui/floating-surface.css"></style>
 <style scoped>
 .settings-shell {
   box-sizing: border-box;
@@ -169,6 +171,10 @@ onBeforeUnmount(() => {
   opacity: 1;
   transform: scale(1);
 }
+.settings-shell.device-popover {
+  transform: none;
+  transition: opacity 100ms ease;
+}
 .settings-shell.below {
   padding: 16px 10px 10px;
   transform-origin: var(--anchor-x) top;
@@ -176,7 +182,7 @@ onBeforeUnmount(() => {
 .settings-shell.preview {
   padding: 0;
 }
-.settings-shell:not(.preview)::after {
+.settings-shell:not(.preview):not(.device-popover)::after {
   content: '';
   position: absolute;
   left: calc(var(--anchor-x) - 5px);
@@ -209,8 +215,14 @@ onBeforeUnmount(() => {
 .preview .quick-settings-window {
   max-height: 100vh;
 }
+.quick-settings-window.floating-surface {
+  position: relative;
+  z-index: 0;
+  background: transparent;
+}
 @media (prefers-reduced-motion: reduce) {
-  .settings-shell {
+  .settings-shell,
+  .settings-shell.device-popover {
     transition: none;
   }
 }

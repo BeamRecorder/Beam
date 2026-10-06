@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref, type CSSProperties } from 'vue';
-import { ChevronRight } from '@lucide/vue';
+import { Check, ChevronRight } from '@lucide/vue';
 import type { PopoverMenuItem } from './popover-menu-types';
 
 const props = withDefaults(defineProps<{ items: readonly PopoverMenuItem[]; level?: number }>(), {
@@ -102,10 +102,12 @@ const handleKeydown = (event: KeyboardEvent, item: PopoverMenuItem) => {
         :class="{
           active: item.active,
           'has-icon': Boolean(item.icon),
+          'has-check': item.checked !== undefined,
           'has-children': Boolean(item.children?.length),
         }"
         :disabled="item.disabled"
-        role="menuitem"
+        :role="item.checked === undefined ? 'menuitem' : 'menuitemradio'"
+        :aria-checked="item.checked"
         :aria-haspopup="item.children?.length ? 'menu' : undefined"
         :aria-expanded="item.children?.length ? openItemId === item.id : undefined"
         @mouseenter="
@@ -118,6 +120,9 @@ const handleKeydown = (event: KeyboardEvent, item: PopoverMenuItem) => {
           <component :is="item.icon" class="menu-item-icon" />
         </span>
         <span class="item-label">{{ item.label }}</span>
+        <span v-if="item.checked !== undefined" class="item-check-wrapper" aria-hidden="true">
+          <Check v-if="item.checked" class="menu-item-icon" />
+        </span>
         <ChevronRight v-if="item.children?.length" class="submenu-chevron" aria-hidden="true" />
       </button>
       <PopoverMenuList
@@ -171,6 +176,13 @@ const handleKeydown = (event: KeyboardEvent, item: PopoverMenuItem) => {
 .menu-item.has-icon {
   grid-template-columns: 18px 1fr auto;
 }
+.menu-item.has-check {
+  grid-template-columns: minmax(0, 1fr) 18px;
+}
+.menu-item.has-icon.has-check {
+  grid-template-columns: 18px minmax(0, 1fr) 18px;
+}
+.item-check-wrapper,
 .item-icon-wrapper {
   display: flex;
   align-items: center;
@@ -207,6 +219,11 @@ const handleKeydown = (event: KeyboardEvent, item: PopoverMenuItem) => {
 .menu-item.active {
   background: var(--color-primary-light);
   color: var(--color-primary);
+}
+.menu-item[aria-checked='true'] {
+  background: var(--color-bg-field-active);
+  color: var(--text-primary);
+  font-weight: 600;
 }
 .menu-item:disabled {
   opacity: 0.5;

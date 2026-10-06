@@ -4,6 +4,8 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-10-06
+
 ### Added
 
 - The private website’s Zooms page demonstrates manual Screenshot 2D, 3D and glass layers in a nine-second, 60 fps loop, with native controls, light/dark variants and matching posters. Editable source lives in `examples/website-still-zoom-loop/`.
@@ -13,6 +15,24 @@ User-facing changes to Beam are documented in this file.
 - The private website’s Edit page now includes themed native Beam video demonstrations for transitions and local export, with matching posters, pause controls and reduced-motion support.
 
 - The private website’s Zooms page shows two eight-second, 60 fps demonstrations of native 2D camera movement and 3D directional perspective, with light/dark variants, matching posters and pause/reduced-motion support. Editable source lives in `examples/website-zoom-loops/`.
+
+- Added editable HTML glass-lens demonstrations with native circle/freehand controls, appearance adjustments and editable automatic lenses generated from recorded clicks, plus themed compressed website loops.
+- Added editable HTML demonstrations for teleprompter playback, text size and color, and local projects, sharing native Beam controls with themed compressed website loops.
+- Added the editable “Take a breath” Recorder demo with supplied facecam footage, the Beautiful Captures pointer, native pause/resume controls and compressed website videos.
+- Added a reusable HTML Recorder demo showing full-screen, region and window capture choices, capture modes and recording controls, with Beautiful Captures cursor artwork and themed website videos.
+
+### Changed
+
+- HUD controls with visible labels no longer show redundant hover tooltips; icon-only actions retain their hints.
+- The local-project website demonstration zooms into Projects actions and pulls back as the file browser opens, using Beam’s editable native 2D camera in both themes.
+
+### Fixed
+
+- Shape thumbnails refresh after editing vector points, including speech-bubble peaks and Bézier handles.
+- Available switches in the Off state are easier to distinguish from unavailable settings, with clearer thumb contrast and muted labels for disabled preferences.
+- Quick Snip microphone, system-audio and camera menus have aligned options, clear selection checks and a simple opening without excessive zoom, using the shared Beam popover appearance.
+- Recording pauses can be removed when screen, webcam and audio segment boundaries differ, preserving recorded frames, audio/video synchronization and downstream zoom timing. Gap actions display a single tooltip.
+- Packaged camera previews load their styles before the first frame, preserving the full webcam image; Quick Snip settings also retain their production styling.
 
 ## [0.5.1] - 2026-10-05
 
@@ -523,7 +543,11 @@ User-facing changes to Beam are documented in this file.
 
 - Improved the editor workflow and native recording startup reliability, including Linux capture startup.
 
-[Unreleased]: https://github.com/BeamRecorder/Beam/compare/0.3.3...HEAD
+[Unreleased]: https://github.com/BeamRecorder/Beam/compare/0.5.2...HEAD
+[0.5.2]: https://github.com/BeamRecorder/Beam/releases/tag/0.5.2
+[0.5.1]: https://github.com/BeamRecorder/Beam/releases/tag/0.5.1
+[0.5.0]: https://github.com/BeamRecorder/Beam/releases/tag/0.5.0
+[0.4.0]: https://github.com/BeamRecorder/Beam/releases/tag/0.4.0
 [0.3.3]: https://github.com/BeamRecorder/Beam/releases/tag/0.3.3
 [0.3.2]: https://github.com/BeamRecorder/Beam/releases/tag/0.3.2
 [0.3.1]: https://github.com/BeamRecorder/Beam/releases/tag/0.3.1

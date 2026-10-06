@@ -30,7 +30,7 @@ const gapsAt = computed(() =>
 const gaps = computed(() =>
   gapsAt.value(window?.timeRange.value.start ?? 0, window?.timeRange.value.end ?? props.durationMs).map((gap) => ({
     gap,
-    removable: removeTimelineGap(props.composition, gap, props.zoomElements) !== props.composition,
+    removable: removeTimelineGap(props.composition, gap, props.zoomElements).composition !== props.composition,
   })),
 );
 </script>
@@ -51,7 +51,6 @@ const gaps = computed(() =>
           :icon="Trash2"
           :disabled="!removable"
           :tooltip="removable ? t('removeGap') : t('removeGapBlocked')"
-          :title="removable ? t('removeGap') : t('removeGapBlocked')"
           :aria-label="removable ? t('removeGap') : t('removeGapBlocked')"
           @click.stop="emit('remove', gap)"
         />

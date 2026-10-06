@@ -47,7 +47,6 @@ const columns = computed(() => (visibleModes.value.length === 1 ? 1 : visibleMod
       :icon-only="!labels"
       variant="tab"
       :class="{ active: modelValue === mode.id, stacked }"
-      :title="labels ? (stacked && mode.id === 'studio' ? tHud('recorder') : t(mode.id)) : undefined"
       :tooltip="labels ? '' : t(`${mode.id}Description`)"
       tooltip-position="bottom"
       :aria-label="stacked && mode.id === 'studio' ? tHud('recorder') : t(mode.id)"

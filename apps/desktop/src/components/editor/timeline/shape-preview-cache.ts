@@ -23,6 +23,7 @@ export const SHAPE_PREVIEW_FIELDS = [
   'shadowDirection',
   'text',
   'drawing',
+  'vector',
 ] as const;
 
 export const shapePreviewSignature = (clip: ShapeClip, canvas: NonNullable<ShapeTimelinePreviewProps['canvas']>) =>

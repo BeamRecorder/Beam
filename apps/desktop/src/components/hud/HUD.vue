@@ -226,6 +226,7 @@ const choose = (target: HudCaptureTarget) => {
               v-model="selectedCameraId"
               :options="cameraOptions"
               :label="t('camera')"
+              tooltip-disabled
               :disabled="captureDisabled"
               @update:model-value="emit('focus-feature', 'camera')"
             >
@@ -248,6 +249,7 @@ const choose = (target: HudCaptureTarget) => {
               v-model="selectedMicId"
               :options="micOptions"
               :label="t('microphone')"
+              tooltip-disabled
               :disabled="captureDisabled"
               @update:model-value="emit('focus-feature', 'mic')"
             >
@@ -271,6 +273,7 @@ const choose = (target: HudCaptureTarget) => {
               v-model="systemAudioMode"
               :options="systemAudioOptions"
               :label="t('systemAudio')"
+              tooltip-disabled
               :disabled="captureDisabled"
               @update:model-value="emit('focus-feature', 'systemAudio')"
             >

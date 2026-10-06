@@ -116,6 +116,22 @@ describe('CaptureModeGroup', () => {
     expect(wrapper.emitted('update:modelValue')).toEqual([['instant']]);
   });
 
+  it.each([false, true])('does not show native or custom hints for labelled modes with stacked=%s', async (stacked) => {
+    vi.useFakeTimers();
+    const wrapper = mount(CaptureModeGroup, { props: { modelValue: 'studio', labels: true, stacked } });
+    try {
+      expect(wrapper.findAll('button').every((button) => button.text() && !button.attributes('title'))).toBe(true);
+      for (const trigger of wrapper.findAll('.btn-container')) await trigger.trigger('mouseenter');
+      await vi.advanceTimersByTimeAsync(200);
+      expect(wrapper.find('.tooltip-wrapper').exists()).toBe(false);
+      expect(document.body.querySelector('[role="tooltip"]')).toBeNull();
+      await wrapper.get('[aria-label="Screenshot"]').trigger('click');
+      expect(wrapper.emitted('update:modelValue')).toEqual([['screenshot']]);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it('shares one sliding indicator across mode changes without replacing the buttons', async () => {
     const wrapper = mount(CaptureModeGroup, {
       props: { modelValue: 'studio', full: true, labels: true },

@@ -123,7 +123,7 @@ describe('timeline gaps', () => {
     ]);
     const gap = gapBetween(next, ['first', 'second'], 0);
 
-    const result = removeTimelineGap(next, gap);
+    const result = removeTimelineGap(next, gap).composition;
 
     expect(clipAt(result, 'first').timelineStartMs).toBe(0);
     expect(clipAt(result, 'second').timelineStartMs).toBe(2_000);
@@ -143,9 +143,9 @@ describe('timeline gaps', () => {
     const incompleteIds: TimelineGap = { ...currentGap, clipIds: ['lane-before'] };
     const otherLane: TimelineGap = { ...currentGap, clipIds: ['other-before', 'other-after'] };
 
-    expect(removeTimelineGap(next, staleBounds)).toBe(next);
-    expect(removeTimelineGap(next, incompleteIds)).toBe(next);
-    expect(removeTimelineGap(next, otherLane)).toBe(next);
+    expect(removeTimelineGap(next, staleBounds).composition).toBe(next);
+    expect(removeTimelineGap(next, incompleteIds).composition).toBe(next);
+    expect(removeTimelineGap(next, otherLane).composition).toBe(next);
   });
 
   it('rejects a stale gap payload that omits a downstream clip from the same visual lane', () => {
@@ -160,7 +160,7 @@ describe('timeline gaps', () => {
       endMs: 3_000,
     };
 
-    expect(removeTimelineGap(next, staleSubset)).toBe(next);
+    expect(removeTimelineGap(next, staleSubset).composition).toBe(next);
     expect(clipAt(next, 'lane-after').timelineStartMs).toBe(3_000);
     expect(clipAt(next, 'lane-later').timelineStartMs).toBe(5_000);
   });
@@ -179,7 +179,7 @@ describe('timeline gaps', () => {
     const originalUnrelated = unrelated.map((entry) => clipAt(next, entry.id));
     const gap = gapBetween(next, ['before', 'after'], 1_000);
 
-    const result = removeTimelineGap(next, gap);
+    const result = removeTimelineGap(next, gap).composition;
 
     expect(result).not.toBe(next);
     expect(clipAt(result, 'before').timelineStartMs).toBe(0);
@@ -223,7 +223,7 @@ describe('timeline gaps', () => {
       2_000,
     );
 
-    const result = removeTimelineGap(moved, gap);
+    const result = removeTimelineGap(moved, gap).composition;
 
     expect(clipAt(result, 'recording-screen').timelineStartMs).toBe(0);
     expect(clipAt(result, 'recording-microphone').timelineStartMs).toBe(0);
@@ -238,7 +238,7 @@ describe('timeline gaps', () => {
       visual('after-direct', 3_000, { trackId: 'lane', locked: true }),
     ]);
     const directGap = gapBetween(lockedDirect, ['before-direct', 'after-direct'], 1_000);
-    expect(removeTimelineGap(lockedDirect, directGap)).toBe(lockedDirect);
+    expect(removeTimelineGap(lockedDirect, directGap).composition).toBe(lockedDirect);
 
     const lockedLinked = composition([
       visual('before-linked', 0, { trackId: 'lane' }),
@@ -246,7 +246,7 @@ describe('timeline gaps', () => {
       microphone('locked-mic', 3_000, { groupId: 'recording', locked: true }),
     ]);
     const linkedGap = gapBetween(lockedLinked, ['before-linked', 'after-linked'], 1_000);
-    expect(removeTimelineGap(lockedLinked, linkedGap)).toBe(lockedLinked);
+    expect(removeTimelineGap(lockedLinked, linkedGap).composition).toBe(lockedLinked);
   });
 
   it('rejects a ripple that would be clamped by a collision on a linked visual track', () => {
@@ -258,7 +258,7 @@ describe('timeline gaps', () => {
     ]);
     const gap = gapBetween(next, ['main-before', 'main-after'], 1_000);
 
-    expect(removeTimelineGap(next, gap)).toBe(next);
+    expect(removeTimelineGap(next, gap).composition).toBe(next);
     expect(clipAt(next, 'main-after').timelineStartMs).toBe(3_000);
     expect(clipAt(next, 'companion-after').timelineStartMs).toBe(3_000);
   });
@@ -268,7 +268,7 @@ describe('timeline gaps', () => {
       microphone('mic-b', 3000),
       { ...microphone('system', 3000), role: 'system' },
     ]);
-    const result = removeTimelineGap(next, { clipIds: ['mic-a', 'mic-b'], startMs: 1000, endMs: 3000 });
+    const result = removeTimelineGap(next, { clipIds: ['mic-a', 'mic-b'], startMs: 1000, endMs: 3000 }).composition;
     expect(clipAt(result, 'mic-b').timelineStartMs).toBe(1000);
     expect(clipAt(result, 'system').timelineStartMs).toBe(1000);
   });
@@ -282,7 +282,7 @@ describe('timeline gaps', () => {
     ]);
     const gap = gapBetween(next, ['target-before', 'target-after'], 1_000);
 
-    const result = removeTimelineGap(next, gap);
+    const result = removeTimelineGap(next, gap).composition;
 
     expect(clipAt(result, 'target-after').timelineStartMs).toBe(1_000);
     expect(clipAt(result, 'other-after').timelineStartMs).toBe(1_000);
@@ -301,7 +301,7 @@ describe('timeline gaps', () => {
     ]);
     const gap = gapBetween(next, ['target-before', 'target-after'], 1_000);
 
-    const result = removeTimelineGap(next, gap);
+    const result = removeTimelineGap(next, gap).composition;
 
     expect(result).toBe(next);
   });
@@ -313,9 +313,9 @@ describe('timeline gaps', () => {
     ]);
     const gap = gapBetween(next, ['target-before', 'target-after'], 1_000);
 
-    expect(removeTimelineGap(next, gap, [manualZoom('overlapping-zoom', 1_500, 2_500)])).toBe(next);
+    expect(removeTimelineGap(next, gap, [manualZoom('overlapping-zoom', 1_500, 2_500)]).composition).toBe(next);
 
-    const result = removeTimelineGap(next, gap, [manualZoom('downstream-zoom', 3_000, 3_500)]);
+    const result = removeTimelineGap(next, gap, [manualZoom('downstream-zoom', 3_000, 3_500)]).composition;
     expect(result).not.toBe(next);
     expect(clipAt(result, 'target-after').timelineStartMs).toBe(1_000);
   });
@@ -323,7 +323,7 @@ describe('timeline gaps', () => {
   it('rejects empty, missing, unsupported and mixed lane requests', () => {
     const next = composition([visual('video', 1000), { ...microphone('system', 1000), role: 'system' }]);
     for (const clipIds of [[], ['missing'], ['system'], ['video', 'system']]) {
-      expect(removeTimelineGap(next, { clipIds, startMs: 0, endMs: 1000 })).toBe(next);
+      expect(removeTimelineGap(next, { clipIds, startMs: 0, endMs: 1000 }).composition).toBe(next);
     }
   });
 });

@@ -24,7 +24,7 @@ describe('compact RecorderBar', () => {
   it('shows a capture warning alongside elapsed time without removing the recording controls', () => {
     const warning = 'Interaction capture stopped. Automatic zooms may be incomplete.';
     const wrapper = setup({ warning });
-    expect(wrapper.get('[role="alert"]').attributes('title')).toBe(warning);
+    expect(wrapper.get('[role="alert"]').attributes('title')).toBeUndefined();
     expect(wrapper.get('[role="alert"]').attributes('aria-label')).toBe(warning);
     expect(wrapper.get('[role="alert"]').text()).toBe('Capture issue');
     expect(wrapper.get('.recording-time').text()).toContain('00:12.3');

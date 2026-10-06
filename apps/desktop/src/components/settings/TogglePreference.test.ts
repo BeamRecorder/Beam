@@ -21,6 +21,16 @@ it('omits missing help and prevents disabled changes', async () => {
   expect(wrapper.get('[role="switch"]').attributes('aria-describedby')).toBeUndefined();
   await wrapper.get('[role="switch"]').trigger('click');
   expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+  expect(wrapper.classes()).toContain('is-disabled');
+  wrapper.unmount();
+});
+it('restores the label and switch together when a preference becomes available', async () => {
+  const wrapper = mount(TogglePreference, { props: { modelValue: false, label: 'Option', disabled: true } });
+  expect(wrapper.classes()).toContain('is-disabled');
+  await wrapper.setProps({ disabled: false });
+  expect(wrapper.classes()).not.toContain('is-disabled');
+  await wrapper.get('[role="switch"]').trigger('click');
+  expect(wrapper.emitted('update:modelValue')).toEqual([[true]]);
   wrapper.unmount();
 });
 it('keeps a reusable info slot and unique descriptions when used twice', () => {

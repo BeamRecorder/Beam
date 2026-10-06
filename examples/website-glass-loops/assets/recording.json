@@ -1,0 +1,14 @@
+{
+  "sessionId": "01a107bb-1daa-7112-a00f-e92e8c14ed19",
+  "name": "Quiet Aurora 4",
+  "durationMs": 8600,
+  "sourceWidth": 3072,
+  "sourceHeight": 1862,
+  "cropTop": 230,
+  "frames": [
+    0,
+    2400,
+    4350,
+    7900
+  ]
+}

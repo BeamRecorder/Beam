@@ -82,7 +82,7 @@ const toggle = () => {
 .switch-thumb {
   width: 20px;
   height: 20px;
-  background-color: var(--color-bg-element);
+  background-color: var(--text-secondary);
   border-radius: var(--radius-full);
   box-shadow: var(--shadow-sm);
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -90,7 +90,22 @@ const toggle = () => {
 }
 
 .switch-thumb.is-checked {
+  background-color: var(--color-bg-element);
   transform: translateX(20px);
+}
+
+.is-disabled .switch-button {
+  background-color: var(--color-bg-field);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.is-disabled .switch-button.is-checked {
+  background-color: var(--color-bg-field-active);
+}
+
+.is-disabled .switch-thumb {
+  background-color: var(--text-muted);
+  box-shadow: none;
 }
 
 .switch-label {
