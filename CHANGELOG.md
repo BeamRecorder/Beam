@@ -222,6 +222,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Shape thumbnails refresh after editing vector points, including speech-bubble peaks and Bézier handles.
+
 - Available switches in the Off state are easier to distinguish from unavailable settings, with clearer thumb contrast and muted labels for disabled preferences.
 
 - Quick Snip microphone, system-audio and camera menus have aligned options, clear selection checks and a simple opening without excessive zoom, using the shared Beam popover appearance.
