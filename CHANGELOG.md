@@ -220,6 +220,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Webcam preview now shows the complete camera frame without an automatic crop, including in square and resized preview windows.
+
 - Russian and Bulgarian website FAQs now display their translated questions and answers, including the current source license, instead of internal category identifiers.
 - Linux CI and release packages now compile and verify the experimental GPU export backend. Packages include only Beam native artifacts and use system FFmpeg libraries, preventing the backend from being omitted without bundling FFmpeg.
 
