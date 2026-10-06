@@ -158,19 +158,8 @@ export function useEditorWorkspaceTimeline(
   };
   const closeTimelineGap = (gap: TimelineGap) => {
     finishCrop();
-    const next = removeTimelineGap(composition.value, gap, zoomElements.value);
-    if (next === composition.value) return;
-    const before = new Map(composition.value.clips.map((clip) => [clip.id, clip.timelineStartMs]));
-    const result = shiftTimelineSelection({
-      composition: composition.value,
-      zoomElements: zoomElements.value,
-      selection: {
-        clipIds: next.clips.filter((clip) => before.get(clip.id) !== clip.timelineStartMs).map((clip) => clip.id),
-        zoomIds: zoomElements.value.filter((zoom) => zoom.startMs >= gap.endMs).map((zoom) => zoom.id),
-      },
-      deltaMs: gap.startMs - gap.endMs,
-    });
-    if (result.deltaMs !== gap.startMs - gap.endMs) return;
+    const result = removeTimelineGap(composition.value, gap, zoomElements.value);
+    if (result.composition === composition.value) return;
     commitNow(createEditorSnapshot());
     composition.value = result.composition;
     zoomElements.value = result.zoomElements;

@@ -1,41 +1,17 @@
 import { triggerPointer } from '../../../../../../tests/support/pointer';
-import { mount } from '@vue/test-utils';
-import { describe, expect, it, vi } from 'vitest';
-import { defineComponent, h } from 'vue';
+import { mount, type VueWrapper } from '@vue/test-utils';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import type { ClipComposition, MediaAsset, VisualClip } from '@beam/engine/shared/composition-types';
 import TimelineGapButtons from './TimelineGapButtons.vue';
+import Button from '~/components/ui/button/Button.vue';
 
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: () => ({
     t: (key: string) => (key === 'removeGap' ? 'Remove gap' : key === 'removeGapBlocked' ? 'Cannot remove gap' : key),
   }),
 }));
-
-const ButtonStub = defineComponent({
-  inheritAttrs: false,
-  props: {
-    disabled: Boolean,
-    tooltip: { type: String, default: '' },
-  },
-  emits: ['click'],
-  setup(props, { attrs, emit }) {
-    return () =>
-      h('button', {
-        ...attrs,
-        type: attrs.type ?? 'button',
-        disabled: props.disabled || undefined,
-        title: props.tooltip || attrs.title,
-        onClick: (event: MouseEvent) => {
-          if (props.disabled) {
-            event.preventDefault();
-            return;
-          }
-          emit('click', event);
-        },
-      });
-  },
-});
 
 const asset = (id: string, kind: MediaAsset['kind'] = 'video'): MediaAsset => ({
   id,
@@ -78,10 +54,15 @@ const composition = (clips: VisualClip[]): ClipComposition => ({
 });
 
 type TimelineGapButtonProps = InstanceType<typeof TimelineGapButtons>['$props'];
+const mounted: VueWrapper<InstanceType<typeof TimelineGapButtons>>[] = [];
+afterEach(() => {
+  mounted.splice(0).forEach((wrapper) => wrapper.unmount());
+  vi.useRealTimers();
+});
 
 const mountButtons = (overrides: Partial<TimelineGapButtonProps> = {}) => {
   const clips = [visual('before', 0), visual('after', 3_000)];
-  return mount(TimelineGapButtons, {
+  const wrapper = mount(TimelineGapButtons, {
     props: {
       clips,
       composition: composition(clips),
@@ -90,8 +71,9 @@ const mountButtons = (overrides: Partial<TimelineGapButtonProps> = {}) => {
       moving: false,
       ...overrides,
     },
-    global: { stubs: { Button: ButtonStub } },
   });
+  mounted.push(wrapper);
+  return wrapper;
 };
 
 describe('TimelineGapButtons', () => {
@@ -99,7 +81,8 @@ describe('TimelineGapButtons', () => {
     const wrapper = mountButtons();
     const button = wrapper.get('button[aria-label="Remove gap"]');
 
-    expect(button.attributes('title')).toBe('Remove gap');
+    expect(button.attributes('title')).toBeUndefined();
+    expect(wrapper.getComponent(Button).props('tooltip')).toBe('Remove gap');
     expect(button.attributes('type')).toBe('button');
     expect(wrapper.findAll('.timeline-gap')).toHaveLength(1);
     expect(wrapper.get('.timeline-gap').attributes('style')).toContain('translate3d(100px');
@@ -131,7 +114,38 @@ describe('TimelineGapButtons', () => {
 
     expect(wrapper.find('.timeline-gap').exists()).toBe(true);
     expect(button.attributes('disabled')).toBeDefined();
-    expect(button.attributes('title')).toBe('Cannot remove gap');
+    expect(button.attributes('title')).toBeUndefined();
+    expect(wrapper.getComponent(Button).props('tooltip')).toBe('Cannot remove gap');
+  });
+
+  it('enables the camera pause action when linked capture boundaries differ by milliseconds', async () => {
+    const cameras = [
+      visual('camera-before', 1, {
+        kind: 'webcam',
+        recordingClipId: 'screen-before',
+        timelineDurationMs: 999,
+        sourceDurationMs: 999,
+      }),
+      visual('camera-after', 3015, { kind: 'webcam', recordingClipId: 'screen-after' }),
+    ];
+    const recorded = composition([
+      visual('screen-before', 0, {
+        kind: 'screen',
+        trackId: 'screen',
+        timelineDurationMs: 1005,
+        sourceDurationMs: 1005,
+      }),
+      visual('screen-after', 3000, { kind: 'screen', trackId: 'screen' }),
+      ...cameras,
+    ]);
+    recorded.assets = recorded.assets.map((entry) => ({ ...entry, origin: 'session', sessionId: 'recording' }));
+    const wrapper = mountButtons({ clips: cameras, composition: recorded });
+    const button = wrapper.get('button[aria-label="Remove gap"]');
+    expect(button.attributes('disabled')).toBeUndefined();
+    await button.trigger('click');
+    expect(wrapper.emitted('remove')).toEqual([
+      [{ clipIds: ['camera-before', 'camera-after'], startMs: 1000, endMs: 3015 }],
+    ]);
   });
 
   it('keeps a colliding linked gap visible with a disabled explanatory button', () => {
@@ -158,7 +172,8 @@ describe('TimelineGapButtons', () => {
 
     expect(wrapper.find('.timeline-gap').exists()).toBe(true);
     expect(button.attributes('disabled')).toBeDefined();
-    expect(button.attributes('title')).toBe('Cannot remove gap');
+    expect(button.attributes('title')).toBeUndefined();
+    expect(wrapper.getComponent(Button).props('tooltip')).toBe('Cannot remove gap');
   });
 
   it('stops pointer and click gestures on the gap container from reaching the timeline', async () => {
@@ -177,4 +192,21 @@ describe('TimelineGapButtons', () => {
 
     expect(wrapper.findAll('.timeline-gap')).toHaveLength(0);
   });
+
+  it.each([false, true])(
+    'shows one custom tooltip without a duplicate browser title when locked is %s',
+    async (locked) => {
+      vi.useFakeTimers();
+      const clips = [visual('before', 0), visual('after', 3000, { locked })];
+      const wrapper = mountButtons({ clips, composition: composition(clips) });
+      await wrapper.get('.tooltip-wrapper').trigger('mouseenter');
+      await vi.advanceTimersByTimeAsync(100);
+      await nextTick();
+      const tooltips = document.body.querySelectorAll('[role="tooltip"]');
+      expect(tooltips).toHaveLength(1);
+      expect(tooltips[0]?.textContent).toBe(locked ? 'Cannot remove gap' : 'Remove gap');
+      expect(wrapper.find('[title]').exists()).toBe(false);
+      expect(wrapper.get('button').attributes('aria-label')).toBe(locked ? 'Cannot remove gap' : 'Remove gap');
+    },
+  );
 });

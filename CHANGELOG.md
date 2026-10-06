@@ -220,6 +220,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Recording pauses can be removed when screen, webcam and audio segment boundaries differ, preserving recorded frames, audio/video synchronization and downstream zoom timing. Gap actions display a single tooltip.
+
 - Fixed cropped webcam previews in packaged builds by loading the selected overlay's styles before its first frame; Quick Snip settings also retain their production styling.
 
 - Webcam preview now shows the complete camera frame without an automatic crop, including in square and resized preview windows.

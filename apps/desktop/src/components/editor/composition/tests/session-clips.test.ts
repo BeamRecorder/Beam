@@ -97,7 +97,7 @@ describe('synchronizeRecordingClips', () => {
     const screenClips = recorded.clips.filter((clip) => clip.kind === 'screen');
     const gap = timelineGaps(screenClips).find(({ startMs, endMs }) => startMs === 2_000 && endMs === 7_000);
     expect(gap).toBeDefined();
-    const joined = removeTimelineGap(recorded, gap!);
+    const joined = removeTimelineGap(recorded, gap!).composition;
     const laterClip = joined.clips.find(
       (clip) => clip.kind === 'screen' && clip.assetId === 'session:session-1:screen:second.webm',
     );
