@@ -1,6 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PopoverMenuList from './PopoverMenuList.vue';
+import { Mic } from '@lucide/vue';
 import type { PopoverMenuItem } from './popover-menu-types';
 
 interface MenuGeometry {
@@ -75,6 +76,59 @@ afterEach(() => {
   }
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+describe('PopoverMenuList choices', () => {
+  it.each([true, false, undefined])(
+    'renders checked=%s with a separate selection slot and preserves action icons',
+    (checked) => {
+      const wrapper = mount(PopoverMenuList, {
+        props: { items: [{ id: 'mic', label: 'Microphone', icon: Mic, checked }] },
+      });
+      wrappers.push(wrapper);
+      const button = wrapper.get('button');
+      expect(button.attributes('role')).toBe(checked === undefined ? 'menuitem' : 'menuitemradio');
+      expect(button.attributes('aria-checked')).toBe(checked === undefined ? undefined : String(checked));
+      expect(button.find('.item-icon-wrapper .lucide-mic').exists()).toBe(true);
+      expect(button.find('.item-check-wrapper').exists()).toBe(checked !== undefined);
+      expect(button.find('.item-check-wrapper .lucide-check').exists()).toBe(checked === true);
+    },
+  );
+  it('skips disabled choices during keyboard navigation and cannot activate them', async () => {
+    const wrapper = mount(PopoverMenuList, {
+      attachTo: document.body,
+      props: {
+        items: [
+          { id: 'off', label: 'Off', checked: false },
+          { id: 'unavailable', label: 'Unavailable', checked: false, disabled: true },
+          { id: 'mic', label: 'Microphone', checked: true },
+        ],
+      },
+    });
+    wrappers.push(wrapper);
+    const buttons = wrapper.findAll('button');
+    await buttons[0].trigger('keydown', { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(buttons[2].element);
+    await buttons[2].trigger('keydown', { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(buttons[0].element);
+    buttons[1].element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(wrapper.emitted('select')).toBeUndefined();
+    await buttons[0].trigger('click');
+    expect(wrapper.emitted('select')).toEqual([['off']]);
+  });
+  it('toggles nested choices and dismisses the whole menu from a child', async () => {
+    const wrapper = mountMenu();
+    const parent = parentItem(wrapper);
+    await parent.trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.submenu-panel').exists()).toBe(true);
+    await parent.trigger('click');
+    expect(wrapper.find('.submenu-panel').exists()).toBe(false);
+    await parent.trigger('click');
+    await flushPromises();
+    await wrapper.get('.submenu-panel button').trigger('keydown', { key: 'Escape' });
+    expect(wrapper.emitted('dismiss')).toHaveLength(1);
+  });
 });
 
 describe('PopoverMenuList submenu placement', () => {

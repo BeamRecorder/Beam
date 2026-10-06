@@ -6,5 +6,6 @@ export interface PopoverMenuItem {
   icon?: Component;
   disabled?: boolean;
   active?: boolean;
+  checked?: boolean;
   children?: readonly PopoverMenuItem[];
 }

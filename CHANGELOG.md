@@ -222,6 +222,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Quick Snip microphone, system-audio and camera menus have aligned options, clear selection checks and a simple opening without excessive zoom, using the shared Beam popover appearance.
+
 - Recording pauses can be removed when screen, webcam and audio segment boundaries differ, preserving recorded frames, audio/video synchronization and downstream zoom timing. Gap actions display a single tooltip.
 
 - Fixed cropped webcam previews in packaged builds by loading the selected overlay's styles before its first frame; Quick Snip settings also retain their production styling.

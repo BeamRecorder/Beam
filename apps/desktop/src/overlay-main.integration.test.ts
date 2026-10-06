@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromiumExecutable } from '../../../apps/cli/src/chromium-install';
+import type { QuickSnipDeviceMenu } from './api/types/quick-snip';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('packaged overlay styles', () => {
   let server: PreviewServer, browser: Browser, page: Page, directory: string, origin: string;
@@ -48,19 +49,27 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('packaged overlay styles'
     if (directory) await rm(directory, { recursive: true, force: true });
   });
 
-  const openOverlay = async (width: number, height: number, query = 'cameraOverlay=1') => {
+  const openOverlay = async (
+    width: number,
+    height: number,
+    query = 'cameraOverlay=1',
+    device: QuickSnipDeviceMenu | null = null,
+    theme = 'dark',
+  ) => {
     await page?.close();
     page = await browser.newPage();
-    await page.setViewport({ width: 217, height: 185 });
+    await page.setViewport(
+      device ? { width: 286, height: device.options.length * 32 + 34 } : { width: 217, height: 185 },
+    );
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(String(error)));
     await page.evaluateOnNewDocument(
-      (width, height) => {
+      (width, height, device, theme) => {
         let recording = false;
         let hover: ((hovered: boolean) => void) | undefined;
         Object.defineProperty(window, 'capture', {
           value: {
-            getPreferences: async () => ({ theme: 'dark', extras: { locale: 'en' } }),
+            getPreferences: async () => ({ theme, extras: { locale: 'en' } }),
             onPreferencesChanged: () => () => undefined,
             onCameraOverlayState: () => () => undefined,
             onCameraOverlayHover: (listener: typeof hover) => {
@@ -75,12 +84,18 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('packaged overlay styles'
               throw new Error('Unexpected camera failure');
             },
             onQuickSnipSettingsContent: (listener: (content: object) => void) => {
-              queueMicrotask(() => listener({ side: 'above', anchorX: 108, device: null, visible: true }));
+              queueMicrotask(() => listener({ side: 'above', anchorX: 248, device, visible: true }));
               return () => undefined;
             },
             onQuickSnipConfigure: () => () => undefined,
             fitQuickSnipSettings: () => undefined,
             notifyQuickSnipSettingsReady: () => undefined,
+            selectQuickSnipDevice: (id: string) => {
+              document.documentElement.dataset.deviceSelection = id;
+            },
+            dismissQuickSnipSettings: () => {
+              document.documentElement.dataset.deviceDismissed = 'true';
+            },
           },
         });
         window.addEventListener('beam-test-recording', () => {
@@ -115,6 +130,8 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('packaged overlay styles'
       },
       width,
       height,
+      device,
+      theme,
     );
     await page.goto(`${origin}/html/index.html?${query}`);
     try {
@@ -212,4 +229,73 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('packaged overlay styles'
     expect(await page.$('.camera-overlay-video')).toBeNull();
     expect(await page.$('.quick-snip-selection-bar')).toBeNull();
   });
+
+  it.each(['dark', 'light'])(
+    'aligns packaged device menus in the %s theme and preserves keyboard selection',
+    async (theme) => {
+      for (const kind of ['microphone', 'camera', 'systemAudio'] as const) {
+        const device: QuickSnipDeviceMenu = {
+          kind,
+          selectedId: 'selected',
+          position: { x: 248, y: 32 },
+          options: [
+            { id: 'off', label: 'Off' },
+            {
+              id: 'selected',
+              label: kind === 'systemAudio' ? 'System audio' : `USB ${kind} with a very long device name`,
+            },
+            ...(kind === 'systemAudio' ? [] : [{ id: 'default', label: `Default ${kind}` }]),
+          ],
+        };
+        await openOverlay(640, 480, 'quickSnipSettings=1', device, theme);
+        await page.waitForFunction(() => {
+          const shell = document.querySelector('.settings-shell')!;
+          return (
+            new DOMMatrixReadOnly(getComputedStyle(shell).transform).a === 1 &&
+            getComputedStyle(shell).opacity === '1' &&
+            document.activeElement?.textContent?.includes('Off') === false
+          );
+        });
+        if (process.env.BEAM_OVERLAY_SCREENSHOT_DIR)
+          await page.screenshot({
+            path: resolve(process.env.BEAM_OVERLAY_SCREENSHOT_DIR, `quick-snip-${kind}-${theme}.png`),
+          });
+        const layout = await page.evaluate(() => {
+          const panel = document.querySelector<HTMLElement>('.quick-settings-window')!;
+          const menu = document.querySelector<HTMLElement>('.menu-content')!;
+          return {
+            menuWidth: menu.getBoundingClientRect().width,
+            panelWidth: panel.clientWidth,
+            scrollWidth: panel.scrollWidth,
+            rows: [...menu.querySelectorAll<HTMLButtonElement>('button')].map((button) => {
+              const label = button.querySelector<HTMLElement>('.item-label')!;
+              return {
+                left: label.getBoundingClientRect().left,
+                height: button.getBoundingClientRect().height,
+                fontSize: getComputedStyle(button).fontSize,
+                role: button.getAttribute('role'),
+                checked: button.getAttribute('aria-checked'),
+              };
+            }),
+          };
+        });
+        expect(new Set(layout.rows.map((row) => row.left)).size).toBe(1);
+        expect(new Set(layout.rows.map((row) => row.height)).size).toBe(1);
+        expect(layout.menuWidth).toBe(layout.panelWidth);
+        expect(layout.scrollWidth).toBe(layout.panelWidth);
+        expect(layout.rows.map((row) => row.fontSize)).toEqual(device.options.map(() => '12px'));
+        expect(layout.rows.map((row) => row.role)).toEqual(device.options.map(() => 'menuitemradio'));
+        expect(layout.rows.map((row) => row.checked)).toEqual(
+          device.options.map((option) => String(option.id === 'selected')),
+        );
+        await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+        expect(await page.$eval('.settings-shell', (shell) => getComputedStyle(shell).transitionDuration)).toBe('0s');
+        await page.keyboard.press('Home');
+        await page.keyboard.press('Enter');
+        expect(await page.evaluate(() => document.documentElement.dataset.deviceSelection)).toBe('off');
+        await page.keyboard.press('Escape');
+        expect(await page.evaluate(() => document.documentElement.dataset.deviceDismissed)).toBe('true');
+      }
+    },
+  );
 });
