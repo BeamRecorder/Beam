@@ -220,6 +220,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Fixed cropped webcam previews in packaged builds by loading the selected overlay's styles before its first frame; Quick Snip settings also retain their production styling.
+
 - Webcam preview now shows the complete camera frame without an automatic crop, including in square and resized preview windows.
 
 - Russian and Bulgarian website FAQs now display their translated questions and answers, including the current source license, instead of internal category identifiers.
