@@ -7,6 +7,11 @@ User-facing changes to Beam are documented in this file.
 ### Added
 
 - General settings now offer Minimize to tray on close, with an explanation in all fifteen languages. Enable it to keep Beam running in the tray; leave it off to quit when closing the Recorder.
+- The private website’s Studio overview shows a real recording edited on the native multi-track timeline in a fifteen-second, 60 fps loop, including trim/split/cut, a caption, appearance and canvas adjustments, and a 2D zoom. Light/dark variants and editable source live in `examples/website-studio-loop/`.
+
+### Changed
+
+- The website’s Studio overview now runs for 15 seconds with gentler cursor travel, longer reading pauses and two restrained camera views that stay fixed during edits.
 
 ### Fixed
 
