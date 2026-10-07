@@ -1,6 +1,6 @@
 # Studio overview
 
-A 12-second, 1600 × 1000 / 60 fps silent loop for the primary Edit feature video,
+A 15-second, 1600 × 1000 / 60 fps silent loop for the primary Edit feature video,
 with light/dark variants. The heading's background animation stays independent.
 
 The film uses the actual Quiet Aurora 4 recording, original cursor telemetry,
@@ -12,12 +12,18 @@ recording, camera, caption, appearance, background and native 2D zoom.
 
 ## Sequence
 
-- 0–3.6 s: trim, split twice, delete the 800 ms fragment, remove the gap.
-- 4–5.3 s: type a manual caption, **Every detail, in focus.**
-- 5.3–7.6 s: change shadow to violet and resize the recording proportionally.
-- 7.6–9.1 s: select the native Ocean canvas gradient.
-- 9.1–11.3 s: play the finished result with a native 2D zoom and caption.
-- 11.3–12 s: fade, reset under zero opacity, return to the opening frame.
+- 0–5.4 s: trim, split twice, delete the 800 ms fragment, remove the gap.
+- 5.9–7.9 s: type and hold a manual caption, **Every detail, in focus.**
+- 7.9–10.9 s: change shadow to violet and resize the recording proportionally.
+- 10.9–12.5 s: select and hold the native Ocean canvas gradient.
+- 12.5–14.25 s: play the finished result with a native 2D zoom and caption.
+- 14.25–15 s: fade, reset under zero opacity, return to the opening frame.
+
+The timeline framing is a restrained 1.1×; the properties framing stays at
+1.22× for 5.75 seconds. Camera transitions take 0.85–0.95 seconds, and the final
+playback returns to the full editor. There are no per-control camera moves.
+The final native 1.5× recording zoom starts at zero strength on Play, then
+enters progressively.
 
 Gestures illustrate editing, not measured interaction latency. No audio
 waveform, automatic transcript or word timing is invented. Mediabunny decodes
@@ -42,28 +48,29 @@ BEAM_CHROMIUM_EXECUTABLE=/path/to/chrome node scripts/verify-site.mjs http://loc
 ```
 
 The build freezes entries into `dist/light` and `dist/dark`. Rendering calls
-Beam CLI motion, producing 720-frame MP4 masters. External FFmpeg creates VP9
+Beam CLI motion, producing 900-frame MP4 masters. External FFmpeg creates VP9
 WebM and WebP website derivatives. Generated builds, proofs and masters are
 ignored by Git.
 Website derivatives use 1280 × 800 / 60 fps, Lanczos resizing and VP9 CRF 38;
 the original 1600 × 1000 masters remain available for later exports.
 
-Verification checks twelve reverse-seek states in both themes and the 0/12 s
+Verification checks twelve reverse-seek states in both themes and the 0/15 s
 seam. The HyperFrames seek-completion barrier awaits the same native inspector,
 scroll and compositor settlement as Beam CLI. Native scroll-clipped labels are
 marked as intentional occlusion; visible controls remain audited.
 Chromium occasionally re-rasterizes antialiased UI edges after a camera
 move. The comparison bounds this to the card's 3-pixel edge strip (≤2000 pixels,
-channel delta ≤20), rounded control edges (≤64 pixels, delta ≤48), and ≤64 other
-native UI pixels with delta ≤8. The measured differences were a single card
-edge row and 45 pixels of the rounded Export button. Source/cursor differences
+channel delta ≤20), rounded control edges (≤64 pixels, delta ≤48), the native
+playhead tip’s right edge (≤16 pixels, delta ≤32), and ≤64 other native UI pixels
+with delta ≤8. The measured differences were a single card
+edge row, 45 pixels of the rounded Export button and 13 playhead-edge pixels. Source/cursor differences
 outside these limits fail; no blanket tolerance masks the media preview.
 
 ## Native project
 
 The local duplicate is **Quiet Aurora 4 — Studio overview**. It keeps its own
 project/session manifests and complete source media. Its edited timeline is
-10.4 seconds; the website film takes 12 seconds to show editing and playback.
+10.4 seconds; the website film takes 15 seconds to show editing and playback.
 
 `prepare-project.mjs` copies the supplied local source and runs offline Beam
 CLI edit commands. `repair-recording-links.mjs` preserves each split camera

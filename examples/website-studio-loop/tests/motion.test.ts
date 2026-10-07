@@ -20,7 +20,7 @@ describe("Studio demonstration clock", () => {
     [-Infinity, 0],
     [-1, 0],
     [4600, 4.6],
-    [15000, 12],
+    [20000, 15],
   ])("bounds %s", (ms, expected) => expect(clampTime(ms)).toBe(expected));
   it.each([
     [-2, 0],
@@ -31,7 +31,7 @@ describe("Studio demonstration clock", () => {
   ])("eases %s", (x, expected) => expect(smooth(x)).toBe(expected));
   it("orders native edit states at their clicks", () => {
     expect(
-      [0, 1.699, 1.7, 2.05, 2.45, 2.85, 3.25, 11.64, 11.65, 12].map(stageAt),
+      [0, 2.199, 2.2, 3.05, 3.8, 4.45, 5.15, 14.64, 14.65, 15].map(stageAt),
     ).toEqual([
       "initial",
       "initial",
@@ -46,7 +46,7 @@ describe("Studio demonstration clock", () => {
     ]);
   });
   it("discloses the inspector for each actual gesture", () => {
-    expect([0, 4.05, 5.35, 6.55, 7.6, 9.15, 12].map(modeAt)).toEqual([
+    expect([0, 5.95, 7.95, 9.45, 10.95, 12.5, 15].map(modeAt)).toEqual([
       "clip",
       "caption",
       "shadow",
@@ -58,26 +58,26 @@ describe("Studio demonstration clock", () => {
   });
   it("keeps scrubbing distinct from playback", () => {
     expect(
-      [0, 1.7, 2.05, 2.45, 3.25, 9.15, 10.15, 12].map(previewTimeAt),
+      [0, 2.2, 3.05, 3.8, 5.15, 12.5, 13.5, 15].map(previewTimeAt),
     ).toEqual([0.65, 3.6, 4.4, 4, 4.4, 4.4, 5.4, 0.65]);
   });
   it("resets all geometry under the fade and ends on the opening frame", () => {
-    expect(phaseTime(11.64)).toBe(11.64);
-    expect(phaseTime(11.65)).toBe(0);
-    expect(opacityAt(11.6)).toBe(0);
-    expect(opacityAt(11.65)).toBe(0);
-    expect(opacityAt(11.4)).toBeGreaterThan(0);
-    expect(opacityAt(11.8)).toBeLessThan(1);
+    expect(phaseTime(14.64)).toBe(14.64);
+    expect(phaseTime(14.65)).toBe(0);
+    expect(opacityAt(14.25)).toBe(1);
+    expect(opacityAt(14.65)).toBe(0);
+    expect(opacityAt(14.4)).toBeGreaterThan(0);
+    expect(opacityAt(14.8)).toBeLessThan(1);
     expect(opacityAt(0)).toBe(1);
-    expect(opacityAt(12)).toBe(1);
-    expect(pointerAt(12)).toEqual(pointerAt(0));
-    expect(cameraAt(12)).toEqual(cameraAt(0));
+    expect(opacityAt(15)).toBe(1);
+    expect(pointerAt(15)).toEqual(pointerAt(0));
+    expect(cameraAt(15)).toEqual(cameraAt(0));
   });
-  it.each([0, 5, 12])("clamps gesture progress at %s", (t) =>
+  it.each([0, 5, 15])("clamps gesture progress at %s", (t) =>
     expect(progress(t, 4, 6)).toBe(t === 5 ? 0.5 : 0),
   );
   it("traverses the entire cursor/camera route with finite geometry and bounded native press response", () => {
-    for (let t = -0.1; t <= 12.1; t += 0.025) {
+    for (let t = -0.1; t <= 15.1; t += 0.025) {
       const cursor = pointerAt(t),
         camera = cameraAt(t);
       expect(cursor.x).toBeGreaterThan(0);
@@ -86,7 +86,7 @@ describe("Studio demonstration clock", () => {
       expect(cursor.y).toBeLessThan(800);
       expect(Number.isFinite(cursor.scale)).toBe(true);
       expect(camera.scale).toBeGreaterThanOrEqual(1);
-      expect(camera.scale).toBeLessThanOrEqual(1.6);
+      expect(camera.scale).toBeLessThanOrEqual(1.22);
       expect(Number.isFinite(camera.x + camera.y)).toBe(true);
       const origin =
         cursor.role === "resizewesteast"
@@ -102,17 +102,31 @@ describe("Studio demonstration clock", () => {
       expect(top + 54 * cursor.scale * camera.scale).toBeLessThanOrEqual(800);
     }
     expect(pointerAt(1.2).role).toBe("resizewesteast");
-    expect(pointerAt(1.8).role).toBe("default");
+    expect(pointerAt(2.4).role).toBe("default");
     for (const click of CLICKS) {
       expect(pointerAt(click + 0.05).scale).toBeGreaterThan(0.4);
       expect(pointerAt(click + 0.05).scale).toBeLessThan(1.6);
     }
   });
-  it("is one paused, exactly twelve-second reversible timeline", () => {
+  it("holds each focus view and limits camera travel so the controls remain readable", () => {
+    expect(cameraAt(2.2)).toEqual(cameraAt(0));
+    expect(cameraAt(3.1)).toEqual(cameraAt(5.25));
+    expect(cameraAt(6.2)).toEqual(cameraAt(11.95));
+    expect(cameraAt(12.85)).toEqual(cameraAt(14.2));
+    for (let t = 0; t < 14.2; t += 1 / 60) {
+      const before = cameraAt(t),
+        after = cameraAt(t + 1 / 60);
+      expect(Math.abs(after.scale - before.scale) * 60).toBeLessThan(0.4);
+      expect(
+        Math.hypot(after.x - before.x, after.y - before.y) * 60,
+      ).toBeLessThan(250);
+    }
+  });
+  it("is one paused, exactly fifteen-second reversible timeline", () => {
     const pose = { time: 0 },
       timeline = createMotion(pose);
     expect(timeline.paused()).toBe(true);
-    expect(timeline.duration()).toBe(12);
+    expect(timeline.duration()).toBe(15);
     timeline.seek(8, false);
     expect(pose.time).toBe(8);
     timeline.seek(2, false);

@@ -64,7 +64,7 @@ try {
       };
     });
     if (
-      state.duration !== 12 ||
+      state.duration !== 15 ||
       state.width !== 1280 ||
       state.height !== 800 ||
       !state.loop ||

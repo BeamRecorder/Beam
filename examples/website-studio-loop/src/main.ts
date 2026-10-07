@@ -27,8 +27,8 @@ const timeline = createMotion(pose),
   host = window as unknown as DemoWindow;
 host.__timelines = { ...host.__timelines, "studio-overview": timeline };
 host.studioDocument = {
-  composition: compositionAt(11),
-  snapshot: snapshotAt(11),
+  composition: compositionAt(13.5),
+  snapshot: snapshotAt(13.5),
 };
 const settle = async () => {
   // CSS reveals are frozen by the build; Vue's flush is the render barrier.

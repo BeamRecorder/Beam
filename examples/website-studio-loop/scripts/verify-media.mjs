@@ -37,8 +37,8 @@ for (const theme of ["light", "dark"]) {
   assert.equal(stream.width, 1280);
   assert.equal(stream.height, 800);
   assert.equal(stream.r_frame_rate, "60/1");
-  assert.equal(Number(stream.nb_read_frames), 720);
-  assert.equal(Number(video.format.duration), 12);
+  assert.equal(Number(stream.nb_read_frames), 900);
+  assert.equal(Number(video.format.duration), 15);
   assert.ok(statSync(path).size < 4000000, "Website video size budget");
   const posterPath = resolve(
     website,
@@ -50,6 +50,6 @@ for (const theme of ["light", "dark"]) {
   assert.equal(poster.height, 800);
   assert.ok(statSync(posterPath).size < 200000, "Website poster size budget");
   console.log(
-    `${theme}: VP9, 720 frames, 12 seconds, 1280 × 800 / 60 fps, no audio; WebP poster verified.`,
+    `${theme}: VP9, 900 frames, 15 seconds, 1280 × 800 / 60 fps, no audio; WebP poster verified.`,
   );
 }

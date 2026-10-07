@@ -9,11 +9,11 @@ for (const theme of ["light", "dark"]) {
     "npx",
     [
       "--yes",
-      "hyperframes@0.8.138",
+      "hyperframes@0.8.140",
       "check",
       resolve(root, `dist/${theme}`),
       "--at",
-      "0,1.5,2.2,3.1,4.8,6.1,7.15,8.7,10.2,12",
+      "0,1.8,3.2,4.6,5.3,7.1,9.1,10.4,12.1,13.6,15",
       "--json",
     ],
     { cwd: root, encoding: "utf8", maxBuffer: 8 * 1024 * 1024 },

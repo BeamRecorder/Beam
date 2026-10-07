@@ -15,7 +15,7 @@ import {
   OCEAN,
   selectedScreen,
 } from "./scene-model";
-import { modeAt, phaseTime } from "./motion";
+import { BEATS, modeAt, phaseTime } from "./motion";
 import type { Pose } from "./demo-types";
 import ventura from "../assets/ventura.webp";
 const props = defineProps<{ pose: Pose }>();
@@ -23,7 +23,9 @@ const mode = computed(() => modeAt(props.pose.time)),
   clip = computed(() => selectedScreen(props.pose.time));
 const caption = computed(() => captionAt(props.pose.time));
 const kind = computed(() =>
-  phaseTime(props.pose.time) < 8.0 ? ("image" as const) : ("gradient" as const),
+  phaseTime(props.pose.time) < BEATS.gradient
+    ? ("image" as const)
+    : ("gradient" as const),
 );
 const title = computed(() =>
   mode.value === "caption"
@@ -68,7 +70,7 @@ const title = computed(() =>
               content-layout="custom"
               :style="{ height: '82px', padding: '4px' }"
               :variant="
-                phaseTime(pose.time) >= 8.35 && gradient.id === OCEAN.id
+                phaseTime(pose.time) >= BEATS.ocean && gradient.id === OCEAN.id
                   ? 'selected'
                   : 'secondary'
               "

@@ -73,7 +73,8 @@ try {
         const controls = [...document.querySelectorAll("button,input")]
           .filter((node) => node.offsetHeight > 0)
           .map((node) => node.getBoundingClientRect());
-        let controlEdges = 0;
+        let controlEdges = 0, playheadEdges = 0;
+        const playhead = document.querySelector(".playhead-head").getBoundingClientRect();
         for (let i = 0; i < pixels[0].length; i += 4) {
           let delta = 0;
           for (let c = 0; c < 4; c++)
@@ -115,6 +116,14 @@ try {
             if (++controlEdges > 64) return false;
             continue;
           }
+          // Measured right edge of the native playhead tip: 13 pixels, maximum delta 27.
+          if (
+            Math.abs(x - playhead.right) <= 2 &&
+            y >= playhead.top - 1 && y <= playhead.bottom + 1 && delta <= 32
+          ) {
+            if (++playheadEdges > 16) return false;
+            continue;
+          }
           if (delta > 8 || ++changed > 64) return false;
         }
         return true;
@@ -135,17 +144,17 @@ try {
       JSON.stringify(await page.evaluate(() => window.studioDocument), null, 2),
     );
     for (const [ms, selector] of [
-      [1050, ".trim-handle.end"],
-      [2050, ".toolbar-split-btn"],
-      [3200, ".gap-action button"],
-      [4050, ".add-menu button"],
-      [4350, ".caption-clip-panel input"],
-      [5500, '[data-clip-section="shadow"] .accordion-trigger'],
-      [5900, '[data-clip-section="shadow"] input[aria-label="Color"]'],
-      [6800, 'input[aria-label="Width"]'],
-      [8000, "button.active"],
-      [8340, 'button[aria-label="Ocean"]'],
-      [9150, ".play-pause-btn"],
+      [1300, ".trim-handle.end"],
+      [3050, ".toolbar-split-btn"],
+      [5100, ".gap-action button"],
+      [5950, ".add-menu button"],
+      [6450, ".caption-clip-panel input"],
+      [8400, '[data-clip-section="shadow"] .accordion-trigger'],
+      [8900, '[data-clip-section="shadow"] input[aria-label="Color"]'],
+      [9950, 'input[aria-label="Width"]'],
+      [11350, "button.active"],
+      [11740, 'button[aria-label="Ocean"]'],
+      [12500, ".play-pause-btn"],
     ]) {
       await seek(ms);
       const hit = await page.evaluate((selector) => {
@@ -166,10 +175,10 @@ try {
     }
     const samples = [];
     for (const ms of [
-      0, 1500, 2200, 2500, 3100, 3400, 4800, 6100, 7150, 8700, 10200, 12000,
+      0, 1800, 3200, 3950, 4700, 5400, 7100, 9100, 10400, 12100, 13600, 15000,
     ]) {
       await seek(ms);
-      if (ms === 10200 && theme === "light") {
+      if (ms === 13600 && theme === "light") {
         const preview = await page.$eval(
           ".preview-surface canvas",
           (canvas) => canvas.toDataURL("image/png").split(",")[1],
@@ -222,7 +231,7 @@ try {
         resolve(output, `layout-${ms}.json`),
         JSON.stringify(state, null, 2),
       );
-      await seek(12000);
+      await seek(15000);
       await seek(0);
       await seek(ms);
       const reversed = await page.screenshot();
@@ -247,11 +256,11 @@ try {
     // HyperFrames' GSAP seek must settle the same native UI/media as Beam's render adapter.
     await page.evaluate(async () => {
       const pending = [];
-      window.__timelines["studio-overview"].seek(6.1);
+      window.__timelines["studio-overview"].seek(9.1);
       window.dispatchEvent(
         new CustomEvent("hf-seek", {
           detail: {
-            time: 6.1,
+            time: 9.1,
             waitUntil: (work) => pending.push(work),
           },
         }),
@@ -261,10 +270,10 @@ try {
       await Promise.all(pending);
     });
     const bridged = await page.screenshot();
-    await seek(6100);
+    await seek(9100);
     if (!(await samePixels(bridged, await page.screenshot())))
       throw new Error("HyperFrames render barrier diverged: " + theme);
-    await seek(12000);
+    await seek(15000);
     if (!(await samePixels(first, await page.screenshot())))
       throw new Error("Visible loop seam: " + theme);
     results.push({

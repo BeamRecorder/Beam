@@ -10,7 +10,7 @@ for (const theme of ["light", "dark"]) {
   const html = `<!doctype html>
 <html lang="en" class="${theme === "dark" ? "dark" : ""}" data-demo-theme="${theme}">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=1600, height=1000"><title>Beam · Studio overview</title><link rel="icon" href="data:,"></head>
-<body><div id="root" data-composition-id="studio-overview" data-start="0" data-duration="12" data-width="1600" data-height="1000"><section id="app" class="clip" data-start="0" data-duration="12" data-track-index="0"></section></div><script type="module" src="./src/main.ts"></script></body></html>`;
+<body><div id="root" data-composition-id="studio-overview" data-start="0" data-duration="15" data-width="1600" data-height="1000"><section id="app" class="clip" data-start="0" data-duration="15" data-track-index="0"></section></div><script type="module" src="./src/main.ts"></script></body></html>`;
   const path = resolve(root, `entry-${theme}.html`);
   await writeFile(path, html);
   entries.push(path);
@@ -83,10 +83,10 @@ for (const theme of ["light", "dark"]) {
     resolve(destination, "index.motion.json"),
     JSON.stringify(
       {
-        duration: 12,
+        duration: 15,
         assertions: [
           { kind: "staysInFrame", selector: ".demo-cursor" },
-          { kind: "keepsMoving", withinSelector: ".world", maxStaticSec: 1.5 },
+          { kind: "keepsMoving", withinSelector: ".world", maxStaticSec: 2 },
         ],
       },
       null,

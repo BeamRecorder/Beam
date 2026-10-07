@@ -19,7 +19,7 @@ writeFileSync(
       entry: `../dist/${theme}/index.html`,
       width: 1600,
       height: 1000,
-      duration: 12,
+      duration: 15,
       fps: 60,
       format: "mp4",
       preset: "high",
@@ -46,4 +46,4 @@ const result = spawnSync(
 );
 if (result.status !== 0) throw new Error("Beam motion export failed.");
 writeFileSync(resolve(root, `.beam/${name}-diagnostics.json`), result.stdout);
-console.log(`Rendered ${name}: 720 frames, 1600 × 1000, 60 fps.`);
+console.log(`Rendered ${name}: 900 frames, 1600 × 1000, 60 fps.`);

@@ -12,7 +12,7 @@ import type {
   TimelineCanvasItem,
 } from "../../../packages/runtime/src/timeline/timeline-canvas-types";
 import { selectedScreen, stateAt, TRACK_WIDTH, zoomsAt } from "./scene-model";
-import { phaseTime, stageAt } from "./motion";
+import { BEATS, phaseTime, stageAt } from "./motion";
 import { decodeVideo } from "./video";
 import type { Pose } from "./demo-types";
 import screenUrl from "../assets/screen-recording.mp4";
@@ -120,7 +120,9 @@ function paint() {
   });
 }
 const trim = computed(
-  () => phaseTime(props.pose.time) >= 0.8 && phaseTime(props.pose.time) < 1.75,
+  () =>
+    phaseTime(props.pose.time) >= 0.85 &&
+    phaseTime(props.pose.time) < BEATS.trimEnd + 0.05,
 );
 const grip = computed(() => ({
   width: `${(screenClips.value[0]!.timelineDurationMs / 12000) * TRACK_WIDTH}px`,
@@ -143,12 +145,15 @@ defineExpose({ ready, paint });
       :is-playing="state.playing"
       :zoom-level="100"
       :can-split="true"
-      :can-undo="phaseTime(pose.time) > 1.7"
+      :can-undo="phaseTime(pose.time) > BEATS.trimEnd"
       :can-redo="false"
       :is-snapping-enabled="true"
     />
     <div
-      v-if="phaseTime(pose.time) >= 2.78 && phaseTime(pose.time) < 3.08"
+      v-if="
+        phaseTime(pose.time) >= BEATS.delete - 0.1 &&
+        phaseTime(pose.time) < BEATS.delete + 0.45
+      "
       class="delete-cue"
       aria-hidden="true"
     >

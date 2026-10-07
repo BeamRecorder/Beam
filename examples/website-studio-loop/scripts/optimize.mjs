@@ -45,7 +45,7 @@ for (const theme of ["light", "dark"]) {
     "-i",
     output,
     "-ss",
-    "8.9",
+    "13.4",
     "-frames:v",
     "1",
     "-c:v",
@@ -59,13 +59,14 @@ for (const theme of ["light", "dark"]) {
 writeFileSync(
   resolve(media, "editing-studio.NOTICE.txt"),
   `Beam — Studio overview
-12 seconds, 1280 × 800, 60 fps, intentionally silent VP9. Light/dark variants.
+15 seconds, 1280 × 800, 60 fps, intentionally silent VP9. Light/dark variants.
 1600 × 1000 MP4 masters remain in the editable source project.
 Native EditorTitlebar, TimelineToolbar, TimelineAddMenu, TimelineTrimHandle, TimelineGapButtons,
 ClipPropertiesPanel, CaptionClipPanel, CanvasBackgroundTabs, and native paintTimelineCanvas.
 Actual Quiet Aurora 4 recording, original cursor telemetry and Beam demo webcam fixture.
 Native renderCompositionFrame, screen/webcam layout, caption styling, shadow and 2D camera evaluator.
 Offline Beam CLI authoring trims, splits and cuts an independent project; original source unchanged.
+Two restrained camera views hold through edits; the final recording zoom enters progressively.
 Illustrated editing gestures, not measured latency. No invented audio waveform or transcript.
 Tahoe/Ventura backgrounds from Beam wallpaper catalog; Ocean gradient from Beam background catalog.
 Native macOS cursor sprites. Hanken Grotesk: SIL OFL. Webcam fixture: existing Beam CC0 media.

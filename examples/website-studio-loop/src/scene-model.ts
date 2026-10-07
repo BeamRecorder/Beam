@@ -18,7 +18,14 @@ import splitAgain from "../assets/split-again.json";
 import deleted from "../assets/deleted.json";
 import cut from "../assets/cut.json";
 import frozen from "../assets/snapshot.json";
-import { modeAt, phaseTime, previewTimeAt, progress, stageAt } from "./motion";
+import {
+  BEATS,
+  modeAt,
+  phaseTime,
+  previewTimeAt,
+  progress,
+  stageAt,
+} from "./motion";
 export const CANVAS = { width: 1920, height: 1080 };
 export const TRACK_WIDTH = 1088,
   TRACK_LEFT = 144;
@@ -39,7 +46,10 @@ const fixtures = {
 Object.values(fixtures).forEach(validateComposition);
 export function captionAt(time: number): CaptionClip {
   const t = phaseTime(time),
-    text = TEXT.slice(0, Math.round(TEXT.length * progress(t, 4.3, 5.0)));
+    text = TEXT.slice(
+      0,
+      Math.round(TEXT.length * progress(t, BEATS.typeStart, BEATS.typeEnd)),
+    );
   return {
     id: "studio-caption",
     name: "Every detail, in focus.",
@@ -80,7 +90,10 @@ export function captionAt(time: number): CaptionClip {
 export function compositionAt(time: number): ClipComposition {
   const t = phaseTime(time),
     base = structuredClone(fixtures[stageAt(t)]);
-  const trim = Math.max(0, Math.min(1, (t - 1.05) / 0.65));
+  const trim = Math.max(
+    0,
+    Math.min(1, (t - BEATS.trimStart) / (BEATS.trimEnd - BEATS.trimStart)),
+  );
   if (stageAt(t) === "initial")
     for (const clip of base.clips) {
       const end = clip.timelineStartMs + clip.timelineDurationMs;
@@ -89,7 +102,7 @@ export function compositionAt(time: number): ClipComposition {
         clip.sourceDurationMs = clip.timelineDurationMs;
       }
     }
-  const size = 1 - 0.14 * progress(t, 6.8, 7.25);
+  const size = 1 - 0.14 * progress(t, BEATS.resizeStart, BEATS.resizeEnd);
   for (const clip of base.clips) {
     if (clip.kind === "screen") {
       clip.name = "Quiet Aurora 4";
@@ -101,14 +114,14 @@ export function compositionAt(time: number): ClipComposition {
       };
       clip.appearance = {
         ...clip.appearance,
-        shadowColor: t >= 5.9 ? "#6a46e6" : "#17171d",
+        shadowColor: t >= BEATS.shadowColor ? "#6a46e6" : "#17171d",
         shadowSize: "lg",
         shadowBlur: 55,
       };
     }
     if (clip.kind === "webcam") clip.name = "Camera";
   }
-  if (t >= 4.05) base.clips.push(captionAt(t));
+  if (t >= BEATS.caption) base.clips.push(captionAt(t));
   return base;
 }
 export function stateAt(time: number): StudioState {
@@ -116,7 +129,7 @@ export function stateAt(time: number): StudioState {
     composition: compositionAt(time),
     mode: modeAt(time),
     previewTime: previewTimeAt(time),
-    playing: phaseTime(time) >= 9.15,
+    playing: phaseTime(time) >= BEATS.play,
   };
 }
 export function selectedScreen(time: number): SelectedClipProperties {
@@ -144,13 +157,13 @@ export function selectedScreen(time: number): SelectedClipProperties {
   };
 }
 export function zoomsAt(time: number) {
-  return phaseTime(time) < 9.15
+  return phaseTime(time) < BEATS.play
     ? []
     : [
         {
-          ...createManualZoom("studio-focus", 3500, 6600),
+          ...createManualZoom("studio-focus", 4800, 7200),
           depth: 2 as const,
-          focus: { cx: 0.3, cy: 0.38 },
+          focus: { cx: 0.38, cy: 0.42 },
           mode: "manual" as const,
           projection: "2d" as const,
         },
@@ -162,7 +175,7 @@ export function snapshotAt(time: number): CompositionSnapshot {
   snapshot.composition = compositionAt(t);
   snapshot.zooms = zoomsAt(t);
   snapshot.canvas.showBackground = true;
-  if (t >= 8.35)
+  if (t >= BEATS.ocean)
     snapshot.background = { kind: "gradient", gradient: OCEAN.gradient };
   return snapshot;
 }
