@@ -45,6 +45,9 @@ function registerCaptureWindowIpc({
   });
   applicationIpc.on('screen-region:marker-ready', (event) => screenRegionOverlay.markMarkerReady(event.sender));
   applicationIpc.on('screen-region:ready', (event) => screenRegionOverlay.markRendererReady(event.sender));
+  applicationIpc.on('screen-region:preview-ready', (event, id, success) =>
+    screenRegionOverlay.markPreviewReady(event.sender, id, success),
+  );
   applicationIpc.on('screen-region:show', (_event, options) => screenRegionOverlay.show(options));
   applicationIpc.on('screen-region:hide', () => screenRegionOverlay.hide());
   applicationIpc.on('screen-region:confirm', (event, region, recording) => {

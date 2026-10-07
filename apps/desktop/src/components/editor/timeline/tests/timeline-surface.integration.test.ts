@@ -12,7 +12,8 @@ import { chromiumSettings } from '../../../../../../cli/src/chromium-settings';
 import { colorClip } from '@beam/engine/scene/tests/scene-fixtures';
 import type { ClipComposition } from '@beam/engine';
 import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '@beam/engine/shared/shape-layer-style';
-import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import { createElementText } from '@beam/engine/shared/element-text';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 
 const shape = {
@@ -35,6 +36,33 @@ const zoom: ZoomElement = {
   depth: 2,
   mode: 'manual' as const,
 };
+const generatedClips: ClipComposition['clips'] = [
+  colorClip('color'),
+  shape,
+  { ...shape, id: 'text', trackId: 'text', family: 'text', text: createElementText('Hello Beam') },
+  {
+    ...shape,
+    id: 'drawing',
+    trackId: 'drawing',
+    family: 'drawing',
+    drawing: {
+      points: [
+        { x: 0, y: 0 },
+        { x: 1, y: 1 },
+      ],
+      smoothing: 65,
+      strokeWidth: 8,
+    },
+  },
+  {
+    ...colorClip('image'),
+    kind: 'image',
+    assetId: 'image',
+    appearance: createDefaultClipAppearance('image'),
+    isMirrored: false,
+    isMirroredY: false,
+  },
+];
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real Chromium', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temporary: string;
@@ -95,12 +123,23 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
     page = await browser.newPage();
     await page.setViewport({ width: 1200, height: 600 });
     await page.goto(`http://127.0.0.1:${address.port}/beam-timeline-test`);
-    // Provide only preferences before importing the actual desktop timeline module graph.
+    // Replace the Electron boundary; workspace, properties, preview and timeline remain real.
     await page.evaluate(() =>
       Object.defineProperty(window, 'capture', {
         value: {
           getPreferences: async () => ({ extras: {}, accessibility: {} }),
           onPreferencesChanged: () => () => {},
+          listBackgroundLibrary: async () => [],
+          onBackgroundLibraryChanged: () => () => {},
+          listCursorPacks: async () => [],
+          onCursorPacksChanged: () => () => {},
+          onEditorPresetsChanged: () => () => {},
+          onAuthoringRequest: () => () => {},
+          registerAuthoringDocument: async () => {},
+          whisperModels: async () => [],
+          onWhisperProgress: () => () => {},
+          listImportedFonts: async () => [],
+          onFontLibraryChanged: () => () => {},
         },
       }),
     );
@@ -114,6 +153,71 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
     await server?.close();
     if (temporary) await rm(temporary, { recursive: true, force: true });
   });
+  it.each(generatedClips)(
+    'keeps $id selectable after pointer movement with properties and preview mounted',
+    async (clip) => {
+      const composition: ClipComposition = {
+        schemaVersion: 14,
+        assets:
+          clip.kind === 'image'
+            ? [
+                {
+                  id: 'image',
+                  kind: 'image',
+                  name: 'Image',
+                  fileName: 'image.svg',
+                  durationMs: 0,
+                  width: 64,
+                  height: 64,
+                  origin: 'project',
+                  src: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="orange"/></svg>')}`,
+                },
+              ]
+            : [],
+        keyboardCaptionSessions: [],
+        clips: [colorClip('other'), { ...clip, order: 1 }],
+      };
+      const errors: string[] = [];
+      const collect = (error: unknown) => errors.push(error instanceof Error ? error.message : String(error));
+      page.on('pageerror', collect);
+      try {
+        await page.evaluate(async (composition) => {
+          const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+          const host = (await load(
+            '/apps/desktop/src/components/editor/timeline/tests/workspace-browser-host.ts',
+          )) as typeof import('./workspace-browser-host');
+          await host.mountWorkspace(composition);
+        }, composition);
+        for (const id of [clip.id, 'other', clip.id]) {
+          await page.locator(`[data-timeline-clip-id="${id}"]`).click();
+          const bounds = (await page.$(`[data-timeline-clip-id="${id}"]`))!;
+          const rect = (await bounds.boundingBox())!;
+          await page.mouse.move(rect.x + rect.width / 2, rect.y + rect.height / 2);
+          await page.mouse.down();
+          // A click can drift by one pixel before release, below the drag threshold.
+          for (const drift of [1, 8]) {
+            await page.mouse.move(rect.x + rect.width / 2 + drift, rect.y + rect.height / 2);
+            await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+          }
+          await page.mouse.up();
+          expect(
+            await page.$eval(`[data-timeline-clip-id="${id}"]`, (button) => button.classList.contains('selected')),
+          ).toBe(true);
+        }
+      } finally {
+        page.off('pageerror', collect);
+        await page.evaluate(async () => {
+          const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+          const host = (await load(
+            '/apps/desktop/src/components/editor/timeline/tests/workspace-browser-host.ts',
+          )) as typeof import('./workspace-browser-host');
+          host.unmountWorkspace();
+        });
+      }
+      expect(errors).toEqual([]);
+    },
+    15000,
+  );
   it.each([false, true])(
     'reserves AI icon space before the painted caption label (locked: %s)',
     async (locked) => {

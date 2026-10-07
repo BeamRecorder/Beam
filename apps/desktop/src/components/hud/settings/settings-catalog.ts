@@ -58,6 +58,7 @@ export const settingsCategories = (development: boolean) =>
 
 const definitions = [
   ['launch-at-startup', 'general', 'HudPreferences.launchAtStartup', 'HudPreferences.launchAtStartupDescription'],
+  ['minimize-to-tray', 'general', 'HudPreferences.minimizeToTray', 'HudPreferences.minimizeToTrayDescription'],
   ['always-on-top', 'recording', 'HudPreferences.alwaysOnTop', 'HudPreferences.recorderAlwaysOnTopDesc'],
   ['language', 'general', 'HudPreferences.language', 'HudPreferences.chooseLanguage'],
   [

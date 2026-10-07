@@ -643,6 +643,8 @@
     "launchAtStartup": "登录时启动 Beam",
     "launchAtStartupDescription": "登录时自动打开 Beam。",
     "launchAtStartupInstalled": "安装 Beam 后可用。",
+    "minimizeToTray": "关闭时最小化到系统托盘",
+    "minimizeToTrayDescription": "启用后，关闭 Beam 窗口时应用会继续在系统托盘中运行。关闭此选项后，Beam 将完全退出，需要重新启动才能使用。",
     "categoryRecording": "录制",
     "categoryDeveloper": "开发者",
     "developerDescription": "用于检查 Beam 和试验 Beamy 的工具。",

@@ -643,6 +643,8 @@
     "launchAtStartup": "로그인 시 Beam 실행",
     "launchAtStartupDescription": "로그인할 때 Beam을 자동으로 엽니다.",
     "launchAtStartupInstalled": "Beam을 설치한 후 사용할 수 있습니다.",
+    "minimizeToTray": "닫을 때 시스템 트레이로 최소화",
+    "minimizeToTrayDescription": "활성화하면 Beam 창을 닫아도 시스템 트레이에서 계속 실행됩니다. 비활성화하면 Beam이 완전히 종료되므로 다시 실행해야 합니다.",
     "categoryRecording": "녹화",
     "categoryDeveloper": "개발자",
     "developerDescription": "Beam을 살펴보고 Beamy를 실험하는 도구입니다.",

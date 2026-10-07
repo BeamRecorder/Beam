@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { capture } = vi.hoisted(() => ({
   capture: {
     notifyScreenRegionReady: vi.fn(),
+    notifyScreenRegionPreviewReady: vi.fn(),
     onScreenRegionConfigure: vi.fn(),
     onPreferenceShortcut: vi.fn((_listener: (id: string) => void) => vi.fn()),
     confirmScreenRegion: vi.fn(),
@@ -38,6 +39,49 @@ const Select = {
 };
 
 describe('ScreenRegionOverlayApp', () => {
+  it('paints a prepared Windows desktop only while selecting and replaces it for the next selection', async () => {
+    let configure!: (value: object) => void;
+    capture.onScreenRegionConfigure.mockImplementation((listener) => {
+      configure = listener;
+      return vi.fn();
+    });
+    const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button, Select } } });
+    const options = {
+      mode: 'select',
+      bounds: { x: -1000, y: 0, width: 1000, height: 500 },
+      preview: 'data:image/png;base64,first',
+      previewId: 1,
+    };
+    configure(options);
+    await wrapper.vm.$nextTick();
+    const first = wrapper.get('.region-desktop-preview').element;
+    expect(wrapper.get('.region-desktop-preview').attributes('src')).toBe(options.preview);
+    configure({ ...options, previewId: 2, preview: 'data:image/png;base64,next' });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get('.region-desktop-preview').element).not.toBe(first);
+    expect(wrapper.get('.region-desktop-preview').attributes('src')).toContain('next');
+    configure({ ...options, mode: 'record' });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('.region-desktop-preview').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it.each([undefined, 'data:image/png;base64,magnifier'])(
+    'keeps the live desktop transparent without a Windows preview ID (%s)',
+    async (preview) => {
+      let configure!: (value: object) => void;
+      capture.onScreenRegionConfigure.mockImplementation((listener) => {
+        configure = listener;
+        return vi.fn();
+      });
+      const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button, Select } } });
+      configure({ mode: 'select', bounds: { x: 0, y: 0, width: 1000, height: 500 }, preview });
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find('.region-desktop-preview').exists()).toBe(false);
+      expect(capture.notifyScreenRegionPreviewReady).not.toHaveBeenCalled();
+      wrapper.unmount();
+    },
+  );
   it('draws a Quick Snip region with only Start, ignores saved presets, and confirms with Enter', async () => {
     capture.getPreferences.mockResolvedValue({ extras: { screenRegionPreset: '800x600' } });
     let configure!: (value: { mode: 'select'; drawOnly: boolean; bounds: { width: number; height: number } }) => void;

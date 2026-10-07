@@ -11,6 +11,7 @@ export interface PreferenceShortcut {
 export interface PreferenceSettings {
   alwaysOnTop?: boolean;
   launchAtStartup?: boolean;
+  minimizeToTray?: boolean;
   schemaVersion: 3;
   theme: 'light' | 'dark' | 'system';
   appearance?: AppearanceSettings;

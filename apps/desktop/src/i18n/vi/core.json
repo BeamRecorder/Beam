@@ -643,6 +643,8 @@
     "launchAtStartup": "Khởi chạy Beam khi đăng nhập",
     "launchAtStartupDescription": "Tự động mở Beam khi bạn đăng nhập.",
     "launchAtStartupInstalled": "Khả dụng sau khi cài đặt Beam.",
+    "minimizeToTray": "Thu nhỏ xuống khay hệ thống khi đóng",
+    "minimizeToTrayDescription": "Khi bật, Beam vẫn chạy trong khay hệ thống sau khi đóng cửa sổ. Khi tắt, Beam sẽ thoát hoàn toàn và bạn cần khởi chạy lại để sử dụng.",
     "categoryRecording": "Ghi hình",
     "categoryDeveloper": "Nhà phát triển",
     "developerDescription": "Công cụ để kiểm tra Beam và thử nghiệm với Beamy.",

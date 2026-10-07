@@ -7,6 +7,9 @@ export function useHudInteractivity(enabled: () => boolean) {
   let lastInteractive: boolean | null = null;
   let pointerInside = false;
   let lastMouseEvent: MouseEvent | null = null;
+  const reset = () => {
+    lastInteractive = null;
+  };
   const apply = (interactive: boolean) => {
     if (interactive === lastInteractive) return;
     lastInteractive = interactive;
@@ -38,15 +41,17 @@ export function useHudInteractivity(enabled: () => boolean) {
   onMounted(() => {
     window.addEventListener('mousemove', move, { passive: true });
     window.addEventListener('mouseleave', leave, { passive: true });
+    window.addEventListener('focus', reset);
+    document.addEventListener('visibilitychange', reset);
   });
   onBeforeUnmount(() => {
     window.removeEventListener('mousemove', move);
     window.removeEventListener('mouseleave', leave);
+    window.removeEventListener('focus', reset);
+    document.removeEventListener('visibilitychange', reset);
   });
   return {
     togglePopover,
-    reset: () => {
-      lastInteractive = null;
-    },
+    reset,
   };
 }

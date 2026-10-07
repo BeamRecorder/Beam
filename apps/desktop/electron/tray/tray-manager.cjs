@@ -178,6 +178,7 @@ function createTrayManager({
 
   return {
     init,
+    isAvailable: () => tray !== null && !tray.isDestroyed(),
     destroy,
     showHud,
     updateMenu,

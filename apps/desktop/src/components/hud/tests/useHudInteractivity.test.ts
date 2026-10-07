@@ -32,6 +32,26 @@ afterEach(() => {
   wrapper = undefined;
 });
 describe('HUD native input policy', () => {
+  it.each(['focus', 'visibilitychange'])('resends pointer classification after native %s', (event) => {
+    create();
+    target = document.createElement('button');
+    move();
+    const surface = event === 'focus' ? window : document;
+    surface.dispatchEvent(new Event(event));
+    // Wait for a current hit test rather than applying the old pointer position.
+    expect(capture.setInteractive.mock.calls).toEqual([[true]]);
+    move();
+    move();
+    expect(capture.setInteractive.mock.calls).toEqual([[true], [true]]);
+    target = document.body;
+    move();
+    expect(capture.setInteractive).toHaveBeenLastCalledWith(false);
+    wrapper!.unmount();
+    wrapper = undefined;
+    surface.dispatchEvent(new Event(event));
+    move();
+    expect(capture.setInteractive).toHaveBeenCalledTimes(3);
+  });
   it('classifies controls and transparent pixels without repeating native calls', () => {
     create();
     target = document.createElement('button');

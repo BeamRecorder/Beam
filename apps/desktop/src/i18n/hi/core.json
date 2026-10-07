@@ -643,6 +643,8 @@
     "launchAtStartup": "स्टार्टअप पर Beam शुरू करें",
     "launchAtStartupDescription": "साइन इन करते समय Beam अपने आप खोलें।",
     "launchAtStartupInstalled": "Beam इंस्टॉल करने के बाद उपलब्ध है।",
+    "minimizeToTray": "बंद करने पर सिस्टम ट्रे में छोटा करें",
+    "minimizeToTrayDescription": "चालू होने पर, Beam की विंडो बंद करने के बाद भी वह सिस्टम ट्रे में चलता रहेगा। बंद होने पर, Beam पूरी तरह बंद हो जाएगा और आपको उसे फिर से शुरू करना होगा।",
     "categoryRecording": "रिकॉर्डिंग",
     "categoryDeveloper": "डेवलपर",
     "developerDescription": "Beam की जाँच और Beamy के साथ प्रयोग करने के उपकरण।",

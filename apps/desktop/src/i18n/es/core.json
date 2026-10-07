@@ -643,6 +643,8 @@
     "launchAtStartup": "Iniciar Beam al arrancar",
     "launchAtStartupDescription": "Abrir Beam automáticamente al iniciar sesión.",
     "launchAtStartupInstalled": "Disponible después de instalar Beam.",
+    "minimizeToTray": "Minimizar a la bandeja al cerrar",
+    "minimizeToTrayDescription": "Si se activa, al cerrar Beam seguirá ejecutándose en la bandeja del sistema. Si se desactiva, Beam se cerrará por completo y tendrás que volver a iniciarlo.",
     "categoryRecording": "Grabación",
     "categoryDeveloper": "Desarrollador",
     "developerDescription": "Herramientas para inspeccionar Beam y experimentar con Beamy.",

@@ -1,21 +1,9 @@
 const { BrowserWindow } = require('electron');
-const os = require('node:os');
 const { isCaptureCancellation } = require('./capture/capture-cancellation.cjs');
 const { createRegionRecordingMarker } = require('./region-recording-marker.cjs');
 const { regionRecordingSettings } = require('./region-selection-settings.cjs');
 const path = require('path');
 const { developmentRendererUrl } = require('./lifecycle/development-session.cjs');
-
-function supportsCaptureSafeRecordingOverlay(platform, release) {
-  if (platform !== 'win32') return true;
-  const build = Number.parseInt(String(release).split('.')[2] || '', 10);
-  // The marker is a transparent, display-sized window protected with
-  // WDA_EXCLUDEFROMCAPTURE. On Windows 10 that combination can be represented
-  // as a black protected surface in Windows Graphics Capture, which makes a
-  // region recording black. Keep the marker on Windows 11+, where transparent
-  // capture exclusion is reliable, and fail closed when the build is unknown.
-  return Number.isFinite(build) && build >= 22_000;
-}
 
 function finiteBounds(value) {
   if (!value || !['x', 'y', 'width', 'height'].every((key) => Number.isFinite(value[key])))
@@ -55,7 +43,6 @@ function createScreenRegionOverlayWindow({
   isPackaged,
   canAcceptWork = () => true,
   platform = process.platform,
-  platformRelease = os.release(),
   screen,
   selectionPreview,
 }) {
@@ -70,6 +57,8 @@ function createScreenRegionOverlayWindow({
   let rendererReady = false;
   let pending = null;
   let current = null;
+  let previewId = 0;
+  let previewReady = false;
   let regionChangeListener = null;
 
   const cancelPendingSelection = () => {
@@ -87,8 +76,9 @@ function createScreenRegionOverlayWindow({
     if (!window || window.isDestroyed() || !ready || !rendererReady) return;
     window.webContents.send('screen-region:configure', options);
   };
+  const presentationReady = () => ready && rendererReady && current && (!current.previewId || previewReady);
   const present = () => {
-    if (!window || window.isDestroyed() || !ready || !rendererReady || !current) return;
+    if (!window || window.isDestroyed() || !presentationReady()) return;
     if (current.mode === 'select') {
       clearTimeout(pending?.timer);
       window.show();
@@ -109,8 +99,10 @@ function createScreenRegionOverlayWindow({
       ...(platform === 'linux' ? { type: 'dock' } : {}),
       frame: false,
       thickFrame: false,
-      transparent: true,
-      backgroundColor: '#00000000',
+      // Windows selection paints the native desktop snapshot instead of
+      // depending on a display-sized transparent DWM surface.
+      transparent: platform !== 'win32',
+      backgroundColor: platform === 'win32' ? '#000000' : '#00000000',
       hasShadow: false,
       resizable: false,
       movable: false,
@@ -181,7 +173,13 @@ function createScreenRegionOverlayWindow({
   const configure = (options, interactive, parentWindow = null) => {
     const bounds = finiteBounds(options.bounds);
     const target = ensureWindow(bounds);
-    current = { ...options, bounds, mode: interactive ? 'select' : 'record' };
+    previewReady = false;
+    current = {
+      ...options,
+      bounds,
+      mode: interactive ? 'select' : 'record',
+      previewId: platform === 'win32' && interactive ? ++previewId : undefined,
+    };
     target.setParentWindow(
       interactive && platform === 'linux' && options.context === 'quick-snip' ? parentWindow : null,
     );
@@ -194,7 +192,7 @@ function createScreenRegionOverlayWindow({
   return {
     isSelecting: () => Boolean(pending),
     handleShortcut(id) {
-      if (id !== 'hud.startStopRecording' || !pending || !current || !ready || !rendererReady) return false;
+      if (id !== 'hud.startStopRecording' || !pending || !presentationReady()) return false;
       window.webContents.send('preferences:shortcut', id);
       return true;
     },
@@ -203,6 +201,31 @@ function createScreenRegionOverlayWindow({
       if (!window || window.isDestroyed() || window.webContents !== sender) return false;
       rendererReady = true;
       if (current) send(current);
+      present();
+      return true;
+    },
+    markPreviewReady(sender, id, success) {
+      if (
+        !window ||
+        window.isDestroyed() ||
+        window.webContents !== sender ||
+        !pending ||
+        !current?.previewId ||
+        current.previewId !== id ||
+        !Number.isSafeInteger(id) ||
+        typeof success !== 'boolean' ||
+        previewReady
+      )
+        return false;
+      if (!success) {
+        clearTimeout(pending.timer);
+        pending.reject(new Error('The desktop preview could not be displayed. Please try Region again.'));
+        pending = null;
+        current = null;
+        window.destroy();
+        return true;
+      }
+      previewReady = true;
       present();
       return true;
     },
@@ -220,12 +243,19 @@ function createScreenRegionOverlayWindow({
         const bounds = resolveSelectionBounds(options, platform, screen, parentWindow);
         ensureWindow(bounds);
         const preview =
-          (options.context !== 'quick-snip' || options.drawOnly === true) && selectionPreview
+          (platform === 'win32' || options.context !== 'quick-snip' || options.drawOnly === true) && selectionPreview
             ? await selectionPreview.prepare(bounds)
             : {};
         if (pending !== request) {
           await selectionPreview?.cancel();
           return await result;
+        }
+        if (
+          platform === 'win32' &&
+          (typeof preview.preview !== 'string' || !preview.preview.startsWith('data:image/png;base64,'))
+        ) {
+          await selectionPreview?.cancel();
+          throw new Error('A desktop preview is required for Windows region selection.');
         }
         configure(
           {
@@ -240,7 +270,7 @@ function createScreenRegionOverlayWindow({
           true,
           parentWindow,
         );
-        if (pending === request && (!ready || !rendererReady)) {
+        if (pending === request && !presentationReady()) {
           request.timer = setTimeout(() => {
             if (pending !== request) return;
             request.reject(new Error('Region selector did not become ready within 30 seconds.'));
@@ -272,7 +302,7 @@ function createScreenRegionOverlayWindow({
       return selection;
     },
     show(options) {
-      if (platform === 'linux' || !supportsCaptureSafeRecordingOverlay(platform, platformRelease)) {
+      if (platform === 'linux' || platform === 'win32') {
         current = null;
         if (window && !window.isDestroyed()) window.hide();
         const region = finiteRegion(options.region);
@@ -357,5 +387,4 @@ function createScreenRegionOverlayWindow({
 module.exports = {
   createScreenRegionOverlayWindow,
   resolveSelectionBounds,
-  supportsCaptureSafeRecordingOverlay,
 };

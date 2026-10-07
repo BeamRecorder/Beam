@@ -39,6 +39,10 @@ function createProjectEditorAccess(options) {
       clips: [],
     };
     const presentation = migratePresentation(current?.presentation);
+    // Rust creates recordings with zoom metadata only. No editor choices have
+    // been saved yet, so consume the same one-time defaults as UI-created projects.
+    const uninitializedRecording =
+      current?.schemaVersion === undefined && current?.composition === undefined && current?.presentation === undefined;
     const composition = repairLegacySessionMediaPaths(
       directory,
       legacyComposition.schemaVersion === compositionSchemaVersion
@@ -52,7 +56,7 @@ function createProjectEditorAccess(options) {
     );
     const editor = {
       schemaVersion: 3,
-      ...(current?.applyGlobalDefaults === true ? { applyGlobalDefaults: true } : {}),
+      ...(current?.applyGlobalDefaults === true || uninitializedRecording ? { applyGlobalDefaults: true } : {}),
       composition,
       zoom: current?.zoom
         ? zoomState(current.zoom)

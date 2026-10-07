@@ -3,6 +3,7 @@ const props = withDefaults(
   defineProps<{
     modelValue: boolean;
     disabled?: boolean;
+    busy?: boolean;
     label?: string;
     ariaLabel?: string;
     ariaDescribedby?: string;
@@ -18,7 +19,7 @@ const emit = defineEmits<{
 }>();
 
 const toggle = () => {
-  if (props.disabled) return;
+  if (props.disabled || props.busy) return;
   emit('update:modelValue', !props.modelValue);
 };
 </script>
@@ -31,7 +32,8 @@ const toggle = () => {
       :aria-checked="modelValue"
       :aria-label="ariaLabel || undefined"
       :aria-describedby="ariaDescribedby"
-      :disabled="disabled"
+      :aria-busy="busy || undefined"
+      :disabled="disabled || busy"
       class="switch-button"
       :class="{ 'is-checked': modelValue }"
     >

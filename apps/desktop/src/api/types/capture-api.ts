@@ -14,6 +14,7 @@ import type {
   ScreenRegion,
   ScreenRegionBounds,
   ScreenRegionOverlayOptions,
+  ScreenRegionOverlayConfiguration,
   ScreenRegionSelectionOptions,
   ScreenRegionSelectionResult,
 } from './screen-region';
@@ -160,13 +161,12 @@ export interface DesktopCaptureApi
   selectScreenRegion(options: ScreenRegionSelectionOptions): Promise<ScreenRegionSelectionResult | null>;
   showScreenRegionOverlay(options: ScreenRegionOverlayOptions): void;
   hideScreenRegionOverlay(): void;
-  onScreenRegionConfigure(
-    listener: (options: ScreenRegionOverlayOptions & { mode?: 'select' | 'record' }) => void,
-  ): () => void;
+  onScreenRegionConfigure(listener: (options: ScreenRegionOverlayConfiguration) => void): () => void;
   toggleRegionTeleprompter(options: ScreenRegionOverlayOptions): Promise<boolean>;
   updateTeleprompterRegion(options: ScreenRegionOverlayOptions): Promise<void>;
   notifyRegionMarkerReady(): void;
   notifyScreenRegionReady(): void;
+  notifyScreenRegionPreviewReady(id: number, success: boolean): void;
   confirmScreenRegion(region: ScreenRegion, recording?: import('./screen-region').RegionRecordingSettings): void;
   updateScreenRegion(region: ScreenRegion): void;
   cancelScreenRegion(): void;

@@ -176,6 +176,7 @@ The input helper emits a transport heartbeat every 500 ms, separate from recorde
 ## Idle editor and export ownership
 
 - The export popover receives cheap project metadata and a snapshot factory. Materialize an immutable export request only when the user starts an export; property edits must not rebuild cursor telemetry for the popover.
+- The snapshot factory copies the complete export payload into owned JSON in one pass. Omit unset optional properties while preserving explicit nulls and all configured values; structured-clone IPC retains undefined properties, so it cannot provide this portability guarantee. GPU render-document validation stays strict.
 - The preview performance monitor runs while playback, media work, export or user interaction is active. An idle or hidden editor owns no monitoring animation frame or sample interval. Resume with fresh timing baselines; a flat performance graph does not animate identical samples.
 - Timeline row reordering adapts `ui/transitions/ReorderGroup.vue` through `TimelineReorderGroup`. Measure positions only for actual reorder changes; insertions and virtual-window membership changes render immediately. Moving groups own a bounded shared-canvas repaint through the existing frame queue and release it on completion/interruption/unmount. Shared row height and `translate3d` placement keep headers, artwork and hit targets aligned. Prepare lock barriers once per drag and use spatial hysteresis instead of a time gate between swaps; preserve reduced-motion preferences and idle ownership.
 - Cursor artwork uses a 32-entry, 16 MiB decoded-pixel LRU. PNG cache keys ignore display size and tint, since these do not alter PNG decoding. Eviction drops the cache reference without changing images still owned by a consumer; uncached export loading remains independent.
@@ -249,6 +250,8 @@ Media and caption clips store an optional clockwise `rotation` in degrees; older
 
 Do not move native capture logic into Vue, add filesystem reads to components, or make a UI component parse an unrelated protocol format when the main process can provide a typed representation.
 
+Windows window sources use Windows Graphics Capture rather than a desktop crop. Rust includes secondary popup/tool windows when the native API supports it (Windows 11 24H2+), for both recordings and screenshots. Windows clips these surfaces to the main window's bounds; older systems retain the default capture setting. See [Microsoft's secondary-window contract](https://learn.microsoft.com/en-us/uwp/api/windows.graphics.capture.graphicscapturesession.includesecondarywindows?view=winrt-26100).
+
 ## File and module organization
 
 - Keep source files below 500 lines. Split a large feature into a canvas/player, timeline, panels, composables, and type modules.
@@ -266,6 +269,8 @@ Developer Mode's optional demo webcam uses the named `projects:import-demo-webca
 ### Native cursor recordings
 
 `showRealCursor` is independent of separate cursor telemetry. Windows Graphics Capture and ScreenCaptureKit include the system cursor in screen pixels when enabled, while the cursor sidecar still supplies zoom anchors. Linux retains Portal Metadata mode and composites the compositor's actual PipeWire bitmap in Rust, respecting hotspot, alpha, crop and transform. Cursor-only updates repaint a cached clean frame on the recording cadence; they never add a second frame in the same FFmpeg tick. The bitmap and clean frame remain capture-local and are cleared at segment/format boundaries as appropriate. `cursorEmbedded` in the session manifest records this baked-in cursor; older manifests default to false. Fresh projects disable `presentation.cursor.enabled` for these sessions, independently of telemetry availability; an explicit saved overlay choice survives reopening.
+
+Native-created projects initially contain zoom metadata without an editor schema, composition or presentation. The desktop's first editor-state migration marks that uninitialized state for one-time defaults, just like projects created in the UI. Reads retain the marker until the first editor save consumes it; existing compositions or presentations never acquire a fresh marker merely because they need migration.
 
 ## Recording buffer lifetime
 

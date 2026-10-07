@@ -30,6 +30,34 @@ describe('Switch', () => {
     expect(wrapper.emitted('update:modelValue')).toBeUndefined();
   });
   it.each([false, true])(
+    'keeps checked=%s visually available while saving and blocks duplicate clicks',
+    async (checked) => {
+      const wrapper = mount(Switch, { props: { modelValue: checked, busy: true } });
+      const button = wrapper.get('[role="switch"]');
+      expect(button.attributes('disabled')).toBeDefined();
+      expect(button.attributes('aria-busy')).toBe('true');
+      expect(button.attributes('aria-checked')).toBe(String(checked));
+      expect(wrapper.classes()).not.toContain('is-disabled');
+      await wrapper.trigger('click');
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+      await wrapper.setProps({ busy: false });
+      expect(button.attributes('disabled')).toBeUndefined();
+      expect(button.attributes('aria-busy')).toBeUndefined();
+      await button.trigger('click');
+      expect(wrapper.emitted('update:modelValue')).toEqual([[!checked]]);
+      wrapper.unmount();
+    },
+  );
+  it('retains unavailable styling when a busy control is also disabled', async () => {
+    const wrapper = mount(Switch, { props: { modelValue: false, busy: true, disabled: true } });
+    expect(wrapper.classes()).toContain('is-disabled');
+    await wrapper.setProps({ busy: false });
+    expect(wrapper.get('[role="switch"]').attributes('disabled')).toBeDefined();
+    await wrapper.trigger('click');
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+    wrapper.unmount();
+  });
+  it.each([false, true])(
     'preserves checked=%s while unavailable, and becomes interactive when enabled',
     async (checked) => {
       const wrapper = mount(Switch, { props: { modelValue: checked, disabled: true } });

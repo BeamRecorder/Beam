@@ -5,10 +5,11 @@ import { Check, Move, RotateCcw, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Select from '~/ui/select/Select.vue';
 import { capture } from '../../../api/capture';
-import type { ScreenRegionOverlayOptions, ScreenRegion } from '../../../api/types/screen-region';
+import type { ScreenRegionOverlayConfiguration, ScreenRegion } from '../../../api/types/screen-region';
 import { useTranslate } from '~/i18n/useTranslate';
 import RegionDimensions from './RegionDimensions.vue';
 import RegionMagnifier from './RegionMagnifier.vue';
+import RegionSelectionBackdrop from './RegionSelectionBackdrop.vue';
 import RegionRecordingToolbar from './RegionRecordingToolbar.vue';
 import { regionControlPosition } from './region-overlay-layout';
 import { alignRegionToPixels, regionPixelRect } from './region-pixels';
@@ -19,7 +20,7 @@ import { SCREEN_REGION_PRESETS, computePresetRegion, findMatchingPreset } from '
 const { t } = useTranslate('ScreenRegionOverlay');
 const { t: quickT } = useTranslate('QuickSnipCropBar');
 
-const options = ref<(ScreenRegionOverlayOptions & { mode?: 'select' | 'record' }) | null>(null);
+const options = ref<ScreenRegionOverlayConfiguration | null>(null);
 const draftRegion = ref<ScreenRegion | null>(null);
 const region = computed({
   get: () =>
@@ -369,6 +370,12 @@ onBeforeUnmount(() => {
     @lostpointercapture="end"
     @keydown="handleKeydown"
   >
+    <RegionSelectionBackdrop
+      v-if="isSelecting && options?.previewId && options.preview"
+      :key="options.previewId"
+      :image="options.preview"
+      :preview-id="options.previewId"
+    />
     <div v-if="isSelecting && !region" class="region-empty-backdrop" />
     <div
       v-if="region"

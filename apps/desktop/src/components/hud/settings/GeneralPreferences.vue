@@ -21,6 +21,20 @@ const localeStore = useLocaleStore();
 const preferences = usePreferencesStore();
 const startupBusy = ref(false);
 const startupError = ref('');
+const closeBusy = ref(false);
+const closeError = ref('');
+const setMinimizeToTray = async (enabled: boolean) => {
+  if (closeBusy.value || !preferences.settings) return;
+  closeBusy.value = true;
+  closeError.value = '';
+  try {
+    await preferences.update({ minimizeToTray: enabled });
+  } catch (error) {
+    closeError.value = String(error);
+  } finally {
+    closeBusy.value = false;
+  }
+};
 const setLaunchAtStartup = async (enabled: boolean) => {
   if (!capture.canLaunchAtStartup || startupBusy.value || !preferences.settings) return;
   startupBusy.value = true;
@@ -47,12 +61,24 @@ const openOnboarding = () => {
     <div class="preference-item preview-preference" data-setting="launch-at-startup" tabindex="-1">
       <TogglePreference
         :model-value="preferences.settings?.launchAtStartup ?? true"
-        :disabled="!capture.canLaunchAtStartup || !preferences.settings || startupBusy"
+        :disabled="!capture.canLaunchAtStartup || !preferences.settings"
+        :busy="startupBusy"
         :label="t('launchAtStartup')"
         :description="t(capture.canLaunchAtStartup ? 'launchAtStartupDescription' : 'launchAtStartupInstalled')"
         @update:model-value="setLaunchAtStartup"
       />
       <p v-if="startupError" class="preference-error" role="alert">{{ startupError }}</p>
+    </div>
+    <div class="preference-item preview-preference" data-setting="minimize-to-tray" tabindex="-1">
+      <TogglePreference
+        :model-value="preferences.settings?.minimizeToTray ?? false"
+        :disabled="!preferences.settings"
+        :busy="closeBusy"
+        :label="t('minimizeToTray')"
+        :description="t('minimizeToTrayDescription')"
+        @update:model-value="setMinimizeToTray"
+      />
+      <p v-if="closeError" class="preference-error" role="alert">{{ closeError }}</p>
     </div>
     <div class="preference-item" data-setting="language" tabindex="-1">
       <div class="preference-copy">
@@ -80,7 +106,8 @@ const openOnboarding = () => {
     >
       <TogglePreference
         :model-value="exportBackend.enabled.value"
-        :disabled="exportBackend.busy.value || !exportBackend.ready.value"
+        :disabled="!exportBackend.ready.value"
+        :busy="exportBackend.busy.value"
         :label="exportText('experimentalFfmpeg')"
         :description="exportText('experimentalFfmpegDesc')"
         @update:model-value="exportBackend.setEnabled"

@@ -2,6 +2,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createServer, type ViteDevServer } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import { expectCameraPreviewFill } from './camera-preview-browser';
 import puppeteer, { type Browser, type Page } from 'puppeteer-core';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -43,7 +44,7 @@ window.cameraTest = {
 };
 `;
 
-describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('complete webcam preview in Chromium', () => {
+describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('filled webcam preview in Chromium', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temp: string;
   beforeAll(async () => {
     const root = fileURLToPath(new URL('../../../../../../', import.meta.url));
@@ -100,42 +101,9 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('complete webcam preview 
     if (temp) await rm(temp, { recursive: true, force: true });
   });
 
-  const expectWholeFrame = async (width: number, height: number, size = { width: 220, height: 220 }) => {
+  const expectFilledFrame = async (width: number, height: number, size = { width: 220, height: 220 }) => {
     await page.setViewport(size);
-    const video = await page.$('video');
-    if (!video) throw new Error('Native webcam preview missing');
-    const png = await video.screenshot();
-    const edges = await page.evaluate(
-      async ({ url, width, height }) => {
-        const image = new Image();
-        image.src = url;
-        await image.decode();
-        const canvas = document.createElement('canvas');
-        canvas.width = image.width;
-        canvas.height = image.height;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(image, 0, 0);
-        const scale = Math.min(canvas.width / width, canvas.height / height);
-        const x = (canvas.width - width * scale) / 2,
-          y = (canvas.height - height * scale) / 2;
-        const read = (px: number, py: number) =>
-          [...ctx.getImageData(Math.floor(px), Math.floor(py), 1, 1).data].slice(0, 3);
-        return [
-          read(x + width * 0.06 * scale, canvas.height / 2),
-          read(x + width * 0.94 * scale, canvas.height / 2),
-          read(canvas.width / 2, y + height * 0.06 * scale),
-          read(canvas.width / 2, y + height * 0.94 * scale),
-        ];
-      },
-      { url: 'data:image/png;base64,' + Buffer.from(png).toString('base64'), width, height },
-    );
-    // Every physical edge of the camera frame must survive the CSS layout.
-    expect(edges).toEqual([
-      [255, 0, 0],
-      [0, 255, 0],
-      [255, 255, 0],
-      [0, 0, 255],
-    ]);
+    await expectCameraPreviewFill(page, width, height);
   };
   const start = async (width: number, height: number) => {
     await page.evaluate(`window.cameraTest.start(${width}, ${height})`);
@@ -148,22 +116,25 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('complete webcam preview 
     [640, 360],
     [640, 480],
     [360, 640],
-  ])('preserves all edges of a %s × %s camera in the default square', async (width, height) => {
-    await start(width, height);
-    await expectWholeFrame(width, height);
-  });
-  it('preserves the complete source after wide and tall native-window resizes', async () => {
+  ])(
+    'fills the default square from a %s × %s camera without stretching or changing the source',
+    async (width, height) => {
+      await start(width, height);
+      await expectFilledFrame(width, height);
+    },
+  );
+  it('fills wide and tall native-window resizes without reopening the camera', async () => {
     await start(640, 360);
     const requests = await page.evaluate('window.cameraTest.requests()');
-    await expectWholeFrame(640, 360, { width: 360, height: 180 });
-    await expectWholeFrame(640, 360, { width: 150, height: 300 });
+    await expectFilledFrame(640, 360, { width: 360, height: 180 });
+    await expectFilledFrame(640, 360, { width: 150, height: 300 });
     expect(await page.evaluate('window.cameraTest.requests()')).toBe(requests);
   });
   it('keeps the same framing on hover and during recording', async () => {
     await start(640, 360);
     await page.evaluate('window.cameraTest.recording(true)');
-    await expectWholeFrame(640, 360);
+    await expectFilledFrame(640, 360);
     await page.evaluate('window.cameraTest.recording(false)');
-    await expectWholeFrame(640, 360);
+    await expectFilledFrame(640, 360);
   });
 });

@@ -643,6 +643,8 @@
     "launchAtStartup": "ログイン時にBeamを起動",
     "launchAtStartupDescription": "ログイン時にBeamを自動的に開きます。",
     "launchAtStartupInstalled": "Beamをインストールすると利用できます。",
+    "minimizeToTray": "閉じるときにシステムトレイに最小化",
+    "minimizeToTrayDescription": "有効にすると、ウィンドウを閉じてもBeamはシステムトレイで動作し続けます。無効にするとBeamは完全に終了し、再度起動する必要があります。",
     "categoryRecording": "録画",
     "categoryDeveloper": "開発者",
     "developerDescription": "Beam の検証と Beamy の実験用ツール。",

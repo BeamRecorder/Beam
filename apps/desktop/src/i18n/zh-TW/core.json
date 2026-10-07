@@ -643,6 +643,8 @@
     "launchAtStartup": "登入時啟動 Beam",
     "launchAtStartupDescription": "登入時自動開啟 Beam。",
     "launchAtStartupInstalled": "安裝 Beam 後可用。",
+    "minimizeToTray": "關閉時最小化至系統匣",
+    "minimizeToTrayDescription": "啟用後，關閉 Beam 視窗時，應用程式會繼續在系統匣中執行。停用此選項後，Beam 將完全結束，需要重新啟動才能使用。",
     "categoryRecording": "錄影",
     "categoryDeveloper": "開發者",
     "developerDescription": "用於檢查 Beam 與實驗 Beamy 的工具。",

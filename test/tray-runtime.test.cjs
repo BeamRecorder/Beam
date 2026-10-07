@@ -12,7 +12,8 @@ function fixture() {
     normal = false,
     screenshot = false,
     onboarding = true,
-    selectingRegion = false;
+    selectingRegion = false,
+    minimizeToTray = false;
   const window = new EventEmitter();
   window.webContents = { send: (...args) => calls.push(args) };
   const controller = { setVisible: (value) => calls.push(['visible', value]) };
@@ -34,6 +35,7 @@ function fixture() {
         createTrayManager: (options) => {
           trayOptions = options;
           return {
+            isAvailable: () => true,
             updateMenu: () => calls.push(['menu']),
             setQuickSnipState: (value) => calls.push(['state', value]),
             destroy: () => calls.push(['tray.destroy']),
@@ -66,9 +68,10 @@ function fixture() {
       cameraOverlay: { destroy: () => calls.push(['camera.destroy']) },
       countdownOverlay: { suspend: () => calls.push(['countdown.suspend']) },
       teleprompterWindow: { suspend: async () => checkpoint },
-      preferencesStore: { read: () => ({ onboardingCompleted: onboarding }) },
+      preferencesStore: { read: () => ({ onboardingCompleted: onboarding, minimizeToTray }) },
       applicationRoot: '/beam',
       coordinator: {
+        canAcceptWork: () => true,
         registerCleanup: (entry) => {
           cleanup = entry.cleanup;
         },
@@ -95,6 +98,7 @@ function fixture() {
       if ('screenshot' in values) screenshot = values.screenshot;
       if ('onboarding' in values) onboarding = values.onboarding;
       if ('selectingRegion' in values) selectingRegion = values.selectingRegion;
+      if ('minimizeToTray' in values) minimizeToTray = values.minimizeToTray;
     },
   };
 }
@@ -130,6 +134,14 @@ test('Show wakes Beam while Hide changes only its visibility', async () => {
   assert.deepEqual(f.calls, [['resume'], ['show']]);
   f.trayOptions.onHideHud();
   assert.deepEqual(f.calls.at(-1), ['visible', false]);
+});
+test('native HUD close uses the live tray preference and disposal removes that behavior', () => {
+  const f = fixture();
+  f.set({ minimizeToTray: true });
+  f.window.emit('close', { preventDefault: () => f.calls.push(['prevent']) });
+  assert.deepEqual(f.calls, [['prevent'], ['visible', false]]);
+  f.manager.destroy();
+  assert.equal(f.window.listenerCount('close'), 0);
 });
 test('tray Quick Snip hides selection and separately opens or stops capture', async () => {
   const f = fixture();

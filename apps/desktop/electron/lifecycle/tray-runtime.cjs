@@ -1,5 +1,6 @@
 const { createTrayManager } = require('../tray/tray-manager.cjs');
 const { createIdleHudRenderer } = require('./idle-hud-renderer.cjs');
+const { registerHudCloseBehavior } = require('./hud-close-behavior.cjs');
 
 function createTrayRuntime({
   window,
@@ -50,6 +51,14 @@ function createTrayRuntime({
       void action.catch((error) => console.error('[Quick Snip] tray action failed:', error));
     },
   });
+  const removeCloseBehavior = registerHudCloseBehavior({
+    window,
+    controller,
+    preferencesStore,
+    coordinator,
+    hasTray: () => manager.isAvailable(),
+    requestQuit: () => require('electron').app.quit(),
+  });
   const reschedule = () => {
     manager.updateMenu();
     idle.schedule();
@@ -63,6 +72,7 @@ function createTrayRuntime({
   };
   const originalDestroy = manager.destroy;
   manager.destroy = () => {
+    removeCloseBehavior();
     idle.destroy();
     window.removeListener('show', reschedule);
     window.removeListener('hide', reschedule);

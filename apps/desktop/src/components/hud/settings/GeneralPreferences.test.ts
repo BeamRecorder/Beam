@@ -14,7 +14,8 @@ import GeneralPreferences from './GeneralPreferences.vue';
 import { usePreferencesStore } from '~/stores/preferences';
 import { useLocaleStore } from '~/stores/locale';
 import Select from '~/ui/select/Select.vue';
-import { setCurrentLocale } from '~/i18n';
+import { i18n, setCurrentLocale } from '~/i18n';
+import { SUPPORTED_LOCALES } from '~/i18n/locales';
 enableAutoUnmount(afterEach);
 const create = () => mount(GeneralPreferences, { global: { stubs: { AppearanceSettings: true } } });
 beforeEach(() => {
@@ -61,6 +62,9 @@ it('disables the switch while loading and displays load failures', async () => {
 
 it.each(['win32', 'darwin'])('hides the Linux video backend on %s', async (platform) => {
   capture.platform = platform;
+  // A Linux export preference copied to another OS must not expose its switch.
+  await usePreferencesStore().load();
+  capture.getPreferences.mockClear();
   const wrapper = create();
   await flushPromises();
   expect(wrapper.find('[data-setting="video-export-backend"]').exists()).toBe(false);
@@ -164,5 +168,107 @@ it('does not update startup before preferences finish loading', async () => {
   const wrapper = create();
   expect(wrapper.get('[data-setting="launch-at-startup"] [role="switch"]').attributes('disabled')).toBeDefined();
   wrapper.findAllComponents({ name: 'TogglePreference' })[0]!.vm.$emit('update:modelValue', false);
+  expect(capture.updatePreferences).not.toHaveBeenCalled();
+});
+
+it.each(['linux', 'win32', 'darwin'])(
+  'places tray close below startup and saves both choices on %s',
+  async (platform) => {
+    await setCurrentLocale('en');
+    capture.platform = platform;
+    capture.getPreferences.mockResolvedValue({ extras: {} });
+    capture.updatePreferences.mockImplementation(async (patch) => ({
+      minimizeToTray: patch.minimizeToTray,
+      extras: {},
+    }));
+    await usePreferencesStore().load();
+    const wrapper = create();
+    await flushPromises();
+    const setting = wrapper.get('[data-setting="minimize-to-tray"]');
+    expect(setting.element.previousElementSibling?.getAttribute('data-setting')).toBe('launch-at-startup');
+    expect(setting.text()).toContain('system tray');
+    expect(setting.text()).toContain('launch it again');
+    const toggle = setting.get('[role="switch"]');
+    expect(toggle.attributes('aria-checked')).toBe('false');
+    for (const enabled of [true, false]) {
+      await toggle.trigger('click');
+      await flushPromises();
+      expect(capture.updatePreferences).toHaveBeenLastCalledWith({ minimizeToTray: enabled });
+      expect(toggle.attributes('aria-checked')).toBe(String(enabled));
+    }
+  },
+);
+
+it('restores the saved tray choice and responds to later preference changes', async () => {
+  capture.getPreferences.mockResolvedValue({ minimizeToTray: true, extras: {} });
+  const wrapper = create();
+  await flushPromises();
+  const toggle = wrapper.get('[data-setting="minimize-to-tray"] [role="switch"]');
+  expect(toggle.attributes('aria-checked')).toBe('true');
+  usePreferencesStore().settings!.minimizeToTray = false;
+  await flushPromises();
+  expect(toggle.attributes('aria-checked')).toBe('false');
+});
+
+it('retains the saved tray choice after a failed save and allows retry', async () => {
+  capture.getPreferences.mockResolvedValue({ minimizeToTray: false, extras: {} });
+  capture.updatePreferences
+    .mockRejectedValueOnce(new Error('disk full'))
+    .mockResolvedValue({ minimizeToTray: true, extras: {} });
+  const wrapper = create();
+  await flushPromises();
+  const toggle = wrapper.get('[data-setting="minimize-to-tray"] [role="switch"]');
+  await toggle.trigger('click');
+  await flushPromises();
+  expect(toggle.attributes('aria-checked')).toBe('false');
+  expect(wrapper.get('[data-setting="minimize-to-tray"] [role="alert"]').text()).toContain('disk full');
+  await toggle.trigger('click');
+  await flushPromises();
+  expect(toggle.attributes('aria-checked')).toBe('true');
+  expect(wrapper.find('[data-setting="minimize-to-tray"] [role="alert"]').exists()).toBe(false);
+});
+
+it('disables tray close while saving and ignores overlapping updates', async () => {
+  const wrapper = create();
+  await flushPromises();
+  let resolve!: (value: { minimizeToTray: boolean; extras: Record<string, never> }) => void;
+  capture.updatePreferences.mockReturnValue(
+    new Promise((done) => {
+      resolve = done;
+    }),
+  );
+  const control = wrapper.get('[data-setting="minimize-to-tray"]').getComponent({ name: 'TogglePreference' });
+  control.vm.$emit('update:modelValue', true);
+  await flushPromises();
+  expect(control.get('[role="switch"]').attributes('disabled')).toBeDefined();
+  expect(control.classes()).not.toContain('is-disabled');
+  expect(control.get('[role="switch"]').attributes('aria-busy')).toBe('true');
+  expect(control.get('.switch-container').classes()).not.toContain('is-disabled');
+  control.vm.$emit('update:modelValue', true);
+  expect(capture.updatePreferences).toHaveBeenCalledOnce();
+  resolve({ minimizeToTray: true, extras: {} });
+  await flushPromises();
+  expect(control.get('[role="switch"]').attributes('disabled')).toBeUndefined();
+  expect(control.get('[role="switch"]').attributes('aria-busy')).toBeUndefined();
+  expect(control.get('[role="switch"]').attributes('aria-checked')).toBe('true');
+});
+
+it.each(SUPPORTED_LOCALES)('renders the tray-close label and both closing outcomes in %s', async (locale) => {
+  await setCurrentLocale(locale);
+  const wrapper = create();
+  await flushPromises();
+  const setting = wrapper.get('[data-setting="minimize-to-tray"]');
+  const label = i18n.global.t('HudPreferences.minimizeToTray');
+  expect(setting.get('[role="switch"]').attributes('aria-label')).toBe(label);
+  expect(setting.get('.preference-description').text()).toBe(i18n.global.t('HudPreferences.minimizeToTrayDescription'));
+  if (locale !== 'en') expect(label).not.toBe('Minimize to tray on close');
+});
+
+it('does not save tray close before preferences finish loading', async () => {
+  capture.getPreferences.mockReturnValue(new Promise(() => {}));
+  const wrapper = create();
+  const control = wrapper.get('[data-setting="minimize-to-tray"]').getComponent({ name: 'TogglePreference' });
+  expect(control.get('[role="switch"]').attributes('disabled')).toBeDefined();
+  control.vm.$emit('update:modelValue', true);
   expect(capture.updatePreferences).not.toHaveBeenCalled();
 });

@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromiumExecutable } from '../../../apps/cli/src/chromium-install';
+import { expectCameraPreviewFill } from './components/hud/tests/camera-preview-browser';
 import type { QuickSnipDeviceMenu } from './api/types/quick-snip';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('packaged overlay styles', () => {
@@ -22,7 +23,12 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('packaged overlay styles'
       build: {
         outDir,
         copyPublicDir: false,
-        rollupOptions: { input: { main: resolve(root, 'apps/desktop/html/index.html') } },
+        rollupOptions: {
+          input: {
+            main: resolve(root, 'apps/desktop/html/index.html'),
+            region: resolve(root, 'apps/desktop/html/screen-region.html'),
+          },
+        },
       },
     });
     server = await preview({
@@ -150,75 +156,137 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('packaged overlay styles'
     }
   };
 
-  const expectWholeFrame = async (width: number, height: number) => {
-    const video = await page.$('.camera-overlay-video');
-    if (!video) throw new Error('Native camera preview missing');
-    const layout = await video.evaluate((element) => {
-      const rect = element.getBoundingClientRect();
-      return { width: rect.width, height: rect.height, fit: getComputedStyle(element).objectFit };
-    });
-    const viewport = page.viewport();
-    if (!viewport) throw new Error('Camera preview viewport unavailable');
-    expect(layout).toEqual({ width: viewport.width, height: viewport.height, fit: 'contain' });
-    const png = await page.screenshot();
-    const edges = await page.evaluate(
-      async ({ url, width, height }) => {
-        const image = new Image();
-        image.src = url;
-        await image.decode();
-        const canvas = document.createElement('canvas');
-        canvas.width = image.width;
-        canvas.height = image.height;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(image, 0, 0);
-        const scale = Math.min(canvas.width / width, canvas.height / height);
-        const x = (canvas.width - width * scale) / 2,
-          y = (canvas.height - height * scale) / 2;
-        const read = (px: number, py: number) =>
-          [...ctx.getImageData(Math.floor(px), Math.floor(py), 1, 1).data].slice(0, 3);
-        return [
-          read(x + width * 0.06 * scale, canvas.height / 2),
-          read(x + width * 0.94 * scale, canvas.height / 2),
-          read(canvas.width / 2, y + height * 0.06 * scale),
-          read(canvas.width / 2, y + height * 0.94 * scale),
-        ];
-      },
-      { url: 'data:image/png;base64,' + Buffer.from(png).toString('base64'), width, height },
-    );
-    expect(edges).toEqual([
-      [255, 0, 0],
-      [0, 255, 0],
-      [255, 255, 0],
-      [0, 0, 255],
-    ]);
-  };
-
   it.each([
     [640, 480],
     [640, 360],
     [360, 640],
-  ])('fits the complete %s × %s camera on its first packaged paint', async (width, height) => {
+  ])('fills the preview from a %s × %s camera on its first packaged paint', async (width, height) => {
     await openOverlay(width, height);
-    await expectWholeFrame(width, height);
+    await expectCameraPreviewFill(page, width, height);
     const styles = await page.evaluate(() =>
       [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].map((link) => link.href),
     );
     expect(styles.some((url) => /CameraOverlayApp-.*\.css$/.test(url))).toBe(true);
     expect(styles.some((url) => /QuickSnipCropBar-.*\.css$/.test(url))).toBe(false);
   });
-  it('keeps the complete packaged preview during recording and hover', async () => {
+  it('keeps the filled packaged preview during recording and hover', async () => {
     await openOverlay(640, 480);
     await page.evaluate(() => window.dispatchEvent(new Event('beam-test-recording')));
     await page.waitForSelector('.camera-overlay-container.is-recording.is-hovered');
-    await expectWholeFrame(640, 480);
+    await expectCameraPreviewFill(page, 640, 480);
   });
-  it('scales the complete packaged camera when its native viewport is resized', async () => {
+  it('fills the packaged camera when its native viewport is resized', async () => {
     await openOverlay(640, 480);
     await page.setViewport({ width: 360, height: 180 });
-    await expectWholeFrame(640, 480);
+    await expectCameraPreviewFill(page, 640, 480);
     await page.setViewport({ width: 150, height: 300 });
-    await expectWholeFrame(640, 480);
+    await expectCameraPreviewFill(page, 640, 480);
   });
+  it.each([1, 1.25, 1.5])(
+    'paints Windows Region selection and selects the correct area at %s display scale',
+    async (scale) => {
+      await page?.close();
+      page = await browser.newPage();
+      await page.setViewport({ width: 800, height: 500, deviceScaleFactor: scale });
+      await page.evaluateOnNewDocument((scale) => {
+        let configure: (options: object) => void;
+        const source = document.createElement('canvas');
+        source.width = 800 * scale;
+        source.height = 500 * scale;
+        const ctx = source.getContext('2d')!;
+        for (const [x, y, color] of [
+          [0, 0, '#f00'],
+          [1, 0, '#0f0'],
+          [0, 1, '#00f'],
+          [1, 1, '#ff0'],
+        ] as const) {
+          ctx.fillStyle = color;
+          ctx.fillRect((x * source.width) / 2, (y * source.height) / 2, source.width / 2, source.height / 2);
+        }
+        Object.defineProperty(window, 'capture', {
+          value: {
+            platform: 'win32',
+            getPreferences: async () => ({ theme: 'dark', extras: { locale: 'en' } }),
+            updatePreferences: async () => ({}),
+            onPreferencesChanged: () => () => undefined,
+            onPreferenceShortcut: () => () => undefined,
+            onScreenRegionConfigure: (listener: typeof configure) => {
+              configure = listener;
+              return () => undefined;
+            },
+            notifyScreenRegionReady: () =>
+              configure({
+                mode: 'select',
+                drawOnly: true,
+                captureMode: 'screenshot',
+                previewId: 5,
+                bounds: { x: -800, y: -200, width: 800, height: 500 },
+                pixelSize: { width: source.width, height: source.height },
+                preview: source.toDataURL(),
+              }),
+            notifyScreenRegionPreviewReady: (id: number, success: boolean) => {
+              document.documentElement.dataset.previewReady = `${id}:${success}`;
+            },
+            updateScreenRegion: () => undefined,
+            cancelScreenRegion: () => undefined,
+            confirmScreenRegion: (region: object) => {
+              document.documentElement.dataset.region = JSON.stringify(region);
+            },
+          },
+        });
+      }, scale);
+      await page.goto(`${origin}/html/screen-region.html`);
+      await page.waitForFunction(() => document.documentElement.dataset.previewReady === '5:true');
+      const preview = await page.$eval('img.region-desktop-preview', (image) => ({
+        width: (image as HTMLImageElement).naturalWidth,
+        height: (image as HTMLImageElement).naturalHeight,
+        rect: { width: image.getBoundingClientRect().width, height: image.getBoundingClientRect().height },
+      }));
+      expect(preview).toEqual({ width: 800 * scale, height: 500 * scale, rect: { width: 800, height: 500 } });
+      await page.mouse.move(160, 100);
+      await page.mouse.down();
+      await page.mouse.move(640, 400, { steps: 3 });
+      await page.mouse.up();
+      const png = await page.screenshot();
+      const pixels = await page.evaluate(
+        async (url) => {
+          const image = new Image();
+          image.src = url;
+          await image.decode();
+          const canvas = document.createElement('canvas');
+          canvas.width = image.width;
+          canvas.height = image.height;
+          const context = canvas.getContext('2d')!;
+          context.drawImage(image, 0, 0);
+          return [
+            [0.3, 0.3],
+            [0.7, 0.3],
+            [0.3, 0.7],
+            [0.7, 0.7],
+          ].map(([x, y]) =>
+            [...context.getImageData(Math.floor(canvas.width * x), Math.floor(canvas.height * y), 1, 1).data].slice(
+              0,
+              3,
+            ),
+          );
+        },
+        'data:image/png;base64,' + Buffer.from(png).toString('base64'),
+      );
+      expect(pixels).toEqual([
+        [255, 0, 0],
+        [0, 255, 0],
+        [0, 0, 255],
+        [255, 255, 0],
+      ]);
+      await page.click('.region-start-control button');
+      expect(JSON.parse(await page.evaluate(() => document.documentElement.dataset.region!))).toEqual({
+        x: 0.2,
+        y: 0.2,
+        width: 0.6,
+        height: 0.6,
+      });
+    },
+  );
   it('loads Quick Snip settings styles without loading camera or Crop Bar content', async () => {
     await openOverlay(640, 480, 'quickSnipSettings=1');
     const styles = await page.evaluate(() =>
