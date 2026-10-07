@@ -6,23 +6,28 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
-- General settings now offer Minimize to tray on close, with an explanation in all fifteen languages. Enable it to keep Beam running in the tray; leave it off to quit when closing the Recorder.
 - The private website’s Studio overview shows a real recording edited on the native multi-track timeline in a fifteen-second, 60 fps loop, including trim/split/cut, a caption, appearance and canvas adjustments, and a 2D zoom. Light/dark variants and editable source live in `examples/website-studio-loop/`.
 
 ### Changed
 
 - The website’s Studio overview now runs for 15 seconds with gentler cursor travel, longer reading pauses and two restrained camera views that stay fixed during edits.
 
+## [0.5.3] - 2026-10-07
+
+### Added
+
+- Choose whether closing Beam keeps it running in the system tray or quits the app. Find the option in General settings, with explanations in all 15 languages.
+
 ### Fixed
 
-- General settings switches keep their labels and pointer appearance stable while saving, including Minimize to tray on close, while preventing duplicate changes.
-- Fixed Linux FFmpeg GPU exports failing before the first frame with "Expected portable JSON data" when optional watermark or cursor metadata was unset.
-- Window capture now includes supported native dropdowns, right-click context menus and application menus on Windows 11 24H2 and later, within the recorded window's bounds.
-- Recordings made with Show Real Cursor now start with Beam's cursor disabled in the editor, preventing duplicate cursors. Later manual choices remain saved.
-- Fixed black Region selection screens on Windows by showing the captured desktop before selecting an area.
-- Webcam previews now fill their frame without black bars, preserving proportions with a centered crop.
-- Fixed a freeze when clicking or moving color, shape, text, image and drawing layers in the timeline.
-- Fixed stale mouse handling after returning to the Recorder and repeated input changes when the window gains or loses focus.
+- Fixed the editor freezing when selecting or moving colors, shapes, text, images and drawings in the timeline.
+- Improved Recorder responsiveness when returning from the editor.
+- Fixed the black screen when selecting a recording region on Windows.
+- Webcam previews now fill their frame without black bars or stretching.
+- Recordings made with Show Real Cursor no longer display a second cursor by default in the editor. Your later changes are still saved.
+- Window recordings now include supported dropdowns, right-click menus and application menus on Windows 11 24H2 and later, inside the recorded window.
+- Fixed Linux FFmpeg GPU exports failing before they start.
+- Settings switches no longer flash or change the pointer while saving.
 
 ## [0.5.2] - 2026-10-06
 

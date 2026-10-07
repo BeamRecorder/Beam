@@ -143,6 +143,12 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
         },
       }),
     );
+    // Compile the workspace fixture before timing interactions. Vite's first
+    // module graph load is unrelated to selection responsiveness.
+    await page.evaluate(async () => {
+      const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+      await load('/apps/desktop/src/components/editor/timeline/tests/workspace-browser-host.ts');
+    });
   }, 30000);
   beforeEach(async () => {
     // Static-playback measurements exclude the intentional hovered-label marquee.
