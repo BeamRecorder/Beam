@@ -4,6 +4,10 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- The private website’s Studio overview shows a real recording edited on the native multi-track timeline in a twelve-second, 60 fps loop, including trim/split/cut, a caption, appearance and canvas adjustments, and a 2D zoom. Light/dark variants and editable source live in `examples/website-studio-loop/`.
+
 ## [0.5.2] - 2026-10-06
 
 ### Added
