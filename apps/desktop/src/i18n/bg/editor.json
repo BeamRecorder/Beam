@@ -658,6 +658,10 @@
     "effects": "Ефекти",
     "color": "Цвят",
     "selectElement": "Изберете елемент",
+    "selectTwoToGroup": "Изберете 2 елемента за групиране",
+    "selectOneMoreToGroup": "Изберете още 1 елемент за групиране",
+    "alreadyGrouped": "Тези елементи вече са групирани",
+    "selectGroupToUngroup": "Изберете групиран елемент за разгрупиране",
     "locked": "Отключете елемента, за да го редактирате",
     "busy": "Изчакайте текущото действие да приключи",
     "effectLimit": "Този елемент вече има четири ефекта",
@@ -715,5 +719,33 @@
     "sectionCaptureSource": "Източник на заснемане",
     "sectionRecorder": "Контроли за запис",
     "sectionDragging": "Плъзгане"
+  },
+  "DitheringEffect": {
+    "title": "Дитеринг",
+    "pattern": "Шаблон",
+    "pixelSize": "Размер на шаблона",
+    "fourTones": "Четири тона",
+    "retro": "Ретро",
+    "algorithm": "Алгоритъм",
+    "ordered": "Подреден (GPU)",
+    "mapping": "Съпоставяне на цветове",
+    "nearestColors": "Най-близки цветове",
+    "luminance": "Яркост",
+    "blockSize": "Пикселизация"
+  },
+  "ArtisticEffect": {
+    "ascii": "ASCII",
+    "grain": "Зърно",
+    "cyanotype": "Цианотипия",
+    "cellSize": "Размер на знаците",
+    "amount": "Сила",
+    "size": "Размер на зърното",
+    "colored": "Оригинални цветове",
+    "monochrome": "Монохромно",
+    "invert": "Обръщане на знаците",
+    "foreground": "Цвят на текста",
+    "background": "Фон",
+    "blue": "Пруско синьо",
+    "paper": "Хартия"
   }
 }

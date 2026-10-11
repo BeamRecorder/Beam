@@ -17,4 +17,11 @@ export interface ColorAdjustmentEffect {
   blendMode: 'source-over';
   recipe: ColorAdjustmentRecipe;
 }
-export type LayerEffectAddKind = 'gradient' | 'color-adjustment' | 'grayscale';
+export type LayerEffectAddKind =
+  | 'gradient'
+  | 'color-adjustment'
+  | 'grayscale'
+  | 'dithering'
+  | 'ascii'
+  | 'grain'
+  | 'cyanotype';

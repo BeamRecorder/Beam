@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Eye, EyeOff, Sparkles, Palette } from '@lucide/vue';
+import { Eye, EyeOff, Sparkles, Palette, Grid2X2, Type, Scan, Sun } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Tooltip from '~/ui/tooltip/Tooltip.vue';
 import LayerThumbnail from '../composition/thumbnails/LayerThumbnail.vue';
@@ -9,6 +9,8 @@ import type { LayerEffectListProps } from './gradient-panel-types';
 defineProps<LayerEffectListProps>();
 const emit = defineEmits<{ select: [id: string]; toggle: [id: string] }>();
 const { t } = useTranslate('GradientEffect');
+const { t: artisticText } = useTranslate('ArtisticEffect');
+const { t: ditherText } = useTranslate('DitheringEffect');
 const { t: colorText } = useTranslate('ColorEffect');
 const { t: effectText } = useTranslate('LayerEffects');
 </script>
@@ -23,9 +25,33 @@ const { t: effectText } = useTranslate('LayerEffects');
         @click="emit('select', effect.id)"
       >
         <LayerThumbnail :value="thumbnails?.[effectThumbnailId(layer.id, effect.id)]" />
-        <component :is="effect.kind === 'gradient' ? Sparkles : Palette" :size="12" aria-hidden="true" />
+        <component
+          :is="
+            effect.kind === 'gradient'
+              ? Sparkles
+              : effect.kind === 'dithering'
+                ? Grid2X2
+                : effect.kind === 'ascii'
+                  ? Type
+                  : effect.kind === 'grain'
+                    ? Scan
+                    : effect.kind === 'cyanotype'
+                      ? Sun
+                      : Palette
+          "
+          :size="12"
+          aria-hidden="true"
+        />
         <span
-          >{{ effect.kind === 'gradient' ? t('title') : colorText('title') }}
+          >{{
+            effect.kind === 'gradient'
+              ? t('title')
+              : effect.kind === 'dithering'
+                ? ditherText('title')
+                : effect.kind === 'color-adjustment'
+                  ? colorText('title')
+                  : artisticText(effect.kind)
+          }}
           <template v-if="layer.effects.length > 1">{{ index + 1 }}</template></span
         >
       </button>
@@ -50,6 +76,7 @@ const { t: effectText } = useTranslate('LayerEffects');
 </template>
 <style scoped>
 .layer-effect-list {
+  box-sizing: border-box;
   width: calc(100% - 22px);
   display: grid;
   gap: 2px;

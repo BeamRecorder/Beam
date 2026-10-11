@@ -4,6 +4,7 @@ import type { CanvasFrameCapture } from '../canvas/canvas-frame-capture';
 import { capture } from '~/api/capture';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useToastStore } from '~/ui/toast/toastStore';
+import { playScreenshotSound } from '~/utils/screenshot-sound';
 
 interface CanvasScreenshotSource {
   captureCurrentFrame(): Promise<CanvasFrameCapture>;
@@ -61,6 +62,7 @@ export function useCanvasScreenshot(options: CanvasScreenshotOptions) {
           },
         },
       );
+      await playScreenshotSound();
     } catch (error) {
       toast.error(
         t('screenshotFailed', {

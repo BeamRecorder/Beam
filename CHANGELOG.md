@@ -30,6 +30,8 @@ User-facing changes to Beam are documented in this file.
 - Windows keeps the Recorder ready in the background, avoiding an unresponsive HUD after returning from the editor or system tray.
 - Clicking an empty space in a text track adds the caption to that track. Add text still creates a new track.
 - Pasted text captions appear at the playhead on their original track instead of creating a new track automatically; existing text is trimmed where the paste overlaps it.
+- Screenshot effect panels avoid unnecessary scrollbars and keep scrollbar thumbs visible while content fades at the edges.
+- Screenshot grouping actions explain how many more elements to select and identify locked or already grouped selections, in all fifteen languages.
 
 ### Added
 
@@ -39,6 +41,8 @@ User-facing changes to Beam are documented in this file.
 - Customize editing, capture, tool and property shortcuts, including selection, duplication and drag modifiers, in a simpler searchable shortcuts page.
 - New project lets you choose Video or Screenshot with Beam's capture icons and remembers your last choice.
 - The private website’s Studio overview shows a real recording edited on the native multi-track timeline in a fifteen-second, 60 fps loop, including trim/split/cut, a caption, appearance and canvas adjustments, and a 2D zoom. Light/dark variants and editable source live in `examples/website-studio-loop/`.
+- Full-screen, region, window, Quick Snip and canvas screenshots play a short CC0 camera shutter at full application volume after success. Recorder finishes the sound before handing off to the editor; Quick Snip confirms after the image is copied or opened for editing.
+- Screenshot layers support adjustable Dithering, ASCII, Grain and Cyanotype effects, with matching thumbnails and exports and preserved transparency. Ordered dithering, ASCII, grain and cyanotype run on the GPU; exact Jarvis–Judice–Ninke dithering runs in a cancellable background worker.
 
 ### Changed
 
@@ -616,7 +620,8 @@ User-facing changes to Beam are documented in this file.
 
 - Improved the editor workflow and native recording startup reliability, including Linux capture startup.
 
-[Unreleased]: https://github.com/BeamRecorder/Beam/compare/0.5.2...HEAD
+[Unreleased]: https://github.com/BeamRecorder/Beam/compare/0.5.3...HEAD
+[0.5.3]: https://github.com/BeamRecorder/Beam/releases/tag/0.5.3
 [0.5.2]: https://github.com/BeamRecorder/Beam/releases/tag/0.5.2
 [0.5.1]: https://github.com/BeamRecorder/Beam/releases/tag/0.5.1
 [0.5.0]: https://github.com/BeamRecorder/Beam/releases/tag/0.5.0

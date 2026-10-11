@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Sparkles, Palette, Contrast } from '@lucide/vue';
+import { Sparkles, Palette, Contrast, Grid2X2, Type, Scan, Sun } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import PopoverMenuList from '~/ui/popover/PopoverMenuList.vue';
@@ -12,13 +12,21 @@ const props = defineProps<LayerEffectToolbarProps>();
 const emit = defineEmits<{ add: [kind: LayerEffectAddKind] }>();
 const { t } = useTranslate('LayerEffects');
 const { t: gradientText } = useTranslate('GradientEffect');
+const { t: artisticText } = useTranslate('ArtisticEffect');
+const { t: ditherText } = useTranslate('DitheringEffect');
 const { t: colorText } = useTranslate('ColorEffect');
 const menus = computed(() => [
   {
     id: 'effects',
     label: t('effects'),
     icon: Sparkles,
-    items: [{ id: 'gradient', label: gradientText('title'), icon: Sparkles }],
+    items: [
+      { id: 'gradient', label: gradientText('title'), icon: Sparkles },
+      { id: 'dithering', label: ditherText('title'), icon: Grid2X2 },
+      { id: 'ascii', label: artisticText('ascii'), icon: Type },
+      { id: 'grain', label: artisticText('grain'), icon: Scan },
+      { id: 'cyanotype', label: artisticText('cyanotype'), icon: Sun },
+    ],
   },
   {
     id: 'color',

@@ -90,3 +90,28 @@ describe('screenshot group actions', () => {
     expect(g.ungroup()).toBe(false);
   });
 });
+it('explains exactly how an unavailable group action becomes available', () => {
+  const g = setup();
+  g.selected.value = [];
+  expect(g.groupDisabledReason.value).toBe('selectTwoToGroup');
+  expect(g.ungroupDisabledReason.value).toBe('selectGroupToUngroup');
+  g.selected.value = ['a'];
+  expect(g.groupDisabledReason.value).toBe('selectOneMoreToGroup');
+  g.selected.value = ['a', 'b'];
+  expect(g.groupDisabledReason.value).toBeUndefined();
+  g.group();
+  expect(g.groupDisabledReason.value).toBe('alreadyGrouped');
+  expect(g.ungroupDisabledReason.value).toBeUndefined();
+  g.disabled.value = true;
+  expect(g.groupDisabledReason.value).toBe('busy');
+  expect(g.ungroupDisabledReason.value).toBe('busy');
+  g.disabled.value = false;
+  g.selected.value = ['__background__', 'a'];
+  expect(g.groupDisabledReason.value).toBe('unsupported');
+  g.state.value = {
+    ...g.state.value!,
+    composition: g.state.value!.composition!.map((r) => (r.id === 'a' ? { ...r, locked: true } : r)),
+  };
+  expect(g.groupDisabledReason.value).toBe('locked');
+  expect(g.ungroupDisabledReason.value).toBe('locked');
+});

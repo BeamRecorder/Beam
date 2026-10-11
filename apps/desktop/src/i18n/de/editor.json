@@ -658,6 +658,10 @@
     "effects": "Effekte",
     "color": "Farbe",
     "selectElement": "Wähle ein Element aus",
+    "selectTwoToGroup": "2 Elemente zum Gruppieren auswählen",
+    "selectOneMoreToGroup": "1 weiteres Element zum Gruppieren auswählen",
+    "alreadyGrouped": "Diese Elemente sind bereits gruppiert",
+    "selectGroupToUngroup": "Ein gruppiertes Element zum Aufheben der Gruppe auswählen",
     "locked": "Entsperre das Element zum Bearbeiten",
     "busy": "Warte, bis die aktuelle Aktion abgeschlossen ist",
     "effectLimit": "Dieses Element hat bereits vier Effekte",
@@ -715,5 +719,33 @@
     "sectionCaptureSource": "Aufnahmequelle",
     "sectionRecorder": "Recorder-Steuerung",
     "sectionDragging": "Ziehen"
+  },
+  "DitheringEffect": {
+    "title": "Dithering",
+    "pattern": "Muster",
+    "pixelSize": "Mustergröße",
+    "fourTones": "Vier Farbtöne",
+    "retro": "Retro",
+    "algorithm": "Algorithmus",
+    "ordered": "Geordnet (GPU)",
+    "mapping": "Farbzuordnung",
+    "nearestColors": "Nächste Farben",
+    "luminance": "Luminanz",
+    "blockSize": "Verpixelung"
+  },
+  "ArtisticEffect": {
+    "ascii": "ASCII",
+    "grain": "Körnung",
+    "cyanotype": "Cyanotypie",
+    "cellSize": "Zeichengröße",
+    "amount": "Stärke",
+    "size": "Korngröße",
+    "colored": "Originalfarben",
+    "monochrome": "Monochrom",
+    "invert": "Zeichen invertieren",
+    "foreground": "Textfarbe",
+    "background": "Hintergrund",
+    "blue": "Preußischblau",
+    "paper": "Papier"
   }
 }

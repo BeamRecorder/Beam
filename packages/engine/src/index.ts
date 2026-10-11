@@ -68,3 +68,18 @@ export type {
   GradientNumberKey,
   GradientPreset,
 } from './gradient/gradient-types';
+
+export {
+  DEFAULT_DITHERING_RECIPE,
+  createDitheringEffect,
+  validateDitheringRecipe,
+} from './gradient/dithering-schema.js';
+export type { DitheringEffect, DitheringRecipe } from './gradient/dithering-effect-types';
+
+export {
+  ARTISTIC_DEFAULTS,
+  ARTISTIC_RANGES,
+  createArtisticEffect,
+  validateArtisticRecipe,
+} from './gradient/artistic-schema.js';
+export type { ArtisticEffect, ArtisticKind, ArtisticRecipeMap } from './gradient/artistic-effect-types';

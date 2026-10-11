@@ -17,6 +17,8 @@ const captureMock = vi.hoisted(() => ({
   openScreenshot: vi.fn(),
   startRecording: vi.fn(),
 }));
+const soundMock = vi.hoisted(() => vi.fn());
+vi.mock('~/utils/screenshot-sound', () => ({ playScreenshotSound: soundMock }));
 
 vi.mock('~/api/capture', () => ({ capture: captureMock }));
 
@@ -163,6 +165,7 @@ describe('useHudCaptureMode', () => {
 
     expect(studio).toHaveBeenCalledWith(config);
     expect(captureMock.captureScreenshot).not.toHaveBeenCalled();
+    expect(soundMock).not.toHaveBeenCalled();
     expect(captureMock.quickSnipFromHud).not.toHaveBeenCalled();
 
     recorderLauncherActive.value = false;
@@ -279,6 +282,11 @@ describe('useHudCaptureMode', () => {
     expect(captureMock.quickSnipFromHud).not.toHaveBeenCalled();
     expect(studio).not.toHaveBeenCalled();
     expect(busy.value).toBe(false);
+    expect(soundMock).toHaveBeenCalledOnce();
+    expect(soundMock.mock.invocationCallOrder[0]).toBeGreaterThan(
+      captureMock.captureScreenshot.mock.invocationCallOrder[0]!,
+    );
+    expect(soundMock.mock.invocationCallOrder[0]).toBeLessThan(captureMock.openScreenshot.mock.invocationCallOrder[0]!);
   });
 
   it('restores the HUD without an editor or error when screenshot selection is canceled', async () => {
@@ -290,6 +298,7 @@ describe('useHudCaptureMode', () => {
     expect(captureMock.setWindowVisible).toHaveBeenLastCalledWith(true);
     expect(error.value).toBe('');
     expect(busy.value).toBe(false);
+    expect(soundMock).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -315,5 +324,36 @@ describe('useHudCaptureMode', () => {
     expect(captureMock.openScreenshot).toHaveBeenCalledTimes(failurePoint === 'open' ? 1 : 0);
     expect(error.value).toBe(message);
     expect(busy.value).toBe(false);
+    expect(soundMock).toHaveBeenCalledTimes(failurePoint === 'open' ? 1 : 0);
+  });
+
+  it.each([
+    ['full screen', { screenKind: 'display', region: null }],
+    ['region', { screenKind: 'display', region: { x: 0.1, y: 0.1, width: 0.5, height: 0.5 } }],
+    ['window', { screenKind: 'window', region: null }],
+  ] as const)('confirms a successful %s screenshot once', async (_mode, source) => {
+    mountMode();
+    api.captureMode.value = 'screenshot';
+    await api.captureWithMode(configuration(source), vi.fn());
+    expect(captureMock.captureScreenshot).toHaveBeenCalledWith(expect.objectContaining(source));
+    expect(soundMock).toHaveBeenCalledOnce();
+    expect(error.value).toBe('');
+  });
+
+  it('finishes confirmation playback before opening the screenshot editor', async () => {
+    let finish!: () => void;
+    soundMock.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    mountMode();
+    api.captureMode.value = 'screenshot';
+    const pending = api.captureWithMode(configuration(), vi.fn());
+    await vi.waitFor(() => expect(soundMock).toHaveBeenCalledOnce());
+    expect(captureMock.openScreenshot).not.toHaveBeenCalled();
+    finish();
+    await pending;
+    expect(captureMock.openScreenshot).toHaveBeenCalledOnce();
   });
 });

@@ -658,6 +658,10 @@
     "effects": "효과",
     "color": "색상",
     "selectElement": "요소를 선택하세요",
+    "selectTwoToGroup": "그룹화할 요소 2개 선택",
+    "selectOneMoreToGroup": "그룹화할 요소 1개 더 선택",
+    "alreadyGrouped": "이미 그룹화된 요소입니다",
+    "selectGroupToUngroup": "그룹을 해제할 그룹 요소 선택",
     "locked": "편집하려면 요소의 잠금을 해제하세요",
     "busy": "현재 작업이 끝날 때까지 기다리세요",
     "effectLimit": "이 요소에는 이미 네 개의 효과가 있습니다",
@@ -715,5 +719,33 @@
     "sectionCaptureSource": "캡처 소스",
     "sectionRecorder": "녹화 제어",
     "sectionDragging": "드래그"
+  },
+  "DitheringEffect": {
+    "title": "디더링",
+    "pattern": "패턴",
+    "pixelSize": "패턴 크기",
+    "fourTones": "4단계 색조",
+    "retro": "레트로",
+    "algorithm": "알고리즘",
+    "ordered": "순서형 (GPU)",
+    "mapping": "색상 매핑",
+    "nearestColors": "가까운 색상",
+    "luminance": "휘도",
+    "blockSize": "픽셀화"
+  },
+  "ArtisticEffect": {
+    "ascii": "ASCII",
+    "grain": "그레인",
+    "cyanotype": "시아노타입",
+    "cellSize": "문자 크기",
+    "amount": "강도",
+    "size": "입자 크기",
+    "colored": "원본 색상",
+    "monochrome": "단색",
+    "invert": "문자 반전",
+    "foreground": "텍스트 색상",
+    "background": "배경",
+    "blue": "프러시안 블루",
+    "paper": "종이"
   }
 }

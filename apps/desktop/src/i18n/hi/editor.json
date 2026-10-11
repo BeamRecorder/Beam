@@ -658,6 +658,10 @@
     "effects": "इफ़ेक्ट",
     "color": "रंग",
     "selectElement": "कोई एलिमेंट चुनें",
+    "selectTwoToGroup": "समूह बनाने के लिए 2 तत्व चुनें",
+    "selectOneMoreToGroup": "समूह बनाने के लिए 1 और तत्व चुनें",
+    "alreadyGrouped": "ये तत्व पहले से समूह में हैं",
+    "selectGroupToUngroup": "समूह हटाने के लिए समूह का एक तत्व चुनें",
     "locked": "संपादित करने के लिए एलिमेंट अनलॉक करें",
     "busy": "वर्तमान क्रिया पूरी होने की प्रतीक्षा करें",
     "effectLimit": "इस एलिमेंट में पहले से चार इफ़ेक्ट हैं",
@@ -715,5 +719,33 @@
     "sectionCaptureSource": "कैप्चर स्रोत",
     "sectionRecorder": "रिकॉर्डिंग नियंत्रण",
     "sectionDragging": "खींचना"
+  },
+  "DitheringEffect": {
+    "title": "डिथरिंग",
+    "pattern": "पैटर्न",
+    "pixelSize": "पैटर्न का आकार",
+    "fourTones": "चार टोन",
+    "retro": "रेट्रो",
+    "algorithm": "एल्गोरिदम",
+    "ordered": "क्रमबद्ध (GPU)",
+    "mapping": "रंग मैपिंग",
+    "nearestColors": "निकटतम रंग",
+    "luminance": "चमक",
+    "blockSize": "पिक्सेलेशन"
+  },
+  "ArtisticEffect": {
+    "ascii": "ASCII",
+    "grain": "ग्रेन",
+    "cyanotype": "सायनोटाइप",
+    "cellSize": "अक्षर का आकार",
+    "amount": "तीव्रता",
+    "size": "ग्रेन का आकार",
+    "colored": "मूल रंग",
+    "monochrome": "मोनोक्रोम",
+    "invert": "अक्षर उलटें",
+    "foreground": "टेक्स्ट का रंग",
+    "background": "पृष्ठभूमि",
+    "blue": "प्रशियन नीला",
+    "paper": "कागज़"
   }
 }

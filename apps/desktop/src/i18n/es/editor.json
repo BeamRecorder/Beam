@@ -658,6 +658,10 @@
     "effects": "Efectos",
     "color": "Color",
     "selectElement": "Selecciona un elemento",
+    "selectTwoToGroup": "Selecciona 2 elementos para agrupar",
+    "selectOneMoreToGroup": "Selecciona 1 elemento más para agrupar",
+    "alreadyGrouped": "Estos elementos ya están agrupados",
+    "selectGroupToUngroup": "Selecciona un elemento agrupado para desagrupar",
     "locked": "Desbloquea el elemento para editarlo",
     "busy": "Espera a que termine la acción actual",
     "effectLimit": "Este elemento ya tiene cuatro efectos",
@@ -715,5 +719,33 @@
     "sectionCaptureSource": "Fuente de captura",
     "sectionRecorder": "Controles de grabación",
     "sectionDragging": "Arrastre"
+  },
+  "DitheringEffect": {
+    "title": "Tramado",
+    "pattern": "Patrón",
+    "pixelSize": "Tamaño del patrón",
+    "fourTones": "Cuatro tonos",
+    "retro": "Retro",
+    "algorithm": "Algoritmo",
+    "ordered": "Ordenado (GPU)",
+    "mapping": "Asignación de colores",
+    "nearestColors": "Colores cercanos",
+    "luminance": "Luminancia",
+    "blockSize": "Pixelado"
+  },
+  "ArtisticEffect": {
+    "ascii": "ASCII",
+    "grain": "Grano",
+    "cyanotype": "Cianotipia",
+    "cellSize": "Tamaño de caracteres",
+    "amount": "Intensidad",
+    "size": "Tamaño del grano",
+    "colored": "Colores originales",
+    "monochrome": "Monocromo",
+    "invert": "Invertir caracteres",
+    "foreground": "Color del texto",
+    "background": "Fondo",
+    "blue": "Azul de Prusia",
+    "paper": "Papel"
   }
 }

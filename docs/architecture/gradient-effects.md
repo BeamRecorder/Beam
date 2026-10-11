@@ -79,3 +79,15 @@ Runtime owns retained WebGL programs and three reusable isolation surfaces per a
 The algorithms originated in the user's BEBE-ui `src/graphics/gradient/` implementation and `src/data/gradients.ts` presets. Beam keeps rendering in runtime and document validation in engine rather than embedding that project's UI.
 
 Focused unit/component tests cover recipes, transactions, projection, GPU cleanup, inspector controls and worker transport. The opt-in `gradient-desktop.integration.test.ts` launches an isolated Electron profile, adds an effect through Composition, checks real preview/thumbnail pixels and transparent alpha, changes presets, exports through the packaged CLI and verifies saved state plus undo/redo. Enable it with `BEAM_RUN_DESKTOP_AGENT_TEST=1` and provide the native capture executable and compatible Chromium host as described in the agent docs.
+
+## Dithering and photographic effects
+
+Composition → Effects also offers Dithering, ASCII, Grain and Cyanotype. Each is a portable, independently enabled layer effect with opacity and undo/redo. Their GPU shaders sample the isolated layer and preserve its alpha; they never sample other composition layers. The same painter serves preview, nested thumbnails, clipboard rasters and exported images.
+
+Dithering exposes Bayer 2×2/4×4/8×8, motif size, pixelation, brightness, contrast, nearest-color or ordered-luminance palette mapping, three palette presets and editable colors. Bayer uses a retained WebGL shader and texture. Its ordered approach is informed by [Alex Charlton's Dithering on the GPU](https://alex-charlton.com/posts/Dithering_on_the_GPU/); Beam uses linear RGB distance/projection to support neutral and repeated hues without singularities.
+
+The optional Jarvis–Judice–Ninke algorithm uses the exact 12-neighbor, denominator-48 error kernel in a separate worker. It keeps only three error rows, preserves original alpha, and skips transparent neighbors. A private paint session waits for each CPU result in stack order and publishes only complete frames. New preview requests cancel superseded workers; completed or cancelled sessions release their bitmaps, scratch surfaces and workers. GPU programs remain lazy. Large JJN previews can take longer to settle while controls stay responsive.
+
+ASCII exposes character size, brightness, contrast, source or custom text colors, background color and glyph inversion. Its retained monospace glyph atlas is generated once and sampled by a shader. Grain exposes amount, size, monochrome/colored noise and a static seed. Cyanotype maps exposed luminance between editable Prussian blue and paper colors, with contrast and effect opacity. Grain and all screenshots remain deterministic; there is no wall-clock animation.
+
+Palette mapping, pixelation and the separate ASCII effect were informed by [Pablo Stanley's Efecto article](https://tympanus.net/codrops/2026/01/04/efecto-building-real-time-ascii-and-dithering-effects-with-webgl-shaders/), which describes CPU error diffusion and GPU ASCII rendering. Beam's own implementation follows the existing engine/runtime/desktop boundary.

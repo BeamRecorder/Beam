@@ -1,5 +1,11 @@
 import { computed, ref, watch } from 'vue';
-import { createGradientEffect, createColorEffect, validateLayerEffects } from '@beam/engine';
+import {
+  createGradientEffect,
+  createColorEffect,
+  createDitheringEffect,
+  createArtisticEffect,
+  validateLayerEffects,
+} from '@beam/engine';
 import { LAYER_BLEND_MODES } from '@beam/engine/shared/layer-compositing';
 import { screenshotLayers, updateScreenshotLayer } from '@beam/engine/screenshot/screenshot-layers';
 import { beginPropertyInteraction, endPropertyInteraction } from '~/composables/property-interaction';
@@ -52,7 +58,11 @@ export function useScreenshotLayerEffects(options: ScreenshotLayerEffectsOptions
     const effect =
       kind === 'gradient'
         ? createGradientEffect(crypto.randomUUID())
-        : createColorEffect(crypto.randomUUID(), kind === 'grayscale');
+        : kind === 'dithering'
+          ? createDitheringEffect(crypto.randomUUID())
+          : kind === 'ascii' || kind === 'grain' || kind === 'cyanotype'
+            ? createArtisticEffect(kind, crypto.randomUUID())
+            : createColorEffect(crypto.randomUUID(), kind === 'grayscale');
     commit([...(target.effects ?? []), effect]);
     effectId.value = effect.id;
     options.inspect();

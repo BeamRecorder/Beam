@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
-import { createGradientEffect, createColorEffect } from '@beam/engine';
+import { createGradientEffect, createColorEffect, createDitheringEffect, createArtisticEffect } from '@beam/engine';
 import { effectThumbnailId } from '../composition/thumbnails/effect-thumbnail';
 import ScreenshotLayerEffectList from './ScreenshotLayerEffectList.vue';
 vi.mock('~/i18n/useTranslate', () => ({ useTranslate: () => ({ t: (key: string) => key }) }));
@@ -70,4 +70,17 @@ describe('Composition attached effect rows', () => {
     expect(single.find('button[aria-label="disable"]').exists()).toBe(true);
     single.unmount();
   });
+});
+
+it.each([
+  createDitheringEffect('dither'),
+  createArtisticEffect('ascii', 'ascii'),
+  createArtisticEffect('grain', 'grain'),
+  createArtisticEffect('cyanotype', 'cyanotype'),
+])('labels and selects the real $kind effect', async (effect) => {
+  const wrapper = mount(ScreenshotLayerEffectList, { props: { layer: { ...layer, effects: [effect] } } });
+  expect(wrapper.text()).toContain(effect.kind === 'dithering' ? 'title' : effect.kind);
+  await wrapper.get('.effect-select').trigger('click');
+  expect(wrapper.emitted('select')).toEqual([[effect.id]]);
+  wrapper.unmount();
 });

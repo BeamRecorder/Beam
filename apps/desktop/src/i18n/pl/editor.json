@@ -658,6 +658,10 @@
     "effects": "Efekty",
     "color": "Kolor",
     "selectElement": "Wybierz element",
+    "selectTwoToGroup": "Wybierz 2 elementy do zgrupowania",
+    "selectOneMoreToGroup": "Wybierz jeszcze 1 element do zgrupowania",
+    "alreadyGrouped": "Te elementy są już zgrupowane",
+    "selectGroupToUngroup": "Wybierz zgrupowany element, aby rozgrupować",
     "locked": "Odblokuj element, aby go edytować",
     "busy": "Poczekaj na zakończenie bieżącego działania",
     "effectLimit": "Ten element ma już cztery efekty",
@@ -715,5 +719,33 @@
     "sectionCaptureSource": "Źródło przechwytywania",
     "sectionRecorder": "Sterowanie nagrywaniem",
     "sectionDragging": "Przeciąganie"
+  },
+  "DitheringEffect": {
+    "title": "Dithering",
+    "pattern": "Wzór",
+    "pixelSize": "Rozmiar wzoru",
+    "fourTones": "Cztery odcienie",
+    "retro": "Retro",
+    "algorithm": "Algorytm",
+    "ordered": "Uporządkowany (GPU)",
+    "mapping": "Mapowanie kolorów",
+    "nearestColors": "Najbliższe kolory",
+    "luminance": "Luminancja",
+    "blockSize": "Pikselizacja"
+  },
+  "ArtisticEffect": {
+    "ascii": "ASCII",
+    "grain": "Ziarno",
+    "cyanotype": "Cyjanotypia",
+    "cellSize": "Rozmiar znaków",
+    "amount": "Intensywność",
+    "size": "Rozmiar ziarna",
+    "colored": "Kolory źródłowe",
+    "monochrome": "Monochromatyczne",
+    "invert": "Odwróć znaki",
+    "foreground": "Kolor tekstu",
+    "background": "Tło",
+    "blue": "Błękit pruski",
+    "paper": "Papier"
   }
 }

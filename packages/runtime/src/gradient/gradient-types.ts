@@ -1,3 +1,5 @@
+import type { ArtisticRenderer } from './artistic-renderer';
+import type { DitheringRenderer } from './dithering-renderer';
 import type { GradientRenderer } from './gradient-renderer';
 import type { Canvas2DContext } from '../canvas-types';
 export type LabColor = [number, number, number];
@@ -31,4 +33,6 @@ export interface LayerEffectSurfaces {
 
 export interface LayerEffectRuntime extends LayerEffectSurfaces {
   renderer?: GradientRenderer;
+  ditheringRenderer?: DitheringRenderer;
+  artisticRenderer?: ArtisticRenderer;
 }

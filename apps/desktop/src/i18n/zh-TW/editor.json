@@ -658,6 +658,10 @@
     "effects": "效果",
     "color": "色彩",
     "selectElement": "請選擇一個元素",
+    "selectTwoToGroup": "選取 2 個元素以群組",
+    "selectOneMoreToGroup": "再選取 1 個元素以群組",
+    "alreadyGrouped": "這些元素已群組",
+    "selectGroupToUngroup": "選取群組中的元素以取消群組",
     "locked": "解鎖元素後即可編輯",
     "busy": "請等待目前操作完成",
     "effectLimit": "此元素已有四個效果",
@@ -715,5 +719,33 @@
     "sectionCaptureSource": "擷取來源",
     "sectionRecorder": "錄製控制",
     "sectionDragging": "拖曳"
+  },
+  "DitheringEffect": {
+    "title": "抖色",
+    "pattern": "圖案",
+    "pixelSize": "圖案大小",
+    "fourTones": "四階色調",
+    "retro": "復古",
+    "algorithm": "演算法",
+    "ordered": "有序（GPU）",
+    "mapping": "色彩對應",
+    "nearestColors": "最接近的色彩",
+    "luminance": "亮度",
+    "blockSize": "像素化"
+  },
+  "ArtisticEffect": {
+    "ascii": "ASCII",
+    "grain": "顆粒",
+    "cyanotype": "藍曬",
+    "cellSize": "字元大小",
+    "amount": "強度",
+    "size": "顆粒大小",
+    "colored": "原始色彩",
+    "monochrome": "單色",
+    "invert": "反轉字元",
+    "foreground": "文字色彩",
+    "background": "背景",
+    "blue": "普魯士藍",
+    "paper": "紙張"
   }
 }

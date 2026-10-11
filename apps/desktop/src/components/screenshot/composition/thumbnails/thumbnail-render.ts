@@ -1,3 +1,5 @@
+import { hasCpuLayerEffects } from '@beam/runtime/screenshot/screenshot-cpu-effects';
+import { paintWithAsyncLayerEffects } from '@beam/runtime/gradient/async-layer-effects';
 import { releaseCompositedLayerSurface } from '@beam/runtime/composition/render-composited-layer';
 import { drawScreenshotLayer } from '@beam/runtime/screenshot/screenshot-layer-render';
 import { screenshotLayerRotation, screenshotLayerTransform } from '../../screenshot-layer-geometry';
@@ -68,7 +70,11 @@ export async function renderLayerThumbnail(
     },
   };
   try {
-    drawScreenshotLayer(context, visibleState, layer, assets, width * scale, height * scale);
+    if (hasCpuLayerEffects(layer.effects))
+      await paintWithAsyncLayerEffects(context, (target) =>
+        drawScreenshotLayer(target, visibleState, layer, assets, width * scale, height * scale),
+      );
+    else drawScreenshotLayer(context, visibleState, layer, assets, width * scale, height * scale);
   } finally {
     releaseCompositedLayerSurface(context);
   }
