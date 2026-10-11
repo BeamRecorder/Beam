@@ -38,6 +38,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Beam CLI installs, checks and updates ten Beam agent skills from the repository's `.skills/Beam-cli` pack, with project-local installation by default, optional global destinations, pinned revisions, checksum validation and protection/backups for local edits. The skills cover design briefs, compositions, animation, capture, screenshot/video editing, assets, audio and export; CLI help and bundled documentation explain how to start.
+
 - The Windows installer lets you choose where Beam is installed, including another drive. In-app updates still install silently and restart Beam.
 - Assign separate global shortcuts to record a screen, region or window with Quick Snip, using your saved countdown. The new actions are available in all 15 languages and start unassigned.
 - Open the same Settings window from the Recorder, video editor, Screenshot and Quick Snip, with shared Appearance controls.

@@ -4,6 +4,11 @@ The CLI exposes discoverable tools with JSON Schema inputs. It controls the docu
 actually open in Beam; edits update the preview and use the editor's undo history.
 Standalone `edit` and `serve` continue to work without the desktop application.
 
+Start with `beam-cli skills install` to give your agent Beam's maintained workflows
+for design, composition, animation, capture, editing and export. Use `skills check`
+and `skills update` to keep them current; see [agent skills](skills.md) or
+`beam-cli docs skills` for destinations, pinning and protected local edits.
+
 For reusable HTML/GSAP sentences, prompt fields, macOS cursors and camera moves,
 see the [launch-video templates](../agents/templates/readme.md) and their complete
 12-second example. Each component is customizable and deterministic when seeking.
@@ -97,7 +102,7 @@ the reference project does not need to be open.
 
 Keep text that the user needs to edit in native text layers, alongside HTML artwork.
 Use `still.layer.add` with `kind: "shape", family: "text", preset: "text"` and an
-`ElementText` value for screenshots; use `clip.insert` for video elements. Read the
+`ElementText` value for screenshots; use `clip.add` with a complete clip for video elements. Read the
 command documentation for the complete clip defaults and required text style fields.
 
 ```sh

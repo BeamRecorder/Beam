@@ -26,7 +26,7 @@ export const TOOL_CATALOG: ToolDefinition[] = [
   definition(
     'docs.read',
     'Find bundled documentation, GitHub source links and the recommended reading order.',
-    { topic: { type: 'string', enum: ['agent', 'html', 'gradients', 'commands', 'architecture'] } },
+    { topic: { type: 'string', enum: ['agent', 'skills', 'html', 'gradients', 'commands', 'architecture'] } },
     [],
     false,
   ),

@@ -19,11 +19,13 @@ import { createDocumentHost, serveDocument } from './document-host';
 import type { StillDocument } from '@beam/engine';
 import { parseExportOptions, exportWithBackend } from './export-backends';
 
-const help = `beam inspect DOCUMENT
+const help = `AI agents: install Beam skills in the current project with beam-cli skills install (.agents/skills).
+beam skills install|check|update [NAME...] [--agent AGENT] [--global] [--dir PATH]
+beam inspect DOCUMENT
 beam tools list
 beam tools describe NAME
 beam tools call NAME [JSON|@FILE|-] [--instance PID]
-beam docs [agent|html|commands|architecture]
+beam docs [agent|skills|html|gradients|commands|architecture]
 beam instances
 beam html watch @PUBLISH.json [--instance PID]
 beam create video OUTPUT
@@ -46,6 +48,10 @@ All successful results are JSON on stdout; errors use stderr and exit code 1.`;
 export async function runCliCommand(args: string[]) {
   const [command, input, second, output, ...flags] = args;
   if (!command || command === '--help') return { usage: help };
+  if (command === 'skills') {
+    const { runSkillsCommand } = await import('./skills');
+    return runSkillsCommand(args.slice(1));
+  }
   if (['tools', 'docs', 'instances', 'html'].includes(command)) {
     const { runAgentCommand } = await import('./agent-runner');
     return runAgentCommand(args);
