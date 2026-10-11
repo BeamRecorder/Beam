@@ -9,7 +9,7 @@ use std::{
 use pipewire::spa::param::video::VideoFormat;
 use xcursor::{CursorTheme, parser::parse_xcursor};
 
-use crate::cursor::{CursorKind, Hotspot};
+use crate::cursor::{CursorKind, Hotspot, resize_classifier::resize_cursor_kind};
 
 const SIGNATURE_SIDE: usize = 24;
 const MATCH_THRESHOLD: f64 = 0.18;
@@ -56,7 +56,10 @@ impl CursorClassifier {
             return *kind;
         }
         let kind = canonical_bitmap(format, width, height, stride, pixels)
-            .and_then(|pixels| self.match_pixels(width, height, hotspot, &pixels))
+            .and_then(|pixels| {
+                self.match_pixels(width, height, hotspot, &pixels)
+                    .or_else(|| resize_cursor_kind(&pixels, width, height, hotspot))
+            })
             .unwrap_or(CursorKind::Custom);
         self.cache.insert(shape_id, kind);
         kind

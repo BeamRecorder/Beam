@@ -180,6 +180,8 @@ fn probe_hardware_encoder(executable: &Path, encoder: &FfmpegEncoder) -> bool {
         "12000000".into(),
         "-c:v".into(),
         encoder.name.clone(),
+        "-bf".into(),
+        "0".into(),
         "-f".into(),
         "null".into(),
         "-".into(),

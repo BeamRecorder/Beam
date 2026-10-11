@@ -232,10 +232,20 @@ impl ScreenSampleSink for FfmpegScreenSink {
         if self.format != Some(actual) {
             self.format_changed(actual)?;
         }
+        let segment_start_ns = self
+            .current_segment
+            .as_ref()
+            .ok_or_else(|| ffmpeg_error("screen segment unavailable"))?
+            .start_ns;
+        let timestamp_ns = sample
+            .timestamp
+            .session_ns
+            .checked_sub(segment_start_ns)
+            .ok_or_else(|| ffmpeg_error("screen timestamp precedes its segment"))?;
         self.process
             .as_mut()
             .ok_or_else(|| ffmpeg_error("FFmpeg is not running for the active segment"))?
-            .write_frame(&sample.frame)?;
+            .write_frame(&sample.frame, timestamp_ns)?;
         if let Some(cursor) = self.cursor.as_mut() {
             cursor.push_sample(sample.timestamp.session_ns, sample.cursor)?;
         }

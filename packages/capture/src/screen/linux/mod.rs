@@ -29,6 +29,7 @@ mod portal;
 mod recording;
 mod region_selection;
 mod runtime;
+mod timestamped_video;
 
 pub use capabilities::*;
 pub(crate) use diagnostics::*;

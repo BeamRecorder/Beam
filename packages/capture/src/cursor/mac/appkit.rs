@@ -72,10 +72,14 @@ fn current_system_shape() -> Result<MacCursorShape, CaptureError> {
 
 fn descriptor_for(cursor: &NSCursor) -> MacCursorShape {
     let hotspot = hotspot(cursor);
-    classify(cursor).map_or_else(
-        || custom_descriptor(cursor as *const NSCursor as usize, hotspot),
-        |kind| system_descriptor(kind, hotspot),
-    )
+    if let Some(kind) = classify(cursor) {
+        return system_descriptor(kind, hotspot);
+    }
+    let mut shape = custom_descriptor(cursor as *const NSCursor as usize, hotspot);
+    if let Some(kind) = super::bitmap::resize_kind(cursor) {
+        shape.cursor_kind = kind;
+    }
+    shape
 }
 
 fn system_descriptor(cursor_kind: CursorKind, hotspot: Hotspot) -> MacCursorShape {

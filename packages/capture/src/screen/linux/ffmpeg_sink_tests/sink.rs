@@ -42,18 +42,29 @@ fn sink_rotates_atomic_segments_and_finalizes_cursor_sidecars() {
     .expect("create FFmpeg sink");
     sink.format_changed(video_format())
         .expect("announce format");
-    sink.push(sample(10)).expect("first sample");
+    sink.push(sample(10_000_000)).expect("first sample");
     sink.end_segment().expect("finish first segment");
     sink.begin_segment(ScreenSegment {
         path: second.clone(),
-        start_ns: 100,
+        start_ns: 100_000_000,
     })
     .expect("begin second segment");
-    sink.push(sample(110)).expect("second sample");
+    assert!(sink.push(sample(99_000_000)).is_err());
+    sink.push(sample(110_000_000)).expect("second sample");
     sink.finish().expect("finalize sink");
 
-    assert_eq!(fs::read(first).expect("first segment"), b"fake-mp4");
-    assert_eq!(fs::read(second).expect("second segment"), b"fake-mp4");
+    let mut packet = crate::screen::linux::timestamped_video::frame_header(10_000_000, 16)
+        .expect("captured packet");
+    packet.extend([0; 16]);
+    for output in [first, second] {
+        assert_eq!(fs::read(&output).expect("published segment"), b"fake-mp4");
+        let input = output.with_extension("partial.mp4.input");
+        assert!(
+            fs::read(input)
+                .expect("timestamped input")
+                .ends_with(&packet)
+        );
+    }
     let events: Vec<crate::cursor::CursorEvent> =
         serde_json::from_slice(&fs::read(cursor.join("cursor.json")).expect("cursor events"))
             .expect("parse cursor events");
@@ -102,7 +113,7 @@ fn fake_ffmpeg(temporary: &tempfile::TempDir) -> std::path::PathBuf {
     let executable = temporary.path().join("ffmpeg-fake");
     fs::write(
         &executable,
-        "#!/bin/sh\nfor output do :; done\nwc -c >/dev/null\nprintf 'fake-mp4' > \"$output\"\n",
+        "#!/bin/sh\nfor output do :; done\ncat > \"$output.input\"\nprintf 'fake-mp4' > \"$output\"\n",
     )
     .expect("write fake FFmpeg");
     let mut permissions = fs::metadata(&executable)

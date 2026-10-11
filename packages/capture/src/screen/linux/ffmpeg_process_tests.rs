@@ -95,7 +95,7 @@ fn capabilities() -> FfmpegCapabilities {
 }
 
 #[test]
-fn arguments_describe_bgra_vfr_h264_mp4_input() {
+fn arguments_preserve_capture_timestamps_instead_of_encoder_arrival_times() {
     let capabilities = capabilities();
     let output = Path::new("screen/segment-0001.mp4");
     let config = FfmpegProcessConfig {
@@ -108,15 +108,12 @@ fn arguments_describe_bgra_vfr_h264_mp4_input() {
         keyframe_interval_seconds: 2,
     };
     let values = arguments(&config, Path::new("screen/segment-0001.partial.mp4"));
+    assert!(values.windows(2).any(|pair| pair == ["-f", "matroska"]));
+    assert!(values.iter().any(|value| value == "-copyts"));
     assert!(
-        values
-            .windows(2)
-            .any(|pair| pair == ["-pixel_format", "bgra"])
-    );
-    assert!(
-        values
-            .windows(2)
-            .any(|pair| pair == ["-video_size", "1919x1079"])
+        !values
+            .iter()
+            .any(|value| value == "-use_wallclock_as_timestamps")
     );
     assert!(values.windows(2).any(|pair| pair == ["-g", "120"]));
     assert!(values.iter().any(|value| value.contains("pad=ceil")));
@@ -143,6 +140,51 @@ fn arguments_keep_the_output_path_as_one_argument() {
         values.last().map(String::as_str),
         Some("screen with spaces/segment-0001.partial.mp4")
     );
+}
+
+#[test]
+fn every_recording_encoder_disables_frame_reordering_without_forcing_constant_cadence() {
+    use super::FfmpegAcceleration;
+    for (name, codec, acceleration) in [
+        ("libx264", "h264", FfmpegAcceleration::Software),
+        ("libopenh264", "h264", FfmpegAcceleration::Software),
+        ("h264_qsv", "h264", FfmpegAcceleration::Qsv),
+        ("h264_nvenc", "h264", FfmpegAcceleration::Nvenc),
+        ("h264_amf", "h264", FfmpegAcceleration::Amf),
+        ("av1_qsv", "av1", FfmpegAcceleration::Qsv),
+        ("vp9_qsv", "vp9", FfmpegAcceleration::Qsv),
+        (
+            "h264_vaapi",
+            "h264",
+            FfmpegAcceleration::Vaapi {
+                device: "/dev/dri/renderD128".into(),
+            },
+        ),
+    ] {
+        let capabilities = FfmpegCapabilities {
+            executable: "ffmpeg".into(),
+            encoder: FfmpegEncoder {
+                name: name.into(),
+                codec: codec.into(),
+                acceleration,
+            },
+        };
+        let values = arguments(
+            &FfmpegProcessConfig {
+                capabilities: &capabilities,
+                output: Path::new("recording.mp4"),
+                width: 1280,
+                height: 720,
+                fps: 60,
+                bitrate_bps: 4_000_000,
+                keyframe_interval_seconds: 1,
+            },
+            Path::new("recording.partial.mp4"),
+        );
+        assert!(values.windows(2).any(|pair| pair == ["-bf", "0"]));
+        assert!(values.windows(2).any(|pair| pair == ["-fps_mode", "vfr"]));
+        assert!(values.windows(2).any(|pair| pair == ["-c:v", name]));
+    }
 }
 
 #[test]
@@ -190,7 +232,7 @@ fn frame(stride: usize, bytes: Vec<u8>) -> OwnedVideoFrame {
 fn process_writes_compact_rows_and_atomically_publishes_output() {
     let _lock = owned_child::test_lock();
     let (_fake, capabilities) = fake_ffmpeg(
-        "#!/bin/sh\nfor output do :; done\nbytes=$(wc -c)\n[ \"$bytes\" -eq 16 ] || exit 9\nprintf 'fake-mp4' > \"$output\"\n",
+        "#!/bin/sh\nfor output do :; done\ncat > \"$output.input\"\nprintf 'fake-mp4' > \"$output\"\n",
     );
     let output_directory = tempfile::tempdir().expect("temporary output");
     let output = output_directory.path().join("segment-0001.mp4");
@@ -205,15 +247,30 @@ fn process_writes_compact_rows_and_atomically_publishes_output() {
     })
     .expect("spawn fake FFmpeg");
     process
-        .write_frame(&frame(
-            12,
-            vec![
-                1, 2, 3, 4, 5, 6, 7, 8, 90, 90, 90, 90, 9, 10, 11, 12, 13, 14, 15, 16, 80, 80, 80,
-                80,
-            ],
-        ))
+        .write_frame(
+            &frame(
+                12,
+                vec![
+                    1, 2, 3, 4, 5, 6, 7, 8, 90, 90, 90, 90, 9, 10, 11, 12, 13, 14, 15, 16, 80, 80,
+                    80, 80,
+                ],
+            ),
+            0,
+        )
         .expect("write padded frame");
     process.finish().expect("finalize fake FFmpeg");
+    let mut expected = super::timestamped_video::stream_header(2, 2, 30);
+    expected.extend(super::timestamped_video::frame_header(0, 16).expect("frame header"));
+    expected.extend(1_u8..=16);
+    assert_eq!(
+        fs::read(
+            output_directory
+                .path()
+                .join("segment-0001.partial.mp4.input")
+        )
+        .expect("input bytes"),
+        expected
+    );
     assert_eq!(fs::read(&output).expect("read output"), b"fake-mp4");
     assert!(
         !output_directory
@@ -242,7 +299,7 @@ fn process_propagates_non_zero_exit_and_removes_partial_output() {
     })
     .expect("spawn fake FFmpeg");
     process
-        .write_frame(&frame(8, vec![0; 16]))
+        .write_frame(&frame(8, vec![0; 16]), 0)
         .expect("write frame");
     let error = process.finish().expect_err("non-zero FFmpeg must fail");
     assert_eq!(error.code(), "ffmpeg-failed");
@@ -279,10 +336,44 @@ fn process_rejects_a_segment_without_frames() {
 }
 
 #[test]
+fn process_rejects_invalid_frames_and_regressing_times_without_corrupting_the_stream() {
+    let _lock = owned_child::test_lock();
+    let (_fake, capabilities) = fake_ffmpeg(
+        "#!/bin/sh\nfor output do :; done\nwc -c >/dev/null\nprintf 'fake-mp4' > \"$output\"\n",
+    );
+    let directory = tempfile::tempdir().expect("temporary output");
+    let output = directory.path().join("segment.mp4");
+    let mut process = FfmpegProcess::spawn(FfmpegProcessConfig {
+        capabilities: &capabilities,
+        output: &output,
+        width: 2,
+        height: 2,
+        fps: 30,
+        bitrate_bps: 500_000,
+        keyframe_interval_seconds: 1,
+    })
+    .expect("spawn fixture FFmpeg");
+    let mut wrong_size = frame(8, vec![0; 16]);
+    wrong_size.width = 3;
+    assert!(process.write_frame(&wrong_size, 0).is_err());
+    assert!(process.write_frame(&frame(4, vec![0; 16]), 0).is_err());
+    assert!(process.write_frame(&frame(8, vec![0; 15]), 0).is_err());
+    process
+        .write_frame(&frame(8, vec![0; 16]), 20)
+        .expect("valid first frame");
+    assert!(process.write_frame(&frame(8, vec![0; 16]), 10).is_err());
+    process
+        .write_frame(&frame(8, vec![0; 16]), 30)
+        .expect("valid following frame");
+    process.finish().expect("stream remains valid");
+    assert!(output.is_file());
+}
+
+#[test]
 fn sink_accepts_the_initial_segment_when_format_arrives_before_frames_and_stop() {
     let _lock = owned_child::test_lock();
     let (_fake, capabilities) = fake_ffmpeg(
-        "#!/bin/sh\nfor output do :; done\nbytes=$(wc -c)\n[ \"$bytes\" -eq 16 ] || exit 9\nprintf 'fake-mp4' > \"$output\"\n",
+        "#!/bin/sh\nfor output do :; done\nwc -c >/dev/null\nprintf 'fake-mp4' > \"$output\"\n",
     );
     let output_directory = tempfile::tempdir().expect("temporary sink directory");
     let output = output_directory.path().join("segment-0001.mp4");
@@ -355,15 +446,18 @@ fn system_ffmpeg_encodes_a_playable_mp4_segment() {
         keyframe_interval_seconds: 1,
     })
     .expect("spawn system FFmpeg");
-    for shade in [0_u8, 32, 64, 96] {
+    for (index, shade) in [0_u8, 32, 64, 96].into_iter().enumerate() {
         process
-            .write_frame(&OwnedVideoFrame {
-                width,
-                height,
-                stride,
-                pixel_format: PixelFormat::Bgra8,
-                pixels: Arc::from(vec![shade; frame_bytes]),
-            })
+            .write_frame(
+                &OwnedVideoFrame {
+                    width,
+                    height,
+                    stride,
+                    pixel_format: PixelFormat::Bgra8,
+                    pixels: Arc::from(vec![shade; frame_bytes]),
+                },
+                index as u64 * 33_333_333,
+            )
             .expect("write system FFmpeg frame");
         thread::sleep(Duration::from_millis(20));
     }

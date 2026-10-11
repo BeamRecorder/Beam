@@ -9,7 +9,7 @@ use std::{
 
 use crate::{CaptureError, NativeCaptureErrorCode, screen::OwnedVideoFrame};
 
-use super::{FfmpegCapabilities, owned_child, pipe_writer};
+use super::{FfmpegCapabilities, owned_child, pipe_writer, timestamped_video};
 
 const MAX_STDERR_BYTES: usize = 64 * 1024;
 
@@ -20,6 +20,8 @@ pub(super) struct FfmpegProcess {
     final_path: PathBuf,
     partial_path: PathBuf,
     frames: u64,
+    dimensions: (u32, u32),
+    last_timestamp_ns: Option<u64>,
 }
 
 pub(super) struct FfmpegProcessConfig<'a> {
@@ -71,7 +73,7 @@ impl FfmpegProcess {
             )
         })?;
         owned_child::register(&child);
-        let Some(stdin) = child.stdin.take() else {
+        let Some(mut stdin) = child.stdin.take() else {
             owned_child::kill_and_wait(&mut child);
             return Err(ffmpeg_error(
                 NativeCaptureErrorCode::FfmpegFailed,
@@ -86,6 +88,16 @@ impl FfmpegProcess {
             ));
         };
         pipe_writer::nonblocking(&stdin).map_err(|error| {
+            owned_child::kill_and_wait(&mut child);
+            ffmpeg_write_error(error)
+        })?;
+        let header = timestamped_video::stream_header(config.width, config.height, config.fps);
+        pipe_writer::write_all(
+            &mut stdin,
+            &header,
+            Instant::now() + Duration::from_secs(10),
+        )
+        .map_err(|error| {
             owned_child::kill_and_wait(&mut child);
             ffmpeg_write_error(error)
         })?;
@@ -106,10 +118,25 @@ impl FfmpegProcess {
             final_path,
             partial_path,
             frames: 0,
+            dimensions: (config.width, config.height),
+            last_timestamp_ns: None,
         })
     }
 
-    pub(super) fn write_frame(&mut self, frame: &OwnedVideoFrame) -> Result<(), CaptureError> {
+    pub(super) fn write_frame(
+        &mut self,
+        frame: &OwnedVideoFrame,
+        timestamp_ns: u64,
+    ) -> Result<(), CaptureError> {
+        if (frame.width, frame.height) != self.dimensions
+            || self
+                .last_timestamp_ns
+                .is_some_and(|last| timestamp_ns < last)
+        {
+            return Err(ffmpeg_failed(
+                "video dimensions changed or capture timestamps regressed",
+            ));
+        }
         let row_bytes = usize::try_from(frame.width)
             .ok()
             .and_then(|width| width.checked_mul(4))
@@ -128,11 +155,16 @@ impl FfmpegProcess {
                 frame.pixels.len()
             )));
         }
+        let pixel_bytes = row_bytes
+            .checked_mul(frame.height as usize)
+            .ok_or_else(|| ffmpeg_failed("video pixel size overflows"))?;
+        let header = timestamped_video::frame_header(timestamp_ns, pixel_bytes)?;
         let stdin = self
             .stdin
             .as_mut()
             .ok_or_else(|| ffmpeg_failed("FFmpeg input is already closed"))?;
         let deadline = Instant::now() + Duration::from_secs(10);
+        pipe_writer::write_all(stdin, &header, deadline).map_err(ffmpeg_write_error)?;
         if frame.stride == row_bytes {
             pipe_writer::write_all(stdin, &frame.pixels[..required], deadline)
                 .map_err(ffmpeg_write_error)?;
@@ -143,6 +175,7 @@ impl FfmpegProcess {
             }
         }
         self.frames = self.frames.saturating_add(1);
+        self.last_timestamp_ns = Some(timestamp_ns);
         Ok(())
     }
 
@@ -244,20 +277,17 @@ pub(super) fn arguments(config: &FfmpegProcessConfig<'_>, partial_path: &Path) -
         "error".into(),
         "-nostdin".into(),
         "-f".into(),
-        "rawvideo".into(),
-        "-pixel_format".into(),
-        "bgra".into(),
-        "-video_size".into(),
-        format!("{}x{}", config.width, config.height),
-        "-framerate".into(),
-        config.fps.to_string(),
-        "-use_wallclock_as_timestamps".into(),
-        "1".into(),
+        "matroska".into(),
+        "-copyts".into(),
         "-i".into(),
         "pipe:0".into(),
         "-an".into(),
         "-c:v".into(),
         config.capabilities.encoder.name.clone(),
+        // QSV frame reordering derives invalid DTS across idle VFR gaps. Keep
+        // recording frames in capture order so MP4 never shifts their PTS.
+        "-bf".into(),
+        "0".into(),
         "-b:v".into(),
         config.bitrate_bps.to_string(),
         "-g".into(),

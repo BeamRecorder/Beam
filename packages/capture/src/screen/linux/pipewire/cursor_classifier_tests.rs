@@ -44,6 +44,76 @@ fn classifies_theme_pixels_without_persisting_them() {
 }
 
 #[test]
+fn recognizes_figma_resize_without_a_matching_desktop_theme() {
+    let (width, height, pixels) = crate::cursor::resize_classifier::tests::figma_bitmap();
+    let mut classifier = classifier(vec![]);
+    assert_eq!(
+        classifier.classify(
+            77,
+            VideoFormat::RGBA,
+            width,
+            height,
+            width as i32 * 4,
+            &pixels,
+            Hotspot { x: 20, y: 20 }
+        ),
+        CursorKind::Resizenorthwestsoutheast
+    );
+    assert_eq!(
+        classifier.cache.get(&77),
+        Some(&CursorKind::Resizenorthwestsoutheast)
+    );
+}
+
+#[test]
+fn figma_recognition_accepts_padded_bgra_rows_from_pipewire() {
+    let (width, height, pixels) = crate::cursor::resize_classifier::tests::figma_bitmap();
+    let mut bgra = Vec::new();
+    for row in pixels.chunks_exact(width as usize * 4) {
+        for pixel in row.as_chunks::<4>().0 {
+            bgra.extend_from_slice(&[pixel[2], pixel[1], pixel[0], pixel[3]]);
+        }
+        bgra.extend_from_slice(&[0; 16]);
+    }
+    assert_eq!(
+        classifier(vec![]).classify(
+            78,
+            VideoFormat::BGRA,
+            width,
+            height,
+            width as i32 * 4 + 16,
+            &bgra,
+            Hotspot { x: 20, y: 20 }
+        ),
+        CursorKind::Resizenorthwestsoutheast
+    );
+}
+
+#[test]
+fn exact_theme_match_takes_precedence_over_generic_shape_recognition() {
+    let (width, height, pixels) = crate::cursor::resize_classifier::tests::figma_bitmap();
+    let known = ThemeCursor {
+        kind: CursorKind::Cross,
+        width,
+        height,
+        hotspot: Hotspot { x: 20, y: 20 },
+        signature: image_signature(&pixels, width, height).expect("valid fixture signature"),
+    };
+    assert_eq!(
+        classifier(vec![known]).classify(
+            79,
+            VideoFormat::RGBA,
+            width,
+            height,
+            width as i32 * 4,
+            &pixels,
+            Hotspot { x: 20, y: 20 }
+        ),
+        CursorKind::Cross
+    );
+}
+
+#[test]
 fn rejects_unknown_or_ambiguous_shapes() {
     let arrow = [
         [0, 0, 0, 0],

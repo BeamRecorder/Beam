@@ -1,3 +1,4 @@
+mod bitmap;
 mod capture;
 mod dpi;
 mod recording;

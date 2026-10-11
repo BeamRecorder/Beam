@@ -1,22 +1,17 @@
-use std::{ffi::c_void, mem::size_of, ptr, sync::OnceLock};
+use std::{ffi::c_void, mem::size_of, sync::OnceLock};
 
 use windows_capture::{monitor::Monitor, window::Window};
 
 use windows::Win32::{
     Foundation::{HWND, POINT},
-    Graphics::Gdi::{
-        BI_RGB, BITMAP, BITMAPINFO, BITMAPINFOHEADER, CreateCompatibleDC, CreateDIBSection,
-        DIB_RGB_COLORS, DeleteDC, DeleteObject, GetMonitorInfoW, GetObjectW, HGDIOBJ, HMONITOR,
-        MONITORINFO, SelectObject,
-    },
+    Graphics::Gdi::{DeleteObject, GetMonitorInfoW, HGDIOBJ, HMONITOR, MONITORINFO},
     UI::{
         Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON, VK_MBUTTON, VK_RBUTTON},
         Shell::GetScaleFactorForMonitor,
         WindowsAndMessaging::{
-            CURSOR_SHOWING, CURSORINFO, DI_NORMAL, DrawIconEx, GetCursorInfo, GetIconInfo,
-            GetPhysicalCursorPos, HICON, ICONINFO, IDC_APPSTARTING, IDC_ARROW, IDC_CROSS, IDC_HAND,
-            IDC_HELP, IDC_IBEAM, IDC_NO, IDC_SIZEALL, IDC_SIZENESW, IDC_SIZENS, IDC_SIZENWSE,
-            IDC_SIZEWE, IDC_WAIT, LoadCursorW,
+            CURSOR_SHOWING, CURSORINFO, GetCursorInfo, GetIconInfo, GetPhysicalCursorPos, HICON,
+            ICONINFO, IDC_APPSTARTING, IDC_ARROW, IDC_CROSS, IDC_HAND, IDC_HELP, IDC_IBEAM, IDC_NO,
+            IDC_SIZEALL, IDC_SIZENESW, IDC_SIZENS, IDC_SIZENWSE, IDC_SIZEWE, IDC_WAIT, LoadCursorW,
         },
     },
 };
@@ -244,6 +239,17 @@ fn cursor_shape(native_id: usize) -> Result<WindowsCursorShape, CaptureError> {
     let mut info = ICONINFO::default();
     // SAFETY: the icon came from GetCursorInfo and `info` is valid writable storage.
     unsafe { GetIconInfo(icon, &mut info) }.map_err(backend_error)?;
+    let hotspot = Hotspot {
+        x: info.xHotspot,
+        y: info.yHotspot,
+    };
+    let kind = classify_system_cursor(native_id);
+    let classification = if kind == CursorKind::Custom {
+        super::bitmap::resize_kind(icon, &info, hotspot)
+            .map(|kind| kind.unwrap_or(CursorKind::Custom))
+    } else {
+        Ok(kind)
+    };
     // SAFETY: GetIconInfo transfers ownership of both returned bitmap handles.
     unsafe {
         if !info.hbmColor.is_invalid() {
@@ -255,11 +261,8 @@ fn cursor_shape(native_id: usize) -> Result<WindowsCursorShape, CaptureError> {
     }
     Ok(WindowsCursorShape {
         native_id,
-        cursor_kind: classify_system_cursor(native_id),
-        hotspot: Hotspot {
-            x: info.xHotspot,
-            y: info.yHotspot,
-        },
+        cursor_kind: classification?,
+        hotspot,
     })
 }
 
@@ -294,104 +297,6 @@ fn classify_system_cursor(native_id: usize) -> CursorKind {
         .iter()
         .find_map(|(handle, kind)| (*handle == native_id).then_some(*kind))
         .unwrap_or(CursorKind::Custom)
-}
-
-#[allow(dead_code)]
-fn render_icon(icon: HICON, info: &ICONINFO) -> Result<(u32, u32, Vec<u8>), CaptureError> {
-    let (width, height) = bitmap_dimensions(info)?;
-    let width_i32 = i32::try_from(width).map_err(backend_error)?;
-    let height_i32 = i32::try_from(height).map_err(backend_error)?;
-    let bitmap_info = BITMAPINFO {
-        bmiHeader: BITMAPINFOHEADER {
-            biSize: u32::try_from(size_of::<BITMAPINFOHEADER>()).map_err(backend_error)?,
-            biWidth: width_i32,
-            biHeight: -height_i32,
-            biPlanes: 1,
-            biBitCount: 32,
-            biCompression: BI_RGB.0,
-            ..BITMAPINFOHEADER::default()
-        },
-        ..BITMAPINFO::default()
-    };
-    let mut pixels = ptr::null_mut();
-    // SAFETY: a null source creates a memory DC and the returned handle is released below.
-    let dc = unsafe { CreateCompatibleDC(None) };
-    if dc.is_invalid() {
-        return Err(CaptureError::Backend("CreateCompatibleDC failed".into()));
-    }
-    // SAFETY: bitmap_info is initialized and pixels points to writable output storage.
-    let bitmap_result =
-        unsafe { CreateDIBSection(Some(dc), &bitmap_info, DIB_RGB_COLORS, &mut pixels, None, 0) };
-    let bitmap = match bitmap_result {
-        Ok(bitmap) => bitmap,
-        Err(error) => {
-            // SAFETY: dc is a live memory DC owned by this function.
-            let _deleted_dc = unsafe { DeleteDC(dc) };
-            return Err(backend_error(error));
-        }
-    };
-    // SAFETY: both values are live GDI handles and the original is restored below.
-    let old = unsafe { SelectObject(dc, HGDIOBJ(bitmap.0)) };
-    // SAFETY: the selected DIB matches the supplied dimensions and icon is a live handle.
-    let draw = unsafe { DrawIconEx(dc, 0, 0, icon, width_i32, height_i32, 0, None, DI_NORMAL) };
-    let byte_len = usize::try_from(width)
-        .unwrap_or(usize::MAX)
-        .saturating_mul(usize::try_from(height).unwrap_or(usize::MAX))
-        .saturating_mul(4);
-    let mut rgba = if draw.is_ok() && !pixels.is_null() {
-        // SAFETY: the DIB owns width*height*4 bytes until its handle is deleted.
-        unsafe { std::slice::from_raw_parts(pixels.cast::<u8>(), byte_len) }.to_vec()
-    } else {
-        Vec::new()
-    };
-    // SAFETY: restore the old object before releasing the owned bitmap and DC.
-    unsafe {
-        SelectObject(dc, old);
-        let _deleted = DeleteObject(HGDIOBJ(bitmap.0));
-        let _deleted_dc = DeleteDC(dc);
-    }
-    draw.map_err(backend_error)?;
-    bgra_to_rgba(&mut rgba);
-    Ok((width, height, rgba))
-}
-
-fn bitmap_dimensions(info: &ICONINFO) -> Result<(u32, u32), CaptureError> {
-    let handle = if !info.hbmColor.is_invalid() {
-        info.hbmColor
-    } else {
-        info.hbmMask
-    };
-    let mut bitmap = BITMAP::default();
-    // SAFETY: handle came from GetIconInfo and bitmap is a correctly sized output value.
-    let copied = unsafe {
-        GetObjectW(
-            HGDIOBJ(handle.0),
-            i32::try_from(size_of::<BITMAP>()).map_err(backend_error)?,
-            Some((&mut bitmap as *mut BITMAP).cast()),
-        )
-    };
-    if copied == 0 {
-        return Err(CaptureError::Backend(
-            "GetObjectW failed for cursor bitmap".into(),
-        ));
-    }
-    let width = u32::try_from(bitmap.bmWidth.max(1)).map_err(backend_error)?;
-    let raw_height = u32::try_from(bitmap.bmHeight.max(1)).map_err(backend_error)?;
-    let height = if info.hbmColor.is_invalid() {
-        (raw_height / 2).max(1)
-    } else {
-        raw_height
-    };
-    Ok((width, height))
-}
-
-fn bgra_to_rgba(pixels: &mut [u8]) {
-    for pixel in pixels.as_chunks_mut::<4>().0 {
-        pixel.swap(0, 2);
-        if pixel[3] == 0 && pixel[..3].iter().any(|channel| *channel != 0) {
-            pixel[3] = 255;
-        }
-    }
 }
 
 fn backend_error(error: impl std::fmt::Display) -> CaptureError {
