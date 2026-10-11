@@ -19,6 +19,7 @@ import { previewSelectionCountdown } from './source-picker/development-countdown
 import { useNativeSystemAudioPreview } from './recorder/useNativeSystemAudioPreview';
 import { useHudIssues } from './useHudIssues';
 import { useHudCaptureMode } from './useHudCaptureMode';
+import { useHudPreviewVisibility } from './useHudPreviewVisibility';
 
 import { useCaptureSourcePreviews } from './useCaptureSourcePreviews';
 import { useHudWindow } from './useHudWindow';
@@ -97,13 +98,15 @@ export function useHudState(props: HudProps, emit: HudEmit) {
   });
 
   const isMicEnabled = computed(() => selectedMicId.value !== 'no-audio');
+  const previewVisible = useHudPreviewVisibility(props.embedded);
   const { level: micLevel } = useAudioLevelMeter(
-    computed(() => !props.embedded && captureMode.value !== 'screenshot' && isMicEnabled.value),
+    computed(() => previewVisible.value && !props.embedded && captureMode.value !== 'screenshot' && isMicEnabled.value),
     selectedMicId,
   );
   const { level: systemAudioLevel } = useNativeSystemAudioPreview(
     computed(
       () =>
+        previewVisible.value &&
         captureMode.value !== 'screenshot' &&
         desktopPlatform === 'linux' &&
         !props.embedded &&

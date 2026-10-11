@@ -70,6 +70,8 @@ const {
   handleProjectOpen,
   isNewProjectOpen,
   newProjectName,
+  newProjectMode,
+  selectNewProjectMode,
   newProjectError,
   newProjectBusy,
   renameProjectId,
@@ -460,6 +462,8 @@ defineExpose({ refresh: loadProjects, invalidate });
     <ProjectCreateDialog
       v-model:open="isNewProjectOpen"
       v-model:name="newProjectName"
+      :mode="newProjectMode"
+      @update:mode="selectNewProjectMode"
       :busy="newProjectBusy"
       :error="newProjectError"
       @create="handleCreateProject"

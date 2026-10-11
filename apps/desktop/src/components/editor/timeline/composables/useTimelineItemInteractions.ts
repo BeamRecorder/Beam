@@ -1,3 +1,4 @@
+import { matchesGesture } from '~/shortcuts/action-bindings';
 import { recordingMoveSelection } from '@beam/engine/composition/recording-sidecars';
 import { selectionHasLocks } from '@beam/engine/composition/timeline-locks';
 import { computed, onBeforeUnmount } from 'vue';
@@ -8,7 +9,7 @@ import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 export type { TimelineItemInteractions } from './timeline-item-interactions-types';
 
 const selectionIntent = (event: MouseEvent): TimelineSelectionIntent =>
-  event.shiftKey ? 'range' : event.ctrlKey || event.metaKey ? 'toggle' : 'replace';
+  matchesGesture(event, 'rangeSelection') ? 'range' : matchesGesture(event, 'addSelection') ? 'toggle' : 'replace';
 
 export function useTimelineItemInteractions(options: TimelineItemInteractionsOptions): TimelineItemInteractions {
   const selectedClipIdSet = computed(
@@ -70,7 +71,7 @@ export function useTimelineItemInteractions(options: TimelineItemInteractionsOpt
   };
   const startClipMove = (event: PointerEvent, clip: Clip) => {
     suppressClick = false;
-    if (event.button > 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (event.button > 0 || matchesGesture(event, 'rangeSelection') || matchesGesture(event, 'addSelection')) return;
     trackDrag(event);
     if (!selectedClipIdSet.value.has(clip.id)) {
       options.emit('select:item', {
@@ -94,7 +95,7 @@ export function useTimelineItemInteractions(options: TimelineItemInteractionsOpt
   };
   const startZoomMove = (event: PointerEvent, zoom: ZoomElement) => {
     suppressClick = false;
-    if (event.button > 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (event.button > 0 || matchesGesture(event, 'rangeSelection') || matchesGesture(event, 'addSelection')) return;
     trackDrag(event);
     if (!selectedZoomIdSet.value.has(zoom.id)) {
       options.emit('select:item', {

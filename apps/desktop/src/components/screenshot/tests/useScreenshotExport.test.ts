@@ -153,3 +153,54 @@ it('reports string encoding failures and ignores unavailable or already busy edi
   await run(false);
   expect(host.encode).toHaveBeenCalledOnce();
 });
+
+it('publishes the chosen filename and returns the real encoded byte size for the dialog', async () => {
+  const { run } = setup();
+  native.publish.mockResolvedValueOnce({ status: 'saved', path: '/exports/final.png', timings: {} });
+  expect(await run(false, 'My image')).toEqual({ status: 'saved', path: '/exports/final.png', timings: {}, bytes: 8 });
+  expect(native.publish).toHaveBeenCalledWith('screen-1', new ArrayBuffer(8), 'png', false, 'My image');
+});
+
+it('streams the real preview and final report to the export pill', async () => {
+  const { run } = setup();
+  const onPreview = vi.fn(),
+    onReport = vi.fn();
+  await run(false, 'Image', { onPreview, onReport });
+  expect(onPreview).toHaveBeenCalledWith('data:image/png;base64,preview');
+  expect(onReport).toHaveBeenCalledWith(expect.objectContaining({ operation: 'export', status: 'success', bytes: 8 }));
+});
+
+it('cancels an in-flight encode without publication or an error notification', async () => {
+  const { host, run } = setup();
+  const abort = new AbortController();
+  const onReport = vi.fn();
+  let signal!: AbortSignal;
+  vi.mocked(host.encode).mockImplementation(
+    (_source, _state, options) =>
+      new Promise((_resolve, reject) => {
+        signal = options!.signal!;
+        signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+      }),
+  );
+  const pending = run(false, 'Image', { signal: abort.signal, onReport });
+  await flushPromises();
+  abort.abort();
+  await pending;
+  expect(signal.aborted).toBe(true);
+  expect(native.publish).not.toHaveBeenCalled();
+  expect(host.fail).not.toHaveBeenCalled();
+  expect(host.notify).not.toHaveBeenCalled();
+  expect(onReport).toHaveBeenCalledWith(expect.objectContaining({ status: 'cancelled' }));
+  expect(host.busy.value).toBe(false);
+});
+
+it('does not start encoding a request cancelled before it begins', async () => {
+  const { host, run } = setup();
+  const abort = new AbortController();
+  abort.abort();
+  await run(false, 'Image', { signal: abort.signal });
+  expect(host.encode).not.toHaveBeenCalled();
+  expect(native.publish).not.toHaveBeenCalled();
+  expect(host.fail).not.toHaveBeenCalled();
+  expect(host.busy.value).toBe(false);
+});

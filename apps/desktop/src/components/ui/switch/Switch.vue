@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { SwitchVariant } from './switch-types';
+
 const props = withDefaults(
   defineProps<{
     modelValue: boolean;
@@ -7,10 +9,12 @@ const props = withDefaults(
     label?: string;
     ariaLabel?: string;
     ariaDescribedby?: string;
+    variant?: SwitchVariant;
   }>(),
   {
     disabled: false,
     label: '',
+    variant: 'neutral',
   },
 );
 
@@ -25,7 +29,7 @@ const toggle = () => {
 </script>
 
 <template>
-  <div class="switch-container" :class="{ 'is-disabled': disabled }" @click="toggle">
+  <div class="switch-container" :class="[{ 'is-disabled': disabled }, `variant-${variant}`]" @click="toggle">
     <button
       type="button"
       role="switch"
@@ -94,6 +98,13 @@ const toggle = () => {
 .switch-thumb.is-checked {
   background-color: var(--color-bg-element);
   transform: translateX(20px);
+}
+
+.variant-primary:not(.is-disabled) .switch-button.is-checked {
+  background-color: var(--color-primary);
+}
+.variant-primary:not(.is-disabled) .switch-thumb.is-checked {
+  background-color: var(--text-on-primary);
 }
 
 .is-disabled .switch-button {

@@ -30,9 +30,15 @@
   padding: 4px 0;
   z-index: 50;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: clip;
+  overflow-clip-margin: border-box;
   width: fit-content;
   max-width: calc(100vw - 16px);
+}
+
+/* Include the translucent border in the blurred backdrop, not only the padding box. */
+.popover-content::before {
+  inset: -1px;
 }
 
 .popover-content.popover-block {

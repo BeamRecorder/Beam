@@ -1,9 +1,9 @@
 import { capture } from '~/api/capture';
-import type { ScreenshotExportHost } from './screenshot-export-types';
+import type { ScreenshotExportHost, ScreenshotExportOptions } from './screenshot-export-types';
 import type { ScreenshotExportReport } from './export/screenshot-export-diagnostics-types';
 
 export function useScreenshotExport(host: ScreenshotExportHost) {
-  return async (copy: boolean) => {
+  return async (copy: boolean, fileName?: string, options?: ScreenshotExportOptions) => {
     if (!host.document.value || !host.state.value || host.busy.value) return;
     const started = performance.now();
     host.finishText();
@@ -25,6 +25,9 @@ export function useScreenshotExport(host: ScreenshotExportHost) {
       timings: {},
     };
     const controller = new AbortController();
+    const abort = () => controller.abort(options?.signal?.reason);
+    if (options?.signal?.aborted) abort();
+    options?.signal?.addEventListener('abort', abort, { once: true });
     let jobs: Promise<unknown>[] = [];
     let preview: string | undefined;
     const measure = async <T>(stage: string, action: () => Promise<T>) => {
@@ -36,6 +39,7 @@ export function useScreenshotExport(host: ScreenshotExportHost) {
       }
     };
     try {
+      controller.signal.throwIfAborted();
       const snapshotStart = performance.now();
       let snapshot: typeof host.state.value;
       try {
@@ -54,6 +58,7 @@ export function useScreenshotExport(host: ScreenshotExportHost) {
             includePreview: true,
             onPreview: (src) => {
               preview = src;
+              options?.onPreview?.(src);
             },
             onTiming: (stage, ms) => {
               report.timings[stage] = ms;
@@ -66,21 +71,29 @@ export function useScreenshotExport(host: ScreenshotExportHost) {
       );
       jobs = [save, encoding];
       const [, bytes] = await Promise.all([save, encoding]);
+      controller.signal.throwIfAborted();
       report.bytes = bytes.byteLength;
       const published = await measure('publishRoundTrip', () =>
-        capture.exportScreenshot(document.id, bytes, format, copy),
+        capture.exportScreenshot(document.id, bytes, format, copy, ...(fileName ? [fileName] : [])),
       );
       for (const [stage, ms] of Object.entries(published.timings)) report.timings[`native.${stage}`] = ms;
       report.status = published.status === 'cancelled' ? 'cancelled' : 'success';
       host.copied.value = copy && report.status === 'success';
+      return { ...published, bytes: bytes.byteLength };
     } catch (reason) {
       controller.abort(reason);
       await Promise.allSettled(jobs);
+      if (options?.signal?.aborted) {
+        report.status = 'cancelled';
+        return;
+      }
       report.error = reason instanceof Error ? reason.message : String(reason);
       host.fail(reason);
     } finally {
       report.totalMs = performance.now() - started;
       host.busy.value = false;
+      options?.signal?.removeEventListener('abort', abort);
+      options?.onReport?.(report);
       console.info(`[Beam Screenshot ${report.operation}]`, report);
       console.table(report.timings);
       if (report.status !== 'cancelled') host.notify(report, preview);

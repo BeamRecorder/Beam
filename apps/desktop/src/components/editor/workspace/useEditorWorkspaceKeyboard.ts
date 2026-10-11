@@ -1,3 +1,4 @@
+import { matchesAction, shortcutTargetIsEditable } from '~/shortcuts/action-bindings';
 import { onBeforeUnmount, onMounted } from 'vue';
 import type {
   EditorWorkspaceState,
@@ -16,23 +17,45 @@ export function useEditorWorkspaceKeyboard(
   const { isDeleteDialogOpen, requestTimelineDeletion } = timeline;
   const { isCropping, canvasFullscreen } = canvas;
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.defaultPrevented || isDeleteDialogOpen.value) return;
+    if (
+      event.defaultPrevented ||
+      event.isComposing ||
+      isDeleteDialogOpen.value ||
+      shortcutTargetIsEditable(event.target) ||
+      shortcutTargetIsEditable(document.activeElement) ||
+      document.querySelector('[role="dialog"][aria-modal="true"], [role="menu"]')
+    )
+      return;
     if (event.key === 'Escape' && canvasFullscreen.isFullscreen.value) return;
-    if (event.key === 'Escape') {
+    if (matchesAction(event, 'editor.deselect')) {
       if (isCropping.value) isCropping.value = false;
       else clearTimelineSelection();
+      event.preventDefault();
+      return;
     }
     const active = document.activeElement;
     if (active) {
       const tag = active.tagName.toLowerCase();
       if (['input', 'textarea', 'select'].includes(tag) || active.getAttribute('contenteditable') === 'true') return;
     }
-    if ((event.key === 's' || event.key === 'S') && selectedClipId.value) {
+    if (matchesAction(event, 'editor.split') && selectedClipId.value) {
       event.preventDefault();
       splitSelectedClip();
       return;
     }
-    if (event.key !== 'Delete' && event.key !== 'Backspace') return;
+    const navigation = [
+      ['editor.previousFrame', state.currentTime.value - 1 / (state.exportRequest.value?.fps ?? 30)],
+      ['editor.nextFrame', state.currentTime.value + 1 / (state.exportRequest.value?.fps ?? 30)],
+      ['editor.start', 0],
+      ['editor.end', state.duration.value],
+    ] as const;
+    const seek = navigation.find(([id]) => matchesAction(event, id));
+    if (seek) {
+      event.preventDefault();
+      void state.player.seek(Math.max(0, Math.min(state.duration.value, seek[1])));
+      return;
+    }
+    if (!matchesAction(event, 'editor.delete')) return;
     if (selectedClipIds.value.length || selectedZoomIds.value.length) {
       event.preventDefault();
       requestTimelineDeletion({

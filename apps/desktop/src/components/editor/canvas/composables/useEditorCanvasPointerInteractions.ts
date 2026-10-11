@@ -1,3 +1,4 @@
+import { pointerSelectionIsAdditive } from '~/shortcuts/pointer-modifiers';
 import type { EditorCanvasPointerOptions } from '../editor-canvas-pointer-types';
 
 export function useEditorCanvasPointerInteractions(options: EditorCanvasPointerOptions) {
@@ -25,7 +26,7 @@ export function useEditorCanvasPointerInteractions(options: EditorCanvasPointerO
   const handleTransformPointerDown = (event: PointerEvent) => {
     if (event.button === 0) {
       const clipId = options.transformAndCrop.clipIdAt(event, options.canvas()) ?? options.selectedClipId();
-      if (clipId && (event.ctrlKey || event.metaKey || event.shiftKey)) {
+      if (clipId && pointerSelectionIsAdditive(event, clipId === options.selectedClipId())) {
         event.stopPropagation();
         options.onToggleClip(clipId, event);
         return;

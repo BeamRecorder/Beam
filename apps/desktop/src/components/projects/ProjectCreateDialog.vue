@@ -4,15 +4,31 @@ import Dialog from '~/ui/dialog/Dialog.vue';
 import Input from '~/ui/input/Input.vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
+import CaptureModeGroup from '../hud/CaptureModeGroup.vue';
+import type { CaptureMode } from '@beam/engine/capture/capture-mode';
+import type { NewProjectMode } from './project-creation-types';
 const { t } = useTranslate('ProjectPicker');
-defineProps<{ busy: boolean; error: string }>();
+const { t: tCapture } = useTranslate('QuickSnipCropBar');
+defineProps<{ busy: boolean; error: string; mode: NewProjectMode }>();
 const open = defineModel<boolean>('open', { required: true });
 const name = defineModel<string>('name', { required: true });
-const emit = defineEmits<{ create: [] }>();
+const emit = defineEmits<{ create: []; 'update:mode': [mode: NewProjectMode] }>();
+const selectMode = (mode: CaptureMode) => {
+  if (mode !== 'instant') emit('update:mode', mode);
+};
 </script>
 <template>
   <Dialog :is-open="open" :title="t('newProject')" size="sm" @close="open = false">
     <form class="project-create" @submit.prevent="!busy && emit('create')">
+      <CaptureModeGroup
+        :model-value="mode"
+        :modes="['studio', 'screenshot']"
+        :studio-label="tCapture('video')"
+        :disabled="busy"
+        labels
+        full
+        @update:model-value="selectMode"
+      />
       <Input v-model="name" :placeholder="t('projectName')" :disabled="busy" autofocus />
       <p v-if="error" class="error" role="alert">{{ error }}</p>
     </form>

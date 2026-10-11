@@ -1,3 +1,4 @@
+import { hydrateActionBindings } from '~/shortcuts/action-bindings';
 import { defineComponent, h, nextTick, ref } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -308,6 +309,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  hydrateActionBindings({});
   wrapper?.unmount();
   wrapper = undefined;
   vi.restoreAllMocks();
@@ -996,6 +998,142 @@ describe('useLayerTransformAndCrop', () => {
     mounted.state.moveCropDrag(pointer(target, { clientX: 200, clientY: 200 }));
   });
 
+  it.each([
+    ['screen', 1],
+    ['video', 1],
+    ['image', 1],
+    ['image', 2],
+  ] as const)('aligns the cropped %s center at camera scale %s without baking the crop', (kind, scale) => {
+    const clip = imageClip();
+    clip.kind = kind;
+    clip.transform = { x: 0.1, y: 0.13, width: 0.6, height: 0.42 };
+    clip.crop = { x: 0.5, y: 0.2, width: 0.5, height: 0.6 };
+    const scene = composition();
+    scene.clips = [clip];
+    const mounted = mountComposable(clip, false, scene);
+    mounted.selectedBounds.value!.scale = scale;
+    mounted.overlayBounds.value!.scale = scale;
+    const target = document.createElement('div');
+    Object.assign(target, { setPointerCapture: vi.fn(), hasPointerCapture: () => false });
+
+    mounted.state.beginTransformDrag(pointer(target), 'move');
+    mounted.state.moveTransformDrag(pointer(target, { clientX: 100 - (0.05 * scale - 0.002) * 800 }));
+    expect(mounted.state.transformDraft.value?.x).toBeCloseTo(0.05);
+    expect(mounted.state.transformDraft.value?.width).toBe(0.6);
+    expect(mounted.state.activeGuideLines.value).toContainEqual({ type: 'vertical', position: 0.5 });
+    mounted.state.endTransformDrag(pointer(target));
+    expect(mounted.options.onUpdateTransform).toHaveBeenCalledWith(
+      expect.objectContaining({ x: expect.closeTo(0.05) }),
+    );
+    expect(mounted.state.activeGuideLines.value).toEqual([]);
+    expect(clip.crop).toEqual({ x: 0.5, y: 0.2, width: 0.5, height: 0.6 });
+    expect(scene.assets.find((asset) => asset.id === clip.assetId)).toMatchObject({ width: 800, height: 600 });
+  });
+
+  it('aligns against the visible edge of another cropped layer', () => {
+    const clip = imageClip();
+    clip.crop = undefined;
+    clip.transform = { x: 0.1, y: 0.2, width: 0.08, height: 0.1 };
+    const reference = imageClip();
+    reference.id = 'reference';
+    reference.transform = { x: 0.38, y: 0.2, width: 0.5, height: 0.3 };
+    reference.crop = { x: 0.3, y: 0, width: 0.4, height: 1 };
+    const scene = composition();
+    scene.clips = [clip, reference];
+    const mounted = mountComposable(clip, false, scene);
+    mounted.overlayBounds.value!.scale = 1;
+    const target = document.createElement('div');
+    Object.assign(target, { setPointerCapture: vi.fn() });
+    mounted.state.beginTransformDrag(pointer(target), 'move');
+    mounted.state.moveTransformDrag(pointer(target, { clientX: 100 + 0.348 * 800 }));
+    expect(mounted.state.transformDraft.value?.x).toBeCloseTo(0.45);
+    expect(mounted.state.activeGuideLines.value).toContainEqual({ type: 'vertical', position: 0.53 });
+  });
+
+  it('uses the mirrored crop position for alignment', () => {
+    const clip = imageClip();
+    clip.isMirrored = true;
+    clip.transform = { x: 0.1, y: 0.13, width: 0.6, height: 0.42 };
+    clip.crop = { x: 0.5, y: 0.2, width: 0.5, height: 0.6 };
+    const scene = composition();
+    scene.clips = [clip];
+    const mounted = mountComposable(clip, false, scene);
+    mounted.overlayBounds.value!.scale = 1;
+    const target = document.createElement('div');
+    Object.assign(target, { setPointerCapture: vi.fn() });
+    mounted.state.beginTransformDrag(pointer(target), 'move');
+    mounted.state.moveTransformDrag(pointer(target, { clientX: 100 + 0.248 * 800 }));
+    expect(mounted.state.transformDraft.value?.x).toBeCloseTo(0.35, 8);
+    expect(mounted.state.activeGuideLines.value).toContainEqual({ type: 'vertical', position: 0.5 });
+  });
+
+  it('uses cropped bounds through the multi-selection canvas interaction', () => {
+    const clip = imageClip();
+    const scene = composition();
+    scene.clips = [screenClip(), clip];
+    const mounted = mountComposable(clip, false, scene);
+    mounted.selectedIds.value = ['screen', clip.id];
+    mounted.selectedBounds.value!.scale = 1;
+    mounted.overlayBounds.value!.scale = 1;
+    const target = document.createElement('div');
+    const canvas = document.createElement('canvas');
+    canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 800, height: 450 }) as DOMRect;
+    Object.assign(target, { setPointerCapture: vi.fn(), hasPointerCapture: () => false });
+    expect(mounted.state.beginSelectedTransformDrag(pointer(target, { clientX: 390, clientY: 200 }), canvas)).toBe(
+      true,
+    );
+    mounted.state.moveSelectedTransformDrag(pointer(target, { clientX: 490, clientY: 250 }));
+    expect(mounted.state.transformDraftFor(clip.id)).toMatchObject({ width: 0.5, height: 0.4 });
+    mounted.state.endSelectedTransformDrag(pointer(target));
+    expect(mounted.options.onUpdateTransforms).toHaveBeenCalledOnce();
+    expect(mounted.state.transformDraftFor(clip.id)).toBeNull();
+    expect(mounted.state.activeGuideLines.value).toEqual([]);
+  });
+
+  it('uses the screen viewport when no overlay viewport exists and ignores inactive gestures', () => {
+    const clip = screenClip();
+    clip.transform = { x: 0.1, y: 0.13, width: 0.6, height: 0.42 };
+    clip.crop = { x: 0.5, y: 0.2, width: 0.5, height: 0.6 };
+    const scene = composition();
+    scene.clips = [clip];
+    const mounted = mountComposable(clip, false, scene);
+    mounted.overlayBounds.value = null;
+    mounted.selectedBounds.value!.scale = 0;
+    const target = document.createElement('div');
+    Object.assign(target, { setPointerCapture: vi.fn(), hasPointerCapture: () => false });
+    mounted.state.beginTransformDrag(pointer(target, { button: 2 }), 'move');
+    mounted.state.moveTransformDrag(pointer(target));
+    mounted.state.endTransformDrag(pointer(target));
+    expect(mounted.options.onUpdateTransform).not.toHaveBeenCalled();
+    mounted.state.beginTransformDrag(pointer(target), 'move');
+    mounted.state.moveTransformDrag(pointer(target, { clientX: 100 - 0.048 * 800 }));
+    expect(mounted.state.transformDraft.value?.x).toBeCloseTo(0.05, 8);
+    expect(mounted.state.activeGuideLines.value).toContainEqual({ type: 'vertical', position: 0.5 });
+  });
+
+  it('refreshes alignment after resetting a crop while preserving source dimensions', () => {
+    const clip = imageClip();
+    clip.transform = { x: 0.1, y: 0.13, width: 0.6, height: 0.42 };
+    clip.crop = { x: 0.5, y: 0.2, width: 0.5, height: 0.6 };
+    const scene = composition();
+    scene.clips = [clip];
+    const mounted = mountComposable(clip, false, scene);
+    mounted.overlayBounds.value!.scale = 1;
+    const target = document.createElement('div');
+    Object.assign(target, { setPointerCapture: vi.fn(), hasPointerCapture: () => false });
+    mounted.state.beginTransformDrag(pointer(target), 'move');
+    mounted.state.moveTransformDrag(pointer(target, { clientX: 100 - 0.048 * 800 }));
+    expect(mounted.state.transformDraft.value?.x).toBeCloseTo(0.05, 8);
+    mounted.state.endTransformDrag(pointer(target));
+
+    mounted.selectedRef.value = { ...clip, crop: undefined };
+    mounted.state.beginTransformDrag(pointer(target), 'move');
+    mounted.state.moveTransformDrag(pointer(target, { clientX: 100 + 0.102 * 800 }));
+    expect(mounted.state.transformDraft.value?.x).toBeCloseTo(0.2, 8);
+    expect(mounted.state.transformDraft.value?.width).toBe(0.6);
+    expect(mounted.state.activeGuideLines.value).toContainEqual({ type: 'vertical', position: 0.5 });
+  });
+
   it('previews move and aspect-constrained resize transforms, including keyboard aspect updates', () => {
     const mounted = mountComposable(imageClip());
     const target = document.createElement('div');
@@ -1388,5 +1526,49 @@ describe('useLayerTransformAndCrop', () => {
 
     expect(mounted.state.selectVisualAt(pointer(canvas, { clientX: 400, clientY: 225 }), canvas)).toBe(true);
     expect(mounted.options.onSelectTransformClip).toHaveBeenCalledWith('imported-video', expect.anything());
+  });
+});
+
+describe('single-layer duplicate drag', () => {
+  const setupDrag = () => {
+    const clip = imageClip(),
+      mounted = mountComposable(clip);
+    const duplicate = vi.fn();
+    mounted.options.onDuplicateTransforms = duplicate;
+    const target = document.createElement('div');
+    Object.assign(target, {
+      setPointerCapture: vi.fn(),
+      hasPointerCapture: () => true,
+      releasePointerCapture: vi.fn(),
+    });
+    return { mounted, clip, duplicate, target };
+  };
+  it('duplicates the moved layer without committing a move to its original', () => {
+    const { mounted, clip, duplicate, target } = setupDrag();
+    mounted.state.beginTransformDrag(pointer(target, { altKey: true }), 'move');
+    mounted.state.moveTransformDrag(pointer(target, { clientX: 180, clientY: 140, altKey: true }));
+    mounted.state.endTransformDrag(pointer(target));
+    expect(duplicate).toHaveBeenCalledWith([
+      { id: clip.id, transform: expect.objectContaining({ x: expect.any(Number) }) },
+    ]);
+    expect(mounted.options.onUpdateTransform).not.toHaveBeenCalled();
+  });
+  it('does not duplicate a click without a drag', () => {
+    const { mounted, duplicate, target } = setupDrag();
+    mounted.state.beginTransformDrag(pointer(target, { altKey: true }), 'move');
+    mounted.state.endTransformDrag(pointer(target));
+    expect(duplicate).not.toHaveBeenCalled();
+    expect(mounted.options.onUpdateTransform).not.toHaveBeenCalled();
+  });
+  it('uses a remapped duplicate modifier and removes the old modifier', () => {
+    hydrateActionBindings({ 'gesture.duplicate': { keys: 'Control', scope: 'application', category: 'gestures' } });
+    const { mounted, duplicate, target } = setupDrag();
+    for (const ctrlKey of [false, true]) {
+      mounted.state.beginTransformDrag(pointer(target, { ctrlKey, altKey: !ctrlKey }), 'move');
+      mounted.state.moveTransformDrag(pointer(target, { clientX: 180, ctrlKey, altKey: !ctrlKey }));
+      mounted.state.endTransformDrag(pointer(target));
+    }
+    expect(mounted.options.onUpdateTransform).toHaveBeenCalledOnce();
+    expect(duplicate).toHaveBeenCalledOnce();
   });
 });

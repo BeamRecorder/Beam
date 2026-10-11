@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { inject } from 'vue';
+import { computed, inject } from 'vue';
+import { shortcutLabel } from '~/shortcuts/shortcut-label';
+import { actionKeys } from '~/shortcuts/action-bindings';
 import { Search } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { editorSearchKey } from './editor-search-types';
 const search = inject(editorSearchKey, null);
 const { t } = useTranslate('EditorSearch');
-const shortcut = window.capture?.platform === 'darwin' ? '⌘F' : 'Ctrl+F';
+const shortcut = computed(() => shortcutLabel(actionKeys('editor.search')));
 </script>
 <template>
   <Button
@@ -17,7 +19,7 @@ const shortcut = window.capture?.platform === 'darwin' ? '⌘F' : 'Ctrl+F';
     :disabled="!search.ready.value"
     :icon="Search"
     :aria-label="t('title')"
-    :tooltip="`${t('title')} (${shortcut})`"
+    :tooltip="shortcut ? `${t('title')} (${shortcut})` : t('title')"
     @click="search.open.value = true"
   />
 </template>

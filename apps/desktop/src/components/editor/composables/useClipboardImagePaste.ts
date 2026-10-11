@@ -1,3 +1,5 @@
+import { actionKeys, canonicalBinding } from '~/shortcuts/action-bindings';
+import { useActionShortcuts } from '~/shortcuts/useActionShortcuts';
 import { onMounted, onScopeDispose } from 'vue';
 import { shouldPreferInternalEditorClipboard } from './internal-editor-clipboard';
 
@@ -29,6 +31,19 @@ export function useClipboardImagePaste(options: {
     event.preventDefault();
     void options.paste().catch(options.onError);
   };
+  useActionShortcuts(
+    () => [
+      {
+        id: 'editor.paste',
+        disabled:
+          canonicalBinding(actionKeys('editor.paste')) === canonicalBinding('CommandOrControl+V') ||
+          Boolean(options.preferInternal?.()),
+        run: options.paste,
+      },
+    ],
+    () => Boolean(options.disabled?.()),
+    options.onError,
+  );
   onMounted(() => window.addEventListener('paste', handlePaste));
   onScopeDispose(() => window.removeEventListener('paste', handlePaste));
   return { handlePaste };

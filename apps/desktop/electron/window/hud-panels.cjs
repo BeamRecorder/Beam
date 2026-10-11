@@ -1,3 +1,4 @@
+const { registerSettingsEditorActions } = require('./settings-editor-actions.cjs');
 const path = require('node:path');
 const { developmentRendererUrl } = require('../lifecycle/development-session.cjs');
 const { BrowserWindow } = require('electron');
@@ -22,14 +23,26 @@ function createHudPanelManager({
   hudWindow,
   hudController,
   canAcceptWork,
+  settingsOwnerFor = () => null,
+  editorContextFor = () => null,
+  shortcutCapture = async () => {},
   captureWarmup = Promise.resolve(),
 }) {
   const panels = new Map();
+  const releaseEditorActions = registerSettingsEditorActions({
+    ipcMain,
+    getSettings: () => panels.get('settings'),
+    editorContextFor,
+    isPackaged,
+  });
   let disposed = false;
   let warmupComplete = false;
   const synchronizeTopmost = (panel) => {
     const topmost =
-      panel.requested && panel.window.isVisible() && !panel.window.isMinimized() && hudWindow.isAlwaysOnTop();
+      panel.requested &&
+      panel.window.isVisible() &&
+      !panel.window.isMinimized() &&
+      Boolean(panel.owner && !panel.owner.isDestroyed() && panel.owner.isAlwaysOnTop());
     if (panel.topmost === topmost) return;
     panel.topmost = topmost;
     panel.window.setAlwaysOnTop(topmost, process.platform === 'win32' ? 'screen-saver' : 'normal');
@@ -39,6 +52,7 @@ function createHudPanelManager({
     panel.activated = false;
     panel.rendererReady = false;
     panel.window.webContents.send('hud-panel:visibility', false);
+    if (panel.role === 'settings') void shortcutCapture(false).catch(console.error);
     panel.window.hide();
     synchronizeTopmost(panel);
   };
@@ -46,7 +60,11 @@ function createHudPanelManager({
   const available = () => canAcceptWork() && !hudWindow.isDestroyed() && hudController.mode === 'hud';
   const present = (panel) => {
     if (!panel.requested || !panel.nativeReady || !panel.rendererReady || panel.window.isDestroyed()) return;
-    if (!canAcceptWork() || (panel.role !== 'mascot' && !available())) {
+    if (
+      !canAcceptWork() ||
+      (panel.role === 'projects' && !available()) ||
+      (panel.role !== 'mascot' && (!panel.owner || panel.owner.isDestroyed()))
+    ) {
       panel.fail(new Error('The recorder is not available.'));
       return;
     }
@@ -158,9 +176,12 @@ function createHudPanelManager({
       synchronizeTopmost(panel);
       if (panel.topmost) window.moveTop();
     });
+    if (role === 'settings') window.on('blur', () => void shortcutCapture(false).catch(console.error));
     window.on('minimize', () => synchronizeTopmost(panel));
     window.on('restore', () => synchronizeTopmost(panel));
     window.on('closed', () => {
+      if (role === 'settings') void shortcutCapture(false).catch(console.error);
+      panel.releaseOwner?.();
       clearTimeout(panel.timer);
       clearTimeout(panel.preparationTimer);
       panel.rejectPrepared(new Error('The window was closed.'));
@@ -173,13 +194,37 @@ function createHudPanelManager({
     Promise.resolve(loading).catch(fail);
     return panel;
   };
+  const settingsOwner = (sender) => {
+    if (sender === hudWindow.webContents && available()) return hudWindow;
+    const owner = settingsOwnerFor(sender);
+    return owner && !owner.isDestroyed() && owner.webContents === sender ? owner : null;
+  };
   const open = (role, sender) => {
     if (disposed) throw new Error('The recorder is not available.');
     if (role === 'mascot') {
       if (isPackaged || !canAcceptWork() || !owns(sender, 'settings') || !panels.get('settings').requested)
         throw new Error('Developer tools are not available.');
-    } else if (sender !== hudWindow.webContents || !available()) throw new Error('The recorder is not available.');
+    } else if (role === 'projects') {
+      if (sender !== hudWindow.webContents || !available()) throw new Error('The recorder is not available.');
+    } else if (!canAcceptWork() || !settingsOwner(sender)) throw new Error('Settings are not available.');
     const panel = panels.get(role) || create(role);
+    const owner = role === 'settings' ? settingsOwner(sender) : hudWindow;
+    if (panel.owner !== owner) {
+      panel.releaseOwner?.();
+      panel.owner = owner;
+      const closed = () => {
+        if (!panel.requested) return;
+        if (panel.rendererReady) dismiss(panel);
+        else panel.fail(new Error('The requesting window was closed.'));
+      };
+      const changed = () => synchronizeTopmost(panel);
+      owner.on('closed', closed);
+      owner.on('always-on-top-changed', changed);
+      panel.releaseOwner = () => {
+        owner.removeListener('closed', closed);
+        owner.removeListener('always-on-top-changed', changed);
+      };
+    }
     if (!panel.requested) {
       panel.requested = true;
       panel.ready = new Promise((resolve, reject) => {
@@ -200,7 +245,7 @@ function createHudPanelManager({
   };
   const hideOwnedPanels = () => {
     for (const panel of panels.values()) {
-      if (panel.role === 'mascot' || !panel.requested) continue;
+      if (panel.role === 'mascot' || !panel.requested || panel.owner !== hudWindow) continue;
       if (panel.rendererReady) dismiss(panel);
       else panel.fail(new Error('The recorder is not available.'));
     }
@@ -218,6 +263,12 @@ function createHudPanelManager({
       warm();
     });
 
+  ipcMain.handle('settings:shortcut-capture', (event, active) => {
+    const panel = panels.get('settings');
+    if (typeof active !== 'boolean' || !owns(event.sender, 'settings') || !panel?.requested)
+      throw new Error('Shortcut capture is not available.');
+    return shortcutCapture(active);
+  });
   ipcMain.handle('hud:open-settings', (event) => open('settings', event.sender));
   ipcMain.handle('hud:open-projects', (event) => open('projects', event.sender));
   if (!isPackaged) {
@@ -270,6 +321,7 @@ function createHudPanelManager({
     prepare,
     destroy() {
       disposed = true;
+      releaseEditorActions();
       hudWindow.removeListener('show', warm);
       hudWindow.removeListener('hide', hideOwnedPanels);
       hudWindow.removeListener('always-on-top-changed', updateTopmost);

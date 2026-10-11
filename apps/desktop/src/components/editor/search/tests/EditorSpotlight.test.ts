@@ -1,3 +1,5 @@
+const capture = vi.hoisted(() => ({ openHudSettings: vi.fn(async () => true) }));
+vi.mock('~/api/capture', () => ({ capture }));
 import { mount, enableAutoUnmount, flushPromises } from '@vue/test-utils';
 import { defineComponent, h, nextTick, ref } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -72,6 +74,7 @@ describe('editor Spotlight integration', () => {
     await flushPromises();
     expect(f.context.open.value).toBe(false);
     expect(document.activeElement).toBe(launcher.element);
+    vi.stubGlobal('navigator', { platform: 'MacIntel' });
     shortcut({ ctrlKey: false, metaKey: true });
     await flushPromises();
     expect(f.context.open.value).toBe(true);
@@ -124,7 +127,7 @@ describe('editor Spotlight integration', () => {
     const missing = mount(EditorSearchButton);
     expect(missing.find('button').exists()).toBe(false);
     missing.unmount();
-    vi.stubGlobal('capture', { platform: 'darwin' });
+    vi.stubGlobal('navigator', { platform: 'MacIntel' });
     const f = fixture();
     expect(f.wrapper.findComponent(EditorSearchButton).findComponent({ name: 'Button' }).props('tooltip')).toContain(
       '⌘F',

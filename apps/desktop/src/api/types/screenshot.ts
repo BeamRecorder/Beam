@@ -45,5 +45,6 @@ export interface ScreenshotApi {
     bytes: ArrayBuffer,
     format: 'png' | 'webp',
     copy: boolean,
+    fileName?: string,
   ): Promise<ScreenshotPublishResult>;
 }

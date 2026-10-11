@@ -4,6 +4,7 @@ import {
   isAudioClip,
   isBlurClip,
   isCaptionClip,
+  isShapeClip,
   isVisualClip,
   type CaptionStyle,
   type Clip,
@@ -24,7 +25,8 @@ import {
   type ZoomElement,
 } from '@beam/engine/zoom/zoom-types';
 import { normalizeCursorAutoHideSettings, normalizeCursorMotionSettings } from '@beam/engine/capture/cursor-settings';
-import type { EditorPreferenceDefaults, VisualClipDefaults } from './editor-default-types';
+import type { EditorPreferenceDefaults, EditorPreferenceSnapshot, VisualClipDefaults } from './editor-default-types';
+import { normalizeElementTextDefaults } from '../elements/element-text-defaults';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const record = (value: unknown): Record<string, unknown> =>
@@ -119,6 +121,7 @@ export const normalizeEditorPreferenceDefaults = (value: unknown): EditorPrefere
       : null;
   if (presentation?.cursor) presentation.cursor.motion = normalizeCursorMotionSettings(presentation.cursor.motion);
   const visualInput = record(input.visual);
+  const elementText = normalizeElementTextDefaults(input.elementText);
   const visual = Object.fromEntries(
     (['screen', 'video', 'image', 'webcam'] as const).flatMap((kind) =>
       visualInput[kind] ? [[kind, visualDefaults(kind, visualInput[kind])]] : [],
@@ -126,6 +129,7 @@ export const normalizeEditorPreferenceDefaults = (value: unknown): EditorPrefere
   );
   return {
     schemaVersion: 1,
+    ...(elementText ? { elementText } : {}),
     ...(presentation ? { presentation } : {}),
     ...(Object.keys(visual).length ? { visual } : {}),
     ...(input.caption && typeof input.caption === 'object'
@@ -167,7 +171,7 @@ export const normalizeEditorPreferenceDefaults = (value: unknown): EditorPrefere
 
 export function defaultsFromEditorState(
   current: EditorPreferenceDefaults,
-  state: ProjectEditorState,
+  state: EditorPreferenceSnapshot,
   selectedClip: Clip | null,
   selectedZoom: ZoomElement | null,
 ): EditorPreferenceDefaults {
@@ -199,6 +203,9 @@ export function defaultsFromEditorState(
       color,
       ...(highlightColor !== undefined ? { highlightColor } : {}),
     });
+  } else if (selectedClip && isShapeClip(selectedClip) && selectedClip.text) {
+    const elementText = normalizeElementTextDefaults(selectedClip.text);
+    if (elementText) next.elementText = elementText;
   } else if (selectedClip && isAudioClip(selectedClip)) {
     next.audio = {
       volume: selectedClip.volume,

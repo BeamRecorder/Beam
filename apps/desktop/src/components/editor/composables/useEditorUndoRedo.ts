@@ -1,3 +1,4 @@
+import { matchesAction } from '~/shortcuts/action-bindings';
 import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue';
 import type { SnapshotHistory } from '@beam/engine/shared/editor-history-types';
 import type {
@@ -67,7 +68,7 @@ export function useEditorUndoRedo<T extends object = EditorStateSnapshot>(option
     return history.redo();
   };
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.defaultPrevented || event.isComposing || event.altKey || !available()) return;
+    if (event.defaultPrevented || event.isComposing || !available()) return;
     const active = document.activeElement;
     if (
       active?.closest(
@@ -76,11 +77,11 @@ export function useEditorUndoRedo<T extends object = EditorStateSnapshot>(option
       document.querySelector('[role="dialog"][aria-modal="true"]')
     )
       return;
-    if (!(event.ctrlKey || event.metaKey)) return;
-    const key = event.key.toLowerCase();
-    if (key !== 'z' && key !== 'y') return;
+    const isUndo = matchesAction(event, 'editor.undo');
+    const isRedo = matchesAction(event, 'editor.redo');
+    if (!isUndo && !isRedo) return;
     event.preventDefault();
-    void (key === 'y' || event.shiftKey ? redo() : undo());
+    void (isRedo ? redo() : undo());
   };
   onMounted(() => window.addEventListener('keydown', handleKeyDown));
   onUnmounted(() => {

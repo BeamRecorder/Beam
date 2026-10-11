@@ -36,6 +36,10 @@ const historyState = vi.hoisted(() => ({
 const fullscreenState = vi.hoisted(() => ({ active: false, toggle: vi.fn() }));
 
 vi.mock('../../../api/capture', () => ({ capture }));
+vi.mock('../properties/settings/EditorSettingsActions.vue', () => ({
+  __esModule: true,
+  default: { template: '<div />' },
+}));
 vi.mock('~/ui/toast/toastStore', () => ({ useToastStore: () => toast }));
 vi.mock('../canvas/composables/useElementFullscreen', async () => {
   const { ref } = await import('vue');
@@ -514,7 +518,7 @@ vi.mock('../Topbar.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockTopbar',
-      emits: ['back-to-hud', 'open-project'],
+      emits: ['back-to-hud', 'open-project', 'rename-project'],
       setup(_, { emit }) {
         return () =>
           h('div', { class: 'mock-topbar' }, [

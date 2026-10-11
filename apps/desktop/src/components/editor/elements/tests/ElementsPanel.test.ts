@@ -7,6 +7,7 @@ import type { DrawingSettings, DrawnElement } from '@beam/engine/shared/element-
 import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import ElementsPanel from '../ElementsPanel.vue';
 import { useVideoElements } from '../useVideoElements';
+import { normalizeEditorPreferenceDefaults } from '../../composables/editor-defaults';
 
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: () => ({ t: (key: string) => key }),
@@ -75,6 +76,7 @@ describe('ElementsPanel', () => {
     const Host = defineComponent({
       setup() {
         useVideoElements({
+          editorDefaults: ref(normalizeEditorPreferenceDefaults(undefined)),
           composition,
           selectedId,
           activeTab,
@@ -114,6 +116,7 @@ describe('ElementsPanel', () => {
     const Host = defineComponent({
       setup() {
         editor = useVideoElements({
+          editorDefaults: ref(normalizeEditorPreferenceDefaults(undefined)),
           composition,
           selectedId,
           activeTab,
@@ -159,6 +162,7 @@ describe('ElementsPanel', () => {
     const Host = defineComponent({
       setup() {
         editor = useVideoElements({
+          editorDefaults: ref(normalizeEditorPreferenceDefaults(undefined)),
           composition,
           selectedId,
           activeTab,

@@ -148,6 +148,23 @@ test('renames, selects, removes, and updates the active named preset', () => {
   assert.equal(removed.activePresetId, DEFAULT_PRESET_ID);
 });
 
+test('keeps editor and export preference patches independent without changing named templates', () => {
+  const file = temporaryFile();
+  const store = createEditorPresetStore(file);
+  const created = store.create('Template');
+  const template = created.presets.find((preset) => preset.id === created.activePresetId);
+  const original = structuredClone(template.settings);
+  store.update(DEFAULT_PRESET_ID, { editor: { schemaVersion: 1, elementText: { style: { color: '#000000' } } } });
+  store.update(DEFAULT_PRESET_ID, { export: { format: 'webm', preset: 'high' } });
+  store.update(DEFAULT_PRESET_ID, { editor: { schemaVersion: 1, elementText: { style: { color: '#abcdef' } } } });
+  const document = createEditorPresetStore(file).read();
+  assert.equal(document.activePresetId, template.id);
+  const preferences = document.presets.find((preset) => preset.id === DEFAULT_PRESET_ID).settings;
+  assert.equal(preferences.editor.elementText.style.color, '#abcdef');
+  assert.deepEqual(preferences.export, { format: 'webm', preset: 'high' });
+  assert.deepEqual(document.presets.find((preset) => preset.id === template.id).settings, original);
+});
+
 test('persists atomically and keeps the previous document as a backup', () => {
   const file = temporaryFile();
   const backup = `${file}.bak`;

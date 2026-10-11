@@ -24,7 +24,7 @@ const contentOpen = ref(props.clip.family === 'text' || Boolean(props.clip.text)
 watch(
   source,
   (value) => {
-    text.value = value ?? createElementText();
+    text.value = value ?? editor?.createText() ?? createElementText();
     if (editor?.editing.value?.id === props.clip.id) contentOpen.value = true;
   },
   { deep: true, immediate: true },

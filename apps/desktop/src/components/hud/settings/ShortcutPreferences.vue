@@ -1,257 +1,237 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { Search } from '@lucide/vue';
+import { useI18n } from 'vue-i18n';
 import { usePreferencesStore } from '~/stores/preferences';
 import ShortcutInput from '~/ui/input/ShortcutInput.vue';
-import { useTranslate } from '~/i18n/useTranslate';
-import { TELEPROMPTER_SHORTCUTS } from '../teleprompter/shortcut-definitions';
-
-const { t } = useTranslate('ShortcutPreferences');
-const preferencesStore = usePreferencesStore();
-const shortcutErrors = ref<Record<string, string>>({});
-
-const recordingDefinitions = [
-  {
-    id: 'quickSnip.toggle',
-    label: () => t('quickSnip'),
-    description: () => t('quickSnipDesc'),
-  },
-  {
-    id: 'hud.startStopRecording',
-    label: () => t('startStopRecording'),
-    description: () => t('startStopRecordingDesc'),
-  },
-  {
-    id: 'hud.playPause',
-    label: () => t('pauseResume'),
-    description: () => t('pauseResumeDesc'),
-  },
-  {
-    id: 'hud.toggleMic',
-    label: () => t('micOnOff'),
-    description: () => t('micOnOffDesc'),
-  },
-  {
-    id: 'hud.toggleCamera',
-    label: () => t('cameraOnOff'),
-    description: () => t('cameraOnOffDesc'),
-  },
-  {
-    id: 'hud.toggleSystemAudio',
-    label: () => t('systemAudioOnOff'),
-    description: () => t('systemAudioOnOffDesc'),
-  },
-];
-
-const teleprompterDefinitions = [
-  {
-    id: 'teleprompter.toggleVisibility',
-    label: () => t('teleprompterVisibility'),
-    description: () => t('teleprompterVisibilityDesc'),
-  },
-  {
-    id: 'teleprompter.toggleAutoscroll',
-    label: () => t('teleprompterAutoscroll'),
-    description: () => t('teleprompterAutoscrollDesc'),
-  },
-  {
-    id: 'teleprompter.nextLine',
-    label: () => t('teleprompterNextLine'),
-    description: () => t('teleprompterNextLineDesc'),
-  },
-  {
-    id: 'teleprompter.previousLine',
-    label: () => t('teleprompterPreviousLine'),
-    description: () => t('teleprompterPreviousLineDesc'),
-  },
-];
-
-const shortcutDefinitions = [...recordingDefinitions, ...teleprompterDefinitions];
-const shortcutGroups = [
-  {
-    id: 'recording',
-    label: () => t('recordingCategory'),
-    definitions: recordingDefinitions,
-  },
-  {
-    id: 'teleprompter',
-    label: () => t('teleprompterCategory'),
-    definitions: teleprompterDefinitions,
-  },
-];
-
-const defaultShortcuts: Record<string, string> = {
-  'hud.startStopRecording': 'Alt+Shift+R',
-  'quickSnip.toggle': 'Alt+Shift+S',
-  'hud.playPause': 'Alt+Shift+P',
-  'hud.toggleMic': 'Alt+Shift+M',
-  'hud.toggleCamera': 'Alt+Shift+C',
-  'hud.toggleSystemAudio': 'Alt+Shift+A',
-  ...Object.fromEntries(TELEPROMPTER_SHORTCUTS.map(({ id, defaultKeys }) => [id, defaultKeys])),
-};
-
-onMounted(() => {
-  preferencesStore.load();
-});
-
-const getShortcutValue = (id: string): string => {
-  return preferencesStore.settings?.shortcuts?.[id]?.keys ?? defaultShortcuts[id] ?? '';
-};
-
-const checkDuplicates = (targetId: string, value: string) => {
-  const errors: Record<string, string> = { ...shortcutErrors.value };
-  delete errors[targetId];
-
-  if (!value) {
-    shortcutErrors.value = errors;
-    return false;
-  }
-
-  const normalizedVal = value.toLowerCase();
-
-  const shortcuts = preferencesStore.settings?.shortcuts || {};
-  for (const [id, s] of Object.entries(shortcuts)) {
-    if (id !== targetId && s.keys && s.keys.toLowerCase() === normalizedVal) {
-      const match = shortcutDefinitions.find((def) => def.id === id);
-      const name = match ? match.label() : id;
-      errors[targetId] = t('conflictWith', { name });
-      shortcutErrors.value = errors;
-      return true;
+import Input from '~/ui/input/Input.vue';
+import Select from '~/ui/select/Select.vue';
+import ConfirmDialog from '~/ui/dialog/ConfirmDialog.vue';
+import { ACTION_GROUPS, configurableActions } from '~/shortcuts/action-catalog';
+import { actionKeys, conflictingActions } from '~/shortcuts/action-bindings';
+import { actionSectionLabel, groupShortcutActions } from '~/shortcuts/action-sections';
+import { shortcutLabel } from '~/shortcuts/shortcut-label';
+import type { ActionBindings, ActionDefinition, ShortcutReassignment } from '~/shortcuts/action-types';
+const props = defineProps<{ focusedSetting?: string }>();
+const { t, te } = useI18n();
+const preferences = usePreferencesStore();
+const actions = configurableActions();
+onMounted(async () => {
+  if (!preferences.settings) {
+    try {
+      await preferences.load();
+    } catch (reason) {
+      error.value = { loading: String(reason) };
     }
   }
-
-  shortcutErrors.value = errors;
-  return false;
+});
+const group = ref('editing');
+const query = ref('');
+const error = ref<Record<string, string>>({});
+const pending = ref<string | null>(null);
+const reassignment = ref<ShortcutReassignment | null>(null);
+const reassignmentDescription = computed(() =>
+  reassignment.value
+    ? t('ActionShortcuts.reassignDescription', {
+        keys: shortcutLabel(reassignment.value.keys),
+        actions: reassignment.value.conflicts.map((action) => t(action.label)).join(', '),
+        action: t(reassignment.value.action.label),
+      })
+    : '',
+);
+const options = computed(() => ACTION_GROUPS.map((item) => ({ value: item.id, label: t(item.label) })));
+const rows = computed(() =>
+  actions.filter(
+    (action) =>
+      te(action.label) &&
+      (query.value.trim()
+        ? `${t(action.label)} ${t(actionSectionLabel(action))} ${action.id}`
+            .toLocaleLowerCase()
+            .includes(query.value.trim().toLocaleLowerCase())
+        : action.group === group.value),
+  ),
+);
+const sections = computed(() => groupShortcutActions(rows.value));
+const keys = (action: ActionDefinition) => actionKeys(action.id, preferences.settings?.shortcuts ?? {});
+const persist = async (action: ActionDefinition, value: string, conflicts: readonly ActionDefinition[] = []) => {
+  if (pending.value || !preferences.settings) return false;
+  error.value = {};
+  const shortcuts: ActionBindings = {
+    [action.id]: { keys: value, scope: action.scope, category: action.group },
+  };
+  for (const conflict of conflicts) {
+    shortcuts[conflict.id] = { keys: '', scope: conflict.scope, category: conflict.group };
+  }
+  pending.value = action.id;
+  try {
+    await preferences.update({ shortcuts });
+    return true;
+  } catch (reason) {
+    error.value = { [action.id]: reason instanceof Error ? reason.message : String(reason) };
+    return false;
+  } finally {
+    pending.value = null;
+  }
 };
-
-const updateShortcut = async (id: string, keys: string) => {
-  const hasConflict = checkDuplicates(id, keys);
-  if (hasConflict) return;
-
-  const currentShortcuts = preferencesStore.settings?.shortcuts || {};
-  const category = id.startsWith('teleprompter.') ? 'teleprompter' : id.startsWith('quickSnip.') ? 'quick-snip' : 'hud';
-  const existing = currentShortcuts[id] || { scope: 'global', category };
-
-  if (existing.keys === keys) {
-    // If setting to same value, clear any error and return cleanly
-    const errors = { ...shortcutErrors.value };
-    delete errors[id];
-    shortcutErrors.value = errors;
+const save = async (action: ActionDefinition, value: string) => {
+  if (pending.value || reassignment.value || !preferences.settings) return;
+  error.value = {};
+  if (value === keys(action)) return;
+  const conflicts =
+    action.kind === 'modifier' ? [] : conflictingActions(action, value, actions, preferences.settings.shortcuts);
+  if (conflicts.length) reassignment.value = { action, keys: value, conflicts };
+  else await persist(action, value);
+};
+const confirmReassignment = async () => {
+  const requested = reassignment.value;
+  if (!requested || pending.value || !preferences.settings) return;
+  const conflicts = conflictingActions(requested.action, requested.keys, actions, preferences.settings.shortcuts);
+  if (conflicts.some((action) => !requested.conflicts.some((approved) => approved.id === action.id))) {
+    reassignment.value = { ...requested, conflicts };
     return;
   }
-
-  // Create plain shortcuts copy without reactivity proxies
-  const updatedShortcuts = JSON.parse(JSON.stringify(currentShortcuts));
-  updatedShortcuts[id] = {
-    ...existing,
-    keys,
-  };
-
-  try {
-    await preferencesStore.update({
-      shortcuts: updatedShortcuts,
-    });
-  } catch (err: any) {
-    shortcutErrors.value = {
-      ...shortcutErrors.value,
-      [id]: err?.message || t('failedToUpdate'),
-    };
-  }
+  if (await persist(requested.action, requested.keys, conflicts)) reassignment.value = null;
 };
-
-const resetShortcut = async (id: string) => {
-  const defaultKey = defaultShortcuts[id] || '';
-  await updateShortcut(id, defaultKey);
-};
+watch(
+  () => props.focusedSetting,
+  (id) => {
+    const action = actions.find((item) => item.id === id);
+    if (action) {
+      group.value = action.group;
+      query.value = '';
+    }
+  },
+  { immediate: true },
+);
 </script>
-
 <template>
-  <div class="shortcut-preferences">
-    <section v-for="group in shortcutGroups" :key="group.id" class="shortcut-group">
-      <h3 class="shortcut-group-title">{{ group.label() }}</h3>
-      <div v-for="item in group.definitions" :key="item.id" class="shortcut-row" :data-setting="item.id" tabindex="-1">
-        <div class="shortcut-info">
-          <span class="shortcut-label">{{ item.label() }}</span>
-          <span class="shortcut-desc">{{ item.description() }}</span>
+  <div class="shortcuts">
+    <p v-if="error.loading" role="alert">{{ error.loading }}</p>
+    <div class="shortcut-filters">
+      <Input
+        v-model="query"
+        type="search"
+        :placeholder="t('ActionShortcuts.search')"
+        :aria-label="t('ActionShortcuts.search')"
+      >
+        <template #prefix><Search :size="15" /></template>
+      </Input>
+      <Select v-model="group" :options="options" :aria-label="t('ActionShortcuts.category')" />
+    </div>
+    <p class="shortcut-help">
+      {{ t(group === 'gestures' ? 'ActionShortcuts.gestureHint' : 'ActionShortcuts.editHint') }}
+    </p>
+    <section
+      v-for="section in sections"
+      :key="section.id"
+      class="shortcut-section"
+      :aria-labelledby="`section-${section.id}`"
+    >
+      <h3 :id="`section-${section.id}`">
+        <span v-if="query.trim()" class="shortcut-category"
+          >{{ t(ACTION_GROUPS.find((item) => item.id === section.group)!.label) }} · </span
+        >{{ t(section.label) }}
+      </h3>
+      <div
+        v-for="action in section.actions"
+        :key="action.id"
+        class="shortcut-row"
+        :data-setting="action.id"
+        tabindex="-1"
+      >
+        <div class="shortcut-copy">
+          <label :for="`shortcut-${action.id}`">{{ t(action.label) }}</label>
         </div>
-        <div class="shortcut-input-container">
-          <ShortcutInput
-            :model-value="getShortcutValue(item.id)"
-            :error="shortcutErrors[item.id]"
-            @update:model-value="updateShortcut(item.id, $event)"
-            @reset="resetShortcut(item.id)"
-          />
-        </div>
+        <ShortcutInput
+          :input-id="`shortcut-${action.id}`"
+          :label="t(action.label)"
+          :model-value="keys(action)"
+          :kind="action.kind"
+          :disabled="!preferences.settings || pending !== null"
+          :customized="keys(action) !== action.keys"
+          :error="reassignment?.action.id === action.id ? undefined : error[action.id]"
+          @update:model-value="save(action, $event)"
+          @reset="save(action, action.keys)"
+        />
       </div>
     </section>
+    <p v-if="!rows.length" class="shortcut-help" role="status">{{ t('EditorSearch.noResults') }}</p>
+    <ConfirmDialog
+      :is-open="reassignment !== null"
+      :title="t('ActionShortcuts.reassignTitle')"
+      :description="reassignmentDescription"
+      :confirm-label="t('ActionShortcuts.reassign')"
+      :cancel-label="t('ActionShortcuts.cancel')"
+      :busy="pending !== null"
+      @close="reassignment = null"
+      @confirm="confirmReassignment"
+    >
+      <p v-if="reassignment && error[reassignment.action.id]" class="shortcut-error" role="alert">
+        {{ error[reassignment.action.id] }}
+      </p>
+    </ConfirmDialog>
   </div>
 </template>
-
 <style scoped>
-.shortcut-preferences {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+.shortcuts {
   width: 100%;
+  max-width: 720px;
 }
-
-.shortcut-group + .shortcut-group {
-  padding-top: 14px;
-}
-
-.shortcut-group-title {
-  margin: 0 0 4px;
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.shortcut-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.shortcut-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(170px, 0.65fr);
   gap: 12px;
-  min-height: 42px;
-  padding: 14px 16px;
-  background: var(--color-bg-element);
-  border-radius: var(--radius-md);
-  margin-top: 8px;
 }
-
-.shortcut-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
-.shortcut-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.shortcut-desc {
-  font-size: var(--font-size-body);
+.shortcut-help {
+  margin: 16px 0 24px;
   color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
 }
-
-.shortcut-input-container {
-  width: 160px;
-  flex-shrink: 0;
+.shortcut-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: center;
+  min-height: 64px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.shortcut-section + .shortcut-section {
+  margin-top: 32px;
+}
+.shortcut-section h3 {
+  margin: 0 0 4px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-title);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.shortcut-copy {
+  display: grid;
+  gap: 4px;
+  color: var(--text-primary);
+  font-size: var(--font-size-body);
+}
+.shortcut-category {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+.shortcut-error {
+  margin: 12px 0 0;
+  color: var(--color-error);
+  font-size: var(--font-size-sm);
 }
 .shortcut-row:focus-visible {
   outline: 2px solid var(--text-secondary);
   outline-offset: 3px;
 }
-@media (max-width: 700px) {
-  .shortcut-row {
-    flex-wrap: wrap;
+@media (max-width: 480px) {
+  .shortcut-filters {
+    grid-template-columns: 1fr;
   }
-  .shortcut-info {
-    flex-basis: 100%;
+  .shortcut-row {
+    gap: 12px;
   }
 }
 </style>

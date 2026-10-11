@@ -1,4 +1,4 @@
-import type { Clip, MediaAsset } from '@beam/engine/shared/composition-types';
+import type { CaptionClip, Clip, ClipComposition, MediaAsset } from '@beam/engine/shared/composition-types';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 
 export type TimelineItemCategory = 'visual' | 'audio' | 'caption' | 'zoom';
@@ -41,7 +41,14 @@ export type TimelineClipboardItem =
 export interface TimelinePasteTarget {
   category: TimelineItemCategory;
   trackId?: string | null;
-  placement?: 'track' | 'new-layer';
+  placement?: 'track' | 'new-layer' | 'auto';
+}
+
+export interface CaptionPastePlacementOptions {
+  composition: ClipComposition;
+  captions: CaptionClip[];
+  placement: TimelinePasteTarget['placement'];
+  idFactory: () => string;
 }
 
 export interface TimelinePasteRequest {

@@ -307,10 +307,6 @@ describe('ElementCanvasOverlay', () => {
     const textarea = wrapper.get('textarea');
 
     await textarea.setValue('Committed from canvas');
-    expect(editor.editing.value?.text?.content).toBe('Original');
-    vi.advanceTimersByTime(150);
-    await nextTick();
-
     expect(editor.editing.value?.text?.content).toBe('Committed from canvas');
     expect(update).not.toHaveBeenCalled();
     await textarea.trigger('keydown', { key: 'Enter', ctrlKey: true });
@@ -339,6 +335,42 @@ describe('ElementCanvasOverlay', () => {
     expect(update).not.toHaveBeenCalled();
     expect(layers.value[0]).toBe(initial);
     expect(layers.value[0]?.text?.content).toBe('Original');
+  });
+
+  it('reuses unchanged word measurements while typing the next character', async () => {
+    const { wrapper, editor, update } = mountOverlay(true);
+    editor.updateText('One two three four five six seven');
+    await nextTick();
+    const measured = vi.mocked(drawingContext.measureText);
+    const previous = measured.mock.calls.length;
+    await wrapper.get('textarea').setValue('One two three four five six seven!');
+    expect(measured.mock.calls.length - previous).toBeLessThanOrEqual(2);
+    expect(editor.editing.value?.text?.content).toBe('One two three four five six seven!');
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('remeasures inline text when typography changes and retains current content', async () => {
+    const { editor } = mountOverlay(true);
+    editor.updateText('One two three four five six seven');
+    await nextTick();
+    const measured = vi.mocked(drawingContext.measureText);
+    const previous = measured.mock.calls.length;
+    editor.editing.value!.text!.style.fontSize = 72;
+    await nextTick();
+    expect(measured.mock.calls.length).toBeGreaterThan(previous);
+    expect(editor.editing.value?.text?.content).toBe('One two three four five six seven');
+  });
+
+  it('retains word measurements for color changes without delaying native input', async () => {
+    const { wrapper, editor } = mountOverlay(true);
+    editor.updateText('One two three');
+    await nextTick();
+    const measured = vi.mocked(drawingContext.measureText);
+    const previous = measured.mock.calls.length;
+    editor.editing.value!.text!.style.color = '#000000';
+    await nextTick();
+    expect(measured.mock.calls.length).toBe(previous);
+    expect((wrapper.get('textarea').element as HTMLTextAreaElement).style.color).toBe('rgb(0, 0, 0)');
   });
 
   it('uses coalesced pointer samples and inserts a finished freehand stroke', async () => {

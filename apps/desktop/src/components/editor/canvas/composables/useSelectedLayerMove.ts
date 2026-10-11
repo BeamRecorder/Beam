@@ -1,3 +1,5 @@
+import { constrainPointerDelta } from '~/shortcuts/pointer-modifiers';
+import { matchesGesture } from '~/shortcuts/action-bindings';
 import { activeClipsAt } from '@beam/runtime/shared/index';
 import {
   isBlurClip,
@@ -13,7 +15,8 @@ import type { VideoWindowBounds } from './useCameraZoom';
 import { perspectivePointerDelta } from './layer-selection-presentation';
 import { editableVisualClipTransform } from '@beam/engine/composition/visual-framing';
 import { clampEditedWebcamTransform, editableWebcamTransform } from './webcam-transform-editing';
-import { computeCanvasAlignmentSnapping, type AlignmentGuide } from './canvas-alignment';
+import type { AlignmentGuide } from './canvas-alignment';
+import { snapDisplayedLayerTranslation } from './layer-alignment';
 
 interface SelectedLayerMoveOptions {
   composition: () => Parameters<typeof activeClipsAt>[0];
@@ -23,7 +26,9 @@ interface SelectedLayerMoveOptions {
   transformFor: (clip: TransformClip) => NormalizedTransform;
   boundsFor: (clip: TransformClip) => VideoWindowBounds | null;
   displayLayoutFor: (clip: TransformClip, transform: NormalizedTransform) => CanvasRect | null;
+  alignmentViewport: () => VideoWindowBounds | null;
   zoomScale: () => number;
+  onDuplicate?: (transforms: ClipTransformUpdate[]) => void;
   onUpdate: (transforms: ClipTransformUpdate[]) => void;
   onGuides?: (guides: AlignmentGuide[]) => void;
 }
@@ -40,6 +45,7 @@ interface SelectedLayerMoveGesture {
   startX: number;
   startY: number;
   moved: boolean;
+  duplicate: boolean;
   target: HTMLElement;
   entries: SelectedLayerMoveEntry[];
 }
@@ -96,6 +102,7 @@ export function useSelectedLayerMove(options: SelectedLayerMoveOptions) {
       startX: event.clientX,
       startY: event.clientY,
       moved: false,
+      duplicate: !!options.onDuplicate && matchesGesture(event, 'duplicate'),
       target: event.currentTarget as HTMLElement,
       entries,
     };
@@ -104,10 +111,13 @@ export function useSelectedLayerMove(options: SelectedLayerMoveOptions) {
   };
   const move = (event: PointerEvent) => {
     if (!gesture || gesture.pointerId !== event.pointerId) return false;
-    const delta = {
-      x: (event.clientX - gesture.startX) / options.zoomScale(),
-      y: (event.clientY - gesture.startY) / options.zoomScale(),
-    };
+    const delta = constrainPointerDelta(
+      {
+        x: (event.clientX - gesture.startX) / options.zoomScale(),
+        y: (event.clientY - gesture.startY) / options.zoomScale(),
+      },
+      event,
+    );
     if (!gesture.moved && Math.hypot(delta.x, delta.y) < 4) return true;
     gesture.moved = true;
     const movedDrafts = Object.fromEntries(
@@ -123,30 +133,37 @@ export function useSelectedLayerMove(options: SelectedLayerMoveOptions) {
         return [clip.id, clip.kind === 'webcam' ? clampEditedWebcamTransform(clip, moved, bounds.scale) : moved];
       }),
     );
-    const values = Object.values(movedDrafts);
-    const left = Math.min(...values.map(({ x }) => x));
-    const top = Math.min(...values.map(({ y }) => y));
-    const right = Math.max(...values.map(({ x, width }) => x + width));
-    const bottom = Math.max(...values.map(({ y, height }) => y + height));
+    const layouts = gesture.entries.flatMap(({ clip }) => {
+      const layout = options.displayLayoutFor(clip, movedDrafts[clip.id]!);
+      return layout ? [layout] : [];
+    });
     const selected = new Set(gesture.entries.map(({ clip }) => clip.id));
     const otherTargets = activeClipsAt(options.composition(), options.currentTime() * 1_000).flatMap((clip) => {
       if (selected.has(clip.id) || !clip.enabled || !isTransformClip(clip) || transformCaptionFollowsCursor(clip))
         return [];
-      const transform = options.transformFor(clip);
-      return [{ id: clip.id, ...transform }];
+      const layout = options.displayLayoutFor(clip, options.transformFor(clip));
+      return layout ? [layout] : [];
     });
-    const snap = computeCanvasAlignmentSnapping(
-      { x: left, y: top, width: right - left, height: bottom - top },
-      otherTargets,
-      0.015,
-    );
-    const snapX = snap.x - left;
-    const snapY = snap.y - top;
+    const snap = matchesGesture(event, 'ignoreSnapping')
+      ? { x: 0, y: 0, guides: [] }
+      : snapDisplayedLayerTranslation(layouts, otherTargets, options.alignmentViewport());
+    if (matchesGesture(event, 'constrain')) {
+      if (delta.y === 0) snap.y = 0;
+      else snap.x = 0;
+    }
     drafts.value = Object.fromEntries(
-      Object.entries(movedDrafts).map(([id, transform]) => [
-        id,
-        { ...transform, x: transform.x + snapX, y: transform.y + snapY },
-      ]),
+      gesture.entries.map(({ clip, bounds }) => {
+        const transform = movedDrafts[clip.id]!;
+        const scale = usesGlobalCamera(clip) ? bounds.scale || 1 : 1;
+        return [
+          clip.id,
+          {
+            ...transform,
+            x: transform.x + snap.x / Math.max(1, bounds.dw * scale),
+            y: transform.y + snap.y / Math.max(1, bounds.dh * scale),
+          },
+        ];
+      }),
     );
     options.onGuides?.(snap.guides);
     return true;
@@ -160,7 +177,10 @@ export function useSelectedLayerMove(options: SelectedLayerMoveOptions) {
     }));
     clear();
     if (finished.target.hasPointerCapture?.(event.pointerId)) finished.target.releasePointerCapture?.(event.pointerId);
-    if (finished.moved && transforms.length) options.onUpdate(transforms);
+    if (finished.moved && transforms.length) {
+      if (finished.duplicate) options.onDuplicate?.(transforms);
+      else options.onUpdate(transforms);
+    }
     return true;
   };
 

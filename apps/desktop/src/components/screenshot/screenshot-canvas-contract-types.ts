@@ -21,6 +21,7 @@ export interface ScreenshotCanvasEmits {
   select: [id: string | null, mode?: ScreenshotSelectionMode];
   selectMany: [selection: CanvasMarqueeSelection];
   transform: [value: NormalizedTransform];
+  duplicate: [translation: ScreenshotTranslation];
   translate: [value: ScreenshotTranslation];
   resizeSelection: [from: NormalizedTransform, to: NormalizedTransform];
   selectionBounds: [value: NormalizedTransform | null];

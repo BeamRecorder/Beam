@@ -15,6 +15,7 @@ export interface ScreenshotDrag {
   selection?: string[];
   targetId?: string;
   clickId?: string;
+  duplicate?: boolean;
 }
 
 export type ScreenshotPanel = 'canvas' | 'image' | 'shapes' | 'cursor' | 'settings' | 'zoom' | 'layer-effect';

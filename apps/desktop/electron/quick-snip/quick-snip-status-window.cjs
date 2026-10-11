@@ -40,6 +40,12 @@ function createQuickSnipStatusWindow({
   let closeRemaining = COMPLETED_VISIBLE_MS;
   let positionTracker = null;
   let popoverSide = 'above';
+  const updateMouse = () => {
+    if (platform === 'linux' || !window || window.isDestroyed()) return;
+    if (!presented || !window.isVisible()) window.setIgnoreMouseEvents(true);
+    else if (interactive) window.setIgnoreMouseEvents(false);
+    else window.setIgnoreMouseEvents(true, { forward: true });
+  };
   const clearClose = () => {
     if (closeDeadline !== null) closeRemaining = Math.max(0, closeDeadline - now());
     closeDeadline = null;
@@ -95,6 +101,7 @@ function createQuickSnipStatusWindow({
     if (presentationRequested && !presented) {
       presented = true;
       window.showInactive();
+      updateMouse();
       scheduleClose();
     }
     send();
@@ -182,7 +189,8 @@ function createQuickSnipStatusWindow({
     target.setContentProtection(true);
     // BrowserWindow.webContents throws once the native window has been destroyed.
     contents.once('destroyed', () => cleanupStatus(contents));
-    if (platform !== 'linux') target.setIgnoreMouseEvents(true, { forward: true });
+    // Hidden preparation must not install Electron's global forwarding hook.
+    updateMouse();
     contents.on('before-input-event', (event, input) => {
       if ((input.control || input.meta) && ['+', '-', '=', '0'].includes(input.key)) event.preventDefault();
     });
@@ -243,9 +251,12 @@ function createQuickSnipStatusWindow({
       return true;
     },
     setInteractive(value) {
-      if (!window || interactive === value) return;
+      if (!window || window.isDestroyed() || interactive === value) return;
       interactive = value;
-      if (platform !== 'linux') window.setIgnoreMouseEvents(!value, { forward: true });
+      // A failure can expand the renderer before presentation. Remember its
+      // desired input policy without activating a hidden native surface.
+      if (!presented || !window.isVisible()) return;
+      updateMouse();
       scheduleClose();
       send();
     },

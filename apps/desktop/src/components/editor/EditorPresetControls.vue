@@ -148,7 +148,7 @@ const confirmName = (name: string) => {
           :icon="Save"
           class="save-action"
           :aria-label="t('saveTitle')"
-          :disabled="!active || !dirty"
+          :disabled="!active || active.protected || !dirty"
           @click="emit('save')"
           >{{ t('save') }}</Button
         >

@@ -118,6 +118,7 @@ describe('useScreenshotLayerShortcuts', () => {
   ] as const)('handles %s through the matching callback', (_label, key, modifiers, action) => {
     const { copy, cut, paste } = mountShortcuts(makeLayer());
 
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('metaKey' in modifiers ? 'MacIntel' : 'Win32');
     const event = dispatchKey(window, key, modifiers);
 
     expect(event.defaultPrevented).toBe(true);
@@ -135,7 +136,7 @@ describe('useScreenshotLayerShortcuts', () => {
 
     for (const [key, modifiers] of [
       ['c', { ctrlKey: true }],
-      ['x', { metaKey: true }],
+      ['x', { ctrlKey: true }],
     ] as const) {
       const event = dispatchKey(window, key, modifiers);
       expect(event.defaultPrevented).toBe(false);
@@ -188,7 +189,7 @@ describe('useScreenshotLayerShortcuts', () => {
     for (const target of targets) {
       for (const [key, modifiers] of [
         ['c', { ctrlKey: true }],
-        ['x', { metaKey: true }],
+        ['x', { ctrlKey: true }],
       ] as const) {
         const event = dispatchKey(target, key, modifiers);
         expect(event.defaultPrevented).toBe(false);
@@ -210,7 +211,7 @@ describe('useScreenshotLayerShortcuts', () => {
 
     for (const [key, modifiers] of [
       ['c', { ctrlKey: true }],
-      ['x', { metaKey: true }],
+      ['x', { ctrlKey: true }],
     ] as const) {
       const event = dispatchKey(window, key, modifiers);
       expect(event.defaultPrevented).toBe(false);
@@ -233,7 +234,7 @@ describe('useScreenshotLayerShortcuts', () => {
     repeated.disabled.value = true;
     for (const [key, modifiers] of [
       ['c', { ctrlKey: true }],
-      ['x', { metaKey: true }],
+      ['x', { ctrlKey: true }],
     ] as const) {
       const event = dispatchKey(window, key, modifiers);
       expect(event.defaultPrevented).toBe(false);
@@ -388,6 +389,7 @@ describe('useScreenshotLayerShortcuts', () => {
 
 describe('screenshot group shortcuts', () => {
   it.each(['ctrlKey', 'metaKey'] as const)('groups with %s+G and detaches with Shift', (modifier) => {
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue(modifier === 'metaKey' ? 'MacIntel' : 'Win32');
     const { wrapper, group, ungroup } = mountShortcuts(makeLayer());
     const target = wrapper.get('[data-testid="plain-target"]').element;
     expect(dispatchKey(target, 'g', { [modifier]: true }).defaultPrevented).toBe(true);

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useActionShortcuts } from '~/shortcuts/useActionShortcuts';
 import { FolderOpen, Minus, Settings, X } from '@lucide/vue';
 import { computed, provide, reactive } from 'vue';
 import { popoverOpenStateKey } from '~/ui/popover/popover-interaction-types';
@@ -17,7 +18,7 @@ provide(popoverOpenStateKey, (id, open) => {
   else openPopovers.delete(id);
 });
 const dismissible = computed(() => openPopovers.size > 0);
-withDefaults(
+const props = withDefaults(
   defineProps<{
     title?: string;
     disabled?: boolean;
@@ -40,6 +41,9 @@ const emit = defineEmits<{
   minimize: [];
   close: [];
 }>();
+useActionShortcuts(() => [
+  { id: 'app.settings', disabled: props.disabled || !props.showSettings, run: () => emit('open-settings') },
+]);
 </script>
 
 <template>

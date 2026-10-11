@@ -86,11 +86,17 @@ const dotAttrs = (dot: DotRender) => {
       />
     </g>
     <g v-if="frame.dotsBehind">
-      <component :is="dot.d ? 'path' : 'circle'" v-for="(dot, i) in frame.dots" :key="i" v-bind="dotAttrs(dot)" />
+      <component
+        :is="dot.d ? 'path' : 'circle'"
+        v-for="(dot, i) in frame.dots"
+        :key="i"
+        class="mascot-fill"
+        v-bind="dotAttrs(dot)"
+      />
     </g>
     <g :opacity="frame.bodyAlpha">
       <path :d="frame.bodyPath" :fill="paper" />
-      <path :d="frame.bodyPath" :fill="color" :mask="`url(#${id}-face)`" />
+      <path class="mascot-fill" :d="frame.bodyPath" :fill="color" :mask="`url(#${id}-face)`" />
       <g v-if="blush" :clip-path="`url(#${id}-body)`">
         <ellipse
           v-for="(eye, i) in frame.eyes"
@@ -109,7 +115,13 @@ const dotAttrs = (dot: DotRender) => {
       <path v-for="(eye, index) in frame.eyes" :key="index" :d="eye.d" :transform="eye.matrix" :opacity="eye.alpha" />
     </g>
     <g v-if="!frame.dotsBehind">
-      <component :is="dot.d ? 'path' : 'circle'" v-for="(dot, i) in frame.dots" :key="i" v-bind="dotAttrs(dot)" />
+      <component
+        :is="dot.d ? 'path' : 'circle'"
+        v-for="(dot, i) in frame.dots"
+        :key="i"
+        class="mascot-fill"
+        v-bind="dotAttrs(dot)"
+      />
     </g>
     <circle v-if="frame.notif" :cx="frame.notif.x" :cy="frame.notif.y" :r="frame.notif.r" :fill="NOTIF_BLUE" />
     <g fill="none" stroke-linecap="round">
@@ -124,3 +136,14 @@ const dotAttrs = (dot: DotRender) => {
     </g>
   </svg>
 </template>
+
+<style scoped>
+.mascot-fill {
+  transition: fill 200ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mascot-fill {
+    transition: none;
+  }
+}
+</style>

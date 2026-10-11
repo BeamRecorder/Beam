@@ -1,0 +1,237 @@
+.snip-surface {
+  width: 100%;
+  position: relative;
+  pointer-events: none;
+}
+.snip-pill,
+.snip-details {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-element);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+}
+.snip-pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 76px;
+  padding: 12px 16px 12px 12px;
+  box-sizing: border-box;
+  border-radius: 24px;
+  overflow: hidden;
+  pointer-events: auto;
+  outline: none;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+  user-select: none;
+}
+.snip-pill:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+.thumbnail,
+.status-copy,
+.status-value {
+  /* Keep the content hoverable so it can reveal the actions. */
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+.thumbnail {
+  flex: 0 0 64px;
+  height: 46px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  position: relative;
+  color: var(--text-secondary);
+  background: var(--color-bg-surface);
+}
+.thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: inherit;
+}
+.success-mark {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-success);
+  color: var(--text-light);
+  border: 2px solid var(--color-bg-element);
+}
+.status-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+.status-copy strong {
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.15px;
+}
+.status-copy span {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.status-value {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+}
+.status-value small {
+  margin-left: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.mascot-value {
+  position: relative;
+  flex: 0 0 52px;
+  height: 52px;
+  justify-content: center;
+}
+.mascot-percent {
+  position: absolute;
+  bottom: -2px;
+  inset-inline: 0;
+  text-align: center;
+  font-size: 11px;
+  line-height: 12px;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+.mascot-percent small {
+  margin-left: 1px;
+  font-size: inherit;
+}
+.has-completion-actions {
+  flex: 0 0 92px;
+  gap: 4px;
+}
+.completed .status-value {
+  color: var(--color-success);
+}
+.failed .status-value,
+.status-error {
+  color: var(--color-error);
+}
+.progress {
+  position: absolute;
+  inset: auto 22px 0;
+  height: 3px;
+  overflow: hidden;
+  background: var(--color-border);
+}
+.progress i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--color-primary);
+  transform-origin: left center;
+  transition: transform 140ms linear;
+}
+.snip-details {
+  position: absolute;
+  bottom: 84px;
+  left: 0;
+  right: 0;
+  padding: 10px 12px;
+  border-radius: 18px;
+  opacity: 0;
+  transform: translate3d(0, 8px, 0);
+  transition:
+    opacity 140ms ease,
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: none;
+}
+.expanded .snip-details {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+  user-select: none;
+}
+.opens-below .snip-details {
+  top: 84px;
+  bottom: auto;
+  transform: translate3d(0, -8px, 0);
+}
+.opens-below.expanded .snip-details {
+  transform: translate3d(0, 0, 0);
+}
+.snip-surface.expanded::before {
+  /* Overlap both surfaces so their borders and native drag regions cannot
+     create a gap in the pointer's path. This bridge is never a drag handle. */
+  content: '';
+  position: absolute;
+  bottom: 72px;
+  left: 0;
+  right: 0;
+  height: 16px;
+  z-index: 1;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+.opens-below.snip-surface.expanded::before {
+  top: 72px;
+  bottom: auto;
+}
+.spinner {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .snip-details,
+  .progress i {
+    transition: none;
+  }
+  .spinner {
+    animation: none;
+  }
+}
+
+.native-draggable .snip-pill,
+.native-draggable.expanded .snip-details {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+.progress.indeterminate i {
+  width: 35%;
+  animation: progress-slide 1.2s ease-in-out infinite;
+}
+@keyframes progress-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .progress.indeterminate i {
+    animation: none;
+    transform: none;
+  }
+}

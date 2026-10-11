@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { Info, Sparkles } from '@lucide/vue';
+import { Info } from '@lucide/vue';
 import Accordion from '~/ui/accordion/Accordion.vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
@@ -8,6 +8,7 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import ConfirmDialog from '~/ui/dialog/ConfirmDialog.vue';
 import ZoomClickEmptyState from './ZoomClickEmptyState.vue';
+import ZoomGenerationButton from './ZoomGenerationButton.vue';
 import ZoomAutoFollowControls from './ZoomAutoFollowControls.vue';
 import ZoomTiltControls from './ZoomTiltControls.vue';
 import GlassHighlightControls from './GlassHighlightControls.vue';
@@ -255,15 +256,12 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) =>
     <Accordion v-if="!still" v-model="sections.automatic" :title="glassText('automatic')" appearance="inspector">
       <div class="header-action section-block">
         <p class="hint">{{ glassText('automaticHint') }}</p>
-        <Button
-          variant="secondary"
-          size="sm"
-          :icon="Sparkles"
-          :disabled="!canGenerate"
-          block
+        <ZoomGenerationButton
+          :can-generate="canGenerate"
+          :has-automatic-zooms="hasAutomaticZooms"
+          :editor-data="editorData"
           @click="confirmingGeneration = true"
-          >{{ t(hasAutomaticZooms ? 'regenerateAutoZooms' : 'generateAutoZooms') }}</Button
-        >
+        />
       </div>
     </Accordion>
     <ConfirmDialog

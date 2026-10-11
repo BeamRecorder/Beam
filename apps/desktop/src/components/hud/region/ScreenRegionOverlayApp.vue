@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { matchesAction } from '~/shortcuts/action-bindings';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useResizeObserver } from '@vueuse/core';
 import { Check, Move, RotateCcw, X } from '@lucide/vue';
@@ -266,8 +267,7 @@ const cancel = () => {
   capture.cancelScreenRegion();
 };
 const handleKeydown = (event: KeyboardEvent) => {
-  if (!isSelecting.value || event.defaultPrevented || event.repeat || event.metaKey || event.ctrlKey || event.altKey)
-    return;
+  if (!isSelecting.value || event.defaultPrevented || event.repeat) return;
   const target = event.target;
   if (
     target instanceof Element &&
@@ -276,11 +276,22 @@ const handleKeydown = (event: KeyboardEvent) => {
     )
   )
     return;
-  if (event.key === 'Enter' && target instanceof Element && target.closest('button:not([data-region-start])')) return;
+  if (
+    matchesAction(event, 'capture.confirm') &&
+    event.key === 'Enter' &&
+    target instanceof Element &&
+    target.closest('button:not([data-region-start])')
+  )
+    return;
   if (event.key === 'Escape') {
     event.preventDefault();
     cancel();
-  } else if (event.key === 'Enter' && region.value && region.value.width > 0 && region.value.height > 0) {
+  } else if (
+    matchesAction(event, 'capture.confirm') &&
+    region.value &&
+    region.value.width > 0 &&
+    region.value.height > 0
+  ) {
     event.preventDefault();
     confirm();
   }

@@ -134,7 +134,8 @@ export async function mountSpeechBubbleEditor(effects: boolean): Promise<SpeechB
     getEditorPresets: async () => clone(presets),
     onEditorPresetsChanged: subscribe,
     updateEditorPreset: async (_id, settings) => {
-      presets = { ...presets, presets: [{ ...presets.presets[0]!, settings }] };
+      const preset = presets.presets[0]!;
+      presets = { ...presets, presets: [{ ...preset, settings: { ...preset.settings, ...settings } }] };
       return clone(presets);
     },
     getProjectEditorState: async () => clone(saved),

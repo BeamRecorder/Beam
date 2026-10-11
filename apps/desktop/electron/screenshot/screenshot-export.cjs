@@ -1,10 +1,10 @@
 const fs = require('fs');
-const path = require('path');
+const { exportFilePath, publishExportFile } = require('../export/export-destination.cjs');
 const { randomUUID } = require('crypto');
 
 /** Timings use one native monotonic clock; clipboard completion is always awaited. */
-async function publishScreenshot(services, event, { id, bytes, format, copy }) {
-  const { store, nativeImage, clipboard, ClipboardItem, dialog, BrowserWindow, outputDirectory } = services;
+async function publishScreenshot(services, event, { id, bytes, format, copy, fileName }) {
+  const { store, nativeImage, clipboard, ClipboardItem, outputDirectory } = services;
   const clock = services.clock ?? (() => performance.now());
   const started = clock();
   const timings = {};
@@ -56,30 +56,26 @@ async function publishScreenshot(services, event, { id, bytes, format, copy }) {
       );
       return result('copied');
     }
-    const selected = await measureAsync('saveDialog', () =>
-      dialog.showSaveDialog(BrowserWindow.fromWebContents(event.sender), {
-        defaultPath: path.join(
-          services.directories ? services.directories.exportDirectory() : outputDirectory,
-          `${document.name.replace(/[:.]/g, '-')}.${format}`,
-        ),
-        filters: [{ name: format.toUpperCase(), extensions: [format] }],
-      }),
+    const filePath = exportFilePath(
+      services.directories ? services.directories.exportDirectory() : outputDirectory,
+      fileName ?? document.name,
+      format,
     );
-    if (selected.canceled || !selected.filePath) return result('cancelled');
-    await measureAsync('fileWrite', async () => {
-      const temporary = `${selected.filePath}.${randomUUID()}.tmp`;
+    const published = await measureAsync('fileWrite', async () => {
+      const temporary = `${filePath}.${randomUUID()}.tmp`;
       const handle = await fs.promises.open(temporary, 'wx', 0o600);
       try {
         await handle.writeFile(buffer);
         await handle.close();
-        await fs.promises.rename(temporary, selected.filePath);
+        return await publishExportFile(services, event, filePath, null, () => fs.promises.rename(temporary, filePath));
       } finally {
         await handle.close();
         await fs.promises.rm(temporary, { force: true });
       }
     });
-    services.directories?.rememberExport(selected.filePath);
-    return result('saved', selected.filePath);
+    if (!published) return result('cancelled');
+    services.directories?.rememberExport(filePath);
+    return result('saved', filePath);
   } catch (reason) {
     console.info('[Beam Screenshot publish]', {
       ...result('error'),

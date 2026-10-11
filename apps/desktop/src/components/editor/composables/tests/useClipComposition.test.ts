@@ -14,6 +14,7 @@ import type {
 import type { DroppedMediaInspection } from '@beam/runtime/shared/media-types';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import { normalizeEditorPreferenceDefaults } from '../editor-defaults';
+import { captionLayerKey, isTextCaptionClip } from '@beam/engine/shared/composition-types';
 
 const { capture, getAudioTracks } = vi.hoisted(() => ({
   capture: { pickProjectMedia: vi.fn() },
@@ -466,6 +467,41 @@ describe('useClipComposition', () => {
     expect(mounted.state.composition.value.clips.find((clip) => clip.id === existingVisual.id)?.order).toBeGreaterThan(
       persistedExistingCaption?.order ?? Number.NEGATIVE_INFINITY,
     );
+  });
+
+  it.each([undefined, 'existing-track'])(
+    'inserts on the requested caption track while Add text creates a separate track (%s)',
+    async (captionLayerId) => {
+      const mounted = mountComposable();
+      await mounted.state.addElement('caption', 0, 1000);
+      const first = mounted.state.selectedCaptionClip.value!;
+      mounted.state.restoreComposition({ ...mounted.state.composition.value, clips: [{ ...first, captionLayerId }] });
+      await mounted.state.addCaptionAtTime({ startMs: 1000, durationMs: 1000, targetClipId: first.id });
+      expect(new Set(mounted.state.composition.value.clips.filter(isTextCaptionClip).map(captionLayerKey)).size).toBe(
+        1,
+      );
+      expect(mounted.state.selectedCaptionClip.value).toMatchObject({
+        timelineStartMs: 1000,
+        timelineDurationMs: 1000,
+      });
+      await mounted.state.addElement('caption', 3000, 1000);
+      expect(new Set(mounted.state.composition.value.clips.filter(isTextCaptionClip).map(captionLayerKey)).size).toBe(
+        2,
+      );
+      expect(mounted.state.selectedCaptionClip.value?.timelineStartMs).toBe(3000);
+    },
+  );
+
+  it('ignores an unavailable or occupied caption insertion without changing the selection', async () => {
+    const mounted = mountComposable();
+    await mounted.state.addElement('caption', 0, 1000);
+    const original = mounted.state.composition.value;
+    const first = mounted.state.selectedCaptionClip.value!;
+    for (const targetClipId of ['missing', first.id]) {
+      await mounted.state.addCaptionAtTime({ startMs: 500, durationMs: 1000, targetClipId });
+      expect(mounted.state.composition.value).toBe(original);
+      expect(mounted.state.selectedClipId.value).toBe(first.id);
+    }
   });
 
   it('reorders text captions within their layer stack, clamps indices, and ignores non-text clips', () => {

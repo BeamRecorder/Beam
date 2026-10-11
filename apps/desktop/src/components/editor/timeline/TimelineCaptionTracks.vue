@@ -28,9 +28,9 @@ const props = defineProps<{
   trimStateFor: (clipId: string) => { edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null;
   beginClipMove: (event: PointerEvent, clip: CaptionClip) => void;
   beginClipTrim: (event: PointerEvent, clip: CaptionClip, edge: 'start' | 'end') => void;
-  hoverAt: (event: MouseEvent, kind: 'caption') => void;
+  hoverAt: (event: MouseEvent, kind: 'caption', targetClipId?: string) => void;
   leaveTrack: (kind: 'caption') => void;
-  addAt: (event: MouseEvent, kind: 'caption') => void;
+  addAt: (event: MouseEvent, kind: 'caption', targetClipId?: string) => void;
   recentPaste?: TimelinePasteHighlight | null;
   reduceMotion?: boolean;
 }>();
@@ -48,9 +48,9 @@ const visibleTextLayers = useVirtualTimelineItems(
 const isVisible = (id: string) => !virtualWindow || virtualWindow.visibleIds.value.has(id);
 
 const hoveredTextLayerId = ref<string | null>(null);
-const hoverTextLayer = (event: MouseEvent, clipId: string) => {
-  hoveredTextLayerId.value = clipId;
-  props.hoverAt(event, 'caption');
+const hoverTextLayer = (event: MouseEvent, layerId: string, targetClipId?: string) => {
+  hoveredTextLayerId.value = layerId;
+  props.hoverAt(event, 'caption', targetClipId);
 };
 const leaveTextLayer = () => {
   hoveredTextLayerId.value = null;
@@ -236,10 +236,10 @@ onUnmounted(() => {
         class="track-content annotation-content"
         :title="t('clickToAddCaption')"
         @pointerdown.stop
-        @mousemove="hoverTextLayer($event, layer.id)"
+        @mousemove="hoverTextLayer($event, layer.id, layer.representative.id)"
         @mouseleave="leaveTextLayer"
-        @click.stop="addAt($event, 'caption')"
-        @dblclick.stop="addAt($event, 'caption')"
+        @click.stop="addAt($event, 'caption', layer.representative.id)"
+        @dblclick.stop="addAt($event, 'caption', layer.representative.id)"
       >
         <div
           v-if="hoverCaptionTimeMs !== null && hoveredTextLayerId === layer.id"

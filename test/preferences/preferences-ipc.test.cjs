@@ -449,3 +449,101 @@ test('ordinary preference IPC cannot bypass the native directory picker and rese
   }
   await cleanup();
 });
+
+test('capturing a shortcut suspends native keys without changing saved bindings and restores them on exit', async () => {
+  const handlers = new Map(),
+    registered = new Map(),
+    sent = [];
+  const preferences = shortcutPreferences();
+  const cleanup = registerPreferencesIpc({
+    ipcMain: ipcMainWith(handlers),
+    BrowserWindow: { getAllWindows: () => [windowWith(sent)] },
+    globalShortcut: { unregisterAll: () => registered.clear(), register: (keys, run) => registered.set(keys, run) },
+    store: storeWith(preferences),
+  });
+  await flush();
+  assert.equal(registered.size, 2);
+  const saved = structuredClone(preferences.shortcuts);
+  await cleanup.setShortcutCapture(true);
+  assert.equal(registered.size, 0);
+  assert.deepEqual(preferences.shortcuts, saved);
+  await cleanup.setShortcutCapture(false);
+  assert.equal(registered.size, 2);
+  registered.get('Alt+Shift+R')();
+  assert.equal(sent.at(-1).id, 'hud.startStopRecording');
+  await cleanup();
+});
+test('clearing a global shortcut persists empty keys and never registers an empty accelerator', async () => {
+  const handlers = new Map(),
+    registered = [];
+  const preferences = shortcutPreferences();
+  const cleanup = registerPreferencesIpc({
+    ipcMain: ipcMainWith(handlers),
+    BrowserWindow: { getAllWindows: () => [] },
+    globalShortcut: { unregisterAll: () => registered.splice(0), register: (keys) => registered.push(keys) },
+    store: storeWith(preferences),
+  });
+  await flush();
+  await handlers.get('preferences:update')(null, {
+    shortcuts: { 'hud.startStopRecording': { keys: '', scope: 'global', category: 'recording' } },
+  });
+  assert.equal(preferences.shortcuts['hud.startStopRecording'].keys, '');
+  assert.deepEqual(registered, ['Alt+Shift+T']);
+  await cleanup();
+});
+test('an unavailable accelerator rolls back its saved binding and restores the previous native keys', async () => {
+  const handlers = new Map(),
+    registered = [],
+    sent = [];
+  const preferences = shortcutPreferences();
+  const cleanup = registerPreferencesIpc({
+    ipcMain: ipcMainWith(handlers),
+    BrowserWindow: { getAllWindows: () => [windowWith(sent)] },
+    globalShortcut: {
+      unregisterAll: () => registered.splice(0),
+      register: (keys) => (keys === 'Ctrl+K' ? false : registered.push(keys)),
+    },
+    store: storeWith(preferences),
+  });
+  await flush();
+  await assert.rejects(
+    handlers.get('preferences:update')(null, {
+      shortcuts: { 'hud.startStopRecording': { keys: 'Ctrl+K', scope: 'global', category: 'recording' } },
+    }),
+    /unavailable/,
+  );
+  assert.equal(preferences.shortcuts['hud.startStopRecording'].keys, 'Alt+Shift+R');
+  assert.deepEqual(registered, ['Alt+Shift+R', 'Alt+Shift+T']);
+  assert.equal(sent.length, 0);
+  await cleanup();
+});
+
+test('editing application shortcuts saves and broadcasts without touching OS global keys', async () => {
+  const handlers = new Map(),
+    sent = [],
+    source = linuxSourceWith({ fallbackIds: [] });
+  let unregisters = 0;
+  const cleanup = registerPreferencesIpc({
+    ipcMain: ipcMainWith(handlers),
+    BrowserWindow: { getAllWindows: () => [windowWith(sent)] },
+    globalShortcut: {
+      register: () => true,
+      unregisterAll: () => {
+        unregisters++;
+      },
+    },
+    store: storeWith(shortcutPreferences()),
+    linuxShortcutSource: source,
+  });
+  await flush();
+  for (const keys of ['Ctrl+K', '']) {
+    const preferences = await handlers.get('preferences:update')(null, {
+      shortcuts: { 'editor.playPause': { keys, scope: 'application', category: 'editing' } },
+    });
+    assert.equal(preferences.shortcuts['editor.playPause'].keys, keys);
+  }
+  assert.equal(source.calls.register.length, 1);
+  assert.equal(unregisters, 1);
+  assert.equal(sent.length, 2);
+  await cleanup();
+});

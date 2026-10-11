@@ -1,3 +1,5 @@
+const capture = vi.hoisted(() => ({ openHudSettings: vi.fn(async () => true) }));
+vi.mock('~/api/capture', () => ({ capture }));
 import { ref } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
 import { useScreenshotPanel } from '../useScreenshotPanel';
@@ -60,10 +62,12 @@ describe('merged screenshot Clip navigation', () => {
     f.api.selectPanel('canvas');
     expect(f.select).toHaveBeenCalledWith(null);
     f.api.selectPanel('settings');
-    expect(f.panel.value).toBe('settings');
+    expect(f.panel.value).toBe('shapes');
+    expect(capture.openHudSettings).toHaveBeenCalled();
     expect(f.finishDrawing).toHaveBeenCalledTimes(2);
     f.api.selectPanel('unknown');
-    expect(f.panel.value).toBe('settings');
+    expect(f.panel.value).toBe('shapes');
+    expect(capture.openHudSettings).toHaveBeenCalled();
     f.state.value = null;
     f.api.showSelection(null);
     expect(f.panel.value).toBe('canvas');

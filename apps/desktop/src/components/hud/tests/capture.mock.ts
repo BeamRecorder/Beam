@@ -31,6 +31,10 @@ export const captureMock = {
   getSources: vi.fn(),
   hideScreenRegionOverlay: vi.fn(),
   setWindowVisible: vi.fn(),
+  onWindowVisibility: vi.fn<(listener: (visible: boolean) => void) => () => void>((listener) => {
+    listener(true);
+    return () => undefined;
+  }),
   setInteractive: vi.fn(),
   getDisplayBounds: vi.fn(),
   inputAccessStatus: vi.fn().mockResolvedValue({

@@ -3,6 +3,7 @@ const { createProjectLibrary } = require('./project-library.cjs');
 const { readClipboardPng } = require('../clipboard/image-clipboard.cjs');
 const { createProjectCatalogClient } = require('./project-catalog-client.cjs');
 const { registerProjectDemoWebcamIpc } = require('./project-demo-webcam-ipc.cjs');
+const { createBlankScreenshot } = require('../screenshot/blank-screenshot.cjs');
 const CURSOR_PACK_DISCOVERY_URL = 'https://store.kde.org/browse/cat/107/';
 
 function registerProjectIpc(
@@ -42,7 +43,24 @@ function registerProjectIpc(
   ipcMain.handle('projects:save-editor-state', (_event, payload = {}) =>
     projectStore.saveEditorState(payload.projectId, payload.state),
   );
-  ipcMain.handle('projects:create', (_event, options = {}) => projectStore.create(options));
+  ipcMain.handle('projects:create', (event, options = {}) => {
+    if (!trustedRenderer?.(event.sender.getURL())) throw new Error('Renderer non autorisé');
+    if (
+      !options ||
+      typeof options !== 'object' ||
+      Array.isArray(options) ||
+      Object.keys(options).some((key) => !['name', 'mode'].includes(key)) ||
+      (options.name !== undefined && typeof options.name !== 'string') ||
+      (options.mode !== undefined && !['studio', 'screenshot'].includes(options.mode))
+    )
+      throw new Error('Invalid new project options.');
+    if (options.mode !== 'screenshot') return projectStore.create({ name: options.name });
+    const document = createBlankScreenshot(
+      { store: screenshotStore, presetStore: application.screenshotPresetStore, nativeImage: application.nativeImage },
+      { width: 1920, height: 1080, name: options.name?.trim() || undefined },
+    );
+    return screenshotStore.readSummary(document.id);
+  });
   ipcMain.handle('projects:rename', (_event, payload = {}) =>
     library.rename(payload.projectId, payload.name, payload.mode),
   );

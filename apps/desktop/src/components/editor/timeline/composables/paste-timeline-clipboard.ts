@@ -7,6 +7,7 @@ import {
 import { createClipPasteTransaction } from '@beam/engine/commands/clip-paste';
 import { pasteZoomAt } from '@beam/engine/zoom/zoom-paste';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
+import { resolveCaptionPastePlacement } from './caption-paste-placement';
 import type {
   TimelineClipboardEntry,
   TimelineClipboardItem,
@@ -61,9 +62,14 @@ export function pasteTimelineClipboard(options: {
   const anchorMs = options.item.type === 'selection' ? options.item.anchorTimeMs : entryStartMs(entries[0]!);
   const primaryIndex = options.item.type === 'selection' ? options.item.primaryIndex : 0;
   const trackIds = new Map<string, string>();
-  const captionLayerIds = new Map<string, string>();
+  const captionPlacement = resolveCaptionPastePlacement({
+    composition: options.composition,
+    captions: entries.flatMap((entry) => (entry.type === 'clip' && isCaptionClip(entry.clip) ? [entry.clip] : [])),
+    placement: options.target?.placement,
+    idFactory,
+  });
   let targetTrackClaimed = false;
-  const transaction = createClipPasteTransaction(options.composition);
+  const transaction = createClipPasteTransaction(captionPlacement.composition);
   let zoomElements = options.zoomElements;
   const clipIds: string[] = [];
   const zoomIds: string[] = [];
@@ -78,7 +84,7 @@ export function pasteTimelineClipboard(options: {
     const mapped = trackIds.get(sourceTrackId);
     if (mapped) return mapped;
     let next = sourceTrackId;
-    if (options.target?.placement === 'new-layer') next = idFactory();
+    if (options.target?.placement === 'new-layer' || options.target?.placement === 'auto') next = idFactory();
     else if (options.target?.category === 'visual' && options.target.trackId && !targetTrackClaimed) {
       next = options.target.trackId;
       targetTrackClaimed = true;
@@ -88,14 +94,9 @@ export function pasteTimelineClipboard(options: {
   };
 
   const copiedClipFor = (entry: Extract<TimelineClipboardEntry, { type: 'clip' }>) => {
-    if (options.target?.placement !== 'new-layer' || !isCaptionClip(entry.clip)) return entry.clip;
-    const sourceLayerId = captionLayerKey(entry.clip);
-    let destinationLayerId = captionLayerIds.get(sourceLayerId);
-    if (!destinationLayerId) {
-      destinationLayerId = idFactory();
-      captionLayerIds.set(sourceLayerId, destinationLayerId);
-    }
-    return { ...entry.clip, captionLayerId: destinationLayerId };
+    if (!isCaptionClip(entry.clip)) return entry.clip;
+    const layerId = captionPlacement.layerIds.get(captionLayerKey(entry.clip));
+    return layerId ? { ...entry.clip, captionLayerId: layerId } : entry.clip;
   };
 
   entries.forEach((entry, index) => {

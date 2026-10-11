@@ -3,6 +3,25 @@ import { describe, expect, it } from 'vitest';
 import Switch from './Switch.vue';
 
 describe('Switch', () => {
+  it('uses the neutral variant by default', () => {
+    const wrapper = mount(Switch, { props: { modelValue: true } });
+    expect(wrapper.classes()).toContain('variant-neutral');
+    wrapper.unmount();
+  });
+  it.each([false, true])('supports an accent variant with checked=%s', async (checked) => {
+    const wrapper = mount(Switch, { props: { modelValue: checked, variant: 'primary' } });
+    expect(wrapper.classes()).toContain('variant-primary');
+    await wrapper.get('[role="switch"]').trigger('click');
+    expect(wrapper.emitted('update:modelValue')).toEqual([[!checked]]);
+    wrapper.unmount();
+  });
+  it('retains disabled behavior with the accent variant', async () => {
+    const wrapper = mount(Switch, { props: { modelValue: true, variant: 'primary', disabled: true } });
+    await wrapper.get('.switch-container').trigger('click');
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+    expect(wrapper.classes()).toContain('is-disabled');
+    wrapper.unmount();
+  });
   it('exposes checked state and label accessibly', () => {
     const wrapper = mount(Switch, {
       props: { modelValue: true, label: 'System audio' },

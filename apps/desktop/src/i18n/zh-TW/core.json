@@ -509,12 +509,12 @@
     "format": "格式",
     "webm": "WebM",
     "mp4": "MP4",
-    "qualityAndBitrate": "品質與位元率",
+    "qualityAndBitrate": "畫質",
     "low": "低",
-    "medium": "中",
+    "medium": "標準",
     "high": "高",
-    "webmDesc": "匯出速度快、檔案小，並支援透明度。",
-    "mp4Desc": "相容性廣，適合在不同平台分享。",
+    "webmDesc": "適合網頁使用，檔案較小並支援透明度。",
+    "mp4Desc": "跨裝置分享及播放時相容性最佳的選擇。",
     "lowDesc": "~{mbps} Mbps · 檔案較小，清晰度較低。",
     "mediumDesc": "~{mbps} Mbps · 品質均衡（推薦）。",
     "highDesc": "~{mbps} Mbps · 最高畫質。",
@@ -532,7 +532,7 @@
     "frameRate24Desc": "電影感節奏，檔案較小。最適合 24 fps 素材。",
     "frameRate30Desc": "兼顧流暢度與檔案大小，適合標準影片。",
     "frameRate60Desc": "快速動作最流暢，但檔案較大。最適合 60 fps 素材。",
-    "resMax": "最大",
+    "resMax": "原始",
     "res1080p": "1080p",
     "res720p": "720p",
     "copyError": "複製錯誤",
@@ -544,7 +544,17 @@
     "res720pDesc": "HD 縮放（{width}×{height}）",
     "moreOptions": "更多選項",
     "includeAudio": "包含音訊",
-    "includeAudioDesc": "將已啟用的音軌加入匯出的影片。"
+    "includeAudioDesc": "將已啟用的音軌加入匯出的影片。",
+    "dialogTitle": "匯出影片",
+    "fileName": "檔案名稱",
+    "estimatedSize": "預估大小 ≈",
+    "sizeHint": "根據目標位元率估算。靜態畫面的檔案可能小得多。",
+    "showInFolder": "在資料夾中顯示",
+    "savingImage": "正在儲存圖片…",
+    "exportAgain": "再次匯出",
+    "watchVideo": "觀看",
+    "openFolder": "開啟資料夾",
+    "viewImage": "檢視圖片"
   },
   "HUD": {
     "issues": "問題",
@@ -720,7 +730,13 @@
     "recordingDescription": "為下次錄製設定控制列與倒數計時。",
     "accessibilityDescription": "管理互動存取權限與寫作輔助。",
     "shortcutsDescription": "透過快捷鍵使用常用操作。",
-    "updatesDescription": "讓 Beam 保持最新並探索新功能。"
+    "updatesDescription": "讓 Beam 保持最新並探索新功能。",
+    "categoryAppearance": "外觀",
+    "appearanceDescription": "設定 Beam 所有視窗的外觀。",
+    "categoryVideoEditor": "影片編輯器",
+    "videoEditorDescription": "時間軸行為與影片匯出偏好設定。",
+    "groupApplication": "應用程式",
+    "groupTools": "工具"
   },
   "ProjectPicker": {
     "projects": "專案",
@@ -1287,6 +1303,7 @@
     "browse": "選擇資料夾",
     "search": "搜尋資料夾",
     "noMatches": "沒有相符的資料夾",
+    "emptyFolders": "選擇資料夾後，即可在此查看最近使用的資料夾。",
     "error": "無法更新資料夾。",
     "retry": "重試"
   }

@@ -111,6 +111,7 @@
     "files": [
       "dist/**/*",
       "apps/desktop/electron/**/*",
+      "apps/desktop/shared/**/*",
       "packages/engine/src/scene/scene-schema.js",
       "packages/engine/src/shared/shape-vector-schema.js",
       "packages/engine/src/shared/animated-frame-schema.js",
@@ -153,6 +154,8 @@
     },
     "nsis": {
       "artifactName": "${productName}-Setup-${version}.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
       "buildUniversalInstaller": true
     },
     "mac": {

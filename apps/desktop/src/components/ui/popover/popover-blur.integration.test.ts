@@ -73,19 +73,24 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('floating menu blur in Ch
     if (temporary) await rm(temporary, { recursive: true, force: true });
   });
 
-  const contrast = async (selector: string, fraction: number) => {
+  const contrast = async (selector: string, fraction: number, edge?: 'left' | 'right') => {
     const box = await page.$eval(
       selector,
-      (element, fraction) => {
+      (element, { fraction, edge }) => {
         const rect = element.getBoundingClientRect();
         return {
-          x: Math.ceil(rect.left + (rect.width - 8) * fraction) + 3,
+          x:
+            edge === 'left'
+              ? Math.round(rect.left)
+              : edge === 'right'
+                ? Math.round(rect.right) - 1
+                : Math.ceil(rect.left + (rect.width - 8) * fraction) + 3,
           y: Math.ceil(rect.top) + 12,
-          width: 2,
+          width: edge ? 1 : 2,
           height: Math.floor(rect.height) - 24,
         };
       },
-      fraction,
+      { fraction, edge },
     );
     const png = await page.screenshot({ clip: box });
     return page.evaluate(
@@ -144,6 +149,19 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('floating menu blur in Ch
         {},
         root,
       );
+      // Measure borders before opening a submenu: an overlapping submenu would
+      // add its own tint/blur and hide the parent's right-hand border.
+      if (kind === 'add') {
+        const edges = ['left', 'right'] as const;
+        const blurredEdges = await Promise.all(edges.map((edge) => contrast(root, 0, edge)));
+        await page.evaluate(() => document.documentElement.classList.add('no-menu-blur'));
+        const sharpEdges = await Promise.all(edges.map((edge) => contrast(root, 0, edge)));
+        await page.evaluate(() => document.documentElement.classList.remove('no-menu-blur'));
+        for (let index = 0; index < edges.length; index++) {
+          expect(sharpEdges[index], `${theme} ${edges[index]} border transparency`).toBeGreaterThan(3);
+          expect(blurredEdges[index], `${theme} ${edges[index]} border blur`).toBeLessThan(sharpEdges[index]! * 0.45);
+        }
+      }
       const selectors = [root];
       if (kind !== 'context') {
         await page.$eval(`${root} .menu-item[aria-haspopup="menu"]`, (element) =>
@@ -158,13 +176,17 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('floating menu blur in Ch
         document.documentElement.classList.add('measure-menu-background');
       });
       const positions = selectors.flatMap((selector) =>
-        [0, 0.25, 0.5, 0.75].map((fraction) => ({ selector, fraction })),
+        [0, 0.25, 0.5, 0.75].map((fraction) => ({
+          selector,
+          fraction,
+          edge: undefined as 'left' | 'right' | undefined,
+        })),
       );
       const blurred: number[] = [];
-      for (const { selector, fraction } of positions) blurred.push(await contrast(selector, fraction));
+      for (const { selector, fraction, edge } of positions) blurred.push(await contrast(selector, fraction, edge));
       await page.evaluate(() => document.documentElement.classList.add('no-menu-blur'));
       const sharp: number[] = [];
-      for (const { selector, fraction } of positions) sharp.push(await contrast(selector, fraction));
+      for (const { selector, fraction, edge } of positions) sharp.push(await contrast(selector, fraction, edge));
       console.info('Menu blur contrast:', { theme, kind, gpu, blurred, sharp });
       for (let index = 0; index < positions.length; index++) {
         const position = positions[index]!;

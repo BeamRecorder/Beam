@@ -65,6 +65,14 @@ describe('Beamy lifecycle', () => {
     await wrapper.setProps({ phase: 'loading' });
     expect(wrapper.getComponent(BeamySvg).props('color')).toBe('var(--color-primary)');
   });
+  it('allows a quiet completed pose while preserving celebration for other callers', async () => {
+    const wrapper = setup('completed');
+    expect(wrapper.getComponent(BeamySvg).props('frame').dots.length).toBeGreaterThan(0);
+    await wrapper.setProps({ celebrate: false });
+    expect(wrapper.getComponent(BeamySvg).props('frame').dots).toHaveLength(0);
+    await wrapper.setProps({ celebrate: true });
+    expect(wrapper.getComponent(BeamySvg).props('frame').dots.length).toBeGreaterThan(0);
+  });
   it('keeps the SVG decorative, bounded and separate from its red recording light', async () => {
     const wrapper = setup('recording');
     expect(wrapper.attributes('aria-hidden')).toBe('true');

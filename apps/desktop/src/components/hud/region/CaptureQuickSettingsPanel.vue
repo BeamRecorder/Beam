@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { openApplicationSettings } from '~/components/settings/open-application-settings';
+import Button from '~/ui/button/Button.vue';
+import { Settings } from '@lucide/vue';
 import { computed } from 'vue';
 import Select from '~/ui/select/Select.vue';
 import RealCursorPreference from '../settings/RealCursorPreference.vue';
@@ -17,6 +20,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ preset: [id: string]; toggle: [open: boolean]; dismiss: [] }>();
 const { t } = useTranslate('ScreenRegionOverlay');
+const { t: preferencesText } = useTranslate('HudPreferences');
 const { t: quickT } = useTranslate('QuickSnipCropBar');
 const countdownOptions = computed(() =>
   Array.from({ length: 11 }, (_, seconds) => ({
@@ -30,6 +34,10 @@ const zoomOptions = computed(() => [
   { value: '3d', label: '3D' },
   { value: 'glass', label: quickT('loupe') },
 ]);
+const openPreferences = async () => {
+  emit('dismiss');
+  await openApplicationSettings();
+};
 </script>
 <template>
   <div
@@ -87,6 +95,9 @@ const zoomOptions = computed(() => [
       @update:hide-taskbar="settings = { ...settings, hideTaskbar: $event }"
       @update:hide-desktop-icons="settings = { ...settings, hideDesktopIcons: $event }"
     />
+    <Button variant="ghost" size="sm" :icon="Settings" block @click="openPreferences">{{
+      preferencesText('preferences')
+    }}</Button>
   </div>
 </template>
 <style scoped>

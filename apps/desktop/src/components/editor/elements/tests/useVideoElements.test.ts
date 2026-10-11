@@ -22,6 +22,8 @@ import { createComposition } from '@beam/engine/commands/clip-engine';
 import type { ElementEditorContext } from '../element-editor-types';
 import { useVideoElements } from '../useVideoElements';
 import { useMixedTimelineSelection } from '../../composables/useMixedTimelineSelection';
+import { normalizeEditorPreferenceDefaults } from '../../composables/editor-defaults';
+import type { EditorPreferenceDefaults } from '../../composables/editor-default-types';
 
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: () => ({ t: (key: string) => `translated:${key}` }),
@@ -165,6 +167,7 @@ const makeCompositionWith = (clip: Clip): ClipComposition => {
 };
 
 interface HarnessOptions {
+  editorDefaults?: EditorPreferenceDefaults;
   composition?: ClipComposition;
   selectedId?: string | null;
   activeTab?: string;
@@ -176,6 +179,7 @@ const wrappers: VueWrapper[] = [];
 
 const mountVideoElements = (configuration: HarnessOptions = {}) => {
   const composition = shallowRef(configuration.composition ?? makeComposition());
+  const editorDefaults = ref(configuration.editorDefaults ?? normalizeEditorPreferenceDefaults(undefined));
   const selectedId = ref<string | null>(configuration.selectedId ?? null);
   const activeTab = ref(configuration.activeTab ?? 'timeline');
   const currentTime = ref(configuration.currentTime ?? 1.2346);
@@ -189,6 +193,7 @@ const mountVideoElements = (configuration: HarnessOptions = {}) => {
   const Host = defineComponent({
     setup() {
       editor = useVideoElements({
+        editorDefaults,
         composition,
         selectedId,
         activeTab,
@@ -205,6 +210,7 @@ const mountVideoElements = (configuration: HarnessOptions = {}) => {
 
   return {
     editor,
+    editorDefaults,
     composition,
     selectedId,
     activeTab,
@@ -226,6 +232,59 @@ afterEach(() => {
 });
 
 describe('useVideoElements', () => {
+  it('remembers a text draft style before committing its content and retains it after deselection', async () => {
+    const state = mountVideoElements();
+    state.editor.add('text');
+    const text = createElementText('Draft words');
+    text.style.color = '#000000';
+    state.editor.update({ text });
+    expect(state.editorDefaults.value.elementText?.style.color).toBe('#000000');
+    expect(state.editorDefaults.value.elementText).not.toHaveProperty('content');
+    expect(state.editor.selected.value?.text?.content).toBe('translated:newText');
+    state.selectedId.value = null;
+    await nextTick();
+    expect(state.editorDefaults.value.elementText?.style.color).toBe('#000000');
+    expect(state.composition.value.clips.at(-1)?.kind).toBe('shape');
+  });
+
+  it.each(['text', 'shape'] as const)('uses remembered typography when adding text to a new %s', (family) => {
+    const savedText = createElementText('Do not reuse these words');
+    savedText.style = { ...savedText.style, color: '#000000', fontSize: 72, fontFamily: 'Inter', fontWeight: 800 };
+    const state = mountVideoElements({ editorDefaults: normalizeEditorPreferenceDefaults({ elementText: savedText }) });
+    state.editor.add(family);
+    if (family === 'shape') {
+      expect(state.editor.selected.value?.text).toBeUndefined();
+      state.editor.beginText(state.selectedId.value!);
+      state.editor.updateText('A new recording');
+    }
+    expect(state.editor.editing.value?.text?.style).toMatchObject({
+      color: '#000000',
+      fontSize: 72,
+      fontFamily: 'Inter',
+      fontWeight: 800,
+    });
+    state.editor.finishText();
+    expect(state.editor.selected.value?.text?.content).toBe(
+      family === 'shape' ? 'A new recording' : 'translated:newText',
+    );
+    expect(state.editor.selected.value?.text?.style.color).toBe('#000000');
+  });
+
+  it('preserves an existing shape text style when reopening it with different saved typography', () => {
+    const text = createElementText('Existing words');
+    text.style.color = '#abcdef';
+    const saved = createElementText();
+    saved.style.color = '#000000';
+    const shape = makeShapeClip('existing', 0, { text });
+    const state = mountVideoElements({
+      composition: makeCompositionWith(shape),
+      editorDefaults: normalizeEditorPreferenceDefaults({ elementText: saved }),
+    });
+    state.editor.beginText(shape.id);
+    expect(state.editor.editing.value?.text?.style.color).toBe('#abcdef');
+    expect(state.editor.editing.value?.text?.content).toBe('Existing words');
+  });
+
   it.each([
     ['shape', makeShapeClip('selected-shape', 0)],
     ['image', makeImageClip('selected-image')],

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { toRef } from 'vue';
+import { computed, toRef } from 'vue';
 import BeamySvg from './BeamySvg.vue';
 import { useBeamy } from './useBeamy';
 import type { BeamyPhase } from './beamy-types';
@@ -11,15 +11,20 @@ const props = withDefaults(
     active?: boolean;
     portrait?: boolean;
     cycleOffset?: number;
+    celebrate?: boolean;
   }>(),
   {
     size: 48,
     active: true,
     portrait: false,
     cycleOffset: 0,
+    celebrate: true,
   },
 );
 const { motion } = useBeamy(toRef(props, 'phase'), toRef(props, 'active'), toRef(props, 'cycleOffset'));
+const frame = computed(() =>
+  props.phase === 'completed' && !props.celebrate ? { ...motion.value.frame, dots: [] } : motion.value.frame,
+);
 </script>
 
 <template>
@@ -27,7 +32,7 @@ const { motion } = useBeamy(toRef(props, 'phase'), toRef(props, 'active'), toRef
     <BeamySvg
       class="mascot-artwork"
       :style="{ transform: motion.transform }"
-      :frame="motion.frame"
+      :frame="frame"
       :size="size"
       :portrait="portrait"
       :color="phase === 'completed' ? 'var(--color-success)' : 'var(--color-primary)'"

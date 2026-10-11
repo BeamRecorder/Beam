@@ -509,12 +509,12 @@
     "format": "Formato",
     "webm": "WebM",
     "mp4": "MP4",
-    "qualityAndBitrate": "Qualità e bitrate",
+    "qualityAndBitrate": "Qualità",
     "low": "Bassa",
-    "medium": "Media",
+    "medium": "Standard",
     "high": "Alta",
-    "webmDesc": "Esportazione rapida, dimensioni ottimali e supporto alla trasparenza.",
-    "mp4Desc": "Compatibilità universale per condividere su più piattaforme.",
+    "webmDesc": "Per il web, con file più piccoli e supporto della trasparenza.",
+    "mp4Desc": "La scelta più compatibile per condividere e riprodurre su dispositivi diversi.",
     "lowDesc": "~{mbps} Mbps · Dimensioni e nitidezza inferiori.",
     "mediumDesc": "~{mbps} Mbps · Qualità bilanciata (consigliata).",
     "highDesc": "~{mbps} Mbps · Massima fedeltà visiva.",
@@ -532,7 +532,7 @@
     "frameRate24Desc": "Cadenza cinematografica e file più leggero. Ideale per sorgenti a 24 fps.",
     "frameRate30Desc": "Buon equilibrio tra fluidità e dimensione del file per i video standard.",
     "frameRate60Desc": "Massima fluidità nei movimenti rapidi, con un file più grande. Ideale per sorgenti a 60 fps.",
-    "resMax": "Massima",
+    "resMax": "Originale",
     "res1080p": "1080p",
     "res720p": "720p",
     "copyError": "Copia errore",
@@ -544,7 +544,17 @@
     "res720pDesc": "Scala HD ({width}×{height})",
     "moreOptions": "Altre opzioni",
     "includeAudio": "Includi audio",
-    "includeAudioDesc": "Aggiunge le tracce audio attive al video esportato."
+    "includeAudioDesc": "Aggiunge le tracce audio attive al video esportato.",
+    "dialogTitle": "Esporta video",
+    "fileName": "Nome del file",
+    "estimatedSize": "Dimensione stimata ≈",
+    "sizeHint": "Basata sul bitrate di destinazione. Le scene statiche possono occupare molto meno.",
+    "showInFolder": "Mostra nella cartella",
+    "savingImage": "Salvataggio immagine…",
+    "exportAgain": "Esporta di nuovo",
+    "watchVideo": "Guarda",
+    "openFolder": "Apri cartella",
+    "viewImage": "Visualizza immagine"
   },
   "HUD": {
     "issues": "Problemi",
@@ -720,7 +730,13 @@
     "recordingDescription": "Prepara i controlli e il conto alla rovescia della prossima registrazione.",
     "accessibilityDescription": "Gestisci l’accesso alle interazioni e l’assistenza alla scrittura.",
     "shortcutsDescription": "Accedi alle tue azioni preferite con una scorciatoia.",
-    "updatesDescription": "Mantieni Beam aggiornato e scopri le novità."
+    "updatesDescription": "Mantieni Beam aggiornato e scopri le novità.",
+    "categoryAppearance": "Aspetto",
+    "appearanceDescription": "Scegli l’aspetto di Beam in tutte le finestre.",
+    "categoryVideoEditor": "Editor video",
+    "videoEditorDescription": "Comportamento della timeline e preferenze di esportazione.",
+    "groupApplication": "Applicazione",
+    "groupTools": "Strumenti"
   },
   "ProjectPicker": {
     "projects": "Progetti",
@@ -1287,6 +1303,7 @@
     "browse": "Scegli una cartella",
     "search": "Cerca cartelle",
     "noMatches": "Nessuna cartella corrispondente",
+    "emptyFolders": "Scegli una cartella per vedere qui le cartelle recenti.",
     "error": "Impossibile aggiornare la cartella.",
     "retry": "Riprova"
   }

@@ -257,7 +257,7 @@ describe('useTimelineContextMenu lock actions', () => {
       expect.objectContaining({
         item: expect.objectContaining({ type: 'clip' }),
         timeMs: 1_000,
-        target: { category: 'visual', trackId: 'video-track', placement: 'new-layer' },
+        target: { category: 'visual', trackId: 'video-track', placement: 'auto' },
       }),
     );
   });

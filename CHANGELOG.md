@@ -4,12 +4,55 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Typing directly on the canvas responds immediately, with native text sizing and local drafts that avoid rebuilding the project on every keystroke.
+- Webcam shadows keep a consistent size during zoom and zoom-out animations, including high-density editor previews.
+- Renaming an open video project keeps its media available for playback and export, including through undo and redo.
+- Default export filenames follow project renames in Video and Screenshot, while keeping any filename you entered yourself.
+- Restored a visible green completion aura around export and Quick Snip notifications in light and dark themes.
+- Fixed brief freezes and jumps in new Linux screen recordings with Intel graphics.
+- Finished Video and Screenshot export notifications stay visible for five full seconds after the result appears, including when rendering is busy. Interaction pauses the countdown, and export errors stay visible.
+- New Linux recordings keep the cursor synchronized with the video during fast movements and text selection, including with cursor smoothing turned off.
+- Dropdown borders blur the content behind them consistently, so sharp text no longer shows through their edges.
+- Export size estimates now include audio that becomes enabled through an animation.
+- Aligned the filename and format controls in the video and Screenshot export dialogs, and made the Export button easier to see in both editor titlebars.
+- Export folders appear only once in the recent-folder list, including when the chosen folder matches the last used folder.
+- Dropdowns inside dialogs appear above the dialog and remain clickable.
+- New recordings recognize custom resize cursors from design tools such as Figma on Linux, Windows and macOS, so the chosen cursor style keeps horizontal, vertical and diagonal resize handles.
+- Improved HUD stability while dragging on Windows, including after recording or taking a screenshot.
+- Screenshot fills the workspace behind the canvas with the selected background, removing pale side bands when the image and window have different proportions.
+- Restarting a recording repeats your selected countdown every time and resets the recording timer for the new take.
+- Fixed thick recording-region borders on Windows appearing over the selected area and in recorded videos.
+- Alignment guides follow the visible cropped bounds in Video and Screenshot, while keeping the original image dimensions available for further crop edits and resets.
+- Studio's Default option remembers your latest editing and export settings, including changes made while using a named preset. Named presets change only when you explicitly save them.
+- Text inside shapes remembers its font, color, size and other typography settings for new recordings.
+- Windows keeps the Recorder ready in the background, avoiding an unresponsive HUD after returning from the editor or system tray.
+- Clicking an empty space in a text track adds the caption to that track. Add text still creates a new track.
+- Pasted text captions appear at the playhead on their original track instead of creating a new track automatically; existing text is trimmed where the paste overlaps it.
+
 ### Added
 
+- The Windows installer lets you choose where Beam is installed, including another drive. In-app updates still install silently and restart Beam.
+- Assign separate global shortcuts to record a screen, region or window with Quick Snip, using your saved countdown. The new actions are available in all 15 languages and start unassigned.
+- Open the same Settings window from the Recorder, video editor, Screenshot and Quick Snip, with shared Appearance controls.
+- Customize editing, capture, tool and property shortcuts, including selection, duplication and drag modifiers, in a simpler searchable shortcuts page.
+- New project lets you choose Video or Screenshot with Beam's capture icons and remembers your last choice.
 - The private website’s Studio overview shows a real recording edited on the native multi-track timeline in a fifteen-second, 60 fps loop, including trim/split/cut, a caption, appearance and canvas adjustments, and a 2D zoom. Light/dark variants and editable source live in `examples/website-studio-loop/`.
 
 ### Changed
 
+- Disabled automatic zoom explains whether the recording, cursor data or recorded clicks are missing, in all 15 languages.
+- Video and Screenshot export dialogs shrink into a small progress pill at the bottom right, using the same appearance and hover actions as Quick Snip. Cancel from the pill, then watch the finished video or open its folder with larger buttons.
+- Export and Quick Snip completion use a simple green checkmark with the subtle green outline, replacing the liquid mascot animation. File actions are available immediately.
+- Settings navigation, preference pages, search results and export dialogs use the same scroll fades as the editor properties panel to show when more content is available. The navigation scrollbar stays at the sidebar's right edge.
+- Shortcuts are organized into clear subcategories, including separate Quick Snip and Recorder controls, with search on the left and the category filter on the right. All headings are translated into 15 languages.
+- Export size estimates explain that still scenes can produce much smaller files than the displayed approximation, in all 15 languages.
+- Export directly to your chosen folder, with clear actions to watch the video or open its folder when finished. FFmpeg GPU export remains available in the export dialog on Linux.
+- Export destinations show the folder path directly and keep recent folders available in the dropdown. Empty recent-folder lists explain how to choose the first folder, in all 15 languages.
+- Video and Screenshot exports open in a wider dialog organized from file and destination to output settings, with the main choices visible together. Video exports the entire timeline by default, with accent-colored audio and playhead switches, simpler quality labels and the Original resolution. MP4 is the initial format, existing choices are remembered, and format hints explain MP4 and WebM. Video shows an estimated file size before exporting, and completed exports offer Watch or View image alongside Open folder. All new labels are translated into 15 languages.
+- Settings separates shared Application preferences from tool-specific options, with Updates and About at the bottom of the navigation. Group headings are translated into all 15 languages.
+- Shortcuts keep Beam's familiar keycaps in a lighter list, with a restore-default action shown only for customized bindings. Reassigning a shortcut already in use asks for confirmation and names the affected actions.
 - The website’s Studio overview now runs for 15 seconds with gentler cursor travel, longer reading pauses and two restrained camera views that stay fixed during edits.
 
 ## [0.5.3] - 2026-10-07

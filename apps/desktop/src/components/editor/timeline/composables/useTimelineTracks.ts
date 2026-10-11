@@ -1,3 +1,4 @@
+import { additiveSelection } from '~/shortcuts/pointer-modifiers';
 import type { TimelineFrameQueue } from '@beam/runtime/timeline/frame-queue-types';
 import { recordingMoveSelection } from '@beam/engine/composition/recording-sidecars';
 import { timelineMovePreviews } from './timeline-composition-preview';
@@ -392,7 +393,7 @@ export function useTimelineTracks(
       clipIds: ordered.map((clip) => clip.id),
       primaryClipId: ordered[0]?.id ?? null,
       trackNames: [trackName],
-      ...(event?.ctrlKey || event?.metaKey || event?.shiftKey ? { additive: true } : {}),
+      ...(event && additiveSelection(event) ? { additive: true } : {}),
     });
   };
   const selectZoomTrack = (zooms: ZoomElement[], event?: MouseEvent) => {
@@ -406,7 +407,7 @@ export function useTimelineTracks(
     emit('select:zoom-track', {
       zoomIds: ordered.map((zoom) => zoom.id),
       primaryZoomId: ordered[0]?.id ?? null,
-      ...(event?.ctrlKey || event?.metaKey || event?.shiftKey ? { additive: true } : {}),
+      ...(event && additiveSelection(event) ? { additive: true } : {}),
     });
   };
   const zoomScale = (depth: number) => [1.25, 1.5, 1.8, 2.2, 3.5, 5][Math.max(0, Math.min(5, depth - 1))] ?? 1.25;
@@ -444,7 +445,6 @@ export function useTimelineTracks(
     sidebarScrollRef,
     tracksViewportRef,
     ticksAreaRef,
-    rulerWidth,
     rulerLayoutWidth,
     timelineViewport,
     tracksWidthStyle,

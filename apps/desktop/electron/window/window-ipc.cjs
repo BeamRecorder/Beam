@@ -1,11 +1,13 @@
 const { BrowserWindow, screen } = require('electron');
 const { resizeHudPopover } = require('./hud-popover-size.cjs');
+const { registerWindowVisibilityIpc } = require('./window-visibility.cjs');
 
 function windowForEvent(event) {
   return BrowserWindow.fromWebContents(event.sender);
 }
 
 function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {}) {
+  registerWindowVisibilityIpc(ipcMain, windowForEvent);
   const logWindow = (message, details) => {
     if (!debug) return;
     if (details === undefined) console.log(`[electron window] ${message}`);

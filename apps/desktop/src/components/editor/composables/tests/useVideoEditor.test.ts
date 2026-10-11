@@ -117,6 +117,7 @@ vi.mock('../useProjectEditorState', () => ({
       load: vi.fn().mockResolvedValue(undefined),
       scheduleSave: vi.fn(),
       enableDefaultCapture: vi.fn(),
+      disableDefaultCapture: vi.fn(),
     };
     state.editorState = value;
     return value;
@@ -222,9 +223,50 @@ describe('useVideoEditor', () => {
     wrapper.unmount();
   });
 
+  it.each([
+    { enabled: true, animated: false, duration: 3_000, expected: true },
+    { enabled: false, animated: false, duration: 3_000, expected: false },
+    { enabled: false, animated: true, duration: 3_000, expected: true },
+    { enabled: true, animated: false, duration: 0, expected: false },
+    { enabled: false, animated: true, duration: 0, expected: false },
+  ])('matches encoder audio eligibility in export metadata: %j', async ({ enabled, animated, duration, expected }) => {
+    let api!: ReturnType<typeof useVideoEditor>;
+    state.initialComposition = {
+      ...createCompositionFixture(),
+      clips: [audioClip('audio', 'audio-asset', { enabled, timelineDurationMs: duration })],
+      animations: {
+        version: 1,
+        tracks: [
+          {
+            id: 'audio-visibility',
+            targetId: 'audio',
+            property: 'enabled',
+            interpolation: 'discrete',
+            keyframes: [
+              { timeMs: 0, value: false },
+              { timeMs: 500, value: animated },
+            ],
+          },
+        ],
+      },
+    };
+    const Harness = defineComponent({
+      setup: () => ((api = useVideoEditor({ project: ref(project), editorData: ref(makeEditorData()) })), {}),
+      template: '<div />',
+    });
+    const wrapper = mount(Harness);
+    await flushPromises();
+    expect(api.exportRequest.value?.hasAudio).toBe(expected);
+    expect(state.createCompositionSnapshot).not.toHaveBeenCalled();
+    state.compositionState.composition.value = { ...createCompositionFixture(), clips: [] };
+    await wrapper.vm.$nextTick();
+    expect(api.exportRequest.value?.hasAudio).toBe(false);
+    wrapper.unmount();
+  });
+
   it('exposes cheap live export metadata and creates snapshots only when requested', async () => {
     let api!: ReturnType<typeof useVideoEditor>;
-    const projectRef = ref(project);
+    const projectRef = ref({ ...project });
     const editorData = ref(makeEditorData());
     const initialComposition = createCompositionFixture();
     const screenClip = initialComposition.clips.find((clip) => clip.id === 'screen')!;
@@ -253,6 +295,11 @@ describe('useVideoEditor', () => {
       height: 1080,
     });
     expect(state.createCompositionSnapshot).not.toHaveBeenCalled();
+    projectRef.value.name = 'Renamed while editing';
+    await wrapper.vm.$nextTick();
+    expect(api.exportRequest.value?.projectName).toBe('Renamed while editing');
+    expect(state.editorState.load).toHaveBeenCalledOnce();
+    expect(state.player.loadComposition).toHaveBeenCalledOnce();
     api.exportRequest.value!.createSnapshot();
     expect(state.createCompositionSnapshot).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -409,11 +456,13 @@ describe('useVideoEditor', () => {
     });
     const wrapper = mount(Harness);
     expect(capture.getProjectEditorState).toHaveBeenCalledWith('project-slow');
+    expect(state.editorState.disableDefaultCapture).toHaveBeenCalledOnce();
     expect(capture.getEditorPresets).toHaveBeenCalled();
     expect(state.player.loadComposition).not.toHaveBeenCalled();
 
     projectRef.value = { ...project, id: 'project-current' };
     await flushPromises();
+    expect(state.editorState.disableDefaultCapture).toHaveBeenCalledTimes(2);
     expect(capture.getEditorPresets).toHaveBeenCalledOnce();
     expect(state.editorState.load).not.toHaveBeenCalled();
     expect(state.player.loadComposition).not.toHaveBeenCalled();

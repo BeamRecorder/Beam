@@ -20,6 +20,7 @@ import { DEFAULT_COLOR_FILL } from '@beam/engine/shared/color-fill-types';
 import { normalizeColorLayerStyle } from '@beam/engine/shared/color-layer-style';
 import { createComposition } from '@beam/engine/commands/clip-engine';
 import { DEFAULT_DRAWING_SETTINGS } from '@beam/engine/shared/freehand';
+import { createElementText } from '@beam/engine/shared/element-text';
 import { normalizeShapeLayerStyle } from '@beam/engine/shared/shape-layer-style';
 import type { ElementEditorContext } from '../elements/element-editor-types';
 import { ELEMENT_EDITOR } from '../elements/useElementEditor';
@@ -196,6 +197,7 @@ const globalStubs = {
 const createEditor = (shape: ShapeClip | null, layers: ShapeClip[] = shape ? [shape] : []) => {
   const remove = vi.fn();
   const editor: ElementEditorContext = {
+    createText: createElementText,
     canInteract: computed(() => true),
     layers: computed(() => layers),
     selected: computed(() => shape),

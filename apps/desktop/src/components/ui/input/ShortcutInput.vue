@@ -1,325 +1,234 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { RotateCcw, X } from '@lucide/vue';
 import KeyboardChip from '../Kbd/KeyboardChip.vue';
-import { X, RotateCcw } from '@lucide/vue';
-
+import Button from '../button/Button.vue';
+import ContextMenu from '../context-menu/ContextMenu.vue';
+import { useTranslate } from '~/i18n/useTranslate';
+import { capture } from '~/api/capture';
+import { isMacKeyboard } from '~/shortcuts/action-bindings';
 const props = withDefaults(
   defineProps<{
     modelValue: string;
+    inputId?: string;
+    label?: string;
     placeholder?: string;
     disabled?: boolean;
     error?: boolean | string;
+    kind?: 'keyboard' | 'modifier';
+    customized?: boolean;
   }>(),
-  {
-    placeholder: 'Press shortcut...',
-  },
+  { kind: 'keyboard' },
 );
-
-const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void;
-  (e: 'change', value: string): void;
-  (e: 'reset'): void;
-}>();
-
-const isRecording = ref(false);
-const capturedKeys = ref<string[]>([]);
-const inputRef = ref<HTMLDivElement | null>(null);
-
-const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-
-const normalizeEventKey = (e: KeyboardEvent): string | null => {
-  const code = e.code;
-
-  // Modifiers
-  if (['ControlLeft', 'ControlRight'].includes(code)) return isMac ? 'Control' : 'Ctrl';
-  if (['ShiftLeft', 'ShiftRight'].includes(code)) return 'Shift';
-  if (['AltLeft', 'AltRight'].includes(code)) return 'Alt';
-  if (['MetaLeft', 'MetaRight'].includes(code)) return isMac ? 'Command' : 'Super';
-
-  // Special keys
-  if (code === 'Space') return 'Space';
-  if (code === 'Enter' || code === 'NumpadEnter') return 'Enter';
-  if (code === 'Backspace') return 'Backspace';
-  if (code === 'Tab') return null; // allow tabbing away if not recording
-
-  // Key codes like KeyA -> A, Digit1 -> 1, F1 -> F1
-  if (code.startsWith('Key')) return code.slice(3);
-  if (code.startsWith('Digit')) return code.slice(5);
-  if (code.startsWith('Numpad') && code.length === 7) return code.slice(6);
-  if (/^F\d+$/.test(code)) return code;
-
-  // Arrow keys
-  if (code === 'ArrowUp') return 'Up';
-  if (code === 'ArrowDown') return 'Down';
-  if (code === 'ArrowLeft') return 'Left';
-  if (code === 'ArrowRight') return 'Right';
-
-  // Fallback to e.key uppercase if single char
-  if (e.key && e.key.length === 1) {
-    return e.key.toUpperCase();
-  }
-
-  return e.key || null;
-};
-
-const formatAccelerator = (modifiers: string[], key: string | null): string => {
-  const result: string[] = [];
-  if (modifiers.includes('Control') || modifiers.includes('Ctrl')) {
-    result.push(isMac ? 'Control' : 'Ctrl');
-  }
-  if (modifiers.includes('Alt')) result.push('Alt');
-  if (modifiers.includes('Shift')) result.push('Shift');
-  if (modifiers.includes('Command') || modifiers.includes('Super')) {
-    result.push(isMac ? 'Command' : 'Super');
-  }
-  if (key && !modifiers.includes(key)) {
-    result.push(key);
-  }
-  return result.join('+');
-};
-
-const handleKeyDown = (e: KeyboardEvent) => {
-  if (!isRecording.value || props.disabled) return;
-
-  e.preventDefault();
-  e.stopPropagation();
-
-  if (e.key === 'Escape') {
-    stopRecording();
-    return;
-  }
-
-  const modifiers: string[] = [];
-  if (e.ctrlKey) modifiers.push(isMac ? 'Control' : 'Ctrl');
-  if (e.altKey) modifiers.push('Alt');
-  if (e.shiftKey) modifiers.push('Shift');
-  if (e.metaKey) modifiers.push(isMac ? 'Command' : 'Super');
-
-  const key = normalizeEventKey(e);
-  const isModifierOnly = key && ['Ctrl', 'Control', 'Alt', 'Shift', 'Command', 'Super'].includes(key);
-
-  if (isModifierOnly) {
-    capturedKeys.value = [...new Set(modifiers)];
-    return;
-  }
-
-  const mainKey = isModifierOnly ? null : key;
-  const accelerator = formatAccelerator(modifiers, mainKey);
-
-  if (accelerator !== undefined) {
-    emit('update:modelValue', accelerator);
-    emit('change', accelerator);
-    stopRecording();
+const emit = defineEmits<{ 'update:modelValue': [value: string]; change: [value: string]; reset: [] }>();
+const { t } = useTranslate('ActionShortcuts');
+const recording = ref(false);
+const draft = ref('');
+const menu = ref<InstanceType<typeof ContextMenu>>();
+const menuItems = computed(() => [
+  { id: 'reset', label: t('restore'), icon: RotateCcw, disabled: !props.customized },
+  { id: 'clear', label: t('clear'), icon: X, disabled: !props.modelValue },
+]);
+let generation = 0;
+let captureRequested = false;
+let restoration: Promise<boolean> | null = null;
+const localError = ref('');
+const restoreNativeShortcuts = async () => {
+  try {
+    await capture.setShortcutCaptureActive(false);
+    return true;
+  } catch (reason) {
+    localError.value = String(reason);
+    return false;
+  } finally {
+    restoration = null;
   }
 };
-
-const startRecording = () => {
-  if (props.disabled) return;
-  isRecording.value = true;
-  capturedKeys.value = [];
+const stop = async () => {
+  generation++;
+  recording.value = false;
+  draft.value = '';
+  if (!captureRequested) return restoration ?? true;
+  captureRequested = false;
+  restoration = restoreNativeShortcuts();
+  return restoration;
 };
-
-const stopRecording = () => {
-  isRecording.value = false;
-  capturedKeys.value = [];
-};
-
-const handleClickOutside = (e: MouseEvent) => {
-  if (inputRef.value && !inputRef.value.contains(e.target as Node)) {
-    stopRecording();
+const start = async () => {
+  if (props.disabled || captureRequested || restoration) return;
+  captureRequested = true;
+  const current = ++generation;
+  localError.value = '';
+  try {
+    await capture.setShortcutCaptureActive(true);
+    if (current === generation) recording.value = true;
+  } catch (reason) {
+    captureRequested = false;
+    localError.value = String(reason);
   }
 };
-
-const handleClear = (e: MouseEvent) => {
-  e.stopPropagation();
-  emit('update:modelValue', '');
-  emit('change', '');
-  stopRecording();
-};
-
-const handleReset = (e: MouseEvent) => {
-  e.stopPropagation();
-  emit('reset');
-  stopRecording();
-};
-
-onMounted(() => {
-  window.addEventListener('click', handleClickOutside);
-});
-
+onMounted(() => window.addEventListener('blur', stop));
 onBeforeUnmount(() => {
-  window.removeEventListener('click', handleClickOutside);
+  stop();
+  window.removeEventListener('blur', stop);
 });
+const commit = async (keys: string) => {
+  if (!(await stop())) return;
+  emit('update:modelValue', keys);
+  emit('change', keys);
+};
+const reset = async () => {
+  if (props.disabled || !props.customized) return;
+  if (await stop()) emit('reset');
+};
+const modifiers = (event: KeyboardEvent) => [
+  ...(event.ctrlKey ? [isMacKeyboard() ? 'Control' : 'Ctrl'] : []),
+  ...(event.altKey ? ['Alt'] : []),
+  ...(event.shiftKey ? ['Shift'] : []),
+  ...(event.metaKey ? [isMacKeyboard() ? 'Command' : 'Super'] : []),
+];
+const keydown = (event: KeyboardEvent) => {
+  if (props.disabled) return;
+  if (event.key === 'Tab') {
+    stop();
+    return;
+  }
+  if (event.key === 'F10' && event.shiftKey) {
+    event.preventDefault();
+    event.stopPropagation();
+    const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    menu.value?.open({ x: bounds.left, y: bounds.bottom });
+    return;
+  }
+  if (!recording.value) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      void start();
+    } else if (event.key === 'Backspace' || event.key === 'Delete') {
+      event.preventDefault();
+      commit('');
+    }
+    return;
+  }
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.key === 'Escape') {
+    stop();
+    return;
+  }
+  if (
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.shiftKey &&
+    !event.altKey &&
+    ['Backspace', 'Delete'].includes(event.key)
+  ) {
+    commit('');
+    return;
+  }
+  const parts = modifiers(event);
+  const modifier = ['Control', 'Shift', 'Alt', 'Meta'].includes(event.key);
+  if (props.kind === 'modifier' || modifier) {
+    draft.value = parts.join('+');
+    return;
+  }
+  const keys: Record<string, string> = {
+    ' ': 'Space',
+    ArrowLeft: 'Left',
+    ArrowRight: 'Right',
+    ArrowUp: 'Up',
+    ArrowDown: 'Down',
+    '+': 'Plus',
+  };
+  const physical = /^(?:Key|Digit)([A-Z0-9])$/.exec(event.code)?.[1];
+  const key =
+    keys[event.key] ??
+    (physical && !/^[a-z0-9]$/i.test(event.key)
+      ? physical
+      : event.key.length === 1
+        ? event.key.toUpperCase()
+        : event.key);
+  commit([...parts, key].join('+'));
+};
+const keyup = (event: KeyboardEvent) => {
+  if (recording.value && props.kind === 'modifier' && draft.value && !modifiers(event).length) commit(draft.value);
+};
+const contextmenu = (event: MouseEvent) => {
+  if (props.disabled) return;
+  stop();
+  menu.value?.open(event);
+};
 </script>
-
 <template>
-  <div class="shortcut-input-container">
-    <div
-      ref="inputRef"
-      class="shortcut-input"
-      :class="{
-        'is-recording': isRecording,
-        'is-disabled': disabled,
-        'is-error': !!error,
-      }"
-      tabindex="0"
-      @click="startRecording"
-      @keydown="handleKeyDown"
-    >
-      <div v-if="isRecording" class="recording-state">
-        <span class="recording-dot" />
-        <span v-if="capturedKeys.length === 0" class="recording-prompt">Press key combination...</span>
-        <KeyboardChip v-else :keys="capturedKeys" size="sm" />
-      </div>
-
-      <div v-else-if="modelValue" class="value-state">
-        <KeyboardChip :shortcut="modelValue" size="sm" />
-      </div>
-
-      <div v-else class="placeholder-state">
-        {{ placeholder }}
-      </div>
-
-      <div class="action-buttons">
-        <button
-          v-if="modelValue && !disabled"
-          type="button"
-          class="icon-button"
-          title="Clear shortcut"
-          @click="handleClear"
+  <div class="shortcut-field" data-shortcut-input>
+    <div class="shortcut-controls">
+      <div class="shortcut-trigger" :class="{ recording }">
+        <Button
+          variant="ghost"
+          size="sm"
+          :disabled="disabled"
+          :id="inputId"
+          :aria-label="label"
+          :aria-pressed="recording"
+          :aria-invalid="Boolean(error)"
+          @click="start"
+          @keydown="keydown"
+          @keyup="keyup"
+          @blur="stop"
+          @contextmenu.prevent="contextmenu"
         >
-          <X class="btn-icon" />
-        </button>
-        <button v-if="!disabled" type="button" class="icon-button" title="Reset to default" @click="handleReset">
-          <RotateCcw class="btn-icon" />
-        </button>
+          <KeyboardChip v-if="recording && draft" :shortcut="draft" size="md" />
+          <span v-else-if="recording" class="shortcut-prompt">{{ t('recordShortcut') }}</span>
+          <KeyboardChip v-else-if="modelValue" :shortcut="modelValue" size="md" />
+          <span v-else class="shortcut-prompt">{{ placeholder || t('unassigned') }}</span>
+        </Button>
       </div>
+      <Button
+        v-if="customized"
+        variant="ghost"
+        size="xs"
+        icon-only
+        :icon="RotateCcw"
+        :disabled="disabled"
+        :aria-label="t('restore')"
+        :tooltip="t('restore')"
+        @click="reset"
+      />
     </div>
-    <span v-if="typeof error === 'string' && error" class="shortcut-error-msg">
-      {{ error }}
-    </span>
+    <span v-if="typeof error === 'string' && error" class="shortcut-error" role="alert">{{ error }}</span>
+    <span v-if="localError" class="shortcut-error" role="alert">{{ localError }}</span>
+    <ContextMenu ref="menu" :items="menuItems" @select="$event === 'reset' ? reset() : commit('')" />
   </div>
 </template>
-
 <style scoped>
-.shortcut-input-container {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 100%;
-}
-
-.shortcut-input {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  height: 2rem;
-  padding: 0 8px;
-  background-color: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  outline: none;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-  user-select: none;
-}
-
-.shortcut-input:hover:not(.is-disabled) {
-  border-color: var(--color-border-strong);
-}
-
-.shortcut-input.is-recording {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
-  background-color: var(--color-bg-element);
-}
-
-.shortcut-input.is-disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.shortcut-input.is-error {
-  border-color: var(--color-error);
-}
-
-.recording-state {
-  display: flex;
-  align-items: center;
+.shortcut-field {
+  --text-muted: var(--text-secondary);
+  display: grid;
   gap: 6px;
+  justify-items: end;
+  min-width: 0;
 }
-
-.recording-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: var(--color-primary);
-  animation: pulse 1s infinite alternate;
-}
-
-@keyframes pulse {
-  from {
-    opacity: 0.4;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.recording-prompt {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.placeholder-state {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.value-state {
-  display: flex;
-  align-items: center;
-  pointer-events: none;
-}
-
-.action-buttons {
-  display: flex;
+.shortcut-controls {
+  display: grid;
+  grid-template-columns: minmax(0, auto) 24px;
   align-items: center;
   gap: 4px;
-  margin-left: auto;
 }
-
-.icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  padding: 2px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition:
-    color 0.15s ease,
-    background-color 0.15s ease;
+.shortcut-trigger {
+  display: flex;
+  justify-content: flex-end;
+  border-radius: var(--radius-md);
 }
-
-.icon-button:hover {
-  color: var(--text-primary);
-  background-color: var(--color-bg-element);
+.shortcut-trigger.recording,
+.shortcut-trigger:focus-within {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 2px;
 }
-
-.btn-icon {
-  width: 12px;
-  height: 12px;
+.shortcut-prompt {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
 }
-
-.shortcut-error-msg {
-  font-size: 11px;
+.shortcut-error {
+  font-size: var(--font-size-sm);
   color: var(--color-error);
-  font-weight: 500;
 }
 </style>

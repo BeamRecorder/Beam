@@ -137,7 +137,7 @@ function createLinuxShortcutSource({
   };
   const register = async (preferences) => {
     const entries = Object.entries(preferences.shortcuts)
-      .filter(([, entry]) => entry.scope === 'global')
+      .filter(([, entry]) => entry.scope === 'global' && entry.keys)
       .map(([id, entry]) => ({
         id,
         path: customPath(id),

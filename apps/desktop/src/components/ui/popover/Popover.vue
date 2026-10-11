@@ -2,6 +2,7 @@
 import { inject, nextTick, provide, ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import { popoverViewportKey, popoverAnchorConstraintKey } from './popover-viewport-types';
 import { holdPopoverInteractionKey, popoverOpenStateKey, popoverVisibilityKey } from './popover-interaction-types';
+import { popoverLayerKey } from './popover-layer-types';
 
 const props = withDefaults(
   defineProps<{
@@ -45,6 +46,8 @@ const emit = defineEmits<{
 }>();
 
 const isOpen = ref(false);
+const floatingLayer = inject(popoverLayerKey, 10000);
+provide(popoverLayerKey, floatingLayer + 1);
 const hasOpened = ref(false);
 const notifyOpenState = inject(popoverOpenStateKey, null);
 const parentVisibility = inject(popoverVisibilityKey, null);
@@ -178,7 +181,7 @@ const adjustPosition = async () => {
     visibility: 'visible',
     top: `${clampedTop}px`,
     left: `${clampedLeft}px`,
-    zIndex: '10000',
+    zIndex: String(floatingLayer),
     ...(fitAnchor
       ? {
           '--popover-available-height': `${Math.max(0, availableHeight - 10)}px`,

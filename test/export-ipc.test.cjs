@@ -5,7 +5,10 @@ const path = require('node:path');
 const test = require('node:test');
 const { registerExportIpc, safeExportName } = require('../apps/desktop/electron/export/export-ipc.cjs');
 
-function setup(filePath, { defaultExportDirectory, dialogCalls = [], resolveAutomaticDestination } = {}) {
+function setup(
+  filePath,
+  { defaultExportDirectory = path.dirname(filePath), dialogCalls = [], resolveAutomaticDestination } = {},
+) {
   const handlers = new Map();
   const registration = {
     ipcMain: { handle: (name, handler) => handlers.set(name, handler) },
@@ -64,6 +67,9 @@ function asyncFsFixture({ writeGate = null, writeFailure = null } = {}) {
   };
   const fsModule = {
     promises: {
+      stat: async () => {
+        throw Object.assign(new Error('Not found'), { code: 'ENOENT' });
+      },
       open: async (temporaryPath, flags) => {
         calls.open.push({ temporaryPath, flags });
         files.add(temporaryPath);
@@ -122,6 +128,7 @@ function asyncSetup(filePath, fsFixture) {
     dialog: { showSaveDialog: async () => ({ canceled: false, filePath }) },
     BrowserWindow: { fromWebContents: () => ({}) },
     fsModule: fsFixture.fsModule,
+    defaultExportDirectory: path.dirname(filePath),
   });
   const event = { sender: { id: 7 } };
   return {
@@ -147,34 +154,20 @@ test('uses the absolute default export directory for sanitized mp4 and webm name
         projectName: '  demo:/recording<>.  ',
         format,
       });
-      assert.equal(dialogCalls.length, 1);
-      assert.equal(
-        dialogCalls[0].defaultPath,
-        path.join(path.resolve(root), safeExportName('  demo:/recording<>.  ', format)),
-      );
-      assert.equal(path.isAbsolute(dialogCalls[0].defaultPath), true);
-      await api.invoke('export:abort', { jobId: opened.jobId });
+      assert.equal(dialogCalls.length, 0);
+      const finalized = await api.invoke('export:finalize', { jobId: opened.jobId });
+      assert.equal(finalized.path, path.join(root, safeExportName('  demo:/recording<>.  ', format)));
+      assert.equal(path.isAbsolute(finalized.path), true);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
   }
 });
 
-test('keeps the existing basename fallback when no default export directory is provided', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-export-default-fallback-'));
-  const target = path.join(root, 'selected.webm');
-  const dialogCalls = [];
-  const api = setup(target, { dialogCalls });
-  try {
-    const opened = await api.invoke('export:begin', {
-      projectName: ' demo:/recording. ',
-      format: 'webm',
-    });
-    assert.equal(dialogCalls[0].defaultPath, safeExportName(' demo:/recording. ', 'webm'));
-    await api.invoke('export:abort', { jobId: opened.jobId });
-  } finally {
-    fs.rmSync(root, { recursive: true, force: true });
-  }
+test('rejects a missing export directory without opening a save dialog', async () => {
+  const api = setup('/tmp/unused.webm', { defaultExportDirectory: null });
+  await assert.rejects(api.invoke('export:begin', { projectName: 'Demo', format: 'webm' }), /Choose an export folder/);
+  assert.equal(api.dialogCalls.length, 0);
 });
 
 test('rejects unsupported output formats before opening a destination file', async () => {
@@ -192,6 +185,7 @@ test('writes ordered chunks atomically and finalizes the selected file', async (
   const api = setup(target);
   const opened = await api.invoke('export:begin', {
     projectName: 'Demo',
+    fileName: 'result',
     format: 'webm',
   });
   await api.invoke('export:write', {
@@ -220,6 +214,7 @@ test('rejects unordered chunks and removes a cancelled partial export', async ()
   const api = setup(target);
   const opened = await api.invoke('export:begin', {
     projectName: 'Demo',
+    fileName: 'result',
     format: 'mp4',
   });
   await assert.rejects(
@@ -248,6 +243,7 @@ test('waits for an asynchronous FileHandle.write before acknowledging a chunk', 
   const api = asyncSetup(target, fixture);
   const opened = await api.invoke('export:begin', {
     projectName: 'Demo',
+    fileName: 'result',
     format: 'webm',
   });
 
@@ -278,6 +274,7 @@ test('serializes concurrent chunk writes and starts the next one after the first
   const api = asyncSetup(target, fixture);
   const opened = await api.invoke('export:begin', {
     projectName: 'Demo',
+    fileName: 'result',
     format: 'webm',
   });
 
@@ -315,6 +312,7 @@ test('removes the partial file after an asynchronous chunk failure and abort', a
   const api = asyncSetup(target, fixture);
   const opened = await api.invoke('export:begin', {
     projectName: 'Demo',
+    fileName: 'result',
     format: 'mp4',
   });
   const temporaryPath = fixture.calls.open[0].temporaryPath;

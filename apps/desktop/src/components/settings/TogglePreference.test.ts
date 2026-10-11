@@ -2,6 +2,12 @@ import { mount } from '@vue/test-utils';
 import { expect, it } from 'vitest';
 import { defineComponent } from 'vue';
 import TogglePreference from './TogglePreference.vue';
+it('passes the requested accent variant to its accessible switch', () => {
+  const wrapper = mount(TogglePreference, { props: { modelValue: true, label: 'Audio', switchVariant: 'primary' } });
+  expect(wrapper.get('.switch-container').classes()).toContain('variant-primary');
+  expect(wrapper.get('[role="switch"]').attributes('aria-label')).toBe('Audio');
+  wrapper.unmount();
+});
 it('labels the switch and associates its description with the real button', async () => {
   const wrapper = mount(TogglePreference, {
     props: { modelValue: false, label: 'Option', description: 'Explanation' },

@@ -24,3 +24,8 @@ export interface RecorderLauncherContext {
   preferredKind: 'window';
   preferredSourceId: string | null;
 }
+
+export interface EditorWindowContext {
+  projectId: string;
+  kind?: 'screenshot';
+}

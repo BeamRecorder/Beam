@@ -1,3 +1,4 @@
+import { hydrateActionBindings } from '~/shortcuts/action-bindings';
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import { capture } from '../api/capture';
@@ -162,6 +163,7 @@ export const useThemeStore = defineStore('theme', () => {
     .getPreferences()
     .then((preferences) => {
       preferencesStore.settings = preferences;
+      hydrateActionBindings(preferences.shortcuts);
       hydrateFromSettings(preferences.appearance, preferences.theme);
       hydrated.value = true;
       logTheme('appearance hydrated', { appearance: preferences.appearance });
@@ -248,6 +250,7 @@ export const useThemeStore = defineStore('theme', () => {
 
   capture.onPreferencesChanged((preferences) => {
     preferencesStore.settings = preferences;
+    hydrateActionBindings(preferences.shortcuts);
     const next = preferences.appearance;
     if (
       preferences.theme === theme.value &&

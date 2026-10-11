@@ -3,7 +3,13 @@ const { EventEmitter } = require('node:events');
 const Module = require('node:module');
 const test = require('node:test');
 
-function fixture({ packaged = false, captureWarmup = Promise.resolve(), visible = false } = {}) {
+function fixture({
+  packaged = false,
+  captureWarmup = Promise.resolve(),
+  visible = false,
+  settingsOwnerFor = () => null,
+  shortcutCapture = async () => {},
+} = {}) {
   const handlers = new Map();
   const windows = [];
   const hud = new EventEmitter();
@@ -98,6 +104,8 @@ function fixture({ packaged = false, captureWarmup = Promise.resolve(), visible 
       applicationRoot: '/beam',
       isPackaged: packaged,
       captureWarmup,
+      settingsOwnerFor,
+      shortcutCapture,
       hudWindow: hud,
       hudController: controller,
       canAcceptWork: () => active,
@@ -590,4 +598,79 @@ test('packaged Settings carries an installed marker and exposes no developer han
   f.ready(f.windows[0]);
   await opening;
   f.manager.destroy();
+});
+
+function editorOwner() {
+  const owner = new EventEmitter();
+  owner.webContents = {};
+  owner.isDestroyed = () => false;
+  owner.isAlwaysOnTop = () => false;
+  return owner;
+}
+test('an editor opens the shared Settings above itself while the HUD stays hidden', async () => {
+  const owner = editorOwner();
+  const f = fixture({ settingsOwnerFor: (sender) => (sender === owner.webContents ? owner : null) });
+  f.controller.mode = 'editor';
+  const opening = f.handlers.get('hud:open-settings')({ sender: owner.webContents });
+  const win = f.windows[0];
+  f.ready(win);
+  assert.equal(await opening, true);
+  assert.equal(win.topmost, false);
+  assert.equal(win.options.parent, undefined);
+  f.hud.emit('hide');
+  assert.equal(win.visible, true);
+  assert.throws(() => f.handlers.get('hud:open-projects')({ sender: owner.webContents }), /recorder/);
+  assert.throws(() => f.handlers.get('hud:open-settings')({ sender: {} }), /Settings/);
+  owner.emit('closed');
+  assert.equal(win.visible, false);
+  f.manager.destroy();
+  assert.equal(owner.listenerCount('closed'), 0);
+});
+test('cached Settings transfers ownership and releases old owner listeners', async () => {
+  const owner = editorOwner();
+  const f = fixture({ settingsOwnerFor: () => owner });
+  const first = f.open('settings');
+  const win = f.windows[0];
+  f.ready(win);
+  await first;
+  win.close();
+  const second = f.handlers.get('hud:open-settings')({ sender: owner.webContents });
+  f.ready(win);
+  await second;
+  assert.equal(f.windows.length, 1);
+  assert.equal(win.topmost, false);
+  f.hud.emit('closed');
+  assert.equal(win.visible, true);
+  owner.isAlwaysOnTop = () => true;
+  owner.emit('always-on-top-changed');
+  assert.equal(win.topmost, true);
+  win.close();
+  f.manager.destroy();
+  assert.equal(owner.listenerCount('always-on-top-changed'), 0);
+});
+test('closing a requesting editor during startup rejects and disposes its pending Settings', async () => {
+  const owner = editorOwner();
+  const f = fixture({ settingsOwnerFor: () => owner });
+  const opening = f.handlers.get('hud:open-settings')({ sender: owner.webContents });
+  owner.emit('closed');
+  await assert.rejects(opening, /requesting window/);
+  assert.equal(f.windows[0].destroyed, true);
+  f.manager.destroy();
+});
+test('shortcut capture is Settings-owned and released on blur, hide and destruction', async () => {
+  const calls = [];
+  const f = fixture({ shortcutCapture: async (value) => calls.push(value) });
+  const opening = f.open('settings');
+  const win = f.windows[0];
+  f.ready(win);
+  await opening;
+  const capture = f.handlers.get('settings:shortcut-capture');
+  assert.throws(() => capture({ sender: f.hud.webContents }, true), /capture/);
+  assert.throws(() => capture({ sender: win.webContents }, 'true'), /capture/);
+  await capture({ sender: win.webContents }, true);
+  win.emit('blur');
+  win.close();
+  assert.throws(() => capture({ sender: win.webContents }, true), /capture/);
+  f.manager.destroy();
+  assert.deepEqual(calls, [true, false, false, false]);
 });

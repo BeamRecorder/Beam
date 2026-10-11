@@ -509,12 +509,12 @@
     "format": "形式",
     "webm": "WebM",
     "mp4": "MP4",
-    "qualityAndBitrate": "品質とビットレート",
+    "qualityAndBitrate": "品質",
     "low": "低",
-    "medium": "中",
+    "medium": "標準",
     "high": "高",
-    "webmDesc": "高速書き出し、最適なサイズ、透明度に対応します。",
-    "mp4Desc": "さまざまなプラットフォームで共有できる汎用形式です。",
+    "webmDesc": "ウェブ向け。ファイルサイズが小さく、透明度に対応します。",
+    "mp4Desc": "さまざまなデバイスでの共有や再生に最も互換性の高い形式です。",
     "lowDesc": "約{mbps} Mbps · サイズと画質を抑える",
     "mediumDesc": "約{mbps} Mbps · バランスのよい品質（推奨）",
     "highDesc": "約{mbps} Mbps · 最高の画質",
@@ -532,7 +532,7 @@
     "frameRate24Desc": "映画らしい動きと小さめのファイルサイズ。24 fpsの素材に最適です。",
     "frameRate30Desc": "標準的な動画向けに、滑らかさとファイルサイズを両立します。",
     "frameRate60Desc": "速い動きを最も滑らかに表現しますが、ファイルは大きくなります。60 fpsの素材に最適です。",
-    "resMax": "最大",
+    "resMax": "元のサイズ",
     "res1080p": "1080p",
     "res720p": "720p",
     "copyError": "エラーをコピー",
@@ -544,7 +544,17 @@
     "res720pDesc": "HDスケール（{width}×{height}）",
     "moreOptions": "その他のオプション",
     "includeAudio": "音声を含める",
-    "includeAudioDesc": "有効な音声トラックをエクスポート動画に追加します。"
+    "includeAudioDesc": "有効な音声トラックをエクスポート動画に追加します。",
+    "dialogTitle": "動画を書き出す",
+    "fileName": "ファイル名",
+    "estimatedSize": "推定サイズ ≈",
+    "sizeHint": "目標ビットレートに基づく概算です。動きの少ない映像は大幅に小さくなる場合があります。",
+    "showInFolder": "フォルダーに表示",
+    "savingImage": "画像を保存中…",
+    "exportAgain": "もう一度書き出す",
+    "watchVideo": "見る",
+    "openFolder": "フォルダーを開く",
+    "viewImage": "画像を表示"
   },
   "HUD": {
     "issues": "問題",
@@ -720,7 +730,13 @@
     "recordingDescription": "次の録画に向けて操作バーとカウントダウンを設定します。",
     "accessibilityDescription": "操作記録の権限と入力補助を管理します。",
     "shortcutsDescription": "お気に入りの操作をショートカットで実行します。",
-    "updatesDescription": "Beam を最新の状態に保ち、新機能を確認します。"
+    "updatesDescription": "Beam を最新の状態に保ち、新機能を確認します。",
+    "categoryAppearance": "外観",
+    "appearanceDescription": "すべてのウィンドウでの Beam の外観を設定します。",
+    "categoryVideoEditor": "動画エディター",
+    "videoEditorDescription": "タイムラインの動作と動画の書き出し設定。",
+    "groupApplication": "アプリケーション",
+    "groupTools": "ツール"
   },
   "ProjectPicker": {
     "projects": "プロジェクト",
@@ -1287,6 +1303,7 @@
     "browse": "フォルダーを選択",
     "search": "フォルダーを検索",
     "noMatches": "一致するフォルダーはありません",
+    "emptyFolders": "フォルダーを選ぶと、最近使ったフォルダーがここに表示されます。",
     "error": "フォルダーを更新できませんでした。",
     "retry": "再試行"
   }

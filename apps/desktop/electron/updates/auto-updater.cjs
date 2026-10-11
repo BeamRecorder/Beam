@@ -120,7 +120,7 @@ function createAutoUpdater({
       // every owned window are released before the installer takes over.
       try {
         if (beforeQuitAndInstall) await beforeQuitAndInstall();
-        autoUpdater.quitAndInstall();
+        autoUpdater.quitAndInstall(true, true);
         return true;
       } catch (error) {
         installing = false;

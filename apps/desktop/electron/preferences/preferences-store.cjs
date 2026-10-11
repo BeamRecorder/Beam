@@ -1,3 +1,4 @@
+const { defaultActionBindings } = require('./shortcut-preferences.cjs');
 const fs = require('fs');
 const path = require('path');
 const { readJsonSync, writeJsonAtomicSync } = require('@beam/storage/node/json-file');
@@ -44,55 +45,7 @@ const defaults = (platform = process.platform) => ({
   directories: normalizeDirectorySettings(null, platform),
   onboardingCompleted: false,
   devices: {},
-  shortcuts: {
-    'hud.startStopRecording': {
-      keys: 'Alt+Shift+R',
-      scope: 'global',
-      category: 'hud',
-    },
-    'hud.playPause': { keys: 'Alt+Shift+P', scope: 'global', category: 'hud' },
-    'hud.toggleMic': { keys: 'Alt+Shift+M', scope: 'global', category: 'hud' },
-    'hud.toggleCamera': {
-      keys: 'Alt+Shift+C',
-      scope: 'global',
-      category: 'hud',
-    },
-    'hud.toggleSystemAudio': {
-      keys: 'Alt+Shift+A',
-      scope: 'global',
-      category: 'hud',
-    },
-    'quickSnip.toggle': {
-      keys: 'Alt+Shift+S',
-      scope: 'global',
-      category: 'quick-snip',
-    },
-    'editor.playPause': {
-      keys: 'Space',
-      scope: 'application',
-      category: 'video-editor',
-    },
-    'teleprompter.toggleVisibility': {
-      keys: 'Alt+Shift+T',
-      scope: 'global',
-      category: 'teleprompter',
-    },
-    'teleprompter.toggleAutoscroll': {
-      keys: 'Alt+Shift+O',
-      scope: 'global',
-      category: 'teleprompter',
-    },
-    'teleprompter.nextLine': {
-      keys: 'Ctrl+Shift+Right',
-      scope: 'global',
-      category: 'teleprompter',
-    },
-    'teleprompter.previousLine': {
-      keys: 'Ctrl+Shift+Left',
-      scope: 'global',
-      category: 'teleprompter',
-    },
-  },
+  shortcuts: defaultActionBindings(),
   backgroundPresets: { colors: [], gradients: [] },
   extras: normalizeRecorderLayout({}),
 });
@@ -101,7 +54,6 @@ const scopes = new Set(['global', 'application']);
 const shortcut = (value) =>
   value &&
   typeof value.keys === 'string' &&
-  value.keys.length > 0 &&
   value.keys.length <= 80 &&
   scopes.has(value.scope) &&
   typeof value.category === 'string' &&
@@ -196,7 +148,7 @@ const normalize = (value, platform = process.platform) => {
   const shortcuts = { ...base.shortcuts, ...providedShortcuts };
   const globalKeys = new Set();
   for (const entry of Object.values(shortcuts)) {
-    if (entry.scope === 'global') {
+    if (entry.scope === 'global' && entry.keys) {
       const key = entry.keys.toLowerCase();
       if (globalKeys.has(key)) throw new Error('Raccourci global dupliqué');
       globalKeys.add(key);

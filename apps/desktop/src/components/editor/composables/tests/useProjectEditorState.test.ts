@@ -6,6 +6,7 @@ import {
   type Clip,
   type ClipComposition,
   type ColorClip,
+  type ShapeClip,
   type VisualClip,
 } from '@beam/engine/shared/composition-types';
 import {
@@ -19,6 +20,8 @@ import { DEFAULT_ZOOM_MOTION_BLUR, type ZoomAutoFollowSettings, type ZoomElement
 import type { EditorPreferenceDefaults } from '../editor-default-types';
 import { createDefaultCursorPresentation } from '@beam/engine/capture/cursor-presentation';
 import { normalizeEditorPreferenceDefaults } from '../editor-defaults';
+import { createElementText } from '@beam/engine/shared/element-text';
+import { normalizeShapeLayerStyle } from '@beam/engine/shared/shape-layer-style';
 import { existingZoom, globalCursor, projectCursor } from './useProjectEditorState.test-support';
 import {
   beginPropertyInteraction,
@@ -430,7 +433,7 @@ describe('useProjectEditorState property persistence', () => {
     expect(editor.isSaving.value).toBe(false);
   });
 
-  it('does not capture editor defaults when project persistence fails', async () => {
+  it('remembers preferences independently when project persistence fails', async () => {
     const state = createState();
     state.editorDefaults.value = editorDefaults();
     const defaultsBeforeSave = JSON.parse(JSON.stringify(state.editorDefaults.value));
@@ -442,8 +445,62 @@ describe('useProjectEditorState property persistence', () => {
 
     expect(mocks.saveProjectEditorState).toHaveBeenCalledOnce();
     expect(mocks.updatePreferences).not.toHaveBeenCalled();
-    expect(state.editorDefaults.value).toEqual(defaultsBeforeSave);
+    expect(state.editorDefaults.value).not.toEqual(defaultsBeforeSave);
+    expect(state.editorDefaults.value.presentation?.canvas).toEqual(state.canvas.value);
     expect(editor.isSaving.value).toBe(false);
+  });
+
+  it('captures black shape typography at the edit before selection changes or the project debounce finishes', async () => {
+    vi.useFakeTimers();
+    const state = createState();
+    const text = createElementText('New words');
+    text.style.color = '#000000';
+    const shape: ShapeClip = {
+      ...normalizeShapeLayerStyle({ family: 'shape' }),
+      id: 'shape',
+      trackId: 'shape',
+      kind: 'shape',
+      assetId: '',
+      name: 'Shape',
+      timelineStartMs: 0,
+      timelineDurationMs: 3000,
+      sourceDurationMs: 3000,
+      sourceInMs: 0,
+      playbackRate: 1,
+      enabled: true,
+      order: 0,
+      transitions: { entry: null, exit: null },
+      transform: { x: 0, y: 0, width: 0.5, height: 0.5 },
+      text,
+    };
+    state.selectedClip.value = shape;
+    useProjectEditorState(state);
+    state.composition.value = { ...state.composition.value, clips: [shape] };
+    expect(state.editorDefaults.value.elementText?.style.color).toBe('#000000');
+    expect(mocks.saveProjectEditorState).not.toHaveBeenCalled();
+    state.selectedClip.value = { ...shape, id: 'old-white-shape', text: createElementText('Old words') };
+    await vi.advanceTimersByTimeAsync(250);
+    expect(state.editorDefaults.value.elementText?.style.color).toBe('#000000');
+    expect(mocks.saveProjectEditorState).toHaveBeenCalledOnce();
+  });
+
+  it('publishes current preferences without waiting for an in-flight project write', async () => {
+    const state = createState();
+    let complete!: () => void;
+    mocks.saveProjectEditorState.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          complete = resolve;
+        }),
+    );
+    const editor = useProjectEditorState(state);
+    state.cursorColor.value = '#123456';
+    const saving = editor.saveNow();
+    expect(state.editorDefaults.value.presentation?.cursor.color).toBe('#123456');
+    await Promise.resolve();
+    await Promise.resolve();
+    complete();
+    await saving;
   });
 
   it('round-trips cursor auto-hide settings through save and load', async () => {

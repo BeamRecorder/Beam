@@ -7,6 +7,7 @@ const { createDocumentBridge } = require('./document-bridge.cjs');
 const { createHtmlFiles } = require('./html-files.cjs');
 const { createHtmlRenderer } = require('./html-renderer.cjs');
 const { openAuthoringProject } = require('./project-opening.cjs');
+const { createBlankScreenshot } = require('../screenshot/blank-screenshot.cjs');
 const { restrictHtmlPreviewNavigation } = require('./html-preview-page.cjs');
 const { validateHtmlComposition } = require('../../../../packages/engine/src/html/html-schema.js');
 
@@ -127,40 +128,11 @@ async function initializeAgentRuntime(options) {
     if (tool === 'projects.create') {
       if (input.kind === 'video') return { ...projectStore.create({ name: input.name }), kind: 'video' };
       if (input.kind !== 'image') throw new Error('Project kind must be image or video.');
-      const width = input.width,
-        height = input.height;
-      if (![width, height].every((n) => Number.isInteger(n) && n >= 2 && n <= 8192) || width * height > 16777216)
-        throw new Error('Provide valid screenshot dimensions (up to 16 megapixels).');
-      const created = screenshotStore.create();
-      try {
-        const pixels = Buffer.alloc(width * height * 4); // An explicitly empty transparent canvas.
-        fs.writeFileSync(created.path, nativeImage.createFromBitmap(pixels, { width, height }).toPNG());
-        const presets = screenshotPresetStore.read();
-        const settings = presets.presets.find((item) => item.id === presets.activePresetId)?.settings;
-        if (!settings) throw new Error('Active screenshot preset is unavailable.');
-        const preset = {
-          ...settings,
-          export: { ...settings.export, resolution: 'custom' },
-          editor: {
-            ...settings.editor,
-            presentation: {
-              ...settings.editor.presentation,
-              canvas: {
-                ...settings.editor.presentation.canvas,
-                preset: 'custom',
-                width,
-                height,
-                showBackground: false,
-              },
-            },
-          },
-        };
-        const document = screenshotStore.complete(created.id, { width, height }, preset, input.name);
-        return { id: document.id, name: document.name, kind: 'image' };
-      } catch (error) {
-        screenshotStore.remove(created.id);
-        throw error;
-      }
+      const document = createBlankScreenshot(
+        { store: screenshotStore, presetStore: screenshotPresetStore, nativeImage },
+        { width: input.width, height: input.height, name: input.name },
+      );
+      return { id: document.id, name: document.name, kind: 'image' };
     }
     if (tool === 'projects.open') return openAuthoringProject(input, { editorWindow, projectStore, screenshotStore });
     if (tool === 'documents.request') return bridge.request(input.projectId, input.request);

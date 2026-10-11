@@ -1,4 +1,5 @@
-import { Accessibility, CodeXml, Info, Keyboard, RefreshCw, Settings2, Video } from '@lucide/vue';
+import { Accessibility, CodeXml, Info, Keyboard, RefreshCw, Settings2, Video, Palette, Film } from '@lucide/vue';
+import { configurableActions } from '~/shortcuts/action-catalog';
 import type { SettingsSearchEntry } from './settings-types';
 
 export const SETTINGS_CATEGORIES = [
@@ -8,6 +9,20 @@ export const SETTINGS_CATEGORIES = [
     description: 'generalDescription',
     icon: Settings2,
     color: 'var(--text-secondary)',
+  },
+  {
+    id: 'appearance',
+    label: 'categoryAppearance',
+    description: 'appearanceDescription',
+    icon: Palette,
+    color: 'var(--color-track-blur-highlight)',
+  },
+  {
+    id: 'video-editor',
+    label: 'categoryVideoEditor',
+    description: 'videoEditorDescription',
+    icon: Film,
+    color: 'var(--color-track-video)',
   },
   {
     id: 'recording',
@@ -56,6 +71,25 @@ export const SETTINGS_CATEGORIES = [
 export const settingsCategories = (development: boolean) =>
   SETTINGS_CATEGORIES.filter(({ id }) => development || id !== 'developer');
 
+export const SETTINGS_NAVIGATION_GROUPS = [
+  {
+    id: 'application',
+    label: 'groupApplication',
+    views: ['general', 'appearance', 'accessibility', 'shortcuts'],
+  },
+  { id: 'tools', label: 'groupTools', views: ['recording', 'video-editor'] },
+  { id: 'support', label: null, views: ['developer', 'updates', 'about'] },
+] as const;
+
+export function settingsNavigationGroups(development: boolean) {
+  const categories = settingsCategories(development);
+  return SETTINGS_NAVIGATION_GROUPS.map((group) => ({
+    id: group.id,
+    label: group.label,
+    categories: group.views.flatMap((id) => categories.filter((category) => category.id === id)),
+  }));
+}
+
 const definitions = [
   ['launch-at-startup', 'general', 'HudPreferences.launchAtStartup', 'HudPreferences.launchAtStartupDescription'],
   ['minimize-to-tray', 'general', 'HudPreferences.minimizeToTray', 'HudPreferences.minimizeToTrayDescription'],
@@ -63,29 +97,36 @@ const definitions = [
   ['language', 'general', 'HudPreferences.language', 'HudPreferences.chooseLanguage'],
   [
     'theme-mode',
-    'general',
+    'appearance',
     'AppearanceSettings.themeMode',
     'AppearanceSettings.subtitle',
     'AppearanceSettings.light',
     'AppearanceSettings.dark',
     'AppearanceSettings.system',
   ],
-  ['theme-presets', 'general', 'AppearanceSettings.themePresets', 'AppearanceSettings.themeCustomization'],
-  ['primary-color', 'general', 'AppearanceSettings.primaryColor', 'AppearanceSettings.themeCustomization'],
-  ['secondary-color', 'general', 'AppearanceSettings.secondaryColor', 'AppearanceSettings.themeCustomization'],
-  ['corner-radius', 'general', 'AppearanceSettings.cornerRadius', 'AppearanceSettings.custom'],
+  ['theme-presets', 'appearance', 'AppearanceSettings.themePresets', 'AppearanceSettings.themeCustomization'],
+  ['primary-color', 'appearance', 'AppearanceSettings.primaryColor', 'AppearanceSettings.themeCustomization'],
+  ['secondary-color', 'appearance', 'AppearanceSettings.secondaryColor', 'AppearanceSettings.themeCustomization'],
+  ['corner-radius', 'appearance', 'AppearanceSettings.cornerRadius', 'AppearanceSettings.custom'],
   [
     'surface-tone',
-    'general',
+    'appearance',
     'AppearanceSettings.surfaceTone',
     'AppearanceSettings.toneNeutral',
     'AppearanceSettings.toneDefault',
     'AppearanceSettings.toneSlate',
     'AppearanceSettings.toneDeep',
   ],
-  ['reset-theme', 'general', 'AppearanceSettings.resetDefault', 'AppearanceSettings.themeCustomization'],
+  ['reset-theme', 'appearance', 'AppearanceSettings.resetDefault', 'AppearanceSettings.themeCustomization'],
+  ['ui-scaling', 'appearance', 'AppearanceSettings.uiScale', 'AppearanceSettings.uiScaleHint'],
+  [
+    'timeline-insertion',
+    'video-editor',
+    'EditorAccessibility.doubleClick',
+    'EditorAccessibility.doubleClickDescription',
+  ],
   ['onboarding', 'general', 'HudPreferences.onboarding', 'HudPreferences.onboardingDesc'],
-  ['video-export-backend', 'general', 'ExportPopover.experimentalFfmpeg', 'ExportPopover.experimentalFfmpegDesc'],
+  ['video-export-backend', 'video-editor', 'ExportPopover.experimentalFfmpeg', 'ExportPopover.experimentalFfmpegDesc'],
   [
     'recorder-bar',
     'recording',
@@ -105,10 +146,10 @@ const definitions = [
   ],
   ['hide-desktop-icons', 'recording', 'ScreenRegionOverlay.hideDesktopIcons', 'ScreenRegionOverlay.captureOnly'],
   ['countdown', 'recording', 'HudPreferences.countdown', 'HudPreferences.selectDelay', 'HudPreferences.off'],
-  ['projects-directory', 'recording', 'DirectoryPreferences.projects', 'DirectoryPreferences.projectsDescription'],
+  ['projects-directory', 'general', 'DirectoryPreferences.projects', 'DirectoryPreferences.projectsDescription'],
   [
     'exports-directory',
-    'recording',
+    'general',
     'DirectoryPreferences.exports',
     'DirectoryPreferences.exportsDescription',
     'DirectoryPreferences.lastUsed',
@@ -155,6 +196,9 @@ const definitions = [
 
 export const SHORTCUT_SEARCH_KEYS = [
   ['quickSnip.toggle', 'quickSnip'],
+  ['quickSnip.recordScreen', 'quickSnipRecordScreen'],
+  ['quickSnip.recordRegion', 'quickSnipRecordRegion'],
+  ['quickSnip.recordWindow', 'quickSnipRecordWindow'],
   ['hud.startStopRecording', 'startStopRecording'],
   ['hud.playPause', 'pauseResume'],
   ['hud.toggleMic', 'micOnOff'],
@@ -182,15 +226,15 @@ export function settingsSearchEntries(
       description: translate(description),
       terms: [english(title), english(description), ...options.flatMap((key) => [translate(key), english(key)])],
     }));
-  for (const [id, key] of SHORTCUT_SEARCH_KEYS) {
-    const title = `ShortcutPreferences.${key}`;
-    const description = `${title}Desc`;
+  for (const action of configurableActions()) {
+    const legacy = SHORTCUT_SEARCH_KEYS.find(([id]) => id === action.id);
+    const description = legacy ? `ShortcutPreferences.${legacy[1]}Desc` : 'ActionShortcuts.editHint';
     entries.push({
-      id,
+      id: action.id,
       view: 'shortcuts',
-      title: translate(title),
+      title: translate(action.label),
       description: translate(description),
-      terms: [english(title), english(description)],
+      terms: [english(action.label), english(description), action.id],
     });
   }
   return entries;

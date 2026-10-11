@@ -10,6 +10,9 @@ const { prepareExportCursorImages, environment } = vi.hoisted(() => ({
 const nativeExport = vi.hoisted(() => vi.fn());
 vi.mock('@desktop/components/export/experimental-exporter', () => ({ exportWithLinuxFfmpeg: nativeExport }));
 vi.mock('@beam/encoder/mediabunny/export-cursor-images', () => ({ prepareExportCursorImages }));
+vi.mock('@desktop/components/authoring/html-export', () => ({
+  withHtmlFrameSources: async <T>(request: T) => request,
+}));
 vi.mock('@desktop/components/export/export-environment', () => ({ collectExportEnvironment: environment }));
 
 import { exportWithMediabunny } from '@desktop/components/export/mediabunny/exporter';
@@ -94,8 +97,7 @@ const diagnostics = (): ExportRuntimeDiagnostics => ({
 });
 
 const flush = async () => {
-  await Promise.resolve();
-  await Promise.resolve();
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
 };
 
 let beginExport: ReturnType<typeof vi.fn>;
@@ -124,6 +126,17 @@ afterEach(() => {
 });
 
 describe('export worker client', () => {
+  it('forwards a custom filename to the native destination without renaming the project', async () => {
+    beginExport.mockResolvedValueOnce({ canceled: true });
+    await expect(
+      exportWithMediabunny({ ...request(), fileName: 'Release demo' }, vi.fn(), new AbortController().signal),
+    ).rejects.toMatchObject({ name: 'AbortError' });
+    expect(beginExport).toHaveBeenCalledWith({
+      projectName: 'Worker export',
+      fileName: 'Release demo',
+      format: 'webm',
+    });
+  });
   it('rejects already-cancelled requests and unavailable workers before preparing resources', async () => {
     const controller = new AbortController();
     controller.abort();
@@ -302,6 +315,19 @@ describe('export worker client', () => {
     expect(finalizeExport).toHaveBeenCalledWith('job-1');
     expect(reported.at(-1)).toBe(1);
     expect(worker.terminate).toHaveBeenCalledOnce();
+  });
+
+  it('cancels cleanly when a destination collision is declined after encoding', async () => {
+    finalizeExport.mockResolvedValueOnce({ canceled: true });
+    const reported = vi.fn();
+    const running = exportWithMediabunny(request(), reported, new AbortController().signal);
+    const cancelled = expect(running).rejects.toMatchObject({ name: 'AbortError' });
+    await flush();
+    FakeWorker.instances[0]!.emit({ type: 'complete', diagnostics: diagnostics() });
+    await cancelled;
+    expect(abortExport).toHaveBeenCalledOnce();
+    expect(reported).not.toHaveBeenCalledWith(expect.objectContaining({ overallProgress: 1 }));
+    expect(FakeWorker.instances[0]!.terminate).toHaveBeenCalledOnce();
   });
 
   it('waits for the disk write before acknowledging each muxed chunk', async () => {

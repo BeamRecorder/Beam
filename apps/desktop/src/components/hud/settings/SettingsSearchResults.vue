@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { ChevronRight, Search } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
+import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { SETTINGS_CATEGORIES } from './settings-catalog';
 import type { SettingsSearchEntry } from './settings-types';
@@ -21,56 +22,59 @@ const categoryLabel = (entry: SettingsSearchEntry) => t(SETTINGS_CATEGORIES.find
 </script>
 
 <template>
-  <section class="search-results" :aria-label="t('searchResults')">
-    <header class="results-header">
-      <h1>{{ t('searchResults') }}</h1>
-      <p role="status" aria-live="polite">
-        {{ t('resultCount', { count: results.length }) }}
-      </p>
-    </header>
-    <div v-if="!results.length" class="search-empty">
-      <Search :size="28" aria-hidden="true" />
-      <p>{{ t('noSearchResults') }}</p>
-      <span>{{ t('searchHint') }}</span>
+  <ScrollShadow as="section" class="search-scroll" stable-scrollbar :aria-label="t('searchResults')">
+    <div class="search-results">
+      <header class="results-header">
+        <h1>{{ t('searchResults') }}</h1>
+        <p role="status" aria-live="polite">
+          {{ t('resultCount', { count: results.length }) }}
+        </p>
+      </header>
+      <div v-if="!results.length" class="search-empty">
+        <Search :size="28" aria-hidden="true" />
+        <p>{{ t('noSearchResults') }}</p>
+        <span>{{ t('searchHint') }}</span>
+      </div>
+      <div v-else class="results-list">
+        <Button
+          v-for="result in visibleResults"
+          :key="result.id"
+          variant="ghost"
+          block
+          wrap
+          :data-search-result="result.id"
+          :style="{
+            height: 'auto',
+            padding: '16px',
+            background: 'var(--color-bg-element)',
+            textAlign: 'left',
+            justifyContent: 'flex-start',
+          }"
+          @click="emit('select', result)"
+        >
+          <span class="result-row">
+            <span class="result-copy"
+              ><span class="result-category">{{ categoryLabel(result) }}</span
+              ><span class="result-title">{{ result.title }}</span
+              ><span class="result-description">{{ result.description }}</span></span
+            >
+            <ChevronRight :size="16" aria-hidden="true" />
+          </span>
+        </Button>
+        <Button v-if="results.length > limit" variant="secondary" size="sm" @click="limit += 40">{{
+          t('showMoreResults')
+        }}</Button>
+      </div>
     </div>
-    <div v-else class="results-list">
-      <Button
-        v-for="result in visibleResults"
-        :key="result.id"
-        variant="ghost"
-        block
-        wrap
-        :data-search-result="result.id"
-        :style="{
-          height: 'auto',
-          padding: '16px',
-          background: 'var(--color-bg-element)',
-          textAlign: 'left',
-          justifyContent: 'flex-start',
-        }"
-        @click="emit('select', result)"
-      >
-        <span class="result-row">
-          <span class="result-copy"
-            ><span class="result-category">{{ categoryLabel(result) }}</span
-            ><span class="result-title">{{ result.title }}</span
-            ><span class="result-description">{{ result.description }}</span></span
-          >
-          <ChevronRight :size="16" aria-hidden="true" />
-        </span>
-      </Button>
-      <Button v-if="results.length > limit" variant="secondary" size="sm" @click="limit += 40">{{
-        t('showMoreResults')
-      }}</Button>
-    </div>
-  </section>
+  </ScrollShadow>
 </template>
 
 <style scoped>
-.search-results {
+.search-scroll {
   flex: 1;
-  min-height: 0;
-  overflow: auto;
+}
+.search-results {
+  flex: 1 0 auto;
   padding: 28px;
 }
 .results-header {

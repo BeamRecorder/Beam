@@ -172,6 +172,49 @@ describe('useExportJob', () => {
     await job.start(request);
     expect(job.error.value).toBeNull();
   });
+  it('uses a readable translated error for non-Error rejections', async () => {
+    exportWithMediabunny.mockRejectedValueOnce('native failure');
+    const job = useExportJob();
+    await job.start(request);
+    expect(job.error.value).toBe('Export failed.');
+    expect(job.errorContext.value).toBe('native failure');
+  });
+  it.each([true, false])('only prepares enabled audio when export audio is %s', async (includeAudio) => {
+    let audioProgress: number | null | undefined;
+    const job = useExportJob();
+    exportWithMediabunny.mockImplementationOnce(async (_request, _progress, _signal, onStarted) => {
+      onStarted({ schemaVersion: 1 });
+      audioProgress = job.progress.value?.audioProgress;
+      return { path: '/tmp/audio.webm', diagnostics: null };
+    });
+    await job.start({
+      ...request,
+      includeAudio,
+      snapshot: {
+        ...request.snapshot,
+        composition: {
+          ...request.snapshot.composition,
+          clips: [
+            { kind: 'video', enabled: true, timelineDurationMs: 2000 },
+            { kind: 'audio', enabled: false, timelineDurationMs: 2000 },
+            { kind: 'audio', enabled: true, timelineDurationMs: 2000 },
+          ] as unknown as ExportRequest['snapshot']['composition']['clips'],
+        },
+      },
+    });
+    expect(audioProgress).toBe(includeAudio ? 0 : null);
+  });
+  it.each([true, false])('updates live diagnostics only after a report is initialized (%s)', async (started) => {
+    const job = useExportJob();
+    exportWithMediabunny.mockImplementationOnce(async (_request, onProgress, _signal, onStarted) => {
+      if (started) onStarted({ schemaVersion: 1 });
+      onProgress({ diagnostics: { videoFrames: 12 } });
+      expect(job.diagnostics.value?.runtime).toEqual(started ? { videoFrames: 12 } : undefined);
+      return { path: '/tmp/demo.webm', diagnostics: null };
+    });
+    await job.start(request);
+    expect(job.error.value).toBeNull();
+  });
   it('aborts the active export', async () => {
     let signal!: AbortSignal;
     let resolve!: () => void;
@@ -190,4 +233,18 @@ describe('useExportJob', () => {
     resolve();
     await running;
   });
+});
+
+it('retains the last real thumbnail after finishing and clears it for the next export', async () => {
+  exportWithMediabunny.mockImplementationOnce(async (_request, onProgress) => {
+    onProgress({ preview: 'data:image/jpeg;base64,real-frame' });
+    onProgress({ overallProgress: 0.9 });
+    return { path: '/tmp/demo.mp4', format: 'mp4' };
+  });
+  const job = useExportJob();
+  await job.start(request);
+  expect(job.preview.value).toBe('data:image/jpeg;base64,real-frame');
+  exportWithMediabunny.mockResolvedValueOnce({ path: '/tmp/next.mp4', format: 'mp4' });
+  await job.start(request);
+  expect(job.preview.value).toBeNull();
 });

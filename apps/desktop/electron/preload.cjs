@@ -74,6 +74,31 @@ contextBridge.exposeInMainWorld(
     },
     setWindowMode: (mode) => ipcRenderer.send('window:set-mode', mode),
     showHud: () => ipcRenderer.send('window:show-hud'),
+    setShortcutCaptureActive: (active) => ipcRenderer.invoke('settings:shortcut-capture', active),
+    getSettingsEditorContext: () => ipcRenderer.invoke('settings:editor-context'),
+    runSettingsEditorAction: (action) => ipcRenderer.invoke('settings:editor-action', action),
+    onSettingsEditorAction: (listener) => {
+      const callback = (_event, request) => {
+        if (
+          !request ||
+          !Number.isSafeInteger(request.id) ||
+          !['recorder', 'webcam', 'devtools'].includes(request.action)
+        )
+          return;
+        Promise.resolve()
+          .then(() => listener(request.action))
+          .then(
+            () => ipcRenderer.send('settings:editor-action-result', { id: request.id }),
+            (error) =>
+              ipcRenderer.send('settings:editor-action-result', {
+                id: request.id,
+                error: String(error).slice(0, 2048),
+              }),
+          );
+      };
+      ipcRenderer.on('settings:editor-action', callback);
+      return () => ipcRenderer.removeListener('settings:editor-action', callback);
+    },
     openHudSettings: () => ipcRenderer.invoke('hud:open-settings'),
     openHudProjects: () => ipcRenderer.invoke('hud:open-projects'),
     notifyHudPanelReady: () => ipcRenderer.send('hud-panel:ready'),
@@ -118,6 +143,12 @@ contextBridge.exposeInMainWorld(
     resizeHudPopover: (height) => ipcRenderer.invoke('window:resize-hud-popover', height),
     setSizeSmooth: (width, height) => ipcRenderer.send('window:setSizeSmooth', width, height),
     setWindowVisible: (visible) => ipcRenderer.send('window:set-visible', Boolean(visible)),
+    onWindowVisibility: (listener) => {
+      const callback = (_event, visible) => listener(visible);
+      ipcRenderer.on('window:visibility', callback);
+      ipcRenderer.send('window:observe-visibility');
+      return () => ipcRenderer.removeListener('window:visibility', callback);
+    },
     setInteractive: (value) => ipcRenderer.send('window:setInteractive', value),
     getSources: (types) => ipcRenderer.invoke('window:getSources', types),
     getDisplayBounds: (displayId) => ipcRenderer.invoke('screen:get-display-bounds', displayId),
@@ -168,7 +199,8 @@ contextBridge.exposeInMainWorld(
     saveScreenshot: (id, state, history) => ipcRenderer.invoke('screenshot:save', { id, state, history }),
     saveScreenshotThumbnail: (id, input) => ipcRenderer.invoke('screenshot:save-thumbnail', { id, ...input }),
     openScreenshot: (id, options) => ipcRenderer.invoke('screenshot:open', id, options),
-    exportScreenshot: (id, bytes, format, copy) => ipcRenderer.invoke('screenshot:export', { id, bytes, format, copy }),
+    exportScreenshot: (id, bytes, format, copy, fileName) =>
+      ipcRenderer.invoke('screenshot:export', { id, bytes, format, copy, ...(fileName ? { fileName } : {}) }),
     getEditorPresets: (kind = 'video') =>
       ipcRenderer.invoke(`${kind === 'screenshot' ? 'screenshot-presets' : 'editor-presets'}:get`),
     createEditorPreset: (name, kind = 'video') =>

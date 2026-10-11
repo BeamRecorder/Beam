@@ -24,6 +24,7 @@ import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import type { ElementEditorContext } from '../elements/element-editor-types';
 import { ELEMENT_EDITOR } from '../elements/useElementEditor';
+import { createElementText } from '@beam/engine/shared/element-text';
 
 vi.mock('../../../api/capture', () => ({ capture: {} }));
 
@@ -445,7 +446,6 @@ describe('PropertiesPanel', () => {
       ['canvas', '.canvas-panel-stub'],
       ['audio', '.audio-panel-stub'],
       ['zoom', '.zoom-panel-stub'],
-      ['settings', '.settings-panel-stub'],
       ['cursor', '.cursor-panel-stub'],
       ['caption', '.caption-panel-stub'],
     ] as const;
@@ -1009,6 +1009,7 @@ describe('PropertiesPanel', () => {
       selected.value = null;
     });
     const editor: ElementEditorContext = {
+      createText: createElementText,
       canInteract: computed(() => true),
       layers: computed(() => (selected.value ? [selected.value] : [])),
       selected: computed(() => selected.value),

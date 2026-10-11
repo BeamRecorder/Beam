@@ -489,6 +489,96 @@ test('recorder position persistence stores the compact bar position', () => {
   controller.setMode('hud');
 });
 
+test('Windows HUD keeps native input stable throughout titlebar dragging', () => {
+  const win = fakeWindow();
+  const controller = new WindowController(win, { platform: 'win32', screenModule: {} });
+  controller.markReadyToShow();
+  controller.setHudInteractive(true);
+  win.calls.length = 0;
+  for (let step = 0; step < 3; step++) {
+    win.emit('will-move');
+    controller.setHudInteractive(false);
+    win.emit('blur');
+    win.emit('focus');
+    win.emit('move');
+  }
+  assert.deepEqual(win.calls, []);
+  win.emit('moved');
+  assert.deepEqual(win.calls, [['mouse', true, { forward: true }]]);
+  controller.setHudInteractive(true);
+  assert.deepEqual(win.calls.at(-1), ['mouse', false]);
+});
+
+test('Windows drag input hold applies only to a ready HUD and clears when changing mode', () => {
+  const win = fakeWindow();
+  const controller = new WindowController(win, {
+    platform: 'win32',
+    screenModule: {
+      getCursorScreenPoint: () => ({ x: 400, y: 400 }),
+      getDisplayNearestPoint: () => ({
+        id: 1,
+        bounds: { x: 0, y: 0, width: 1920, height: 1080 },
+        workArea: { x: 0, y: 0, width: 1920, height: 1040 },
+      }),
+    },
+  });
+  const mouse = () => win.calls.filter(([name]) => name === 'mouse').at(-1);
+  win.emit('will-move');
+  controller.markReadyToShow();
+  assert.deepEqual(mouse(), ['mouse', true, { forward: true }]);
+  controller.setHudInteractive(true);
+  win.emit('will-move');
+  controller.setHudInteractive(false);
+  assert.deepEqual(mouse(), ['mouse', false]);
+  controller.setMode('recorder');
+  win.emit('will-move');
+  controller.setMode('hud');
+  assert.deepEqual(mouse(), ['mouse', true, { forward: true }]);
+  controller.setHudInteractive(true);
+  win.emit('move');
+  controller.setHudInteractive(false);
+  assert.deepEqual(mouse(), ['mouse', true, { forward: true }]);
+});
+
+for (const action of ['hide', 'minimize']) {
+  test(`Windows HUD clears its drag input hold on ${action}`, () => {
+    const win = fakeWindow();
+    const controller = new WindowController(win, { platform: 'win32', screenModule: {} });
+    controller.markReadyToShow();
+    controller.setHudInteractive(true);
+    win.emit('will-move');
+    controller.setHudInteractive(false);
+    if (action === 'hide') controller.setVisible(false);
+    else {
+      win.setMinimized(true);
+      win.emit('minimize');
+    }
+    assert.deepEqual(win.calls.filter(([name]) => name === 'mouse').at(-1), ['mouse', true]);
+    if (action === 'hide') controller.setVisible(true);
+    else win.restore();
+    assert.deepEqual(win.calls.filter(([name]) => name === 'mouse').at(-1), ['mouse', true, { forward: true }]);
+    win.emit('moved');
+    controller.setHudInteractive(true);
+    assert.deepEqual(win.calls.filter(([name]) => name === 'mouse').at(-1), ['mouse', false]);
+  });
+}
+
+for (const platform of ['linux', 'darwin']) {
+  test(`${platform}: Windows drag input hold does not change the HUD policy`, () => {
+    const win = fakeWindow();
+    const controller = new WindowController(win, { platform, screenModule: {} });
+    controller.markReadyToShow();
+    controller.setHudInteractive(true);
+    win.emit('will-move');
+    controller.setHudInteractive(false);
+    assert.deepEqual(
+      win.calls.filter(([name]) => name === 'mouse').at(-1),
+      platform === 'linux' ? ['mouse', false] : ['mouse', true, { forward: true }],
+    );
+    win.emit('moved');
+  });
+}
+
 test('HUD restores and clamps saved positions using the normalized native width', () => {
   assert.deepEqual(HUD_SIZE, { width: 672, height: 268 });
   const display = {

@@ -1,4 +1,4 @@
-import { mount, flushPromises } from '@vue/test-utils';
+import { enableAutoUnmount, mount, flushPromises } from '@vue/test-utils';
 import { reactive } from 'vue';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import type { PreferenceSettings } from '~/api/types/capture-api';
@@ -21,6 +21,7 @@ vi.mock('~/stores/preferences', () => ({
 }));
 import HudSettingsWindow from './HudSettingsWindow.vue';
 import { setCurrentLocale } from '~/i18n';
+enableAutoUnmount(afterEach);
 const preferences: PreferenceSettings = {
   schemaVersion: 3,
   theme: 'dark',
@@ -78,6 +79,48 @@ const create = async () => {
   return wrapper;
 };
 describe('separate HUD settings', () => {
+  it('groups shared preferences and tools, with Updates and About last', async () => {
+    vi.stubEnv('DEV', false);
+    const wrapper = await create();
+    expect(wrapper.findAll('nav h2').map((heading) => heading.text())).toEqual(['Application', 'Tools']);
+    const views = (group: string) =>
+      wrapper
+        .findAll(`[data-settings-group="${group}"] [data-settings-view]`)
+        .map((button) => button.attributes('data-settings-view'));
+    expect(views('application')).toEqual(['general', 'appearance', 'accessibility', 'shortcuts']);
+    expect(views('tools')).toEqual(['recording', 'video-editor']);
+    expect(views('support')).toEqual(['updates', 'about']);
+    expect(wrapper.get('[data-settings-group="support"]').classes()).toContain('settings-footer');
+    expect(
+      wrapper
+        .findAll('nav [data-settings-view]')
+        .slice(-2)
+        .map((button) => button.text()),
+    ).toEqual(['Updates', 'About']);
+    expect(wrapper.findAll('nav h2 button')).toHaveLength(0);
+    wrapper.unmount();
+  });
+  it('localizes the group headings and updates them when the language changes', async () => {
+    const wrapper = await create();
+    await setCurrentLocale('fr');
+    await flushPromises();
+    expect(wrapper.findAll('nav h2').map((heading) => heading.text())).toEqual(['Application', 'Outils']);
+    await setCurrentLocale('de');
+    await flushPromises();
+    expect(wrapper.findAll('nav h2').map((heading) => heading.text())).toEqual(['Anwendung', 'Werkzeuge']);
+    wrapper.unmount();
+  });
+  it('keeps the correct tool selected when a search result opens it', async () => {
+    const wrapper = await create();
+    await wrapper.get('input[type="search"]').setValue('empty timeline tracks');
+    await wrapper.get('[data-search-result="timeline-insertion"]').trigger('click');
+    expect(wrapper.getComponent(stub).props('view')).toBe('video-editor');
+    expect(wrapper.get('[data-settings-group="tools"] [aria-current="page"]').attributes('data-settings-view')).toBe(
+      'video-editor',
+    );
+    expect(wrapper.find('[data-settings-group="application"] [aria-current="page"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
   it('marks Updates in settings when a download or restart is available', async () => {
     mocks.capture.getUpdateState.mockResolvedValue({
       status: 'available',
@@ -240,7 +283,10 @@ describe('separate HUD settings', () => {
     await wrapper.get('button[aria-label="Clear search"]').trigger('click');
     expect(wrapper.find('.search-results').exists()).toBe(false);
     await input.setValue('theme');
-    await wrapper.findAll('nav > .btn-container button')[2]!.trigger('click');
+    await wrapper
+      .findAll('nav [data-settings-view]')
+      .find((button) => button.text() === 'Accessibility')!
+      .trigger('click');
     expect(wrapper.getComponent(stub).props('view')).toBe('accessibility');
     expect(input.element.value).toBe('');
     expect(wrapper.find('nav .btn-tab').exists()).toBe(false);
@@ -265,7 +311,7 @@ describe('separate HUD settings', () => {
     const wrapper = await create();
     const input = wrapper.get<HTMLInputElement>('input[type="search"]');
     expect(document.activeElement).toBe(input.element);
-    const navigation = wrapper.findAll('nav > .btn-container button')[1]!;
+    const navigation = wrapper.findAll('nav [data-settings-view]')[1]!;
     (navigation.element as HTMLButtonElement).focus();
     await navigation.trigger('keydown', { key: 'c' });
     expect(input.element.value).toBe('c');
@@ -292,8 +338,17 @@ describe('separate HUD settings', () => {
 
   it('navigates the settings pages and closes only its own window', async () => {
     const wrapper = await create();
-    for (const [index, view] of ['general', 'recording', 'accessibility', 'shortcuts', 'updates', 'about'].entries()) {
-      await wrapper.findAll('nav > .btn-container button')[index]!.trigger('click');
+    for (const view of [
+      'general',
+      'appearance',
+      'video-editor',
+      'recording',
+      'accessibility',
+      'shortcuts',
+      'updates',
+      'about',
+    ]) {
+      await wrapper.get(`[data-settings-view="${view}"]`).trigger('click');
       expect(wrapper.getComponent(stub).props('view')).toBe(view);
     }
     wrapper.getComponent(stub).vm.$emit('update:view', 'general');

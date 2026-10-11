@@ -5,10 +5,11 @@ import type { ExportRuntimeDiagnostics } from '@beam/encoder/export-diagnostics-
 export interface DesktopExportApi {
   beginExport(options: {
     projectName: string;
+    fileName?: string;
     format: 'webm' | 'mp4';
   }): Promise<{ canceled: true } | { canceled: false; jobId: string }>;
   writeExportChunk(payload: { jobId: string; sequence: number; data: Uint8Array; position: number }): Promise<void>;
-  finalizeExport(jobId: string): Promise<{ path: string; gpuUsage?: GpuUsageSummary }>;
+  finalizeExport(jobId: string): Promise<{ canceled: true } | { path: string; gpuUsage?: GpuUsageSummary }>;
   abortExport(jobId: string): Promise<void | { gpuUsage?: GpuUsageSummary }>;
   renderLinuxFfmpegExport(jobId: string, request: ExportRequest, bitrate: number): Promise<ExportRuntimeDiagnostics>;
   onFfmpegExportProgress(callback: (event: { jobId: string; progress: ExportProgress }) => void): () => void;

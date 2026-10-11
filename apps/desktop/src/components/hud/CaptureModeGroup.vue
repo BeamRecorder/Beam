@@ -17,6 +17,7 @@ const props = withDefaults(
     modes?: CaptureMode[];
     labels?: boolean;
     stacked?: boolean;
+    studioLabel?: string;
   }>(),
   { modes: () => ['studio', 'screenshot', 'instant'] },
 );
@@ -24,6 +25,10 @@ const emit = defineEmits<{ 'update:modelValue': [mode: CaptureMode] }>();
 const availableModes = [{ id: 'studio' }, { id: 'screenshot' }, { id: 'instant' }] as const;
 const visibleModes = computed(() => availableModes.filter((mode) => props.modes.includes(mode.id)));
 const columns = computed(() => (visibleModes.value.length === 1 ? 1 : visibleModes.value.length === 2 ? 2 : 3));
+const modeLabel = (mode: CaptureMode) => {
+  if (mode !== 'studio') return t(mode);
+  return props.studioLabel || (props.stacked ? tHud('recorder') : t('studio'));
+};
 </script>
 
 <template>
@@ -49,13 +54,13 @@ const columns = computed(() => (visibleModes.value.length === 1 ? 1 : visibleMod
       :class="{ active: modelValue === mode.id, stacked }"
       :tooltip="labels ? '' : t(`${mode.id}Description`)"
       tooltip-position="bottom"
-      :aria-label="stacked && mode.id === 'studio' ? tHud('recorder') : t(mode.id)"
+      :aria-label="modeLabel(mode.id)"
       :aria-pressed="modelValue === mode.id"
       :disabled="disabled"
       @click="emit('update:modelValue', mode.id)"
     >
       <template #icon><CaptureModeIcon :mode="mode.id" decorative /></template>
-      {{ labels ? (stacked && mode.id === 'studio' ? tHud('recorder') : t(mode.id)) : undefined }}
+      {{ labels ? modeLabel(mode.id) : undefined }}
     </Button>
   </ButtonGroup>
 </template>

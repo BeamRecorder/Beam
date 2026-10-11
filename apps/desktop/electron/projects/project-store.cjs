@@ -22,7 +22,6 @@ function createProjectStore(
   root,
   { mediaHost = 'asset', category = null, repairMetadata = true, roots = () => [root], writeRoot = () => root } = {},
 ) {
-  const { mediaUrlFor, mediaFileForUrl } = createProjectMediaLocations(root, roots, mediaHost);
   const assertId = (id) => {
     if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
       throw new Error('Identifiant de projet invalide');
@@ -43,6 +42,9 @@ function createProjectStore(
   const projectDirectories = () => [
     ...new Set(roots().flatMap((directory) => listProjectDirectories(directory, category))),
   ];
+  const { mediaUrlFor, mediaFileForUrl } = createProjectMediaLocations(root, roots, mediaHost, {
+    projects: projectDirectories,
+  });
   const directoryFor = (id) => {
     const projectId = assertId(id);
     const directory = projectDirectories().find((candidate) => {

@@ -22,6 +22,7 @@ function fixture(t, overrides = {}) {
   const idle = createIdleHudRenderer({
     window,
     controller,
+    platform: 'linux',
     canSuspend: () => true,
     releaseAuxiliary: async () => true,
     log: (...args) => logs.push(args),
@@ -34,6 +35,69 @@ function fixture(t, overrides = {}) {
   };
   return { window, controller, idle, urls, logs, hide };
 }
+test('Windows keeps the HUD document alive across editor return while releasing auxiliary resources', async (t) => {
+  let released = 0;
+  const f = fixture(t, {
+    platform: 'win32',
+    releaseAuxiliary: async () => {
+      released++;
+      return true;
+    },
+  });
+  const originalUrl = f.window.webContents.getURL();
+  for (let cycle = 0; cycle < 3; cycle++) {
+    f.hide();
+    t.mock.timers.tick(1000);
+    await flush();
+    assert.equal(released, cycle + 1);
+    assert.equal(f.idle.isSuspended(), false);
+    await f.idle.resume();
+    f.window.visible = true;
+    f.window.emit('show');
+    assert.equal(f.window.webContents.getURL(), originalUrl);
+    assert.deepEqual(f.urls, [], 'returning to the HUD must retain its native renderer/input target');
+  }
+});
+test('Windows cancels idle cleanup when returning during an auxiliary checkpoint', async (t) => {
+  let release;
+  const f = fixture(t, {
+    platform: 'win32',
+    releaseAuxiliary: () =>
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+  });
+  f.hide();
+  t.mock.timers.tick(1000);
+  await flush();
+  await f.idle.resume();
+  f.window.visible = true;
+  f.window.emit('show');
+  release(true);
+  await flush();
+  assert.deepEqual(f.urls, []);
+  assert.equal(f.idle.isSuspended(), false);
+});
+test('Windows can retry failed auxiliary cleanup without unloading the HUD', async (t) => {
+  let attempts = 0;
+  const f = fixture(t, {
+    platform: 'win32',
+    releaseAuxiliary: async () => {
+      if (++attempts === 1) throw Error('Checkpoint failed');
+      return true;
+    },
+  });
+  f.hide();
+  t.mock.timers.tick(1000);
+  await flush();
+  assert.equal(f.logs.length, 1);
+  f.idle.schedule();
+  t.mock.timers.tick(1000);
+  await flush();
+  assert.equal(attempts, 2);
+  assert.equal(f.idle.isSuspended(), false);
+  assert.deepEqual(f.urls, []);
+});
 test('releases hidden HUD resources after the idle delay and restores the exact session URL', async (t) => {
   let released = 0;
   const f = fixture(t, {
@@ -54,17 +118,18 @@ test('releases hidden HUD resources after the idle delay and restores the exact 
   assert.equal(f.idle.isSuspended(), false);
   assert.equal(f.urls.at(-1), 'http://localhost:6512/html/index.html');
 });
-for (const condition of ['visible', 'recorder', 'busy', 'destroyed'])
-  test(`does not unload a ${condition} HUD`, async (t) => {
-    const f = fixture(t, { canSuspend: () => condition !== 'busy' });
-    f.hide();
-    if (condition === 'visible') f.window.visible = true;
-    if (condition === 'recorder') f.controller.mode = 'recorder';
-    if (condition === 'destroyed') f.window.destroyed = true;
-    t.mock.timers.tick(1000);
-    await flush();
-    assert.deepEqual(f.urls, []);
-  });
+for (const platform of ['linux', 'darwin', 'win32'])
+  for (const condition of ['visible', 'recorder', 'busy', 'destroyed'])
+    test(`${platform}: does not unload a ${condition} HUD`, async (t) => {
+      const f = fixture(t, { platform, canSuspend: () => condition !== 'busy' });
+      f.hide();
+      if (condition === 'visible') f.window.visible = true;
+      if (condition === 'recorder') f.controller.mode = 'recorder';
+      if (condition === 'destroyed') f.window.destroyed = true;
+      t.mock.timers.tick(1000);
+      await flush();
+      assert.deepEqual(f.urls, []);
+    });
 test('showing or resuming during an auxiliary checkpoint prevents a late standby navigation', async (t) => {
   let release;
   const f = fixture(t, {

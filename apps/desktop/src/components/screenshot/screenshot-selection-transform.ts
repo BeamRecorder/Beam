@@ -2,8 +2,7 @@ import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot-types';
 import type { ScreenshotTranslation } from './screenshot-types';
 import { screenshotLayers } from '@beam/engine/screenshot/screenshot-layers';
-import { screenshotImage } from '@beam/engine/screenshot/screenshot-images';
-import { screenshotLayerTransform } from './screenshot-layer-geometry';
+import { screenshotLayerBounds, screenshotLayerTransform } from './screenshot-layer-geometry';
 import { computeCanvasAlignmentSnapping } from '../editor/canvas/composables/canvas-alignment';
 
 export function movableScreenshotSelection(state: ScreenshotState, ids: readonly string[]) {
@@ -28,7 +27,7 @@ export function constrainScreenshotTranslation(
   assets: ScreenshotRenderAssets | null,
 ): ScreenshotTranslation {
   const transforms = movableScreenshotSelection(state, ids).flatMap(({ id }) => {
-    const transform = screenshotImage(state, id)?.transform ?? screenshotLayerTransform(state, assets, id);
+    const transform = screenshotLayerBounds(state, assets, id);
     return transform ? [transform] : [];
   });
   if (!transforms.length) return { x: 0, y: 0 };

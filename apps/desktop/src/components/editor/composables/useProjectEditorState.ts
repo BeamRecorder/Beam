@@ -1,6 +1,6 @@
 import { computed, getCurrentScope, onScopeDispose, ref, toRaw, watch, type Ref } from 'vue';
 import { capture } from '../../../api/capture';
-import type { CaptureProject, ProjectEditorState } from '../../../api/types/capture-api';
+import type { CaptureProject, ProjectEditorPresentation, ProjectEditorState } from '../../../api/types/capture-api';
 import type { Clip, ClipComposition } from '@beam/engine/shared/composition-types';
 import {
   DEFAULT_ZOOM_MOTION_BLUR,
@@ -74,53 +74,55 @@ export function useProjectEditorState(options: {
   let savedBackgroundId: string | null = null;
   let loadGeneration = 0;
   let defaultCaptureEnabled = true;
-  let scheduledDefaultCapture = false;
+
+  const presentationSnapshot = (): ProjectEditorPresentation => ({
+    canvas: clone(options.canvas.value),
+    selectedBackgroundId: options.selectedBackground.value?.id ?? savedBackgroundId,
+    background:
+      options.selectedBackground.value && !['image', 'video'].includes(options.selectedBackground.value.kind)
+        ? clone(options.selectedBackground.value)
+        : null,
+    blurPercent: Math.max(0, Math.min(100, Math.round(options.backgroundBlurPercent.value))),
+    importedBackgrounds: [],
+    cursor: {
+      enabled: options.cursorEnabled.value,
+      selection: clone(options.cursorSelection.value),
+      size: options.cursorSize.value,
+      color: options.cursorColor.value,
+      shadow: {
+        enabled: options.cursorShadowEnabled.value,
+        blur: options.cursorShadowBlur.value,
+        color: options.cursorShadowColor.value,
+        direction: options.cursorShadowDirection.value,
+      },
+      clickEffects: clone(options.cursorEffects.value),
+      motion: clone(options.cursorMotion.value),
+      autoHide: clone(options.cursorAutoHide.value),
+    },
+  });
 
   const snapshot = (): ProjectEditorState => ({
     schemaVersion: 3,
     composition: clone(options.composition.value),
     zoom: {
-      elements: options.zoomElements.value.map((zoom) => ({
-        ...toRaw(zoom),
-        focus: { ...toRaw(zoom).focus },
-      })),
-      generatedSessions: options.generatedSessions.value.map((session) => ({
-        ...toRaw(session),
-      })),
+      elements: options.zoomElements.value.map((zoom) => ({ ...toRaw(zoom), focus: { ...toRaw(zoom).focus } })),
+      generatedSessions: options.generatedSessions.value.map((session) => ({ ...toRaw(session) })),
       motionBlur: clone(zoomMotionBlur.value),
       autoFollow: clone(zoomAutoFollow.value),
     },
-    presentation: {
-      canvas: clone(options.canvas.value),
-      selectedBackgroundId: options.selectedBackground.value?.id ?? savedBackgroundId,
-      background:
-        options.selectedBackground.value && !['image', 'video'].includes(options.selectedBackground.value.kind)
-          ? clone(options.selectedBackground.value)
-          : null,
-      blurPercent: Math.max(0, Math.min(100, Math.round(options.backgroundBlurPercent.value))),
-      importedBackgrounds: [],
-      cursor: {
-        enabled: options.cursorEnabled.value,
-        selection: clone(options.cursorSelection.value),
-        size: options.cursorSize.value,
-        color: options.cursorColor.value,
-        shadow: {
-          enabled: options.cursorShadowEnabled.value,
-          blur: options.cursorShadowBlur.value,
-          color: options.cursorShadowColor.value,
-          direction: options.cursorShadowDirection.value,
-        },
-        clickEffects: clone(options.cursorEffects.value),
-        motion: clone(options.cursorMotion.value),
-        autoHide: clone(options.cursorAutoHide.value),
-      },
-    },
+    presentation: presentationSnapshot(),
   });
+  const rememberDefaults = () => {
+    options.editorDefaults.value = defaultsFromEditorState(
+      options.editorDefaults.value,
+      { presentation: presentationSnapshot(), zoom: { motionBlur: zoomMotionBlur.value } },
+      options.selectedClip.value,
+      options.selectedZoom.value,
+    );
+  };
 
   const saveNow = (captureDefaults = defaultCaptureEnabled) => {
     if (propertyInteractionActive.value) return Promise.resolve();
-    const shouldCaptureDefaults = captureDefaults || scheduledDefaultCapture;
-    scheduledDefaultCapture = false;
     if (timer) {
       clearTimeout(timer);
       timer = null;
@@ -129,8 +131,6 @@ export function useProjectEditorState(options: {
     if (loading.value || !options.project.value) return Promise.resolve();
     const projectId = options.project.value.id;
     let state: ProjectEditorState;
-    const selectedClip = options.selectedClip.value ? clone(options.selectedClip.value) : null;
-    const selectedZoom = options.selectedZoom.value ? clone(options.selectedZoom.value) : null;
     try {
       state = snapshot();
     } catch (error) {
@@ -138,17 +138,11 @@ export function useProjectEditorState(options: {
         new Error(`Impossible de sérialiser l'état éditeur: ${error instanceof Error ? error.message : String(error)}`),
       );
     }
+    if (captureDefaults) rememberDefaults();
     pendingSaves.value += 1;
     writeChain = writeChain
       .catch(() => undefined)
       .then(() => capture.saveProjectEditorState(projectId, state))
-      .then(async () => {
-        if (!shouldCaptureDefaults) return;
-        const defaults = clone(
-          defaultsFromEditorState(options.editorDefaults.value, state, selectedClip, selectedZoom),
-        );
-        options.editorDefaults.value = defaults;
-      })
       .then(() => undefined)
       .finally(() => {
         pendingSaves.value = Math.max(0, pendingSaves.value - 1);
@@ -158,8 +152,9 @@ export function useProjectEditorState(options: {
 
   const scheduleSave = (captureDefaults = defaultCaptureEnabled) => {
     if (loading.value || !options.project.value || propertyInteractionActive.value) return;
+    // Preferences follow committed edits, independently of project disk latency.
+    if (captureDefaults) rememberDefaults();
     if (timer) clearTimeout(timer);
-    scheduledDefaultCapture ||= captureDefaults;
     scheduledSave.value = true;
     timer = setTimeout(
       () =>
@@ -175,7 +170,6 @@ export function useProjectEditorState(options: {
     if (timer) clearTimeout(timer);
     timer = null;
     scheduledSave.value = false;
-    scheduledDefaultCapture = false;
     defaultCaptureEnabled = false;
     loading.value = true;
     try {
@@ -233,12 +227,13 @@ export function useProjectEditorState(options: {
     onScopeDispose(() => {
       loadGeneration += 1;
       if (scheduledSave.value) {
-        void saveNow().catch((error) => console.error('[Beam editor] failed to save before leaving project', error));
+        void saveNow(false).catch((error) =>
+          console.error('[Beam editor] failed to save before leaving project', error),
+        );
       }
       if (timer) clearTimeout(timer);
       timer = null;
       scheduledSave.value = false;
-      scheduledDefaultCapture = false;
     });
   }
 
@@ -269,7 +264,7 @@ export function useProjectEditorState(options: {
   );
   // Composition is an immutable shallow state: edits replace the document.
   // Deep Vue traversal visits every annotation even though none are reactive.
-  watch(options.composition, () => scheduleSave());
+  watch(options.composition, () => scheduleSave(), { flush: 'sync' });
 
   watch(
     propertyInteractionActive,
@@ -301,6 +296,9 @@ export function useProjectEditorState(options: {
     load,
     saveNow,
     scheduleSave,
+    disableDefaultCapture: () => {
+      defaultCaptureEnabled = false;
+    },
     enableDefaultCapture: () => {
       defaultCaptureEnabled = true;
     },

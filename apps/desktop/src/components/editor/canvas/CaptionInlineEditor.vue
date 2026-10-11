@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch, type CSSProperties } from 'vue';
+import { computed, nextTick, onMounted, ref, watch, type CSSProperties } from 'vue';
 import { TriangleAlert } from '@lucide/vue';
 import type { CaptionClip } from '@beam/engine/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -19,9 +19,6 @@ const emit = defineEmits<{
 }>();
 const { t } = useTranslate('CaptionClipPanel');
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
-const UPDATE_DEBOUNCE_MS = 150;
-let updateTimer: ReturnType<typeof setTimeout> | null = null;
-let pendingText: string | null = null;
 let isCancelling = false;
 
 const transcriptionText = computed(() => props.clip.caption.sentences.map((sentence) => sentence.text).join(' '));
@@ -74,52 +71,28 @@ const textStyle = computed<CSSProperties>(() => {
   };
 });
 
-const resizeTextarea = () => {
-  const textarea = textareaRef.value;
-  if (!textarea) return;
-  textarea.style.height = '0px';
-  textarea.style.height = `${Math.min(textarea.scrollHeight, textarea.parentElement?.clientHeight ?? textarea.scrollHeight)}px`;
-};
-
 const focusAtEnd = async () => {
   await nextTick();
   const textarea = textareaRef.value;
   if (!textarea) return;
   textarea.value = editableText.value;
-  resizeTextarea();
   textarea.focus({ preventScroll: true });
   textarea.setSelectionRange(textarea.value.length, textarea.value.length);
 };
 
 const handleInput = (event: Event) => {
-  resizeTextarea();
-  pendingText = (event.target as HTMLTextAreaElement).value;
-  if (updateTimer) clearTimeout(updateTimer);
-  updateTimer = setTimeout(flushPendingUpdate, UPDATE_DEBOUNCE_MS);
-};
-function flushPendingUpdate() {
-  if (updateTimer) clearTimeout(updateTimer);
-  updateTimer = null;
-  if (pendingText === null) return;
-  emit('update', pendingText);
-  pendingText = null;
-}
-const discardPendingUpdate = () => {
-  if (updateTimer) clearTimeout(updateTimer);
-  updateTimer = null;
-  pendingText = null;
+  if (!isCancelling) emit('update', (event.target as HTMLTextAreaElement).value);
 };
 const finishEditing = () => {
   if (isCancelling) return;
-  flushPendingUpdate();
   emit('finish');
 };
 const handleKeydown = (event: KeyboardEvent) => {
+  if (event.isComposing) return;
   if (event.key === 'Escape') {
     event.preventDefault();
     event.stopPropagation();
     isCancelling = true;
-    discardPendingUpdate();
     emit('cancel');
     return;
   }
@@ -134,13 +107,8 @@ watch(editableText, (text) => {
   const textarea = textareaRef.value;
   if (!textarea || document.activeElement === textarea || textarea.value === text) return;
   textarea.value = text;
-  resizeTextarea();
-});
-watch([fontSize, () => props.clip.caption.style.lineHeight, () => props.layoutStyle], resizeTextarea, {
-  flush: 'post',
 });
 onMounted(focusAtEnd);
-onUnmounted(discardPendingUpdate);
 </script>
 
 <template>
@@ -199,6 +167,7 @@ onUnmounted(discardPendingUpdate);
 textarea {
   display: block;
   width: 100%;
+  field-sizing: content;
   min-height: 1em;
   max-height: 100%;
   margin: 0;

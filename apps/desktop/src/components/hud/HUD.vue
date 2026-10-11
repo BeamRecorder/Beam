@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useCaptureActionShortcuts } from '~/shortcuts/useCaptureActionShortcuts';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import type { CaptureMode } from '@beam/engine/capture/capture-mode';
 import { Camera, CameraOff, ScrollText } from '@lucide/vue';
@@ -140,6 +141,12 @@ const choose = (target: HudCaptureTarget) => {
       presetError.value = reason instanceof Error ? reason.message : String(reason);
     });
 };
+useCaptureActionShortcuts({
+  mode: captureMode,
+  instant: true,
+  choose,
+  disabled: () => isBusy.value || isRecording.value || !!props.recorderLauncherContext,
+});
 </script>
 
 <template>

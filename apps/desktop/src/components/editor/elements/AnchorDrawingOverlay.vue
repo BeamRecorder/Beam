@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { matchesGesture } from '~/shortcuts/action-bindings';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { MAX_VECTOR_NODES } from '@beam/engine/shared/shape-vector-schema';
 import { finishAnchorPath } from '@beam/engine/shared/shape-vector-anchors';
@@ -58,9 +59,9 @@ const pointAt = (event: PointerEvent) => {
       x: node.x * props.viewport.width,
       y: node.y * props.viewport.height,
     })),
-    event.altKey ? 0 : 6,
+    matchesGesture(event, 'ignoreSnapping') ? 0 : 6,
   );
-  alignmentGuides.value = event.altKey ? [] : snapped.guides;
+  alignmentGuides.value = matchesGesture(event, 'ignoreSnapping') ? [] : snapped.guides;
   return { x: snapped.point.x / props.viewport.width, y: snapped.point.y / props.viewport.height };
 };
 const paint = () => {

@@ -509,12 +509,12 @@
     "format": "Formato",
     "webm": "WebM",
     "mp4": "MP4",
-    "qualityAndBitrate": "Qualidade e taxa de bits",
+    "qualityAndBitrate": "Qualidade",
     "low": "Baixa",
-    "medium": "Média",
+    "medium": "Padrão",
     "high": "Alta",
-    "webmDesc": "Exportação rápida, tamanho ideal e suporte a transparência.",
-    "mp4Desc": "Compatibilidade universal para compartilhar em várias plataformas.",
+    "webmDesc": "Para a web, com arquivos menores e suporte a transparência.",
+    "mp4Desc": "A opção mais compatível para compartilhar e reproduzir em diferentes dispositivos.",
     "lowDesc": "~{mbps} Mbps · Menor tamanho e nitidez.",
     "mediumDesc": "~{mbps} Mbps · Qualidade equilibrada (recomendado).",
     "highDesc": "~{mbps} Mbps · Máxima fidelidade visual.",
@@ -532,7 +532,7 @@
     "frameRate24Desc": "Cadência cinematográfica e arquivo menor. Ideal para fontes em 24 fps.",
     "frameRate30Desc": "Equilíbrio entre fluidez e tamanho do arquivo para vídeos padrão.",
     "frameRate60Desc": "Máxima fluidez em movimentos rápidos, com arquivo maior. Ideal para fontes em 60 fps.",
-    "resMax": "Máxima",
+    "resMax": "Original",
     "res1080p": "1080p",
     "res720p": "720p",
     "copyError": "Copiar erro",
@@ -544,7 +544,17 @@
     "res720pDesc": "Escala HD ({width}×{height})",
     "moreOptions": "Mais opções",
     "includeAudio": "Incluir áudio",
-    "includeAudioDesc": "Adiciona as faixas de áudio ativadas ao vídeo exportado."
+    "includeAudioDesc": "Adiciona as faixas de áudio ativadas ao vídeo exportado.",
+    "dialogTitle": "Exportar vídeo",
+    "fileName": "Nome do arquivo",
+    "estimatedSize": "Tamanho estimado ≈",
+    "sizeHint": "Baseado na taxa de bits alvo. Cenas estáticas podem ocupar muito menos.",
+    "showInFolder": "Mostrar na pasta",
+    "savingImage": "Salvando imagem…",
+    "exportAgain": "Exportar novamente",
+    "watchVideo": "Assistir",
+    "openFolder": "Abrir pasta",
+    "viewImage": "Ver imagem"
   },
   "HUD": {
     "issues": "Problemas",
@@ -720,7 +730,13 @@
     "recordingDescription": "Prepare os controles e a contagem regressiva da próxima gravação.",
     "accessibilityDescription": "Gerencie o acesso às interações e a assistência de escrita.",
     "shortcutsDescription": "Acesse suas ações favoritas com um atalho.",
-    "updatesDescription": "Mantenha o Beam atualizado e descubra as novidades."
+    "updatesDescription": "Mantenha o Beam atualizado e descubra as novidades.",
+    "categoryAppearance": "Aparência",
+    "appearanceDescription": "Escolha a aparência do Beam em todas as janelas.",
+    "categoryVideoEditor": "Editor de vídeo",
+    "videoEditorDescription": "Comportamento da linha do tempo e preferências de exportação.",
+    "groupApplication": "Aplicativo",
+    "groupTools": "Ferramentas"
   },
   "ProjectPicker": {
     "projects": "Projetos",
@@ -1287,6 +1303,7 @@
     "browse": "Escolher uma pasta",
     "search": "Buscar pastas",
     "noMatches": "Nenhuma pasta correspondente",
+    "emptyFolders": "Escolha uma pasta para ver suas pastas recentes aqui.",
     "error": "Não foi possível atualizar a pasta.",
     "retry": "Tentar novamente"
   }

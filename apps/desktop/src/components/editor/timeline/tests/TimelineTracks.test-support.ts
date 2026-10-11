@@ -19,7 +19,7 @@ import { timelineClipStyle } from '../timeline-clip-geometry';
 
 vi.mock('~/api/capture', () => ({
   capture: {
-    getPreferences: vi.fn(async () => ({ extras: {} })),
+    getPreferences: vi.fn(async () => ({ extras: {}, shortcuts: {} })),
     onPreferencesChanged: vi.fn(() => () => {}),
   },
 }));

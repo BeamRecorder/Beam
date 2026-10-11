@@ -1,3 +1,5 @@
+import { useActionShortcuts } from '~/shortcuts/useActionShortcuts';
+import { capture } from '~/api/capture';
 import { computed, nextTick, provide, ref, shallowRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
@@ -36,6 +38,10 @@ export function provideEditorSearch(options: EditorSearchOptions) {
     { tab: 'settings', key: 'settings', icon: Settings },
   ];
   const navigate = async (tab: string) => {
+    if (tab === 'settings') {
+      await capture.openHudSettings();
+      return;
+    }
     if (!navigator) throw new Error(t('EditorSearch.unavailable'));
     navigator(tab);
     await nextTick();
@@ -111,6 +117,7 @@ export function provideEditorSearch(options: EditorSearchOptions) {
         });
       }
       for (const group of EDITOR_PROPERTY_GROUPS) {
+        if (group.tab === 'settings') continue;
         if (group.modes && !group.modes.includes(options.mode)) continue;
         if (group.kinds && !group.kinds.includes(options.clipKind() ?? '')) continue;
         if (group.videoOnly && options.mode !== 'video') continue;
@@ -159,6 +166,13 @@ export function provideEditorSearch(options: EditorSearchOptions) {
       ];
     }),
   };
+  useActionShortcuts(
+    () => [
+      { id: 'app.settings', run: () => capture.openHudSettings() },
+      ...context.actions.value.filter((action) => action.group !== 'selection'),
+    ],
+    () => !context.ready.value || context.open.value,
+  );
   provide(editorSearchKey, context);
   return context;
 }

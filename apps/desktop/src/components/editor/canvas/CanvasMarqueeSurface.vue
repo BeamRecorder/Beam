@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { additiveSelection } from '~/shortcuts/pointer-modifiers';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { createAnimationFrameCoalescer } from '../timeline/composables/animation-frame-coalescer';
 import type {
@@ -198,7 +199,7 @@ const begin = (event: PointerEvent) => {
     initial,
     last: initial,
     targets: props.targets().filter((target) => target.width > 0 && target.height > 0),
-    additive: startsFromSelection || event.shiftKey || event.ctrlKey || event.metaKey,
+    additive: startsFromSelection || additiveSelection(event),
     dragged: false,
   };
   window.addEventListener('pointermove', move);

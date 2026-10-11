@@ -6,6 +6,7 @@ import Button from '~/components/ui/button/Button.vue';
 import { ArrowLeft } from '@lucide/vue';
 import { isVisualClip } from '@beam/engine/shared/composition-types';
 import { useEditorWorkspaceContext } from './workspace-context';
+import { useActionShortcuts } from '~/shortcuts/useActionShortcuts';
 import { toRefs } from 'vue';
 import HtmlDomPreview from '~/components/authoring/HtmlDomPreview.vue';
 import { capture } from '~/api/capture';
@@ -13,6 +14,8 @@ import { sourceTimeAt } from '@beam/engine/shared/timeline-mapping';
 import { computed } from 'vue';
 const workspace = useEditorWorkspaceContext();
 const {
+  isInlineCaptionEditing,
+  duplicateSelectedTransforms,
   tTopbarHud,
   tTimelineToolbar,
   activeTab,
@@ -103,6 +106,13 @@ const captureCompositionPreview = computed(() => {
     return { bytes: new Uint8Array(bytes).buffer, width: preview.html.width, height: preview.html.height };
   };
 });
+useActionShortcuts(
+  () => [
+    { id: 'action:fullscreen', run: canvasFullscreen.toggleFullscreen },
+    { id: 'action:recenter', run: () => editorCanvasRef.value?.viewportZoom.resetZoom() },
+  ],
+  () => isInlineCaptionEditing.value,
+);
 </script>
 <template>
   <div class="canvas-column">
@@ -196,6 +206,7 @@ const captureCompositionPreview = computed(() => {
         @deselect:transform-clip="deselectTransformClip"
         @update:clip-transform="commitSelectedTransform"
         @update:clip-transforms="commitSelectedTransforms"
+        @duplicate:clips="duplicateSelectedTransforms"
         @update:clip-crop="commitSelectedCrop"
         @preview:clip-crop="previewCrop"
         @preview:clip-rotation="previewSelectedRotation"

@@ -20,6 +20,7 @@ function registerScreenshotIpc({
   canCapture,
   outputDirectory,
   directories,
+  getLocale,
   platform = process.platform,
   prepareCapture,
 }) {
@@ -122,7 +123,7 @@ function registerScreenshotIpc({
   });
   handle('screenshot:export', (event, input) =>
     publishScreenshot(
-      { store, nativeImage, clipboard, ClipboardItem, dialog, BrowserWindow, outputDirectory, directories },
+      { store, nativeImage, clipboard, ClipboardItem, dialog, BrowserWindow, outputDirectory, directories, getLocale },
       event,
       input,
     ),

@@ -74,6 +74,7 @@ describe('TimelineTracks selection', () => {
     ['Ctrl', { ctrlKey: true }],
     ['Cmd', { metaKey: true }],
   ])('emits a toggle selection intent for a %s-click', async (_label, modifiers) => {
+    vi.stubGlobal('navigator', { platform: 'metaKey' in modifiers ? 'MacIntel' : 'Win32' });
     const mounted = await mountTracks({
       selectedClipId: 'screen-clip',
       selectedClipIds: ['screen-clip'],

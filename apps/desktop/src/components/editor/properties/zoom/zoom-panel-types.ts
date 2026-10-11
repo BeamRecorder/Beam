@@ -4,6 +4,14 @@ import type {
   ZoomMotionBlurSettings,
   ZoomStyle,
 } from '@beam/engine/zoom/zoom-types';
+import type { ProjectEditorData } from '~/api/types/capture-api';
+
+export interface ZoomGenerationButtonProps {
+  canGenerate: boolean;
+  hasAutomaticZooms: boolean;
+  editorData?: Pick<ProjectEditorData, 'sessionId' | 'cursor'> | null;
+}
+
 export interface ZoomPanelProps {
   selectedZoom: ZoomElement | null;
   canGenerate: boolean;
@@ -12,6 +20,7 @@ export interface ZoomPanelProps {
   autoFollow?: ZoomAutoFollowSettings;
   canvasSize?: { width: number; height: number };
   still?: boolean;
+  editorData?: ZoomGenerationButtonProps['editorData'];
 }
 export interface ZoomPanelEmits {
   (event: 'update', value: ZoomElement): void;

@@ -306,7 +306,7 @@ describe('useRecordingController countdown', () => {
 
 describe('useRecordingController restart', () => {
   it.each(['recording', 'paused'] as const)(
-    'discards a %s take and starts the same sources without repeating the countdown',
+    'repeats the selected countdown and resets elapsed time for every restart from %s',
     async (phase) => {
       vi.useFakeTimers();
       const completed = vi.fn();
@@ -314,21 +314,57 @@ describe('useRecordingController restart', () => {
       await controller.start({ ...fullConfig, countdownSeconds: 3 });
       await vi.advanceTimersByTimeAsync(3000);
       expect(controller.phase.value).toBe('recording');
-      if (phase === 'paused') await controller.togglePause();
-      await controller.restart();
-      await vi.waitFor(() => expect(controller.phase.value).toBe('recording'));
-      expect(controller.secondsRemaining.value).toBe(0);
-      expect(controller.recordingTime.value).toBe('00:00.0');
-      expect(mocks.capture.discardRecording).toHaveBeenCalledWith('session-1');
-      expect(mocks.capture.prepareRecording.mock.calls[1]).toEqual(mocks.capture.prepareRecording.mock.calls[0]);
-      expect(mocks.cameraRecorder.start).toHaveBeenCalledTimes(2);
-      expect(mocks.micRecorder.start).toHaveBeenCalledTimes(2);
-      expect(mocks.systemAudioRecorder.start).toHaveBeenCalledTimes(2);
+      for (let take = 1; take <= 2; take++) {
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(controller.recordingTime.value).toBe('00:01.0');
+        if (phase === 'paused') await controller.togglePause();
+        await controller.restart();
+        expect(controller.phase.value).toBe('countdown');
+        expect(controller.secondsRemaining.value).toBe(3);
+        expect(controller.recordingTime.value).toBe('00:00.0');
+        expect(mocks.capture.setCountdown).toHaveBeenLastCalledWith(3);
+        expect(mocks.capture.discardRecording).toHaveBeenCalledTimes(take);
+        expect(mocks.capture.discardRecording).toHaveBeenLastCalledWith('session-1');
+        expect(mocks.capture.prepareRecording.mock.calls[take]).toEqual(mocks.capture.prepareRecording.mock.calls[0]);
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(controller.secondsRemaining.value).toBe(1);
+        await controller.restart();
+        expect(mocks.capture.discardRecording).toHaveBeenCalledTimes(take);
+        await vi.advanceTimersByTimeAsync(999);
+        expect(controller.phase.value).toBe('countdown');
+        expect(controller.recordingTime.value).toBe('00:00.0');
+        expect(mocks.capture.startPreparedRecording).toHaveBeenCalledTimes(take);
+        expect(mocks.cameraRecorder.start).toHaveBeenCalledTimes(take);
+        expect(mocks.micRecorder.start).toHaveBeenCalledTimes(take);
+        expect(mocks.systemAudioRecorder.start).toHaveBeenCalledTimes(take);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(controller.phase.value).toBe('recording');
+        expect(controller.secondsRemaining.value).toBe(0);
+        expect(controller.recordingTime.value).toBe('00:00.0');
+        expect(mocks.capture.startPreparedRecording).toHaveBeenCalledTimes(take + 1);
+      }
       expect(mocks.capture.completeNativeRecording).not.toHaveBeenCalled();
       expect(completed).not.toHaveBeenCalled();
       await controller.cancel();
     },
   );
+
+  it('allows cancelling a restarted countdown without starting another take', async () => {
+    vi.useFakeTimers();
+    const completed = vi.fn();
+    const controller = useRecordingController(completed);
+    await controller.start({ ...fullConfig, countdownSeconds: 3 });
+    await vi.advanceTimersByTimeAsync(3000);
+    await controller.restart();
+    expect(controller.phase.value).toBe('countdown');
+    mocks.capture.onCountdownCancelled.mock.calls.at(-1)![0]();
+    await vi.waitFor(() => expect(controller.phase.value).toBe('idle'));
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(mocks.capture.startPreparedRecording).toHaveBeenCalledOnce();
+    expect(mocks.capture.cancelPreparedRecording).toHaveBeenCalledOnce();
+    expect(controller.recordingTime.value).toBe('00:00.0');
+    expect(completed).not.toHaveBeenCalled();
+  });
 
   it('waits for native discard before preparing a replacement and blocks concurrent restarts', async () => {
     vi.useFakeTimers();
@@ -651,7 +687,7 @@ describe('useRecordingController startup', () => {
     const prepareCalls = mocks.capture.prepareRecording.mock.calls.length;
     await controller.start(fullConfig);
     expect(mocks.capture.prepareRecording).toHaveBeenCalledTimes(prepareCalls);
-    expect(controller.error.value).toContain('restart Beam');
+    expect(controller.error.value).toContain('Restart Beam');
   });
 
   it('preserves sidecar cleanup errors in startup failure metadata', async () => {

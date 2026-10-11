@@ -5,7 +5,6 @@ import { DEFAULT_ZOOM_MOTION_BLUR } from '@beam/engine/zoom/zoom-types';
 import BlurPropertiesPanel from '../editor/properties/clip/BlurPropertiesPanel.vue';
 import ClipPropertiesPanel from '../editor/properties/clip/ClipPropertiesPanel.vue';
 import CanvasPanel from '../editor/properties/canvas/CanvasPanel.vue';
-import SettingsPanel from '../editor/properties/settings/SettingsPanel.vue';
 import ScreenshotCursorControls from './ScreenshotCursorControls.vue';
 import ZoomPanel from '../editor/properties/zoom/ZoomPanel.vue';
 import ScreenshotLayerEffectPanel from './gradient/ScreenshotLayerEffectPanel.vue';
@@ -41,7 +40,6 @@ const {
   busy,
   cropping,
   select,
-  back,
 } = props.editor;
 </script>
 <template>
@@ -128,7 +126,6 @@ const {
           @imported="cursors.registerPack"
         />
       </template>
-      <SettingsPanel v-else-if="panel === 'settings'" hide-recorder @back-to-hud="back" />
       <ScreenshotLayerEffectPanel
         v-if="panel === 'layer-effect' && layerEffects.selected.value"
         :effect="layerEffects.selected.value"

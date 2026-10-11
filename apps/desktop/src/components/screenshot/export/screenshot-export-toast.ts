@@ -7,17 +7,9 @@ export function useScreenshotExportToast() {
   const toast = useToastStore();
   const { t } = useTranslate('ScreenshotEditor');
   return (report: ScreenshotExportReport, src?: string) => {
-    if (report.status === 'cancelled') return;
+    if (report.status === 'cancelled' || report.operation === 'export') return;
     const success = report.status === 'success';
-    const message = t(
-      success
-        ? report.operation === 'copy'
-          ? 'copiedToast'
-          : 'exportedToast'
-        : report.operation === 'copy'
-          ? 'copyFailedToast'
-          : 'exportFailedToast',
-    );
+    const message = t(success ? 'copiedToast' : 'copyFailedToast');
     const preview: ToastPreview | undefined = src
       ? { kind: 'image', src, alt: message, status: success ? 'success' : 'error' }
       : undefined;

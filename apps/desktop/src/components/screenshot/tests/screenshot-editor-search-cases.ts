@@ -57,7 +57,8 @@ export function registerScreenshotEditorSearchTests(harness: ScreenshotEditorTes
       await run(wrapper, 'navigate:canvas');
       expect(wrapper.find('[data-testid="canvas-panel"]').exists()).toBe(true);
       await run(wrapper, 'navigate:settings');
-      expect(wrapper.find('[data-testid="editor-settings"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="editor-settings"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="canvas-panel"]').exists()).toBe(true);
     } finally {
       wrapper.unmount();
     }

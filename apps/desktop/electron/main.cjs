@@ -1,4 +1,5 @@
 const startupAt = process.hrtime.bigint();
+const { settingsOwnerOptions } = require('./window/settings-owner-options.cjs');
 const { initializeDesktopStorage } = require('./storage/desktop-storage.cjs');
 const { initializeApplicationUpdater } = require('./lifecycle/application-updater.cjs');
 const { prewarmCaptureCapabilities } = require('./lifecycle/capture-warmup.cjs');
@@ -6,6 +7,7 @@ const { registerScreenshotIpc } = require('./screenshot/screenshot-ipc.cjs');
 const {
   app,
   BrowserWindow,
+  nativeImage,
   Menu,
   desktopCapturer,
   ipcMain,
@@ -241,7 +243,7 @@ function initializeApplication() {
         cursorLibrary,
         screenshotStore,
         require('electron').clipboard,
-        { applicationRoot, isPackaged: app.isPackaged },
+        { applicationRoot, isPackaged: app.isPackaged, screenshotPresetStore, nativeImage },
       );
       require('./lifecycle/media-protocols.cjs').registerMediaProtocols({
         protocol,
@@ -298,7 +300,7 @@ function initializeApplication() {
         selectSource: (kind) => captureIpc.sourcePicker.openForWindow(quickSnipService.cropWindow.nativeWindow(), kind),
         cancelSourceSelection: () =>
           captureIpc.sourcePicker.cancel(quickSnipService.cropWindow.nativeWindow()?.webContents),
-        nativeImage: require('electron').nativeImage,
+        nativeImage,
         clipboard: require('electron').clipboard,
         ClipboardItem: require('electron').ClipboardItem,
         getTrayManager: () => trayManager,
@@ -313,6 +315,7 @@ function initializeApplication() {
         BrowserWindow,
         directories,
         resolveAutomaticDestination: quickSnipService.exportDestination,
+        getLocale: () => preferencesStore.read()?.extras?.locale || app.getLocale(),
         createGpuMonitor: () => createDesktopGpuMonitor({ app, captureEngine }),
       });
       logStartup('Export IPC registered.');
@@ -375,7 +378,7 @@ function initializeApplication() {
         cursorLibrary,
         coordinator,
         screenshotPresetStore,
-        nativeImage: require('electron').nativeImage,
+        nativeImage,
       });
       screenshotService = registerScreenshotIpc({
         ipcMain: applicationIpc,
@@ -386,7 +389,7 @@ function initializeApplication() {
         dialog: require('electron').dialog,
         clipboard: require('electron').clipboard,
         ClipboardItem: require('electron').ClipboardItem,
-        nativeImage: require('electron').nativeImage,
+        nativeImage,
         isTrustedRenderer,
         openEditor: (id, options, sender) => editorWindow.open(id, { ...options, kind: 'screenshot' }, sender),
         prepareCapture: quickSnipService.prepareScreenshot,
@@ -397,6 +400,7 @@ function initializeApplication() {
               quickSnipController.state().job?.mode === 'screenshot')),
         outputDirectory: userPaths.screenshots,
         directories,
+        getLocale: () => preferencesStore.read()?.extras?.locale || app.getLocale(),
       });
       const onboardingWindow = createOnboardingWindowManager({
         applicationRoot,
@@ -431,8 +435,8 @@ function initializeApplication() {
       });
       trayManager.init();
       if (!preferencesStore.read().onboardingCompleted) onboardingWindow.open();
-
       const hudPanels = createHudPanelManager({
+        ...settingsOwnerOptions(BrowserWindow, editorWindow, quickSnipService, preferencesCleanup),
         captureWarmup,
         ...lifecycleOptions,
         appIconPath,
@@ -455,11 +459,9 @@ function initializeApplication() {
       coordinator.registerCleanup({ id: 'quick-snip-status', cleanup: () => quickSnipService.statusWindow.destroy() });
       coordinator.registerCleanup({ id: 'preferences', cleanup: preferencesCleanup });
       coordinator.registerCleanup({ id: 'project-catalog', cleanup: projectIpc.destroy });
-
       win.on('closed', () => {
         if (coordinator.canAcceptWork()) app.quit();
       });
-
       win.webContents.once('destroyed', () => {
         exportIpc.cleanupWindow(win.webContents);
         cameraStorage.cleanupOwner(win.webContents.id);
@@ -476,7 +478,6 @@ function initializeApplication() {
       require('electron').dialog.showErrorBox('Beam could not start', String(error));
       app.quit();
     });
-
   app.on('before-quit', (event) => {
     if (coordinator.isComplete() || quitting) return;
     event.preventDefault();
@@ -491,7 +492,6 @@ function initializeApplication() {
     if (process.platform !== 'darwin') app.quit();
   });
 }
-
 initializeSingleInstance({
   app,
   initialize: initializeApplication,

@@ -147,6 +147,7 @@ export interface DesktopCaptureApi
   resizeHudPopover(height: number): Promise<number | null>;
   setSizeSmooth(width: number, height: number): void;
   setWindowVisible(visible: boolean): void;
+  onWindowVisibility(listener: (visible: boolean) => void): () => void;
   setInteractive(overInteractive: boolean): void;
   setCountdown(seconds: number | null): Promise<void>;
   notifyCountdownReady(): void;
@@ -184,7 +185,11 @@ export interface DesktopCaptureApi
   renameEditorPreset(id: string, name: string, kind?: PresetKind): Promise<EditorPresetDocument>;
   deleteEditorPreset(id: string, kind?: PresetKind): Promise<EditorPresetDocument>;
   selectEditorPreset(id: string, kind?: PresetKind): Promise<EditorPresetDocument>;
-  updateEditorPreset(id: string, settings: EditorPresetSettings, kind?: PresetKind): Promise<EditorPresetDocument>;
+  updateEditorPreset(
+    id: string,
+    settings: Partial<EditorPresetSettings>,
+    kind?: PresetKind,
+  ): Promise<EditorPresetDocument>;
   updateActiveEditorPreset(settings: EditorPresetSettings, kind?: PresetKind): Promise<EditorPresetDocument>;
   onEditorPresetsChanged(listener: (document: EditorPresetDocument) => void, kind?: PresetKind): () => void;
   showTeleprompter(): void;

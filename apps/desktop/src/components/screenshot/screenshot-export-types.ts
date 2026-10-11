@@ -1,3 +1,4 @@
+import type { ScreenshotPublishResult } from '~/api/types/screenshot-export';
 import type { Ref } from 'vue';
 import type { ScreenshotDocument } from '~/api/types/screenshot';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
@@ -14,4 +15,14 @@ export interface ScreenshotExportHost {
   save(): Promise<unknown>;
   fail(reason: unknown): void;
   notify(report: ScreenshotExportReport, preview?: string): void;
+}
+
+export interface ScreenshotExportOutcome extends ScreenshotPublishResult {
+  bytes: number;
+}
+
+export interface ScreenshotExportOptions {
+  signal?: AbortSignal;
+  onPreview?(src: string): void;
+  onReport?(report: ScreenshotExportReport): void;
 }

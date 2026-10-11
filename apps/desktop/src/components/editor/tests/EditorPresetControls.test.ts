@@ -415,7 +415,7 @@ describe('EditorPresetControls', () => {
     prompt.mockRestore();
   });
 
-  it('disables rename and delete for Default while keeping them available for named presets', async () => {
+  it('keeps Default automatic and enables template actions only for named presets', async () => {
     const wrapper = mountControls(presetDocument(), true);
     await wrapper.get('button[aria-label="Editor preset"]').trigger('click');
     await nextTick();
@@ -423,6 +423,7 @@ describe('EditorPresetControls', () => {
     const popover = document.body.querySelector<HTMLElement>('.preset-popover')!;
     expect(action('Rename preset', popover)?.disabled).toBe(true);
     expect(action('Delete preset', popover)?.disabled).toBe(true);
+    expect(action('Save preset', popover)?.disabled).toBe(true);
     action('Delete preset', popover)?.click();
     await nextTick();
     expect(document.body.querySelector('.confirm-dialog-stub')).toBeNull();

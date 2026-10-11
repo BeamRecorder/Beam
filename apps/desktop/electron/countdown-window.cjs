@@ -20,10 +20,11 @@ function createCountdownWindow({
   const height = 320;
   const ownsRenderer = (sender) => Boolean(window && !window.isDestroyed() && window.webContents === sender);
   const updateMouse = () => {
-    if (window && !window.isDestroyed())
-      window.setIgnoreMouseEvents(platform !== 'linux' && !interactive, {
-        forward: true,
-      });
+    if (!window || window.isDestroyed()) return;
+    // Forwarding installs a global Windows mouse hook, even for hidden windows.
+    if (seconds === null || !window.isVisible()) window.setIgnoreMouseEvents(true);
+    else if (platform === 'linux' || interactive) window.setIgnoreMouseEvents(false);
+    else window.setIgnoreMouseEvents(true, { forward: true });
   };
   const position = () => {
     const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
@@ -48,6 +49,7 @@ function createCountdownWindow({
   const reveal = () => {
     if (!window || window.isDestroyed()) return;
     window.showInactive();
+    updateMouse();
     window.moveTop();
   };
   const present = () => {
@@ -140,7 +142,7 @@ function createCountdownWindow({
       return true;
     },
     setInteractive(sender, value) {
-      if (!ownsRenderer(sender) || typeof value !== 'boolean' || seconds === null) return false;
+      if (!ownsRenderer(sender) || typeof value !== 'boolean' || seconds === null || !window.isVisible()) return false;
       if (interactive !== value) {
         interactive = value;
         updateMouse();

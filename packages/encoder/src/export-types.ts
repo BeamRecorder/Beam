@@ -37,6 +37,7 @@ export interface ExportRequest {
 export interface EditorExportSource {
   projectName: string;
   includeAudio: boolean;
+  hasAudio: boolean;
   duration: number;
   fps: number;
   width: number;

@@ -1,3 +1,5 @@
+const capture = vi.hoisted(() => ({ openHudSettings: vi.fn(async () => true) }));
+vi.mock('~/api/capture', () => ({ capture }));
 import { mount, enableAutoUnmount, flushPromises } from '@vue/test-utils';
 import { defineComponent, h, ref } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';

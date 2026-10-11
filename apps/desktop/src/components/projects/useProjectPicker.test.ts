@@ -307,14 +307,30 @@ describe('project picker search and batch actions', () => {
 });
 
 describe('project picker individual mutations', () => {
+  it('opens the created project without waiting for the catalog refresh', async () => {
+    const { picker, emit } = await create();
+    await picker.openNewProjectDialog();
+    let finish!: (projects: CaptureProject[]) => void;
+    capture.listProjects.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    await picker.handleCreateProject();
+    expect(emit).toHaveBeenCalledWith('open-project', first);
+    expect(picker.isNewProjectOpen.value).toBe(false);
+    expect(picker.newProjectBusy.value).toBe(false);
+    finish([first, image]);
+    await flushPromises();
+  });
   it('creates a default named project and reports creation failures', async () => {
     const { picker, emit } = await create();
-    picker.openNewProjectDialog();
+    await picker.openNewProjectDialog();
     await picker.handleCreateProject();
-    expect(capture.createProject).toHaveBeenCalledWith({ name: undefined });
+    expect(capture.createProject).toHaveBeenCalledWith({ name: undefined, mode: 'studio' });
     expect(emit).toHaveBeenCalledWith('open-project', first);
     for (const reason of [new Error('no space'), 'blocked']) {
-      picker.openNewProjectDialog();
+      await picker.openNewProjectDialog();
       capture.createProject.mockRejectedValueOnce(reason);
       await picker.handleCreateProject();
       expect(picker.newProjectError.value).toBe(reason instanceof Error ? reason.message : reason);

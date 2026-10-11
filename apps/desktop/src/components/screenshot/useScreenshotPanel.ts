@@ -1,3 +1,4 @@
+import { openApplicationSettings } from '~/components/settings/open-application-settings';
 import { SCREENSHOT_BACKGROUND_ID, SCREENSHOT_WATERMARK_ID } from '@beam/engine/screenshot/screenshot-layers';
 import type { ScreenshotPanelOptions } from './screenshot-panel-types';
 export function useScreenshotPanel(options: ScreenshotPanelOptions) {
@@ -25,8 +26,7 @@ export function useScreenshotPanel(options: ScreenshotPanelOptions) {
       if (panel.value === 'canvas') panel.value = 'shapes';
     } else if (tab === 'settings') {
       options.finishDrawing();
-      panel.value = 'settings';
-      cropping.value = false;
+      void openApplicationSettings();
     }
   };
   return { showSelection, selectPanel };

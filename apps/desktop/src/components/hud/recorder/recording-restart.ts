@@ -15,7 +15,7 @@ export function createRecordingRestart(
     pending = true;
     try {
       await cancel();
-      if (phase.value === 'idle') await start({ ...current, countdownSeconds: 0 });
+      if (phase.value === 'idle') await start({ ...current });
     } finally {
       pending = false;
     }

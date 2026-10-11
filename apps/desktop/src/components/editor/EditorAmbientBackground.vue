@@ -1,31 +1,20 @@
 <script setup lang="ts">
-import { computed, nextTick, onUnmounted, ref, watch, type CSSProperties } from 'vue';
+import { nextTick, onUnmounted, ref, watch, type CSSProperties } from 'vue';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
-import type { BackgroundValue } from '@beam/engine/shared/background-types';
+import type { EditorAmbientBackgroundProps } from './editor-ambient-background-types';
+import type { ColorBackground, GradientCatalogBackground } from '@beam/engine/shared/background-types';
 import { mediaSourceDescriptor, type MediaFrame } from '@beam/runtime/shared/index';
 import type { MediaAsset } from '@beam/engine/shared/composition-types';
 
-const props = defineProps<{
-  background: BackgroundValue | null;
-}>();
+const props = withDefaults(defineProps<EditorAmbientBackgroundProps>(), { variant: 'ambient' });
 
 const mediaFailed = ref(false);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 let poster: MediaFrame | null = null;
 let loadVersion = 0;
 
-const resolvedMediaPath = computed(() => {
-  const background = props.background;
-  return background && (background.kind === 'image' || background.kind === 'video')
-    ? resolvePublicAssetUrl(background.path)
-    : '';
-});
-
-const surfaceStyle = computed<CSSProperties>(() => {
-  const background = props.background;
-  if (!background || background.kind === 'image' || background.kind === 'video') return {};
+const surfaceStyle = (background: ColorBackground | GradientCatalogBackground): CSSProperties => {
   if (background.kind === 'color') return { background: background.color };
-  if (background.kind !== 'gradient') return {};
 
   const stops = background.gradient.stops
     .map((stop) => {
@@ -41,7 +30,7 @@ const surfaceStyle = computed<CSSProperties>(() => {
         ? `radial-gradient(circle, ${stops})`
         : `linear-gradient(${background.gradient.angle}deg, ${stops})`,
   };
-});
+};
 
 const drawPoster = () => {
   const canvas = canvasRef.value;
@@ -99,19 +88,23 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="editor-ambient-background" aria-hidden="true">
+  <div
+    class="editor-ambient-background"
+    :class="{ 'is-workspace-background': variant === 'workspace' }"
+    aria-hidden="true"
+  >
     <Transition name="ambient-fade">
       <div
         v-if="background && (background.kind === 'color' || background.kind === 'gradient')"
         key="surface"
         class="ambient-surface"
-        :style="surfaceStyle"
+        :style="surfaceStyle(background)"
       ></div>
       <img
         v-else-if="background?.kind === 'image' && !mediaFailed"
-        :key="resolvedMediaPath"
+        :key="resolvePublicAssetUrl(background.path)"
         class="ambient-media"
-        :src="resolvedMediaPath"
+        :src="resolvePublicAssetUrl(background.path)"
         alt=""
         aria-hidden="true"
         decoding="async"
@@ -179,6 +172,19 @@ onUnmounted(() => {
   background: var(--color-bg-app);
   opacity: var(--editor-ambient-veil-opacity);
   transition: opacity 0.4s ease;
+}
+
+.is-workspace-background {
+  --editor-ambient-media-opacity: 1;
+  --editor-ambient-veil-opacity: 0;
+}
+
+.is-workspace-background .ambient-media {
+  filter: blur(56px);
+}
+
+.is-workspace-background .ambient-surface {
+  filter: none;
 }
 
 @media (prefers-reduced-transparency: reduce) {

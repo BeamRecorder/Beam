@@ -242,6 +242,103 @@ async function selectAndStart(controller, mode = 'studio') {
   await controller.toggle();
 }
 
+for (const platform of ['win32', 'darwin', 'linux']) {
+  for (const target of ['screen', 'region', 'window']) {
+    test(`direct ${target} recording selects its source and starts once on ${platform}`, async () => {
+      const sources = [];
+      const f = harness({
+        platform,
+        preferences: { extras: { captureMode: 'screenshot', recordingCountdownSeconds: 5 } },
+        selectSource: async (kind) => {
+          sources.push(kind);
+          return { id: `native:${kind}`, kind };
+        },
+      });
+      await f.controller.record(target);
+      const state = f.controller.state();
+      assert.equal(state.state, 'preparing');
+      assert.equal(state.job.mode, 'instant');
+      assert.equal(state.job.captureTarget, target);
+      assert.equal(state.job.countdownSeconds, 5);
+      assert.equal(state.job.sourceReady, true);
+      assert.equal(state.job.screenKind, target === 'window' ? 'window' : 'display');
+      assert.equal(state.job.region !== null, target === 'region');
+      assert.equal(f.calls.filter((call) => call === 'crop.start').length, 1);
+      if (target === 'region') {
+        assert.equal(f.selectCalls[0].drawOnly, true);
+        assert.equal(f.selectCalls[0].captureMode, 'instant');
+      }
+      assert.deepEqual(sources, platform === 'linux' || target === 'region' ? [] : [target]);
+      if (platform === 'linux')
+        assert.equal(state.job.screenId, target === 'window' ? 'portal:window' : 'portal:monitor');
+    });
+  }
+}
+
+test('direct recording reuses a disabled countdown and can restart after a terminal state', async () => {
+  const f = harness({ preferences: { extras: { recordingCountdownSeconds: 0 } } });
+  await f.controller.record('screen');
+  assert.equal(f.controller.state().job.countdownSeconds, 0);
+  await f.controller.cancel();
+  await f.controller.record('window');
+  assert.equal(f.controller.state().job.captureTarget, 'window');
+  assert.equal(f.controller.state().state, 'preparing');
+  assert.equal(f.calls.filter((call) => call === 'crop.start').length, 2);
+});
+
+test('direct shortcuts preserve an active selection or recording instead of changing or stopping it', async () => {
+  const f = harness();
+  await f.controller.toggle();
+  const selecting = f.controller.state();
+  await f.controller.record('window');
+  assert.deepEqual(f.controller.state(), selecting);
+  await f.controller.start();
+  const preparing = f.controller.state();
+  await f.controller.record('region');
+  assert.deepEqual(f.controller.state(), preparing);
+  await f.controller.report({ type: 'recording' });
+  const recording = f.controller.state();
+  await f.controller.record('screen');
+  assert.deepEqual(f.controller.state(), recording);
+  await f.controller.stop();
+  const finalizing = f.controller.state();
+  await f.controller.record('window');
+  assert.deepEqual(f.controller.state(), finalizing);
+});
+
+test('direct recording does not start after source cancellation or a stale picker reply', async () => {
+  const f = harness({ selectSource: async () => null });
+  await f.controller.record('window');
+  assert.equal(f.controller.state().state, 'selecting');
+  assert.equal(f.calls.includes('crop.start'), false);
+  const picker = deferred();
+  const pending = harness({ selectSource: () => picker.promise });
+  const task = pending.controller.record('window');
+  await new Promise((resolve) => setImmediate(resolve));
+  await pending.controller.cancel();
+  picker.resolve({ id: 'native:window', kind: 'window' });
+  await task;
+  assert.equal(pending.controller.state().state, 'canceled');
+  assert.equal(pending.calls.includes('crop.start'), false);
+});
+
+test('repeated direct shortcuts cannot launch concurrent source pickers or captures', async () => {
+  const f = harness();
+  await Promise.all([f.controller.record('window'), f.controller.record('screen'), f.controller.record('region')]);
+  assert.equal(f.controller.state().job.captureTarget, 'window');
+  assert.equal(f.calls.filter((call) => call === 'crop.start').length, 1);
+  assert.equal(f.showCalls.length, 1);
+});
+
+test('direct recording rejects invalid targets and respects a normal recording already in progress', async () => {
+  const f = harness();
+  await assert.rejects(f.controller.record('anything'), /Invalid Quick Snip source/);
+  assert.equal(f.controller.state().state, 'idle');
+  const busy = harness({ normalRecording: true });
+  await assert.rejects(busy.controller.record('screen'), /during a Beam recording/);
+  assert.equal(busy.calls.includes('crop.show'), false);
+});
+
 for (const value of [undefined, null, '4d'])
   test(`Quick Snip defaults to 2D when the recording zoom preference is ${value}`, async () => {
     const f = harness({ preferences: { extras: { recordingZoomMode: value } } });

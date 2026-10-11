@@ -31,6 +31,7 @@ class WindowController {
     // Electron only forwards mousemove to click-through windows on macOS and
     // Windows; on Linux the HUD stays interactive instead (applyInteractionPolicy).
     this.hudOverInteractive = false;
+    this.hudDragging = false;
     this.recorderPositions = this.readRecorderPositions();
     this.recorderPlacement = null;
     this.recorderPositionDirty = false;
@@ -70,11 +71,20 @@ class WindowController {
       this.flushRecorderPosition();
       this.flushHudPosition();
     });
+    this.window.on('will-move', () => {
+      if (this.platform !== 'win32' || this.mode !== 'hud') return;
+      this.hudDragging = true;
+      this.applyInteractionPolicy();
+    });
     this.window.on('move', () => {
       if (this.mode === 'recorder') this.rememberRecorderPosition();
       else if (this.mode === 'hud') this.rememberHudPosition();
     });
     this.window.on('moved', () => {
+      if (this.hudDragging) {
+        this.hudDragging = false;
+        this.applyInteractionPolicy();
+      }
       if (this.mode === 'recorder') {
         this.rememberRecorderPosition();
         this.flushRecorderPosition();
@@ -192,6 +202,7 @@ class WindowController {
       this.flushHudPosition();
     }
     this.mode = mode;
+    this.hudDragging = false;
     if (mode === 'hud') this.hudSize = this.readHudSize();
     this.applySizeConstraints();
     if (mode === 'hud') this.hudOverInteractive = false;
@@ -361,6 +372,7 @@ class WindowController {
     const shouldBeActive =
       !this.hiddenByController && this.ready && this.window.isVisible() && !this.window.isMinimized();
     if (!shouldBeActive) {
+      this.hudDragging = false;
       this.setMousePolicy(true);
       this.interactive = false;
       return;
@@ -373,7 +385,9 @@ class WindowController {
         // 16 px transparent margin then also captures clicks, which is the
         // accepted Linux trade-off for overlay windows.
         this.setMousePolicy(false);
-      } else if (this.hudOverInteractive) {
+      } else if (this.hudOverInteractive || this.hudDragging) {
+        // Native titlebar dragging suppresses renderer pointer events. Keep the
+        // input surface stable until Windows finishes its move loop.
         this.setMousePolicy(false);
       } else {
         this.setMousePolicy(true, true);

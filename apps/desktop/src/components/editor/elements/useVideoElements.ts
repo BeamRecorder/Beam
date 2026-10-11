@@ -3,9 +3,12 @@ import type { Ref } from 'vue';
 import { isShapeClip, type ClipComposition } from '@beam/engine/shared/composition-types';
 import { addClip, deleteClip, setShapeLayerStyle, setTransform } from '@beam/engine/commands/clip-engine';
 import { provideElementEditor } from './useElementEditor';
+import type { EditorPreferenceDefaults } from '../composables/editor-default-types';
+import { normalizeElementTextDefaults } from './element-text-defaults';
 
 export function useVideoElements(options: {
   composition: Ref<ClipComposition>;
+  editorDefaults: Ref<EditorPreferenceDefaults>;
   selectedId: Ref<string | null>;
   activeTab: Ref<string>;
   canvasSize?: () => { width: number; height: number };
@@ -19,6 +22,11 @@ export function useVideoElements(options: {
   addImage?: () => void | Promise<void>;
 }) {
   const editor = provideElementEditor({
+    textDefaults: () => options.editorDefaults.value.elementText,
+    rememberTextStyle: (text) => {
+      const elementText = normalizeElementTextDefaults(text);
+      if (elementText) options.editorDefaults.value = { ...options.editorDefaults.value, elementText };
+    },
     canvasSize: options.canvasSize,
     addImage: options.addImage,
     addHighlight: options.addHighlight,

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { additiveSelection } from '~/shortcuts/pointer-modifiers';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import type { TimelineSelectionIds } from './composables/timeline-tracks-types';
 import type { BoxSelectionGesture, SelectionBounds, SelectionTarget } from './composables/timeline-box-selection-types';
@@ -171,7 +172,7 @@ const begin = (event: PointerEvent) => {
     initial,
     last: initial,
     targets: collectTargets(),
-    additive: event.shiftKey || event.ctrlKey || event.metaKey,
+    additive: additiveSelection(event),
     dragged: false,
   };
   window.addEventListener('pointermove', move);

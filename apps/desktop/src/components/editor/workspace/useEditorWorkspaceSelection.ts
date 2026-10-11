@@ -1,3 +1,4 @@
+import { openApplicationSettings } from '~/components/settings/open-application-settings';
 import { nextTick, ref, watch } from 'vue';
 import type { CaptionInlineTextUpdate } from '~/components/editor/canvas/caption-inline-editing';
 import { isTextCaptionClip } from '@beam/engine/shared/composition-types';
@@ -28,6 +29,10 @@ export function useEditorWorkspaceSelection(state: EditorWorkspaceState, finishC
     isPropertiesPanelOpen.value = true;
   };
   const selectPropertiesTab = (tab: string) => {
+    if (tab === 'settings') {
+      void openApplicationSettings();
+      return;
+    }
     if (activeTab.value === tab) {
       isPropertiesPanelOpen.value = !isPropertiesPanelOpen.value;
       return;
@@ -134,7 +139,6 @@ export function useEditorWorkspaceSelection(state: EditorWorkspaceState, finishC
   const updateInlineCaptionText = ({ clipId, customText }: CaptionInlineTextUpdate) => {
     const clip = composition.value.clips.find((candidate) => candidate.id === clipId);
     if (!clip || !isTextCaptionClip(clip)) return;
-    if (selectedClipId.value !== clipId || selectedClipIds.value.length !== 1) selectEditorClip(clipId);
     commitCaption({
       ...clip,
       caption: {

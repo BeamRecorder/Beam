@@ -42,4 +42,35 @@ describe('concise export labels', () => {
         messages['../../../i18n/en/core.json']!.ExportPopover.experimentalFfmpegDesc,
       );
   });
+  it.each(Object.keys(expected))('translates the dialog and size estimate in %s', (locale) => {
+    const translation = messages[`../../../i18n/${locale}/core.json`]!.ExportPopover;
+    for (const key of [
+      'exportUntilPlayhead',
+      'exportUntilPlayheadDesc',
+      'dialogTitle',
+      'fileName',
+      'estimatedSize',
+      'sizeHint',
+      'showInFolder',
+      'savingImage',
+      'watchVideo',
+      'openFolder',
+      'viewImage',
+    ]) {
+      expect(translation[key]?.length).toBeGreaterThan(2);
+      if (locale !== 'en')
+        expect(translation[key]).not.toBe(messages['../../../i18n/en/core.json']!.ExportPopover[key]);
+    }
+  });
+  it.each(Object.keys(expected))('provides the simplified output labels and format hints in %s', (locale) => {
+    const translation = messages[`../../../i18n/${locale}/core.json`]!.ExportPopover;
+    for (const key of ['qualityAndBitrate', 'low', 'medium', 'high', 'resMax']) {
+      expect(translation[key]?.length).toBeGreaterThan(0);
+    }
+    for (const key of ['webmDesc', 'mp4Desc']) {
+      expect(translation[key]?.length).toBeGreaterThan(10);
+      if (locale !== 'en')
+        expect(translation[key]).not.toBe(messages['../../../i18n/en/core.json']!.ExportPopover[key]);
+    }
+  });
 });

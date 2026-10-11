@@ -9,10 +9,11 @@ import { useInteractionAccess } from '../interactions/useInteractionAccess';
 import type { PreferencePatch } from '~/api/types/capture-api';
 import Button from '~/ui/button/Button.vue';
 import Input from '~/ui/input/Input.vue';
+import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
 import HudPreferences from './HudPreferences.vue';
 import UpdateAvailableBadge from '~/components/updates/UpdateAvailableBadge.vue';
 import SettingsSearchResults from './SettingsSearchResults.vue';
-import { settingsCategories, settingsSearchEntries } from './settings-catalog';
+import { settingsNavigationGroups, settingsSearchEntries } from './settings-catalog';
 import { createSettingsSearch, normalizeSettingsSearch } from './settings-search';
 import type { SettingsSearchEntry, SettingsView } from './settings-types';
 
@@ -20,7 +21,7 @@ const emit = defineEmits<{ ready: [] }>();
 const { t } = useTranslate('HudPreferences');
 const { t: translate, locale } = useI18n();
 const preferences = usePreferencesStore();
-const categories = settingsCategories(import.meta.env.DEV);
+const groups = settingsNavigationGroups(import.meta.env.DEV);
 const view = ref<SettingsView>('general');
 const query = ref('');
 const searchInput = ref<InstanceType<typeof Input>>();
@@ -54,7 +55,13 @@ const windowBlurred = () => {
   windowActive = false;
 };
 const searchKeydown = (event: KeyboardEvent) => {
-  if (!windowActive || event.defaultPrevented || event.isComposing) return;
+  if (
+    !windowActive ||
+    event.defaultPrevented ||
+    event.isComposing ||
+    (event.target instanceof Element && event.target.closest('[data-shortcut-input]'))
+  )
+    return;
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f') {
     event.preventDefault();
     searchInput.value?.focus();
@@ -62,7 +69,7 @@ const searchKeydown = (event: KeyboardEvent) => {
     const target = event.target;
     if (
       target instanceof Element &&
-      target.closest('input, textarea, select, [contenteditable="true"], [role="combobox"]')
+      target.closest('input, textarea, select, [contenteditable="true"], [role="combobox"], [data-shortcut-input]')
     )
       return;
     event.preventDefault();
@@ -155,29 +162,44 @@ onBeforeUnmount(() => {
           /></template>
         </Input>
       </div>
-      <Button
-        v-for="category in categories"
-        :key="category.id"
-        variant="ghost"
-        size="sm"
-        block
-        :aria-current="!searching && view === category.id ? 'page' : undefined"
-        :style="{
-          justifyContent: 'flex-start',
-          height: '42px',
-          padding: '0 10px',
-          color: 'var(--text-primary)',
-          background: !searching && view === category.id ? 'var(--color-bg-field-active)' : 'transparent',
-        }"
-        @click="navigate(category.id)"
-      >
-        <template #icon
-          ><span class="category-icon" :style="{ background: category.color }"
-            ><component :is="category.icon" :size="15" aria-hidden="true" /></span
-        ></template>
-        {{ t(category.label) }}
-        <UpdateAvailableBadge v-if="category.id === 'updates'" inline />
-      </Button>
+      <ScrollShadow class="settings-navigation-scroll" stable-scrollbar>
+        <div class="settings-groups">
+          <section
+            v-for="group in groups"
+            :key="group.id"
+            class="settings-group"
+            :class="{ 'settings-footer': group.id === 'support' }"
+            :data-settings-group="group.id"
+            :aria-labelledby="group.label ? `settings-group-${group.id}` : undefined"
+          >
+            <h2 v-if="group.label" :id="`settings-group-${group.id}`">{{ t(group.label) }}</h2>
+            <Button
+              v-for="category in group.categories"
+              :key="category.id"
+              variant="ghost"
+              size="sm"
+              block
+              :data-settings-view="category.id"
+              :aria-current="!searching && view === category.id ? 'page' : undefined"
+              :style="{
+                justifyContent: 'flex-start',
+                height: '42px',
+                padding: '0 10px',
+                color: 'var(--text-primary)',
+                background: !searching && view === category.id ? 'var(--color-bg-field-active)' : 'transparent',
+              }"
+              @click="navigate(category.id)"
+            >
+              <template #icon
+                ><span class="category-icon" :style="{ background: category.color }"
+                  ><component :is="category.icon" :size="15" aria-hidden="true" /></span
+              ></template>
+              {{ t(category.label) }}
+              <UpdateAvailableBadge v-if="category.id === 'updates'" inline />
+            </Button>
+          </section>
+        </div>
+      </ScrollShadow>
     </nav>
     <section class="settings-content">
       <p v-if="error" class="settings-error" role="alert">{{ error }}</p>
@@ -223,13 +245,44 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 20px 12px;
-  overflow-y: auto;
+  padding: 20px 0;
+  min-height: 0;
+  overflow: hidden;
   background: var(--color-bg-field);
 }
+.settings-navigation-scroll {
+  flex: 1;
+}
+.settings-groups {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 20px;
+  padding: 0 12px;
+}
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 4px;
+}
+.settings-group h2 {
+  margin: 0 0 4px;
+  padding: 0 10px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-title);
+  line-height: 1.5;
+}
+.settings-footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
 .settings-search {
-  margin-bottom: 18px;
+  margin: 0 12px 18px;
   min-width: 0;
+  flex-shrink: 0;
 }
 .category-icon {
   display: inline-flex;

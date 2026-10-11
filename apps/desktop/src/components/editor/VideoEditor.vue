@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue';
+const EditorSettingsActions = import.meta.env.DEV
+  ? defineAsyncComponent(() => import('./properties/settings/EditorSettingsActions.vue'))
+  : null;
 import type { CaptureProject, ProjectEditorData } from '~/api/types/capture-api';
 import EditorWorkspace from './layout/EditorWorkspace.vue';
 import SidebarPanel from '~/components/editor/sidebar/SidebarPanel.vue';
@@ -20,6 +24,7 @@ const emit = defineEmits<{
   (event: 'ready'): void;
   (event: 'back-to-hud'): void;
   (event: 'open-project', project: CaptureProject): void;
+  (event: 'rename-project', project: CaptureProject): void;
 }>();
 const workspace = useEditorWorkspace(props, emit);
 provideEditorWorkspace(workspace);
@@ -57,6 +62,7 @@ import VideoEditorTracks from './workspace/VideoEditorTracks.vue';
     @dragleave="mediaDrop.onMediaDragLeave"
     @drop="mediaDrop.onMediaDrop"
   >
+    <EditorSettingsActions v-if="EditorSettingsActions" />
     <EditorAmbientBackground :background="renderedBackground" />
     <EditorMediaDropOverlay
       :visible="mediaDrop.isDraggingMedia.value || mediaDrop.isImportingMedia.value"
@@ -75,6 +81,7 @@ import VideoEditorTracks from './workspace/VideoEditorTracks.vue';
       :preset-dirty="editorPresets.dirty.value"
       @back-to-hud="emit('back-to-hud')"
       @open-project="emit('open-project', $event)"
+      @rename-project="emit('rename-project', $event)"
       @preset-select="editorPresets.select"
       @preset-add="editorPresets.create"
       @preset-rename="editorPresets.rename"

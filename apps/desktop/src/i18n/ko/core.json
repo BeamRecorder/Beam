@@ -509,12 +509,12 @@
     "format": "형식",
     "webm": "WebM",
     "mp4": "MP4",
-    "qualityAndBitrate": "품질 및 비트 전송률",
+    "qualityAndBitrate": "품질",
     "low": "낮음",
-    "medium": "중간",
+    "medium": "표준",
     "high": "높음",
-    "webmDesc": "빠른 내보내기, 최적의 크기 및 투명도 지원.",
-    "mp4Desc": "다양한 플랫폼에서 공유할 수 있는 범용 호환성.",
+    "webmDesc": "웹에 적합하며 파일 크기가 작고 투명도를 지원합니다.",
+    "mp4Desc": "여러 기기에서 공유하고 재생할 때 호환성이 가장 높은 형식입니다.",
     "lowDesc": "~{mbps} Mbps · 작은 크기와 낮은 선명도.",
     "mediumDesc": "~{mbps} Mbps · 균형 잡힌 품질(권장).",
     "highDesc": "~{mbps} Mbps · 최고 수준의 화질.",
@@ -532,7 +532,7 @@
     "frameRate24Desc": "영화 같은 움직임과 작은 파일 크기. 24 fps 소스에 적합합니다.",
     "frameRate30Desc": "표준 영상에 알맞은 부드러움과 파일 크기의 균형입니다.",
     "frameRate60Desc": "빠른 움직임을 가장 부드럽게 표현하지만 파일이 커집니다. 60 fps 소스에 적합합니다.",
-    "resMax": "최대",
+    "resMax": "원본",
     "res1080p": "1080p",
     "res720p": "720p",
     "copyError": "오류 복사",
@@ -544,7 +544,17 @@
     "res720pDesc": "HD 크기 조정({width}×{height})",
     "moreOptions": "추가 옵션",
     "includeAudio": "오디오 포함",
-    "includeAudioDesc": "활성화된 오디오 트랙을 내보낸 동영상에 추가합니다."
+    "includeAudioDesc": "활성화된 오디오 트랙을 내보낸 동영상에 추가합니다.",
+    "dialogTitle": "동영상 내보내기",
+    "fileName": "파일 이름",
+    "estimatedSize": "예상 크기 ≈",
+    "sizeHint": "목표 비트레이트 기준입니다. 정적인 장면은 파일 크기가 훨씬 작을 수 있습니다.",
+    "showInFolder": "폴더에서 보기",
+    "savingImage": "이미지 저장 중…",
+    "exportAgain": "다시 내보내기",
+    "watchVideo": "보기",
+    "openFolder": "폴더 열기",
+    "viewImage": "이미지 보기"
   },
   "HUD": {
     "issues": "문제",
@@ -720,7 +730,13 @@
     "recordingDescription": "다음 녹화를 위한 컨트롤과 카운트다운을 설정하세요.",
     "accessibilityDescription": "상호작용 접근 권한과 글쓰기 도움을 관리하세요.",
     "shortcutsDescription": "즐겨 쓰는 작업을 단축키로 실행하세요.",
-    "updatesDescription": "Beam을 최신 상태로 유지하고 새 기능을 확인하세요."
+    "updatesDescription": "Beam을 최신 상태로 유지하고 새 기능을 확인하세요.",
+    "categoryAppearance": "모양",
+    "appearanceDescription": "모든 창에 적용할 Beam의 모양을 선택하세요.",
+    "categoryVideoEditor": "비디오 편집기",
+    "videoEditorDescription": "타임라인 동작 및 비디오 내보내기 설정.",
+    "groupApplication": "애플리케이션",
+    "groupTools": "도구"
   },
   "ProjectPicker": {
     "projects": "프로젝트",
@@ -1287,6 +1303,7 @@
     "browse": "폴더 선택",
     "search": "폴더 검색",
     "noMatches": "일치하는 폴더 없음",
+    "emptyFolders": "폴더를 선택하면 최근 폴더가 여기에 표시됩니다.",
     "error": "폴더를 업데이트할 수 없습니다.",
     "retry": "다시 시도"
   }

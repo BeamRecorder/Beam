@@ -105,10 +105,10 @@ function makeFixture(options = {}) {
     },
   };
   const dialog = {
-    showSaveDialog: async (...args) => {
+    showMessageBox: async (...args) => {
       calls.dialogs.push(args);
       if (options.onDialog) return options.onDialog(...args);
-      return dialogResult;
+      return { response: dialogResult.canceled ? 1 : 0 };
     },
   };
   const clipboard = {
@@ -534,6 +534,7 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
         await fixture.invoke('screenshot:export', {
           id: screenshot.id,
           bytes: png,
+          fileName: 'final',
           format: 'png',
           copy: true,
         })
@@ -595,6 +596,7 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
         await fixture.invoke('screenshot:export', {
           id: screenshot.id,
           bytes: png,
+          fileName: 'final',
           format: 'png',
           copy: false,
         })
@@ -602,9 +604,7 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
       outputFile,
     );
     assert.deepEqual(fs.readFileSync(outputFile), pngBytes);
-    assert.equal(fixture.calls.dialogs.length, 1);
-    assert.equal(fixture.calls.dialogs[0][0].owner, 'trusted-window');
-    assert.deepEqual(fixture.calls.dialogs[0][1].filters, [{ name: 'PNG', extensions: ['png'] }]);
+    assert.equal(fixture.calls.dialogs.length, 0);
 
     const outputWebpFile = path.join(fixture.outputDirectory, 'final.webp');
     fixture.setDialogResult({ canceled: false, filePath: outputWebpFile });
@@ -613,6 +613,7 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
         await fixture.invoke('screenshot:export', {
           id: screenshot.id,
           bytes: webp,
+          fileName: 'final',
           format: 'webp',
           copy: false,
         })
@@ -629,6 +630,7 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
         await fixture.invoke('screenshot:export', {
           id: screenshot.id,
           bytes: webp,
+          fileName: 'final',
           format: 'webp',
           copy: false,
         })
@@ -636,8 +638,10 @@ test('validates PNG and WebP encodings for clipboard publication and file saving
       'cancelled',
     );
     assert.equal(fs.existsSync(canceledFile), false);
-    assert.equal(fixture.calls.dialogs.length, 3);
-    assert.equal(fixture.calls.dialogs[2][1].filters[0].extensions[0], 'webp');
+    assert.equal(fixture.calls.dialogs.length, 1);
+    assert.equal(fixture.calls.dialogs[0][0].owner, 'trusted-window');
+    assert.equal(fixture.calls.dialogs[0][1].detail, outputWebpFile);
+    assert.equal(fixture.calls.dialogs[0][1].cancelId, 1);
   } finally {
     fixture.cleanup();
   }

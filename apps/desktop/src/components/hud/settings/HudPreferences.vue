@@ -2,13 +2,16 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import About from './About.vue';
+import AppearanceSettings from '~/components/settings/AppearanceSettings.vue';
+import VideoEditorPreferences from './VideoEditorPreferences.vue';
 import GeneralPreferences from './GeneralPreferences.vue';
 import RecordingPreferences from './RecordingPreferences.vue';
 import AccessibilityPreferences from './AccessibilityPreferences.vue';
 import ShortcutPreferences from './ShortcutPreferences.vue';
 import DeveloperPreferences from './DeveloperPreferences.vue';
 import UpdateControls from '~/components/updates/UpdateControls.vue';
-import { SETTINGS_CATEGORIES } from './settings-catalog';
+import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
+import { SETTINGS_CATEGORIES, settingsNavigationGroups } from './settings-catalog';
 import type { HudPreferenceProps, SettingsView } from './settings-types';
 import type { RecordingBarVisibility } from '../recorder/recording-types';
 
@@ -42,12 +45,13 @@ const emit = defineEmits<{
 const { t } = useTranslate('HudPreferences');
 const root = ref<HTMLElement>();
 const development = import.meta.env.DEV;
+const categoryOrder = settingsNavigationGroups(development).flatMap((group) => group.categories.map(({ id }) => id));
 const direction = ref('next');
 const category = computed(() => SETTINGS_CATEGORIES.find(({ id }) => id === props.view)!);
 watch(
   () => props.view,
   (next, previous) => {
-    const index = (view: SettingsView) => SETTINGS_CATEGORIES.findIndex(({ id }) => id === view);
+    const index = (view: SettingsView) => categoryOrder.indexOf(view);
     direction.value = index(next) > index(previous) ? 'next' : 'previous';
   },
 );
@@ -70,43 +74,47 @@ onMounted(focusSetting);
 <template>
   <section ref="root" class="preferences" :aria-label="t(category.label)">
     <Transition :name="`settings-${direction}`" mode="out-in" @after-enter="focusSetting">
-      <div :key="view" class="view-container">
-        <header class="view-header">
-          <h1>{{ t(category.label) }}</h1>
-          <p>{{ t(category.description) }}</p>
-        </header>
-        <GeneralPreferences v-if="view === 'general'" :focused-setting="focusedSetting" @close="emit('close')" />
-        <RecordingPreferences
-          v-else-if="view === 'recording'"
-          :countdown-seconds="countdownSeconds"
-          :show-real-cursor="showRealCursor"
-          :hide-taskbar="hideTaskbar"
-          :hide-desktop-icons="hideDesktopIcons"
-          @update:hide-taskbar="emit('update:hideTaskbar', $event)"
-          @update:hide-desktop-icons="emit('update:hideDesktopIcons', $event)"
-          @update:show-real-cursor="emit('update:showRealCursor', $event)"
-          :always-on-top="alwaysOnTop"
-          :recording-bar-visibility="recordingBarVisibility"
-          @update:countdown-seconds="emit('update:countdownSeconds', $event)"
-          @update:always-on-top="emit('update:alwaysOnTop', $event)"
-          @update:recording-bar-visibility="emit('update:recordingBarVisibility', $event)"
-        />
-        <AccessibilityPreferences
-          v-else-if="view === 'accessibility'"
-          :input-access="inputAccess"
-          :record-interactions="recordInteractions"
-          :requesting-input-access="requestingInputAccess"
-          :platform="platform"
-          @request-input-access="emit('requestInputAccess')"
-          @update:record-interactions="emit('update:recordInteractions', $event)"
-        />
-        <ShortcutPreferences v-else-if="view === 'shortcuts'" />
-        <div v-else-if="view === 'updates'" class="updates-card" data-setting="updates" tabindex="-1">
-          <UpdateControls show-icon />
+      <ScrollShadow :key="view" class="view-scroll" stable-scrollbar>
+        <div class="view-container">
+          <header class="view-header">
+            <h1>{{ t(category.label) }}</h1>
+            <p>{{ t(category.description) }}</p>
+          </header>
+          <GeneralPreferences v-if="view === 'general'" :focused-setting="focusedSetting" @close="emit('close')" />
+          <AppearanceSettings v-else-if="view === 'appearance'" :show-title="false" :focused-setting="focusedSetting" />
+          <VideoEditorPreferences v-else-if="view === 'video-editor'" />
+          <RecordingPreferences
+            v-else-if="view === 'recording'"
+            :countdown-seconds="countdownSeconds"
+            :show-real-cursor="showRealCursor"
+            :hide-taskbar="hideTaskbar"
+            :hide-desktop-icons="hideDesktopIcons"
+            @update:hide-taskbar="emit('update:hideTaskbar', $event)"
+            @update:hide-desktop-icons="emit('update:hideDesktopIcons', $event)"
+            @update:show-real-cursor="emit('update:showRealCursor', $event)"
+            :always-on-top="alwaysOnTop"
+            :recording-bar-visibility="recordingBarVisibility"
+            @update:countdown-seconds="emit('update:countdownSeconds', $event)"
+            @update:always-on-top="emit('update:alwaysOnTop', $event)"
+            @update:recording-bar-visibility="emit('update:recordingBarVisibility', $event)"
+          />
+          <AccessibilityPreferences
+            v-else-if="view === 'accessibility'"
+            :input-access="inputAccess"
+            :record-interactions="recordInteractions"
+            :requesting-input-access="requestingInputAccess"
+            :platform="platform"
+            @request-input-access="emit('requestInputAccess')"
+            @update:record-interactions="emit('update:recordInteractions', $event)"
+          />
+          <ShortcutPreferences v-else-if="view === 'shortcuts'" :focused-setting="focusedSetting" />
+          <div v-else-if="view === 'updates'" class="updates-card" data-setting="updates" tabindex="-1">
+            <UpdateControls show-icon />
+          </div>
+          <DeveloperPreferences v-else-if="view === 'developer' && development" />
+          <About v-else-if="view === 'about'" />
         </div>
-        <DeveloperPreferences v-else-if="view === 'developer' && development" />
-        <About v-else-if="view === 'about'" />
-      </div>
+      </ScrollShadow>
     </Transition>
   </section>
 </template>
@@ -119,10 +127,11 @@ onMounted(focusSetting);
   overflow: hidden;
   display: flex;
 }
-.view-container {
+.view-scroll {
   flex: 1;
-  min-height: 0;
-  overflow: auto;
+}
+.view-container {
+  flex: 1 0 auto;
   padding: 28px;
 }
 .view-header {

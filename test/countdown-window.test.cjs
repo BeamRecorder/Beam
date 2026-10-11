@@ -53,12 +53,13 @@ for (const platform of ['win32', 'darwin', 'linux'])
     const renderer = fixture.window.webContents;
     assert.equal(fixture.overlay.setInteractive(renderer, true), false);
     fixture.overlay.show(3);
+    fixture.finishLoad();
     assert.equal(fixture.overlay.setInteractive({}, true), false);
     assert.equal(fixture.overlay.setInteractive(renderer, 'yes'), false);
     assert.equal(fixture.overlay.setInteractive(renderer, true), true);
     assert.deepEqual(fixture.calls.at(-1), ['mouse', false]);
     assert.equal(fixture.overlay.setInteractive(renderer, false), true);
-    if (platform !== 'linux') assert.deepEqual(fixture.calls.at(-1), ['mouse', true]);
+    if (platform !== 'linux') assert.deepEqual(fixture.calls.at(-1), ['mouse', true, { forward: true }]);
     fixture.overlay.show(null);
     assert.equal(fixture.overlay.setInteractive(renderer, true), false);
     assert.equal(fixture.calls.find(([name]) => name === 'constructor')[1].focusable, false);
@@ -86,6 +87,7 @@ function loadCountdownWindow({
     };
     const windowCalls = [];
     let destroyed = false;
+    let visible = false;
     const record = (call) => {
       calls.push(call);
       windowCalls.push(call);
@@ -106,14 +108,22 @@ function loadCountdownWindow({
         for (const { listener } of listeners) listener(...args);
       },
       isDestroyed: () => destroyed,
-      setIgnoreMouseEvents: (value) => record(['mouse', value]),
+      isVisible: () => visible,
+      setIgnoreMouseEvents: (...args) => record(['mouse', ...args]),
       setPosition: (...args) => record(['position', ...args]),
       show: () => record(['show']),
-      showInactive: () => record(['showInactive']),
+      showInactive: () => {
+        visible = true;
+        record(['showInactive']);
+      },
       moveTop: () => record(['top']),
-      hide: () => record(['hide']),
+      hide: () => {
+        visible = false;
+        record(['hide']);
+      },
       destroy: () => {
         destroyed = true;
+        visible = false;
         record(['destroy']);
       },
       loadURL: (url) => {
@@ -187,6 +197,26 @@ function loadCountdownWindow({
   } finally {
     Module._load = originalLoad;
   }
+}
+
+for (const platform of ['win32', 'darwin', 'linux']) {
+  test(`${platform}: hidden countdown never forwards mouse movement to its renderer`, () => {
+    const fixture = loadCountdownWindow({ platform });
+    const mouse = () => fixture.calls.filter(([name]) => name === 'mouse');
+    assert.deepEqual(mouse(), [['mouse', true]]);
+    fixture.overlay.show(3);
+    assert.equal(fixture.overlay.setInteractive(fixture.window.webContents, true), false);
+    assert.deepEqual(mouse(), [['mouse', true]]);
+    fixture.finishLoad();
+    assert.deepEqual(mouse().at(-1), platform === 'linux' ? ['mouse', false] : ['mouse', true, { forward: true }]);
+    fixture.overlay.show(null);
+    const hide = fixture.calls.findIndex(([name]) => name === 'hide');
+    assert.deepEqual(fixture.calls[hide - 1], ['mouse', true]);
+    assert.equal(fixture.overlay.setInteractive(fixture.window.webContents, true), false);
+    fixture.overlay.show(2);
+    assert.deepEqual(mouse().at(-1), platform === 'linux' ? ['mouse', false] : ['mouse', true, { forward: true }]);
+    fixture.overlay.destroy();
+  });
 }
 
 test('prewarms the dedicated countdown renderer in development and packaged builds', async () => {
@@ -392,7 +422,10 @@ test('X11 positions and raises the countdown with the supported inactive path', 
   assert.equal(constructor[1].show, false);
   assert.equal(constructor[1].center, false);
   assert.equal(constructor[1].focusable, false);
-  assert.ok(fixture.calls.some((call) => call[0] === 'mouse' && call[1] === false));
+  assert.deepEqual(
+    fixture.calls.filter(([name]) => name === 'mouse'),
+    [['mouse', true]],
+  );
 
   fixture.overlay.show(3);
   assert.equal(
@@ -405,6 +438,7 @@ test('X11 positions and raises the countdown with the supported inactive path', 
   );
 
   fixture.finishLoad();
+  assert.deepEqual(fixture.calls.filter(([name]) => name === 'mouse').at(-1), ['mouse', false]);
   assert.ok(fixture.calls.some((call) => call[0] === 'send' && call[1] === 'countdown:state' && call[2] === 3));
   assert.deepEqual(
     fixture.calls.filter((call) => call[0] === 'position'),

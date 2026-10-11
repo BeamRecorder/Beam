@@ -1,3 +1,8 @@
+const quickSnipTargets = {
+  'quickSnip.recordScreen': 'screen',
+  'quickSnip.recordRegion': 'region',
+  'quickSnip.recordWindow': 'window',
+};
 function createShortcutDispatcher({
   BrowserWindow,
   preferencesStore,
@@ -12,10 +17,10 @@ function createShortcutDispatcher({
     if (getRegionOverlay?.()?.handleShortcut(id)) return true;
     if (id.startsWith('hud.') && getTray()?.dispatchHudShortcut(id)) return true;
     if (id.startsWith('teleprompter.')) return teleprompterWindow.handleShortcut(id);
-    if (id === 'quickSnip.toggle') {
-      void getQuickSnip()
-        ?.toggle()
-        .catch((error) => console.error('[Quick Snip] toggle failed:', error));
+    if (id === 'quickSnip.toggle' || Object.hasOwn(quickSnipTargets, id)) {
+      const quickSnip = getQuickSnip();
+      const task = id === 'quickSnip.toggle' ? quickSnip?.toggle() : quickSnip?.record(quickSnipTargets[id]);
+      void task?.catch((error) => console.error('[Quick Snip] shortcut failed:', error));
       return true;
     }
     for (const window of BrowserWindow.getAllWindows()) window.webContents.send('preferences:shortcut', id);

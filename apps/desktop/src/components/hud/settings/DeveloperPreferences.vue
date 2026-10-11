@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SettingsEditorTools from './SettingsEditorTools.vue';
 import { ref } from 'vue';
 import { FlaskConical, Terminal } from '@lucide/vue';
 import { capture } from '~/api/capture';
@@ -56,6 +57,7 @@ const open = async (target: 'devtools' | 'mascot') => {
         >{{ t('openMascotLab') }}</Button
       >
     </div>
+    <SettingsEditorTools />
     <p v-if="error" class="developer-error" role="alert">{{ error }}</p>
   </div>
 </template>

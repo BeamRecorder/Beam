@@ -83,6 +83,7 @@ export interface EditorCanvasEmits {
   (event: 'deselect:transform-clip'): void;
   (event: 'deselect:zoom'): void;
   (event: 'update:clip-transform', transform: NormalizedTransform): void;
+  (event: 'duplicate:clips', transforms: ClipTransformUpdate[]): void;
   (event: 'update:clip-transforms', transforms: ClipTransformUpdate[]): void;
   (event: 'preview:clip-crop', crop: NormalizedCrop | null): void;
   (event: 'update:clip-crop', crop: NormalizedCrop): void;

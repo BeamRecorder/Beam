@@ -11,6 +11,7 @@ import type { TimelineClipboardItem, TimelinePasteHighlight, TimelinePasteReques
 import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 import type { AddVisualElementRequest } from '@beam/engine/composition/visual-element-types';
 import type { TimelineElementKind } from '../timeline-element-types';
+import type { CaptionPlacementRequest } from '@beam/engine/composition/caption-element-types';
 
 export interface VisualTimelineTrack {
   id: string;
@@ -113,7 +114,7 @@ export interface TimelineTracksEmits {
   (event: 'move:zoom', payload: { id: string; startMs: number; endMs: number }): void;
   (event: 'move:selection', payload: TimelineSelectionMove): void;
   (event: 'add:zoom', placement: TimelinePlacementRequest): void;
-  (event: 'add:caption', placement: TimelinePlacementRequest): void;
+  (event: 'add:caption', placement: CaptionPlacementRequest): void;
   (event: 'add:visual-element', request: AddVisualElementRequest): void;
   (event: 'reorder:clip', payload: { id: string; targetIndex: number }): void;
   (event: 'reorder:caption', payload: { id: string; targetIndex: number }): void;

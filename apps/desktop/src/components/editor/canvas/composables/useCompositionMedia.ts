@@ -64,6 +64,10 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     const selected = options.selectedTransformClip();
     return options.transformDraftFor?.(clipId) ?? (clipId === selected?.id ? options.transformDraft() : null);
   };
+  const appearanceScaleFor = (window: { dw: number; dh: number }) => {
+    const output = options.outputCanvas();
+    return Math.min(window.dw / Math.max(1, output.width), window.dh / Math.max(1, output.height));
+  };
   const dispose = () => {
     gpuShapes.dispose();
     images.clear();
@@ -148,16 +152,12 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       crop,
       editingPhoneCrop ? 'fit' : editingCrop ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
     );
-    const output = options.outputCanvas?.();
-    const shadowScale = output
-      ? Math.min(window.dw / Math.max(1, output.width), window.dh / Math.max(1, output.height))
-      : 1;
     const mediaOptions: DecoratedMediaOptions = {
       source,
       sourceRect: framing.sourceRect,
       rect: framing.rect,
       appearance: editingPhoneCrop ? { ...clip.appearance, frame: 'none' } : clip.appearance,
-      shadowScale,
+      shadowScale: appearanceScaleFor(window),
       title: clip.name,
       mirrored: clip.isMirrored,
       mirroredY: clip.isMirroredY,
@@ -268,7 +268,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop,
       clip.appearance,
       clip.name,
-      undefined,
+      appearanceScaleFor(window),
       options.isCropping?.() && clip.id === selected?.id ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
     );
     ctx.restore();
@@ -427,12 +427,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop,
         clip.appearance,
         clip.name,
-        options.outputCanvas
-          ? Math.min(
-              window.dw / Math.max(1, options.outputCanvas().width),
-              window.dh / Math.max(1, options.outputCanvas().height),
-            )
-          : 1,
+        appearanceScaleFor(window),
         options.isCropping?.() && clip.id === selected?.id ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
       );
       ctx.restore();

@@ -162,11 +162,13 @@ describe('useCaptionInlineEditing', () => {
     expect(mounted.onStart).not.toHaveBeenCalled();
   });
 
-  it('selects and starts an editable caption, forwards updates, and finishes it', () => {
+  it('selects and starts an editable caption, keeps a local draft, and commits it once', () => {
     const mounted = mountEditing({ selected: null });
 
     mounted.state.begin(pointer());
     mounted.state.update('Edited caption');
+    expect(mounted.onUpdate).not.toHaveBeenCalled();
+    expect(mounted.state.editingCaption.value?.caption.style.customText).toBe('Edited caption');
     mounted.state.finish();
 
     expect(mounted.onSelect).toHaveBeenCalledWith('caption');
@@ -180,18 +182,102 @@ describe('useCaptionInlineEditing', () => {
     expect(mounted.state.editingCaptionId.value).toBeNull();
   });
 
-  it('restores the original text and marks the edit cancelled', () => {
+  it('discards the local draft on cancellation without updating the document', () => {
     const mounted = mountEditing();
 
     mounted.state.begin(pointer());
     mounted.state.update('Discarded text');
     mounted.state.cancel();
 
-    expect(mounted.onUpdate).toHaveBeenLastCalledWith({
-      clipId: 'caption',
-      customText: 'Original',
-    });
+    expect(mounted.onUpdate).not.toHaveBeenCalled();
+    expect(mounted.composition.value.clips[0]).toMatchObject({ caption: { style: { customText: 'Original' } } });
     expect(mounted.onEnd).toHaveBeenLastCalledWith(true);
+    expect(mounted.state.editingCaptionId.value).toBeNull();
+  });
+
+  it('commits the last keystroke when a selection change finishes editing', async () => {
+    const mounted = mountEditing();
+    mounted.state.begin(pointer());
+    mounted.state.update('Last keystroke');
+    mounted.selected.value = caption({ id: 'other-caption' });
+    await nextTick();
+    expect(mounted.onUpdate).toHaveBeenCalledExactlyOnceWith({ clipId: 'caption', customText: 'Last keystroke' });
+    expect(mounted.state.editingCaptionId.value).toBeNull();
+  });
+
+  it('keeps current typography when committing a draft and does not commit an unchanged edit', () => {
+    const mounted = mountEditing();
+    mounted.state.begin(pointer());
+    mounted.state.finish();
+    expect(mounted.onUpdate).not.toHaveBeenCalled();
+    mounted.state.begin(pointer());
+    mounted.state.update('Draft text');
+    const clip = caption();
+    clip.caption.style.color = '#000000';
+    mounted.composition.value = { ...mounted.composition.value, clips: [clip] };
+    expect(mounted.state.editingCaption.value?.caption.style.color).toBe('#000000');
+    expect(mounted.state.editingCaption.value?.caption.style.customText).toBe('Draft text');
+    mounted.state.finish();
+    expect(mounted.onUpdate).toHaveBeenCalledExactlyOnceWith({ clipId: 'caption', customText: 'Draft text' });
+  });
+
+  it('commits a local draft when its canvas is unmounted', () => {
+    const mounted = mountEditing();
+    mounted.state.begin(pointer());
+    mounted.state.update('Saved on close');
+    mounted.wrapper.unmount();
+    expect(mounted.onUpdate).toHaveBeenCalledExactlyOnceWith({ clipId: 'caption', customText: 'Saved on close' });
+  });
+
+  it('keeps the draft when editing starts again on the same caption', () => {
+    const mounted = mountEditing();
+    mounted.state.begin(pointer());
+    mounted.state.update('Current draft');
+    expect(mounted.state.begin(pointer())).toBe(true);
+    expect(mounted.state.editingCaption.value?.caption.style.customText).toBe('Current draft');
+    expect(mounted.onStart).toHaveBeenCalledOnce();
+    expect(mounted.onUpdate).not.toHaveBeenCalled();
+  });
+
+  it('commits the old draft before beginning another caption', () => {
+    const mounted = mountEditing();
+    mounted.composition.value = { ...mounted.composition.value, clips: [caption(), caption({ id: 'second' })] };
+    mounted.state.begin(pointer());
+    mounted.state.update('First draft');
+    mounted.clipIdAt.mockReturnValue('second');
+    mounted.state.begin(pointer());
+    expect(mounted.onUpdate).toHaveBeenCalledExactlyOnceWith({ clipId: 'caption', customText: 'First draft' });
+    expect(mounted.state.editingCaptionId.value).toBe('second');
+    expect(mounted.state.editingCaption.value?.caption.style.customText).toBe('Original');
+  });
+
+  it('keeps transcription text implicit until it is actually edited, including clearing it', () => {
+    const clip = caption();
+    delete clip.caption.style.customText;
+    const mounted = mountEditing({ clip });
+    mounted.state.begin(pointer());
+    mounted.state.finish();
+    expect(mounted.onUpdate).not.toHaveBeenCalled();
+    mounted.state.begin(pointer());
+    mounted.state.update('');
+    mounted.state.finish();
+    expect(mounted.onUpdate).toHaveBeenCalledExactlyOnceWith({ clipId: 'caption', customText: '' });
+  });
+
+  it('does not write a draft after its caption was deleted or locked', async () => {
+    const mounted = mountEditing();
+    mounted.state.begin(pointer());
+    mounted.state.update('Deleted');
+    mounted.composition.value = { ...mounted.composition.value, clips: [] };
+    mounted.activeCaptionIds.value = [];
+    await nextTick();
+    expect(mounted.onUpdate).not.toHaveBeenCalled();
+    mounted.composition.value = { ...mounted.composition.value, clips: [caption()] };
+    mounted.activeCaptionIds.value = ['caption'];
+    mounted.state.begin(pointer());
+    mounted.state.update('Locked');
+    mounted.composition.value = { ...mounted.composition.value, clips: [caption({ locked: true })] };
+    expect(mounted.onUpdate).not.toHaveBeenCalled();
     expect(mounted.state.editingCaptionId.value).toBeNull();
   });
 

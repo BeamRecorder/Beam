@@ -1,7 +1,16 @@
 import type { RecordingBarVisibility } from '../recorder/recording-types';
 import type { InteractionAccessViewState } from '../interactions/interaction-access-types';
 
-export type SettingsView = 'general' | 'recording' | 'accessibility' | 'shortcuts' | 'updates' | 'about' | 'developer';
+export type SettingsView =
+  | 'general'
+  | 'appearance'
+  | 'video-editor'
+  | 'recording'
+  | 'accessibility'
+  | 'shortcuts'
+  | 'updates'
+  | 'about'
+  | 'developer';
 
 export interface HudPreferenceProps {
   countdownSeconds: number;

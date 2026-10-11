@@ -138,7 +138,7 @@ describe('useTimelineItemInteractions', () => {
 
     vm.selectItem('clip', 'clip-range', clickEvent({ shiftKey: true }));
     vm.selectItem('clip', 'clip-toggle', clickEvent({ ctrlKey: true }));
-    vm.selectItem('zoom', 'zoom-toggle', clickEvent({ metaKey: true }));
+    vm.selectItem('zoom', 'zoom-toggle', clickEvent({ ctrlKey: true }));
     vm.selectItem('zoom', 'zoom-replace', clickEvent());
     expect(harness.emit.mock.calls.map(([, request]) => request)).toEqual([
       { kind: 'clip', id: 'clip-range', intent: 'range' },
@@ -177,7 +177,7 @@ describe('useTimelineItemInteractions', () => {
 
     start({ button: 2 });
     start({ ctrlKey: true });
-    start({ metaKey: true });
+    start({ ctrlKey: true });
     start({ shiftKey: true });
     expect(harness.beginClipMove).not.toHaveBeenCalled();
     expect(harness.emit).not.toHaveBeenCalled();
@@ -264,7 +264,7 @@ describe('useTimelineItemInteractions', () => {
 
     start({ button: 1 });
     start({ ctrlKey: true });
-    start({ metaKey: true });
+    start({ ctrlKey: true });
     start({ shiftKey: true });
     expect(harness.beginZoomMove).not.toHaveBeenCalled();
     expect(harness.emit).not.toHaveBeenCalled();

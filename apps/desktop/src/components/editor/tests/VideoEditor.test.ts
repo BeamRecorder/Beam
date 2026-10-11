@@ -15,6 +15,7 @@ import {
   capture,
   canvasState,
   editorState,
+  exportState,
   fullscreenState,
   historyState,
   mountEditor,
@@ -92,6 +93,51 @@ const cropFromComposition = (composition: ClipComposition | undefined) => {
 };
 
 describe('VideoEditor', () => {
+  it('forwards a project rename without reopening the editor', async () => {
+    const mounted = mountEditor();
+    const renamed = { id: 'project-1', name: 'Renamed project' };
+    mounted.findComponent({ name: 'MockTopbar' }).vm.$emit('rename-project', renamed);
+    await flushPromises();
+    expect(mounted.emitted('rename-project')).toEqual([[renamed]]);
+    expect(mounted.emitted('open-project')).toBeUndefined();
+  });
+
+  it('keeps the export audio choice and progress connected to the workspace', async () => {
+    const mounted = mountEditor();
+    mounted.findComponent({ name: 'MockTopbar' }).vm.$emit('update:exportAudio', false);
+    await mounted.vm.$nextTick();
+    expect(editorState.store.includeAudioInExport.value).toBe(false);
+    exportState.isExporting.value = true;
+    await mounted.vm.$nextTick();
+    expect(mounted.find('.export-notice-banner').exists()).toBe(true);
+    exportState.isExporting.value = false;
+    await mounted.vm.$nextTick();
+    expect(mounted.find('.export-notice-banner').exists()).toBe(false);
+  });
+
+  it('keeps drag overlays and timeline resizing interactive', async () => {
+    const mounted = mountEditor();
+    const surface = mounted.get('.editor-page');
+    const dataTransfer = { types: ['Files'], files: [], dropEffect: 'none' };
+    await surface.trigger('dragenter', { dataTransfer });
+    expect(mounted.find('.media-drop-overlay').exists()).toBe(true);
+    await surface.trigger('dragover', { dataTransfer });
+    expect(dataTransfer.dropEffect).toBe('copy');
+    await surface.trigger('dragleave', { dataTransfer });
+    expect(mounted.find('.media-drop-overlay').exists()).toBe(false);
+    await surface.trigger('dragenter', { dataTransfer });
+    await surface.trigger('drop', { dataTransfer });
+    expect(mounted.find('.media-drop-overlay').exists()).toBe(false);
+    mounted
+      .get('.timeline-resize-handle')
+      .element.dispatchEvent(new MouseEvent('pointerdown', { clientY: 100, bubbles: true }));
+    await mounted.vm.$nextTick();
+    expect(mounted.get('.timeline-resize-handle').classes()).toContain('is-resizing');
+    window.dispatchEvent(new Event('pointerup'));
+    await mounted.vm.$nextTick();
+    expect(mounted.get('.timeline-resize-handle').classes()).not.toContain('is-resizing');
+  });
+
   it('captures the current canvas and offers a new Screenshot editor window for three seconds', async () => {
     const bytes = Uint8Array.from([137, 80, 78, 71]).buffer;
     canvasState.captureCurrentFrame.mockResolvedValue({
@@ -926,6 +972,28 @@ describe('VideoEditor', () => {
     expect(cropFromComposition(state.compositionState.composition.value)).toEqual(cropModePreview);
     expect(mounted.get('.mock-canvas').attributes('data-is-cropping')).toBe('false');
     expect(mounted.get('.mock-canvas').attributes('data-composition-crop')).toBe(JSON.stringify(cropModePreview));
+  });
+
+  it('preserves the new selection when committing the previous inline caption draft', async () => {
+    const mounted = mountEditor();
+    const caption = addInlineCaption();
+    editorState.store.compositionState.selectClip('screen');
+    editorState.store.compositionState.updateCaption.mockImplementation(updateCaptionState);
+    await mounted.vm.$nextTick();
+    mounted.findComponent({ name: 'MockEditorCanvas' }).vm.$emit('update:caption-text', {
+      clipId: caption.id,
+      customText: 'Committed after selection change',
+    });
+    await mounted.vm.$nextTick();
+    expect(editorState.store.compositionState.selectedClipId.value).toBe('screen');
+    expect(editorState.store.compositionState.updateCaption).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: caption.id,
+        caption: expect.objectContaining({
+          style: expect.objectContaining({ customText: 'Committed after selection change' }),
+        }),
+      }),
+    );
   });
 
   it('groups spaced inline caption updates into one final history entry', async () => {

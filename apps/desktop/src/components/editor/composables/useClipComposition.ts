@@ -33,6 +33,8 @@ import {
   visualClipDefaultProps,
 } from './editor-defaults';
 import { addClip, setClipEnabled } from '@beam/engine/commands/clip-engine';
+import { insertTextCaption } from '@beam/engine/commands/insert-text-caption';
+import type { CaptionPlacementRequest } from '@beam/engine/composition/caption-element-types';
 import { synchronizeRecordingClips } from '../composition/session-clips';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useSelectedClips } from './useSelectedClips';
@@ -233,6 +235,7 @@ export function useClipComposition(options: {
     requestedStartMs?: number,
     requestedDurationMs?: number,
     targetTrackId?: string,
+    targetCaptionClipId?: string,
   ) => {
     const startMs = Math.max(0, Math.round(requestedStartMs ?? options.currentTimeSec.value * 1_000));
     if (!Number.isFinite(startMs)) return;
@@ -361,7 +364,9 @@ export function useClipComposition(options: {
         },
         ...(defaults.transform ? { transform: defaults.transform } : {}),
       };
-      composition.value = addClip(composition.value, clip);
+      const next = insertTextCaption(composition.value, clip, targetCaptionClipId);
+      if (!next) return;
+      composition.value = next;
       selectClip(clip.id);
       return;
     }
@@ -403,10 +408,10 @@ export function useClipComposition(options: {
     );
   };
 
-  const addCaptionAtTime = (request: number | { startMs: number; durationMs: number }) =>
+  const addCaptionAtTime = (request: number | CaptionPlacementRequest) =>
     typeof request === 'number'
       ? addElement('caption', request)
-      : addElement('caption', request.startMs, request.durationMs);
+      : addElement('caption', request.startMs, request.durationMs, undefined, request.targetClipId);
   const addVisualElementAtTime = (request: AddVisualElementRequest) =>
     addElement(request.kind, request.startMs, request.durationMs, request.trackId);
 

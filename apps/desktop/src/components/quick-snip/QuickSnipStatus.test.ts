@@ -30,7 +30,7 @@ beforeEach(() => {
 });
 
 describe('quick capture status labels', () => {
-  it('retains one loading player across finalization and progress, celebrating only actual completion', async () => {
+  it('retains one loading player until actual completion, then shows a green checkmark', async () => {
     const snapshot: QuickSnipSnapshot = {
       state: 'preparing',
       job: {
@@ -80,10 +80,10 @@ describe('quick capture status labels', () => {
     }
     receive({ ...snapshot, state: 'completed', progress: 1 });
     await flushPromises();
-    expect(wrapper.getComponent(Beamy).element).toBe(player);
-    expect(wrapper.getComponent(Beamy).props('phase')).toBe('completed');
-    expect(wrapper.getComponent(BeamySvg).props('color')).toBe('var(--color-success)');
-    expect(wrapper.getComponent(BeamySvg).props('frame').dots).toHaveLength(12);
+    expect(wrapper.findComponent(Beamy).exists()).toBe(false);
+    expect(wrapper.find('.completion-check').exists()).toBe(true);
+    expect(wrapper.find('.mascot-melt').exists()).toBe(false);
+    expect(wrapper.find('.completion-aura').exists()).toBe(true);
     expect(wrapper.find('.success-mark').exists()).toBe(true);
     wrapper.unmount();
   });
@@ -92,7 +92,6 @@ describe('quick capture status labels', () => {
     ['finalizing', 'loading'],
     ['recording', 'recording'],
     ['processing', 'loading'],
-    ['completed', 'completed'],
     ['failed', 'failed'],
   ])('ties the Instant mascot to actual %s state', async (state, phase) => {
     capture.getQuickSnipState.mockResolvedValue({
@@ -111,9 +110,7 @@ describe('quick capture status labels', () => {
     const wrapper = mount(QuickSnipStatus);
     await flushPromises();
     expect(wrapper.get('.beam-mascot').attributes('data-phase')).toBe(phase);
-    expect(wrapper.getComponent(BeamySvg).props('color')).toBe(
-      state === 'completed' ? 'var(--color-success)' : 'var(--color-primary)',
-    );
+    expect(wrapper.getComponent(BeamySvg).props('color')).toBe('var(--color-primary)');
     expect(wrapper.get('.thumbnail img').attributes('src')).toBe('data:image/png;base64,abc');
     if (state === 'processing') {
       expect(wrapper.get('.mascot-percent').text()).toBe('48%');

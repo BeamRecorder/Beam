@@ -155,6 +155,7 @@ describe('CanvasMarqueeSurface', () => {
   });
 
   it.each(['shiftKey', 'ctrlKey', 'metaKey'] as const)('adds hits to the existing selection with %s', async (key) => {
+    vi.stubGlobal('navigator', { platform: key === 'metaKey' ? 'MacIntel' : 'Win32' });
     const mounted = mountSurface(['shape']);
     await drag(mounted.element, [290, 290], [390, 390], { [key]: true });
 

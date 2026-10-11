@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { useTranslate } from '~/i18n/useTranslate';
-import { inject, ref, nextTick, watch, onMounted, onUnmounted } from 'vue';
+import { inject, provide, ref, nextTick, watch, onMounted, onUnmounted } from 'vue';
 import { X } from '@lucide/vue';
+import { popoverLayerKey } from '../popover/popover-layer-types';
+import ScrollShadow from '../scroll-shadow/ScrollShadow.vue';
 
 const { t } = useTranslate('Dialog');
 const popoverOwner = inject<string | null>('popover-owner-id', null);
+const dialogLayer = Math.max(20000, inject(popoverLayerKey, 20000));
+provide(popoverLayerKey, dialogLayer + 1);
 const content = ref<HTMLElement | null>(null);
 let previousFocus: HTMLElement | null = null;
 const focusable = () =>
@@ -25,12 +29,16 @@ const props = withDefaults(
     size?: 'sm' | 'md' | 'lg' | 'xl';
     closeOnOverlayClick?: boolean;
     presentation?: 'default' | 'command';
+    scrollShadow?: boolean;
+    animate?: boolean;
   }>(),
   {
     title: '',
     size: 'md',
     closeOnOverlayClick: true,
     presentation: 'default',
+    scrollShadow: false,
+    animate: true,
   },
 );
 
@@ -41,6 +49,7 @@ const emit = defineEmits<{
 const close = () => {
   emit('close');
 };
+defineExpose({ content });
 
 const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key === 'Tab' && props.isOpen) {
@@ -107,16 +116,17 @@ onUnmounted(() => {
 
 <template>
   <Teleport to="body">
-    <Transition name="fade-overlay">
+    <Transition name="fade-overlay" :css="animate">
       <div
         v-if="isOpen"
         class="dialog-overlay"
+        :style="{ zIndex: dialogLayer }"
         :class="{ 'command-overlay': presentation === 'command' }"
         :data-popover-owner="popoverOwner"
         @mousedown="handleOverlayMouseDown"
         @mouseup="handleOverlayMouseUp"
       >
-        <Transition :name="presentation === 'command' ? 'command-modal' : 'scale-modal'" appear>
+        <Transition :name="presentation === 'command' ? 'command-modal' : 'scale-modal'" :css="animate" appear>
           <div
             ref="content"
             tabindex="-1"
@@ -135,7 +145,10 @@ onUnmounted(() => {
               </button>
             </header>
 
-            <div class="dialog-body">
+            <ScrollShadow v-if="scrollShadow" class="dialog-scroll-body" stable-scrollbar>
+              <div class="dialog-body dialog-scrolling-content"><slot /></div>
+            </ScrollShadow>
+            <div v-else class="dialog-body">
               <slot />
             </div>
 
@@ -235,6 +248,14 @@ onUnmounted(() => {
   overflow-y: auto;
   font-size: 1rem;
   color: var(--text-secondary);
+}
+
+.dialog-scroll-body {
+  flex: 1;
+}
+.dialog-body.dialog-scrolling-content {
+  flex: 1 0 auto;
+  overflow: visible;
 }
 
 .dialog-footer {

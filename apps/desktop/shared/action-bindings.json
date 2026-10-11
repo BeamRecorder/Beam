@@ -1,0 +1,643 @@
+[
+  {
+    "id": "quickSnip.toggle",
+    "keys": "Alt+Shift+S",
+    "group": "recording",
+    "label": "ShortcutPreferences.quickSnip",
+    "contexts": ["global"],
+    "kind": "keyboard",
+    "scope": "global"
+  },
+  {
+    "id": "quickSnip.recordScreen",
+    "keys": "",
+    "group": "recording",
+    "label": "ShortcutPreferences.quickSnipRecordScreen",
+    "contexts": ["global"],
+    "kind": "keyboard",
+    "scope": "global"
+  },
+  {
+    "id": "quickSnip.recordRegion",
+    "keys": "",
+    "group": "recording",
+    "label": "ShortcutPreferences.quickSnipRecordRegion",
+    "contexts": ["global"],
+    "kind": "keyboard",
+    "scope": "global"
+  },
+  {
+    "id": "quickSnip.recordWindow",
+    "keys": "",
+    "group": "recording",
+    "label": "ShortcutPreferences.quickSnipRecordWindow",
+    "contexts": ["global"],
+    "kind": "keyboard",
+    "scope": "global"
+  },
+  {
+    "id": "hud.startStopRecording",
+    "keys": "Alt+Shift+R",
+    "group": "recording",
+    "label": "ShortcutPreferences.startStopRecording",
+    "contexts": ["global"],
+    "kind": "keyboard",
+    "scope": "global"
+  },
+  {
+    "id": "hud.playPause",
+    "keys": "Alt+Shift+P",
+    "group": "recording",
+    "label": "ShortcutPreferences.pauseResume",
+    "contexts": ["global"],
+    "kind": "keyboard",
+    "scope": "global"
+  },
+  {
+    "id": "hud.toggleMic",
+    "keys": "Alt+Shift+M",
+    "group": "recording",
+    "label": "ShortcutPreferences.micOnOff",
+    "contexts": ["global"],
+    "kind": "keyboard",
+    "scope": "global"
+  },
+  {
+    "id": "hud.toggleCamera",
+    "keys": "Alt+Shift+C",
+    "group": "recording",
+    "label": "ShortcutPreferences.cameraOnOff",
+    "contexts": ["global"],
+    "kind": "keyboard",
+    "scope": "global"
+  },
+  {
+    "id": "hud.toggleSystemAudio",
+    "keys": "Alt+Shift+A",
+    "group": "recording",
+    "label": "ShortcutPreferences.systemAudioOnOff",
+    "contexts": ["global"],
+    "kind": "keyboard",
+    "scope": "global"
+  },
+  {
+    "id": "teleprompter.toggleVisibility",
+    "keys": "Alt+Shift+T",
+    "group": "teleprompter",
+    "label": "ShortcutPreferences.teleprompterVisibility",
+    "contexts": ["global"],
+    "kind": "keyboard",
+    "scope": "global"
+  },
+  {
+    "id": "teleprompter.toggleAutoscroll",
+    "keys": "Alt+Shift+O",
+    "group": "teleprompter",
+    "label": "ShortcutPreferences.teleprompterAutoscroll",
+    "contexts": ["global"],
+    "kind": "keyboard",
+    "scope": "global"
+  },
+  {
+    "id": "teleprompter.nextLine",
+    "keys": "Ctrl+Shift+Right",
+    "group": "teleprompter",
+    "label": "ShortcutPreferences.teleprompterNextLine",
+    "contexts": ["global"],
+    "kind": "keyboard",
+    "scope": "global"
+  },
+  {
+    "id": "teleprompter.previousLine",
+    "keys": "Ctrl+Shift+Left",
+    "group": "teleprompter",
+    "label": "ShortcutPreferences.teleprompterPreviousLine",
+    "contexts": ["global"],
+    "kind": "keyboard",
+    "scope": "global"
+  },
+  {
+    "id": "app.settings",
+    "keys": "CommandOrControl+,",
+    "group": "editing",
+    "label": "SidebarPanel.settings",
+    "contexts": ["video", "screenshot", "hud", "quick-snip"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "editor.search",
+    "keys": "CommandOrControl+F",
+    "group": "editing",
+    "label": "EditorSearch.title",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "editor.undo",
+    "keys": "CommandOrControl+Z",
+    "group": "editing",
+    "label": "UndoRedoToast.undo",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "editor.redo",
+    "keys": "CommandOrControl+Shift+Z",
+    "group": "editing",
+    "label": "UndoRedoToast.redo",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application",
+    "aliases": ["CommandOrControl+Y"]
+  },
+  {
+    "id": "editor.selectAll",
+    "keys": "CommandOrControl+A",
+    "group": "editing",
+    "label": "ActionShortcuts.selectAll",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "editor.deselect",
+    "keys": "Escape",
+    "group": "editing",
+    "label": "ActionShortcuts.deselect",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "editor.copy",
+    "keys": "CommandOrControl+C",
+    "group": "editing",
+    "label": "ActionShortcuts.copy",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "editor.cut",
+    "keys": "CommandOrControl+X",
+    "group": "editing",
+    "label": "ActionShortcuts.cut",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "editor.paste",
+    "keys": "CommandOrControl+V",
+    "group": "editing",
+    "label": "ActionShortcuts.paste",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "editor.duplicate",
+    "keys": "CommandOrControl+D",
+    "group": "editing",
+    "label": "ActionShortcuts.duplicate",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "editor.delete",
+    "keys": "Delete",
+    "group": "editing",
+    "label": "TimelineTracks.delete",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application",
+    "aliases": ["Backspace"]
+  },
+  {
+    "id": "action:export",
+    "keys": "CommandOrControl+Shift+E",
+    "group": "editing",
+    "label": "ScreenshotEditor.export",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "action:fullscreen",
+    "keys": "F",
+    "group": "editing",
+    "label": "TimelineToolbar.fullscreenPreview",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "action:recenter",
+    "keys": "CommandOrControl+0",
+    "group": "editing",
+    "label": "EditorCanvas.recenter",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "editor.playPause",
+    "keys": "Space",
+    "group": "timeline",
+    "label": "ActionShortcuts.playPause",
+    "contexts": ["video"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "editor.split",
+    "keys": "S",
+    "group": "timeline",
+    "label": "ActionShortcuts.split",
+    "contexts": ["video"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "editor.previousFrame",
+    "keys": "Left",
+    "group": "timeline",
+    "label": "ActionShortcuts.previousFrame",
+    "contexts": ["video"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "editor.nextFrame",
+    "keys": "Right",
+    "group": "timeline",
+    "label": "ActionShortcuts.nextFrame",
+    "contexts": ["video"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "editor.start",
+    "keys": "Home",
+    "group": "timeline",
+    "label": "ActionShortcuts.start",
+    "contexts": ["video"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "editor.end",
+    "keys": "End",
+    "group": "timeline",
+    "label": "ActionShortcuts.end",
+    "contexts": ["video"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "editor.group",
+    "keys": "CommandOrControl+G",
+    "group": "editing",
+    "label": "ActionShortcuts.group",
+    "contexts": ["screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "editor.ungroup",
+    "keys": "CommandOrControl+Shift+G",
+    "group": "editing",
+    "label": "ActionShortcuts.ungroup",
+    "contexts": ["screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "insert:text",
+    "keys": "T",
+    "group": "tools",
+    "label": "Elements.text",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "insert:shape",
+    "keys": "U",
+    "group": "tools",
+    "label": "Elements.shape",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "insert:arrow",
+    "keys": "",
+    "group": "tools",
+    "label": "Elements.arrow",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "insert:drawing",
+    "keys": "B",
+    "group": "tools",
+    "label": "Elements.drawing",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "insert:image",
+    "keys": "",
+    "group": "tools",
+    "label": "Elements.image",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "insert:highlight",
+    "keys": "",
+    "group": "tools",
+    "label": "Highlight.title",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "insert:blur",
+    "keys": "",
+    "group": "tools",
+    "label": "TimelineToolbar.blur",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "insert:zoom",
+    "keys": "Z",
+    "group": "tools",
+    "label": "SidebarPanel.zoom",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "insert:color",
+    "keys": "",
+    "group": "tools",
+    "label": "CanvasPanel.color",
+    "contexts": ["video"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "insert:video",
+    "keys": "",
+    "group": "tools",
+    "label": "TimelineToolbar.video",
+    "contexts": ["video"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "insert:sound",
+    "keys": "",
+    "group": "tools",
+    "label": "TimelineToolbar.sound",
+    "contexts": ["video"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "insert:voiceover",
+    "keys": "",
+    "group": "tools",
+    "label": "TimelineToolbar.voiceover",
+    "contexts": ["video"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "insert:cursor",
+    "keys": "",
+    "group": "tools",
+    "label": "Elements.cursor",
+    "contexts": ["screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "action:crop",
+    "keys": "C",
+    "group": "tools",
+    "label": "ScreenshotEditor.crop",
+    "contexts": ["screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "action:copy",
+    "keys": "CommandOrControl+Shift+C",
+    "group": "tools",
+    "label": "ScreenshotEditor.copy",
+    "contexts": ["screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "setting:dimensions",
+    "keys": "",
+    "group": "view",
+    "label": "ScreenshotEditor.dimensions",
+    "contexts": ["screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "setting:background-visibility",
+    "keys": "",
+    "group": "view",
+    "label": "CanvasPanel.removeBackground",
+    "contexts": ["screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "navigate:canvas",
+    "keys": "",
+    "group": "view",
+    "label": "SidebarPanel.canvas",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "navigate:clip",
+    "keys": "",
+    "group": "view",
+    "label": "SidebarPanel.clip",
+    "contexts": ["video", "screenshot"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "navigate:zoom",
+    "keys": "",
+    "group": "view",
+    "label": "SidebarPanel.zoom",
+    "contexts": ["video"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "navigate:cursor",
+    "keys": "",
+    "group": "view",
+    "label": "SidebarPanel.cursor",
+    "contexts": ["video"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "navigate:caption",
+    "keys": "",
+    "group": "view",
+    "label": "SidebarPanel.captions",
+    "contexts": ["video"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "navigate:audio",
+    "keys": "",
+    "group": "view",
+    "label": "SidebarPanel.audio",
+    "contexts": ["video"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "gesture.constrain",
+    "keys": "Shift",
+    "group": "gestures",
+    "label": "ActionShortcuts.constrain",
+    "contexts": ["video", "screenshot"],
+    "kind": "modifier",
+    "scope": "application"
+  },
+  {
+    "id": "gesture.duplicate",
+    "keys": "Alt",
+    "group": "gestures",
+    "label": "ActionShortcuts.duplicateDrag",
+    "contexts": ["video", "screenshot"],
+    "kind": "modifier",
+    "scope": "application"
+  },
+  {
+    "id": "gesture.freeAspect",
+    "keys": "Shift",
+    "group": "gestures",
+    "label": "ActionShortcuts.freeAspect",
+    "contexts": ["video", "screenshot"],
+    "kind": "modifier",
+    "scope": "application"
+  },
+  {
+    "id": "gesture.ignoreSnapping",
+    "keys": "Alt",
+    "group": "gestures",
+    "label": "ActionShortcuts.ignoreSnapping",
+    "contexts": ["video", "screenshot"],
+    "kind": "modifier",
+    "scope": "application"
+  },
+  {
+    "id": "gesture.addSelection",
+    "keys": "CommandOrControl",
+    "group": "gestures",
+    "label": "ActionShortcuts.addSelection",
+    "contexts": ["video", "screenshot"],
+    "kind": "modifier",
+    "scope": "application"
+  },
+  {
+    "id": "gesture.rangeSelection",
+    "keys": "Shift",
+    "group": "gestures",
+    "label": "ActionShortcuts.rangeSelection",
+    "contexts": ["video", "screenshot"],
+    "kind": "modifier",
+    "scope": "application"
+  },
+  {
+    "id": "capture.studio",
+    "keys": "",
+    "group": "recording",
+    "label": "HUD.recorder",
+    "contexts": ["hud", "quick-snip"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "capture.screenshot",
+    "keys": "",
+    "group": "recording",
+    "label": "QuickSnipCropBar.screenshot",
+    "contexts": ["hud", "quick-snip"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "capture.instant",
+    "keys": "",
+    "group": "recording",
+    "label": "QuickSnipCropBar.instant",
+    "contexts": ["hud"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "capture.screen",
+    "keys": "",
+    "group": "recording",
+    "label": "HUD.fullScreen",
+    "contexts": ["hud", "quick-snip"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "capture.region",
+    "keys": "",
+    "group": "recording",
+    "label": "HUD.region",
+    "contexts": ["hud", "quick-snip"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "capture.window",
+    "keys": "",
+    "group": "recording",
+    "label": "HUD.window",
+    "contexts": ["hud", "quick-snip"],
+    "kind": "keyboard",
+    "scope": "application"
+  },
+  {
+    "id": "capture.confirm",
+    "keys": "Enter",
+    "group": "recording",
+    "label": "ScreenRegionOverlay.record",
+    "contexts": ["hud", "quick-snip"],
+    "kind": "keyboard",
+    "scope": "application"
+  }
+]

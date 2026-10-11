@@ -149,6 +149,12 @@ const handleOpenProject = (nextProject: CaptureProject) => {
   });
 };
 
+const handleProjectRenamed = (renamed: CaptureProject) => {
+  if (!project.value || project.value.id !== renamed.id) return;
+  project.value.name = renamed.name;
+  document.title = editorTitle(renamed.name);
+};
+
 const notifyEditorReady = (generation: number) => {
   if (generation !== loadGeneration || generation !== editorGeneration.value || !project.value) return;
   // The child is mounted and has its loading shell. Notify the native window
@@ -215,6 +221,7 @@ onBeforeUnmount(() => {
     :project="project"
     @back-to-hud="handleBackToHud"
     @open-project="handleOpenProject"
+    @rename-project="handleProjectRenamed"
     @ready="notifyEditorReady(editorGeneration)"
   />
   <EditorProjectLoadingOverlay

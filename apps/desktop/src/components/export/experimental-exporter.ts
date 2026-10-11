@@ -1,11 +1,12 @@
+import type { DesktopExportRequest } from './experimental-export-types';
 import { bitrateFor } from '@beam/encoder/export-presets';
-import type { ExportProgress, ExportRequest, ExportResult } from '@beam/encoder/export-types';
+import type { ExportProgress, ExportResult } from '@beam/encoder/export-types';
 import type { ExportDiagnostics } from '@beam/encoder/export-diagnostics-types';
 import { readGpuUsage } from '@beam/system-metrics/gpu-validation';
 import { collectExportEnvironment } from './export-environment';
 
 export async function exportWithLinuxFfmpeg(
-  request: ExportRequest,
+  request: DesktopExportRequest,
   onProgress: (progress: ExportProgress) => void,
   signal: AbortSignal,
   onStarted?: (diagnostics: ExportDiagnostics) => void,
@@ -16,7 +17,11 @@ export async function exportWithLinuxFfmpeg(
   if (signal.aborted) throw aborted();
   const startedAt = new Date().toISOString();
   const dialogStarted = performance.now();
-  const opened = await api.beginExport({ projectName: request.projectName, format: request.format });
+  const opened = await api.beginExport({
+    projectName: request.projectName,
+    format: request.format,
+    ...(request.fileName ? { fileName: request.fileName } : {}),
+  });
   if (opened.canceled) throw aborted();
   const destinationDialogMs = performance.now() - dialogStarted;
   let unsubscribe: (() => void) | undefined;
@@ -51,6 +56,7 @@ export async function exportWithLinuxFfmpeg(
     if (signal.aborted) throw aborted();
     const nativeFinalizationStarted = performance.now();
     const final = await api.finalizeExport(opened.jobId);
+    if ('canceled' in final) throw aborted();
     diagnostics.gpuUsage = readGpuUsage(final.gpuUsage);
     diagnostics.completedAt = new Date().toISOString();
     const nativeFinalizationMs = performance.now() - nativeFinalizationStarted;

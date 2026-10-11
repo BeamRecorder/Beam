@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import { pointerSelectionIsAdditive } from '~/shortcuts/pointer-modifiers';
+import { matchesGesture } from '~/shortcuts/action-bindings';
+import {
+  screenshotDragDelta,
+  constrainedScreenshotTranslation,
+  resizedScreenshotTransform,
+} from './screenshot-drag-geometry';
 import ScreenshotGroupSelection from './ScreenshotGroupSelection.vue';
 import { useScreenshotCanvasGeometry } from './useScreenshotCanvasGeometry';
 import { createScreenshotAlignment } from './screenshot-alignment';
@@ -25,7 +32,7 @@ import type { NormalizedTransform } from '@beam/engine/shared/composition-types'
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
 import ScreenshotCropSelection from './ScreenshotCropSelection.vue';
 import { rotateMediaVector } from '@beam/engine/layout/media-rotation';
-import { screenshotImageFraming, resizeScreenshotImage } from '@beam/engine/screenshot/screenshot-geometry';
+import { screenshotImageFraming } from '@beam/engine/screenshot/screenshot-geometry';
 import CanvasLayerSelection from '../editor/canvas/CanvasLayerSelection.vue';
 import { useScreenshotCanvasAssets } from './useScreenshotCanvasAssets';
 import { injectScreenshotStartup } from './loading/screenshot-startup-context';
@@ -33,7 +40,6 @@ import { releaseCompositedLayerSurface } from '@beam/runtime/composition/render-
 import { drawScreenshot } from '@beam/runtime/screenshot/screenshot-render';
 import CanvasRecenterButton from '../editor/canvas/CanvasRecenterButton.vue';
 import EditorLoadingFrame from '../editor/layout/EditorLoadingFrame.vue';
-import { moveScreenshotLayer } from './screenshot-state';
 import type { ScreenshotDrag, ScreenshotTranslation } from './screenshot-types';
 import { movableScreenshotSelection, withScreenshotTranslation } from './screenshot-selection-transform';
 import { screenshotLayerTransform, screenshotLayerRotation } from './screenshot-layer-geometry';
@@ -245,7 +251,7 @@ const start = (event: PointerEvent, corner?: ResizeCorner, selectionId?: string)
   if (props.cropping || props.disabled || event.button !== 0) return;
   const selectedOutlineId = props.selectedIds.length > 1 ? selectionId : undefined;
   const hitId = corner ? null : layerAt(event);
-  if (event.ctrlKey || event.metaKey || event.shiftKey) {
+  if (pointerSelectionIsAdditive(event, props.selectedIds.includes(hitId ?? ''))) {
     event.stopPropagation();
     selectHit(hitId ?? selectedOutlineId ?? null, true);
     return;
@@ -279,6 +285,7 @@ const start = (event: PointerEvent, corner?: ResizeCorner, selectionId?: string)
     corner,
     targetId: targetId ?? undefined,
     clickId: hitId ?? undefined,
+    duplicate: !corner && matchesGesture(event, 'duplicate'),
     selection:
       !corner || groupCorner
         ? movableScreenshotSelection(props.state, props.selectedIds).map((layer) => layer.id)
@@ -305,7 +312,7 @@ const start = (event: PointerEvent, corner?: ResizeCorner, selectionId?: string)
 };
 const move = (event: PointerEvent) => {
   if (!drag || !canvas.value) return;
-  const delta = { x: (event.clientX - drag.x) / drag.width, y: (event.clientY - drag.y) / drag.height };
+  const delta = screenshotDragDelta(drag, event);
   const rotation =
     drag.corner && !drag.selection && drag.targetId ? screenshotLayerRotation(props.state, drag.targetId) : 0;
   const local = rotateMediaVector(
@@ -316,31 +323,31 @@ const move = (event: PointerEvent) => {
     dy = local.y / props.state.canvas.height;
   if (drag.selection && !drag.corner) {
     if (!translationDraft.value && !pendingTranslation && Math.hypot(dx * drag.width, dy * drag.height) < 4) return;
-    const snapped = alignment!({ x: dx, y: dy }, event.altKey);
-    pendingTranslation = snapped.translation;
+    const snapped = alignment!({ x: dx, y: dy }, matchesGesture(event, 'ignoreSnapping'));
+    pendingTranslation = constrainedScreenshotTranslation(delta, snapped.translation, event);
     activeGuideLines.value = snapped.guides;
     activeMeasurements.value = snapped.measurements;
     frames.requestRender();
     return;
   }
   if (drag.selection && drag.corner) {
-    pendingTransform = resizeScreenshotImage(drag.initial, drag.initial, dx, dy, drag.corner);
+    pendingTransform = resizedScreenshotTransform(drag, dx, dy, event, drag.initial);
     frames.requestRender();
     return;
   }
   const effect = props.state.effects?.find((item) => item.id === props.selectedId);
   const proportionalFrame = drag.imageFrame ?? (effect && effect.shape !== 'rectangle' ? drag.initial : undefined);
-  pendingTransform =
-    proportionalFrame && drag.corner
-      ? resizeScreenshotImage(drag.initial, proportionalFrame, dx, dy, drag.corner)
-      : moveScreenshotLayer(drag.initial, dx, dy, drag.corner);
+  pendingTransform = resizedScreenshotTransform(drag, dx, dy, event, proportionalFrame);
   if (rotation && pendingTransform && drag.targetId)
     pendingTransform = anchorScreenshotResize(props.state, drag.targetId, pendingTransform, assets.value);
   frames.requestRender();
 };
 const endDrag = () => {
   flushTransform();
-  if (translationDraft.value) emit('translate', translationDraft.value);
+  if (translationDraft.value) {
+    if (drag?.duplicate) emit('duplicate', translationDraft.value);
+    else emit('translate', translationDraft.value);
+  }
   if (transformDraft.value) {
     if (drag?.selection && drag.corner) emit('resizeSelection', drag.initial, transformDraft.value);
     else emit('transform', transformDraft.value);

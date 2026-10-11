@@ -798,6 +798,13 @@ for (const scenario of [
         constructor(options) {
           const calls = [];
           const target = createRegionOverlayWindowMock(calls);
+          target.setShape = (rects) => calls.push(['shape', rects]);
+          target.getBounds = () => ({
+            x: options.x,
+            y: options.y,
+            width: Math.max(32, options.width),
+            height: Math.max(40, options.height),
+          });
           windows.push({ target, options, calls });
           return target;
         }
@@ -830,9 +837,13 @@ for (const scenario of [
             options.y >= bounds.y + (scenario.region.y + scenario.region.height) * bounds.height,
         );
         assert.equal(
-          calls.some(([name]) => name === 'showInactive' || name === 'contentProtection'),
+          calls.some(([name]) => name === 'showInactive'),
           false,
         );
+        assert.ok(calls.some(([name, enabled]) => name === 'contentProtection' && enabled));
+        assert.deepEqual(calls.find(([name]) => name === 'shape')[1], [
+          { x: 0, y: 0, width: options.width, height: options.height },
+        ]);
         overlay.markMarkerReady(target.webContents);
         assert.equal(
           calls.some(([name]) => name === 'showInactive'),

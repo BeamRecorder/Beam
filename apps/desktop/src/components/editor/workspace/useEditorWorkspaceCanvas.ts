@@ -1,3 +1,4 @@
+import { duplicateCanvasClips } from '../canvas/duplicate-canvas-clips';
 import { ref, shallowRef, watch } from 'vue';
 import { useCanvasScreenshot } from '~/components/editor/composables/useCanvasScreenshot';
 import { useTimelineZoom } from '~/components/editor/timeline/composables/useTimelineZoom';
@@ -46,6 +47,14 @@ export function useEditorWorkspaceCanvas(
     commitNow(createEditorSnapshot());
   };
 
+  const duplicateSelectedTransforms = (transforms: Parameters<typeof updateSelectedTransforms>[0]) => {
+    commitNow(createEditorSnapshot());
+    const result = duplicateCanvasClips(composition.value, transforms);
+    composition.value = result.composition;
+    state.selectClips(result.ids);
+    editorState.scheduleSave();
+    commitNow(createEditorSnapshot());
+  };
   const commitSelectedCrop = (crop: NormalizedCrop) => {
     commitNow(createEditorSnapshot());
     updateSelectedCrop(crop);
@@ -120,6 +129,7 @@ export function useEditorWorkspaceCanvas(
     };
   };
   return {
+    duplicateSelectedTransforms,
     commitSelectedTransform,
     commitSelectedTransforms,
     commitSelectedCrop,

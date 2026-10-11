@@ -86,7 +86,7 @@ vi.mock('../VideoEditor.vue', async () => {
         project: { type: Object, required: true },
         editorData: { type: Object, required: true },
       },
-      emits: ['ready', 'back-to-hud', 'open-project'],
+      emits: ['ready', 'back-to-hud', 'open-project', 'rename-project'],
       setup(props: { project: { id: string }; editorData: object }, { emit }) {
         capture.reportEditorLoadingStage('renderingEditor');
         onMounted(async () => {
@@ -163,7 +163,7 @@ describe('EditorWindowApp', () => {
     state.deferVideoReady = false;
     state.resolveVideoReady = null;
     capture.getEditorContext.mockResolvedValue({ projectId: project.id });
-    capture.getProject.mockResolvedValue(project);
+    capture.getProject.mockResolvedValue({ ...project });
     capture.listProjects.mockResolvedValue([project]);
     capture.getProjectEditorData.mockResolvedValue({
       composition: {},
@@ -331,6 +331,44 @@ describe('EditorWindowApp', () => {
     expect(received.cursor.events.at(-1)).toBe(cursorEvents.at(-1));
     expect(isReactive(received.cursor.events[0])).toBe(false);
     expect(toRaw(received.cursor.events[0])).toBe(cursorEvents[0]);
+  });
+
+  it('updates the current project name and window title without resetting the editor', async () => {
+    const wrapper = mountEditor();
+    await flushPromises();
+    const editor = wrapper.findComponent({ name: 'MockVideoEditor' });
+    const instance = editor.vm;
+    const editorData = editor.props('editorData');
+    editor.vm.$emit('rename-project', { ...project, name: 'Renamed walkthrough' });
+    await flushPromises();
+    expect(editor.props('project')).toEqual({ ...project, name: 'Renamed walkthrough' });
+    expect(document.title).toBe('Renamed walkthrough - Beam Editor');
+    expect(wrapper.findComponent({ name: 'MockVideoEditor' }).vm).toBe(instance);
+    expect(editor.props('editorData')).toBe(editorData);
+    expect(capture.getProject).toHaveBeenCalledOnce();
+    expect(capture.getProjectEditorData).toHaveBeenCalledOnce();
+  });
+
+  it('ignores a rename belonging to another project in the picker', async () => {
+    const wrapper = mountEditor();
+    await flushPromises();
+    const editor = wrapper.findComponent({ name: 'MockVideoEditor' });
+    editor.vm.$emit('rename-project', { ...project, id: 'other-project', name: 'Other name' });
+    await flushPromises();
+    expect(editor.props('project')).toEqual(project);
+    expect(document.title).toBe('Project - Beam Editor');
+  });
+
+  it('keeps only the renamed identity and preserves the current project metadata', async () => {
+    const wrapper = mountEditor();
+    await flushPromises();
+    const editor = wrapper.findComponent({ name: 'MockVideoEditor' });
+    for (const name of ['First name', 'Final name — Démo']) {
+      editor.vm.$emit('rename-project', { ...project, name, previewSrc: null });
+      await flushPromises();
+      expect(editor.props('project')).toEqual({ ...project, name });
+      expect(document.title).toBe(`${name} - Beam Editor`);
+    }
   });
 
   it('notifies native readiness when the hidden window never receives an animation frame', async () => {

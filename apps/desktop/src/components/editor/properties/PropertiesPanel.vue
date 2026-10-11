@@ -10,7 +10,6 @@ import CursorPanel from '~/components/editor/properties/cursor/CursorPanel.vue';
 import CanvasPanel from '~/components/editor/properties/canvas/CanvasPanel.vue';
 import AudioPanel from '~/components/editor/properties/audio/AudioPanel.vue';
 import ZoomPanel from '~/components/editor/properties/zoom/ZoomPanel.vue';
-import SettingsPanel from '~/components/editor/properties/settings/SettingsPanel.vue';
 import ClipPropertiesPanel from '~/components/editor/properties/clip/ClipPropertiesPanel.vue';
 import AudioClipPropertiesPanel from '~/components/editor/properties/clip/AudioClipPropertiesPanel.vue';
 import BlurPropertiesPanel from '~/components/editor/properties/clip/BlurPropertiesPanel.vue';
@@ -436,6 +435,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
                 :selected-zoom="selectedZoom"
                 :canvas-size="canvas"
                 :can-generate="canGenerateZooms"
+                :editor-data="editorData"
                 :has-automatic-zooms="hasAutomaticZooms"
                 :motion-blur="zoomMotionBlur"
                 :auto-follow="zoomAutoFollow"
@@ -445,7 +445,6 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
                 @delete="emit('delete:zoom')"
                 @generate="emit('generate:zooms', $event)"
               />
-              <SettingsPanel v-else-if="activeTab === 'settings'" />
               <CaptionPanel
                 v-show="activeTab === 'caption'"
                 :composition="composition"

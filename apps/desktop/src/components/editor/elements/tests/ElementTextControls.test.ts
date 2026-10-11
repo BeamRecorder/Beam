@@ -132,6 +132,43 @@ afterEach(() => {
 });
 
 describe('ElementTextControls', () => {
+  it('uses the remembered style when typing into an empty shape from its properties', async () => {
+    const layer = ref(clipWithText());
+    delete layer.value.text;
+    const savedText = createElementText();
+    savedText.style = { ...savedText.style, color: '#000000', fontSize: 64, fontFamily: 'Inter' };
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          const editor = provideElementEditor({
+            layers: () => [layer.value],
+            selectedId: () => layer.value.id,
+            select: () => {},
+            insert: () => {},
+            remove: () => {},
+            timing: () => ({ startMs: 0, durationMs: 1000 }),
+            textDefaults: () => savedText,
+            update: (_id, patch) => {
+              layer.value = { ...layer.value, ...patch };
+            },
+          });
+          return () => h(ElementTextControls, { clip: layer.value, onUpdate: (text) => editor.update({ text }) });
+        },
+      }),
+      { global: { stubs: uiStubs } },
+    );
+    await flushPromises();
+    const accordion = wrapper.findComponent({ name: 'Accordion' });
+    accordion.vm.$emit('update:modelValue', true);
+    await nextTick();
+    await wrapper.get('textarea').setValue('New words');
+    expect(layer.value.text).toMatchObject({
+      content: 'New words',
+      style: { color: '#000000', fontSize: 64, fontFamily: 'Inter' },
+    });
+    wrapper.unmount();
+  });
+
   it('shows and styles the active inline draft, committing it only when editing finishes', async () => {
     const layer = ref(clipWithText());
     let editor!: ReturnType<typeof provideElementEditor>;

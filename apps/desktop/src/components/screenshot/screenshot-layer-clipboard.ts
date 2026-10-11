@@ -104,6 +104,7 @@ export function pasteScreenshotLayerSelection(
   state: ScreenshotState,
   clipboard: ScreenshotLayerClipboard,
   idFactory: () => string = () => crypto.randomUUID(),
+  offset = true,
 ): ScreenshotPasteResult {
   if (!clipboard.entries.length) throw new Error('The screenshot clipboard is empty.');
   const existingIds = new Set(screenshotLayers(state).map((layer) => layer.id));
@@ -134,28 +135,28 @@ export function pasteScreenshotLayerSelection(
     if (entry.layer.type === 'cursor') {
       const value = { ...clone(entry.layer.value), id };
       value.position = {
-        x: Math.min(0.99, value.position.x + 24 / Math.max(1, next.canvas.width)),
-        y: Math.min(0.99, value.position.y + 24 / Math.max(1, next.canvas.height)),
+        x: Math.min(0.99, value.position.x + (offset ? 24 : 0) / Math.max(1, next.canvas.width)),
+        y: Math.min(0.99, value.position.y + (offset ? 24 : 0) / Math.max(1, next.canvas.height)),
       };
       next.cursors!.push(value);
     } else if (entry.layer.type === 'zoom') {
       const value = { ...clone(entry.layer.value), id };
       value.focus = {
-        cx: Math.min(1, value.focus.cx + 24 / next.canvas.width),
-        cy: Math.min(1, value.focus.cy + 24 / next.canvas.height),
+        cx: Math.min(1, value.focus.cx + (offset ? 24 : 0) / next.canvas.width),
+        cy: Math.min(1, value.focus.cy + (offset ? 24 : 0) / next.canvas.height),
       };
       (next.zooms ??= []).push(value);
     } else if (entry.layer.type === 'shape') {
       const value = { ...clone(entry.layer.value), id, trackId: id };
-      value.transform = offsetTransform(value.transform, next.canvas);
+      if (offset) value.transform = offsetTransform(value.transform, next.canvas);
       next.shapes.push(value);
     } else if (entry.layer.type === 'effect') {
       const value = { ...clone(entry.layer.value), id, trackId: id };
-      value.transform = offsetTransform(value.transform, next.canvas);
+      if (offset) value.transform = offsetTransform(value.transform, next.canvas);
       (next.effects ??= []).push(value);
     } else {
       const value = { ...clone(entry.layer.value), id };
-      value.transform = offsetTransform(value.transform, next.canvas);
+      if (offset) value.transform = offsetTransform(value.transform, next.canvas);
       if (value.trackId) value.trackId = id;
       (next.images ??= []).push(value);
     }

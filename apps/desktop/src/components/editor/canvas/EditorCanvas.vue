@@ -131,6 +131,7 @@ const transformAndCrop = useLayerTransformAndCrop({
   zoomScale: () => viewportZoom.zoomScale.value,
   onUpdateTransform: (transform) => emit('update:clip-transform', transform),
   onUpdateTransforms: (transforms) => emit('update:clip-transforms', transforms),
+  onDuplicateTransforms: (transforms) => emit('duplicate:clips', transforms),
   onPreviewCrop: (crop) => emit('preview:clip-crop', crop),
   onUpdateCrop: (crop) => emit('update:clip-crop', crop),
   onSelectTransformClip: selectCanvasClip,

@@ -3,6 +3,7 @@ import EditorTitlebar from '../editor/EditorTitlebar.vue';
 import UndoRedoToast from '../editor/canvas/UndoRedoToast.vue';
 import PropertiesDeleteAction from '../editor/properties/PropertiesDeleteAction.vue';
 import { computed, ref, watch } from 'vue';
+import { capture } from '~/api/capture';
 import type { NormalizedTransform } from '@beam/engine/shared/composition-types';
 import { ArrowLeft, Copy, Settings2 } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -13,7 +14,7 @@ import VideoProjectEdition from '../editor/VideoProjectEdition.vue';
 import EditorAmbientBackground from '../editor/EditorAmbientBackground.vue';
 import ScreenshotCanvas from './ScreenshotCanvas.vue';
 import ScreenshotPropertiesPanel from './ScreenshotPropertiesPanel.vue';
-import ScreenshotExportPopover from './ScreenshotExportPopover.vue';
+import ScreenshotExportDialog from './ScreenshotExportDialog.vue';
 import ScreenshotViewControls from './ScreenshotViewControls.vue';
 import ScreenshotToolbar from './ScreenshotToolbar.vue';
 import EditorSearchButton from '../editor/search/EditorSearchButton.vue';
@@ -34,6 +35,7 @@ import {
 import { useClipboardImagePaste } from '../editor/composables/useClipboardImagePaste';
 import { useElementFullscreen } from '../editor/canvas/composables/useElementFullscreen';
 
+const exportDialog = ref<InstanceType<typeof ScreenshotExportDialog>>();
 const props = defineProps<{ id: string }>();
 const emit = defineEmits<{ ready: [] }>();
 const handlesMuted = ref(false);
@@ -93,6 +95,7 @@ const {
   rotate,
   startCrop,
   translate,
+  duplicateSelection,
   removeLayer,
   exportImage,
   back,
@@ -126,6 +129,10 @@ watch([panel, selectedId], () => {
   inspectorOpen.value = true;
 });
 const choosePanel = (target: 'canvas' | 'settings') => {
+  if (target === 'settings') {
+    void capture.openHudSettings().catch(fail);
+    return;
+  }
   inspectorOpen.value = panel.value !== target || !inspectorOpen.value;
   selectPanel(target);
 };
@@ -154,6 +161,10 @@ const renameLayer = (id: string, name: string) => {
   if (state.value && !busy.value && !cropping.value) renameScreenshotLayer(state.value, id, name);
 };
 const navigateSearch = (tab: string) => {
+  if (tab === 'settings') {
+    void capture.openHudSettings().catch(fail);
+    return;
+  }
   if (tab === 'clip' && !selectedId.value && state.value) select(state.value.image.id);
   else selectPanel(tab);
   inspectorOpen.value = true;
@@ -168,13 +179,12 @@ const navigateSearch = (tab: string) => {
       :can-crop="Boolean(image && !selectedLayer?.locked)"
       :can-fullscreen="!elements.editing.value && !elements.drawingMode.value"
       @copy="exportImage(true)"
-      @export="exportImage(false)"
+      @export="exportDialog?.open()"
       @crop="image && startCrop(image.id)"
       @recenter="canvasPreview?.resetView()"
       @fullscreen="toggleFullscreen()"
       @dimensions="viewControls?.openDimensions()"
     />
-    <EditorAmbientBackground :background="state?.canvas.showBackground ? state.background : null" />
     <EditorTitlebar class="screenshot-topbar screenshot-chrome">
       <template #left>
         <Button
@@ -206,7 +216,7 @@ const navigateSearch = (tab: string) => {
           :disabled="busy || cropping"
           :aria-label="sidebarText('settings')"
           :tooltip="sidebarText('settings')"
-          :aria-pressed="panel === 'settings' && inspectorOpen"
+          aria-haspopup="dialog"
           @click="choosePanel('settings')"
         />
       </template>
@@ -245,14 +255,17 @@ const navigateSearch = (tab: string) => {
         >
           <span class="copy-label">{{ t(copied ? 'copied' : 'copy') }}</span>
         </Button>
-        <ScreenshotExportPopover
+        <ScreenshotExportDialog
+          ref="exportDialog"
+          :project-name="document.name"
+          :error="error"
+          :save="(name, options) => exportImage(false, name, options)"
           v-if="state && document"
           :state="state"
           :original="document"
           :busy="busy"
           v-model:advanced="advanced"
           v-model:keep-aspect="keepAspect"
-          @export="exportImage(false)"
         />
       </template>
     </EditorTitlebar>
@@ -265,6 +278,10 @@ const navigateSearch = (tab: string) => {
       :show-topbar-skeleton="false"
     />
     <EditorWorkspace v-if="state && document" kind="screenshot" class="editor-body">
+      <EditorAmbientBackground
+        variant="workspace"
+        :background="state.canvas.showBackground ? state.background : null"
+      />
       <ScreenshotPropertiesPanel :open="inspectorOpen" :title="panelTitle" @close="hideInspector">
         <template
           v-if="selectedLayer && selectedIds.length < 2 && panel !== 'settings' && panel !== 'layer-effect'"
@@ -344,6 +361,7 @@ const navigateSearch = (tab: string) => {
           @rotate="rotate"
           @update-zoom="zooms.update"
           @translate="translate"
+          @duplicate="duplicateSelection"
           @resize-selection="resizeSelection"
           @selection-bounds="selectionBounds = $event"
           @crop="image && (image.crop = $event)"

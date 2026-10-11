@@ -509,12 +509,12 @@
     "format": "格式",
     "webm": "WebM",
     "mp4": "MP4",
-    "qualityAndBitrate": "质量和比特率",
+    "qualityAndBitrate": "画质",
     "low": "低",
-    "medium": "中",
+    "medium": "标准",
     "high": "高",
-    "webmDesc": "导出速度快、体积小，并支持透明度。",
-    "mp4Desc": "兼容性广，适合在不同平台分享。",
+    "webmDesc": "适合网页使用，文件更小并支持透明度。",
+    "mp4Desc": "用于跨设备分享和播放时兼容性最佳的选择。",
     "lowDesc": "~{mbps} Mbps · 体积和清晰度较低。",
     "mediumDesc": "~{mbps} Mbps · 均衡质量（推荐）。",
     "highDesc": "~{mbps} Mbps · 最高画质。",
@@ -532,7 +532,7 @@
     "frameRate24Desc": "电影感节奏，文件更小。最适合 24 fps 素材。",
     "frameRate30Desc": "兼顾流畅度与文件大小，适合标准视频。",
     "frameRate60Desc": "快速运动最流畅，但文件更大。最适合 60 fps 素材。",
-    "resMax": "最大",
+    "resMax": "原始",
     "res1080p": "1080p",
     "res720p": "720p",
     "copyError": "复制错误",
@@ -544,7 +544,17 @@
     "res720pDesc": "HD 缩放（{width}×{height}）",
     "moreOptions": "更多选项",
     "includeAudio": "包含音频",
-    "includeAudioDesc": "将已启用的音轨添加到导出的视频中。"
+    "includeAudioDesc": "将已启用的音轨添加到导出的视频中。",
+    "dialogTitle": "导出视频",
+    "fileName": "文件名",
+    "estimatedSize": "预估大小 ≈",
+    "sizeHint": "根据目标比特率估算。静态画面的文件可能小得多。",
+    "showInFolder": "在文件夹中显示",
+    "savingImage": "正在保存图像…",
+    "exportAgain": "再次导出",
+    "watchVideo": "观看",
+    "openFolder": "打开文件夹",
+    "viewImage": "查看图片"
   },
   "HUD": {
     "issues": "问题",
@@ -720,7 +730,13 @@
     "recordingDescription": "为下次录制配置控制栏和倒计时。",
     "accessibilityDescription": "管理交互访问权限和写作辅助。",
     "shortcutsDescription": "通过快捷键使用常用操作。",
-    "updatesDescription": "保持 Beam 更新并探索新功能。"
+    "updatesDescription": "保持 Beam 更新并探索新功能。",
+    "categoryAppearance": "外观",
+    "appearanceDescription": "设置 Beam 所有窗口的外观。",
+    "categoryVideoEditor": "视频编辑器",
+    "videoEditorDescription": "时间轴行为和视频导出偏好设置。",
+    "groupApplication": "应用",
+    "groupTools": "工具"
   },
   "ProjectPicker": {
     "projects": "项目",
@@ -1287,6 +1303,7 @@
     "browse": "选择文件夹",
     "search": "搜索文件夹",
     "noMatches": "没有匹配的文件夹",
+    "emptyFolders": "选择一个文件夹，即可在此查看最近使用的文件夹。",
     "error": "无法更新文件夹。",
     "retry": "重试"
   }

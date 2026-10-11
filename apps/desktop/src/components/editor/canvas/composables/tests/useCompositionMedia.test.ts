@@ -573,6 +573,48 @@ describe('useCompositionMedia', () => {
     expect(mounted.frameFor).toHaveBeenCalledWith('webcam');
   });
 
+  it.each([1, 1.25, 2.5])('keeps webcam appearance at the preview scale during a %sx zoom', (scale) => {
+    const mounted = mountComposable();
+    const bounds = { dx: 10, dy: 20, dw: 800, dh: 450, scale };
+    state.drawWebcamClips(context(), bounds);
+    const overlay = drawDecoratedMedia.mock.calls.at(-1)![1];
+    drawDecoratedMedia.mockClear();
+
+    state.drawVisualStack(context(), bounds, vi.fn());
+    const webcam = drawDecoratedMedia.mock.calls.find(
+      ([, options]) => options.source === mounted.frames.get('webcam')!.bitmap,
+    )![1];
+    expect(webcam.shadowScale).toBe(0.5);
+    expect(webcam).toEqual(overlay);
+  });
+
+  it.each(['stack', 'overlay'] as const)('keeps crop drafts and appearance scale together in the webcam %s', (path) => {
+    const mounted = mountComposable();
+    const camera = mounted.compositionRef.value.clips.find((clip) => clip.id === 'webcam') as VisualClip;
+    camera.cameraFramingPreset = 'circle';
+    mounted.selected.value = camera;
+    mounted.cropping.value = true;
+    const bounds = { dx: 0, dy: 0, dw: 800, dh: 450, scale: 0 };
+    if (path === 'stack') state.drawVisualStack(context(), bounds, vi.fn());
+    else state.drawWebcamClips(context(), bounds);
+    const drawn = drawDecoratedMedia.mock.calls.find(
+      ([, options]) => options.source === mounted.frames.get('webcam')!.bitmap,
+    )![1];
+    expect(drawn).toMatchObject({ shadowScale: 0.5, sourceRect: undefined, mask: undefined });
+  });
+
+  it('omits unavailable webcam frames in both render paths and leaves them out of caption rendering', () => {
+    const mounted = mountComposable();
+    mounted.frames.delete('webcam');
+    const bounds = { dx: 0, dy: 0, dw: 800, dh: 450, scale: 1 };
+    state.drawVisualStack(context(), bounds, vi.fn());
+    state.drawWebcamClips(context(), bounds);
+    drawDecoratedMedia.mockClear();
+    state.drawComposition(context(), bounds, 'webcam');
+    expect(drawDecoratedMedia).not.toHaveBeenCalled();
+    expect(mounted.frameFor).toHaveBeenCalledWith('webcam');
+  });
+
   it('uses supplied resolved layers without resolving the scene again', () => {
     const mounted = mountComposable();
     const video = mounted.compositionRef.value.clips.find((clip) => clip.id === 'video') as VisualClip;

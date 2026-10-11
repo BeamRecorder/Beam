@@ -30,7 +30,7 @@ it('clears selection on the background and outside the canvas while preserving a
   f.interaction.select(click({ clientX: -100 }) as PointerEvent);
   expect(f.options.select.mock.calls).toEqual([[null], [null]]);
   f.interaction.select(click({ ctrlKey: true }) as PointerEvent);
-  f.interaction.select(click({ metaKey: true }) as PointerEvent);
+  f.interaction.select(click({ ctrlKey: true }) as PointerEvent);
   f.interaction.select(click({ shiftKey: true }) as PointerEvent);
   expect(f.options.select.mock.calls.slice(2)).toEqual([
     ['image', 'toggle'],
@@ -125,7 +125,7 @@ it('ignores disabled, pan-consumed, non-left and modified double-click events', 
   const prevented = new MouseEvent('pointerdown', { cancelable: true });
   prevented.preventDefault();
   f.interaction.select(prevented as PointerEvent);
-  for (const init of [{ button: 2 }, { ctrlKey: true }, { metaKey: true }, { shiftKey: true }])
+  for (const init of [{ button: 2 }, { ctrlKey: true }, { ctrlKey: true }, { shiftKey: true }])
     f.interaction.editLayer(click(init));
   f.interaction.select(click({ button: 1 }) as PointerEvent);
   expect(f.options.select).not.toHaveBeenCalled();

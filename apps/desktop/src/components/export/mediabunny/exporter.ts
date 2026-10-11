@@ -39,6 +39,7 @@ export async function exportWithMediabunny(
   try {
     opened = await window.capture?.beginExport({
       projectName: request.projectName,
+      ...(request.fileName ? { fileName: request.fileName } : {}),
       format: request.format,
     });
   } catch (error) {
@@ -86,6 +87,7 @@ export async function exportWithMediabunny(
       writeChunk: (chunk) => window.capture!.writeExportChunk({ jobId: opened.jobId, ...chunk }),
       finalize: async () => {
         const result = await window.capture!.finalizeExport(opened.jobId);
+        if ('canceled' in result) throw abortError();
         return { ...result, gpuUsage: readGpuUsage(result.gpuUsage) };
       },
       abort: () => window.capture!.abortExport(opened.jobId),

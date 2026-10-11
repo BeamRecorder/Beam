@@ -103,22 +103,22 @@ describe('HudPreferences', () => {
   });
 
   it('renders the shared appearance controls', () => {
-    const wrapper = mountPreferences({ view: 'general', countdownSeconds: 0 });
+    const wrapper = mountPreferences({ view: 'appearance', countdownSeconds: 0 });
     expect(wrapper.find('.appearance-settings').exists()).toBe(true);
     expect(wrapper.find('.theme-mode-group').exists()).toBe(true);
   });
 
-  it('passes the HUD-specific scaling flag and does not render scaling controls', async () => {
-    const wrapper = mountPreferences({ view: 'general' });
+  it('shows shared scaling controls in Appearance', async () => {
+    const wrapper = mountPreferences({ view: 'appearance' });
     const appearance = wrapper.findComponent(AppearanceSettings);
 
     expect(appearance.exists()).toBe(true);
-    expect(appearance.props('showUiScaling')).toBe(false);
+    expect(appearance.props('showUiScaling')).toBe(true);
 
     await appearance.get('.advanced-toggle').trigger('click');
 
-    expect(appearance.find('.ui-scale-setting').exists()).toBe(false);
-    expect(appearance.find('.ui-scale-slider').exists()).toBe(false);
+    expect(appearance.find('.ui-scale-setting').exists()).toBe(true);
+    expect(appearance.find('.ui-scale-slider').exists()).toBe(true);
   });
 
   it('exposes spell check directly under Accessibility', async () => {
@@ -256,6 +256,55 @@ describe('HudPreferences', () => {
     expect(wrapper.getComponent({ name: 'Transition' }).props('name')).toBe('settings-previous');
     wrapper.unmount();
   });
+  it.each([
+    ['shortcuts', 'recording', 'next'],
+    ['recording', 'video-editor', 'next'],
+    ['recording', 'accessibility', 'previous'],
+  ] as const)('follows the grouped sidebar order from %s to %s', async (previous, next, direction) => {
+    const wrapper = mount(HudPreferences, {
+      props: { view: previous, countdownSeconds: 3 },
+      global: {
+        stubs: {
+          ShortcutPreferences: true,
+          RecordingPreferences: true,
+          VideoEditorPreferences: true,
+          AccessibilityPreferences: true,
+        },
+      },
+    });
+    await wrapper.setProps({ view: next });
+    expect(wrapper.getComponent({ name: 'Transition' }).props('name')).toBe(`settings-${direction}`);
+    wrapper.unmount();
+  });
+  it('preserves Recorder controls and General close after switching groups', async () => {
+    const wrapper = mount(HudPreferences, {
+      props: { view: 'recording', countdownSeconds: 3 },
+      global: { stubs: { RecordingPreferences: true, GeneralPreferences: true } },
+    });
+    const recording = wrapper.getComponent({ name: 'RecordingPreferences' });
+    for (const option of ['hideTaskbar', 'hideDesktopIcons', 'showRealCursor']) {
+      recording.vm.$emit(`update:${option}`, true);
+      expect(wrapper.emitted(`update:${option}`)).toEqual([[true]]);
+    }
+    await wrapper.setProps({ view: 'general' });
+    wrapper.getComponent({ name: 'GeneralPreferences' }).vm.$emit('close');
+    expect(wrapper.emitted('close')).toHaveLength(1);
+    wrapper.unmount();
+  });
+  it.each([
+    ['video-editor', 'Video editor', 'VideoEditorPreferences'],
+    ['shortcuts', 'Keyboard Shortcuts', 'ShortcutPreferences'],
+    ['updates', 'Updates', 'UpdateControls'],
+    ['about', 'About', 'About'],
+  ] as const)('opens %s from its new sidebar location', (view, title, component) => {
+    const wrapper = mount(HudPreferences, {
+      props: { view, countdownSeconds: 3 },
+      global: { stubs: { [component]: true } },
+    });
+    expect(wrapper.get('h1').text()).toBe(title);
+    expect(wrapper.findComponent({ name: component }).exists()).toBe(true);
+    wrapper.unmount();
+  });
 
   it('reveals and focuses advanced appearance settings from a search result', async () => {
     Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
@@ -263,13 +312,13 @@ describe('HudPreferences', () => {
       value: vi.fn(),
     });
     const wrapper = mountPreferences({
-      view: 'general',
+      view: 'appearance',
       focusedSetting: 'secondary-color',
     });
     await flushPromises();
     expect(wrapper.get('.advanced-toggle').attributes('aria-expanded')).toBe('true');
     expect(wrapper.get('[data-setting="secondary-color"]').element.scrollIntoView).toHaveBeenCalled();
-    expect(wrapper.find('.divider').exists()).toBe(false);
+    expect(wrapper.find('[data-setting="language"]').exists()).toBe(false);
     await wrapper.setProps({ focusedSetting: 'missing-setting' });
     await flushPromises();
     wrapper.unmount();

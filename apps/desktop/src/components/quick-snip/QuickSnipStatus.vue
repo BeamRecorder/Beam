@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { Check, Copy, ExternalLink, Film, LoaderCircle, X } from '@lucide/vue';
+import { Check, Copy, ExternalLink, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import CopyButton from '~/ui/button/CopyButton.vue';
 import QuickSnipCountdown from './QuickSnipCountdown.vue';
-import Beamy from '../brand/Beamy/Beamy.vue';
+import StatusPill from '~/ui/status-pill/StatusPill.vue';
 import type { BeamyPhase } from '../brand/Beamy/beamy-types';
 import { capture } from '~/api/capture';
 import { useTranslate } from '../../i18n/useTranslate';
@@ -224,14 +224,26 @@ onBeforeUnmount(() => {
       'opens-below': status?.popoverSide === 'below',
     }"
   >
-    <section
-      class="snip-surface"
+    <StatusPill
+      :expanded="expanded"
+      :completed="completed && !error"
+      :failed="failed"
+      :opens-below="status?.popoverSide === 'below'"
+      native-draggable
+      :label="label"
+      :detail="detail"
+      :percent="percent"
+      :preview="preview"
+      :mascot="instant"
+      :mascot-phase="mascotPhase"
+      :job-key="status?.job?.name"
       @mouseenter="hover(true)"
       @mouseleave="hover(false)"
       @focusin="focus(true)"
       @focusout="focusOut"
+      @dismiss="capture.dismissQuickSnipStatus()"
     >
-      <div class="snip-details" :inert="!expanded" :aria-hidden="!expanded">
+      <template #details>
         <div v-if="error" class="error-row">
           <p class="status-error" role="alert" :title="error">{{ error }}</p>
           <CopyButton
@@ -290,52 +302,11 @@ onBeforeUnmount(() => {
             @click="capture.dismissQuickSnipStatus()"
           />
         </div>
-      </div>
-      <div class="snip-pill" tabindex="0" :aria-label="`${label} ${percent}%`">
-        <div class="thumbnail" aria-hidden="true">
-          <img v-if="preview" :src="preview" alt="" />
-          <Film v-else :size="22" />
-          <span v-if="completed && !error" class="success-mark"><Check :size="13" /></span>
-        </div>
-        <div class="status-copy">
-          <strong role="status">{{ label }}</strong>
-          <span>{{ detail }}</span>
-          <QuickSnipCountdown v-if="completed && status?.autoClose" :countdown="status.autoClose" :paused="expanded" />
-        </div>
-        <div class="status-value" :class="{ 'mascot-value': instant }">
-          <template v-if="instant">
-            <Beamy :key="status?.job?.name" :phase="mascotPhase" :size="52" />
-            <span v-if="!completed && !failed" class="mascot-percent">{{ percent }}<small>%</small></span>
-          </template>
-          <Check v-else-if="completed" :size="20" />
-          <Button
-            v-else-if="failed"
-            size="xs"
-            variant="ghost"
-            icon-only
-            :icon="X"
-            :aria-label="t('dismiss')"
-            :title="t('dismiss')"
-            @click="capture.dismissQuickSnipStatus()"
-          />
-          <template v-else
-            ><span>{{ percent }}<small>%</small></span
-            ><LoaderCircle v-if="percent === 0" class="spinner" :size="12"
-          /></template>
-        </div>
-        <div
-          v-if="!completed && !failed"
-          class="progress"
-          role="progressbar"
-          :aria-label="t('exporting')"
-          :aria-valuenow="percent"
-          :aria-valuemin="0"
-          :aria-valuemax="100"
-        >
-          <i :style="{ transform: `scaleX(${percent / 100})` }" />
-        </div>
-      </div>
-    </section>
+      </template>
+      <template #detail>
+        <QuickSnipCountdown v-if="completed && status?.autoClose" :countdown="status.autoClose" :paused="expanded" />
+      </template>
+    </StatusPill>
   </main>
 </template>
 

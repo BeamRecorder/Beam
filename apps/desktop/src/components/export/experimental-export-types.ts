@@ -4,4 +4,5 @@ export type DesktopVideoExportBackend = 'webcodecs' | 'ffmpeg-vaapi';
 
 export interface DesktopExportRequest extends ExportRequest {
   experimentalLinuxFfmpeg?: boolean;
+  fileName?: string;
 }

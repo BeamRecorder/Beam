@@ -18,6 +18,7 @@ export interface UseLayerTransformAndCropOptions {
   measureCaptionText?: CaptionTextMeasurer;
   zoomScale?: () => number;
   onUpdateTransform: (transform: NormalizedTransform) => void;
+  onDuplicateTransforms?: (transforms: ClipTransformUpdate[]) => void;
   onUpdateTransforms?: (transforms: ClipTransformUpdate[]) => void;
   onPreviewCrop?: (crop: NormalizedCrop | null) => void;
   onUpdateCrop: (crop: NormalizedCrop) => void;

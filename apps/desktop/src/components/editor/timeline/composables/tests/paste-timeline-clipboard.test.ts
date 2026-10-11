@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   COMPOSITION_SCHEMA_VERSION,
+  isCaptionClip,
   type CaptionClip,
   type Clip,
   type ClipComposition,
@@ -11,6 +12,8 @@ import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/en
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import { pasteTimelineClipboard } from '../paste-timeline-clipboard';
 import { useTimelineClipboard } from '../useTimelineClipboard';
+import { captionLayerKey } from '@beam/engine/shared/composition-types';
+import { TimelineLockedError } from '@beam/engine/composition/timeline-locks';
 
 const mediaAsset = (id: string): MediaAsset => ({
   id,
@@ -87,7 +90,13 @@ const copySelection = (clips: Clip[], zooms: ZoomElement[], assets: MediaAsset[]
   return item;
 };
 
-const caption = (id: string, layerId: string, timelineStartMs: number, text: string, order = 0): CaptionClip => ({
+const caption = (
+  id: string,
+  layerId: string | undefined,
+  timelineStartMs: number,
+  text: string,
+  order = 0,
+): CaptionClip => ({
   id,
   kind: 'caption',
   name: id,
@@ -107,6 +116,12 @@ const caption = (id: string, layerId: string, timelineStartMs: number, text: str
   },
 });
 
+const findCaption = (source: ClipComposition, id: string): CaptionClip => {
+  const found = source.clips.filter(isCaptionClip).find((clip) => clip.id === id);
+  if (!found) throw new Error(`Missing caption ${id}`);
+  return found;
+};
+
 const queuedIds = (ids: string[]) => () => {
   const id = ids.shift();
   if (!id) throw new Error('No more deterministic IDs are available.');
@@ -116,6 +131,371 @@ const queuedIds = (ids: string[]) => () => {
 afterEach(() => useTimelineClipboard().clearClipboard());
 
 describe('pasteTimelineClipboard', () => {
+  it.each([undefined, 'track'] as const)(
+    'keeps a legacy text caption on its source track for context-menu paste (%s)',
+    (placement) => {
+      const original = caption('source', undefined, 0, 'Original');
+      const item = useTimelineClipboard().copyClip('project-a', original);
+      const result = pasteTimelineClipboard({
+        composition: composition([original], []),
+        zoomElements: [],
+        item,
+        timeMs: 500,
+        timelineDurationMs: 3000,
+        target: { category: 'caption', placement },
+        idFactory: () => 'copy',
+      });
+      expect(result.composition.clips.map((clip) => [clip.timelineStartMs, clip.timelineDurationMs])).toEqual([
+        [0, 500],
+        [500, 500],
+      ]);
+      expect(new Set(result.composition.clips.filter(isCaptionClip).map(captionLayerKey)).size).toBe(1);
+      expect(findCaption(result.composition, 'copy').captionLayerId).toBe('source');
+      expect(original.captionLayerId).toBeUndefined();
+    },
+  );
+
+  it('keeps repeated overlapping legacy pastes on the same track after the original clip has been replaced', () => {
+    const original = caption('source', undefined, 0, 'Original');
+    const item = useTimelineClipboard().copyClip('project-a', original);
+    let source = composition([original], []);
+    for (const id of ['copy-a', 'copy-b', 'copy-c']) {
+      source = pasteTimelineClipboard({
+        composition: source,
+        zoomElements: [],
+        item,
+        timeMs: 0,
+        timelineDurationMs: 3000,
+        target: { category: 'caption', placement: 'auto' },
+        idFactory: queuedIds([id]),
+      }).composition;
+      expect(source.clips).toHaveLength(1);
+      expect(findCaption(source, id).captionLayerId).toBe('source');
+    }
+  });
+  it('reuses an assigned legacy track across repeated pastes of the same clipboard snapshot', () => {
+    const copied = caption('source', undefined, 0, 'Original');
+    const item = useTimelineClipboard().copyClip('project-a', copied);
+    const paste = (source: ClipComposition, timeMs: number, ids: string[]) =>
+      pasteTimelineClipboard({
+        composition: source,
+        zoomElements: [],
+        item,
+        timeMs,
+        timelineDurationMs: 3_000,
+        target: { category: 'caption', placement: 'auto' },
+        idFactory: queuedIds(ids),
+      });
+    const first = paste(composition([copied], []), 500, ['copy-a']);
+    const second = paste(first.composition, 1_000, ['copy-b']);
+    const restored = JSON.parse(JSON.stringify(second.composition)) as ClipComposition;
+    const third = paste(restored, 1_500, ['copy-c']);
+    expect(new Set(third.composition.clips.filter((clip) => clip.kind === 'caption').map(captionLayerKey)).size).toBe(
+      1,
+    );
+    const collision = paste(third.composition, 1_000, ['copy-d']);
+    expect(findCaption(collision.composition, 'copy-d').captionLayerId).toBe('source');
+    expect(collision.composition.clips.find((clip) => clip.id === 'copy-b')).toBeUndefined();
+  });
+
+  it('keeps cut legacy caption fragments together when the original track no longer exists', () => {
+    const first = { ...caption('first', undefined, 0, 'First'), isAiGenerated: true };
+    const second = { ...caption('second', undefined, 1_000, 'Second'), isAiGenerated: true };
+    const result = pasteTimelineClipboard({
+      composition: composition([], []),
+      zoomElements: [],
+      item: copySelection([first, second], [], [], first.id),
+      timeMs: 500,
+      timelineDurationMs: 3_000,
+      target: { category: 'caption', placement: 'auto' },
+      idFactory: queuedIds(['copy-a', 'copy-b']),
+    });
+    expect(result.composition.clips.filter(isCaptionClip).map((clip) => clip.captionLayerId)).toEqual([
+      'first',
+      'first',
+    ]);
+  });
+
+  it.each([499.6, 999.4])('uses the same millisecond rounding as the paste transaction at %s ms', (timeMs) => {
+    const copied = caption('source', 'captions', 0, 'Original');
+    const neighbor = caption('neighbor', 'captions', 1_500, 'Next');
+    const result = pasteTimelineClipboard({
+      composition: composition([copied, neighbor], []),
+      zoomElements: [],
+      item: useTimelineClipboard().copyClip('project-a', copied),
+      timeMs,
+      timelineDurationMs: 3_000,
+      target: { category: 'caption', placement: 'auto' },
+      idFactory: () => 'copy',
+    });
+    expect(result.composition.clips.find((clip) => clip.id === 'copy')).toMatchObject({
+      timelineStartMs: Math.round(timeMs),
+      captionLayerId: 'captions',
+    });
+  });
+
+  it.each([0, 500, 1_000, 2_000])('reuses a text caption track at %i ms when the copy fits', (timeMs) => {
+    const copied = caption('source', 'captions', 500, 'Keep this text');
+    const neighbor = caption('neighbor', 'captions', 1_500, 'Next caption');
+    // 500 ms is occupied: this case also checks that cutting before pasting frees the track.
+    const source = composition(timeMs === 500 ? [neighbor] : [copied, neighbor], []);
+    const before = JSON.parse(JSON.stringify(source)) as ClipComposition;
+    const result = pasteTimelineClipboard({
+      composition: source,
+      zoomElements: [],
+      item: useTimelineClipboard().copyClip('project-a', copied),
+      timeMs,
+      timelineDurationMs: 3_000,
+      target: { category: 'caption', placement: 'auto' },
+      idFactory: () => 'copy',
+    });
+    expect(result.composition.clips.find((clip) => clip.id === 'copy')).toMatchObject({
+      timelineStartMs: timeMs,
+      captionLayerId: 'captions',
+      caption: copied.caption,
+    });
+    expect(new Set(result.composition.clips.filter((clip) => clip.kind === 'caption').map(captionLayerKey)).size).toBe(
+      1,
+    );
+    expect(source).toEqual(before);
+  });
+
+  it.each([
+    {
+      timeMs: 250,
+      intervals: [
+        [250, 500],
+        [750, 250],
+        [1500, 500],
+      ],
+    },
+    {
+      timeMs: 500,
+      intervals: [
+        [500, 500],
+        [1500, 500],
+      ],
+    },
+    {
+      timeMs: 750,
+      intervals: [
+        [500, 250],
+        [750, 500],
+        [1500, 500],
+      ],
+    },
+    {
+      timeMs: 1250,
+      intervals: [
+        [500, 500],
+        [1250, 500],
+        [1750, 250],
+      ],
+    },
+  ])('trims covered caption portions and pastes on the same track at $timeMs ms', ({ timeMs, intervals }) => {
+    const copied = caption('source', 'captions', 500, 'Keep this text');
+    const neighbor = { ...caption('neighbor', 'captions', 1500, 'Disabled but occupied'), enabled: false };
+    const source = composition([copied, neighbor], []);
+    const before = JSON.parse(JSON.stringify(source)) as ClipComposition;
+    const result = pasteTimelineClipboard({
+      composition: source,
+      zoomElements: [],
+      item: useTimelineClipboard().copyClip('project-a', copied),
+      timeMs,
+      timelineDurationMs: 3000,
+      target: { category: 'caption', placement: 'auto' },
+      idFactory: queuedIds(['copy']),
+    });
+    expect(findCaption(result.composition, 'copy')).toMatchObject({
+      captionLayerId: 'captions',
+      timelineStartMs: timeMs,
+      caption: copied.caption,
+    });
+    expect(result.composition.clips.map((clip) => [clip.timelineStartMs, clip.timelineDurationMs])).toEqual(intervals);
+    expect(new Set(result.composition.clips.filter(isCaptionClip).map(captionLayerKey)).size).toBe(1);
+    expect(source).toEqual(before);
+  });
+
+  it.each([false, true])(
+    'keeps legacy caption originals and copies on the same persisted track (AI: %s)',
+    (isAiGenerated) => {
+      const first = { ...caption('legacy-first', undefined, 0, 'First'), isAiGenerated };
+      const second = { ...caption('legacy-second', undefined, 1_500, 'Second'), isAiGenerated };
+      const source = composition([first, second], []);
+      const before = JSON.parse(JSON.stringify(source)) as ClipComposition;
+      const result = pasteTimelineClipboard({
+        composition: source,
+        zoomElements: [],
+        item: useTimelineClipboard().copyClip('project-a', first),
+        timeMs: 500,
+        timelineDurationMs: 3_000,
+        target: { category: 'caption', placement: 'auto' },
+        idFactory: queuedIds(['copy']),
+      });
+      const restored = JSON.parse(JSON.stringify(result.composition)) as ClipComposition;
+      const original = restored.clips.find((clip) => clip.id === first.id) as CaptionClip;
+      const pasted = restored.clips.find((clip) => clip.id === 'copy') as CaptionClip;
+      expect(original.captionLayerId).toBe('legacy-first');
+      expect(captionLayerKey(pasted)).toBe(captionLayerKey(original));
+      expect(findCaption(restored, second.id).captionLayerId).toBe(isAiGenerated ? 'legacy-first' : undefined);
+      expect(source).toEqual(before);
+    },
+  );
+
+  it.each([false, true])(
+    'keeps copied fragments on their original track, trimming a later collision (%s)',
+    (reverse) => {
+      const first = caption('first', 'captions', 0, 'First');
+      const second = caption('second', 'captions', 2_000, 'Second');
+      const collision = caption('collision', 'captions', 3_500, 'Existing');
+      const source = composition([second, collision, first], []);
+      const copied = reverse ? [second, first] : [first, second];
+      const result = pasteTimelineClipboard({
+        composition: source,
+        zoomElements: [],
+        item: copySelection(copied, [], [], second.id),
+        timeMs: 1_500,
+        timelineDurationMs: 5_000,
+        target: { category: 'caption', placement: 'auto' },
+        idFactory: queuedIds(['copy-a', 'copy-b']),
+      });
+      const pasted = result.composition.clips.filter(isCaptionClip).filter((clip) => result.clipIds.includes(clip.id));
+      expect(pasted.map((clip) => clip.captionLayerId)).toEqual(['captions', 'captions']);
+      expect(pasted.map((clip) => clip.timelineStartMs).sort((a, b) => a - b)).toEqual([1_500, 3_500]);
+      expect(result.composition.clips.filter((clip) => !result.clipIds.includes(clip.id))).toEqual(
+        expect.arrayContaining([first, second]),
+      );
+    },
+  );
+
+  it('checks each copied track independently and ignores overlapping captions on other tracks', () => {
+    const first = caption('first', 'track-a', 0, 'First', 0);
+    const second = caption('second', 'track-b', 0, 'Second', 1);
+    const collision = caption('collision', 'track-b', 1_000, 'Existing', 1);
+    const source = composition([first, second, collision], []);
+    const result = pasteTimelineClipboard({
+      composition: source,
+      zoomElements: [],
+      item: copySelection([first, second], [], [], first.id),
+      timeMs: 1_000,
+      timelineDurationMs: 3_000,
+      target: { category: 'caption', placement: 'auto' },
+      idFactory: queuedIds(['copy-a', 'copy-b']),
+    });
+    expect(findCaption(result.composition, 'copy-a').captionLayerId).toBe('track-a');
+    expect(findCaption(result.composition, 'copy-b').captionLayerId).toBe('track-b');
+  });
+
+  it.each(['captions', undefined])('rejects paste into a locked caption track (layer: %s)', (layerId) => {
+    const copied = { ...caption('locked', layerId, 0, 'Locked'), locked: true };
+    const source = composition([copied], []);
+    const before = JSON.parse(JSON.stringify(source)) as ClipComposition;
+    expect(() =>
+      pasteTimelineClipboard({
+        composition: source,
+        zoomElements: [],
+        item: useTimelineClipboard().copyClip('project-a', copied),
+        timeMs: 500,
+        timelineDurationMs: 3000,
+        target: { category: 'caption', placement: 'auto' },
+      }),
+    ).toThrow(TimelineLockedError);
+    expect(source).toEqual(before);
+  });
+
+  it.each([undefined, 'track'] as const)('preserves context-menu placement for keyboard captions (%s)', (placement) => {
+    const keyboard: CaptionClip = {
+      ...caption('keyboard', 'keyboard-track', 0, 'Keyboard'),
+      caption: {
+        type: 'keyboard',
+        steps: [{ offsetMs: 0, modifiers: [], key: 'A' }],
+        recordedPlatform: 'linux',
+        sourceSessionId: 'session',
+        followCursor: false,
+        style: createDefaultCaptionStyle(),
+      },
+    };
+    const result = pasteTimelineClipboard({
+      composition: composition([keyboard], []),
+      zoomElements: [],
+      item: useTimelineClipboard().copyClip('project-a', keyboard),
+      timeMs: 500,
+      timelineDurationMs: 3000,
+      target: { category: 'caption', placement },
+      idFactory: () => 'copy',
+    });
+    expect(findCaption(result.composition, 'copy').captionLayerId).toBe('keyboard-track');
+    expect(result.composition.clips).toHaveLength(2);
+  });
+
+  it('retains new-track keyboard pasting for visual clips and keyboard captions in a mixed selection', () => {
+    const asset = mediaAsset('screen-asset');
+    const screen = visual({ id: 'screen' });
+    const keyboard: CaptionClip = {
+      ...caption('keyboard', 'keyboard-track', 0, 'Keyboard', 1),
+      caption: {
+        type: 'keyboard',
+        steps: [{ offsetMs: 0, modifiers: [], key: 'A' }],
+        recordedPlatform: 'linux',
+        sourceSessionId: 'session',
+        followCursor: false,
+        style: createDefaultCaptionStyle(),
+      },
+    };
+    const source = composition([screen, keyboard], [asset]);
+    const result = pasteTimelineClipboard({
+      composition: source,
+      zoomElements: [],
+      item: copySelection([screen, keyboard], [], [asset], screen.id),
+      timeMs: 1_000,
+      timelineDurationMs: 3_000,
+      target: { category: 'visual', placement: 'auto' },
+      idFactory: queuedIds(['new-keyboard-track', 'new-visual-track', 'screen-copy', 'keyboard-copy']),
+    });
+    expect(result.composition.clips.find((clip) => clip.id === 'screen-copy')?.trackId).toBe('new-visual-track');
+    expect(findCaption(result.composition, 'keyboard-copy').captionLayerId).toBe('new-keyboard-track');
+  });
+
+  it('keeps all fragments of a legacy AI caption selection on one reused track when every destination fits', () => {
+    const first = { ...caption('first', undefined, 0, 'First'), isAiGenerated: true };
+    const second = { ...caption('second', undefined, 1_000, 'Second'), isAiGenerated: true };
+    const source = composition([first, second], []);
+    const result = pasteTimelineClipboard({
+      composition: source,
+      zoomElements: [],
+      item: copySelection([first, second], [], [], second.id),
+      timeMs: 2_000,
+      timelineDurationMs: 4_000,
+      target: { category: 'caption', placement: 'auto' },
+      idFactory: queuedIds(['copy-a', 'copy-b']),
+    });
+    expect(new Set(result.composition.clips.filter((clip) => clip.kind === 'caption').map(captionLayerKey)).size).toBe(
+      1,
+    );
+    expect(result.primary).toEqual({ type: 'clip', id: 'copy-b' });
+    expect(
+      result.composition.clips.filter((clip) => result.clipIds.includes(clip.id)).map((clip) => clip.timelineStartMs),
+    ).toEqual([2_000, 3_000]);
+  });
+
+  it('leaves legacy source tracks unchanged if a later pasted item is out of bounds', () => {
+    const first = caption('first', undefined, 0, 'First');
+    const second = caption('second', undefined, 2_000, 'Second');
+    const source = composition([first, second], []);
+    const before = JSON.parse(JSON.stringify(source)) as ClipComposition;
+    expect(() =>
+      pasteTimelineClipboard({
+        composition: source,
+        zoomElements: [],
+        item: copySelection([first, second], [], [], first.id),
+        timeMs: 3_000,
+        timelineDurationMs: 4_000,
+        target: { category: 'caption', placement: 'auto' },
+      }),
+    ).toThrow('does not fit');
+    expect(source).toEqual(before);
+  });
+
   it('pastes a single zoom without altering composition or requiring a clip transaction commit', () => {
     const original = composition([], []),
       copied = zoom('zoom', 1000, 2000);

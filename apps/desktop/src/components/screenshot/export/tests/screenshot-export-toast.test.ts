@@ -18,38 +18,44 @@ const report = (patch: Partial<ScreenshotExportReport> = {}): ScreenshotExportRe
   ...patch,
 });
 beforeEach(() => vi.clearAllMocks());
-it.each([
-  ['copy', 'copiedToast'],
-  ['export', 'exportedToast'],
-] as const)('confirms %s with its output preview and a copyable report', (operation, message) => {
-  const result = report({ operation });
-  useScreenshotExportToast()(result, 'data:image/png;base64,preview');
-  expect(toast.success).toHaveBeenCalledWith(
-    message,
-    5000,
-    { label: 'copyTimingReport', copyText: JSON.stringify(result, null, 2), dismissOnSuccess: false },
-    { preview: { kind: 'image', src: 'data:image/png;base64,preview', alt: message, status: 'success' } },
-  );
-});
-it.each([
-  ['copy', 'copyFailedToast'],
-  ['export', 'exportFailedToast'],
-] as const)('reports %s failure with a red output badge and the error details', (operation, message) => {
-  const result = report({ operation, status: 'error', error: 'Denied' });
-  useScreenshotExportToast()(result, 'preview');
-  expect(toast.error).toHaveBeenCalledWith(
-    message,
-    8000,
-    expect.objectContaining({ detail: 'Denied', dismissOnSuccess: false }),
-    { preview: expect.objectContaining({ status: 'error' }) },
-  );
-});
+it.each([['copy', 'copiedToast']] as const)(
+  'confirms %s with its output preview and a copyable report',
+  (operation, message) => {
+    const result = report({ operation });
+    useScreenshotExportToast()(result, 'data:image/png;base64,preview');
+    expect(toast.success).toHaveBeenCalledWith(
+      message,
+      5000,
+      { label: 'copyTimingReport', copyText: JSON.stringify(result, null, 2), dismissOnSuccess: false },
+      { preview: { kind: 'image', src: 'data:image/png;base64,preview', alt: message, status: 'success' } },
+    );
+  },
+);
+it.each([['copy', 'copyFailedToast']] as const)(
+  'reports %s failure with a red output badge and the error details',
+  (operation, message) => {
+    const result = report({ operation, status: 'error', error: 'Denied' });
+    useScreenshotExportToast()(result, 'preview');
+    expect(toast.error).toHaveBeenCalledWith(
+      message,
+      8000,
+      expect.objectContaining({ detail: 'Denied', dismissOnSuccess: false }),
+      { preview: expect.objectContaining({ status: 'error' }) },
+    );
+  },
+);
 it('handles failures before rendering without inventing an output thumbnail', () => {
   useScreenshotExportToast()(report({ status: 'error' }));
   expect(toast.error).toHaveBeenCalledWith('copyFailedToast', 8000, expect.any(Object), { preview: undefined });
 });
 it('skips completion feedback when the save dialog was cancelled', () => {
   useScreenshotExportToast()(report({ status: 'cancelled' }), 'preview');
+  expect(toast.success).not.toHaveBeenCalled();
+  expect(toast.error).not.toHaveBeenCalled();
+});
+
+it.each(['success', 'error'] as const)('leaves %s export feedback to the persistent pill', (status) => {
+  useScreenshotExportToast()(report({ operation: 'export', status }), 'preview');
   expect(toast.success).not.toHaveBeenCalled();
   expect(toast.error).not.toHaveBeenCalled();
 });

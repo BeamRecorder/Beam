@@ -38,7 +38,7 @@ import {
 } from '~/composables/property-interaction';
 import { useScreenshotHistory } from './useScreenshotHistory';
 import { useScreenshotCursors } from './useScreenshotCursors';
-import { useScreenshotLayerShortcuts } from './useScreenshotLayerShortcuts';
+import { useScreenshotEditingShortcuts } from './useScreenshotEditingShortcuts';
 import { useScreenshotLayerClipboard } from './useScreenshotLayerClipboard';
 import { createScreenshotImage, screenshotImageProperties } from './screenshot-images';
 import { screenshotImage } from '@beam/engine/screenshot/screenshot-images';
@@ -327,15 +327,19 @@ export function useScreenshotEditor(
     reconcileSelection: selection.reconcile,
     showSelection,
   });
-  useScreenshotLayerShortcuts({
-    selected: () =>
-      state.value
-        ? screenshotLayers(state.value).find(
-            (layer) => selectedIds.value.includes(layer.id) && canRemoveScreenshotLayer(layer),
-          )
-        : undefined,
+  const duplicateSelection = useScreenshotEditingShortcuts({
+    state,
+    selectedIds,
+    selectedId,
     disabled: shortcutsDisabled,
     remove: removeLayer,
+    selectMany: selection.selectMany,
+    showSelection,
+    fail,
+    source: () =>
+      document.value
+        ? { source: document.value.source, width: document.value.width, height: document.value.height }
+        : null,
     group: groups.group,
     ungroup: groups.ungroup,
     copy: layerClipboard.copy,
@@ -478,8 +482,8 @@ export function useScreenshotEditor(
     startCrop,
     translate,
     removeLayer,
+    duplicateSelection,
     appearance,
-    removeShape,
     exportImage,
     back,
     openProject,

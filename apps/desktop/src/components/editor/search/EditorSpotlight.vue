@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { matchesAction, shortcutTargetIsEditable } from '~/shortcuts/action-bindings';
 import { computed, inject, onBeforeUnmount, onMounted, watch } from 'vue';
 import CommandPalette from '~/ui/command-palette/CommandPalette.vue';
 import EditorSearchThumbnail from './EditorSearchThumbnail.vue';
@@ -13,10 +14,9 @@ const { t: backText } = useTranslate('TopbarHUD');
 const byId = computed(() => new Map(context.actions.value.map((action) => [action.id, action])));
 const keydown = (event: KeyboardEvent) => {
   if (
-    !(event.ctrlKey || event.metaKey) ||
-    event.altKey ||
-    event.shiftKey ||
-    event.key.toLowerCase() !== 'f' ||
+    !matchesAction(event, 'editor.search') ||
+    event.defaultPrevented ||
+    shortcutTargetIsEditable(event.target) ||
     event.repeat ||
     !context.ready.value
   )

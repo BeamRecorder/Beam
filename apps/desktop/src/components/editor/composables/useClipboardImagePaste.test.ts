@@ -1,3 +1,4 @@
+import { hydrateActionBindings } from '~/shortcuts/action-bindings';
 import { defineComponent, h } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -39,6 +40,7 @@ afterEach(() => {
   wrapper?.unmount();
   wrapper = undefined;
   resetInternalEditorClipboardSync();
+  hydrateActionBindings({});
   vi.unstubAllGlobals();
 });
 
@@ -154,5 +156,47 @@ describe('useClipboardImagePaste', () => {
     await flushPromises();
     expect(disabled.paste).not.toHaveBeenCalled();
     expect(imageEvent.preventDefault).not.toHaveBeenCalled();
+  });
+});
+
+describe('custom image paste shortcut', () => {
+  const press = (key: string, target: EventTarget = window) => {
+    const event = new KeyboardEvent('keydown', { key, ctrlKey: true, bubbles: true, cancelable: true });
+    target.dispatchEvent(event);
+    return event;
+  };
+  const remap = () =>
+    hydrateActionBindings({ 'editor.paste': { keys: 'Ctrl+K', scope: 'application', category: 'editing' } });
+  it('uses the configured binding and blocks the previous paste accelerator', async () => {
+    remap();
+    const { paste } = mountPaste();
+    expect(press('v').defaultPrevented).toBe(true);
+    expect(paste).not.toHaveBeenCalled();
+    expect(press('k').defaultPrevented).toBe(true);
+    await flushPromises();
+    expect(paste).toHaveBeenCalledOnce();
+  });
+  it('leaves the custom binding to the internal clipboard and protects editable fields', async () => {
+    remap();
+    const { paste } = mountPaste(false, true);
+    expect(press('k').defaultPrevented).toBe(false);
+    const input = document.createElement('input');
+    document.body.append(input);
+    expect(press('k', input).defaultPrevented).toBe(false);
+    input.remove();
+    await flushPromises();
+    expect(paste).not.toHaveBeenCalled();
+  });
+  it('honors disabled editors and reports image read failures', async () => {
+    remap();
+    const disabled = mountPaste(true);
+    expect(press('k').defaultPrevented).toBe(false);
+    expect(disabled.paste).not.toHaveBeenCalled();
+    wrapper?.unmount();
+    const active = mountPaste();
+    active.paste.mockRejectedValueOnce(new Error('clipboard unavailable'));
+    press('k');
+    await flushPromises();
+    expect(active.onError).toHaveBeenCalledWith(expect.objectContaining({ message: 'clipboard unavailable' }));
   });
 });

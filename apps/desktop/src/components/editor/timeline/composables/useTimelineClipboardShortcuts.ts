@@ -1,3 +1,4 @@
+import { matchesAction, actionKeys, canonicalBinding } from '~/shortcuts/action-bindings';
 import { computed, onMounted, onUnmounted } from 'vue';
 import type { ClipComposition } from '@beam/engine/shared/composition-types';
 import { clipboardContainsImage, isEditablePasteTarget } from '../../composables/useClipboardImagePaste';
@@ -22,35 +23,37 @@ export function useTimelineClipboardShortcuts(options: {
     return options.selectedZoomId() ? { category: 'zoom' } : null;
   });
   const keydown = (event: KeyboardEvent) => {
-    if (
-      event.defaultPrevented ||
-      event.repeat ||
-      event.isComposing ||
-      options.disabled() ||
-      event.altKey ||
-      event.shiftKey ||
-      !(event.ctrlKey || event.metaKey)
-    )
-      return;
+    if (event.defaultPrevented || event.repeat || event.isComposing || options.disabled()) return;
     const element = event.target instanceof Element ? event.target : document.activeElement;
     if (
       element?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]') ||
       document.querySelector('[role="dialog"][aria-modal="true"]')
     )
       return;
-    const key = event.key.toLowerCase();
     const hasSelection = Boolean(options.selectedClipId() || options.selectedZoomId());
-    if (key === 'c' && hasSelection) {
+    if (matchesAction(event, 'editor.copy') && hasSelection) {
       event.preventDefault();
       options.copySelected();
-    } else if (key === 'x' && hasSelection) {
+    } else if (matchesAction(event, 'editor.cut') && hasSelection) {
       if (options.cutSelected()) event.preventDefault();
+    } else if (
+      matchesAction(event, 'editor.paste') &&
+      canonicalBinding(actionKeys('editor.paste')) !== canonicalBinding('CommandOrControl+V') &&
+      options.canPaste()
+    ) {
+      event.preventDefault();
+      options.pasteClipboard({ ...(selectedPasteTarget.value ?? { category: 'visual' }), placement: 'auto' });
+    } else if (matchesAction(event, 'editor.duplicate') && hasSelection) {
+      event.preventDefault();
+      options.copySelected();
+      options.pasteClipboard({ ...(selectedPasteTarget.value ?? { category: 'visual' }), placement: 'new-layer' });
     }
   };
   const paste = (event: ClipboardEvent) => {
     const containsImage = clipboardContainsImage(event);
     if (
       event.defaultPrevented ||
+      !actionKeys('editor.paste') ||
       options.disabled() ||
       isEditablePasteTarget(event.target) ||
       document.querySelector('[role="dialog"][aria-modal="true"]') ||
@@ -61,7 +64,7 @@ export function useTimelineClipboardShortcuts(options: {
     event.preventDefault();
     options.pasteClipboard({
       ...(selectedPasteTarget.value ?? { category: 'visual' as const }),
-      placement: 'new-layer',
+      placement: 'auto',
     });
   };
   onMounted(() => window.addEventListener('keydown', keydown));

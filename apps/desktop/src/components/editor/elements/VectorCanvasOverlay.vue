@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { matchesGesture } from '~/shortcuts/action-bindings';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { hasLayerRotation3d } from '@beam/engine/layout/layer-perspective';
 import type { LayerRotation3d } from '@beam/engine/layout/layer-perspective-types';
@@ -118,8 +119,11 @@ const move = (event: PointerEvent) => {
   if (!drag || drag.pointerId !== event.pointerId || !editor) return;
   const screen = screenPoint(event);
   if (!screen) return;
-  if (event.altKey) guides.value = [];
-  const point = unprojectVectorPoint(event.altKey ? screen : snap(screen, drag.selection), drag.matrix);
+  if (matchesGesture(event, 'ignoreSnapping')) guides.value = [];
+  const point = unprojectVectorPoint(
+    matchesGesture(event, 'ignoreSnapping') ? screen : snap(screen, drag.selection),
+    drag.matrix,
+  );
   if (!point) return;
   const normalized = {
     x: Math.max(-8, Math.min(8, point.x / drag.width)),
@@ -147,7 +151,7 @@ const insert = (event: PointerEvent) => {
   const selection = { contour: hit.contour, node: hit.node + 1 };
   // A click on the path preserves its curve; a click beside it bends a new smooth anchor.
   if (hit.distance > 8) {
-    const placed = unprojectVectorPoint(event.altKey ? screen : snap(screen), f.matrix);
+    const placed = unprojectVectorPoint(matchesGesture(event, 'ignoreSnapping') ? screen : snap(screen), f.matrix);
     if (!placed) return;
     vector = moveVectorPoint(vector, selection, {
       x: Math.max(-8, Math.min(8, placed.x / f.rect.width)),

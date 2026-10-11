@@ -8,6 +8,7 @@ import {
   getFirstEncodableAudioCodec,
   type AudioSample,
 } from 'mediabunny';
+import { EXPORT_AUDIO_BITRATE } from '@beam/encoder/export-estimate';
 import { bitrateFor } from '@beam/encoder/export-presets';
 import type { ExportRequest } from '@beam/encoder/export-types';
 import type { ExportWorkerResponse } from '@beam/encoder/mediabunny/export-worker-protocol';
@@ -24,7 +25,7 @@ type AudioEncoderSelection = {
 const AUDIO_ENCODING_OPTIONS = {
   sampleRate: 48_000,
   numberOfChannels: 2,
-  bitrate: 128_000,
+  bitrate: EXPORT_AUDIO_BITRATE,
 };
 
 async function selectAudioEncoder(request: ExportRequest, withAudio: boolean): Promise<AudioEncoderSelection | null> {

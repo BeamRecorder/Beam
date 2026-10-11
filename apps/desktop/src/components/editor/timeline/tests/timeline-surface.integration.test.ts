@@ -127,7 +127,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
     await page.evaluate(() =>
       Object.defineProperty(window, 'capture', {
         value: {
-          getPreferences: async () => ({ extras: {}, accessibility: {} }),
+          getPreferences: async () => ({ extras: {}, shortcuts: {}, accessibility: {} }),
           onPreferencesChanged: () => () => {},
           listBackgroundLibrary: async () => [],
           onBackgroundLibraryChanged: () => () => {},
@@ -159,6 +159,130 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
     await server?.close();
     if (temporary) await rm(temporary, { recursive: true, force: true });
   });
+  it.each([
+    { captionLayerId: undefined, timeMs: 2000 },
+    { captionLayerId: 'text-track', timeMs: 2000 },
+    { captionLayerId: undefined, timeMs: 0 },
+  ])(
+    'pastes captions at the playhead repeatedly on one track ($captionLayerId, $timeMs ms)',
+    async ({ captionLayerId, timeMs }) => {
+      const composition: ClipComposition = {
+        schemaVersion: 14,
+        assets: [],
+        keyboardCaptionSessions: [],
+        clips: [
+          { ...caption, name: 'Original text', timelineDurationMs: 4000, sourceDurationMs: 4000, captionLayerId },
+        ],
+      };
+      await page.evaluate(
+        async ({ composition, timeMs }) => {
+          const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+          const host = (await load(
+            '/apps/desktop/src/components/editor/timeline/tests/caption-clipboard-browser-host.ts',
+          )) as typeof import('./caption-clipboard-browser-host');
+          await host.mountCaptionTimeline(composition, timeMs);
+        },
+        { composition, timeMs },
+      );
+      try {
+        await browser
+          .defaultBrowserContext()
+          .overridePermissions(page.url(), ['clipboard-read', 'clipboard-sanitized-write']);
+        await page.evaluate(() => navigator.clipboard.writeText('Beam timeline clip'));
+        await page.locator('[data-timeline-clip-id="caption"]').click();
+        await page.keyboard.down('Control');
+        await page.keyboard.press('c');
+        await page.keyboard.up('Control');
+        for (let index = 0; index < 2; index++) {
+          const previousId = await page.$eval('.annotation-indicator.selected', (clip) =>
+            clip.getAttribute('data-timeline-clip-id'),
+          );
+          await page.keyboard.down('Control');
+          await page.keyboard.press('v');
+          await page.keyboard.up('Control');
+          await page.waitForFunction(
+            (previousId) => {
+              const selected = document.querySelector('.annotation-indicator.selected');
+              return selected && selected.getAttribute('data-timeline-clip-id') !== previousId;
+            },
+            {},
+            previousId,
+          );
+          const snapshot = await page.evaluate(async () => {
+            const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+            const host = (await load(
+              '/apps/desktop/src/components/editor/timeline/tests/caption-clipboard-browser-host.ts',
+            )) as typeof import('./caption-clipboard-browser-host');
+            return host.captionTimelineSnapshot();
+          });
+          expect(await page.$$eval('.tracks-stack .text-caption-layer', (rows) => rows.length)).toBe(1);
+          expect(snapshot.clips.map((clip) => [clip.timelineStartMs, clip.timelineDurationMs])).toEqual(
+            timeMs === 0
+              ? [[0, 4000]]
+              : [
+                  [0, 2000],
+                  [2000, 4000],
+                ],
+          );
+        }
+      } finally {
+        await page.evaluate(async () => {
+          const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+          const host = (await load(
+            '/apps/desktop/src/components/editor/timeline/tests/caption-clipboard-browser-host.ts',
+          )) as typeof import('./caption-clipboard-browser-host');
+          host.unmountCaptionTimeline();
+        });
+      }
+    },
+    15000,
+  );
+  it.each([undefined, 'text-track'])(
+    'adds text beside an existing caption on the clicked track (layer: %s)',
+    async (captionLayerId) => {
+      const composition: ClipComposition = {
+        schemaVersion: 14,
+        assets: [],
+        keyboardCaptionSessions: [],
+        clips: [{ ...caption, captionLayerId }],
+      };
+      const errors: string[] = [];
+      const collect = (error: unknown) => errors.push(error instanceof Error ? error.message : String(error));
+      page.on('pageerror', collect);
+      try {
+        await page.evaluate(async (composition) => {
+          const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+          const host = (await load(
+            '/apps/desktop/src/components/editor/timeline/tests/workspace-browser-host.ts',
+          )) as typeof import('./workspace-browser-host');
+          await host.mountWorkspace(composition);
+        }, composition);
+        const content = (await page.$('.tracks-stack .text-caption-layer .annotation-content'))!;
+        const bounds = (await content.boundingBox())!;
+        await page.mouse.click(bounds.x + bounds.width * 0.5, bounds.y + bounds.height / 2);
+        await page.waitForFunction(
+          () => document.querySelectorAll('.tracks-stack .text-caption-layer [data-timeline-clip-id]').length === 2,
+        );
+        expect(await page.$$eval('.tracks-stack .text-caption-layer', (rows) => rows.length)).toBe(1);
+        expect(
+          await page.$$eval('.tracks-stack .text-caption-layer [data-timeline-clip-id]', (clips) =>
+            clips.map((clip) => clip.textContent),
+          ),
+        ).toEqual(expect.arrayContaining([expect.stringContaining('Hello')]));
+      } finally {
+        page.off('pageerror', collect);
+        await page.evaluate(async () => {
+          const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+          const host = (await load(
+            '/apps/desktop/src/components/editor/timeline/tests/workspace-browser-host.ts',
+          )) as typeof import('./workspace-browser-host');
+          host.unmountWorkspace();
+        });
+      }
+      expect(errors).toEqual([]);
+    },
+    15000,
+  );
   it.each(generatedClips)(
     'keeps $id selectable after pointer movement with properties and preview mounted',
     async (clip) => {

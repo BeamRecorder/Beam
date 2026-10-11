@@ -2,6 +2,7 @@ import type { ScreenRegion } from './screen-region';
 
 export interface CreateProjectOptions {
   name?: string;
+  mode?: 'studio' | 'screenshot';
 }
 
 export interface StartRecordingOptions {

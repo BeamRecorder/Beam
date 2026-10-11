@@ -1,3 +1,4 @@
+import { openApplicationSettings } from '~/components/settings/open-application-settings';
 import { usePreferencesStore } from '~/stores/preferences';
 import { recordingZoomMode } from '@beam/engine/zoom/recording-zoom-preference';
 import { getCurrentInstance, provide } from 'vue';
@@ -16,6 +17,7 @@ import { useProjectZoom } from './useProjectZoom';
 import { normalizeZoomAutoFollow, normalizeZoomMotionBlur } from '@beam/engine/zoom/zoom-types';
 import { useProjectEditorState } from './useProjectEditorState';
 import type { EditorExportSource } from '@beam/encoder/export-types';
+import { hasExportAudio } from '@beam/encoder/export-estimate';
 import { createCompositionSnapshot } from '@beam/runtime/rendering/snapshot';
 import { projectFontSources } from '../text/project-font-sources';
 import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
@@ -135,6 +137,7 @@ export function useVideoEditor(options: {
   });
   const editorPresets = useEditorPresets(editorDefaults, resources);
   const elements = useVideoElements({
+    editorDefaults,
     canvasSize: () => outputCanvas.value,
     addBlur: async () => {
       await compositionState.addElement('blur').catch((error) => {
@@ -233,6 +236,7 @@ export function useVideoEditor(options: {
     return {
       projectName: project.value.name,
       includeAudio: includeAudioInExport.value,
+      hasAudio: hasExportAudio(compositionState.composition.value),
       duration: compositionDurationMs(compositionState.composition.value) / 1_000,
       fps: sourceFps.value,
       width: outputCanvas.value.width,
@@ -248,6 +252,7 @@ export function useVideoEditor(options: {
       const request = ++editorLoad;
       projectStateReady.value = false;
       initialPlaybackSettled.value = false;
+      editorState.disableDefaultCapture();
       if (!id) return;
       try {
         const [initialState] = await Promise.all([
@@ -364,6 +369,10 @@ export function useVideoEditor(options: {
     editorDefaults,
     editorPresets,
     handleSelectTab: (tab: string) => {
+      if (tab === 'settings') {
+        void openApplicationSettings();
+        return;
+      }
       activeTab.value = tab;
     },
   };

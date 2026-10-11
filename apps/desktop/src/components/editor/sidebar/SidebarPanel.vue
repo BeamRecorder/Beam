@@ -129,9 +129,8 @@ watch(menuItems, () => updateSelection(), { flush: 'post' });
         <button
           type="button"
           class="nav-btn footer-btn"
-          :class="{ active: activeTab === 'settings' }"
           :aria-label="t('settings')"
-          :aria-expanded="activeTab === 'settings' ? panelOpen : undefined"
+          aria-haspopup="dialog"
           :title="t('settings')"
           @click="emit('select-tab', 'settings')"
         >

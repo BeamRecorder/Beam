@@ -8,6 +8,7 @@ import { tNamespace } from '../../i18n';
 const $t = tNamespace('exporter');
 
 const progress = ref<ExportProgress | null>(null);
+const preview = ref<string | null>(null);
 const error = ref<string | null>(null);
 const errorContext = ref<unknown>(null);
 const result = ref<ExportResult | null>(null);
@@ -24,6 +25,7 @@ export function useExportJob() {
     result.value = null;
     diagnostics.value = null;
     progress.value = null;
+    preview.value = null;
     const next = new AbortController();
     isChoosingDestination.value = true;
     controller.value = next;
@@ -32,6 +34,7 @@ export function useExportJob() {
         request,
         (value) => {
           progress.value = value;
+          if (value.preview) preview.value = value.preview;
           if (value.diagnostics && diagnostics.value) diagnostics.value.runtime = value.diagnostics;
         },
         next.signal,
@@ -71,6 +74,7 @@ export function useExportJob() {
   const cancel = () => controller.value?.abort();
   return {
     progress,
+    preview,
     error,
     errorContext,
     result,

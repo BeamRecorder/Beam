@@ -31,6 +31,7 @@ const capture = vi.hoisted(() => ({
   selectEditorPreset: vi.fn(),
   deleteEditorPreset: vi.fn(),
   showHud: vi.fn(),
+  openHudSettings: vi.fn(async () => true),
   openEditor: vi.fn(),
   openScreenshot: vi.fn(),
 }));
@@ -282,21 +283,19 @@ describe('ScreenshotEditor', () => {
     wrapper.unmount();
   });
 
-  it('groups editor settings in the same inspector without showing layer deletion', async () => {
+  it('opens unified Settings without replacing the selected layer inspector', async () => {
     const wrapper = mountEditor(true);
     await flushPromises();
     const canvas = wrapper.findComponent(ScreenshotCanvasStub);
     canvas.vm.$emit('select', 'screenshot');
     await wrapper.vm.$nextTick();
-    await wrapper.get('.screenshot-topbar button[aria-label="Settings"]').trigger('click');
-    expect(wrapper.find('[data-testid="editor-settings"]').exists()).toBe(true);
-    expect(wrapper.find('.properties-footer').exists()).toBe(false);
-    expect(canvas.props('selectedId')).toBe('screenshot');
-    await wrapper.get('.screenshot-topbar button[aria-label="Settings"]').trigger('click');
-    expect(wrapper.get('.properties-island').isVisible()).toBe(false);
-    await wrapper.get('.screenshot-toolbar button[aria-label="Properties"]').trigger('click');
-    expect(wrapper.get('[data-testid="editor-settings"]').isVisible()).toBe(true);
-    expect(canvas.props('selectedId')).toBe('screenshot');
+    for (let i = 0; i < 2; i++) {
+      await wrapper.get('.screenshot-topbar button[aria-label="Settings"]').trigger('click');
+      expect(capture.openHudSettings).toHaveBeenCalledTimes(i + 1);
+      expect(wrapper.find('[data-testid="editor-settings"]').exists()).toBe(false);
+      expect(canvas.props('selectedId')).toBe('screenshot');
+      expect(wrapper.get('.properties-island').isVisible()).toBe(true);
+    }
     wrapper.unmount();
   });
 
@@ -486,7 +485,7 @@ describe('ScreenshotEditor', () => {
     expect(wrapper.get('[role="alert"]').text()).toBe('Image unavailable');
     expect(wrapper.emitted('ready')).toEqual([[]]);
     await wrapper.get('.screenshot-topbar button[aria-label="Settings"]').trigger('click');
-    wrapper.findComponent({ name: 'SettingsPanel' }).vm.$emit('back-to-hud');
+    await wrapper.get('button[aria-label="Back to HUD"]').trigger('click');
     await flushPromises();
     expect(capture.showHud).toHaveBeenCalledOnce();
     wrapper.unmount();
@@ -536,7 +535,13 @@ describe('ScreenshotEditor', () => {
       }),
       expect.any(Object),
     );
-    expect(capture.exportScreenshot).toHaveBeenCalledWith('screen-1', new ArrayBuffer(4), 'png', false);
+    expect(capture.exportScreenshot).toHaveBeenCalledWith(
+      'screen-1',
+      new ArrayBuffer(4),
+      'png',
+      false,
+      'Captured screen',
+    );
     wrapper.unmount();
   });
 
@@ -585,7 +590,14 @@ describe('ScreenshotEditor', () => {
       expect.objectContaining({ format: 'webp' }),
       expect.objectContaining({ includePreview: true, signal: expect.any(AbortSignal) }),
     );
-    expect(capture.exportScreenshot).toHaveBeenNthCalledWith(2, 'screen-1', new ArrayBuffer(4), 'webp', false);
+    expect(capture.exportScreenshot).toHaveBeenNthCalledWith(
+      2,
+      'screen-1',
+      new ArrayBuffer(4),
+      'webp',
+      false,
+      'Captured screen',
+    );
     wrapper.unmount();
   });
 
@@ -1428,10 +1440,11 @@ describe('ScreenshotEditor', () => {
     const wrapper = mountEditor();
     await flushPromises();
     const children = wrapper.get('.editor-body > .workspace-upper').element.children;
-    expect(children[0]?.classList.contains('properties-island')).toBe(true);
-    expect(children[1]?.classList.contains('screenshot-preview-stage')).toBe(true);
-    expect(children[1]?.querySelector('[data-testid="screenshot-canvas"]')).not.toBeNull();
-    expect(children).toHaveLength(2);
+    expect(children[0]?.classList.contains('editor-ambient-background')).toBe(true);
+    expect(children[1]?.classList.contains('properties-island')).toBe(true);
+    expect(children[2]?.classList.contains('screenshot-preview-stage')).toBe(true);
+    expect(children[2]?.querySelector('[data-testid="screenshot-canvas"]')).not.toBeNull();
+    expect(children).toHaveLength(3);
     expect(wrapper.find('[aria-label="Audio"]').exists()).toBe(false);
     wrapper.findComponent(ScreenshotCanvasStub).vm.$emit('select', 'screenshot');
     await flushPromises();
@@ -1559,21 +1572,32 @@ describe('ScreenshotEditor', () => {
     expect(useToastStore().toasts[0]).toMatchObject({ type: 'error', message: 'Image copy failed' });
     wrapper.unmount();
   });
-  it('shares the ambient canvas background and centers project navigation with presets on the left', async () => {
+  it('fills the workspace background and centers project navigation with presets on the left', async () => {
     const wrapper = mountEditor();
     await flushPromises();
     expect(wrapper.get('.screenshot-topbar').text()).toContain('Back to HUD');
     expect(wrapper.find('.left-actions [data-testid="preset-controls"]').exists()).toBe(true);
     expect(wrapper.find('.center-actions [data-testid="project-switcher"]').exists()).toBe(true);
     expect(wrapper.find('.right-actions [data-testid="preset-controls"]').exists()).toBe(false);
+    const background = wrapper.findComponent({ name: 'EditorAmbientBackground' });
+    expect(background.props('variant')).toBe('workspace');
+    expect(background.element.parentElement).toBe(wrapper.get('.workspace-upper').element);
+    expect(wrapper.find('.screenshot-topbar .editor-ambient-background').exists()).toBe(false);
     const state = wrapper.findComponent(ScreenshotCanvasStub).props('state')!;
     state.background = { kind: 'color', color: '#d54f68' };
     state.canvas.showBackground = true;
     await wrapper.vm.$nextTick();
-    expect(wrapper.findComponent({ name: 'EditorAmbientBackground' }).props('background')).toEqual(state.background);
+    expect(background.props('background')).toEqual(state.background);
+    const originalCanvas = { ...state.canvas };
+    await wrapper.get('.screenshot-toolbar button[aria-label="Properties"]').trigger('click');
+    expect(background.props('background')).toEqual(state.background);
+    expect(state.canvas).toEqual(originalCanvas);
+    await wrapper.get('.screenshot-toolbar button[aria-label="Properties"]').trigger('click');
+    expect(background.props('background')).toEqual(state.background);
+    expect(state.canvas).toEqual(originalCanvas);
     state.canvas.showBackground = false;
     await wrapper.vm.$nextTick();
-    expect(wrapper.findComponent({ name: 'EditorAmbientBackground' }).props('background')).toBeNull();
+    expect(background.props('background')).toBeNull();
     wrapper.unmount();
   });
 

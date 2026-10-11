@@ -3,7 +3,7 @@ import EditorTitlebar from './EditorTitlebar.vue';
 import type { CaptureProject } from '~/api/types/capture-api';
 import type { ProjectIdentity } from '../projects/project-picker-types';
 import VideoProjectEdition from './VideoProjectEdition.vue';
-import ExportPopover from '../export/ExportPopover.vue';
+import ExportDialog from '../export/ExportDialog.vue';
 import Button from '~/ui/button/Button.vue';
 import { ArrowLeft } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -40,6 +40,7 @@ withDefaults(
 const emit = defineEmits<{
   (e: 'back-to-hud'): void;
   (e: 'open-project', project: CaptureProject): void;
+  (e: 'rename-project', project: CaptureProject): void;
   (e: 'update:exportAudio', value: boolean): void;
   (e: 'presetSelect', id: string | number): void;
   (e: 'presetAdd', name: string): void;
@@ -80,10 +81,15 @@ const handleExit = () => {
       <EditorSearchButton />
     </template>
     <template #center>
-      <VideoProjectEdition :project="project" :is-saving="isSaving" @open-project="emit('open-project', $event)" />
+      <VideoProjectEdition
+        :project="project"
+        :is-saving="isSaving"
+        @open-project="emit('open-project', $event)"
+        @rename-project="emit('rename-project', $event)"
+      />
     </template>
     <template #right>
-      <ExportPopover
+      <ExportDialog
         v-if="exportRequest"
         :request="exportRequest"
         :playhead-seconds="playheadSeconds"

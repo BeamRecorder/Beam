@@ -8,15 +8,12 @@ import { isSupportedLocale, localeOptions } from '~/i18n/locales';
 import { capture } from '~/api/capture';
 import Button from '~/ui/button/Button.vue';
 import Select from '~/ui/select/Select.vue';
-import AppearanceSettings from '~/components/settings/AppearanceSettings.vue';
+import StoragePreferences from '~/components/settings/StoragePreferences.vue';
 import TogglePreference from '~/components/settings/TogglePreference.vue';
-import { useExportBackendPreference } from '~/components/export/useExportBackendPreference';
 
 defineProps<{ focusedSetting?: string }>();
 const emit = defineEmits<{ close: [] }>();
 const { t } = useTranslate('HudPreferences');
-const { t: exportText } = useTranslate('ExportPopover');
-const exportBackend = useExportBackendPreference();
 const localeStore = useLocaleStore();
 const preferences = usePreferencesStore();
 const startupBusy = ref(false);
@@ -95,25 +92,7 @@ const openOnboarding = () => {
         />
       </div>
     </div>
-    <div class="preference-item preference-appearance-item">
-      <AppearanceSettings :show-title="false" compact :show-ui-scaling="false" :focused-setting="focusedSetting" />
-    </div>
-    <div
-      v-if="exportBackend.available"
-      class="preference-item preview-preference"
-      data-setting="video-export-backend"
-      tabindex="-1"
-    >
-      <TogglePreference
-        :model-value="exportBackend.enabled.value"
-        :disabled="!exportBackend.ready.value"
-        :busy="exportBackend.busy.value"
-        :label="exportText('experimentalFfmpeg')"
-        :description="exportText('experimentalFfmpegDesc')"
-        @update:model-value="exportBackend.setEnabled"
-      />
-      <p v-if="exportBackend.error.value" class="preference-error" role="alert">{{ exportBackend.error.value }}</p>
-    </div>
+    <StoragePreferences />
     <div class="preference-item" data-setting="onboarding" tabindex="-1">
       <div class="preference-copy">
         <p class="preference-title">{{ t('onboarding') }}</p>

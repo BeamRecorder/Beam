@@ -1,3 +1,4 @@
+import { additiveSelection } from '~/shortcuts/pointer-modifiers';
 import { screenshotLayers } from '@beam/engine/screenshot/screenshot-layers';
 import { screenshotLayerAt } from './screenshot-layer-geometry';
 import type { ScreenshotCanvasInteractionOptions } from './screenshot-canvas-interaction-types';
@@ -21,11 +22,11 @@ export function screenshotCanvasInteraction(options: ScreenshotCanvasInteraction
   const select = (event: PointerEvent) => {
     if (options.blocked() || event.defaultPrevented || event.button !== 0) return;
     const id = layerAt(event);
-    selectHit(id, event.ctrlKey || event.metaKey || event.shiftKey);
+    selectHit(id, additiveSelection(event));
   };
   const editLayer = (event: MouseEvent) => {
     if (event.type === 'click' && event.detail !== 3) return;
-    if (options.blocked() || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (options.blocked() || event.button !== 0 || additiveSelection(event)) return;
     if (event.target instanceof Element && event.target.closest('button, input, textarea, [role="button"]')) return;
     const id = layerAt(event);
     if (!id) return options.add(event);

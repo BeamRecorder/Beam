@@ -1,3 +1,4 @@
+import type { EditorWindowContext } from './editor-window';
 import type { CaptureMode } from '@beam/engine/capture/capture-mode';
 
 export type HudPanel = 'settings' | 'projects' | 'mascot';
@@ -5,7 +6,12 @@ export interface HudProjectRequest {
   id: string;
   mode: CaptureMode;
 }
+export type SettingsEditorAction = 'recorder' | 'webcam' | 'devtools';
 export interface HudPanelApi {
+  setShortcutCaptureActive(active: boolean): Promise<void>;
+  getSettingsEditorContext(): Promise<EditorWindowContext | null>;
+  runSettingsEditorAction(action: SettingsEditorAction): Promise<void>;
+  onSettingsEditorAction(listener: (action: SettingsEditorAction) => void | Promise<void>): () => void;
   openHudSettings(): Promise<boolean>;
   openHudProjects(): Promise<boolean>;
   openDeveloperTools(): Promise<void>;

@@ -14,36 +14,44 @@ const configuration: RecordingConfiguration = {
   recordingBarVisibility: 'always',
   region: { x: 0, y: 0, width: 1, height: 1 },
 };
-const fixture = (initial: RecordingPhase = 'recording') => {
+const fixture = (initial: RecordingPhase = 'recording', current = configuration) => {
   const phase = ref<RecordingPhase>(initial);
   const cancel = vi.fn(async () => {
     phase.value = 'idle';
   });
-  const start = vi.fn(async () => {
+  const start = vi.fn(async (_configuration: RecordingConfiguration) => {
     phase.value = 'recording';
   });
   return {
     phase,
     cancel,
     start,
-    restart: createRecordingRestart(phase, () => configuration, cancel, start),
+    restart: createRecordingRestart(phase, () => current, cancel, start),
   };
 };
 describe('recording restart', () => {
   it.each(['recording', 'paused'] as const)(
-    'discards %s before restarting with the same configuration and no countdown',
+    'discards %s before restarting with the same configuration and countdown',
     async (phase) => {
       const f = fixture(phase);
       await f.restart();
       expect(f.cancel).toHaveBeenCalledOnce();
-      expect(f.start).toHaveBeenCalledWith({
-        ...configuration,
-        countdownSeconds: 0,
-      });
+      expect(f.start).toHaveBeenCalledWith(configuration);
+      expect(f.start.mock.calls[0]?.[0]).not.toBe(configuration);
       expect(f.cancel.mock.invocationCallOrder[0]).toBeLessThan(f.start.mock.invocationCallOrder[0]!);
       expect(configuration.countdownSeconds).toBe(3);
     },
   );
+  it.each([0, 1, 3, 5, 10])('keeps the %s-second countdown on every restart', async (countdownSeconds) => {
+    const current = { ...configuration, countdownSeconds };
+    const f = fixture('recording', current);
+    await f.restart();
+    await f.restart();
+    expect(f.cancel).toHaveBeenCalledTimes(2);
+    expect(f.start).toHaveBeenNthCalledWith(1, current);
+    expect(f.start).toHaveBeenNthCalledWith(2, current);
+    expect(current.countdownSeconds).toBe(countdownSeconds);
+  });
   it.each(['idle', 'starting', 'countdown', 'finalizing'] as const)('ignores restart during %s', async (phase) => {
     const f = fixture(phase);
     await f.restart();

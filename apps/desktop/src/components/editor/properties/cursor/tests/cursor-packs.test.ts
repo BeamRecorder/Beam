@@ -104,6 +104,22 @@ describe('cursor pack catalog', () => {
     }
   });
 
+  it.each(['resizewesteast', 'resizenorthsouth', 'resizenortheastsouthwest', 'resizenorthwestsoutheast'])(
+    'renders the recognized %s resize role with its macOS SVG',
+    (role) => {
+      const asset = resolveCursorAsset(
+        MACOS_CURSOR_PACK,
+        { packId: MACOS_CURSOR_PACK.id, mode: 'automatic', cursorId: null },
+        role,
+      );
+
+      expect(asset.id).toBe(role);
+      expect(asset.format).toBe('svg');
+      expect(asset.url).toMatch(new RegExp(`/macOsSvgCursors/${role}\\.svg$`));
+      expect(existsSync(bundledAssetPath(asset.url))).toBe(true);
+    },
+  );
+
   it('resolves tintability per asset for mixed packs', () => {
     const pack: CursorPackDescriptor = {
       id: 'pack:mixed-tintability',

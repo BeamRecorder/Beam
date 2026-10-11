@@ -28,6 +28,9 @@ function fixture(options = {}) {
       toggle: async () => {
         calls.push(['quick']);
       },
+      record: async (target) => {
+        calls.push(['record', target]);
+      },
     }),
     getRegionOverlay: () => ({
       handleShortcut: (id) => {
@@ -66,6 +69,17 @@ test('dispatches Quick Snip directly without waking the HUD', () => {
   f.dispatcher.dispatch('quickSnip.toggle');
   assert.deepEqual(f.calls, [['quick']]);
 });
+for (const [action, target] of [
+  ['Screen', 'screen'],
+  ['Region', 'region'],
+  ['Window', 'window'],
+]) {
+  test(`dispatches the direct Quick Snip ${target} action without waking or broadcasting to the HUD`, () => {
+    const f = fixture({ sleeping: true });
+    assert.equal(f.dispatcher.dispatch(`quickSnip.record${action}`), true);
+    assert.deepEqual(f.calls, [['record', target]]);
+  });
+}
 test('routes teleprompter actions to its native owner and ordinary actions to existing windows', () => {
   const f = fixture();
   f.dispatcher.dispatch('teleprompter.play');

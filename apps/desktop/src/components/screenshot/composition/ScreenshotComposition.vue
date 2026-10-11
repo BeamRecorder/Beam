@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { matchesGesture } from '~/shortcuts/action-bindings';
 import { computed, nextTick, ref, watch } from 'vue';
 import { useMediaQuery } from '@vueuse/core';
 import {
@@ -169,7 +170,7 @@ const selectLayer = (event: MouseEvent, id: string, wholeGroup = false) => {
   if (props.disabled) return;
   if (consumeClick(event, id)) return;
   const individual = !wholeGroup && Boolean(props.layers.find((layer) => layer.id === id)?.groupId);
-  if (event.ctrlKey || event.metaKey) emit('select', id, individual ? 'toggle-individual' : 'toggle');
+  if (matchesGesture(event, 'addSelection')) emit('select', id, individual ? 'toggle-individual' : 'toggle');
   else if (individual) emit('select', id, 'individual');
   else emit('select', id);
 };

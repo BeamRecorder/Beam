@@ -4,15 +4,8 @@ const path = require('path');
 
 const MAX_CHUNK_BYTES = 32 * 1024 * 1024;
 
-function safeExportName(name, extension) {
-  const base = typeof name === 'string' ? name.normalize('NFKC').trim() : '';
-  const cleaned = base
-    .replace(/[<>:"/\\|?*\x00-\x1f]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/[. ]+$/g, '')
-    .slice(0, 120);
-  return `${cleaned || 'Beam export'}.${extension}`;
-}
+const { safeExportName } = require('./export-file-name.cjs');
+const { exportFilePath, confirmExportReplacement, publishExportFile } = require('./export-destination.cjs');
 
 function registerExportIpc({
   ipcMain,
@@ -22,6 +15,7 @@ function registerExportIpc({
   applicationRoot,
   defaultExportDirectory = null,
   directories,
+  getLocale,
   resolveAutomaticDestination = () => null,
   createGpuMonitor,
   createExperimentalExport = require('@beam/electron-export').createExperimentalGpuExport,
@@ -29,6 +23,7 @@ function registerExportIpc({
   pathModule = path,
 }) {
   const jobs = new Map();
+  const destinationServices = { dialog, BrowserWindow, getLocale, fsModule };
   const experimental = createExperimentalExport({
     ipcMain,
     BrowserWindow,
@@ -65,22 +60,15 @@ function registerExportIpc({
   ipcMain.handle('export:begin', async (event, payload = {}) => {
     const format = payload.format === 'mp4' ? 'mp4' : payload.format === 'webm' ? 'webm' : null;
     if (!format) throw new Error('Format d’export invalide.');
-    const window = BrowserWindow.fromWebContents(event.sender);
-    const defaultName = safeExportName(payload.projectName, format);
     const automaticPath = resolveAutomaticDestination(event.sender, format);
     const exportDirectory = directories ? directories.exportDirectory() : defaultExportDirectory;
-    const result = automaticPath
-      ? { filePath: automaticPath, canceled: false }
-      : await dialog.showSaveDialog(window, {
-          title: 'Export video',
-          defaultPath: exportDirectory ? pathModule.resolve(exportDirectory, defaultName) : defaultName,
-          filters: [{ name: format.toUpperCase(), extensions: [format] }],
-          properties: ['showOverwriteConfirmation'],
-        });
-    if (result.canceled || !result.filePath) return { canceled: true };
-    const targetPath = pathModule.resolve(result.filePath);
+    const targetPath = automaticPath
+      ? pathModule.resolve(automaticPath)
+      : exportFilePath(exportDirectory, payload.fileName ?? payload.projectName, format, pathModule);
     if (pathModule.extname(targetPath).toLowerCase() !== `.${format}`)
       throw new Error(`Le fichier doit utiliser l’extension .${format}.`);
+    const approval = await confirmExportReplacement(destinationServices, event, targetPath);
+    if (!approval.accepted) return { canceled: true };
     const id = crypto.randomUUID();
     const temporaryPath = `${targetPath}.${id}.partial`;
     const handle = await fsModule.promises.open(temporaryPath, 'wx');
@@ -90,6 +78,7 @@ function registerExportIpc({
       targetPath,
       temporaryPath,
       rememberDirectory: !automaticPath,
+      approvedRevision: approval.revision,
       handle,
       gpuMonitor: createGpuMonitor?.(),
       nextSequence: 0,
@@ -126,7 +115,13 @@ function registerExportIpc({
     await job.handle.sync();
     await job.handle.close();
     job.handle = null;
-    await fsModule.promises.rename(job.temporaryPath, job.targetPath);
+    const published = await publishExportFile(destinationServices, event, job.targetPath, job.approvedRevision, () =>
+      fsModule.promises.rename(job.temporaryPath, job.targetPath),
+    );
+    if (!published) {
+      await cleanup(job);
+      return { canceled: true };
+    }
     jobs.delete(job.id);
     if (job.rememberDirectory) directories?.rememberExport(job.targetPath);
     return { path: job.targetPath, ...(gpuUsage ? { gpuUsage } : {}) };

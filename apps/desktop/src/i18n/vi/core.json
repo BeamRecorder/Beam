@@ -509,12 +509,12 @@
     "format": "Định dạng",
     "webm": "WebM",
     "mp4": "MP4",
-    "qualityAndBitrate": "Chất lượng & Tốc độ bit",
+    "qualityAndBitrate": "Chất lượng",
     "low": "Thấp",
-    "medium": "Vừa",
+    "medium": "Chuẩn",
     "high": "Cao",
-    "webmDesc": "Xuất nhanh, dung lượng tối ưu và hỗ trợ nền trong suốt.",
-    "mp4Desc": "Tương thích phổ biến để chia sẻ trên mọi nền tảng.",
+    "webmDesc": "Dành cho web, với tệp nhỏ hơn và hỗ trợ độ trong suốt.",
+    "mp4Desc": "Lựa chọn tương thích nhất để chia sẻ và phát trên nhiều thiết bị.",
     "lowDesc": "~{mbps} Mbps · Dung lượng nhỏ hơn & độ nét thấp hơn.",
     "mediumDesc": "~{mbps} Mbps · Chất lượng cân bằng (Khuyên dùng).",
     "highDesc": "~{mbps} Mbps · Độ sắc nét hình ảnh tối đa.",
@@ -532,7 +532,7 @@
     "frameRate24Desc": "Nhịp chuyển động điện ảnh và tệp nhỏ hơn. Phù hợp nhất với nguồn 24 fps.",
     "frameRate30Desc": "Cân bằng độ mượt và kích thước tệp cho video tiêu chuẩn.",
     "frameRate60Desc": "Chuyển động nhanh mượt nhất nhưng tệp lớn hơn. Phù hợp nhất với nguồn 60 fps.",
-    "resMax": "Gốc (Tối đa)",
+    "resMax": "Gốc",
     "res1080p": "1080p",
     "res720p": "720p",
     "copyError": "Sao chép lỗi",
@@ -544,7 +544,17 @@
     "res720pDesc": "Tỷ lệ HD ({width}x{height})",
     "moreOptions": "Tùy chọn khác",
     "includeAudio": "Bao gồm âm thanh",
-    "includeAudioDesc": "Thêm các rãnh âm thanh đang bật vào video xuất."
+    "includeAudioDesc": "Thêm các rãnh âm thanh đang bật vào video xuất.",
+    "dialogTitle": "Xuất video",
+    "fileName": "Tên tệp",
+    "estimatedSize": "Kích thước ước tính ≈",
+    "sizeHint": "Dựa trên tốc độ bit mục tiêu. Cảnh tĩnh có thể có dung lượng nhỏ hơn nhiều.",
+    "showInFolder": "Hiển thị trong thư mục",
+    "savingImage": "Đang lưu ảnh…",
+    "exportAgain": "Xuất lại",
+    "watchVideo": "Xem",
+    "openFolder": "Mở thư mục",
+    "viewImage": "Xem ảnh"
   },
   "HUD": {
     "issues": "Sự cố",
@@ -720,7 +730,13 @@
     "recordingDescription": "Chuẩn bị điều khiển và đếm ngược cho lần ghi tiếp theo.",
     "accessibilityDescription": "Quản lý quyền ghi tương tác và hỗ trợ viết.",
     "shortcutsDescription": "Thực hiện thao tác yêu thích bằng phím tắt.",
-    "updatesDescription": "Luôn cập nhật Beam và khám phá tính năng mới."
+    "updatesDescription": "Luôn cập nhật Beam và khám phá tính năng mới.",
+    "categoryAppearance": "Giao diện",
+    "appearanceDescription": "Chọn giao diện Beam cho tất cả cửa sổ.",
+    "categoryVideoEditor": "Trình chỉnh sửa video",
+    "videoEditorDescription": "Hành vi dòng thời gian và tùy chọn xuất video.",
+    "groupApplication": "Ứng dụng",
+    "groupTools": "Công cụ"
   },
   "ProjectPicker": {
     "projects": "Dự án",
@@ -1287,6 +1303,7 @@
     "browse": "Chọn thư mục",
     "search": "Tìm thư mục",
     "noMatches": "Không có thư mục phù hợp",
+    "emptyFolders": "Chọn một thư mục để xem các thư mục gần đây tại đây.",
     "error": "Không thể cập nhật thư mục.",
     "retry": "Thử lại"
   }

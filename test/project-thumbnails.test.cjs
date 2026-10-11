@@ -71,7 +71,7 @@ test('instant projects and a custom media host retain valid thumbnail URLs', (t)
   const listed = store.list().find((item) => item.id === project.id);
   assert.equal(listed.mode, 'instant');
   assert.equal(new URL(listed.thumbnailSrc).hostname, 'fixture');
-  assert.ok(decodeURIComponent(new URL(listed.thumbnailSrc).pathname).startsWith('/instant/'));
+  assert.ok(decodeURIComponent(new URL(listed.thumbnailSrc).pathname).startsWith(`/@project/${project.id}/`));
 });
 
 test('invalid thumbnail input does not write a file or expose a URL', (t) => {

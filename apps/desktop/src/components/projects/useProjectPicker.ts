@@ -7,6 +7,7 @@ import { useProjectPreviews } from './useProjectPreviews';
 import { useProjectGrid } from './useProjectGrid';
 import { useProjectSearch } from './useProjectSearch';
 import { useProjectCatalog } from './useProjectCatalog';
+import { useProjectCreation } from './useProjectCreation';
 import { createProjectPickerRefresh } from './project-picker-refresh';
 import type { ProjectPickerProps, ProjectPickerEmit } from './project-picker-types';
 
@@ -292,11 +293,14 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
     },
   );
 
-  // New project states
-  const isNewProjectOpen = ref(false);
-  const newProjectName = ref('');
-  const newProjectError = ref('');
-  const newProjectBusy = ref(false);
+  const creation = useProjectCreation({
+    refresh: async () => {
+      catalog.invalidate();
+      void loadProjects();
+    },
+    open: (project) => emit('open-project', project),
+  });
+  const { isNewProjectOpen } = creation;
 
   // Rename project states
   const renameProjectId = ref('');
@@ -316,30 +320,6 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
       deleteError.value = '';
     }
     emit('toggle-popover', isOpen);
-  };
-
-  const openNewProjectDialog = () => {
-    newProjectName.value = '';
-    newProjectError.value = '';
-    isNewProjectOpen.value = true;
-  };
-
-  const handleCreateProject = async () => {
-    newProjectBusy.value = true;
-    newProjectError.value = '';
-    try {
-      const created = await capture.createProject({
-        name: newProjectName.value.trim() || undefined,
-      });
-      catalog.invalidate();
-      await loadProjects();
-      isNewProjectOpen.value = false;
-      emit('open-project', created);
-    } catch (error) {
-      newProjectError.value = error instanceof Error ? error.message : String(error);
-    } finally {
-      newProjectBusy.value = false;
-    }
   };
 
   const startRename = (project: CaptureProject) => {
@@ -469,10 +449,7 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
     openSelectedProject,
     formatDate,
     handleProjectOpen,
-    isNewProjectOpen,
-    newProjectName,
-    newProjectError,
-    newProjectBusy,
+    ...creation,
     renameProjectId,
     renameValue,
     renameBusy,
@@ -480,8 +457,6 @@ export function useProjectPicker(props: ProjectPickerProps, emit: ProjectPickerE
     deleteBusy,
     deleteConfirmProjectId,
     handleActionPopoverToggle,
-    openNewProjectDialog,
-    handleCreateProject,
     startRename,
     cancelRename,
     handleRenameProject,

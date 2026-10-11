@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { useId } from 'vue';
 import Switch from '~/ui/switch/Switch.vue';
-defineProps<{ label: string; description?: string; disabled?: boolean; busy?: boolean }>();
+import type { SwitchVariant } from '~/ui/switch/switch-types';
+defineProps<{
+  label: string;
+  description?: string;
+  disabled?: boolean;
+  busy?: boolean;
+  switchVariant?: SwitchVariant;
+}>();
 const enabled = defineModel<boolean>({ required: true });
 const descriptionId = useId();
 </script>
@@ -20,6 +27,7 @@ const descriptionId = useId();
       v-model="enabled"
       :disabled="disabled"
       :busy="busy"
+      :variant="switchVariant"
       :aria-label="label"
       :aria-describedby="description ? descriptionId : undefined"
     />

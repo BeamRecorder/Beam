@@ -168,6 +168,7 @@ describe('TimelineSelectionBox', () => {
   it.each(['shiftKey', 'ctrlKey', 'metaKey'] as const)(
     'adds the hit targets to the initial selection for %s',
     (modifier) => {
+      vi.spyOn(navigator, 'platform', 'get').mockReturnValue(modifier === 'metaKey' ? 'MacIntel' : 'Win32');
       const initial = { clipIds: ['kept-clip'], zoomIds: ['kept-zoom'] };
       const { wrapper } = mountSelectionBox(initial);
       const down = pointerEvent('pointerdown', {

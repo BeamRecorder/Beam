@@ -161,9 +161,10 @@ export function createScreenshotEditorTestHarness(
           EditorSkeletonSurface: { template: '<div><slot /></div>' },
           RafRevealTransition: { props: ['axis'], template: '<slot />' },
           UpdateAvailableBadge: true,
+          DirectoryPreference: true,
           EditorAmbientBackground: {
             name: 'EditorAmbientBackground',
-            props: ['background'],
+            props: ['background', 'variant'],
             template: '<div class="editor-ambient-background" />',
           },
           VideoProjectEdition: {
@@ -171,6 +172,10 @@ export function createScreenshotEditorTestHarness(
             props: ['project', 'disabled'],
             emits: ['open-project', 'rename-project', 'delete-project'],
             template: '<div data-testid="project-switcher" />',
+          },
+          Dialog: {
+            props: ['isOpen'],
+            template: '<div v-if="isOpen" role="dialog"><slot /><slot name="footer" /></div>',
           },
           Popover: defineComponent({
             data: () => ({ open: false }),

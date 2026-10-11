@@ -48,7 +48,7 @@ function createQuickSnipController(dependencies) {
       },
     };
   };
-  const beginSelection = async (sourceOptions = null) => {
+  const beginSelection = async (sourceOptions = null, recordTarget = null) => {
     if (dependencies.isNormalRecordingActive?.()) throw new Error('Quick Snip is unavailable during a Beam recording.');
     selection.generation += 1;
     dependencies.statusWindow?.hide();
@@ -58,11 +58,12 @@ function createQuickSnipController(dependencies) {
     );
     selection.display = display;
     const region = sourceOptions?.region ?? null;
-    const mode = sourceOptions
-      ? 'instant'
-      : ['studio', 'instant', 'screenshot'].includes(preferences.extras?.captureMode)
-        ? preferences.extras.captureMode
-        : 'studio';
+    const mode =
+      sourceOptions || recordTarget
+        ? 'instant'
+        : ['studio', 'instant', 'screenshot'].includes(preferences.extras?.captureMode)
+          ? preferences.extras.captureMode
+          : 'studio';
     const preset = selectedPreset(mode);
     const format = preset.settings.export?.format === 'webm' ? 'webm' : 'mp4';
     const configuration = {
@@ -74,7 +75,9 @@ function createQuickSnipController(dependencies) {
         ? preferences.extras.recordingZoomMode
         : '2d',
       automaticZoom: preferences.extras.recordingZoomMode !== 'off',
-      captureTarget: sourceOptions?.screenKind === 'window' ? 'window' : sourceOptions?.region ? 'region' : 'screen',
+      captureTarget:
+        recordTarget ??
+        (sourceOptions?.screenKind === 'window' ? 'window' : sourceOptions?.region ? 'region' : 'screen'),
       sourceReady: Boolean(sourceOptions),
       countdownSeconds:
         Number.isInteger(preferences.extras.recordingCountdownSeconds) &&
@@ -441,6 +444,13 @@ function createQuickSnipController(dependencies) {
   };
   return {
     toggle,
+    async record(target) {
+      if (!['screen', 'region', 'window'].includes(target)) throw new Error('Invalid Quick Snip source.');
+      if (snapshot.state !== 'idle' && !TERMINAL_STATES.has(snapshot.state)) return snapshot;
+      if (TERMINAL_STATES.has(snapshot.state)) reset();
+      await beginSelection(null, target);
+      return start();
+    },
     async fromHud(options) {
       if (!options || typeof options !== 'object' || !['display', 'window'].includes(options.screenKind))
         throw new Error('Invalid Instant capture source.');

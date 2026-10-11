@@ -12,11 +12,28 @@ const { t } = useTranslate('DirectoryPreferences');
 const { snapshot, busy, loading, error, load, choose, select } = useStorageDirectories();
 const automatic = 'automatic';
 const title = computed(() => t(props.kind === 'projects' ? 'projects' : 'exports'));
-const model = computed(() => snapshot.value?.[props.kind].directory ?? automatic);
-const options = computed(() => [
-  { value: automatic, label: t(props.kind === 'projects' ? 'defaultLocation' : 'lastUsed') },
-  ...(snapshot.value?.[props.kind].recent ?? []).map((directory) => ({ value: directory, label: directory })),
-]);
+const isExportDialog = computed(() => props.compact && props.kind === 'exports');
+const automaticExportPath = computed(() =>
+  snapshot.value ? (snapshot.value.exports.lastDirectory ?? snapshot.value.defaultExportDirectory) : '',
+);
+const model = computed(() => {
+  const directory = snapshot.value?.[props.kind].directory;
+  // A fixed export folder matching the automatic path shares its single visible row.
+  return directory == null || (props.kind === 'exports' && directory === automaticExportPath.value)
+    ? automatic
+    : directory;
+});
+const options = computed(() => {
+  const recent = snapshot.value?.[props.kind].recent ?? [];
+  if (props.kind === 'exports' && recent.length === 0) return [];
+  const paths = recent.filter((directory) => props.kind === 'projects' || directory !== automaticExportPath.value);
+  return [
+    props.kind === 'projects'
+      ? { value: automatic, label: t('defaultLocation') }
+      : { value: automatic, label: automaticExportPath.value, description: t('lastUsed') },
+    ...paths.map((directory) => ({ value: directory, label: directory })),
+  ];
+});
 const effectivePath = computed(() => {
   const current = snapshot.value;
   if (!current) return '';
@@ -39,19 +56,21 @@ const update = (value: string | number) => {
       <Select
         :model-value="model"
         :options="options"
+        :placeholder="effectivePath || t('browse')"
+        :empty-label="t('emptyFolders')"
         :disabled="busy || disabled || !snapshot"
         :loading="loading"
         :aria-label="title"
         :search-placeholder="t('search')"
         :no-results-label="t('noMatches')"
-        variant="search"
+        :variant="options.length ? 'search' : 'default'"
         appearance="neutral"
-        size="sm"
+        :size="isExportDialog ? 'md' : 'sm'"
         @update:model-value="update"
       />
       <Button
         variant="secondary"
-        size="sm"
+        :size="isExportDialog ? 'md' : 'sm'"
         icon-only
         :icon="FolderOpen"
         :disabled="busy || disabled || !snapshot"
@@ -60,7 +79,7 @@ const update = (value: string | number) => {
         @click="choose(kind)"
       />
     </div>
-    <p v-if="effectivePath" class="directory-path" :title="effectivePath">{{ effectivePath }}</p>
+    <p v-if="kind === 'projects' && effectivePath" class="directory-path" :title="effectivePath">{{ effectivePath }}</p>
     <div v-if="error" class="directory-error" role="alert">
       <span>{{ t('error') }} {{ error }}</span>
       <Button v-if="!snapshot" variant="ghost" size="sm" :icon="RefreshCw" :disabled="busy" @click="load">{{

@@ -6,7 +6,7 @@ import type {
   NormalizedTransform,
   VisualClip,
 } from '@beam/engine/shared/composition-types';
-import type { ProjectEditorPresentation } from '~/api/types/capture-api';
+import type { ProjectEditorPresentation, ProjectEditorState } from '~/api/types/capture-api';
 import type {
   ZoomDepth,
   ZoomMode,
@@ -15,6 +15,12 @@ import type {
   ZoomTiltPreset,
 } from '@beam/engine/zoom/zoom-types';
 import type { CameraFramingPreset, CameraLayoutPreset } from '@beam/engine/shared/camera-layout-types';
+import type { ElementTextDefaults } from '../elements/element-text-default-types';
+
+export interface EditorPreferenceSnapshot {
+  presentation: ProjectEditorPresentation;
+  zoom: Pick<ProjectEditorState['zoom'], 'motionBlur'>;
+}
 
 export interface VisualClipDefaults {
   transform: NormalizedTransform;
@@ -33,6 +39,7 @@ export interface VisualClipDefaults {
 
 export interface EditorPreferenceDefaults {
   schemaVersion: 1;
+  elementText?: ElementTextDefaults;
   presentation?: Omit<ProjectEditorPresentation, 'importedBackgrounds'>;
   visual?: Partial<Record<VisualClip['kind'], VisualClipDefaults>>;
   caption?: {

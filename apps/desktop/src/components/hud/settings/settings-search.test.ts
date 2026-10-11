@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { i18n, setCurrentLocale } from '~/i18n';
 import { createSettingsSearch, normalizeSettingsSearch } from './settings-search';
-import { settingsCategories, settingsSearchEntries } from './settings-catalog';
+import { settingsCategories, settingsNavigationGroups, settingsSearchEntries } from './settings-catalog';
 import type { SettingsSearchEntry } from './settings-types';
 
 const entries: SettingsSearchEntry[] = [
@@ -108,6 +108,25 @@ describe('indexed bilingual settings search', () => {
       expect(catalogue.some(({ id }) => id === 'always-on-top')).toBe(true);
     }
   });
+  it.each([true, false])(
+    'assigns every visible settings category to exactly one ordered group (development: %s)',
+    (development) => {
+      const groups = settingsNavigationGroups(development);
+      expect(groups.map((group) => group.id)).toEqual(['application', 'tools', 'support']);
+      const ids = groups.flatMap((group) => group.categories.map((category) => category.id));
+      expect(new Set(ids).size).toBe(ids.length);
+      expect([...ids].sort()).toEqual(
+        settingsCategories(development)
+          .map((category) => category.id)
+          .sort(),
+      );
+      expect(groups[1]!.categories.map((category) => category.id)).toEqual(['recording', 'video-editor']);
+      expect(groups[2]!.categories.map((category) => category.id)).toEqual(
+        development ? ['developer', 'updates', 'about'] : ['updates', 'about'],
+      );
+      expect(groups.every((group) => group.categories.length > 0)).toBe(true);
+    },
+  );
   it.each(['linux', 'win32', 'darwin', 'unknown'])(
     'indexes the video backend only where it is available (%s)',
     (platform) => {

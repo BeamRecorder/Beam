@@ -65,6 +65,7 @@ for (const operation of ['finalize', 'abort', 'window-close'])
     let stopped = 0;
     const registration = registerExportIpc({
       ipcMain: { handle: (name, handler) => handlers.set(name, handler) },
+      defaultExportDirectory: directory,
       dialog: { showSaveDialog: async () => ({ filePath: path.join(directory, 'output.mp4') }) },
       BrowserWindow: { fromWebContents: () => ({}) },
       createGpuMonitor: () => ({

@@ -20,7 +20,8 @@ function setup(run) {
     event = { sender: { id: 7 } };
   const controller = registerExportIpc({
     ipcMain: { handle: (name, handler) => handlers.set(name, handler) },
-    dialog: { showSaveDialog: async () => ({ canceled: false, filePath: target }) },
+    defaultExportDirectory: directory,
+    dialog: { showMessageBox: async () => ({ response: 0 }) },
     BrowserWindow: { fromWebContents: () => ({}) },
     createExperimentalExport: () => ({ run }),
   });
@@ -42,7 +43,7 @@ test('reserves native jobs before awaiting closure, rejects concurrent writes/fi
     return { codec: request.format };
   });
   try {
-    const opened = await api.invoke('export:begin', { format: 'mp4' });
+    const opened = await api.invoke('export:begin', { format: 'mp4', fileName: 'result' });
     const payload = { jobId: opened.jobId, request: { format: 'mp4' }, bitrate: 1000 };
     const task = api.invoke('export:ffmpeg', payload);
     await entered.promise;
@@ -65,7 +66,7 @@ test('validates native ownership, bitrate and destination format before starting
     starts++;
   });
   try {
-    const opened = await api.invoke('export:begin', { format: 'mp4' });
+    const opened = await api.invoke('export:begin', { format: 'mp4', fileName: 'result' });
     const payload = { jobId: opened.jobId, request: { format: 'mp4' }, bitrate: 1000 };
     await assert.rejects(api.invoke('export:ffmpeg', payload, { sender: { id: 8 } }), /autorisé/);
     for (const bitrate of [999, 1e9 + 1, 1.5, NaN])
@@ -92,7 +93,7 @@ test('abort and owner teardown terminate a native task and preserve existing des
       return done.promise;
     });
     try {
-      const opened = await api.invoke('export:begin', { format: 'mp4' });
+      const opened = await api.invoke('export:begin', { format: 'mp4', fileName: 'result' });
       const task = api.invoke('export:ffmpeg', { jobId: opened.jobId, request: { format: 'mp4' }, bitrate: 1000 });
       const rejection = assert.rejects(task, /cancelled/);
       await entered.promise;

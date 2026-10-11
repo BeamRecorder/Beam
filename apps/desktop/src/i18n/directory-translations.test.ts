@@ -11,6 +11,7 @@ const keys = [
   'browse',
   'search',
   'noMatches',
+  'emptyFolders',
   'error',
   'retry',
 ];

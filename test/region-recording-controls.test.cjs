@@ -80,7 +80,7 @@ test('marker omits screen edges and leaves a full screen capture unobstructed', 
   assert.equal(markerBounds(bounds, { x: 0, y: 0, width: 0.5, height: 0.5 }).length, 2);
   assert.equal(markerBounds(bounds, { x: 0.1, y: 0.1, width: 0.899, height: 0.899 }).length, 2);
 });
-function markerHarness(load = () => Promise.resolve()) {
+function markerHarness(load = () => Promise.resolve(), { platform = 'linux', isPackaged = false } = {}) {
   const windows = [];
   class BrowserWindow {
     constructor(options) {
@@ -88,6 +88,13 @@ function markerHarness(load = () => Promise.resolve()) {
       this.webContents = {};
       this.destroyed = false;
       this.shown = false;
+      // Windows/Chromium may enlarge a two-pixel native window independently of CSS.
+      this.bounds = {
+        x: options.x,
+        y: options.y,
+        width: Math.max(platform === 'win32' ? 32 : 0, options.width),
+        height: Math.max(platform === 'win32' ? 40 : 0, options.height),
+      };
       windows.push(this);
     }
     isDestroyed() {
@@ -102,6 +109,17 @@ function markerHarness(load = () => Promise.resolve()) {
     }
     setIgnoreMouseEvents(value) {
       this.ignored = value;
+    }
+    getBounds() {
+      return this.bounds;
+    }
+    setShape(rects) {
+      assert.equal(this.shown, false, 'clip the native surface before it becomes visible');
+      this.shape = rects;
+    }
+    setContentProtection(value) {
+      assert.equal(this.shown, false, 'exclude the marker before it becomes visible');
+      this.protected = value;
     }
     showInactive() {
       this.shown = true;
@@ -120,11 +138,52 @@ function markerHarness(load = () => Promise.resolve()) {
     marker: createRegionRecordingMarker({
       BrowserWindow,
       applicationRoot: '/app',
-      isPackaged: false,
-      platform: 'linux',
+      isPackaged,
+      platform,
     }),
   };
 }
+for (const isPackaged of [false, true])
+  test(`Windows ${isPackaged ? 'packaged' : 'development'} markers clip native minimum sizes outside the recording`, () => {
+    const { marker, windows } = markerHarness(undefined, { platform: 'win32', isPackaged });
+    marker.show(bounds, region);
+    const strips = markerBounds(bounds, region);
+    const crop = regionRectangle({ bounds, region });
+    for (const [index, target] of windows.entries()) {
+      assert.equal(target.protected, true);
+      assert.equal(target.shown, false);
+      assert.deepEqual(target.shape, [{ x: 0, y: 0, width: strips[index].width, height: strips[index].height }]);
+      assert.equal(marker.ready(target.webContents), true);
+      const painted = {
+        ...target.shape[0],
+        x: target.bounds.x + target.shape[0].x,
+        y: target.bounds.y + target.shape[0].y,
+      };
+      assert.deepEqual(painted, strips[index]);
+      assert.ok(
+        painted.x + painted.width <= crop.x ||
+          painted.x >= crop.x + crop.width ||
+          painted.y + painted.height <= crop.y ||
+          painted.y >= crop.y + crop.height,
+      );
+      assert.ok(target.url.includes(isPackaged ? 'dist/html/region-marker.html' : '/html/region-marker.html'));
+    }
+    marker.hide();
+    assert.ok(windows.every((target) => target.destroyed));
+  });
+
+test('Windows reapplies the exact strip relative to native bounds before the themed renderer is presented', () => {
+  const { marker, windows } = markerHarness(undefined, { platform: 'win32' });
+  marker.show(bounds, region);
+  const target = windows[0];
+  // Simulate native positioning/DPI adjustments while the renderer loads.
+  target.bounds = { ...target.bounds, x: target.bounds.x - 4, y: target.bounds.y - 6 };
+  assert.equal(marker.ready(target.webContents), true);
+  assert.deepEqual(target.shape, [{ x: 4, y: 6, width: 2, height: 400 }]);
+  marker.hide();
+  assert.equal(marker.ready(target.webContents), false);
+});
+
 test('markers wait for their own themed renderer and do not take focus or clicks', () => {
   const { marker, windows } = markerHarness();
   marker.show(bounds, region);

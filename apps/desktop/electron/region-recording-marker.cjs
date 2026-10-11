@@ -12,10 +12,23 @@ function markerBounds(bounds, region) {
   if (bottom + 2 <= bounds.y + bounds.height) strips.push({ x: left, y: bottom, width: right - left, height: 2 });
   return strips;
 }
+function clipWindowsMarker(target, strip) {
+  // Windows can enlarge a two-pixel window to its native minimum. Clip drawing
+  // at the OS level so top/left strips cannot extend into the captured pixels.
+  const bounds = target.getBounds();
+  target.setShape([
+    {
+      x: strip.x - bounds.x,
+      y: strip.y - bounds.y,
+      width: strip.width,
+      height: strip.height,
+    },
+  ]);
+}
 function createRegionRecordingMarker({ BrowserWindow, applicationRoot, isPackaged, platform }) {
-  const windows = new Set();
+  const windows = new Map();
   const hide = () => {
-    for (const target of windows) if (!target.isDestroyed()) target.destroy();
+    for (const target of windows.keys()) if (!target.isDestroyed()) target.destroy();
     windows.clear();
   };
   return {
@@ -43,8 +56,12 @@ function createRegionRecordingMarker({ BrowserWindow, applicationRoot, isPackage
             sandbox: false,
           },
         });
-        windows.add(target);
+        windows.set(target, strip);
         target.setIgnoreMouseEvents(true);
+        if (platform === 'win32') {
+          target.setContentProtection(true);
+          clipWindowsMarker(target, strip);
+        }
         if (platform === 'darwin') {
           target.setVisibleOnAllWorkspaces(true, {
             visibleOnFullScreen: true,
@@ -63,8 +80,9 @@ function createRegionRecordingMarker({ BrowserWindow, applicationRoot, isPackage
       }
     },
     ready(sender) {
-      for (const target of windows)
+      for (const [target, strip] of windows)
         if (!target.isDestroyed() && target.webContents === sender) {
+          if (platform === 'win32') clipWindowsMarker(target, strip);
           target.showInactive();
           return true;
         }

@@ -8,6 +8,7 @@ function createIdleHudRenderer({
   releaseAuxiliary,
   delayMs = 1000,
   log = console.error,
+  platform = process.platform,
 }) {
   let timer = null;
   let generation = 0;
@@ -30,6 +31,10 @@ function createIdleHudRenderer({
         if (current !== generation || !canSuspend() || window.isVisible() || controller.mode !== 'hud') return;
         if ((await releaseAuxiliary()) === false) return;
         if (current !== generation || disposed || window.isDestroyed() || window.isVisible() || !canSuspend()) return;
+        // Windows mouse forwarding retains Chromium's first native child HWND.
+        // Navigating this transparent window to data: and back can replace that
+        // input target. Release auxiliary resources, but retain the HUD document.
+        if (platform === 'win32') return;
         originalUrl = window.webContents.getURL();
         if (!originalUrl || originalUrl === STANDBY_URL) return;
         suspended = true;

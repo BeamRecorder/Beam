@@ -1,3 +1,4 @@
+import { hydrateActionBindings } from '~/shortcuts/action-bindings';
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { capture } from '../api/capture';
@@ -10,17 +11,21 @@ export const usePreferencesStore = defineStore('preferences', () => {
     settings.value = await capture.getPreferences();
     unsubscribe ??= capture.onPreferencesChanged((next) => {
       settings.value = next;
+      hydrateActionBindings(next.shortcuts);
     });
+    hydrateActionBindings(settings.value.shortcuts);
     return settings.value;
   };
   const update = async (patch: PreferencePatch) => {
     const plainPatch = JSON.parse(JSON.stringify(patch));
     settings.value = await capture.updatePreferences(plainPatch);
+    hydrateActionBindings(settings.value.shortcuts);
     return settings.value;
   };
   const updateBatch = async (patches: PreferencePatch[]) => {
     const plainPatches: PreferencePatch[] = JSON.parse(JSON.stringify(patches));
     settings.value = await capture.updatePreferencesBatch(plainPatches);
+    hydrateActionBindings(settings.value.shortcuts);
     return settings.value;
   };
   return { settings, load, update, updateBatch };

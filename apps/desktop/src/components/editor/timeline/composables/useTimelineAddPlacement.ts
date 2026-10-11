@@ -1,6 +1,6 @@
 import { computed, reactive } from 'vue';
 import { useTimelineInsertPreference } from './useTimelineInsertPreference';
-import type { CaptionClip } from '@beam/engine/shared/composition-types';
+import { captionLayerKey, type CaptionClip } from '@beam/engine/shared/composition-types';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type { TimelineTracksEmits, VisualTimelineTrack } from './timeline-tracks-types';
 import type { TimelineAddableVisualKind } from '@beam/engine/composition/visual-element-types';
@@ -29,9 +29,16 @@ export function useTimelineAddPlacement(options: {
   const hoverPlacements = reactive<Record<string, Placement>>({});
   const targetKey = (target: BasicTarget | VisualTimelineTrack) =>
     typeof target === 'string' ? target : `visual:${target.id}`;
-  const placementAt = (event: MouseEvent, target: BasicTarget | VisualTimelineTrack) => {
+  const placementAt = (event: MouseEvent, target: BasicTarget | VisualTimelineTrack, targetClipId?: string) => {
     const visualKind = typeof target === 'string' ? null : visualKindFor(target);
     if (typeof target !== 'string' && !visualKind) return null;
+    const captionTarget =
+      target === 'caption' && targetClipId ? options.textCaptionClips().find((clip) => clip.id === targetClipId) : null;
+    if (target === 'caption' && targetClipId && !captionTarget) return null;
+    const captionClips = captionTarget
+      ? options.textCaptionClips().filter((clip) => captionLayerKey(clip) === captionLayerKey(captionTarget))
+      : options.textCaptionClips();
+    if (target === 'caption' && captionClips.some((clip) => clip.locked)) return null;
     let preferredDurationMs: number;
     if (target === 'zoom') preferredDurationMs = options.newZoomDurationMs();
     else if (target === 'caption') preferredDurationMs = DEFAULT_CAPTION_DURATION_MS;
@@ -43,7 +50,7 @@ export function useTimelineAddPlacement(options: {
       target === 'zoom'
         ? options.zoomElements()
         : target === 'caption'
-          ? options.textCaptionClips().map((clip) => ({
+          ? captionClips.map((clip) => ({
               startMs: clip.timelineStartMs,
               endMs: clip.timelineStartMs + clip.timelineDurationMs,
             }))
@@ -64,23 +71,27 @@ export function useTimelineAddPlacement(options: {
         }
       : null;
   };
-  const hoverAt = (event: MouseEvent, target: BasicTarget | VisualTimelineTrack) => {
+  const hoverAt = (event: MouseEvent, target: BasicTarget | VisualTimelineTrack, targetClipId?: string) => {
     const key = targetKey(target);
-    const placement = placementAt(event, target);
+    const placement = placementAt(event, target, targetClipId);
     if (placement) hoverPlacements[key] = placement;
     else delete hoverPlacements[key];
   };
   const leaveTrack = (target: BasicTarget | VisualTimelineTrack) => {
     delete hoverPlacements[targetKey(target)];
   };
-  const addAt = (event: MouseEvent, target: BasicTarget | VisualTimelineTrack) => {
+  const addAt = (event: MouseEvent, target: BasicTarget | VisualTimelineTrack, targetClipId?: string) => {
     event.preventDefault();
     event.stopPropagation();
     if (!accepts(event)) return;
-    const placement = placementAt(event, target);
+    const placement = placementAt(event, target, targetClipId);
     if (!placement) return;
     if (target === 'zoom') options.emit('add:zoom', placement);
-    else if (target === 'caption') options.emit('add:caption', placement);
+    else if (target === 'caption')
+      options.emit('add:caption', {
+        ...placement,
+        ...(targetClipId ? { targetClipId } : {}),
+      });
     else {
       const kind = visualKindFor(target);
       if (kind)

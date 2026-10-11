@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type { CaptionClip } from '@beam/engine/shared/composition-types';
 import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 import { useTimelineClipboard } from '../composables/useTimelineClipboard';
+import { pasteTimelineClipboard } from '../composables/paste-timeline-clipboard';
+import type { TimelinePasteRequest } from '../composables/timeline-clipboard-types';
 import TimelineCanvasLane from '../TimelineCanvasLane.vue';
 import {
   composition,
@@ -257,6 +259,7 @@ describe('TimelineTracks', () => {
       selectedClipIds: ['screen-clip', 'image-clip'],
     });
     const dispatchShortcut = (key: string, modifiers: Pick<KeyboardEventInit, 'ctrlKey' | 'metaKey'>) => {
+      vi.stubGlobal('navigator', { platform: modifiers.metaKey ? 'MacIntel' : 'Win32' });
       const event = new KeyboardEvent('keydown', {
         key,
         bubbles: true,
@@ -327,7 +330,7 @@ describe('TimelineTracks', () => {
     expect(pastePayload?.target).toEqual({
       category: 'visual',
       trackId: 'screen-track',
-      placement: 'new-layer',
+      placement: 'auto',
     });
 
     const repeatedPasteEvent = new Event('paste', {
@@ -352,7 +355,7 @@ describe('TimelineTracks', () => {
     expect(ctrlPastePayload).toMatchObject({
       timeMs: 6_000,
       item: { type: 'selection' },
-      target: { category: 'visual', placement: 'new-layer' },
+      target: { category: 'visual', placement: 'auto' },
     });
 
     expect(dispatchShortcut('x', { ctrlKey: true }).defaultPrevented).toBe(true);
@@ -404,6 +407,53 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('paste:error')).toBeUndefined();
     expect(mounted!.emitted('paste:item')?.length ?? 0).toBe(pastesBeforeEditableShortcuts);
   });
+
+  it.each([
+    { layerId: 'caption-track', time: 7, rows: 1 },
+    { layerId: undefined, time: 7, rows: 1 },
+    { layerId: 'caption-track', time: 6, rows: 1 },
+  ])(
+    'pastes text through the keyboard into $rows row(s), at $time seconds, layer $layerId',
+    async ({ layerId, time, rows }) => {
+      const source = composition();
+      const caption = source.clips.find((clip) => clip.id === 'caption-clip') as CaptionClip;
+      caption.captionLayerId = layerId;
+      caption.isAiGenerated = false;
+      caption.transitions = { entry: null, exit: null };
+      source.clips = [caption];
+      const mounted = await mountTracks({
+        composition: source,
+        currentTime: time,
+        selectedClipId: caption.id,
+        selectedClipIds: [caption.id],
+        selectedZoomId: null,
+        selectedZoomIds: [],
+      });
+      queueAnimationFrames();
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', ctrlKey: true, bubbles: true, cancelable: true }));
+      const event = new Event('paste', { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'clipboardData', { value: { items: [] } });
+      window.dispatchEvent(event);
+      await flushPromises();
+      expect(event.defaultPrevented).toBe(true);
+      const request = mounted!.emitted('paste:item')?.at(-1)?.[0] as TimelinePasteRequest;
+      expect(request.target?.placement).toBe('auto');
+      const pasted = pasteTimelineClipboard({
+        ...request,
+        composition: source,
+        zoomElements: [],
+        timelineDurationMs: 10_000,
+      });
+      await mounted!.setProps({
+        composition: pasted.composition,
+        selectedClipId: pasted.primary.id,
+        selectedClipIds: pasted.clipIds,
+      });
+      await flushPromises();
+      expect(mounted!.findAll('.tracks-stack .text-caption-layer')).toHaveLength(rows);
+      expect(pasted.composition.clips.filter((clip) => clip.kind === 'caption')).toHaveLength(2);
+    },
+  );
 
   it('does not cut or replace the clipboard for a locked selection', async () => {
     const lockedComposition = composition();

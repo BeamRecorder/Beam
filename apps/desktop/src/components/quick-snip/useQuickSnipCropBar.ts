@@ -1,3 +1,4 @@
+import { useCaptureActionShortcuts } from '~/shortcuts/useCaptureActionShortcuts';
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import type { CaptureMode } from '@beam/engine/capture/capture-mode';
 import { captureQuickScreenshot } from './quick-snip-screenshot';
@@ -302,6 +303,23 @@ export function useQuickSnipCropBar() {
     offSettings();
   });
 
+  const selectSource = async (target: 'screen' | 'region' | 'window') => {
+    if (settingsDisabled.value) return;
+    try {
+      await settingsWrite;
+      await capture.selectQuickSnipSource(target);
+    } catch (reason) {
+      await reportFailure(reason);
+    }
+  };
+  useCaptureActionShortcuts({
+    mode,
+    choose: selectSource,
+    confirm: toggleFromControls,
+    disabled: () => !configured.value || actionPending.value || recording.value,
+    settings: () => capture.openHudSettings(),
+    fail: reportFailure,
+  });
   return {
     visibility,
     pointerOver,
@@ -330,15 +348,7 @@ export function useQuickSnipCropBar() {
     restart,
     compact,
     captureTarget,
-    selectSource: async (target: 'screen' | 'region' | 'window') => {
-      if (settingsDisabled.value) return;
-      try {
-        await settingsWrite;
-        await capture.selectQuickSnipSource(target);
-      } catch (reason) {
-        await reportFailure(reason);
-      }
-    },
+    selectSource,
     settingsOpen,
     dismissSettings: () => capture.dismissQuickSnipSettings(),
     openSettings: (anchor: QuickSnipSettingsAnchor) => capture.toggleQuickSnipSettings(anchor).catch(reportFailure),

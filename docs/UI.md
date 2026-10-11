@@ -23,6 +23,12 @@ The shared `CommandPalette` composes editor Spotlight views with fixed-height vi
 
 Shared settings use `SettingsSection` for category headings and `TogglePreference` for consistent option labels, descriptions and accessible switches. Recorder and editor appearance choices reuse `ThemeModePicker`; System shows both palettes with a localized explanation. Theme Advanced contains colors/style only. Scaling keeps its global slider visible and reveals per-area overrides separately.
 
+Settings navigation, preference pages, global search results and export dialogs reuse `ScrollShadow` from the editor properties panel. Each area has one scroll viewport, with fades only at overflowing edges. Keep the sidebar search fixed and its scrollbar gutter at the sidebar's right edge. Dialogs opt in with `scrollShadow`; only the body scrolls, while the heading and footer remain outside the fade.
+
+Manual Video and Screenshot exports use dialogs for configuration only. On export, release the dialog focus trap and overlay immediately, then animate an inert decorative surface from the measured dialog to a nonmodal bottom-right status pill. Respect reduced motion. `ui/status-pill/StatusPill.vue` shares Quick Snip's geometry, mascot, progress and hover reveal with `export/ExportStatusPill.vue`; native dragging is opt-in for Quick Snip only. Display actual video progress or indeterminate image progress. Successful exports close after five seconds of visible completion, starting after the result is painted and the dialog morph finishes. Preserve the remaining time during hover, keyboard focus or pending actions; a hidden editor starts a fresh five seconds when it becomes visible. Failures and file-action errors remain visible until dismissed or resolved. Keep file/folder actions and a copyable report in the pill; do not add duplicate export toasts. Clipboard copies retain their existing toast.
+
+On success, replace the mascot directly with a simple green checkmark and show the restrained green outline. Its slow orbit remains for the completed pill’s lifetime; reduced motion uses a static outline. Do not add confetti or a liquid transition. Manual exports keep their completion check on the thumbnail and place Watch (View image for Screenshot) before Open folder at the far right, each with a 44 × 44 px hit target and a translated native hint. Quick Snip retains its clipboard and editor actions in the hover panel.
+
 Theme choice previews keep a 3:2 aspect ratio and scale their miniature geometry with the card's container, not just its width. Cap the choice group at 36rem so maximized settings windows keep readable previews; the same group must still fit the compact editor inspector.
 
 Screenshot layer naming reuses `Input`: single-click the selected layer title in the left inspector header, or double-click/F2 in Composition. Do not add a separate name field in the properties body. Enter or blur commits a name, Escape cancels, and inline editing restores the initiating control's focus only for keyboard completion. Names describe layers without changing text rendered on the canvas.
@@ -36,6 +42,8 @@ Clip inspectors use `Accordion` with `appearance="inspector"` for flat section h
 Media dimensions default to canvas pixels while document coordinates stay normalized. Enable `Input`'s optional `unitOptions` and `update:unit` contract for a clickable suffix; callers own conversion. Clip width and height share a px/% display choice that stays outside document history. Rotation combines a precise degree field and independent icon actions on one compact row, shared with text elements; display precision is capped at two decimals.
 
 Bounded numeric placement fields use `Input`'s `commitOnBlur` option: retain the complete draft until blur or Enter, then validate through the engine. Mouse drags still publish immediate gesture updates. Undo and external model changes replace stale drafts.
+
+Canvas text editing uses the shared native textarea with `field-sizing: content`. Input updates its local draft immediately; do not force layout with height resets or delay typing with a timer. Caption and element editors commit once on completion and discard on Escape. Preserve native caret selection and IME composition while typography changes.
 
 ## Icons and imagery
 
@@ -56,7 +64,7 @@ Bounded numeric placement fields use `Input`'s `commitOnBlur` option: retain the
 
 Shared popover and context-menu surfaces use the translucent theme tokens and a 12 px backdrop blur from `ui/floating-surface.css`. Apply the filter to the non-interactive background layer, never the container: filtering an ancestor prevents nested panels from sampling the canvas behind them. Each positioned surface retains its own stacking context and rounded background; menu content stays transparent. Hover/focus feedback uses `--color-bg-surface-hover`. Compact numeric affixes stay close to the edges, with padding on the editable value.
 
-Verify the rendered blur inside the full panel, including beneath the options, rather than only along its border. Browser checks cover both 2D and WebGL canvas backdrops while preserving the menu geometry.
+Verify the rendered blur inside the full panel, including beneath the options and its translucent border. Popover backgrounds extend beneath the one-pixel border and clip at its outer edge using `overflow: clip` with `overflow-clip-margin: border-box`; padding-box clipping would expose sharp content through that border. Browser checks cover both 2D and WebGL canvas backdrops while preserving the menu geometry.
 
 Destructive actions use `Button`’s `danger` variant and the shared `--color-error` palette token; text and icons use `--text-on-error`. Keep icon-only and labelled controls of the same explicit size aligned.
 

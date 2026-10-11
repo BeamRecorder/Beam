@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { matchesAction } from '~/shortcuts/action-bindings';
 import { onMounted, onUnmounted } from 'vue';
 import TimelineTracks from './TimelineTracks.vue';
 import type { ExportProgress } from '@beam/encoder/export-types';
@@ -21,6 +22,7 @@ import type {
   TrackZoomSelection,
 } from './composables/timeline-tracks-types';
 import type { AddVisualElementRequest } from '@beam/engine/composition/visual-element-types';
+import type { CaptionPlacementRequest } from '@beam/engine/composition/caption-element-types';
 import type { TimelineElementKind } from './timeline-element-types';
 import type { LiveAudioDraft } from './composables/timeline-tracks-types';
 
@@ -87,7 +89,7 @@ const emit = defineEmits<{
   (event: 'move:zoom', payload: { id: string; startMs: number; endMs: number }): void;
   (event: 'move:selection', payload: TimelineSelectionMove): void;
   (event: 'add:zoom', placement: TimelinePlacementRequest): void;
-  (event: 'add:caption', placement: TimelinePlacementRequest): void;
+  (event: 'add:caption', placement: CaptionPlacementRequest): void;
   (event: 'add:visual-element', request: AddVisualElementRequest): void;
   (event: 'reorder:clip', payload: { id: string; targetIndex: number }): void;
   (event: 'reorder:caption', payload: { id: string; targetIndex: number }): void;
@@ -106,14 +108,20 @@ const isEditorFocused = (active: Element | null) => {
 };
 
 const handleKeyDown = (event: KeyboardEvent) => {
-  if (props.controlsLocked) return;
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+  if (
+    event.defaultPrevented ||
+    event.isComposing ||
+    props.controlsLocked ||
+    document.querySelector('[role="dialog"][aria-modal="true"]')
+  )
+    return;
+  if (matchesAction(event, 'editor.selectAll')) {
     if (isEditorFocused(document.activeElement)) return;
     event.preventDefault();
     emit('select:all');
     return;
   }
-  if (event.code !== 'Space') return;
+  if (!matchesAction(event, 'editor.playPause')) return;
   if (isEditorFocused(document.activeElement)) return;
   event.preventDefault();
   emit('update:isPlaying', !props.isPlaying);

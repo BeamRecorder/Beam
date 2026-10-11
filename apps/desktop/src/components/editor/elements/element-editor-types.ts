@@ -2,7 +2,8 @@ import type { ComputedRef, Ref } from 'vue';
 import type { NormalizedTransform, ShapeClip } from '@beam/engine/shared/composition-types';
 import type { ShapeLayerFamily, ShapeLayerStyle } from '@beam/engine/shared/shape-layer-types';
 import type { ArrowPreset, VectorNode, VectorNodeSelection } from '@beam/engine/shared/shape-vector-types';
-import type { DrawingSettings, DrawnElement } from '@beam/engine/shared/element-types';
+import type { DrawingSettings, DrawnElement, ElementText } from '@beam/engine/shared/element-types';
+import type { ElementTextDefaults } from './element-text-default-types';
 
 export type ElementLayerPatch = Partial<ShapeLayerStyle> & { transform?: NormalizedTransform };
 
@@ -14,6 +15,8 @@ export interface ElementEditorOptions {
   update: (id: string, patch: ElementLayerPatch) => void;
   remove: (id: string) => void;
   timing: () => { startMs: number; durationMs: number };
+  textDefaults?: () => ElementTextDefaults | undefined;
+  rememberTextStyle?: (text: ElementText) => void;
   canvasSize?: () => { width: number; height: number } | null;
   showLayers?: boolean;
   canInteract?: () => boolean;
@@ -23,6 +26,7 @@ export interface ElementEditorOptions {
   addImage?: () => void | Promise<void>;
 }
 export interface ElementEditorContext {
+  createText: (content?: string) => ElementText;
   canInteract: ComputedRef<boolean>;
   layers: ComputedRef<ShapeClip[]>;
   selected: ComputedRef<ShapeClip | null>;

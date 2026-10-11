@@ -59,11 +59,15 @@ describe('TimelineTracks', () => {
     await annotation.trigger('mousemove', { clientX: 600 });
     expect(mounted!.find('.annotation-indicator.preview-ghost').exists()).toBe(true);
     await annotation.trigger('click', { clientX: 600 });
-    expect(mounted!.emitted('add:caption')).toContainEqual([{ startMs: 3_000, durationMs: 2_000 }]);
+    expect(mounted!.emitted('add:caption')).toContainEqual([
+      { startMs: 3_000, durationMs: 2_000, targetClipId: 'caption-clip' },
+    ]);
     await annotation.trigger('mousemove', { clientX: 950 });
     expect(mounted!.find('.annotation-indicator.preview-ghost').exists()).toBe(true);
     await annotation.trigger('click', { clientX: 950 });
-    expect(mounted!.emitted('add:caption')).toContainEqual([{ startMs: 7_300, durationMs: 2_000 }]);
+    expect(mounted!.emitted('add:caption')).toContainEqual([
+      { startMs: 7_300, durationMs: 2_000, targetClipId: 'caption-clip' },
+    ]);
     await annotation.trigger('mouseleave');
   });
 
@@ -157,5 +161,49 @@ describe('TimelineTracks', () => {
 
     await annotation.trigger('click', { clientX: 600 });
     expect(mounted!.emitted('add:caption') ?? []).toHaveLength(0);
+  });
+
+  it('fits a new caption into the clicked track even when another track covers that time', async () => {
+    const source = composition();
+    const target = source.clips.find((clip) => clip.id === 'caption-clip')!;
+    const other = {
+      ...target,
+      id: 'other-caption',
+      captionLayerId: 'other-track',
+      timelineStartMs: 0,
+      timelineDurationMs: 10000,
+      sourceDurationMs: 10000,
+      order: target.order + 1,
+    };
+    source.clips.push(other);
+    const mounted = await mountTracks({ composition: source });
+    const track = mounted!
+      .findAll('.tracks-stack .text-caption-layer')
+      .find((row) => row.find('[data-timeline-clip-id="caption-clip"]').exists())!;
+    await track.get('.annotation-content').trigger('mousemove', { clientX: 600 });
+    expect(track.find('.preview-ghost').exists()).toBe(true);
+    await track.get('.annotation-content').trigger('click', { clientX: 600 });
+    expect(mounted!.emitted('add:caption')).toContainEqual([
+      { startMs: 3000, durationMs: 2000, targetClipId: 'caption-clip' },
+    ]);
+  });
+
+  it('does not offer insertion into a locked caption track', async () => {
+    const source = composition();
+    source.clips = source.clips.map((clip) => (clip.id === 'caption-clip' ? { ...clip, locked: true } : clip));
+    const mounted = await mountTracks({ composition: source });
+    const content = mounted!.get('.tracks-stack .text-caption-layer .annotation-content');
+    await content.trigger('mousemove', { clientX: 600 });
+    expect(mounted!.find('.annotation-indicator.preview-ghost').exists()).toBe(false);
+    await content.trigger('click', { clientX: 600 });
+    expect(mounted!.emitted('add:caption')).toBeUndefined();
+  });
+
+  it('creates the first caption from the empty-track placeholder without a target', async () => {
+    const source = composition();
+    source.clips = source.clips.filter((clip) => clip.kind !== 'caption');
+    const mounted = await mountTracks({ composition: source });
+    await mounted!.get('.tracks-stack .text-caption-track .annotation-content').trigger('click', { clientX: 600 });
+    expect(mounted!.emitted('add:caption')).toContainEqual([{ startMs: 3800, durationMs: 2000 }]);
   });
 });

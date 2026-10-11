@@ -434,16 +434,62 @@ test('debounces visible status-window moves and stores only the trailing macOS p
   });
 });
 
+for (const platform of ['win32', 'darwin']) {
+  test(`${platform}: a failure expanded while hidden becomes clickable on presentation`, () => {
+    for (const order of ['native-first', 'renderer-first']) {
+      const fixture = createFixture(platform);
+      fixture.status.prepare({ ...processingStatus, state: 'failed', error: 'Capture failed' });
+      fixture.status.setInteractive(true);
+      fixture.ready(fixture.windows[0], order);
+      assert.deepEqual(
+        fixture.calls.filter(([name]) => name === 'ignoreMouse'),
+        [['ignoreMouse', true]],
+      );
+      fixture.status.show();
+      assert.equal(fixture.windows[0].visible, true);
+      assert.deepEqual(fixture.calls.filter(([name]) => name === 'ignoreMouse').at(-1), ['ignoreMouse', false]);
+      fixture.status.setInteractive(false);
+      assert.deepEqual(fixture.calls.filter(([name]) => name === 'ignoreMouse').at(-1), [
+        'ignoreMouse',
+        true,
+        { forward: true },
+      ]);
+      fixture.status.destroy();
+    }
+  });
+
+  test(`${platform}: hidden Quick Snip preparation never enables mouse forwarding`, () => {
+    const fixture = createFixture(platform);
+    fixture.status.prepare(processingStatus);
+    const mouse = () => fixture.calls.filter(([name]) => name === 'ignoreMouse');
+    assert.deepEqual(mouse(), [['ignoreMouse', true]]);
+    fixture.status.setInteractive(true);
+    fixture.status.setInteractive(false);
+    fixture.ready();
+    assert.equal(fixture.windows[0].visible, false);
+    assert.deepEqual(mouse(), [['ignoreMouse', true]]);
+    fixture.status.show();
+    assert.deepEqual(mouse().at(-1), ['ignoreMouse', true, { forward: true }]);
+    fixture.status.hide();
+    fixture.status.setInteractive(false);
+    fixture.status.prepare(processingStatus);
+    assert.deepEqual(mouse().at(-1), ['ignoreMouse', true]);
+    fixture.status.destroy();
+  });
+}
+
 test('passes transparent pixels through on Windows and restores it after hover', () => {
   const fixture = createFixture();
   fixture.status.update(processingStatus);
+  fixture.ready();
   fixture.status.setInteractive(true);
   fixture.status.setInteractive(false);
   assert.deepEqual(
     fixture.calls.filter((call) => call[0] === 'ignoreMouse'),
     [
+      ['ignoreMouse', true],
       ['ignoreMouse', true, { forward: true }],
-      ['ignoreMouse', false, { forward: true }],
+      ['ignoreMouse', false],
       ['ignoreMouse', true, { forward: true }],
     ],
   );

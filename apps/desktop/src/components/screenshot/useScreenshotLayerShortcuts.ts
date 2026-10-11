@@ -1,3 +1,4 @@
+import { matchesAction, actionKeys, canonicalBinding } from '~/shortcuts/action-bindings';
 import { onMounted, onScopeDispose } from 'vue';
 import { clipboardContainsImage, isEditablePasteTarget } from '../editor/composables/useClipboardImagePaste';
 import { shouldPreferInternalEditorClipboard } from '../editor/composables/internal-editor-clipboard';
@@ -10,6 +11,9 @@ export function useScreenshotLayerShortcuts(options: {
   copy: () => boolean | Promise<boolean>;
   cut: () => boolean | Promise<boolean>;
   paste: () => boolean;
+  selectAll?: () => void;
+  deselect?: () => void;
+  duplicate?: () => boolean;
   group?: () => boolean;
   ungroup?: () => boolean;
 }) {
@@ -23,27 +27,40 @@ export function useScreenshotLayerShortcuts(options: {
       document.querySelector('[role="dialog"][aria-modal="true"]')
     )
       return;
-    const key = event.key.toLowerCase();
-    if ((event.ctrlKey || event.metaKey) && !event.altKey && key === 'g') {
-      if (event.shiftKey ? options.ungroup?.() : options.group?.()) event.preventDefault();
+    if (matchesAction(event, 'editor.selectAll') && options.selectAll) {
+      event.preventDefault();
+      options.selectAll();
       return;
     }
-    if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) {
-      const handled = key === 'c' ? options.copy() : key === 'x' ? options.cut() : false;
-      if (handled instanceof Promise) {
-        event.preventDefault();
-        void handled;
-      } else if (handled) event.preventDefault();
+    if (matchesAction(event, 'editor.deselect') && options.deselect) {
+      event.preventDefault();
+      options.deselect();
       return;
     }
-    if (
-      !['Delete', 'Backspace'].includes(event.key) ||
-      event.ctrlKey ||
-      event.metaKey ||
-      event.altKey ||
-      event.shiftKey
-    )
+    if (matchesAction(event, 'editor.group') || matchesAction(event, 'editor.ungroup')) {
+      if (matchesAction(event, 'editor.ungroup') ? options.ungroup?.() : options.group?.()) event.preventDefault();
       return;
+    }
+    const handled = matchesAction(event, 'editor.copy')
+      ? options.copy()
+      : matchesAction(event, 'editor.cut')
+        ? options.cut()
+        : matchesAction(event, 'editor.paste') &&
+            canonicalBinding(actionKeys('editor.paste')) !== canonicalBinding('CommandOrControl+V')
+          ? options.paste()
+          : matchesAction(event, 'editor.duplicate')
+            ? options.duplicate?.()
+            : false;
+    if (handled instanceof Promise) {
+      event.preventDefault();
+      void handled;
+      return;
+    }
+    if (handled) {
+      event.preventDefault();
+      return;
+    }
+    if (!matchesAction(event, 'editor.delete')) return;
     const layer = options.selected();
     if (!layer || layer.locked) return;
     event.preventDefault();
@@ -53,6 +70,7 @@ export function useScreenshotLayerShortcuts(options: {
     const containsImage = clipboardContainsImage(event);
     if (
       event.defaultPrevented ||
+      !actionKeys('editor.paste') ||
       options.disabled() ||
       isEditablePasteTarget(event.target) ||
       (event.target instanceof Element && event.target.closest('[role="menu"], .popover-content')) ||

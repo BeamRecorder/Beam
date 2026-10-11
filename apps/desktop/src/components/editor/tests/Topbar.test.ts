@@ -1,6 +1,9 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Topbar from '../Topbar.vue';
+import VideoProjectEdition from '../VideoProjectEdition.vue';
+import EditorPresetControls from '../EditorPresetControls.vue';
+import ExportDialog from '../../export/ExportDialog.vue';
 import { computed, ref } from 'vue';
 import { editorSearchKey, type EditorSearchContext } from '../search/editor-search-types';
 import type { EditorExportSource } from '@beam/encoder/export-types';
@@ -12,11 +15,11 @@ const capture = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../api/capture', () => ({ capture }));
-vi.mock('../../export/ExportPopover.vue', () => ({
+vi.mock('../../export/ExportDialog.vue', () => ({
   default: {
     props: ['request', 'playheadSeconds'],
     template:
-      '<div class="export-popover-stub" :data-project-name="request?.projectName" :data-duration="request?.duration" :data-playhead="playheadSeconds" />',
+      '<div class="export-dialog-stub" :data-project-name="request?.projectName" :data-duration="request?.duration" :data-playhead="playheadSeconds" />',
   },
 }));
 vi.mock('../VideoProjectEdition.vue', () => ({
@@ -49,11 +52,53 @@ describe('VideoEditor Topbar', () => {
     expect(wrapper.emitted('back-to-hud')).toHaveLength(1);
   });
 
+  it('forwards project renames to the owner of the live export metadata', () => {
+    const wrapper = mount(Topbar);
+    const renamed = { id: 'project-1', name: 'Renamed project' };
+    wrapper.findComponent(VideoProjectEdition).vm.$emit('rename-project', renamed);
+    expect(wrapper.emitted('rename-project')).toEqual([[renamed]]);
+    wrapper.unmount();
+  });
+
+  it('keeps project navigation, preset actions and export audio connected alongside renaming', () => {
+    const request = {
+      projectName: 'Demo',
+      includeAudio: true,
+      hasAudio: false,
+      duration: 1,
+      fps: 30,
+      width: 1280,
+      height: 720,
+      createSnapshot: vi.fn(() => ({}) as CompositionSnapshot),
+    };
+    const wrapper = mount(Topbar, { props: { exportRequest: request } });
+    const project = { id: 'next-project', name: 'Next project' };
+    wrapper.findComponent(VideoProjectEdition).vm.$emit('open-project', project);
+    expect(wrapper.emitted('open-project')).toEqual([[project]]);
+    const presets = wrapper.findComponent(EditorPresetControls);
+    for (const [event, emitted, value] of [
+      ['select', 'presetSelect', 'preset-1'],
+      ['add', 'presetAdd', 'My preset'],
+      ['rename', 'presetRename', 'Renamed preset'],
+    ]) {
+      presets.vm.$emit(event!, value);
+      expect(wrapper.emitted(emitted!)).toEqual([[value]]);
+    }
+    presets.vm.$emit('delete');
+    presets.vm.$emit('save');
+    expect(wrapper.emitted('presetDelete')).toEqual([[]]);
+    expect(wrapper.emitted('presetSave')).toEqual([[]]);
+    wrapper.findComponent(ExportDialog).vm.$emit('update:includeAudio', false);
+    expect(wrapper.emitted('update:exportAudio')).toEqual([[false]]);
+    wrapper.unmount();
+  });
+
   it('passes live export metadata and playhead through without asking for a snapshot', () => {
     const createSnapshot = vi.fn(() => ({}) as CompositionSnapshot);
     const exportRequest: EditorExportSource = {
       projectName: 'Demo project',
       includeAudio: true,
+      hasAudio: true,
       duration: 24,
       fps: 30,
       width: 1280,
@@ -64,7 +109,7 @@ describe('VideoEditor Topbar', () => {
       props: { exportRequest, playheadSeconds: 7.5 },
     });
 
-    expect(wrapper.get('.export-popover-stub').attributes()).toMatchObject({
+    expect(wrapper.get('.export-dialog-stub').attributes()).toMatchObject({
       'data-project-name': 'Demo project',
       'data-duration': '24',
       'data-playhead': '7.5',

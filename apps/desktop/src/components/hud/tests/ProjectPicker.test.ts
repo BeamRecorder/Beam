@@ -123,7 +123,7 @@ describe('ProjectPicker', () => {
     const create = wrapper.findAll('button').find((button) => button.text() === 'Create');
     await create?.trigger('click');
     await settle();
-    expect(capture.createProject).toHaveBeenCalledWith({ name: 'New' });
+    expect(capture.createProject).toHaveBeenCalledWith({ name: 'New', mode: 'studio' });
     expect(wrapper.emitted('open-project')).toEqual([[projects[0]]]);
   });
   it('renames a project, rejects unchanged names, and handles rename failure', async () => {

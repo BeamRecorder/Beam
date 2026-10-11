@@ -148,6 +148,41 @@ describe('HUD startup', () => {
 });
 
 describe('HUD coordination boundaries', () => {
+  it('pauses the preview microphone while hidden and resumes without reinitializing the HUD', async () => {
+    const state = mountState();
+    await flushPromises();
+    const visibility = capture.onWindowVisibility.mock.calls[0]![0];
+    expect(state.micLevel.value).toBe(1);
+    for (let cycle = 0; cycle < 3; cycle++) {
+      visibility(false);
+      await flushPromises();
+      expect(state.micLevel.value).toBe(0);
+      visibility(true);
+      await flushPromises();
+      expect(state.micLevel.value).toBe(1);
+      expect(state.selectedMicId.value).toBe('microphone:1');
+      expect(state.isBusy.value).toBe(false);
+    }
+    expect(capture.discover).toHaveBeenCalledOnce();
+    expect(capture.getPreferences).toHaveBeenCalledOnce();
+  });
+
+  it('does not open the preview microphone in a HUD that starts hidden', async () => {
+    capture.onWindowVisibility.mockImplementationOnce((listener) => {
+      listener(false);
+      return () => undefined;
+    });
+    const state = mountState();
+    await flushPromises();
+    expect(state.selectedMicId.value).toBe('microphone:1');
+    expect(state.micLevel.value).toBe(0);
+    const visibility = capture.onWindowVisibility.mock.calls[0]![0];
+    state.selectedMicId.value = 'no-audio';
+    visibility(true);
+    await flushPromises();
+    expect(state.micLevel.value).toBe(0);
+  });
+
   it('does not start recording while busy and routes start/stop shortcuts to its owner', async () => {
     const state = mountState();
     await state.toggleRecording();

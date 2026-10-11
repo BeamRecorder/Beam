@@ -1,3 +1,4 @@
+import { actionKeys } from '~/shortcuts/action-bindings';
 import { computed, ref, type Ref } from 'vue';
 import { engineMetrics } from '@beam/runtime/performance/engine-metrics';
 import { AudioLines, ClipboardPaste, Copy, Lock, Unlock, Pause, Trash2 } from '@lucide/vue';
@@ -296,14 +297,14 @@ export function useTimelineContextMenu(options: {
         id: 'copy',
         label: options.t('copy'),
         icon: Copy,
-        shortcut: 'Ctrl+C',
+        shortcut: actionKeys('editor.copy'),
         disabled: !canCopy,
       },
       {
         id: 'paste',
         label: options.t('paste'),
         icon: ClipboardPaste,
-        shortcut: 'Ctrl+V',
+        shortcut: actionKeys('editor.paste'),
         disabled: !clipboard.canPaste(options.scopeId.value),
       },
       { isDivider: true },
@@ -312,7 +313,7 @@ export function useTimelineContextMenu(options: {
         label: options.t('delete'),
         icon: Trash2,
         danger: true,
-        shortcut: 'Del',
+        shortcut: actionKeys('editor.delete'),
         disabled: locked || (clipIds.length === 0 && zoomIds.length === 0),
       },
     );

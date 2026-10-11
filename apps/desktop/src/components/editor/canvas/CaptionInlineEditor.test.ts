@@ -97,24 +97,20 @@ describe('CaptionInlineEditor', () => {
     expect(textarea.selectionEnd).toBe(textarea.value.length);
   });
 
-  it('coalesces rapid native textarea input updates and emits the latest value after the debounce', async () => {
+  it('updates native textarea drafts immediately without scheduling timers', async () => {
     wrapper = mountEditor();
     const textarea = wrapper.get('textarea');
 
     await textarea.setValue('Hello');
-    expect(wrapper.emitted('update')).toBeUndefined();
+    expect(wrapper.emitted('update')).toEqual([['Hello']]);
 
     await textarea.setValue('Hello there');
-    expect(wrapper.emitted('update')).toBeUndefined();
-
-    vi.advanceTimersByTime(149);
-    expect(wrapper.emitted('update')).toBeUndefined();
-
-    vi.advanceTimersByTime(1);
-    expect(wrapper.emitted('update')).toEqual([['Hello there']]);
+    expect(wrapper.emitted('update')).toEqual([['Hello'], ['Hello there']]);
+    vi.runAllTimers();
+    expect(wrapper.emitted('update')).toEqual([['Hello'], ['Hello there']]);
   });
 
-  it('flushes one pending update on blur without emitting it again after the timer', async () => {
+  it('finishes on blur without repeating the latest draft', async () => {
     wrapper = mountEditor();
     const textarea = wrapper.get('textarea');
 
@@ -131,7 +127,7 @@ describe('CaptionInlineEditor', () => {
   it.each([
     ['Ctrl+Enter', { ctrlKey: true }],
     ['Cmd+Enter', { metaKey: true }],
-  ])('flushes one pending update on %s without emitting it again after the timer', async (_label, modifiers) => {
+  ])('finishes on %s without repeating the latest draft', async (_label, modifiers) => {
     wrapper = mountEditor();
     const textarea = wrapper.get('textarea');
 
@@ -145,30 +141,58 @@ describe('CaptionInlineEditor', () => {
     expect(wrapper.emitted('update')).toEqual([['Edited with shortcut']]);
   });
 
-  it('discards a pending update on Escape and cancels the edit', async () => {
+  it('cancels the current draft on Escape and ignores its subsequent blur', async () => {
     wrapper = mountEditor();
     const textarea = wrapper.get('textarea');
 
     await textarea.setValue('Discard me');
     await textarea.trigger('keydown', { key: 'Escape' });
 
-    expect(wrapper.emitted('update')).toBeUndefined();
+    expect(wrapper.emitted('update')).toEqual([['Discard me']]);
     expect(wrapper.emitted('cancel')).toHaveLength(1);
     expect(wrapper.emitted('finish')).toBeUndefined();
 
     vi.advanceTimersByTime(150);
-    expect(wrapper.emitted('update')).toBeUndefined();
+    await textarea.trigger('blur');
+    await textarea.setValue('Ignored after cancellation');
+    expect(wrapper.emitted('update')).toEqual([['Discard me']]);
+    expect(wrapper.emitted('finish')).toBeUndefined();
   });
 
-  it('clears a pending update timer when unmounted', async () => {
+  it('leaves no delayed draft work when unmounted', async () => {
     wrapper = mountEditor();
+    const update = vi.fn();
+    await wrapper.setProps({ onUpdate: update });
     const textarea = wrapper.get('textarea');
 
     await textarea.setValue('Unmount me');
     wrapper.unmount();
 
     vi.advanceTimersByTime(150);
-    expect(wrapper.emitted('update')).toBeUndefined();
+    expect(update).toHaveBeenCalledExactlyOnceWith('Unmount me');
+  });
+
+  it.each(['Escape', 'Enter'])('preserves native IME composition on %s', async (key) => {
+    wrapper = mountEditor();
+    await wrapper.get('textarea').setValue('日本語');
+    await wrapper.get('textarea').trigger('keydown', { key, ctrlKey: true, isComposing: true });
+    expect(wrapper.emitted('update')).toEqual([['日本語']]);
+    expect(wrapper.emitted('cancel')).toBeUndefined();
+    expect(wrapper.emitted('finish')).toBeUndefined();
+  });
+
+  it('preserves the active caret and accepts external text only when the field is unfocused', async () => {
+    wrapper = mountEditor();
+    await nextTick();
+    const textarea = wrapper.get('textarea').element;
+    textarea.value = 'Local draft';
+    textarea.setSelectionRange(2, 4);
+    await wrapper.setProps({ clip: createClip({ customText: 'External update' }) });
+    expect(textarea.value).toBe('Local draft');
+    expect([textarea.selectionStart, textarea.selectionEnd]).toEqual([2, 4]);
+    textarea.blur();
+    await wrapper.setProps({ clip: createClip({ customText: 'Next caption' }) });
+    expect(textarea.value).toBe('Next caption');
   });
 
   it('forces the native WebKit text fill to match the caption color while editing', () => {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { shortcutKeyLabel } from '~/shortcuts/shortcut-label';
 
 const props = withDefaults(
   defineProps<{
@@ -12,54 +13,12 @@ const props = withDefaults(
   },
 );
 
-// Standardize platform key representation
-const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-
-const normalizeKey = (key: string): string => {
-  const trimmed = key.trim();
-  const lower = trimmed.toLowerCase();
-
-  if (lower === 'commandorcontrol' || lower === 'cmdorctrl' || lower === 'ctrl') {
-    return isMac ? '⌘' : 'Ctrl';
-  }
-  if (lower === 'command' || lower === 'cmd' || lower === 'meta') {
-    return '⌘';
-  }
-  if (lower === 'alt' || lower === 'option') {
-    return isMac ? '⌥' : 'Alt';
-  }
-  if (lower === 'shift') {
-    return isMac ? '⇧' : 'Shift';
-  }
-  if (lower === 'control') {
-    return isMac ? '⌃' : 'Ctrl';
-  }
-  if (lower === 'space') {
-    return 'Space';
-  }
-  if (lower === 'enter' || lower === 'return') {
-    return '↵';
-  }
-  if (lower === 'backspace') {
-    return '⌫';
-  }
-  if (lower === 'escape' || lower === 'esc') {
-    return 'Esc';
-  }
-
-  // Capitalize single letter or normal word
-  if (trimmed.length === 1) {
-    return trimmed.toUpperCase();
-  }
-  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-};
-
 const parsedKeys = computed(() => {
   if (props.keys && props.keys.length > 0) {
-    return props.keys.map(normalizeKey);
+    return props.keys.map((key) => shortcutKeyLabel(key));
   }
   if (props.shortcut) {
-    return props.shortcut.split('+').map(normalizeKey);
+    return props.shortcut.split('+').map((key) => shortcutKeyLabel(key));
   }
   return [];
 });

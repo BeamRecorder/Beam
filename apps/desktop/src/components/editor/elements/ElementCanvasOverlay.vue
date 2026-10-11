@@ -11,6 +11,7 @@ import { useElementEditor } from './useElementEditor';
 import { elementTextCaption, elementTextLayout } from '@beam/engine/shared/element-text';
 import { elementTextCanvas } from '@beam/runtime/composition/shape/render-element-content';
 import { applyCanvasCaptionFont } from '@beam/runtime/shared/caption-font-render';
+import { captionTextCache } from '@beam/runtime/composition/captions/caption-text-cache';
 import { finishDrawing, MAX_DRAWING_POINTS } from '@beam/engine/shared/freehand';
 import { traceFreehand } from '@beam/runtime/shared/freehand-render';
 import type { DrawingPoint } from '@beam/engine/shared/element-types';
@@ -36,7 +37,7 @@ const textLayout = computed(() => {
   if (!clip) return null;
   const canonical = elementTextCanvas(props.viewport);
   if (measure && clip.text) applyCanvasCaptionFont(measure, clip.text.style);
-  const layout = elementTextLayout(clip, canonical, measure ? (text) => measure.measureText(text).width : undefined);
+  const layout = elementTextLayout(clip, canonical, measure ? captionTextCache(measure).measure : undefined);
   const rect = {
     x: props.viewport.x + clip.transform.x * props.viewport.width,
     y: props.viewport.y + clip.transform.y * props.viewport.height,

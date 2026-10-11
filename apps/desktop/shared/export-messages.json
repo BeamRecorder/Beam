@@ -1,0 +1,92 @@
+{
+  "en": {
+    "title": "Replace existing file?",
+    "description": "A file with this name already exists in the export folder. Do you want to replace it?",
+    "replace": "Replace",
+    "cancel": "Cancel"
+  },
+  "fr": {
+    "title": "Remplacer le fichier existant ?",
+    "description": "Un fichier portant ce nom existe déjà dans le dossier d’export. Voulez-vous le remplacer ?",
+    "replace": "Remplacer",
+    "cancel": "Annuler"
+  },
+  "bg": {
+    "title": "Замяна на съществуващия файл?",
+    "description": "В папката за експортиране вече има файл с това име. Искате ли да го замените?",
+    "replace": "Замени",
+    "cancel": "Отказ"
+  },
+  "de": {
+    "title": "Vorhandene Datei ersetzen?",
+    "description": "Im Exportordner gibt es bereits eine Datei mit diesem Namen. Möchtest du sie ersetzen?",
+    "replace": "Ersetzen",
+    "cancel": "Abbrechen"
+  },
+  "es": {
+    "title": "¿Reemplazar el archivo existente?",
+    "description": "Ya existe un archivo con este nombre en la carpeta de exportación. ¿Quieres reemplazarlo?",
+    "replace": "Reemplazar",
+    "cancel": "Cancelar"
+  },
+  "hi": {
+    "title": "मौजूदा फ़ाइल बदलें?",
+    "description": "निर्यात फ़ोल्डर में इस नाम की फ़ाइल पहले से मौजूद है। क्या आप इसे बदलना चाहते हैं?",
+    "replace": "बदलें",
+    "cancel": "रद्द करें"
+  },
+  "it": {
+    "title": "Sostituire il file esistente?",
+    "description": "Nella cartella di esportazione esiste già un file con questo nome. Vuoi sostituirlo?",
+    "replace": "Sostituisci",
+    "cancel": "Annulla"
+  },
+  "ja": {
+    "title": "既存のファイルを置き換えますか？",
+    "description": "書き出し先フォルダーに同じ名前のファイルが既にあります。置き換えますか？",
+    "replace": "置き換える",
+    "cancel": "キャンセル"
+  },
+  "ko": {
+    "title": "기존 파일을 덮어쓸까요?",
+    "description": "내보내기 폴더에 같은 이름의 파일이 이미 있습니다. 덮어쓰시겠어요?",
+    "replace": "덮어쓰기",
+    "cancel": "취소"
+  },
+  "pl": {
+    "title": "Zastąpić istniejący plik?",
+    "description": "W folderze eksportu jest już plik o tej nazwie. Czy chcesz go zastąpić?",
+    "replace": "Zastąp",
+    "cancel": "Anuluj"
+  },
+  "pt-BR": {
+    "title": "Substituir o arquivo existente?",
+    "description": "Já existe um arquivo com esse nome na pasta de exportação. Deseja substituí-lo?",
+    "replace": "Substituir",
+    "cancel": "Cancelar"
+  },
+  "ru": {
+    "title": "Заменить существующий файл?",
+    "description": "В папке экспорта уже есть файл с таким именем. Хотите заменить его?",
+    "replace": "Заменить",
+    "cancel": "Отмена"
+  },
+  "vi": {
+    "title": "Thay thế tệp hiện có?",
+    "description": "Đã có một tệp cùng tên trong thư mục xuất. Bạn có muốn thay thế tệp đó không?",
+    "replace": "Thay thế",
+    "cancel": "Hủy"
+  },
+  "zh-CN": {
+    "title": "替换现有文件？",
+    "description": "导出文件夹中已存在同名文件。要替换它吗？",
+    "replace": "替换",
+    "cancel": "取消"
+  },
+  "zh-TW": {
+    "title": "取代現有檔案？",
+    "description": "匯出資料夾中已存在同名檔案。要取代它嗎？",
+    "replace": "取代",
+    "cancel": "取消"
+  }
+}

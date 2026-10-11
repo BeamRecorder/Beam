@@ -1,3 +1,4 @@
+import { matchesGesture } from '~/shortcuts/action-bindings';
 import { keepMediaResizeAnchor, rotateMediaVector } from '@beam/engine/layout/media-rotation';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
@@ -21,7 +22,8 @@ import {
 } from '@beam/engine/shared/caption-text-layout';
 import type { UseLayerTransformAndCropOptions } from './layer-transform-and-crop-types';
 
-import { computeCanvasAlignmentSnapping, type AlignmentGuide } from './canvas-alignment';
+import type { AlignmentGuide } from './canvas-alignment';
+import { snapDisplayedLayerTranslation } from './layer-alignment';
 import { useCropSelection } from './useCropSelection';
 import { editableVisualClipTransform, resizePhoneFrameTransform } from '@beam/engine/composition/visual-framing';
 import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
@@ -46,6 +48,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   const activeGuideLines = ref<AlignmentGuide[]>([]);
   let transformDrag: {
     kind: 'move' | 'resize';
+    duplicate: boolean;
     corner?: ResizeCorner;
     startX: number;
     startY: number;
@@ -114,8 +117,10 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     transformFor,
     boundsFor,
     displayLayoutFor,
+    alignmentViewport: () => options.overlayWindowBounds() ?? options.videoWindowBounds(),
     zoomScale: () => options.zoomScale?.() ?? 1,
     onUpdate: (transforms) => options.onUpdateTransforms?.(transforms),
+    onDuplicate: options.onDuplicateTransforms,
     onGuides: (guides) => (activeGuideLines.value = guides),
   });
   const transformDraftFor = (clipId: string) =>
@@ -225,6 +230,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     event.stopPropagation();
     transformDraft.value = { ...transform };
     transformDrag = {
+      duplicate: kind === 'move' && !!options.onDuplicateTransforms && matchesGesture(event, 'duplicate'),
       kind,
       corner,
       startX: event.clientX,
@@ -236,7 +242,13 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
   };
 
-  const applyTransformDrag = (clientX: number, clientY: number, freeAspect: boolean) => {
+  const applyTransformDrag = (
+    clientX: number,
+    clientY: number,
+    freeAspect: boolean,
+    constrain = false,
+    ignoreSnapping = false,
+  ) => {
     const clip = options.selectedTransformClip();
     const bounds = boundsFor(clip);
     if (!clip || !bounds || !transformDrag) return;
@@ -252,6 +264,10 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       x: (clientX - transformDrag.startX) / vScale,
       y: (clientY - transformDrag.startY) / vScale,
     };
+    if (transformDrag.kind === 'move' && constrain) {
+      if (Math.abs(screenDelta.x) >= Math.abs(screenDelta.y)) screenDelta.y = 0;
+      else screenDelta.x = 0;
+    }
     const pointerDelta =
       clip.kind === 'caption'
         ? screenDelta
@@ -293,14 +309,21 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
             c.id !== clip.id &&
             c.enabled,
         )
-        .map((c) => {
-          const t = transformFor(c);
-          return { id: c.id, x: t.x, y: t.y, width: t.width, height: t.height };
+        .flatMap((c) => {
+          const layout = displayLayoutFor(c);
+          return layout ? [layout] : [];
         });
 
-      const snapResult = computeCanvasAlignmentSnapping(moved, otherTargets, 0.015);
-      moved.x = snapResult.x;
-      moved.y = snapResult.y;
+      const layout = displayLayoutFor(clip, moved);
+      const snapResult = ignoreSnapping
+        ? { x: 0, y: 0, guides: [] }
+        : snapDisplayedLayerTranslation(layout ? [layout] : [], otherTargets, options.overlayWindowBounds() ?? bounds);
+      if (constrain) {
+        if (screenDelta.y === 0) snapResult.y = 0;
+        else snapResult.x = 0;
+      }
+      moved.x += snapResult.x / Math.max(1, bounds.dw * scale);
+      moved.y += snapResult.y / Math.max(1, bounds.dh * scale);
       activeGuideLines.value = snapResult.guides;
 
       transformDraft.value = clip.kind === 'webcam' ? clampEditedWebcamTransform(clip, moved, bounds.scale) : moved;
@@ -355,16 +378,34 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   };
 
   const moveTransformDrag = (event: PointerEvent) => {
-    applyTransformDrag(event.clientX, event.clientY, event.shiftKey);
+    applyTransformDrag(
+      event.clientX,
+      event.clientY,
+      matchesGesture(event, 'freeAspect'),
+      matchesGesture(event, 'constrain'),
+      matchesGesture(event, 'ignoreSnapping'),
+    );
   };
   const updateAspectMode = (event: KeyboardEvent) => {
-    if (event.key === 'Shift' && transformDrag)
-      applyTransformDrag(transformDrag.lastX, transformDrag.lastY, event.type === 'keydown');
+    if (['Shift', 'Control', 'Alt', 'Meta'].includes(event.key) && transformDrag)
+      applyTransformDrag(
+        transformDrag.lastX,
+        transformDrag.lastY,
+        matchesGesture(event, 'freeAspect'),
+        matchesGesture(event, 'constrain'),
+        matchesGesture(event, 'ignoreSnapping'),
+      );
   };
   const endTransformDrag = (event: PointerEvent) => {
     activeGuideLines.value = [];
     if (!transformDrag) return;
-    if (transformDraft.value) options.onUpdateTransform(transformDraft.value);
+    if (transformDraft.value) {
+      const clip = options.selectedTransformClip();
+      if (transformDrag.duplicate && clip) {
+        if (Math.hypot(transformDrag.lastX - transformDrag.startX, transformDrag.lastY - transformDrag.startY) >= 4)
+          options.onDuplicateTransforms?.([{ id: clip.id, transform: transformDraft.value }]);
+      } else options.onUpdateTransform(transformDraft.value);
+    }
     transformDrag = null;
     transformDraft.value = null;
     const target = event.currentTarget as HTMLElement;

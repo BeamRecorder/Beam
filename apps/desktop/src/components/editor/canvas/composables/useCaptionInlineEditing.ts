@@ -1,4 +1,4 @@
-import { computed, ref, watch, type CSSProperties, type Ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch, type CSSProperties, type Ref } from 'vue';
 import { isTextCaptionClip, type ClipComposition } from '@beam/engine/shared/composition-types';
 import { outputPreviewRect, type OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 import type { TransformClip } from '../editor-canvas-types';
@@ -23,11 +23,15 @@ export function useCaptionInlineEditing(options: {
   onRender: () => void;
 }) {
   const editingCaptionId = ref<string | null>(null);
-  const originalCustomText = ref<string | undefined>(undefined);
+  const draftText = ref<string | undefined>(undefined);
   const editingCaption = computed(() => {
     if (!editingCaptionId.value) return null;
     const clip = options.composition().clips.find((candidate) => candidate.id === editingCaptionId.value);
-    return clip && isTextCaptionClip(clip) ? clip : null;
+    if (!clip || !isTextCaptionClip(clip)) return null;
+    return {
+      ...clip,
+      caption: { ...clip.caption, style: { ...clip.caption.style, customText: draftText.value } },
+    };
   });
   const renderScale = computed(() => {
     const size = options.logicalSize.value;
@@ -43,30 +47,34 @@ export function useCaptionInlineEditing(options: {
   const close = (cancelled: boolean) => {
     if (!editingCaptionId.value) return;
     editingCaptionId.value = null;
-    originalCustomText.value = undefined;
+    draftText.value = undefined;
     options.onEnd(cancelled);
     options.onRender();
   };
-  const finish = () => close(false);
-  const cancel = () => {
+  const finish = () => {
     const clipId = editingCaptionId.value;
     if (!clipId) return;
-    options.onUpdate({ clipId, customText: originalCustomText.value });
-    close(true);
+    const clip = options.composition().clips.find((candidate) => candidate.id === clipId);
+    if (clip && isTextCaptionClip(clip) && !clip.locked && draftText.value !== clip.caption.style.customText)
+      options.onUpdate({ clipId, customText: draftText.value });
+    close(false);
   };
+  const cancel = () => close(true);
   const update = (customText: string) => {
     const clipId = editingCaptionId.value;
-    if (clipId && !editingCaption.value?.locked) options.onUpdate({ clipId, customText });
+    if (clipId && editingCaption.value && !editingCaption.value.locked) draftText.value = customText;
   };
   const begin = (event: Pick<MouseEvent, 'clientX' | 'clientY' | 'button'>) => {
     if (event.button !== 0 || options.isPlaying() || options.isCropping() || options.isManualZoom()) return false;
     const clipId = options.clipIdAt(event);
     const clip = options.composition().clips.find((candidate) => candidate.id === clipId);
     if (!clip || clip.locked || !isTextCaptionClip(clip)) return false;
+    if (editingCaptionId.value === clip.id) return true;
+    finish();
     if (options.selectedClip()?.id !== clip.id) options.onSelect(clip.id);
     options.onStart();
     editingCaptionId.value = clip.id;
-    originalCustomText.value = clip.caption.style.customText;
+    draftText.value = clip.caption.style.customText;
     options.onRender();
     return true;
   };
@@ -88,6 +96,7 @@ export function useCaptionInlineEditing(options: {
   watch(options.activeCaptionIds, (ids) => {
     if (editingCaptionId.value && !ids.includes(editingCaptionId.value)) finish();
   });
+  onBeforeUnmount(finish);
 
   return {
     editingCaptionId,

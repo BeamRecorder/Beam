@@ -33,6 +33,10 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 describe('Linux native export desktop adapter', () => {
+  it('forwards the edited filename separately from the project name', async () => {
+    await exportWithLinuxFfmpeg({ ...request, fileName: 'Edited name' }, vi.fn(), new AbortController().signal);
+    expect(api.beginExport).toHaveBeenCalledWith({ projectName: 'GPU', fileName: 'Edited name', format: 'mp4' });
+  });
   it('starts diagnostics, forwards only owned progress and atomically finalizes', async () => {
     const onProgress = vi.fn(),
       onStarted = vi.fn();
@@ -79,6 +83,14 @@ describe('Linux native export desktop adapter', () => {
     });
     expect(api.abortExport).toHaveBeenCalledWith('job');
     expect(api.renderLinuxFfmpegExport).not.toHaveBeenCalled();
+  });
+  it('treats a declined replacement during finalization as cancellation', async () => {
+    api.finalizeExport.mockResolvedValueOnce({ canceled: true } as never);
+    await expect(exportWithLinuxFfmpeg(request, vi.fn(), new AbortController().signal)).rejects.toMatchObject({
+      name: 'AbortError',
+    });
+    expect(api.abortExport).toHaveBeenCalledWith('job');
+    expect(api.unsubscribe).toHaveBeenCalledOnce();
   });
   it('aborts on native/finalization failure and tolerates cleanup rejection', async () => {
     api.renderLinuxFfmpegExport.mockRejectedValueOnce(new Error('direct map failed'));

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { matchesGesture } from '~/shortcuts/action-bindings';
 import { computed, onBeforeUnmount, ref, type CSSProperties } from 'vue';
 import { RotateCw } from '@lucide/vue';
 import ResizeHandle from '~/ui/ResizeHandle/ResizeHandle.vue';
@@ -69,7 +70,7 @@ const moveRotation = (event: PointerEvent) => {
     rotationDrag.initialPointerAngle,
     rotationDrag.center,
     { x: event.clientX, y: event.clientY },
-    event.shiftKey,
+    matchesGesture(event, 'constrain'),
   );
   emit('rotate', rotationDrag.currentRotation);
 };

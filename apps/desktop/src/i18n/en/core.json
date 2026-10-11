@@ -509,12 +509,12 @@
     "format": "Format",
     "webm": "WebM",
     "mp4": "MP4",
-    "qualityAndBitrate": "Quality & Bitrate",
+    "qualityAndBitrate": "Quality",
     "low": "Low",
-    "medium": "Medium",
+    "medium": "Standard",
     "high": "High",
-    "webmDesc": "Fast export, optimal size and transparency support.",
-    "mp4Desc": "Universal compatibility for sharing across platforms.",
+    "webmDesc": "For the web, with smaller files and transparency support.",
+    "mp4Desc": "The most compatible choice for sharing and playback across devices.",
     "lowDesc": "~{mbps} Mbps · Lower size & clarity.",
     "mediumDesc": "~{mbps} Mbps · Balanced quality (Recommended).",
     "highDesc": "~{mbps} Mbps · Maximum visual fidelity.",
@@ -532,7 +532,7 @@
     "frameRate24Desc": "Cinematic cadence with a smaller file size. Best for 24 fps sources.",
     "frameRate30Desc": "Balanced smoothness and file size for standard video.",
     "frameRate60Desc": "Smoothest motion for fast movement, with a larger file size. Best for 60 fps sources.",
-    "resMax": "Max",
+    "resMax": "Original",
     "res1080p": "1080p",
     "res720p": "720p",
     "copyError": "Copy error",
@@ -544,7 +544,17 @@
     "res720pDesc": "HD scale ({width}x{height})",
     "moreOptions": "More options",
     "includeAudio": "Include audio",
-    "includeAudioDesc": "Add enabled audio tracks to the exported video."
+    "includeAudioDesc": "Add enabled audio tracks to the exported video.",
+    "dialogTitle": "Export video",
+    "fileName": "File name",
+    "estimatedSize": "Estimated size ≈",
+    "sizeHint": "Based on target bitrate. Static scenes can be much smaller.",
+    "showInFolder": "Show in folder",
+    "savingImage": "Saving image…",
+    "exportAgain": "Export again",
+    "watchVideo": "Watch",
+    "openFolder": "Open folder",
+    "viewImage": "View image"
   },
   "HUD": {
     "issues": "Issues",
@@ -732,7 +742,13 @@
     "recordingDescription": "Set up the controls and countdown for your next recording.",
     "accessibilityDescription": "Manage interaction access and writing assistance.",
     "shortcutsDescription": "Keep your favourite actions a keypress away.",
-    "updatesDescription": "Keep Beam up to date and explore what’s new."
+    "updatesDescription": "Keep Beam up to date and explore what’s new.",
+    "categoryAppearance": "Appearance",
+    "appearanceDescription": "Choose how Beam looks across all windows.",
+    "categoryVideoEditor": "Video editor",
+    "videoEditorDescription": "Timeline behavior and video export preferences.",
+    "groupApplication": "Application",
+    "groupTools": "Tools"
   },
   "ProjectPicker": {
     "projects": "Projects",
@@ -1299,6 +1315,7 @@
     "browse": "Choose a folder",
     "search": "Search folders",
     "noMatches": "No matching folders",
+    "emptyFolders": "Choose a folder to see your recent folders here.",
     "error": "Unable to update the folder.",
     "retry": "Retry"
   }

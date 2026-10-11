@@ -21,6 +21,7 @@ import {
   snapScreenshotTranslation,
   withScreenshotTranslation,
 } from '../screenshot-selection-transform';
+import { screenshotLayerBounds } from '../screenshot-layer-geometry';
 
 const pointerAsset: CursorAssetDescriptor = {
   id: 'pointer',
@@ -307,7 +308,10 @@ describe('screenshot selection translation', () => {
     const leftTop = constrainScreenshotTranslation(state, selected, { x: -1, y: -1 }, assets);
     const movedLeftTop = withScreenshotTranslation(state, selected, leftTop);
     expect(leftTop.x).toBeCloseTo(-0.29);
-    expect(leftTop.y).toBeCloseTo(-0.44);
+    // The fitted source ends at 0.4; its unused transform height is not a visible edge.
+    expect(leftTop.y).toBeCloseTo(-0.39);
+    const visibleSource = screenshotLayerBounds(movedLeftTop, assets, state.image.id)!;
+    expect(visibleSource.y + visibleSource.height).toBeCloseTo(0.01);
     expect(movedLeftTop.image.transform.x - state.image.transform.x).toBeCloseTo(leftTop.x);
     expect(movedLeftTop.images![0]!.transform.y - state.images![0]!.transform.y).toBeCloseTo(leftTop.y);
     expect(movedLeftTop.shapes[0]!.transform.x - state.shapes[0]!.transform.x).toBeCloseTo(leftTop.x);

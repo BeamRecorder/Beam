@@ -1,7 +1,7 @@
 import { computed, inject, provide, ref, watch, type InjectionKey } from 'vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { ShapeClip } from '@beam/engine/shared/composition-types';
-import { createElementText } from '@beam/engine/shared/element-text';
+import { elementTextFromDefaults } from './element-text-defaults';
 import { DEFAULT_DRAWING_SETTINGS } from '@beam/engine/shared/freehand';
 import {
   DEFAULT_ANNOTATION_SHAPE_STYLE,
@@ -36,6 +36,7 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
   };
   const drawingSettings = ref({ ...DEFAULT_DRAWING_SETTINGS });
   let latestDrawingId: string | null = null;
+  const createText = (content = '') => elementTextFromDefaults(content, options.textDefaults?.());
   const create = (family: ShapeLayerFamily): ShapeClip => {
     const { startMs, durationMs } = options.timing();
     const id = crypto.randomUUID();
@@ -68,14 +69,17 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
         width: family === 'arrow' ? 0.2 : 0.4,
         height: family === 'arrow' ? 0.055 : family === 'text' ? 0.16 : 0.3,
       },
-      ...(family === 'text' ? { text: createElementText(t('newText')) } : {}),
+      ...(family === 'text' ? { text: createText(t('newText')) } : {}),
     };
   };
   const allowed = () => options.canInteract?.() !== false;
   const finishText = () => {
     const clip = editing.value;
     editing.value = null;
-    if (clip && layers.value.some((c) => c.id === clip.id)) options.update(clip.id, { text: clip.text });
+    if (clip && layers.value.some((c) => c.id === clip.id)) {
+      options.update(clip.id, { text: clip.text });
+      if (clip.text) options.rememberTextStyle?.(clip.text);
+    }
   };
   const beginText = (id: string) => {
     if (!allowed() || drawingMode.value) return false;
@@ -85,10 +89,11 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
     finishText();
     finishVector();
     options.select(id);
-    editing.value = JSON.parse(JSON.stringify({ ...clip, text: clip.text ?? createElementText() })) as ShapeClip;
+    editing.value = JSON.parse(JSON.stringify({ ...clip, text: clip.text ?? createText() })) as ShapeClip;
     return true;
   };
   const context: ElementEditorContext = {
+    createText,
     canInteract: computed(allowed),
     canvasSize,
     vectorEditing,
@@ -246,6 +251,7 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
         const { text: _text, ...appearance } = patch;
         if (Object.keys(appearance).length) options.update(selected.value.id, appearance);
       } else options.update(selected.value.id, patch);
+      if (patch.text) options.rememberTextStyle?.(patch.text);
     },
     remove: () => {
       if (selected.value) options.remove(selected.value.id);
