@@ -180,6 +180,7 @@ const navigateSearch = (tab: string) => {
 </script>
 <template>
   <main class="screenshot-editor">
+    <EditorAmbientBackground :background="state?.canvas.showBackground ? state.background : null" />
     <ScreenshotSearch
       v-if="state && document && !canvasFullscreen.isFullscreen.value"
       :navigate="navigateSearch"
@@ -286,10 +287,6 @@ const navigateSearch = (tab: string) => {
       :show-topbar-skeleton="false"
     />
     <EditorWorkspace v-if="state && document" kind="screenshot" class="editor-body">
-      <EditorAmbientBackground
-        variant="workspace"
-        :background="state.canvas.showBackground ? state.background : null"
-      />
       <ScreenshotPropertiesPanel :open="inspectorOpen" :title="panelTitle" @close="hideInspector">
         <template
           v-if="selectedLayer && selectedIds.length < 2 && panel !== 'settings' && panel !== 'layer-effect'"

@@ -6,7 +6,7 @@ import type { ColorBackground, GradientCatalogBackground } from '@beam/engine/sh
 import { mediaSourceDescriptor, type MediaFrame } from '@beam/runtime/shared/index';
 import type { MediaAsset } from '@beam/engine/shared/composition-types';
 
-const props = withDefaults(defineProps<EditorAmbientBackgroundProps>(), { variant: 'ambient' });
+const props = defineProps<EditorAmbientBackgroundProps>();
 
 const mediaFailed = ref(false);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -88,11 +88,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
-    class="editor-ambient-background"
-    :class="{ 'is-workspace-background': variant === 'workspace' }"
-    aria-hidden="true"
-  >
+  <div class="editor-ambient-background" aria-hidden="true">
     <Transition name="ambient-fade">
       <div
         v-if="background && (background.kind === 'color' || background.kind === 'gradient')"
@@ -172,19 +168,6 @@ onUnmounted(() => {
   background: var(--color-bg-app);
   opacity: var(--editor-ambient-veil-opacity);
   transition: opacity 0.4s ease;
-}
-
-.is-workspace-background {
-  --editor-ambient-media-opacity: 1;
-  --editor-ambient-veil-opacity: 0;
-}
-
-.is-workspace-background .ambient-media {
-  filter: blur(56px);
-}
-
-.is-workspace-background .ambient-surface {
-  filter: none;
 }
 
 @media (prefers-reduced-transparency: reduce) {

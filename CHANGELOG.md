@@ -21,7 +21,7 @@ User-facing changes to Beam are documented in this file.
 - Dropdowns inside dialogs appear above the dialog and remain clickable.
 - New recordings recognize custom resize cursors from design tools such as Figma on Linux, Windows and macOS, so the chosen cursor style keeps horizontal, vertical and diagonal resize handles.
 - Improved HUD stability while dragging on Windows, including after recording or taking a screenshot.
-- Screenshot fills the workspace behind the canvas with the selected background, removing pale side bands when the image and window have different proportions.
+- Screenshot fills the editor window with the same subtle blurred background as Studio, with consistent opacity in light and dark themes.
 - Restarting a recording repeats your selected countdown every time and resets the recording timer for the new take.
 - Fixed thick recording-region borders on Windows appearing over the selected area and in recorded videos.
 - Alignment guides follow the visible cropped bounds in Video and Screenshot, while keeping the original image dimensions available for further crop edits and resets.

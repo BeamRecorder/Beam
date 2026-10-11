@@ -93,21 +93,22 @@ describe('EditorAmbientBackground', () => {
     expect(root.findAll('button, a, input, select, textarea')).toHaveLength(0);
   });
 
-  it.each([color(), gradient(), image()])('keeps the selected $kind background in workspace mode', (background) => {
-    const wrapper = mount(EditorAmbientBackground, { props: { background, variant: 'workspace' } });
-    expect(wrapper.classes()).toContain('is-workspace-background');
-    expect(wrapper.attributes('aria-hidden')).toBe('true');
-    expect(wrapper.find('.ambient-surface, .ambient-media').exists()).toBe(true);
-    expect(wrapper.props('background')).toEqual(background);
-    wrapper.unmount();
-  });
+  it.each([color(), gradient(), image()])(
+    'keeps the selected $kind background in the shared ambient surface',
+    (background) => {
+      const wrapper = mount(EditorAmbientBackground, { props: { background } });
+      expect(wrapper.classes()).not.toContain('is-workspace-background');
+      expect(wrapper.attributes('aria-hidden')).toBe('true');
+      expect(wrapper.find('.ambient-surface, .ambient-media').exists()).toBe(true);
+      expect(wrapper.props('background')).toEqual(background);
+      wrapper.unmount();
+    },
+  );
 
-  it('keeps the subdued ambient appearance by default and switches workspace mode independently of the source', async () => {
+  it('keeps the subdued ambient appearance when the source changes', async () => {
     const background = image();
     const wrapper = mount(EditorAmbientBackground, { props: { background } });
     expect(wrapper.classes()).not.toContain('is-workspace-background');
-    await wrapper.setProps({ variant: 'workspace' });
-    expect(wrapper.classes()).toContain('is-workspace-background');
     expect(wrapper.get('img').attributes('src')).toBe(resolvePublicAssetUrl(background.path));
     await wrapper.setProps({ background: null });
     expect(wrapper.find('.ambient-media').exists()).toBe(false);
@@ -136,7 +137,7 @@ describe('EditorAmbientBackground', () => {
     background.gradient.type = 'radial';
     background.gradient.stops[0]!.alpha = -1;
     background.gradient.stops[1]!.alpha = 2;
-    const wrapper = mount(EditorAmbientBackground, { props: { background, variant: 'workspace' } });
+    const wrapper = mount(EditorAmbientBackground, { props: { background } });
     const style = wrapper.get('.ambient-surface').attributes('style');
     expect(style).toContain('radial-gradient');
     expect(style).toContain('rgba(16, 24, 32, 0)');
@@ -207,7 +208,7 @@ describe('EditorAmbientBackground', () => {
     let resolve!: (value: typeof frame) => void;
     runtime.decodeVideoPoster.mockReturnValueOnce(new Promise((done) => (resolve = done)));
     const background = { ...video(), fileName: 'wallpaper.webm' };
-    const wrapper = mount(EditorAmbientBackground, { props: { background, variant: 'workspace' } });
+    const wrapper = mount(EditorAmbientBackground, { props: { background } });
     await flushPromises();
     expect(runtime.mediaSourceDescriptor).toHaveBeenLastCalledWith(
       expect.objectContaining({ fileName: 'wallpaper.webm' }),
@@ -224,7 +225,7 @@ describe('EditorAmbientBackground', () => {
   it('ignores a late video decoding error after choosing a valid image', async () => {
     let reject!: (reason: Error) => void;
     runtime.decodeVideoPoster.mockReturnValueOnce(new Promise((_resolve, fail) => (reject = fail)));
-    const wrapper = mount(EditorAmbientBackground, { props: { background: video(), variant: 'workspace' } });
+    const wrapper = mount(EditorAmbientBackground, { props: { background: video() } });
     await flushPromises();
     await wrapper.setProps({ background: image() });
     reject(new Error('Old video decode failed'));
@@ -247,7 +248,7 @@ describe('EditorAmbientBackground', () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
     const frame = posterFrame();
     runtime.decodeVideoPoster.mockResolvedValueOnce(frame);
-    const wrapper = mount(EditorAmbientBackground, { props: { background: video(), variant: 'workspace' } });
+    const wrapper = mount(EditorAmbientBackground, { props: { background: video() } });
     await flushPromises();
     expect(wrapper.find('canvas').exists()).toBe(true);
     wrapper.unmount();

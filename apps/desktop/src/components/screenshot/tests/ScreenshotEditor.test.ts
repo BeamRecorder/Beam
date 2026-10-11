@@ -1572,7 +1572,7 @@ describe('ScreenshotEditor', () => {
     expect(useToastStore().toasts[0]).toMatchObject({ type: 'error', message: 'Image copy failed' });
     wrapper.unmount();
   });
-  it('fills the workspace background and centers project navigation with presets on the left', async () => {
+  it('shares Studio’s ambient background across the editor and centers project navigation with presets on the left', async () => {
     const wrapper = mountEditor();
     await flushPromises();
     expect(wrapper.get('.screenshot-topbar').text()).toContain('Back to HUD');
@@ -1580,8 +1580,8 @@ describe('ScreenshotEditor', () => {
     expect(wrapper.find('.center-actions [data-testid="project-switcher"]').exists()).toBe(true);
     expect(wrapper.find('.right-actions [data-testid="preset-controls"]').exists()).toBe(false);
     const background = wrapper.findComponent({ name: 'EditorAmbientBackground' });
-    expect(background.props('variant')).toBe('workspace');
-    expect(background.element.parentElement).toBe(wrapper.get('.workspace-upper').element);
+    expect(background.element.parentElement).toBe(wrapper.get('.screenshot-editor').element);
+    expect(background.classes()).not.toContain('is-workspace-background');
     expect(wrapper.find('.screenshot-topbar .editor-ambient-background').exists()).toBe(false);
     const state = wrapper.findComponent(ScreenshotCanvasStub).props('state')!;
     state.background = { kind: 'color', color: '#d54f68' };
