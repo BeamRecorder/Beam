@@ -16,6 +16,7 @@ const props = withDefaults(
     disabled?: boolean;
     label?: string;
     tooltipDisabled?: boolean;
+    showPreviewIndicator?: boolean;
   }>(),
   { kind: 'video', size: 'sm' },
 );
@@ -42,6 +43,7 @@ const presets = computed(() => new Map(props.document?.presets.map((preset) => [
     :label="label ?? t('select')"
     :placeholder="t('preset')"
     :tooltip-disabled="tooltipDisabled"
+    :show-preview-indicator="showPreviewIndicator"
     @update:model-value="emit('select', $event)"
     @toggle="emit('toggle', $event)"
   >
@@ -55,7 +57,7 @@ const presets = computed(() => new Map(props.document?.presets.map((preset) => [
         :source="source"
       />
     </template>
-    <template #option="{ option }">
+    <template #option="{ option, previewing }">
       <EditorPresetPreview
         v-if="presets.has(String(option.value))"
         :class="{ 'compact-preview': compact }"
@@ -63,7 +65,9 @@ const presets = computed(() => new Map(props.document?.presets.map((preset) => [
         :kind="kind"
         :source="source"
       />
-      <span class="preset-option-label">{{ option.label }}</span>
+      <slot name="option-label" :option="option" :previewing="previewing">
+        <span class="preset-option-label">{{ option.label }}</span>
+      </slot>
     </template>
   </Select>
 </template>

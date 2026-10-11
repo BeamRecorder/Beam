@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { useTranslate } from '~/i18n/useTranslate';
-import { onBeforeUnmount, ref, watch } from 'vue';
+import { defineAsyncComponent, onBeforeUnmount, ref, watch } from 'vue';
 import { capture } from '~/api/capture';
 import EditorPresetSelect from '../editor/presets/EditorPresetSelect.vue';
+import Tooltip from '~/ui/tooltip/Tooltip.vue';
+const CapturePresetPreview = defineAsyncComponent(() => import('./CapturePresetPreview.vue'));
 import CaptureModeIcon from '../capture/CaptureModeIcon.vue';
 import type { PresetKind } from '@beam/engine/capture/capture-mode';
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
@@ -59,6 +61,7 @@ const select = async (id: string | number) => {
     if (current === generation) busy.value = false;
   }
 };
+const presetFor = (id: string | number) => document.value?.presets.find((preset) => preset.id === id);
 onBeforeUnmount(() => {
   emit('error', '');
   generation++;
@@ -77,9 +80,18 @@ onBeforeUnmount(() => {
       :disabled="disabled || busy"
       :label="t('preset')"
       tooltip-disabled
+      show-preview-indicator
       @select="select"
       @toggle="emit('toggle', $event)"
     >
+      <template #option-label="{ option, previewing }">
+        <Tooltip class="preset-option-label" :open="previewing" position="left">
+          <span :title="option.label">{{ option.label }}</span>
+          <template v-if="previewing && presetFor(option.value)" #content>
+            <CapturePresetPreview :preset="presetFor(option.value)!" :kind="kind" />
+          </template>
+        </Tooltip>
+      </template>
       <template v-if="compact" #icon
         ><CaptureModeIcon :mode="kind === 'screenshot' ? 'screenshot' : 'studio'" :size="14" decorative
       /></template>
@@ -99,6 +111,15 @@ onBeforeUnmount(() => {
 .preset-control.compact {
   grid-template-columns: minmax(0, 1fr);
   gap: 0;
+}
+.preset-option-label {
+  width: 100%;
+  font-weight: inherit;
+}
+.preset-option-label > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 p {
   grid-column: 1 / -1;

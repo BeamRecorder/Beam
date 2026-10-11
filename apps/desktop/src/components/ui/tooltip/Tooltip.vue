@@ -17,12 +17,14 @@ const props = withDefaults(
     delay?: number;
     as?: string;
     interactive?: boolean;
+    open?: boolean;
   }>(),
   {
     position: 'top',
     variant: 'default',
     delay: 0,
     as: 'div',
+    open: undefined,
   },
 );
 
@@ -48,7 +50,7 @@ const updatePosition = () => {
     left: 'right',
     right: 'left',
   } as const;
-  const preferred = props.position ?? 'top';
+  const preferred = props.position;
   const candidates: Array<'top' | 'bottom' | 'left' | 'right'> = [
     preferred,
     opposite[preferred],
@@ -96,7 +98,7 @@ const show = () => {
   if (props.disabled) return;
   if (showTimer) clearTimeout(showTimer);
   if (hideTimer) clearTimeout(hideTimer);
-  const delayMs = props.delay ?? 100;
+  const delayMs = props.delay;
   if (delayMs > 0) {
     showTimer = setTimeout(async () => {
       visible.value = true;
@@ -108,6 +110,21 @@ const show = () => {
     void nextTick().then(updatePosition);
   }
 };
+
+watch(
+  () => props.open,
+  (open) => {
+    if (open === undefined) return;
+    if (open && !props.disabled) show();
+    else {
+      if (showTimer) clearTimeout(showTimer);
+      if (hideTimer) clearTimeout(hideTimer);
+      showTimer = hideTimer = null;
+      visible.value = false;
+    }
+  },
+  { immediate: true },
+);
 
 const hide = () => {
   if (showTimer) {
@@ -144,6 +161,10 @@ watch(
   () => props.disabled,
   (disabled) => {
     if (disabled) return hide();
+    if (props.open !== undefined) {
+      if (props.open) show();
+      return;
+    }
     if (wrapperRef.value?.matches(':hover')) void show();
   },
 );
@@ -153,6 +174,13 @@ watch(
     if (visible.value) updatePosition();
   },
 );
+watch(contentRef, (element, _previous, onCleanup) => {
+  if (!element || typeof ResizeObserver === 'undefined') return;
+  // Slot content can load after opening (for example a preset thumbnail).
+  const observer = new ResizeObserver(updatePosition);
+  observer.observe(element);
+  onCleanup(() => observer.disconnect());
+});
 
 window.addEventListener('resize', updatePosition);
 window.addEventListener('scroll', updatePosition, true);
@@ -170,10 +198,10 @@ onBeforeUnmount(() => {
     ref="wrapperRef"
     v-bind="$attrs"
     :class="['tooltip-wrapper', ($attrs as any)?.class]"
-    @mouseenter="show"
-    @mouseleave="hide"
-    @focusin="show"
-    @focusout="hide"
+    @mouseenter="open === undefined && show()"
+    @mouseleave="open === undefined && hide()"
+    @focusin="open === undefined && show()"
+    @focusout="open === undefined && hide()"
   >
     <slot />
   </component>

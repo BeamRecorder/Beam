@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { stateFixture } from '../export/tests/export-test-support';
 import ScreenshotExportDialog from '../ScreenshotExportDialog.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 vi.mock('~/api/capture', () => ({ capture: {} }));
 beforeEach(() => {
   vi.spyOn(window, 'matchMedia').mockImplementation(
@@ -129,16 +130,41 @@ it('supports WebP quality and opening through the exposed search action', async 
   await flushPromises();
   expect(wrapper.find('[role="dialog"]').exists()).toBe(true);
 });
-it('keeps format and quality editable after moving them into their own rows', async () => {
+it('switches PNG and WebP through the shared animated group and preserves WebP quality', async () => {
   const { wrapper } = await setup();
-  await wrapper.get('[aria-label="Image format"]').trigger('click');
-  await wrapper
-    .findAll('[role="option"]')
-    .find((option) => option.text().includes('WebP'))!
-    .trigger('click');
+  const group = wrapper.getComponent(ButtonGroup);
+  expect(group.props('variant')).toBe('neutral');
+  expect(group.props('selection')).toEqual({ index: 0, count: 2 });
+  expect(group.attributes('aria-label')).toBe('Image format');
+  expect(group.findAll('[aria-pressed="true"]')).toHaveLength(1);
+  await action(wrapper, 'WebP').trigger('click');
   expect(wrapper.props('state').format).toBe('webp');
+  expect(group.props('selection')).toEqual({ index: 1, count: 2 });
+  expect(action(wrapper, 'WebP').attributes('aria-pressed')).toBe('true');
   await wrapper.get('input[type="range"]').setValue('0.72');
   expect(wrapper.props('state').quality).toBe(0.72);
+  await action(wrapper, 'PNG').trigger('click');
+  expect(wrapper.find('input[type="range"]').exists()).toBe(false);
+  expect(wrapper.props('state').quality).toBe(0.72);
+  expect(action(wrapper, 'PNG').attributes('aria-pressed')).toBe('true');
+});
+it('reflects the document format when a preset changes it externally', async () => {
+  const { wrapper } = await setup();
+  await wrapper.setProps({ state: { ...stateFixture(), format: 'webp' } });
+  expect(wrapper.getComponent(ButtonGroup).props('selection')).toEqual({ index: 1, count: 2 });
+  expect(action(wrapper, 'PNG').attributes('aria-pressed')).toBe('false');
+  expect(action(wrapper, 'WebP').attributes('aria-pressed')).toBe('true');
+});
+it('uses the same export-folder control as video and blocks changes during publication', async () => {
+  const { wrapper, save } = await setup();
+  const directory = wrapper.get('directory-preference-stub');
+  expect(directory.attributes()).toMatchObject({ kind: 'exports', compact: 'true', disabled: 'false' });
+  await wrapper.setProps({ busy: true });
+  expect(directory.attributes('disabled')).toBe('true');
+  expect(wrapper.get('fieldset.export-fields').attributes('disabled')).toBeDefined();
+  await action(wrapper, 'WebP').trigger('click');
+  expect(wrapper.props('state').format).toBe('png');
+  expect(save).not.toHaveBeenCalled();
 });
 it('preserves custom dimensions and aspect ratio controls in the new settings row', async () => {
   const { wrapper } = await setup(true);

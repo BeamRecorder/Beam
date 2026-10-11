@@ -228,14 +228,10 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('landscape export dialogs
           await page.click('.export-range [role="switch"]');
           await page.screenshot({ path: `/tmp/beam-export-options-${theme}.png` });
         } else {
-          await page.click('.export-destination .select-trigger');
-          await page.waitForSelector('[role="option"]');
-          await page.waitForFunction(() =>
-            document.getAnimations().every((animation) => animation.playState === 'finished'),
-          );
+          expect(await page.$eval('.export-format-choices', (node) => node.getAttribute('role'))).toBe('group');
           const target = await page.evaluate(() => {
-            const option = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find((node) =>
-              node.textContent?.includes('WebP'),
+            const option = [...document.querySelectorAll<HTMLButtonElement>('.export-format-choices button')].find(
+              (node) => node.textContent?.trim() === 'WebP',
             )!;
             const bounds = option.getBoundingClientRect();
             return {
@@ -322,54 +318,59 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('landscape export dialogs
     expect(await page.$('.export-range .is-overflowing')).toBeNull();
   });
 
-  it('keeps recent export folders selectable and lets the browse action change the path', async () => {
-    await page.setViewport({ width: 1280, height: 800 });
-    await page.goto(`${origin}/export-dialog-test?mode=video&locale=fr`);
-    await page.waitForSelector('.export-trigger');
-    await page.click('.export-trigger');
-    const trigger = '[data-setting="exports-directory"] .select-trigger';
-    await page.waitForFunction(
-      (selector) => document.querySelector(selector)?.textContent?.trim() === '/home/test/Videos',
-      {},
-      trigger,
-    );
-    expect(await page.$('[data-setting="exports-directory"] input[readonly]')).toBeNull();
-    await page.click(trigger);
-    await page.waitForSelector('[role="option"]');
-    await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState === 'finished'));
-    await page.evaluate(() =>
-      [...document.querySelectorAll<HTMLElement>('[role="option"]')]
-        .find((node) => node.textContent?.includes('/home/test/Previous exports'))!
-        .click(),
-    );
-    await page.waitForFunction(
-      (selector) => document.querySelector(selector)?.textContent?.trim() === '/home/test/Previous exports',
-      {},
-      trigger,
-    );
-    await page.click(trigger);
-    await page.waitForSelector('[role="option"]');
-    expect(await page.$$eval('[role="option"]', (nodes) => nodes.map((node) => node.textContent?.trim()))).toEqual([
-      '/home/test/Videos',
-      '/home/test/Previous exports',
-    ]);
-    await page.evaluate(() =>
-      [...document.querySelectorAll<HTMLElement>('[role="option"]')]
-        .find((node) => node.textContent?.trim() === '/home/test/Videos')!
-        .click(),
-    );
-    await page.waitForFunction(
-      (selector) => document.querySelector(selector)?.textContent?.trim() === '/home/test/Videos',
-      {},
-      trigger,
-    );
-    await page.click('[data-setting="exports-directory"] button[aria-label="Choisir un dossier"]');
-    await page.waitForFunction(
-      (selector) => document.querySelector(selector)?.textContent?.trim() === '/home/albi/Téléchargements',
-      {},
-      trigger,
-    );
-  });
+  it.each(['video', 'image'])(
+    'keeps recent %s export folders selectable and lets browse change the path',
+    async (mode) => {
+      await page.setViewport({ width: 1280, height: 800 });
+      await page.goto(`${origin}/export-dialog-test?mode=${mode}&locale=fr`);
+      await page.waitForSelector('.export-trigger');
+      await page.click('.export-trigger');
+      const trigger = '[data-setting="exports-directory"] .select-trigger';
+      await page.waitForFunction(
+        (selector) => document.querySelector(selector)?.textContent?.trim() === '/home/test/Videos',
+        {},
+        trigger,
+      );
+      expect(await page.$('[data-setting="exports-directory"] input[readonly]')).toBeNull();
+      await page.click(trigger);
+      await page.waitForSelector('[role="option"]');
+      await page.waitForFunction(() =>
+        document.getAnimations().every((animation) => animation.playState === 'finished'),
+      );
+      await page.evaluate(() =>
+        [...document.querySelectorAll<HTMLElement>('[role="option"]')]
+          .find((node) => node.textContent?.includes('/home/test/Previous exports'))!
+          .click(),
+      );
+      await page.waitForFunction(
+        (selector) => document.querySelector(selector)?.textContent?.trim() === '/home/test/Previous exports',
+        {},
+        trigger,
+      );
+      await page.click(trigger);
+      await page.waitForSelector('[role="option"]');
+      expect(await page.$$eval('[role="option"]', (nodes) => nodes.map((node) => node.textContent?.trim()))).toEqual([
+        '/home/test/Videos',
+        '/home/test/Previous exports',
+      ]);
+      await page.evaluate(() =>
+        [...document.querySelectorAll<HTMLElement>('[role="option"]')]
+          .find((node) => node.textContent?.trim() === '/home/test/Videos')!
+          .click(),
+      );
+      await page.waitForFunction(
+        (selector) => document.querySelector(selector)?.textContent?.trim() === '/home/test/Videos',
+        {},
+        trigger,
+      );
+      await page.click('[data-setting="exports-directory"] button[aria-label="Choisir un dossier"]');
+      await page.waitForFunction(
+        (selector) => document.querySelector(selector)?.textContent?.trim() === '/home/albi/Téléchargements',
+        {},
+        trigger,
+      );
+    },
+  );
 
   it('opens an empty recent-folder list in Settings with useful help', async () => {
     await page.setViewport({ width: 1280, height: 800 });
