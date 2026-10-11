@@ -138,6 +138,8 @@ The packaged application includes `beam-cli` (`beam-cli.cmd` on Windows); Linux 
 
 Video export accepts `beam-cli export request.json output.mp4 --backend webcodecs` (default), or `--backend ffmpeg-vaapi` for experimental Linux GPU export. Both use Beam's common renderer. FFmpeg requires a working X11/XWayland display, VA-API drivers and built native artifacts; see [setup and CLI usage](./docs/dev/ffmpeg-gpu-export.md).
 
+For AI agents, start with `beam-cli skills install`, then use `skills check` and `skills update` to keep the Beam guidance current. The pack includes ten skills for design briefs, HTML composition, deterministic animation, recording, screenshots, video editing, assets/fonts, audio and export. Skills are fetched from this repository's [`.skills/Beam-cli`](./.skills/Beam-cli) directory and installed project-locally by default; use `--global`, `--agent claude|cursor|gemini`, or `--dir` to choose another destination. Local edits are protected. See the [skills guide](./docs/agent/skills.md), also bundled as `beam-cli docs skills`, for version pinning, backups and local/offline installs.
+
 ## 💬 Join the Beam community
 
 Have feedback, ideas, or questions? Join the Beam community on Discord and follow the project on GitHub.

@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "version": "1.0.0",
+  "skills": [
+    {
+      "name": "beam-animation",
+      "description": "Animate Beam HTML compositions or native video property tracks with deterministic seeking. Use for timing, transitions, GSAP, WebGL and camera emphasis that must match preview, reverse scrubbing and export.",
+      "files": {
+        "references/clocks.md": "7f04ab811ca8ca5d58cecb4bdef6294a11eb1ce771c49764de2bf063356d8c46",
+        "SKILL.md": "98cccd32bf454b094c3a311d11afb1a6342d169c005803f9c74f4746a3f1d834"
+      }
+    },
+    {
+      "name": "beam-assets",
+      "description": "Import and resolve local media, fonts and frozen HTML references for Beam compositions and editors. Keep native text editable and make standalone render assets portable.",
+      "files": {
+        "SKILL.md": "261162eb913de4b9df6c8f291496ba760cafc20f91834ce22dc65a0200dff338"
+      }
+    },
+    {
+      "name": "beam-audio",
+      "description": "Arrange and adjust audio in Beam video timelines using real media clips, gain commands and native animation tracks. Use for narration/music balance, fades, timing and audible export verification.",
+      "files": {
+        "SKILL.md": "b7cdf938f5f6de5a877ab455e9f108d474e939ed914e7a46a9274f32418520db"
+      }
+    },
+    {
+      "name": "beam-cli",
+      "description": "Use Beam CLI to capture screens, edit Beam projects, publish HTML artwork and render video or screenshots. Discover the real tools and route to the relevant Beam skill; use for Beam workflows, not unrelated website development.",
+      "files": {
+        "references/authoring.md": "95eab6167090fc34ed3fc3beaead6e91d66f15b8facf1bcc2f4175d482c9dc40",
+        "SKILL.md": "006b769aae9faf44ad7987e76f631eaf45622d15793d22073f853c16c47c4ec7"
+      }
+    },
+    {
+      "name": "beam-composition",
+      "description": "Build or edit Beam HTML and TypeScript compositions, optionally with Vue, and publish or watch them as real video or Screenshot layers. Use Beam's deterministic clock and local asset compiler contract.",
+      "files": {
+        "assets/html/index.html": "8343e4b1c5da9374c2015e61a66db62ccdccfc6408d058e074cf8e19978f9a05",
+        "assets/html/main.ts": "658001ddfed8a1cea8591875244d8147c81e20a4b1bb0f7ee56db36a4f3f80e4",
+        "references/publish.md": "799dd258353c418b072fd2feafaa18c0a8613cc83fdf6590033f81cc32f7ef3c",
+        "SKILL.md": "9195494daaab2f8cbe36b9e885568b78c8676742e4e598126d15820010c4af1d"
+      }
+    },
+    {
+      "name": "beam-design",
+      "description": "Establish the visual brief for a Beam video, screenshot or HTML composition. Read existing design.md and frame.md, ask for missing visual decisions, and turn the answers into an actionable design and frame plan.",
+      "files": {
+        "references/briefs.md": "955232eb321c18892b8ac778dce8d510bf0ae9264459203fe58141d3bac55e2a",
+        "SKILL.md": "e0bddc5b63918fa3c59f54e9fbe5ef7778d01f68c371d70624e7eaa012a17d65"
+      }
+    },
+    {
+      "name": "beam-export",
+      "description": "Review and export Beam videos, screenshots and HTML motion to real MP4, WebM, PNG or WebP files. Select live or standalone rendering, protect output files and verify visual/audio results.",
+      "files": {
+        "SKILL.md": "889aa035b4f483327426f41fa52a6d15c20ee2f4b00116566ffc14b8b687380a"
+      }
+    },
+    {
+      "name": "beam-recording",
+      "description": "Record a real screen or capture a raw screenshot with Beam CLI's native Rust backend. Discover sources and permissions, construct supported capture configuration and inspect the actual result.",
+      "files": {
+        "references/config.md": "b65dfa6a8927deb1a41d735293531da736e9de9f7805cf8224e2ef3b46d4f0be",
+        "SKILL.md": "5ef1f14cc0c2dc030a9fe769215a1daa78655f7b0bb42d3929d7ba4491676118"
+      }
+    },
+    {
+      "name": "beam-screenshot",
+      "description": "Create and edit Beam Screenshot documents with native image/text layers, framing, backgrounds and supported effects, then export real PNG or WebP. Use for still compositions and frame-derived image editing.",
+      "files": {
+        "SKILL.md": "b7020e3733d68a1660e36ac0f87e0400a073ba89f47bb2f44dd7c0841404671f"
+      }
+    },
+    {
+      "name": "beam-video-editor",
+      "description": "Edit real Beam video documents using timeline commands, native text, presentation settings, captions, zooms and lenses. Preserve source timing, locks and edit history while producing a clear, concise demo.",
+      "files": {
+        "SKILL.md": "7b80178e6cb101369dee9f9498130ab96719c9d73892f1df8c38332cb9944daa"
+      }
+    }
+  ]
+}

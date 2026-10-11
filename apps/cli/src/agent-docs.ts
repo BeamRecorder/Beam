@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path';
 
 const topics = {
   agent: 'docs/agent/README.md',
+  skills: 'docs/agent/skills.md',
   html: 'docs/agent/html-compositions.md',
   gradients: 'docs/architecture/gradient-effects.md',
   commands: 'docs/architecture/authoring-protocol.md',
@@ -18,10 +19,11 @@ export async function readAgentDocs(topic = 'agent') {
   return {
     topic,
     path: local,
-    github: `https://github.com/BeamRecorder/Beam/blob/main/${path}`,
+    github: `https://github.com/BeamRecorder/Beam/blob/master/${path}`,
     content: await readFile(local, 'utf8'),
     topics,
     next: [
+      'beam skills install',
       'beam tools list',
       'beam instances',
       'beam tools call projects.list',

@@ -60,6 +60,7 @@ for (const file of [
   'apps/desktop/src/components/brand/Beamy/engine/NOTICE.md',
   'public/cursorPacks/THIRD_PARTY_NOTICES.md',
   'docs/agent/README.md',
+  'docs/agent/skills.md',
   'docs/agent/html-compositions.md',
   'docs/architecture/gradient-effects.md',
   'docs/architecture/authoring-protocol.md',
