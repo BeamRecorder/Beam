@@ -336,6 +336,12 @@
     }
   },
   "Updates": {
+    "downloadHint": "업데이트를 다운로드하는 동안 계속 작업할 수 있습니다.",
+    "restartHint": "업데이트를 설치할 준비가 되면 Beam을 다시 시작하세요.",
+    "update": "업데이트",
+    "downloadProgress": "다운로드 중 {percent}%",
+    "restartToUpdate": "다시 시작하여 업데이트",
+    "retry": "업데이트 다시 시도",
     "title": "앱 업데이트",
     "checkForUpdates": "업데이트 확인",
     "download": "다운로드",

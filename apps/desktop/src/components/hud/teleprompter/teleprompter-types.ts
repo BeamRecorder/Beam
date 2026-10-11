@@ -72,3 +72,13 @@ export interface TeleprompterViewState {
   isPaused: boolean;
   error: string;
 }
+
+/** Native reader presentation, independent from window IPC and playback clocks. */
+export interface TeleprompterViewProps {
+  document: TeleprompterDocument;
+  editing: boolean;
+  playing: boolean;
+  activeLine: number;
+  error: string;
+  defaultTextColor: string;
+}

@@ -156,6 +156,41 @@ test('Recorder restores the X11 zero origin and clamps off-screen placements', (
 });
 
 for (const platform of ['linux', 'darwin', 'win32']) {
+  test(`${platform}: native input callbacks cannot reenter the same mouse policy`, () => {
+    const win = fakeWindow();
+    const controller = new WindowController(win, { platform, screenModule: {} });
+    const original = win.setIgnoreMouseEvents;
+    let depth = 0;
+    win.setIgnoreMouseEvents = (...args) => {
+      assert.ok(++depth < 3, 'Mouse policy reentered a native focus callback');
+      original(...args);
+      win.emit('focus');
+      depth--;
+    };
+    controller.markReadyToShow();
+    controller.setHudInteractive(true);
+    const count = win.calls.filter((call) => call[0] === 'mouse').length;
+    for (const event of ['focus', 'blur', 'restore', 'show']) win.emit(event);
+    controller.setHudInteractive(true);
+    assert.equal(win.calls.filter((call) => call[0] === 'mouse').length, count);
+  });
+
+  test(`${platform}: late renderer input cannot reactivate a hidden HUD`, () => {
+    const win = fakeWindow();
+    const controller = new WindowController(win, { platform, screenModule: {} });
+    controller.markReadyToShow();
+    controller.setHudInteractive(true);
+    controller.setVisible(false);
+    const count = win.calls.filter((call) => call[0] === 'mouse').length;
+    controller.setHudInteractive(true);
+    controller.setHudInteractive(false);
+    assert.equal(win.calls.filter((call) => call[0] === 'mouse').length, count);
+    assert.deepEqual(win.calls.filter((call) => call[0] === 'mouse').at(-1), ['mouse', true]);
+    controller.setVisible(true);
+    controller.setHudInteractive(true);
+    assert.deepEqual(win.calls.filter((call) => call[0] === 'mouse').at(-1), ['mouse', false]);
+  });
+
   test(`${platform}: native focus callbacks cannot reenter a topmost change`, () => {
     const win = fakeWindow();
     const setAlwaysOnTop = win.setAlwaysOnTop;

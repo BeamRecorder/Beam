@@ -62,7 +62,9 @@ fn settings_for_support(
             DrawBorderSettings::Default
         },
         secondary_windows: if support.secondary_windows {
-            SecondaryWindowSettings::Exclude
+            // Native selects and menus can be separate popup windows. Include
+            // them when Windows exposes this setting (Windows 11 24H2+).
+            SecondaryWindowSettings::Include
         } else {
             SecondaryWindowSettings::Default
         },

@@ -35,6 +35,7 @@ const defaults = (platform = process.platform) => ({
   appearance: defaultAppearance(),
   alwaysOnTop: true,
   launchAtStartup: true,
+  minimizeToTray: false,
   hudWindow: { ...DEFAULT_HUD_WINDOW_SIZE },
   recordingBar: { visibility: platform === 'linux' ? 'hover-only' : 'always' },
   recordingInteractions: { enabled: false, noticeDismissed: false },
@@ -215,6 +216,7 @@ const normalize = (value, platform = process.platform) => {
     appearance: appearanceSettings,
     alwaysOnTop: typeof next.alwaysOnTop === 'boolean' ? next.alwaysOnTop : base.alwaysOnTop,
     launchAtStartup: typeof next.launchAtStartup === 'boolean' ? next.launchAtStartup : base.launchAtStartup,
+    minimizeToTray: typeof next.minimizeToTray === 'boolean' ? next.minimizeToTray : base.minimizeToTray,
     hudWindow: normalizeHudWindowSize(next.hudWindow),
     recordingBar: {
       visibility: ['always', 'auto-fade', 'hover-only'].includes(next.recordingBar?.visibility)

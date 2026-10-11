@@ -1,0 +1,412 @@
+{
+  "schemaVersion": 14,
+  "assets": [
+    {
+      "id": "session:01a107bb-1daa-7112-a00f-e92e8c14ed19:screen:screen/segment-0001.mp4",
+      "kind": "video",
+      "name": "Screen recording",
+      "fileName": null,
+      "durationMs": 18425,
+      "width": 3072,
+      "height": 1862,
+      "origin": "session",
+      "sessionId": "01a107bb-1daa-7112-a00f-e92e8c14ed19",
+      "sessionPath": "screen/segment-0001.mp4"
+    },
+    {
+      "id": "webcam-asset:094b7c6d-985f-4b48-a05c-fffe43ed85ba",
+      "kind": "video",
+      "name": "demo-webcam",
+      "fileName": "afd7da42-6c43-4216-b44b-f6dda47b5fe8.mp4",
+      "durationMs": 8000,
+      "width": 640,
+      "height": 480,
+      "origin": "project"
+    }
+  ],
+  "keyboardCaptionSessions": [
+    "01a107bb-1daa-7112-a00f-e92e8c14ed19"
+  ],
+  "clips": [
+    {
+      "id": "e4e52725-339e-4722-83ac-db3ecc23c716",
+      "kind": "webcam",
+      "name": "Demo webcam",
+      "timelineStartMs": 0,
+      "timelineDurationMs": 3600,
+      "sourceInMs": 0,
+      "sourceDurationMs": 3600,
+      "playbackRate": 1,
+      "transitions": {
+        "entry": null,
+        "exit": null
+      },
+      "enabled": true,
+      "order": 0,
+      "recordingClipId": "screen",
+      "trackId": "webcam:6206bba2-bc91-43c7-ac91-b1a4efd747e6",
+      "assetId": "webcam-asset:094b7c6d-985f-4b48-a05c-fffe43ed85ba",
+      "transform": {
+        "x": 0.7390949170124481,
+        "y": 0.5978792070078377,
+        "width": 0.21090508298755187,
+        "height": 0.3749423697556477
+      },
+      "appearance": {
+        "cornerRadius": "sm",
+        "shadowSize": "lg",
+        "shadowBlur": 20,
+        "shadowMode": "solid",
+        "shadowColor": "#000000",
+        "shadowDirection": "all",
+        "borderEnabled": false,
+        "borderColor": "#fd0000",
+        "borderWidth": 1,
+        "frame": "none",
+        "frameTitle": "",
+        "frameColor": "#c0c0c0",
+        "frameShowMenu": true,
+        "frameShowScrollbars": true,
+        "frameChromeScale": 1,
+        "phoneFrameFill": {
+          "kind": "color",
+          "color": "#000000"
+        }
+      },
+      "cameraLayoutPreset": "custom",
+      "cameraFramingPreset": "squircle",
+      "cameraSplitRatio": 0.5,
+      "cameraSplitPadding": 0,
+      "reactToZoom": true,
+      "isMirrored": false,
+      "isMirroredY": false
+    },
+    {
+      "id": "2d0d294b-02d5-4000-afd5-292849fb7f64",
+      "kind": "webcam",
+      "name": "Demo webcam",
+      "timelineStartMs": 3600,
+      "timelineDurationMs": 800,
+      "sourceInMs": 3600,
+      "sourceDurationMs": 800,
+      "playbackRate": 1,
+      "transitions": {
+        "entry": null,
+        "exit": null
+      },
+      "enabled": true,
+      "order": 0,
+      "recordingClipId": "0706ec40-1884-490d-8b6a-06ba255daa22",
+      "trackId": "webcam:6206bba2-bc91-43c7-ac91-b1a4efd747e6",
+      "assetId": "webcam-asset:094b7c6d-985f-4b48-a05c-fffe43ed85ba",
+      "transform": {
+        "x": 0.7390949170124481,
+        "y": 0.5978792070078377,
+        "width": 0.21090508298755187,
+        "height": 0.3749423697556477
+      },
+      "appearance": {
+        "cornerRadius": "sm",
+        "shadowSize": "lg",
+        "shadowBlur": 20,
+        "shadowMode": "solid",
+        "shadowColor": "#000000",
+        "shadowDirection": "all",
+        "borderEnabled": false,
+        "borderColor": "#fd0000",
+        "borderWidth": 1,
+        "frame": "none",
+        "frameTitle": "",
+        "frameColor": "#c0c0c0",
+        "frameShowMenu": true,
+        "frameShowScrollbars": true,
+        "frameChromeScale": 1,
+        "phoneFrameFill": {
+          "kind": "color",
+          "color": "#000000"
+        }
+      },
+      "cameraLayoutPreset": "custom",
+      "cameraFramingPreset": "squircle",
+      "cameraSplitRatio": 0.5,
+      "cameraSplitPadding": 0,
+      "reactToZoom": true,
+      "isMirrored": false,
+      "isMirroredY": false
+    },
+    {
+      "id": "f4da4a61-e77b-4341-a9ab-31ecb066b6df",
+      "kind": "webcam",
+      "name": "Demo webcam",
+      "timelineStartMs": 4400,
+      "timelineDurationMs": 1742,
+      "sourceInMs": 4400,
+      "sourceDurationMs": 1742,
+      "playbackRate": 1,
+      "transitions": {
+        "entry": null,
+        "exit": null
+      },
+      "enabled": true,
+      "order": 0,
+      "recordingClipId": "b4a48377-7c6f-4bef-a9b2-91bc5ec3655f",
+      "trackId": "webcam:6206bba2-bc91-43c7-ac91-b1a4efd747e6",
+      "assetId": "webcam-asset:094b7c6d-985f-4b48-a05c-fffe43ed85ba",
+      "transform": {
+        "x": 0.7390949170124481,
+        "y": 0.5978792070078377,
+        "width": 0.21090508298755187,
+        "height": 0.3749423697556477
+      },
+      "appearance": {
+        "cornerRadius": "sm",
+        "shadowSize": "lg",
+        "shadowBlur": 20,
+        "shadowMode": "solid",
+        "shadowColor": "#000000",
+        "shadowDirection": "all",
+        "borderEnabled": false,
+        "borderColor": "#fd0000",
+        "borderWidth": 1,
+        "frame": "none",
+        "frameTitle": "",
+        "frameColor": "#c0c0c0",
+        "frameShowMenu": true,
+        "frameShowScrollbars": true,
+        "frameChromeScale": 1,
+        "phoneFrameFill": {
+          "kind": "color",
+          "color": "#000000"
+        }
+      },
+      "cameraLayoutPreset": "custom",
+      "cameraFramingPreset": "squircle",
+      "cameraSplitRatio": 0.5,
+      "cameraSplitPadding": 0,
+      "reactToZoom": true,
+      "isMirrored": false,
+      "isMirroredY": false
+    },
+    {
+      "id": "f14c10e1-60e3-47d4-9836-af9aee7e915d",
+      "kind": "webcam",
+      "name": "Demo webcam",
+      "timelineStartMs": 6142,
+      "timelineDurationMs": 5058,
+      "sourceInMs": 0,
+      "sourceDurationMs": 5058,
+      "playbackRate": 1,
+      "transitions": {
+        "entry": null,
+        "exit": null
+      },
+      "enabled": true,
+      "order": 0,
+      "recordingClipId": "b4a48377-7c6f-4bef-a9b2-91bc5ec3655f",
+      "trackId": "webcam:6206bba2-bc91-43c7-ac91-b1a4efd747e6",
+      "assetId": "webcam-asset:094b7c6d-985f-4b48-a05c-fffe43ed85ba",
+      "transform": {
+        "x": 0.7184450399569694,
+        "y": 0.5,
+        "width": 0.25000000000000006,
+        "height": 0.4444444444444444
+      },
+      "appearance": {
+        "cornerRadius": "sm",
+        "shadowSize": "lg",
+        "shadowBlur": 20,
+        "shadowMode": "solid",
+        "shadowColor": "#000000",
+        "shadowDirection": "all",
+        "borderEnabled": false,
+        "borderColor": "#fd0000",
+        "borderWidth": 1,
+        "frame": "none",
+        "frameTitle": "",
+        "frameColor": "#c0c0c0",
+        "frameShowMenu": true,
+        "frameShowScrollbars": true,
+        "frameChromeScale": 1,
+        "phoneFrameFill": {
+          "kind": "color",
+          "color": "#000000"
+        }
+      },
+      "cameraLayoutPreset": "custom",
+      "cameraFramingPreset": "squircle",
+      "cameraSplitRatio": 0.5,
+      "cameraSplitPadding": 0,
+      "reactToZoom": true,
+      "isMirrored": false,
+      "isMirroredY": false
+    },
+    {
+      "id": "screen",
+      "kind": "screen",
+      "name": "Screen recording",
+      "timelineStartMs": 0,
+      "timelineDurationMs": 3600,
+      "sourceInMs": 0,
+      "sourceDurationMs": 3600,
+      "playbackRate": 1,
+      "transitions": {
+        "entry": null,
+        "exit": null
+      },
+      "enabled": true,
+      "order": 1,
+      "trackId": "session:01a107bb-1daa-7112-a00f-e92e8c14ed19:track:01a107bb-33f4-71a1-9743-1f3b1c145c46",
+      "assetId": "session:01a107bb-1daa-7112-a00f-e92e8c14ed19:screen:screen/segment-0001.mp4",
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "crop": {
+        "x": 0,
+        "y": 0.13157894736842105,
+        "width": 1,
+        "height": 0.868421052631579
+      },
+      "appearance": {
+        "cornerRadius": "md",
+        "shadowSize": "lg",
+        "shadowBlur": 63,
+        "shadowMode": "solid",
+        "shadowColor": "#f0f0f0",
+        "shadowDirection": "all",
+        "borderEnabled": false,
+        "borderColor": "#000000",
+        "borderWidth": 1,
+        "frame": "none",
+        "frameTitle": "Beam documentations",
+        "frameColor": "#c0c0c0",
+        "frameTheme": "auto",
+        "frameShowMenu": true,
+        "frameShowScrollbars": true,
+        "frameChromeScale": 1,
+        "phoneFrameFill": {
+          "kind": "color",
+          "color": "#000000"
+        }
+      },
+      "cameraLayoutPreset": "custom",
+      "cameraFramingPreset": "custom",
+      "isMirrored": false,
+      "isMirroredY": false
+    },
+    {
+      "id": "0706ec40-1884-490d-8b6a-06ba255daa22",
+      "kind": "screen",
+      "name": "Screen recording",
+      "timelineStartMs": 3600,
+      "timelineDurationMs": 800,
+      "sourceInMs": 3600,
+      "sourceDurationMs": 800,
+      "playbackRate": 1,
+      "transitions": {
+        "entry": null,
+        "exit": null
+      },
+      "enabled": true,
+      "order": 1,
+      "trackId": "session:01a107bb-1daa-7112-a00f-e92e8c14ed19:track:01a107bb-33f4-71a1-9743-1f3b1c145c46",
+      "assetId": "session:01a107bb-1daa-7112-a00f-e92e8c14ed19:screen:screen/segment-0001.mp4",
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "crop": {
+        "x": 0,
+        "y": 0.13157894736842105,
+        "width": 1,
+        "height": 0.868421052631579
+      },
+      "appearance": {
+        "cornerRadius": "md",
+        "shadowSize": "lg",
+        "shadowBlur": 63,
+        "shadowMode": "solid",
+        "shadowColor": "#f0f0f0",
+        "shadowDirection": "all",
+        "borderEnabled": false,
+        "borderColor": "#000000",
+        "borderWidth": 1,
+        "frame": "none",
+        "frameTitle": "Beam documentations",
+        "frameColor": "#c0c0c0",
+        "frameTheme": "auto",
+        "frameShowMenu": true,
+        "frameShowScrollbars": true,
+        "frameChromeScale": 1,
+        "phoneFrameFill": {
+          "kind": "color",
+          "color": "#000000"
+        }
+      },
+      "cameraLayoutPreset": "custom",
+      "cameraFramingPreset": "custom",
+      "isMirrored": false,
+      "isMirroredY": false
+    },
+    {
+      "id": "b4a48377-7c6f-4bef-a9b2-91bc5ec3655f",
+      "kind": "screen",
+      "name": "Screen recording",
+      "timelineStartMs": 4400,
+      "timelineDurationMs": 6800,
+      "sourceInMs": 4400,
+      "sourceDurationMs": 6800,
+      "playbackRate": 1,
+      "transitions": {
+        "entry": null,
+        "exit": null
+      },
+      "enabled": true,
+      "order": 1,
+      "trackId": "session:01a107bb-1daa-7112-a00f-e92e8c14ed19:track:01a107bb-33f4-71a1-9743-1f3b1c145c46",
+      "assetId": "session:01a107bb-1daa-7112-a00f-e92e8c14ed19:screen:screen/segment-0001.mp4",
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "crop": {
+        "x": 0,
+        "y": 0.13157894736842105,
+        "width": 1,
+        "height": 0.868421052631579
+      },
+      "appearance": {
+        "cornerRadius": "md",
+        "shadowSize": "lg",
+        "shadowBlur": 63,
+        "shadowMode": "solid",
+        "shadowColor": "#f0f0f0",
+        "shadowDirection": "all",
+        "borderEnabled": false,
+        "borderColor": "#000000",
+        "borderWidth": 1,
+        "frame": "none",
+        "frameTitle": "Beam documentations",
+        "frameColor": "#c0c0c0",
+        "frameTheme": "auto",
+        "frameShowMenu": true,
+        "frameShowScrollbars": true,
+        "frameChromeScale": 1,
+        "phoneFrameFill": {
+          "kind": "color",
+          "color": "#000000"
+        }
+      },
+      "cameraLayoutPreset": "custom",
+      "cameraFramingPreset": "custom",
+      "isMirrored": false,
+      "isMirroredY": false
+    }
+  ]
+}

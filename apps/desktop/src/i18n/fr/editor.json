@@ -336,6 +336,12 @@
     }
   },
   "Updates": {
+    "downloadHint": "Vous pouvez continuer à travailler pendant le téléchargement.",
+    "restartHint": "Redémarrez Beam quand vous êtes prêt à installer la mise à jour.",
+    "update": "Mise à jour",
+    "downloadProgress": "Téléchargement {percent} %",
+    "restartToUpdate": "Redémarrer pour mettre à jour",
+    "retry": "Réessayer",
     "title": "Mise à jour de l’application",
     "checkForUpdates": "Rechercher une mise à jour",
     "download": "Télécharger",

@@ -27,7 +27,6 @@ const targets = [
       :class="{ 'is-selected': selected === target.id }"
       :disabled="disabled"
       :aria-label="t(target.label)"
-      :title="t(target.label)"
       @click="emit('choose', target.id)"
     >
       <span class="capture-artwork" :class="target.id" aria-hidden="true">

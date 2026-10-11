@@ -79,7 +79,6 @@ const diagnosticReport = computed(() =>
         :error-label="t('copyFailed')"
         variant="secondary"
         size="sm"
-        tooltip-mode="native"
       />
       <Button variant="outline" size="sm" @click="$emit('dismiss')">{{ t('back') }}</Button>
     </div>

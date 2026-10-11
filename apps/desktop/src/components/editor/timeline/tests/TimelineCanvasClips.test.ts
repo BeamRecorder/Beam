@@ -1,6 +1,6 @@
 import { enableAutoUnmount, mount } from '@vue/test-utils';
-import { defineComponent } from 'vue';
-import { afterEach, describe, expect, it } from 'vitest';
+import { defineComponent, inject, nextTick } from 'vue';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import TimelineCanvasClips from '../TimelineCanvasClips.vue';
 import type { TimelineVisualClipsProps } from '../timeline-canvas-types';
 import type { BlurClip, ShapeClip } from '@beam/engine/shared/composition-types';
@@ -8,11 +8,16 @@ import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '@beam/engine/shared/shape-layer-
 import { createElementText } from '@beam/engine/shared/element-text';
 import { setCurrentLocale } from '~/i18n';
 import { visual, importedAudio, TimelineClipStub } from './TimelineTracks.test-support';
+import { timelineCanvasRegistryKey } from '../timeline-canvas-registry';
 
 enableAutoUnmount(afterEach);
 const Lane = defineComponent({
   name: 'TimelineCanvasLane',
   props: ['items', 'durationMs', 'width', 'viewport', 'artworks'],
+  setup() {
+    const registry = inject(timelineCanvasRegistryKey)!;
+    return { finishArtwork: () => registry.set('a', { kind: 'color', fill: { kind: 'color', color: '#ff0000' } }) };
+  },
   template: '<canvas />',
 });
 const props = (patch: Partial<TimelineVisualClipsProps> = {}): TimelineVisualClipsProps => ({
@@ -39,6 +44,43 @@ const create = (patch: Partial<TimelineVisualClipsProps> = {}) =>
   });
 
 describe('always-canvas timeline group', () => {
+  it('retains a timing preview when artwork completion rerenders the lane', async () => {
+    const displayedClip = vi.fn<TimelineVisualClipsProps['displayedClip']>((clip) => ({
+      ...clip,
+      timelineStartMs: 1500,
+    }));
+    const wrapper = create({ displayedClip });
+    const control = wrapper.getComponent(TimelineClipStub);
+    const preview = control.props('clip');
+    expect(displayedClip).toHaveBeenCalledOnce();
+    wrapper.getComponent(Lane).vm.finishArtwork();
+    await nextTick();
+    expect(control.props('clip')).toBe(preview);
+    expect(wrapper.getComponent(Lane).props('items')[0].clip).toBe(preview);
+    expect(displayedClip).toHaveBeenCalledOnce();
+  });
+  it('publishes a new timing preview to both bitmap and controls when the gesture changes', async () => {
+    const wrapper = create({ displayedClip: (clip) => ({ ...clip, timelineStartMs: 1500 }) });
+    const control = wrapper.getComponent(TimelineClipStub);
+    await wrapper.setProps({ displayedClip: (clip) => ({ ...clip, timelineStartMs: 2500 }) });
+    expect(control.props('clip').timelineStartMs).toBe(2500);
+    expect(wrapper.getComponent(Lane).props('items')[0].clip).toBe(control.props('clip'));
+  });
+  it('keeps previews attached to their keyed clips when clips reorder or leave the lane', async () => {
+    const a = visual({ id: 'a' }),
+      b = visual({ id: 'b' });
+    const wrapper = create({
+      clips: [a, b],
+      displayedClip: (clip) => ({ ...clip, timelineStartMs: clip.id === 'a' ? 1000 : 2000 }),
+    });
+    const aButton = wrapper.get('[data-timeline-clip-id="a"]').element;
+    await wrapper.setProps({ clips: [b, a] });
+    expect(wrapper.findAllComponents(TimelineClipStub).map((control) => control.props('clip').id)).toEqual(['b', 'a']);
+    expect(wrapper.get('[data-timeline-clip-id="a"]').element).toBe(aButton);
+    await wrapper.setProps({ clips: [a] });
+    expect(wrapper.getComponent(TimelineClipStub).props('clip')).toMatchObject({ id: 'a', timelineStartMs: 1000 });
+    expect(wrapper.getComponent(Lane).props('items')).toHaveLength(1);
+  });
   it('delegates semantic select/context/move and both trim edges with the original clip identity', () => {
     const wrapper = create(),
       clip = props().clips[0]!;
@@ -106,7 +148,7 @@ describe('always-canvas timeline group', () => {
       clip: displayed,
       selected: true,
       deferThumbnailRequests: true,
-      deferWaveformDraw: true,
+      deferWaveformDraw: false,
     });
   });
   it('accepts an empty lane and forwards borrowed audio data to every visible control', () => {

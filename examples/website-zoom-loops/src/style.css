@@ -1,0 +1,302 @@
+@import '../../../apps/desktop/src/theme/palette.css';
+@import '../../../apps/desktop/src/theme/surfaces.css';
+@import '../../../apps/desktop/src/theme/timeline.css';
+@font-face {
+  font-family: 'Hanken Grotesk';
+  src: url('../assets/HankenGrotesk.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: block;
+}
+:root {
+  --font-sans: 'Hanken Grotesk', sans-serif;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-full: 999px;
+  --fast: 0s;
+}
+/* This stylesheet intentionally owns only the isolated authored video surface. */
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+body {
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--color-bg-surface);
+  -webkit-font-smoothing: antialiased;
+}
+#app {
+  position: absolute;
+  inset: 0;
+}
+.design-stage {
+  position: absolute;
+  width: 640px;
+  height: 400px;
+  transform: scale(2);
+  transform-origin: 0 0;
+}
+.world {
+  position: absolute;
+  inset: 0;
+  will-change: opacity;
+}
+.editor-card {
+  position: absolute;
+  left: 20px;
+  top: 17px;
+  width: 600px;
+  height: 366px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--color-bg-app);
+  box-shadow:
+    0 12px 30px #00000035,
+    0 2px 5px #00000018;
+}
+.project-bar {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.project-format {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 500;
+}
+.workspace {
+  display: flex;
+  height: 338px;
+}
+.preview-area {
+  position: relative;
+  width: 356px;
+  height: 230px;
+  flex-shrink: 0;
+  display: grid;
+  align-items: start;
+  background: var(--color-bg-well);
+  padding: 12px;
+}
+.composition-preview {
+  display: block;
+  width: 332px;
+  height: 187px;
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+}
+.inspector {
+  width: 242px;
+  height: 338px;
+  padding: 10px 12px;
+  background: var(--color-bg-surface);
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  --text-muted: var(--text-primary);
+  --text-secondary: var(--text-primary);
+}
+.inspector h2 {
+  font-size: 12px;
+  font-weight: 650;
+  margin: 0 0 2px;
+}
+.playback-bar {
+  position: absolute;
+  top: 258px;
+  left: 0;
+  width: 356px;
+  height: 26px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+.track-mode {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+.playback-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 22px;
+}
+.time-display {
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+.time-display span {
+  color: var(--text-secondary);
+}
+.timeline {
+  position: absolute;
+  top: 284px;
+  left: 0;
+  width: 356px;
+  padding-bottom: 2px;
+  background: var(--color-bg-app);
+}
+.ruler {
+  position: relative;
+  height: 14px;
+  margin-left: 82px;
+  font-size: 8px;
+  color: var(--text-secondary);
+}
+.ruler span {
+  display: block;
+  position: absolute;
+  top: 3px;
+}
+.track-row {
+  display: flex;
+  height: 22px;
+  align-items: center;
+  border-top: 1px solid var(--color-border);
+}
+.track-label {
+  width: 82px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-left: 7px;
+  font-size: 8px;
+  color: var(--text-secondary);
+}
+.track-body {
+  height: 21px;
+  position: relative;
+  width: 272px;
+}
+.track-body > canvas {
+  display: block;
+  width: 272px;
+  height: 21px;
+}
+.track-waveform {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 3px;
+  bottom: 3px;
+}
+.voice-waveform {
+  left: 44px;
+  right: 58px;
+}
+.playhead {
+  position: absolute;
+  width: 1px;
+  height: 80px;
+  top: 0;
+  left: 82px;
+  background: var(--color-primary);
+  pointer-events: none;
+}
+.playhead::before {
+  content: '';
+  display: block;
+  width: 5px;
+  height: 5px;
+  margin-left: -2px;
+  border-radius: 2px;
+  background: var(--color-primary);
+}
+.demo-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 3px #00000065);
+}
+.demo-cursor img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.click-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--color-primary);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--color-bg-surface);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.preview-toolbar {
+  position: absolute;
+  bottom: 7px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 9px;
+  color: var(--text-secondary);
+}
+
+.desktop-wallpaper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.inspector {
+  padding: 8px 12px;
+}
+.inspector-body {
+  width: 310px;
+  transform: scale(0.7);
+  transform-origin: 0 0;
+}
+.preview-area {
+  height: 230px;
+  align-content: center;
+  padding-bottom: 28px;
+}
+.composition-preview {
+  border-radius: 6px;
+}
+.preview-toolbar {
+  justify-content: center;
+  bottom: 5px;
+}
+.editor-card {
+  --text-muted: var(--text-secondary);
+}

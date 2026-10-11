@@ -6,6 +6,7 @@ const state = vi.hoisted(() => ({
   appearance: vi.fn(),
   camera: vi.fn(),
   crop: vi.fn(),
+  settings: vi.fn(),
   locale: vi.fn(),
   complete: vi.fn(),
   zoom: vi.fn(),
@@ -25,6 +26,10 @@ vi.mock('./components/hud/camera/CameraOverlayApp.vue', () => {
 vi.mock('./components/quick-snip/QuickSnipCropBar.vue', () => {
   state.crop();
   return { default: { name: 'QuickSnipCropBar' } };
+});
+vi.mock('./components/quick-snip/QuickSnipSettings.vue', () => {
+  state.settings();
+  return { default: { name: 'QuickSnipSettings' } };
 });
 vi.mock('./window-bootstrap', () => ({
   prepareWindowAppearance: state.appearance,
@@ -46,6 +51,7 @@ describe('overlay window bootstrap', () => {
   it.each([
     ['cameraOverlay', 'CameraOverlayApp', 'camera', 'crop'],
     ['quickSnipCrop', 'QuickSnipCropBar', 'crop', 'camera'],
+    ['quickSnipSettings', 'QuickSnipSettings', 'settings', 'camera'],
   ] as const)('mounts only %s with the shared locale and theme', async (query, component, loaded, omitted) => {
     window.history.replaceState(null, '', `/?${query}=1`);
     await import('./overlay-main');
@@ -59,6 +65,13 @@ describe('overlay window bootstrap', () => {
     expect(state.mount).toHaveBeenCalledWith('#app');
     expect(state.complete).toHaveBeenCalledOnce();
     expect(state.zoom).toHaveBeenCalledOnce();
+  });
+  it('gives Quick Snip settings precedence when both overlay flags are present', async () => {
+    window.history.replaceState(null, '', '/?cameraOverlay=1&quickSnipSettings=1');
+    await import('./overlay-main');
+    expect(state.createApp).toHaveBeenCalledWith(expect.anything(), {
+      content: { name: 'QuickSnipSettings' },
+    });
   });
   it('loads overlay content while appearance is pending and mounts after both are ready', async () => {
     window.history.replaceState(null, '', '/?cameraOverlay=1');

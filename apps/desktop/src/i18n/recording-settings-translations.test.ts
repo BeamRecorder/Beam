@@ -6,6 +6,8 @@ const keys = [
   'HudPreferences.launchAtStartup',
   'HudPreferences.launchAtStartupDescription',
   'HudPreferences.launchAtStartupInstalled',
+  'HudPreferences.minimizeToTray',
+  'HudPreferences.minimizeToTrayDescription',
   'Updates.check',
   'Updates.changelog',
   'EditorAccessibility.title',

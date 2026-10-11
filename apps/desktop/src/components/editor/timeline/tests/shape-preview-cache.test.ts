@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '@beam/engine/shared/shape-layer-style';
 import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import { createElementText } from '@beam/engine/shared/element-text';
+import { vectorForShape } from '@beam/engine/shared/shape-vector-presets';
 import {
   ShapePreviewCache,
   shapePreviewCache,
@@ -73,6 +74,38 @@ describe('shapePreviewSignature', () => {
     expect(shapePreviewSignature({ ...detailed, text: createElementText('Second') }, canvas)).not.toBe(
       shapePreviewSignature(detailed, canvas),
     );
+  });
+  it('refreshes a speech bubble after moving its peak without changing the layer bounds', () => {
+    const bubble = { ...clip, preset: 'speech-bubble' as const };
+    const vector = vectorForShape(bubble, canvas);
+    const edited = structuredClone(vector);
+    edited.contours[0]!.nodes[6]!.x += 0.1;
+    expect(shapePreviewSignature({ ...bubble, vector: edited }, canvas)).not.toBe(
+      shapePreviewSignature({ ...bubble, vector }, canvas),
+    );
+  });
+  it('refreshes artwork for control handles, closed contours and vector stroke settings', () => {
+    const vector = vectorForShape({ ...clip, preset: 'speech-bubble' }, canvas);
+    const baseline = shapePreviewSignature({ ...clip, vector }, canvas);
+    const handle = structuredClone(vector);
+    handle.contours[0]!.nodes[0]!.in!.x += 0.05;
+    const open = structuredClone(vector);
+    open.contours[0]!.closed = false;
+    for (const edited of [handle, open, { ...vector, strokeWidth: vector.strokeWidth + 1 }]) {
+      expect(shapePreviewSignature({ ...clip, vector: edited }, canvas)).not.toBe(baseline);
+    }
+  });
+  it('shares identical copied vectors while separating the original catalogue shape', async () => {
+    const bubble = { ...clip, preset: 'speech-bubble' as const };
+    const vector = vectorForShape(bubble, canvas);
+    const artwork = { ...bubble, vector };
+    const original = shapePreviewSignature(bubble, canvas);
+    const converted = shapePreviewSignature(artwork, canvas);
+    expect(converted).not.toBe(original);
+    expect(shapePreviewSignature(structuredClone(artwork), canvas)).toBe(converted);
+    const cache = new ShapePreviewCache();
+    await cache.get(original, async () => 'original');
+    await expect(cache.get(converted, async () => 'edited')).resolves.toBe('edited');
   });
 });
 

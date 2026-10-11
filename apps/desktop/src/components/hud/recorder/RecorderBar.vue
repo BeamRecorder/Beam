@@ -130,7 +130,7 @@ watch(
         />
         <template v-else>
           {{ recordingTime }}
-          <span v-if="warning" class="recording-warning" role="alert" :title="warning" :aria-label="warning">
+          <span v-if="warning" class="recording-warning" role="alert" :aria-label="warning">
             <TriangleAlert :size="12" class="warning-icon" aria-hidden="true" />
             <span class="warning-label">{{ t('captureIssue') }}</span>
           </span>

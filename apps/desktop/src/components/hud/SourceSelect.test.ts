@@ -67,6 +67,7 @@ describe('SourceSelect', () => {
     });
 
     expect(wrapper.get('.trigger-thumbnail-img').attributes('src')).toBe('screen-one');
+    expect(wrapper.get('.select-trigger').attributes('title')).toBeUndefined();
     await wrapper.get('.select-trigger').trigger('click');
 
     const options = document.body.querySelectorAll<HTMLElement>('.select-option');

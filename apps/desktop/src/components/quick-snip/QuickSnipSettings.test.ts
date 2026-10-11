@@ -170,3 +170,68 @@ it('opens and closes its shell from the actual trigger side without changing its
   expect(wrapper.classes()).toContain('below');
   expect(wrapper.findComponent(CaptureQuickSettingsPanel).exists()).toBe(true);
 });
+it.each(['microphone', 'camera', 'systemAudio'] as const)(
+  'uses the shared choice surface for %s and restores settings afterward',
+  async (kind) => {
+    const { wrapper } = await mountSettings();
+    const device = {
+      kind,
+      selectedId: 'on',
+      position: { x: 240, y: 32 },
+      options: [
+        { id: 'off', label: 'Off' },
+        { id: 'on', label: 'Device' },
+      ],
+    };
+    bridge.contentListener?.({ side: 'above', anchorX: 240, device, visible: true });
+    await flushPromises();
+    expect(wrapper.classes()).toContain('device-popover');
+    expect(wrapper.get('main').classes()).toContain('floating-surface');
+    expect(wrapper.findComponent(CaptureQuickSettingsPanel).exists()).toBe(false);
+    await wrapper.get('[aria-checked="false"]').trigger('click');
+    expect(bridge.capture.selectQuickSnipDevice).toHaveBeenCalledWith('off');
+    await wrapper.get('[aria-checked="true"]').trigger('keydown', { key: 'Escape' });
+    expect(bridge.capture.dismissQuickSnipSettings).toHaveBeenCalledOnce();
+    bridge.contentListener?.({ side: 'below', anchorX: 40, device: null, visible: true });
+    await flushPromises();
+    expect(wrapper.classes()).not.toContain('device-popover');
+    expect(wrapper.get('main').classes()).not.toContain('floating-surface');
+    expect(wrapper.findComponent(CaptureQuickSettingsPanel).exists()).toBe(true);
+  },
+);
+it('reports the full menu content height including its border to the native window', async () => {
+  const { wrapper } = await mountSettings();
+  Object.defineProperties(wrapper.get('main').element, {
+    offsetHeight: { value: 180 },
+    clientHeight: { value: 178 },
+    scrollHeight: { value: 312 },
+  });
+  bridge.contentListener?.({ side: 'above', anchorX: 240, device: null, visible: true });
+  await flushPromises();
+  expect(bridge.capture.fitQuickSnipSettings).toHaveBeenLastCalledWith(314);
+});
+it('keeps development preview choices local without requesting a native menu or changing user settings', async () => {
+  window.history.replaceState(null, '', '/?preview=1');
+  vi.resetModules();
+  try {
+    const { default: PreviewSettings } = await import('./QuickSnipSettings.vue');
+    const wrapper = mount(PreviewSettings, { global: { stubs: { CaptureQuickSettingsPanel: true } } });
+    await flushPromises();
+    const panel = wrapper.getComponent({ name: 'CaptureQuickSettingsPanel' });
+    expect(wrapper.classes()).toContain('preview');
+    expect(panel.props('presets')).toHaveLength(10);
+    expect(bridge.capture.onQuickSnipSettingsContent).not.toHaveBeenCalled();
+    panel.vm.$emit('update:modelValue', { ...panel.props('modelValue'), zoomMode: '3d' });
+    panel.vm.$emit('preset', 'demo-4');
+    panel.vm.$emit('dismiss');
+    await flushPromises();
+    expect(panel.props('presetId')).toBe('demo-4');
+    expect(bridge.capture.configureQuickSnip).not.toHaveBeenCalled();
+    expect(bridge.capture.selectEditorPreset).not.toHaveBeenCalled();
+    expect(bridge.capture.fitQuickSnipSettings).not.toHaveBeenCalled();
+    expect(bridge.capture.dismissQuickSnipSettings).not.toHaveBeenCalled();
+    wrapper.unmount();
+  } finally {
+    window.history.replaceState(null, '', '/');
+  }
+});

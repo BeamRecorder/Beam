@@ -655,6 +655,8 @@
     "launchAtStartup": "Lancer Beam au démarrage",
     "launchAtStartupDescription": "Ouvrir Beam automatiquement à la connexion.",
     "launchAtStartupInstalled": "Disponible après installation de Beam.",
+    "minimizeToTray": "Réduire dans la zone de notification à la fermeture",
+    "minimizeToTrayDescription": "Si activé, fermer Beam le laisse fonctionner dans la zone de notification. Sinon, Beam quitte complètement et vous devrez le relancer.",
     "categoryRecording": "Enregistrement",
     "categoryDeveloper": "Développeur",
     "developerDescription": "Des outils pour inspecter Beam et expérimenter avec Beamy.",

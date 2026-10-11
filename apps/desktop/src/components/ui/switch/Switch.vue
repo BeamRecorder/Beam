@@ -3,6 +3,7 @@ const props = withDefaults(
   defineProps<{
     modelValue: boolean;
     disabled?: boolean;
+    busy?: boolean;
     label?: string;
     ariaLabel?: string;
     ariaDescribedby?: string;
@@ -18,7 +19,7 @@ const emit = defineEmits<{
 }>();
 
 const toggle = () => {
-  if (props.disabled) return;
+  if (props.disabled || props.busy) return;
   emit('update:modelValue', !props.modelValue);
 };
 </script>
@@ -31,7 +32,8 @@ const toggle = () => {
       :aria-checked="modelValue"
       :aria-label="ariaLabel || undefined"
       :aria-describedby="ariaDescribedby"
-      :disabled="disabled"
+      :aria-busy="busy || undefined"
+      :disabled="disabled || busy"
       class="switch-button"
       :class="{ 'is-checked': modelValue }"
     >
@@ -82,7 +84,7 @@ const toggle = () => {
 .switch-thumb {
   width: 20px;
   height: 20px;
-  background-color: var(--color-bg-element);
+  background-color: var(--text-secondary);
   border-radius: var(--radius-full);
   box-shadow: var(--shadow-sm);
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -90,7 +92,22 @@ const toggle = () => {
 }
 
 .switch-thumb.is-checked {
+  background-color: var(--color-bg-element);
   transform: translateX(20px);
+}
+
+.is-disabled .switch-button {
+  background-color: var(--color-bg-field);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.is-disabled .switch-button.is-checked {
+  background-color: var(--color-bg-field-active);
+}
+
+.is-disabled .switch-thumb {
+  background-color: var(--text-muted);
+  box-shadow: none;
 }
 
 .switch-label {

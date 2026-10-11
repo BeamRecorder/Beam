@@ -10,10 +10,68 @@ User-facing changes to Beam are documented in this file.
 
 - Screenshot layers support adjustable Dithering, ASCII, Grain and Cyanotype effects, with matching thumbnails and exports and preserved transparency. Ordered dithering, ASCII, grain and cyanotype run on the GPU; exact Jarvis–Judice–Ninke dithering runs in a cancellable background worker.
 
+- The private website’s Studio overview shows a real recording edited on the native multi-track timeline in a fifteen-second, 60 fps loop, including trim/split/cut, a caption, appearance and canvas adjustments, and a 2D zoom. Light/dark variants and editable source live in `examples/website-studio-loop/`.
+
+### Changed
+
+- The website’s Studio overview now runs for 15 seconds with gentler cursor travel, longer reading pauses and two restrained camera views that stay fixed during edits.
+
 ### Fixed
 
 - Screenshot effect panels avoid unnecessary scrollbars and keep scrollbar thumbs visible while content fades at the edges.
 - Screenshot grouping actions explain how many more elements to select and identify locked or already grouped selections, in all fifteen languages.
+
+## [0.5.3] - 2026-10-07
+
+### Added
+
+- Choose whether closing Beam keeps it running in the system tray or quits the app. Find the option in General settings, with explanations in all 15 languages.
+
+### Fixed
+
+- Fixed the editor freezing when selecting or moving colors, shapes, text, images and drawings in the timeline.
+- Improved Recorder responsiveness when returning from the editor.
+- Fixed the black screen when selecting a recording region on Windows.
+- Webcam previews now fill their frame without black bars or stretching.
+- Recordings made with Show Real Cursor no longer display a second cursor by default in the editor. Your later changes are still saved.
+- Window recordings now include supported dropdowns, right-click menus and application menus on Windows 11 24H2 and later, inside the recorded window.
+- Fixed Linux FFmpeg GPU exports failing before they start.
+- Settings switches no longer flash or change the pointer while saving.
+
+## [0.5.2] - 2026-10-06
+
+### Added
+
+- A discreet Recorder update action explains the available version on hover, downloads in the background, shows progress and offers Restart to update. A brief two-second shimmer highlights its first appearance and respects reduced motion. Red indicators on the settings gear and Updates category keep available updates visible, with labels translated into all fifteen languages.
+
+- The private website’s Zooms page demonstrates manual Screenshot 2D, 3D and glass layers in a nine-second, 60 fps loop, with native controls, light/dark variants and matching posters. Editable source lives in `examples/website-still-zoom-loop/`.
+
+- The private website’s Edit header has a minimal, themed three-track animation with macOS trim cursors, offscreen suspension and reduced-motion support.
+
+- The private website’s Edit page now includes themed native Beam video demonstrations for transitions and local export, with matching posters, pause controls and reduced-motion support.
+
+- The private website’s Zooms page shows two eight-second, 60 fps demonstrations of native 2D camera movement and 3D directional perspective, with light/dark variants, matching posters and pause/reduced-motion support. Editable source lives in `examples/website-zoom-loops/`.
+
+- Added editable HTML glass-lens demonstrations with native circle/freehand controls, appearance adjustments and editable automatic lenses generated from recorded clicks, plus themed compressed website loops.
+- Added editable HTML demonstrations for teleprompter playback, text size and color, and local projects, sharing native Beam controls with themed compressed website loops.
+- Added the editable “Take a breath” Recorder demo with supplied facecam footage, the Beautiful Captures pointer, native pause/resume controls and compressed website videos.
+- Added a reusable HTML Recorder demo showing full-screen, region and window capture choices, capture modes and recording controls, with Beautiful Captures cursor artwork and themed website videos.
+
+### Changed
+
+- HUD controls with visible labels no longer show redundant hover tooltips; icon-only actions retain their hints.
+- The local-project website demonstration zooms into Projects actions and pulls back as the file browser opens, using Beam’s editable native 2D camera in both themes.
+
+### Fixed
+
+- Update popovers can be dismissed by clicking anywhere in the HUD topbar; Settings places the changelog on the left and Download or Restart on the right.
+- Update downloads start only once across windows, remain available for retry after a failure, and cannot be reset by checking for updates while downloading or ready to install.
+
+- Shape thumbnails refresh after editing vector points, including speech-bubble peaks and Bézier handles.
+- Available switches in the Off state are easier to distinguish from unavailable settings, with clearer thumb contrast and muted labels for disabled preferences.
+- Quick Snip microphone, system-audio and camera menus have aligned options, clear selection checks and a simple opening without excessive zoom, using the shared Beam popover appearance.
+- Recording pauses can be removed when screen, webcam and audio segment boundaries differ, preserving recorded frames, audio/video synchronization and downstream zoom timing. Gap actions display a single tooltip.
+- Packaged camera previews load their styles before the first frame, preserving the full webcam image; Quick Snip settings also retain their production styling.
 
 ## [0.5.1] - 2026-10-05
 
@@ -524,7 +582,11 @@ User-facing changes to Beam are documented in this file.
 
 - Improved the editor workflow and native recording startup reliability, including Linux capture startup.
 
-[Unreleased]: https://github.com/BeamRecorder/Beam/compare/0.3.3...HEAD
+[Unreleased]: https://github.com/BeamRecorder/Beam/compare/0.5.2...HEAD
+[0.5.2]: https://github.com/BeamRecorder/Beam/releases/tag/0.5.2
+[0.5.1]: https://github.com/BeamRecorder/Beam/releases/tag/0.5.1
+[0.5.0]: https://github.com/BeamRecorder/Beam/releases/tag/0.5.0
+[0.4.0]: https://github.com/BeamRecorder/Beam/releases/tag/0.4.0
 [0.3.3]: https://github.com/BeamRecorder/Beam/releases/tag/0.3.3
 [0.3.2]: https://github.com/BeamRecorder/Beam/releases/tag/0.3.2
 [0.3.1]: https://github.com/BeamRecorder/Beam/releases/tag/0.3.1

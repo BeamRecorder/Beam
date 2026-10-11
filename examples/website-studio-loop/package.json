@@ -1,0 +1,34 @@
+{
+  "name": "@beam/example-website-studio-loop",
+  "private": true,
+  "license": "MPL-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "vue-tsc -p tsconfig.json",
+    "test": "vitest run --config vitest.config.ts",
+    "verify": "node scripts/verify.mjs",
+    "check": "node scripts/check.mjs",
+    "render": "node scripts/render.mjs",
+    "website": "node scripts/optimize.mjs",
+    "prepare:project": "node scripts/prepare-project.mjs",
+    "finish:project": "node scripts/finish-project.mjs"
+  },
+  "dependencies": {
+    "@lucide/vue": "1.49.0",
+    "@vueuse/core": "15.0.0",
+    "gsap": "3.15.0",
+    "vue": "3.5.43",
+    "vue-i18n": "11.4.12",
+    "mediabunny": "1.61.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "6.0.9",
+    "@vitest/coverage-v8": "5.0.3",
+    "puppeteer-core": "24.39.1",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "vite": "8.3.1",
+    "vitest": "5.0.3",
+    "vue-tsc": "3.3.12"
+  }
+}

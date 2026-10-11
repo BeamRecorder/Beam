@@ -52,7 +52,9 @@ test('adds a tray stop action while recording and forwards it to the HUD window'
       getWindow: () => window,
       getController: () => null,
     });
+    assert.equal(manager.isAvailable(), false);
     manager.init();
+    assert.equal(manager.isAvailable(), true);
     manager.updateMenu({ recording: true });
 
     const stopItem = latestTemplate.find((item) => item.label === 'Stop recording');
@@ -60,6 +62,10 @@ test('adds a tray stop action while recording and forwards it to the HUD window'
     stopItem.click();
     assert.deepEqual(calls.at(-1), ['tray:stop-recording']);
     assert.equal(typeof ipcListener, 'function');
+    latestTemplate.find((item) => item.label === 'Quit Beam').click();
+    assert.deepEqual(calls.at(-1), ['quit']);
+    manager.destroy();
+    assert.equal(manager.isAvailable(), false);
   } finally {
     Module._load = originalLoad;
   }

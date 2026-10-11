@@ -643,6 +643,8 @@
     "launchAtStartup": "Avvia Beam all’avvio",
     "launchAtStartupDescription": "Apri Beam automaticamente quando accedi.",
     "launchAtStartupInstalled": "Disponibile dopo aver installato Beam.",
+    "minimizeToTray": "Riduci nell’area di notifica alla chiusura",
+    "minimizeToTrayDescription": "Se attivato, Beam continua a funzionare nell’area di notifica quando chiudi la finestra. Altrimenti Beam si chiude completamente e dovrai riavviarlo.",
     "categoryRecording": "Registrazione",
     "categoryDeveloper": "Sviluppatore",
     "developerDescription": "Strumenti per esaminare Beam e sperimentare con Beamy.",

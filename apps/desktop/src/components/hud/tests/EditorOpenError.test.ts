@@ -24,6 +24,7 @@ describe('editor opening errors', () => {
     expect(wrapper.get('[data-phase]').attributes('data-phase')).toBe('failed');
     expect(wrapper.get('.editor-open-error-reason').text()).toContain(text);
     expect(wrapper.getComponent(CopyButton).props('text')).toContain(`Failure code: ${errorCode}`);
+    expect(wrapper.get('.copy-button-idle').attributes('title')).toBeUndefined();
     await wrapper.findAll('button').at(-1)!.trigger('click');
     expect(wrapper.emitted('dismiss')).toEqual([[]]);
     wrapper.unmount();

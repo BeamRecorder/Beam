@@ -17,6 +17,42 @@ const RECORDER_LAYOUT_EXTRAS = {
 
 const CANONICAL_HUD_WINDOW = { width: 672, height: 268 };
 
+test('tray close defaults off on every platform and only accepts explicit boolean choices', () => {
+  for (const platform of ['linux', 'win32', 'darwin']) {
+    assert.equal(defaults(platform).minimizeToTray, false);
+    for (const value of [undefined, null, 'true', 1, [], {}])
+      assert.equal(normalize({ minimizeToTray: value }, platform).minimizeToTray, false);
+    for (const value of [true, false])
+      assert.equal(normalize({ minimizeToTray: value }, platform).minimizeToTray, value);
+  }
+});
+
+test('tray close choice survives unrelated changes and reopening preferences', (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-tray-preferences-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const store = createPreferencesStore(directory);
+  for (const enabled of [true, false]) {
+    store.patch({ minimizeToTray: enabled });
+    store.patch({ launchAtStartup: false, extras: { retained: true } });
+    const reopened = createPreferencesStore(directory).read();
+    assert.equal(reopened.minimizeToTray, enabled);
+    assert.equal(reopened.launchAtStartup, false);
+    assert.equal(reopened.extras.retained, true);
+  }
+});
+
+test('repair adds the default close choice to legacy preferences without changing existing settings', (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-legacy-tray-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const file = path.join(directory, 'preferences.json');
+  fs.writeFileSync(file, JSON.stringify({ theme: 'dark', launchAtStartup: false }));
+  const repaired = createPreferencesStore(file).repair();
+  assert.equal(repaired.minimizeToTray, false);
+  assert.equal(repaired.launchAtStartup, false);
+  assert.equal(repaired.theme, 'dark');
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).minimizeToTray, false);
+});
+
 test('durably clears old recorder placements once and keeps later movements across restarts', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-recorder-layout-'));
   const file = path.join(directory, 'preferences.json');

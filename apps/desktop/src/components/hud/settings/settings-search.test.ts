@@ -94,6 +94,9 @@ describe('indexed bilingual settings search', () => {
     expect(index.search('surface tone').some(({ id }) => id === 'surface-tone')).toBe(true);
     expect(index.search('neutral').some(({ id }) => id === 'surface-tone')).toBe(true);
     expect(index.search('misspelled').some(({ id }) => id === 'spell-check')).toBe(true);
+    for (const query of ['zone de notification', 'system tray', 'launch it again']) {
+      expect(index.search(query).some(({ id }) => id === 'minimize-to-tray')).toBe(true);
+    }
   });
   it('exposes developer navigation and search only in development builds', () => {
     const translate = (key: string) => key;

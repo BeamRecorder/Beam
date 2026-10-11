@@ -15,27 +15,6 @@ import { normalizeCursorAutoHideSettings, normalizeCursorMotionSettings } from '
 import type { CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 
 const cloneJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
-const copyZooms = (zooms: readonly ZoomElement[]) => zooms.map((zoom) => ({ ...zoom, focus: { ...zoom.focus } }));
-const copyCursor = (cursor: ProjectEditorData['cursor'] | undefined): CompositionSnapshot['cursor'] => {
-  if (!cursor) return { available: false, events: [], telemetry: [], shapes: {}, catalog: {}, missing: [] };
-  return {
-    available: cursor.available,
-    events: cursor.events.map((event) =>
-      event.event === 'shape' ? { ...event, hotspot: { ...event.hotspot } } : { ...event },
-    ),
-    telemetry: cursor.telemetry.map((sample) => ({ ...sample })),
-    shapes: Object.fromEntries(
-      Object.entries(cursor.shapes).map(([shapeId, asset]) => [shapeId, { ...asset, hotspot: { ...asset.hotspot } }]),
-    ),
-    catalog: Object.fromEntries(
-      Object.entries(cursor.catalog ?? {}).map(([cursorId, entry]) => [
-        cursorId,
-        { ...entry, hotspot: { ...entry.hotspot } },
-      ]),
-    ),
-    missing: [...cursor.missing],
-  };
-};
 
 export function createCompositionSnapshot(input: {
   duration: number;
@@ -53,7 +32,10 @@ export function createCompositionSnapshot(input: {
   fontSources?: Record<string, string>;
 }): CompositionSnapshot {
   const canvas = normalizeOutputCanvas(input.canvas);
-  return {
+  const cursor = input.editorData?.cursor;
+  // Capture the entire export payload as owned JSON once. Structured-clone
+  // IPC retains undefined properties, which the GPU renderer must reject.
+  return cloneJson<CompositionSnapshot>({
     duration: Math.max(0, input.duration),
     render: {
       fps: Math.max(1, input.fps),
@@ -67,22 +49,31 @@ export function createCompositionSnapshot(input: {
       : input.background?.kind === 'color'
         ? { kind: 'color', color: input.background.color }
         : input.background?.kind === 'gradient'
-          ? { kind: 'gradient', gradient: cloneJson(input.background.gradient) }
+          ? { kind: 'gradient', gradient: input.background.gradient }
           : input.background
             ? { kind: input.background.kind, src: input.background.path }
             : null,
     blurPercent: Math.max(0, Math.min(100, Math.round(input.blurPercent))),
-    zooms: copyZooms(input.zooms),
+    zooms: input.zooms,
     zoomMotionBlur: normalizeZoomMotionBlur(input.zoomMotionBlur),
     zoomAutoFollow: normalizeZoomAutoFollow(input.zoomAutoFollow),
-    cursor: copyCursor(input.editorData?.cursor),
-    cursorSettings: cloneJson({
+    cursor: cursor
+      ? {
+          available: cursor.available,
+          events: cursor.events,
+          telemetry: cursor.telemetry,
+          shapes: cursor.shapes,
+          catalog: cursor.catalog ?? {},
+          missing: cursor.missing,
+        }
+      : { available: false, events: [], telemetry: [], shapes: {}, catalog: {}, missing: [] },
+    cursorSettings: {
       ...input.cursorSettings,
       motion: normalizeCursorMotionSettings(input.cursorSettings.motion),
       autoHide: normalizeCursorAutoHideSettings(input.cursorSettings.autoHide),
-    }),
-    cursorPack: input.cursorPack ? cloneJson(input.cursorPack) : null,
-    composition: cloneJson(input.composition),
-    fontSources: input.fontSources ? { ...input.fontSources } : {},
-  };
+    },
+    cursorPack: input.cursorPack,
+    composition: input.composition,
+    fontSources: input.fontSources ?? {},
+  });
 }

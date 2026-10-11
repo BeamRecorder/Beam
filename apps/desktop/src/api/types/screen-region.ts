@@ -24,6 +24,11 @@ export interface ScreenRegionOverlayOptions {
   pixelSize?: { width: number; height: number };
 }
 
+export interface ScreenRegionOverlayConfiguration extends ScreenRegionOverlayOptions {
+  mode: 'select' | 'record';
+  previewId?: number;
+}
+
 export interface ScreenRegionSelectionOptions {
   bounds?: ScreenRegionBounds;
   region?: ScreenRegion | null;

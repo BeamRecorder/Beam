@@ -24,6 +24,7 @@ vi.mock('@beam/encoder/mediabunny/export-worker-pipelines', () => ({
 }));
 vi.mock('@beam/runtime/frames/http-frame-source', () => ({ createHttpFrameSource: mocks.frameSource }));
 import { renderExperimentalExport } from '@beam/encoder/gpu-export/experimental-renderer';
+import { createCompositionSnapshot } from '@beam/runtime/rendering/snapshot';
 const stats = { elapsedMs: 200, decodeMs: 10, renderMs: 20, encoderBackpressureMs: 170 };
 let request: ExportRequest;
 let api: ExperimentalGpuExportApi;
@@ -61,6 +62,25 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 describe('experimental shared renderer', () => {
+  it.each(['mp4', 'webm'] as const)('starts %s rendering with the real desktop snapshot factory', async (format) => {
+    const source = request.snapshot;
+    request.format = format;
+    request.snapshot = createCompositionSnapshot({
+      duration: source.duration,
+      fps: source.render.fps,
+      canvas: source.canvas,
+      background: null,
+      blurPercent: 0,
+      editorData: null,
+      zooms: source.zooms,
+      composition: source.composition,
+      cursorSettings: source.cursorSettings,
+      cursorPack: null,
+    });
+    await renderExperimentalExport(api);
+    expect(mocks.video).toHaveBeenCalledOnce();
+    expect(api.complete).toHaveBeenCalledOnce();
+  });
   it('uses the shared render pipeline, reports diagnostics and releases all owned resources', async () => {
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
       queueMicrotask(() => callback(0));

@@ -6,7 +6,6 @@ import Slider from '~/ui/slider/Slider.vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import TeleprompterControl from './TeleprompterControl.vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import { useThemeStore } from '~/stores/theme';
 import { TELEPROMPTER_FONT_SIZE } from './teleprompter-types';
 import type { TeleprompterDocument } from './teleprompter-types';
 
@@ -14,6 +13,7 @@ const props = defineProps<{
   document: TeleprompterDocument;
   editing: boolean;
   playing: boolean;
+  defaultTextColor: string;
 }>();
 const emit = defineEmits<{
   update: [patch: Partial<TeleprompterDocument>];
@@ -22,14 +22,13 @@ const emit = defineEmits<{
   play: [];
 }>();
 const { t } = useTranslate('Teleprompter');
-const theme = useThemeStore();
 const openControls = ref(new Set<string>());
 const tooltipDisabled = computed(() => openControls.value.size > 0);
 const setOpen = (control: string, open: boolean) => {
   if (open) openControls.value.add(control);
   else openControls.value.delete(control);
 };
-const color = computed(() => props.document.textColor ?? (theme.isDarkMode ? '#f8fafc' : '#1e1e1e'));
+const color = computed(() => props.document.textColor ?? props.defaultTextColor);
 </script>
 
 <template>

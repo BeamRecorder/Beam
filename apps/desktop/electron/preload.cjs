@@ -133,6 +133,7 @@ contextBridge.exposeInMainWorld(
     updateTeleprompterRegion: (options) => ipcRenderer.invoke('screen-region:teleprompter-region', options),
     notifyRegionMarkerReady: () => ipcRenderer.send('screen-region:marker-ready'),
     notifyScreenRegionReady: () => ipcRenderer.send('screen-region:ready'),
+    notifyScreenRegionPreviewReady: (id, success) => ipcRenderer.send('screen-region:preview-ready', id, success),
     confirmScreenRegion: (region, recording) => ipcRenderer.send('screen-region:confirm', region, recording),
     updateScreenRegion: (region) => ipcRenderer.send('screen-region:update', region),
     cancelScreenRegion: () => ipcRenderer.send('screen-region:cancel'),

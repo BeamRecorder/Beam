@@ -1,0 +1,130 @@
+@import '../../../apps/desktop/src/theme/palette.css';
+@import '../../../apps/desktop/src/theme/surfaces.css';
+@font-face {
+  font-family: 'Hanken Grotesk';
+  src: url('../../../public/font/HankenGrotesk-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: block;
+}
+:root {
+  --font-sans: 'Hanken Grotesk', sans-serif;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+  --fast: 0s;
+  --shadow-md: 0 4px 12px -2px #1615120d, 0 2px 6px -1px #16151208;
+  --shadow-lg: 0 16px 32px -4px #16151214, 0 4px 16px -2px #1615120a;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+body {
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+.design-stage {
+  position: absolute;
+  inset: 0;
+}
+.wallpaper {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.world {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 55%;
+}
+.demo-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 48px;
+  height: 48px;
+  transform-origin: 6.4px 6.4px;
+  filter: drop-shadow(0 2px 3px #00000070);
+  pointer-events: none;
+  z-index: 20000;
+}
+.demo-cursor img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+h1,
+p {
+  margin: 0;
+}
+.native-window {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg-surface);
+  box-shadow:
+    0 24px 70px #00000035,
+    0 6px 18px #00000018;
+}
+.prompter-host {
+  position: absolute;
+  left: 318px;
+  top: 45px;
+  width: 460px;
+  height: 450px;
+  transform: scale(1.4);
+  transform-origin: 0 0;
+  overflow: hidden;
+}
+.recording-host {
+  position: absolute;
+  left: 393.6px;
+  top: 675px;
+  width: 352px;
+  height: 88px;
+  transform: scale(1.4);
+  transform-origin: 0 0;
+}
+.projects-host {
+  position: absolute;
+  left: 192px;
+  top: 65px;
+  width: 640px;
+  height: 490px;
+  transform: scale(1.4);
+  transform-origin: 0 0;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 9999px;
+}
+
+:root.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary, #b85c38) !important;
+}

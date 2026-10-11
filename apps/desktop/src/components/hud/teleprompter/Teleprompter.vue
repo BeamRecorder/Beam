@@ -1,10 +1,7 @@
 <script setup lang="ts">
-import type { VNodeRef } from 'vue';
 import { computed, onBeforeUnmount, onMounted, watch } from 'vue';
-import { ScrollText, X } from '@lucide/vue';
-import Button from '~/ui/button/Button.vue';
-import Textarea from '~/ui/textarea/Textarea.vue';
-import TeleprompterToolbar from './TeleprompterToolbar.vue';
+import TeleprompterView from './TeleprompterView.vue';
+import { useThemeStore } from '~/stores/theme';
 import TeleprompterResizeHandle from './TeleprompterResizeHandle.vue';
 import ToastProvider from '~/ui/toast/ToastProvider.vue';
 import { useToastStore } from '~/ui/toast/toastStore';
@@ -14,19 +11,16 @@ import { useTeleprompter } from './useTeleprompter';
 
 const { t } = useTranslate('Teleprompter');
 const state = useTeleprompter();
+const theme = useThemeStore();
 const toast = useToastStore();
 const reset = () => {
   state.resetSettings();
   toast.success(t('settingsReset'), 2400);
 };
 state.setVisible(false);
-const setDisplayElement: VNodeRef = (element) => {
-  state.setDisplayElement(element instanceof HTMLElement ? element : null);
-};
 const isAutoscrolling = computed(
   () => !state.isEditing.value && state.document.value.autoscroll && !state.isPaused.value,
 );
-const updateText = (text: string) => state.updateDocument({ text });
 const initialOpacity = document.body.style.opacity;
 watch(
   () => state.document.value.windowOpacity,
@@ -84,76 +78,22 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main
-    class="teleprompter-window"
-    :style="{
-      '--teleprompter-font-size': state.document.value.fontSize + 'px',
-      '--teleprompter-line-height': state.document.value.lineHeight,
-      '--teleprompter-text': state.document.value.textColor ?? 'var(--text-primary)',
-    }"
+  <TeleprompterView
+    :document="state.document.value"
+    :editing="state.isEditing.value"
+    :playing="isAutoscrolling"
+    :active-line="state.activeLine.value"
+    :error="state.error.value"
+    :default-text-color="theme.isDarkMode ? '#f8fafc' : '#1e1e1e'"
+    @display="state.setDisplayElement"
+    @close="hide"
+    @update="state.updateDocument"
+    @reset="reset"
+    @edit="state.editScript"
+    @play="state.togglePlayback"
   >
-    <header class="teleprompter-header">
-      <div class="teleprompter-title">
-        <ScrollText :size="14" aria-hidden="true" />
-        <h1>{{ t('title') }}</h1>
-      </div>
-      <div class="teleprompter-close">
-        <Button
-          variant="ghost"
-          size="xs"
-          icon-only
-          :icon="X"
-          :aria-label="t('close')"
-          :tooltip="t('close')"
-          tooltip-position="bottom"
-          @click="hide"
-        />
-      </div>
-    </header>
-    <section class="reader-view">
-      <p v-if="state.error.value" class="teleprompter-error" role="alert">
-        {{ state.error.value }}
-      </p>
-      <Textarea
-        v-if="state.isEditing.value"
-        class="teleprompter-editor"
-        :model-value="state.document.value.text"
-        :placeholder="t('placeholder')"
-        :aria-label="t('editorLabel')"
-        @update:model-value="updateText"
-      />
-      <section
-        v-show="!state.isEditing.value"
-        :ref="setDisplayElement"
-        class="teleprompter-display"
-        :class="{ 'is-centered': state.document.value.textAlign === 'center' }"
-        :aria-label="t('readerLabel')"
-      >
-        <p
-          v-for="(line, index) in state.lines.value"
-          :key="index + '-' + line"
-          :data-line-index="index"
-          class="teleprompter-line"
-          :class="{
-            active: state.document.value.mode === 'line-by-line' && state.activeLine.value === index,
-            past: state.document.value.mode === 'line-by-line' && index < state.activeLine.value,
-          }"
-        >
-          {{ line || '\u00a0' }}
-        </p>
-      </section>
-    </section>
-    <TeleprompterToolbar
-      :document="state.document.value"
-      :editing="state.isEditing.value"
-      :playing="isAutoscrolling"
-      @update="state.updateDocument"
-      @reset="reset"
-      @edit="state.editScript"
-      @play="state.togglePlayback"
-    />
     <TeleprompterResizeHandle @error="state.error.value = $event" />
     <ToastProvider class="teleprompter-toasts" :dismiss-label="t('close')" />
-  </main>
+  </TeleprompterView>
 </template>
 <style scoped src="./Teleprompter.css"></style>

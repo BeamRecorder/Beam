@@ -44,7 +44,7 @@ const options: ScreenRegionOverlayOptions = {
   region: { x: 0.1, y: 0.1, width: 0.5, height: 0.5 },
 };
 const Select = {
-  props: ['modelValue', 'options', 'label'],
+  props: { modelValue: [String, Number], options: Array, label: String, tooltipDisabled: Boolean },
   emits: ['update:modelValue'],
   template: '<div><slot name="icon" /></div>',
 };
@@ -121,6 +121,7 @@ it('uses the existing device and audio paths, including explicit off choices', a
     ],
   ]);
   const selects = wrapper.findAllComponents(Select);
+  expect(selects.every((select) => select.props('tooltipDisabled'))).toBe(true);
   selects[0]!.vm.$emit('update:modelValue', 'camera');
   expect(capture.configureCameraOverlay).toHaveBeenCalledWith({
     cameraId: 'camera',

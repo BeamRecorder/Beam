@@ -643,6 +643,8 @@
     "launchAtStartup": "Beam beim Anmelden starten",
     "launchAtStartupDescription": "Beam beim Anmelden automatisch öffnen.",
     "launchAtStartupInstalled": "Nach der Installation von Beam verfügbar.",
+    "minimizeToTray": "Beim Schließen in den Infobereich minimieren",
+    "minimizeToTrayDescription": "Wenn aktiviert, läuft Beam nach dem Schließen im Infobereich weiter. Andernfalls wird Beam vollständig beendet und muss erneut gestartet werden.",
     "categoryRecording": "Aufnahme",
     "categoryDeveloper": "Entwickler",
     "developerDescription": "Werkzeuge zum Untersuchen von Beam und Experimentieren mit Beamy.",

@@ -15,6 +15,8 @@ const emit = defineEmits<{
 }>();
 const registry = useTimelineCanvasRegistry();
 const { t } = useTranslate('TimelineTracks');
+// Reuse each displayed clip for the bitmap and its controls. Artwork completion
+// rerenders this lane and must not create another timing preview in that render.
 const items = computed(() =>
   props.clips.map((clip) => ({
     clip: props.displayedClip(clip),
@@ -40,10 +42,10 @@ const items = computed(() =>
     :artworks="registry.artworks.value"
   />
   <TimelineCanvasClip
-    v-for="clip in clips"
+    v-for="(clip, index) in clips"
     :key="clip.id"
     v-bind="audioFor?.(clip.id)"
-    :clip="displayedClip(clip)"
+    :clip="items[index]!.clip"
     :canvas="canvas"
     :asset="assetFor(clip)"
     :duration="durationMs / 1000"

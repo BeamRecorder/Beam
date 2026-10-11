@@ -1,30 +1,27 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { capture } from '~/api/capture';
-import type { AppUpdateState } from '~/api/types/capture-api';
+import { computed } from 'vue';
 import { useTranslate } from '~/i18n/useTranslate';
+import { useAppUpdates } from './useAppUpdates';
 
+defineProps<{ inline?: boolean }>();
 const { t } = useTranslate('Updates');
-const state = ref<AppUpdateState | null>(null);
-const visible = computed(() => ['available', 'downloading', 'downloaded'].includes(state.value?.status ?? ''));
+const { state, attention } = useAppUpdates();
 const label = computed(() =>
   state.value?.availableVersion
     ? t('updateAvailable', { version: state.value.availableVersion })
     : t('updateAvailableGeneric'),
 );
-let stopListening: (() => void) | undefined;
-
-onMounted(async () => {
-  stopListening = capture.onUpdateState((nextState) => {
-    state.value = nextState;
-  });
-  state.value = await capture.getUpdateState();
-});
-onBeforeUnmount(() => stopListening?.());
 </script>
 
 <template>
-  <span v-if="visible" class="update-badge" :title="label" aria-hidden="true" />
+  <span
+    v-if="attention"
+    class="update-badge"
+    :class="{ 'badge-inline': inline }"
+    :title="inline ? undefined : label"
+    :aria-label="label"
+    role="img"
+  />
 </template>
 
 <style scoped>
@@ -38,5 +35,13 @@ onBeforeUnmount(() => stopListening?.());
   border-radius: 50%;
   background: var(--color-error);
   pointer-events: none;
+}
+.badge-inline {
+  position: static;
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 8px;
+  border: none;
+  flex: none;
 }
 </style>

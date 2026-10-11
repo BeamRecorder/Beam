@@ -4,6 +4,8 @@ import { nextTick } from 'vue';
 import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import { createElementText } from '@beam/engine/shared/element-text';
 import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
+import { vectorForShape } from '@beam/engine/shared/shape-vector-presets';
+import { projectFontSource } from '~/api/project-font-source';
 
 const dependencies = vi.hoisted(() => ({
   loadElementFonts: vi.fn(),
@@ -112,7 +114,7 @@ describe('ShapeTimelinePreview', () => {
 
     expect(wrapper.get('.preview-status').text()).toBe('Rendering preview…');
     await runFrame();
-    expect(dependencies.loadElementFonts).toHaveBeenCalledWith([firstClip]);
+    expect(dependencies.loadElementFonts).toHaveBeenCalledWith([firstClip], projectFontSource);
     expect(dependencies.renderShapeTimelinePreview).not.toHaveBeenCalled();
 
     resolveInitial();
@@ -139,7 +141,7 @@ describe('ShapeTimelinePreview', () => {
     expect(wrapper.get('.shape-preview').attributes('style')).toContain('data:image/png;base64,first');
 
     await runFrame();
-    expect(dependencies.loadElementFonts).toHaveBeenLastCalledWith([latestClip]);
+    expect(dependencies.loadElementFonts).toHaveBeenLastCalledWith([latestClip], projectFontSource);
     resolveLatest();
     await settle();
     expect(dependencies.renderShapeTimelinePreview).toHaveBeenCalledTimes(3);
@@ -268,6 +270,31 @@ describe('ShapeTimelinePreview', () => {
     await wrapper.setProps({ clip: { ...clip, fillEnabled: true } });
     await runFrame();
     expect(dependencies.renderShapeTimelinePreview).toHaveBeenCalledTimes(2);
+    wrapper.unmount();
+  });
+  it('refreshes edited SVG points, retains copied paths, and restores the catalogue preview', async () => {
+    const clip = shapeClip({ family: 'shape', preset: 'speech-bubble', drawing: undefined, text: undefined });
+    dependencies.renderShapeTimelinePreview
+      .mockReturnValueOnce('data:image/png;base64,original')
+      .mockReturnValueOnce('data:image/png;base64,converted')
+      .mockReturnValueOnce('data:image/png;base64,edited');
+    const wrapper = mount(ShapeTimelinePreview, { props: { clip } });
+    await runFrame();
+    const vector = vectorForShape(clip, DEFAULT_OUTPUT_CANVAS);
+    await wrapper.setProps({ clip: { ...clip, vector } });
+    await runFrame();
+    const edited = structuredClone(vector);
+    edited.contours[0]!.nodes[6]!.x += 0.1;
+    await wrapper.setProps({ clip: { ...clip, vector: edited } });
+    await runFrame();
+    expect(wrapper.get('.shape-preview').attributes('style')).toContain('data:image/png;base64,edited');
+    await wrapper.setProps({ clip: { ...clip, vector: structuredClone(edited) } });
+    expect(frames.size).toBe(0);
+    expect(dependencies.renderShapeTimelinePreview).toHaveBeenCalledTimes(3);
+    await wrapper.setProps({ clip: { ...clip, vector: null } });
+    await runFrame();
+    expect(wrapper.get('.shape-preview').attributes('style')).toContain('data:image/png;base64,original');
+    expect(dependencies.renderShapeTimelinePreview).toHaveBeenCalledTimes(3);
     wrapper.unmount();
   });
 });

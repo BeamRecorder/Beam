@@ -643,6 +643,8 @@
     "launchAtStartup": "Запускать Beam при входе",
     "launchAtStartupDescription": "Автоматически открывать Beam при входе в систему.",
     "launchAtStartupInstalled": "Доступно после установки Beam.",
+    "minimizeToTray": "Сворачивать в трей при закрытии",
+    "minimizeToTrayDescription": "Если включено, при закрытии Beam продолжит работать в системном трее. Иначе Beam полностью завершит работу, и его потребуется запустить снова.",
     "categoryRecording": "Запись",
     "categoryDeveloper": "Разработчик",
     "developerDescription": "Инструменты для изучения Beam и экспериментов с Beamy.",

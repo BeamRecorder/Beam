@@ -135,6 +135,7 @@ vi.mock('../composables/useVideoEditor', async () => {
         () => composition.value.clips.find((clip) => clip.id === selectedClipId.value) ?? null,
       );
       const player = {
+        liveHtmlPreview: ref(null),
         isPlaying: ref(false),
         currentTime: ref(0),
         duration: ref(2),
@@ -338,6 +339,7 @@ vi.mock('../composables/useVideoEditor', async () => {
         activeTab,
         // This fixture exposes export metadata without an authorable render document.
         projectStateReady: ref(false),
+        authoringReady: ref(false),
         initialPlaybackSettled: ref(editorState.previewInitiallySettled),
         includeAudioInExport: ref(true),
         editorDefaults: ref({ zoom: { durationMs: 1_500 } }),

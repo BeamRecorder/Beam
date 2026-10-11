@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { useId } from 'vue';
 import Switch from '~/ui/switch/Switch.vue';
-defineProps<{ label: string; description?: string; disabled?: boolean }>();
+defineProps<{ label: string; description?: string; disabled?: boolean; busy?: boolean }>();
 const enabled = defineModel<boolean>({ required: true });
 const descriptionId = useId();
 </script>
 <template>
-  <div class="toggle-preference">
+  <div class="toggle-preference" :class="{ 'is-disabled': disabled }">
     <div class="preference-copy">
       <div class="preference-label">
         <span>{{ label }}</span
@@ -19,6 +19,7 @@ const descriptionId = useId();
     <Switch
       v-model="enabled"
       :disabled="disabled"
+      :busy="busy"
       :aria-label="label"
       :aria-describedby="description ? descriptionId : undefined"
     />
@@ -52,5 +53,8 @@ const descriptionId = useId();
   font-size: var(--font-size-sm);
   font-weight: 400;
   line-height: 1.5;
+}
+.is-disabled .preference-label {
+  color: var(--text-muted);
 }
 </style>

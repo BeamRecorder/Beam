@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
-import { Check } from '@lucide/vue';
 import PopoverMenuList from '~/ui/popover/PopoverMenuList.vue';
 import type { QuickSnipDeviceMenu } from '~/api/types/quick-snip';
 const props = defineProps<{ menu: QuickSnipDeviceMenu }>();
@@ -10,7 +9,7 @@ const items = computed(() =>
   props.menu.options.map((option) => ({
     id: option.id,
     label: option.label,
-    icon: option.id === props.menu.selectedId ? Check : undefined,
+    checked: option.id === props.menu.selectedId,
   })),
 );
 const focusSelection = async () => {
@@ -27,12 +26,22 @@ watch(
 </script>
 <template>
   <div ref="root" class="device-menu">
-    <PopoverMenuList :items="items" @select="emit('select', $event)" @dismiss="emit('dismiss')" />
+    <PopoverMenuList
+      class="device-options"
+      :items="items"
+      @select="emit('select', $event)"
+      @dismiss="emit('dismiss')"
+    />
   </div>
 </template>
 <style scoped>
 .device-menu {
   width: 100%;
   min-width: 0;
+}
+.device-options {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 </style>

@@ -190,6 +190,27 @@ describe('Select', () => {
     wrapper.unmount();
   });
 
+  it.each(['one', null, 'missing'])(
+    'can suppress the native hint without hiding its icon, label or accessible name for %s',
+    async (modelValue) => {
+      const wrapper = mount(Select, { props: { modelValue, options, icon: Mic, label: 'Microphone' } });
+      const trigger = wrapper.get('.select-trigger');
+      const visibleLabel = wrapper.get('.select-label').text();
+      const originalTitle = trigger.attributes('title');
+      expect(originalTitle).toBeTruthy();
+      await wrapper.setProps({ tooltipDisabled: true });
+      expect(trigger.attributes('title')).toBeUndefined();
+      expect(trigger.attributes('aria-label')).toBe('Microphone');
+      expect(wrapper.get('.select-label').text()).toBe(visibleLabel);
+      expect(wrapper.get('.select-leading-icon').element.tagName).toBe('svg');
+      await wrapper.setProps({ disabled: true });
+      expect(trigger.attributes('title')).toBeUndefined();
+      expect(trigger.attributes('disabled')).toBeDefined();
+      await wrapper.setProps({ tooltipDisabled: false });
+      expect(trigger.attributes('title')).toBe(originalTitle);
+    },
+  );
+
   it('fuzzy-filters searchable options without being sensitive to case or accents', async () => {
     const wrapper = mountSearchable({ modelValue: null, options: searchableOptions, variant: 'search' });
 

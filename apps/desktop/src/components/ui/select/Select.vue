@@ -15,6 +15,7 @@ const props = withDefaults(
     items?: SelectOption[];
     placeholder?: string;
     label?: string;
+    tooltipDisabled?: boolean;
     disabled?: boolean;
     appearance?: 'default' | 'neutral';
     direction?: 'up' | 'down';
@@ -31,6 +32,7 @@ const props = withDefaults(
   {
     placeholder: 'Select an option',
     disabled: false,
+    tooltipDisabled: false,
     direction: 'down',
     optionHeight: 38,
     loading: false,
@@ -292,7 +294,7 @@ onBeforeUnmount(() => {
         ]"
         :disabled="disabled"
         :aria-label="label"
-        :title="selectedOption?.label || label || placeholder"
+        :title="tooltipDisabled ? undefined : selectedOption?.label || label || placeholder"
         aria-haspopup="listbox"
         :aria-expanded="isOpen"
         :aria-controls="listboxId"

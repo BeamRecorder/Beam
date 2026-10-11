@@ -21,6 +21,7 @@ function harness() {
       update: (...args) => calls.push(['update', ...args]),
       cancel: () => calls.push(['cancel']),
       markMarkerReady: (sender) => calls.push(['marker', sender]),
+      markPreviewReady: (...args) => calls.push(['preview', ...args]),
     },
     teleprompterWindow: {
       toggleForRegion: (options) => {
@@ -56,4 +57,34 @@ test('marker readiness passes the exact native sender to its owning marker servi
   const { events, calls, owner } = harness();
   events.get('screen-region:marker-ready')({ sender: owner });
   assert.deepEqual(calls, [['marker', owner]]);
+});
+test('preview readiness preserves the sender, generation and decoding result for owner validation', () => {
+  const { events, calls, owner } = harness();
+  events.get('screen-region:preview-ready')({ sender: owner }, 17, false);
+  assert.deepEqual(calls, [['preview', owner, 17, false]]);
+});
+test('the preload exposes only the named preview readiness signal with the exact generation and result', () => {
+  const fs = require('node:fs');
+  const vm = require('node:vm');
+  let api;
+  const sent = [];
+  vm.runInNewContext(fs.readFileSync(require.resolve('../apps/desktop/electron/preload.cjs'), 'utf8'), {
+    process: { platform: 'win32', argv: [] },
+    require: () => ({
+      contextBridge: {
+        exposeInMainWorld: (_name, value) => {
+          api = value;
+        },
+      },
+      webUtils: {},
+      ipcRenderer: { send: (...args) => sent.push(args) },
+    }),
+  });
+  api.notifyScreenRegionPreviewReady(8, true);
+  api.notifyScreenRegionPreviewReady(9, false);
+  assert.deepEqual(sent, [
+    ['screen-region:preview-ready', 8, true],
+    ['screen-region:preview-ready', 9, false],
+  ]);
+  assert.equal(Object.isFrozen(api), true);
 });

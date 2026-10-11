@@ -8,6 +8,7 @@ const { createUserPaths } = require('../apps/desktop/electron/storage/user-paths
 const { createProjectStore } = require('../apps/desktop/electron/projects/project-store.cjs');
 const { createScreenshotStore } = require('../apps/desktop/electron/screenshot/screenshot-store.cjs');
 const { createProjectLibrary } = require('../apps/desktop/electron/projects/project-library.cjs');
+const { createPreferencesStore } = require('../apps/desktop/electron/preferences/preferences-store.cjs');
 
 function fakeApp(root) {
   const paths = new Map([
@@ -112,4 +113,63 @@ test('resolving user paths does not create or migrate any data', (t) => {
   const paths = createUserPaths(fakeApp(root));
   assert.equal(fs.existsSync(paths.user), false);
   assert.deepEqual(fs.readdirSync(root), []);
+});
+
+test('packaged and development stores read each other’s persisted preferences', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-shared-preferences-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const production = { ...fakeApp(root), isPackaged: true };
+  const productionStore = createPreferencesStore(createUserPaths(production).preferences);
+  productionStore.patch({
+    theme: 'dark',
+    appearance: { uiScale: { global: 125 } },
+    extras: { cameraOverlay: { x: 120, y: 80, width: 217, height: 185 } },
+  });
+  for (const [applicationRoot, session] of sessions) {
+    const development = fakeApp(root);
+    configureDevelopmentProfile(
+      development,
+      { BEAM_DEVELOPMENT_INSTANCE: '1', BEAM_DEV_SESSION: session },
+      { applicationRoot },
+    );
+    const developmentStore = createPreferencesStore(createUserPaths(development).preferences);
+    assert.equal(developmentStore.file, productionStore.file);
+    assert.deepEqual(developmentStore.read(), productionStore.read());
+    developmentStore.patch({ extras: { cameraOverlay: { x: 100, y: 90, width: 320, height: 240 } } });
+    assert.deepEqual(productionStore.read().extras.cameraOverlay, { x: 100, y: 90, width: 320, height: 240 });
+    productionStore.patch({ theme: 'light' });
+    assert.equal(developmentStore.read().theme, 'light');
+  }
+});
+
+test('an obsolete preference file inside a development profile cannot override shared preferences', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-old-preferences-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const development = fakeApp(root);
+  configureDevelopmentProfile(development, { BEAM_DEVELOPMENT_INSTANCE: '1' }, { applicationRoot: '/workspace/beam' });
+  const obsolete = path.join(development.getPath('userData'), 'Beam', 'user', 'preferences.json');
+  createPreferencesStore(obsolete).patch({ theme: 'light', extras: { cameraOverlay: { width: 800, height: 90 } } });
+  const sharedFile = createUserPaths(fakeApp(root)).preferences;
+  const productionStore = createPreferencesStore(sharedFile);
+  productionStore.patch({ theme: 'dark', extras: { cameraOverlay: { x: 0, y: 0, width: 220, height: 220 } } });
+  const developmentStore = createPreferencesStore(createUserPaths(development).preferences);
+  assert.equal(developmentStore.file, sharedFile);
+  assert.deepEqual(developmentStore.read(), productionStore.read());
+  assert.equal(createPreferencesStore(obsolete).read().theme, 'light');
+});
+
+test('custom project and recording roots retain the production preference file', () => {
+  const app = fakeApp('/user');
+  configureDevelopmentProfile(
+    app,
+    { BEAM_DEVELOPMENT_INSTANCE: '1' },
+    { applicationRoot: '/workspace/beam', mkdirSync: () => {} },
+  );
+  const paths = createUserPaths(app, {
+    projectRoot: () => '/external/projects',
+    recordingRoot: () => '/external/recordings',
+  });
+  assert.equal(paths.preferences, createUserPaths(fakeApp('/user')).preferences);
+  assert.equal(paths.projects, '/external/projects/projects');
+  assert.equal(paths.studioProjects, '/external/recordings/projects/studio');
 });

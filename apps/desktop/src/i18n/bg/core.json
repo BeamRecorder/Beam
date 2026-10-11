@@ -643,6 +643,8 @@
     "launchAtStartup": "Стартиране на Beam при влизане",
     "launchAtStartupDescription": "Автоматично отваряне на Beam при влизане в системата.",
     "launchAtStartupInstalled": "Достъпно след инсталиране на Beam.",
+    "minimizeToTray": "Минимизиране в системната област при затваряне",
+    "minimizeToTrayDescription": "Когато е включено, Beam продължава да работи в системната област след затваряне. В противен случай Beam се затваря напълно и трябва да го стартирате отново.",
     "categoryRecording": "Запис",
     "categoryDeveloper": "Разработчик",
     "developerDescription": "Инструменти за проверка на Beam и експерименти с Beamy.",

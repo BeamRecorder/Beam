@@ -1,0 +1,82 @@
+@import '../../../apps/desktop/src/theme/palette.css';
+@import '../../../apps/desktop/src/theme/surfaces.css';
+@font-face {
+  font-family: 'Hanken Grotesk';
+  src: url('../../../public/font/HankenGrotesk-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: block;
+}
+:root {
+  --font-sans: 'Hanken Grotesk', sans-serif;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+  --fast: 0s;
+  --shadow-md: 0 4px 12px -2px #1615120d, 0 2px 6px -1px #16151208;
+  --shadow-lg: 0 16px 32px -4px #16151214, 0 4px 16px -2px #1615120a;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+body {
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+.design-stage {
+  position: absolute;
+  inset: 0;
+}
+.wallpaper {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.world {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 55%;
+}
+.setup-host {
+  position: absolute;
+  left: 160px;
+  top: 238px;
+  width: 640px;
+  height: 236px;
+  transform-origin: 0 0;
+}
+.bar-host {
+  position: absolute;
+  left: 358.4px;
+  top: 589.6px;
+  width: 352px;
+  height: 88px;
+  transform-origin: 0 0;
+}
+.demo-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 48px;
+  height: 48px;
+  transform-origin: 6.4px 6.4px;
+  filter: drop-shadow(0 2px 3px #00000070);
+  pointer-events: none;
+  z-index: 5;
+}
+.demo-cursor img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

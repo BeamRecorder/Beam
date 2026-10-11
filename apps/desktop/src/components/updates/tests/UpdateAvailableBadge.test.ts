@@ -42,10 +42,25 @@ describe('UpdateAvailableBadge', () => {
       expect(wrapper.find('.update-badge').exists()).toBe(true);
       expect(wrapper.find('.update-badge').attributes('title')).toContain('1.1.0');
     }
-    captureMock.listener?.(update('error'));
+    captureMock.listener?.({ ...update('error'), availableVersion: null });
     await wrapper.vm.$nextTick();
     expect(wrapper.find('.update-badge').exists()).toBe(false);
     wrapper.unmount();
     expect(captureMock.stopListening).toHaveBeenCalledOnce();
+  });
+  it('retains the update indicator when a known update failed to download', async () => {
+    captureMock.getUpdateState.mockResolvedValue(update('error'));
+    const wrapper = mount(UpdateAvailableBadge, { props: { inline: true } });
+    await flushPromises();
+    expect(wrapper.get('.badge-inline').attributes('aria-label')).toContain('1.1.0');
+    expect(wrapper.get('.badge-inline').attributes('title')).toBeUndefined();
+    wrapper.unmount();
+  });
+  it('uses a generic accessible label when a version has not arrived', async () => {
+    captureMock.getUpdateState.mockResolvedValue({ ...update('available'), availableVersion: null });
+    const wrapper = mount(UpdateAvailableBadge);
+    await flushPromises();
+    expect(wrapper.get('[role="img"]').attributes('aria-label')).toBe('An update is available.');
+    wrapper.unmount();
   });
 });

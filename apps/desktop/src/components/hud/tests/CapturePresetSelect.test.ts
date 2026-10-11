@@ -55,7 +55,7 @@ const deferred = <T>() => {
 
 const SelectStub = defineComponent({
   name: 'Select',
-  props: { modelValue: [String, Number], options: Array, disabled: Boolean },
+  props: { modelValue: [String, Number], options: Array, disabled: Boolean, tooltipDisabled: Boolean },
   emits: ['update:modelValue'],
   template:
     '<button data-testid="choose-numeric-preset" :disabled="disabled" @click="$emit(\'update:modelValue\', 23)">Choose</button>',
@@ -68,6 +68,13 @@ const mountSelector = (kind: PresetKind = 'screenshot') =>
   });
 
 describe('CapturePresetSelect', () => {
+  it('suppresses the redundant hint while retaining the visible preset label', async () => {
+    const wrapper = mountSelector();
+    await flushPromises();
+    expect(wrapper.getComponent(SelectStub).props('tooltipDisabled')).toBe(true);
+    wrapper.unmount();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     subscriptions.splice(0);

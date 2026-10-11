@@ -131,6 +131,12 @@ describe('horizontal HUD', () => {
     expect(hud.findAll('.capture-card')).toHaveLength(3);
     expect(hud.get('[aria-label="Recorder"]').attributes('aria-pressed')).toBe('true');
     expect(hud.findAll('.hud-devices .select-trigger')).toHaveLength(3);
+    expect(
+      hud
+        .findAll('.hud-devices .select-trigger, .capture-card, .hud-modes button')
+        .every((control) => control.attributes('title') === undefined),
+    ).toBe(true);
+    expect(hud.findAll('.window-actions button').every((control) => Boolean(control.attributes('title')))).toBe(true);
     expect(hud.get('.hud-wrapper').attributes('style')).toContain('236px');
     expect(capture.setSize).toHaveBeenLastCalledWith(672, 268);
   });

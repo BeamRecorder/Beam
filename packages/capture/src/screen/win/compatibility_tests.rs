@@ -42,7 +42,7 @@ fn supported_features_select_requested_compatible_settings() {
     assert_eq!(without_cursor.border, DrawBorderSettings::WithoutBorder);
     assert_eq!(
         without_cursor.secondary_windows,
-        SecondaryWindowSettings::Exclude
+        SecondaryWindowSettings::Include
     );
     assert_eq!(
         without_cursor.minimum_update_interval,
@@ -54,10 +54,54 @@ fn supported_features_select_requested_compatible_settings() {
     assert_eq!(with_cursor.border, DrawBorderSettings::WithoutBorder);
     assert_eq!(
         with_cursor.secondary_windows,
-        SecondaryWindowSettings::Exclude
+        SecondaryWindowSettings::Include
     );
     assert_eq!(
         with_cursor.minimum_update_interval,
         MinimumUpdateIntervalSettings::Custom(Duration::from_secs_f64(1.0 / 60.0))
+    );
+}
+
+#[test]
+fn supported_secondary_windows_are_included_without_other_optional_features() {
+    let settings = settings_for_support(
+        true,
+        30,
+        FeatureSupport {
+            cursor: false,
+            border: false,
+            secondary_windows: true,
+            minimum_update_interval: false,
+        },
+    );
+
+    assert_eq!(settings.secondary_windows, SecondaryWindowSettings::Include);
+    assert_eq!(settings.cursor, CursorCaptureSettings::Default);
+    assert_eq!(settings.border, DrawBorderSettings::Default);
+    assert_eq!(
+        settings.minimum_update_interval,
+        MinimumUpdateIntervalSettings::Default
+    );
+}
+
+#[test]
+fn unsupported_secondary_windows_preserve_other_capture_options() {
+    let settings = settings_for_support(
+        false,
+        30,
+        FeatureSupport {
+            cursor: true,
+            border: true,
+            secondary_windows: false,
+            minimum_update_interval: true,
+        },
+    );
+
+    assert_eq!(settings.secondary_windows, SecondaryWindowSettings::Default);
+    assert_eq!(settings.cursor, CursorCaptureSettings::WithCursor);
+    assert_eq!(settings.border, DrawBorderSettings::WithoutBorder);
+    assert_eq!(
+        settings.minimum_update_interval,
+        MinimumUpdateIntervalSettings::Custom(Duration::from_secs_f64(1.0 / 30.0))
     );
 }

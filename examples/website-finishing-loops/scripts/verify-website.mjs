@@ -76,6 +76,7 @@ try {
           expected: `editing-${mode}-${theme === "light" ? "dark" : "light"}.webm`,
         },
       );
+      await new Promise((resolve) => setTimeout(resolve, 600));
       if (!(await page.$eval(selector, (video) => video.paused)))
         throw new Error("A theme change discarded the manual pause.");
       await page.screenshot({ path: resolve(output, `${mode}-${theme}.png`) });

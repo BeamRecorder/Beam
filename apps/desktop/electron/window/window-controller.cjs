@@ -23,6 +23,7 @@ class WindowController {
     this.ready = false;
     this.interactive = false;
     this.hiddenByController = false;
+    this.mousePolicy = null;
     this.overlayAlwaysOnTop = null;
     this.hudAlwaysOnTop = preferencesStore?.read()?.alwaysOnTop !== false;
     // Start click-through so the renderer can classify the pointer from the
@@ -51,7 +52,7 @@ class WindowController {
       );
       this.window.setPosition(position.x, position.y);
     }
-    this.window.setIgnoreMouseEvents(true);
+    this.setMousePolicy(true);
     const applyNativeWindowPolicy = () => {
       this.applyInteractionPolicy();
       this.applyZOrderPolicy();
@@ -314,12 +315,17 @@ class WindowController {
   setHudInteractive(overInteractive) {
     if (this.mode !== 'hud' || this.window.isDestroyed()) return;
     this.hudOverInteractive = overInteractive;
-    if (this.isLinux) return; // The window stays interactive; nothing to toggle.
-    if (overInteractive) {
-      this.window.setIgnoreMouseEvents(false);
-    } else {
-      this.window.setIgnoreMouseEvents(true, { forward: true });
-    }
+    this.applyInteractionPolicy();
+  }
+
+  setMousePolicy(ignore, forward = false) {
+    const policy = ignore ? (forward ? 'forward' : 'ignore') : 'interactive';
+    if (this.mousePolicy === policy) return;
+    // Native input changes can synchronously dispatch focus/blur. Commit first
+    // so those callbacks cannot reconfigure the same transparent surface.
+    this.mousePolicy = policy;
+    if (ignore && forward) this.window.setIgnoreMouseEvents(true, { forward: true });
+    else this.window.setIgnoreMouseEvents(ignore);
   }
 
   setVisible(visible) {
@@ -345,7 +351,7 @@ class WindowController {
     // setAlwaysOnTop must not raise the still-visible HUD again.
     this.hiddenByController = true;
     this.setOverlayAlwaysOnTop(false);
-    this.window.setIgnoreMouseEvents(true);
+    this.setMousePolicy(true);
     this.window.hide();
     return !this.window.isVisible();
   }
@@ -355,7 +361,7 @@ class WindowController {
     const shouldBeActive =
       !this.hiddenByController && this.ready && this.window.isVisible() && !this.window.isMinimized();
     if (!shouldBeActive) {
-      this.window.setIgnoreMouseEvents(true);
+      this.setMousePolicy(true);
       this.interactive = false;
       return;
     }
@@ -366,18 +372,18 @@ class WindowController {
         // regain pointer input on Linux. Keep the whole window interactive; the
         // 16 px transparent margin then also captures clicks, which is the
         // accepted Linux trade-off for overlay windows.
-        this.window.setIgnoreMouseEvents(false);
+        this.setMousePolicy(false);
       } else if (this.hudOverInteractive) {
-        this.window.setIgnoreMouseEvents(false);
+        this.setMousePolicy(false);
       } else {
-        this.window.setIgnoreMouseEvents(true, { forward: true });
+        this.setMousePolicy(true, true);
       }
     } else if (this.mode === 'recorder') {
       // The compact Recorder window is itself the interactive hit target.
       // Global pointer polling is unreliable on Wayland once a window is
       // click-through, so Recorder mode must never depend on it to recover
       // mouse input.
-      this.window.setIgnoreMouseEvents(false);
+      this.setMousePolicy(false);
     }
     this.interactive = true;
   }
