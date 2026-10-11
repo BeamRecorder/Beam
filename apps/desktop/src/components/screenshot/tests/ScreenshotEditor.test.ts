@@ -1440,11 +1440,10 @@ describe('ScreenshotEditor', () => {
     const wrapper = mountEditor();
     await flushPromises();
     const children = wrapper.get('.editor-body > .workspace-upper').element.children;
-    expect(children[0]?.classList.contains('editor-ambient-background')).toBe(true);
-    expect(children[1]?.classList.contains('properties-island')).toBe(true);
-    expect(children[2]?.classList.contains('screenshot-preview-stage')).toBe(true);
-    expect(children[2]?.querySelector('[data-testid="screenshot-canvas"]')).not.toBeNull();
-    expect(children).toHaveLength(3);
+    expect(children[0]?.classList.contains('properties-island')).toBe(true);
+    expect(children[1]?.classList.contains('screenshot-preview-stage')).toBe(true);
+    expect(children[1]?.querySelector('[data-testid="screenshot-canvas"]')).not.toBeNull();
+    expect(children).toHaveLength(2);
     expect(wrapper.find('[aria-label="Audio"]').exists()).toBe(false);
     wrapper.findComponent(ScreenshotCanvasStub).vm.$emit('select', 'screenshot');
     await flushPromises();

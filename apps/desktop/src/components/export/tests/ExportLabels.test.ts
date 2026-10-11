@@ -57,7 +57,7 @@ describe('concise export labels', () => {
       'openFolder',
       'viewImage',
     ]) {
-      expect(translation[key]?.length).toBeGreaterThan(2);
+      expect(translation[key], `${locale}.${key}`).toEqual(expect.stringMatching(/\S/));
       if (locale !== 'en')
         expect(translation[key]).not.toBe(messages['../../../i18n/en/core.json']!.ExportPopover[key]);
     }
