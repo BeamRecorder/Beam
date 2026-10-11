@@ -358,7 +358,7 @@ describe('ScreenshotEditor', () => {
       name: 'Custom',
       protected: false,
     };
-    capture.getEditorPresets.mockResolvedValueOnce(named);
+    capture.getEditorPresets.mockResolvedValueOnce(presetFixture());
     capture.selectEditorPreset.mockResolvedValue(named);
     capture.createEditorPreset.mockResolvedValue(named);
     capture.updateEditorPreset.mockResolvedValue(named);

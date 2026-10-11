@@ -6,6 +6,9 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Switching screenshot presets preserves zooms, custom layer names, image cropping, rotation and visibility, and restores enabled background and watermark layers without invalid composition errors. Selecting the current preset keeps unsaved edits intact.
+- Windows screen recordings copy captured frames on the GPU before asynchronous encoding, preventing reuse of the capture surface from overwriting queued video frames.
+- Slider reset and direct-value editing hints follow the selected language in all fifteen locales.
 - Typing directly on the canvas responds immediately, with native text sizing and local drafts that avoid rebuilding the project on every keystroke.
 - Webcam shadows keep a consistent size during zoom and zoom-out animations, including high-density editor previews.
 - Renaming an open video project keeps its media available for playback and export, including through undo and redo.
@@ -63,10 +66,6 @@ User-facing changes to Beam are documented in this file.
 - Shortcuts keep Beam's familiar keycaps in a lighter list, with a restore-default action shown only for customized bindings. Reassigning a shortcut already in use asks for confirmation and names the affected actions.
 - The website’s Studio overview now runs for 15 seconds with gentler cursor travel, longer reading pauses and two restrained camera views that stay fixed during edits.
 - Dithering uses the gradient editor's freely editable two-to-eight-color palette, full-width algorithm and color-mapping choices, and organized inspector sections with effect opacity and removal actions below the controls.
-
-### Fixed
-
-- Slider reset and direct-value editing hints follow the selected language in all fifteen locales.
 
 ## [0.5.3] - 2026-10-07
 

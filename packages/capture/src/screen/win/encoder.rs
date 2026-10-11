@@ -22,6 +22,7 @@ use windows::{
 use windows_capture::frame::Frame;
 use windows_future::IAsyncActionWithProgress;
 
+use super::encoder_surface::copy_encoder_surface;
 use crate::screen::recording_queue::{FrameQueuePressure, frame_queue_capacity};
 
 const FINALIZE_TIMEOUT: Duration = Duration::from_secs(15);
@@ -155,10 +156,19 @@ impl RecordingEncoder {
     }
 
     pub(super) fn send_frame(&mut self, frame: &Frame) -> Result<bool, String> {
+        self.check_running()?;
+        if self.sender.as_ref().is_none_or(Sender::is_full) {
+            return Ok(false);
+        }
+        let surface = copy_encoder_surface(
+            frame.device(),
+            frame.device_context(),
+            frame.as_raw_texture(),
+        )
+        .map_err(message)?;
         let timestamp = self.timestamp(frame.timestamp().map_err(message)?.Duration);
         let sample =
-            MediaStreamSample::CreateFromDirect3D11Surface(frame.as_raw_surface(), timestamp)
-                .map_err(message)?;
+            MediaStreamSample::CreateFromDirect3D11Surface(&surface, timestamp).map_err(message)?;
         self.send(sample)
     }
 

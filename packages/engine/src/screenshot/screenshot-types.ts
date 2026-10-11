@@ -22,6 +22,13 @@ export interface ScreenshotState {
   quality: number;
 }
 
+export type ScreenshotPresetPresentation = Pick<
+  ScreenshotState,
+  'canvas' | 'background' | 'blurPercent' | 'format' | 'quality'
+> & {
+  image: Pick<VisualClip, 'transform' | 'appearance' | 'isMirrored' | 'isMirroredY' | 'cameraFramingPreset'>;
+};
+
 export interface ScreenshotZoomLayer extends ZoomElement {
   kind: 'zoom';
   name: string;

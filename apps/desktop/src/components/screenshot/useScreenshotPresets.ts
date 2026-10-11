@@ -1,6 +1,7 @@
 import { computed, onScopeDispose } from 'vue';
 import { capture } from '~/api/capture';
 import { screenshotState, screenshotPresetSettings } from './screenshot-state';
+import { applyScreenshotPreset } from '@beam/engine/screenshot/screenshot-presets';
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
 import type { ScreenshotPresetHost } from './screenshot-preset-types';
 import type { EditorResources } from '../editor/resources/editor-resource-types';
@@ -29,23 +30,17 @@ export function useScreenshotPresets(host: ScreenshotPresetHost, resources: Edit
     presets.value = next;
     const selected = next.presets.find((item) => item.id === next.activePresetId);
     if (!document.value || !state.value || !selected) return;
-    const { shapes, cursors, images, effects, composition } = state.value;
-    const crop = state.value.image.crop;
     applyingPreset = true;
-    state.value = {
-      ...screenshotState({ ...plain(document.value), preset: selected.settings, state: null }, backgroundLibrary.value),
-      shapes,
-      cursors,
-      images,
-      effects,
-      composition,
-    };
-    state.value.image.crop = crop;
+    state.value = applyScreenshotPreset(
+      state.value,
+      screenshotState({ ...plain(document.value), preset: selected.settings, state: null }, backgroundLibrary.value),
+    );
     baseline = JSON.stringify(settings());
     applyingPreset = false;
   };
   const presetAction = async (action: 'select' | 'add' | 'rename' | 'delete', value = '') => {
     if (busy.value) return;
+    if (action === 'select' && value === activePreset.value?.id) return;
     busy.value = true;
     try {
       if ((action === 'select' || action === 'delete') && activePreset.value?.id !== 'default' && dirty.value) {
