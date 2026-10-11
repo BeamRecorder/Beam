@@ -58,17 +58,17 @@ User-facing changes to Beam are documented in this file.
 
 - Saved video and screenshot capture presets show a labelled sample of their appearance on hover or keyboard focus, without changing the selected preset. Previews use Beam’s shared renderer and remain inside the menu window.
 
-- The private website’s Instant sections now show three eight-second light/dark loops of native Beam preset previews, local export and pasting the completed file into an illustrative team chat, with macOS cursor interactions and Beamy’s loading-to-success animation. Reusable source lives in `examples/website-instant-loops/`.
+- The private website’s Instant sections now show three eight-second light/dark loops of native Beam preset previews, local export and pasting the completed file into an illustrative team chat, with macOS cursor interactions and Beamy’s loading-to-success animation.
 
-- The private website’s local-rendering section now shows an eight-second themed loop of Beam CLI rendering HTML, encoding with Mediabunny and saving a video locally. Reusable source lives in `examples/website-local-render-loop/`.
+- The private website’s local-rendering section now shows an eight-second themed loop of Beam CLI rendering HTML, encoding with Mediabunny and saving a video locally.
 
 - The private documentation site illustrates 2D, 3D Tilt and Loupe with three headless Beam CLI renders of the same HTML checklist, with editable native documents and English JSON example copy.
 
-- The private website’s AI-native frames section compares animated HTML and an actual PNG from the same source in a seven-second themed loop. Reusable source and captured frames live in `examples/website-motion-still-loop/`.
+- The private website’s AI-native frames section compares animated HTML and an actual PNG from the same source in a seven-second themed loop.
 
 - The private documentation site illustrates Recording, Screenshots, Studio and Exporting with eleven supplied captures, including centered native Beam compositions and readable portrait controls. Missing captures remain placeholders.
 
-- The private website’s agents section now presents real Beam CLI commands in a clean seven-second loop, with light/dark themes, matching posters, pause and reduced-motion support. Reusable HTML/TypeScript source lives in `examples/website-agent-cli-loop/`.
+- The private website’s agents section now presents real Beam CLI commands in a clean seven-second loop, with light/dark themes, matching posters, pause and reduced-motion support.
 
 - The private documentation site now includes Studio & editing, Zooms & lenses and Exporting guides based on Beam's current implementation, with image placeholders for future screenshots and English JSON catalogs. Future languages can be added through JSON catalogs and locale metadata without changing application configuration.
 
