@@ -207,6 +207,9 @@ export function drawWebcamOverlay(
     settings.mirrorY,
   );
   const sourceRect: MediaRect | undefined = framing.sourceRect;
+  // Camera projection is already cancelled by the caller. Only the render
+  // surface density remains; motion-blur surfaces can use a different density.
+  const matrix = ctx.getTransform();
   drawDecoratedMedia(ctx, {
     timeMs,
     source,
@@ -214,6 +217,7 @@ export function drawWebcamOverlay(
     rect: framingPreset === 'custom' && appearance && isPhoneFrame(appearance.frame) ? layout : framing.rect,
     appearance: { ...DEFAULT_CLIP_APPEARANCE, ...appearance },
     shadowScale,
+    shadowPixelRatio: Math.hypot(matrix.a, matrix.b),
     title,
     mirrored: settings.mirror,
     mirroredY: settings.mirrorY,

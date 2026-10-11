@@ -25,6 +25,8 @@ export interface DecoratedMediaOptions {
   appearance?: ClipAppearance;
   /** Pixel-based appearance values are stored in output pixels; preview callers provide their display scale. */
   shadowScale?: number;
+  /** Raster pixels per logical pixel for Canvas shadows, which ignore the context transform. */
+  shadowPixelRatio?: number;
   /** Derive the shadow silhouette from the rendered source pixels instead of its bounding box. */
   shadowFollowsSourceAlpha?: boolean;
   /** Composition timeline clock; still renders use phase zero. */

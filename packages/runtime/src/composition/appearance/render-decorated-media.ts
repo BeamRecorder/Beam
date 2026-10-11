@@ -248,6 +248,7 @@ export function drawDecoratedMedia(ctx: Canvas2DContext, options: DecoratedMedia
 function drawOrientedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions) {
   const appearance = { ...DEFAULT_CLIP_APPEARANCE, ...options.appearance };
   const appearanceScale = Math.max(0, options.shadowScale ?? 1);
+  const shadowScale = appearanceScale * Math.max(0, options.shadowPixelRatio ?? 1);
   const windowsOptions = {
     showMenu: appearance.frameShowMenu,
     showScrollbars: appearance.frameShowScrollbars,
@@ -268,7 +269,7 @@ function drawOrientedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions)
   const appearanceRadius =
     mask === 'circle' ? Number.MAX_SAFE_INTEGER : radiusForAppearance(appearance, appearanceScale);
   const outerRadius = frameRadius(appearance.frame, appearanceRadius, outer);
-  const shadowBlur = shadowBlurForAppearance(appearance) * appearanceScale;
+  const shadowBlur = shadowBlurForAppearance(appearance) * shadowScale;
   let sourceDrawn = false;
   if (shadowBlur > 0) {
     const alphaSurface =
@@ -277,7 +278,7 @@ function drawOrientedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions)
         : null;
     if (alphaSurface) {
       ctx.save();
-      applyClipShadow(ctx, appearance, options.source, options.sourceRect, options.shadowScale);
+      applyClipShadow(ctx, appearance, options.source, options.sourceRect, shadowScale);
       ctx.drawImage(alphaSurface, options.rect.x, options.rect.y, options.rect.width, options.rect.height);
       ctx.restore();
       sourceDrawn = true;
@@ -290,8 +291,8 @@ function drawOrientedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions)
       const fill = appearance.frame !== 'none' ? appearance.frameColor : '#000000';
       const paint = (target: Canvas2DContext) => {
         target.save();
-        applyClipShadow(target, style, undefined, undefined, options.shadowScale);
-        clipOutsideMedia(target, outer, outerRadius, mask, shadowBlur);
+        applyClipShadow(target, style, undefined, undefined, shadowScale);
+        clipOutsideMedia(target, outer, outerRadius, mask, shadowBlurForAppearance(appearance) * appearanceScale);
         target.fillStyle = fill;
         mediaPath(target, outer, outerRadius, mask);
         target.fill();

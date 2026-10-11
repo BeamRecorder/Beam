@@ -24,6 +24,7 @@ const context = () =>
     drawImage: vi.fn(),
     translate: vi.fn(),
     scale: vi.fn(),
+    getTransform: vi.fn(() => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 })),
     fillRect: vi.fn(),
     strokeRect: vi.fn(),
     fillText: vi.fn(),
@@ -47,10 +48,44 @@ const context = () =>
   }) as unknown as CanvasRenderingContext2D;
 
 describe('webcam zoom layout', () => {
+  it.each([
+    { a: 1, b: 0, density: 1 },
+    { a: 1.25, b: 0, density: 1.25 },
+    { a: 0, b: -2, density: 2 },
+  ])('uses the remaining surface density $density for the shadow only', ({ a, b, density }) => {
+    const ctx = context();
+    vi.mocked(ctx.getTransform).mockReturnValue({ a, b, c: -b, d: a, e: 30, f: 50 } as DOMMatrix);
+    const draw = vi.spyOn(renderDecoratedMedia, 'drawDecoratedMedia').mockImplementation(() => {});
+    drawWebcamOverlay(
+      ctx,
+      {} as CanvasImageSource,
+      { width: 320, height: 240 },
+      800,
+      600,
+      2,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'Camera',
+      0.5,
+    );
+    expect(draw).toHaveBeenCalledWith(ctx, expect.objectContaining({ shadowScale: 0.5, shadowPixelRatio: density }));
+  });
+
   it('uses the inverse of the applied zoom scale', () => {
     expect(getWebcamZoomFactor(1, true)).toBe(1);
     expect(getWebcamZoomFactor(1.5, true)).toBeCloseTo(2 / 3);
     expect(getWebcamZoomFactor(3.5, true)).toBeCloseTo(1 / 3.5);
+  });
+
+  it('preserves numeric webcam corners and diagonal shadow direction', () => {
+    expect(
+      webcamSettingsForAppearance({ cornerRadius: 18, shadowSize: 'md', shadowBlur: 20, shadowMode: 'solid' }),
+    ).toMatchObject({ cornerRadius: 18, shadowOpacity: 0.42 });
+    expect(
+      webcamSettingsForAppearance({ ...createDefaultClipAppearance('webcam'), shadowDirection: 'bottom-right' }),
+    ).toMatchObject({ shadowOffsetX: 0.7, shadowOffsetY: 0.7 });
   });
 
   it('does not react when the setting is disabled or the scale is invalid', () => {

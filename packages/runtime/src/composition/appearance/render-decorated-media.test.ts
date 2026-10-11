@@ -4,6 +4,7 @@ import { resolveSafariFrameGeometry, resolveWindowsFrameGeometry } from '@beam/e
 import {
   applyClipShadow,
   drawDecoratedMedia,
+  radiusForAppearance,
   shadowBlurForAppearance,
 } from '@beam/runtime/composition/appearance/render-decorated-media';
 import { adaptivePhoneFillColors } from '@beam/runtime/composition/appearance/phone-frame-fill';
@@ -11,6 +12,7 @@ import type { ClipAppearance } from '@beam/engine/shared/composition-types';
 import * as animatedFrame from './animated-frame';
 import { DEFAULT_ANIMATED_FRAME } from '@beam/engine/shared/animated-frame-types';
 import * as mediaShadows from '@beam/runtime/composition/appearance/media-shadow-cache';
+import * as adaptiveShadows from '@beam/runtime/composition/appearance/adaptive-shadow';
 
 const appearance = (patch: Partial<ClipAppearance> = {}): ClipAppearance => ({
   cornerRadius: 'sm',
@@ -116,6 +118,143 @@ const nonStretchedWindowsFormats = [
 ] as const;
 
 describe('decorated media rendering', () => {
+  it.each([1, 1.25, 2])('converts shadows to %sx raster pixels without scaling the media corners twice', (density) => {
+    const ctx = context();
+    drawDecoratedMedia(ctx, {
+      source,
+      rect: { x: 40, y: 60, width: 240, height: 160 },
+      sourceSize: { width: 480, height: 320 },
+      appearance: appearance({
+        cornerRadius: 24,
+        shadowSize: 'custom',
+        shadowBlur: 40,
+        shadowDirection: 'bottom-right',
+      }),
+      shadowScale: 0.5,
+      shadowPixelRatio: density,
+      title: 'Camera',
+    });
+    expect(ctx.shadowBlur).toBe(20 * density);
+    expect(ctx.shadowOffsetX).toBe(10 * density);
+    expect(ctx.shadowOffsetY).toBe(10 * density);
+    expect(ctx.roundRect).toHaveBeenCalledWith(40, 60, 240, 160, 12);
+    expect(ctx.roundRect).toHaveBeenCalledWith(-41, -21, 402, 322, 0);
+  });
+
+  it('does not paint a shadow for a collapsed raster scale', () => {
+    const ctx = context();
+    drawDecoratedMedia(ctx, {
+      source,
+      rect: { x: 40, y: 60, width: 240, height: 160 },
+      appearance: appearance({ shadowSize: 'md' }),
+      shadowPixelRatio: 0,
+      title: 'Camera',
+    });
+    expect(ctx.fill).not.toHaveBeenCalled();
+    expect(ctx.drawImage).toHaveBeenCalledWith(source, 40, 60, 240, 160);
+  });
+
+  it('keeps directional, adaptive and disabled shadows in the requested raster units', () => {
+    const ctx = context();
+    applyClipShadow(
+      ctx,
+      appearance({ shadowSize: 'custom', shadowBlur: 40, shadowDirection: 'top-left' }),
+      undefined,
+      undefined,
+      2,
+    );
+    expect(ctx).toMatchObject({ shadowBlur: 80, shadowOffsetX: -40, shadowOffsetY: -40 });
+    const adaptiveColor = vi.spyOn(adaptiveShadows, 'adaptiveShadowColor').mockReturnValue('#123456');
+    try {
+      applyClipShadow(ctx, appearance({ shadowSize: 'md', shadowMode: 'adaptive', shadowColor: '#123456' }), source);
+      expect(ctx.shadowColor).toBe('#123456');
+      expect(adaptiveColor).toHaveBeenCalledWith(source, undefined, '#123456');
+    } finally {
+      adaptiveColor.mockRestore();
+    }
+    applyClipShadow(ctx, appearance({ shadowSize: 'none' }));
+    expect(ctx).toMatchObject({ shadowBlur: 0, shadowColor: 'transparent' });
+    expect(radiusForAppearance(undefined, 0.5)).toBe(4);
+    applyClipShadow(ctx, undefined);
+    expect(ctx.shadowBlur).toBe(24);
+  });
+
+  it('paints a source-alpha shadow in logical units on a host without OffscreenCanvas', () => {
+    const ctx = context(),
+      alphaContext = context();
+    vi.stubGlobal('OffscreenCanvas', undefined);
+    const getContext = vi
+      .spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockReturnValue(alphaContext as CanvasRenderingContext2D);
+    try {
+      drawDecoratedMedia(ctx, {
+        source: {} as CanvasImageSource,
+        rect: { x: 20, y: 30, width: 240, height: 160 },
+        appearance: appearance({ shadowSize: 'md' }),
+        shadowPixelRatio: 2,
+        shadowFollowsSourceAlpha: true,
+        title: 'Camera',
+        mirroredY: true,
+      });
+      expect(ctx.shadowBlur).toBe(48);
+      expect(alphaContext.scale).toHaveBeenCalledWith(1, -1);
+      expect(ctx.drawImage).toHaveBeenCalledWith(expect.any(HTMLCanvasElement), 20, 30, 240, 160);
+    } finally {
+      getContext.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('reuses an alpha caster across raster densities without changing its logical corners', () => {
+    const ctx = context(),
+      alphaContext = context();
+    const getContext = vi.fn(() => alphaContext);
+    class Canvas {
+      getContext = getContext;
+    }
+    vi.stubGlobal('OffscreenCanvas', Canvas);
+    const options = {
+      source: {} as CanvasImageSource,
+      rect: { x: 20, y: 30, width: 240, height: 160 },
+      appearance: appearance({ cornerRadius: 24, shadowSize: 'md' }),
+      shadowScale: 0.5,
+      shadowFollowsSourceAlpha: true,
+      title: 'Camera',
+    };
+    try {
+      drawDecoratedMedia(ctx, { ...options, shadowPixelRatio: 1.25 });
+      drawDecoratedMedia(ctx, { ...options, shadowPixelRatio: 2 });
+      expect(getContext).toHaveBeenCalledOnce();
+      expect(alphaContext.roundRect).toHaveBeenCalledWith(0, 0, 240, 160, 12);
+      expect(ctx.shadowBlur).toBe(24);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('keeps the scaled geometric shadow if a source alpha surface cannot be painted', () => {
+    const ctx = context();
+    class Canvas {
+      getContext = () => null;
+    }
+    vi.stubGlobal('OffscreenCanvas', Canvas);
+    try {
+      drawDecoratedMedia(ctx, {
+        source: {} as CanvasImageSource,
+        rect: { x: 20, y: 30, width: 240, height: 160 },
+        appearance: appearance({ shadowSize: 'md' }),
+        shadowScale: 0.5,
+        shadowPixelRatio: 2,
+        shadowFollowsSourceAlpha: true,
+        title: 'Camera',
+      });
+      expect(ctx.fill).toHaveBeenCalledOnce();
+      expect(ctx.shadowBlur).toBe(24);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('allows geometric shadow admission at the original appearance scale', () => {
     const cache = vi.spyOn(mediaShadows, 'drawCachedMediaShadow').mockReturnValue(true);
     try {
@@ -241,6 +380,7 @@ describe('decorated media rendering', () => {
         rect: { x: 4, y: 6, width: 240, height: 160 },
         appearance: appearance({ cornerRadius: 72, shadowSize: 'custom', shadowBlur: 40 }),
         shadowScale: 0.5,
+        shadowPixelRatio: 2,
         shadowFollowsSourceAlpha: true,
         title: 'Scaled image',
       });
@@ -249,6 +389,7 @@ describe('decorated media rendering', () => {
     }
 
     expect(alphaContext.roundRect).toHaveBeenCalledWith(0, 0, 240, 160, 36);
+    expect(ctx.shadowBlur).toBe(40);
     expect(ctx.drawImage).toHaveBeenCalledWith(expect.any(FakeOffscreenCanvas), 4, 6, 240, 160);
   });
 
