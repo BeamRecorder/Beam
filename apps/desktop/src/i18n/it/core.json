@@ -1312,5 +1312,9 @@
   "BigSlider": {
     "resetDefault": "Ripristina il valore predefinito",
     "editValue": "Fai clic per modificare direttamente il valore"
+  },
+  "RecordingHealth": {
+    "captureStopped": "La registrazione dello schermo si è interrotta. I file registrati sono stati conservati.",
+    "transitionFailed": "Impossibile mettere in pausa o riprendere. La registrazione è stata interrotta per conservare i file. {reason}"
   }
 }

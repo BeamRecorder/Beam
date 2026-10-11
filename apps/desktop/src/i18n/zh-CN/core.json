@@ -1312,5 +1312,9 @@
   "BigSlider": {
     "resetDefault": "恢复默认值",
     "editValue": "点击直接编辑数值"
+  },
+  "RecordingHealth": {
+    "captureStopped": "屏幕录制已停止。已保留录制的文件。",
+    "transitionFailed": "暂停或继续录制失败。为保留文件，录制已停止。{reason}"
   }
 }

@@ -54,3 +54,32 @@ pub fn map_coordinates(
         inside,
     })
 }
+
+#[cfg(any(windows, test))]
+pub(crate) fn map_aspect_fit(
+    mut position: CursorCoordinates,
+    source: CaptureRegion,
+    width: u32,
+    height: u32,
+) -> Result<CursorCoordinates, crate::CaptureError> {
+    if source.width == 0 || source.height == 0 || width == 0 || height == 0 {
+        return Err(crate::CaptureError::InvalidConfiguration(
+            "cursor output dimensions cannot be empty".into(),
+        ));
+    }
+    let scale = (f64::from(width) / f64::from(source.width))
+        .min(f64::from(height) / f64::from(source.height));
+    let x = f64::from(position.pixel_x) * scale
+        + (f64::from(width) - f64::from(source.width) * scale) * 0.5;
+    let y = f64::from(position.pixel_y) * scale
+        + (f64::from(height) - f64::from(source.height) * scale) * 0.5;
+    position.pixel_x = x.round() as i32;
+    position.pixel_y = y.round() as i32;
+    position.normalized_x = x / f64::from(width);
+    position.normalized_y = y / f64::from(height);
+    Ok(position)
+}
+
+#[cfg(test)]
+#[path = "coordinates_tests.rs"]
+mod tests;

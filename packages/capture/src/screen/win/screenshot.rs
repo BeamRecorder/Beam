@@ -34,11 +34,12 @@ impl GraphicsCaptureApiHandler for FirstFrame {
         stop: InternalCaptureControl,
     ) -> Result<(), String> {
         let (width, height) = (frame.width(), frame.height());
-        let pixels = frame
-            .buffer()
-            .map_err(|error| error.to_string())?
-            .as_nopadding_buffer(&mut Vec::new())
-            .to_vec();
+        let pixels = super::readback::read_bgra(
+            frame.device(),
+            frame.device_context(),
+            frame.as_raw_texture(),
+        )
+        .map_err(|error| error.to_string())?;
         if let Some(sender) = self.sender.take() {
             sender
                 .send(OwnedVideoFrame {
@@ -58,6 +59,13 @@ fn backend_error(error: impl std::fmt::Display) -> CaptureError {
     CaptureError::Backend(error.to_string())
 }
 fn capture_item<T: TryInto<GraphicsCaptureItemType> + Send + 'static>(
+    item: T,
+) -> Result<OwnedVideoFrame, CaptureError> {
+    super::capture::run_native("wgc-screenshot", Duration::from_secs(15), move || {
+        capture_item_inner(item)
+    })
+}
+fn capture_item_inner<T: TryInto<GraphicsCaptureItemType> + Send + 'static>(
     item: T,
 ) -> Result<OwnedVideoFrame, CaptureError> {
     let (sender, receiver) = mpsc::sync_channel(1);

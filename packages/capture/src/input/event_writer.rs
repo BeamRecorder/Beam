@@ -2,8 +2,8 @@ use std::{fs::OpenOptions, io::Write, path::Path};
 
 use crate::{
     CaptureError,
-    input::{InputEvent, InputEventSidecar},
-    storage::write_json_atomic,
+    input::{INPUT_SIDECAR_VERSION, InputEvent},
+    storage::{JsonlReader, StagedFile},
 };
 
 pub struct InputEventWriter {
@@ -11,15 +11,28 @@ pub struct InputEventWriter {
 }
 
 pub fn finalize_input_events(partial: &Path, destination: &Path) -> Result<(), CaptureError> {
-    let contents =
-        std::fs::read_to_string(partial).map_err(|error| CaptureError::storage(partial, error))?;
-    let mut events = contents
-        .lines()
-        .filter(|line| !line.trim().is_empty())
-        .map(serde_json::from_str::<InputEvent>)
-        .collect::<Result<Vec<_>, _>>()?;
-    events.sort_by_key(InputEvent::session_ns);
-    write_json_atomic(destination, &InputEventSidecar::new(events))?;
+    let sorted = super::sorted_events::sorted_events(partial)?;
+    let mut reader = JsonlReader::<InputEvent>::open(sorted.path())?;
+    let mut file = StagedFile::new(destination)?;
+    write!(
+        file.writer()?,
+        "{{\"version\":{INPUT_SIDECAR_VERSION},\"events\":["
+    )
+    .map_err(|error| CaptureError::storage(destination, error))?;
+    let mut first = true;
+    while let Some(event) = reader.next_record()? {
+        if !first {
+            file.writer()?
+                .write_all(b",")
+                .map_err(|error| CaptureError::storage(destination, error))?;
+        }
+        first = false;
+        serde_json::to_writer(file.writer()?, &event)?;
+    }
+    file.writer()?
+        .write_all(b"]}")
+        .map_err(|error| CaptureError::storage(destination, error))?;
+    file.publish()?;
     std::fs::remove_file(partial).map_err(|error| CaptureError::storage(partial, error))
 }
 

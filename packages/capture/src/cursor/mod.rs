@@ -1,4 +1,9 @@
 mod backend;
+mod telemetry;
+#[cfg(any(windows, target_os = "macos"))]
+mod worker_permit;
+#[cfg(any(windows, target_os = "macos"))]
+pub(crate) use worker_permit::{CursorWorkerPermit, cursor_worker_active};
 #[cfg(any(windows, target_os = "macos", test))]
 mod bitmap;
 mod coordinates;

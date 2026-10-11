@@ -12,6 +12,7 @@ import { formatRecordingTime, isRecordingActivePhase } from './recording-types';
 import { finalizeRecording } from './recording-stop';
 import { createRecordingRestart } from './recording-restart';
 import { createRecordingCountdown } from './recording-countdown';
+import { createRecordingPause } from './recording-pause';
 import type { RecordingConfiguration, RecordingPhase, RecordingSessionResult } from './recording-types';
 import type { RecordingStartFailure, RecordingStartStage, StartupSidecarState } from './recording-types';
 
@@ -449,30 +450,19 @@ export function useRecordingController(
     }
   }
 
-  const togglePause = async () => {
-    if (!sessionId) return;
-    if (phase.value === 'recording') {
-      const pauseNs = timelineNowNs();
-      await Promise.all([
-        capture.pause(),
-        camera?.pause(pauseNs),
-        microphone?.pause(pauseNs),
-        systemAudio?.pause(pauseNs),
-      ]);
-      clearTimer();
-      phase.value = 'paused';
-      resetSystemAudioLevel();
-    } else if (phase.value === 'paused') {
-      await Promise.all([
-        capture.resume(),
-        camera?.resume(sessionId),
-        microphone?.resume(sessionId),
-        systemAudio?.resume(sessionId),
-      ]);
-      startTimer();
-      phase.value = 'recording';
-    }
-  };
+  const togglePause = createRecordingPause({
+    phase,
+    error,
+    sessionId: () => sessionId,
+    recorders: () => [camera, microphone, systemAudio],
+    timelineNowNs,
+    pause: () => capture.pause(),
+    resume: () => capture.resume(),
+    stop,
+    clearTimer,
+    startTimer,
+    resetSystemAudioLevel,
+  });
 
   const recordingTime = computed(() => formatRecordingTime(elapsedTenths.value));
   const restart = createRecordingRestart(phase, () => configuration, cancel, start);

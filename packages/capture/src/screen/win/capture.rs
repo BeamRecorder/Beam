@@ -1,261 +1,62 @@
+use super::{
+    capture_handler::{CaptureHandler, CaptureHealth, HandlerFlags},
+    compatibility::compatible_settings,
+};
+use crate::{
+    CaptureError,
+    model::{ScreenRegion, SourceId},
+    screen::{
+        ScreenCaptureMetrics, ScreenConsumer, ScreenOpenRequest, bounded_task::NativeOperations,
+    },
+    session::StartGate,
+};
+use parking_lot::Mutex;
 use std::{
     ffi::c_void,
     path::{Path, PathBuf},
     sync::{
-        Arc,
+        Arc, OnceLock,
         atomic::{AtomicBool, Ordering},
     },
+    time::{Duration, Instant},
 };
-
-use parking_lot::Mutex;
 use windows_capture::{
-    capture::{CaptureControl, Context, GraphicsCaptureApiHandler},
-    frame::Frame,
-    graphics_capture_api::InternalCaptureControl,
+    capture::{CaptureControl, GraphicsCaptureApiHandler},
     monitor::Monitor,
     settings::{ColorFormat, DirtyRegionSettings, GraphicsCaptureItemType, Settings},
     window::Window,
 };
 
-use super::{compatibility::compatible_settings, encoder::RecordingEncoder};
-use crate::screen::{
-    frame_buffer::{flip_bgra_rows, pad_bgra_frame},
-    recording_queue::FrameCadence,
-};
-
-use crate::{
-    CaptureError,
-    model::{ScreenRegion, SourceId},
-    screen::{PixelCrop, ScreenCaptureMetrics, ScreenConsumer, ScreenOpenRequest, normalize_crop},
-    session::StartGate,
-};
-
-struct HandlerFlags {
-    output: PathBuf,
-    bitrate: u32,
-    fps: u32,
-    metrics: Arc<ScreenCaptureMetrics>,
-    start_gate: Arc<StartGate>,
-    region: Option<ScreenRegion>,
-    unavailable: Arc<AtomicBool>,
-}
-
-struct PendingEncoder {
-    output: PathBuf,
-    bitrate: u32,
-    fps: u32,
-    candidate_crop_size: Option<(u32, u32)>,
-}
-
-struct CaptureHandler {
-    encoder: Option<RecordingEncoder>,
-    pending_encoder: Option<PendingEncoder>,
-    metrics: Arc<ScreenCaptureMetrics>,
-    start_gate: Arc<StartGate>,
-    region: Option<ScreenRegion>,
-    crop: Option<PixelCrop>,
-    encoded_size: Option<(u32, u32)>,
-    cadence: FrameCadence,
-    unavailable: Arc<AtomicBool>,
-}
-
-impl CaptureHandler {
-    fn from_flags(flags: HandlerFlags) -> Self {
-        let settings = PendingEncoder {
-            output: flags.output,
-            bitrate: flags.bitrate,
-            fps: flags.fps,
-            candidate_crop_size: None,
-        };
-        let cadence = FrameCadence::new(settings.fps);
-        // GetWindowRect can return DPI-virtualized bounds. Only a received WGC
-        // frame supplies reliable pixel dimensions for the encoder.
-        Self {
-            encoder: None,
-            pending_encoder: Some(settings),
-            metrics: flags.metrics,
-            start_gate: flags.start_gate,
-            region: flags.region,
-            crop: None,
-            encoded_size: None,
-            cadence,
-            unavailable: flags.unavailable,
-        }
-    }
-
-    fn create_encoder(
-        settings: &PendingEncoder,
-        width: u32,
-        height: u32,
-    ) -> Result<RecordingEncoder, String> {
-        RecordingEncoder::new(
-            &settings.output,
-            width,
-            height,
-            settings.bitrate,
-            settings.fps,
-        )
-    }
-
-    fn finish(&mut self) -> Result<(), CaptureError> {
-        self.pending_encoder = None;
-        if let Some(encoder) = self.encoder.take() {
-            encoder
-                .finish()
-                .map_err(|error| CaptureError::Backend(error.to_string()))?;
-        }
-        Ok(())
-    }
-    fn process_frame(&mut self, frame: &mut Frame) -> Result<(), String> {
-        if !self.start_gate.is_released() {
-            self.start_gate.wait().map_err(|error| error.to_string())?;
-        }
-        let timestamp = frame
-            .timestamp()
-            .map_err(|error| error.to_string())?
-            .Duration;
-        if !self.cadence.accepts(timestamp) {
-            return Ok(());
-        }
-        let crop = if let Some(region) = self.region {
-            let frame_crop = normalize_crop(region, frame.width(), frame.height())
-                .map_err(|error| error.to_string())?;
-            if let Some(encoder_crop) = self.crop {
-                if frame_crop.width() != encoder_crop.width()
-                    || frame_crop.height() != encoder_crop.height()
-                {
-                    return Err("captured frame dimensions changed during region recording".into());
-                }
-            } else {
-                let candidate_size = (frame_crop.width(), frame_crop.height());
-                let pending = self
-                    .pending_encoder
-                    .as_mut()
-                    .ok_or_else(|| "video encoder was finalized".to_owned())?;
-                if pending.candidate_crop_size != Some(candidate_size) {
-                    pending.candidate_crop_size = Some(candidate_size);
-                    self.metrics.dropped_frames(1);
-                    return Ok(());
-                }
-                let settings = self.pending_encoder.take().ok_or_else(|| {
-                    "video encoder settings disappeared during initialization".to_owned()
-                })?;
-                self.encoder = Some(Self::create_encoder(
-                    &settings,
-                    frame_crop.width(),
-                    frame_crop.height(),
-                )?);
-                self.crop = Some(frame_crop);
-                self.encoded_size = Some(candidate_size);
-            }
-            Some(frame_crop)
-        } else {
-            if let Some(settings) = self.pending_encoder.take() {
-                let bounds = normalize_crop(
-                    ScreenRegion {
-                        x: 0.0,
-                        y: 0.0,
-                        width: 1.0,
-                        height: 1.0,
-                    },
-                    frame.width(),
-                    frame.height(),
-                )
-                .map_err(|error| error.to_string())?;
-                self.encoder = Some(Self::create_encoder(
-                    &settings,
-                    bounds.width(),
-                    bounds.height(),
-                )?);
-                self.encoded_size = Some((bounds.width(), bounds.height()));
-            }
-            None
-        };
-        let encoder = self
-            .encoder
-            .as_mut()
-            .ok_or_else(|| "video encoder was finalized".to_owned())?;
-        if !encoder.has_capacity()? {
-            self.metrics.dropped_frames(1);
-            return Ok(());
-        }
-        let crop = crop.or_else(|| {
-            self.encoded_size
-                .filter(|size| *size != (frame.width(), frame.height()))
-                .map(|(width, height)| PixelCrop {
-                    start_x: 0,
-                    start_y: 0,
-                    end_x: width.min(frame.width()),
-                    end_y: height.min(frame.height()),
-                })
-        });
-        let result = if let Some(crop) = crop {
-            let cropped = frame
-                .buffer_crop(crop.start_x, crop.start_y, crop.end_x, crop.end_y)
-                .map_err(|error| error.to_string())?;
-            let mut compact = Vec::new();
-            let bytes = cropped.as_nopadding_buffer(&mut compact);
-            let (width, height) = self
-                .encoded_size
-                .ok_or("recording dimensions are unavailable")?;
-            let padded = pad_bgra_frame(bytes, crop.width(), crop.height(), width, height)
-                .map_err(|error| error.to_string())?;
-            // WinRT buffer samples use bottom-up BGRA; WGC surfaces are top-down.
-            let bottom_up = flip_bgra_rows(&padded, width, height);
-            encoder.send_frame_buffer(&bottom_up, timestamp)
-        } else {
-            encoder.send_frame(frame)
-        };
-        let accepted = result.map_err(|error| {
-            self.unavailable.store(true, Ordering::Release);
-            self.metrics.dropped_frames(1);
-            error.to_string()
-        })?;
-        if accepted {
-            self.metrics.received_frame(None, false);
-        } else {
-            self.metrics.dropped_frames(1);
-        }
-        Ok(())
-    }
-}
-
-impl GraphicsCaptureApiHandler for CaptureHandler {
-    type Flags = HandlerFlags;
-    type Error = String;
-
-    fn new(context: Context<Self::Flags>) -> Result<Self, Self::Error> {
-        Ok(Self::from_flags(context.flags))
-    }
-
-    fn on_frame_arrived(
-        &mut self,
-        frame: &mut Frame,
-        _capture_control: InternalCaptureControl,
-    ) -> Result<(), Self::Error> {
-        let result = self.process_frame(frame);
-        if result.is_err() {
-            self.unavailable.store(true, Ordering::Release);
-        }
-        result
-    }
-
-    fn on_closed(&mut self) -> Result<(), Self::Error> {
-        self.unavailable.store(true, Ordering::Release);
-        self.finish().map_err(|error| error.to_string())
-    }
-}
-
 type Control = CaptureControl<CaptureHandler, String>;
+fn native_operations() -> &'static NativeOperations {
+    static OPERATIONS: OnceLock<NativeOperations> = OnceLock::new();
+    OPERATIONS.get_or_init(NativeOperations::default)
+}
+
+pub(super) fn run_native<T: Send + 'static>(
+    name: &'static str,
+    timeout: Duration,
+    operation: impl FnOnce() -> Result<T, CaptureError> + Send + 'static,
+) -> Result<T, CaptureError> {
+    native_operations().run(name, timeout, move || {
+        let _apartment = super::RuntimeApartment::initialize()?;
+        operation()
+    })
+}
 
 pub struct WindowsRecording {
     control: Option<Control>,
     callback: Arc<Mutex<CaptureHandler>>,
     metrics: Arc<ScreenCaptureMetrics>,
     output: PathBuf,
-    unavailable: Arc<AtomicBool>,
+    health: Arc<Mutex<CaptureHealth>>,
+    stopping: Arc<AtomicBool>,
+    start_gate: Arc<StartGate>,
+    stopped_result: Option<Result<(), String>>,
+    stop_requested_at: Option<Instant>,
+    finalized: Arc<AtomicBool>,
+    health_worker: Option<std::thread::JoinHandle<Result<(), CaptureError>>>,
 }
-
 impl WindowsRecording {
     pub(crate) fn open(request: ScreenOpenRequest<'_>) -> Result<Self, CaptureError> {
         let crate::model::ScreenSelection::Source { source_id } = request.selection else {
@@ -335,51 +136,97 @@ impl WindowsRecording {
         )))
     }
 
+    pub(crate) fn request_stop(&mut self) {
+        self.stop_requested_at.get_or_insert_with(Instant::now);
+        self.stopping.store(true, Ordering::Release);
+        self.start_gate.cancel();
+    }
+
     pub fn stop(&mut self) -> Result<(), CaptureError> {
-        let control_result = self
-            .control
-            .take()
-            .map_or(Ok(()), |control| control.stop().map_err(backend_error));
-        let finish_result = self.callback.lock().finish();
-        let result = match control_result {
-            Err(error) => Err(error),
-            Ok(()) => finish_result,
-        };
-        let result = result.and_then(|()| {
-            if self.metrics.frames_received() == 0 {
-                return Err(CaptureError::Backend(
-                    "Windows Graphics Capture produced no frames for the selected window".into(),
-                ));
-            }
-            let size = std::fs::metadata(&self.output)
-                .map_err(backend_error)?
-                .len();
-            if size == 0 {
-                return Err(CaptureError::Backend(
-                    "Windows Graphics Capture produced an empty video file".into(),
-                ));
-            }
-            Ok(())
-        });
-        if result.is_err() {
-            let _ = std::fs::remove_file(&self.output);
+        if let Some(result) = &self.stopped_result {
+            return result.clone().map_err(CaptureError::Backend);
         }
+        self.request_stop();
+        let stopped_at = self.stop_requested_at.unwrap_or_else(Instant::now);
+        let control = self.control.take();
+        let callback = self.callback.clone();
+        let finalized = self.finalized.clone();
+        let output = self.output.clone();
+        let metrics = self.metrics.clone();
+        let mut result = run_native("wgc-stop", Duration::from_secs(25), move || {
+            let stopped = control.map_or(Ok(()), |control| control.stop().map_err(backend_error));
+            let finished = callback.lock().finish_at(stopped_at);
+            if finished.is_ok() && validate_output(&output, metrics.frames_received()).is_ok() {
+                finalized.store(true, Ordering::Release);
+            }
+            stopped.and(finished)
+        })
+        .and_then(|()| {
+            if let Some(error) = &self.health.lock().failure {
+                return Err(CaptureError::Backend(error.clone()));
+            }
+            validate_output(&self.output, self.metrics.frames_received())
+        });
+        if let Some(worker) = self.health_worker.take() {
+            let joined = crate::session::join_worker(worker, "Windows capture health");
+            result = result.and(joined);
+        }
+        if let Err(error) = &result {
+            self.health.lock().fail(error);
+        }
+        // Never delete media here. Even a failed or interrupted segment may
+        // contain valid recorded content and must remain available to recovery.
+        self.stopped_result = Some(result.as_ref().copied().map_err(ToString::to_string));
         result
     }
-
     pub fn is_available(&self) -> bool {
-        if let Some(mut callback) = self.callback.try_lock()
-            && let Some(encoder) = callback.encoder.as_mut()
-            && encoder.has_capacity().is_err()
-        {
-            self.unavailable.store(true, Ordering::Release);
-        }
-        !self.unavailable.load(Ordering::Acquire)
+        self.failure_reason().is_none()
     }
-
+    pub(crate) fn output_finalized(&self) -> bool {
+        self.finalized.load(Ordering::Acquire)
+    }
+    pub fn failure_reason(&self) -> Option<String> {
+        if self.stopping.load(Ordering::Acquire) {
+            return self.health.lock().failure.clone();
+        }
+        if self.control.as_ref().is_some_and(Control::is_finished) {
+            self.health
+                .lock()
+                .fail("Windows Graphics Capture stopped unexpectedly");
+        }
+        if self
+            .health_worker
+            .as_ref()
+            .is_some_and(std::thread::JoinHandle::is_finished)
+            && self.health.lock().failure.is_none()
+        {
+            self.health
+                .lock()
+                .fail("Windows capture health worker stopped unexpectedly");
+        }
+        let mut health = self.health.lock();
+        if self.start_gate.is_released() {
+            let now = Instant::now();
+            if health.callback_since.is_some_and(|since| {
+                now.saturating_duration_since(since) >= Duration::from_secs(15)
+            }) {
+                health.fail("Windows capture callback is blocked for 15 seconds");
+            } else if health.encoded_size.is_none()
+                && self
+                    .start_gate
+                    .elapsed_since_release()
+                    .is_some_and(|elapsed| elapsed >= Duration::from_secs(30))
+            {
+                health.fail(
+                    "Windows Graphics Capture did not deliver its first image within 30 seconds",
+                );
+            }
+        }
+        health.failure.clone()
+    }
     #[must_use]
     pub fn video_format(&self) -> Option<crate::screen::VideoFormat> {
-        let (width, height) = self.callback.lock().encoded_size?;
+        let (width, height) = self.health.lock().encoded_size?;
         Some(crate::screen::VideoFormat {
             width,
             height,
@@ -387,20 +234,31 @@ impl WindowsRecording {
             pixel_format: crate::screen::PixelFormat::Bgra8,
         })
     }
-
     #[must_use]
     pub fn metrics(&self) -> Arc<ScreenCaptureMetrics> {
         self.metrics.clone()
     }
 }
-
 impl Drop for WindowsRecording {
     fn drop(&mut self) {
-        if let Some(control) = self.control.take() {
-            let _result = control.stop();
+        if self.control.is_some() {
+            let _ = self.stop();
         }
-        let _result = self.callback.lock().finish();
     }
+}
+
+fn validate_output(path: &Path, frames: u64) -> Result<(), CaptureError> {
+    if frames == 0 {
+        return Err(CaptureError::Backend(
+            "Windows Graphics Capture produced no frames for the selected source".into(),
+        ));
+    }
+    if std::fs::metadata(path).map_err(backend_error)?.len() == 0 {
+        return Err(CaptureError::Backend(
+            "Windows Graphics Capture produced an empty video file".into(),
+        ));
+    }
+    Ok(())
 }
 
 struct StartItemConfig<'a> {
@@ -425,7 +283,9 @@ where
         start_gate,
     } = config;
     let metrics = Arc::new(ScreenCaptureMetrics::default());
-    let unavailable = Arc::new(AtomicBool::new(false));
+    let health = Arc::new(Mutex::new(CaptureHealth::default()));
+    let stopping = Arc::new(AtomicBool::new(false));
+    let recording_gate = start_gate.clone();
     let flags = HandlerFlags {
         output: output.to_owned(),
         bitrate,
@@ -433,7 +293,8 @@ where
         metrics: metrics.clone(),
         start_gate,
         region,
-        unavailable: unavailable.clone(),
+        health: health.clone(),
+        stopping: stopping.clone(),
     };
     let compatibility = compatible_settings(exclude_cursor, fps);
     let settings = Settings::new(
@@ -446,18 +307,45 @@ where
         ColorFormat::Bgra8,
         flags,
     );
-    let control = CaptureHandler::start_free_threaded(settings).map_err(backend_error)?;
-    let callback = control.callback();
-    Ok(WindowsRecording {
-        control: Some(control),
-        callback,
-        metrics,
-        output: output.to_owned(),
-        unavailable,
+    let output = output.to_owned();
+    run_native("wgc-start", Duration::from_secs(15), move || {
+        let control = CaptureHandler::start_free_threaded(settings).map_err(backend_error)?;
+        let callback = control.callback();
+        let mut recording = WindowsRecording {
+            control: Some(control),
+            callback,
+            metrics,
+            output,
+            health,
+            stopping,
+            start_gate: recording_gate,
+            stopped_result: None,
+            stop_requested_at: None,
+            finalized: Arc::new(AtomicBool::new(false)),
+            health_worker: None,
+        };
+        match super::capture_health::start(
+            recording.callback.clone(),
+            recording.health.clone(),
+            recording.stopping.clone(),
+        ) {
+            Ok(worker) => recording.health_worker = Some(worker),
+            Err(error) => {
+                // Still inside the bounded startup worker. Clean up here rather
+                // than recursively trying to acquire its native-operation slot.
+                recording.request_stop();
+                if let Some(control) = recording.control.take() {
+                    let _ = control.stop();
+                }
+                let _ = recording.callback.lock().finish_at(Instant::now());
+                return Err(error);
+            }
+        }
+        Ok(recording)
     })
 }
 
-pub(super) fn window_from_source_id(source_id: &SourceId) -> Result<Window, CaptureError> {
+pub(crate) fn window_from_source_id(source_id: &SourceId) -> Result<Window, CaptureError> {
     let s = source_id.as_str();
     let (raw, radix) = if let Some(raw) = s.strip_prefix("wgc:window:") {
         (raw, 16)

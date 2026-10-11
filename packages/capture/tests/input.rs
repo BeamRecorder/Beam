@@ -217,3 +217,77 @@ fn invalid_input_partial_is_preserved_for_recovery() {
     assert!(partial.is_file());
     assert!(!destination.exists());
 }
+
+#[test]
+fn external_sort_handles_large_shuffled_journals_and_preserves_equal_time_order() {
+    let temporary = tempfile::tempdir().expect("directory");
+    let partial = temporary.path().join("input.partial.jsonl");
+    let destination = temporary.path().join("input.json");
+    let mut writer = capture::input::InputEventWriter::open(&partial).expect("writer");
+    let mut seed = 42_u64;
+    let mut expected = Vec::new();
+    for index in 0..100_000 {
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+        let event = InputEvent::MouseButton {
+            session_ns: seed % 1000,
+            button: (index % 3 + 1) as u8,
+            pressed: index % 2 == 0,
+        };
+        writer.push(&event).expect("event");
+        expected.push(event);
+    }
+    writer.flush().expect("flush");
+    drop(writer);
+    expected.sort_by_key(InputEvent::session_ns);
+    finalize_input_events(&partial, &destination).expect("external merge");
+    let actual: InputEventSidecar = capture::storage::read_json(&destination).expect("sidecar");
+    assert_eq!(actual.events, expected);
+    assert!(!partial.exists());
+    assert_eq!(
+        temporary.path().read_dir().expect("directory").count(),
+        1,
+        "sort runs must be cleaned up"
+    );
+}
+
+#[test]
+fn corrupt_large_journals_keep_existing_input_and_clean_every_sort_run() {
+    use std::io::Write;
+    let temporary = tempfile::tempdir().expect("directory");
+    let partial = temporary.path().join("input.partial.jsonl");
+    let destination = temporary.path().join("input.json");
+    let mut writer = capture::input::InputEventWriter::open(&partial).expect("writer");
+    for session_ns in 0..20_000 {
+        writer
+            .push(&InputEvent::MouseButton {
+                session_ns,
+                button: 1,
+                pressed: true,
+            })
+            .expect("event");
+    }
+    writer.flush().expect("flush");
+    drop(writer);
+    std::fs::OpenOptions::new()
+        .append(true)
+        .open(&partial)
+        .expect("append")
+        .write_all(b"{torn")
+        .expect("corruption");
+    std::fs::write(&destination, b"existing sidecar").expect("existing");
+    let original_size = partial.metadata().expect("original").len();
+    assert!(finalize_input_events(&partial, &destination).is_err());
+    assert_eq!(
+        partial.metadata().expect("preserved journal").len(),
+        original_size
+    );
+    assert_eq!(
+        std::fs::read(destination).expect("preserved output"),
+        b"existing sidecar"
+    );
+    assert_eq!(
+        temporary.path().read_dir().expect("directory").count(),
+        2,
+        "failed merges must clean private runs"
+    );
+}

@@ -1312,5 +1312,9 @@
   "BigSlider": {
     "resetDefault": "기본값으로 재설정",
     "editValue": "클릭하여 값을 직접 편집"
+  },
+  "RecordingHealth": {
+    "captureStopped": "화면 녹화가 중지되었습니다. 녹화된 파일은 보존되었습니다.",
+    "transitionFailed": "일시 정지 또는 재개에 실패했습니다. 파일을 보존하기 위해 녹화를 중지했습니다. {reason}"
   }
 }

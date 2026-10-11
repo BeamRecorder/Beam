@@ -1312,5 +1312,9 @@
   "BigSlider": {
     "resetDefault": "既定値に戻す",
     "editValue": "クリックして値を直接編集"
+  },
+  "RecordingHealth": {
+    "captureStopped": "画面録画が停止しました。録画済みのファイルは保持されています。",
+    "transitionFailed": "一時停止または再開に失敗しました。ファイルを保持するため録画を停止しました。{reason}"
   }
 }

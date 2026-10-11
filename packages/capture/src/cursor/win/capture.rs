@@ -1,6 +1,6 @@
 use std::{ffi::c_void, mem::size_of, sync::OnceLock};
 
-use windows_capture::{monitor::Monitor, window::Window};
+use windows_capture::monitor::Monitor;
 
 use windows::Win32::{
     Foundation::{HWND, POINT},
@@ -44,11 +44,24 @@ pub struct WindowsCursorSample {
 pub struct WindowsCursorSourceContext {
     pub region: CaptureRegion,
     pub display_scale_factor: Option<f64>,
+    pub window_handle: Option<usize>,
 }
 
 pub fn sample_cursor(
     region: CaptureRegion,
     include_shape: bool,
+) -> Result<WindowsCursorSample, CaptureError> {
+    sample_cursor_cached(
+        region,
+        include_shape,
+        &mut super::shape_cache::ShapeCache::default(),
+    )
+}
+
+pub(super) fn sample_cursor_cached(
+    region: CaptureRegion,
+    include_shape: bool,
+    cache: &mut super::shape_cache::ShapeCache,
 ) -> Result<WindowsCursorSample, CaptureError> {
     let mut info = CURSORINFO {
         cbSize: u32::try_from(size_of::<CURSORINFO>()).map_err(backend_error)?,
@@ -66,7 +79,8 @@ pub fn sample_cursor(
     let position = map_coordinates(physical_position.x, physical_position.y, region)?;
     let visible = info.flags == CURSOR_SHOWING;
     let shape = if include_shape && visible && !info.hCursor.is_invalid() {
-        Some(cursor_shape(info.hCursor.0 as usize)?)
+        let id = info.hCursor.0 as usize;
+        Some(cache.resolve(id, std::time::Instant::now(), || cursor_shape(id))?)
     } else {
         None
     };
@@ -100,32 +114,45 @@ pub fn source_context(source_id: &SourceId) -> Result<WindowsCursorSourceContext
         return Ok(WindowsCursorSourceContext {
             region: region_from_rect(info.rcMonitor)?,
             display_scale_factor: display_scale_factor(monitor),
+            window_handle: None,
         });
     }
-    if source_id.as_str().starts_with("wgc:window:") {
-        let window = Window::enumerate()
-            .map_err(backend_error)?
-            .into_iter()
-            .find(|window| {
-                source_id.as_str() == format!("wgc:window:{:x}", window.as_raw_hwnd() as usize)
-            })
-            .ok_or_else(|| CaptureError::SourceNotFound(source_id.to_string()))?;
-        let monitor = unsafe {
-            windows::Win32::Graphics::Gdi::MonitorFromWindow(
-                HWND(window.as_raw_hwnd()),
-                windows::Win32::Graphics::Gdi::MONITOR_DEFAULTTONEAREST,
-            )
-        };
-        return Ok(WindowsCursorSourceContext {
-            region: region_from_rect(window.rect().map_err(backend_error)?)?,
-            display_scale_factor: (!monitor.is_invalid())
-                .then(|| display_scale_factor(monitor))
-                .flatten(),
-        });
+    if source_id.as_str().starts_with("wgc:window:") || source_id.as_str().starts_with("window:") {
+        let window = crate::screen::win::window_from_source_id(source_id)?;
+        return window_context(window.as_raw_hwnd() as usize);
     }
     Err(CaptureError::InvalidConfiguration(format!(
         "{source_id} is not a Windows visual source"
     )))
+}
+
+pub(super) fn window_context(handle: usize) -> Result<WindowsCursorSourceContext, CaptureError> {
+    use windows::Win32::{
+        Foundation::RECT,
+        Graphics::{
+            Dwm::{DWMWA_EXTENDED_FRAME_BOUNDS, DwmGetWindowAttribute},
+            Gdi::{MONITOR_DEFAULTTONEAREST, MonitorFromWindow},
+        },
+    };
+    let hwnd = HWND(handle as *mut c_void);
+    let mut bounds = RECT::default();
+    // DWM's extended frame bounds exclude invisible resize borders and use
+    // physical pixels, matching WGC's captured window content.
+    unsafe {
+        DwmGetWindowAttribute(
+            hwnd,
+            DWMWA_EXTENDED_FRAME_BOUNDS,
+            (&mut bounds as *mut RECT).cast(),
+            size_of::<RECT>() as u32,
+        )
+    }
+    .map_err(backend_error)?;
+    let monitor = unsafe { MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST) };
+    Ok(WindowsCursorSourceContext {
+        region: region_from_rect(bounds)?,
+        display_scale_factor: display_scale_factor(monitor),
+        window_handle: Some(handle),
+    })
 }
 
 pub fn source_region(source_id: &SourceId) -> Result<CaptureRegion, CaptureError> {

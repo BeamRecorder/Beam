@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc, thread::JoinHandle, time::Instant};
+use std::{path::PathBuf, sync::Arc, thread::JoinHandle};
 
 use crossbeam_channel::{Receiver, RecvTimeoutError, Sender, bounded};
 
@@ -38,6 +38,7 @@ impl MetricSampler {
 pub(super) struct PeriodicReporter {
     stop: Option<Sender<()>>,
     thread: Option<JoinHandle<Result<(), CaptureError>>>,
+    start_gate: Arc<StartGate>,
 }
 
 #[derive(Debug, Clone)]
@@ -57,19 +58,22 @@ impl PeriodicReporter {
         health_path: PathBuf,
         timing_path: PathBuf,
         start_gate: Arc<StartGate>,
-        segment_start_ns: u64,
+        _segment_start_ns: u64,
         samplers: Vec<MetricSampler>,
         source_watches: Vec<SourceWatch>,
     ) -> Result<Self, CaptureError> {
         let (stop, receiver) = bounded(1);
+        let worker_gate = start_gate.clone();
         let thread = std::thread::Builder::new()
             .name("capture-health-reporter".into())
             .spawn(move || {
-                start_gate.wait()?;
+                #[cfg(windows)]
+                let _apartment = crate::screen::win::RuntimeApartment::initialize()?;
+                worker_gate.wait()?;
                 report_loop(
                     &health_path,
                     &timing_path,
-                    segment_start_ns,
+                    &worker_gate,
                     &samplers,
                     &source_watches,
                     &receiver,
@@ -79,6 +83,7 @@ impl PeriodicReporter {
         Ok(Self {
             stop: Some(stop),
             thread: Some(thread),
+            start_gate,
         })
     }
 
@@ -88,10 +93,9 @@ impl PeriodicReporter {
 
     fn finish(&mut self) -> Result<(), CaptureError> {
         self.stop.take();
+        self.start_gate.cancel();
         if let Some(thread) = self.thread.take() {
-            thread
-                .join()
-                .map_err(|_| CaptureError::Backend("health reporter thread panicked".into()))??;
+            super::join_worker(thread, "health reporter")?;
         }
         Ok(())
     }
@@ -106,12 +110,11 @@ impl Drop for PeriodicReporter {
 fn report_loop(
     health_path: &std::path::Path,
     timing_path: &std::path::Path,
-    segment_start_ns: u64,
+    start_gate: &StartGate,
     samplers: &[MetricSampler],
     source_watches: &[SourceWatch],
     stop: &Receiver<()>,
 ) -> Result<(), CaptureError> {
-    let started = Instant::now();
     let mut previous = vec![TrackMetrics::default(); samplers.len()];
     let mut source_state = source_watches
         .iter()
@@ -123,8 +126,7 @@ fn report_loop(
             Ok(()) | Err(RecvTimeoutError::Disconnected) => return Ok(()),
             Err(RecvTimeoutError::Timeout) => {}
         }
-        let session_ns = segment_start_ns
-            .saturating_add(u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX));
+        let session_ns = start_gate.session_time_ns()?;
         for (index, sampler) in samplers.iter().enumerate() {
             let metrics = add_metrics(&sampler.base, &(sampler.sample)());
             append_jsonl(
@@ -337,6 +339,12 @@ fn add_metrics(base: &TrackMetrics, current: &TrackMetrics) -> TrackMetrics {
     TrackMetrics {
         frames_acquired: base.frames_acquired.saturating_add(current.frames_acquired),
         frames_encoded: base.frames_encoded.saturating_add(current.frames_encoded),
+        frames_submitted: base
+            .frames_submitted
+            .saturating_add(current.frames_submitted),
+        frames_processed: base
+            .frames_processed
+            .saturating_add(current.frames_processed),
         frames_received: base.frames_received.saturating_add(current.frames_received),
         frames_dropped: base.frames_dropped.saturating_add(current.frames_dropped),
         samples_received: base

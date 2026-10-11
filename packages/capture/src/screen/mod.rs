@@ -1,8 +1,13 @@
+#[cfg(any(windows, test))]
+mod bounded_task;
 mod crop;
 mod desktop_policy;
 mod frame;
-#[cfg(any(windows, test))]
+#[cfg(test)]
 mod frame_buffer;
+#[cfg(any(windows, test))]
+mod frame_pool;
+mod metrics;
 mod preview;
 mod recording;
 #[cfg(any(windows, target_os = "macos", test))]
@@ -13,6 +18,7 @@ mod selection;
 #[cfg(any(windows, target_os = "linux"))]
 pub(crate) use crop::{PixelCrop, normalize_crop};
 pub use frame::*;
+pub use metrics::*;
 pub use preview::*;
 pub use recording::*;
 pub use region_selection::*;

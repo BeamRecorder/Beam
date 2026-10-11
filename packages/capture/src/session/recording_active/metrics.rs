@@ -20,8 +20,16 @@ pub(super) fn samplers(
             track.format.clone(),
             track.metrics.clone(),
             move || TrackMetrics {
+                #[cfg(not(windows))]
                 frames_acquired: metrics.frames_received(),
+                #[cfg(windows)]
+                frames_acquired: metrics.frames_acquired(),
+                #[cfg(not(windows))]
                 frames_encoded: metrics.frames_received(),
+                #[cfg(windows)]
+                frames_submitted: metrics.frames_submitted(),
+                #[cfg(windows)]
+                frames_processed: metrics.frames_processed(),
                 frames_received: metrics.frames_received(),
                 frames_dropped: metrics.frames_dropped(),
                 ..TrackMetrics::default()

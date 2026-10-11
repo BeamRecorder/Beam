@@ -45,7 +45,6 @@ pub fn recover_session(layout: &SessionLayout) -> Result<RecoveryReport, crate::
     let jsonl_paths = [
         layout.health(),
         layout.timing(),
-        cursor_directory.join("cursor.json"),
         cursor_directory.join("cursor.partial.jsonl"),
         cursor_directory.join("input.partial.jsonl"),
     ];
@@ -62,21 +61,47 @@ fn repair_invalid_trailing_lines(path: &std::path::Path) -> Result<usize, crate:
     if !path.exists() {
         return Ok(0);
     }
-    let contents =
-        std::fs::read_to_string(path).map_err(|error| crate::CaptureError::storage(path, error))?;
-    let lines = contents.lines().collect::<Vec<_>>();
-    let valid_count = lines
-        .iter()
-        .position(|line| serde_json::from_str::<serde_json::Value>(line).is_err())
-        .unwrap_or(lines.len());
-    let ignored = lines.len().saturating_sub(valid_count);
-    if ignored > 0 {
-        let mut repaired = lines[..valid_count].join("\n");
-        if !repaired.is_empty() {
-            repaired.push('\n');
+    let file =
+        std::fs::File::open(path).map_err(|error| crate::CaptureError::storage(path, error))?;
+    let mut reader = std::io::BufReader::new(file);
+    let mut bytes = Vec::new();
+    let mut valid_end = 0_u64;
+    let mut ignored = 0_usize;
+    loop {
+        let count = super::read_record(&mut reader, &mut bytes, path)?;
+        if count == 0 {
+            break;
         }
-        std::fs::write(path, repaired)
+        let blank = bytes.iter().all(u8::is_ascii_whitespace);
+        let valid = blank || serde_json::from_slice::<serde_json::Value>(&bytes).is_ok();
+        if valid && ignored > 0 && !blank {
+            return Err(crate::CaptureError::storage(
+                path,
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "capture journal has corruption before a valid record; original data was preserved",
+                ),
+            ));
+        }
+        if valid && ignored == 0 {
+            valid_end += count as u64;
+        } else {
+            ignored += 1;
+        }
+    }
+    drop(reader);
+    if ignored > 0 {
+        let file = std::fs::OpenOptions::new()
+            .write(true)
+            .open(path)
+            .map_err(|error| crate::CaptureError::storage(path, error))?;
+        file.set_len(valid_end)
+            .and_then(|()| file.sync_all())
             .map_err(|error| crate::CaptureError::storage(path, error))?;
     }
     Ok(ignored)
 }
+
+#[cfg(test)]
+#[path = "recovery_tests.rs"]
+mod tests;

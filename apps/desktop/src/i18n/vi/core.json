@@ -1312,5 +1312,9 @@
   "BigSlider": {
     "resetDefault": "Đặt lại giá trị mặc định",
     "editValue": "Nhấp để chỉnh sửa trực tiếp giá trị"
+  },
+  "RecordingHealth": {
+    "captureStopped": "Quá trình ghi màn hình đã dừng. Các tệp đã ghi được giữ lại.",
+    "transitionFailed": "Không thể tạm dừng hoặc tiếp tục. Quá trình ghi đã dừng để giữ lại các tệp của bạn. {reason}"
   }
 }

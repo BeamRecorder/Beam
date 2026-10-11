@@ -27,6 +27,8 @@ fn main() {
 fn run() -> Result<(), capture::CaptureError> {
     #[cfg(windows)]
     windows_dpi::configure_windows_dpi_awareness()?;
+    #[cfg(windows)]
+    let _runtime = windows_dpi::RuntimeApartment::initialize()?;
     capture::parent_watch::install_parent_death_guard()?;
     #[cfg(target_os = "macos")]
     return run_with_main_thread_cursor_sampling();
@@ -346,6 +348,7 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
                 "manifestPath": engine.session.as_ref().map(RecordingSession::manifest_path),
                 "systemAudioLevel": engine.session.as_ref().and_then(RecordingSession::system_audio_level),
                 "screenAvailable": engine.session.as_ref().is_none_or(RecordingSession::screen_available),
+                "screenCaptureError": engine.session.as_ref().and_then(RecordingSession::screen_capture_error),
                 "inputCaptureError": input_capture_error,
             }))
         }

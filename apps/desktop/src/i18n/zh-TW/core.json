@@ -1312,5 +1312,9 @@
   "BigSlider": {
     "resetDefault": "還原預設值",
     "editValue": "點擊直接編輯數值"
+  },
+  "RecordingHealth": {
+    "captureStopped": "螢幕錄影已停止。已保留錄製的檔案。",
+    "transitionFailed": "暫停或繼續錄影失敗。為保留檔案，錄影已停止。{reason}"
   }
 }

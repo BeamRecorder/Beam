@@ -1312,5 +1312,9 @@
   "BigSlider": {
     "resetDefault": "Przywróć wartość domyślną",
     "editValue": "Kliknij, aby edytować wartość bezpośrednio"
+  },
+  "RecordingHealth": {
+    "captureStopped": "Nagrywanie ekranu zostało zatrzymane. Nagrane pliki zostały zachowane.",
+    "transitionFailed": "Nie udało się wstrzymać lub wznowić nagrywania. Nagrywanie zatrzymano, aby zachować pliki. {reason}"
   }
 }

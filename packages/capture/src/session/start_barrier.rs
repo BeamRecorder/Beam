@@ -4,11 +4,16 @@ use std::sync::{
 };
 
 use crate::CaptureError;
+use std::time::Instant;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum GateState {
     Armed,
-    Started { t0_ns: u64 },
+    Started {
+        t0_ns: u64,
+        session_ns: u64,
+        started_at: Instant,
+    },
     Cancelled,
 }
 
@@ -31,6 +36,10 @@ impl StartGate {
     }
 
     pub fn release(&self, t0_ns: u64) -> Result<(), CaptureError> {
+        self.release_at(t0_ns, 0)
+    }
+
+    pub(crate) fn release_at(&self, t0_ns: u64, session_ns: u64) -> Result<(), CaptureError> {
         let mut state = self
             .state
             .lock()
@@ -41,7 +50,11 @@ impl StartGate {
                 to: "Started".into(),
             });
         }
-        *state = GateState::Started { t0_ns };
+        *state = GateState::Started {
+            t0_ns,
+            session_ns,
+            started_at: Instant::now(),
+        };
         self.fast_state.store(1, Ordering::Release);
         self.changed.notify_all();
         Ok(())
@@ -69,7 +82,7 @@ impl StartGate {
                 .map_err(|_| CaptureError::Backend("start gate lock poisoned".into()))?;
         }
         match *state {
-            GateState::Started { t0_ns } => Ok(t0_ns),
+            GateState::Started { t0_ns, .. } => Ok(t0_ns),
             GateState::Cancelled => Err(CaptureError::Backend(
                 "recording cancelled before the start barrier".into(),
             )),
@@ -77,9 +90,35 @@ impl StartGate {
         }
     }
 
+    pub(crate) fn session_time_ns(&self) -> Result<u64, CaptureError> {
+        self.wait()?;
+        let state = self
+            .state
+            .lock()
+            .map_err(|_| CaptureError::Backend("start gate lock poisoned".into()))?;
+        match *state {
+            GateState::Started {
+                session_ns,
+                started_at,
+                ..
+            } => Ok(session_ns.saturating_add(
+                u64::try_from(started_at.elapsed().as_nanos()).unwrap_or(u64::MAX),
+            )),
+            _ => Err(CaptureError::Cancelled),
+        }
+    }
+
     #[must_use]
     pub fn is_released(&self) -> bool {
         self.fast_state.load(Ordering::Acquire) == 1
+    }
+
+    #[cfg(windows)]
+    pub(crate) fn elapsed_since_release(&self) -> Option<std::time::Duration> {
+        match *self.state.lock().ok()? {
+            GateState::Started { started_at, .. } => Some(started_at.elapsed()),
+            _ => None,
+        }
     }
 }
 

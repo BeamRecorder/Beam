@@ -1324,5 +1324,9 @@
   "BigSlider": {
     "resetDefault": "Rétablir la valeur par défaut",
     "editValue": "Cliquez pour modifier la valeur directement"
+  },
+  "RecordingHealth": {
+    "captureStopped": "La capture vidéo s’est arrêtée. Les fichiers enregistrés ont été conservés.",
+    "transitionFailed": "La pause ou la reprise a échoué. L’enregistrement a été arrêté pour conserver vos fichiers. {reason}"
   }
 }

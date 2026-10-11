@@ -1312,5 +1312,9 @@
   "BigSlider": {
     "resetDefault": "Auf Standardwert zurücksetzen",
     "editValue": "Klicken, um den Wert direkt zu bearbeiten"
+  },
+  "RecordingHealth": {
+    "captureStopped": "Die Bildschirmaufnahme wurde beendet. Deine aufgenommenen Dateien wurden behalten.",
+    "transitionFailed": "Pausieren oder Fortsetzen fehlgeschlagen. Die Aufnahme wurde beendet, um deine Dateien zu erhalten. {reason}"
   }
 }

@@ -362,3 +362,38 @@ test('native transport rejects payloads that override its request envelope befor
     await assert.rejects(engine.request('capabilities', payload), /request envelope/);
   assert.equal(spawned.length, 0);
 });
+
+for (const command of ['stop', 'pause', 'resume']) {
+  test(`long ${command} keeps queued Status requests within the transition deadline`, async (context) => {
+    context.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+    const engine = createEngine();
+    const stop = engine.request(command);
+    const status = engine.request('status');
+    const [stopRequest, statusRequest] = writes.map((write) => JSON.parse(write));
+    assert.equal(engine.pending.get(stopRequest.id).deadline - Date.now(), 120_000);
+    context.mock.timers.tick(31_000);
+    assert.equal(spawned[0].killCalls.length, 0, 'Status must not kill a journal publisher after 30 seconds');
+    interfaces[0].lineHandler(JSON.stringify({ requestId: stopRequest.id, ok: true, result: { state: 'completed' } }));
+    interfaces[0].lineHandler(
+      JSON.stringify({ requestId: statusRequest.id, ok: true, result: { state: 'completed' } }),
+    );
+    await Promise.all([stop, status]);
+    assert.equal(engine.pending.size, 0);
+    await engine.forceShutdown();
+  });
+}
+
+test('a blocked long finalization still has a hard deadline and rejects queued requests', async (context) => {
+  context.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  const engine = createEngine();
+  const stop = engine.request('stop');
+  const status = engine.request('status');
+  const rejected = Promise.all([assert.rejects(stop, /Délai dépassé/), assert.rejects(status, /Délai dépassé/)]);
+  context.mock.timers.tick(120_001);
+  await rejected;
+  // The mocked clock also controls termination escalation.
+  context.mock.timers.tick(1_001);
+  await engine.terminating?.promise;
+  assert.ok(spawned[0].killCalls.length > 0);
+  assert.equal(engine.pending.size, 0);
+});

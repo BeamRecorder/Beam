@@ -382,3 +382,28 @@ fn recovery_preserves_a_failed_cursor_track_and_its_diagnostic_reason() {
     assert_eq!(track.termination_reason.as_deref(), Some(reason));
     assert_eq!(track.metrics.frames_received, 1);
 }
+
+#[test]
+fn recovery_never_treats_a_pretty_cursor_json_array_as_a_jsonl_journal() {
+    let temporary = tempfile::tempdir().expect("directory");
+    let project = ProjectId::new();
+    let session = SessionId::new();
+    let layout = ProjectLayout::new(temporary.path(), project).session(session);
+    layout.create().expect("layout");
+    let writer = ManifestWriter::new(layout.clone());
+    writer
+        .checkpoint(&manifest(project, session))
+        .expect("checkpoint");
+    let cursor = layout.track_dir(TrackKind::Cursor).join("cursor.json");
+    let bytes = b"[\n  {\"event\": \"visibility\", \"sessionNs\": 1, \"visible\": true}\n]\n";
+    std::fs::write(&cursor, bytes).expect("cursor sidecar");
+    for _ in 0..10 {
+        assert_eq!(
+            recover_session(&layout)
+                .expect("recover")
+                .ignored_trailing_jsonl_lines,
+            0
+        );
+        assert_eq!(std::fs::read(&cursor).expect("untouched cursor"), bytes);
+    }
+}

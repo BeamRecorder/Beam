@@ -1,120 +1,7 @@
 #![allow(clippy::expect_used)]
-
+use super::super::test_support::*;
 use super::*;
-use windows::{
-    Foundation::TimeSpan,
-    Media::Core::MediaStreamSample,
-    Win32::{
-        Foundation::HMODULE,
-        Graphics::{
-            Direct3D::D3D_DRIVER_TYPE_WARP,
-            Direct3D11::{
-                D3D11_CPU_ACCESS_READ, D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_MAP_READ,
-                D3D11_MAPPED_SUBRESOURCE, D3D11_SDK_VERSION, D3D11_USAGE_STAGING,
-                D3D11CreateDevice,
-            },
-            Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SAMPLE_DESC},
-        },
-        System::WinRT::{
-            Direct3D11::IDirect3DDxgiInterfaceAccess, RO_INIT_MULTITHREADED, RoInitialize,
-            RoUninitialize,
-        },
-    },
-};
-
-struct Apartment;
-impl Drop for Apartment {
-    fn drop(&mut self) {
-        unsafe { RoUninitialize() };
-    }
-}
-
-fn device() -> (Apartment, ID3D11Device, ID3D11DeviceContext) {
-    unsafe { RoInitialize(RO_INIT_MULTITHREADED) }.expect("WinRT apartment");
-    let apartment = Apartment;
-    let (mut device, mut context) = (None, None);
-    // WARP exercises real D3D texture lifetimes even on a headless Windows runner.
-    unsafe {
-        D3D11CreateDevice(
-            None,
-            D3D_DRIVER_TYPE_WARP,
-            HMODULE::default(),
-            D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-            None,
-            D3D11_SDK_VERSION,
-            Some(&mut device),
-            None,
-            Some(&mut context),
-        )
-    }
-    .expect("D3D11 WARP device");
-    (
-        apartment,
-        device.expect("device"),
-        context.expect("context"),
-    )
-}
-
-fn texture(device: &ID3D11Device, width: u32, height: u32) -> ID3D11Texture2D {
-    let desc = D3D11_TEXTURE2D_DESC {
-        Width: width,
-        Height: height,
-        MipLevels: 1,
-        ArraySize: 1,
-        Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-        SampleDesc: DXGI_SAMPLE_DESC {
-            Count: 1,
-            Quality: 0,
-        },
-        Usage: D3D11_USAGE_DEFAULT,
-        BindFlags: (D3D11_BIND_RENDER_TARGET.0 | D3D11_BIND_SHADER_RESOURCE.0) as u32,
-        ..Default::default()
-    };
-    let mut texture = None;
-    unsafe { device.CreateTexture2D(&desc, None, Some(&mut texture)) }.expect("texture");
-    texture.expect("texture output")
-}
-
-fn update(context: &ID3D11DeviceContext, texture: &ID3D11Texture2D, width: u32, pixels: &[u8]) {
-    unsafe { context.UpdateSubresource(texture, 0, None, pixels.as_ptr().cast(), width * 4, 0) };
-}
-
-fn read(
-    device: &ID3D11Device,
-    context: &ID3D11DeviceContext,
-    surface: &IDirect3DSurface,
-) -> Vec<u8> {
-    let access = surface
-        .cast::<IDirect3DDxgiInterfaceAccess>()
-        .expect("DXGI access");
-    let source = unsafe { access.GetInterface::<ID3D11Texture2D>() }.expect("texture interface");
-    let mut desc = D3D11_TEXTURE2D_DESC::default();
-    unsafe { source.GetDesc(&mut desc) };
-    desc.Usage = D3D11_USAGE_STAGING;
-    desc.BindFlags = 0;
-    desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ.0 as u32;
-    let mut staging = None;
-    unsafe { device.CreateTexture2D(&desc, None, Some(&mut staging)) }.expect("readback texture");
-    let staging = staging.expect("staging output");
-    unsafe { context.CopyResource(&staging, &source) };
-    let mut mapped = D3D11_MAPPED_SUBRESOURCE::default();
-    unsafe { context.Map(&staging, 0, D3D11_MAP_READ, 0, Some(&mut mapped)) }
-        .expect("map readback");
-    let mut pixels = Vec::new();
-    for row in 0..desc.Height as usize {
-        let start = unsafe {
-            mapped
-                .pData
-                .cast::<u8>()
-                .add(row * mapped.RowPitch as usize)
-        };
-        pixels.extend_from_slice(unsafe {
-            std::slice::from_raw_parts(start, desc.Width as usize * 4)
-        });
-    }
-    unsafe { context.Unmap(&staging, 0) };
-    pixels
-}
+use windows::{Foundation::TimeSpan, Media::Core::MediaStreamSample};
 
 #[test]
 fn queued_gpu_snapshots_survive_capture_surface_reuse_and_release() {
@@ -167,4 +54,148 @@ fn media_sample_owns_its_gpu_snapshot_after_local_resources_are_dropped() {
         ),
         vec![123; 16]
     );
+}
+
+#[test]
+fn gpu_crop_preserves_pixels_and_rejects_out_of_bounds_before_copying() {
+    let (_apartment, device, context) = device();
+    let source = texture(&device, 10, 6);
+    let pixels = (0..240)
+        .map(|index| (index % 251) as u8)
+        .collect::<Vec<_>>();
+    update(&context, &source, 10, &pixels);
+    let mut copies = SurfaceCopies::new(4, 2, 1);
+    for crop in [
+        PixelCrop {
+            start_x: 5,
+            start_y: 0,
+            end_x: 5,
+            end_y: 2,
+        },
+        PixelCrop {
+            start_x: 0,
+            start_y: 0,
+            end_x: 11,
+            end_y: 2,
+        },
+    ] {
+        assert!(copies.copy(&device, &context, &source, crop).is_err());
+        assert!(copies.available());
+    }
+    let crop = PixelCrop {
+        start_x: 2,
+        start_y: 2,
+        end_x: 6,
+        end_y: 4,
+    };
+    let owned = copies
+        .copy(&device, &context, &source, crop)
+        .expect("copy")
+        .expect("surface");
+    let expected = [pixels[88..104].to_vec(), pixels[128..144].to_vec()].concat();
+    assert_eq!(
+        read(&device, &context, &owned.surface().expect("surface")),
+        expected
+    );
+    assert!(!copies.available());
+    drop(owned);
+    assert!(copies.available());
+}
+
+#[test]
+fn gpu_window_resize_keeps_both_sides_and_uses_opaque_letterboxing() {
+    let (_apartment, device, context) = device();
+    let source = texture(&device, 8, 4);
+    let pixels = (0..32)
+        .flat_map(|pixel| {
+            if pixel % 8 < 4 {
+                [255, 0, 0, 255]
+            } else {
+                [0, 0, 255, 255]
+            }
+        })
+        .collect::<Vec<_>>();
+    update(&context, &source, 8, &pixels);
+    let mut copies = SurfaceCopies::new(4, 4, 1);
+    let owned = copies
+        .copy(
+            &device,
+            &context,
+            &source,
+            PixelCrop {
+                start_x: 0,
+                start_y: 0,
+                end_x: 8,
+                end_y: 4,
+            },
+        )
+        .expect("scale")
+        .expect("surface");
+    let result = read(&device, &context, &owned.surface().expect("surface"));
+    assert_eq!(&result[..16], &[0, 0, 0, 255].repeat(4));
+    assert_eq!(&result[48..], &[0, 0, 0, 255].repeat(4));
+    assert_eq!(&result[16..20], &[255, 0, 0, 255]);
+    assert_eq!(&result[28..32], &[0, 0, 255, 255]);
+}
+
+#[test]
+fn thousands_of_texture_reuses_preserve_all_inflight_samples() {
+    let (_apartment, device, context) = device();
+    let source = texture(&device, 4, 4);
+    let crop = PixelCrop {
+        start_x: 0,
+        start_y: 0,
+        end_x: 4,
+        end_y: 4,
+    };
+    let mut copies = SurfaceCopies::new(4, 4, 3);
+    let mut inflight = std::collections::VecDeque::new();
+    for index in 0..5000_u32 {
+        let color = (index % 251) as u8;
+        update(&context, &source, 4, &[color; 64]);
+        let owned = copies
+            .copy(&device, &context, &source, crop)
+            .expect("copy")
+            .expect("bounded surface");
+        inflight.push_back((owned, color));
+        if inflight.len() == 3 {
+            assert!(
+                copies
+                    .copy(&device, &context, &source, crop)
+                    .expect("full pool")
+                    .is_none()
+            );
+            update(&context, &source, 4, &[0; 64]);
+            let (owned, expected) = inflight.pop_front().expect("oldest sample");
+            assert_eq!(
+                read(&device, &context, &owned.surface().expect("surface")),
+                vec![expected; 64]
+            );
+        }
+    }
+    for (owned, expected) in inflight {
+        assert_eq!(
+            read(&device, &context, &owned.surface().expect("surface")),
+            vec![expected; 64]
+        );
+    }
+}
+
+#[test]
+fn owned_readback_unmaps_padded_rows_over_repeated_screenshots() {
+    let (_apartment, device, context) = device();
+    for width in [1, 3, 17, 63, 65] {
+        let source = texture(&device, width, 7);
+        let pixels = (0..width * 7 * 4)
+            .map(|pixel| (pixel % 251) as u8)
+            .collect::<Vec<_>>();
+        update(&context, &source, width, &pixels);
+        for _ in 0..100 {
+            assert_eq!(
+                super::super::readback::read_bgra(&device, &context, &source)
+                    .expect("owned readback"),
+                pixels
+            );
+        }
+    }
 }

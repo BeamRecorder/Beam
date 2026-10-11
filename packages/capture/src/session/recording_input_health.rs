@@ -1,5 +1,5 @@
 use crate::{CaptureError, input::InputAccessError};
-#[cfg(any(target_os = "linux", test))]
+#[cfg(any(all(windows, feature = "cursor"), target_os = "linux", test))]
 use crate::{
     input::{InputAccessState, InputAccessStatus},
     model::{CursorSelection, HealthEvent},
@@ -9,6 +9,11 @@ use super::RecordingSession;
 
 impl RecordingSession {
     pub fn input_capture_error(&mut self) -> Result<Option<InputAccessError>, CaptureError> {
+        #[cfg(all(windows, feature = "cursor"))]
+        if let Some(reason) = self.active.input_failure_reason() {
+            return self
+                .update_input_health(&InputAccessStatus::failed(&CaptureError::Backend(reason)));
+        }
         #[cfg(target_os = "linux")]
         if matches!(
             self.state,
@@ -30,7 +35,7 @@ impl RecordingSession {
         Ok(self.input_capture_error.clone())
     }
 
-    #[cfg(any(target_os = "linux", test))]
+    #[cfg(any(all(windows, feature = "cursor"), target_os = "linux", test))]
     pub(super) fn update_input_health(
         &mut self,
         status: &InputAccessStatus,
@@ -68,7 +73,7 @@ impl RecordingSession {
     }
 }
 
-#[cfg(any(target_os = "linux", test))]
+#[cfg(any(all(windows, feature = "cursor"), target_os = "linux", test))]
 fn requested_input_error(
     cursor: &CursorSelection,
     status: &InputAccessStatus,

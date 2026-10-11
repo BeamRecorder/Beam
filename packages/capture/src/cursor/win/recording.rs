@@ -1,37 +1,44 @@
 use std::{
-    path::{Path, PathBuf},
+    path::Path,
     sync::{
         Arc,
         atomic::{AtomicBool, AtomicU64, Ordering},
         mpsc,
     },
     thread::JoinHandle,
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use crate::{
     CaptureError,
-    cursor::{
-        CaptureRegion, CursorEvent, CursorEventWriter, CursorRecordingPaths, finalize_after_worker,
-        move_sample_due,
-    },
+    cursor::{CursorEvent, CursorEventWriter, move_sample_due},
     input::{InputEvent, InputEventWriter, ShortcutSampler},
     session::StartGate,
 };
 
-use super::WindowsCursorSourceContext;
-use super::{sample_cursor, shortcut_key_pressed, shortcut_modifier_pressed};
+use super::{WindowsCursorRecordingConfig, WindowsCursorSourceContext};
+use super::{capture::sample_cursor_cached, shape_cache::ShapeCache};
+use super::{shortcut_key_pressed, shortcut_modifier_pressed};
 
 #[derive(Debug, Default)]
 pub struct CursorCaptureMetrics {
     events: AtomicU64,
     interruptions: AtomicU64,
+    failure: std::sync::Mutex<Option<String>>,
 }
 
 impl CursorCaptureMetrics {
     #[must_use]
     pub fn events(&self) -> u64 {
         self.events.load(Ordering::Relaxed)
+    }
+
+    #[must_use]
+    pub fn failure_reason(&self) -> Option<String> {
+        self.failure
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
     }
 
     #[must_use]
@@ -44,32 +51,27 @@ pub struct WindowsCursorRecording {
     cancel: Arc<AtomicBool>,
     thread: Option<JoinHandle<Result<(), CaptureError>>>,
     metrics: Arc<CursorCaptureMetrics>,
-    partial_path: PathBuf,
-    final_path: PathBuf,
-    shapes_path: PathBuf,
-    telemetry_path: PathBuf,
-    input_partial_path: PathBuf,
-    input_path: PathBuf,
+    start_gate: Arc<StartGate>,
 }
 
 impl WindowsCursorRecording {
     pub fn start(
         directory: &Path,
         source: WindowsCursorSourceContext,
-        capture_clicks: bool,
-        capture_shortcuts: bool,
-        capture_shape: bool,
-        segment_start_ns: u64,
-        start_gate: Arc<StartGate>,
+        config: WindowsCursorRecordingConfig,
     ) -> Result<Self, CaptureError> {
+        let WindowsCursorRecordingConfig {
+            capture_clicks,
+            capture_shortcuts,
+            capture_shape,
+            segment_start_ns,
+            start_gate,
+            screen_metrics,
+        } = config;
         std::fs::create_dir_all(directory)
             .map_err(|error| CaptureError::storage(directory, error))?;
         let partial_path = directory.join("cursor.partial.jsonl");
-        let final_path = directory.join("cursor.json");
-        let shapes_path = directory.join("shapes.json");
-        let telemetry_path = directory.join("telemetry.json");
         let input_partial_path = directory.join("input.partial.jsonl");
-        let input_path = directory.join("input.json");
         let cancel = Arc::new(AtomicBool::new(false));
         let thread_cancel = cancel.clone();
         let metrics = Arc::new(CursorCaptureMetrics::default());
@@ -77,43 +79,63 @@ impl WindowsCursorRecording {
         let thread_partial = partial_path.clone();
         let thread_input_partial = input_partial_path.clone();
         let (ready_sender, ready_receiver) = mpsc::sync_channel(1);
+        let permit = crate::cursor::CursorWorkerPermit::acquire()?;
+        let worker_gate = start_gate.clone();
         let thread = std::thread::Builder::new()
             .name("capture-windows-cursor".into())
             .spawn(move || {
-                capture_loop(
+                let _permit = permit;
+                let result = capture_loop(
                     &thread_partial,
                     &thread_input_partial,
-                    source.region,
+                    source,
                     capture_clicks,
                     capture_shortcuts,
                     capture_shape,
-                    source.display_scale_factor,
                     segment_start_ns,
                     &thread_cancel,
                     &thread_metrics,
                     &ready_sender,
-                    &start_gate,
-                )
+                    &worker_gate,
+                    &screen_metrics,
+                );
+                if let Err(error) = &result {
+                    *thread_metrics
+                        .failure
+                        .lock()
+                        .unwrap_or_else(std::sync::PoisonError::into_inner) =
+                        Some(error.to_string());
+                }
+                result
             })
             .map_err(backend_error)?;
-        ready_receiver
-            .recv()
-            .map_err(|_| CaptureError::Backend("cursor startup channel closed".into()))??;
+        let ready = ready_receiver
+            .recv_timeout(Duration::from_secs(2))
+            .map_err(|_| {
+                CaptureError::Backend("cursor startup did not finish within 2 seconds".into())
+            })
+            .and_then(|result| result);
+        if let Err(error) = ready {
+            cancel.store(true, Ordering::Release);
+            start_gate.cancel();
+            let _ = crate::session::join_worker(thread, "cursor startup");
+            return Err(error);
+        }
         Ok(Self {
             cancel,
             thread: Some(thread),
             metrics,
-            partial_path,
-            final_path,
-            shapes_path,
-            telemetry_path,
-            input_partial_path,
-            input_path,
+            start_gate,
         })
     }
 
     pub fn stop(mut self) -> Result<(), CaptureError> {
         self.finish()
+    }
+
+    pub(crate) fn request_stop(&self) {
+        self.cancel.store(true, Ordering::Release);
+        self.start_gate.cancel();
     }
 
     #[must_use]
@@ -123,22 +145,9 @@ impl WindowsCursorRecording {
 
     fn finish(&mut self) -> Result<(), CaptureError> {
         self.cancel.store(true, Ordering::Release);
+        self.start_gate.cancel();
         if let Some(thread) = self.thread.take() {
-            let worker_result = thread
-                .join()
-                .map_err(|_| CaptureError::Backend("cursor capture thread panicked".into()))
-                .and_then(|result| result);
-            return finalize_after_worker(
-                worker_result,
-                CursorRecordingPaths {
-                    partial: self.partial_path.clone(),
-                    final_path: self.final_path.clone(),
-                    telemetry: self.telemetry_path.clone(),
-                    shapes: self.shapes_path.clone(),
-                    input_partial: self.input_partial_path.clone(),
-                    input: self.input_path.clone(),
-                },
-            );
+            return crate::session::join_worker(thread, "cursor capture");
         }
         Ok(())
     }
@@ -161,38 +170,89 @@ struct Previous {
 fn capture_loop(
     partial_path: &Path,
     input_partial_path: &Path,
-    region: CaptureRegion,
+    mut source: WindowsCursorSourceContext,
     capture_clicks: bool,
     capture_shortcuts: bool,
     capture_shape: bool,
-    display_scale_factor: Option<f64>,
     segment_start_ns: u64,
     cancel: &AtomicBool,
     metrics: &CursorCaptureMetrics,
     ready: &mpsc::SyncSender<Result<(), CaptureError>>,
     start_gate: &Arc<StartGate>,
+    screen_metrics: &crate::screen::ScreenCaptureMetrics,
 ) -> Result<(), CaptureError> {
     let mut writer = CursorEventWriter::open(partial_path)?;
     let mut input_writer = InputEventWriter::open(input_partial_path)?;
-    if let Some(display_scale_factor) = display_scale_factor {
-        writer.push(CursorEvent::Metadata {
-            session_ns: segment_start_ns,
-            display_scale_factor,
-        })?;
-    }
     ready
         .send(Ok(()))
         .map_err(|_| CaptureError::Backend("cursor startup receiver closed".into()))?;
     start_gate.wait()?;
-    let started = Instant::now();
+    if let Some(display_scale_factor) = source.display_scale_factor {
+        writer.push(CursorEvent::Metadata {
+            session_ns: start_gate.session_time_ns()?,
+            display_scale_factor,
+        })?;
+    }
     let mut previous = Previous::default();
     let mut next_move_sample_ns = segment_start_ns;
     let mut shortcuts = ShortcutSampler::default();
+    let mut shapes = ShapeCache::default();
+    let _physical = super::dpi::PhysicalCoordinates::enter()?;
+    let fallback_size = (
+        source.region.width.max(2) & !1,
+        source.region.height.max(2) & !1,
+    );
     while !cancel.load(Ordering::Acquire) {
-        let session_ns = segment_start_ns
-            .saturating_add(u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX));
-        match sample_cursor(region, capture_shape) {
-            Ok(sample) => {
+        let session_ns = start_gate.session_time_ns()?;
+        if let Some(handle) = source.window_handle {
+            match super::capture::window_context(handle) {
+                Ok(context) => {
+                    if context.region != source.region {
+                        push(
+                            &mut writer,
+                            metrics,
+                            CursorEvent::CropChanged {
+                                session_ns,
+                                x: context.region.x,
+                                y: context.region.y,
+                                width: context.region.width,
+                                height: context.region.height,
+                            },
+                        )?;
+                    }
+                    if context.display_scale_factor != source.display_scale_factor
+                        && let Some(display_scale_factor) = context.display_scale_factor
+                    {
+                        push(
+                            &mut writer,
+                            metrics,
+                            CursorEvent::Metadata {
+                                session_ns,
+                                display_scale_factor,
+                            },
+                        )?;
+                    }
+                    source = context;
+                }
+                Err(error) => {
+                    metrics.interruptions.fetch_add(1, Ordering::Relaxed);
+                    return Err(error);
+                }
+            }
+        }
+        match sample_cursor_cached(source.region, capture_shape, &mut shapes) {
+            Ok(mut sample) => {
+                if source.window_handle.is_some() {
+                    let size = screen_metrics
+                        .first_video_format()
+                        .map_or(fallback_size, |format| (format.width, format.height));
+                    sample.position = crate::cursor::map_aspect_fit(
+                        sample.position,
+                        source.region,
+                        size.0,
+                        size.1,
+                    )?;
+                }
                 if move_sample_due(&mut next_move_sample_ns, session_ns) {
                     push(
                         &mut writer,
@@ -272,8 +332,12 @@ fn capture_loop(
                     previous.shape = Some(shape.native_id);
                 }
             }
-            Err(_) => {
+            Err(error) => {
                 metrics.interruptions.fetch_add(1, Ordering::Relaxed);
+                *metrics
+                    .failure
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(error.to_string());
             }
         }
         if capture_shortcuts {

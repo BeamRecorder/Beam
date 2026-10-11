@@ -222,3 +222,109 @@ fn start_segment_rejects_an_invalid_gate_and_marks_the_session_failed() {
     session.cancel().expect("cancel failed segment start");
     assert_output_root_is_empty(&temporary);
 }
+
+#[test]
+fn failed_pause_never_leaves_a_ghost_recording_and_keeps_existing_media() {
+    let (_temporary, mut session) = prepared_session_without_screen();
+    session.start().expect("start");
+    let media = session.layout.root().join("already-recorded.mp4");
+    std::fs::write(&media, b"valuable recorded media").expect("media");
+    session.active.set_screen_availability_for_test(true);
+    session
+        .active
+        .fail_next_stop_for_test("encoder finalization failed");
+    assert!(session.pause().is_err());
+    assert_eq!(session.state(), SessionState::Failed);
+    assert!(!session.screen_available());
+    assert!(
+        session
+            .screen_capture_error()
+            .expect("native reason")
+            .contains("encoder finalization failed")
+    );
+    assert!(session.stop().is_err());
+    assert_eq!(session.state(), SessionState::Completed);
+    assert_eq!(
+        std::fs::read(&media).expect("preserved"),
+        b"valuable recorded media"
+    );
+    let manifest: crate::model::SessionManifest =
+        crate::storage::read_json(&session.manifest_path()).expect("finalized diagnostic");
+    assert!(
+        manifest
+            .warnings
+            .iter()
+            .any(|reason| reason.contains("encoder finalization failed"))
+    );
+}
+
+#[test]
+fn activation_checkpoint_failure_closes_tracks_and_can_be_finalized_for_recovery() {
+    let (_temporary, mut session) = prepared_session_without_screen();
+    let checkpoint = session.layout.partial_manifest();
+    std::fs::remove_file(&checkpoint).expect("remove checkpoint");
+    std::fs::create_dir(&checkpoint).expect("block publication");
+    assert!(session.start().is_err());
+    assert_eq!(session.state(), SessionState::Failed);
+    assert!(!session.screen_available());
+    assert!(!session.active.has_screen());
+    std::fs::remove_dir(&checkpoint).expect("restore path");
+    assert!(session.stop().is_err());
+    assert!(session.manifest_path().is_file());
+}
+
+#[test]
+fn requested_screen_cannot_be_healthy_when_recording_without_its_native_handle() {
+    let (_temporary, mut session) = prepared_session_without_screen();
+    session.request.screen = Some(crate::model::ScreenSelection::Source {
+        source_id: crate::model::SourceId::new("wgc:monitor:test").expect("source"),
+    });
+    session.state = SessionState::Recording;
+    assert!(!session.screen_available());
+    assert!(session.screen_capture_error().is_some());
+    session.state = SessionState::Paused;
+    assert!(
+        session.screen_available(),
+        "a closed segment is normal while paused"
+    );
+}
+
+#[test]
+fn repeated_pause_resume_and_invalid_transitions_keep_consistent_state() {
+    let (_temporary, mut session) = prepared_session_without_screen();
+    session.start().expect("start");
+    let mut previous_duration = 0;
+    for _ in 0..128 {
+        assert!(session.start().is_err());
+        assert_eq!(session.state(), SessionState::Recording);
+        session.pause().expect("pause");
+        assert!(session.pause().is_err());
+        assert_eq!(session.state(), SessionState::Paused);
+        session.resume().expect("resume");
+        assert!(session.resume().is_err());
+        assert_eq!(session.state(), SessionState::Recording);
+        let now = session.session_ns();
+        assert!(now >= previous_duration);
+        previous_duration = now;
+    }
+    let first = session.stop().expect("stop");
+    assert_eq!(session.stop().expect("idempotent stop"), first);
+    assert!(session.resume().is_err());
+    assert!(session.pause().is_err());
+    let manifest: crate::model::SessionManifest =
+        crate::storage::read_json(&first).expect("manifest");
+    assert!(manifest.completed);
+    assert!(manifest.duration_ns >= previous_duration);
+}
+
+#[test]
+fn resume_uses_the_released_clock_instead_of_preparation_time() {
+    let gate = StartGate::new();
+    std::thread::sleep(std::time::Duration::from_millis(10));
+    gate.release_at(900_000_000, 800_000_000).expect("release");
+    let first = gate.session_time_ns().expect("session clock");
+    assert!(first >= 800_000_000);
+    std::thread::sleep(std::time::Duration::from_millis(10));
+    assert!(gate.session_time_ns().expect("later") >= first + 5_000_000);
+    assert_eq!(gate.wait().expect("native clock"), 900_000_000);
+}

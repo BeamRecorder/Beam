@@ -6,6 +6,11 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Windows recordings keep existing media after capture or encoder failures, bound native startup and shutdown waits, and report the actual failure without leaving a recording indicator over stopped tracks.
+- Windows region capture stays on the GPU with bounded reusable frame surfaces; frame pacing preserves the requested rate across monitor refresh rates, and transient overload drops frames while a progressing encoder keeps recording.
+- Windows window recordings preserve the whole image when resized, follow window movements with the cursor, and retain static screen content through the end of the recording.
+- Pause and resume preserve the full Windows and macOS cursor and shortcut history. Long recordings publish interaction sidecars with bounded memory, and recovery preserves finalized cursor files and valid journal records.
+- Recording pause/resume failures finalize the remaining tracks consistently, with translated messages in all fifteen languages. Long interaction journals can finish saving without a queued status request terminating capture.
 - Switching screenshot presets preserves zooms, custom layer names, image cropping, rotation and visibility, and restores enabled background and watermark layers without invalid composition errors. Selecting the current preset keeps unsaved edits intact.
 - Windows screen recordings copy captured frames on the GPU before asynchronous encoding, preventing reuse of the capture surface from overwriting queued video frames.
 - Slider reset and direct-value editing hints follow the selected language in all fifteen locales.

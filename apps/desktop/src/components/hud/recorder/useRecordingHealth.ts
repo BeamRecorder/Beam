@@ -1,6 +1,7 @@
 import type { Ref } from 'vue';
 import { capture } from '../../../api/capture';
 import { BrowserSystemAudioRecorder } from '../../../api/system-audio-recorder';
+import { tNamespace } from '../../../i18n';
 import { isRecordingActivePhase, type RecordingPhase } from './recording-types';
 
 export function useRecordingHealth(
@@ -10,6 +11,7 @@ export function useRecordingHealth(
   cancel: () => Promise<void>,
   stop: () => Promise<void>,
 ) {
+  const t = tNamespace('RecordingHealth');
   let timer: number | null = null;
   let polling = false;
   let generation = 0;
@@ -37,8 +39,13 @@ export function useRecordingHealth(
     try {
       const status = await capture.status();
       if (currentGeneration !== generation) return;
-      if (status.screenAvailable === false) handleFailure('Screen sharing ended.');
-      else if (status.inputCaptureError && !inputFailureHandled) {
+      if (
+        status.screenAvailable === false ||
+        (['recording', 'paused'].includes(phase.value) &&
+          ['idle', 'failed', 'recoverable', 'completed'].includes(status.state))
+      ) {
+        handleFailure(status.screenCaptureError || t('captureStopped'));
+      } else if (status.inputCaptureError && !inputFailureHandled) {
         inputFailureHandled = true;
         error.value = status.inputCaptureError.message;
       }

@@ -1,12 +1,12 @@
 use std::{
-    path::{Path, PathBuf},
+    path::Path,
     sync::{
         Arc,
         atomic::{AtomicBool, AtomicU64, Ordering},
         mpsc,
     },
     thread::JoinHandle,
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use core_graphics::{
@@ -17,10 +17,7 @@ use foreign_types::ForeignType;
 
 use crate::{
     CaptureError,
-    cursor::{
-        CaptureRegion, CursorEvent, CursorEventWriter, CursorRecordingPaths, finalize_after_worker,
-        map_coordinates, move_sample_due,
-    },
+    cursor::{CaptureRegion, CursorEvent, CursorEventWriter, map_coordinates, move_sample_due},
     input::{InputEvent, InputEventWriter, ShortcutSampler},
     model::{CursorSelection, SourceId},
     session::StartGate,
@@ -63,12 +60,7 @@ pub struct MacCursorRecording {
     cancel: Arc<AtomicBool>,
     thread: Option<JoinHandle<Result<(), CaptureError>>>,
     metrics: Arc<MacCursorMetrics>,
-    partial: PathBuf,
-    final_path: PathBuf,
-    telemetry_path: PathBuf,
-    shapes_path: PathBuf,
-    input_partial_path: PathBuf,
-    input_path: PathBuf,
+    start_gate: Arc<StartGate>,
 }
 
 impl MacCursorRecording {
@@ -93,11 +85,7 @@ impl MacCursorRecording {
         std::fs::create_dir_all(directory)
             .map_err(|error| CaptureError::storage(directory, error))?;
         let partial = directory.join("cursor.partial.jsonl");
-        let final_path = directory.join("cursor.json");
-        let telemetry_path = directory.join("telemetry.json");
-        let shapes_path = directory.join("shapes.json");
         let input_partial_path = directory.join("input.partial.jsonl");
-        let input_path = directory.join("input.json");
         let cancel = Arc::new(AtomicBool::new(false));
         let thread_cancel = cancel.clone();
         let metrics = Arc::new(MacCursorMetrics::new(shape_source.clone()));
@@ -105,9 +93,12 @@ impl MacCursorRecording {
         let thread_path = partial.clone();
         let thread_input_path = input_partial_path.clone();
         let (ready_sender, ready_receiver) = mpsc::sync_channel(1);
+        let permit = crate::cursor::CursorWorkerPermit::acquire()?;
+        let worker_gate = start_gate.clone();
         let thread = std::thread::Builder::new()
             .name("capture-macos-cursor".into())
             .spawn(move || {
+                let _permit = permit;
                 capture_loop(
                     &thread_path,
                     &thread_input_path,
@@ -120,28 +111,37 @@ impl MacCursorRecording {
                     &thread_cancel,
                     &thread_metrics,
                     &ready_sender,
-                    &start_gate,
+                    &worker_gate,
                 )
             })
             .map_err(backend_error)?;
-        ready_receiver
-            .recv()
-            .map_err(|_| CaptureError::Backend("cursor startup channel closed".into()))??;
+        let ready = ready_receiver
+            .recv_timeout(Duration::from_secs(2))
+            .map_err(|_| {
+                CaptureError::Backend("cursor startup did not finish within 2 seconds".into())
+            })
+            .and_then(|result| result);
+        if let Err(error) = ready {
+            cancel.store(true, Ordering::Release);
+            start_gate.cancel();
+            let _ = crate::session::join_worker(thread, "cursor startup");
+            return Err(error);
+        }
         Ok(Self {
             cancel,
             thread: Some(thread),
             metrics,
-            partial,
-            final_path,
-            telemetry_path,
-            shapes_path,
-            input_partial_path,
-            input_path,
+            start_gate,
         })
     }
 
     pub fn stop(mut self) -> Result<(), CaptureError> {
         self.finish()
+    }
+
+    pub(crate) fn request_stop(&self) {
+        self.cancel.store(true, Ordering::Release);
+        self.start_gate.cancel();
     }
 
     #[must_use]
@@ -151,22 +151,9 @@ impl MacCursorRecording {
 
     fn finish(&mut self) -> Result<(), CaptureError> {
         self.cancel.store(true, Ordering::Release);
+        self.start_gate.cancel();
         if let Some(thread) = self.thread.take() {
-            let worker_result = thread
-                .join()
-                .map_err(|_| CaptureError::Backend("macOS cursor thread panicked".into()))
-                .and_then(|result| result);
-            return finalize_after_worker(
-                worker_result,
-                CursorRecordingPaths {
-                    partial: self.partial.clone(),
-                    final_path: self.final_path.clone(),
-                    telemetry: self.telemetry_path.clone(),
-                    shapes: self.shapes_path.clone(),
-                    input_partial: self.input_partial_path.clone(),
-                    input: self.input_path.clone(),
-                },
-            );
+            return crate::session::join_worker(thread, "cursor capture");
         }
         Ok(())
     }
@@ -243,14 +230,13 @@ fn capture_loop(
         .send(Ok(()))
         .map_err(|_| CaptureError::Backend("cursor startup receiver closed".into()))?;
     start_gate.wait()?;
-    let started = Instant::now();
     let mut next_move_sample_ns = segment_start_ns;
     let mut previous_buttons = [false; 3];
     push(
         &mut writer,
         metrics,
         CursorEvent::Visibility {
-            session_ns: segment_start_ns,
+            session_ns: start_gate.session_time_ns()?,
             visible: true,
         },
     )?;
@@ -259,8 +245,7 @@ fn capture_loop(
     let mut successful_samples = 0_u64;
     let mut last_sampling_error = None;
     while !cancel.load(Ordering::Acquire) {
-        let session_ns = segment_start_ns
-            .saturating_add(u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX));
+        let session_ns = start_gate.session_time_ns()?;
         let event = match current_cursor_event() {
             Ok(event) => {
                 successful_samples = successful_samples.saturating_add(1);

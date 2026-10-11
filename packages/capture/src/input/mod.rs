@@ -2,6 +2,7 @@ mod access;
 mod event_writer;
 mod helper_protocol;
 mod shortcut_sampler;
+mod sorted_events;
 mod types;
 
 pub use access::*;

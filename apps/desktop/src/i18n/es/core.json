@@ -1312,5 +1312,9 @@
   "BigSlider": {
     "resetDefault": "Restablecer el valor predeterminado",
     "editValue": "Haz clic para editar el valor directamente"
+  },
+  "RecordingHealth": {
+    "captureStopped": "La grabación de pantalla se detuvo. Se conservaron los archivos grabados.",
+    "transitionFailed": "No se pudo pausar o reanudar. Se detuvo la grabación para conservar tus archivos. {reason}"
   }
 }

@@ -1324,5 +1324,9 @@
   "BigSlider": {
     "resetDefault": "Reset to default",
     "editValue": "Click to edit value directly"
+  },
+  "RecordingHealth": {
+    "captureStopped": "Screen recording stopped. Your recorded files have been kept.",
+    "transitionFailed": "Pause or resume failed. Recording was stopped to preserve your files. {reason}"
   }
 }

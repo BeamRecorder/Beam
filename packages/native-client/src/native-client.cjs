@@ -127,14 +127,35 @@ class NativeCaptureClient {
         'prepare',
         'prepare-region-selection',
         'start',
+        'stop',
+        'pause',
+        'resume',
         'screenshot',
         'request-input-access',
       ].includes(command);
       const timeoutMs = options.timeoutMs ?? (interactive ? INTERACTIVE_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS);
-      const timeout = setTimeout(() => {
+      const deadline = Date.now() + timeoutMs;
+      const onTimeout = () => {
+        // The engine serializes commands. A long cursor journal publication
+        // and bounded segment shutdown can hold queued Status requests behind
+        // a transition. Share that finite deadline instead of killing its writer.
+        const transitions = ['stop', 'pause', 'resume'];
+        const finalizing = [...this.pending.values()].find((pending) => transitions.includes(pending.command));
+        if (
+          !transitions.includes(command) &&
+          finalizing &&
+          finalizing.deadline > Date.now() &&
+          options.timeoutMs === undefined &&
+          !this.shuttingDown
+        ) {
+          const pending = this.pending.get(id);
+          if (pending) pending.timeout = setTimeout(onTimeout, Math.max(1, finalizing.deadline - Date.now()));
+          return;
+        }
         void this.terminateProcess(new Error(`Délai dépassé pour la commande de capture "${command}"`));
-      }, timeoutMs);
-      this.pending.set(id, { resolve, reject, timeout });
+      };
+      const timeout = setTimeout(onTimeout, timeoutMs);
+      this.pending.set(id, { resolve, reject, timeout, command, deadline });
       this.process.stdin.write(`${JSON.stringify({ id, command, ...payload })}\n`, (error) => {
         if (!error) return;
         void this.terminateProcess(error);

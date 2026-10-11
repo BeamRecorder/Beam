@@ -39,7 +39,11 @@ pub struct SegmentMetadata {
 pub struct TrackMetrics {
     /// Frames delivered by a native source before queueing or encoding.
     pub frames_acquired: u64,
-    /// Frames successfully accepted by the encoder/writer.
+    /// Frames submitted to the native encoder, including repeated static images.
+    pub frames_submitted: u64,
+    /// Samples the native encoder has finished consuming.
+    pub frames_processed: u64,
+    /// Frames in a successfully finalized segment (zero if finalization failed).
     pub frames_encoded: u64,
     /// Generic produced-frame count kept for schema compatibility.
     pub frames_received: u64,

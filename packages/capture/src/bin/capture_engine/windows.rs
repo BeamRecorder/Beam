@@ -6,6 +6,23 @@ use windows::Win32::{
     },
 };
 
+pub(super) struct RuntimeApartment;
+impl RuntimeApartment {
+    pub(super) fn initialize() -> Result<Self, capture::CaptureError> {
+        use windows::Win32::System::WinRT::{RO_INIT_MULTITHREADED, RoInitialize};
+        // Protocol status can publish a retained GPU image for a static source.
+        // Keep the protocol thread in an MTA as well as the WGC worker threads.
+        unsafe { RoInitialize(RO_INIT_MULTITHREADED) }
+            .map_err(|error| capture::CaptureError::Backend(error.to_string()))?;
+        Ok(Self)
+    }
+}
+impl Drop for RuntimeApartment {
+    fn drop(&mut self) {
+        unsafe { windows::Win32::System::WinRT::RoUninitialize() };
+    }
+}
+
 pub(super) fn configure_windows_dpi_awareness() -> Result<(), capture::CaptureError> {
     // This process owns no UI. Set its coordinate system before discovery creates
     // WGC items or worker threads so frames, source bounds and cursor positions

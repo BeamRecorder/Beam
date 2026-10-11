@@ -198,8 +198,20 @@ jobs:
           shared-key: cargo-package-windows-x64-arm64-release
           cache-on-failure: true
       - run: node scripts/ci/bun-install-retry.cjs
-      - name: Test Windows capture initialization and bounded H.264 encoding
-        run: cargo test -p capture --all-features --lib --target x86_64-pc-windows-msvc screen::win
+      - name: Test Windows capture stress, recovery and decoded GPU recordings
+        shell: pwsh
+        run: |
+          if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
+            choco install ffmpeg --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          $env:BEAM_CAPTURE_TEST_FFMPEG = (Get-Command ffmpeg -ErrorAction Stop).Source
+          foreach ($scope in @('screen::', 'cursor::', 'session::', 'storage::')) {
+            cargo test -p capture --all-features --lib --target x86_64-pc-windows-msvc $scope -- --test-threads=1
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          cargo test -p capture --all-features --target x86_64-pc-windows-msvc --test input --test storage --test architecture --test windows_recording_soak
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build and stage both Windows engines
         shell: pwsh
         run: |

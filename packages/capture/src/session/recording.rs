@@ -18,6 +18,8 @@ use super::{
 
 #[path = "recording_input_health.rs"]
 mod input_health;
+#[path = "recording_transitions.rs"]
+mod transitions;
 
 /// A prepared native recording session controlled by the JSONL engine.
 pub struct RecordingSession {
@@ -35,6 +37,7 @@ pub struct RecordingSession {
     generation: u32,
     active: ActiveRecordings,
     input_capture_error: Option<crate::input::InputAccessError>,
+    recording_error: Option<String>,
     project_layout: ProjectLayout,
     project_existed: bool,
     prepared_start_gate: Option<Arc<super::StartGate>>,
@@ -113,6 +116,7 @@ impl RecordingSession {
             generation: 0,
             active: ActiveRecordings::default(),
             input_capture_error: None,
+            recording_error: None,
             project_layout,
             project_existed,
             prepared_start_gate: None,
@@ -173,7 +177,24 @@ impl RecordingSession {
 
     #[must_use]
     pub fn screen_available(&self) -> bool {
-        self.active.screen_available()
+        self.screen_capture_error().is_none() && self.active.screen_available()
+    }
+
+    #[must_use]
+    pub fn screen_capture_error(&self) -> Option<String> {
+        if let Some(error) = &self.recording_error {
+            return Some(error.clone());
+        }
+        if self.request.screen.is_some()
+            && matches!(
+                self.state,
+                super::SessionState::Recording | super::SessionState::Degraded
+            )
+            && !self.active.has_screen()
+        {
+            return Some("screen recording stopped unexpectedly".into());
+        }
+        self.active.screen_failure_reason()
     }
 
     #[cfg(all(target_os = "macos", feature = "cursor"))]
@@ -189,25 +210,6 @@ impl RecordingSession {
         } else {
             false
         }
-    }
-
-    pub fn start(&mut self) -> Result<(), CaptureError> {
-        if self.state != super::SessionState::Armed {
-            return Err(invalid_transition(self.state, "Recording"));
-        }
-        let start_gate = self
-            .prepared_start_gate
-            .take()
-            .unwrap_or_else(|| Arc::new(super::StartGate::new()));
-        if !self.active.has_screen() {
-            self.open_segment(0, &start_gate)?;
-        }
-        let t0 = self.clock.now_ns();
-        self.manifest.session_start_monotonic_ns = t0;
-        self.start_segment(&start_gate, t0, 0)?;
-        write_timing_anchors(&self.layout, &self.manifest.tracks, 0)?;
-        self.state = super::SessionState::Recording;
-        self.checkpoint()
     }
 
     pub fn cancel(mut self) -> Result<(), CaptureError> {
@@ -257,75 +259,15 @@ impl RecordingSession {
         Ok(())
     }
 
-    pub fn pause(&mut self) -> Result<(), CaptureError> {
-        if self.state != super::SessionState::Recording {
-            return Err(invalid_transition(self.state, "Paused"));
-        }
-        let now = self.session_ns();
-        #[cfg(target_os = "linux")]
-        if matches!(
-            self.request.screen,
-            Some(crate::model::ScreenSelection::Portal { .. })
-        ) {
-            if let Err(error) = self.active.pause_portal(&mut self.manifest.tracks, now) {
-                self.state = super::SessionState::Failed;
-                return Err(error);
-            }
-        } else {
-            self.close_segment(now)?;
-        }
-        #[cfg(not(target_os = "linux"))]
-        self.close_segment(now)?;
-        self.state = super::SessionState::Paused;
-        self.checkpoint()
-    }
-
-    pub fn resume(&mut self) -> Result<(), CaptureError> {
-        if self.state != super::SessionState::Paused {
-            return Err(invalid_transition(self.state, "Recording"));
-        }
-        let now = self.session_ns();
-        let start_gate = Arc::new(super::StartGate::new());
-        #[cfg(target_os = "linux")]
-        if matches!(
-            self.request.screen,
-            Some(crate::model::ScreenSelection::Portal { .. })
-        ) {
-            self.generation = self.generation.saturating_add(1);
-            let result = self.active.resume_portal(OpenContext {
-                request: &self.request,
-                region_selection: &mut self.region_selection,
-                snapshot: &self.snapshot,
-                layout: &self.layout,
-                generation: self.generation,
-                start_ns: now,
-                tracks: &mut self.manifest.tracks,
-                start_gate: &start_gate,
-            });
-            if let Err(error) = result {
-                start_gate.cancel();
-                let _ = self.active.stop(&mut self.manifest.tracks, now);
-                self.state = super::SessionState::Failed;
-                return Err(error);
-            }
-        } else {
-            self.open_segment(now, &start_gate)?;
-        }
-        #[cfg(not(target_os = "linux"))]
-        self.open_segment(now, &start_gate)?;
-        self.start_segment(&start_gate, self.clock.now_ns(), now)?;
-        write_timing_anchors(&self.layout, &self.manifest.tracks, now)?;
-        self.state = super::SessionState::Recording;
-        self.checkpoint()
-    }
-
     pub fn stop(&mut self) -> Result<PathBuf, CaptureError> {
         if self.state == super::SessionState::Completed {
             return Ok(self.layout.manifest());
         }
         let _input_error = self.input_capture_error()?;
         let now = self.session_ns();
-        let close_error = if self.state == super::SessionState::Recording
+        #[allow(unused_mut)]
+        let mut close_error = if self.active.has_screen()
+            || self.state == super::SessionState::Recording
             || (cfg!(target_os = "linux")
                 && self.state == super::SessionState::Paused
                 && matches!(
@@ -342,6 +284,17 @@ impl RecordingSession {
         {
             self.manifest.warnings.push(error.to_string());
         }
+        #[cfg(any(windows, target_os = "macos"))]
+        if let Err(error) =
+            crate::cursor::finalize_session_cursor(&self.layout.track_dir(TrackKind::Cursor))
+        {
+            mark_track_failed(
+                &mut self.manifest.tracks,
+                TrackKind::Cursor,
+                &Err(CaptureError::Backend(error.to_string())),
+            );
+            close_error.get_or_insert(error);
+        }
         self.state = super::SessionState::Finalizing;
         self.manifest.duration_ns = now;
         if let Some(error) = &close_error {
@@ -349,12 +302,12 @@ impl RecordingSession {
                 .warnings
                 .push(format!("track shutdown reported: {error}"));
         }
-        let required_screen_failed =
-            self.manifest.tracks.iter().any(|track| {
-                track.kind == TrackKind::Screen && track.status == TrackStatus::Failed
-            });
+        let required_screen_failed = self.manifest.tracks.iter().any(|track| {
+            track.kind == TrackKind::Screen
+                && matches!(track.status, TrackStatus::Failed | TrackStatus::Interrupted)
+        });
         for track in &mut self.manifest.tracks {
-            if track.status != TrackStatus::Failed {
+            if !matches!(track.status, TrackStatus::Failed | TrackStatus::Interrupted) {
                 track.status = TrackStatus::Completed;
             }
         }
@@ -362,7 +315,8 @@ impl RecordingSession {
         checkpoint_tracks(&self.layout, &self.manifest.tracks)?;
         let path = self.writer.finalize(&mut self.manifest)?;
         self.state = super::SessionState::Completed;
-        if let Some(error) = close_error
+        if let Some(error) =
+            close_error.or_else(|| self.recording_error.clone().map(CaptureError::Backend))
             && (required_screen_failed
                 || self.request.failure_policy == crate::model::FailurePolicy::FailFast)
         {
@@ -413,7 +367,7 @@ impl RecordingSession {
         t0_ns: u64,
         start_ns: u64,
     ) -> Result<(), CaptureError> {
-        if let Err(error) = self.active.start(start_gate, t0_ns) {
+        if let Err(error) = self.active.start(start_gate, t0_ns, start_ns) {
             start_gate.cancel();
             let _ = self.active.stop(&mut self.manifest.tracks, start_ns);
             self.state = super::SessionState::Failed;
@@ -423,7 +377,15 @@ impl RecordingSession {
     }
 
     fn close_segment(&mut self, end_ns: u64) -> Result<(), CaptureError> {
-        self.active.stop(&mut self.manifest.tracks, end_ns)
+        let result = self.active.stop(&mut self.manifest.tracks, end_ns);
+        if let Err(error) = &result {
+            self.state = super::SessionState::Failed;
+            self.recording_error
+                .get_or_insert_with(|| error.to_string());
+            self.manifest.warnings.push(error.to_string());
+            let _ = self.checkpoint();
+        }
+        result
     }
 
     fn checkpoint(&self) -> Result<(), CaptureError> {

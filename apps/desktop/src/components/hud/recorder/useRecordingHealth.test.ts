@@ -144,7 +144,7 @@ describe('recording health', () => {
     state.health.start();
     await vi.advanceTimersByTimeAsync(1000);
     expect(state.stop).toHaveBeenCalledOnce();
-    expect(state.error.value).toBe('Screen sharing ended.');
+    expect(state.error.value).toBe('Screen recording stopped. Your recorded files have been kept.');
   });
 
   it.each(['countdown', 'starting'] as const)('cancels unavailable screen sharing during %s', async (phase) => {
@@ -176,4 +176,29 @@ describe('recording health', () => {
     fatal(new Error('Already finalizing'));
     expect(state.stop).toHaveBeenCalledOnce();
   });
+});
+
+describe('native capture failure diagnostics', () => {
+  it('keeps the actual encoder failure instead of replacing it with a generic source message', async () => {
+    const state = healthFor();
+    capture.status.mockResolvedValue({
+      state: 'recording',
+      screenAvailable: false,
+      screenCaptureError: 'Windows video encoder made no progress for 30 seconds',
+    });
+    state.health.start();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(state.error.value).toBe('Windows video encoder made no progress for 30 seconds');
+    expect(state.stop).toHaveBeenCalledOnce();
+  });
+  it.each(['failed', 'idle', 'completed', 'recoverable'] as const)(
+    'does not leave an active HUD over a native %s session',
+    async (native) => {
+      const state = healthFor();
+      capture.status.mockResolvedValue({ state: native, screenAvailable: true });
+      state.health.start();
+      await vi.advanceTimersByTimeAsync(250);
+      expect(state.stop).toHaveBeenCalledOnce();
+    },
+  );
 });

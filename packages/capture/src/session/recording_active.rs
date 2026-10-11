@@ -2,22 +2,26 @@ use std::sync::Arc;
 
 mod metrics;
 mod source_watches;
+mod stop;
 
 use crate::{
     CaptureError,
     catalog::CatalogSnapshot,
     model::{CaptureRequest, CursorSelection, ScreenSelection, TrackMetadata, TrackStatus},
-    storage::finish_segment,
 };
 
 use crate::model::TrackKind;
 
 use super::periodic_reporter::PeriodicReporter;
 use super::recording_support::*;
+#[cfg(target_os = "linux")]
+use crate::storage::finish_segment;
 use source_watches::source_watches;
 
 #[derive(Default)]
 pub(super) struct ActiveRecordings {
+    #[cfg(test)]
+    test_stop_failure: Option<String>,
     reporter: Option<PeriodicReporter>,
     screen: Option<crate::screen::ScreenRecording>,
     #[cfg(test)]
@@ -61,6 +65,24 @@ impl ActiveRecordings {
             .is_none_or(crate::screen::ScreenRecording::is_available)
     }
 
+    pub(super) fn screen_failure_reason(&self) -> Option<String> {
+        self.screen
+            .as_ref()
+            .and_then(crate::screen::ScreenRecording::failure_reason)
+    }
+
+    #[cfg(all(windows, feature = "cursor"))]
+    pub(super) fn input_failure_reason(&self) -> Option<String> {
+        self.cursor
+            .as_ref()
+            .and_then(|cursor| cursor.metrics().failure_reason())
+    }
+
+    #[cfg(test)]
+    pub(super) fn fail_next_stop_for_test(&mut self, reason: &str) {
+        self.test_stop_failure = Some(reason.into());
+    }
+
     #[cfg(test)]
     pub(super) fn set_screen_availability_for_test(&mut self, available: bool) {
         self.test_screen_availability = Some(available);
@@ -76,10 +98,11 @@ impl ActiveRecordings {
         &mut self,
         start_gate: &super::StartGate,
         t0_ns: u64,
+        session_ns: u64,
     ) -> Result<(), CaptureError> {
         // A static Portal window may only produce one frame on activation.
         // Open the gate first so that frame cannot be discarded as pre-recording data.
-        start_gate.release(t0_ns)?;
+        start_gate.release_at(t0_ns, session_ns)?;
         if let Some(screen) = self.screen.as_mut() {
             screen.start()?;
         }
@@ -99,6 +122,18 @@ impl ActiveRecordings {
             #[cfg(all(target_os = "macos", feature = "cursor"))]
             cursor_shape_source,
         } = context;
+        self.open_screen(OpenContext {
+            request,
+            region_selection,
+            snapshot,
+            layout,
+            generation,
+            start_ns,
+            tracks: &mut *tracks,
+            start_gate,
+            #[cfg(all(target_os = "macos", feature = "cursor"))]
+            cursor_shape_source,
+        })?;
         #[cfg(all(windows, feature = "cursor"))]
         if let CursorSelection::Separate {
             capture_clicks,
@@ -120,6 +155,7 @@ impl ActiveRecordings {
                             }),
                         )?,
                         display_scale_factor: source.display_scale_factor,
+                        window_handle: source.window_handle,
                     }
                 }
                 _ => crate::cursor::win::WindowsCursorSourceContext {
@@ -130,16 +166,24 @@ impl ActiveRecordings {
                         height: 1,
                     },
                     display_scale_factor: None,
+                    window_handle: None,
                 },
             };
             self.cursor = Some(crate::cursor::win::WindowsCursorRecording::start(
                 &layout.track_dir(TrackKind::Cursor),
                 source,
-                capture_clicks,
-                capture_shortcuts,
-                capture_shape,
-                start_ns,
-                start_gate.clone(),
+                crate::cursor::win::WindowsCursorRecordingConfig {
+                    capture_clicks,
+                    capture_shortcuts,
+                    capture_shape,
+                    segment_start_ns: start_ns,
+                    start_gate: start_gate.clone(),
+                    screen_metrics: self
+                        .screen
+                        .as_ref()
+                        .map(crate::screen::ScreenRecording::metrics)
+                        .unwrap_or_default(),
+                },
             )?);
             let track = track_mut(tracks, TrackKind::Cursor)
                 .ok_or_else(|| CaptureError::Backend("missing cursor track metadata".into()))?;
@@ -184,18 +228,6 @@ impl ActiveRecordings {
             ));
             track.status = TrackStatus::Recording;
         }
-        self.open_screen(OpenContext {
-            request,
-            region_selection,
-            snapshot,
-            layout,
-            generation,
-            start_ns,
-            tracks: &mut *tracks,
-            start_gate,
-            #[cfg(all(target_os = "macos", feature = "cursor"))]
-            cursor_shape_source,
-        })?;
         self.open_system_audio(request, layout, generation, start_ns, tracks, start_gate)?;
         let _ = snapshot;
         let samplers = metrics::samplers(self, tracks);
@@ -404,88 +436,6 @@ impl ActiveRecordings {
                 samplers,
                 source_watches(request, snapshot, tracks),
             )?);
-        }
-        Ok(())
-    }
-
-    pub(super) fn stop(
-        &mut self,
-        tracks: &mut [TrackMetadata],
-        end_ns: u64,
-    ) -> Result<(), CaptureError> {
-        #[allow(unused_mut)]
-        let mut first_error = None;
-        if let Some(reporter) = self.reporter.take() {
-            record_result(reporter.stop(), &mut first_error);
-        }
-        if let Some(recording) = self.screen.take() {
-            let metrics = recording.metrics();
-            let mut recording = recording;
-            let result = recording.stop();
-            #[cfg(any(windows, target_os = "linux"))]
-            if let Some(format) = recording.video_format() {
-                update_video_format(tracks, TrackKind::Screen, format);
-            }
-            mark_track_failed(tracks, TrackKind::Screen, &result);
-            record_result(result, &mut first_error);
-            update_video_metrics(
-                tracks,
-                TrackKind::Screen,
-                metrics.frames_received(),
-                metrics.frames_dropped(),
-            );
-            #[cfg(target_os = "linux")]
-            if let Some(track) = track_mut(tracks, TrackKind::Cursor) {
-                track.metrics.frames_received = metrics.cursor_samples();
-                track.metrics.interruptions = metrics.frames_dropped();
-            }
-        }
-        if let Some(mut recording) = self.system_audio.take() {
-            let metrics = recording.metrics();
-            let result = recording.stop();
-            mark_track_failed(tracks, TrackKind::SystemAudio, &result);
-            record_result(result, &mut first_error);
-            if let Some(track) = track_mut(tracks, TrackKind::SystemAudio) {
-                track.metrics.samples_received = metrics.samples_received();
-                track.metrics.samples_dropped = metrics.samples_dropped();
-            }
-        }
-        #[cfg(all(windows, feature = "cursor"))]
-        if let Some(recording) = self.cursor.take() {
-            let metrics = recording.metrics();
-            let result = recording.stop();
-            mark_track_failed(tracks, TrackKind::Cursor, &result);
-            record_result(result, &mut first_error);
-            if let Some(track) = track_mut(tracks, TrackKind::Cursor) {
-                track.metrics.frames_received += metrics.events();
-                track.metrics.interruptions += metrics.interruptions();
-            }
-        }
-        #[cfg(all(target_os = "macos", feature = "cursor"))]
-        if let Some(recording) = self.cursor.take() {
-            let metrics = recording.metrics();
-            let result = recording.stop();
-            mark_track_failed(tracks, TrackKind::Cursor, &result);
-            record_result(result, &mut first_error);
-            if let Some(track) = track_mut(tracks, TrackKind::Cursor) {
-                track.metrics.frames_received += metrics.events();
-                track.metrics.interruptions += metrics.interruptions();
-            }
-        }
-        for track in tracks.iter_mut().filter(|track| {
-            matches!(track.status, TrackStatus::Recording | TrackStatus::Paused)
-                && track
-                    .segments
-                    .last()
-                    .is_some_and(|segment| !segment.complete)
-        }) {
-            if let Some(last) = track.segments.last_mut() {
-                finish_segment(last, end_ns)?;
-            }
-            track.status = TrackStatus::Paused;
-        }
-        if let Some(error) = first_error {
-            return Err(error);
         }
         Ok(())
     }

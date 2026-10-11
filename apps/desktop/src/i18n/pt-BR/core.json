@@ -1312,5 +1312,9 @@
   "BigSlider": {
     "resetDefault": "Restaurar o valor padrão",
     "editValue": "Clique para editar o valor diretamente"
+  },
+  "RecordingHealth": {
+    "captureStopped": "A gravação da tela parou. Os arquivos gravados foram preservados.",
+    "transitionFailed": "Não foi possível pausar ou retomar. A gravação foi interrompida para preservar seus arquivos. {reason}"
   }
 }
