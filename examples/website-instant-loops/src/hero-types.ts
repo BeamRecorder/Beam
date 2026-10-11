@@ -1,0 +1,37 @@
+export interface HeroState {
+  time: number;
+  chatTime: number;
+  captureMode: 'studio' | 'instant';
+  menuOpen: boolean;
+  previewPreset: 0 | 1 | 2;
+  previewStart: number;
+  menuStart: number;
+  preset: 'default' | 'nocturne' | 'sunrise';
+  recording: boolean;
+  stopped: boolean;
+  completed: boolean;
+  copied: boolean;
+  progress: number;
+  mascotTime: number;
+  hudX: number;
+  hudY: number;
+  hudScale: number;
+  hudOpacity: number;
+  statusOpacity: number;
+  recorderOpacity: number;
+  artworkOpacity: number;
+  artworkTime: number;
+  drag: number;
+  attachment: number;
+  sent: number;
+  mediaX: number;
+  mediaY: number;
+  mediaScale: number;
+  replies: [number, number, number];
+  chatScroll: number;
+  chatX: number;
+  chatY: number;
+  chatScale: number;
+  chatOpacity: number;
+  dockActive: 'beam' | 'chat' | null;
+}

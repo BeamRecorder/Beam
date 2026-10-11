@@ -1,0 +1,50 @@
+{
+  "category": "kinetic-type",
+  "duration_s": 7,
+  "fps": 60,
+  "canvas": {
+    "w": 1280,
+    "h": 800,
+    "aspect": "16:10"
+  },
+  "style": "Native Beam tokens, one stationary terminal, three command frontiers, minimal English labels",
+  "palette": [
+    "#cf4a1d",
+    "#151517",
+    "#f5f5f7"
+  ],
+  "font": "Local Hanken Grotesk and Noto Sans Mono",
+  "export": "mp4",
+  "asset_needs": [],
+  "block": "code-terminal-run",
+  "customize": {
+    "commands": "src/commands.ts",
+    "cadence": "uniform",
+    "exit": "content-only fade",
+    "themes": [
+      "light",
+      "dark"
+    ]
+  },
+  "content": {
+    "scenes": [
+      {
+        "id": "agent-cli",
+        "start": 0,
+        "end": 7,
+        "text": "Beam CLI",
+        "emphasis_words": [
+          "Beam CLI"
+        ],
+        "emotion": "precise",
+        "motion": "character frontiers, final hold, closed loop",
+        "beats": [
+          0.3,
+          1.8,
+          3.4,
+          4.6
+        ]
+      }
+    ]
+  }
+}
