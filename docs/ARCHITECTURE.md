@@ -254,6 +254,8 @@ Windows window sources use Windows Graphics Capture rather than a desktop crop. 
 
 ## File and module organization
 
+Preset selectors share `editor/presets/EditorPresetSelect.vue` and `EditorPresetPreview.vue` across Instant and both editors. The desktop adapter resolves stored settings and background identities; `runtime/presets/render-preset-preview.ts` delegates to the normal screen/image, background and watermark painters. Previews are bounded still canvases, with generation guards for asynchronous media and explicit poster disposal. They do not apply a preset or change native window bounds.
+
 - Keep source files below 500 lines. Split a large feature into a canvas/player, timeline, panels, composables, and type modules.
 - Prefer one responsibility per module.
 - Keep parsing and validation at the boundary where data enters a layer.

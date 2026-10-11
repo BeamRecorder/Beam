@@ -1060,6 +1060,8 @@
     "ungroup": "Разгруппировать"
   },
   "EditorPresetControls": {
+    "preview": "Предпросмотр пресета",
+    "previewUnavailable": "Предпросмотр недоступен",
     "preset": "Пресет",
     "editorPreset": "Пресет редактора",
     "settings": "Настройки пресетов",

@@ -1060,6 +1060,8 @@
     "ungroup": "समूह हटाएँ"
   },
   "EditorPresetControls": {
+    "preview": "प्रीसेट का पूर्वावलोकन",
+    "previewUnavailable": "पूर्वावलोकन उपलब्ध नहीं है",
     "preset": "प्रीसेट",
     "editorPreset": "एडिटर प्रीसेट",
     "settings": "एडिटर प्रीसेट की सेटिंग",

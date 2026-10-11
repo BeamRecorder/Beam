@@ -1060,6 +1060,8 @@
     "ungroup": "Gruppierung aufheben"
   },
   "EditorPresetControls": {
+    "preview": "Vorschau der Vorgabe",
+    "previewUnavailable": "Vorschau nicht verfügbar",
     "preset": "Vorlage",
     "editorPreset": "Editorvorlage",
     "settings": "Vorlageneinstellungen",

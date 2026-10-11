@@ -1060,6 +1060,8 @@
     "ungroup": "Разгрупиране"
   },
   "EditorPresetControls": {
+    "preview": "Преглед на предварителната настройка",
+    "previewUnavailable": "Прегледът не е наличен",
     "preset": "Настройка",
     "editorPreset": "Настройка на редактора",
     "settings": "Управление на настройките",

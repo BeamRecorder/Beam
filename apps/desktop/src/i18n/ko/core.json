@@ -1060,6 +1060,8 @@
     "ungroup": "그룹 해제"
   },
   "EditorPresetControls": {
+    "preview": "프리셋 미리보기",
+    "previewUnavailable": "미리보기를 사용할 수 없음",
     "preset": "프리셋",
     "editorPreset": "편집기 프리셋",
     "settings": "편집기 프리셋 설정",

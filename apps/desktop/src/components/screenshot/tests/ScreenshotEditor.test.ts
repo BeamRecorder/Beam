@@ -367,6 +367,8 @@ describe('ScreenshotEditor', () => {
     const wrapper = mountEditor();
     await flushPromises();
     const controls = wrapper.findComponent({ name: 'EditorPresetControls' });
+    expect(controls.props('kind')).toBe('screenshot');
+    expect(controls.props('previewSource')).toBe(documentFixture().source);
     controls.vm.$emit('select', 'custom');
     await flushPromises();
     expect(capture.selectEditorPreset).toHaveBeenCalledWith('custom', 'screenshot');

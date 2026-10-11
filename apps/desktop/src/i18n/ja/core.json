@@ -1060,6 +1060,8 @@
     "ungroup": "グループ解除"
   },
   "EditorPresetControls": {
+    "preview": "プリセットのプレビュー",
+    "previewUnavailable": "プレビューを表示できません",
     "preset": "プリセット",
     "editorPreset": "エディターのプリセット",
     "settings": "プリセット設定",

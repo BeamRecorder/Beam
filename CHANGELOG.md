@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Instant, video editor and screenshot editor preset selectors show still previews with the preset's background, framing, shadows, borders and watermark. Screenshot previews use the open image; animated backgrounds show a still frame.
+
 - Full-screen, region, window, Quick Snip and canvas screenshots play a short CC0 camera shutter at full application volume after success. Recorder finishes the sound before handing off to the editor; Quick Snip confirms after the image is copied or opened for editing.
 
 - Screenshot layers support adjustable Dithering, ASCII, Grain and Cyanotype effects, with matching thumbnails and exports and preserved transparency. Ordered dithering, ASCII, grain and cyanotype run on the GPU; exact Jarvis–Judice–Ninke dithering runs in a cancellable background worker.

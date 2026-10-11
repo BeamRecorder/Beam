@@ -1072,6 +1072,8 @@
     "ungroup": "Dégrouper"
   },
   "EditorPresetControls": {
+    "preview": "Aperçu du preset",
+    "previewUnavailable": "Aperçu indisponible",
     "preset": "Préréglage",
     "editorPreset": "Préréglage de l’éditeur",
     "settings": "Réglages des préréglages",

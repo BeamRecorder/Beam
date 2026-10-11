@@ -303,36 +303,38 @@ onBeforeUnmount(() => {
           <span v-if="$slots.icon" class="select-leading-icon" aria-hidden="true"><slot name="icon" /></span>
           <component :is="icon" v-else-if="icon" class="select-leading-icon" aria-hidden="true" />
 
-          <!-- Thumbnail preview -->
-          <div v-if="selectedOption?.thumbnail" class="selected-thumbnail-wrapper">
-            <img :src="selectedOption.thumbnail" class="trigger-thumbnail-img" draggable="false" />
-            <img
-              v-if="selectedOption.appIcon"
-              :src="selectedOption.appIcon"
-              class="trigger-app-icon"
-              draggable="false"
-            />
-          </div>
+          <slot name="preview" :option="selectedOption">
+            <!-- Thumbnail preview -->
+            <div v-if="selectedOption?.thumbnail" class="selected-thumbnail-wrapper">
+              <img :src="selectedOption.thumbnail" class="trigger-thumbnail-img" draggable="false" />
+              <img
+                v-if="selectedOption.appIcon"
+                :src="selectedOption.appIcon"
+                class="trigger-app-icon"
+                draggable="false"
+              />
+            </div>
 
-          <!-- Color preview -->
-          <div
-            v-else-if="selectedOption?.color"
-            class="selected-color-badge"
-            :style="{ backgroundColor: selectedOption.color }"
-          ></div>
+            <!-- Color preview -->
+            <div
+              v-else-if="selectedOption?.color"
+              class="selected-color-badge"
+              :style="{ backgroundColor: selectedOption.color }"
+            ></div>
 
-          <!-- Skeleton preview -->
-          <div
-            v-else-if="variant !== 'search' && (loading || selectedOption?.loading)"
-            class="selected-thumbnail-wrapper"
-          >
-            <Skeleton variant="linear" width="100%" height="100%" />
-          </div>
+            <!-- Skeleton preview -->
+            <div
+              v-else-if="variant !== 'search' && (loading || selectedOption?.loading)"
+              class="selected-thumbnail-wrapper"
+            >
+              <Skeleton variant="linear" width="100%" height="100%" />
+            </div>
 
-          <div v-else-if="selectedOption?.thumbnailFallback" class="selected-thumbnail-wrapper thumbnail-fallback">
-            <Monitor v-if="selectedOption.thumbnailFallback === 'screen'" :size="15" aria-hidden="true" />
-            <PanelsTopLeft v-else :size="15" aria-hidden="true" />
-          </div>
+            <div v-else-if="selectedOption?.thumbnailFallback" class="selected-thumbnail-wrapper thumbnail-fallback">
+              <Monitor v-if="selectedOption.thumbnailFallback === 'screen'" :size="15" aria-hidden="true" />
+              <PanelsTopLeft v-else :size="15" aria-hidden="true" />
+            </div>
+          </slot>
 
           <span class="select-label" :class="{ 'is-placeholder': !selectedOption }" :style="labelStyle">
             {{ selectedOption ? selectedOption.label : placeholder }}

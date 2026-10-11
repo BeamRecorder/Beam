@@ -1060,6 +1060,8 @@
     "ungroup": "取消编组"
   },
   "EditorPresetControls": {
+    "preview": "预设预览",
+    "previewUnavailable": "预览不可用",
     "preset": "预设",
     "editorPreset": "编辑器预设",
     "settings": "编辑器预设设置",

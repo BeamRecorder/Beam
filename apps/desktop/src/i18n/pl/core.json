@@ -1060,6 +1060,8 @@
     "ungroup": "Rozgrupuj"
   },
   "EditorPresetControls": {
+    "preview": "Podgląd ustawienia wstępnego",
+    "previewUnavailable": "Podgląd niedostępny",
     "preset": "Preset",
     "editorPreset": "Preset edytora",
     "settings": "Ustawienia presetów",

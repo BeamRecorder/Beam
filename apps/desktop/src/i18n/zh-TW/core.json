@@ -1060,6 +1060,8 @@
     "ungroup": "取消群組"
   },
   "EditorPresetControls": {
+    "preview": "預設預覽",
+    "previewUnavailable": "無法預覽",
     "preset": "預設",
     "editorPreset": "編輯器預設",
     "settings": "編輯器預設設定",

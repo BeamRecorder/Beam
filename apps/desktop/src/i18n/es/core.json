@@ -1060,6 +1060,8 @@
     "ungroup": "Desagrupar"
   },
   "EditorPresetControls": {
+    "preview": "Vista previa del preajuste",
+    "previewUnavailable": "Vista previa no disponible",
     "preset": "Preajuste",
     "editorPreset": "Preajuste del editor",
     "settings": "Ajustes de preajustes",

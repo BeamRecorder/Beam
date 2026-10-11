@@ -1060,6 +1060,8 @@
     "ungroup": "Bỏ nhóm"
   },
   "EditorPresetControls": {
+    "preview": "Xem trước thiết lập sẵn",
+    "previewUnavailable": "Không có bản xem trước",
     "preset": "Thiết lập sẵn",
     "editorPreset": "Thiết lập của trình chỉnh sửa",
     "settings": "Cài đặt thiết lập sẵn",

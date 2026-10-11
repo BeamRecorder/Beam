@@ -148,6 +148,7 @@ export function createScreenshotEditorTestHarness(
   };
   const PresetControlsStub = {
     name: 'EditorPresetControls',
+    props: ['kind', 'previewSource'],
     template: '<div data-testid="preset-controls" />',
   };
 
