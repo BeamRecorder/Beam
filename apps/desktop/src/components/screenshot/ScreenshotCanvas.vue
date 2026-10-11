@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { screenshotPaintState } from './screenshot-paint-state';
 import ScreenshotGroupSelection from './ScreenshotGroupSelection.vue';
 import { useScreenshotCanvasGeometry } from './useScreenshotCanvasGeometry';
 import { createScreenshotAlignment } from './screenshot-alignment';
@@ -30,6 +31,7 @@ import CanvasLayerSelection from '../editor/canvas/CanvasLayerSelection.vue';
 import { useScreenshotCanvasAssets } from './useScreenshotCanvasAssets';
 import { injectScreenshotStartup } from './loading/screenshot-startup-context';
 import { releaseCompositedLayerSurface } from '@beam/runtime/composition/render-composited-layer';
+import { createScreenshotCpuPreview } from './screenshot-cpu-preview';
 import { drawScreenshot } from '@beam/runtime/screenshot/screenshot-render';
 import CanvasRecenterButton from '../editor/canvas/CanvasRecenterButton.vue';
 import EditorLoadingFrame from '../editor/layout/EditorLoadingFrame.vue';
@@ -124,6 +126,21 @@ const { selections, selectionBounds, marqueeTargets, editingRotation3d } = useSc
   () => elements?.editing.value?.id ?? elements?.vectorEditing.value ?? undefined,
   (bounds) => emit('selectionBounds', bounds),
 );
+const cpuPreview = createScreenshotCpuPreview({
+  ready: () => {
+    contrast.refresh();
+    if (!painted) {
+      painted = true;
+      initialFramePending.value = false;
+      startup?.finish(canvas.value!.width, canvas.value!.height);
+      emit('ready');
+    }
+  },
+  error: (reason) => {
+    initialFramePending.value = false;
+    emit('error', String(reason));
+  },
+});
 const paint = () => {
   if (!resources.isReady()) return;
   const ctx = canvas.value?.getContext('2d');
@@ -132,21 +149,8 @@ const paint = () => {
   if (canvas.value.width !== width) canvas.value.width = width;
   if (canvas.value.height !== height) canvas.value.height = height;
   try {
-    const state = zoomDraft.value
-      ? {
-          ...previewState.value,
-          zooms: previewState.value.zooms?.map((zoom) =>
-            zoom.id === zoomDraft.value!.id ? { ...zoom, ...zoomDraft.value!, mode: 'manual' as const } : zoom,
-          ),
-        }
-      : previewState.value;
-    const preview = props.cropping
-      ? {
-          ...state,
-          image: props.selectedId === state.image.id ? { ...state.image, crop: undefined } : state.image,
-          images: state.images?.map((image) => (image.id === props.selectedId ? { ...image, crop: undefined } : image)),
-        }
-      : state;
+    const preview = screenshotPaintState(previewState.value, zoomDraft.value, props.cropping, props.selectedId);
+    if (cpuPreview.paint(ctx, preview, assets.value, width, height, elements?.editing.value?.id)) return;
     if (drag && props.selectedId)
       dragRenderer.draw(
         ctx,
@@ -373,6 +377,7 @@ onBeforeUnmount(() => {
   endDrag();
   if (rotating) endPropertyInteraction();
   const context = canvas.value?.getContext('2d');
+  cpuPreview.dispose();
   if (context) releaseCompositedLayerSurface(context);
   frames.dispose();
 });
@@ -472,7 +477,10 @@ onBeforeUnmount(() => {
           />
         </div>
         <Transition name="canvas-frame-ready">
-          <EditorLoadingFrame v-if="initialFramePending" :aspect-ratio="state.canvas.width / state.canvas.height" />
+          <EditorLoadingFrame
+            v-if="initialFramePending || cpuPreview.pending.value"
+            :aspect-ratio="state.canvas.width / state.canvas.height"
+          />
         </Transition>
       </ScreenshotMarqueeSurface>
     </div>

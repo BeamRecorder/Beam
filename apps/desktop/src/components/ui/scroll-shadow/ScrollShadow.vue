@@ -75,9 +75,27 @@ const maskStyle = computed(() => {
 
   if (masks.length === 0) return {};
 
+  // Keep native scrollbars opaque while fading only the content at the viewport edges.
+  const sizes = masks.map(() => '100% 100%');
+  const positions = masks.map(() => '0 0');
+  if (!props.hideScrollbar && props.scrollable) {
+    if (isVert) {
+      masks.push('linear-gradient(black, black)');
+      sizes.push('6px 100%');
+      positions.push('right top');
+    }
+    if (isHoriz) {
+      masks.push('linear-gradient(black, black)');
+      sizes.push('100% 6px');
+      positions.push('left bottom');
+    }
+  }
   const maskValue = masks.join(', ');
   return {
     maskImage: maskValue,
+    maskSize: sizes.join(', '),
+    maskPosition: positions.join(', '),
+    maskRepeat: 'no-repeat',
     WebkitMaskImage: maskValue,
   };
 });
@@ -136,6 +154,10 @@ defineExpose({
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+}
+
+.scroll-shadow-viewport::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
 }
 
 .scroll-shadow-viewport.hide-scrollbar {

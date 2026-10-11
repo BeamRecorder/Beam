@@ -1,3 +1,5 @@
+import { hasCpuLayerEffects } from '@beam/runtime/screenshot/screenshot-cpu-effects';
+import { paintWithAsyncLayerEffects } from '@beam/runtime/gradient/async-layer-effects';
 import { releaseCompositedLayerSurface } from '@beam/runtime/composition/render-composited-layer';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
@@ -66,7 +68,11 @@ export async function rasterizeScreenshotLayer(
           }
         : state;
     try {
-      drawScreenshotLayer(context, visibleState, layer, { background, logo }, width, height);
+      if (hasCpuLayerEffects(layer.effects))
+        await paintWithAsyncLayerEffects(context, (target) =>
+          drawScreenshotLayer(target, visibleState, layer, { background, logo }, width, height),
+        );
+      else drawScreenshotLayer(context, visibleState, layer, { background, logo }, width, height);
     } finally {
       releaseCompositedLayerSurface(context);
     }

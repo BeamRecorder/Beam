@@ -140,7 +140,11 @@ const navigate = (event: KeyboardEvent) => {
         :style="toolStyle"
         :disabled="disabled || !canGroup"
         :aria-label="t('ScreenshotEditor.group')"
-        :tooltip="canGroup ? t('ScreenshotEditor.group') + ' · Ctrl+G' : t('LayerEffects.selectElement')"
+        :tooltip="
+          canGroup
+            ? t('ScreenshotEditor.group') + ' · Ctrl+G'
+            : t(`LayerEffects.${disabled ? 'busy' : (groupDisabledReason ?? 'selectTwoToGroup')}`)
+        "
         :tooltip-delay="200"
         @click="emit('group')"
       />
@@ -152,7 +156,11 @@ const navigate = (event: KeyboardEvent) => {
         :style="toolStyle"
         :disabled="disabled || !canUngroup"
         :aria-label="t('ScreenshotEditor.ungroup')"
-        :tooltip="canUngroup ? t('ScreenshotEditor.ungroup') + ' · Ctrl+Shift+G' : t('LayerEffects.selectElement')"
+        :tooltip="
+          canUngroup
+            ? t('ScreenshotEditor.ungroup') + ' · Ctrl+Shift+G'
+            : t(`LayerEffects.${disabled ? 'busy' : (ungroupDisabledReason ?? 'selectGroupToUngroup')}`)
+        "
         :tooltip-delay="200"
         @click="emit('ungroup')"
       />

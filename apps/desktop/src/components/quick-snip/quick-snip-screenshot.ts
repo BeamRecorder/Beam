@@ -1,5 +1,6 @@
 import { capture } from '~/api/capture';
 import type { QuickSnipConfiguration } from '~/api/types/quick-snip';
+import { playScreenshotSound } from '~/utils/screenshot-sound';
 
 export async function captureQuickScreenshot(current: QuickSnipConfiguration, isCurrent: () => boolean) {
   await capture.prepareRecordingSurface();
@@ -48,10 +49,12 @@ export async function captureQuickScreenshot(current: QuickSnipConfiguration, is
     if (!isCurrent()) return;
     await capture.exportScreenshot(document.id, bytes, 'png', true);
   }
-  if (isCurrent())
-    await capture.reportQuickSnip({
+  if (isCurrent()) {
+    const result = await capture.reportQuickSnip({
       type: 'screenshot',
       name: current.name,
       screenshotId: document.id,
     });
+    if (isCurrent() && result.state === 'completed') await playScreenshotSound();
+  }
 }

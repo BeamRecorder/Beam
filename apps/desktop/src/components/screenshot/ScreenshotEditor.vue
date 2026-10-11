@@ -42,6 +42,8 @@ const selectionBounds = ref<NormalizedTransform | null>(null);
 const toolbarHeight = ref(50);
 const { t } = useTranslate('ScreenshotEditor');
 const { t: effectText } = useTranslate('GradientEffect');
+const { t: artisticText } = useTranslate('ArtisticEffect');
+const { t: ditheringText } = useTranslate('DitheringEffect');
 const { t: colorEffectText } = useTranslate('ColorEffect');
 const { t: topbarText } = useTranslate('Topbar');
 const { t: elementsText } = useTranslate('Elements');
@@ -141,7 +143,13 @@ const panelLabels = computed<Record<string, string>>(() => ({
   canvas: t('canvas'),
   settings: sidebarText('settings'),
   'layer-effect':
-    layerEffects.selected.value?.kind === 'color-adjustment' ? colorEffectText('title') : effectText('title'),
+    layerEffects.selected.value?.kind === 'color-adjustment'
+      ? colorEffectText('title')
+      : layerEffects.selected.value?.kind === 'dithering'
+        ? ditheringText('title')
+        : layerEffects.selected.value && layerEffects.selected.value.kind !== 'gradient'
+          ? artisticText(layerEffects.selected.value.kind)
+          : effectText('title'),
 }));
 const panelTitle = computed(
   () =>
@@ -371,6 +379,7 @@ const navigateSearch = (tab: string) => {
               :source="document.source"
               :disabled="busy || cropping"
               :can-group="groups.canGroup.value"
+              :group-disabled-reason="groups.groupDisabledReason.value"
               :can-move-to-group="groups.canMoveToGroup"
               @group="groups.group"
               @move-to-group="groups.moveToGroup"
@@ -398,7 +407,9 @@ const navigateSearch = (tab: string) => {
               :panel="panel"
               :inspector-open="inspectorOpen"
               :can-group="groups.canGroup.value"
+              :group-disabled-reason="groups.groupDisabledReason.value"
               :can-ungroup="groups.canUngroup.value"
+              :ungroup-disabled-reason="groups.ungroupDisabledReason.value"
               @group="groups.group"
               @ungroup="groups.ungroup"
               :can-undo="history.canUndo.value"

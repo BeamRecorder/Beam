@@ -70,6 +70,9 @@ const { t } = useI18n();
   height: calc(100% - 24px);
   z-index: 13;
 }
+.panel-body {
+  min-height: 0;
+}
 .properties-footer {
   background: transparent;
 }

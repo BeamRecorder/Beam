@@ -1,4 +1,6 @@
 import type { GradientNumberKey, GradientLayerEffect, LayerEffect } from '@beam/engine/gradient/gradient-types';
+import type { ArtisticEffect } from '@beam/engine/gradient/artistic-effect-types';
+import type { DitheringEffect } from '@beam/engine/gradient/dithering-effect-types';
 import type { ColorAdjustmentEffect } from '@beam/engine/gradient/color-effect-types';
 import type { LayerThumbnail } from '../composition/thumbnails/thumbnail-types';
 import type { ScreenshotLayer, ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
@@ -21,6 +23,14 @@ export interface GradientPanelProps {
 }
 export interface ColorPanelProps {
   effect: ColorAdjustmentEffect;
+  disabled?: boolean;
+}
+export interface ArtisticPanelProps {
+  effect: ArtisticEffect;
+  disabled?: boolean;
+}
+export interface DitheringPanelProps {
+  effect: DitheringEffect;
   disabled?: boolean;
 }
 export interface LayerEffectPanelProps {

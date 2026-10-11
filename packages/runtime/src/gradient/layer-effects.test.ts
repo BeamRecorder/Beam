@@ -1,7 +1,17 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
-import { createGradientEffect, createColorEffect } from '@beam/engine';
+import { createGradientEffect, createColorEffect, createDitheringEffect } from '@beam/engine';
 import type { Canvas2DContext } from '../canvas-types';
 const gpu = vi.hoisted(() => ({ render: vi.fn(), dispose: vi.fn(), created: vi.fn() }));
+const dither = vi.hoisted(() => ({ render: vi.fn((..._args: unknown[]) => ({})), dispose: vi.fn(), created: vi.fn() }));
+vi.mock('./dithering-renderer', () => ({
+  DitheringRenderer: class {
+    constructor() {
+      dither.created();
+    }
+    render = dither.render;
+    dispose = dither.dispose;
+  },
+}));
 vi.mock('./gradient-renderer', () => ({
   GradientRenderer: class {
     constructor() {
@@ -204,4 +214,24 @@ describe('isolated layer gradient effects', () => {
     expect(outputs[0]!.restore).toHaveBeenCalled();
     releaseLayerEffects(ctx as unknown as Canvas2DContext);
   });
+});
+
+it('isolates dithering, preserves ordered stacks and disposes its retained GPU resources', () => {
+  const ctx = context();
+  const effect = createDitheringEffect('dither');
+  for (let n = 0; n < 2; n++)
+    drawWithLayerEffects(
+      ctx as unknown as Canvas2DContext,
+      [createColorEffect('color'), effect, createGradientEffect('fill')],
+      rect,
+      1,
+      vi.fn(),
+    );
+  expect(dither.created).toHaveBeenCalledOnce();
+  expect(dither.render).toHaveBeenCalledTimes(2);
+  expect(dither.render.mock.calls[0]?.[0]).toEqual(effect.recipe);
+  expect(dither.render.mock.calls[0]?.[1]).toBe(outputs[1]!.canvas);
+  releaseLayerEffects(ctx as unknown as Canvas2DContext);
+  expect(dither.dispose).toHaveBeenCalledOnce();
+  expect(gpu.dispose).toHaveBeenCalledOnce();
 });

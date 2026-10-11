@@ -2,6 +2,9 @@ import { disposeBlurEffect } from '../composition/effects/blur-effect';
 import type { LayerEffect } from '@beam/engine/gradient/gradient-types';
 import type { Canvas2DContext } from '../canvas-types';
 import type { GradientRect, LayerEffectRuntime } from './gradient-types';
+import { ArtisticRenderer } from './artistic-renderer';
+import { drawJarvisEffect } from './async-layer-effects';
+import { DitheringRenderer } from './dithering-renderer';
 import { GradientRenderer } from './gradient-renderer';
 import { gradientProjection } from './gradient-projection';
 import { colorAdjustmentFilter } from './color-filter';
@@ -21,6 +24,8 @@ export function releaseLayerEffects(ctx: Canvas2DContext) {
   const runtime = surfaces.get(ctx);
   if (!runtime) return;
   runtime.renderer?.dispose();
+  runtime.ditheringRenderer?.dispose();
+  runtime.artisticRenderer?.dispose();
   disposeBlurEffect(runtime.layerContext);
   for (const canvas of [runtime.layer, runtime.base, runtime.result]) canvas.width = canvas.height = 0;
   surfaces.delete(ctx);
@@ -78,6 +83,24 @@ export function drawWithLayerEffects(
         resultContext.drawImage(gradient, 0, 0);
         resultContext.globalCompositeOperation = 'destination-in';
         resultContext.drawImage(base, 0, 0);
+      } else if (effect.kind === 'dithering') {
+        if (effect.recipe.algorithm === 'jarvis-judice-ninke') {
+          resultContext.drawImage(drawJarvisEffect(base, effect.recipe, pixelRatio), 0, 0);
+        } else {
+          const renderer = (runtime.ditheringRenderer ??= new DitheringRenderer());
+          resultContext.drawImage(
+            renderer.render(effect.recipe, base, gradientProjection(rect, ctx.getTransform()), rect, pixelRatio),
+            0,
+            0,
+          );
+        }
+      } else if (effect.kind !== 'color-adjustment') {
+        const renderer = (runtime.artisticRenderer ??= new ArtisticRenderer());
+        resultContext.drawImage(
+          renderer.render(effect, base, gradientProjection(rect, ctx.getTransform()), rect, pixelRatio),
+          0,
+          0,
+        );
       } else {
         resultContext.filter = colorAdjustmentFilter(effect.recipe);
         resultContext.drawImage(base, 0, 0);

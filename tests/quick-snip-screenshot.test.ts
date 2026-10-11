@@ -13,7 +13,9 @@ const mocks = vi.hoisted(() => ({
   screenshotState: vi.fn(),
   encodeScreenshot: vi.fn(),
   screenshotPreview: vi.fn(),
+  playScreenshotSound: vi.fn(),
 }));
+vi.mock('~/utils/screenshot-sound', () => ({ playScreenshotSound: mocks.playScreenshotSound }));
 vi.mock('~/api/capture', () => ({ capture: mocks.capture }));
 vi.mock('~/components/screenshot/screenshot-state', () => ({
   screenshotState: mocks.screenshotState,
@@ -42,6 +44,7 @@ const bytes = new ArrayBuffer(4);
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.capture.captureScreenshot.mockResolvedValue(document);
+  mocks.capture.reportQuickSnip.mockResolvedValue({ state: 'completed' });
   mocks.capture.listBackgroundLibrary.mockResolvedValue([]);
   mocks.screenshotState.mockReturnValue(state);
   mocks.screenshotPreview.mockResolvedValue('data:image/jpeg;base64,AA==');
@@ -91,6 +94,10 @@ describe('Quick screenshot pipeline', () => {
       mocks.capture.exportScreenshot.mock.invocationCallOrder[0]!,
     );
     expect(mocks.capture.exportScreenshot).toHaveBeenCalledWith(document.id, bytes, 'png', true);
+    expect(mocks.playScreenshotSound).toHaveBeenCalledOnce();
+    expect(mocks.playScreenshotSound.mock.invocationCallOrder[0]).toBeGreaterThan(
+      mocks.capture.reportQuickSnip.mock.invocationCallOrder[2]!,
+    );
   });
 
   it('returns Portal cancellation to the bar without processing or copying', async () => {
@@ -104,6 +111,7 @@ describe('Quick screenshot pipeline', () => {
       name: configuration.name,
     });
     expect(mocks.encodeScreenshot).not.toHaveBeenCalled();
+    expect(mocks.playScreenshotSound).not.toHaveBeenCalled();
   });
 
   it('opens an editable screenshot without background loading or clipboard encoding', async () => {
@@ -115,6 +123,7 @@ describe('Quick screenshot pipeline', () => {
     });
     expect(mocks.capture.listBackgroundLibrary).not.toHaveBeenCalled();
     expect(mocks.capture.exportScreenshot).not.toHaveBeenCalled();
+    expect(mocks.playScreenshotSound).toHaveBeenCalledOnce();
   });
 
   it.each(['prepareRecordingSurface', 'captureScreenshot', 'listBackgroundLibrary', 'saveScreenshot'] as const)(
@@ -128,6 +137,7 @@ describe('Quick screenshot pipeline', () => {
       await captureQuickScreenshot(configuration, () => current);
       expect(mocks.capture.exportScreenshot).not.toHaveBeenCalled();
       expect(mocks.capture.reportQuickSnip.mock.calls.some(([event]) => event.type === 'screenshot')).toBe(false);
+      expect(mocks.playScreenshotSound).not.toHaveBeenCalled();
     },
   );
 
@@ -140,6 +150,7 @@ describe('Quick screenshot pipeline', () => {
     await captureQuickScreenshot(configuration, () => current);
     expect(mocks.capture.reportQuickSnip).toHaveBeenCalledTimes(1);
     expect(mocks.capture.exportScreenshot).not.toHaveBeenCalled();
+    expect(mocks.playScreenshotSound).not.toHaveBeenCalled();
   });
 
   it('does not complete an obsolete job after clipboard response', async () => {
@@ -149,11 +160,48 @@ describe('Quick screenshot pipeline', () => {
     });
     await captureQuickScreenshot(configuration, () => current);
     expect(mocks.capture.reportQuickSnip).toHaveBeenCalledTimes(2);
+    expect(mocks.playScreenshotSound).not.toHaveBeenCalled();
   });
 
   it('propagates a clipboard failure without claiming completion', async () => {
     mocks.capture.exportScreenshot.mockRejectedValue(new Error('clipboard unavailable'));
     await expect(captureQuickScreenshot(configuration, () => true)).rejects.toThrow('clipboard unavailable');
     expect(mocks.capture.reportQuickSnip).toHaveBeenCalledTimes(2);
+    expect(mocks.playScreenshotSound).not.toHaveBeenCalled();
+  });
+
+  it.each(['failed', 'canceled', 'processing'])(
+    'does not sound a success when completion returns %s',
+    async (state) => {
+      mocks.capture.reportQuickSnip.mockResolvedValue({ state });
+      await captureQuickScreenshot(configuration, () => true);
+      expect(mocks.playScreenshotSound).not.toHaveBeenCalled();
+    },
+  );
+
+  it('does not sound a success for a job canceled during the completion report', async () => {
+    let current = true;
+    mocks.capture.reportQuickSnip.mockImplementation(async (event) => {
+      if (event.type === 'screenshot') current = false;
+      return { state: 'completed' };
+    });
+    await captureQuickScreenshot(configuration, () => current);
+    expect(mocks.playScreenshotSound).not.toHaveBeenCalled();
+  });
+
+  it('keeps the capturing renderer pending until the sound finishes', async () => {
+    let finish!: () => void;
+    mocks.playScreenshotSound.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const completed = vi.fn();
+    const capture = captureQuickScreenshot({ ...configuration, screenshotAction: 'edit' }, () => true).then(completed);
+    await vi.waitFor(() => expect(mocks.playScreenshotSound).toHaveBeenCalledOnce());
+    expect(completed).not.toHaveBeenCalled();
+    finish();
+    await capture;
+    expect(completed).toHaveBeenCalledOnce();
   });
 });

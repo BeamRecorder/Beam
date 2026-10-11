@@ -643,9 +643,41 @@
     "effects": "エフェクト",
     "color": "色",
     "selectElement": "要素を選択してください",
+    "selectTwoToGroup": "グループ化する要素を2つ選択",
+    "selectOneMoreToGroup": "グループ化する要素をあと1つ選択",
+    "alreadyGrouped": "これらの要素は既にグループ化されています",
+    "selectGroupToUngroup": "グループ化を解除する要素を選択",
     "locked": "編集するには要素のロックを解除してください",
     "busy": "現在の操作が完了するまでお待ちください",
     "effectLimit": "この要素にはすでに4つのエフェクトがあります",
     "unsupported": "コンテンツ要素を選択してください"
+  },
+  "DitheringEffect": {
+    "title": "ディザリング",
+    "pattern": "パターン",
+    "pixelSize": "パターンのサイズ",
+    "fourTones": "4階調",
+    "retro": "レトロ",
+    "algorithm": "アルゴリズム",
+    "ordered": "規則的（GPU）",
+    "mapping": "色の割り当て",
+    "nearestColors": "近似色",
+    "luminance": "輝度",
+    "blockSize": "ピクセル化"
+  },
+  "ArtisticEffect": {
+    "ascii": "ASCII",
+    "grain": "粒子",
+    "cyanotype": "サイアノタイプ",
+    "cellSize": "文字サイズ",
+    "amount": "強度",
+    "size": "粒子サイズ",
+    "colored": "元の色",
+    "monochrome": "単色",
+    "invert": "文字を反転",
+    "foreground": "文字色",
+    "background": "背景",
+    "blue": "プルシアンブルー",
+    "paper": "用紙"
   }
 }

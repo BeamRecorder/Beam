@@ -643,9 +643,41 @@
     "effects": "Hiệu ứng",
     "color": "Màu",
     "selectElement": "Chọn một phần tử",
+    "selectTwoToGroup": "Chọn 2 phần tử để nhóm",
+    "selectOneMoreToGroup": "Chọn thêm 1 phần tử để nhóm",
+    "alreadyGrouped": "Các phần tử này đã được nhóm",
+    "selectGroupToUngroup": "Chọn một phần tử trong nhóm để bỏ nhóm",
     "locked": "Mở khóa phần tử để chỉnh sửa",
     "busy": "Đợi thao tác hiện tại hoàn tất",
     "effectLimit": "Phần tử này đã có bốn hiệu ứng",
     "unsupported": "Chọn một phần tử nội dung"
+  },
+  "DitheringEffect": {
+    "title": "Dithering",
+    "pattern": "Mẫu",
+    "pixelSize": "Kích thước mẫu",
+    "fourTones": "Bốn sắc độ",
+    "retro": "Hoài cổ",
+    "algorithm": "Thuật toán",
+    "ordered": "Có thứ tự (GPU)",
+    "mapping": "Ánh xạ màu",
+    "nearestColors": "Màu gần nhất",
+    "luminance": "Độ chói",
+    "blockSize": "Điểm ảnh hóa"
+  },
+  "ArtisticEffect": {
+    "ascii": "ASCII",
+    "grain": "Hạt",
+    "cyanotype": "Cyanotype",
+    "cellSize": "Cỡ ký tự",
+    "amount": "Cường độ",
+    "size": "Cỡ hạt",
+    "colored": "Màu gốc",
+    "monochrome": "Đơn sắc",
+    "invert": "Đảo ký tự",
+    "foreground": "Màu chữ",
+    "background": "Nền",
+    "blue": "Xanh Phổ",
+    "paper": "Giấy"
   }
 }

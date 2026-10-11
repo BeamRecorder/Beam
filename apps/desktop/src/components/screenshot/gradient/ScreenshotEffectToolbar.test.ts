@@ -16,7 +16,13 @@ it('offers two compact icon menus and actual gradient/color/monochrome tools', (
   expect(wrapper.get('[data-effect-menu="effects"]').text()).toBe('');
   expect(wrapper.get('[data-effect-menu="color"]').attributes('aria-label')).toBe('color');
   const menus = wrapper.findAllComponents(PopoverMenuList);
-  expect(menus[0]!.props('items').map((item) => item.id)).toEqual(['gradient']);
+  expect(menus[0]!.props('items').map((item) => item.id)).toEqual([
+    'gradient',
+    'dithering',
+    'ascii',
+    'grain',
+    'cyanotype',
+  ]);
   expect(menus[1]!.props('items').map((item) => item.id)).toEqual(['color-adjustment', 'grayscale']);
   wrapper.unmount();
 });

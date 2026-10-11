@@ -1,4 +1,6 @@
 import type { LayerBlendMode } from '../shared/layer-compositing-types';
+import type { ArtisticEffect } from './artistic-effect-types';
+import type { DitheringEffect } from './dithering-effect-types';
 import type { ColorAdjustmentEffect } from './color-effect-types';
 
 export type GradientMode = 'mesh' | 'flow' | 'silk';
@@ -44,7 +46,7 @@ export interface GradientLayerEffect {
   blendMode: LayerBlendMode;
   recipe: GradientRecipe;
 }
-export type LayerEffect = GradientLayerEffect | ColorAdjustmentEffect;
+export type LayerEffect = GradientLayerEffect | ColorAdjustmentEffect | DitheringEffect | ArtisticEffect;
 
 export interface GradientPreset {
   id: string;

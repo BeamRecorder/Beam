@@ -1,3 +1,5 @@
+import { validateArtisticRecipe } from './artistic-schema.js';
+import { validateDitheringRecipe } from './dithering-schema.js';
 import { validateColorRecipe } from './color-schema.js';
 // Portable, static recipes use the BEBE-ui parameter contract. No wall-clock state is persisted.
 export const DEFAULT_GRADIENT_RECIPE = {
@@ -101,19 +103,21 @@ export function validateLayerEffects(effects, blendModes) {
       !effect.id ||
       effect.id.length > 200 ||
       ids.has(effect.id) ||
-      !['gradient', 'color-adjustment'].includes(effect.kind) ||
+      !['gradient', 'color-adjustment', 'dithering', 'ascii', 'grain', 'cyanotype'].includes(effect.kind) ||
       typeof effect.enabled !== 'boolean' ||
       typeof effect.opacity !== 'number' ||
       !Number.isFinite(effect.opacity) ||
       effect.opacity < 0 ||
       effect.opacity > 100 ||
       !blendModes.includes(effect.blendMode) ||
-      (effect.kind === 'color-adjustment' && effect.blendMode !== 'source-over') ||
+      (effect.kind !== 'gradient' && effect.blendMode !== 'source-over') ||
       Object.keys(effect).some((key) => !['id', 'kind', 'enabled', 'opacity', 'blendMode', 'recipe'].includes(key))
     )
       throw new TypeError('Invalid layer effect.');
     if (effect.kind === 'gradient') validateGradientRecipe(effect.recipe);
-    else validateColorRecipe(effect.recipe);
+    else if (effect.kind === 'dithering') validateDitheringRecipe(effect.recipe);
+    else if (effect.kind === 'color-adjustment') validateColorRecipe(effect.recipe);
+    else validateArtisticRecipe(effect.kind, effect.recipe);
     ids.add(effect.id);
   }
 }

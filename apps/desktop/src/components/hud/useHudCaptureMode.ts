@@ -3,6 +3,7 @@ import { capture } from '~/api/capture';
 import type { CaptureMode } from '@beam/engine/capture/capture-mode';
 import type { PreferenceSettings } from '~/api/types/capture-api';
 import type { RecordingConfiguration } from './recorder/recording-types';
+import { playScreenshotSound } from '~/utils/screenshot-sound';
 
 export function useHudCaptureMode(
   busy: Ref<boolean>,
@@ -76,6 +77,7 @@ export function useHudCaptureMode(
         });
         capture.setWindowVisible(true);
         if (screenshot === null) return;
+        await playScreenshotSound();
         await capture.openScreenshot(screenshot.id);
       }
     } catch (reason) {

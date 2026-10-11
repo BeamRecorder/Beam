@@ -1,6 +1,8 @@
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import { validScreenshotDimensions } from '@beam/engine/screenshot/screenshot-dimensions';
 import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot-types';
+import { screenshotHasCpuEffects } from '@beam/runtime/screenshot/screenshot-cpu-effects';
+import { paintWithAsyncLayerEffects } from '@beam/runtime/gradient/async-layer-effects';
 import { drawScreenshot } from '@beam/runtime/screenshot/screenshot-render';
 import { releaseCompositedLayerSurface } from '@beam/runtime/composition/render-composited-layer';
 import type { StillEncodeOptions } from './still-encode-types';
@@ -29,7 +31,11 @@ export async function encodeStillImage(
     if (!context) throw new StillEncodingError('render-unavailable');
     const start = performance.now();
     try {
-      drawScreenshot(context, state, assets, canvas.width, canvas.height);
+      if (screenshotHasCpuEffects(state))
+        await paintWithAsyncLayerEffects(context, (target) =>
+          drawScreenshot(target, state, assets, canvas.width, canvas.height),
+        );
+      else drawScreenshot(context, state, assets, canvas.width, canvas.height);
     } finally {
       options.onTiming?.('render', performance.now() - start);
     }

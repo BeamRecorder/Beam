@@ -113,3 +113,32 @@ describe('Screenshot attached effect editing', () => {
     f.scope.stop();
   });
 });
+it('adds dithering to just its owner and edits, toggles and removes it', () => {
+  const f = setup();
+  f.effects.add('image', 'dithering');
+  const effect = f.effects.selected.value!;
+  expect(effect.kind).toBe('dithering');
+  expect(f.state.value.composition!.filter((layer) => layer.effects?.length).map((layer) => layer.id)).toEqual([
+    'image',
+  ]);
+  if (effect.kind !== 'dithering') throw new Error('Expected dithering');
+  f.effects.update({ recipe: { ...effect.recipe, pixelSize: 3 } });
+  expect(f.effects.selected.value!.recipe).toMatchObject({ pixelSize: 3 });
+  f.effects.toggle('image', effect.id);
+  expect(f.effects.selected.value!.enabled).toBe(false);
+  f.effects.remove();
+  expect(f.effects.selected.value).toBeUndefined();
+  f.scope.stop();
+});
+it.each(['ascii', 'grain', 'cyanotype'] as const)('adds and persists %s independently of other effects', (kind) => {
+  const f = setup();
+  f.effects.add('image');
+  const first = f.effects.selected.value!.id;
+  f.effects.add('image', kind);
+  expect(f.effects.selected.value?.kind).toBe(kind);
+  f.effects.update({ opacity: 35 });
+  expect(f.effects.selected.value?.opacity).toBe(35);
+  f.effects.select('image', first);
+  expect(f.effects.selected.value?.kind).toBe('gradient');
+  f.scope.stop();
+});

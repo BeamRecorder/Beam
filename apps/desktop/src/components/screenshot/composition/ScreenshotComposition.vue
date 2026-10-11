@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ScreenshotGroupDisabledReason } from '../screenshot-toolbar-types';
 import { computed, nextTick, ref, watch } from 'vue';
 import { useMediaQuery } from '@vueuse/core';
 import {
@@ -52,6 +53,7 @@ const props = defineProps<{
   previewReady?: boolean;
   cursorPacks?: CursorPackDescriptor[];
   canGroup?: boolean;
+  groupDisabledReason?: ScreenshotGroupDisabledReason;
   canMoveToGroup?: (id: string, groupId: string | null) => boolean;
 }>();
 const emit = defineEmits<{
@@ -321,7 +323,11 @@ const keyboard = (event: KeyboardEvent, id: string) => {
             :icon="Group"
             :disabled="disabled || !canGroup"
             :aria-label="editorText('group')"
-            :tooltip="canGroup ? editorText('group') + ' · Ctrl+G' : effectText('selectElement')"
+            :tooltip="
+              canGroup
+                ? editorText('group') + ' · Ctrl+G'
+                : effectText(disabled ? 'busy' : (groupDisabledReason ?? 'selectTwoToGroup'))
+            "
             :tooltip-delay="200"
             data-composition-group-action
             @click="!disabled && canGroup && emit('group')"
@@ -334,7 +340,12 @@ const keyboard = (event: KeyboardEvent, id: string) => {
           :aria-label="t('layers')"
           :inert="disabled || undefined"
           :aria-disabled="disabled"
-          :style="{ maskImage: listMask }"
+          :style="{
+            maskImage: `${listMask}, linear-gradient(black, black)`,
+            maskSize: '100% 100%, 6px 100%',
+            maskPosition: '0 0, right top',
+            maskRepeat: 'no-repeat',
+          }"
         >
           <!-- Export disables the list once, without updating every row or remeasuring its buttons. -->
           <TransitionGroup tag="div" name="layer" class="layer-rows">

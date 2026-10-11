@@ -1,4 +1,5 @@
 import { computed } from 'vue';
+import type { ScreenshotGroupDisabledReason } from './screenshot-toolbar-types';
 import type { Ref } from 'vue';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import { screenshotLayers } from '@beam/engine/screenshot/screenshot-layers';
@@ -16,16 +17,23 @@ export function useScreenshotGroups(
   const members = computed(() =>
     state.value ? screenshotLayers(state.value).filter((r) => selected.value.includes(r.id)) : [],
   );
-  const canGroup = computed(
-    () =>
-      !disabled() &&
-      members.value.length >= 2 &&
-      members.value.every((r) => !r.locked && !['background', 'watermark', 'zoom'].includes(r.kind)) &&
-      !members.value.every((r) => r.groupId && r.groupId === members.value[0]?.groupId),
-  );
-  const canUngroup = computed(
-    () => !disabled() && members.value.some((r) => r.groupId) && members.value.every((r) => !r.locked),
-  );
+  const groupDisabledReason = computed<ScreenshotGroupDisabledReason | undefined>(() => {
+    if (disabled()) return 'busy';
+    if (members.value.length === 0) return 'selectTwoToGroup';
+    if (members.value.some((r) => r.locked)) return 'locked';
+    if (members.value.some((r) => ['background', 'watermark', 'zoom'].includes(r.kind))) return 'unsupported';
+    if (members.value.length === 1) return 'selectOneMoreToGroup';
+    if (members.value.every((r) => r.groupId && r.groupId === members.value[0]?.groupId)) return 'alreadyGrouped';
+    return undefined;
+  });
+  const ungroupDisabledReason = computed<ScreenshotGroupDisabledReason | undefined>(() => {
+    if (disabled()) return 'busy';
+    if (members.value.some((r) => r.locked)) return 'locked';
+    if (!members.value.some((r) => r.groupId)) return 'selectGroupToUngroup';
+    return undefined;
+  });
+  const canGroup = computed(() => !groupDisabledReason.value);
+  const canUngroup = computed(() => !ungroupDisabledReason.value);
   const perform = (ungroup: boolean) => {
     if (!state.value || !(ungroup ? canUngroup.value : canGroup.value)) return false;
     beginPropertyInteraction();
@@ -53,6 +61,8 @@ export function useScreenshotGroups(
   };
   return {
     canGroup,
+    groupDisabledReason,
+    ungroupDisabledReason,
     canUngroup,
     canMoveToGroup,
     moveToGroup,

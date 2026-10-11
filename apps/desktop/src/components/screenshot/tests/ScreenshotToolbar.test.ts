@@ -219,3 +219,19 @@ it('disables unavailable group actions', () => {
   expect(wrapper.get('button[aria-label="Group"]').attributes('disabled')).toBeDefined();
   expect(wrapper.get('button[aria-label="Ungroup"]').attributes('disabled')).toBeDefined();
 });
+it('shows selection-specific group instructions on both actions', async () => {
+  const { default: Button } = await import('~/ui/button/Button.vue');
+  const wrapper = makeToolbar();
+  const group = () =>
+    wrapper.findAllComponents(Button).find((button) => button.find('button[aria-label="Group"]').exists())!;
+  const ungroup = () =>
+    wrapper.findAllComponents(Button).find((button) => button.find('button[aria-label="Ungroup"]').exists())!;
+  expect(group().props('tooltip')).toBe('Select 2 elements to group');
+  expect(ungroup().props('tooltip')).toBe('Select a grouped element to ungroup');
+  await wrapper.setProps({ groupDisabledReason: 'selectOneMoreToGroup' });
+  expect(group().props('tooltip')).toBe('Select 1 more element to group');
+  await wrapper.setProps({ groupDisabledReason: 'alreadyGrouped' });
+  expect(group().props('tooltip')).toBe('These elements are already grouped');
+  await wrapper.setProps({ canGroup: true });
+  expect(group().props('tooltip')).toBe('Group · Ctrl+G');
+});

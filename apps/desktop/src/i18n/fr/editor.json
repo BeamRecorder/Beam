@@ -643,9 +643,41 @@
     "effects": "Effets",
     "color": "Couleur",
     "selectElement": "Sélectionnez un élément",
+    "selectTwoToGroup": "Sélectionnez 2 éléments à grouper",
+    "selectOneMoreToGroup": "Sélectionnez 1 élément de plus pour grouper",
+    "alreadyGrouped": "Ces éléments sont déjà groupés",
+    "selectGroupToUngroup": "Sélectionnez un élément groupé pour le dégrouper",
     "locked": "Déverrouillez l’élément pour le modifier",
     "busy": "Attendez la fin de l’action en cours",
     "effectLimit": "Cet élément possède déjà quatre effets",
     "unsupported": "Sélectionnez un élément de contenu"
+  },
+  "DitheringEffect": {
+    "title": "Dithering",
+    "pattern": "Motif",
+    "pixelSize": "Taille du motif",
+    "fourTones": "Quatre tons",
+    "retro": "Rétro",
+    "algorithm": "Algorithme",
+    "ordered": "Ordonné (GPU)",
+    "mapping": "Correspondance des couleurs",
+    "nearestColors": "Couleurs proches",
+    "luminance": "Luminance",
+    "blockSize": "Pixellisation"
+  },
+  "ArtisticEffect": {
+    "ascii": "ASCII",
+    "grain": "Grain",
+    "cyanotype": "Cyanotype",
+    "cellSize": "Taille des caractères",
+    "amount": "Intensité",
+    "size": "Taille du grain",
+    "colored": "Couleurs originales",
+    "monochrome": "Monochrome",
+    "invert": "Inverser les caractères",
+    "foreground": "Couleur du texte",
+    "background": "Fond",
+    "blue": "Bleu de Prusse",
+    "paper": "Papier"
   }
 }
