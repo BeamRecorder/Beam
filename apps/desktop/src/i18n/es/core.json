@@ -1289,5 +1289,9 @@
     "noMatches": "No hay carpetas coincidentes",
     "error": "No se pudo actualizar la carpeta.",
     "retry": "Reintentar"
+  },
+  "BigSlider": {
+    "resetDefault": "Restablecer el valor predeterminado",
+    "editValue": "Haz clic para editar el valor directamente"
   }
 }

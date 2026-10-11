@@ -1301,5 +1301,9 @@
     "noMatches": "Aucun dossier correspondant",
     "error": "Impossible de mettre à jour le dossier.",
     "retry": "Réessayer"
+  },
+  "BigSlider": {
+    "resetDefault": "Rétablir la valeur par défaut",
+    "editValue": "Cliquez pour modifier la valeur directement"
   }
 }

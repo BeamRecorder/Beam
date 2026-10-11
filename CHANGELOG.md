@@ -14,10 +14,13 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Dithering uses the gradient editor's freely editable two-to-eight-color palette, full-width algorithm and color-mapping choices, and organized inspector sections with effect opacity and removal actions below the controls.
+
 - The website’s Studio overview now runs for 15 seconds with gentler cursor travel, longer reading pauses and two restrained camera views that stay fixed during edits.
 
 ### Fixed
 
+- Slider reset and direct-value editing hints follow the selected language in all fifteen locales.
 - Screenshot effect panels avoid unnecessary scrollbars and keep scrollbar thumbs visible while content fades at the edges.
 - Screenshot grouping actions explain how many more elements to select and identify locked or already grouped selections, in all fifteen languages.
 

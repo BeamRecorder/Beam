@@ -5,7 +5,8 @@ import ScreenshotDitheringPanel from './ScreenshotDitheringPanel.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Select from '~/ui/select/Select.vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
-import ScreenshotOpacity from '../composition/ScreenshotOpacity.vue';
+import Gradient from '~/ui/Gradient/Gradient.vue';
+import Accordion from '~/ui/accordion/Accordion.vue';
 vi.mock('~/i18n/useTranslate', () => ({ useTranslate: () => ({ t: (key: string) => key }) }));
 enableAutoUnmount(afterEach);
 const panel = (disabled = false) =>
@@ -33,20 +34,29 @@ it('rejects invalid values and guards disabled controls even for stale events', 
   expect(wrapper.emitted('update')).toBeUndefined();
   const disabled = panel(true);
   disabled.findComponent(BigSlider).vm.$emit('update:modelValue', 3);
-  disabled.findComponent(ScreenshotOpacity).vm.$emit('update:modelValue', 40);
+  disabled
+    .findAllComponents(BigSlider)
+    .find((item) => item.props('label') === 'opacity')!
+    .vm.$emit('update:modelValue', 40);
   expect(disabled.emitted('update')).toBeUndefined();
   expect(disabled.get('fieldset').attributes('inert')).toBeDefined();
 });
-it('applies palettes and forwards opacity, enable, reset, remove and back', async () => {
+it('edits a custom palette and forwards opacity, enable, reset, remove and back', async () => {
   const wrapper = panel();
-  await wrapper
-    .findAll('button')
-    .find((button) => button.text() === 'retro')!
-    .trigger('click');
+  wrapper.getComponent(Gradient).vm.$emit('update:modelValue', {
+    stops: [
+      { id: 'a', position: 0, color: '#123456' },
+      { id: 'b', position: 0.5, color: '#789abc' },
+      { id: 'c', position: 1, color: '#def012' },
+    ],
+  });
   expect(wrapper.emitted('update')?.[0]).toEqual([
-    { recipe: { ...DEFAULT_DITHERING_RECIPE, colors: ['#0f380f', '#306230', '#8bac0f', '#9bbc0f'] } },
+    { recipe: { ...DEFAULT_DITHERING_RECIPE, colors: ['#123456', '#789abc', '#def012'] } },
   ]);
-  wrapper.findComponent(ScreenshotOpacity).vm.$emit('update:modelValue', 40);
+  wrapper
+    .findAllComponents(BigSlider)
+    .find((item) => item.props('label') === 'opacity')!
+    .vm.$emit('update:modelValue', 40);
   await wrapper.get('[role="switch"]').trigger('click');
   await wrapper
     .findAll('button')
@@ -61,6 +71,23 @@ it('applies palettes and forwards opacity, enable, reset, remove and back', asyn
   await wrapper.get('[aria-label="back"]').trigger('click');
   expect(wrapper.emitted('remove')).toEqual([[]]);
   expect(wrapper.emitted('back')).toEqual([[]]);
+});
+it('keeps navigation separate from footer actions and groups controls into accessible disclosures', async () => {
+  const wrapper = panel();
+  expect(wrapper.find('.effect-navigation strong').exists()).toBe(false);
+  expect(wrapper.find('.effect-navigation [aria-label="remove"]').exists()).toBe(false);
+  expect(wrapper.find('.effect-footer [aria-label="remove"]').exists()).toBe(true);
+  expect(wrapper.findAllComponents(Select).every((item) => item.props('size') === 'sm')).toBe(true);
+  expect(wrapper.findAllComponents(Accordion).map((item) => item.props('title'))).toEqual([
+    'palette',
+    'surface',
+    'adjustments',
+  ]);
+  for (const disclosure of wrapper.findAllComponents(Accordion)) {
+    const open = disclosure.props('modelValue');
+    await disclosure.get('.accordion-trigger').trigger('click');
+    expect(disclosure.props('modelValue')).toBe(!open);
+  }
 });
 it('offers JJN and palette mapping, rejects unknown selections and hides ordered-only controls for JJN', async () => {
   const wrapper = panel(),

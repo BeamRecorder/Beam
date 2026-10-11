@@ -1289,5 +1289,9 @@
     "noMatches": "Không có thư mục phù hợp",
     "error": "Không thể cập nhật thư mục.",
     "retry": "Thử lại"
+  },
+  "BigSlider": {
+    "resetDefault": "Đặt lại giá trị mặc định",
+    "editValue": "Nhấp để chỉnh sửa trực tiếp giá trị"
   }
 }

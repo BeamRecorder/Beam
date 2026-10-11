@@ -662,14 +662,15 @@
     "title": "抖色",
     "pattern": "图案",
     "pixelSize": "图案大小",
-    "fourTones": "四阶色调",
-    "retro": "复古",
     "algorithm": "算法",
-    "ordered": "有序（GPU）",
+    "ordered": "Bayer",
     "mapping": "颜色映射",
     "nearestColors": "最近颜色",
     "luminance": "亮度",
-    "blockSize": "像素化"
+    "blockSize": "像素化",
+    "palette": "调色板",
+    "enabled": "启用抖色",
+    "remove": "移除抖色"
   },
   "ArtisticEffect": {
     "ascii": "ASCII",

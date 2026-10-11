@@ -1289,5 +1289,9 @@
     "noMatches": "没有匹配的文件夹",
     "error": "无法更新文件夹。",
     "retry": "重试"
+  },
+  "BigSlider": {
+    "resetDefault": "恢复默认值",
+    "editValue": "点击直接编辑数值"
   }
 }

@@ -662,14 +662,15 @@
     "title": "Дитеринг",
     "pattern": "Шаблон",
     "pixelSize": "Размер на шаблона",
-    "fourTones": "Четири тона",
-    "retro": "Ретро",
     "algorithm": "Алгоритъм",
-    "ordered": "Подреден (GPU)",
+    "ordered": "Bayer",
     "mapping": "Съпоставяне на цветове",
     "nearestColors": "Най-близки цветове",
     "luminance": "Яркост",
-    "blockSize": "Пикселизация"
+    "blockSize": "Пикселизация",
+    "palette": "Палитра",
+    "enabled": "Активиране на дитеринг",
+    "remove": "Премахване на дитеринг"
   },
   "ArtisticEffect": {
     "ascii": "ASCII",

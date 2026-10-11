@@ -1289,5 +1289,9 @@
     "noMatches": "Keine passenden Ordner",
     "error": "Der Ordner konnte nicht aktualisiert werden.",
     "retry": "Erneut versuchen"
+  },
+  "BigSlider": {
+    "resetDefault": "Auf Standardwert zurücksetzen",
+    "editValue": "Klicken, um den Wert direkt zu bearbeiten"
   }
 }

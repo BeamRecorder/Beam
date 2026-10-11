@@ -1289,5 +1289,9 @@
     "noMatches": "Brak pasujących folderów",
     "error": "Nie udało się zaktualizować folderu.",
     "retry": "Spróbuj ponownie"
+  },
+  "BigSlider": {
+    "resetDefault": "Przywróć wartość domyślną",
+    "editValue": "Kliknij, aby edytować wartość bezpośrednio"
   }
 }

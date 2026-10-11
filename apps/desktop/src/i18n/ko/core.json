@@ -1289,5 +1289,9 @@
     "noMatches": "일치하는 폴더 없음",
     "error": "폴더를 업데이트할 수 없습니다.",
     "retry": "다시 시도"
+  },
+  "BigSlider": {
+    "resetDefault": "기본값으로 재설정",
+    "editValue": "클릭하여 값을 직접 편집"
   }
 }

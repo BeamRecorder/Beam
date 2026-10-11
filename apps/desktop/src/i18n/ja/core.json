@@ -1289,5 +1289,9 @@
     "noMatches": "一致するフォルダーはありません",
     "error": "フォルダーを更新できませんでした。",
     "retry": "再試行"
+  },
+  "BigSlider": {
+    "resetDefault": "既定値に戻す",
+    "editValue": "クリックして値を直接編集"
   }
 }

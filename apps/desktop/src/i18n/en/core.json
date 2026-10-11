@@ -1301,5 +1301,9 @@
     "noMatches": "No matching folders",
     "error": "Unable to update the folder.",
     "retry": "Retry"
+  },
+  "BigSlider": {
+    "resetDefault": "Reset to default",
+    "editValue": "Click to edit value directly"
   }
 }

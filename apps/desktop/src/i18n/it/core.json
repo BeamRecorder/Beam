@@ -1289,5 +1289,9 @@
     "noMatches": "Nessuna cartella corrispondente",
     "error": "Impossibile aggiornare la cartella.",
     "retry": "Riprova"
+  },
+  "BigSlider": {
+    "resetDefault": "Ripristina il valore predefinito",
+    "editValue": "Fai clic per modificare direttamente il valore"
   }
 }

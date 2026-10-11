@@ -1289,5 +1289,9 @@
     "noMatches": "沒有相符的資料夾",
     "error": "無法更新資料夾。",
     "retry": "重試"
+  },
+  "BigSlider": {
+    "resetDefault": "還原預設值",
+    "editValue": "點擊直接編輯數值"
   }
 }

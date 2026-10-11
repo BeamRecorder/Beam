@@ -662,14 +662,15 @@
     "title": "ディザリング",
     "pattern": "パターン",
     "pixelSize": "パターンのサイズ",
-    "fourTones": "4階調",
-    "retro": "レトロ",
     "algorithm": "アルゴリズム",
-    "ordered": "規則的（GPU）",
+    "ordered": "Bayer",
     "mapping": "色の割り当て",
     "nearestColors": "近似色",
     "luminance": "輝度",
-    "blockSize": "ピクセル化"
+    "blockSize": "ピクセル化",
+    "palette": "パレット",
+    "enabled": "ディザリングを有効にする",
+    "remove": "ディザリングを削除"
   },
   "ArtisticEffect": {
     "ascii": "ASCII",

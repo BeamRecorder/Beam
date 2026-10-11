@@ -1289,5 +1289,9 @@
     "noMatches": "Nenhuma pasta correspondente",
     "error": "Não foi possível atualizar a pasta.",
     "retry": "Tentar novamente"
+  },
+  "BigSlider": {
+    "resetDefault": "Restaurar o valor padrão",
+    "editValue": "Clique para editar o valor diretamente"
   }
 }

@@ -662,14 +662,15 @@
     "title": "Dithering",
     "pattern": "Pattern",
     "pixelSize": "Pattern size",
-    "fourTones": "Four tones",
-    "retro": "Retro",
     "algorithm": "Algorithm",
-    "ordered": "Ordered (GPU)",
+    "ordered": "Bayer",
     "mapping": "Color mapping",
     "nearestColors": "Nearest colors",
     "luminance": "Luminance",
-    "blockSize": "Pixelation"
+    "blockSize": "Pixelation",
+    "palette": "Palette",
+    "enabled": "Enable dithering",
+    "remove": "Remove dithering"
   },
   "ArtisticEffect": {
     "ascii": "ASCII",
