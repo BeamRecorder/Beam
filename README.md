@@ -50,6 +50,8 @@
 - 📦 **Direct Export**
   Export straight to MP4 or WebM, up to 4K, with simple bitrate presets and fast rendering.
 
+Screenshot exports use the same destination workflow as video: name the file, choose PNG or WebP in the animated format group, then select a recent folder or choose a new one. The chosen export folder is shared between both editors. Popover backdrops remain outside their scroll viewport, so short menus do not reserve a scrollbar and overflowing menus keep their blur.
+
 See [GPU drivers and WebCodecs export](docs/dev/gpu-drivers.md) for hardware prerequisites, installation guidance and verified platform limits.
 
 Have ideas or feature requests? Open an issue or join the discussion on [Discord](https://discord.gg/6Q6v2xUCB).

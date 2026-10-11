@@ -191,7 +191,7 @@ const adjustPosition = async () => {
       ? {}
       : {
           maxHeight: fitAnchor ? `${availableHeight}px` : `calc(100vh - ${VIEWPORT_MARGIN * 2}px)`,
-          overflowY: 'auto',
+          '--popover-max-height': fitAnchor ? `${availableHeight}px` : `calc(100vh - ${VIEWPORT_MARGIN * 2}px)`,
         }),
     ...(props.matchTriggerWidth
       ? {
@@ -228,7 +228,7 @@ watch(isOpen, (val) => {
       top: `${VIEWPORT_MARGIN}px`,
       left: `${VIEWPORT_MARGIN}px`,
       maxHeight: `calc(100vh - ${VIEWPORT_MARGIN * 2}px)`,
-      overflowY: 'auto',
+      '--popover-max-height': `calc(100vh - ${VIEWPORT_MARGIN * 2}px)`,
       ...(props.matchTriggerWidth && trigger ? { width: `${Math.min(trigger.width, window.innerWidth - 16)}px` } : {}),
     };
     void nextTick(() => adjustPosition());
@@ -387,7 +387,9 @@ defineExpose({
           @focusin="cancelClose"
           @focusout="scheduleFocusClose"
         >
-          <slot :close="close" :isOpen="isOpen" />
+          <div class="popover-viewport">
+            <slot :close="close" :isOpen="isOpen" />
+          </div>
         </div>
       </Transition>
     </Teleport>

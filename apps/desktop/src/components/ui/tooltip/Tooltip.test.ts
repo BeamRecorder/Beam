@@ -8,6 +8,129 @@ import Tooltip from './Tooltip.vue';
 enableAutoUnmount(afterEach);
 
 describe('Tooltip', () => {
+  it('accepts controlled visibility for a keyboard-focused select option', async () => {
+    const wrapper = mount(Tooltip, { attachTo: document.body, props: { content: 'Preview', open: false } });
+    await wrapper.get('.tooltip-wrapper').trigger('mouseenter');
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull();
+    await wrapper.setProps({ open: true });
+    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toContain('Preview');
+    await wrapper.get('.tooltip-wrapper').trigger('mouseleave');
+    expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull();
+    await wrapper.setProps({ open: false });
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull();
+  });
+  it('cancels a delayed controlled preview when its option closes', async () => {
+    const wrapper = mount(Tooltip, { attachTo: document.body, props: { content: 'Preview', open: true, delay: 200 } });
+    await wrapper.setProps({ open: false });
+    vi.advanceTimersByTime(300);
+    await nextTick();
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull();
+  });
+  it('does not open a disabled controlled preview', async () => {
+    mount(Tooltip, { attachTo: document.body, props: { content: 'Preview', open: true, disabled: true } });
+    await nextTick();
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull();
+  });
+  it('restores a controlled preview after re-enabling it without requiring pointer hover', async () => {
+    const wrapper = mount(Tooltip, {
+      attachTo: document.body,
+      props: { content: 'Preview', open: true, disabled: true },
+    });
+    await wrapper.setProps({ disabled: false });
+    expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull();
+    await wrapper.setProps({ disabled: true });
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull();
+  });
+  it('finishes a pending interactive close and cancels it on a repeated hover', async () => {
+    const wrapper = mount(Tooltip, {
+      attachTo: document.body,
+      props: { content: 'Preview', interactive: true, delay: 50 },
+    });
+    const trigger = wrapper.get('.tooltip-wrapper');
+    await trigger.trigger('mouseenter');
+    await trigger.trigger('mouseenter');
+    vi.advanceTimersByTime(50);
+    await nextTick();
+    await trigger.trigger('mouseleave');
+    await trigger.trigger('mouseleave');
+    await trigger.trigger('mouseenter');
+    vi.advanceTimersByTime(50);
+    await nextTick();
+    expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull();
+    await trigger.trigger('mouseleave');
+    vi.advanceTimersByTime(80);
+    await nextTick();
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull();
+  });
+  it('cancels interactive timers on disposal and controlled close', async () => {
+    const wrapper = mount(Tooltip, { attachTo: document.body, props: { content: 'Preview', interactive: true } });
+    await wrapper.get('.tooltip-wrapper').trigger('focusin');
+    await wrapper.get('.tooltip-wrapper').trigger('focusout');
+    await wrapper.setProps({ open: false });
+    vi.advanceTimersByTime(100);
+    await nextTick();
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull();
+    await wrapper.setProps({ open: undefined });
+    await wrapper.get('.tooltip-wrapper').trigger('mouseenter');
+    await wrapper.get('.tooltip-wrapper').trigger('mouseleave');
+    wrapper.unmount();
+    vi.advanceTimersByTime(100);
+    await nextTick();
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull();
+  });
+  it('repositions async slot content when its size changes and releases its observer on close', async () => {
+    let resized!: ResizeObserverCallback;
+    const disconnect = vi.fn(),
+      observe = vi.fn();
+    class Observer {
+      constructor(callback: ResizeObserverCallback) {
+        resized = callback;
+      }
+      observe = observe;
+      disconnect = disconnect;
+    }
+    vi.stubGlobal('ResizeObserver', Observer);
+    const wrapper = mount(Tooltip, {
+      attachTo: document.body,
+      props: { content: 'Preview', open: true, position: 'left' },
+      attrs: { class: 'preview' },
+    });
+    await nextTick();
+    expect(observe).toHaveBeenCalledOnce();
+    const trigger = wrapper.get('.tooltip-wrapper').element as HTMLElement;
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
+      x: 300,
+      y: 200,
+      left: 300,
+      top: 200,
+      right: 400,
+      bottom: 230,
+      width: 100,
+      height: 30,
+    } as DOMRect);
+    const tooltip = document.body.querySelector<HTMLElement>('[role="tooltip"]')!;
+    vi.spyOn(tooltip, 'getBoundingClientRect').mockReturnValue({ width: 220, height: 160 } as DOMRect);
+    resized([], {} as ResizeObserver);
+    await nextTick();
+    expect(tooltip.style.left).toBe('72px');
+    expect(tooltip.style.top).toBe('135px');
+    await wrapper.setProps({ open: false });
+    expect(disconnect).toHaveBeenCalledOnce();
+    await wrapper.setProps({ position: 'bottom' });
+    vi.unstubAllGlobals();
+  });
+  it('retains ordinary hover behavior after disabling and re-enabling a hovered trigger', async () => {
+    const wrapper = mount(Tooltip, { attachTo: document.body, props: { content: 'Preview', disabled: true } });
+    vi.spyOn(wrapper.get('.tooltip-wrapper').element, 'matches').mockReturnValue(true);
+    await wrapper.setProps({ disabled: false });
+    expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull();
+    const tooltip = document.body.querySelector('[role="tooltip"]')!;
+    tooltip.dispatchEvent(new MouseEvent('mouseenter'));
+    tooltip.dispatchEvent(new MouseEvent('mouseleave'));
+    await nextTick();
+    expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull();
+    await wrapper.get('.tooltip-wrapper').trigger('mouseleave');
+  });
   beforeEach(() => {
     vi.useFakeTimers();
   });

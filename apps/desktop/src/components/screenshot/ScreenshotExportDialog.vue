@@ -2,9 +2,9 @@
 import { onBeforeUnmount, ref, watch } from 'vue';
 import { Download } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Dialog from '~/ui/dialog/Dialog.vue';
 import Input from '~/ui/input/Input.vue';
-import Select from '~/ui/select/Select.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
@@ -115,7 +115,7 @@ onBeforeUnmount(cancel);
     @close="close"
   >
     <section class="export-dialog">
-      <div class="export-fields">
+      <fieldset class="export-fields" :disabled="busy">
         <div class="export-destination">
           <label class="field">
             <span class="field-label">{{ exportText('fileName') }}</span>
@@ -126,20 +126,32 @@ onBeforeUnmount(cancel);
               data-dialog-autofocus
             />
           </label>
-          <label class="field">
+          <div class="field">
             <span class="field-label">{{ t('imageFormat') }}</span>
-            <Select
-              v-model="state.format"
-              :options="[
-                { label: 'PNG', value: 'png' },
-                { label: 'WebP', value: 'webp' },
-              ]"
+            <ButtonGroup
+              class="export-format-choices"
+              full
+              variant="neutral"
+              role="group"
               :aria-label="t('imageFormat')"
-              appearance="neutral"
-              size="lg"
-            />
-          </label>
-          <DirectoryPreference class="export-directory" kind="exports" compact />
+              :selection="{ index: state.format === 'png' ? 0 : 1, count: 2 }"
+            >
+              <Button
+                v-for="format in ['png', 'webp'] as const"
+                :key="format"
+                style="height: calc(2.75rem - 2 * var(--button-group-padding-y) - 2px); padding-block: 0"
+                variant="tab"
+                size="sm"
+                block
+                :class="{ active: state.format === format }"
+                :aria-pressed="state.format === format"
+                :disabled="busy"
+                @click="state.format = format"
+                >{{ format === 'png' ? 'PNG' : 'WebP' }}</Button
+              >
+            </ButtonGroup>
+          </div>
+          <DirectoryPreference class="export-directory" kind="exports" compact :disabled="busy" />
         </div>
         <div class="export-output-options screenshot-output-options">
           <ScreenshotSizeControls
@@ -160,7 +172,7 @@ onBeforeUnmount(cancel);
             <p class="option-hint">{{ t('transparency') }}</p>
           </div>
         </div>
-      </div>
+      </fieldset>
     </section>
     <template #footer>
       <div class="export-footer">

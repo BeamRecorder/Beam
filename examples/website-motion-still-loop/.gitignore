@@ -1,0 +1,6 @@
+node_modules/
+.beam/
+dist/
+renders/
+light.html
+artwork/light.html

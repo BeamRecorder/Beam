@@ -11,6 +11,15 @@ User-facing changes to Beam are documented in this file.
 - Windows window recordings preserve the whole image when resized, follow window movements with the cursor, and retain static screen content through the end of the recording.
 - Pause and resume preserve the full Windows and macOS cursor and shortcut history. Long recordings publish interaction sidecars with bounded memory, and recovery preserves finalized cursor files and valid journal records.
 - Recording pause/resume failures finalize the remaining tracks consistently, with translated messages in all fifteen languages. Long interaction journals can finish saving without a queued status request terminating capture.
+
+- The private website’s Instant page retains its main video below the animated header, with a themed preset-to-export-to-clipboard overview and all three detail videos.
+
+- The private website's topbar Download button shares the navigation's corner radius.
+
+- The private website uses client routing for all internal links and Download buttons, prepares nearby demo videos, prioritizes article images and caches production media. Download navigation stays responsive while fetching releases, and sections reveal before entering view.
+
+- Popovers no longer show a spare scrollbar or transparent strip beside short menus. Their blurred backdrop stays fixed while only overflowing content scrolls.
+
 - Switching screenshot presets preserves zooms, custom layer names, image cropping, rotation and visibility, and restores enabled background and watermark layers without invalid composition errors. Selecting the current preset keeps unsaved edits intact.
 - Windows screen recordings copy captured frames on the GPU before asynchronous encoding, preventing reuse of the capture surface from overwriting queued video frames.
 - Slider reset and direct-value editing hints follow the selected language in all fifteen locales.
@@ -43,6 +52,26 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Instant’s main video now follows a 24-second desktop workflow: launch Beam from a simple dock, preview two saved presets, ease back to the full canvas, export locally and switch to an illustrative chat. The light/dark loop uses native components, a macOS cursor and restrained 2D focus.
+
+- The private website’s Instant header uses a lightweight orange WebGL light-trail background, matching Beam’s theme and reduced-motion preferences.
+
+- Saved video and screenshot capture presets show a labelled sample of their appearance on hover or keyboard focus, without changing the selected preset. Previews use Beam’s shared renderer and remain inside the menu window.
+
+- The private website’s Instant sections now show three eight-second light/dark loops of native Beam preset previews, local export and pasting the completed file into an illustrative team chat, with macOS cursor interactions and Beamy’s loading-to-success animation. Reusable source lives in `examples/website-instant-loops/`.
+
+- The private website’s local-rendering section now shows an eight-second themed loop of Beam CLI rendering HTML, encoding with Mediabunny and saving a video locally. Reusable source lives in `examples/website-local-render-loop/`.
+
+- The private documentation site illustrates 2D, 3D Tilt and Loupe with three headless Beam CLI renders of the same HTML checklist, with editable native documents and English JSON example copy.
+
+- The private website’s AI-native frames section compares animated HTML and an actual PNG from the same source in a seven-second themed loop. Reusable source and captured frames live in `examples/website-motion-still-loop/`.
+
+- The private documentation site illustrates Recording, Screenshots, Studio and Exporting with eleven supplied captures, including centered native Beam compositions and readable portrait controls. Missing captures remain placeholders.
+
+- The private website’s agents section now presents real Beam CLI commands in a clean seven-second loop, with light/dark themes, matching posters, pause and reduced-motion support. Reusable HTML/TypeScript source lives in `examples/website-agent-cli-loop/`.
+
+- The private documentation site now includes Studio & editing, Zooms & lenses and Exporting guides based on Beam's current implementation, with image placeholders for future screenshots and English JSON catalogs. Future languages can be added through JSON catalogs and locale metadata without changing application configuration.
+
 - Beam CLI installs, checks and updates ten Beam agent skills from the repository's `.skills/Beam-cli` pack, with project-local installation by default, optional global destinations, pinned revisions, checksum validation and protection/backups for local edits. The skills cover design briefs, compositions, animation, capture, screenshot/video editing, assets, audio and export; CLI help and bundled documentation explain how to start.
 
 - The Windows installer lets you choose where Beam is installed, including another drive. In-app updates still install silently and restart Beam.
@@ -59,6 +88,12 @@ User-facing changes to Beam are documented in this file.
 - The private website’s Studio overview shows a real recording edited on the native multi-track timeline in a fifteen-second, 60 fps loop, including trim/split/cut, a caption, appearance and canvas adjustments, and a 2D zoom. Light/dark variants and editable source live in `examples/website-studio-loop/`.
 
 ### Changed
+
+- Instant’s main video now has a calmer chat handoff: a polished dock icon, a held draft and slower Send, three replies below the video, and a clean shared preview without playback controls or editing handles.
+
+- The private documentation overview and sidebar share six workflow categories, grouping Files & storage with Exporting and replacing vague starting-point and More guides labels.
+
+- Screenshot export uses Studio’s animated PNG/WebP format group and the same remembered-folder chooser, with settings disabled while an image is being published.
 
 - Disabled automatic zoom explains whether the recording, cursor data or recorded clicks are missing, in all 15 languages.
 - Video and Screenshot export dialogs shrink into a small progress pill at the bottom right, using the same appearance and hover actions as Quick Snip. Cancel from the pill, then watch the finished video or open its folder with larger buttons.

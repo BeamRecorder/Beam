@@ -1,4 +1,4 @@
-import { defineComponent } from 'vue';
+import { defineComponent, nextTick } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PresetKind } from '@beam/engine/capture/capture-mode';
@@ -89,6 +89,39 @@ describe('CapturePresetSelect', () => {
         return subscription.unsubscribe;
       },
     );
+  });
+  it('previews on hover and keyboard navigation without committing and clears previews on Escape', async () => {
+    const fixture = documentFixture('video');
+    fixture.presets.push({ ...fixture.presets[0]!, id: 'other', name: 'Other preset' });
+    capture.getEditorPresets.mockResolvedValueOnce(fixture);
+    const wrapper = mount(CapturePresetSelect, {
+      attachTo: document.body,
+      props: { kind: 'video', compact: true },
+      global: {
+        stubs: {
+          CapturePresetPreview: {
+            props: ['preset', 'kind'],
+            template: '<div data-testid="preset-preview">{{preset.name}} sample</div>',
+          },
+        },
+      },
+    });
+    await flushPromises();
+    await wrapper.get('.select-trigger').trigger('click');
+    const items = document.body.querySelectorAll<HTMLElement>('[role="option"]');
+    items[1]!.dispatchEvent(new Event('pointerenter'));
+    await flushPromises();
+    expect(document.body.querySelector('[data-testid="preset-preview"]')?.textContent).toBe('Other preset sample');
+    expect(capture.selectEditorPreset).not.toHaveBeenCalled();
+    items[1]!.dispatchEvent(new FocusEvent('focus'));
+    await nextTick();
+    expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull();
+    items[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await flushPromises();
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull();
+    expect(capture.selectEditorPreset).not.toHaveBeenCalled();
+    expect(wrapper.get('.select-trigger').text()).toContain('Video preset');
+    wrapper.unmount();
   });
 
   it('uses the screenshot icon for still presets and the Studio icon for video presets', async () => {

@@ -1,0 +1,30 @@
+{
+  "category": "kinetic-type",
+  "asset_needs": [],
+  "duration": 8,
+  "width": 1280,
+  "height": 800,
+  "beats": [
+    {
+      "at": 0.5,
+      "action": "Agent types the verified CLI command"
+    },
+    {
+      "at": 2.1,
+      "action": "Local rendering produces frames"
+    },
+    {
+      "at": 5.6,
+      "action": "Mediabunny finalizes the media file"
+    },
+    {
+      "at": 6,
+      "action": "Local MP4 appears; completion hold"
+    },
+    {
+      "at": 7.35,
+      "action": "Fade back to identical opening"
+    }
+  ],
+  "primitives": ["code-terminal-run", "stat-bars-and-fills"]
+}
