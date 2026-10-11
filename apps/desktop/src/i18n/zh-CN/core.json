@@ -1076,6 +1076,8 @@
     "ungroup": "取消编组"
   },
   "EditorPresetControls": {
+    "preview": "预设预览",
+    "previewUnavailable": "预览不可用",
     "preset": "预设",
     "editorPreset": "编辑器预设",
     "settings": "编辑器预设设置",
@@ -1306,5 +1308,9 @@
     "emptyFolders": "选择一个文件夹，即可在此查看最近使用的文件夹。",
     "error": "无法更新文件夹。",
     "retry": "重试"
+  },
+  "BigSlider": {
+    "resetDefault": "恢复默认值",
+    "editValue": "点击直接编辑数值"
   }
 }

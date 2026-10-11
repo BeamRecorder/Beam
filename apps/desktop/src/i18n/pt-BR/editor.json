@@ -724,14 +724,15 @@
     "title": "Pontilhamento",
     "pattern": "Padrão",
     "pixelSize": "Tamanho do padrão",
-    "fourTones": "Quatro tons",
-    "retro": "Retrô",
     "algorithm": "Algoritmo",
-    "ordered": "Ordenado (GPU)",
+    "ordered": "Bayer",
     "mapping": "Mapeamento de cores",
     "nearestColors": "Cores próximas",
     "luminance": "Luminância",
-    "blockSize": "Pixelização"
+    "blockSize": "Pixelização",
+    "palette": "Paleta",
+    "enabled": "Ativar dithering",
+    "remove": "Remover dithering"
   },
   "ArtisticEffect": {
     "ascii": "ASCII",

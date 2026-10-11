@@ -724,14 +724,15 @@
     "title": "Dithering",
     "pattern": "Muster",
     "pixelSize": "Mustergröße",
-    "fourTones": "Vier Farbtöne",
-    "retro": "Retro",
     "algorithm": "Algorithmus",
-    "ordered": "Geordnet (GPU)",
+    "ordered": "Bayer",
     "mapping": "Farbzuordnung",
     "nearestColors": "Nächste Farben",
     "luminance": "Luminanz",
-    "blockSize": "Verpixelung"
+    "blockSize": "Verpixelung",
+    "palette": "Palette",
+    "enabled": "Dithering aktivieren",
+    "remove": "Dithering entfernen"
   },
   "ArtisticEffect": {
     "ascii": "ASCII",

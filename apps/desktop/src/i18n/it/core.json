@@ -1076,6 +1076,8 @@
     "ungroup": "Separa"
   },
   "EditorPresetControls": {
+    "preview": "Anteprima della preimpostazione",
+    "previewUnavailable": "Anteprima non disponibile",
     "preset": "Predefinito",
     "editorPreset": "Predefinito dell’editor",
     "settings": "Impostazioni dei predefiniti",
@@ -1306,5 +1308,9 @@
     "emptyFolders": "Scegli una cartella per vedere qui le cartelle recenti.",
     "error": "Impossibile aggiornare la cartella.",
     "retry": "Riprova"
+  },
+  "BigSlider": {
+    "resetDefault": "Ripristina il valore predefinito",
+    "editValue": "Fai clic per modificare direttamente il valore"
   }
 }

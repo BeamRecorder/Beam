@@ -3,7 +3,8 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { computed, ref } from 'vue';
 import { SlidersHorizontal, Plus, Save, Pencil, Trash2 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
-import Select from '~/ui/select/Select.vue';
+import EditorPresetSelect from './presets/EditorPresetSelect.vue';
+import type { PresetKind } from '@beam/engine/capture/capture-mode';
 import Popover from '~/ui/popover/Popover.vue';
 import ConfirmDialog from '~/ui/dialog/ConfirmDialog.vue';
 import TextInputDialog from '~/ui/dialog/TextInputDialog.vue';
@@ -13,6 +14,8 @@ const { t } = useTranslate('EditorPresetControls');
 const props = defineProps<{
   document: EditorPresetDocument | null;
   dirty: boolean;
+  kind?: PresetKind;
+  previewSource?: string;
 }>();
 const emit = defineEmits<{
   select: [id: string | number];
@@ -22,13 +25,6 @@ const emit = defineEmits<{
   save: [];
 }>();
 const active = computed(() => props.document?.presets.find((preset) => preset.id === props.document?.activePresetId));
-const options = computed(
-  () =>
-    props.document?.presets.map(({ id, name }) => ({
-      value: id,
-      label: id === 'default' ? t('defaultPreset') : name,
-    })) ?? [],
-);
 const presetPopover = ref<InstanceType<typeof Popover> | null>(null);
 const nameDialog = ref<'create' | 'rename' | null>(null);
 const deletingPreset = ref<EditorPresetDocument['presets'][number] | null>(null);
@@ -111,12 +107,12 @@ const confirmName = (name: string) => {
           t('new')
         }}</Button>
       </header>
-      <Select
-        :model-value="document?.activePresetId ?? null"
-        :options="options"
-        size="sm"
+      <EditorPresetSelect
+        :document="document"
+        :kind="kind"
+        :source="previewSource"
         :aria-label="t('select')"
-        @update:model-value="emit('select', $event)"
+        @select="emit('select', $event)"
       />
       <footer>
         <div class="common-actions">

@@ -1076,6 +1076,8 @@
     "ungroup": "Desagrupar"
   },
   "EditorPresetControls": {
+    "preview": "Vista previa del preajuste",
+    "previewUnavailable": "Vista previa no disponible",
     "preset": "Preajuste",
     "editorPreset": "Preajuste del editor",
     "settings": "Ajustes de preajustes",
@@ -1306,5 +1308,9 @@
     "emptyFolders": "Elige una carpeta para ver aquí tus carpetas recientes.",
     "error": "No se pudo actualizar la carpeta.",
     "retry": "Reintentar"
+  },
+  "BigSlider": {
+    "resetDefault": "Restablecer el valor predeterminado",
+    "editValue": "Haz clic para editar el valor directamente"
   }
 }

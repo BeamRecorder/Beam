@@ -724,14 +724,15 @@
     "title": "डिथरिंग",
     "pattern": "पैटर्न",
     "pixelSize": "पैटर्न का आकार",
-    "fourTones": "चार टोन",
-    "retro": "रेट्रो",
     "algorithm": "एल्गोरिदम",
-    "ordered": "क्रमबद्ध (GPU)",
+    "ordered": "Bayer",
     "mapping": "रंग मैपिंग",
     "nearestColors": "निकटतम रंग",
     "luminance": "चमक",
-    "blockSize": "पिक्सेलेशन"
+    "blockSize": "पिक्सेलेशन",
+    "palette": "रंग पट्टिका",
+    "enabled": "डिथरिंग चालू करें",
+    "remove": "डिथरिंग हटाएँ"
   },
   "ArtisticEffect": {
     "ascii": "ASCII",

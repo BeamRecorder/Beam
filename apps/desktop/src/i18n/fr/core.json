@@ -1088,6 +1088,8 @@
     "ungroup": "Dégrouper"
   },
   "EditorPresetControls": {
+    "preview": "Aperçu du preset",
+    "previewUnavailable": "Aperçu indisponible",
     "preset": "Préréglage",
     "editorPreset": "Préréglage de l’éditeur",
     "settings": "Réglages des préréglages",
@@ -1318,5 +1320,9 @@
     "emptyFolders": "Choisissez un dossier pour retrouver vos dossiers récents ici.",
     "error": "Impossible de mettre à jour le dossier.",
     "retry": "Réessayer"
+  },
+  "BigSlider": {
+    "resetDefault": "Rétablir la valeur par défaut",
+    "editValue": "Cliquez pour modifier la valeur directement"
   }
 }

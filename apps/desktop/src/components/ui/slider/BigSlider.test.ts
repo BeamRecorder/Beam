@@ -4,6 +4,8 @@ import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import BigSlider from './BigSlider.vue';
 import InputField from '../input/Input.vue';
+import { i18n, setCurrentLocale } from '../../../i18n';
+import { SUPPORTED_LOCALES } from '../../../i18n/locales';
 
 const Input = {
   inheritAttrs: false,
@@ -14,6 +16,19 @@ const Input = {
 };
 
 describe('BigSlider', () => {
+  it.each(SUPPORTED_LOCALES)('localizes editing and reset hints in %s', async (locale) => {
+    await setCurrentLocale(locale);
+    const wrapper = mount(BigSlider, {
+      props: { modelValue: 50, min: 0, max: 100, defaultValue: 100, label: 'Opacity' },
+    });
+    const reset = i18n.global.t('BigSlider.resetDefault');
+    const edit = i18n.global.t('BigSlider.editValue');
+    expect(reset).not.toContain('BigSlider.');
+    expect(edit).not.toContain('BigSlider.');
+    expect(wrapper.get('.slider-reset-btn').attributes()).toMatchObject({ title: reset, 'aria-label': reset });
+    expect(wrapper.get('.big-slider-value').attributes('title')).toBe(edit);
+    wrapper.unmount();
+  });
   it.each([0, 25.5, 100])('edits %s in a compact field while keeping the label visible', async (value) => {
     const wrapper = mount(BigSlider, {
       props: { modelValue: value, min: 0, max: 100, label: 'Opacity' },

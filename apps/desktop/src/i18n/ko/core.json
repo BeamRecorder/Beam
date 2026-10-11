@@ -1076,6 +1076,8 @@
     "ungroup": "그룹 해제"
   },
   "EditorPresetControls": {
+    "preview": "프리셋 미리보기",
+    "previewUnavailable": "미리보기를 사용할 수 없음",
     "preset": "프리셋",
     "editorPreset": "편집기 프리셋",
     "settings": "편집기 프리셋 설정",
@@ -1306,5 +1308,9 @@
     "emptyFolders": "폴더를 선택하면 최근 폴더가 여기에 표시됩니다.",
     "error": "폴더를 업데이트할 수 없습니다.",
     "retry": "다시 시도"
+  },
+  "BigSlider": {
+    "resetDefault": "기본값으로 재설정",
+    "editValue": "클릭하여 값을 직접 편집"
   }
 }

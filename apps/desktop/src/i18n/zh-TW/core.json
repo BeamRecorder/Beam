@@ -1076,6 +1076,8 @@
     "ungroup": "取消群組"
   },
   "EditorPresetControls": {
+    "preview": "預設預覽",
+    "previewUnavailable": "無法預覽",
     "preset": "預設",
     "editorPreset": "編輯器預設",
     "settings": "編輯器預設設定",
@@ -1306,5 +1308,9 @@
     "emptyFolders": "選擇資料夾後，即可在此查看最近使用的資料夾。",
     "error": "無法更新資料夾。",
     "retry": "重試"
+  },
+  "BigSlider": {
+    "resetDefault": "還原預設值",
+    "editValue": "點擊直接編輯數值"
   }
 }

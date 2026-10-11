@@ -1076,6 +1076,8 @@
     "ungroup": "Desagrupar"
   },
   "EditorPresetControls": {
+    "preview": "Prévia da predefinição",
+    "previewUnavailable": "Prévia indisponível",
     "preset": "Predefinição",
     "editorPreset": "Predefinição do editor",
     "settings": "Configurações de predefinições",
@@ -1306,5 +1308,9 @@
     "emptyFolders": "Escolha uma pasta para ver suas pastas recentes aqui.",
     "error": "Não foi possível atualizar a pasta.",
     "retry": "Tentar novamente"
+  },
+  "BigSlider": {
+    "resetDefault": "Restaurar o valor padrão",
+    "editValue": "Clique para editar o valor diretamente"
   }
 }

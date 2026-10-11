@@ -1076,6 +1076,8 @@
     "ungroup": "グループ解除"
   },
   "EditorPresetControls": {
+    "preview": "プリセットのプレビュー",
+    "previewUnavailable": "プレビューを表示できません",
     "preset": "プリセット",
     "editorPreset": "エディターのプリセット",
     "settings": "プリセット設定",
@@ -1306,5 +1308,9 @@
     "emptyFolders": "フォルダーを選ぶと、最近使ったフォルダーがここに表示されます。",
     "error": "フォルダーを更新できませんでした。",
     "retry": "再試行"
+  },
+  "BigSlider": {
+    "resetDefault": "既定値に戻す",
+    "editValue": "クリックして値を直接編集"
   }
 }

@@ -724,14 +724,15 @@
     "title": "디더링",
     "pattern": "패턴",
     "pixelSize": "패턴 크기",
-    "fourTones": "4단계 색조",
-    "retro": "레트로",
     "algorithm": "알고리즘",
-    "ordered": "순서형 (GPU)",
+    "ordered": "Bayer",
     "mapping": "색상 매핑",
     "nearestColors": "가까운 색상",
     "luminance": "휘도",
-    "blockSize": "픽셀화"
+    "blockSize": "픽셀화",
+    "palette": "팔레트",
+    "enabled": "디더링 활성화",
+    "remove": "디더링 제거"
   },
   "ArtisticEffect": {
     "ascii": "ASCII",

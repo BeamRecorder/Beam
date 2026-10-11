@@ -724,14 +724,15 @@
     "title": "Tramado",
     "pattern": "Patrón",
     "pixelSize": "Tamaño del patrón",
-    "fourTones": "Cuatro tonos",
-    "retro": "Retro",
     "algorithm": "Algoritmo",
-    "ordered": "Ordenado (GPU)",
+    "ordered": "Bayer",
     "mapping": "Asignación de colores",
     "nearestColors": "Colores cercanos",
     "luminance": "Luminancia",
-    "blockSize": "Pixelado"
+    "blockSize": "Pixelado",
+    "palette": "Paleta",
+    "enabled": "Activar tramado",
+    "remove": "Eliminar tramado"
   },
   "ArtisticEffect": {
     "ascii": "ASCII",

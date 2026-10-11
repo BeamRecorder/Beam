@@ -210,6 +210,8 @@ const navigateSearch = (tab: string) => {
         <EditorPresetControls
           :document="presets"
           :dirty="dirty"
+          kind="screenshot"
+          :preview-source="document?.source"
           @select="presetAction('select', String($event))"
           @add="presetAction('add', $event)"
           @rename="presetAction('rename', $event)"

@@ -40,9 +40,13 @@ User-facing changes to Beam are documented in this file.
 - Open the same Settings window from the Recorder, video editor, Screenshot and Quick Snip, with shared Appearance controls.
 - Customize editing, capture, tool and property shortcuts, including selection, duplication and drag modifiers, in a simpler searchable shortcuts page.
 - New project lets you choose Video or Screenshot with Beam's capture icons and remembers your last choice.
-- The private website’s Studio overview shows a real recording edited on the native multi-track timeline in a fifteen-second, 60 fps loop, including trim/split/cut, a caption, appearance and canvas adjustments, and a 2D zoom. Light/dark variants and editable source live in `examples/website-studio-loop/`.
+- Instant, video editor and screenshot editor preset selectors show still previews with the preset's background, framing, shadows, borders and watermark. Screenshot previews use the open image; animated backgrounds show a still frame.
+
 - Full-screen, region, window, Quick Snip and canvas screenshots play a short CC0 camera shutter at full application volume after success. Recorder finishes the sound before handing off to the editor; Quick Snip confirms after the image is copied or opened for editing.
+
 - Screenshot layers support adjustable Dithering, ASCII, Grain and Cyanotype effects, with matching thumbnails and exports and preserved transparency. Ordered dithering, ASCII, grain and cyanotype run on the GPU; exact Jarvis–Judice–Ninke dithering runs in a cancellable background worker.
+
+- The private website’s Studio overview shows a real recording edited on the native multi-track timeline in a fifteen-second, 60 fps loop, including trim/split/cut, a caption, appearance and canvas adjustments, and a 2D zoom. Light/dark variants and editable source live in `examples/website-studio-loop/`.
 
 ### Changed
 
@@ -58,6 +62,11 @@ User-facing changes to Beam are documented in this file.
 - Settings separates shared Application preferences from tool-specific options, with Updates and About at the bottom of the navigation. Group headings are translated into all 15 languages.
 - Shortcuts keep Beam's familiar keycaps in a lighter list, with a restore-default action shown only for customized bindings. Reassigning a shortcut already in use asks for confirmation and names the affected actions.
 - The website’s Studio overview now runs for 15 seconds with gentler cursor travel, longer reading pauses and two restrained camera views that stay fixed during edits.
+- Dithering uses the gradient editor's freely editable two-to-eight-color palette, full-width algorithm and color-mapping choices, and organized inspector sections with effect opacity and removal actions below the controls.
+
+### Fixed
+
+- Slider reset and direct-value editing hints follow the selected language in all fifteen locales.
 
 ## [0.5.3] - 2026-10-07
 

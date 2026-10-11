@@ -724,14 +724,15 @@
     "title": "Dithering",
     "pattern": "Motivo",
     "pixelSize": "Dimensione del motivo",
-    "fourTones": "Quattro toni",
-    "retro": "Retrò",
     "algorithm": "Algoritmo",
-    "ordered": "Ordinato (GPU)",
+    "ordered": "Bayer",
     "mapping": "Mappatura colori",
     "nearestColors": "Colori più vicini",
     "luminance": "Luminanza",
-    "blockSize": "Pixelatura"
+    "blockSize": "Pixelatura",
+    "palette": "Tavolozza",
+    "enabled": "Attiva dithering",
+    "remove": "Rimuovi dithering"
   },
   "ArtisticEffect": {
     "ascii": "ASCII",

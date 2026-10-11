@@ -724,14 +724,15 @@
     "title": "Дизеринг",
     "pattern": "Узор",
     "pixelSize": "Размер узора",
-    "fourTones": "Четыре тона",
-    "retro": "Ретро",
     "algorithm": "Алгоритм",
-    "ordered": "Упорядоченный (GPU)",
+    "ordered": "Bayer",
     "mapping": "Сопоставление цветов",
     "nearestColors": "Ближайшие цвета",
     "luminance": "Яркость",
-    "blockSize": "Пикселизация"
+    "blockSize": "Пикселизация",
+    "palette": "Палитра",
+    "enabled": "Включить дизеринг",
+    "remove": "Удалить дизеринг"
   },
   "ArtisticEffect": {
     "ascii": "ASCII",

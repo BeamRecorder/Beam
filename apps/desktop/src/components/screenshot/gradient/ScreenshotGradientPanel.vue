@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import { ArrowLeft, Trash2 } from '@lucide/vue';
 import Accordion from '~/ui/accordion/Accordion.vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Select from '~/ui/select/Select.vue';
-import Gradient from '~/ui/Gradient/Gradient.vue';
-import type { GradientValue } from '~/ui/Gradient/gradient-types';
+import ScreenshotEffectPalette from './ScreenshotEffectPalette.vue';
 import ScreenshotGradientPreview from './ScreenshotGradientPreview.vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
@@ -39,37 +38,6 @@ const numeric = (key: GradientNumberKey, value: number) =>
       Math.min(GRADIENT_RANGES[key][1], ['seed', 'octaves'].includes(key) ? Math.round(value) : value),
     ),
   });
-const palette = ref<GradientValue>({ stops: [] });
-watch(
-  () => props.effect.recipe.colors,
-  (colors) => {
-    if (
-      colors.length === palette.value.stops.length &&
-      colors.every((color, index) => color === palette.value.stops[index]!.color)
-    )
-      return;
-    palette.value = {
-      stops: colors.map((color, index) => ({
-        id: String(index),
-        position: index / (colors.length - 1),
-        color,
-        alpha: 1,
-      })),
-    };
-  },
-  { deep: true, immediate: true },
-);
-const updatePalette = (value: GradientValue) => {
-  if (
-    props.disabled ||
-    value.stops.length < 2 ||
-    value.stops.length > 8 ||
-    value.stops.some((stop) => !/^#[\da-f]{6}$/i.test(stop.color))
-  )
-    return;
-  palette.value = value;
-  recipe({ colors: value.stops.map((stop) => stop.color) });
-};
 </script>
 <template>
   <fieldset class="gradient-panel" :disabled="disabled" :inert="disabled || undefined" :aria-label="t('title')">
@@ -123,16 +91,13 @@ const updatePalette = (value: GradientValue) => {
           :disabled="disabled"
           @update:model-value="recipe({ background: $event })"
         />
-        <Gradient
-          :model-value="palette"
-          palette
-          :min-stops="2"
-          :max-stops="8"
+        <ScreenshotEffectPalette
+          :colors="effect.recipe.colors"
           :disabled="disabled"
-          @update:model-value="updatePalette"
+          @update="recipe({ colors: $event })"
         >
           <template #preview><ScreenshotGradientPreview :recipe="effect.recipe" /></template>
-        </Gradient>
+        </ScreenshotEffectPalette>
       </div>
     </Accordion>
     <Accordion

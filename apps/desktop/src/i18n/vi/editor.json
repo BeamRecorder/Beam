@@ -724,14 +724,15 @@
     "title": "Dithering",
     "pattern": "Mẫu",
     "pixelSize": "Kích thước mẫu",
-    "fourTones": "Bốn sắc độ",
-    "retro": "Hoài cổ",
     "algorithm": "Thuật toán",
-    "ordered": "Có thứ tự (GPU)",
+    "ordered": "Bayer",
     "mapping": "Ánh xạ màu",
     "nearestColors": "Màu gần nhất",
     "luminance": "Độ chói",
-    "blockSize": "Điểm ảnh hóa"
+    "blockSize": "Điểm ảnh hóa",
+    "palette": "Bảng màu",
+    "enabled": "Bật hiệu ứng dithering",
+    "remove": "Xóa hiệu ứng dithering"
   },
   "ArtisticEffect": {
     "ascii": "ASCII",

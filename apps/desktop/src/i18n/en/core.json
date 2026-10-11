@@ -1088,6 +1088,8 @@
     "ungroup": "Ungroup"
   },
   "EditorPresetControls": {
+    "preview": "Preset preview",
+    "previewUnavailable": "Preview unavailable",
     "preset": "Preset",
     "editorPreset": "Editor preset",
     "settings": "Editor preset settings",
@@ -1318,5 +1320,9 @@
     "emptyFolders": "Choose a folder to see your recent folders here.",
     "error": "Unable to update the folder.",
     "retry": "Retry"
+  },
+  "BigSlider": {
+    "resetDefault": "Reset to default",
+    "editValue": "Click to edit value directly"
   }
 }

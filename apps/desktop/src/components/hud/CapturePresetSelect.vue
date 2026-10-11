@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useTranslate } from '~/i18n/useTranslate';
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { onBeforeUnmount, ref, watch } from 'vue';
 import { capture } from '~/api/capture';
-import Select from '~/ui/select/Select.vue';
+import EditorPresetSelect from '../editor/presets/EditorPresetSelect.vue';
 import CaptureModeIcon from '../capture/CaptureModeIcon.vue';
 import type { PresetKind } from '@beam/engine/capture/capture-mode';
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
@@ -24,13 +24,6 @@ const busy = ref(false);
 watch(error, (message) => emit('error', message));
 let generation = 0;
 let unsubscribe: (() => void) | null = null;
-const options = computed(
-  () =>
-    document.value?.presets.map((preset) => ({
-      label: preset.id === 'default' ? t('defaultPreset') : preset.name,
-      value: preset.id,
-    })) ?? [{ label: t('defaultPreset'), value: 'default' }],
-);
 watch(
   () => props.kind,
   async (kind) => {
@@ -76,21 +69,21 @@ onBeforeUnmount(() => {
 <template>
   <div class="preset-control" :class="{ compact }">
     <CaptureModeIcon v-if="!compact" :mode="kind === 'screenshot' ? 'screenshot' : 'studio'" :size="17" decorative />
-    <Select
-      :model-value="document?.activePresetId ?? 'default'"
-      :options="options"
-      :size="compact ? 'compact' : 'lg'"
-      :option-height="compact ? 32 : 38"
+    <EditorPresetSelect
+      :document="document"
+      :kind="kind"
+      :compact="compact"
+      size="lg"
       :disabled="disabled || busy"
       :label="t('preset')"
       tooltip-disabled
-      @update:model-value="select"
+      @select="select"
       @toggle="emit('toggle', $event)"
     >
       <template v-if="compact" #icon
         ><CaptureModeIcon :mode="kind === 'screenshot' ? 'screenshot' : 'studio'" :size="14" decorative
       /></template>
-    </Select>
+    </EditorPresetSelect>
     <p v-if="error && !compact" role="alert">{{ error }}</p>
   </div>
 </template>

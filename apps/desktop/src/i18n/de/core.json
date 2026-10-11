@@ -1076,6 +1076,8 @@
     "ungroup": "Gruppierung aufheben"
   },
   "EditorPresetControls": {
+    "preview": "Vorschau der Vorgabe",
+    "previewUnavailable": "Vorschau nicht verfügbar",
     "preset": "Vorlage",
     "editorPreset": "Editorvorlage",
     "settings": "Vorlageneinstellungen",
@@ -1306,5 +1308,9 @@
     "emptyFolders": "Wähle einen Ordner, um hier zuletzt verwendete Ordner zu sehen.",
     "error": "Der Ordner konnte nicht aktualisiert werden.",
     "retry": "Erneut versuchen"
+  },
+  "BigSlider": {
+    "resetDefault": "Auf Standardwert zurücksetzen",
+    "editValue": "Klicken, um den Wert direkt zu bearbeiten"
   }
 }

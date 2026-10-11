@@ -4,8 +4,10 @@ import type { BigSliderProps } from './big-slider-types';
 import { RotateCcw } from '@lucide/vue';
 import Input from '../input/Input.vue';
 import { beginPropertyInteraction, endPropertyInteraction } from '~/composables/property-interaction';
+import { useTranslate } from '~/i18n/useTranslate';
 
 const props = withDefaults(defineProps<BigSliderProps>(), { min: 0, max: 1, step: 0.01 });
+const { t } = useTranslate('BigSlider');
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: number): void;
@@ -177,7 +179,8 @@ onBeforeUnmount(() => {
             v-if="defaultValue !== undefined && isChanged"
             type="button"
             class="slider-reset-btn"
-            title="Reset to default"
+            :title="t('resetDefault')"
+            :aria-label="t('resetDefault')"
             @pointerdown.stop
             @mousedown.stop
             @click.stop.prevent="handleReset"
@@ -186,7 +189,7 @@ onBeforeUnmount(() => {
           </button>
           <span
             class="big-slider-value"
-            title="Click to edit value directly"
+            :title="t('editValue')"
             @pointerdown.stop
             @mousedown.stop
             @click.stop.prevent="startEditing"

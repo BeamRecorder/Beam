@@ -724,14 +724,15 @@
     "title": "Dithering",
     "pattern": "Wzór",
     "pixelSize": "Rozmiar wzoru",
-    "fourTones": "Cztery odcienie",
-    "retro": "Retro",
     "algorithm": "Algorytm",
-    "ordered": "Uporządkowany (GPU)",
+    "ordered": "Bayer",
     "mapping": "Mapowanie kolorów",
     "nearestColors": "Najbliższe kolory",
     "luminance": "Luminancja",
-    "blockSize": "Pikselizacja"
+    "blockSize": "Pikselizacja",
+    "palette": "Paleta",
+    "enabled": "Włącz dithering",
+    "remove": "Usuń dithering"
   },
   "ArtisticEffect": {
     "ascii": "ASCII",

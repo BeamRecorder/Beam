@@ -33,6 +33,10 @@ export interface DitheringPanelProps {
   effect: DitheringEffect;
   disabled?: boolean;
 }
+export interface EffectPaletteProps {
+  colors: readonly string[];
+  disabled?: boolean;
+}
 export interface LayerEffectPanelProps {
   effect: LayerEffect;
   disabled?: boolean;
