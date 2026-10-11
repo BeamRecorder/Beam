@@ -6,7 +6,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
-- Windows recordings keep existing media after capture or encoder failures, bound native startup and shutdown waits, and report the actual failure without leaving a recording indicator over stopped tracks.
+- Windows recordings keep existing media after capture or encoder failures, bound native startup and shutdown waits, clean up capture that starts after a timeout, and report the actual failure without leaving a recording indicator over stopped tracks.
 - Windows region capture stays on the GPU with bounded reusable frame surfaces; frame pacing preserves the requested rate across monitor refresh rates, and transient overload drops frames while a progressing encoder keeps recording.
 - Windows window recordings preserve the whole image when resized, follow window movements with the cursor, and retain static screen content through the end of the recording.
 - Pause and resume preserve the full Windows and macOS cursor and shortcut history. Long recordings publish interaction sidecars with bounded memory, and recovery preserves finalized cursor files and valid journal records.

@@ -199,6 +199,7 @@ jobs:
           cache-on-failure: true
       - run: node scripts/ci/bun-install-retry.cjs
       - name: Test Windows capture stress, recovery and decoded GPU recordings
+        timeout-minutes: 30
         shell: pwsh
         run: |
           if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
