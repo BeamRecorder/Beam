@@ -17,7 +17,12 @@ export interface CursorGpuOptions {
   geometry: CursorGpuGeometry;
   samples: readonly CursorGpuSample[];
   volume?: CursorVolumePose;
-  shadow: { enabled: boolean; blur: number; color: string; direction: CursorShadowDirection };
+  shadow: {
+    enabled: boolean;
+    blur: number;
+    color: string;
+    direction: CursorShadowDirection;
+  };
   resolution: number;
 }
 export interface CursorGpuAsset {
@@ -26,4 +31,41 @@ export interface CursorGpuAsset {
   vertices: number;
   bytes: number;
   rasterSize: number;
+  volume: boolean;
+}
+
+export interface CursorRasterBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  pixelWidth: number;
+  pixelHeight: number;
+  resolution: number;
+  weight: number;
+}
+export interface CursorRasterSurface {
+  canvas: OffscreenCanvas;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+export interface CursorStampRasterizer {
+  readonly canvas: OffscreenCanvas;
+  readonly gl: WebGL2RenderingContext;
+  readonly maxSize: number;
+  render(options: CursorGpuOptions, density?: number): CursorRasterSurface;
+}
+export interface CursorExposureStamp {
+  image: HTMLImageElement | ImageBitmap;
+  key: string;
+  texture: WebGLTexture;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  bytes: number;
+  retained: boolean;
+  resolution: number;
 }

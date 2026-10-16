@@ -1,3 +1,11 @@
+/** The unchanged front cap is sufficient for 2D cursors, without reading their alpha back from the GPU. */
+export function cursorFaceMesh(): Float32Array {
+  return new Float32Array([
+    0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0,
+    1, 0, 1, 0, 0, 1, 0, 0, 1,
+  ]);
+}
+
 /** An actual extruded alpha silhouette; the caps retain the original cursor artwork. */
 export function cursorVolumeMesh(rgba: Uint8ClampedArray, width: number, height: number): Float32Array {
   if (
@@ -5,7 +13,7 @@ export function cursorVolumeMesh(rgba: Uint8ClampedArray, width: number, height:
     rgba.length !== width * height * 4
   )
     throw new RangeError('Invalid cursor silhouette.');
-  const vertices: number[] = [];
+  const vertices: number[] = Array.from(cursorFaceMesh());
   const vertex = (x: number, y: number, z: number, u: number, v: number, nx: number, ny: number, nz: number) =>
     vertices.push(x, y, z, u, v, nx, ny, nz);
   const quad = (
@@ -25,16 +33,6 @@ export function cursorVolumeMesh(rgba: Uint8ClampedArray, width: number, height:
     [1, 1],
     [0, 1],
   ] as const;
-  quad(
-    [
-      [0, 0, 0],
-      [1, 0, 0],
-      [1, 1, 0],
-      [0, 1, 0],
-    ],
-    capUV,
-    [0, 0, 1],
-  );
   quad(
     [
       [0, 0, -0.18],

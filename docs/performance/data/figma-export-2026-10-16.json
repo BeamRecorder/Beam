@@ -1,0 +1,575 @@
+{
+  "date": "2026-10-16",
+  "baselineCommit": "370008c7",
+  "workload": {
+    "project": "FigmaDemo",
+    "timelineDurationSeconds": 13.973,
+    "excerptFrameRange": [
+      0,
+      60
+    ],
+    "exportWidth": 1920,
+    "exportHeight": 1080,
+    "exportFps": 30,
+    "audio": false,
+    "avcBitrate": 8000000,
+    "previewWidth": 960,
+    "previewHeight": 540,
+    "previewFrames": 120,
+    "previewFps": 60,
+    "hoverAnalysisIncluded": false,
+    "hoverAnalysisPreparationMs": 50488.09999999404,
+    "host": "Linux, Intel Core Ultra 5 125H, 18 logical CPUs, shared desktop",
+    "fullFrameRange": [
+      0,
+      420
+    ]
+  },
+  "measurements": {
+    "before-warm": {
+      "setupMs": 1755,
+      "elapsedMs": 97364.90000000596,
+      "stats": {
+        "elapsedMs": 96283.09999999404,
+        "decodeMs": 230.20000004768372,
+        "renderMs": 72503.0000000894,
+        "encoderBackpressureMs": 23341.70000013709,
+        "engine": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "decode": {
+              "count": 60,
+              "totalMs": 230.20000004768372,
+              "latestMs": 0.09999999403953552,
+              "medianMs": 0.09999999403953552,
+              "p95Ms": 17.200000017881393,
+              "maxMs": 168.5,
+              "windowSamples": 60
+            },
+            "render": {
+              "count": 60,
+              "totalMs": 72503.0000000894,
+              "latestMs": 803.9000000059605,
+              "medianMs": 614.8000000119209,
+              "p95Ms": 3987.4000000059605,
+              "maxMs": 7196,
+              "windowSamples": 60
+            },
+            "encode-wait": {
+              "count": 60,
+              "totalMs": 23341.70000013709,
+              "latestMs": 10.399999976158142,
+              "medianMs": 31.900000005960464,
+              "p95Ms": 2295.7000000178814,
+              "maxMs": 2849,
+              "windowSamples": 60
+            }
+          },
+          "counters": {
+            "frames": 60
+          }
+        }
+      },
+      "packets": 60,
+      "selection": {
+        "codec": "avc",
+        "quality": {
+          "_preferBitrate": false,
+          "_bitrate": 8000000,
+          "_bitrateMode": "variable"
+        },
+        "hardwareAcceleration": "prefer-software",
+        "bitrateMode": "variable",
+        "hardwareEncoderCheck": "unsupported",
+        "hardwareEncoderError": null
+      },
+      "bytes": 944506,
+      "backend": [
+        "--disable-background-timer-throttling",
+        "--disable-renderer-backgrounding",
+        "--disable-accelerated-video-decode",
+        "--use-gl=angle",
+        "--use-angle=swiftshader",
+        "--enable-unsafe-swiftshader"
+      ],
+      "browser": "Chrome/154.0.8037.57"
+    },
+    "after-gpu-batch": {
+      "setupMs": 703,
+      "elapsedMs": 84868.09999999404,
+      "stats": {
+        "elapsedMs": 84062.10000002384,
+        "decodeMs": 808.8000000119209,
+        "renderMs": 64117.09999996424,
+        "encoderBackpressureMs": 18973.399999946356,
+        "engine": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "decode": {
+              "count": 60,
+              "totalMs": 808.8000000119209,
+              "latestMs": 0,
+              "medianMs": 0.09999999403953552,
+              "p95Ms": 14.799999982118607,
+              "maxMs": 742.3000000119209,
+              "windowSamples": 60
+            },
+            "render": {
+              "count": 60,
+              "totalMs": 64117.09999996424,
+              "latestMs": 589.9000000059605,
+              "medianMs": 640.4000000059605,
+              "p95Ms": 2805.199999988079,
+              "maxMs": 7728,
+              "windowSamples": 60
+            },
+            "encode-wait": {
+              "count": 60,
+              "totalMs": 18973.399999946356,
+              "latestMs": 3.699999988079071,
+              "medianMs": 23.900000005960464,
+              "p95Ms": 809.2999999821186,
+              "maxMs": 2636.7000000178814,
+              "windowSamples": 60
+            }
+          },
+          "counters": {
+            "frames": 60
+          }
+        }
+      },
+      "packets": 60,
+      "selection": {
+        "codec": "avc",
+        "quality": {
+          "_preferBitrate": false,
+          "_bitrate": 8000000,
+          "_bitrateMode": "variable"
+        },
+        "hardwareAcceleration": "prefer-software",
+        "bitrateMode": "variable",
+        "hardwareEncoderCheck": "unsupported",
+        "hardwareEncoderError": null
+      },
+      "bytes": 945260,
+      "backend": [
+        "--disable-background-timer-throttling",
+        "--disable-renderer-backgrounding",
+        "--disable-accelerated-video-decode",
+        "--use-gl=angle",
+        "--use-angle=swiftshader",
+        "--enable-unsafe-swiftshader"
+      ],
+      "browser": "Chrome/154.0.8037.57"
+    },
+    "playback-before": {
+      "frames": 120,
+      "width": 960,
+      "height": 540,
+      "fps": 60,
+      "elapsedMs": 98503.80000001192,
+      "decodeMs": 570.1000000834465,
+      "submitMs": 5996.299999892712,
+      "completedRenderMs": 97907.49999985099,
+      "medianMs": 516.0999999940395,
+      "p95Ms": 1570.300000011921,
+      "note": "Actual createRuntimePreview, decoded project media, completed GPU work fenced through a one-pixel copy; unpaced, no encoder or vsync.",
+      "backend": [
+        "--disable-background-timer-throttling",
+        "--disable-renderer-backgrounding",
+        "--disable-accelerated-video-decode",
+        "--use-gl=angle",
+        "--use-angle=swiftshader",
+        "--enable-unsafe-swiftshader"
+      ],
+      "browser": "Chrome/154.0.8037.57"
+    },
+    "playback-after-gpu": {
+      "frames": 120,
+      "width": 960,
+      "height": 540,
+      "fps": 60,
+      "elapsedMs": 84347.19999998808,
+      "decodeMs": 408.49999994039536,
+      "submitMs": 3752.3000000417233,
+      "completedRenderMs": 83910.70000004768,
+      "medianMs": 464.89999997615814,
+      "p95Ms": 1522.7000000178814,
+      "note": "Actual createRuntimePreview, decoded project media, completed GPU work fenced through a one-pixel copy; unpaced, no encoder or vsync.",
+      "backend": [
+        "--disable-background-timer-throttling",
+        "--disable-renderer-backgrounding",
+        "--disable-accelerated-video-decode",
+        "--use-gl=angle",
+        "--use-angle=swiftshader",
+        "--enable-unsafe-swiftshader"
+      ],
+      "browser": "Chrome/154.0.8037.57"
+    },
+    "full-before": {
+      "setupMs": 597.5,
+      "elapsedMs": 350797.40000000596,
+      "stats": {
+        "elapsedMs": 350061.6999999881,
+        "decodeMs": 880.8999998867512,
+        "renderMs": 168003.20000004768,
+        "encoderBackpressureMs": 180744.49999970198,
+        "engine": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "decode": {
+              "count": 420,
+              "totalMs": 880.8999998867512,
+              "latestMs": 0,
+              "medianMs": 0.09999999403953552,
+              "p95Ms": 0.30000001192092896,
+              "maxMs": 3.300000011920929,
+              "windowSamples": 120
+            },
+            "render": {
+              "count": 420,
+              "totalMs": 168003.20000004768,
+              "latestMs": 8.900000005960464,
+              "medianMs": 30.30000001192093,
+              "p95Ms": 2447.4000000059605,
+              "maxMs": 2758.699999988079,
+              "windowSamples": 120
+            },
+            "encode-wait": {
+              "count": 420,
+              "totalMs": 180744.49999970198,
+              "latestMs": 412.5,
+              "medianMs": 507,
+              "p95Ms": 1256.199999988079,
+              "maxMs": 2524.300000011921,
+              "windowSamples": 120
+            }
+          },
+          "counters": {
+            "frames": 420
+          }
+        }
+      },
+      "packets": 420,
+      "selection": {
+        "codec": "avc",
+        "quality": {
+          "_preferBitrate": false,
+          "_bitrate": 8000000,
+          "_bitrateMode": "variable"
+        },
+        "hardwareAcceleration": "prefer-software",
+        "bitrateMode": "variable",
+        "hardwareEncoderCheck": "unsupported",
+        "hardwareEncoderError": null
+      },
+      "bytes": 5265847,
+      "backend": [
+        "--disable-background-timer-throttling",
+        "--disable-renderer-backgrounding",
+        "--disable-accelerated-video-decode",
+        "--use-gl=angle",
+        "--use-angle=swiftshader",
+        "--enable-unsafe-swiftshader"
+      ],
+      "browser": "Chrome/154.0.8037.57"
+    },
+    "full-after": {
+      "setupMs": 591.5,
+      "elapsedMs": 286642.39999997616,
+      "stats": {
+        "elapsedMs": 285976.40000000596,
+        "decodeMs": 544.2000003457069,
+        "renderMs": 139543.19999989867,
+        "encoderBackpressureMs": 145586.09999978542,
+        "engine": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "decode": {
+              "count": 420,
+              "totalMs": 544.2000003457069,
+              "latestMs": 0,
+              "medianMs": 0.09999999403953552,
+              "p95Ms": 0.30000001192092896,
+              "maxMs": 2.5,
+              "windowSamples": 120
+            },
+            "render": {
+              "count": 420,
+              "totalMs": 139543.19999989867,
+              "latestMs": 9.299999982118607,
+              "medianMs": 23.099999994039536,
+              "p95Ms": 1862.9000000059605,
+              "maxMs": 2107.9000000059605,
+              "windowSamples": 120
+            },
+            "encode-wait": {
+              "count": 420,
+              "totalMs": 145586.09999978542,
+              "latestMs": 385.40000000596046,
+              "medianMs": 492.80000001192093,
+              "p95Ms": 917.7000000178814,
+              "maxMs": 1763.7999999821186,
+              "windowSamples": 120
+            }
+          },
+          "counters": {
+            "frames": 420
+          }
+        }
+      },
+      "packets": 420,
+      "selection": {
+        "codec": "avc",
+        "quality": {
+          "_preferBitrate": false,
+          "_bitrate": 8000000,
+          "_bitrateMode": "variable"
+        },
+        "hardwareAcceleration": "prefer-software",
+        "bitrateMode": "variable",
+        "hardwareEncoderCheck": "unsupported",
+        "hardwareEncoderError": null
+      },
+      "bytes": 5269649,
+      "backend": [
+        "--disable-background-timer-throttling",
+        "--disable-renderer-backgrounding",
+        "--disable-accelerated-video-decode",
+        "--use-gl=angle",
+        "--use-angle=swiftshader",
+        "--enable-unsafe-swiftshader"
+      ],
+      "browser": "Chrome/154.0.8037.57"
+    }
+  },
+  "bundleSha256": {
+    "before-bundle.js": "ef2984b631c3ab39962b0d020e12f645f93d5362ffffcedfda60e794d3097571",
+    "after-gpu-batch-bundle.js": "c9a880b8cfb6a1dea4d75df0522313158f9ff8a6c8a3a98bd7202bd87e43facd",
+    "playback-before-bundle.js": "84ecaab392b691d52b9eab35f0500ce0f9c6f14da0a83b52e2e2e4053e94360f",
+    "playback-after-gpu-bundle.js": "c9a880b8cfb6a1dea4d75df0522313158f9ff8a6c8a3a98bd7202bd87e43facd",
+    "full-after-bundle.js": "4fbe82f67600b549ea6c0183ce46af02a2ae06a051464e1e1dc843656c1c6c23"
+  },
+  "cursorPixelComparison": {
+    "maxEnergyError": 0.016138081738719556,
+    "maxPixelError": 0.04996614714261773,
+    "identical": true,
+    "hole": 0,
+    "cases": [
+      {
+        "frame": 0,
+        "unit": 32,
+        "resolution": 1,
+        "shadow": false,
+        "alpha": 100692,
+        "baselineAlpha": 100726,
+        "ratio": 0.9996624506085817,
+        "pixelError": 0.0029919646114308163
+      },
+      {
+        "frame": 1,
+        "unit": 45,
+        "resolution": 1.01,
+        "shadow": true,
+        "alpha": 67175,
+        "baselineAlpha": 68218,
+        "ratio": 0.9847107801460026,
+        "pixelError": 0.03399564199892042
+      },
+      {
+        "frame": 2,
+        "unit": 160,
+        "resolution": 1.25,
+        "shadow": true,
+        "alpha": 2913854,
+        "baselineAlpha": 2912918,
+        "ratio": 1.0003213272738882,
+        "pixelError": 0.0010061435733824968
+      },
+      {
+        "frame": 3,
+        "unit": 32,
+        "resolution": 2,
+        "shadow": false,
+        "alpha": 26107,
+        "baselineAlpha": 26478,
+        "ratio": 0.985988367701488,
+        "pixelError": 0.048623607612090836
+      },
+      {
+        "frame": 4,
+        "unit": 45,
+        "resolution": 2.01,
+        "shadow": true,
+        "alpha": 249315,
+        "baselineAlpha": 249142,
+        "ratio": 1.0006943831228776,
+        "pixelError": 0.0017427536796481603
+      },
+      {
+        "frame": 5,
+        "unit": 160,
+        "resolution": 4,
+        "shadow": true,
+        "alpha": 742693,
+        "baselineAlpha": 742728,
+        "ratio": 0.999952876423132,
+        "pixelError": 0.001855801696385408
+      },
+      {
+        "frame": 6,
+        "unit": 32,
+        "resolution": 1,
+        "shadow": false,
+        "alpha": 100709,
+        "baselineAlpha": 100594,
+        "ratio": 1.0011432093365409,
+        "pixelError": 0.006904526329290291
+      },
+      {
+        "frame": 7,
+        "unit": 45,
+        "resolution": 1.01,
+        "shadow": true,
+        "alpha": 66635,
+        "baselineAlpha": 67728,
+        "ratio": 0.9838619182612804,
+        "pixelError": 0.033188984310946204
+      },
+      {
+        "frame": 8,
+        "unit": 160,
+        "resolution": 1.25,
+        "shadow": true,
+        "alpha": 2913854,
+        "baselineAlpha": 2912918,
+        "ratio": 1.0003213272738882,
+        "pixelError": 0.0010061435733824968
+      },
+      {
+        "frame": 9,
+        "unit": 32,
+        "resolution": 2,
+        "shadow": false,
+        "alpha": 26720,
+        "baselineAlpha": 26325,
+        "ratio": 1.0150047483380817,
+        "pixelError": 0.04996614714261773
+      },
+      {
+        "frame": 10,
+        "unit": 45,
+        "resolution": 2.01,
+        "shadow": true,
+        "alpha": 249315,
+        "baselineAlpha": 249142,
+        "ratio": 1.0006943831228776,
+        "pixelError": 0.0017427536796481603
+      },
+      {
+        "frame": 11,
+        "unit": 160,
+        "resolution": 4,
+        "shadow": true,
+        "alpha": 742693,
+        "baselineAlpha": 742728,
+        "ratio": 0.999952876423132,
+        "pixelError": 0.001855801696385408
+      },
+      {
+        "frame": 12,
+        "unit": 32,
+        "resolution": 1,
+        "shadow": false,
+        "alpha": 100709,
+        "baselineAlpha": 100594,
+        "ratio": 1.0011432093365409,
+        "pixelError": 0.006904526329290291
+      },
+      {
+        "frame": 13,
+        "unit": 45,
+        "resolution": 1.01,
+        "shadow": true,
+        "alpha": 66635,
+        "baselineAlpha": 67728,
+        "ratio": 0.9838619182612804,
+        "pixelError": 0.033188984310946204
+      },
+      {
+        "frame": 14,
+        "unit": 160,
+        "resolution": 1.25,
+        "shadow": true,
+        "alpha": 2913854,
+        "baselineAlpha": 2912918,
+        "ratio": 1.0003213272738882,
+        "pixelError": 0.0010061435733824968
+      },
+      {
+        "frame": 15,
+        "unit": 32,
+        "resolution": 2,
+        "shadow": false,
+        "alpha": 26720,
+        "baselineAlpha": 26325,
+        "ratio": 1.0150047483380817,
+        "pixelError": 0.04996614714261773
+      },
+      {
+        "frame": 16,
+        "unit": 45,
+        "resolution": 2.01,
+        "shadow": true,
+        "alpha": 249315,
+        "baselineAlpha": 249142,
+        "ratio": 1.0006943831228776,
+        "pixelError": 0.0017427536796481603
+      },
+      {
+        "frame": 17,
+        "unit": 160,
+        "resolution": 4,
+        "shadow": true,
+        "alpha": 742693,
+        "baselineAlpha": 742728,
+        "ratio": 0.999952876423132,
+        "pixelError": 0.001855801696385408
+      }
+    ],
+    "marker": [
+      255,
+      0,
+      0,
+      255
+    ]
+  },
+  "unitCoverage": {
+    "tests": 119,
+    "statements": 99.81,
+    "branches": 99.55,
+    "functions": 100,
+    "lines": 100
+  },
+  "fullExportComparison": {
+    "beforeMs": 350797.40000000596,
+    "afterMs": 286642.39999997616,
+    "savedMs": 64155.0000000298,
+    "lessElapsedPercent": 18.288333950031756,
+    "encodedPacketsBefore": 420,
+    "encodedPacketsAfter": 420,
+    "ssim": 0.999951,
+    "decodedFramesBefore": 420,
+    "decodedFramesAfter": 420,
+    "outputCodec": "h264",
+    "outputDurationSeconds": 13.966667
+  }
+}

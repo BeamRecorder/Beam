@@ -37,6 +37,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Preview and export rasterize a 2D cursor and its complete shadow once, then reuse that image for motion-blur samples. A bounded cache avoids repeating unchanged artwork, and 2D cursors no longer build unused 3D meshes.
 - Automatic zoom grouping has a bounded action window and preserves wide pauses between separate shots, while uninterrupted long drags remain continuous.
 - 3D camera motion blur prepares and uploads the scene once per frame for all shutter poses. Exports also skip empty cursor projections when the cursor is disabled, reducing software rendering work without removing shutter samples or lowering output resolution.
 - The Dynamic 3D camera preset uses gentler angles and perspective to preserve text readability while retaining its responsive follow movement.

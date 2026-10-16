@@ -1,10 +1,26 @@
 import { expect, it } from 'vitest';
-import { cursorVolumeMesh } from './cursor-volume-mesh';
+import { cursorFaceMesh, cursorVolumeMesh } from './cursor-volume-mesh';
 const mask = (w: number, h: number, predicate: (x: number, y: number) => boolean) => {
   const rgba = new Uint8ClampedArray(w * h * 4);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) rgba[(y * w + x) * 4 + 3] = predicate(x, y) ? 255 : 0;
   return rgba;
 };
+it('uses the identical front cap for flat and extruded artwork, including holes', () => {
+  for (const predicate of [() => false, () => true, (x: number, y: number) => x !== y])
+    expect(cursorVolumeMesh(mask(3, 3, predicate), 3, 3).slice(0, 48)).toEqual(cursorFaceMesh());
+});
+it('maps the complete flat artwork to outward-facing unit triangles', () => {
+  const face = cursorFaceMesh();
+  expect(face.length).toBe(48);
+  for (let index = 0; index < face.length; index += 8) {
+    expect(Array.from(face.slice(index + 2, index + 8))).toEqual([0, face[index], face[index + 1], 0, 0, 1]);
+  }
+});
+it('owns each front-cap array independently', () => {
+  const face = cursorFaceMesh();
+  face.fill(NaN);
+  expect(Array.from(cursorFaceMesh()).every(Number.isFinite)).toBe(true);
+});
 it('retains the front and back artwork caps for a transparent silhouette', () => {
   const mesh = cursorVolumeMesh(
     mask(2, 2, () => false),

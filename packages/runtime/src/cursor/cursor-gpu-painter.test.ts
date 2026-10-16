@@ -156,6 +156,7 @@ it('retains artwork and uniforms across frames and releases every GPU allocation
   expect(gl.createTexture).toHaveBeenCalledOnce();
   expect(gl.bufferData).toHaveBeenCalledOnce();
   expect(gl.getError).toHaveBeenCalledOnce();
+  expect(gl.getAttribLocation).toHaveBeenCalledTimes(3);
   painter.dispose();
   painter.dispose();
   expect(gl.deleteTexture).toHaveBeenCalledOnce();
@@ -163,13 +164,45 @@ it('retains artwork and uniforms across frames and releases every GPU allocation
   expect(gl.deleteProgram).toHaveBeenCalledOnce();
   expect(() => painter.render(input)).toThrow('unavailable');
 });
+it('skips unused 2D silhouette geometry and upgrades to a volume once without downgrading flat artwork', () => {
+  const painter = new CursorGpuPainter(),
+    input = options();
+  painter.render(input);
+  expect(canvasCount).toBe(3);
+  expect(gl.bufferData.mock.calls[0]![1]).toHaveLength(48);
+  painter.render({ ...input, volume: { pitch: 0.2, yaw: 0, height: 0.3 } });
+  expect((gl.bufferData.mock.calls[1]![1] as Float32Array).length).toBeGreaterThan(48);
+  painter.render(input);
+  painter.render({ ...input, volume: { pitch: 0, yaw: 0, height: 0.4 } });
+  expect(gl.bufferData).toHaveBeenCalledTimes(2);
+  painter.dispose();
+});
+it('retains a sharp cached raster when adding volume before another magnified frame', () => {
+  const painter = new CursorGpuPainter(),
+    artwork = image();
+  const magnified = options({
+    image: artwork,
+    geometry: { width: 200, height: 200, hotspot: { x: 10, y: 10 } },
+    resolution: 2,
+  });
+  painter.render(magnified);
+  painter.render(options({ image: artwork, volume: { pitch: 0.2, yaw: 0, height: 0.3 } }));
+  expect((gl.texImage2D.mock.calls[1]![5] as OffscreenCanvas).width).toBe(512);
+  painter.render({ ...magnified, volume: { pitch: 0.2, yaw: 0, height: 0.3 } });
+  expect(gl.createTexture).toHaveBeenCalledTimes(2);
+  painter.dispose();
+});
 it('evicts immutable artwork by count and byte budget', () => {
   const painter = new CursorGpuPainter();
   for (let i = 0; i < 10; i++) painter.render(options());
   expect(gl.deleteTexture).toHaveBeenCalledTimes(2);
   for (let i = 0; i < 6; i++)
     painter.render(
-      options({ image: image(4096), geometry: { width: 512, height: 512, hotspot: { x: 4, y: 4 } }, resolution: 2 }),
+      options({
+        image: image(4096),
+        geometry: { width: 512, height: 512, hotspot: { x: 4, y: 4 } },
+        resolution: 2,
+      }),
     );
   expect(gl.deleteTexture.mock.calls.length).toBeGreaterThan(8);
   painter.dispose();
@@ -177,7 +210,12 @@ it('evicts immutable artwork by count and byte budget', () => {
 });
 it('accepts decoded HTML artwork and caps raster resolution', () => {
   const painter = new CursorGpuPainter();
-  painter.render(options({ image: { naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement, resolution: 8 }));
+  painter.render(
+    options({
+      image: { naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement,
+      resolution: 8,
+    }),
+  );
   expect(gl.viewport.mock.calls[0]![2]).toBeLessThan(4096);
   painter.dispose();
 });
@@ -186,7 +224,11 @@ it('upgrades artwork for magnification and retains the sharp raster when shrinki
     artwork = image();
   painter.render(options({ image: artwork }));
   painter.render(
-    options({ image: artwork, geometry: { width: 160, height: 160, hotspot: { x: 80, y: 80 } }, resolution: 2 }),
+    options({
+      image: artwork,
+      geometry: { width: 160, height: 160, hotspot: { x: 80, y: 80 } },
+      resolution: 2,
+    }),
   );
   expect(gl.createTexture).toHaveBeenCalledTimes(2);
   expect(gl.deleteTexture).toHaveBeenCalledOnce();
@@ -220,9 +262,22 @@ it('composes complete cursor and shadow samples before additive exposure', () =>
 it('bounds the parsed shadow color cache and rejects malformed colors', () => {
   const painter = new CursorGpuPainter();
   for (let i = 0; i < 65; i++)
-    painter.render(options({ shadow: { enabled: false, blur: 0, color: `rgb(${i},0,0)`, direction: 'bottom' } }));
+    painter.render(
+      options({
+        shadow: {
+          enabled: false,
+          blur: 0,
+          color: `rgb(${i},0,0)`,
+          direction: 'bottom',
+        },
+      }),
+    );
   expect(() =>
-    painter.render(options({ shadow: { enabled: true, blur: 0, color: 'bad', direction: 'bottom' } })),
+    painter.render(
+      options({
+        shadow: { enabled: true, blur: 0, color: 'bad', direction: 'bottom' },
+      }),
+    ),
   ).toThrow('color');
   painter.dispose();
 });
@@ -253,12 +308,17 @@ it('rejects incomplete artwork and context loss', () => {
 it.each([1, 2, 3])('cleans up when Canvas2D surface %s is unavailable', (number) => {
   missingCanvas = number;
   const painter = new CursorGpuPainter();
-  expect(() => painter.render(options())).toThrow('canvas unavailable');
+  expect(() => painter.render(options({ volume: { pitch: 0, yaw: 0, height: 0 } }))).toThrow('canvas unavailable');
   painter.dispose();
 });
 it('fails explicitly without WebGL2', () => {
   unavailable = true;
   expect(() => new CursorGpuPainter()).toThrow('WebGL2');
+});
+it('rejects an unavailable shader attribute and releases the partially linked program', () => {
+  gl.getAttribLocation.mockReturnValueOnce(-1);
+  expect(() => new CursorGpuPainter()).toThrow('attribute is unavailable');
+  expect(gl.deleteProgram).toHaveBeenCalledOnce();
 });
 it.each(['createProgram', 'createShader', 'createBuffer', 'createTexture'] as const)(
   'cleans partial allocation failure in %s',

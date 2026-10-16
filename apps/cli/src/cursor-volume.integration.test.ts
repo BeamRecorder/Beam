@@ -349,4 +349,144 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('GPU cursor exposure and 
     await writeFile('/tmp/beam-resize-blur-reference.png', Buffer.from(result.png.split(',')[1]!, 'base64'));
     expect(result.relativeError).toBeLessThan(0.05);
   }, 30_000);
+  it('reuses flat cursor rasters without halos, opacity drift, lost holes or stale pixels', async () => {
+    const result = await page.evaluate(async () => {
+      const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+      const { CursorGpuPainter } = (await load(
+        '/packages/runtime/src/cursor/cursor-gpu-painter.ts',
+      )) as typeof import('@beam/runtime/cursor/cursor-gpu-painter');
+      const { FlatCursorExposurePainter } = (await load(
+        '/packages/runtime/src/cursor/flat-cursor-exposure.ts',
+      )) as typeof import('@beam/runtime/cursor/flat-cursor-exposure');
+      const rasterizer = new CursorGpuPainter(),
+        reference = new CursorGpuPainter(),
+        flat = new FlatCursorExposurePainter(rasterizer);
+      const artwork = new OffscreenCanvas(32, 32),
+        source = artwork.getContext('2d')!;
+      source.fillStyle = '#e09050c0';
+      source.fillRect(4, 4, 24, 24);
+      source.fillStyle = '#ff0000';
+      source.fillRect(4, 4, 6, 6);
+      source.clearRect(12, 12, 8, 8);
+      const image = artwork.transferToImageBitmap(),
+        resize = new Image();
+      resize.src = '/macOsSvgCursors/resizenortheastsouthwest.svg';
+      await resize.decode();
+      const read = (surface: import('@beam/runtime/cursor/cursor-gpu-types').CursorRasterSurface) => {
+        const canvas = new OffscreenCanvas(400, 350),
+          context = canvas.getContext('2d')!;
+        context.drawImage(surface.canvas, surface.x, surface.y, surface.width, surface.height);
+        return { canvas, pixels: context.getImageData(0, 0, 400, 350).data };
+      };
+      const cases: unknown[] = [];
+      let maxEnergyError = 0,
+        maxPixelError = 0,
+        png = '';
+      for (let frame = 0; frame < 18; frame++) {
+        const unit = [32, 45, 160][frame % 3]!;
+        const input = {
+          image: frame % 2 ? resize : image,
+          geometry: {
+            width: unit,
+            height: unit,
+            hotspot: { x: unit / 2, y: unit / 2 },
+          },
+          resolution: [1, 1.01, 1.25, 2, 2.01, 4][frame % 6]!,
+          shadow: {
+            enabled: frame % 3 !== 0,
+            blur: 6,
+            color: '#10203080',
+            direction: 'bottom-right' as const,
+          },
+          samples: Array.from({ length: 16 }, (_, index) => ({
+            x: 150.25 + index * 3.1,
+            y: 150.1 - index * 0.93,
+            weight: 0.25 + index / 16,
+          })),
+        };
+        const actual = read(flat.render(input)),
+          expected = read(reference.render(input));
+        let alpha = 0,
+          baselineAlpha = 0,
+          difference = 0;
+        for (let index = 3; index < actual.pixels.length; index += 4) {
+          const a = actual.pixels[index]!,
+            b = expected.pixels[index]!;
+          alpha += a;
+          baselineAlpha += b;
+          for (let channel = 0; channel < 4; channel++) {
+            const offset = index - 3 + channel;
+            difference +=
+              channel === 3
+                ? 255 * Math.abs(a - b)
+                : Math.abs(actual.pixels[offset]! * a - expected.pixels[offset]! * b);
+          }
+        }
+        cases.push({
+          frame,
+          unit,
+          resolution: input.resolution,
+          shadow: input.shadow.enabled,
+          alpha,
+          baselineAlpha,
+          ratio: alpha / baselineAlpha,
+          pixelError: difference / (baselineAlpha * 255 * 4),
+        });
+        maxEnergyError = Math.max(maxEnergyError, Math.abs(alpha / baselineAlpha - 1));
+        maxPixelError = Math.max(maxPixelError, difference / (baselineAlpha * 255 * 4));
+        if (frame === 11) {
+          const comparison = document.createElement('canvas');
+          comparison.width = 800;
+          comparison.height = 350;
+          const context = comparison.getContext('2d')!;
+          context.fillStyle = '#eee1de';
+          context.fillRect(0, 0, 800, 350);
+          context.drawImage(actual.canvas, 0, 0);
+          context.drawImage(expected.canvas, 400, 0);
+          png = comparison.toDataURL();
+        }
+      }
+      const hold = {
+        image,
+        geometry: { width: 32, height: 32, hotspot: { x: 16, y: 16 } },
+        resolution: 2,
+        shadow: {
+          enabled: false,
+          blur: 0,
+          color: '#000',
+          direction: 'bottom' as const,
+        },
+        samples: [{ x: 100, y: 100, weight: 1 }],
+      };
+      const first = read(flat.render(hold));
+      // Interleave a different GPU render; the retained stamp must own its pixels.
+      reference.render({ ...hold, image: resize });
+      rasterizer.render({ ...hold, image: resize });
+      const second = read(flat.render(hold));
+      const identical = first.pixels.every((value, index) => value === second.pixels[index]);
+      const hole = second.pixels[(100 * 400 + 100) * 4 + 3];
+      const markerOffset = (89 * 400 + 89) * 4;
+      const marker = Array.from(second.pixels.slice(markerOffset, markerOffset + 4));
+      flat.dispose();
+      reference.dispose();
+      rasterizer.dispose();
+      image.close();
+      return {
+        maxEnergyError,
+        maxPixelError,
+        identical,
+        hole,
+        png,
+        cases,
+        marker,
+      };
+    });
+    await writeFile('/tmp/beam-flat-cursor-exposure.png', Buffer.from(result.png.split(',')[1]!, 'base64'));
+    await writeFile('/tmp/beam-flat-comparison.json', JSON.stringify({ ...result, png: undefined }, null, 2));
+    expect(result.maxEnergyError).toBeLessThan(0.05);
+    expect(result.maxPixelError).toBeLessThan(0.05);
+    expect(result.identical).toBe(true);
+    expect(result.hole).toBe(0);
+    expect(result.marker).toEqual([255, 0, 0, 255]);
+  }, 60_000);
 });
