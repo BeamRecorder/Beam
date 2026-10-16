@@ -1,7 +1,5 @@
 const { readJsonSync } = require('@beam/storage/node/json-file');
-const fs = require('fs');
 const path = require('path');
-const { pathToFileURL } = require('url');
 const { captureWindowExclusions } = require('./capture-window-exclusions.cjs');
 const { buildDefaultCaptureConfig } = require('./capture-config.cjs');
 const { createSystemAudioPreview } = require('./system-audio-preview.cjs');
@@ -10,6 +8,7 @@ const { createSourcePreviewService } = require('./source-preview-service.cjs');
 const { registerSourcePickerIpc } = require('../source-picker/source-picker-ipc.cjs');
 const { registerScreenColorIpc } = require('./screen-color-ipc.cjs');
 const { nativeDisplayBounds } = require('./display-coordinates.cjs');
+const { completedVideoSource } = require('./completed-recording.cjs');
 
 const ALLOWED_COMMANDS = new Set([
   'discover',
@@ -27,24 +26,6 @@ const ALLOWED_COMMANDS = new Set([
   'system-audio-preview-level',
   'stop-system-audio-preview',
 ]);
-
-function completedVideoSource(session) {
-  if (!session?.manifestPath) return session;
-  const directory = path.dirname(session.manifestPath);
-  const screenDirectory = path.join(directory, 'screen');
-  const video = fs.existsSync(screenDirectory)
-    ? fs
-        .readdirSync(screenDirectory)
-        .filter((name) => /\.mp4$/i.test(name))
-        .sort()[0]
-    : null;
-  return video
-    ? {
-        ...session,
-        videoSrc: pathToFileURL(path.join(screenDirectory, video)).href,
-      }
-    : session;
-}
 
 function withProjectId(session) {
   if (!session || typeof session !== 'object' || typeof session.manifestPath !== 'string') return session;

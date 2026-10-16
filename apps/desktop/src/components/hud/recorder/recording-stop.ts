@@ -1,5 +1,7 @@
 import { withMediaDeadline } from '../../../api/media-recorder-finalization';
+import { tNamespace } from '../../../i18n';
 import type { RecordingStopOperations, RecordingStopResult } from './recording-stop-types';
+import type { CaptureSession } from '../../../api/types/capture-api';
 
 export async function finalizeRecording(operations: RecordingStopOperations): Promise<RecordingStopResult> {
   const [native, sidecars] = await Promise.allSettled([
@@ -10,7 +12,7 @@ export async function finalizeRecording(operations: RecordingStopOperations): Pr
   let failure: unknown;
   try {
     if (native.status === 'rejected') throw native.reason;
-    return { kind: 'completed', session: await operations.completeNative(), warning };
+    return completion(await operations.completeNative(), warning);
   } catch (error) {
     failure = error;
   }
@@ -21,7 +23,7 @@ export async function finalizeRecording(operations: RecordingStopOperations): Pr
     if (['recording', 'degraded', 'paused'].includes(status.state)) return { kind: 'active', error: message(failure) };
     if (status.state === 'completed' && status.manifestPath) {
       try {
-        return { kind: 'completed', session: await operations.completeNative(), warning };
+        return completion(await operations.completeNative(), warning);
       } catch (error) {
         return { kind: 'failed', error: message(error), cleanupBlocked: true };
       }
@@ -30,6 +32,17 @@ export async function finalizeRecording(operations: RecordingStopOperations): Pr
   } catch {
     return { kind: 'failed', error: message(failure), cleanupBlocked: true };
   }
+}
+
+function completion(session: CaptureSession, warning: string): RecordingStopResult {
+  if (session.screenMediaAvailable === false) {
+    return {
+      kind: 'failed',
+      error: session.screenCaptureError || tNamespace('RecordingHealth')('captureStopped'),
+      cleanupBlocked: false,
+    };
+  }
+  return { kind: 'completed', session, warning };
 }
 
 function message(value: unknown): string {

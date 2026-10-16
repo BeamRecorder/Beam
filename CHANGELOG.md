@@ -6,6 +6,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Empty failed recordings show the capture error instead of opening a broken video in the editor; finalized partial recordings remain available and a new recording can start immediately.
 - Windows screen recording uses an explicit H.264 profile instead of camera Auto settings and can select software encoding when accelerated Media Foundation type negotiation fails, including errors raised after transcoding starts. Initialization remains bounded and preserves the first captured image.
 - The private website’s Instant page retains its main video below the animated header, with a themed preset-to-export-to-clipboard overview and all three detail videos.
 - The private website's topbar Download button shares the navigation's corner radius.

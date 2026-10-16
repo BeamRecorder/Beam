@@ -23,6 +23,8 @@ export interface CaptureSession {
   videoSrc?: string | null;
   systemAudioLevel?: number | null;
   screenAvailable?: boolean;
+  /** Set by completion after checking finalized screen media on disk. */
+  screenMediaAvailable?: boolean;
   screenCaptureError?: string | null;
   inputCaptureError?: { code: string; message: string } | null;
 }

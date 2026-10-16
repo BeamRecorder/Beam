@@ -1,16 +1,66 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { finalizeRecording } from './recording-stop';
 import type { CaptureState } from '../../../api/types/capture-api';
+import type { CaptureSession } from '../../../api/types/capture-api';
 
 const operations = () => ({
   stopNative: vi.fn(async () => ({ state: 'completed' as const })),
   stopSidecars: vi.fn(async (): Promise<void> => undefined),
-  completeNative: vi.fn(async () => ({ state: 'completed' as const, manifestPath: '/session/manifest.json' })),
+  completeNative: vi.fn(async (): Promise<CaptureSession> => ({
+    state: 'completed',
+    manifestPath: '/session/manifest.json',
+  })),
   status: vi.fn(async () => ({ state: 'idle' as CaptureState, manifestPath: null as string | null })),
 });
 afterEach(() => vi.useRealTimers());
 
 describe('terminal recording stop', () => {
+  it.each([false, true])('does not open a failed empty recording after stop recovery=%s', async (recovery) => {
+    const calls = operations();
+    if (recovery) {
+      calls.stopNative.mockRejectedValue(new Error('source failed'));
+      calls.status.mockResolvedValue({ state: 'completed', manifestPath: '/session/manifest.json' });
+    }
+    calls.completeNative.mockResolvedValue({
+      state: 'completed',
+      screenAvailable: false,
+      screenMediaAvailable: false,
+      videoSrc: null,
+      screenCaptureError: '0xC00D6D60: type not set',
+    });
+    expect(await finalizeRecording(calls)).toEqual({
+      kind: 'failed',
+      error: '0xC00D6D60: type not set',
+      cleanupBlocked: false,
+    });
+    expect(calls.completeNative).toHaveBeenCalledTimes(1);
+  });
+  it('uses the existing translated capture error if empty output has no native diagnostic', async () => {
+    const calls = operations();
+    calls.completeNative.mockResolvedValue({ state: 'completed', screenAvailable: false, screenMediaAvailable: false });
+    const result = await finalizeRecording(calls);
+    expect(result).toMatchObject({ kind: 'failed', cleanupBlocked: false });
+    if (result.kind === 'failed') expect(result.error).toBeTruthy();
+  });
+  it('still opens playable partial media even if the native screen track failed later', async () => {
+    const calls = operations();
+    calls.completeNative.mockResolvedValue({
+      state: 'completed',
+      screenAvailable: false,
+      screenMediaAvailable: true,
+      videoSrc: 'file:///screen.mp4',
+      screenCaptureError: 'source disappeared',
+    });
+    expect(await finalizeRecording(calls)).toMatchObject({
+      kind: 'completed',
+      session: { videoSrc: 'file:///screen.mp4' },
+    });
+  });
+  it('allows camera/audio-only sessions with no native screen track', async () => {
+    const calls = operations();
+    calls.completeNative.mockResolvedValue({ state: 'completed', screenAvailable: false });
+    expect(await finalizeRecording(calls)).toMatchObject({ kind: 'completed' });
+  });
   it('waits for sidecars before publishing the completed native session', async () => {
     const calls = operations();
     let release!: () => void;

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RecordingConfiguration } from './recording-types';
+import type { CaptureSession } from '../../../api/types/capture-api';
 
 const mocks = vi.hoisted(() => {
   const makeRecorder = () => ({
@@ -31,11 +32,12 @@ const mocks = vi.hoisted(() => {
       discardRecording: vi.fn(async (): Promise<void> => undefined),
       stop: vi.fn(async () => ({ sessionId: 'session-1' })),
       stopNativeRecording: vi.fn(async () => ({ sessionId: 'session-1' })),
-      completeNativeRecording: vi.fn(async () => ({
+      completeNativeRecording: vi.fn(async (): Promise<CaptureSession> => ({
+        state: 'completed',
         sessionId: 'session-1',
         videoSrc: 'file:///v.mp4',
       })),
-      status: vi.fn(async () => ({
+      status: vi.fn(async (): Promise<CaptureSession> => ({
         state: 'recording',
         screenAvailable: true,
       })),
@@ -100,9 +102,11 @@ const resetCapture = () => {
     sessionId: 'session-1',
   });
   mocks.capture.completeNativeRecording.mockResolvedValue({
+    state: 'completed',
     sessionId: 'session-1',
     videoSrc: 'file:///v.mp4',
   });
+  mocks.capture.status.mockResolvedValue({ state: 'recording', screenAvailable: true });
   mocks.capture.pause.mockResolvedValue({ sessionId: 'session-1' });
   mocks.capture.resume.mockResolvedValue({ sessionId: 'session-1' });
   for (const recorder of [mocks.cameraRecorder, mocks.micRecorder, mocks.systemAudioRecorder]) {
@@ -123,6 +127,37 @@ afterEach(() => {
 });
 
 describe('useRecordingController countdown', () => {
+  it('keeps an empty failed Windows take out of the editor and permits a fresh recording', async () => {
+    vi.useFakeTimers();
+    mocks.capture.platform = 'win32';
+    const completed = vi.fn();
+    const controller = useRecordingController(completed);
+    await controller.start(baseConfig);
+    await vi.waitFor(() => expect(controller.phase.value).toBe('recording'));
+    const failed: CaptureSession = {
+      state: 'completed',
+      manifestPath: '/session/manifest.json',
+      screenAvailable: false,
+      screenMediaAvailable: false,
+      screenCaptureError: 'Windows encoder: type not set (0xC00D6D60)',
+      videoSrc: null,
+    };
+    mocks.capture.completeNativeRecording.mockResolvedValue(failed);
+    mocks.capture.status.mockResolvedValue(failed);
+    await vi.advanceTimersByTimeAsync(250);
+    await vi.waitFor(() => expect(controller.phase.value).toBe('idle'));
+    expect(completed).not.toHaveBeenCalled();
+    expect(controller.error.value).toContain('0xC00D6D60');
+    expect(mocks.capture.completeNativeRecording).toHaveBeenCalledOnce();
+
+    mocks.capture.status.mockResolvedValue({ state: 'recording', screenAvailable: true });
+    mocks.capture.completeNativeRecording.mockResolvedValue({ state: 'completed', videoSrc: 'file:///retry.mp4' });
+    await controller.start(baseConfig);
+    await vi.waitFor(() => expect(controller.phase.value).toBe('recording'));
+    await controller.stop();
+    expect(completed).toHaveBeenCalledOnce();
+    expect(completed).toHaveBeenCalledWith(expect.objectContaining({ videoSrc: 'file:///retry.mp4' }));
+  });
   it('Cancel during countdown releases prepared capture without starting a recording', async () => {
     vi.useFakeTimers();
     let cancelCountdown = () => {};

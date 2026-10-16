@@ -42,7 +42,13 @@ test('stops native capture before completing sidecar tracks', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-capture-ipc-'));
   const manifestPath = path.join(root, 'manifest.json');
   fs.mkdirSync(path.join(root, 'screen'));
-  fs.writeFileSync(manifestPath, JSON.stringify({ projectId: 'project-1' }));
+  fs.writeFileSync(
+    manifestPath,
+    JSON.stringify({
+      projectId: 'project-1',
+      tracks: [{ kind: 'screen', segments: [{ path: 'screen/primary.mp4', complete: true }] }],
+    }),
+  );
   fs.writeFileSync(path.join(root, 'screen', 'primary.mp4'), Buffer.from([1]));
 
   const handlers = new Map();
@@ -98,7 +104,13 @@ test('recovers a completed partial native session after stop rejects', async () 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-capture-ipc-'));
   const manifestPath = path.join(root, 'manifest.json');
   fs.mkdirSync(path.join(root, 'screen'));
-  fs.writeFileSync(manifestPath, JSON.stringify({ projectId: 'project-partial' }));
+  fs.writeFileSync(
+    manifestPath,
+    JSON.stringify({
+      projectId: 'project-partial',
+      tracks: [{ kind: 'screen', status: 'failed', segments: [{ path: 'screen/primary.mp4', complete: true }] }],
+    }),
+  );
   fs.writeFileSync(path.join(root, 'screen', 'primary.mp4'), Buffer.from([1]));
 
   try {
@@ -155,6 +167,64 @@ test('recovers a completed partial native session after stop rejects', async () 
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('completes sidecars for an empty failed take without publishing video and releases the next recording', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-capture-failed-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const manifestPath = path.join(root, 'manifest.json');
+  fs.mkdirSync(path.join(root, 'screen'));
+  fs.writeFileSync(path.join(root, 'screen/segment-0001.mp4'), '');
+  fs.writeFileSync(
+    manifestPath,
+    JSON.stringify({
+      tracks: [
+        {
+          kind: 'screen',
+          status: 'failed',
+          terminationReason: '0xC00D6D60',
+          segments: [{ path: 'screen/segment-0001.mp4', complete: false }],
+        },
+      ],
+    }),
+  );
+  const session = { state: 'completed', sessionId: 'failed', manifestPath };
+  const handlers = new Map();
+  const commands = [];
+  let completed = 0;
+  registerCaptureIpc({
+    ipcMain: { handle: (channel, handler) => handlers.set(channel, handler), on: () => undefined },
+    desktopCapturer: {},
+    screen: {},
+    app: new EventEmitter(),
+    userPaths: { projects: root },
+    trackStorages: [
+      {
+        registerSession: () => undefined,
+        complete: (value) => {
+          completed += 1;
+          return value;
+        },
+      },
+    ],
+    captureEngine: {
+      request: async (command) => {
+        commands.push(command);
+        if (command === 'stop') throw new Error('0xC00D6D60');
+        return session;
+      },
+    },
+  });
+  const request = handlers.get('capture:request');
+  await request({}, 'stop-native-recording');
+  const result = await request({}, 'complete-native-recording');
+  assert.equal(completed, 1);
+  assert.equal(result.videoSrc, null);
+  assert.equal(result.screenAvailable, false);
+  assert.equal(result.screenCaptureError, '0xC00D6D60');
+  await request({}, 'start-recording', { config: {} });
+  assert.deepEqual(commands, ['stop', 'status', 'prepare', 'start']);
+  assert.equal(fs.statSync(path.join(root, 'screen/segment-0001.mp4')).size, 0);
 });
 
 test('resolves display bounds by native display id without relying on desktop previews', async () => {
