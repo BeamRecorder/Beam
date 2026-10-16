@@ -32,6 +32,7 @@ pub(super) struct SamplePump {
     cancel: Option<Sender<()>>,
     worker: Option<JoinHandle<Result<(), CaptureError>>>,
     failure: Arc<Mutex<Option<String>>>,
+    ready: Receiver<()>,
 }
 
 impl SamplePump {
@@ -47,6 +48,7 @@ impl SamplePump {
         let permit = WorkerPermit;
         let (requests, pending) = bounded::<Request>(1);
         let (cancel, cancelled) = bounded(1);
+        let (requested, ready) = bounded(1);
         let failure = Arc::new(Mutex::new(None));
         let worker_failure = failure.clone();
         let callback_failure = failure.clone();
@@ -75,6 +77,7 @@ impl SamplePump {
                     recv(cancelled) -> _ => break,
                     recv(pending) -> request => match request { Ok(request) => request, Err(_) => break },
                 };
+                let _ = requested.try_send(());
                 let sample = select! {
                     recv(cancelled) -> _ => None,
                     recv(frames) -> frame => frame.ok(),
@@ -102,7 +105,11 @@ impl SamplePump {
             cancel: Some(cancel),
             worker: Some(worker),
             failure,
+            ready,
         })
+    }
+    pub(super) fn ready(&self) -> &Receiver<()> {
+        &self.ready
     }
     pub(super) fn check(&self) -> Result<(), String> {
         let failure = self

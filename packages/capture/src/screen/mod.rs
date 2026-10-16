@@ -2,6 +2,8 @@
 mod bounded_task;
 mod crop;
 mod desktop_policy;
+#[cfg(any(windows, test))]
+mod encoder_negotiation;
 mod frame;
 #[cfg(test)]
 mod frame_buffer;

@@ -8,7 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-fn crop(width: u32, height: u32) -> PixelCrop {
+pub(super) fn crop(width: u32, height: u32) -> PixelCrop {
     PixelCrop {
         start_x: 0,
         start_y: 0,
@@ -17,7 +17,7 @@ fn crop(width: u32, height: u32) -> PixelCrop {
     }
 }
 
-fn decode(path: &Path, filter: &str) -> (Vec<u8>, Vec<f64>) {
+pub(super) fn decode(path: &Path, filter: &str) -> (Vec<u8>, Vec<f64>) {
     let binary = std::env::var_os("BEAM_CAPTURE_TEST_FFMPEG").unwrap_or_else(|| "ffmpeg".into());
     let output = Command::new(binary)
         .args([

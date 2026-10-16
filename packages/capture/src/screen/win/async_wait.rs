@@ -5,24 +5,25 @@ use windows_future::{AsyncOperationCompletedHandler, AsyncStatus, IAsyncOperatio
 pub(super) fn wait<T: RuntimeType>(
     operation: IAsyncOperation<T>,
     deadline: Instant,
-) -> Result<T, String> {
-    if operation.Status().map_err(|error| error.to_string())? == AsyncStatus::Started {
+) -> windows::core::Result<T> {
+    if operation.Status()? == AsyncStatus::Started {
         let (sender, receiver) = crossbeam_channel::bounded(1);
-        operation
-            .SetCompleted(&AsyncOperationCompletedHandler::new(move |_, _| {
-                let _ = sender.try_send(());
-                Ok(())
-            }))
-            .map_err(|error| error.to_string())?;
+        operation.SetCompleted(&AsyncOperationCompletedHandler::new(move |_, _| {
+            let _ = sender.try_send(());
+            Ok(())
+        }))?;
         if receiver
             .recv_timeout(deadline.saturating_duration_since(Instant::now()))
             .is_err()
         {
             let _ = operation.Cancel();
-            return Err("Windows encoder initialization exceeded its deadline".into());
+            return Err(windows::core::Error::new(
+                windows::core::HRESULT(0x800705B4_u32 as i32),
+                "Windows encoder initialization exceeded its deadline",
+            ));
         }
     }
-    operation.GetResults().map_err(|error| error.to_string())
+    operation.GetResults()
 }
 
 pub(super) fn initialization_deadline() -> Instant {
@@ -44,12 +45,26 @@ mod tests {
             windows::core::HRESULT(0x80004005_u32 as i32),
             "codec unavailable",
         );
-        assert!(
-            wait(
-                IAsyncOperation::<u32>::ready(Err(error)),
-                initialization_deadline()
-            )
-            .is_err()
+        let result = wait(
+            IAsyncOperation::<u32>::ready(Err(error.clone())),
+            initialization_deadline(),
+        );
+        assert_eq!(result.expect_err("native failure").code(), error.code());
+    }
+
+    #[test]
+    fn async_type_negotiation_failure_keeps_its_hresult_for_encoder_selection() {
+        let error = windows::core::Error::new(
+            windows::core::HRESULT(0xC00D6D60_u32 as i32),
+            "type not set",
+        );
+        let result = wait(
+            IAsyncOperation::<u32>::spawn(move || Err(error)),
+            initialization_deadline(),
+        );
+        assert_eq!(
+            result.expect_err("type negotiation").code().0 as u32,
+            0xC00D6D60
         );
     }
 
@@ -68,7 +83,12 @@ mod tests {
         finished
             .recv_timeout(Duration::from_secs(1))
             .expect("cleanup");
-        assert!(result.expect_err("deadline").contains("deadline"));
+        assert!(
+            result
+                .expect_err("deadline")
+                .to_string()
+                .contains("deadline")
+        );
         assert!(started.elapsed() < Duration::from_secs(1));
     }
 }

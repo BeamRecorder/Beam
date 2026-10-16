@@ -7,6 +7,7 @@ mod capture_health;
 mod catalog;
 mod compatibility;
 mod encoder;
+mod encoder_startup;
 mod encoder_surface;
 mod gpu_scale;
 mod permissions;

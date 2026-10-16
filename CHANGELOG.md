@@ -6,6 +6,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Windows screen recording uses an explicit H.264 profile instead of camera Auto settings and can select software encoding when accelerated Media Foundation type negotiation fails, including errors raised after transcoding starts. Initialization remains bounded and preserves the first captured image.
 - The private website’s Instant page retains its main video below the animated header, with a themed preset-to-export-to-clipboard overview and all three detail videos.
 - The private website's topbar Download button shares the navigation's corner radius.
 - The private website uses client routing for all internal links and Download buttons, prepares nearby demo videos, prioritizes article images and caches production media. Download navigation stays responsive while fetching releases, and sections reveal before entering view.
