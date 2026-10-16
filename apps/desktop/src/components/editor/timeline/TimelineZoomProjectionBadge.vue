@@ -10,13 +10,18 @@ import {
   normalizeZoomTiltIntensity,
   type ZoomElement,
 } from '@beam/engine/zoom/zoom-types';
+import { ORBIT_PRESETS, activeOrbitPreset, normalizeOrbitSettings } from '@beam/engine/zoom/orbit-settings';
 import { activeZoomTiltPreset, ZOOM_TILT_PRESETS } from '@beam/engine/zoom/zoom-tilt-presets';
 
 const props = defineProps<{ zoom: ZoomElement }>();
 const { t } = useTranslate('ZoomPanel');
-const is3d = computed(() => normalizeZoomProjection(props.zoom.projection) === '3d');
+const is3d = computed(() => normalizeZoomProjection(props.zoom.projection) !== '2d');
 const label = computed(() => {
   if (!is3d.value) return t('projection2d');
+  if (props.zoom.projection === 'orbit') {
+    const active = activeOrbitPreset(props.zoom.orbitSettings);
+    return t(ORBIT_PRESETS.find((p) => p.id === active)?.labelKey ?? 'tiltPresetCustom');
+  }
   const active = activeZoomTiltPreset(props.zoom);
   const preset = ZOOM_TILT_PRESETS.find((value) => value.id === active);
   return t(preset ? preset.labelKey : 'tiltPresetCustom');
@@ -30,7 +35,12 @@ const preview = computed(() => ({
 
 <template>
   <span class="zoom-meta-badge zoom-projection-badge" :title="label" :aria-label="label">
-    <ZoomTiltPreview v-if="is3d" :preset="preview" compact />
+    <ZoomTiltPreview
+      v-if="is3d"
+      :preset="preview"
+      :orbit="zoom.projection === 'orbit' ? normalizeOrbitSettings(zoom.orbitSettings) : undefined"
+      compact
+    />
     <template v-else>{{ label }}</template>
   </span>
 </template>

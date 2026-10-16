@@ -752,3 +752,66 @@ test('rejects malformed optional cursor effect controls on save', () => {
     assert.throws(() => presentationState(state), /cursor click effect/);
   }
 });
+
+test('round trips orbit cameras, cinematic transitions and optional cursor volume', () => {
+  const zoom = {
+    id: 'orbit',
+    sessionId: 'take',
+    startMs: 5000,
+    endMs: 9000,
+    depth: 3,
+    mode: 'auto',
+    focus: { cx: 0.4, cy: 0.6 },
+    projection: 'orbit',
+    transition: 'cinematic',
+  };
+  const saved = zoomState({ elements: [zoom], generatedSessions: [] });
+  assert.equal(saved.elements[0].projection, 'orbit');
+  assert.equal(saved.elements[0].transition, 'cinematic');
+  assert.deepEqual(zoomState(JSON.parse(JSON.stringify(saved))), saved);
+  for (const model3d of [true, false]) {
+    const input = {
+      canvas: canvas(undefined),
+      selectedBackgroundId: null,
+      background: null,
+      blurPercent: 0,
+      importedBackgrounds: [],
+      cursor: { ...cursor(), motion: { ...cursor().motion, model3d } },
+    };
+    assert.equal(presentationState(input).cursor.motion.model3d, model3d);
+  }
+  for (const patch of [{ projection: 'invalid' }, { transition: 'invalid' }])
+    assert.throws(() => zoomState({ elements: [{ ...zoom, ...patch }], generatedSessions: [] }));
+});
+
+test('round trips bounded 3D camera settings without sharing or losing pullback, roll and follow', () => {
+  const { DEFAULT_ORBIT_SETTINGS, ORBIT_SETTING_LIMITS } = require('../packages/engine/src/zoom/orbit-schema.js');
+  const zoom = {
+    id: 'camera',
+    sessionId: 'take',
+    startMs: 1000,
+    endMs: 5000,
+    depth: 3,
+    mode: 'auto',
+    focus: { cx: 0.2, cy: 0.7 },
+    projection: 'orbit',
+    transition: 'cinematic',
+    orbitSettings: { ...DEFAULT_ORBIT_SETTINGS, yaw: -25, roll: -6, pullback: 0.5, fieldOfView: 46, responseMs: 700 },
+  };
+  const saved = zoomState({ elements: [zoom], generatedSessions: [] });
+  assert.deepEqual(saved.elements[0].orbitSettings, zoom.orbitSettings);
+  assert.notEqual(saved.elements[0].orbitSettings, zoom.orbitSettings);
+  assert.deepEqual(zoomState(JSON.parse(JSON.stringify(saved))), saved);
+  for (const [key, [min, max]] of Object.entries(ORBIT_SETTING_LIMITS))
+    for (const value of [min - 1, max + 1, NaN, Infinity, '1', null, undefined])
+      assert.throws(
+        () =>
+          zoomState({
+            elements: [{ ...zoom, orbitSettings: { ...zoom.orbitSettings, [key]: value } }],
+            generatedSessions: [],
+          }),
+        /Invalid orbit/,
+      );
+  for (const orbitSettings of [null, [], {}, false, { ...zoom.orbitSettings, extra: true }])
+    assert.throws(() => zoomState({ elements: [{ ...zoom, orbitSettings }], generatedSessions: [] }), /Invalid orbit/);
+});

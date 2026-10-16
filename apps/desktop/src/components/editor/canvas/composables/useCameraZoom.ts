@@ -1,8 +1,6 @@
 import { computed, getCurrentScope, onScopeDispose, ref, toRaw } from 'vue';
 import { createRetainedCamera } from '@beam/runtime/zoom/retained-camera';
-import { ZOOM_DEPTH_SCALES } from '@beam/engine/zoom/zoom-types';
 import { createCompositionCameraEvaluator } from '@beam/engine/zoom/composition-camera';
-import { clampFocusToScale } from '@beam/engine/zoom/zoom-playback';
 import { createCameraMotionBlurPlan } from '@beam/engine/zoom/zoom-motion-blur';
 import {
   compositeIsolatedMotionBlurSample,
@@ -24,6 +22,7 @@ import { createCurrentScreenResolver } from './current-screen-resolver';
 import type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
 import { selectedZoomPreviewTilt } from './camera-preview-tilt';
 import { drawInCameraSpace } from './camera-space';
+import { cameraFocusTargetStyle, cameraFocusAtPoint } from './camera-focus-presentation';
 export type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
 const EMPTY_TELEMETRY = [] as const;
 export function useCameraZoom(options: UseCameraZoomOptions) {
@@ -55,30 +54,9 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     if (!isMovingSelection.value) resetCamera();
   };
 
-  const focusTargetStyle = computed(() => {
-    const bounds = overlayWindowBounds.value;
-    const selected = options.selectedZoom();
-    if (!selected || selected.effect === 'glass' || selected.mode !== 'manual' || options.isPlaying() || !bounds)
-      return { display: 'none' };
-    const selectionScale = ZOOM_DEPTH_SCALES[selected.depth];
-    const scale = bounds.scale || 1;
-    const centerX = bounds.dx + bounds.dw / 2;
-    const centerY = bounds.dy + bounds.dh / 2;
-    const focusX = bounds.focusX ?? centerX;
-    const focusY = bounds.focusY ?? centerY;
-    const targetWidth = bounds.dw / selectionScale;
-    const targetHeight = bounds.dh / selectionScale;
-    const focus = clampFocusToScale(draftFocus.value ?? selected.focus, selectionScale);
-    const { cx, cy } = focus;
-    const left = bounds.dx + cx * bounds.dw - targetWidth / 2;
-    const top = bounds.dy + cy * bounds.dh - targetHeight / 2;
-    return {
-      width: `${targetWidth * scale}px`,
-      height: `${targetHeight * scale}px`,
-      transform: `translate3d(${centerX + (left - focusX) * scale - bounds.dx}px, ${centerY + (top - focusY) * scale - bounds.dy}px, 0)`,
-      willChange: isMovingSelection.value ? 'transform' : 'auto',
-    };
-  });
+  const focusTargetStyle = computed(() =>
+    cameraFocusTargetStyle(overlayWindowBounds.value, options.selectedZoom(), options.isPlaying(), draftFocus.value),
+  );
 
   const createZoomDragGeometry = () => {
     const canvas = options.canvasRef();
@@ -100,20 +78,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const { bounds, scaleRatio } = geometry;
     const canvasX = (point.x - geometry.canvasLeft) / scaleRatio;
     const canvasY = (point.y - geometry.canvasTop) / scaleRatio;
-    const scale = bounds.scale || 1;
-    const centerX = bounds.dx + bounds.dw / 2;
-    const centerY = bounds.dy + bounds.dh / 2;
-    const focusX = bounds.focusX ?? centerX;
-    const focusY = bounds.focusY ?? centerY;
-    const unzoomedX = (canvasX - centerX) / scale + focusX;
-    const unzoomedY = (canvasY - centerY) / scale + focusY;
-    return clampFocusToScale(
-      {
-        cx: (unzoomedX - bounds.dx) / bounds.dw,
-        cy: (unzoomedY - bounds.dy) / bounds.dh,
-      },
-      ZOOM_DEPTH_SCALES[selected.depth],
-    );
+    return cameraFocusAtPoint({ x: canvasX, y: canvasY }, bounds, selected.depth);
   };
 
   const scheduleDraftFocus = (event: PointerEvent) => {
@@ -322,6 +287,10 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       scale: sample.scale,
       tiltX: selectedPerspectivePreview?.tiltX ?? sample.tiltX ?? 0,
       tiltY: selectedPerspectivePreview?.tiltY ?? sample.tiltY ?? 0,
+      orbit:
+        selectedPerspectivePreview && 'orbit' in selectedPerspectivePreview
+          ? selectedPerspectivePreview.orbit
+          : sample.orbit,
     };
     const renderedWindow: RenderedVideoWindow = {
       dx,
@@ -333,6 +302,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       focusY: camera.focusY,
       tiltX: camera.tiltX,
       tiltY: camera.tiltY,
+      orbit: camera.orbit,
     };
     if (paint) {
       const drawScreen = (target = ctx) => {
@@ -457,6 +427,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       focusY: camera.focusY,
       tiltX: camera.tiltX,
       tiltY: camera.tiltY,
+      orbit: camera.orbit,
     };
     const screenBounds = screen
       ? editingPhoneCrop
@@ -481,6 +452,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       focusY: camera.focusY,
       tiltX: camera.tiltX,
       tiltY: camera.tiltY,
+      orbit: camera.orbit,
     };
     return renderedWindow;
   };

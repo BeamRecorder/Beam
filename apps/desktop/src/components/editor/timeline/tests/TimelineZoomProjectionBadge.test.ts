@@ -2,6 +2,7 @@ import { enableAutoUnmount, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import TimelineZoomProjectionBadge from '../TimelineZoomProjectionBadge.vue';
 import ZoomTiltPreview from '../../zoom/ZoomTiltPreview.vue';
+import { ORBIT_PRESETS, applyOrbitPreset } from '@beam/engine/zoom/orbit-settings';
 import { applyZoomTiltPreset, ZOOM_TILT_PRESETS } from '@beam/engine/zoom/zoom-tilt-presets';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 
@@ -67,4 +68,23 @@ describe('timeline perspective thumbnail', () => {
     await wrapper.setProps({ zoom: value });
     expect(wrapper.get('path.outline').attributes('d')).toBe(path);
   });
+});
+
+it.each(ORBIT_PRESETS)('shows the actual $id camera including pullback and roll', (preset) => {
+  const wrapper = mount(TimelineZoomProjectionBadge, { props: { zoom: applyOrbitPreset(zoom, preset) } });
+  expect(wrapper.getComponent(ZoomTiltPreview).props('orbit')).toEqual(preset.settings);
+  expect(wrapper.attributes('title')).not.toBe('2D');
+  expect(wrapper.attributes('title')).not.toBe('Custom');
+});
+it('updates a camera badge after custom editing, undo and missing optional settings', async () => {
+  const original = applyOrbitPreset(zoom, ORBIT_PRESETS[7]!);
+  const wrapper = mount(TimelineZoomProjectionBadge, { props: { zoom: original } });
+  const path = wrapper.get('path.screen').attributes('d');
+  await wrapper.setProps({ zoom: { ...original, orbitSettings: { ...original.orbitSettings!, roll: 5 } } });
+  expect(wrapper.attributes('title')).toBe('Custom');
+  expect(wrapper.get('path.screen').attributes('d')).not.toBe(path);
+  await wrapper.setProps({ zoom: original });
+  expect(wrapper.get('path.screen').attributes('d')).toBe(path);
+  await wrapper.setProps({ zoom: { ...zoom, projection: 'orbit' } });
+  expect(wrapper.attributes('title')).toBe('Balanced');
 });

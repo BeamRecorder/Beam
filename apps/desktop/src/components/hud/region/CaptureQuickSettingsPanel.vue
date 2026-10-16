@@ -74,7 +74,7 @@ const openPreferences = async () => {
     <label v-if="!screenshot" class="option-row">
       <span>{{ quickT('zoom') }}</span>
       <Select
-        :model-value="settings.zoomMode ?? '2d'"
+        :model-value="settings.zoomMode === 'orbit' ? '3d' : (settings.zoomMode ?? '2d')"
         :options="zoomOptions"
         size="compact"
         :option-height="28"

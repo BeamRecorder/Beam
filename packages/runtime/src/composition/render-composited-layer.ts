@@ -33,8 +33,6 @@ export function releaseCompositedLayerSurface(ctx: Canvas2DContext) {
 export function renderCompositedLayer(
   ctx: Canvas2DContext,
   layer: LayerCompositing,
-  width: number,
-  height: number,
   draw: (target: Canvas2DContext, backdrop: CanvasImageSource) => void,
 ) {
   if (layer.opacity <= 0) return;
@@ -47,6 +45,7 @@ export function renderCompositedLayer(
     }
     return;
   }
+  const { width, height } = ctx.canvas;
   let surface = surfaces.get(ctx);
   if (!surface) {
     surface = new OffscreenCanvas(width, height);
@@ -56,15 +55,18 @@ export function renderCompositedLayer(
   if (surface.height !== height) surface.height = height;
   const target = surface.getContext('2d');
   if (!target) throw new Error('Layer rendering context unavailable.');
+  target.setTransform(1, 0, 0, 1, 0, 0);
   target.clearRect(0, 0, width, height);
   target.save();
   try {
+    target.setTransform(ctx.getTransform());
     draw(target, ctx.canvas);
   } finally {
     target.restore();
   }
   ctx.save();
   try {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha *= layer.opacity / 100;
     ctx.globalCompositeOperation = layer.blendMode;
     ctx.drawImage(surface, 0, 0);

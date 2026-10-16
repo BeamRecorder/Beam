@@ -47,6 +47,23 @@ const balancedAutoFollow: ZoomAutoFollowSettings = {
 };
 
 describe('ZoomPanel', () => {
+  it('puts the orbit camera inside the single 3D choice', async () => {
+    const wrapper = mount(ZoomPanel, {
+      props: {
+        selectedZoom,
+        canGenerate: true,
+        hasAutomaticZooms: false,
+        motionBlur: { enabled: false, intensity: 0.55 },
+      },
+      global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
+    });
+    await wrapper.findAll('.zoom-projection-options button')[1]!.trigger('click');
+    const orbit = wrapper.emitted('update')![0]![0] as ZoomElement;
+    expect(orbit).toMatchObject({ projection: 'orbit', transition: 'cinematic' });
+    await wrapper.setProps({ selectedZoom: orbit });
+    expect(wrapper.findAll('[data-tilt-preset]')).toHaveLength(8);
+    wrapper.unmount();
+  });
   it('can generate glass lenses directly from an empty zoom inspector', async () => {
     const wrapper = mount(ZoomPanel, {
       props: {
@@ -122,10 +139,10 @@ describe('ZoomPanel', () => {
     });
     const info = wrapper.get('.projection-info');
     expect(info.attributes('data-icon-only')).toBe('true');
-    expect(info.attributes('title')).toContain('perspective tilt');
-    expect(info.attributes('title')).toContain('zoom focus.\nAdjust');
+    expect(info.attributes('title')).toContain('3D camera.');
+    expect(info.attributes('title')).toContain('camera.\nRotation');
     expect(info.attributes('aria-label')).toBe('Perspective');
-    expect(wrapper.findAll('.section-description').some((element) => element.text().includes('perspective tilt'))).toBe(
+    expect(wrapper.findAll('.section-description').some((element) => element.text().includes('3D camera.'))).toBe(
       false,
     );
     wrapper.unmount();
@@ -271,228 +288,29 @@ describe('ZoomPanel', () => {
     expect(wrapper.emitted('update:autoFollow')).toContainEqual([balancedAutoFollow]);
   });
 
-  it('activates 3D with the existing metadata, marks it custom, and preserves it when returning to 2D', async () => {
+  it('keeps legacy 3D selected without rewriting it and converts only on explicit preset selection', async () => {
+    const original = { ...selectedZoom, projection: '3d' as const, tiltIntensity: 0.42, tiltHorizontal: -0.3 };
     const wrapper = mount(ZoomPanel, {
       props: {
-        selectedZoom: {
-          ...selectedZoom,
-          projection: '2d',
-          tiltIntensity: 0.42,
-          tiltHorizontal: -0.3,
-          tiltVertical: 0.7,
-          tiltPreset: 'medium',
-        },
+        selectedZoom: original,
         canGenerate: true,
         hasAutomaticZooms: false,
         motionBlur: { enabled: true, intensity: 0.55 },
       },
       global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
     });
-
-    const projectionButtons = wrapper.findAll('.zoom-projection-options button');
-    await projectionButtons[1]!.trigger('click');
-    expect(wrapper.emitted('update')).toContainEqual([
-      {
-        ...selectedZoom,
-        projection: '3d',
-        tiltIntensity: 0.42,
-        tiltHorizontal: -0.3,
-        tiltVertical: 0.7,
-        tiltPreset: 'custom',
-      },
-    ]);
-
-    await wrapper.setProps({
-      selectedZoom: {
-        ...selectedZoom,
-        projection: '3d',
-        tiltIntensity: 0.4,
-        tiltHorizontal: 0.2,
-        tiltVertical: -0.5,
-        tiltPreset: 'custom',
-      },
-    });
-    await wrapper.get('.tilt-slider').trigger('click');
-    expect(wrapper.emitted('update')).toContainEqual([
-      {
-        ...selectedZoom,
-        projection: '3d',
-        tiltIntensity: 1,
-        tiltHorizontal: 0.2,
-        tiltVertical: -0.5,
-        tiltPreset: 'custom',
-      },
-    ]);
-
-    await wrapper.setProps({
-      selectedZoom: {
-        ...selectedZoom,
-        projection: '3d',
-        tiltIntensity: 0.4,
-        tiltHorizontal: 0.2,
-        tiltVertical: -0.5,
-        tiltPreset: 'custom',
-      },
-    });
-    const updatedProjectionButtons = wrapper.findAll('.zoom-projection-options button');
-    await updatedProjectionButtons[0]!.trigger('click');
-    expect(wrapper.emitted('update')).toContainEqual([
-      {
-        ...selectedZoom,
-        projection: '2d',
-        tiltIntensity: 0.4,
-        tiltHorizontal: 0.2,
-        tiltVertical: -0.5,
-        tiltPreset: 'custom',
-      },
-    ]);
-  });
-
-  it('emits signed left-right and up-down tilt axis values in 3D mode', async () => {
-    const wrapper = mount(ZoomPanel, {
-      props: {
-        selectedZoom: {
-          ...selectedZoom,
-          projection: '3d',
-          tiltIntensity: 0.6,
-          tiltHorizontal: 0.1,
-          tiltVertical: -0.2,
-        },
-        canGenerate: true,
-        hasAutomaticZooms: false,
-        motionBlur: { enabled: true, intensity: 0.55 },
-      },
-      global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
-    });
-
-    await wrapper.get('.tilt-horizontal-slider').trigger('click');
-    await wrapper.get('.tilt-vertical-slider').trigger('click');
-
-    expect(wrapper.emitted('update')).toContainEqual([
-      {
-        ...selectedZoom,
-        projection: '3d',
-        tiltIntensity: 0.6,
-        tiltHorizontal: 0.25,
-        tiltVertical: -0.2,
-        tiltPreset: 'custom',
-      },
-    ]);
-    expect(wrapper.emitted('update')).toContainEqual([
-      {
-        ...selectedZoom,
-        projection: '3d',
-        tiltIntensity: 0.6,
-        tiltHorizontal: 0.1,
-        tiltVertical: -0.6,
-        tiltPreset: 'custom',
-      },
-    ]);
-  });
-
-  it('applies illustrated directional presets while Custom preserves the current values', async () => {
-    const wrapper = mount(ZoomPanel, {
-      props: {
-        selectedZoom: {
-          ...selectedZoom,
-          projection: '3d',
-          tiltIntensity: 0.8,
-          tiltHorizontal: -0.25,
-          tiltVertical: 0.45,
-          tiltPreset: 'custom',
-        },
-        canGenerate: true,
-        hasAutomaticZooms: false,
-        motionBlur: { enabled: true, intensity: 0.55 },
-      },
-      global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
-    });
-
+    expect(wrapper.findAll('.zoom-projection-options button')).toHaveLength(3);
+    expect(wrapper.findAll('.zoom-projection-options button')[1]!.attributes('variant')).toBe('selected');
     expect(wrapper.emitted('update')).toBeUndefined();
-    await wrapper.setProps({
-      selectedZoom: {
-        ...selectedZoom,
-        projection: '3d',
-        tiltIntensity: 0.9,
-        tiltHorizontal: -0.25,
-        tiltVertical: 0.45,
-        tiltPreset: 'custom',
-      },
+    await wrapper.get('[data-tilt-preset="pullback-large"]').trigger('click');
+    const changed = wrapper.emitted('update')!.at(-1)![0] as ZoomElement;
+    expect(changed).toMatchObject({ projection: 'orbit', orbitSettings: { pullback: 0.5 }, focus: original.focus });
+    await wrapper.setProps({ selectedZoom: changed });
+    await wrapper.findAll('.zoom-projection-options button')[0]!.trigger('click');
+    expect(wrapper.emitted('update')!.at(-1)![0]).toMatchObject({
+      projection: '2d',
+      orbitSettings: changed.orbitSettings,
     });
-    expect(wrapper.emitted('update')).toBeUndefined();
-
-    const presetButtons = wrapper.findAll('.zoom-tilt-presets button');
-    await presetButtons[0]!.trigger('click');
-    expect(wrapper.emitted('update')).toContainEqual([
-      expect.objectContaining({
-        tiltPreset: 'tilt-back',
-        tiltIntensity: 0.6,
-        tiltHorizontal: 0,
-        tiltVertical: 0.85,
-      }),
-    ]);
-    await presetButtons[1]!.trigger('click');
-    expect(wrapper.emitted('update')).toContainEqual([
-      expect.objectContaining({
-        tiltPreset: 'tilt-front',
-        tiltIntensity: 0.6,
-        tiltHorizontal: 0,
-        tiltVertical: -0.85,
-      }),
-    ]);
-    await presetButtons[2]!.trigger('click');
-    expect(wrapper.emitted('update')).toContainEqual([
-      expect.objectContaining({
-        tiltPreset: 'tilt-left',
-        tiltIntensity: 0.6,
-        tiltHorizontal: -0.85,
-        tiltVertical: 0,
-      }),
-    ]);
-    await wrapper.get('.custom-tilt').trigger('click');
-    expect(wrapper.emitted('update')).toContainEqual([
-      expect.objectContaining({
-        tiltPreset: 'custom',
-        tiltIntensity: 0.9,
-        tiltHorizontal: -0.25,
-        tiltVertical: 0.45,
-      }),
-    ]);
-  });
-
-  it('renders Custom as an accessible Lucide icon button and keeps it functional', async () => {
-    const wrapper = mount(ZoomPanel, {
-      props: {
-        selectedZoom: {
-          ...selectedZoom,
-          projection: '3d',
-          tiltIntensity: 0.8,
-          tiltHorizontal: -0.25,
-          tiltVertical: 0.45,
-          tiltPreset: 'custom',
-        },
-        canGenerate: true,
-        hasAutomaticZooms: false,
-        motionBlur: { enabled: true, intensity: 0.55 },
-      },
-      global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
-    });
-
-    const customButton = wrapper.get('.custom-tilt');
-    expect(customButton.text()).toBe('');
-    expect(customButton.attributes('data-icon')).toBe('lucide');
-    expect(customButton.attributes('data-icon-only')).toBe('true');
-    expect(customButton.attributes('aria-label')).toBe('Custom');
-    expect(customButton.attributes('title')).toBe('Custom');
-
-    await customButton.trigger('click');
-    expect(wrapper.emitted('update')).toContainEqual([
-      expect.objectContaining({
-        tiltPreset: 'custom',
-        tiltIntensity: 0.8,
-        tiltHorizontal: -0.25,
-        tiltVertical: 0.45,
-      }),
-    ]);
+    wrapper.unmount();
   });
 });

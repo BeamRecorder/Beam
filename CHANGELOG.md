@@ -6,14 +6,20 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
-- Empty failed recordings show the capture error instead of opening a broken video in the editor; finalized partial recordings remain available and a new recording can start immediately.
 - Windows screen recording uses an explicit H.264 profile instead of camera Auto settings and can select software encoding when accelerated Media Foundation type negotiation fails, including errors raised after transcoding starts. Initialization remains bounded and preserves the first captured image.
+- Empty failed recordings show the capture error instead of opening a broken video in the editor; finalized partial recordings remain available and a new recording can start immediately.
+- 3D camera motion blur keeps soft shadows at a consistent opacity when the shutter sample count changes, and camera framing returns to flat without a final jump.
+- 3D zooms project the complete video, frame and shadow instead of a previously cropped viewport, including translucent layers. Zoom-aware raster resolution and pixel alignment keep small text sharper in previews, screenshots and exports.
+- 3D camera presets no longer multiply the selected zoom to fill tilted corners. Low zoom levels retain more of the image, with stable OpenScreen-style framing that eases into the authored magnification by 2× in preview, screenshots and exports.
+- Cursor motion blur no longer adds blocky halos during fast dragging and resizing; shutter samples keep the current cursor shape sharp and align immediately when dragging starts.
+- Cursors reappear at their recorded position without movement or settling trails from hidden intervals. Camera motion blur now includes perspective and orbit movement.
 - The private website’s Instant page retains its main video below the animated header, with a themed preset-to-export-to-clipboard overview and all three detail videos.
 - The private website's topbar Download button shares the navigation's corner radius.
 - The private website uses client routing for all internal links and Download buttons, prepares nearby demo videos, prioritizes article images and caches production media. Download navigation stays responsive while fetching releases, and sections reveal before entering view.
 
 ### Added
 
+- Orbit camera framing and lit 3D cursors with click contact, adjustable alongside existing camera and cursor controls in all fifteen languages.
 - Instant’s main video now follows a 24-second desktop workflow: launch Beam from a simple dock, preview two saved presets, ease back to the full canvas, export locally and switch to an illustrative chat. The light/dark loop uses native components, a macOS cursor and restrained 2D focus.
 - The private website’s Instant header uses a lightweight orange WebGL light-trail background, matching Beam’s theme and reduced-motion preferences.
 - The private website’s Instant sections now show three eight-second light/dark loops of native Beam preset previews, local export and pasting the completed file into an illustrative team chat, with macOS cursor interactions and Beamy’s loading-to-success animation.
@@ -27,6 +33,10 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- 3D camera motion blur prepares and uploads the scene once per frame for all shutter poses. Exports also skip empty cursor projections when the cursor is disabled, reducing software rendering work without removing shutter samples or lowering output resolution.
+- The Dynamic 3D camera preset uses gentler angles and perspective to preserve text readability while retaining its responsive follow movement.
+- Orbit is now part of the single 3D zoom style, with eight illustrated camera presets including a large pullback, plus rotation, perspective, framing and follow controls translated into all fifteen languages. Pullbacks keep the canvas background flat in videos and screenshots.
+- Cursor motion blur accumulates complete transparent samples on the GPU; preview and export use the same renderer.
 - Instant’s main video now has a calmer chat handoff: a polished dock icon, a held draft and slower Send, three replies below the video, and a clean shared preview without playback controls or editing handles.
 - The private documentation overview and sidebar share six workflow categories, grouping Files & storage with Exporting and replacing vague starting-point and More guides labels.
 - The website’s Studio overview now runs for 15 seconds with gentler cursor travel, longer reading pauses and two restrained camera views that stay fixed during edits.

@@ -2,15 +2,18 @@ import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screenshotShape, screenshotState } from '../screenshot-state';
-import { updateScreenshotLayer } from '@beam/engine/screenshot/screenshot-layers';
+import { updateScreenshotLayer, insertScreenshotLayer } from '@beam/engine/screenshot/screenshot-layers';
 import type { ScreenshotLayer } from '@beam/engine/screenshot/screenshot-types';
 import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot-types';
 
 const render = vi.hoisted(() => ({
   drawLayer: vi.fn(),
+  drawScene: vi.fn(),
   compositedLayer: vi.fn(),
   release: vi.fn(),
 }));
+
+vi.mock('@beam/runtime/screenshot/screenshot-render', () => ({ drawScreenshot: render.drawScene }));
 
 vi.mock('@beam/runtime/screenshot/screenshot-layer-render', () => ({
   drawScreenshotLayer: render.drawLayer,
@@ -72,8 +75,6 @@ beforeEach(() => {
     (
       target: Canvas2DContext,
       layer: ScreenshotLayer,
-      _width: number,
-      _height: number,
       draw: (context: Canvas2DContext, backdrop?: CanvasImageSource) => void,
     ) => {
       const backdrop =
@@ -302,3 +303,36 @@ describe('createScreenshotDragRenderer', () => {
     expect(target.drawImage).not.toHaveBeenCalled();
   });
 });
+
+it.each([true, false])(
+  'uses complete projective scene rendering during gestures only for visible cameras: %s',
+  (enabled) => {
+    const state = makeState();
+    state.zooms = [
+      {
+        id: 'orbit',
+        kind: 'zoom',
+        name: '3D',
+        sessionId: 'manual',
+        startMs: 0,
+        endMs: 1,
+        depth: 2,
+        mode: 'manual',
+        focus: { cx: 0.5, cy: 0.5 },
+        projection: 'orbit',
+        enabled,
+      },
+    ];
+    insertScreenshotLayer(state, 'orbit');
+    const renderer = createScreenshotDragRenderer(),
+      ctx = createContext(),
+      assets = makeAssets();
+    renderer.draw(ctx, state, assets, 400, 240, 'shape-selected');
+    expect(render.drawScene).toHaveBeenCalledTimes(enabled ? 1 : 0);
+    if (enabled) {
+      expect(render.drawLayer).not.toHaveBeenCalled();
+      expect(render.drawScene).toHaveBeenCalledWith(ctx, state, assets, 400, 240, undefined);
+    } else expect(render.drawLayer).toHaveBeenCalled();
+    renderer.reset();
+  },
+);

@@ -418,4 +418,139 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('glass zoom pixels in rea
     });
     expect(result).toEqual({ differing: 0, maximum: 0 });
   });
+  it.each([
+    { visible: true, opacity: 100, nested: false, alpha: 255 },
+    { visible: false, opacity: 100, nested: false, alpha: 0 },
+    { visible: true, opacity: 40, nested: false, alpha: 102 },
+    { visible: true, opacity: 100, nested: true, alpha: 255 },
+  ])('keeps screenshot pullback backgrounds flat with $visible / $opacity / nested $nested', async (options) => {
+    const result = await page.evaluate(async (options) => {
+      const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+      const { drawScreenshot } = (await load(
+        '/packages/runtime/src/screenshot/screenshot-render.ts',
+      )) as typeof import('../screenshot/screenshot-render');
+      const { createStillDocument } = (await load(
+        '/packages/engine/src/screenshot/still-document.ts',
+      )) as typeof import('@beam/engine/screenshot/still-document');
+      const { insertScreenshotLayer, updateScreenshotLayer } = (await load(
+        '/packages/engine/src/screenshot/screenshot-layers.ts',
+      )) as typeof import('@beam/engine/screenshot/screenshot-layers');
+      const { applyOrbitPreset, ORBIT_PRESETS } = (await load(
+        '/packages/engine/src/zoom/orbit-settings.ts',
+      )) as typeof import('@beam/engine/zoom/orbit-settings');
+      const { createManualZoom } = (await load(
+        '/packages/engine/src/zoom/manual-zoom.ts',
+      )) as typeof import('@beam/engine/zoom/manual-zoom');
+      const state = createStillDocument('still', 'source.png', 400, 240).state;
+      state.canvas.showBackground = options.visible;
+      state.canvas.watermark!.enabled = false;
+      state.background = { kind: 'color', id: 'test', name: 'Red', color: '#cc1144' };
+      state.image.appearance.shadowSize = 'none';
+      state.image.appearance.cornerRadius = 0;
+      const zoom = applyOrbitPreset(createManualZoom('camera', 0, 1), ORBIT_PRESETS.at(-1)!);
+      state.zooms = [{ ...zoom, kind: 'zoom', name: 'Camera', enabled: true, mode: 'manual', endMs: 1 }];
+      insertScreenshotLayer(state, 'camera');
+      updateScreenshotLayer(state, '__background__', { opacity: options.opacity });
+      if (options.nested) {
+        state.zooms.push({ ...state.zooms[0]!, id: 'camera2' });
+        insertScreenshotLayer(state, 'camera2');
+      }
+      const image = new OffscreenCanvas(400, 240),
+        paint = image.getContext('2d')!;
+      paint.fillStyle = '#00aaff';
+      paint.fillRect(0, 0, 400, 240);
+      const output = new OffscreenCanvas(400, 240),
+        ctx = output.getContext('2d')!;
+      drawScreenshot(ctx, state, { image, background: null, logo: null, width: 400, height: 240 }, 400, 240);
+      const { createScreenshotDragRenderer } = (await load(
+        '/apps/desktop/src/components/screenshot/screenshot-drag-renderer.ts',
+      )) as typeof import('../../../../apps/desktop/src/components/screenshot/screenshot-drag-renderer');
+      const gesture = new OffscreenCanvas(400, 240),
+        g = gesture.getContext('2d')!,
+        drag = createScreenshotDragRenderer();
+      drag.draw(g, state, { image, background: null, logo: null, width: 400, height: 240 }, 400, 240, state.image.id);
+      const a = ctx.getImageData(0, 0, 400, 240).data,
+        b = g.getImageData(0, 0, 400, 240).data;
+      const matches = a.every((value, index) => value === b[index]);
+      drag.reset();
+      return {
+        matches,
+        corner: [...ctx.getImageData(10, 10, 1, 1).data],
+        center: [...ctx.getImageData(200, 120, 1, 1).data],
+      };
+    }, options);
+    expect(result.matches).toBe(true);
+    expect(result.corner[3]).toBe(options.alpha);
+    if (options.alpha)
+      [204, 17, 68].forEach((channel, index) =>
+        expect(Math.abs(result.corner[index]! - channel)).toBeLessThanOrEqual(1),
+      );
+    expect(result.center).toEqual([0, 170, 255, 255]);
+  });
+  it.each(['subtle', 'balanced', 'dynamic', 'isometric', 'left', 'right', 'pullback', 'pullback-large'])(
+    'keeps actual 1.25x screenshot pixels modest with the %s preset',
+    async (presetId) => {
+      const result = await page.evaluate(async (presetId) => {
+        const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+        const { drawScreenshot } = (await load(
+          '/packages/runtime/src/screenshot/screenshot-render.ts',
+        )) as typeof import('../screenshot/screenshot-render');
+        const { createStillDocument } = (await load(
+          '/packages/engine/src/screenshot/still-document.ts',
+        )) as typeof import('@beam/engine/screenshot/still-document');
+        const { insertScreenshotLayer } = (await load(
+          '/packages/engine/src/screenshot/screenshot-layers.ts',
+        )) as typeof import('@beam/engine/screenshot/screenshot-layers');
+        const { applyOrbitPreset, ORBIT_PRESETS } = (await load(
+          '/packages/engine/src/zoom/orbit-settings.ts',
+        )) as typeof import('@beam/engine/zoom/orbit-settings');
+        const { createManualZoom } = (await load(
+          '/packages/engine/src/zoom/manual-zoom.ts',
+        )) as typeof import('@beam/engine/zoom/manual-zoom');
+        const state = createStillDocument('still', 'source.png', 400, 240).state;
+        state.canvas.watermark!.enabled = false;
+        state.image.appearance.shadowSize = 'none';
+        state.image.appearance.cornerRadius = 0;
+        const zoom = applyOrbitPreset(
+          { ...createManualZoom('camera', 0, 1), depth: 1 },
+          ORBIT_PRESETS.find((p) => p.id === presetId)!,
+        );
+        state.zooms = [{ ...zoom, kind: 'zoom', name: 'Camera', enabled: true, mode: 'manual', endMs: 1 }];
+        insertScreenshotLayer(state, 'camera');
+        const image = new OffscreenCanvas(400, 240),
+          paint = image.getContext('2d')!;
+        paint.fillStyle = '#0088ff';
+        paint.fillRect(0, 0, 400, 240);
+        paint.fillStyle = '#ff0000';
+        paint.beginPath();
+        paint.arc(200, 120, 12, 0, Math.PI * 2);
+        paint.fill();
+        const output = new OffscreenCanvas(400, 240),
+          ctx = output.getContext('2d')!;
+        drawScreenshot(ctx, state, { image, background: null, logo: null, width: 400, height: 240 }, 400, 240);
+        const rgba = ctx.getImageData(0, 0, 400, 240).data;
+        let minX = 400,
+          minY = 240,
+          maxX = -1,
+          maxY = -1,
+          count = 0;
+        for (let y = 0; y < 240; y++)
+          for (let x = 0; x < 400; x++) {
+            const index = (y * 400 + x) * 4;
+            if (rgba[index]! > 180 && rgba[index + 1]! < 40 && rgba[index + 2]! < 40 && rgba[index + 3]! > 200) {
+              minX = Math.min(minX, x);
+              minY = Math.min(minY, y);
+              maxX = Math.max(maxX, x);
+              maxY = Math.max(maxY, y);
+              count++;
+            }
+          }
+        return { width: maxX - minX + 1, height: maxY - minY + 1, count };
+      }, presetId);
+      expect(result.count).toBeGreaterThan(3);
+      // A 24px circle at 1.25x may foreshorten, but must not acquire an extra zoom.
+      expect(result.width).toBeLessThanOrEqual(32);
+      expect(result.height).toBeLessThanOrEqual(32);
+    },
+  );
 });

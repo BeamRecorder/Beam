@@ -1,11 +1,12 @@
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import { normalizeZoomProjection } from '@beam/engine/zoom/zoom-types';
 import { PerspectiveSceneCompositor } from '@beam/runtime/zoom/perspective-scene-compositor';
+import type { OrbitCameraPose } from '@beam/engine/zoom/orbit-camera-types';
 
 const hasNearbyPerspective = (zooms: readonly ZoomElement[], timeMs: number) =>
   zooms.some(
     (zoom) =>
-      normalizeZoomProjection(zoom.projection) === '3d' &&
+      normalizeZoomProjection(zoom.projection) !== '2d' &&
       timeMs >= zoom.startMs - 2_000 &&
       timeMs <= zoom.endMs + 2_000,
   );
@@ -13,7 +14,7 @@ const hasNearbyPerspective = (zooms: readonly ZoomElement[], timeMs: number) =>
 export class PerspectivePreviewRenderer {
   private readonly compositor = new PerspectiveSceneCompositor();
 
-  render<T extends { tiltX?: number; tiltY?: number }>(options: {
+  render<T extends { tiltX?: number; tiltY?: number; orbit?: OrbitCameraPose }>(options: {
     target: CanvasRenderingContext2D;
     bounds: { x: number; y: number; width: number; height: number };
     pixelScale: number;
@@ -29,7 +30,7 @@ export class PerspectivePreviewRenderer {
       pixelScale: options.pixelScale,
       draw: (context) => {
         result = options.drawScene(context as CanvasRenderingContext2D);
-        return { tiltX: result.tiltX ?? 0, tiltY: result.tiltY ?? 0 };
+        return { tiltX: result.tiltX ?? 0, tiltY: result.tiltY ?? 0, orbit: result.orbit };
       },
     });
     if (!result) throw new Error('Unable to resolve the perspective zoom camera window.');

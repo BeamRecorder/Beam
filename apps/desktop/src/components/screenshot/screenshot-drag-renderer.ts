@@ -2,6 +2,7 @@ import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import { releaseCompositedLayerSurface } from '@beam/runtime/composition/render-composited-layer';
 import { renderCompositedLayer } from '@beam/runtime/composition/render-composited-layer';
+import { drawScreenshot } from '@beam/runtime/screenshot/screenshot-render';
 import { drawScreenshotLayer } from '@beam/runtime/screenshot/screenshot-layer-render';
 import { screenshotLayers } from '@beam/engine/screenshot/screenshot-layers';
 import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot-types';
@@ -31,6 +32,20 @@ export function createScreenshotDragRenderer() {
     editingId?: string,
   ) => {
     const layers = screenshotLayers(state);
+    if (
+      layers.some(
+        (layer) =>
+          layer.kind === 'zoom' &&
+          layer.visible &&
+          layer.opacity > 0 &&
+          state.zooms?.find((zoom) => zoom.id === layer.id)?.projection === 'orbit',
+      )
+    ) {
+      // A projective camera needs clean lower content and a separate flat background on every gesture frame.
+      reset();
+      drawScreenshot(ctx, state, assets, width, height, editingId);
+      return;
+    }
     const index = Math.max(
       0,
       layers.findIndex((layer) => layer.id === selectedId),
@@ -39,7 +54,7 @@ export function createScreenshotDragRenderer() {
       for (let i = start; i < end; i++) {
         const layer = layers[i]!;
         if (!layer.visible) continue;
-        renderCompositedLayer(target, layer, width, height, (context, backdrop) =>
+        renderCompositedLayer(target, layer, (context, backdrop) =>
           drawScreenshotLayer(context, state, layer, assets, width, height, backdrop, editingId),
         );
       }

@@ -80,6 +80,27 @@ const base = (): Parameters<typeof createCompositionSnapshot>[0] => ({
 });
 
 describe('createCompositionSnapshot', () => {
+  it('freezes derived hover synchronization and original source timing for export', () => {
+    const input = base();
+    const cursor = {
+      available: true,
+      events: [],
+      telemetry: [],
+      shapes: {},
+      catalog: {},
+      missing: [],
+      hoverSync: { version: 1 as const, ranges: [{ startSeconds: 1, endSeconds: 2 }] },
+      hoverSources: [{ id: 'screen', src: 'project-media://asset/screen.mp4', startSeconds: 0, durationSeconds: 4 }],
+    };
+    input.editorData = { cursor } as unknown as NonNullable<typeof input.editorData>;
+    const snapshot = createCompositionSnapshot(input);
+    expect(snapshot.cursor.hoverSync).toEqual(cursor.hoverSync);
+    expect(snapshot.cursor.hoverSources).toEqual(cursor.hoverSources);
+    cursor.hoverSync.ranges[0]!.endSeconds = 3;
+    cursor.hoverSources[0]!.startSeconds = 5;
+    expect(snapshot.cursor.hoverSync?.ranges[0]!.endSeconds).toBe(2);
+    expect(snapshot.cursor.hoverSources?.[0]!.startSeconds).toBe(0);
+  });
   it('does not fabricate render source dimensions from composition metadata', () => {
     const input = base();
     input.composition.assets[0].src = '';

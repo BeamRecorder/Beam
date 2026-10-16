@@ -4,6 +4,7 @@ const {
   validateCursorClickEffect,
 } = require('../../../../packages/engine/src/capture/cursor-click-schema.js');
 const { validateGlassHighlight } = require('../../../../packages/engine/src/zoom/glass-highlight-schema.js');
+const { validateOrbitSettings } = require('../../../../packages/engine/src/zoom/orbit-schema.js');
 const CURSOR_TYPES = new Set([
   'automatic',
   'default',
@@ -144,7 +145,8 @@ const zoomState = (value) => {
       ![1, 2, 3, 4, 5, 6].includes(element.depth) ||
       !['auto', 'manual'].includes(element.mode) ||
       (element.enabled !== undefined && typeof element.enabled !== 'boolean') ||
-      (element.projection !== undefined && !['2d', '3d'].includes(element.projection)) ||
+      (element.projection !== undefined && !['2d', '3d', 'orbit'].includes(element.projection)) ||
+      (element.transition !== undefined && element.transition !== 'cinematic') ||
       (element.tiltIntensity !== undefined && !finite(element.tiltIntensity)) ||
       (element.tiltHorizontal !== undefined && !finite(element.tiltHorizontal)) ||
       (element.tiltVertical !== undefined && !finite(element.tiltVertical)) ||
@@ -165,6 +167,7 @@ const zoomState = (value) => {
       throw new Error('Propriétés de zoom invalides');
     ids.add(element.id);
     validateGlassHighlight(element);
+    if (element.orbitSettings !== undefined) validateOrbitSettings(element.orbitSettings);
     const tiltIntensity = clamp(element.tiltIntensity === undefined ? 0.6 : element.tiltIntensity, 0, 1);
     const inferredTiltPreset =
       Math.abs(tiltIntensity - 0.3) < 1e-6
@@ -190,7 +193,9 @@ const zoomState = (value) => {
       ...(element.glass === undefined
         ? {}
         : { glass: { ...element.glass, path: element.glass.path.map((point) => ({ x: point.x, y: point.y })) } }),
-      projection: element.projection === '3d' ? '3d' : '2d',
+      projection: element.projection === '3d' || element.projection === 'orbit' ? element.projection : '2d',
+      ...(element.transition ? { transition: element.transition } : {}),
+      ...(element.orbitSettings === undefined ? {} : { orbitSettings: { ...element.orbitSettings } }),
       tiltIntensity,
       tiltHorizontal: clamp(element.tiltHorizontal === undefined ? 0.65 : element.tiltHorizontal, -1, 1),
       tiltVertical: clamp(element.tiltVertical === undefined ? -0.35 : element.tiltVertical, -1, 1),
@@ -268,7 +273,8 @@ const cursorState = (value) => {
     !['focused', 'smooth', 'custom'].includes(value.motion.preset) ||
     !finite(value.motion.smoothing) ||
     !finite(value.motion.springMassMultiplier) ||
-    !finite(value.motion.motionBlur)
+    !finite(value.motion.motionBlur) ||
+    (value.motion.model3d !== undefined && typeof value.motion.model3d !== 'boolean')
   )
     throw new Error('Présentation du curseur invalide');
   validateCursorClickEffect(value.clickEffects.left);
@@ -300,6 +306,7 @@ const cursorState = (value) => {
       motionBlur: clamp(value.motion.motionBlur, 0, 1),
       stopSpringEnabled: typeof value.motion.stopSpringEnabled === 'boolean' ? value.motion.stopSpringEnabled : true,
       stopSpringStrength: finite(value.motion.stopSpringStrength) ? clamp(value.motion.stopSpringStrength, 0, 1) : 0.45,
+      ...(value.motion.model3d === undefined ? {} : { model3d: value.motion.model3d }),
     },
     autoHide: {
       enabled: value.autoHide?.enabled === true,
@@ -388,7 +395,7 @@ const migratePresentation = (value) => {
     for (const button of ['left', 'right'])
       cursor.clickEffects[button] = {
         ...cursor.clickEffects[button],
-        ...(input.cursorEffects[button] || {}),
+        ...input.cursorEffects[button],
       };
   }
   if (input.cursorMotion && typeof input.cursorMotion === 'object')

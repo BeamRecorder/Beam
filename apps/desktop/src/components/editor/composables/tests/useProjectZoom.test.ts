@@ -141,7 +141,7 @@ describe('useProjectZoom', () => {
     const { state } = create(data(), 5000, undefined, mode);
     state.generateZooms(true, style);
     expect(state.zoomElements.value.length).toBeGreaterThan(0);
-    expect(state.zoomElements.value.every((item) => item.projection === style)).toBe(true);
+    expect(state.zoomElements.value.every((item) => item.projection === (style === '3d' ? 'orbit' : style))).toBe(true);
   });
   it.each(['off', '2d', '3d', 'glass'] as const)(
     'keeps generated glass lenses independent of the %s recording preference',
@@ -196,7 +196,7 @@ describe('useProjectZoom', () => {
     expect(state.zoomElements.value).toEqual(expect.arrayContaining(preserved));
     const generated = state.zoomElements.value.filter((item) => !preserved.some((saved) => saved.id === item.id));
     expect(generated.length).toBeGreaterThan(0);
-    expect(generated.every((item) => item.enabled && item.projection === '3d')).toBe(true);
+    expect(generated.every((item) => item.enabled && item.projection === 'orbit')).toBe(true);
   });
   it('waits for preferences before generating and does not offer regeneration without click data', () => {
     const { state, recordingZoomMode } = create(data(), 5000, undefined, null);
@@ -204,7 +204,7 @@ describe('useProjectZoom', () => {
     expect(state.zoomElements.value).toEqual([]);
     recordingZoomMode.value = '3d';
     state.ensureAutomaticZooms();
-    expect(state.zoomElements.value[0].projection).toBe('3d');
+    expect(state.zoomElements.value[0].projection).toBe('orbit');
     const empty = data();
     empty.cursor.telemetry = [];
     expect(create(empty).state.canGenerateZooms.value).toBe(false);

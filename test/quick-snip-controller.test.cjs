@@ -479,7 +479,7 @@ for (const target of ['screen', 'window'])
     await f.controller.start();
     assert.equal(f.controller.state().state, 'preparing');
   });
-for (const zoomMode of ['off', '2d', '3d', 'glass'])
+for (const zoomMode of ['off', '2d', '3d', 'orbit', 'glass'])
   test(`persists the shared ${zoomMode} zoom preference and countdown`, async () => {
     const f = harness();
     await f.controller.toggle();

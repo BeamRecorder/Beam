@@ -18,7 +18,7 @@ export function projectElementPoint(
       y: cy + (p.y - (camera.focusY ?? cy)) * scale,
     },
     viewport,
-    { tiltX: camera.tiltX ?? 0, tiltY: camera.tiltY ?? 0 },
+    { tiltX: camera.tiltX ?? 0, tiltY: camera.tiltY ?? 0, orbit: camera.orbit },
   );
 }
 export function unprojectElementPoint(
@@ -29,6 +29,7 @@ export function unprojectElementPoint(
   const point = unprojectPerspectivePoint(p, viewport, {
     tiltX: camera.tiltX ?? 0,
     tiltY: camera.tiltY ?? 0,
+    orbit: camera.orbit,
   });
   const cx = viewport.x + viewport.width / 2,
     cy = viewport.y + viewport.height / 2;

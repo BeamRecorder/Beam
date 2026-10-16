@@ -44,7 +44,7 @@ it.each([0, 1, 10])('offers every countdown and saves %s', (seconds) => {
   expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([{ ...settings, countdownSeconds: seconds }]);
   wrapper.unmount();
 });
-it.each(['off', '2d', '3d', 'glass'])('shares the %s zoom preference with the region toolbar', (zoomMode) => {
+it.each(['off', '2d', '3d', 'orbit', 'glass'])('shares the %s zoom preference with the region toolbar', (zoomMode) => {
   const wrapper = mountSettings();
   wrapper
     .findAllComponents(Select)
@@ -147,5 +147,16 @@ it('keeps 2D as the initial choice and disables all selectors during a settings 
   expect(selects.find((select) => select.props('label') === 'zoom')!.props('modelValue')).toBe('2d');
   expect(selects.find((select) => select.props('label') === 'preset')!.props('modelValue')).toBe('default');
   expect(selects.every((select) => select.props('disabled'))).toBe(true);
+  wrapper.unmount();
+});
+
+it('shows saved orbit preferences as the unified 3D choice without rewriting on open', () => {
+  const wrapper = mount(CaptureQuickSettingsPanel, {
+    props: { modelValue: { ...settings, zoomMode: 'orbit' } },
+    global: { stubs: { Select, Switch } },
+  });
+  const zoom = wrapper.findAllComponents(Select).find((s) => s.props('label') === 'zoom')!;
+  expect(zoom.props('modelValue')).toBe('3d');
+  expect(wrapper.emitted('update:modelValue')).toBeUndefined();
   wrapper.unmount();
 });

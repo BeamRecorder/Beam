@@ -18,6 +18,8 @@ export interface CursorMotionSettings {
   motionBlur: number;
   stopSpringEnabled: boolean;
   stopSpringStrength: number;
+  /** Missing in older projects means flat cursor artwork. */
+  model3d?: boolean;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object';
@@ -102,6 +104,7 @@ export const normalizeCursorMotionSettings = (value: unknown): CursorMotionSetti
     motionBlur: clamp(finiteNumber(input.motionBlur, fallback.motionBlur), 0, 1),
     stopSpringEnabled: booleanValue(input.stopSpringEnabled, fallback.stopSpringEnabled),
     stopSpringStrength: clamp(finiteNumber(input.stopSpringStrength, fallback.stopSpringStrength), 0, 1),
+    ...(typeof input.model3d === 'boolean' ? { model3d: input.model3d } : {}),
   };
 };
 

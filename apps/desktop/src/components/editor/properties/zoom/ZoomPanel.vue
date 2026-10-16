@@ -27,6 +27,7 @@ import {
   type ZoomMotionBlurSettings,
   type ZoomStyle,
 } from '@beam/engine/zoom/zoom-types';
+import { normalizeOrbitSettings } from '@beam/engine/zoom/orbit-settings';
 import { createGlassHighlight } from '@beam/engine/zoom/glass-highlight';
 import { useTranslate } from '~/i18n/useTranslate';
 
@@ -59,7 +60,9 @@ const style = computed(() =>
   props.selectedZoom
     ? props.selectedZoom.effect === 'glass'
       ? 'glass'
-      : normalizeZoomProjection(props.selectedZoom.projection)
+      : normalizeZoomProjection(props.selectedZoom.projection) === 'orbit'
+        ? '3d'
+        : normalizeZoomProjection(props.selectedZoom.projection)
     : generationStyle.value,
 );
 const updateDepth = (depth: number) => {
@@ -70,7 +73,7 @@ const setMode = (mode: 'auto' | 'manual') => {
   if (!props.selectedZoom || props.selectedZoom.locked || props.selectedZoom.mode === mode) return;
   emit('update', { ...props.selectedZoom, mode });
 };
-const setStyle = (value: '2d' | '3d' | 'glass') => {
+const setStyle = (value: ZoomStyle) => {
   const zoom = props.selectedZoom;
   if (!zoom) {
     generationStyle.value = value;
@@ -91,8 +94,10 @@ const setStyle = (value: '2d' | '3d' | 'glass') => {
   emit('update', {
     ...zoom,
     ...(zoom.effect ? { effect: 'camera' as const } : {}),
-    projection: value,
-    tiltIntensity: normalizeZoomTiltIntensity(zoom.tiltIntensity),
+    projection: value === '3d' ? 'orbit' : value,
+    ...(value === '3d' ? { orbitSettings: normalizeOrbitSettings(zoom.orbitSettings) } : {}),
+    ...(value === '3d' && !props.still ? { transition: 'cinematic' as const } : {}),
+    tiltIntensity: value === '3d' ? 1 : normalizeZoomTiltIntensity(zoom.tiltIntensity),
     tiltHorizontal: normalizeZoomTiltAxis(zoom.tiltHorizontal, DEFAULT_ZOOM_TILT_HORIZONTAL),
     tiltVertical: normalizeZoomTiltAxis(zoom.tiltVertical, DEFAULT_ZOOM_TILT_VERTICAL),
     tiltPreset:
@@ -128,6 +133,7 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) =>
             >
           </ButtonGroup>
           <p v-if="style === 'glass'" class="section-description">{{ glassText('description') }}</p>
+          <p v-if="style === '3d'" class="section-description">{{ t('camera3dDescription') }}</p>
         </div>
       </Accordion>
       <GlassHighlightControls

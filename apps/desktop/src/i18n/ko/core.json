@@ -486,7 +486,9 @@
       "diagonalUp": "대각선 ↗",
       "diagonalDown": "대각선 ↘"
     },
-    "cursorResize": "크기 조절: {direction}"
+    "cursorResize": "크기 조절: {direction}",
+    "model3d": "3D 커서",
+    "model3dDescription": "깊이, 조명, 클릭 시 접촉을 추가합니다."
   },
   "EditorCanvas": {
     "videoPreviewLoading": "비디오 미리보기 로드 중",

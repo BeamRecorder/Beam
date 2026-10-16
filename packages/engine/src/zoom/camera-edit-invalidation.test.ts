@@ -4,6 +4,8 @@ import { emptyComposition } from '../shared/composition-types';
 import type { ClipComposition, VisualClip } from '../shared/composition-types';
 import type { ZoomElement } from './zoom-types';
 import { cameraEditInvalidationTime } from './camera-edit-invalidation';
+import { cinematicZoomDurationMs } from './zoom-transitions';
+import { ZOOM_DEPTH_SCALES } from './zoom-types';
 
 const screen: VisualClip = {
   id: 'screen',
@@ -35,6 +37,25 @@ const zoom: ZoomElement = {
 const composition = (): ClipComposition => ({ ...emptyComposition(), clips: [screen] });
 
 describe('camera edit invalidation', () => {
+  it('invalidates the full lead of deep cinematic zooms', () => {
+    const base = { ...emptyComposition(), clips: [] };
+    const deep: ZoomElement = {
+      id: 'deep',
+      sessionId: 'take',
+      startMs: 5000,
+      endMs: 9000,
+      depth: 6,
+      mode: 'manual',
+      focus: { cx: 0.5, cy: 0.5 },
+      transition: 'cinematic',
+    };
+    expect(cameraEditInvalidationTime(base, base, [], [deep])).toBeCloseTo(
+      5000 - cinematicZoomDurationMs(ZOOM_DEPTH_SCALES[6]),
+    );
+    expect(cameraEditInvalidationTime(base, base, [deep], [])).toBeCloseTo(
+      5000 - cinematicZoomDurationMs(ZOOM_DEPTH_SCALES[6]),
+    );
+  });
   it('retains all history for unchanged screens, copied arrays and unrelated visual edits', () => {
     const base = composition();
     expect(cameraEditInvalidationTime(base, base, [zoom], [zoom])).toBe(Infinity);

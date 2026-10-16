@@ -62,6 +62,7 @@ export interface ElementEditorContext {
 }
 export type ElementViewport = NormalizedTransform;
 export interface ElementCamera {
+  orbit?: import('@beam/engine/zoom/orbit-camera-types').OrbitCameraPose;
   scale?: number;
   focusX?: number;
   focusY?: number;

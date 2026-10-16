@@ -118,6 +118,8 @@ export interface CursorTelemetryPoint {
   cy: number;
   interactionType?: CursorInteractionType;
   cursorType?: string;
+  /** Older sidecars omit visibility. */
+  visible?: boolean;
 }
 
 export interface CursorTelemetrySidecar {
@@ -254,6 +256,8 @@ export interface ProjectEditorData {
   videoSessionPath: string | null;
   tracks: SessionTrackData[];
   cursor: {
+    hoverSync?: import('../cursor/cursor-hover-types').CursorHoverSync;
+    hoverSources?: import('../cursor/cursor-hover-types').CursorHoverSource[];
     available: boolean;
     events: CursorEvent[];
     telemetry: CursorTelemetryPoint[];

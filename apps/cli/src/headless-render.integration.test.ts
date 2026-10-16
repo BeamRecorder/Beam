@@ -16,6 +16,7 @@ import { composition as screenDocument } from '../../../packages/runtime/src/ren
 import type { ProjectEditorData } from '@beam/engine/capture/capture-session';
 import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
+import { ORBIT_PRESETS } from '@beam/engine/zoom/orbit-settings';
 import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '@beam/engine/shared/shape-layer-style';
 import type { ShapeClip } from '@beam/engine';
 
@@ -112,6 +113,12 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
         const output = exported.getContext('2d')!,
           context = preview.getContext('2d')!;
         const cursor = snapshot.cursorSettings;
+        const artwork = snapshot.cursorPack ? new Image() : null;
+        if (artwork) {
+          artwork.src = snapshot.cursorPack!.cursors[0]!.url;
+          await artwork.decode();
+        }
+        const cursorImages = artwork ? new Map([[snapshot.cursorPack!.cursors[0]!.id, artwork]]) : undefined;
         const source = new OffscreenCanvas(width, height);
         const pixels = source.getContext('2d')!;
         pixels.fillStyle = '#3366cc';
@@ -173,7 +180,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
             editorData: { cursor: snapshot.cursor } as ProjectEditorData,
           },
           images: new Map(),
-          cursorImage: () => null,
+          cursorImage: () => artwork,
           cursorEnabled: () => cursor.enabled,
           watermarkImage: () => null,
           drafts: () => ({}),
@@ -193,7 +200,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
           snapshot,
           time,
           null,
-          undefined,
+          cursorImages,
           visuals,
           undefined,
           undefined,
@@ -218,10 +225,141 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
         for (let i = 0; i < a.length; i += 4) if (a[i + 1] || a[i + 2]) contrastingPixels++;
         host.dispose();
         bitmap.close();
-        return { differingChannels, maximumError, center, contrastingPixels };
+        return { differingChannels, maximumError, center, contrastingPixels, corner: Array.from(a.slice(0, 4)) };
       },
       { snapshot, time },
     );
+
+  it.each(ORBIT_PRESETS)('matches modest 1.25x $id cameras between preview and export', async (preset) => {
+    const value = snapshot();
+    value.composition = screenDocument();
+    value.canvas.showBackground = true;
+    value.background = { kind: 'color', color: '#bb2266' };
+    value.zooms = [
+      {
+        id: 'camera',
+        sessionId: 'take',
+        startMs: 0,
+        endMs: 1000,
+        mode: 'manual',
+        depth: 1,
+        focus: { cx: 0.5, cy: 0.5 },
+        projection: 'orbit',
+        transition: 'cinematic',
+        tiltIntensity: 1,
+        orbitSettings: { ...preset.settings },
+      },
+    ];
+    value.zoomMotionBlur = { enabled: true, intensity: 0.55 };
+    for (const time of [0.5, 0.15, 0.5])
+      expect(await compare(value, time)).toMatchObject({ differingChannels: 0, maximumError: 0 });
+  });
+  it.each(['2d', 'orbit'] as const)(
+    'matches cinematic handoffs in %s preview and export frames',
+    async (projection) => {
+      const value = snapshot();
+      value.composition = screenDocument();
+      value.canvas.showBackground = true;
+      value.background = { kind: 'color', color: '#bb2266' };
+      value.cursor.available = true;
+      value.cursor.telemetry = [
+        { timeMs: 0, cx: 0.8, cy: 0.2 },
+        { timeMs: 1000, cx: 0.9, cy: 0.4 },
+      ];
+      value.zooms = [
+        {
+          id: 'first',
+          sessionId: 'take',
+          startMs: 0,
+          endMs: 400,
+          mode: 'manual',
+          depth: 2,
+          focus: { cx: 0.4, cy: 0.6 },
+          projection,
+          transition: 'cinematic',
+          tiltIntensity: 0.6,
+          orbitSettings: { ...ORBIT_PRESETS[0]!.settings },
+        },
+        {
+          id: 'second',
+          sessionId: 'take',
+          startMs: 600,
+          endMs: 1000,
+          mode: 'auto',
+          depth: 3,
+          focus: { cx: 0.7, cy: 0.3 },
+          projection,
+          transition: 'cinematic',
+          tiltIntensity: 1,
+          orbitSettings: { ...ORBIT_PRESETS[1]!.settings },
+        },
+      ];
+      value.zoomMotionBlur = { enabled: true, intensity: 0.8 };
+      for (const time of [0.1999, 0.2, 0.5, 0.8, 0.8001, 0.3])
+        expect(await compare(value, time)).toMatchObject({ differingChannels: 0, maximumError: 0 });
+    },
+    30000,
+  );
+  it('matches orbit cameras and volumetric blurred cursors between real preview and export frames', async () => {
+    const value = snapshot();
+    value.composition = screenDocument();
+    value.cursorSettings.enabled = true;
+    value.cursorSettings.motion = { ...value.cursorSettings.motion, model3d: true, motionBlur: 0.8 };
+    value.cursorSettings.shadow.enabled = true;
+    value.cursorPack = {
+      id: 'test-pack',
+      name: 'Test',
+      source: 'imported',
+      colorMode: 'original',
+      defaultCursorId: 'arrow',
+      automaticMap: { default: 'arrow' },
+      cursors: [
+        {
+          id: 'arrow',
+          label: 'Arrow',
+          url: '/macOsSvgCursors/default.svg',
+          format: 'svg',
+          intrinsicSize: { width: 32, height: 32 },
+          nominalSize: 32,
+          hotspot: { x: 4, y: 4 },
+        },
+      ],
+    };
+    value.cursor.available = true;
+    value.cursor.events = Array.from({ length: 61 }, (_, index) => ({
+      event: 'move' as const,
+      sessionNs: (index / 60) * 1e9,
+      normalizedX: 0.3 + index / 120,
+      normalizedY: 0.5,
+      pixelX: 0,
+      pixelY: 0,
+      visible: true,
+    }));
+    value.zooms = [
+      {
+        id: 'orbit',
+        sessionId: 'take',
+        startMs: 0,
+        endMs: 1000,
+        mode: 'manual',
+        depth: 3,
+        focus: { cx: 0.5, cy: 0.5 },
+        projection: 'orbit',
+        transition: 'cinematic',
+        tiltIntensity: 0.8,
+      },
+    ];
+    value.canvas.showBackground = true;
+    value.background = { kind: 'color', color: '#bb2266' };
+    value.zooms[0]!.orbitSettings = { ...ORBIT_PRESETS.at(-1)!.settings };
+    value.zoomMotionBlur = { enabled: true, intensity: 0.55 };
+    for (const time of [0.1, 0.5, 0.85, 0.25])
+      expect(await compare(value, time)).toMatchObject({
+        differingChannels: 0,
+        maximumError: 0,
+        corner: [187, 34, 102, 255],
+      });
+  }, 30_000);
   it('preserves exact native rectangle pixels through fractional zooms, overlaps, alpha and shadows', async () => {
     const clips: ShapeClip[] = Array.from({ length: 10000 }, (_, i) => ({
       ...DEFAULT_ANNOTATION_SHAPE_STYLE,

@@ -486,7 +486,9 @@
       "diagonalUp": "по диагонали ↗",
       "diagonalDown": "по диагонали ↘"
     },
-    "cursorResize": "Изменить размер {direction}"
+    "cursorResize": "Изменить размер {direction}",
+    "model3d": "3D-курсор",
+    "model3dDescription": "Добавляет объём, освещение и касание при клике."
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Загрузка предпросмотра видео",

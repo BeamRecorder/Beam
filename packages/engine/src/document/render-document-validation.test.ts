@@ -9,6 +9,23 @@ import type { OutputCanvasSettings } from '../layout/output-canvas-types';
 
 const snapshot = () => createRenderDocument(undefined, 64, 64, 30);
 const validate = (value: unknown) => validateRenderDocument(value as CompositionSnapshot);
+it('validates derived hover metadata at the portable render boundary', () => {
+  const document = snapshot();
+  document.cursor.hoverSync = { version: 1, ranges: [{ startSeconds: 1, endSeconds: 2 }] };
+  document.cursor.hoverSources = [
+    { id: 'screen', src: 'project-media://project/screen.mp4', startSeconds: 0, durationSeconds: 4 },
+  ];
+  expect(() => validate(document)).not.toThrow();
+  expect(() =>
+    validate({ ...document, cursor: { ...document.cursor, hoverSync: { version: 2, ranges: [] } } }),
+  ).toThrow(TypeError);
+  expect(() =>
+    validate({
+      ...document,
+      cursor: { ...document.cursor, hoverSources: [{ ...document.cursor.hoverSources![0], durationSeconds: -1 }] },
+    }),
+  ).toThrow(TypeError);
+});
 it('accepts authored zooms, explicit font capabilities and all supported backgrounds', () => {
   const document = snapshot();
   document.zooms = [

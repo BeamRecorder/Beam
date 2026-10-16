@@ -15,14 +15,15 @@ export function drawScreenshot(
   onLayerPaint?: ScreenshotLayerPaintObserver,
   beforeLayer?: string,
   sharpLenses = true,
+  includeBackground = true,
 ) {
   ctx.clearRect(0, 0, width, height);
   for (const layer of screenshotLayers(state)) {
     if (layer.id === beforeLayer) break;
-    if (!layer.visible) continue;
+    if (!layer.visible || (!includeBackground && layer.kind === 'background')) continue;
     const started = onLayerPaint ? performance.now() : 0;
     try {
-      renderCompositedLayer(ctx, layer, width, height, (target, backdrop) => {
+      renderCompositedLayer(ctx, layer, (target, backdrop) => {
         drawScreenshotLayer(
           target,
           state,
@@ -32,13 +33,26 @@ export function drawScreenshot(
           height,
           backdrop,
           editingId,
-          sharpLenses && layer.kind === 'zoom'
+          layer.kind === 'zoom' &&
+            (sharpLenses || state.zooms?.find((zoom) => zoom.id === layer.id)?.projection === 'orbit')
             ? {
                 draw: (scene, w, h) =>
-                  drawScreenshot(scene, state, assets, w, h, editingId, undefined, layer.id, false),
+                  drawScreenshot(
+                    scene,
+                    state,
+                    assets,
+                    w,
+                    h,
+                    editingId,
+                    undefined,
+                    layer.id,
+                    false,
+                    includeBackground && state.zooms?.find((zoom) => zoom.id === layer.id)?.projection !== 'orbit',
+                  ),
                 dispose: releaseCompositedLayerSurface,
               }
             : undefined,
+          includeBackground,
         );
       });
     } finally {

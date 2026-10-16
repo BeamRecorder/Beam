@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as decoratedMedia from '../../composition/appearance/render-decorated-media';
 import * as webcam from '../../composition/webcam/webcam-zoom';
 import { drawVisualClip, drawWebcamClip } from '../render-media';
+import { drawScreenMedia } from '../render-screen';
 import { drawCompositionLayers, renderCompositionFrame } from '../render';
 import { context, snapshot } from './render.test-support';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
@@ -29,6 +30,15 @@ const clip = (kind: VisualClip['kind'] = 'video'): VisualClip => ({
 afterEach(() => vi.restoreAllMocks());
 
 describe('shared media framing clocks and scales', () => {
+  it.each([0.5, 1.25, 3.5])('keeps media shadow geometry proportional on a %sx 3D source raster', (density) => {
+    const draw = vi.spyOn(decoratedMedia, 'drawDecoratedMedia').mockImplementation(() => {});
+    const ctx = context(),
+      canvas = { width: 800, height: 600, showBackground: true };
+    drawScreenMedia(ctx, clip('screen'), media, canvas, 1000, 0.5, density);
+    drawVisualClip(ctx, clip(), media, canvas, 1000, 0.5, density);
+    for (const [, options] of draw.mock.calls)
+      expect(options).toMatchObject({ shadowScale: 0.5, shadowPixelRatio: density });
+  });
   it.each(['image', 'video', 'screen'] as const)(
     'passes %s geometry, time and appearance scale without changing the clip',
     (kind) => {

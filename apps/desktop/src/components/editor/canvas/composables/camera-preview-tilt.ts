@@ -1,4 +1,5 @@
 import { cameraTiltForControls } from '@beam/engine/zoom/composition-camera';
+import { manualCameraZoom } from '@beam/engine/zoom/manual-zoom';
 import {
   DEFAULT_ZOOM_TILT_HORIZONTAL,
   DEFAULT_ZOOM_TILT_VERTICAL,
@@ -13,9 +14,13 @@ export function selectedZoomPreviewTilt(selectedZoom: ZoomElement | null, isPlay
     isPlaying ||
     selectedZoom?.effect === 'glass' ||
     selectedZoom?.mode !== 'manual' ||
-    normalizeZoomProjection(selectedZoom.projection) !== '3d'
+    normalizeZoomProjection(selectedZoom.projection) === '2d'
   )
     return null;
+  if (selectedZoom.projection === 'orbit') {
+    const camera = manualCameraZoom(selectedZoom);
+    return { tiltX: 0, tiltY: 0, orbit: camera.orbit };
+  }
   return cameraTiltForControls(
     normalizeZoomTiltIntensity(selectedZoom.tiltIntensity),
     normalizeZoomTiltAxis(selectedZoom.tiltHorizontal, DEFAULT_ZOOM_TILT_HORIZONTAL),

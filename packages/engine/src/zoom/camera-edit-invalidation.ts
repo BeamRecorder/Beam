@@ -1,6 +1,8 @@
 import type { ClipComposition } from '../shared/composition-types';
 import type { ZoomElement } from './zoom-types';
 import { CONNECTED_GAP_MS } from './zoom-playback';
+import { cinematicZoomDurationMs } from './zoom-transitions';
+import { ZOOM_DEPTH_SCALES } from './zoom-types';
 
 /** Earliest target affected by an immutable edit, including connected zoom pans. */
 export function cameraEditInvalidationTime(
@@ -12,6 +14,10 @@ export function cameraEditInvalidationTime(
   if (previous.scene !== next.scene || previous.animations !== next.animations || previous.assets !== next.assets)
     return 0;
   let start = Infinity;
+  let lead = CONNECTED_GAP_MS;
+  const includeRamp = (zoom: ZoomElement | undefined) => {
+    if (zoom?.transition === 'cinematic') lead = Math.max(lead, cinematicZoomDurationMs(ZOOM_DEPTH_SCALES[zoom.depth]));
+  };
   const screens = new Map(previous.clips.filter((clip) => clip.kind === 'screen').map((clip) => [clip.id, clip]));
   for (const clip of next.clips) {
     if (clip.kind !== 'screen') continue;
@@ -24,9 +30,16 @@ export function cameraEditInvalidationTime(
   for (const zoom of nextZooms) {
     if (zoom.effect === 'glass') continue;
     const old = zooms.get(zoom.id);
-    if (old !== zoom) start = Math.min(start, zoom.startMs, old?.startMs ?? Infinity);
+    if (old !== zoom) {
+      start = Math.min(start, zoom.startMs, old?.startMs ?? Infinity);
+      includeRamp(zoom);
+      includeRamp(old);
+    }
     zooms.delete(zoom.id);
   }
-  for (const zoom of zooms.values()) start = Math.min(start, zoom.startMs);
-  return Math.max(0, start - CONNECTED_GAP_MS);
+  for (const zoom of zooms.values()) {
+    start = Math.min(start, zoom.startMs);
+    includeRamp(zoom);
+  }
+  return Math.max(0, start - lead);
 }

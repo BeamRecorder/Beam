@@ -6,6 +6,8 @@ type Listener = (event: Event) => void;
 
 const createWebGlMock = () => {
   const gl = {
+    MAX_TEXTURE_SIZE: 100,
+    getParameter: vi.fn(() => 8192),
     VERTEX_SHADER: 1,
     FRAGMENT_SHADER: 2,
     COMPILE_STATUS: 3,
@@ -28,6 +30,8 @@ const createWebGlMock = () => {
     UNSIGNED_BYTE: 20,
     TRIANGLE_STRIP: 21,
     BLEND: 22,
+    ONE: 25,
+    FUNC_ADD: 26,
     DEPTH_TEST: 23,
     COLOR_BUFFER_BIT: 24,
     createShader: vi.fn((kind: number) => ({ kind })),
@@ -49,6 +53,9 @@ const createWebGlMock = () => {
     getAttribLocation: vi.fn((_program: WebGLProgram, name: string) => (name === 'a_position' ? 0 : 1)),
     viewport: vi.fn(),
     disable: vi.fn(),
+    enable: vi.fn(),
+    blendEquation: vi.fn(),
+    blendFunc: vi.fn(),
     clearColor: vi.fn(),
     clear: vi.fn(),
     useProgram: vi.fn(),
@@ -64,6 +71,7 @@ const createWebGlMock = () => {
     texSubImage2D: vi.fn(),
     getUniformLocation: vi.fn(() => ({})),
     uniform1i: vi.fn(),
+    uniform1f: vi.fn(),
     drawArrays: vi.fn(),
     flush: vi.fn(),
     isContextLost: vi.fn(() => false),
@@ -103,6 +111,83 @@ const create2dContext = () =>
   }) as unknown as CanvasRenderingContext2D;
 
 describe('WebGlPerspectiveProjector', () => {
+  it('uploads the scene once and linearly accumulates all shutter poses with normalized premultiplied weights', () => {
+    const gl = createWebGlMock(),
+      projector = new WebGlPerspectiveProjector(() => createCanvas(gl) as unknown as PerspectiveCanvas);
+    const a = new Float32Array(16),
+      b = new Float32Array(16).fill(1);
+    projector.renderSamples({} as TexImageSource, 400, 240, [
+      { positions: a, weight: 1 },
+      { positions: b, weight: 3 },
+    ]);
+    expect(gl.texSubImage2D).toHaveBeenCalledOnce();
+    expect(gl.clear).toHaveBeenCalledOnce();
+    expect(gl.blendFunc).toHaveBeenCalledWith(gl.ONE, gl.ONE);
+    expect(gl.blendEquation).toHaveBeenCalledWith(gl.FUNC_ADD);
+    expect(gl.uniform1f).toHaveBeenNthCalledWith(1, expect.anything(), 0.25);
+    expect(gl.uniform1f).toHaveBeenNthCalledWith(2, expect.anything(), 0.75);
+    expect(gl.drawArrays).toHaveBeenCalledTimes(2);
+    projector.dispose();
+  });
+  it('skips zero exposure taps and resets blending and weight for a subsequent sharp frame', () => {
+    const gl = createWebGlMock(),
+      projector = new WebGlPerspectiveProjector(() => createCanvas(gl) as unknown as PerspectiveCanvas),
+      positions = new Float32Array(16);
+    projector.renderSamples({} as TexImageSource, 400, 240, [
+      { positions, weight: 0 },
+      { positions, weight: 1 },
+    ]);
+    expect(gl.drawArrays).toHaveBeenCalledOnce();
+    projector.renderGeometry({} as TexImageSource, 400, 240, positions);
+    expect(gl.uniform1f).toHaveBeenLastCalledWith(expect.anything(), 1);
+    expect(gl.disable).toHaveBeenCalledWith(gl.BLEND);
+    expect(gl.texImage2D).toHaveBeenCalledOnce();
+    projector.dispose();
+  });
+  it.each([[], [0], [-1, 2], [NaN, 1], [Infinity]].map((weights) => ({ weights })))(
+    'rejects invalid shutter weights $weights before uploading the scene',
+    ({ weights }) => {
+      const gl = createWebGlMock(),
+        projector = new WebGlPerspectiveProjector(() => createCanvas(gl) as unknown as PerspectiveCanvas);
+      expect(() =>
+        projector.renderSamples(
+          {} as TexImageSource,
+          400,
+          240,
+          weights.map((weight) => ({ positions: new Float32Array(16), weight })),
+        ),
+      ).toThrow(RangeError);
+      expect(gl.texSubImage2D).not.toHaveBeenCalled();
+      projector.dispose();
+    },
+  );
+  it('allocates and reuses the full source texture independently of the final viewport', () => {
+    const gl = createWebGlMock(),
+      canvas = createCanvas(gl),
+      projector = new WebGlPerspectiveProjector(() => canvas as unknown as PerspectiveCanvas);
+    const source = {} as TexImageSource,
+      positions = new Float32Array(16);
+    projector.renderGeometry(source, 400, 240, positions, { width: 1200, height: 800 });
+    projector.renderGeometry(source, 800, 480, positions, { width: 1200, height: 800 });
+    expect(gl.texImage2D).toHaveBeenCalledOnce();
+    expect(gl.texImage2D).toHaveBeenCalledWith(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      1200,
+      800,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      null,
+    );
+    expect(gl.viewport).toHaveBeenLastCalledWith(0, 0, 800, 480);
+    projector.renderGeometry(source, 800, 480, positions, { width: 1000, height: 700 });
+    expect(gl.texImage2D).toHaveBeenCalledTimes(2);
+    expect(gl.getParameter).toHaveBeenCalledOnce();
+    expect(projector.maxTextureSize).toBe(8192);
+    projector.dispose();
+  });
   it('renders one reusable textured quad with the requested dimensions', () => {
     const gl = createWebGlMock();
     const canvas = createCanvas(gl);
@@ -135,7 +220,7 @@ describe('WebGlPerspectiveProjector', () => {
     expect(gl.createBuffer).toHaveBeenCalledTimes(2);
     expect(gl.createTexture).toHaveBeenCalledOnce();
     expect(gl.texImage2D).toHaveBeenCalledOnce();
-    expect(gl.getUniformLocation).toHaveBeenCalledOnce();
+    expect(gl.getUniformLocation).toHaveBeenCalledTimes(2);
     expect(gl.texParameteri).toHaveBeenCalledTimes(4);
     expect(gl.pixelStorei).toHaveBeenCalledTimes(2);
     expect(gl.flush).not.toHaveBeenCalled();

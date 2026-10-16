@@ -1,4 +1,5 @@
 import { validateGlassHighlight } from './glass-highlight-schema.js';
+import { validateOrbitSettings } from './orbit-schema.js';
 
 export function validateZoomElement(zoom) {
   if (
@@ -12,13 +13,15 @@ export function validateZoomElement(zoom) {
     ![1, 2, 3, 4, 5, 6].includes(zoom.depth) ||
     !['auto', 'manual'].includes(zoom.mode) ||
     (zoom.enabled !== undefined && typeof zoom.enabled !== 'boolean') ||
-    (zoom.projection !== undefined && !['2d', '3d'].includes(zoom.projection)) ||
+    (zoom.projection !== undefined && !['2d', '3d', 'orbit'].includes(zoom.projection)) ||
+    (zoom.transition !== undefined && zoom.transition !== 'cinematic') ||
     ['tiltIntensity', 'tiltHorizontal', 'tiltVertical'].some(
       (key) => zoom[key] !== undefined && !Number.isFinite(zoom[key]),
     )
   )
     throw new TypeError('Invalid zoom.');
   validateGlassHighlight(zoom);
+  if (zoom.orbitSettings !== undefined) validateOrbitSettings(zoom.orbitSettings);
 }
 
 export function validateStillZoom(zoom) {

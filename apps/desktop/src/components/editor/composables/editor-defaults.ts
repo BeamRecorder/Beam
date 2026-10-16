@@ -12,6 +12,7 @@ import {
 } from '@beam/engine/shared/composition-types';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import { isCameraFramingPreset, isCameraLayoutPreset } from '@beam/engine/shared/camera-layout-types';
+import { normalizeOrbitSettings } from '@beam/engine/zoom/orbit-settings';
 import { normalizeClipTransitions } from '@beam/engine/shared/clip-transitions';
 import { normalizeOutputCanvas } from '@beam/engine/layout/output-canvas';
 import {
@@ -156,6 +157,13 @@ export const normalizeEditorPreferenceDefaults = (value: unknown): EditorPrefere
           zoom: {
             ...clone(input.zoom as EditorPreferenceDefaults['zoom']),
             projection: normalizeZoomProjection(record(input.zoom).projection),
+            ...(record(input.zoom).orbitSettings
+              ? {
+                  orbitSettings: normalizeOrbitSettings(
+                    record(input.zoom).orbitSettings as Parameters<typeof normalizeOrbitSettings>[0],
+                  ),
+                }
+              : {}),
             tiltIntensity: normalizeZoomTiltIntensity(record(input.zoom).tiltIntensity),
             tiltHorizontal: normalizeZoomTiltAxis(record(input.zoom).tiltHorizontal, DEFAULT_ZOOM_TILT_HORIZONTAL),
             tiltVertical: normalizeZoomTiltAxis(record(input.zoom).tiltVertical, DEFAULT_ZOOM_TILT_VERTICAL),
@@ -218,6 +226,7 @@ export function defaultsFromEditorState(
       depth: selectedZoom.depth,
       mode: selectedZoom.mode,
       projection: normalizeZoomProjection(selectedZoom.projection),
+      ...(selectedZoom.orbitSettings ? { orbitSettings: normalizeOrbitSettings(selectedZoom.orbitSettings) } : {}),
       tiltIntensity: normalizeZoomTiltIntensity(selectedZoom.tiltIntensity),
       tiltHorizontal: normalizeZoomTiltAxis(selectedZoom.tiltHorizontal, DEFAULT_ZOOM_TILT_HORIZONTAL),
       tiltVertical: normalizeZoomTiltAxis(selectedZoom.tiltVertical, DEFAULT_ZOOM_TILT_VERTICAL),

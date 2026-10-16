@@ -486,7 +486,9 @@
       "diagonalUp": "diagonal ↗",
       "diagonalDown": "diagonal ↘"
     },
-    "cursorResize": "Größe ändern {direction}"
+    "cursorResize": "Größe ändern {direction}",
+    "model3d": "3D-Cursor",
+    "model3dDescription": "Fügt Tiefe, Beleuchtung und Kontakt beim Klicken hinzu."
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Videovorschau wird geladen",

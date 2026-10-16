@@ -8,6 +8,8 @@ import {
 
 class MockContext {
   readonly canvas: { width: number; height: number };
+  readonly getTransform = vi.fn(() => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }));
+  readonly setTransform = vi.fn();
   readonly clearRect = vi.fn();
   readonly drawImage = vi.fn();
   readonly save = vi.fn(() => this.stack.push([this.alpha, this.operation]));
@@ -114,7 +116,7 @@ describe('renderCompositedLayer', () => {
       (target as unknown as MockContext).drawImage('second-overlap', 10, 10);
     });
 
-    renderCompositedLayer(output as unknown as Canvas2DContext, layer({ opacity: 35 }), 640, 480, draw);
+    renderCompositedLayer(output as unknown as Canvas2DContext, layer({ opacity: 35 }), draw);
 
     expect(surfaces).toHaveLength(1);
     expect(surfaces[0]!.context!.drawImage).toHaveBeenCalledTimes(2);
@@ -131,7 +133,7 @@ describe('renderCompositedLayer', () => {
     const output = outputContext() as unknown as MockContext;
     const draw = vi.fn();
 
-    renderCompositedLayer(output as unknown as Canvas2DContext, layer({ opacity: 60, blendMode }), 640, 480, draw);
+    renderCompositedLayer(output as unknown as Canvas2DContext, layer({ opacity: 60, blendMode }), draw);
 
     expect(output.compositeAssignments).toContain(blendMode);
     expect(output.drawImage).toHaveBeenCalledOnce();
@@ -142,7 +144,7 @@ describe('renderCompositedLayer', () => {
     const output = outputContext();
     const draw = vi.fn();
 
-    renderCompositedLayer(output, layer({ opacity: 0, blendMode: 'multiply' }), 640, 480, draw);
+    renderCompositedLayer(output, layer({ opacity: 0, blendMode: 'multiply' }), draw);
 
     expect(surfaces).toHaveLength(0);
     expect(draw).not.toHaveBeenCalled();
@@ -153,7 +155,7 @@ describe('renderCompositedLayer', () => {
     const output = outputContext() as unknown as MockContext;
     const draw = vi.fn();
 
-    renderCompositedLayer(output as unknown as Canvas2DContext, layer(), 640, 480, draw);
+    renderCompositedLayer(output as unknown as Canvas2DContext, layer(), draw);
 
     expect(surfaces).toHaveLength(0);
     expect(draw).toHaveBeenCalledWith(output, output.canvas);
@@ -166,17 +168,32 @@ describe('renderCompositedLayer', () => {
     const draw = vi.fn();
     const composited = layer({ blendMode: 'multiply' });
 
-    renderCompositedLayer(output, composited, 320, 200, draw);
-    renderCompositedLayer(output, composited, 320, 200, draw);
-    renderCompositedLayer(output, composited, 640, 200, draw);
-    renderCompositedLayer(output, composited, 640, 360, draw);
+    renderCompositedLayer(output, composited, draw);
+    renderCompositedLayer(output, composited, draw);
+    output.canvas.width = 320;
+    output.canvas.height = 200;
+    renderCompositedLayer(output, composited, draw);
+    output.canvas.width = 640;
+    output.canvas.height = 360;
+    renderCompositedLayer(output, composited, draw);
 
     expect(surfaces).toHaveLength(1);
     expect(surfaces[0]).toMatchObject({ width: 640, height: 360 });
     expect(surfaces[0]!.context!.clearRect).toHaveBeenLastCalledWith(0, 0, 640, 360);
 
-    renderCompositedLayer(outputContext() as unknown as Canvas2DContext, composited, 640, 360, draw);
+    renderCompositedLayer(outputContext() as unknown as Canvas2DContext, composited, draw);
     expect(surfaces).toHaveLength(2);
+  });
+
+  it('keeps padded high density source dimensions and inherits the camera transform once', () => {
+    const output = outputContext(1800, 1200) as unknown as MockContext;
+    const matrix = { a: 1.5, b: 0, c: 0, d: 1.5, e: 150, f: 210 };
+    output.getTransform.mockReturnValue(matrix);
+    renderCompositedLayer(output as unknown as Canvas2DContext, layer({ opacity: 60 }), vi.fn());
+    expect(surfaces[0]).toMatchObject({ width: 1800, height: 1200 });
+    expect(surfaces[0]!.context!.setTransform).toHaveBeenLastCalledWith(matrix);
+    expect(output.setTransform).toHaveBeenCalledWith(1, 0, 0, 1, 0, 0);
+    expect(output.drawImage).toHaveBeenCalledWith(surfaces[0], 0, 0);
   });
 
   it('releases only its destination surface, is idempotent, and allocates a fresh surface afterward', () => {
@@ -185,8 +202,8 @@ describe('renderCompositedLayer', () => {
     const composited = layer({ opacity: 50, blendMode: 'multiply' });
     const draw = vi.fn();
 
-    renderCompositedLayer(firstOutput, composited, 640, 480, draw);
-    renderCompositedLayer(secondOutput, composited, 640, 480, draw);
+    renderCompositedLayer(firstOutput, composited, draw);
+    renderCompositedLayer(secondOutput, composited, draw);
     const [firstSurface, secondSurface] = surfaces;
     expect(firstSurface).toMatchObject({ width: 640, height: 480 });
     expect(secondSurface).toMatchObject({ width: 640, height: 480 });
@@ -195,10 +212,10 @@ describe('renderCompositedLayer', () => {
     expect(firstSurface).toMatchObject({ width: 0, height: 0 });
     expect(secondSurface).toMatchObject({ width: 640, height: 480 });
     expect(() => releaseCompositedLayerSurface(firstOutput)).not.toThrow();
-    renderCompositedLayer(secondOutput, composited, 640, 480, draw);
+    renderCompositedLayer(secondOutput, composited, draw);
     expect(surfaces).toHaveLength(2);
 
-    renderCompositedLayer(firstOutput, composited, 640, 480, draw);
+    renderCompositedLayer(firstOutput, composited, draw);
     expect(surfaces).toHaveLength(3);
     expect(surfaces[2]).not.toBe(firstSurface);
     expect(surfaces[2]).toMatchObject({ width: 640, height: 480 });
@@ -212,7 +229,7 @@ describe('renderCompositedLayer', () => {
     const output = outputContext();
     const draw = vi.fn();
 
-    expect(() => renderCompositedLayer(output, layer({ opacity: 50 }), 640, 480, draw)).toThrow(
+    expect(() => renderCompositedLayer(output, layer({ opacity: 50 }), draw)).toThrow(
       'Layer rendering context unavailable.',
     );
     expect(draw).not.toHaveBeenCalled();
@@ -225,14 +242,12 @@ describe('renderCompositedLayer', () => {
       throw new Error('layer draw failed');
     });
 
-    expect(() => renderCompositedLayer(output, layer({ opacity: 50 }), 640, 480, firstSurfaceDraw)).toThrow(
-      'layer draw failed',
-    );
+    expect(() => renderCompositedLayer(output, layer({ opacity: 50 }), firstSurfaceDraw)).toThrow('layer draw failed');
     expect(surfaces[0]!.context!.save).toHaveBeenCalledOnce();
     expect(surfaces[0]!.context!.restore).toHaveBeenCalledOnce();
     expect((output as unknown as MockContext).restore).not.toHaveBeenCalled();
 
-    renderCompositedLayer(output, layer({ opacity: 50 }), 640, 480, vi.fn());
+    renderCompositedLayer(output, layer({ opacity: 50 }), vi.fn());
     expect(surfaces).toHaveLength(1);
     expect((output as unknown as MockContext).drawImage).toHaveBeenCalledOnce();
   });
@@ -246,13 +261,7 @@ describe('renderCompositedLayer', () => {
     });
 
     expect(() =>
-      renderCompositedLayer(
-        output as unknown as Canvas2DContext,
-        layer({ opacity: 50, blendMode: 'screen' }),
-        640,
-        480,
-        vi.fn(),
-      ),
+      renderCompositedLayer(output as unknown as Canvas2DContext, layer({ opacity: 50, blendMode: 'screen' }), vi.fn()),
     ).toThrow('destination draw failed');
 
     expect(output.globalAlpha).toBe(0.8);
@@ -264,7 +273,7 @@ describe('renderCompositedLayer', () => {
     const output = outputContext() as unknown as MockContext;
 
     expect(() =>
-      renderCompositedLayer(output as unknown as Canvas2DContext, layer(), 640, 480, () => {
+      renderCompositedLayer(output as unknown as Canvas2DContext, layer(), () => {
         throw new Error('direct draw failed');
       }),
     ).toThrow('direct draw failed');
@@ -277,7 +286,7 @@ describe('renderCompositedLayer', () => {
     const output = outputContext() as unknown as Canvas2DContext;
     const draw = vi.fn();
 
-    renderCompositedLayer(output, layer({ opacity: 40, blendMode: 'overlay' }), 640, 480, draw);
+    renderCompositedLayer(output, layer({ opacity: 40, blendMode: 'overlay' }), draw);
 
     expect(draw.mock.calls[0]![1]).toBe(output.canvas);
     expect(draw.mock.calls[0]![0]).not.toBe(output);

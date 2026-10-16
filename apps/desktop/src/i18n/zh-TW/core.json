@@ -486,7 +486,9 @@
       "diagonalUp": "對角線 ↗",
       "diagonalDown": "對角線 ↘"
     },
-    "cursorResize": "調整大小：{direction}"
+    "cursorResize": "調整大小：{direction}",
+    "model3d": "3D 游標",
+    "model3dDescription": "加入深度、光照與點擊時的接觸效果。"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "正在載入影片預覽",

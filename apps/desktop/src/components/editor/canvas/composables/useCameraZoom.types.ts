@@ -3,6 +3,7 @@ import type { ClipComposition, NormalizedTransform } from '@beam/engine/shared/c
 import type { ZoomAutoFollowSettings, ZoomElement, ZoomMotionBlurSettings } from '@beam/engine/zoom/zoom-types';
 import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 import type { CompositionSceneLayers } from '@beam/engine/composition/scene-layers';
+import type { OrbitCameraPose } from '@beam/engine/zoom/orbit-camera-types';
 
 export interface VideoWindowBounds {
   dx: number;
@@ -14,6 +15,7 @@ export interface VideoWindowBounds {
   focusY?: number;
   tiltX?: number;
   tiltY?: number;
+  orbit?: OrbitCameraPose;
 }
 
 export interface RenderedVideoWindow extends VideoWindowBounds {

@@ -111,6 +111,8 @@ export function useProjectZoom(options: {
       depth: defaults?.depth ?? 2,
       mode: defaults?.mode ?? 'manual',
       projection: defaults?.projection ?? DEFAULT_ZOOM_PROJECTION,
+      ...(defaults?.projection === 'orbit' ? { transition: 'cinematic' as const } : {}),
+      ...(defaults?.orbitSettings ? { orbitSettings: { ...defaults.orbitSettings } } : {}),
       tiltIntensity: defaults?.tiltIntensity ?? DEFAULT_ZOOM_TILT_INTENSITY,
       tiltHorizontal: defaults?.tiltHorizontal ?? DEFAULT_ZOOM_TILT_HORIZONTAL,
       tiltVertical: defaults?.tiltVertical ?? DEFAULT_ZOOM_TILT_VERTICAL,

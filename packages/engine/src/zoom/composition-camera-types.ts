@@ -2,6 +2,7 @@ import type { CursorTelemetryPoint } from '../capture/capture-session';
 import type { AppliedZoom, ZoomAutoFollowSettings, ZoomElement, ZoomFocus } from './zoom-types';
 import type { CameraTransform, CameraVelocity } from './zoom-spring';
 import type { AutoFollowState } from './auto-follow-camera';
+import type { OrbitCameraPose } from './orbit-camera-types';
 
 export interface CameraSimulationState {
   camera: Required<CameraTransform>;
@@ -14,6 +15,7 @@ export interface CameraSample {
   scale: number;
   tiltX?: number;
   tiltY?: number;
+  orbit?: OrbitCameraPose;
 }
 
 export interface CompositionCameraEvaluator {

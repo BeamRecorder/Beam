@@ -1,4 +1,10 @@
 import type { CursorTelemetryPoint } from '@beam/engine/capture/capture-session';
+import { cinematicZoomStrength, interpolateZoomScale, CONNECTED_GAP_MS, CONNECTED_PAN_MS } from './zoom-transitions';
+export { CONNECTED_GAP_MS } from './zoom-transitions';
+import { interpolateOrbitSettings } from './orbit-settings';
+import { cinematicZoomConnection } from './cinematic-zoom-connection';
+import { clampFocusToScale } from './zoom-focus';
+export { clampFocusToScale } from './zoom-focus';
 import {
   DEFAULT_ZOOM_TILT_HORIZONTAL,
   DEFAULT_ZOOM_TILT_VERTICAL,
@@ -17,23 +23,19 @@ export const ZOOM_OUT_MS = 1015.05;
 const LEAD_MS = 200;
 const IN_OVERLAP_MS = 1000;
 const OUT_EARLY_MS = 500;
-export const CONNECTED_GAP_MS = 1350;
-const CONNECTED_PAN_MS = 1000;
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 const easeOut = (value: number) => 1 - (1 - clamp01(value)) ** 3;
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const tiltFor = (zoom: ZoomElement) =>
   normalizeZoomProjection(zoom.projection) === '3d' ? normalizeZoomTiltIntensity(zoom.tiltIntensity) : 0;
+const orbitFor = (zoom: ZoomElement) =>
+  normalizeZoomProjection(zoom.projection) === 'orbit' ? normalizeZoomTiltIntensity(zoom.tiltIntensity) : 0;
 const horizontalTiltFor = (zoom: ZoomElement) =>
   normalizeZoomTiltAxis(zoom.tiltHorizontal, DEFAULT_ZOOM_TILT_HORIZONTAL);
 const verticalTiltFor = (zoom: ZoomElement) => normalizeZoomTiltAxis(zoom.tiltVertical, DEFAULT_ZOOM_TILT_VERTICAL);
 
-export function clampFocusToScale(focus: ZoomFocus, scale: number): ZoomFocus {
-  const margin = 1 / (2 * Math.max(1, scale));
-  return { cx: Math.min(1 - margin, Math.max(margin, focus.cx)), cy: Math.min(1 - margin, Math.max(margin, focus.cy)) };
-}
-
 export function regionStrength(region: ZoomElement, timeMs: number): number {
+  if (region.transition === 'cinematic') return cinematicZoomStrength(region, timeMs);
   const adjusted = timeMs - LEAD_MS;
   const inStart = region.startMs + IN_OVERLAP_MS - ZOOM_IN_MS;
   let inEnd = inStart + ZOOM_IN_MS;
@@ -62,6 +64,7 @@ export function cursorFocusAt(samples: readonly CursorTelemetryPoint[], timeMs: 
   }
   const previous = previousIndex >= 0 ? samples[previousIndex] : undefined;
   const next = samples[previousIndex + 1];
+  if (previous?.visible === false || (!previous && next?.visible === false)) return null;
   if (!previous) return next ? { cx: next.cx, cy: next.cy } : null;
   if (!next) return { cx: previous.cx, cy: previous.cy };
   const t = (timeMs - previous.timeMs) / Math.max(1, next.timeMs - previous.timeMs);
@@ -73,10 +76,15 @@ function zoomAtSortedTime(
   timeMs: number,
   mapFocus: ZoomFocusMapper = (focus) => focus,
 ): AppliedZoom | null {
+  for (let index = 0; index < elements.length - 1; index++) {
+    const connection = cinematicZoomConnection(elements[index]!, elements[index + 1]!, timeMs, mapFocus);
+    if (connection) return connection;
+  }
   const pair = elements.find((current, index) => {
     const next = elements[index + 1];
     return (
       next &&
+      !(current.transition === 'cinematic' && next.transition === 'cinematic') &&
       next.startMs - current.endMs <= CONNECTED_GAP_MS &&
       timeMs >= current.endMs + LEAD_MS &&
       timeMs <= current.endMs + LEAD_MS + CONNECTED_PAN_MS
@@ -116,6 +124,12 @@ function zoomAtSortedTime(
         tilt: lerp(tiltFor(pair), tiltFor(next), t) * transitionStrength,
         tiltHorizontal: lerp(horizontalTiltFor(pair), horizontalTiltFor(next), t),
         tiltVertical: lerp(verticalTiltFor(pair), verticalTiltFor(next), t),
+        ...(orbitFor(pair) || orbitFor(next)
+          ? {
+              orbit: lerp(orbitFor(pair), orbitFor(next), t),
+              orbitSettings: interpolateOrbitSettings(pair.orbitSettings, next.orbitSettings, t),
+            }
+          : {}),
       };
     }
   }
@@ -153,6 +167,7 @@ function zoomAtSortedTime(
   let scale = currentScale;
   if (
     next &&
+    !(current.element.transition === 'cinematic' && next.transition === 'cinematic') &&
     timeMs >= current.element.endMs + LEAD_MS &&
     timeMs <= current.element.endMs + LEAD_MS + CONNECTED_PAN_MS
   ) {
@@ -180,10 +195,19 @@ function zoomAtSortedTime(
       tilt: lerp(tiltFor(current.element), tiltFor(next), t),
       tiltHorizontal: lerp(horizontalTiltFor(current.element), horizontalTiltFor(next), t),
       tiltVertical: lerp(verticalTiltFor(current.element), verticalTiltFor(next), t),
+      ...(orbitFor(current.element) || orbitFor(next)
+        ? {
+            orbit: lerp(orbitFor(current.element), orbitFor(next), t),
+            orbitSettings: interpolateOrbitSettings(current.element.orbitSettings, next.orbitSettings, t),
+          }
+        : {}),
     };
   }
   return {
-    scale: 1 + (scale - 1) * current.strength,
+    scale:
+      current.element.transition === 'cinematic'
+        ? interpolateZoomScale(1, scale, current.strength)
+        : 1 + (scale - 1) * current.strength,
     focus,
     strength: current.strength,
     mode: current.element.mode,
@@ -191,6 +215,10 @@ function zoomAtSortedTime(
     tilt: tiltFor(current.element) * current.strength,
     tiltHorizontal: horizontalTiltFor(current.element),
     tiltVertical: verticalTiltFor(current.element),
+    ...(orbitFor(current.element)
+      ? { orbit: orbitFor(current.element) * current.strength, orbitSettings: current.element.orbitSettings }
+      : {}),
+    ...(current.element.transition === 'cinematic' ? { cinematic: true } : {}),
   };
 }
 

@@ -5,6 +5,10 @@ import type { CursorPlaybackState } from '@beam/engine/cursor/cursorPlayback';
 import { cursorStateAt } from '@beam/engine/cursor/cursorPlayback';
 import { createDeterministicCursorMotionEvaluator } from '@beam/engine/cursor/cursor-motion-evaluator';
 import { createCursorStopSpring } from '@beam/engine/cursor/cursor-stop-spring';
+import type { CursorHoverSync } from './cursor-hover-types';
+import { validateCursorHoverSync } from './cursor-hover-sync';
+import { createCursorVisibleSince } from './cursor-visibility';
+import { createCursorModelPose } from './cursor-model-pose';
 
 export { stepSpringAxis } from '@beam/engine/cursor/cursor-motion-evaluator';
 
@@ -340,7 +344,9 @@ export function createCursorMotionPlayer(
   settings: CursorMotionSettings,
   sourceWidth = 1920,
   sourceHeight = 1080,
+  hoverSync?: CursorHoverSync,
 ) {
+  if (hoverSync !== undefined) validateCursorHoverSync(hoverSync);
   const stylizedTimeline = createCursorMotionTimeline(events, settings, sourceWidth, sourceHeight);
   const recordedTargetAt = createRecordedCursorTarget(events);
   const timeline: CursorMotionTimeline = { ...stylizedTimeline, targetAt: recordedTargetAt };
@@ -349,12 +355,14 @@ export function createCursorMotionPlayer(
   const isDraggingAt = (timeSeconds: number) =>
     drags.some((range) => timeSeconds >= range.startSeconds && timeSeconds <= range.endSeconds);
   const evaluator = createDeterministicCursorMotionEvaluator({
+    hoverSync,
     settings,
     targetAt: recordedTargetAt,
     directTargetAt: recordedTargetAt,
     isDraggingAt,
     buttonTimes,
     stopSpringAt: createCursorStopSpring(events, settings, sourceWidth, sourceHeight, isDraggingAt),
+    visibleSinceAt: createCursorVisibleSince(events),
   });
   const sample = (timeSeconds: number, rawState: CursorPlaybackState | null): CursorMotionSample | null => {
     if (!rawState) return null;
@@ -364,7 +372,7 @@ export function createCursorMotionPlayer(
       ...motion,
     };
   };
-  return { timeline, sample, reset: evaluator.reset };
+  return { timeline, sample, modelPose: createCursorModelPose(events), reset: evaluator.reset };
 }
 
 export function motionBlurTrail(

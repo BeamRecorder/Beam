@@ -484,3 +484,38 @@ describe('highlight defaults', () => {
     expect(saved.blur).toEqual(current.blur);
   });
 });
+
+it('preserves bounded 3D camera defaults and owns their values across selection and normalization', () => {
+  const settings = {
+    yaw: -25,
+    pitch: 18,
+    roll: -6,
+    horizontal: 12,
+    vertical: 5,
+    pullback: 0.5,
+    fieldOfView: 46,
+    dolly: 0,
+    responseMs: 700,
+    leadMs: 80,
+  };
+  const zoom = {
+    id: '3d',
+    sessionId: 'take',
+    startMs: 0,
+    endMs: 1000,
+    depth: 2 as const,
+    mode: 'auto' as const,
+    focus: { cx: 0.5, cy: 0.5 },
+    projection: 'orbit' as const,
+    orbitSettings: settings,
+  };
+  const captured = defaultsFromEditorState(normalizeEditorPreferenceDefaults(undefined), state(), null, zoom);
+  expect(captured.zoom!.orbitSettings).toEqual(settings);
+  expect(captured.zoom!.orbitSettings).not.toBe(settings);
+  const normalized = normalizeEditorPreferenceDefaults({
+    ...captured,
+    zoom: { ...captured.zoom!, orbitSettings: { ...settings, yaw: -100, pullback: 10, responseMs: Infinity } },
+  });
+  expect(normalized.zoom!.orbitSettings).toMatchObject({ yaw: -35, pullback: 0.65, responseMs: 450 });
+  expect(normalized.zoom!.orbitSettings).not.toBe(captured.zoom!.orbitSettings);
+});

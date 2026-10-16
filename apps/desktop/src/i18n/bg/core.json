@@ -486,7 +486,9 @@
       "diagonalUp": "диагонално ↗",
       "diagonalDown": "диагонално ↘"
     },
-    "cursorResize": "Преоразмеряване {direction}"
+    "cursorResize": "Преоразмеряване {direction}",
+    "model3d": "3D курсор",
+    "model3dDescription": "Добавя дълбочина, осветление и допир при щракване."
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Зареждане на видео визуализация",

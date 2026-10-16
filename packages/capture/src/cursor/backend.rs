@@ -22,8 +22,14 @@ pub struct CursorTelemetryPoint {
     pub time_ms: u64,
     pub cx: f64,
     pub cy: f64,
+    #[serde(default = "visible_by_default")]
+    pub visible: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub interaction_type: Option<CursorInteractionType>,
+}
+
+const fn visible_by_default() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

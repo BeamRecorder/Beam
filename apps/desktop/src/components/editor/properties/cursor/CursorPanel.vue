@@ -77,7 +77,15 @@ const updateAutoHide = (patch: Partial<CursorAutoHideSettings>) =>
   emit('update:autoHide', normalizeCursorAutoHideSettings({ ...props.autoHide, ...patch }));
 const selectMotionPreset = (preset: CursorMotionPreset) => {
   motionAdvancedOpen.value = preset === 'custom';
-  emit('update:motion', preset === 'custom' ? { ...props.motion, preset } : cursorMotionPreset(preset));
+  emit(
+    'update:motion',
+    preset === 'custom'
+      ? { ...props.motion, preset }
+      : {
+          ...cursorMotionPreset(preset),
+          ...(props.motion.model3d === undefined ? {} : { model3d: props.motion.model3d }),
+        },
+  );
 };
 </script>
 
@@ -101,6 +109,15 @@ const selectMotionPreset = (preset: CursorMotionPreset) => {
       @update:shadow-color="emit('update:shadowColor', $event)"
       @update:shadow-direction="emit('update:shadowDirection', $event)"
     />
+    <div class="prop-row volume-option">
+      <span class="prop-label">{{ t('model3d') }}</span>
+      <Switch
+        :model-value="Boolean(motion.model3d)"
+        :aria-label="t('model3d')"
+        @update:model-value="emit('update:motion', { ...motion, model3d: $event })"
+      />
+    </div>
+    <p class="volume-description">{{ t('model3dDescription') }}</p>
     <Accordion
       v-model="sections.motion"
       appearance="inspector"

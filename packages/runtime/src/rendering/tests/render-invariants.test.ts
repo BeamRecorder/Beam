@@ -366,7 +366,7 @@ describe('composition rendering invariants', () => {
     const compositeIndexes = operations
       .map((operation, index) => (operation.kind === 'composite' ? index : -1))
       .filter((index) => index >= 0);
-    expect(compositeIndexes.length).toBeGreaterThanOrEqual(3);
+    expect(compositeIndexes).toHaveLength(1);
     const sampleContexts = new Set(surfaces.map((_surface, index) => `sample-${index}`));
     for (const sampleContext of sampleContexts) {
       const sampleOperations = operations.filter(({ context }) => context === sampleContext);
@@ -375,6 +375,7 @@ describe('composition rendering invariants', () => {
     }
     expect(operations.filter(({ kind }) => kind === 'shadow').every(({ context }) => context !== 'target')).toBe(true);
     expect(operations.filter(({ kind }) => kind === 'video').every(({ context }) => context !== 'target')).toBe(true);
+    expect(operations.filter(({ kind }) => kind === 'video').length).toBeGreaterThanOrEqual(3);
     let previousComposite = -1;
     for (const compositeIndex of compositeIndexes) {
       const sampleOperations = operations.slice(previousComposite + 1, compositeIndex);

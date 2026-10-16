@@ -486,7 +486,9 @@
       "diagonalUp": "theo đường chéo ↗",
       "diagonalDown": "theo đường chéo ↘"
     },
-    "cursorResize": "Đổi kích thước {direction}"
+    "cursorResize": "Đổi kích thước {direction}",
+    "model3d": "Con trỏ 3D",
+    "model3dDescription": "Thêm chiều sâu, ánh sáng và tiếp xúc khi nhấp."
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Đang tải xem trước video",

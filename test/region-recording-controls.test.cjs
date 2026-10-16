@@ -34,7 +34,7 @@ test('Linux settings explicitly disable unavailable shell hiding', () => {
     hideDesktopIcons: false,
   });
 });
-for (const zoomMode of ['off', '2d', '3d', 'glass'])
+for (const zoomMode of ['off', '2d', '3d', 'orbit', 'glass'])
   test(`accepts the ${zoomMode} region zoom algorithm through IPC`, () => {
     const next = { ...settings, zoomMode };
     assert.deepEqual(regionRecordingSettings(next, 'win32'), next);

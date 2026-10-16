@@ -1,4 +1,6 @@
 import { createPerspectiveGeometry, type PerspectiveTransform } from '@beam/engine/zoom/perspective-projection';
+import type { MediaDimensions } from '@beam/engine/layout/media-rotation-types';
+import type { PerspectiveProjectionSample } from './perspective-projector-types';
 
 export type PerspectiveCanvas = HTMLCanvasElement | OffscreenCanvas;
 export type PerspectiveCanvasFactory = (width: number, height: number) => PerspectiveCanvas;
@@ -10,6 +12,7 @@ interface WebGlResources {
   texture: WebGLTexture;
   positionLocation: number;
   textureLocation: number;
+  weightLocation: WebGLUniformLocation | null;
 }
 
 const VERTEX_SHADER = `
@@ -22,11 +25,12 @@ void main() {
 }`;
 
 const FRAGMENT_SHADER = `
-precision mediump float;
+precision highp float;
 uniform sampler2D u_scene;
+uniform float u_weight;
 varying vec2 v_texture;
 void main() {
-  gl_FragColor = texture2D(u_scene, v_texture);
+  gl_FragColor = texture2D(u_scene, v_texture) * u_weight;
 }`;
 
 const TEXTURE_COORDINATES = new Float32Array([0, 1, 0, 0, 1, 1, 1, 0]);
@@ -81,6 +85,7 @@ const createResources = (gl: WebGLRenderingContext): WebGlResources => {
     texture,
     positionLocation: gl.getAttribLocation(program, 'a_position'),
     textureLocation: gl.getAttribLocation(program, 'a_texture'),
+    weightLocation: gl.getUniformLocation(program, 'u_weight'),
   };
 };
 
@@ -103,6 +108,7 @@ const configureStaticResources = (gl: WebGLRenderingContext, resources: WebGlRes
 
 export class WebGlPerspectiveProjector {
   readonly canvas: PerspectiveCanvas;
+  readonly maxTextureSize: number;
   private readonly gl: WebGLRenderingContext;
   private resources: WebGlResources;
   private textureWidth = 0;
@@ -121,6 +127,7 @@ export class WebGlPerspectiveProjector {
     }) as WebGLRenderingContext | null;
     if (!gl) throw new Error('WebGL is required for perspective zoom rendering.');
     this.gl = gl;
+    this.maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
     this.resources = createResources(gl);
     configureStaticResources(gl, this.resources);
     this.canvas.addEventListener?.('webglcontextlost', this.handleContextLost as EventListener);
@@ -150,7 +157,32 @@ export class WebGlPerspectiveProjector {
       createPerspectiveGeometry(pixelWidth, pixelHeight, transform).positions,
     );
   }
-  renderGeometry(source: TexImageSource, width: number, height: number, positions: Float32Array): PerspectiveCanvas {
+  renderGeometry(
+    source: TexImageSource,
+    width: number,
+    height: number,
+    positions: Float32Array,
+    sourceSize?: MediaDimensions,
+  ): PerspectiveCanvas {
+    return this.renderSamples(source, width, height, [{ positions, weight: 1 }], sourceSize);
+  }
+
+  /** One scene upload and one completed canvas transfer for the whole premultiplied shutter. */
+  renderSamples(
+    source: TexImageSource,
+    width: number,
+    height: number,
+    samples: readonly PerspectiveProjectionSample[],
+    sourceSize?: MediaDimensions,
+  ): PerspectiveCanvas {
+    const totalWeight = samples.reduce((total, sample) => total + sample.weight, 0);
+    if (
+      !samples.length ||
+      !Number.isFinite(totalWeight) ||
+      totalWeight <= 0 ||
+      samples.some((sample) => !Number.isFinite(sample.weight) || sample.weight < 0)
+    )
+      throw new RangeError('Invalid perspective exposure weights.');
     const pixelWidth = Math.max(1, Math.round(width));
     const pixelHeight = Math.max(1, Math.round(height));
     if (this.lost || this.gl.isContextLost()) throw new Error('Perspective zoom WebGL context was lost.');
@@ -166,19 +198,30 @@ export class WebGlPerspectiveProjector {
     gl.useProgram(resources.program);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, resources.positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW);
     gl.enableVertexAttribArray(resources.positionLocation);
     gl.vertexAttribPointer(resources.positionLocation, 4, gl.FLOAT, false, 0, 0);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, resources.texture);
-    if (this.textureWidth !== pixelWidth || this.textureHeight !== pixelHeight) {
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, pixelWidth, pixelHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-      this.textureWidth = pixelWidth;
-      this.textureHeight = pixelHeight;
+    const sourceWidth = sourceSize?.width ?? pixelWidth,
+      sourceHeight = sourceSize?.height ?? pixelHeight;
+    if (this.textureWidth !== sourceWidth || this.textureHeight !== sourceHeight) {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, sourceWidth, sourceHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      this.textureWidth = sourceWidth;
+      this.textureHeight = sourceHeight;
     }
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    if (samples.length > 1) {
+      gl.enable(gl.BLEND);
+      gl.blendEquation(gl.FUNC_ADD);
+      gl.blendFunc(gl.ONE, gl.ONE);
+    }
+    for (const sample of samples) {
+      if (sample.weight === 0) continue;
+      gl.bufferData(gl.ARRAY_BUFFER, sample.positions, gl.DYNAMIC_DRAW);
+      gl.uniform1f(resources.weightLocation, sample.weight / totalWeight);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
     return this.canvas;
   }
 

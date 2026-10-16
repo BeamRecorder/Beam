@@ -1,0 +1,554 @@
+{
+  "environment": {
+    "cpu": "Intel Core Ultra 5 125H",
+    "logicalCpus": 18,
+    "ramGiB": 30.84,
+    "os": "Linux",
+    "browser": "Chrome/154.0.8037.57",
+    "rendering": "ANGLE SwiftShader",
+    "encoding": "software AVC, VBR 4000000 bit/s, quality latency"
+  },
+  "workload": {
+    "width": 1280,
+    "height": 720,
+    "fps": 30,
+    "durationSeconds": 4,
+    "frames": 120,
+    "audio": false,
+    "source": "examples/website-studio-loop/assets/screen-recording.mp4",
+    "sourceRangeSeconds": [
+      2,
+      6
+    ],
+    "camera": "Dynamic, automatic, 1.5x, camera motion blur 0.8",
+    "cursorVariant": "built-in macOS cursor, 3D model and cursor motion blur 0.8, deterministic path"
+  },
+  "trials": {
+    "before-frozen": {
+      "mode": "orbit",
+      "count": 120,
+      "setupMs": 44.400000005960464,
+      "stats": {
+        "elapsedMs": 119136.09999999404,
+        "decodeMs": 55.89999997615814,
+        "renderMs": 1575.0999999940395,
+        "encoderBackpressureMs": 117473.90000000596,
+        "engine": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "decode": {
+              "count": 120,
+              "totalMs": 55.89999997615814,
+              "latestMs": 0,
+              "medianMs": 0,
+              "p95Ms": 0.09999999403953552,
+              "maxMs": 54.30000001192093,
+              "windowSamples": 120
+            },
+            "render": {
+              "count": 120,
+              "totalMs": 1575.0999999940395,
+              "latestMs": 3.800000011920929,
+              "medianMs": 10.900000005960464,
+              "p95Ms": 28.599999994039536,
+              "maxMs": 185.59999999403954,
+              "windowSamples": 120
+            },
+            "encode-wait": {
+              "count": 120,
+              "totalMs": 117473.90000000596,
+              "latestMs": 444,
+              "medianMs": 1172.1000000238419,
+              "p95Ms": 1602.0999999940395,
+              "maxMs": 1999.4000000059605,
+              "windowSamples": 120
+            }
+          },
+          "counters": {
+            "frames": 120
+          }
+        }
+      },
+      "finalizationMs": 392.19999998807907,
+      "totalMs": 119575.29999998212,
+      "bytes": 1906205,
+      "selection": {
+        "codec": "avc",
+        "quality": {
+          "_preferBitrate": false,
+          "_bitrate": 4000000,
+          "_bitrateMode": "variable"
+        },
+        "hardwareAcceleration": "prefer-software",
+        "bitrateMode": "variable",
+        "hardwareEncoderCheck": "unsupported",
+        "hardwareEncoderError": null
+      },
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36"
+    },
+    "after": {
+      "mode": "orbit",
+      "count": 120,
+      "setupMs": 72.59999999403954,
+      "stats": {
+        "elapsedMs": 51405.5,
+        "decodeMs": 56.19999998807907,
+        "renderMs": 880.4999995529652,
+        "encoderBackpressureMs": 50427.80000022054,
+        "engine": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "decode": {
+              "count": 120,
+              "totalMs": 56.19999998807907,
+              "latestMs": 0,
+              "medianMs": 0,
+              "p95Ms": 0.09999999403953552,
+              "maxMs": 54.70000001788139,
+              "windowSamples": 120
+            },
+            "render": {
+              "count": 120,
+              "totalMs": 880.4999995529652,
+              "latestMs": 4.5,
+              "medianMs": 4.5,
+              "p95Ms": 16.5,
+              "maxMs": 189,
+              "windowSamples": 120
+            },
+            "encode-wait": {
+              "count": 120,
+              "totalMs": 50427.80000022054,
+              "latestMs": 293.7999999821186,
+              "medianMs": 413.19999998807907,
+              "p95Ms": 606.1000000238419,
+              "maxMs": 2207.4000000059605,
+              "windowSamples": 120
+            }
+          },
+          "counters": {
+            "frames": 120
+          }
+        }
+      },
+      "finalizationMs": 391.09999999403954,
+      "totalMs": 51871.59999999404,
+      "bytes": 1915451,
+      "selection": {
+        "codec": "avc",
+        "quality": {
+          "_preferBitrate": false,
+          "_bitrate": 4000000,
+          "_bitrateMode": "variable"
+        },
+        "hardwareAcceleration": "prefer-software",
+        "bitrateMode": "variable",
+        "hardwareEncoderCheck": "unsupported",
+        "hardwareEncoderError": null
+      },
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36"
+    },
+    "before-repeat": {
+      "mode": "orbit",
+      "count": 120,
+      "setupMs": 166.80000001192093,
+      "stats": {
+        "elapsedMs": 138543.59999999404,
+        "decodeMs": 59.19999983906746,
+        "renderMs": 1859.0999999642372,
+        "encoderBackpressureMs": 136562.80000016093,
+        "engine": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "decode": {
+              "count": 120,
+              "totalMs": 59.19999983906746,
+              "latestMs": 0.09999999403953552,
+              "medianMs": 0,
+              "p95Ms": 0.09999999403953552,
+              "maxMs": 56.39999997615814,
+              "windowSamples": 120
+            },
+            "render": {
+              "count": 120,
+              "totalMs": 1859.0999999642372,
+              "latestMs": 3.5,
+              "medianMs": 12,
+              "p95Ms": 34.29999998211861,
+              "maxMs": 326.59999999403954,
+              "windowSamples": 120
+            },
+            "encode-wait": {
+              "count": 120,
+              "totalMs": 136562.80000016093,
+              "latestMs": 500.59999999403954,
+              "medianMs": 1361.0999999940395,
+              "p95Ms": 1885,
+              "maxMs": 2272.5,
+              "windowSamples": 120
+            }
+          },
+          "counters": {
+            "frames": 120
+          }
+        }
+      },
+      "finalizationMs": 448.09999999403954,
+      "totalMs": 139161.59999999404,
+      "bytes": 1909796,
+      "selection": {
+        "codec": "avc",
+        "quality": {
+          "_preferBitrate": false,
+          "_bitrate": 4000000,
+          "_bitrateMode": "variable"
+        },
+        "hardwareAcceleration": "prefer-software",
+        "bitrateMode": "variable",
+        "hardwareEncoderCheck": "unsupported",
+        "hardwareEncoderError": null
+      },
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36"
+    },
+    "after-repeat": {
+      "mode": "orbit",
+      "withCursor": false,
+      "count": 120,
+      "encodedPackets": 120,
+      "setupMs": 81.09999999403954,
+      "stats": {
+        "elapsedMs": 62557.19999998808,
+        "decodeMs": 83.80000004172325,
+        "renderMs": 1138.8999998569489,
+        "encoderBackpressureMs": 61282.200000047684,
+        "engine": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "decode": {
+              "count": 120,
+              "totalMs": 83.80000004172325,
+              "latestMs": 0,
+              "medianMs": 0,
+              "p95Ms": 0.10000002384185791,
+              "maxMs": 81.7000000178814,
+              "windowSamples": 120
+            },
+            "render": {
+              "count": 120,
+              "totalMs": 1138.8999998569489,
+              "latestMs": 3.699999988079071,
+              "medianMs": 4.9000000059604645,
+              "p95Ms": 17.400000005960464,
+              "maxMs": 325.30000001192093,
+              "windowSamples": 120
+            },
+            "encode-wait": {
+              "count": 120,
+              "totalMs": 61282.200000047684,
+              "latestMs": 443.39999997615814,
+              "medianMs": 495.5,
+              "p95Ms": 731.5,
+              "maxMs": 2864.4000000059605,
+              "windowSamples": 120
+            }
+          },
+          "counters": {
+            "frames": 120
+          }
+        }
+      },
+      "finalizationMs": 417.2999999821186,
+      "totalMs": 63058.19999998808,
+      "bytes": 1906494,
+      "selection": {
+        "codec": "avc",
+        "quality": {
+          "_preferBitrate": false,
+          "_bitrate": 4000000,
+          "_bitrateMode": "variable"
+        },
+        "hardwareAcceleration": "prefer-software",
+        "bitrateMode": "variable",
+        "hardwareEncoderCheck": "unsupported",
+        "hardwareEncoderError": null
+      },
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36"
+    },
+    "before-cursor": {
+      "mode": "orbit",
+      "withCursor": true,
+      "count": 120,
+      "encodedPackets": 120,
+      "setupMs": 64.7999999821186,
+      "stats": {
+        "elapsedMs": 150958.70000001788,
+        "decodeMs": 65.09999999403954,
+        "renderMs": 135748.2999999225,
+        "encoderBackpressureMs": 15084.100000143051,
+        "engine": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "decode": {
+              "count": 120,
+              "totalMs": 65.09999999403954,
+              "latestMs": 0,
+              "medianMs": 0,
+              "p95Ms": 0.10000002384185791,
+              "maxMs": 62.400000005960464,
+              "windowSamples": 120
+            },
+            "render": {
+              "count": 120,
+              "totalMs": 135748.2999999225,
+              "latestMs": 4,
+              "medianMs": 1444.8999999761581,
+              "p95Ms": 2221.0999999940395,
+              "maxMs": 3005.5,
+              "windowSamples": 120
+            },
+            "encode-wait": {
+              "count": 120,
+              "totalMs": 15084.100000143051,
+              "latestMs": 536.4000000059605,
+              "medianMs": 1.199999988079071,
+              "p95Ms": 1575.4000000059605,
+              "maxMs": 1866.5999999940395,
+              "windowSamples": 120
+            }
+          },
+          "counters": {
+            "frames": 120
+          }
+        }
+      },
+      "finalizationMs": 74.39999997615814,
+      "totalMs": 151542.39999997616,
+      "bytes": 1911522,
+      "selection": {
+        "codec": "avc",
+        "quality": {
+          "_preferBitrate": false,
+          "_bitrate": 4000000,
+          "_bitrateMode": "variable"
+        },
+        "hardwareAcceleration": "prefer-software",
+        "bitrateMode": "variable",
+        "hardwareEncoderCheck": "unsupported",
+        "hardwareEncoderError": null
+      },
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36"
+    },
+    "after-cursor": {
+      "mode": "orbit",
+      "withCursor": true,
+      "count": 120,
+      "encodedPackets": 120,
+      "setupMs": 57.20000001788139,
+      "stats": {
+        "elapsedMs": 69004.40000000596,
+        "decodeMs": 68.80000001192093,
+        "renderMs": 60207.29999998212,
+        "encoderBackpressureMs": 8660.099999904633,
+        "engine": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "decode": {
+              "count": 120,
+              "totalMs": 68.80000001192093,
+              "latestMs": 0,
+              "medianMs": 0,
+              "p95Ms": 0.10000002384185791,
+              "maxMs": 65,
+              "windowSamples": 120
+            },
+            "render": {
+              "count": 120,
+              "totalMs": 60207.29999998212,
+              "latestMs": 3,
+              "medianMs": 565.5999999940395,
+              "p95Ms": 817.1999999880791,
+              "maxMs": 1127.5,
+              "windowSamples": 120
+            },
+            "encode-wait": {
+              "count": 120,
+              "totalMs": 8660.099999904633,
+              "latestMs": 457.90000000596046,
+              "medianMs": 1.100000023841858,
+              "p95Ms": 573.5,
+              "maxMs": 1750.3999999761581,
+              "windowSamples": 120
+            }
+          },
+          "counters": {
+            "frames": 120
+          }
+        }
+      },
+      "finalizationMs": 88,
+      "totalMs": 69678.40000000596,
+      "bytes": 1914925,
+      "selection": {
+        "codec": "avc",
+        "quality": {
+          "_preferBitrate": false,
+          "_bitrate": 4000000,
+          "_bitrateMode": "variable"
+        },
+        "hardwareAcceleration": "prefer-software",
+        "bitrateMode": "variable",
+        "hardwareEncoderCheck": "unsupported",
+        "hardwareEncoderError": null
+      },
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36"
+    },
+    "before-flat": {
+      "mode": "flat",
+      "withCursor": false,
+      "count": 120,
+      "encodedPackets": 120,
+      "setupMs": 49.099999994039536,
+      "stats": {
+        "elapsedMs": 60946.80000001192,
+        "decodeMs": 80.70000010728836,
+        "renderMs": 1209.7999998629093,
+        "encoderBackpressureMs": 59613.40000003576,
+        "engine": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "decode": {
+              "count": 120,
+              "totalMs": 80.70000010728836,
+              "latestMs": 0,
+              "medianMs": 0,
+              "p95Ms": 0.10000002384185791,
+              "maxMs": 77.2999999821186,
+              "windowSamples": 120
+            },
+            "render": {
+              "count": 120,
+              "totalMs": 1209.7999998629093,
+              "latestMs": 3.300000011920929,
+              "medianMs": 9.099999994039536,
+              "p95Ms": 24.80000001192093,
+              "maxMs": 57.5,
+              "windowSamples": 120
+            },
+            "encode-wait": {
+              "count": 120,
+              "totalMs": 59613.40000003576,
+              "latestMs": 292.10000002384186,
+              "medianMs": 533.6999999880791,
+              "p95Ms": 699.2000000178814,
+              "maxMs": 1925.699999988079,
+              "windowSamples": 120
+            }
+          },
+          "counters": {
+            "frames": 120
+          }
+        }
+      },
+      "finalizationMs": 391,
+      "totalMs": 61389.69999998808,
+      "bytes": 1914544,
+      "selection": {
+        "codec": "avc",
+        "quality": {
+          "_preferBitrate": false,
+          "_bitrate": 4000000,
+          "_bitrateMode": "variable"
+        },
+        "hardwareAcceleration": "prefer-software",
+        "bitrateMode": "variable",
+        "hardwareEncoderCheck": "unsupported",
+        "hardwareEncoderError": null
+      },
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36"
+    },
+    "after-flat": {
+      "mode": "flat",
+      "withCursor": false,
+      "count": 120,
+      "encodedPackets": 120,
+      "setupMs": 40.60000002384186,
+      "stats": {
+        "elapsedMs": 62226.60000002384,
+        "decodeMs": 74.89999997615814,
+        "renderMs": 1137.6000001132488,
+        "encoderBackpressureMs": 60970.19999986887,
+        "engine": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "capacity": 120,
+          "stages": {
+            "decode": {
+              "count": 120,
+              "totalMs": 74.89999997615814,
+              "latestMs": 0,
+              "medianMs": 0,
+              "p95Ms": 0.09999999403953552,
+              "maxMs": 73,
+              "windowSamples": 120
+            },
+            "render": {
+              "count": 120,
+              "totalMs": 1137.6000001132488,
+              "latestMs": 3.5999999940395355,
+              "medianMs": 9.400000005960464,
+              "p95Ms": 19.900000005960464,
+              "maxMs": 40.400000005960464,
+              "windowSamples": 120
+            },
+            "encode-wait": {
+              "count": 120,
+              "totalMs": 60970.19999986887,
+              "latestMs": 406.5,
+              "medianMs": 548.5,
+              "p95Ms": 709.8000000119209,
+              "maxMs": 2564.199999988079,
+              "windowSamples": 120
+            }
+          },
+          "counters": {
+            "frames": 120
+          }
+        }
+      },
+      "finalizationMs": 485.40000000596046,
+      "totalMs": 62754.70000001788,
+      "bytes": 1919861,
+      "selection": {
+        "codec": "avc",
+        "quality": {
+          "_preferBitrate": false,
+          "_bitrate": 4000000,
+          "_bitrateMode": "variable"
+        },
+        "hardwareAcceleration": "prefer-software",
+        "bitrateMode": "variable",
+        "hardwareEncoderCheck": "unsupported",
+        "hardwareEncoderError": null
+      },
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36"
+    }
+  },
+  "frozenBundles": {
+    "before-frozen": "59d969ea48e372a8213a3fcccbbde649f48cbb0c833478f008c59bc5859b9494",
+    "after": "74142aa35ce6c773a3aba7ff059feb141e04ceeb1c1f1219955551b72cda558a"
+  }
+}

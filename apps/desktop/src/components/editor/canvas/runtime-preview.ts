@@ -132,6 +132,7 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
       });
       const cursorKey = [
         cursor.events,
+        cursor.hoverSync,
         props.motion.preset,
         props.motion.smoothing,
         props.motion.springMassMultiplier,
@@ -148,6 +149,7 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
           props.motion,
           frame?.width ?? size.width,
           frame?.height ?? size.height,
+          cursor.hoverSync,
         );
       }
       const visuals = new Map<string, RenderableMedia>();

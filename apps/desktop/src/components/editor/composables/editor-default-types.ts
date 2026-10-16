@@ -15,6 +15,7 @@ import type {
   ZoomTiltPreset,
 } from '@beam/engine/zoom/zoom-types';
 import type { CameraFramingPreset, CameraLayoutPreset } from '@beam/engine/shared/camera-layout-types';
+import type { OrbitCameraSettings } from '@beam/engine/zoom/orbit-camera-types';
 import type { ElementTextDefaults } from '../elements/element-text-default-types';
 
 export interface EditorPreferenceSnapshot {
@@ -70,6 +71,7 @@ export interface EditorPreferenceDefaults {
     tiltHorizontal?: number;
     tiltVertical?: number;
     tiltPreset?: ZoomTiltPreset;
+    orbitSettings?: OrbitCameraSettings;
   };
   zoomMotionBlur?: ZoomMotionBlurSettings;
 }

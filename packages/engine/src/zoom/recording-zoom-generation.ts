@@ -7,6 +7,7 @@ import { createSceneAnimator } from '../scene/scene-animation';
 import { createScenePointMapper } from '../scene/scene-spatial';
 import { buildAutomaticGlassElements } from './glass-generation';
 import type { ZoomGenerationOptions } from './glass-generation-types';
+import { applyRecordingZoomMode } from './recording-zoom-preference';
 import { buildAutomaticZoomElements } from '@beam/engine/zoom/zoom-suggestions';
 
 export function generateRecordingZooms(
@@ -63,7 +64,7 @@ export function generateRecordingZooms(
     } else generated = buildAutomaticZoomElements({ sessionId, telemetry: samples, durationMs, reserved: occupied });
     return generated.map((zoom) => ({
       ...zoom,
-      ...(options?.style === '3d' ? { projection: '3d' as const } : {}),
+      ...(options?.style === '3d' || options?.style === 'orbit' ? applyRecordingZoomMode(zoom, options.style) : {}),
       id: allocateId(`${zoom.id}:${clip.id}`),
       linkedClipId: clip.id,
       startMs: zoom.startMs + clip.timelineStartMs,

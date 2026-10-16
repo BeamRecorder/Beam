@@ -1,12 +1,50 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
-import { createZoomMotionBlurSamplePlan } from '@beam/engine/zoom/zoom-motion-blur';
+import { createZoomMotionBlurSamplePlan, createCameraMotionBlurPlan } from '@beam/engine/zoom/zoom-motion-blur';
 import {
   compositeIsolatedMotionBlurSample,
   type MotionBlurSurface,
 } from '@beam/runtime/zoom/zoom-motion-blur-compositor';
 
 const camera = (focusX: number, focusY: number, scale: number) => ({ focusX, focusY, scale });
+it('samples actual orbit poses during a fixed physical camera exposure', () => {
+  const sampleAt = (timeMs: number) => ({
+    focus: { cx: 0.5, cy: 0.5 },
+    scale: 1,
+    orbit: { azimuth: timeMs / 1000, elevation: 0, distance: 4, strength: 1 },
+  });
+  const blurred = createCameraMotionBlurPlan({
+    sampleAt,
+    timeMs: 500,
+    intensity: 1,
+    viewportWidth: 1920,
+    viewportHeight: 1080,
+  });
+  expect(blurred).toHaveLength(3);
+  expect(blurred[0]!.camera.orbit!.azimuth).toBeLessThan(0.5);
+  expect(blurred.at(-1)!.camera.orbit!.azimuth).toBeGreaterThan(0.5);
+  expect(blurred.reduce((sum, p) => sum + p.weight, 0)).toBeCloseTo(1, 12);
+  expect(
+    createCameraMotionBlurPlan({ sampleAt, timeMs: 500, intensity: 0, viewportWidth: 1920, viewportHeight: 1080 }),
+  ).toEqual([{ camera: { ...camera(0.5, 0.5, 1), tiltX: 0, tiltY: 0, orbit: sampleAt(500).orbit }, weight: 1 }]);
+});
+it('blends the exposure as an orbit begins or ends without dropping its pose', () => {
+  const orbit = { azimuth: 0.2, elevation: 0.1, distance: 3, strength: 1 };
+  for (const [previous, current] of [
+    [{ ...camera(0.5, 0.5, 1), orbit }, camera(0.5, 0.5, 1)],
+    [camera(0.5, 0.5, 1), { ...camera(0.5, 0.5, 1), orbit }],
+  ]) {
+    const samples = createZoomMotionBlurSamplePlan({
+      previous: previous!,
+      current: current!,
+      intensity: 1,
+      deltaMs: 16,
+      sampleCount: 5,
+    });
+    expect(samples).toHaveLength(5);
+    expect(samples.every((p) => Number.isFinite(p.camera.orbit!.azimuth))).toBe(true);
+  }
+});
 type MotionBlurPlanOptions = Parameters<typeof createZoomMotionBlurSamplePlan>[0] & {
   viewportWidth: number;
   viewportHeight: number;
@@ -23,6 +61,40 @@ const planForPixelMovement = (previousX: number, currentX: number, intensity = 0
   } as MotionBlurPlanOptions);
 
 describe('zoom motion-blur sample plan', () => {
+  it('bounds pathological numbers, missing viewports and odd sample counts', () => {
+    const invalid = { focusX: NaN, focusY: Infinity, scale: NaN, tiltX: 0, tiltY: 0 };
+    expect(
+      createZoomMotionBlurSamplePlan({ previous: invalid, current: invalid, intensity: NaN, deltaMs: 16 }),
+    ).toEqual([{ camera: { focusX: 0.5, focusY: 0.5, scale: 1, tiltX: 0, tiltY: 0 }, weight: 1 }]);
+    const moving = { previous: camera(0.2, 0.2, 1), current: camera(0.8, 0.8, 2), intensity: 0.5, deltaMs: 16 };
+    expect(createZoomMotionBlurSamplePlan(moving)).toHaveLength(3);
+    expect(createZoomMotionBlurSamplePlan({ ...moving, intensity: 0.9 })).toHaveLength(5);
+    expect(createZoomMotionBlurSamplePlan({ ...moving, sampleCount: 4 })).toHaveLength(5);
+    expect(createZoomMotionBlurSamplePlan({ ...moving, sampleCount: 100 })).toHaveLength(5);
+    expect(createZoomMotionBlurSamplePlan({ ...moving, viewportWidth: NaN, viewportHeight: NaN })).toHaveLength(3);
+    expect(createZoomMotionBlurSamplePlan({ ...moving, deltaMs: 0 })).toHaveLength(1);
+  });
+  it('uses explicit center poses and clamps pre-roll source sampling', () => {
+    const sampleAt = vi.fn((timeMs: number) => ({
+      focus: { cx: 0.5 + timeMs / 1000, cy: 0.5 },
+      scale: 1,
+      tiltX: 0.2,
+      tiltY: -0.2,
+    }));
+    const center = { focus: { cx: 0.5, cy: 0.5 }, scale: 1, tiltX: 0.2, tiltY: -0.2 };
+    const samples = createCameraMotionBlurPlan({
+      sampleAt,
+      center,
+      timeMs: 0,
+      intensity: 1,
+      sampleCount: 3,
+      viewportWidth: 1920,
+      viewportHeight: 1080,
+    });
+    expect(sampleAt.mock.calls[0]![0]).toBe(0);
+    expect(samples).toHaveLength(3);
+    expect(samples[0]!.camera.focusX).toBe(0.5);
+  });
   it('collapses an idle camera or zero intensity to one fully weighted sample', () => {
     const current = camera(0.5, 0.5, 1.5);
 
@@ -344,4 +416,34 @@ describe('zoom motion-blur sample plan', () => {
     expect(first.every(({ weight }) => weight >= 0 && weight <= 1)).toBe(true);
     expect(first.reduce((total, { weight }) => total + weight, 0)).toBeCloseTo(1, 12);
   });
+});
+
+it('preserves authored zoom and the reference lens through every camera exposure sample', () => {
+  const sampleAt = (timeMs: number) => ({
+    focus: { cx: 0.5, cy: 0.5 },
+    scale: 1.25 + timeMs / 1000,
+    orbit: {
+      azimuth: 0.2,
+      elevation: 0.1,
+      distance: 2,
+      framingDistance: 3,
+      zoomScale: 1.25 + timeMs / 1000,
+      strength: 1,
+    },
+  });
+  const samples = createCameraMotionBlurPlan({
+    sampleAt,
+    timeMs: 500,
+    intensity: 1,
+    sampleCount: 5,
+    viewportWidth: 1920,
+    viewportHeight: 1080,
+  });
+  expect(samples).toHaveLength(5);
+  for (const sample of samples) {
+    expect(sample.camera.orbit!.zoomScale).toBeCloseTo(sample.camera.scale, 12);
+    expect(sample.camera.orbit!.framingDistance).toBe(3);
+  }
+  expect(samples[0]!.camera.orbit!.zoomScale).toBeLessThan(1.75);
+  expect(samples.at(-1)!.camera.orbit!.zoomScale).toBeGreaterThan(1.75);
 });

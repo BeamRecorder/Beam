@@ -1,5 +1,6 @@
 import type { ZoomTiltDirectionPreset } from '@beam/engine/zoom/zoom-tilt-preset-types';
 import type { GlassHighlightSettings } from './glass-highlight-types';
+import type { OrbitCameraSettings } from './orbit-camera-types';
 
 export interface ZoomFocus {
   cx: number;
@@ -8,7 +9,7 @@ export interface ZoomFocus {
 
 export type ZoomDepth = 1 | 2 | 3 | 4 | 5 | 6;
 export type ZoomMode = 'auto' | 'manual';
-export type ZoomProjection = '2d' | '3d';
+export type ZoomProjection = '2d' | '3d' | 'orbit';
 export type ZoomStyle = ZoomProjection | 'glass';
 export type ZoomTiltPreset = 'small' | 'medium' | 'large' | 'custom' | ZoomTiltDirectionPreset;
 
@@ -40,6 +41,9 @@ export interface ZoomElement {
   glass?: GlassHighlightSettings;
   /** Missing only in projects saved before perspective zooms were introduced. */
   projection?: ZoomProjection;
+  /** New shot plans use a critical-spring envelope on the timeline clock. */
+  transition?: 'cinematic';
+  orbitSettings?: OrbitCameraSettings;
   /** Normalized perspective strength. Missing values use the product default. */
   tiltIntensity?: number;
   /** Signed left/right and up/down perspective axes, normalized from -1 to 1. */
@@ -58,6 +62,9 @@ export interface AppliedZoom {
   tilt: number;
   tiltHorizontal?: number;
   tiltVertical?: number;
+  orbit?: number;
+  cinematic?: boolean;
+  orbitSettings?: OrbitCameraSettings;
 }
 
 export type ZoomFocusMapper = (focus: ZoomFocus, zoom: AppliedZoom, timeMs: number) => ZoomFocus;
@@ -125,7 +132,8 @@ export const DEFAULT_ZOOM_TILT_VERTICAL = -0.35;
 export const DEFAULT_ZOOM_TILT_PRESET: ZoomTiltPreset = 'medium';
 export const ZOOM_TILT_PRESET_INTENSITIES = { small: 0.3, medium: 0.6, large: 1 } as const;
 
-export const normalizeZoomProjection = (value: unknown): ZoomProjection => (value === '3d' ? '3d' : '2d');
+export const normalizeZoomProjection = (value: unknown): ZoomProjection =>
+  value === '3d' || value === 'orbit' ? value : '2d';
 export const normalizeZoomTiltIntensity = (value: unknown): number =>
   typeof value === 'number' && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : DEFAULT_ZOOM_TILT_INTENSITY;
 export const normalizeZoomTiltAxis = (value: unknown, fallback: number): number =>

@@ -1,5 +1,6 @@
 import type { CursorEvent } from '@beam/engine/capture/capture-session';
 import type { CursorMotionSettings } from '@beam/engine/capture/cursor-settings';
+import { createCursorVisibleSince } from './cursor-visibility';
 
 interface StopSpring {
   timeSeconds: number;
@@ -21,6 +22,7 @@ export function createCursorStopSpring(
   if (!settings.stopSpringEnabled || settings.stopSpringStrength <= 0) return () => ({ x: 0, y: 0, active: false });
 
   const moves = events.filter((event) => event.event === 'move').sort((a, b) => a.sessionNs - b.sessionNs);
+  const visibleSinceAt = createCursorVisibleSince(events);
   const buttonTimes = events
     .filter((event) => event.event === 'button')
     .map(timeOf)
@@ -33,6 +35,8 @@ export function createCursorStopSpring(
     const current = moves[index]!;
     const next = moves[index + 1];
     const stopTime = timeOf(current);
+    const visibleSince = visibleSinceAt(stopTime);
+    if (visibleSince === null) continue;
     // A long gap between different positions is a pause; a short gap is
     // continuous movement. Repeated positions also mark a stop.
     if (
@@ -48,6 +52,7 @@ export function createCursorStopSpring(
     let beforeIndex = index - 1;
     while (beforeIndex > 0 && stopTime - timeOf(moves[beforeIndex]!) < 0.12) beforeIndex -= 1;
     const before = moves[beforeIndex]!;
+    if (timeOf(before) < visibleSince) continue;
     const dx = (current.normalizedX - before.normalizedX) * sourceWidth;
     const dy = (current.normalizedY - before.normalizedY) * sourceHeight;
     const distance = Math.hypot(dx, dy);
@@ -89,7 +94,15 @@ export function createCursorStopSpring(
       else high = middle;
     }
     const spring = springs[low - 1];
-    if (!spring || timeSeconds >= spring.endSeconds || isDraggingAt(timeSeconds)) return { x: 0, y: 0, active: false };
+    const since = visibleSinceAt(timeSeconds);
+    if (
+      !spring ||
+      since === null ||
+      since > spring.timeSeconds ||
+      timeSeconds >= spring.endSeconds ||
+      isDraggingAt(timeSeconds)
+    )
+      return { x: 0, y: 0, active: false };
     const elapsed = timeSeconds - spring.timeSeconds;
     const displacement = Math.sin(2 * Math.PI * 7 * elapsed) * Math.exp(-10 * elapsed);
     return { x: spring.x * displacement, y: spring.y * displacement, active: true };

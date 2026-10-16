@@ -162,7 +162,7 @@ it('maps automatic lenses to the output canvas and preserves trim/rate/linking',
       style: '3d',
       canvas: { width: 1920, height: 1080, showBackground: false },
     })[0]!.projection,
-  ).toBe('3d');
+  ).toBe('orbit');
   comp.clips[0]!.enabled = false;
   expect(generateRecordingZooms(comp, 'session', [click(3000)], [])).toEqual([]);
 });

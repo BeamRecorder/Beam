@@ -117,6 +117,7 @@
       "packages/engine/src/shared/animated-frame-schema.js",
       "packages/engine/src/capture/cursor-click-schema.js",
       "packages/engine/src/zoom/glass-highlight-schema.js",
+      "packages/engine/src/zoom/orbit-schema.js",
       "packages/engine/src/zoom/zoom-schema.js",
       "packages/engine/src/html/html-schema.js",
       "packages/runtime/src/html/playback-controller.cjs",

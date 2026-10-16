@@ -8,6 +8,7 @@ import {
 } from './zoom-types';
 import { cameraTiltForControls } from './composition-camera';
 import { clampFocusToScale } from './zoom-playback';
+import { orbitCameraPose } from './orbit-camera';
 
 export function createManualZoom(id: string, startMs: number, endMs: number): ZoomElement {
   return {
@@ -35,5 +36,22 @@ export function manualCameraZoom(zoom: ZoomElement) {
           normalizeZoomTiltAxis(zoom.tiltVertical, DEFAULT_ZOOM_TILT_VERTICAL),
         )
       : { tiltX: 0, tiltY: 0 };
-  return { scale, focus: clampFocusToScale(zoom.focus, scale), ...tilt };
+  return {
+    scale,
+    focus: clampFocusToScale(zoom.focus, scale),
+    ...tilt,
+    ...(zoom.projection === 'orbit'
+      ? {
+          orbit: orbitCameraPose({
+            timeMs: 0,
+            weight: 1,
+            intensity: normalizeZoomTiltIntensity(zoom.tiltIntensity),
+            settings: zoom.orbitSettings,
+            scale,
+            fixed: zoom.focus,
+            pointAt: () => null,
+          }),
+        }
+      : {}),
+  };
 }

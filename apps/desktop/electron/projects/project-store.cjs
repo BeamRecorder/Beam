@@ -118,6 +118,7 @@ function createProjectStore(
           timeMs: Math.max(0, sample.timeMs),
           cx: Math.max(0, Math.min(1, sample.cx)),
           cy: Math.max(0, Math.min(1, sample.cy)),
+          ...(typeof sample.visible === 'boolean' ? { visible: sample.visible } : {}),
           interactionType: ['move', 'click', 'double-click', 'right-click', 'middle-click', 'mouseup'].includes(
             sample.interactionType,
           )

@@ -60,6 +60,8 @@ export function createCompositionSnapshot(input: {
     cursor: cursor
       ? {
           available: cursor.available,
+          hoverSync: cursor.hoverSync,
+          hoverSources: cursor.hoverSources,
           events: cursor.events,
           telemetry: cursor.telemetry,
           shapes: cursor.shapes,

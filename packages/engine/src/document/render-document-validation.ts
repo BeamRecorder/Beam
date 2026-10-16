@@ -3,6 +3,8 @@ import { validateComposition } from '../commands/clip-composition-validation';
 import { validateCanvas, validateBackground } from './presentation-validation';
 import { assertJsonValue } from './json-value';
 import { validateGlassHighlight } from '../zoom/glass-highlight-schema.js';
+import { validateCursorHoverSync, validateCursorHoverSources } from '../cursor/cursor-hover-sync';
+import { validateZoomElement } from '../zoom/zoom-schema.js';
 
 export function validateRenderDocument(snapshot: CompositionSnapshot) {
   assertJsonValue(snapshot);
@@ -30,9 +32,17 @@ export function validateRenderDocument(snapshot: CompositionSnapshot) {
   )
     throw new TypeError('Invalid render document settings.');
   validateCanvas(snapshot.canvas);
+  if (snapshot.cursor.hoverSync !== undefined) validateCursorHoverSync(snapshot.cursor.hoverSync);
+  if (snapshot.cursor.hoverSources !== undefined) validateCursorHoverSources(snapshot.cursor.hoverSources);
+  if (
+    snapshot.cursorSettings.motion?.model3d !== undefined &&
+    typeof snapshot.cursorSettings.motion.model3d !== 'boolean'
+  )
+    throw new TypeError('Invalid cursor volume setting.');
   validateBackground(snapshot.background);
   const ids = new Set<string>();
   for (const zoom of snapshot.zooms) {
+    validateZoomElement(zoom);
     if (
       !zoom ||
       typeof zoom.id !== 'string' ||

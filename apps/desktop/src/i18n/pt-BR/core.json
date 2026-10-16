@@ -486,7 +486,9 @@
       "diagonalUp": "na diagonal ↗",
       "diagonalDown": "na diagonal ↘"
     },
-    "cursorResize": "Redimensionar {direction}"
+    "cursorResize": "Redimensionar {direction}",
+    "model3d": "Cursor 3D",
+    "model3dDescription": "Adiciona profundidade, iluminação e contato ao clicar."
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Carregando prévia do vídeo",

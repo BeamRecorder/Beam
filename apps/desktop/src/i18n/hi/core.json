@@ -486,7 +486,9 @@
       "diagonalUp": "तिरछे ↗",
       "diagonalDown": "तिरछे ↘"
     },
-    "cursorResize": "आकार बदलें: {direction}"
+    "cursorResize": "आकार बदलें: {direction}",
+    "model3d": "3D कर्सर",
+    "model3dDescription": "गहराई, रोशनी और क्लिक पर संपर्क जोड़ता है।"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "वीडियो पूर्वावलोकन लोड हो रहा है",

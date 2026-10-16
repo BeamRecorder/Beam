@@ -35,7 +35,7 @@ export const layerSelectionPresentation = (
 ): LayerSelectionPresentation => {
   if (!selection) return { handleStyle: { display: 'none' } };
   const { layout, viewport } = selection;
-  const transform = { tiltX: viewport.tiltX ?? 0, tiltY: viewport.tiltY ?? 0 };
+  const transform = { tiltX: viewport.tiltX ?? 0, tiltY: viewport.tiltY ?? 0, orbit: viewport.orbit };
   if (!projectPerspective || !hasPerspectiveTilt(transform))
     return {
       handleStyle: {
@@ -108,7 +108,7 @@ export const perspectivePointerDelta = (
     width: viewport.dw,
     height: viewport.dh,
   };
-  const transform = { tiltX: viewport.tiltX ?? 0, tiltY: viewport.tiltY ?? 0 };
+  const transform = { tiltX: viewport.tiltX ?? 0, tiltY: viewport.tiltY ?? 0, orbit: viewport.orbit };
   if (!hasPerspectiveTilt(transform)) return screenDelta;
   const bounds = {
     x: viewport.dx,

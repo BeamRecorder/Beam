@@ -28,6 +28,13 @@ const capture = vi.hoisted(() => ({
 vi.mock('~/api/capture', () => ({ capture }));
 
 describe('CursorPanel', () => {
+  it('toggles cursor volume without changing movement settings', async () => {
+    const motion = { ...createDefaultCursorMotionSettings(), preset: 'custom' as const, smoothing: 0.45 };
+    const wrapper = mountPanel({ motion });
+    await wrapper.get('.volume-option button').trigger('click');
+    expect(wrapper.emitted('update:motion')![0]![0]).toEqual({ ...motion, model3d: true });
+    wrapper.unmount();
+  });
   beforeEach(() => {
     setActivePinia(createPinia());
     capture.pickCursorPackImport.mockReset();

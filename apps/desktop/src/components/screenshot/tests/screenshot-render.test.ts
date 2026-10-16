@@ -52,8 +52,10 @@ let canvasConvertError: Error | null = null;
 let arrayBufferResult: Promise<ArrayBuffer> | null = null;
 let offscreenCanvases: Array<{ width: number; height: number }> = [];
 
-const context = (canvas: object = {}) =>
+const context = (canvas: object = { width: 1000, height: 500 }) =>
   ({
+    getTransform: vi.fn(() => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 })),
+    setTransform: vi.fn(),
     clearRect: vi.fn(),
     drawImage: vi.fn(),
     save: vi.fn(),

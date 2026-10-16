@@ -168,6 +168,20 @@ it('delegates completed frames and caches camera/motion until their inputs chang
   draw(null, 201, 101);
   expect(state.camera).toHaveBeenCalledTimes(2);
 });
+it('updates the retained motion player when background hover analysis arrives', () => {
+  const { draw, options } = host();
+  const cursor = snapshot().cursor;
+  options.props.editorData = { cursor } as NonNullable<typeof options.props.editorData>;
+  draw();
+  expect(state.motion.mock.lastCall?.[4]).toBeUndefined();
+  cursor.hoverSync = { version: 1, ranges: [{ startSeconds: 0.2, endSeconds: 0.8 }] };
+  draw();
+  expect(state.motion).toHaveBeenCalledTimes(2);
+  expect(state.motion.mock.lastCall?.[4]).toBe(cursor.hoverSync);
+  draw();
+  expect(state.motion).toHaveBeenCalledTimes(2);
+  expect(state.camera).toHaveBeenCalledOnce();
+});
 it('passes raw immutable capture data and borrows camera history across a late timeline draft', () => {
   const { options, draw } = host();
   options.props.composition = reactive(options.props.composition);

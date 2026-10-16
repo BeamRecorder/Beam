@@ -73,6 +73,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
   const customCursorImage = ref<HTMLImageElement | null>(null);
   const cursorBounds = shallowRef<CursorCanvasBounds | null>(null);
   let motionPlayer: ReturnType<typeof createCursorMotionPlayer> | null = null;
+  let hoverSync: ProjectEditorData['cursor']['hoverSync'];
   let motionPlayerEvents: ProjectEditorData['cursor']['events'] | null = null;
   let motionPlayerKey = '';
   let sampledPlayer: ReturnType<typeof createCursorMotionPlayer> | null = null;
@@ -202,8 +203,10 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
   const playerFor = (events: ProjectEditorData['cursor']['events'], videoWidth: number, videoHeight: number) => {
     const motion = options.motion();
     const key = `${events.length}:${events.at(-1)?.sessionNs ?? 0}:${videoWidth}:${videoHeight}:${motion.preset}:${motion.smoothing}:${motion.springMassMultiplier}:${motion.motionBlur}:${motion.stopSpringEnabled}:${motion.stopSpringStrength}`;
-    if (!motionPlayer || motionPlayerEvents !== events || motionPlayerKey !== key) {
-      motionPlayer = createCursorMotionPlayer(events, motion, videoWidth, videoHeight);
+    const nextSync = options.editorData()?.cursor.hoverSync;
+    if (!motionPlayer || motionPlayerEvents !== events || motionPlayerKey !== key || hoverSync !== nextSync) {
+      hoverSync = nextSync;
+      motionPlayer = createCursorMotionPlayer(events, motion, videoWidth, videoHeight, nextSync);
       motionPlayerEvents = events;
       motionPlayerKey = key;
       sampledPlayer = null;

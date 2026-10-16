@@ -1,6 +1,11 @@
+import type { OrbitCameraPose } from './orbit-camera-types';
+import { orbitCameraPoint, orbitCameraCoverScale } from './orbit-camera';
+import type { MediaRect } from '../shared/geometry-types';
+
 export interface PerspectiveTransform {
   tiltX: number;
   tiltY: number;
+  orbit?: OrbitCameraPose;
 }
 
 export interface ProjectedPoint {
@@ -34,6 +39,7 @@ function homogeneousPoint(u: number, v: number, aspect: number, transform: Persp
   const yawZ = -Math.sin(tiltY) * x;
   const pitchY = Math.cos(tiltX) * y - Math.sin(tiltX) * yawZ;
   const pitchZ = Math.sin(tiltX) * y + Math.cos(tiltX) * yawZ;
+  if (transform.orbit) return orbitCameraPoint(yawX, pitchY, pitchZ, aspect, transform.orbit);
   return {
     x: yawX / aspect,
     y: pitchY,
@@ -77,6 +83,7 @@ function quadAtScale(aspect: number, transform: PerspectiveTransform, scale: num
 
 export function perspectiveCoverScale(width: number, height: number, transform: PerspectiveTransform): number {
   const aspect = Math.max(1e-6, width / Math.max(1e-6, height));
+  if (transform.orbit) return orbitCameraCoverScale(aspect, transform.orbit);
   const coversViewport = (scale: number) => {
     const quad = quadAtScale(aspect, transform, scale);
     return TARGET_CORNERS.every((corner) => pointInsideConvexQuad(corner, quad));
@@ -97,6 +104,8 @@ export function createPerspectiveGeometry(
   width: number,
   height: number,
   transform: PerspectiveTransform,
+  /** Location of the complete texture plane in normalized viewport coordinates. */
+  plane: MediaRect = { x: 0, y: 0, width: 1, height: 1 },
 ): PerspectiveGeometry {
   const aspect = Math.max(1e-6, width / Math.max(1e-6, height));
   const coverScale = perspectiveCoverScale(width, height, transform);
@@ -108,7 +117,7 @@ export function createPerspectiveGeometry(
     [1, 1],
   ] as const;
   corners.forEach(([u, v], index) => {
-    const point = homogeneousPoint(u, v, aspect, transform);
+    const point = homogeneousPoint(plane.x + u * plane.width, plane.y + v * plane.height, aspect, transform);
     const offset = index * 4;
     positions[offset] = point.x * coverScale;
     positions[offset + 1] = point.y * coverScale;
@@ -142,6 +151,25 @@ export function unprojectPerspectivePoint(
   const width = Math.max(1e-6, bounds.width);
   const height = Math.max(1e-6, bounds.height);
   const aspect = width / height;
+  if (transform.orbit) {
+    const a = homogeneousPoint(0, 0, aspect, transform),
+      b = homogeneousPoint(1, 0, aspect, transform),
+      c = homogeneousPoint(0, 1, aspect, transform);
+    const x = (((point.x - bounds.x) / width) * 2 - 1) / coverScale;
+    const y = (1 - ((point.y - bounds.y) / height) * 2) / coverScale;
+    const A = b.x - a.x - x * (b.w - a.w),
+      B = c.x - a.x - x * (c.w - a.w),
+      C = x * a.w - a.x;
+    const D = b.y - a.y - y * (b.w - a.w),
+      E = c.y - a.y - y * (c.w - a.w),
+      F = y * a.w - a.y;
+    const determinant = A * E - B * D;
+    if (Math.abs(determinant) < 1e-8) throw new RangeError('Orbit camera projection is singular.');
+    return {
+      x: bounds.x + ((C * E - B * F) / determinant) * width,
+      y: bounds.y + ((A * F - C * D) / determinant) * height,
+    };
+  }
   const tiltX = clampTilt(transform.tiltX);
   const tiltY = clampTilt(transform.tiltY);
   const projectedX = (((point.x - bounds.x) / width) * 2 - 1) / Math.max(1e-6, coverScale);
@@ -165,4 +193,6 @@ export function unprojectPerspectivePoint(
 }
 
 export const hasPerspectiveTilt = (transform: PerspectiveTransform) =>
-  Math.abs(transform.tiltX) > 0.000_01 || Math.abs(transform.tiltY) > 0.000_01;
+  Math.abs(transform.tiltX) > 0.000_01 ||
+  Math.abs(transform.tiltY) > 0.000_01 ||
+  (transform.orbit?.strength ?? 0) > 0.00001;

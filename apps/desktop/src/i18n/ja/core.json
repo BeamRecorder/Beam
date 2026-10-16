@@ -486,7 +486,9 @@
       "diagonalUp": "斜め ↗",
       "diagonalDown": "斜め ↘"
     },
-    "cursorResize": "サイズ変更（{direction}）"
+    "cursorResize": "サイズ変更（{direction}）",
+    "model3d": "3Dカーソル",
+    "model3dDescription": "奥行き、照明、クリック時の接触を追加します。"
   },
   "EditorCanvas": {
     "videoPreviewLoading": "動画プレビューを読み込み中",

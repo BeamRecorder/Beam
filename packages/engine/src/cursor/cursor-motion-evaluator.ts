@@ -1,4 +1,6 @@
 import type { CursorMotionSettings } from '@beam/engine/capture/cursor-settings';
+import type { CursorHoverSync } from './cursor-hover-types';
+import { cursorHoverWeightAt } from './cursor-hover-sync';
 
 interface Point {
   x: number;
@@ -25,12 +27,14 @@ export interface CursorMotionEvaluation {
 }
 
 interface CursorMotionEvaluatorInputs {
+  hoverSync?: CursorHoverSync;
   settings: CursorMotionSettings;
   targetAt: (timeSeconds: number) => Point | null;
   directTargetAt: (timeSeconds: number) => Point | null;
   isDraggingAt: (timeSeconds: number) => boolean;
   buttonTimes: readonly number[];
   stopSpringAt: (timeSeconds: number) => Point & { active: boolean };
+  visibleSinceAt?: (timeSeconds: number) => number | null;
 }
 
 const STEP_SECONDS = 1 / 120;
@@ -135,7 +139,9 @@ export function createDeterministicCursorMotionEvaluator(inputs: CursorMotionEva
       const previousTime = (step - 1) * STEP_SECONDS;
       const direct = inputs.isDraggingAt(time) ? inputs.directTargetAt(time) : null;
       const target = direct ?? inputs.targetAt(time) ?? { x: state.x.position, y: state.y.position };
-      if (direct || buttonSteps.has(step)) {
+      const visibleSince = inputs.visibleSinceAt?.(time);
+      const reappeared = visibleSince !== null && visibleSince !== undefined && visibleSince > previousTime;
+      if (direct || buttonSteps.has(step) || reappeared) {
         state = {
           x: { position: target.x, velocity: 0 },
           y: { position: target.y, velocity: 0 },
@@ -152,8 +158,12 @@ export function createDeterministicCursorMotionEvaluator(inputs: CursorMotionEva
 
   const basePointAt = (timeSeconds: number): Point => {
     const time = Math.max(0, Number.isFinite(timeSeconds) ? timeSeconds : 0);
-    if (inputs.settings.smoothing <= 0) return inputs.directTargetAt(time) ?? inputs.targetAt(time) ?? { x: 0, y: 0 };
+    if (inputs.settings.smoothing <= 0 || inputs.isDraggingAt(time))
+      return inputs.directTargetAt(time) ?? inputs.targetAt(time) ?? { x: 0, y: 0 };
     const lowerStep = Math.floor(time / STEP_SECONDS);
+    const visibleSince = inputs.visibleSinceAt?.(time);
+    if (visibleSince !== null && visibleSince !== undefined && visibleSince > lowerStep * STEP_SECONDS)
+      return inputs.directTargetAt(time) ?? inputs.targetAt(time) ?? { x: 0, y: 0 };
     const progress = time / STEP_SECONDS - lowerStep;
     const lower = stateAtStep(lowerStep);
     if (progress <= 0.000_000_1) return { x: lower.x.position, y: lower.y.position };
@@ -167,7 +177,13 @@ export function createDeterministicCursorMotionEvaluator(inputs: CursorMotionEva
   const pointAt = (timeSeconds: number): Point => {
     const base = basePointAt(timeSeconds);
     const offset = inputs.stopSpringAt(timeSeconds);
-    return { x: clamp01(base.x + offset.x), y: clamp01(base.y + offset.y) };
+    const weight = cursorHoverWeightAt(inputs.hoverSync, timeSeconds);
+    if (weight === 0) return { x: clamp01(base.x + offset.x), y: clamp01(base.y + offset.y) };
+    const recorded = inputs.directTargetAt(timeSeconds) ?? base;
+    return {
+      x: clamp01((base.x + offset.x) * (1 - weight) + recorded.x * weight),
+      y: clamp01((base.y + offset.y) * (1 - weight) + recorded.y * weight),
+    };
   };
 
   return {
@@ -175,13 +191,17 @@ export function createDeterministicCursorMotionEvaluator(inputs: CursorMotionEva
       const time = Math.max(0, Number.isFinite(timeSeconds) ? timeSeconds : 0);
       const previousTime = Math.max(0, time - VELOCITY_WINDOW_SECONDS);
       const current = pointAt(time);
-      const previous = pointAt(previousTime);
+      const visibleSince = inputs.visibleSinceAt?.(time);
+      const previous =
+        visibleSince !== null && visibleSince !== undefined && previousTime < visibleSince
+          ? current
+          : pointAt(previousTime);
       return {
         ...current,
         previousX: previous.x,
         previousY: previous.y,
         deltaSeconds: time - previousTime,
-        stopSpringActive: inputs.stopSpringAt(time).active,
+        stopSpringActive: cursorHoverWeightAt(inputs.hoverSync, time) < 1 && inputs.stopSpringAt(time).active,
       };
     },
     reset,

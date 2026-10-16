@@ -67,9 +67,10 @@ export function updateAutoFollowTarget(
   }
   if (state.reachedFullZoom && strength < 0.99) return clampFocusToScale(state.frozenTarget, scale);
   if (!cursor) return state.target;
-  if (state.settings.directionLock && timeMs < state.lockUntilMs) return state.target;
-
   const visibleHalfExtent = 1 / (2 * Math.max(1, scale));
+  const nearEdge =
+    Math.max(Math.abs(cursor.cx - state.target.cx), Math.abs(cursor.cy - state.target.cy)) > visibleHalfExtent * 0.9;
+  if (state.settings.directionLock && timeMs < state.lockUntilMs && !nearEdge) return state.target;
   const safeHalfExtent = visibleHalfExtent * state.settings.safeZone;
   const hysteresis = visibleHalfExtent * FOLLOW_HYSTERESIS_RATIO;
   const next = clampFocusToScale(

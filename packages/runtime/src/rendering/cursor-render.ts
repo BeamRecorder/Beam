@@ -1,10 +1,8 @@
 import type { VisualClip } from '@beam/engine/shared/composition-types';
 import { cursorClickSpringScale } from '@beam/engine/cursor/cursor-click-spring';
-import {
-  createCursorMotionPlayer,
-  cursorMotionBlurTrail,
-  type CursorMotionSample,
-} from '@beam/engine/cursor/cursor-motion';
+import { createCursorMotionPlayer, type CursorMotionSample } from '@beam/engine/cursor/cursor-motion';
+import { cursorExposureSamples } from '@beam/engine/cursor/cursor-exposure';
+import { drawGpuCursor } from './cursor-gpu-render';
 import {
   buttonEventsBetween,
   cursorAutoHideOpacityAt,
@@ -20,6 +18,8 @@ import { cursorRippleAt } from '@beam/engine/cursor/cursor-ripple';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import { transitionPointWithClip } from '@beam/runtime/composition/transitions/render-transition';
 import { createScenePointMapper } from '@beam/engine/scene/scene-spatial';
+import { hasPerspectiveTilt, projectPerspectivePoint } from '@beam/engine/zoom/perspective-projection';
+import type { CameraSample } from '@beam/engine/zoom/composition-camera-types';
 
 type CursorImage = HTMLImageElement | ImageBitmap;
 const usableImage = (image: CursorImage | undefined) => {
@@ -38,7 +38,7 @@ export function cursorPositionForKeyboardCaption(
   height: number,
   cursorImages: ReadonlyMap<string, CursorImage> | undefined,
   motionState: CursorMotionSample | null,
-  camera: { scale: number; focus: { cx: number; cy: number } },
+  camera: CameraSample,
 ) {
   const asset = snapshot.cursorPack
     ? cursorAssetAt(snapshot.cursorPack, snapshot.cursorSettings.selection, motionState)
@@ -64,10 +64,14 @@ export function cursorPositionForKeyboardCaption(
         timelineTimeMs,
       )
     : { cx: raw.x / width, cy: raw.y / height };
-  return {
+  const position = {
     x: width / 2 + camera.scale * (point.cx * width - camera.focus.cx * width),
     y: height / 2 + camera.scale * (point.cy * height - camera.focus.cy * height),
   };
+  const transform = { tiltX: camera.tiltX ?? 0, tiltY: camera.tiltY ?? 0, orbit: camera.orbit };
+  return hasPerspectiveTilt(transform)
+    ? projectPerspectivePoint(position, { x: 0, y: 0, width, height }, transform)
+    : position;
 }
 
 export function drawCursorLayer(
@@ -155,11 +159,58 @@ export function drawCursorLayer(
   const age = click ? Math.max(0, time - click.sessionNs / 1_000_000_000) : Infinity;
   const spring = click ? settingsForButton(click.button) : null;
   const clickScale = cursorClickSpringScale(age, Boolean(spring?.springEnabled), spring?.springIntensity ?? 0);
-  const trail = cursorMotionBlurTrail(motionCursor, settings.motion.motionBlur, { width, height });
+  const transform = ctx.getTransform();
+  const resolution = Math.max(1, Math.hypot(transform.a, transform.b), Math.hypot(transform.c, transform.d));
+  const trail = cursorExposureSamples({
+    time,
+    motion: motionCursor,
+    intensity: settings.motion.motionBlur,
+    width,
+    height,
+    resolution,
+    sourceRate: screen.freezeFrameSourceMs === undefined ? screen.playbackRate : 0,
+    sampleAt: (at) => cursorMotionPlayer.sample(at, cursorStateAt(snapshot.cursor.events, at)),
+  });
+  if (settings.motion.model3d || trail.length > 1) {
+    const animated = [1, 2, 3].filter((button) => settingsForButton(button)?.springEnabled);
+    ctx.save();
+    ctx.globalAlpha *= autoHideOpacity;
+    try {
+      drawGpuCursor(ctx, {
+        image: image!,
+        geometry: settings.motion.model3d
+          ? geometry
+          : {
+              width: geometry.width * clickScale,
+              height: geometry.height * clickScale,
+              hotspot: { x: geometry.hotspot.x * clickScale, y: geometry.hotspot.y * clickScale },
+            },
+        samples: trail.map((sample) => ({
+          ...positionAt({ ...motionCursor, x: sample.x, y: sample.y }),
+          weight: sample.weight,
+        })),
+        ...(settings.motion.model3d
+          ? {
+              volume: cursorMotionPlayer.modelPose(
+                time,
+                motionCursor,
+                animated,
+                (button) => (settingsForButton(button)?.springIntensity ?? 50) / 50,
+              ),
+            }
+          : {}),
+        shadow: { ...settings.shadow, blur: shadowBlur },
+        resolution,
+      });
+    } finally {
+      ctx.restore();
+    }
+    return;
+  }
   for (const sample of trail) {
     const samplePosition = positionAt({ ...motionCursor, x: sample.x, y: sample.y });
     ctx.save();
-    ctx.globalAlpha *= sample.alpha * autoHideOpacity;
+    ctx.globalAlpha *= sample.weight * autoHideOpacity;
     if (settings.shadow.enabled) {
       ctx.shadowColor = settings.shadow.color;
       ctx.shadowBlur = shadowBlur;

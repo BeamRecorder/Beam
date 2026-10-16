@@ -25,21 +25,23 @@ import { drawCanvasTransitionFrame } from '@beam/runtime/composition/transitions
 import { resolveScreenRenderGeometry } from '@beam/engine/composition/camera-layout';
 import { OUTPUT_FALLBACK_COLOR } from '@beam/engine/layout/output-canvas';
 import { createCameraMotionBlurPlan } from '@beam/engine/zoom/zoom-motion-blur';
-import { compositeIsolatedMotionBlurSample } from '@beam/runtime/zoom/zoom-motion-blur-compositor';
-import {
-  getExportMotionBlurSurface,
-  disposeExportMotionBlurSurface,
-} from '@beam/runtime/rendering/motion-blur-surface';
+import { renderExportMotionBlur, disposeExportMotionBlurSurface } from '@beam/runtime/rendering/motion-blur-surface';
 import { normalizeZoomMotionBlur } from '@beam/engine/zoom/zoom-types';
 import { sessionTimeAt } from '@beam/runtime/shared/index';
 import { drawExportGeneratedLayer } from '@beam/runtime/rendering/render-generated-layer';
 import { hasPerspectiveTilt } from '@beam/engine/zoom/perspective-projection';
-import { disposePerspectiveRenderer, renderPerspectiveLayers } from '@beam/runtime/rendering/perspective-render';
+import { disposeGpuCursor } from './cursor-gpu-render';
+import {
+  disposePerspectiveRenderer,
+  renderPerspectiveLayers,
+  renderPerspectiveSamples,
+} from '@beam/runtime/rendering/perspective-render';
 import {
   disposeCanvasTransitionSurface,
   getCanvasTransitionSurface,
 } from '@beam/runtime/rendering/canvas-transition-surface';
 import { createGpuShapeScope } from '@beam/runtime/composition/shape/ordered-gpu-shapes';
+import { perspectiveSourceBounds } from '../zoom/perspective-source';
 import { releaseCompositedLayerSurface } from '../composition/render-composited-layer';
 
 import type { RenderableMedia, CompositionVisuals } from '@beam/runtime/rendering/render-types';
@@ -172,81 +174,119 @@ function renderCompositionFrameContent(
     viewportWidth: width,
     viewportHeight: height,
   });
-  const drawCameraSample = (target: Canvas2DContext, blurSample: (typeof blurPlan)[number]) => {
+  const flatBackground = Boolean(camera.orbit || blurPlan.some((sample) => sample.camera.orbit));
+  if (flatBackground) drawSnapshotBackground(ctx, snapshot, background);
+  const sourceBounds = flatBackground
+    ? perspectiveSourceBounds(
+        snapshot.canvas,
+        layers.visualStack,
+        appearanceScale,
+        layers.scene,
+        (snapshot.cursorSettings.size + snapshot.cursorSettings.shadow.blur * 4) * appearanceScale,
+      )
+    : undefined;
+  const drawCameraSample = (target: Canvas2DContext, blurSample: (typeof blurPlan)[number], captureOnly = false) => {
     const sampleCamera = blurSample.camera;
-    target.save();
-    target.translate(width / 2, height / 2);
-    target.scale(sampleCamera.scale, sampleCamera.scale);
-    target.translate(-sampleCamera.focusX * width, -sampleCamera.focusY * height);
-    drawSnapshotBackground(target, snapshot, background);
-    drawSceneStack(target, layers.visualStack, layers.scene, { width, height }, (target, clips) =>
-      gpuShapes.render(target, (batch) => {
-        for (const clip of clips) {
-          if (isBlurClip(clip) && batch.tryBlur(clip, { x: 0, y: 0, width, height })) continue;
-          if (
-            isShapeClip(clip) &&
-            batch.tryShape(clip, { x: 0, y: 0, width, height }, () =>
-              drawExportGeneratedLayer(target, clip, timeMs, { width, height }),
+    const drawFlat = (target: Canvas2DContext) => {
+      const matrix = sampleCamera.orbit || captureOnly ? target.getTransform() : undefined;
+      const shadowPixelRatio = matrix ? Math.hypot(matrix.a, matrix.b) : 1;
+      target.save();
+      if (!sampleCamera.orbit && !captureOnly) {
+        target.translate(width / 2, height / 2);
+        target.scale(sampleCamera.scale, sampleCamera.scale);
+        target.translate(-sampleCamera.focusX * width, -sampleCamera.focusY * height);
+      }
+      if (!flatBackground) drawSnapshotBackground(target, snapshot, background);
+      drawSceneStack(target, layers.visualStack, layers.scene, { width, height }, (target, clips) =>
+        gpuShapes.render(target, (batch) => {
+          for (const clip of clips) {
+            if (isBlurClip(clip) && batch.tryBlur(clip, { x: 0, y: 0, width, height })) continue;
+            if (
+              isShapeClip(clip) &&
+              batch.tryShape(clip, { x: 0, y: 0, width, height }, () =>
+                drawExportGeneratedLayer(target, clip, timeMs, { width, height }),
+              )
             )
-          )
-            continue;
-          batch.flush();
-          if (clip.kind === 'screen') {
-            const media = clip.id === screen?.id ? screenMedia : visuals?.get(clip.id);
-            if (!media) continue;
-            drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () => {
-              drawScreenMedia(target, clip, media, snapshot.canvas, timeMs, appearanceScale);
-              if (layers.scene && clip.id === screen?.id && resolvedCursorMotionPlayer)
-                drawCursorLayer(
-                  target,
-                  snapshot,
-                  screenTime,
-                  clip,
-                  sourceWidth,
-                  sourceHeight,
-                  width,
-                  height,
-                  cursorImages,
-                  resolvedCursorMotionPlayer,
-                  cursorMotion,
-                  pixelScale,
-                );
-            });
-            continue;
+              continue;
+            batch.flush();
+            if (clip.kind === 'screen') {
+              const media = clip.id === screen?.id ? screenMedia : visuals?.get(clip.id);
+              if (!media) continue;
+              drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () => {
+                drawScreenMedia(target, clip, media, snapshot.canvas, timeMs, appearanceScale, shadowPixelRatio);
+                if (layers.scene && clip.id === screen?.id && resolvedCursorMotionPlayer)
+                  drawCursorLayer(
+                    target,
+                    snapshot,
+                    screenTime,
+                    clip,
+                    sourceWidth,
+                    sourceHeight,
+                    width,
+                    height,
+                    cursorImages,
+                    resolvedCursorMotionPlayer,
+                    cursorMotion,
+                    pixelScale,
+                  );
+              });
+              continue;
+            }
+            if (isColorClip(clip) || isShapeClip(clip)) {
+              drawExportGeneratedLayer(target, clip, timeMs, { width, height });
+              continue;
+            }
+            if (isBlurClip(clip)) {
+              drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
+                drawBlurClip(target, clip, snapshot.canvas),
+              );
+              continue;
+            }
+            const sourceVisual = visuals?.get(clip.id);
+            if (!sourceVisual) continue;
+            if (clip.kind === 'webcam')
+              drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
+                drawWebcamClip(target, clip, sourceVisual, snapshot.canvas, timeMs, appearanceScale, {
+                  scale: sampleCamera.scale,
+                  focusX: sampleCamera.focusX * width,
+                  focusY: sampleCamera.focusY * height,
+                }),
+              );
+            else
+              drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
+                drawVisualClip(target, clip, sourceVisual, snapshot.canvas, timeMs, appearanceScale, shadowPixelRatio),
+              );
           }
-          if (isColorClip(clip) || isShapeClip(clip)) {
-            drawExportGeneratedLayer(target, clip, timeMs, { width, height });
-            continue;
-          }
-          if (isBlurClip(clip)) {
-            drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
-              drawBlurClip(target, clip, snapshot.canvas),
-            );
-            continue;
-          }
-          const sourceVisual = visuals?.get(clip.id);
-          if (!sourceVisual) continue;
-          if (clip.kind === 'webcam')
-            drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
-              drawWebcamClip(target, clip, sourceVisual, snapshot.canvas, timeMs, appearanceScale, {
-                scale: sampleCamera.scale,
-                focusX: sampleCamera.focusX * width,
-                focusY: sampleCamera.focusY * height,
-              }),
-            );
-          else
-            drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
-              drawVisualClip(target, clip, sourceVisual, snapshot.canvas, timeMs, appearanceScale),
-            );
-        }
-      }),
-    );
-    target.restore();
+        }),
+      );
+      target.restore();
+    };
+    if (captureOnly) {
+      drawFlat(target);
+      return;
+    }
+    const transform = { tiltX: sampleCamera.tiltX ?? 0, tiltY: sampleCamera.tiltY ?? 0, orbit: sampleCamera.orbit };
+    if (sampleCamera.orbit || hasPerspectiveTilt(transform))
+      renderPerspectiveLayers({
+        target,
+        width,
+        height,
+        transform,
+        drawLayers: drawFlat,
+        ...(sampleCamera.orbit ? { camera: sampleCamera, sourceBounds } : {}),
+      });
+    else drawFlat(target);
   };
   const hasRenderableScreen = Boolean(screen && video && positionedMedia && source);
   const resolvedCursorMotionPlayer = hasRenderableScreen
     ? (cursorMotionPlayer ??
-      createCursorMotionPlayer(snapshot.cursor.events, snapshot.cursorSettings.motion, sourceWidth, sourceHeight))
+      createCursorMotionPlayer(
+        snapshot.cursor.events,
+        snapshot.cursorSettings.motion,
+        sourceWidth,
+        sourceHeight,
+        snapshot.cursor.hoverSync,
+      ))
     : null;
   const cursorMotion = resolvedCursorMotionPlayer
     ? resolvedCursorMotionPlayer.sample(screenTime, cursorStateAt(snapshot.cursor.events, screenTime))
@@ -269,66 +309,72 @@ function renderCompositionFrameContent(
   const drawCameraLayers = (target: Canvas2DContext) => {
     if (blurPlan.length === 1) {
       drawCameraSample(target, blurPlan[0]!);
+    } else if (
+      flatBackground &&
+      !layers.visualStack.some((clip) => clip.kind === 'webcam') &&
+      blurPlan.every(
+        (sample) =>
+          sample.camera.orbit ||
+          !hasPerspectiveTilt({ tiltX: sample.camera.tiltX ?? 0, tiltY: sample.camera.tiltY ?? 0 }),
+      )
+    ) {
+      renderPerspectiveSamples({
+        target,
+        width,
+        height,
+        sourceBounds: sourceBounds!,
+        samples: blurPlan,
+        drawLayers: (source) => drawCameraSample(source, blurPlan[Math.floor(blurPlan.length / 2)]!, true),
+      });
     } else {
-      const surface = getExportMotionBlurSurface(width, height);
-      if (!surface) {
-        drawCameraSample(target, blurPlan[Math.floor(blurPlan.length / 2)]!);
-      } else {
-        let accumulatedWeight = 0;
-        let composited = false;
-        for (const blurSample of blurPlan) {
-          const rendered = compositeIsolatedMotionBlurSample({
-            target,
-            surface,
-            logicalWidth: width,
-            logicalHeight: height,
-            pixelScale: 1,
-            sample: blurSample,
-            accumulatedWeight,
-            draw: (sampleTarget, sampleToDraw) => drawCameraSample(sampleTarget, sampleToDraw),
-          });
-          if (rendered) {
-            composited = true;
-            accumulatedWeight += blurSample.weight;
-          }
-        }
-        if (!composited) drawCameraSample(target, blurPlan[Math.floor(blurPlan.length / 2)]!);
-      }
+      renderExportMotionBlur(target, width, height, blurPlan, drawCameraSample);
     }
-    if (!layers.scene && hasRenderableScreen && screen && resolvedCursorMotionPlayer) {
-      target.save();
-      target.translate(width / 2, height / 2);
-      target.scale(scale, scale);
-      target.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
-      drawWithClipTransition(target, screen, timeMs, snapshot.canvas, () =>
-        drawCursorLayer(
+    if (
+      !layers.scene &&
+      hasRenderableScreen &&
+      screen &&
+      resolvedCursorMotionPlayer &&
+      snapshot.cursorSettings.enabled !== false
+    ) {
+      const drawCursor = (target: Canvas2DContext) => {
+        target.save();
+        if (!camera.orbit) {
+          target.translate(width / 2, height / 2);
+          target.scale(scale, scale);
+          target.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
+        }
+        drawWithClipTransition(target, screen, timeMs, snapshot.canvas, () =>
+          drawCursorLayer(
+            target,
+            snapshot,
+            screenTime,
+            screen,
+            sourceWidth,
+            sourceHeight,
+            width,
+            height,
+            cursorImages,
+            resolvedCursorMotionPlayer,
+            cursorMotion,
+            pixelScale,
+          ),
+        );
+        target.restore();
+      };
+      const transform = { tiltX: camera.tiltX ?? 0, tiltY: camera.tiltY ?? 0, orbit: camera.orbit };
+      if (camera.orbit || hasPerspectiveTilt(transform))
+        renderPerspectiveLayers({
           target,
-          snapshot,
-          screenTime,
-          screen,
-          sourceWidth,
-          sourceHeight,
           width,
           height,
-          cursorImages,
-          resolvedCursorMotionPlayer,
-          cursorMotion,
-          pixelScale,
-        ),
-      );
-      target.restore();
+          transform,
+          drawLayers: drawCursor,
+          ...(camera.orbit ? { camera: { scale, focusX: cameraFocus.cx, focusY: cameraFocus.cy }, sourceBounds } : {}),
+        });
+      else drawCursor(target);
     }
   };
-  const perspective = { tiltX: camera.tiltX ?? 0, tiltY: camera.tiltY ?? 0 };
-  if (hasPerspectiveTilt(perspective)) {
-    renderPerspectiveLayers({
-      target: ctx,
-      width,
-      height,
-      transform: perspective,
-      drawLayers: drawCameraLayers,
-    });
-  } else drawCameraLayers(ctx);
+  drawCameraLayers(ctx);
   drawSceneStack(ctx, layers.captions, layers.scene, snapshot.canvas, (ctx, clips) => {
     for (const clip of clips)
       drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
@@ -367,6 +413,7 @@ function renderCompositionFrameContent(
 }
 
 export function disposeCompositionRenderer() {
+  disposeGpuCursor();
   disposeWaterRippleRenderer();
   disposeAnimatedFrameRenderer();
   disposeGlassHighlights();

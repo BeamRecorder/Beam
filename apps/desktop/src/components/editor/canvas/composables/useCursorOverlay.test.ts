@@ -212,6 +212,31 @@ it('can disable the Beam overlay while retaining recorded cursor telemetry', asy
 });
 
 describe('useCursorOverlay', () => {
+  it('updates keyboard-caption cursor positioning when hover analysis arrives', async () => {
+    const options = baseOptions(),
+      owner = options.editorData()!;
+    owner.cursor.events = [0, 0.75, 1].map((time, index) => ({
+      event: 'move',
+      sessionNs: second(time),
+      normalizedX: 0.5,
+      normalizedY: [0.1, 0.8, 0.2][index]!,
+      pixelX: 960,
+      pixelY: 100,
+      visible: true,
+    }));
+    options.editorData = () => owner;
+    options.motion = () => ({ ...createDefaultCursorMotionSettings(), smoothing: 1 });
+    getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
+    const overlay = useCursorOverlay(options);
+    drawOverlay(overlay);
+    await settleCursorImage();
+    const window = { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 400, focusY: 225, scale: 1 };
+    const before = overlay.cursorPositionForKeyboardCaption(window, 1920, 1080);
+    owner.cursor.hoverSync = { version: 1, ranges: [{ startSeconds: 0.3, endSeconds: 0.9 }] };
+    const after = overlay.cursorPositionForKeyboardCaption(window, 1920, 1080);
+    expect(after?.y).toBeCloseTo(360, 8);
+    expect(before?.y).not.toBeCloseTo(after!.y, 4);
+  });
   it('formats ripple colors and loads the current cursor image', async () => {
     expect(getRippleStyleColor('#12ab34', 0.5)).toBe('rgba(18, 171, 52, 0.5)');
     expect(getRippleStyleColor('var(--cursor)', 0.5)).toBe('var(--cursor)');

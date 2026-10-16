@@ -83,7 +83,7 @@ describe('auto-follow camera', () => {
     updateAutoFollowTarget(state, center, center, 2, 1, 0);
 
     const firstTarget = updateAutoFollowTarget(state, { cx: 0.9, cy: 0.5 }, center, 2, 1, 64);
-    const retargeted = updateAutoFollowTarget(state, { cx: 0.5, cy: 0.9 }, center, 2, 1, 80);
+    const retargeted = updateAutoFollowTarget(state, { cx: 0.6, cy: 0.7 }, center, 2, 1, 80);
 
     expect(firstTarget.cx).toBeGreaterThan(0.5);
     expect(retargeted.cx).toBeGreaterThanOrEqual(firstTarget.cx);
@@ -91,6 +91,20 @@ describe('auto-follow camera', () => {
 
     const settled = updateAutoFollowTarget(state, { cx: 0.5, cy: 0.9 }, center, 2, 1, 2_000);
     expect(settled.cy).toBeGreaterThan(firstTarget.cy);
+  });
+
+  it.each([
+    { cx: 0.99, cy: 0.5 },
+    { cx: 0.5, cy: 0.99 },
+    { cx: 0.01, cy: 0.99 },
+  ])('releases the direction lock before a fast gesture leaves the visible frame: %j', (cursor) => {
+    const state = createAutoFollowState(settings);
+    updateAutoFollowTarget(state, center, center, 4, 1, 0);
+    updateAutoFollowTarget(state, { cx: 0.7, cy: 0.5 }, center, 4, 1, 64);
+    expect(state.lockUntilMs).toBeGreaterThan(80);
+    const target = updateAutoFollowTarget(state, cursor, center, 4, 1, 80);
+    expect(Math.abs(target.cx - cursor.cx)).toBeLessThanOrEqual(1 / 8);
+    expect(Math.abs(target.cy - cursor.cy)).toBeLessThanOrEqual(1 / 8);
   });
 
   it('resets deterministically after a backward seek', () => {

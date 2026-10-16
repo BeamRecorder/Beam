@@ -3,13 +3,29 @@ import { computed } from 'vue';
 import { cameraTiltForControls } from '@beam/engine/zoom/composition-camera';
 import { projectPerspectivePoint } from '@beam/engine/zoom/perspective-projection';
 import type { ZoomTiltPreviewControls } from '@beam/engine/zoom/zoom-tilt-preset-types';
+import type { OrbitCameraSettings } from '@beam/engine/zoom/orbit-camera-types';
+import { orbitCameraPose } from '@beam/engine/zoom/orbit-camera';
 
 const props = defineProps<{
-  preset: ZoomTiltPreviewControls;
+  preset?: ZoomTiltPreviewControls;
+  orbit?: OrbitCameraSettings;
   compact?: boolean;
 }>();
 const geometry = computed(() => {
-  const transform = cameraTiltForControls(props.preset.intensity, props.preset.horizontal, props.preset.vertical);
+  const transform = props.orbit
+    ? {
+        tiltX: 0,
+        tiltY: 0,
+        orbit: orbitCameraPose({
+          timeMs: 1000,
+          weight: 1,
+          intensity: 1,
+          scale: 1,
+          settings: props.orbit,
+          pointAt: () => ({ cx: 0.75, cy: 0.35 }),
+        }),
+      }
+    : cameraTiltForControls(props.preset!.intensity, props.preset!.horizontal, props.preset!.vertical);
   const bounds = { x: 22, y: 16, width: 76, height: 50 };
   const path = (left: number, top: number, width: number, height: number) =>
     [
@@ -19,7 +35,7 @@ const geometry = computed(() => {
       [left, top + height],
     ]
       .map(([x, y], index) => {
-        const point = projectPerspectivePoint({ x: x!, y: y! }, bounds, transform, 1);
+        const point = projectPerspectivePoint({ x: x!, y: y! }, bounds, transform, props.orbit ? undefined : 1);
         return `${index ? 'L' : 'M'}${point.x.toFixed(2)},${point.y.toFixed(2)}`;
       })
       .join(' ') + ' Z';

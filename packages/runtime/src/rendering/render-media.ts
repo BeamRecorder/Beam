@@ -12,8 +12,14 @@ export function drawVisualClip(
   canvas: { width: number; height: number },
   timeMs: number,
   appearanceScale = 1,
+  shadowPixelRatio = 1,
 ) {
-  drawDecoratedMedia(ctx, { ...visualMediaOptions(clip, media, canvas), timeMs, shadowScale: appearanceScale });
+  drawDecoratedMedia(ctx, {
+    ...visualMediaOptions(clip, media, canvas),
+    timeMs,
+    shadowScale: appearanceScale,
+    shadowPixelRatio,
+  });
 }
 
 export function drawWebcamClip(
