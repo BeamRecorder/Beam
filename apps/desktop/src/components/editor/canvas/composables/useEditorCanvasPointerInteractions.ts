@@ -16,6 +16,7 @@ export function useEditorCanvasPointerInteractions(options: EditorCanvasPointerO
   const handleIslandPointerDownCapture = (event: PointerEvent) => {
     if (
       options.isCropping() ||
+      options.isManualZoom() ||
       (event.target as Element | null)?.closest(
         '.cursor-canvas-selection, .caption-text-editor, .canvas-recenter-float, .element-overlay, .glass-highlight-selection, .canvas-playback-error',
       )

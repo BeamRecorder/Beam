@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Manual zoom focus stays editable across repeated adjustments inside its small focus frame. Clicking outside exits editing; recorded cursor hit-testing no longer interrupts a manual focus gesture.
+
 - Composition header hover follows the panel corners when expanded: square edges toward its contents, rounded outer corners, and a fully rounded header when collapsed or docked.
 
 - Screenshot Composition stays above Properties when moved across the inspector. Properties and Composition share a nearly opaque frosted background in both light and dark themes, including the docked layer list, to keep controls readable.

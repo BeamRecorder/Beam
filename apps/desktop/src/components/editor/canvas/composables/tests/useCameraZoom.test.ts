@@ -363,9 +363,8 @@ describe('useCameraZoom', () => {
     state.resetCameraUnlessDragging();
     state.moveSelection(pointer('pointermove'));
     state.endSelectionMove(pointer('pointerup'));
-    expect(options.callbacks.onUpdateZoom).toHaveBeenCalledWith(
-      expect.objectContaining({ focus: { cx: 0.5, cy: 0.5 } }),
-    );
+    expect(options.callbacks.onUpdateZoom).not.toHaveBeenCalled();
+    expect(options.callbacks.onDeselectZoom).not.toHaveBeenCalled();
     state.videoWindowBounds.value = { dx: 0, dy: 0, dw: 800, dh: 450, scale: 1 };
     options.selected.value = autoZoom;
     state.beginSelectionMove(pointer('pointerdown'));
@@ -733,7 +732,7 @@ describe('useCameraZoom', () => {
     expect(options.canvas.releasePointerCapture).toHaveBeenCalledWith(4);
   });
 
-  it('commits a valid manual focus and deselects exactly once on pointerup', () => {
+  it('commits a valid manual focus and keeps it selected after pointerup', () => {
     mountComposable();
     prepareManualDrag();
 
@@ -741,7 +740,83 @@ describe('useCameraZoom', () => {
     state.endSelectionMove(pointer('pointerup', 640, 140));
 
     expect(options.callbacks.onUpdateZoom).toHaveBeenCalledOnce();
+    expect(options.callbacks.onDeselectZoom).not.toHaveBeenCalled();
+  });
+
+  it('keeps manual editing active across consecutive focus adjustments', () => {
+    mountComposable();
+    prepareManualDrag();
+    options.callbacks.onUpdateZoom.mockImplementation((zoom: ZoomElement) => {
+      options.selected.value = zoom;
+    });
+    options.callbacks.onDeselectZoom.mockImplementation(() => {
+      options.selected.value = null;
+    });
+    const points = [
+      [400, 225],
+      [550, 170],
+      [320, 250],
+    ];
+    for (const [x, y] of points) {
+      state.beginSelectionMove(pointer('pointerdown', x!, y!));
+      state.endSelectionMove(pointer('pointerup', x!, y!));
+      expect(options.selected.value?.id).toBe(manualZoom.id);
+      expect(state.focusTargetStyle.value).not.toEqual({ display: 'none' });
+    }
+    expect(options.callbacks.onUpdateZoom).toHaveBeenCalledTimes(3);
+    expect(options.callbacks.onDeselectZoom).not.toHaveBeenCalled();
+    expect(options.callbacks.selectVisualAt).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [50, 225],
+    [750, 225],
+    [400, 20],
+    [400, 430],
+  ])('exits manual focus on a fresh press outside the small reticle at (%s, %s)', (x, y) => {
+    mountComposable();
+    options.selected.value = { ...manualZoom, focus: { cx: 0.5, cy: 0.5 } };
+    options.zooms.value = [options.selected.value];
+    prepareManualDrag();
+    state.beginSelectionMove(pointer('pointerdown', x, y));
+    state.endSelectionMove(pointer('pointerup', x, y));
     expect(options.callbacks.onDeselectZoom).toHaveBeenCalledOnce();
+    expect(options.callbacks.onUpdateZoom).not.toHaveBeenCalled();
+    expect(options.canvas.setPointerCapture).not.toHaveBeenCalled();
+    expect(options.callbacks.selectVisualAt).not.toHaveBeenCalled();
+  });
+
+  it.each([0.75, 1.25, 2])('keeps reticle hit-testing aligned at viewport scale %s', (scale) => {
+    mountComposable();
+    options.selected.value = { ...manualZoom, focus: { cx: 0.5, cy: 0.5 } };
+    options.zooms.value = [options.selected.value];
+    prepareManualDrag();
+    const rect = options.canvas.getBoundingClientRect();
+    options.canvas.getBoundingClientRect = () => ({
+      ...rect,
+      left: 80,
+      top: 60,
+      width: 800 * scale,
+      height: 450 * scale,
+    });
+    state.beginSelectionMove(pointer('pointerdown', 80 + 400 * scale, 60 + 225 * scale));
+    state.endSelectionMove(pointer('pointerup', 80 + 400 * scale, 60 + 225 * scale));
+    expect(options.callbacks.onUpdateZoom).toHaveBeenCalledOnce();
+    expect(options.callbacks.onDeselectZoom).not.toHaveBeenCalled();
+    state.beginSelectionMove(pointer('pointerdown', 80 + 50 * scale, 60 + 225 * scale));
+    expect(options.callbacks.onDeselectZoom).toHaveBeenCalledOnce();
+    expect(options.callbacks.onUpdateZoom).toHaveBeenCalledOnce();
+  });
+
+  it('keeps manual editing after releasing a captured drag outside the reticle', () => {
+    mountComposable();
+    prepareManualDrag();
+    state.beginSelectionMove(pointer('pointerdown', 400, 225));
+    state.endSelectionMove(pointer('pointerup', -100, -100));
+    expect(options.callbacks.onUpdateZoom).toHaveBeenCalledOnce();
+    expect(options.callbacks.onDeselectZoom).not.toHaveBeenCalled();
+    expect(options.canvas.releasePointerCapture).toHaveBeenCalledOnce();
+    expect(state.focusTargetStyle.value).not.toEqual({ display: 'none' });
   });
 
   it('does not deselect on pointerup when no manual drag is active', () => {

@@ -84,7 +84,7 @@ describe('useEditorCanvasPointerInteractions', () => {
     'element-overlay',
     'cursor-canvas-selection',
   ])('leaves %s controls outside cursor hit-testing', (className) => {
-    const harness = createHarness();
+    const harness = createHarness(false);
     const container = document.createElement('div');
     container.className = className;
     const button = document.createElement('button');
@@ -94,7 +94,7 @@ describe('useEditorCanvasPointerInteractions', () => {
   });
 
   it('captures cursor selection on the canvas while leaving crop mode alone', () => {
-    const harness = createHarness();
+    const harness = createHarness(false);
     const event = pointer({ stopPropagation: vi.fn() });
     vi.mocked(harness.options.cursorInteraction.selectAt).mockReturnValue(true);
     harness.interactions.handleIslandPointerDownCapture(event);
@@ -103,6 +103,17 @@ describe('useEditorCanvasPointerInteractions', () => {
     harness.interactions.handleIslandPointerDownCapture(event);
     expect(harness.options.cursorInteraction.selectAt).toHaveBeenCalledOnce();
   });
+  it('keeps manual focus ahead of cursor selection in the capture phase', () => {
+    const harness = createHarness(true);
+    const event = pointer({ stopPropagation: vi.fn() });
+    vi.mocked(harness.options.cursorInteraction.selectAt).mockReturnValue(true);
+    harness.interactions.handleIslandPointerDownCapture(event);
+    harness.interactions.handleIslandPointerDown(event);
+    expect(harness.options.cursorInteraction.selectAt).not.toHaveBeenCalled();
+    expect(event.stopPropagation).not.toHaveBeenCalled();
+    expect(harness.beginSelectionMove).toHaveBeenCalledWith(event);
+  });
+
   it('forwards a Manual Zoom pointerdown to camera zoom without raycasting composited media first', () => {
     const harness = createHarness(true);
 
@@ -170,5 +181,70 @@ describe('useEditorCanvasPointerInteractions', () => {
 
     expect(harness.onToggleClip).toHaveBeenCalledWith('image', event);
     expect(event.stopPropagation).toHaveBeenCalledOnce();
+  });
+});
+
+describe('canvas pointer routing boundaries', () => {
+  it('leaves an owned transform gesture ahead of canvas panning and camera focus', () => {
+    const h = createHarness(false);
+    vi.mocked(h.options.transformAndCrop.beginSelectedTransformDrag).mockReturnValue(true);
+    h.interactions.handleIslandPointerDown(pointer());
+    expect(h.selectVisualAt).not.toHaveBeenCalled();
+    expect(h.beginPan).not.toHaveBeenCalled();
+    expect(h.beginSelectionMove).not.toHaveBeenCalled();
+    vi.mocked(h.options.transformAndCrop.moveSelectedTransformDrag).mockReturnValue(true);
+    vi.mocked(h.options.transformAndCrop.endSelectedTransformDrag).mockReturnValue(true);
+    h.interactions.handleIslandPointerMove(pointer());
+    h.interactions.handleIslandPointerUp(pointer());
+    expect(h.moveSelection).not.toHaveBeenCalled();
+    expect(h.endSelectionMove).not.toHaveBeenCalled();
+  });
+
+  it('selects another clip from its handle before starting a transform', () => {
+    const h = createHarness(false);
+    h.selectedClipId.value = 'old';
+    h.clipIdAt.mockReturnValue('new');
+    const event = pointer({ stopPropagation: vi.fn() });
+    h.interactions.handleTransformPointerDown(event);
+    expect(h.options.onSelectClip).toHaveBeenCalledWith('new');
+    expect(event.stopPropagation).toHaveBeenCalledOnce();
+    expect(h.options.transformAndCrop.beginTransformDrag).not.toHaveBeenCalled();
+  });
+
+  it('starts a regular handle move when the current clip is already selected or no clip is hit', () => {
+    const h = createHarness(false);
+    h.selectedClipId.value = 'same';
+    h.clipIdAt.mockReturnValue('same');
+    const event = pointer();
+    h.interactions.handleTransformPointerDown(event);
+    expect(h.options.transformAndCrop.beginTransformDrag).toHaveBeenCalledWith(event, 'move');
+    h.clipIdAt.mockReturnValue(null);
+    h.selectedClipId.value = null;
+    h.interactions.handleTransformPointerDown(event);
+    h.interactions.handleTransformPointerDown(pointer({ button: 2 }));
+    expect(h.options.onSelectClip).not.toHaveBeenCalled();
+    expect(h.options.onToggleClip).not.toHaveBeenCalled();
+  });
+
+  it('does not raycast a right press as a visual selection', () => {
+    const h = createHarness(false);
+    const event = pointer({ button: 2 });
+    h.interactions.handleIslandPointerDown(event);
+    expect(h.selectVisualAt).not.toHaveBeenCalled();
+    expect(h.beginSelectionMove).toHaveBeenCalledWith(event);
+  });
+
+  it('forwards wheel geometry and crop completion through their owning controllers', () => {
+    const h = createHarness();
+    const event = new WheelEvent('wheel');
+    h.interactions.handleIslandWheel(event);
+    expect(h.options.viewportZoom.handleWheel).toHaveBeenCalledWith(event, undefined);
+    const container = document.createElement('div');
+    h.options.container = () => container;
+    h.interactions.handleIslandWheel(event);
+    expect(h.options.viewportZoom.handleWheel).toHaveBeenLastCalledWith(event, container.getBoundingClientRect());
+    h.interactions.commitCrop();
+    expect(h.options.transformAndCrop.commitCrop).toHaveBeenCalledOnce();
+    expect(h.options.onDoneCrop).toHaveBeenCalledOnce();
   });
 });

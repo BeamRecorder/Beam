@@ -1227,18 +1227,15 @@ describe('EditorCanvas', () => {
     await mounted.get('textarea').setValue('Edited caption');
     vi.advanceTimersByTime(150);
     await nextTick();
-    expect(mounted.emitted('update:caption-text')).toContainEqual([
-      { clipId: 'caption', customText: 'Edited caption' },
-    ]);
+    expect((mounted.get('textarea').element as HTMLTextAreaElement).value).toBe('Edited caption');
+    expect(mounted.emitted('update:caption-text')).toBeUndefined();
 
     await mounted.get('textarea').trigger('keydown', { key: 'Escape' });
     await nextTick();
 
     expect(mounted.find('textarea').exists()).toBe(false);
     expect(mounted.emitted('caption-editing-end')).toContainEqual([{ cancelled: true }]);
-    expect(mounted.emitted('update:caption-text')).toContainEqual([
-      { clipId: 'caption', customText: 'Original caption' },
-    ]);
+    expect(mounted.emitted('update:caption-text')).toBeUndefined();
   });
 
   it('requests crop when a visual clip receives a double-click', async () => {

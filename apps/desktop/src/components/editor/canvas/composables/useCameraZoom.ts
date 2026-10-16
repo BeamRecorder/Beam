@@ -22,7 +22,7 @@ import { createCurrentScreenResolver } from './current-screen-resolver';
 import type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
 import { selectedZoomPreviewTilt } from './camera-preview-tilt';
 import { drawInCameraSpace } from './camera-space';
-import { cameraFocusTargetStyle, cameraFocusAtPoint } from './camera-focus-presentation';
+import { cameraFocusTargetStyle, cameraFocusAtPoint, cameraFocusContainsPoint } from './camera-focus-presentation';
 export type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
 const EMPTY_TELEMETRY = [] as const;
 export function useCameraZoom(options: UseCameraZoomOptions) {
@@ -63,6 +63,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const bounds = overlayWindowBounds.value;
     if (!canvas || !bounds) return null;
     const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || bounds.dw <= 0 || bounds.dh <= 0) return null;
     return {
       canvasLeft: rect.left,
       canvasTop: rect.top,
@@ -100,6 +101,14 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     if (isManualZoom) {
       zoomDragGeometry = createZoomDragGeometry();
       if (!zoomDragGeometry) return;
+      const { bounds, scaleRatio, canvasLeft, canvasTop } = zoomDragGeometry;
+      const x = (event.clientX - canvasLeft) / scaleRatio,
+        y = (event.clientY - canvasTop) / scaleRatio;
+      if (!cameraFocusContainsPoint({ x, y }, bounds, selectedZoom)) {
+        zoomDragGeometry = null;
+        options.onDeselectZoom();
+        return;
+      }
       isMovingSelection.value = true;
       const target = (event.currentTarget as HTMLElement) ?? options.canvasRef();
       if (target?.setPointerCapture) target.setPointerCapture(event.pointerId);
@@ -140,7 +149,6 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       zoomDragGeometry = null;
       if (selected?.mode === 'manual' && focus) {
         options.onUpdateZoom({ ...selected, focus });
-        options.onDeselectZoom();
       }
       const target = (event.currentTarget as HTMLElement) ?? options.canvasRef();
       if (target?.hasPointerCapture?.(event.pointerId)) target.releasePointerCapture(event.pointerId);

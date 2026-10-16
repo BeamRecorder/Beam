@@ -42,11 +42,7 @@ export function cameraFocusTargetStyle(
     willChange: 'transform',
   };
 }
-export function cameraFocusAtPoint(
-  point: { x: number; y: number },
-  bounds: VideoWindowBounds,
-  depth: ZoomElement['depth'],
-) {
+function cameraFocusCoordinates(point: { x: number; y: number }, bounds: VideoWindowBounds) {
   const viewport = { x: bounds.dx, y: bounds.dy, width: bounds.dw, height: bounds.dh };
   const flat = unprojectPerspectivePoint(point, viewport, {
     tiltX: bounds.tiltX ?? 0,
@@ -56,11 +52,28 @@ export function cameraFocusAtPoint(
   const scale = bounds.scale || 1,
     centerX = bounds.dx + bounds.dw / 2,
     centerY = bounds.dy + bounds.dh / 2;
-  return clampFocusToScale(
-    {
-      cx: ((flat.x - centerX) / scale + (bounds.focusX ?? centerX) - bounds.dx) / bounds.dw,
-      cy: ((flat.y - centerY) / scale + (bounds.focusY ?? centerY) - bounds.dy) / bounds.dh,
-    },
-    ZOOM_DEPTH_SCALES[depth],
-  );
+  return {
+    cx: ((flat.x - centerX) / scale + (bounds.focusX ?? centerX) - bounds.dx) / bounds.dw,
+    cy: ((flat.y - centerY) / scale + (bounds.focusY ?? centerY) - bounds.dy) / bounds.dh,
+  };
+}
+export function cameraFocusAtPoint(
+  point: { x: number; y: number },
+  bounds: VideoWindowBounds,
+  depth: ZoomElement['depth'],
+) {
+  return clampFocusToScale(cameraFocusCoordinates(point, bounds), ZOOM_DEPTH_SCALES[depth]);
+}
+export function cameraFocusContainsPoint(
+  point: { x: number; y: number },
+  bounds: VideoWindowBounds,
+  zoom: ZoomElement,
+) {
+  if (point.x < bounds.dx || point.x > bounds.dx + bounds.dw || point.y < bounds.dy || point.y > bounds.dy + bounds.dh)
+    return false;
+  const scale = ZOOM_DEPTH_SCALES[zoom.depth];
+  const focus = clampFocusToScale(zoom.focus, scale);
+  const pointer = cameraFocusCoordinates(point, bounds);
+  const half = 1 / (2 * scale);
+  return Math.abs(pointer.cx - focus.cx) <= half && Math.abs(pointer.cy - focus.cy) <= half;
 }
