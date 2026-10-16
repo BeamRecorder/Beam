@@ -17,6 +17,7 @@ import {
 import { orbitCameraPose } from './orbit-camera';
 import { connectedCameraFocus } from './camera-connection';
 import { createAutomaticFollowGate } from './camera-follow-gate';
+import { createCameraFollowCursor } from './camera-follow-cursor';
 
 const STEP_MS = 1_000 / 120;
 const CHECKPOINT_STEPS = 30;
@@ -42,6 +43,9 @@ const cloneState = (state: SimulationState): SimulationState => ({
     target: { ...state.autoFollow.target },
     frozenTarget: { ...state.autoFollow.frozenTarget },
     direction: { ...state.autoFollow.direction },
+    anchorCursor: { ...state.autoFollow.anchorCursor },
+    anchorFocus: { ...state.autoFollow.anchorFocus },
+    previousCursor: state.autoFollow.previousCursor ? { ...state.autoFollow.previousCursor } : null,
   },
   ...(state.connection
     ? { connection: { ...state.connection, from: { ...state.connection.from }, to: { ...state.connection.to } } }
@@ -57,6 +61,7 @@ export function createCompositionCameraEvaluator(
   const autoFollowSettings = normalizeZoomAutoFollow(inputs.autoFollow ?? DEFAULT_ZOOM_AUTO_FOLLOW);
   const sortedTelemetry = [...inputs.telemetry].sort((left, right) => left.timeMs - right.timeMs);
   const canFollow = createAutomaticFollowGate(inputs, sortedTelemetry);
+  const followCursorAt = createCameraFollowCursor(inputs, sortedTelemetry, canFollow);
   const targetAt = (
     timeMs: number,
     state: SimulationState,
@@ -71,12 +76,10 @@ export function createCompositionCameraEvaluator(
     let focus = zoom.cinematic ? zoom.focus : clampFocusToScale(zoom.focus, zoom.scale);
     const connectedFollow =
       zoom.connection && (zoom.connection.from.mode === 'auto' || zoom.connection.to.mode === 'auto');
-    if (connectedFollow) focus = connectedCameraFocus(state, zoom, timeMs, inputs, sortedTelemetry, zoomAt, canFollow);
+    if (connectedFollow) focus = connectedCameraFocus(state, zoom, timeMs, zoomAt, followCursorAt);
     else if (zoom.tracksCursor) {
       const entering = zoom.cinematic && !autoFollow.reachedFullZoom && zoom.strength < 0.99;
-      const sourceTimeMs = inputs.mapTelemetryTime?.(timeMs) ?? timeMs;
-      const rawCursor = canFollow(zoom.elementId, sourceTimeMs) ? cursorFocusAt(sortedTelemetry, sourceTimeMs) : null;
-      const cursor = rawCursor ? (inputs.mapFocus?.(rawCursor, zoom, timeMs) ?? rawCursor) : null;
+      const cursor = followCursorAt(zoom, timeMs);
       focus = updateAutoFollowTarget(autoFollow, cursor, focus, zoom.scale, zoom.strength, timeMs);
       if (entering) focus = zoom.focus;
     } else updateAutoFollowTarget(autoFollow, null, focus, zoom.scale, 0, timeMs);
@@ -142,7 +145,7 @@ export function createCompositionCameraEvaluator(
       }
       if (step % CHECKPOINT_STEPS === 0) checkpoints.set(step, cloneState(state));
     }
-    return state.camera;
+    return state;
   };
 
   const evaluator: CompositionCameraEvaluator = {
@@ -150,7 +153,8 @@ export function createCompositionCameraEvaluator(
       const time = Math.max(0, Number.isFinite(timeMs) ? timeMs : 0);
       const lowerStep = Math.floor(time / STEP_MS);
       const progress = time / STEP_MS - lowerStep;
-      const lower = stateAtStep(lowerStep);
+      const lowerState = stateAtStep(lowerStep);
+      const lower = lowerState.camera;
       const zoom = zoomAt(time);
       const orbit = zoom?.orbit
         ? orbitCameraPose({
@@ -174,14 +178,34 @@ export function createCompositionCameraEvaluator(
           tiltY: lower.tiltY,
           ...(orbit ? { orbit } : {}),
         };
-      const upper = stateAtStep(lowerStep + 1);
-      const mix = (left: number, right: number) => left + (right - left) * progress;
-      const scale = zoom?.cinematic ? zoom.scale : mix(lower.scale, upper.scale);
+      const upperState = stateAtStep(lowerStep + 1);
+      const upper = upperState.camera;
+      // Hermite interpolation preserves the spring's velocity between fixed
+      // simulation ticks. Linear interpolation introduces a speed jump at 120 Hz.
+      const mix = (left: number, right: number, leftVelocity: number, rightVelocity: number) => {
+        const p2 = progress * progress,
+          p3 = p2 * progress;
+        return (
+          (2 * p3 - 3 * p2 + 1) * left +
+          (((p3 - 2 * p2 + progress) * STEP_MS) / 1000) * leftVelocity +
+          (-2 * p3 + 3 * p2) * right +
+          (((p3 - p2) * STEP_MS) / 1000) * rightVelocity
+        );
+      };
+      const velocity = lowerState.velocity,
+        nextVelocity = upperState.velocity;
+      const scale = zoom?.cinematic ? zoom.scale : mix(lower.scale, upper.scale, velocity.scale, nextVelocity.scale);
       return {
-        focus: clampFocusToScale({ cx: mix(lower.focusX, upper.focusX), cy: mix(lower.focusY, upper.focusY) }, scale),
+        focus: clampFocusToScale(
+          {
+            cx: mix(lower.focusX, upper.focusX, velocity.focusX, nextVelocity.focusX),
+            cy: mix(lower.focusY, upper.focusY, velocity.focusY, nextVelocity.focusY),
+          },
+          scale,
+        ),
         scale,
-        tiltX: mix(lower.tiltX, upper.tiltX),
-        tiltY: mix(lower.tiltY, upper.tiltY),
+        tiltX: mix(lower.tiltX, upper.tiltX, velocity.tiltX ?? 0, nextVelocity.tiltX ?? 0),
+        tiltY: mix(lower.tiltY, upper.tiltY, velocity.tiltY ?? 0, nextVelocity.tiltY ?? 0),
         ...(orbit ? { orbit } : {}),
       };
     },

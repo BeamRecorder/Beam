@@ -92,6 +92,40 @@ describe('headless snapshot camera', () => {
     vi.spyOn(mapping, 'sessionTimeAt').mockReturnValueOnce(null);
     expect(inputs.mapTelemetryTime!(1500)).toBe(1500);
   });
+  it('bounds cursor prediction to the current screen clip, with no prediction inside a gap', () => {
+    const inputs = mappedInputs(withScreen());
+    expect(inputs.followEndMsAt!(1500)).toBe(3000);
+    expect(inputs.followEndMsAt!(500)).toBe(500);
+    expect(inputs.followEndMsAt!(3000)).toBe(3000);
+  });
+  it('stops anticipation at an overlapping screen even when the original clip is still active', () => {
+    const input = withScreen();
+    input.composition.clips.push({
+      ...input.composition.clips[0]!,
+      id: 'insert',
+      timelineStartMs: 1600,
+      timelineDurationMs: 20,
+      order: 1,
+    });
+    const inputs = mappedInputs(input);
+    expect(inputs.followEndMsAt!(1500)).toBe(1600);
+    expect(inputs.followEndMsAt!(1600)).toBe(1620);
+    expect(inputs.followEndMsAt!(1620)).toBe(3000);
+  });
+  it('keeps anticipating within the current screen after an irrelevant screen boundary has passed', () => {
+    const input = withScreen();
+    input.composition.clips.push({
+      ...input.composition.clips[0]!,
+      id: 'behind',
+      timelineStartMs: 1800,
+      timelineDurationMs: 20,
+      order: -1,
+    });
+    const inputs = mappedInputs(input);
+    expect(inputs.followEndMsAt!(1700)).toBe(1800);
+    expect(inputs.followEndMsAt!(1800)).toBe(1820);
+    expect(inputs.followEndMsAt!(1820)).toBe(3000);
+  });
   it('projects automatic focus into the screen transform while preserving manual focus', () => {
     const inputs = mappedInputs(withScreen());
     const focus = { cx: 0, cy: 0 };
@@ -102,7 +136,7 @@ describe('headless snapshot camera', () => {
   });
 });
 
-it('keeps the recorded Calm Orbit opening monotonic with its real source aspect ratio and translated video', () => {
+const calmOrbitSnapshot = () => {
   const input = withScreen();
   const asset = input.composition.assets[0]!;
   const clip = input.composition.clips[0]!;
@@ -119,13 +153,31 @@ it('keeps the recorded Calm Orbit opening monotonic with its real source aspect 
   input.canvas = { preset: '16:9', width: 1920, height: 1080, showBackground: true };
   input.cursor.telemetry = calmOrbitOpening;
   input.zooms = generateRecordingZooms(input.composition, 'take', calmOrbitOpening, []);
+  return input;
+};
+
+it('keeps the recorded Calm Orbit opening monotonic with its real source aspect ratio and translated video', () => {
+  const input = calmOrbitSnapshot();
   const camera = createSnapshotCameraEvaluator(input, 3072, 1862);
   let previous = camera.sample(0).focus.cx;
-  for (let time = 10; time <= 2500; time += 10) {
+  for (let time = 10; time <= 1104; time += 10) {
     const current = camera.sample(time).focus.cx;
     expect(current).toBeLessThanOrEqual(previous + 1e-9);
     expect(current).toBeGreaterThan(0.4785);
     previous = current;
   }
-  expect(camera.sample(2500).focus.cx).toBeCloseTo(0.478596, 6);
+  expect(camera.sample(1104).focus.cx).toBeCloseTo(0.478596, 6);
+});
+
+it('follows the first Calm Orbit drag progressively instead of waiting then catching up', () => {
+  const camera = createSnapshotCameraEvaluator(calmOrbitSnapshot(), 3072, 1862);
+  const before = camera.sample(2655).focus.cx;
+  expect(camera.sample(3500).focus.cx).toBeGreaterThan(before + 0.001);
+  let previous = before;
+  for (let time = 2665; time <= 4500; time += 10) {
+    const focus = camera.sample(time).focus.cx;
+    expect(focus).toBeGreaterThanOrEqual(previous - 1e-9);
+    expect(focus - previous).toBeLessThan(0.0012);
+    previous = focus;
+  }
 });

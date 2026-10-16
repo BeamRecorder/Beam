@@ -9,4 +9,9 @@ export interface AutoFollowState {
   target: ZoomFocus;
   frozenTarget: ZoomFocus;
   direction: ZoomFocus;
+  anchorCursor: ZoomFocus;
+  anchorFocus: ZoomFocus;
+  previousCursor: ZoomFocus | null;
+  lastMotionTimeMs: number;
+  settled: boolean;
 }

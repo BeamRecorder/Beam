@@ -102,11 +102,11 @@ export interface ZoomMotionBlurSettings {
 }
 
 export interface ZoomAutoFollowSettings {
-  /** Fraction of the visible viewport kept stable around the camera focus. */
+  /** Fraction of the viewport used for the quiet core and progressive follow shoulder. */
   safeZone: number;
   /** Normalized critical-spring response from stable (0) to responsive (1). */
   responsiveness: number;
-  /** Holds each target until settled so camera travel stays on a straight segment. */
+  /** Damps brief direction reversals without freezing continued travel or new axes. */
   directionLock: boolean;
 }
 

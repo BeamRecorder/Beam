@@ -14,19 +14,18 @@ describe('auto-follow motion regressions', () => {
     ['cx', -1],
     ['cy', 1],
     ['cy', -1],
-  ] as const)('recenters %s in direction %d when leaving the safe zone', (axis, direction) => {
+  ] as const)('progressively follows %s in direction %d through the safe-zone boundary', (axis, direction) => {
     const state = createAutoFollowState(settings);
     updateAutoFollowTarget(state, center, center, 3.5, 1, 0);
     const cursor = point(axis, 0.5 + direction * 0.08);
     const target = updateAutoFollowTarget(state, cursor, center, 3.5, 1, 100);
 
-    // Recenter once, leaving room for continued travel instead of repeatedly
-    // nudging the target by the dead-zone boundary plus a tiny hysteresis.
-    expect(target[axis]).toBeCloseTo(cursor[axis], 12);
+    expect((target[axis] - 0.5) * direction).toBeGreaterThan(0);
+    expect(Math.abs(target[axis] - 0.5)).toBeLessThan(Math.abs(cursor[axis] - 0.5));
     expect(target[axis === 'cx' ? 'cy' : 'cx']).toBe(0.5);
-    expect(updateAutoFollowTarget(state, point(axis, cursor[axis] + direction * 0.01), center, 3.5, 1, 110)).toEqual(
-      target,
-    );
+    const continued = updateAutoFollowTarget(state, point(axis, cursor[axis] + direction * 0.01), center, 3.5, 1, 110);
+    expect((continued[axis] - target[axis]) * direction).toBeGreaterThan(0);
+    expect(Math.abs(continued[axis] - target[axis])).toBeLessThan(0.01);
   });
 
   it.each([

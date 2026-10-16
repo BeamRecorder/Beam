@@ -38,12 +38,12 @@ const autoZoom: ZoomElement = {
 const autoFollow = { safeZone: 0.5, responsiveness: 0.55, directionLock: true } as const;
 
 describe('composition camera evaluator', () => {
-  it('keeps an auto zoom stable while the cursor remains inside its safe zone', () => {
+  it('keeps an auto zoom stable while the cursor remains inside its quiet core', () => {
     const evaluator = createCompositionCameraEvaluator({
       zooms: [autoZoom],
       telemetry: [
-        { timeMs: 0, cx: 0.58, cy: 0.42 },
-        { timeMs: 5_000, cx: 0.58, cy: 0.42 },
+        { timeMs: 0, cx: 0.52, cy: 0.48 },
+        { timeMs: 5_000, cx: 0.52, cy: 0.48 },
       ],
       autoFollow,
     });

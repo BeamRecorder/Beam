@@ -11,11 +11,11 @@ const settings: ZoomAutoFollowSettings = {
 const center = { cx: 0.5, cy: 0.5 };
 
 describe('auto-follow camera', () => {
-  it('keeps both camera axes fixed while the cursor is inside the safe zone', () => {
+  it('keeps both camera axes fixed inside the quiet core', () => {
     const state = createAutoFollowState(settings);
     const initial = updateAutoFollowTarget(state, center, center, 2, 1, 0);
 
-    expect(updateAutoFollowTarget(state, { cx: 0.6, cy: 0.4 }, center, 2, 1, 16)).toEqual(initial);
+    expect(updateAutoFollowTarget(state, { cx: 0.51, cy: 0.49 }, center, 2, 1, 16)).toEqual(initial);
   });
 
   it('keeps the authored click focus while an auto zoom is entering', () => {
@@ -33,7 +33,10 @@ describe('auto-follow camera', () => {
     const cursor = { cx: 0.9, cy: 0.5 };
 
     updateAutoFollowTarget(state, cursor, authoredFocus, 2, 0.5, 100);
-    expect(updateAutoFollowTarget(state, cursor, authoredFocus, 2, 1, 200)).toEqual({ cx: 0.75, cy: 0.4 });
+    const target = updateAutoFollowTarget(state, cursor, authoredFocus, 2, 1, 200);
+    expect(target.cx).toBeGreaterThan(authoredFocus.cx);
+    expect(target.cx).toBeLessThan(0.75);
+    expect(target.cy).toBeGreaterThan(authoredFocus.cy);
   });
 
   it('preserves the last followed focus during exit and ignores a new cursor position', () => {
@@ -41,20 +44,22 @@ describe('auto-follow camera', () => {
     const authoredFocus = { cx: 0.6, cy: 0.4 };
 
     const followed = updateAutoFollowTarget(state, { cx: 0.9, cy: 0.5 }, authoredFocus, 2, 1, 100);
-    expect(followed).toEqual({ cx: 0.75, cy: 0.4 });
+    expect(followed.cx).toBeGreaterThan(authoredFocus.cx);
     expect(updateAutoFollowTarget(state, { cx: 0.1, cy: 0.9 }, authoredFocus, 2, 0.8, 200)).toEqual(followed);
   });
 
   it('reclamps the frozen focus progressively toward center as exit scale decreases', () => {
     const state = createAutoFollowState(settings);
     const authoredFocus = { cx: 0.6, cy: 0.4 };
-    updateAutoFollowTarget(state, { cx: 0.9, cy: 0.9 }, authoredFocus, 2, 1, 100);
+    for (let time = 0; time <= 1000; time += 10)
+      updateAutoFollowTarget(state, { cx: 0.9, cy: 0.9 }, authoredFocus, 2, 1, time);
 
-    const atScaleTwo = updateAutoFollowTarget(state, { cx: 0.1, cy: 0.1 }, authoredFocus, 2, 0.8, 200);
-    const atScaleOnePointFive = updateAutoFollowTarget(state, { cx: 0.1, cy: 0.1 }, authoredFocus, 1.5, 0.6, 300);
-    const atScaleOnePointOne = updateAutoFollowTarget(state, { cx: 0.1, cy: 0.1 }, authoredFocus, 1.1, 0.2, 400);
+    const atScaleTwo = updateAutoFollowTarget(state, { cx: 0.1, cy: 0.1 }, authoredFocus, 2, 0.8, 1100);
+    const atScaleOnePointFive = updateAutoFollowTarget(state, { cx: 0.1, cy: 0.1 }, authoredFocus, 1.5, 0.6, 1200);
+    const atScaleOnePointOne = updateAutoFollowTarget(state, { cx: 0.1, cy: 0.1 }, authoredFocus, 1.1, 0.2, 1300);
 
-    expect(atScaleTwo).toEqual({ cx: 0.75, cy: 0.75 });
+    expect(atScaleTwo.cx).toBeCloseTo(0.75, 8);
+    expect(atScaleTwo.cy).toBeCloseTo(0.75, 8);
     expect(atScaleOnePointFive.cx).toBeCloseTo(2 / 3);
     expect(atScaleOnePointFive.cy).toBeCloseTo(2 / 3);
     expect(atScaleOnePointOne.cx).toBeCloseTo(1 - 1 / 2.2);
@@ -78,7 +83,7 @@ describe('auto-follow camera', () => {
     if (!movesY) expect(result.cy).toBe(0.5);
   });
 
-  it('keeps a locked travel direction until the first target settles, then retargets', () => {
+  it('damps reversals without freezing either axis while a pan settles', () => {
     const state = createAutoFollowState(settings);
     updateAutoFollowTarget(state, center, center, 2, 1, 0);
 
@@ -86,8 +91,9 @@ describe('auto-follow camera', () => {
     const retargeted = updateAutoFollowTarget(state, { cx: 0.6, cy: 0.7 }, center, 2, 1, 80);
 
     expect(firstTarget.cx).toBeGreaterThan(0.5);
-    expect(retargeted.cx).toBeGreaterThanOrEqual(firstTarget.cx);
-    expect(retargeted.cy).toBe(firstTarget.cy);
+    expect(retargeted.cx).toBeLessThan(firstTarget.cx);
+    expect(retargeted.cx).toBeGreaterThan(0.6);
+    expect(retargeted.cy).toBeGreaterThan(firstTarget.cy);
 
     const settled = updateAutoFollowTarget(state, { cx: 0.5, cy: 0.9 }, center, 2, 1, 2_000);
     expect(settled.cy).toBeGreaterThan(firstTarget.cy);
@@ -102,9 +108,10 @@ describe('auto-follow camera', () => {
     updateAutoFollowTarget(state, center, center, 4, 1, 0);
     updateAutoFollowTarget(state, { cx: 0.7, cy: 0.5 }, center, 4, 1, 64);
     expect(state.lockUntilMs).toBeGreaterThan(80);
-    const target = updateAutoFollowTarget(state, cursor, center, 4, 1, 80);
-    expect(Math.abs(target.cx - cursor.cx)).toBeLessThanOrEqual(1 / 8);
-    expect(Math.abs(target.cy - cursor.cy)).toBeLessThanOrEqual(1 / 8);
+    let target = state.target;
+    for (let time = 80; time <= 1000; time += 10) target = updateAutoFollowTarget(state, cursor, center, 4, 1, time);
+    expect(Math.abs(target.cx - cursor.cx)).toBeLessThanOrEqual(1 / 8 + 0.001);
+    expect(Math.abs(target.cy - cursor.cy)).toBeLessThanOrEqual(1 / 8 + 0.001);
   });
 
   it('resets deterministically after a backward seek', () => {

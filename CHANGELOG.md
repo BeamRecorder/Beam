@@ -6,9 +6,11 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Automatic camera follow starts progressively before the safe-zone edge and anticipates recorded movement, avoiding delayed catch-up pans. Pauses retain calm framing, direction changes never freeze an axis, and camera interpolation preserves velocity in previews and exports. Follow descriptions are updated in all fifteen languages.
+
 - Generated zooms enter at the first recorded press instead of aiming ahead at later actions. Cursor following starts with that action, preventing the large opening left-right swing seen in Calm Orbit while retaining full drags and smooth handoffs.
 
-- Automatic zooms keep separate actions in shorter shots instead of merging distant clicks or dropping the next gesture. Camera handoffs preserve the followed focus and connect overlapping ramps without left-right detours; safe-zone following recenters smoothly without stalling continued movement. Saved automatic plans are refreshed while authored, locked and detached zooms stay protected.
+- Automatic zooms keep separate actions in shorter shots instead of merging distant clicks or dropping the next gesture. Camera handoffs preserve the followed focus and connect overlapping ramps without left-right detours. Saved automatic plans are refreshed while authored, locked and detached zooms stay protected.
 
 - Manual zoom focus stays editable across repeated adjustments inside its small focus frame. Clicking outside exits editing; recorded cursor hit-testing no longer interrupts a manual focus gesture.
 

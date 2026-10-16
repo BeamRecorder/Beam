@@ -37,14 +37,19 @@ describe('camera checkpoint reuse', () => {
       previous = createCompositionCameraEvaluator(value);
     previous.sample(4_000);
     const mapTelemetryTime = vi.fn((time: number) => time);
+    const coldTelemetryTime = vi.fn((time: number) => time);
     const next = createCompositionCameraEvaluator(
       { ...value, mapTelemetryTime },
       { previous, unchangedBeforeMs: Infinity },
     );
     for (const time of [4_000, 2_125.5, 4_200, 250, 0]) {
-      expect(next.sample(time)).toEqual(createCompositionCameraEvaluator(value).sample(time));
+      expect(next.sample(time)).toEqual(
+        createCompositionCameraEvaluator({ ...value, mapTelemetryTime: coldTelemetryTime }).sample(time),
+      );
     }
-    expect(mapTelemetryTime.mock.calls.length).toBeLessThan(150);
+    // Prediction reads both current and future source clocks; retain the
+    // performance contract in simulation work rather than one clock read/tick.
+    expect(mapTelemetryTime.mock.calls.length).toBeLessThan(coldTelemetryTime.mock.calls.length / 4);
   });
 
   it('discards a checkpoint exactly at the first changed simulation step', () => {

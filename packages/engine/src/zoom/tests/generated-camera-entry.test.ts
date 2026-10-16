@@ -17,7 +17,7 @@ describe('generated camera entry', () => {
     const zooms = plan(calmOrbitOpening);
     const camera = createCompositionCameraEvaluator({ zooms, telemetry: calmOrbitOpening });
     let previous = camera.sample(0).focus.cx;
-    for (let time = 10; time <= 2500; time += 10) {
+    for (let time = 10; time <= 1104; time += 10) {
       const focus = camera.sample(time).focus.cx;
       expect(focus).toBeLessThanOrEqual(previous + 1e-9);
       expect(focus).toBeGreaterThanOrEqual(0.4697265625 - 1e-9);

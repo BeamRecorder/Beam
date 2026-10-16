@@ -36,6 +36,8 @@ export interface CompositionCameraInputs {
   telemetry: readonly CursorTelemetryPoint[];
   mapFocus?: (focus: ZoomFocus, zoom: AppliedZoom, timeMs: number) => ZoomFocus;
   mapTelemetryTime?: (timelineTimeMs: number) => number;
+  /** Exclusive end of the current screen clip; prediction must not cross an edit. */
+  followEndMsAt?: (timelineTimeMs: number) => number;
   autoFollow?: ZoomAutoFollowSettings;
 }
 
@@ -46,3 +48,5 @@ export interface CameraCheckpointReuse {
 
 /** Whether a region may follow at this recorded source timestamp. */
 export type CameraFollowGate = (elementId: string | undefined, sourceTimeMs: number) => boolean;
+
+export type CameraFollowCursor = (zoom: AppliedZoom, timelineTimeMs: number) => ZoomFocus | null;

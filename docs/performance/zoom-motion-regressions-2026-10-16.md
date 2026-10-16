@@ -60,3 +60,30 @@ The planner now retains each action's initial press separately from its full pat
 A reduced anonymous coordinate/timing trace reproduces all four original failures (future-action entry focus, opening detour, and mirrored pre-click approach). Further regressions exercise opening drags, incoming handoffs before their press, source offset/rate mapping, missing/hidden inputs, and exact cadence/seek/checkpoint invariance. The real-source canvas mapping is also tested through the runtime snapshot camera. Algorithm thirteen refreshes older generated plans using the existing protections; original recording files were not modified by the diagnostic.
 
 Follow-up validation passed 239 focused engine/editor tests, thirteen runtime camera regressions, and two real Chromium preview/export comparisons covering generated 2D/orbit entry and post-press frames. Changed implementation coverage is 99.11% statements, 96.25% branches, 100% functions and 98.98% lines; each module exceeds 90% in every metric. Desktop/package type checks, scoped lint/format, package boundaries and the desktop/CLI build passed. Native Windows/macOS visual playback was not exercised.
+
+## Progressive following after the first action
+
+The next report describes a different motion defect: Balanced holds the camera until the pointer leaves its safe zone, then begins a smooth but conspicuously late catch-up pan. The old target jumps by the full cursor offset at that boundary. The spring smooths the resulting position but cannot anticipate that step. Its direction lock can also keep rejecting a new axis while continued travel repeatedly extends the deadline.
+
+Following now has a quiet core occupying one quarter of the configured safe-zone half extent, followed by a C2 shoulder. Its displacement integrates smoothstep through the shoulder, joining zero motion and full-rate tracking with continuous first and second spatial derivatives. A separate target filter precedes the existing critical spring. Brief reversals receive additional damping; continued travel does not extend the lock, and a new axis is never frozen. After 120 ms without recorded movement, spatial anchors rebase once to the acquired destination, preserving quiet framing and avoiding a pull toward the old click. Slow continuous motion never counts as a pause.
+
+The source sampler compensates part of the spring/filter delay with 125–200 ms of real recorded lookahead (about 167 ms in Balanced). It does not extrapolate missing samples or pass the current hold, an exclusive screen-clip boundary, or a hidden-cursor interval. It predicts source coordinates and maps them with current screen geometry, including trim and playback rate. Incoming handoffs use the same sampler with the destination's actual element identity so the first-action gate remains effective. Their acquired spatial references are checkpointed along with the target.
+
+A further test exposed velocity jumps introduced by linear interpolation between 120 Hz simulation ticks. Cubic Hermite interpolation now uses both endpoint velocities for focus, legacy scale and tilt. Cinematic scale retains its analytical envelope. This is shared engine/runtime behavior; it does not change planned shot timings, magnification or algorithm version thirteen, and existing zooms receive the correction without regeneration.
+
+Read-only diagnostics on the complete Calm Orbit telemetry, with the original source aspect ratio and translated screen geometry, show the first drag changing as follows. Values are output-normalized horizontal camera focus; these are sampled trajectories, not a subjective quality score.
+
+| Time (ms) | Boundary-triggered follow | Progressive follow |
+| --- | --- | --- |
+| 2500 | .478596 | .478596 |
+| 3300 | .478596 | .478618 |
+| 3500 | .478596 | .480823 |
+| 3700 | .478596 | .489119 |
+| 3900 | .534863 | .502532 |
+| 4100 | .624951 | .515105 |
+| 4500 | .645910 | .538518 |
+| 4900 | .646271 | .523396 |
+
+Focused regressions first reproduced the old boundary wait, target jump, blocked new axis and late constant-speed drag at 24/60/144 fps. Tests also cover smooth shoulder derivatives, abrupt native coordinate jumps, reversals across lock expiry, slow movement, long pauses with jitter, hidden sentinel positions, hide/show within the prediction window, half-open clip cuts, mapped source clocks, handoff acquisition, retained edits, dropped presentation frames, reverse seeks and the real Calm Orbit screen geometry. Recording/project files were not modified by diagnostics.
+
+Validation passed 202 distinct focused TypeScript regressions plus two real Chromium preview/export comparisons with identical completed pixels. Coverage across the five changed implementation modules is 100% statements/functions/lines and 95.15% branches; each module exceeds 90% in every metric. The final connection cleanup separately passed all 41 affected handoff/seek regressions with 100% module coverage, and the ten snapshot-camera tests cover overlapping and short inserted screens. The three-minute retained-camera regression also passed with the ordinary test timeout (coverage instrumentation used a longer runner timeout). Desktop and engine/runtime type checks, scoped lint/format, package boundaries, and the desktop/CLI build passed. Native Windows/macOS visual playback was not exercised.

@@ -1,36 +1,22 @@
 import type { AppliedZoom, ZoomFocus } from './zoom-types';
-import type { CameraSimulationState, CompositionCameraInputs, CameraFollowGate } from './composition-camera-types';
-import { createAutoFollowState, updateAutoFollowTarget } from './auto-follow-camera';
-import { clampFocusToScale, cursorFocusAt } from './zoom-playback';
-import type { CursorTelemetryPoint } from '../capture/capture-session';
+import type { CameraSimulationState, CameraFollowCursor } from './composition-camera-types';
+import { createAutoFollowState, progressiveFollowFocus } from './auto-follow-camera';
+import { clampFocusToScale } from './zoom-playback';
 
 /** Preserve the acquired focus through a handoff, including checkpoint restores. */
 export function connectedCameraFocus(
   state: CameraSimulationState,
   zoom: AppliedZoom,
   timeMs: number,
-  inputs: CompositionCameraInputs,
-  telemetry: readonly CursorTelemetryPoint[],
   zoomAt: (time: number) => AppliedZoom | null,
-  canFollow: CameraFollowGate,
+  followCursorAt: CameraFollowCursor,
 ): ZoomFocus {
   const handoff = zoom.connection!;
   if (state.connection?.fromId !== handoff.from.id || state.connection.toId !== handoff.to.id) {
-    const destination = { ...zoomAt(handoff.endMs)!, mode: handoff.to.mode };
+    const destination = { ...zoomAt(handoff.endMs)!, elementId: handoff.to.id, mode: handoff.to.mode };
     let to = destination.focus;
-    if (handoff.to.mode === 'auto') {
-      const cursorTime = inputs.mapTelemetryTime?.(handoff.endMs) ?? handoff.endMs;
-      const rawCursor = canFollow(handoff.to.id, cursorTime) ? cursorFocusAt(telemetry, cursorTime) : null;
-      const cursor = rawCursor ? (inputs.mapFocus?.(rawCursor, destination, handoff.endMs) ?? rawCursor) : null;
-      to = updateAutoFollowTarget(
-        createAutoFollowState(state.autoFollow.settings),
-        cursor,
-        to,
-        destination.scale,
-        1,
-        handoff.endMs,
-      );
-    }
+    const cursor = handoff.to.mode === 'auto' ? followCursorAt(destination, handoff.endMs) : null;
+    if (cursor) to = progressiveFollowFocus(cursor, to, to, destination.scale, state.autoFollow.settings.safeZone);
     state.connection = {
       fromId: handoff.from.id,
       toId: handoff.to.id,
@@ -40,19 +26,24 @@ export function connectedCameraFocus(
           : { cx: state.camera.focusX, cy: state.camera.focusY },
       to: { ...to },
     };
+    // The pan has already acquired this endpoint. Keep its spatial references
+    // too, so the first hold frame cannot start a second correction.
+    state.autoFollow = {
+      ...createAutoFollowState(state.autoFollow.settings),
+      initialized: true,
+      reachedFullZoom: true,
+      target: { ...to },
+      frozenTarget: { ...to },
+      anchorCursor: { ...(cursor ?? to) },
+      anchorFocus: { ...to },
+      previousCursor: cursor ? { ...cursor } : null,
+      lastMotionTimeMs: handoff.endMs,
+      settled: true,
+    };
   }
   const { from, to } = state.connection;
-  // Seed the incoming follow state with the acquired endpoint, rather than
-  // resetting to the saved click focus on the first frame after the pan.
-  Object.assign(state.autoFollow, {
-    initialized: true,
-    reachedFullZoom: true,
-    lastTimeMs: timeMs,
-    lockUntilMs: timeMs,
-    target: to,
-    frozenTarget: to,
-    direction: { cx: 0, cy: 0 },
-  });
+  state.autoFollow.lastTimeMs = timeMs;
+  state.autoFollow.lockUntilMs = timeMs;
   return clampFocusToScale(
     {
       cx: from.cx + (to.cx - from.cx) * handoff.progress,
