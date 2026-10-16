@@ -1278,7 +1278,8 @@
     "showRealCursor": "Systemcursor anzeigen",
     "description": "Zeichnet den Systemcursor direkt im Video auf. Automatische Zooms folgen ihm weiterhin. Der Beam-Cursor ist anfangs deaktiviert und kann in den Cursor-Einstellungen eingeblendet werden. Der aufgezeichnete Cursor lässt sich nicht entfernen.",
     "customCursor": "Eigener Cursor",
-    "overlayDescription": "Blendet den Beam-Cursor im Video ein. Deaktiviere ihn, wenn die Aufnahme bereits den Systemcursor enthält."
+    "overlayDescription": "Blendet den Beam-Cursor im Video ein. Deaktiviere ihn, wenn die Aufnahme bereits den Systemcursor enthält.",
+    "hoverSyncFailed": "Hover-Effekte konnten nicht synchronisiert werden. Öffne das Projekt erneut oder stelle die Cursorglättung auf 0 %, um ohne Synchronisierung zu exportieren."
   },
   "Gradient": {
     "type": "Typ",

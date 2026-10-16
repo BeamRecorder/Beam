@@ -1278,7 +1278,8 @@
     "showRealCursor": "Mostra cursore reale",
     "description": "Registra il cursore di sistema direttamente nel video. Gli zoom automatici continuano a seguirlo. Il cursore Beam è inizialmente disattivato; puoi sovrapporlo nelle impostazioni Cursore. Il cursore registrato non può essere rimosso.",
     "customCursor": "Cursore personalizzato",
-    "overlayDescription": "Sovrapponi il cursore Beam al video. Disattivalo se la registrazione include già il cursore di sistema."
+    "overlayDescription": "Sovrapponi il cursore Beam al video. Disattivalo se la registrazione include già il cursore di sistema.",
+    "hoverSyncFailed": "Impossibile sincronizzare gli effetti al passaggio del cursore. Riapri il progetto o imposta la fluidità del cursore allo 0% per esportare senza sincronizzazione."
   },
   "Gradient": {
     "type": "Tipo",

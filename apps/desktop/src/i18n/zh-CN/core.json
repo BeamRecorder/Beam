@@ -1278,7 +1278,8 @@
     "showRealCursor": "显示真实光标",
     "description": "将系统光标直接录入视频。自动缩放仍会跟随光标。Beam 光标默认关闭；可在光标设置中叠加显示。已录入的光标无法移除。",
     "customCursor": "自定义光标",
-    "overlayDescription": "在视频上叠加 Beam 光标。如果录制内容已包含系统光标，请关闭此选项。"
+    "overlayDescription": "在视频上叠加 Beam 光标。如果录制内容已包含系统光标，请关闭此选项。",
+    "hoverSyncFailed": "无法同步悬停效果。请重新打开项目重试，或将光标平滑设为 0% 以在不同步的情况下导出。"
   },
   "Gradient": {
     "type": "类型",

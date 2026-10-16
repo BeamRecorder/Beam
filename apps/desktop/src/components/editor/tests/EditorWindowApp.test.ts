@@ -69,6 +69,11 @@ vi.mock('@vueuse/motion', () => ({
   },
 }));
 vi.mock('../../../api/capture', () => ({ capture }));
+// Analysis ownership and cancellation have focused composable tests. Startup fixtures intentionally omit media.
+vi.mock('../composables/useCursorHoverAnalysis', async () => {
+  const { computed } = await import('vue');
+  return { useCursorHoverAnalysis: (data: { value: unknown }) => computed(() => data.value) };
+});
 vi.mock('../../ui/toast/ToastProvider.vue', () => ({
   default: { template: '<div />' },
 }));

@@ -124,6 +124,52 @@ beforeEach(() => {
 });
 
 describe('openMediaInput', () => {
+  it('rejects cancellation before acquiring a source', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const pool = makePool();
+    await expect(openMediaInput(descriptor(), pool, controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
+    expect(runtime.Input).not.toHaveBeenCalled();
+    expect(pool.size).toBe(0);
+  });
+  it('cancels an outstanding format read and releases its source exactly once', async () => {
+    const controller = new AbortController(),
+      pool = makePool();
+    let reject!: (error: Error) => void;
+    const input = makeInput({
+      getFormat: vi.fn(
+        () =>
+          new Promise((_resolve, fail) => {
+            reject = fail;
+          }),
+      ),
+    });
+    input.dispose.mockImplementation(() => reject(new runtime.InputDisposedError()));
+    runtime.inputFactory = () => input;
+    const pending = openMediaInput(descriptor(), pool, controller.signal);
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    expect(input.dispose).toHaveBeenCalledOnce();
+    expect(pool.size).toBe(0);
+  });
+  it('keeps cancellation attached after opening and detaches it on ordinary disposal', async () => {
+    const input = makeInput();
+    runtime.inputFactory = () => input;
+    const pool = makePool(),
+      controller = new AbortController();
+    const opened = await openMediaInput(descriptor(), pool, controller.signal);
+    controller.abort();
+    opened.dispose();
+    expect(input.dispose).toHaveBeenCalledOnce();
+    expect(pool.size).toBe(0);
+    const other = makeInput();
+    runtime.inputFactory = () => other;
+    const second = new AbortController();
+    const next = await openMediaInput(descriptor(), pool, second.signal);
+    next.dispose();
+    second.abort();
+    expect(other.dispose).toHaveBeenCalledOnce();
+  });
   it('passes video and audio containers to Mediabunny', () => {
     expect(EDITOR_INPUT_FORMATS).toEqual([
       runtime.MP4,

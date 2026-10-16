@@ -1290,7 +1290,8 @@
     "showRealCursor": "Show real cursor",
     "description": "Records the system cursor directly in the video. Automatic zooms still follow it. The Beam cursor starts disabled; you can overlay it in Cursor settings. The recorded cursor cannot be removed.",
     "customCursor": "Custom cursor",
-    "overlayDescription": "Overlay the Beam cursor on the video. Turn it off when the recording already includes the system cursor."
+    "overlayDescription": "Overlay the Beam cursor on the video. Turn it off when the recording already includes the system cursor.",
+    "hoverSyncFailed": "Unable to synchronize hover effects. Reopen the project to retry, or set cursor smoothing to 0% to export without synchronization."
   },
   "Gradient": {
     "type": "Type",

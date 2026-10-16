@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Cursor hover synchronization runs silently in the background; only failures show a message, translated into all fifteen languages. Repeated video frames are filtered before conversion, with one small analysis canvas instead of full-resolution mipmap surfaces.
+- Smoothed cursors now adapt to visual hover changes in recordings, keeping fast list navigation aligned in the editor and video exports while preserving smooth movement elsewhere.
 - Windows screen recording uses an explicit H.264 profile instead of camera Auto settings and can select software encoding when accelerated Media Foundation type negotiation fails, including errors raised after transcoding starts. Initialization remains bounded and preserves the first captured image.
 - Empty failed recordings show the capture error instead of opening a broken video in the editor; finalized partial recordings remain available and a new recording can start immediately.
 - 3D camera motion blur keeps soft shadows at a consistent opacity when the shutter sample count changes, and camera framing returns to flat without a final jump.

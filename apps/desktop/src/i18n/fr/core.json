@@ -1290,7 +1290,8 @@
     "showRealCursor": "Afficher le curseur réel",
     "description": "Enregistre le curseur système directement dans la vidéo. Les zooms automatiques continuent de le suivre. Le curseur Beam est désactivé au départ ; vous pouvez le superposer dans les paramètres Curseur. Le curseur enregistré ne peut pas être retiré.",
     "customCursor": "Curseur personnalisé",
-    "overlayDescription": "Superpose le curseur Beam à la vidéo. Désactivez-le si la vidéo contient déjà le curseur système."
+    "overlayDescription": "Superpose le curseur Beam à la vidéo. Désactivez-le si la vidéo contient déjà le curseur système.",
+    "hoverSyncFailed": "Impossible de synchroniser les effets de survol. Rouvrez le projet pour réessayer, ou réglez le lissage du curseur à 0 % pour exporter sans synchronisation."
   },
   "Gradient": {
     "type": "Type",

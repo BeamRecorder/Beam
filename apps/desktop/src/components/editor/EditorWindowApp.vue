@@ -11,6 +11,7 @@ import EditorProjectLoadingOverlay from './EditorProjectLoadingOverlay.vue';
 import type { EditorLayoutKind } from './layout/editor-layout-types';
 import { useScreenshotStartup } from '../screenshot/loading/useScreenshotStartup';
 import { clearEditorImages } from './resources/editor-image-cache';
+import { useCursorHoverAnalysis } from './composables/useCursorHoverAnalysis';
 const screenshotStartup = useScreenshotStartup();
 const VideoEditor = shallowRef<Component>();
 const ScreenshotEditor = shallowRef<Component>();
@@ -20,6 +21,7 @@ const project = ref<CaptureProject | null>(null);
 // Session cursor/input arrays are immutable and can be large after a long recording.
 // Keep them out of Vue's deep reactive graph during editor startup.
 const editorData = shallowRef<ProjectEditorData | null>(null);
+const synchronizedEditorData = useCursorHoverAnalysis(editorData);
 const loading = ref(true);
 const loadingKind = ref<EditorLayoutKind | null>(null);
 const error = ref('');
@@ -217,7 +219,7 @@ onBeforeUnmount(() => {
   <VideoEditor
     v-if="project"
     :key="`${project.id}:${editorGeneration}`"
-    :editor-data="editorData"
+    :editor-data="synchronizedEditorData"
     :project="project"
     @back-to-hud="handleBackToHud"
     @open-project="handleOpenProject"

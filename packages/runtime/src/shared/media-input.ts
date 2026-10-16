@@ -52,29 +52,36 @@ function errorDetail(error: unknown, descriptor: MediaSourceDescriptor): MediaEr
 export async function openMediaInput(
   descriptor: MediaSourceDescriptor,
   pool: MediaSourcePool = mediaSourcePool,
+  signal?: AbortSignal,
 ): Promise<OpenedMediaInput> {
+  signal?.throwIfAborted();
   const lease = pool.acquire(descriptor);
   let input: Input<UrlSource> | null = null;
-  try {
-    input = new Input({ source: lease.ref, formats: EDITOR_INPUT_FORMATS });
-    await input.getFormat();
-  } catch (error) {
+  let disposed = false;
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true;
+    signal?.removeEventListener('abort', dispose);
     if (input) input.dispose();
     else lease.ref.free();
     lease.release();
+  };
+  try {
+    input = new Input({ source: lease.ref, formats: EDITOR_INPUT_FORMATS });
+    signal?.addEventListener('abort', dispose, { once: true });
+    signal?.throwIfAborted();
+    await input.getFormat();
+    signal?.throwIfAborted();
+  } catch (error) {
+    dispose();
+    if (signal?.aborted) throw signal.reason;
     throw new MediaInputError(errorDetail(error, descriptor));
   }
 
-  let disposed = false;
   return {
     descriptor,
     input,
-    dispose: () => {
-      if (disposed) return;
-      disposed = true;
-      input.dispose();
-      lease.release();
-    },
+    dispose,
   };
 }
 

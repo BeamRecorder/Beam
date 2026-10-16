@@ -25,6 +25,7 @@ import {
 import type { ExportRequest } from '@beam/encoder/export-types';
 import type { ExportAssets } from '@beam/encoder/mediabunny/export-worker-assets';
 import { WATERMARK_LOGO_KEY } from '@beam/runtime/rendering/watermark-render';
+import { prepareExportCursorHovers } from './export-cursor-hover';
 
 const abortIfNeeded = (signal: AbortSignal) => {
   if (signal.aborted) throw new DOMException('Export cancelled.', 'AbortError');
@@ -133,6 +134,7 @@ export async function renderExportVideo(
   const sharedConsumers = new Map<string, AsyncIterator<VideoSample | null>>();
   let backgroundReader: BackgroundVideoReader | null = null;
   try {
+    request = await prepareExportCursorHovers(request, assets, signal);
     for (const clip of compileSceneComposition(request.snapshot.composition).clips) {
       if (
         !isVisualClip(clip) ||
@@ -180,6 +182,7 @@ export async function renderExportVideo(
           request.snapshot.cursorSettings.motion,
           assets.screenSize.width,
           assets.screenSize.height,
+          request.snapshot.cursor.hoverSync,
         )
       : undefined;
     const camera = createSnapshotCameraEvaluator(

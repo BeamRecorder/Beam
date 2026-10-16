@@ -1278,7 +1278,8 @@
     "showRealCursor": "顯示真實游標",
     "description": "將系統游標直接錄入影片。自動縮放仍會跟隨游標。Beam 游標預設關閉；可在游標設定中疊加顯示。已錄入的游標無法移除。",
     "customCursor": "自訂游標",
-    "overlayDescription": "在影片上疊加 Beam 游標。如果錄製內容已包含系統游標，請關閉此選項。"
+    "overlayDescription": "在影片上疊加 Beam 游標。如果錄製內容已包含系統游標，請關閉此選項。",
+    "hoverSyncFailed": "無法同步懸停效果。請重新開啟專案重試，或將游標平滑設為 0% 以在不同步的情況下匯出。"
   },
   "Gradient": {
     "type": "類型",

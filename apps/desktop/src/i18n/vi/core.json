@@ -1278,7 +1278,8 @@
     "showRealCursor": "Hiển thị con trỏ thật",
     "description": "Ghi con trỏ hệ thống trực tiếp vào video. Thu phóng tự động vẫn theo dõi con trỏ. Con trỏ Beam ban đầu bị tắt; bạn có thể phủ nó trong cài đặt Con trỏ. Không thể xóa con trỏ đã ghi.",
     "customCursor": "Con trỏ tùy chỉnh",
-    "overlayDescription": "Phủ con trỏ Beam lên video. Tắt nếu bản ghi đã có con trỏ hệ thống."
+    "overlayDescription": "Phủ con trỏ Beam lên video. Tắt nếu bản ghi đã có con trỏ hệ thống.",
+    "hoverSyncFailed": "Không thể đồng bộ hiệu ứng di chuột. Mở lại dự án để thử lại, hoặc đặt mức làm mượt con trỏ về 0% để xuất mà không đồng bộ."
   },
   "Gradient": {
     "type": "Loại",
