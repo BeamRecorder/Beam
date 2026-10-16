@@ -313,6 +313,22 @@ function createProjectStore(
       path: pathToFileURL(targetPath).href,
     };
   };
+  const list = () => {
+    const seen = new Set();
+    return projectDirectories()
+      .flatMap((directory) => {
+        try {
+          const manifest = readManifest(directory);
+          if (seen.has(manifest.projectId)) return [];
+          const project = summary(directory, manifest, manifest.projectId);
+          seen.add(project.id);
+          return [project];
+        } catch {
+          return [];
+        }
+      })
+      .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  };
   if (repairMetadata) applyPendingRenames();
   return {
     rootDirectory: root,
@@ -320,18 +336,7 @@ function createProjectStore(
       return roots();
     },
     summaryForDirectory: summary,
-    list: () =>
-      projectDirectories()
-        .map((directory) => {
-          try {
-            const manifest = readManifest(directory);
-            return summary(directory, manifest, manifest.projectId);
-          } catch {
-            return null;
-          }
-        })
-        .filter(Boolean)
-        .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))),
+    list,
     get: (id) => {
       const directory = directoryFor(id);
       return summary(directory, readManifest(directory), id);

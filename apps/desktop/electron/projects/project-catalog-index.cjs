@@ -8,6 +8,8 @@ const { validatePageRequest, validSummary, UUID } = require('./project-catalog-p
 const { fileStamp, watchPaths, validWatchPaths, dependencyStamp } = require('./project-catalog-files.cjs');
 const { rootKey, safePath } = require('./project-media-locations.cjs');
 
+const projectIdentity = (summary) => `${summary.mode === 'screenshot' ? 'screenshot' : 'video'}:${summary.id}`;
+
 function createProjectCatalogIndex(root, { roots = [root] } = {}) {
   const database = createCatalogDatabase(root);
   // The main process owns startup repairs. This worker only indexes metadata.
@@ -56,14 +58,15 @@ function createProjectCatalogIndex(root, { roots = [root] } = {}) {
     if (!force && cached?.source_stamp === sourceStamp) {
       try {
         const paths = JSON.parse(cached.dependency_paths);
+        const summary = JSON.parse(cached.summary);
         if (
           paths !== null &&
           validWatchPaths(candidate.root, paths) &&
-          validSummary(JSON.parse(cached.summary)) &&
+          validSummary(summary) &&
           cached.dependency_stamp === (await dependencyStamp(candidate.root, paths))
         ) {
           metrics.reused++;
-          return {};
+          return { identity: projectIdentity(summary) };
         }
       } catch (error) {
         if (!(error instanceof SyntaxError)) throw error;
@@ -93,6 +96,7 @@ function createProjectCatalogIndex(root, { roots = [root] } = {}) {
     const paths = watchPaths(candidate.root, candidate.directory, manifest);
     metrics.rebuilt++;
     return {
+      identity: projectIdentity(summary),
       update: {
         key,
         summary,
@@ -107,6 +111,7 @@ function createProjectCatalogIndex(root, { roots = [root] } = {}) {
     const previous = database.keys();
     const entries = await candidates();
     const present = new Set(entries.map(candidateKey));
+    const seen = new Set();
     for (let offset = 0; offset < entries.length; offset += 4) {
       const batch = await Promise.all(
         entries.slice(offset, offset + 4).map(async (candidate) => {
@@ -125,10 +130,20 @@ function createProjectCatalogIndex(root, { roots = [root] } = {}) {
           }
         }),
       );
-      database.commit(
-        batch.flatMap((result) => (result.update ? [result.update] : [])),
-        batch.flatMap((result) => (result.removed ? [result.removed] : [])),
-      );
+      const updates = [],
+        removed = [];
+      // Promise.all preserves root order. A stale cached row must not make the
+      // picker show a different copy from the one directoryFor() will open.
+      for (const [index, result] of batch.entries()) {
+        if (result.identity && seen.has(result.identity)) {
+          removed.push(candidateKey(entries[offset + index]));
+          continue;
+        }
+        if (result.identity) seen.add(result.identity);
+        if (result.update) updates.push(result.update);
+        if (result.removed) removed.push(result.removed);
+      }
+      database.commit(updates, removed);
     }
     database.commit(
       [],

@@ -22,11 +22,17 @@ function createStorageDirectories({
     if (!fs.statSync(root).isDirectory()) throw new Error('Project location is not a directory.');
     return root;
   };
-  const projectRoots = () => [
-    ...new Map(
-      [defaultProjectsDirectory, ...settings.projects.recent].map((root) => [pathKey(root, platform), root]),
-    ).values(),
-  ];
+  const projectRoots = () => {
+    const seen = new Set();
+    // Reads must prefer the same library as writes when a project was copied
+    // to the selected drive and its old manifest still exists in Default.
+    return [projectRoot(), defaultProjectsDirectory, ...settings.projects.recent].filter((root) => {
+      const key = pathKey(root, platform);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
   const exportDirectory = () => settings.exports.directory ?? settings.exports.lastDirectory ?? defaultExportDirectory;
   const publish = (next) => {
     const previousProjects = JSON.stringify(settings.projects);

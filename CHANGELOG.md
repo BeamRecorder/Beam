@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Opening projects now prioritizes the selected project location over stale copies in the default folder. Studio, Instant and Screenshot listings, media loading and cached search results use the same copy after changing drives or restarting Beam.
+
 - Windows screen recording uses an explicit H.264 profile instead of camera Auto settings and can select software encoding when accelerated Media Foundation type negotiation fails, including errors raised after transcoding starts. Initialization remains bounded and preserves the first captured image.
 - Empty failed recordings show the capture error instead of opening a broken video in the editor; finalized partial recordings remain available and a new recording can start immediately.
 - Automatic zooms retain opening clicks and frame the full duration and visible path of drags. Dense later activity no longer erases the first gesture, and older telemetry without releases remains usable.

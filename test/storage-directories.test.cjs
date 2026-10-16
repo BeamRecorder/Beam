@@ -130,7 +130,7 @@ test('choosing a root establishes all categories, keeps historical roots and per
     for (const mode of ['studio', 'instant', 'screenshot'])
       assert.ok(fs.statSync(path.join(root, 'projects', mode)).isDirectory());
   }
-  assert.deepEqual(f.service.projectRoots(), [f.root, next, selected]);
+  assert.deepEqual(f.service.projectRoots(), [next, f.root, selected]);
   assert.equal(f.service.projectRoot(), next);
   assert.equal(f.service.exportDirectory(), f.root);
   assert.deepEqual(createStorageDirectories(f.options).snapshot(), f.service.snapshot());
@@ -222,7 +222,7 @@ test('hydration updates the live roots and independent exports without writing p
     selected = f.directory('Library');
   f.service.hydrate({ directories: { projects: { directory: selected }, exports: { lastDirectory: f.root } } });
   assert.equal(f.service.projectRoot(), selected);
-  assert.deepEqual(f.service.projectRoots(), [f.root, selected]);
+  assert.deepEqual(f.service.projectRoots(), [selected, f.root]);
   assert.equal(f.service.exportDirectory(), f.root);
   assert.equal(f.notifications.length, 0);
 });
