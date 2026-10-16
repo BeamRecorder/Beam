@@ -6,7 +6,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
-- Screenshot Composition stays above Properties when moved across the inspector. Properties and Composition now use fully opaque backgrounds in both light and dark themes, including the docked layer list.
+- Screenshot Composition stays above Properties when moved across the inspector. Properties and Composition share a nearly opaque frosted background in both light and dark themes, including the docked layer list, to keep controls readable.
 
 - Opening projects now prioritizes the selected project location over stale copies in the default folder. Studio, Instant and Screenshot listings, media loading and cached search results use the same copy after changing drives or restarting Beam.
 
@@ -42,6 +42,8 @@ User-facing changes to Beam are documented in this file.
 - The private website’s Studio overview shows a real recording edited on the native multi-track timeline in a fifteen-second, 60 fps loop, including trim/split/cut, a caption, appearance and canvas adjustments, and a 2D zoom. Light/dark variants and editable source live in `examples/website-studio-loop/`.
 
 ### Changed
+
+- Screenshot Properties and Composition share a subtle frosted background in both themes, with a 96% theme tint to preserve readability, whether floating or docked. Reduced transparency keeps them opaque.
 
 - The Composition docking preview now pulses its dashed outline while dragging to highlight where to drop. Its label and position stay stable; reduced motion uses a static outline.
 

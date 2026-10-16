@@ -316,71 +316,109 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('Composition floating lay
   }, 30_000);
 
   it.each(['light', 'dark'])(
-    'keeps Properties and floating/docked Composition fully opaque in %s',
+    'gives Properties and floating/docked Composition the same subtle frost in %s',
     async (theme) => {
       await mount();
-      await page.evaluate((theme) => document.documentElement.classList.toggle('dark', theme === 'dark'), theme);
-      const assertOpaque = async (selector: string) => {
+      await page.evaluate((theme) => {
+        document.documentElement.classList.toggle('dark', theme === 'dark');
+        for (const el of document.querySelectorAll<HTMLElement>('.screenshot-editor,.workspace-upper'))
+          el.style.background = 'repeating-linear-gradient(0deg, #000 0 4px, #fff 4px 8px)';
+      }, theme);
+      await page.addStyleTag({
+        content:
+          '.measure-frost > * { opacity:0 !important } .without-frost::before { backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }',
+      });
+      const assertFrost = async (selector: string, pixels = true) => {
         const appearance = await page.$eval(selector, (element) => {
-          const style = getComputedStyle(element);
+          const style = getComputedStyle(element, '::before');
+          const ctx = new OffscreenCanvas(1, 1).getContext('2d')!;
+          ctx.fillStyle = style.backgroundColor;
+          ctx.fillRect(0, 0, 1, 1);
           return {
-            background: style.backgroundColor,
-            opacity: style.opacity,
-            filter: style.backdropFilter,
-            pseudo: getComputedStyle(element, '::before').content,
+            alpha: ctx.getImageData(0, 0, 1, 1).data[3],
+            blur: style.backdropFilter,
+            parentFilter: getComputedStyle(element).backdropFilter,
+            opacity: getComputedStyle(element).opacity,
           };
         });
-        expect(appearance.background).not.toContain('rgba');
-        expect(appearance.background).not.toBe('transparent');
+        expect(appearance.alpha).toBeGreaterThanOrEqual(244);
+        expect(appearance.alpha).toBeLessThanOrEqual(246);
+        expect(appearance.blur).toBe('blur(12px)');
+        expect(appearance.parentFilter).toBe('none');
         expect(appearance.opacity).toBe('1');
-        expect(appearance.filter).toBe('none');
-        expect(appearance.pseudo).toBe('none');
+        if (!pixels) return;
+        await page.$eval(selector, (element) => element.classList.add('measure-frost'));
         const clip = await page.$eval(selector, (element) => {
-          const r = element.getBoundingClientRect();
-          return {
-            x: Math.ceil(r.x) + 10,
-            y: Math.ceil(r.y) + 10,
-            width: Math.floor(r.width) - 20,
-            height: Math.floor(r.height) - 20,
-          };
+          const rect = element.getBoundingClientRect();
+          return { x: Math.ceil(rect.left) + 20, y: Math.ceil(rect.top) + 100, width: 4, height: 128 };
         });
-        await page.evaluate(async (selector) => {
-          await document.fonts.ready;
-          document.querySelector(selector)!.classList.add('measure-panel-background');
-        }, selector);
-        await page.addStyleTag({ content: '.measure-panel-background > * { opacity: 0 !important; }' });
-        const images = [];
-        for (const color of ['black', 'white']) {
-          await page.evaluate((color) => {
-            for (const el of document.querySelectorAll<HTMLElement>('.screenshot-editor,.workspace-upper'))
-              el.style.background = color;
-          }, color);
+        const contrast = async () => {
           await page.evaluate(
             () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
           );
-          images.push(await page.screenshot({ clip }));
-        }
-        expect(
-          Buffer.from(images[0]!).equals(Buffer.from(images[1]!)),
-          `${selector} must hide changing media pixels`,
-        ).toBe(true);
-        await page.$eval(selector, (element) => element.classList.remove('measure-panel-background'));
+          const bytes = await page.screenshot({ clip });
+          return page.evaluate(
+            async (bytes) => {
+              const bitmap = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: 'image/png' }));
+              const canvas = new OffscreenCanvas(bitmap.width, bitmap.height),
+                ctx = canvas.getContext('2d')!;
+              ctx.drawImage(bitmap, 0, 0);
+              bitmap.close();
+              const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+              const offset = canvas.width * 4 * 4;
+              let difference = 0;
+              for (let i = offset; i < pixels.length; i += 4) difference += Math.abs(pixels[i]! - pixels[i - offset]!);
+              return difference / ((pixels.length - offset) / 4);
+            },
+            [...bytes],
+          );
+        };
+        const blurred = await contrast();
+        await page.$eval(selector, (element) => element.classList.add('without-frost'));
+        const sharp = await contrast();
+        expect(sharp, `${selector} needs measurable translucency`).toBeGreaterThan(5);
+        expect(blurred, `${selector} must blur its actual backdrop`).toBeLessThan(sharp * 0.45);
+        await page.$eval(selector, (element) => element.classList.remove('measure-frost', 'without-frost'));
       };
       await settled();
-      await assertOpaque('.properties-island');
-      await assertOpaque('.composition-surface');
+      await assertFrost('.properties-island');
       if (!(await page.$('.composition-content'))) await page.click('.composition-toggle');
+      await assertFrost('.composition-surface');
       await page.click('[aria-label="Dock composition in the title bar"]');
       await page.waitForSelector('.screenshot-composition.docked');
       await settled();
       await page.click('.composition-toggle');
       await page.waitForSelector('.composition-content');
-      await assertOpaque('.composition-surface');
-      await assertOpaque('.composition-content');
-      await page.screenshot({ path: `/tmp/beam-composition-opaque-${theme}.png` });
+      await assertFrost('.composition-surface', false);
+      await assertFrost('.composition-content');
+      await page.screenshot({ path: `/tmp/beam-panels-subtle-blur-${theme}.png` });
     },
     30_000,
   );
+
+  it('makes both panels opaque when reduced transparency is requested', async () => {
+    await mount();
+    const session = await page.createCDPSession();
+    try {
+      await session.send('Emulation.setEmulatedMedia', {
+        features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }],
+      });
+      for (const selector of ['.properties-island', '.composition-surface']) {
+        const appearance = await page.$eval(selector, (element) => {
+          const style = getComputedStyle(element, '::before');
+          const ctx = new OffscreenCanvas(1, 1).getContext('2d')!;
+          ctx.fillStyle = style.backgroundColor;
+          ctx.fillRect(0, 0, 1, 1);
+          return { alpha: ctx.getImageData(0, 0, 1, 1).data[3], blur: style.backdropFilter };
+        });
+        expect(appearance).toEqual({ alpha: 255, blur: 'none' });
+      }
+    } finally {
+      await session.send('Emulation.setEmulatedMedia', { features: [] });
+      await session.detach();
+    }
+  }, 30_000);
+
   it.each([20, 1550])(
     'docks when released at titlebar x=%s without hitting the small preview',
     async (x) => {

@@ -15,11 +15,15 @@
   pointer-events: none;
 }
 
-/* Inspectors must stay readable even over high contrast media. An opaque
- * surface also avoids a redundant backdrop pass behind their controls. */
-.screenshot-chrome.screenshot-panel {
-  background: var(--color-bg-surface);
-}
+/* Keep inspector text legible with only a faint frosted finish. Blur stays on
+ * the background layer so nested menus can sample their own backdrop. */
 .screenshot-chrome.screenshot-panel::before {
-  content: none;
+  background: color-mix(in srgb, var(--color-bg-surface) 96%, transparent);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .screenshot-chrome.screenshot-panel::before {
+    background: var(--color-bg-surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }

@@ -596,3 +596,27 @@ test('persists always-on-top changes across restart without resetting other pref
     fs.rmSync(directory, { recursive: true, force: true });
   }
 });
+
+for (const platform of ['linux', 'win32', 'darwin']) {
+  test(`Composition docking survives disk reload and unrelated preference updates (${platform})`, (t) => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-composition-preferences-'));
+    t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+    let store = createPreferencesStore(directory, { platform });
+    const position = { x: 0.2, y: 0.6 };
+    for (const docked of [true, false, true]) {
+      store.patch({
+        extras: { screenshotCompositionDocked: docked, screenshotCompositionPosition: position },
+      });
+      store.patch({ theme: 'dark', extras: { locale: 'fr' } });
+      const disk = JSON.parse(fs.readFileSync(store.file, 'utf8'));
+      assert.equal(disk.extras.screenshotCompositionDocked, docked);
+      assert.deepEqual(disk.extras.screenshotCompositionPosition, position);
+      store = createPreferencesStore(directory, { platform });
+      store.repair();
+      assert.equal(store.read().extras.screenshotCompositionDocked, docked);
+      assert.deepEqual(store.read().extras.screenshotCompositionPosition, position);
+      assert.equal(store.read().extras.locale, 'fr');
+      assert.equal(store.read().theme, 'dark');
+    }
+  });
+}
