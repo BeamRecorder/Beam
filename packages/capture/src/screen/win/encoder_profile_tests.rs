@@ -9,7 +9,7 @@ fn screen_profile_has_explicit_h264_mp4_geometry_rate_and_no_audio() {
     let video = profile.Video().expect("video");
     assert_eq!(
         video.Subtype().expect("codec"),
-        MediaEncodingSubtypes::H264().expect("H.264")
+        MediaEncodingSubtypes::H264Es().expect("H.264 elementary stream")
     );
     assert_eq!(
         profile
