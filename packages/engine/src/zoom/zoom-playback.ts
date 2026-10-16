@@ -121,6 +121,13 @@ function zoomAtSortedTime(
         strength: 1,
         mode: pair.mode === 'auto' || next.mode === 'auto' ? 'auto' : 'manual',
         tracksCursor: false,
+        connection: {
+          from: pair,
+          to: next,
+          startMs: pair.endMs + LEAD_MS,
+          endMs: pair.endMs + LEAD_MS + CONNECTED_PAN_MS,
+          progress: t,
+        },
         tilt: lerp(tiltFor(pair), tiltFor(next), t) * transitionStrength,
         tiltHorizontal: lerp(horizontalTiltFor(pair), horizontalTiltFor(next), t),
         tiltVertical: lerp(verticalTiltFor(pair), verticalTiltFor(next), t),

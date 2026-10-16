@@ -9,7 +9,7 @@ import { suggestAutomaticTilt } from './automatic-tilt';
 import { planZoomShots } from './zoom-shot-planner';
 import type { ZoomShotBounds } from './zoom-shot-types';
 
-export const ZOOM_ALGORITHM_VERSION = 11;
+export const ZOOM_ALGORITHM_VERSION = 12;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 export function normalizeCursorTelemetry(

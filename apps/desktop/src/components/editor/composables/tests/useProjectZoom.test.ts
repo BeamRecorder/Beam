@@ -422,7 +422,7 @@ describe('useProjectZoom', () => {
         id: 'auto:session:6000:screen',
         mode: 'auto',
         startMs: 5_500,
-        endMs: 7_500,
+        endMs: 6_500,
       }),
     );
   });
@@ -713,20 +713,25 @@ describe('useProjectZoom', () => {
     expect(state.zoomElements.value).toEqual([zoom('saved')]);
   });
 
-  it.each([9, 10])('recalculates previously saved algorithm %d plans while preserving authored zooms', (version) => {
-    const { state } = create();
-    const authored = { ...zoom('authored'), startMs: 0, endMs: 200 };
-    state.zoomElements.value = [
-      authored,
-      { ...zoom('stale', 'auto'), generation: 'automatic', startMs: 3000, endMs: 9000, linkedClipId: 'screen' },
-    ];
-    state.generatedSessions.value = [{ sessionId: 'session', algorithmVersion: version, generatedAt: 'old' }];
-    state.ensureAutomaticZooms();
-    expect(state.zoomElements.value).toContainEqual(authored);
-    expect(state.zoomElements.value.some((zoom) => zoom.id === 'stale')).toBe(false);
-    expect(state.zoomElements.value).toContainEqual(expect.objectContaining({ startMs: 5500, endMs: 7500 }));
-    expect(state.generatedSessions.value).toContainEqual(expect.objectContaining({ algorithmVersion: 11 }));
-  });
+  it.each([9, 10, 11])(
+    'recalculates previously saved algorithm %d plans while preserving authored zooms',
+    (version) => {
+      const { state } = create();
+      const authored = { ...zoom('authored'), startMs: 0, endMs: 200 };
+      state.zoomElements.value = [
+        authored,
+        { ...zoom('stale', 'auto'), generation: 'automatic', startMs: 3000, endMs: 9000, linkedClipId: 'screen' },
+      ];
+      state.generatedSessions.value = [{ sessionId: 'session', algorithmVersion: version, generatedAt: 'old' }];
+      state.ensureAutomaticZooms();
+      expect(state.zoomElements.value).toContainEqual(authored);
+      expect(state.zoomElements.value.some((zoom) => zoom.id === 'stale')).toBe(false);
+      expect(state.zoomElements.value).toContainEqual(expect.objectContaining({ startMs: 5500, endMs: 6500 }));
+      expect(state.generatedSessions.value).toContainEqual(
+        expect.objectContaining({ algorithmVersion: ZOOM_ALGORITHM_VERSION }),
+      );
+    },
+  );
 });
 
 it('reuses saved camera settings on a new zoom with independent values', () => {

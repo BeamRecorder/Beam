@@ -89,7 +89,7 @@ describe('generateRecordingZooms', () => {
       canvas: { width: 1920, height: 1080, showBackground: false },
     });
     expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({ startMs: 5500, endMs: 7500, focus: { cx: 0.4, cy: 0.6 }, projection: 'orbit' });
+    expect(result[0]).toMatchObject({ startMs: 5500, endMs: 6500, focus: { cx: 0.4, cy: 0.6 }, projection: 'orbit' });
   });
   it('ignores the actual recording Stop click on resumed and sped-up clips', () => {
     const resumed = { ...asset('resumed', 'session'), sessionStartMs: 12000, durationMs: 20000 };
@@ -107,7 +107,7 @@ describe('generateRecordingZooms', () => {
     expect(generateRecordingZooms(comp, 'session', [click(31500)], [])).toEqual([]);
     expect(generateRecordingZooms(comp, 'session', [click(18000)], [])[0]).toMatchObject({
       startMs: 6500,
-      endMs: 8500,
+      endMs: 7500,
     });
   });
   it('maps trimmed source telemetry into the clip timeline using playback rate and offset', () => {
@@ -133,7 +133,7 @@ describe('generateRecordingZooms', () => {
     expect(result[0]).toMatchObject({
       linkedClipId: 'trimmed-screen',
       startMs: 5_500,
-      endMs: 7_500,
+      endMs: 6_500,
       focus: { cx: 0.4, cy: 0.6 },
       mode: 'auto',
       sessionId: 'session',

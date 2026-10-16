@@ -8,7 +8,8 @@ import {
   DEFAULT_ZOOM_TILT_VERTICAL,
 } from './zoom-types';
 import { clampFocusToScale } from './zoom-focus';
-import { cinematicProgress, interpolateZoomScale, CONNECTED_GAP_MS, CONNECTED_PAN_MS } from './zoom-transitions';
+import { cinematicProgress, interpolateZoomScale } from './zoom-transitions';
+import { cinematicConnectionWindow } from './zoom-connection-window';
 import { interpolateOrbitSettings, normalizeOrbitSettings } from './orbit-settings';
 
 /** Connected holds share one continuous pan, including short gaps, without a partial zoom-out. */
@@ -18,13 +19,9 @@ export function cinematicZoomConnection(
   timeMs: number,
   mapFocus: ZoomFocusMapper,
 ): AppliedZoom | null {
-  const gap = next.startMs - current.endMs;
-  if (current.transition !== 'cinematic' || next.transition !== 'cinematic' || gap < 0 || gap > CONNECTED_GAP_MS)
-    return null;
-  const extension = Math.max(0, (CONNECTED_PAN_MS - gap) / 2);
-  const start = Math.max((current.startMs + current.endMs) / 2, current.endMs - extension);
-  const end = Math.min((next.startMs + next.endMs) / 2, next.startMs + extension);
-  if (timeMs < start || timeMs > end || end <= start) return null;
+  const handoffWindow = cinematicConnectionWindow(current, next);
+  if (!handoffWindow || timeMs < handoffWindow.startMs || timeMs > handoffWindow.endMs) return null;
+  const { startMs: start, endMs: end } = handoffWindow;
   const progress = cinematicProgress((timeMs - start) / (end - start));
   const mix = (a: number, b: number) => a + (b - a) * progress;
   const scaleFor = (zoom: ZoomElement) => ZOOM_DEPTH_SCALES[zoom.depth];
@@ -59,6 +56,7 @@ export function cinematicZoomConnection(
     mode: current.mode === 'auto' || next.mode === 'auto' ? 'auto' : 'manual',
     tracksCursor: false,
     cinematic: true,
+    connection: { from: current, to: next, startMs: start, endMs: end, progress },
     tilt: mix(tiltFor(current, '3d'), tiltFor(next, '3d')),
     tiltHorizontal: mix(
       normalizeZoomTiltAxis(current.tiltHorizontal, DEFAULT_ZOOM_TILT_HORIZONTAL),

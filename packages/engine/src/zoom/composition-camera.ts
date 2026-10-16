@@ -7,12 +7,7 @@ import type {
 export type { CameraSample, CompositionCameraEvaluator, CompositionCameraInputs } from './composition-camera-types';
 import { createCameraVelocity, stepCameraSpring, type CameraTransform } from '@beam/engine/zoom/zoom-spring';
 import { clampFocusToScale, createZoomTimeEvaluator, cursorFocusAt } from '@beam/engine/zoom/zoom-playback';
-import {
-  cameraSpringOmega,
-  createAutoFollowState,
-  updateAutoFollowTarget,
-  type AutoFollowState,
-} from '@beam/engine/zoom/auto-follow-camera';
+import { cameraSpringOmega, createAutoFollowState, updateAutoFollowTarget } from '@beam/engine/zoom/auto-follow-camera';
 import {
   DEFAULT_ZOOM_TILT_HORIZONTAL,
   DEFAULT_ZOOM_TILT_VERTICAL,
@@ -20,6 +15,7 @@ import {
   normalizeZoomAutoFollow,
 } from '@beam/engine/zoom/zoom-types';
 import { orbitCameraPose } from './orbit-camera';
+import { connectedCameraFocus } from './camera-connection';
 
 const STEP_MS = 1_000 / 120;
 const CHECKPOINT_STEPS = 30;
@@ -44,7 +40,11 @@ const cloneState = (state: SimulationState): SimulationState => ({
     settings: { ...state.autoFollow.settings },
     target: { ...state.autoFollow.target },
     frozenTarget: { ...state.autoFollow.frozenTarget },
+    direction: { ...state.autoFollow.direction },
   },
+  ...(state.connection
+    ? { connection: { ...state.connection, from: { ...state.connection.from }, to: { ...state.connection.to } } }
+    : {}),
 });
 
 export function createCompositionCameraEvaluator(
@@ -57,15 +57,20 @@ export function createCompositionCameraEvaluator(
   const sortedTelemetry = [...inputs.telemetry].sort((left, right) => left.timeMs - right.timeMs);
   const targetAt = (
     timeMs: number,
-    autoFollow: AutoFollowState,
+    state: SimulationState,
   ): { camera: Required<CameraTransform>; tracksCursor: boolean; cinematic?: boolean } => {
+    const autoFollow = state.autoFollow;
     const zoom = zoomAt(timeMs);
+    if (!zoom?.connection) state.connection = undefined;
     if (!zoom) {
       updateAutoFollowTarget(autoFollow, null, { cx: 0.5, cy: 0.5 }, 1, 0, timeMs);
       return { camera: { focusX: 0.5, focusY: 0.5, scale: 1, tiltX: 0, tiltY: 0 }, tracksCursor: false };
     }
     let focus = zoom.cinematic ? zoom.focus : clampFocusToScale(zoom.focus, zoom.scale);
-    if (zoom.tracksCursor) {
+    const connectedFollow =
+      zoom.connection && (zoom.connection.from.mode === 'auto' || zoom.connection.to.mode === 'auto');
+    if (connectedFollow) focus = connectedCameraFocus(state, zoom, timeMs, inputs, sortedTelemetry, zoomAt);
+    else if (zoom.tracksCursor) {
       const entering = zoom.cinematic && !autoFollow.reachedFullZoom && zoom.strength < 0.99;
       const rawCursor = cursorFocusAt(sortedTelemetry, inputs.mapTelemetryTime?.(timeMs) ?? timeMs);
       const cursor = rawCursor ? (inputs.mapFocus?.(rawCursor, zoom, timeMs) ?? rawCursor) : null;
@@ -79,13 +84,19 @@ export function createCompositionCameraEvaluator(
     );
     return {
       camera: { focusX: focus.cx, focusY: focus.cy, scale: zoom.scale, ...tilt },
-      tracksCursor: zoom.tracksCursor === true,
+      tracksCursor: connectedFollow || zoom.tracksCursor === true,
       cinematic: zoom.cinematic,
     };
   };
   const initialState = (): SimulationState => {
     const autoFollow = createAutoFollowState(autoFollowSettings);
-    return { camera: targetAt(0, autoFollow).camera, velocity: createCameraVelocity(), autoFollow };
+    const state: SimulationState = {
+      camera: { focusX: 0.5, focusY: 0.5, scale: 1, tiltX: 0, tiltY: 0 },
+      velocity: createCameraVelocity(),
+      autoFollow,
+    };
+    state.camera = targetAt(0, state).camera;
+    return state;
   };
   const reset = () => {
     checkpoints.clear();
@@ -106,7 +117,7 @@ export function createCompositionCameraEvaluator(
     while (startStep > 0 && !checkpoints.has(startStep)) startStep -= CHECKPOINT_STEPS;
     let state = cloneState(checkpoints.get(startStep)!);
     for (let step = startStep + 1; step <= targetStep; step += 1) {
-      const target = targetAt(step * STEP_MS, state.autoFollow);
+      const target = targetAt(step * STEP_MS, state);
       // At identity the focus is visually unobservable. Aim before magnification makes
       // it visible; the threshold bounds any correction below 0.02 px on a 4K frame.
       if (target.cinematic && state.camera.scale <= 1.00001) {

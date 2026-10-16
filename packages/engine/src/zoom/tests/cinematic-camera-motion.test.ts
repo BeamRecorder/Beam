@@ -66,28 +66,31 @@ describe('connected cinematic shots', () => {
     }
     expect(zoomAtTime(zooms, 3300)?.scale).toBe(1.8);
   });
-  it.each([0, 50, 400, 800, 1350])('moves continuously through a %d ms gap without a zoom-out pulse', (gap) => {
-    const a = zoom('one', 3000, 6000),
-      b = { ...zoom('two', 6000 + gap, 10000), depth: 4 as const, focus: { cx: 0.7, cy: 0.4 } };
-    const extension = Math.max(0, (1000 - gap) / 2),
-      start = 6000 - extension,
-      end = 6000 + gap + extension;
-    let previous = 1.5;
-    for (let step = 0; step <= 1000; step++) {
-      const t = start + ((end - start) * step) / 1000,
-        result = zoomAtTime([a, b], t)!;
-      expect(result.scale).toBeGreaterThanOrEqual(previous - 1e-12);
-      expect(result.scale).toBeGreaterThanOrEqual(1.5);
-      expect(result.scale).toBeLessThanOrEqual(2.2);
-      previous = result.scale;
-    }
-    for (const boundary of [start, end]) {
-      const left = zoomAtTime([a, b], boundary - 0.001)!,
-        right = zoomAtTime([a, b], boundary + 0.001)!;
-      expect(Math.abs(left.scale - right.scale)).toBeLessThan(1e-9);
-      expect(Math.abs(left.focus.cx - right.focus.cx)).toBeLessThan(1e-9);
-    }
-  });
+  it.each([0, 50, 400, 800, 1350, 1400, 1600])(
+    'moves continuously through a %d ms gap without a zoom-out pulse',
+    (gap) => {
+      const a = zoom('one', 3000, 6000),
+        b = { ...zoom('two', 6000 + gap, 10000), depth: 4 as const, focus: { cx: 0.7, cy: 0.4 } };
+      const extension = Math.max(0, (1000 - gap) / 2),
+        start = 6000 - extension,
+        end = 6000 + gap + extension;
+      let previous = 1.5;
+      for (let step = 0; step <= 1000; step++) {
+        const t = start + ((end - start) * step) / 1000,
+          result = zoomAtTime([a, b], t)!;
+        expect(result.scale).toBeGreaterThanOrEqual(previous - 1e-12);
+        expect(result.scale).toBeGreaterThanOrEqual(1.5);
+        expect(result.scale).toBeLessThanOrEqual(2.2);
+        previous = result.scale;
+      }
+      for (const boundary of [start, end]) {
+        const left = zoomAtTime([a, b], boundary - 0.001)!,
+          right = zoomAtTime([a, b], boundary + 0.001)!;
+        expect(Math.abs(left.scale - right.scale)).toBeLessThan(1e-9);
+        expect(Math.abs(left.focus.cx - right.focus.cx)).toBeLessThan(1e-9);
+      }
+    },
+  );
   it('holds identical scales through the entire handoff and blends perspective settings', () => {
     const a = { ...zoom('one', 3000, 6000), projection: 'orbit' as const, tiltIntensity: 0.6 },
       b = { ...zoom('two', 6800, 10000), projection: '3d' as const, tiltIntensity: 0.8, mode: 'auto' as const };
@@ -100,7 +103,7 @@ describe('connected cinematic shots', () => {
       tilt: 0.4,
     });
   });
-  it.each([{ gap: -1 }, { gap: 1351 }, { gap: 500, legacy: true }, { gap: 500, outside: true }])(
+  it.each([{ gap: -1 }, { gap: 1900 }, { gap: 500, legacy: true }, { gap: 500, outside: true }])(
     'leaves unrelated or inactive pairs alone: %j',
     ({ gap, legacy, outside }) => {
       const a = zoom('one', 3000, 6000),

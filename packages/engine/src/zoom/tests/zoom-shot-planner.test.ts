@@ -29,7 +29,7 @@ describe('action shot planning', () => {
     const [zoom] = plan([click()]);
     expect(zoom).toMatchObject({
       startMs: 4500,
-      endMs: 6500,
+      endMs: 5500,
       depth: 3,
       transition: 'cinematic',
       generation: 'automatic',
@@ -43,20 +43,30 @@ describe('action shot planning', () => {
     expect(plan([click(5000, 0.3, 0.4), click(6000, 0.5, 0.6)])[0]).toMatchObject({
       focus: { cx: 0.4, cy: 0.5 },
       depth: 3,
-      endMs: 7500,
+      endMs: 6500,
     });
   });
-  it('reduces magnification when a wider action group requires it', () => {
-    expect(plan([click(5000, 0.25, 0.5), click(6000, 0.75, 0.5)])[0]?.depth).toBe(1);
+  it('keeps distant intentions magnified instead of combining them into a shallow zoom', () => {
+    const zooms = plan([click(5000, 0.25, 0.5), click(6000, 0.75, 0.5)]);
+    expect(zooms).toHaveLength(2);
+    expect(zooms.every((zoom) => zoom.depth === 3)).toBe(true);
+    const camera = createCompositionCameraEvaluator({ zooms, telemetry: [] });
+    for (let time = 5000; time <= 6500; time += 10) expect(camera.sample(time).scale).toBe(1.8);
   });
   it('does not frame opposing corners as one target or introduce an unreadable wide flash', () => {
     const zooms = plan([click(5000, 0.1, 0.1), click(6500, 0.9, 0.9)]);
-    expect(zooms).toHaveLength(1);
-    expect(zooms[0]?.focus).toEqual({ cx: 0.1, cy: 0.1 });
+    expect(zooms).toHaveLength(2);
+    expect(zooms.map((zoom) => zoom.focus)).toEqual([
+      { cx: 0.1, cy: 0.1 },
+      { cx: 0.9, cy: 0.9 },
+    ]);
+    const camera = createCompositionCameraEvaluator({ zooms, telemetry: [] });
+    for (let time = 5000; time <= 6500; time += 10) expect(camera.sample(time).scale).toBe(1.8);
   });
   it('starts wide without discarding opening clicks and ignores the Stop click', () => {
     const zooms = plan([click(100), click(5000), click(29900)]);
-    expect(zooms).toHaveLength(1);
+    expect(zooms).toHaveLength(2);
+    expect(zooms.some((zoom) => zoom.id.endsWith(':29900'))).toBe(false);
     expect(zooms[0]!.id).toBe('auto:take:100');
     expect(zooms[0]!.startMs - cinematicZoomDurationMs(1.8)).toBeGreaterThanOrEqual(0);
     expect(zooms[0]!.endMs + cinematicZoomDurationMs(1.8)).toBeLessThanOrEqual(29000);
@@ -72,7 +82,7 @@ describe('action shot planning', () => {
     const hidden = { timeMs: 5033, cx: 0.5, cy: 0.5, visible: false, interactionType: 'move' as const };
     const released = { ...hidden, timeMs: 5200, interactionType: 'mouseup' as const };
     expect(plan([click(), hidden, released])[0]).toMatchObject({
-      endMs: 6700,
+      endMs: 5700,
       focus: { cx: 0.4, cy: 0.6 },
     });
     expect(plan([click(), { ...released, timeMs: 5020, visible: true }, hidden])).toHaveLength(1);
@@ -84,10 +94,11 @@ describe('action shot planning', () => {
     expect(JSON.stringify(fixed)).toBe(before);
     expect(plan([click()], [manual()])).toHaveLength(1);
   });
-  it('merges readable neighboring shots when their complete action box still fits', () => {
+  it('keeps independent actions separate even when their ramp envelopes are nearby', () => {
     const zooms = plan([click(5000), click(9000, 0.45, 0.6)]);
-    expect(zooms).toHaveLength(1);
-    expect(zooms[0]?.endMs).toBe(10500);
+    expect(zooms).toHaveLength(2);
+    expect(zooms[0]?.endMs).toBe(5500);
+    expect(zooms[1]?.startMs).toBe(8500);
   });
   it('keeps separated opposing targets as independent shots with a real wide interval', () => {
     const zooms = plan([click(5000, 0.1, 0.1), click(14000, 0.9, 0.9)]);

@@ -50,7 +50,7 @@ describe('buildAutomaticZoomElements', () => {
     expect(zooms).toEqual([
       expect.objectContaining({
         startMs: 5_500,
-        endMs: 7_500,
+        endMs: 6_500,
         focus: { cx: 0.25, cy: 0.75 },
         depth: 3,
         mode: 'auto',
@@ -124,7 +124,7 @@ describe('buildAutomaticZoomElements', () => {
       durationMs: 25_000,
       reserved,
     });
-    expect(zooms[0]).toMatchObject({ startMs: 13500, endMs: 15500 });
+    expect(zooms[0]).toMatchObject({ startMs: 13500, endMs: 14500 });
     expectAutoTiltMetadata(zooms[0]);
   });
 
@@ -234,8 +234,8 @@ describe('buildAutomaticZoomElements', () => {
     expect(zoom?.tiltVertical).toBeLessThanOrEqual(1);
   });
 
-  it('increments the automatic zoom algorithm version for opening actions and drag framing', () => {
-    expect(ZOOM_ALGORITHM_VERSION).toBe(11);
+  it('increments the automatic zoom algorithm version for independent intentions and continuous camera handoffs', () => {
+    expect(ZOOM_ALGORITHM_VERSION).toBe(12);
   });
 });
 

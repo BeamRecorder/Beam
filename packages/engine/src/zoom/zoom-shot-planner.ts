@@ -6,9 +6,10 @@ import type { ZoomAction, ZoomShot, ZoomShotBox, ZoomShotOptions } from './zoom-
 import { mergeActionBox as mergeBox, recordingZoomActions } from './zoom-actions';
 
 const MARGIN = 0.12;
-const MERGE_GAP_MS = 3000;
+const MERGE_GAP_MS = 2500;
+const RAPID_BURST_MS = 500;
 const WIDE_GAP_MS = 1500;
-const MIN_HOLD_MS = 1800;
+const MIN_HOLD_MS = 1000;
 const ACTION_WINDOW_MS = 8000;
 const focusFor = (box: ZoomShotBox) => ({ cx: (box.left + box.right) / 2, cy: (box.top + box.bottom) / 2 });
 const fittedDepth = (box: ZoomShotBox): ZoomDepth | null => {
@@ -17,7 +18,7 @@ const fittedDepth = (box: ZoomShotBox): ZoomDepth | null => {
 };
 const rampFor = (shot: Pick<ZoomShot, 'depth'>) => cinematicZoomDurationMs(ZOOM_DEPTH_SCALES[shot.depth]);
 
-/** Frame actions in shots, leaving readable wide intervals and preserving authored zooms. */
+/** Group nearby intentions; connect crowded shots without deleting their actions. */
 export function planZoomShots(options: ZoomShotOptions): ZoomShot[] {
   const { durationMs } = options;
   if (!Number.isFinite(durationMs) || durationMs <= 0) return [];
@@ -33,7 +34,7 @@ export function planZoomShots(options: ZoomShotOptions): ZoomShot[] {
       previous &&
       action.startMs - previous.actions.at(-1)!.endMs <= MERGE_GAP_MS &&
       action.startMs - previous.actions[0]!.startMs <= ACTION_WINDOW_MS &&
-      fittedDepth(box)
+      ((fittedDepth(box) ?? 0) >= 2 || action.startMs - previous.actions.at(-1)!.endMs < RAPID_BURST_MS)
     ) {
       previous.actions.push(action);
       previous.box = box;
@@ -63,7 +64,7 @@ export function planZoomShots(options: ZoomShotOptions): ZoomShot[] {
     const first = group.actions[0]!.startMs,
       last = group.actions.at(-1)!.endMs;
     const startMs = Math.ceil(Math.max(earliest, Math.min(first - 500, latest - MIN_HOLD_MS)));
-    const endMs = Math.floor(Math.min(latest, Math.max(last + 1500, startMs + MIN_HOLD_MS)));
+    const endMs = Math.floor(Math.min(latest, Math.max(last + 500, startMs + MIN_HOLD_MS)));
     if (
       endMs - startMs < MIN_HOLD_MS ||
       !group.actions.some((action) => action.endMs >= startMs - ramp && action.startMs <= endMs)
@@ -80,43 +81,29 @@ export function planZoomShots(options: ZoomShotOptions): ZoomShot[] {
       actions: group.actions,
     };
     if (blocked(shot)) continue;
-    while (plan.length) {
-      const previous = plan.at(-1)!;
-      if (shot.startMs - rampFor(shot) - previous.endMs - rampFor(previous) >= WIDE_GAP_MS) break;
-      const box = mergeBox(previous.box, shot.box);
-      const combinedDepth = fittedDepth(box);
-      if (combinedDepth && shot.actions.at(-1)!.startMs - previous.actions[0]!.startMs <= ACTION_WINDOW_MS) {
-        const combined = {
-          ...previous,
-          endMs: shot.endMs,
-          box,
-          focus: focusFor(box),
-          depth: combinedDepth,
-          clicks: previous.clicks + shot.clicks,
-          actions: [...previous.actions, ...shot.actions],
-        };
-        plan.pop();
-        shot = combined;
+    const previous = plan.at(-1);
+    if (previous && previous.endMs > shot.startMs) {
+      // Ramp occupancy is not evidence that two intentions belong together.
+      // Share the idle interval, leaving each complete press/release intact.
+      // At a clip boundary there may be no room for another distinct hold.
+      // Keep that burst in one shot instead of emitting a reversed/empty interval.
+      const lowerBoundary = Math.max(previous.startMs + 200, previous.actions.at(-1)!.endMs);
+      const upperBoundary = Math.min(shot.endMs - 200, first);
+      if (lowerBoundary > upperBoundary) {
+        previous.box = mergeBox(previous.box, shot.box);
+        previous.focus = focusFor(previous.box);
+        previous.depth = fittedDepth(previous.box) ?? 1;
+        previous.endMs = Math.max(previous.endMs, shot.endMs);
+        previous.actions = [...previous.actions, ...shot.actions];
+        previous.clicks += shot.clicks;
         continue;
       }
-      // A busier later group must not erase the opening gesture. Reuse its later actions
-      // only once the preceding shot has left enough space for both complete ramps.
-      const nextStart = Math.ceil(previous.endMs + rampFor(previous) + rampFor(shot) + WIDE_GAP_MS);
-      const remaining = shot.actions.filter((action) => action.endMs >= nextStart && action.startMs <= shot.endMs);
-      if (shot.endMs - nextStart < MIN_HOLD_MS || !remaining.length) shot = { ...shot, clicks: 0 };
-      else {
-        const box = remaining.map((action) => action.box).reduce(mergeBox);
-        shot = {
-          ...shot,
-          startMs: nextStart,
-          firstClickMs: remaining[0]!.startMs,
-          box,
-          focus: focusFor(box),
-          clicks: remaining.length,
-          actions: remaining,
-        };
-      }
-      break;
+      const boundary = Math.max(
+        lowerBoundary,
+        Math.min(upperBoundary, Math.round((previous.actions.at(-1)!.endMs + first) / 2)),
+      );
+      previous.endMs = Math.min(previous.endMs, boundary);
+      shot = { ...shot, startMs: Math.max(shot.startMs, boundary) };
     }
     if (shot.clicks) plan.push(shot);
   }

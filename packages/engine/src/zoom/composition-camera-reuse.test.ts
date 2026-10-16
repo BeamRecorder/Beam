@@ -102,3 +102,29 @@ describe('camera checkpoint reuse', () => {
     ).toEqual(previous.sample(1_000));
   });
 });
+
+it('invalidates at the real start of a long cinematic handoff when its destination changes', () => {
+  const composition = emptyComposition();
+  const first: ZoomElement = {
+    ...zoom,
+    id: 'a',
+    mode: 'auto',
+    startMs: 3000,
+    endMs: 6000,
+    depth: 6,
+    transition: 'cinematic',
+    focus: { cx: 0.3, cy: 0.5 },
+  };
+  const second: ZoomElement = { ...first, id: 'b', startMs: 8500, endMs: 12000, focus: { cx: 0.7, cy: 0.5 } };
+  const oldZooms = [first, second];
+  const previous = createCompositionCameraEvaluator({ zooms: oldZooms, telemetry: [] });
+  previous.sample(12000);
+  const nextZooms = [first, { ...second, focus: { cx: 0.8, cy: 0.6 } }];
+  const changedFrom = cameraEditInvalidationTime(composition, composition, oldZooms, nextZooms);
+  expect(changedFrom).toBeLessThanOrEqual(6000);
+  const value = { zooms: nextZooms, telemetry: [] };
+  const retained = createCompositionCameraEvaluator(value, { previous, unchangedBeforeMs: changedFrom });
+  const cold = createCompositionCameraEvaluator(value);
+  for (const time of [6100, 6250.5, 7500, 8500, 9000]) expect(retained.sample(time)).toEqual(cold.sample(time));
+  expect(retained.sample(7500)).not.toEqual(previous.sample(7500));
+});

@@ -65,6 +65,16 @@ export interface AppliedZoom {
   orbit?: number;
   cinematic?: boolean;
   orbitSettings?: OrbitCameraSettings;
+  /** Runtime-only handoff metadata; never persisted in a project. */
+  connection?: ZoomConnection;
+}
+
+export interface ZoomConnection {
+  from: ZoomElement;
+  to: ZoomElement;
+  startMs: number;
+  endMs: number;
+  progress: number;
 }
 
 export type ZoomFocusMapper = (focus: ZoomFocus, zoom: AppliedZoom, timeMs: number) => ZoomFocus;

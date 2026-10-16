@@ -3,6 +3,7 @@ import type { ZoomElement } from './zoom-types';
 import { CONNECTED_GAP_MS } from './zoom-playback';
 import { cinematicZoomDurationMs } from './zoom-transitions';
 import { ZOOM_DEPTH_SCALES } from './zoom-types';
+import { cinematicConnectionWindow } from './zoom-connection-window';
 
 /** Earliest target affected by an immutable edit, including connected zoom pans. */
 export function cameraEditInvalidationTime(
@@ -14,6 +15,7 @@ export function cameraEditInvalidationTime(
   if (previous.scene !== next.scene || previous.animations !== next.animations || previous.assets !== next.assets)
     return 0;
   let start = Infinity;
+  const changedZooms = new Set<string>();
   let lead = CONNECTED_GAP_MS;
   const includeRamp = (zoom: ZoomElement | undefined) => {
     if (zoom?.transition === 'cinematic') lead = Math.max(lead, cinematicZoomDurationMs(ZOOM_DEPTH_SCALES[zoom.depth]));
@@ -31,6 +33,7 @@ export function cameraEditInvalidationTime(
     if (zoom.effect === 'glass') continue;
     const old = zooms.get(zoom.id);
     if (old !== zoom) {
+      changedZooms.add(zoom.id);
       start = Math.min(start, zoom.startMs, old?.startMs ?? Infinity);
       includeRamp(zoom);
       includeRamp(old);
@@ -38,8 +41,24 @@ export function cameraEditInvalidationTime(
     zooms.delete(zoom.id);
   }
   for (const zoom of zooms.values()) {
+    changedZooms.add(zoom.id);
     start = Math.min(start, zoom.startMs);
     includeRamp(zoom);
   }
-  return Math.max(0, start - lead);
+  if (!changedZooms.size) return Math.max(0, start - lead);
+  let connectionStart = Infinity;
+  for (const elements of [previousZooms, nextZooms]) {
+    const ordered = elements
+      .filter((zoom) => zoom.enabled !== false && zoom.effect !== 'glass')
+      .sort((a, b) => a.startMs - b.startMs);
+    for (let index = 0; index < ordered.length - 1; index++) {
+      const from = ordered[index]!,
+        to = ordered[index + 1]!;
+      if (changedZooms.has(from.id) || changedZooms.has(to.id)) {
+        const handoffWindow = cinematicConnectionWindow(from, to);
+        if (handoffWindow) connectionStart = Math.min(connectionStart, handoffWindow.startMs);
+      }
+    }
+  }
+  return Math.max(0, Math.min(start - lead, connectionStart));
 }

@@ -1,13 +1,21 @@
 import type { CursorTelemetryPoint } from '../capture/capture-session';
 import type { AppliedZoom, ZoomAutoFollowSettings, ZoomElement, ZoomFocus } from './zoom-types';
 import type { CameraTransform, CameraVelocity } from './zoom-spring';
-import type { AutoFollowState } from './auto-follow-camera';
+import type { AutoFollowState } from './auto-follow-camera-types';
 import type { OrbitCameraPose } from './orbit-camera-types';
 
 export interface CameraSimulationState {
   camera: Required<CameraTransform>;
   velocity: CameraVelocity;
   autoFollow: AutoFollowState;
+  connection?: CameraConnectionState;
+}
+
+export interface CameraConnectionState {
+  fromId: string;
+  toId: string;
+  from: ZoomFocus;
+  to: ZoomFocus;
 }
 
 export interface CameraSample {
