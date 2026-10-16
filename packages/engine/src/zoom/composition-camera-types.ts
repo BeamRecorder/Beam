@@ -43,3 +43,6 @@ export interface CameraCheckpointReuse {
   previous: CompositionCameraEvaluator;
   unchangedBeforeMs: number;
 }
+
+/** Whether a region may follow at this recorded source timestamp. */
+export type CameraFollowGate = (elementId: string | undefined, sourceTimeMs: number) => boolean;

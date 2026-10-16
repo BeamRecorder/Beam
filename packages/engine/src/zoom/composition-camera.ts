@@ -16,6 +16,7 @@ import {
 } from '@beam/engine/zoom/zoom-types';
 import { orbitCameraPose } from './orbit-camera';
 import { connectedCameraFocus } from './camera-connection';
+import { createAutomaticFollowGate } from './camera-follow-gate';
 
 const STEP_MS = 1_000 / 120;
 const CHECKPOINT_STEPS = 30;
@@ -55,6 +56,7 @@ export function createCompositionCameraEvaluator(
   const zoomAt = createZoomTimeEvaluator(inputs.zooms, inputs.telemetry, inputs.mapFocus);
   const autoFollowSettings = normalizeZoomAutoFollow(inputs.autoFollow ?? DEFAULT_ZOOM_AUTO_FOLLOW);
   const sortedTelemetry = [...inputs.telemetry].sort((left, right) => left.timeMs - right.timeMs);
+  const canFollow = createAutomaticFollowGate(inputs, sortedTelemetry);
   const targetAt = (
     timeMs: number,
     state: SimulationState,
@@ -69,10 +71,11 @@ export function createCompositionCameraEvaluator(
     let focus = zoom.cinematic ? zoom.focus : clampFocusToScale(zoom.focus, zoom.scale);
     const connectedFollow =
       zoom.connection && (zoom.connection.from.mode === 'auto' || zoom.connection.to.mode === 'auto');
-    if (connectedFollow) focus = connectedCameraFocus(state, zoom, timeMs, inputs, sortedTelemetry, zoomAt);
+    if (connectedFollow) focus = connectedCameraFocus(state, zoom, timeMs, inputs, sortedTelemetry, zoomAt, canFollow);
     else if (zoom.tracksCursor) {
       const entering = zoom.cinematic && !autoFollow.reachedFullZoom && zoom.strength < 0.99;
-      const rawCursor = cursorFocusAt(sortedTelemetry, inputs.mapTelemetryTime?.(timeMs) ?? timeMs);
+      const sourceTimeMs = inputs.mapTelemetryTime?.(timeMs) ?? timeMs;
+      const rawCursor = canFollow(zoom.elementId, sourceTimeMs) ? cursorFocusAt(sortedTelemetry, sourceTimeMs) : null;
       const cursor = rawCursor ? (inputs.mapFocus?.(rawCursor, zoom, timeMs) ?? rawCursor) : null;
       focus = updateAutoFollowTarget(autoFollow, cursor, focus, zoom.scale, zoom.strength, timeMs);
       if (entering) focus = zoom.focus;

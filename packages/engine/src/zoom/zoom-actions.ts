@@ -28,7 +28,13 @@ export function recordingZoomActions(points: readonly CursorTelemetryPoint[]): Z
   for (const point of points) {
     if (CLICK_TYPES.has(point.interactionType ?? '')) {
       finish();
-      if (point.visible !== false) pending = { startMs: point.timeMs, endMs: point.timeMs, box: boxFor(point) };
+      if (point.visible !== false)
+        pending = {
+          startMs: point.timeMs,
+          endMs: point.timeMs,
+          focus: { cx: point.cx, cy: point.cy },
+          box: boxFor(point),
+        };
     } else if (pending && recordsReleases) {
       pending.endMs = point.timeMs;
       // Hidden coordinates can be stale or belong to the compositor's hidden-pointer transport.

@@ -713,7 +713,7 @@ describe('useProjectZoom', () => {
     expect(state.zoomElements.value).toEqual([zoom('saved')]);
   });
 
-  it.each([9, 10, 11])(
+  it.each([9, 10, 11, 12])(
     'recalculates previously saved algorithm %d plans while preserving authored zooms',
     (version) => {
       const { state } = create();

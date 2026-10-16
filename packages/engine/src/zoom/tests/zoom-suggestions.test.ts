@@ -72,7 +72,7 @@ describe('buildAutomaticZoomElements', () => {
       durationMs: 25_000,
     });
     expect(zooms).toHaveLength(2);
-    expect(zooms[0]).toMatchObject({ focus: { cx: 0.25, cy: 0.35 }, depth: 3, transition: 'cinematic' });
+    expect(zooms[0]).toMatchObject({ focus: { cx: 0.2, cy: 0.3 }, depth: 3, transition: 'cinematic' });
     expectAutoTiltMetadata(zooms[0]);
   });
 
@@ -234,8 +234,8 @@ describe('buildAutomaticZoomElements', () => {
     expect(zoom?.tiltVertical).toBeLessThanOrEqual(1);
   });
 
-  it('increments the automatic zoom algorithm version for independent intentions and continuous camera handoffs', () => {
-    expect(ZOOM_ALGORITHM_VERSION).toBe(12);
+  it('increments the automatic zoom algorithm version for first-action framing and pre-click follow gating', () => {
+    expect(ZOOM_ALGORITHM_VERSION).toBe(13);
   });
 });
 

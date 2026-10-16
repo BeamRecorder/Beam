@@ -7,6 +7,8 @@ import type { AppliedZoom } from '@beam/engine/zoom/zoom-types';
 import * as camera from '@beam/engine/zoom/composition-camera';
 import * as mapping from '@beam/engine/shared/timeline-mapping';
 import { createSnapshotCameraEvaluator } from '../snapshot-camera';
+import { generateRecordingZooms } from '@beam/engine/zoom/recording-zoom-generation';
+import { calmOrbitOpening } from '@beam/engine/zoom/tests/fixtures/calm-orbit-opening';
 
 afterEach(() => vi.restoreAllMocks());
 const mappedInputs = (snapshot: CompositionSnapshot) => {
@@ -98,4 +100,32 @@ describe('headless snapshot camera', () => {
     expect(inputs.mapFocus!(focus, { ...zoom, mode: 'manual' }, 1500)).toBe(focus);
     expect(inputs.mapFocus!(focus, zoom, 500)).toBe(focus);
   });
+});
+
+it('keeps the recorded Calm Orbit opening monotonic with its real source aspect ratio and translated video', () => {
+  const input = withScreen();
+  const asset = input.composition.assets[0]!;
+  const clip = input.composition.clips[0]!;
+  if (asset.kind !== 'video' || clip.kind !== 'screen') throw new Error('Expected the screen fixture');
+  Object.assign(asset, { width: 3072, height: 1862, durationMs: 20883, sessionStartMs: 0, sessionId: 'take' });
+  Object.assign(clip, {
+    timelineStartMs: 0,
+    timelineDurationMs: 20883,
+    sourceInMs: 0,
+    sourceDurationMs: 20883,
+    playbackRate: 1,
+    transform: { x: 0.0034549587912830275, y: -0.00780423811229532, width: 1, height: 1 },
+  });
+  input.canvas = { preset: '16:9', width: 1920, height: 1080, showBackground: true };
+  input.cursor.telemetry = calmOrbitOpening;
+  input.zooms = generateRecordingZooms(input.composition, 'take', calmOrbitOpening, []);
+  const camera = createSnapshotCameraEvaluator(input, 3072, 1862);
+  let previous = camera.sample(0).focus.cx;
+  for (let time = 10; time <= 2500; time += 10) {
+    const current = camera.sample(time).focus.cx;
+    expect(current).toBeLessThanOrEqual(previous + 1e-9);
+    expect(current).toBeGreaterThan(0.4785);
+    previous = current;
+  }
+  expect(camera.sample(2500).focus.cx).toBeCloseTo(0.478596, 6);
 });

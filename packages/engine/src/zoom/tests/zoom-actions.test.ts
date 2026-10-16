@@ -34,7 +34,7 @@ describe('recorded zoom gestures', () => {
           point(900, 'mouseup', 0.6, 0.4),
           point(1000, 'move', 0, 1),
         ]),
-      ).toEqual([{ startMs: 100, endMs: 900, box: box(0.5, 0.7, 0.2, 0.5) }]);
+      ).toEqual([{ startMs: 100, endMs: 900, focus: { cx: 0.5, cy: 0.5 }, box: box(0.5, 0.7, 0.2, 0.5) }]);
     },
   );
   it('retains the duration of hidden-pointer drags without framing hidden sentinel coordinates', () => {
@@ -45,7 +45,7 @@ describe('recorded zoom gestures', () => {
         point(400, 'move', 0, 1, false),
         point(900, 'mouseup', 0, 1, false),
       ]),
-    ).toEqual([{ startMs: 100, endMs: 900, box: box(0.5, 0.7, 0.2, 0.5) }]);
+    ).toEqual([{ startMs: 100, endMs: 900, focus: { cx: 0.5, cy: 0.5 }, box: box(0.5, 0.7, 0.2, 0.5) }]);
   });
   it('bounds an unreleased press by the last actual sample and closes it before a new press', () => {
     const input = [
@@ -57,9 +57,9 @@ describe('recorded zoom gestures', () => {
     ];
     const before = structuredClone(input);
     expect(recordingZoomActions(input)).toEqual([
-      { startMs: 0, endMs: 25, box: box() },
-      { startMs: 100, endMs: 300, box: box(0.5, 0.7) },
-      { startMs: 500, endMs: 500, box: box(0.2) },
+      { startMs: 0, endMs: 25, focus: { cx: 0.5, cy: 0.5 }, box: box() },
+      { startMs: 100, endMs: 300, focus: { cx: 0.5, cy: 0.5 }, box: box(0.5, 0.7) },
+      { startMs: 500, endMs: 500, focus: { cx: 0.2, cy: 0.5 }, box: box(0.2) },
     ]);
     expect(input).toEqual(before);
   });
@@ -73,13 +73,13 @@ describe('recorded zoom gestures', () => {
         point(900, 'move', 1),
       ]),
     ).toEqual([
-      { startMs: 100, endMs: 100, box: box() },
-      { startMs: 500, endMs: 500, box: box(0.2) },
+      { startMs: 100, endMs: 100, focus: { cx: 0.5, cy: 0.5 }, box: box() },
+      { startMs: 500, endMs: 500, focus: { cx: 0.2, cy: 0.5 }, box: box(0.2) },
     ]);
   });
   it('keeps same-timestamp presses/releases and a late visibility change independent', () => {
     expect(recordingZoomActions([point(100, 'click'), point(100, 'mouseup'), point(200, 'move', 0, 0, false)])).toEqual(
-      [{ startMs: 100, endMs: 100, box: box() }],
+      [{ startMs: 100, endMs: 100, focus: { cx: 0.5, cy: 0.5 }, box: box() }],
     );
   });
 });

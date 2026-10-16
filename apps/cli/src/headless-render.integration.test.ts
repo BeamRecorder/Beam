@@ -264,6 +264,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
       value.cursor.available = true;
       value.cursor.telemetry = [
         { timeMs: 0, cx: 0.8, cy: 0.2 },
+        { timeMs: 900, cx: 0.9, cy: 0.4, interactionType: 'click' },
         { timeMs: 1000, cx: 0.9, cy: 0.4 },
       ];
       value.zooms = [
@@ -286,6 +287,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
           startMs: 600,
           endMs: 1000,
           mode: 'auto',
+          generation: 'automatic',
           depth: 3,
           focus: { cx: 0.7, cy: 0.3 },
           projection,
@@ -295,7 +297,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
         },
       ];
       value.zoomMotionBlur = { enabled: true, intensity: 0.8 };
-      for (const time of [0.1999, 0.2, 0.5, 0.8, 0.8001, 0.3])
+      for (const time of [0.1999, 0.2, 0.5, 0.8, 0.8001, 0.9001, 0.95, 0.3])
         expect(await compare(value, time)).toMatchObject({ differingChannels: 0, maximumError: 0 });
     },
     30000,

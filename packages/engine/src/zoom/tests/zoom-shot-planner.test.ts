@@ -39,9 +39,9 @@ describe('action shot planning', () => {
     expect(camera.sample(0).scale).toBe(1);
     expect(camera.sample(29000).scale).toBeCloseTo(1, 10);
   });
-  it('frames the bounding box of nearby actions, instead of choosing one arbitrary click', () => {
+  it('uses the action box for depth while aiming entry at the first press', () => {
     expect(plan([click(5000, 0.3, 0.4), click(6000, 0.5, 0.6)])[0]).toMatchObject({
-      focus: { cx: 0.4, cy: 0.5 },
+      focus: { cx: 0.3, cy: 0.4 },
       depth: 3,
       endMs: 6500,
     });

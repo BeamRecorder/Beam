@@ -39,3 +39,24 @@ Root reproduced the sub-agent's ten failing regression cases before modifying pr
 Camera samples are compared exactly across 24/60/144 fps callers, dropped presentation frames and reverse seeks. Existing cinematic checks also cover 30/120/240 fps. These are deterministic trajectory checks, not native display-performance measurements or a guarantee of subjective preference for every recording.
 
 Local validation passed 226 targeted engine/editor tests, 64 additional focused preview/focus regressions and two real Chromium preview/export comparisons with identical completed pixels. The nine changed camera/planning modules reached 100% statements, functions and lines and 96.64% branches overall, with each module above 90% in all four metrics. After the final type/import cleanup and unchanged-history fast path, the 51 directly affected connection/invalidation tests passed again with 100% statements/functions/lines and 98.07% branches. Desktop and package type checks, scoped formatting/lint, package boundaries and the desktop/CLI build passed. Native Windows/macOS visual behavior and subjective motion preference were not tested on those hosts.
+
+
+## Calm Orbit opening follow-up (algorithm thirteen)
+
+Read-only inspection of the actual Calm Orbit project confirmed that it had already regenerated with algorithm twelve. Its first 1.5× shot held from 824 to 8125 ms. The first press was at 1104 ms, `cx=.469727`, but the bounding box included actions on the right several seconds later and set the entry focus to `cx=.676758`. At full strength, follow immediately reacquired the approaching cursor on the left. This was an entry regression separate from the corrected handoffs.
+
+Using the real 3072 × 1862 source, 1920 × 1080 canvas, background and translated screen geometry, the horizontal camera focus changed as follows. These are output-normalized camera coordinates; the source press coordinates above have not yet been mapped into that canvas.
+
+| Time (ms) | Algorithm twelve | Algorithm thirteen |
+| --- | --- | --- |
+| 0 | .500000 | .500000 |
+| 600 | .643830 | .478596 |
+| 900 | .517922 | .478596 |
+| 1100 | .445371 | .478596 |
+| 2500 | .431052 | .478596 |
+
+The planner now retains each action's initial press separately from its full path bounds. The path still selects depth and preserves complete drags; the first press selects the entry focus. A derived runtime gate holds that framing until the first visible action. It uses the existing timeline-to-source mapper and excludes presses owned by the preceding hold, including overlapping entry ramps and rounded clip openings. A connected generated destination similarly keeps its action framing while its cursor is still approaching. Explicitly authored automatic regions retain their normal follow behavior. No project schema fields are added.
+
+A reduced anonymous coordinate/timing trace reproduces all four original failures (future-action entry focus, opening detour, and mirrored pre-click approach). Further regressions exercise opening drags, incoming handoffs before their press, source offset/rate mapping, missing/hidden inputs, and exact cadence/seek/checkpoint invariance. The real-source canvas mapping is also tested through the runtime snapshot camera. Algorithm thirteen refreshes older generated plans using the existing protections; original recording files were not modified by the diagnostic.
+
+Follow-up validation passed 239 focused engine/editor tests, thirteen runtime camera regressions, and two real Chromium preview/export comparisons covering generated 2D/orbit entry and post-press frames. Changed implementation coverage is 99.11% statements, 96.25% branches, 100% functions and 98.98% lines; each module exceeds 90% in every metric. Desktop/package type checks, scoped lint/format, package boundaries and the desktop/CLI build passed. Native Windows/macOS visual playback was not exercised.

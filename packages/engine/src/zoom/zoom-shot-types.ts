@@ -19,6 +19,7 @@ export interface ZoomShotBox {
   bottom: number;
 }
 export interface ZoomAction {
+  focus: ZoomFocus;
   startMs: number;
   endMs: number;
   box: ZoomShotBox;

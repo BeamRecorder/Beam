@@ -53,6 +53,8 @@ export interface ZoomElement {
 }
 
 export interface AppliedZoom {
+  /** Runtime region identity for action-gated cursor follow. */
+  elementId?: string;
   scale: number;
   focus: ZoomFocus;
   strength: number;

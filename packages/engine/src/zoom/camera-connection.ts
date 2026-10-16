@@ -1,5 +1,5 @@
 import type { AppliedZoom, ZoomFocus } from './zoom-types';
-import type { CameraSimulationState, CompositionCameraInputs } from './composition-camera-types';
+import type { CameraSimulationState, CompositionCameraInputs, CameraFollowGate } from './composition-camera-types';
 import { createAutoFollowState, updateAutoFollowTarget } from './auto-follow-camera';
 import { clampFocusToScale, cursorFocusAt } from './zoom-playback';
 import type { CursorTelemetryPoint } from '../capture/capture-session';
@@ -12,6 +12,7 @@ export function connectedCameraFocus(
   inputs: CompositionCameraInputs,
   telemetry: readonly CursorTelemetryPoint[],
   zoomAt: (time: number) => AppliedZoom | null,
+  canFollow: CameraFollowGate,
 ): ZoomFocus {
   const handoff = zoom.connection!;
   if (state.connection?.fromId !== handoff.from.id || state.connection.toId !== handoff.to.id) {
@@ -19,7 +20,7 @@ export function connectedCameraFocus(
     let to = destination.focus;
     if (handoff.to.mode === 'auto') {
       const cursorTime = inputs.mapTelemetryTime?.(handoff.endMs) ?? handoff.endMs;
-      const rawCursor = cursorFocusAt(telemetry, cursorTime);
+      const rawCursor = canFollow(handoff.to.id, cursorTime) ? cursorFocusAt(telemetry, cursorTime) : null;
       const cursor = rawCursor ? (inputs.mapFocus?.(rawCursor, destination, handoff.endMs) ?? rawCursor) : null;
       to = updateAutoFollowTarget(
         createAutoFollowState(state.autoFollow.settings),

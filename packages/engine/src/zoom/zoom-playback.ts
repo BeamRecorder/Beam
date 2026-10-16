@@ -211,6 +211,7 @@ function zoomAtSortedTime(
     };
   }
   return {
+    elementId: current.element.id,
     scale:
       current.element.transition === 'cinematic'
         ? interpolateZoomScale(1, scale, current.strength)

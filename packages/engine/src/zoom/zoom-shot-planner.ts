@@ -11,7 +11,6 @@ const RAPID_BURST_MS = 500;
 const WIDE_GAP_MS = 1500;
 const MIN_HOLD_MS = 1000;
 const ACTION_WINDOW_MS = 8000;
-const focusFor = (box: ZoomShotBox) => ({ cx: (box.left + box.right) / 2, cy: (box.top + box.bottom) / 2 });
 const fittedDepth = (box: ZoomShotBox): ZoomDepth | null => {
   const extent = Math.max(box.right - box.left, box.bottom - box.top) + MARGIN * 2;
   return ([3, 2, 1] as const).find((depth) => extent * ZOOM_DEPTH_SCALES[depth] <= 1) ?? null;
@@ -74,7 +73,7 @@ export function planZoomShots(options: ZoomShotOptions): ZoomShot[] {
       startMs,
       endMs,
       firstClickMs: first,
-      focus: focusFor(group.box),
+      focus: { ...group.actions[0]!.focus },
       depth,
       box: group.box,
       clicks: group.actions.length,
@@ -91,7 +90,6 @@ export function planZoomShots(options: ZoomShotOptions): ZoomShot[] {
       const upperBoundary = Math.min(shot.endMs - 200, first);
       if (lowerBoundary > upperBoundary) {
         previous.box = mergeBox(previous.box, shot.box);
-        previous.focus = focusFor(previous.box);
         previous.depth = fittedDepth(previous.box) ?? 1;
         previous.endMs = Math.max(previous.endMs, shot.endMs);
         previous.actions = [...previous.actions, ...shot.actions];
