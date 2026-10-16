@@ -43,6 +43,24 @@ const dock = useCompositionPanelDock();
   -webkit-app-region: no-drag;
   app-region: no-drag;
 }
+.composition-dock-target:not(.occupied)::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px dashed var(--color-primary);
+  border-radius: inherit;
+  pointer-events: none;
+  animation: composition-dock-hint 1200ms ease-in-out infinite;
+}
+@keyframes composition-dock-hint {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
 .composition-dock-target.hovered {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 2px var(--color-primary-light);
@@ -53,6 +71,10 @@ const dock = useCompositionPanelDock();
 @media (prefers-reduced-motion: reduce) {
   .composition-dock-target {
     transition: none;
+  }
+  .composition-dock-target:not(.occupied)::after {
+    animation: none;
+    opacity: 1;
   }
 }
 </style>

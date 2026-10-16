@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { createServer, type ViteDevServer } from 'vite';
 import puppeteer, { type Browser, type Page } from 'puppeteer-core';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -50,6 +50,10 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('Composition floating lay
     page = await browser.newPage();
     await page.setViewport({ width: 1600, height: 900 });
   }, 30_000);
+  afterEach(async () => {
+    await page?.mouse.reset();
+    await page?.emulateMediaFeatures([]);
+  });
   afterAll(async () => {
     await browser?.close();
     await server?.close();
@@ -187,6 +191,93 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('Composition floating lay
     const after = await page.$eval('.composition-toggle', (element) => element.getBoundingClientRect().toJSON());
     expect(Math.abs(before.x - after.x)).toBeLessThan(1);
     expect(Math.abs(before.y - after.y)).toBeLessThan(1);
+  }, 30_000);
+
+  it.each(['light', 'dark'])(
+    'pulses only the dashed drop hint without shifting its content in %s',
+    async (theme) => {
+      await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
+      await mount();
+      await page.evaluate((theme) => document.documentElement.classList.toggle('dark', theme === 'dark'), theme);
+      const from = await header();
+      await page.mouse.move(from.x, from.y);
+      await page.mouse.down();
+      await page.mouse.move(20, 3, { steps: 12 });
+      const pulse = await page.evaluate(async () => {
+        const target = document.querySelector('.composition-dock-target')!;
+        const animation = target
+          .getAnimations({ subtree: true })
+          .find(
+            (animation) =>
+              animation instanceof CSSAnimation && animation.animationName.includes('composition-dock-hint'),
+          )!;
+        const running = animation.playState;
+        animation.pause();
+        const sample = async (time: number) => {
+          animation.currentTime = time;
+          await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+          return {
+            opacity: Number(getComputedStyle(target, '::after').opacity),
+            border: getComputedStyle(target, '::after').borderTopStyle,
+            rect: target.getBoundingClientRect().toJSON(),
+            title: document.querySelector('.test-project-name')!.getBoundingClientRect().toJSON(),
+            contentOpacity: getComputedStyle(target).opacity,
+          };
+        };
+        const timing = animation.effect!.getTiming();
+        return {
+          running,
+          duration: timing.duration,
+          looping: timing.iterations === Infinity,
+          low: await sample(0),
+          high: await sample(600),
+        };
+      });
+      expect(pulse.running).toBe('running');
+      expect(pulse.duration).toBe(1200);
+      expect(pulse.looping).toBe(true);
+      expect(pulse.low.border).toBe('dashed');
+      expect(pulse.high.opacity - pulse.low.opacity).toBeGreaterThan(0.7);
+      expect(pulse.low.contentOpacity).toBe('1');
+      expect(pulse.high.contentOpacity).toBe('1');
+      expect(pulse.low.rect).toEqual(pulse.high.rect);
+      expect(pulse.low.title).toEqual(pulse.high.title);
+      await page.mouse.up();
+      await page.waitForSelector('.screenshot-composition.docked');
+      expect(
+        await page.$eval(
+          '.composition-dock-target',
+          (element) =>
+            element
+              .getAnimations({ subtree: true })
+              .filter(
+                (animation) =>
+                  animation instanceof CSSAnimation && animation.animationName.includes('composition-dock-hint'),
+              ).length,
+        ),
+      ).toBe(0);
+    },
+    30_000,
+  );
+
+  it('keeps a static dashed hint with reduced motion and removes it when dragging is cancelled', async () => {
+    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+    await mount();
+    const from = await header();
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(20, 3, { steps: 12 });
+    const hint = await page.$eval('.composition-dock-target', (element) => ({
+      animations: element.getAnimations({ subtree: true }).length,
+      border: getComputedStyle(element, '::after').borderTopStyle,
+      opacity: getComputedStyle(element, '::after').opacity,
+    }));
+    expect(hint).toEqual({ animations: 0, border: 'dashed', opacity: '1' });
+    await page.keyboard.press('Escape');
+    await page.mouse.up();
+    expect(await page.$eval('.composition-dock-target', (element) => getComputedStyle(element).display)).toBe('none');
+    expect(await page.$('.screenshot-composition.docked')).toBeNull();
+    await page.emulateMediaFeatures([]);
   }, 30_000);
 
   it('keeps a scaled dock and its popup inside a small editor and honors reduced motion', async () => {
