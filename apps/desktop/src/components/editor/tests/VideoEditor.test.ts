@@ -298,6 +298,28 @@ describe('VideoEditor', () => {
     expect(editorState.store.zoomState.selectedZoomId.value).toBeNull();
   });
 
+  it('opens Canvas from a background selection even with Properties hidden and a zoom selected', async () => {
+    const mounted = mountEditor();
+    await mounted.get('.sidebar-canvas-tab').trigger('click');
+    editorState.store.activeTab.value = 'zoom';
+    editorState.store.compositionState.selectedClipId.value = 'screen';
+    editorState.store.compositionState.selectedClipIds.value = ['screen'];
+    editorState.store.zoomState.selectedZoomId.value = 'existing-zoom';
+    editorState.store.zoomState.selectedZoomIds.value = ['existing-zoom'];
+    await mounted.vm.$nextTick();
+    expect(mounted.find('.mock-properties').exists()).toBe(false);
+
+    mounted.findComponent({ name: 'MockEditorCanvas' }).vm.$emit('select:canvas');
+    await mounted.vm.$nextTick();
+
+    expect(editorState.store.activeTab.value).toBe('canvas');
+    expect(mounted.find('.mock-properties').exists()).toBe(true);
+    expect(editorState.store.compositionState.selectedClipId.value).toBeNull();
+    expect(editorState.store.compositionState.selectedClipIds.value).toEqual([]);
+    expect(editorState.store.zoomState.selectedZoomId.value).toBeNull();
+    expect(editorState.store.zoomState.selectedZoomIds.value).toEqual([]);
+  });
+
   it('passes selectedBackgroundMedia to the ambient layer independently from the canvas grid', async () => {
     const mounted = mountEditor();
     const ambient = mounted.get('.mock-editor-ambient');

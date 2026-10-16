@@ -104,19 +104,19 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       const { bounds, scaleRatio, canvasLeft, canvasTop } = zoomDragGeometry;
       const x = (event.clientX - canvasLeft) / scaleRatio,
         y = (event.clientY - canvasTop) / scaleRatio;
-      if (!cameraFocusContainsPoint({ x, y }, bounds, selectedZoom)) {
-        zoomDragGeometry = null;
-        options.onDeselectZoom();
+      if (cameraFocusContainsPoint({ x, y }, bounds, selectedZoom)) {
+        isMovingSelection.value = true;
+        const target = (event.currentTarget as HTMLElement) ?? options.canvasRef();
+        if (target?.setPointerCapture) target.setPointerCapture(event.pointerId);
+        scheduleDraftFocus(event);
         return;
       }
-      isMovingSelection.value = true;
-      const target = (event.currentTarget as HTMLElement) ?? options.canvasRef();
-      if (target?.setPointerCapture) target.setPointerCapture(event.pointerId);
-      scheduleDraftFocus(event);
-      return;
+      zoomDragGeometry = null;
+      options.onDeselectZoom();
+      // The same press still selects the screen or its canvas background.
     }
 
-    if (options.selectVisualAt(event)) return;
+    if (!isManualZoom && options.selectVisualAt(event)) return;
     const canvas = options.canvasRef();
     const bounds = screenHitBounds.value ?? videoWindowBounds.value;
     if (canvas && bounds) {
@@ -126,13 +126,15 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       const y = (event.clientY - rect.top) / (scaleRatio || 1);
       if (x >= bounds.dx && x <= bounds.dx + bounds.dw && y >= bounds.dy && y <= bounds.dy + bounds.dh) {
         const screen = screenClip();
-        if (screen) options.onSelectScreenClip(screen.id, event);
-        return;
+        if (screen) {
+          options.onSelectScreenClip(screen.id, event);
+          return;
+        }
       }
     }
     options.onSelectCanvas();
     if (options.selectedTransformClipExists()) options.onDeselectTransformClip();
-    if (selectedZoom) options.onDeselectZoom();
+    if (selectedZoom && !isManualZoom) options.onDeselectZoom();
   };
   const moveSelection = (event: PointerEvent) => {
     if (isMovingSelection.value) scheduleDraftFocus(event);

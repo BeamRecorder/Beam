@@ -819,6 +819,89 @@ describe('useCameraZoom', () => {
     expect(state.focusTargetStyle.value).not.toEqual({ display: 'none' });
   });
 
+  it.each(['none', 'auto', 'manual'] as const)(
+    'opens Canvas with one background press when zoom selection is %s',
+    (kind) => {
+      mountComposable();
+      options.selected.value = kind === 'none' ? null : kind === 'auto' ? autoZoom : manualZoom;
+      options.output.value = { ...options.output.value!, showBackground: true };
+      prepareManualDrag();
+      // Rendering also uses the fixture callback; only count pointer selection.
+      vi.clearAllMocks();
+
+      state.beginSelectionMove(pointer('pointerdown', 1, 1));
+      state.endSelectionMove(pointer('pointerup', 1, 1));
+
+      expect(options.callbacks.onSelectCanvas).toHaveBeenCalledOnce();
+      expect(options.callbacks.onDeselectZoom).toHaveBeenCalledTimes(kind === 'none' ? 0 : 1);
+      expect(options.callbacks.onSelectScreenClip).not.toHaveBeenCalled();
+      expect(options.callbacks.onUpdateZoom).not.toHaveBeenCalled();
+      expect(options.canvas.setPointerCapture).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([0.75, 1.25, 2])(
+    'opens Canvas on the same background press after manual focus at viewport scale %s',
+    (scale) => {
+      mountComposable();
+      options.output.value = { ...options.output.value!, showBackground: true };
+      prepareManualDrag();
+      const rect = options.canvas.getBoundingClientRect();
+      options.canvas.getBoundingClientRect = () => ({
+        ...rect,
+        left: 80,
+        top: 60,
+        width: 800 * scale,
+        height: 450 * scale,
+      });
+      vi.clearAllMocks();
+
+      state.beginSelectionMove(pointer('pointerdown', 80 + scale, 60 + scale));
+
+      expect(options.callbacks.onSelectCanvas).toHaveBeenCalledOnce();
+      expect(options.callbacks.onDeselectZoom).toHaveBeenCalledOnce();
+      expect(options.canvas.setPointerCapture).not.toHaveBeenCalled();
+    },
+  );
+
+  it('opens Canvas in uncovered background when the scene contains only imported media', () => {
+    mountComposable();
+    options.selected.value = null;
+    options.compositionRef.value = {
+      ...composition(),
+      assets: [],
+      clips: [
+        {
+          ...screenClip(),
+          id: 'imported',
+          kind: 'image',
+          assetId: 'image',
+          transform: { x: 0.25, y: 0.25, width: 0.5, height: 0.5 },
+        },
+      ],
+    };
+    prepareManualDrag();
+    vi.clearAllMocks();
+
+    state.beginSelectionMove(pointer('pointerdown', 10, 10));
+
+    expect(options.callbacks.onSelectCanvas).toHaveBeenCalledOnce();
+    expect(options.callbacks.onSelectScreenClip).not.toHaveBeenCalled();
+  });
+
+  it('does not swallow background selection when the last drawn screen is no longer active', () => {
+    mountComposable();
+    options.selected.value = null;
+    prepareManualDrag();
+    options.currentTime.value = 4;
+    vi.clearAllMocks();
+
+    state.beginSelectionMove(pointer('pointerdown', 400, 225));
+
+    expect(options.callbacks.onSelectCanvas).toHaveBeenCalledOnce();
+    expect(options.callbacks.onSelectScreenClip).not.toHaveBeenCalled();
+  });
+
   it('does not deselect on pointerup when no manual drag is active', () => {
     mountComposable();
 

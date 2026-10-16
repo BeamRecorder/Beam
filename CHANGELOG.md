@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Clicking the video editor background opens Canvas settings on the first press, including when leaving manual zoom focus or editing a scene without a screen recording.
+
 - Automatic camera follow starts progressively before the safe-zone edge and anticipates recorded movement, avoiding delayed catch-up pans. Pauses retain calm framing, direction changes never freeze an axis, and camera interpolation preserves velocity in previews and exports. Follow descriptions are updated in all fifteen languages.
 
 - Generated zooms enter at the first recorded press instead of aiming ahead at later actions. Cursor following starts with that action, preventing the large opening left-right swing seen in Calm Orbit while retaining full drags and smooth handoffs.
