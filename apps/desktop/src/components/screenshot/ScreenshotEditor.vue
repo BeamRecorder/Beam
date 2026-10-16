@@ -25,6 +25,8 @@ import EditorWorkspace from '../editor/layout/EditorWorkspace.vue';
 import EditorProjectLoadingOverlay from '../editor/EditorProjectLoadingOverlay.vue';
 import { useScreenshotEditor } from './useScreenshotEditor';
 import ScreenshotComposition from './composition/ScreenshotComposition.vue';
+import ScreenshotCompositionDock from './composition/ScreenshotCompositionDock.vue';
+import { provideCompositionPanelDock } from './composition/composition-panel-dock';
 import {
   screenshotLayers,
   renameScreenshotLayer,
@@ -34,6 +36,8 @@ import {
 } from '@beam/engine/screenshot/screenshot-layers';
 import { useClipboardImagePaste } from '../editor/composables/useClipboardImagePaste';
 import { useElementFullscreen } from '../editor/canvas/composables/useElementFullscreen';
+
+const compositionDock = provideCompositionPanelDock();
 
 const exportDialog = ref<InstanceType<typeof ScreenshotExportDialog>>();
 const props = defineProps<{ id: string }>();
@@ -194,7 +198,13 @@ const navigateSearch = (tab: string) => {
       @fullscreen="toggleFullscreen()"
       @dimensions="viewControls?.openDimensions()"
     />
-    <EditorTitlebar class="screenshot-topbar screenshot-chrome">
+    <EditorTitlebar
+      class="screenshot-topbar screenshot-chrome"
+      :class="{
+        'is-dismissible': compositionDock.expanded.value,
+        'composition-drop-active': compositionDock.dragging.value,
+      }"
+    >
       <template #left>
         <Button
           variant="ghost"
@@ -232,14 +242,17 @@ const navigateSearch = (tab: string) => {
         />
       </template>
       <template #center>
-        <VideoProjectEdition
-          v-if="document"
-          :project="{ ...document, mode: 'screenshot' }"
-          :disabled="busy"
-          @open-project="openProject"
-          @rename-project="renameProject"
-          @delete-project="deleteProject"
-        />
+        <div class="screenshot-project-heading">
+          <ScreenshotCompositionDock v-if="state && document && !canvasFullscreen.isFullscreen.value" />
+          <VideoProjectEdition
+            v-if="document"
+            :project="{ ...document, mode: 'screenshot' }"
+            :disabled="busy"
+            @open-project="openProject"
+            @rename-project="renameProject"
+            @delete-project="deleteProject"
+          />
+        </div>
       </template>
       <template #right>
         <ScreenshotViewControls
@@ -385,32 +398,6 @@ const navigateSearch = (tab: string) => {
         >
           <template #overlay>
             <UndoRedoToast :action="history.lastAction.value" class="screenshot-history-feedback" />
-            <ScreenshotComposition
-              v-if="!canvasFullscreen.isFullscreen.value"
-              :layers="composition"
-              :state="state"
-              :preview-ready="previewReady"
-              :cursor-packs="cursors.packs.value"
-              :selected-id="selectedId"
-              :selected-ids="selectedIds"
-              :source="document.source"
-              :disabled="busy || cropping"
-              :can-group="groups.canGroup.value"
-              :group-disabled-reason="groups.groupDisabledReason.value"
-              :can-move-to-group="groups.canMoveToGroup"
-              @group="groups.group"
-              @move-to-group="groups.moveToGroup"
-              @select="showSelection"
-              @reorder="(id, index) => reorderScreenshotLayer(state!, id, index)"
-              @update="(id, patch) => updateScreenshotLayer(state!, id, patch)"
-              @visibility="(id, visible) => setScreenshotLayerVisible(state!, id, visible)"
-              @remove="removeLayer"
-              :selected-effect-id="panel === 'layer-effect' ? layerEffects.selected.value?.id : undefined"
-              @add-effect="layerEffects.add"
-              @select-effect="layerEffects.select"
-              @toggle-effect="layerEffects.toggle"
-              @rename="renameLayer"
-            />
           </template>
           <template #controls>
             <ScreenshotToolbar
@@ -444,6 +431,34 @@ const navigateSearch = (tab: string) => {
         </ScreenshotCanvas>
       </div>
     </EditorWorkspace>
+    <div v-if="state && document" class="composition-panel-overlay">
+      <ScreenshotComposition
+        v-if="!canvasFullscreen.isFullscreen.value"
+        :layers="composition"
+        :state="state"
+        :preview-ready="previewReady"
+        :cursor-packs="cursors.packs.value"
+        :selected-id="selectedId"
+        :selected-ids="selectedIds"
+        :source="document.source"
+        :disabled="busy || cropping"
+        :can-group="groups.canGroup.value"
+        :group-disabled-reason="groups.groupDisabledReason.value"
+        :can-move-to-group="groups.canMoveToGroup"
+        @group="groups.group"
+        @move-to-group="groups.moveToGroup"
+        @select="showSelection"
+        @reorder="(id, index) => reorderScreenshotLayer(state!, id, index)"
+        @update="(id, patch) => updateScreenshotLayer(state!, id, patch)"
+        @visibility="(id, visible) => setScreenshotLayerVisible(state!, id, visible)"
+        @remove="removeLayer"
+        :selected-effect-id="panel === 'layer-effect' ? layerEffects.selected.value?.id : undefined"
+        @add-effect="layerEffects.add"
+        @select-effect="layerEffects.select"
+        @toggle-effect="layerEffects.toggle"
+        @rename="renameLayer"
+      />
+    </div>
   </main>
 </template>
 

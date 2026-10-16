@@ -1222,6 +1222,8 @@
     "luminosity": "광도"
   },
   "ScreenshotComposition": {
+    "dock": "컴포지션을 제목 표시줄에 고정",
+    "undock": "컴포지션 고정 해제",
     "expandGroup": "{name} 그룹 펼치기",
     "collapseGroup": "{name} 그룹 접기",
     "selectGroup": "{name} 그룹 선택",

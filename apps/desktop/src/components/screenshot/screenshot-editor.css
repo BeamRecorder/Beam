@@ -10,6 +10,12 @@
 .screenshot-editor > :not(.editor-project-loading-overlay, .editor-ambient-background) {
   position: relative;
 }
+.screenshot-editor > .composition-panel-overlay {
+  position: absolute;
+  inset: var(--editor-titlebar-height) 0 0;
+  z-index: 30;
+  pointer-events: none;
+}
 .back-label {
   display: var(--editor-back-label-display, inline);
 }
@@ -36,4 +42,21 @@
   color: var(--color-error);
   padding: 8px 16px;
   margin: 0;
+}
+
+.screenshot-project-heading {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+.screenshot-topbar.composition-drop-active::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  pointer-events: none;
 }

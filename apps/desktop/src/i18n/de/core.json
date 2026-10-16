@@ -1222,6 +1222,8 @@
     "luminosity": "Luminanz"
   },
   "ScreenshotComposition": {
+    "dock": "Komposition in der Titelleiste andocken",
+    "undock": "Komposition abdocken",
     "expandGroup": "Gruppe {name} aufklappen",
     "collapseGroup": "Gruppe {name} zuklappen",
     "selectGroup": "Gruppe {name} auswählen",

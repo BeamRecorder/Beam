@@ -14,3 +14,12 @@
   -webkit-backdrop-filter: blur(12px);
   pointer-events: none;
 }
+
+/* Inspectors must stay readable even over high contrast media. An opaque
+ * surface also avoids a redundant backdrop pass behind their controls. */
+.screenshot-chrome.screenshot-panel {
+  background: var(--color-bg-surface);
+}
+.screenshot-chrome.screenshot-panel::before {
+  content: none;
+}

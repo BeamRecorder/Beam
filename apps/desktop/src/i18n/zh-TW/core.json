@@ -1222,6 +1222,8 @@
     "luminosity": "明度"
   },
   "ScreenshotComposition": {
+    "dock": "將合成面板停駐至標題列",
+    "undock": "取消合成面板停駐",
     "expandGroup": "展開 {name} 群組",
     "collapseGroup": "收合 {name} 群組",
     "selectGroup": "選取 {name} 群組",

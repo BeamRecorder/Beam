@@ -1222,6 +1222,8 @@
     "luminosity": "Độ sáng"
   },
   "ScreenshotComposition": {
+    "dock": "Ghim bảng bố cục vào thanh tiêu đề",
+    "undock": "Bỏ ghim bảng bố cục",
     "expandGroup": "Mở rộng nhóm {name}",
     "collapseGroup": "Thu gọn nhóm {name}",
     "selectGroup": "Chọn nhóm {name}",

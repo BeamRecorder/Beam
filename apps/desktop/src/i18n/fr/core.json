@@ -1234,6 +1234,8 @@
     "luminosity": "Luminosité"
   },
   "ScreenshotComposition": {
+    "dock": "Ancrer la composition dans la barre du haut",
+    "undock": "Détacher la composition",
     "expandGroup": "Déplier le groupe {name}",
     "collapseGroup": "Replier le groupe {name}",
     "selectGroup": "Sélectionner le groupe {name}",

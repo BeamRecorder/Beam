@@ -1222,6 +1222,8 @@
     "luminosity": "Яркость"
   },
   "ScreenshotComposition": {
+    "dock": "Закрепить композицию в верхней панели",
+    "undock": "Открепить композицию",
     "expandGroup": "Развернуть группу {name}",
     "collapseGroup": "Свернуть группу {name}",
     "selectGroup": "Выбрать группу {name}",

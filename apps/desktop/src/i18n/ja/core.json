@@ -1222,6 +1222,8 @@
     "luminosity": "輝度"
   },
   "ScreenshotComposition": {
+    "dock": "コンポジションをタイトルバーに固定",
+    "undock": "コンポジションの固定を解除",
     "expandGroup": "{name} グループを展開",
     "collapseGroup": "{name} グループを折りたたむ",
     "selectGroup": "{name} グループを選択",

@@ -1222,6 +1222,8 @@
     "luminosity": "चमक"
   },
   "ScreenshotComposition": {
+    "dock": "कंपोज़िशन को शीर्षक पट्टी में डॉक करें",
+    "undock": "कंपोज़िशन को अलग करें",
     "expandGroup": "{name} समूह खोलें",
     "collapseGroup": "{name} समूह समेटें",
     "selectGroup": "{name} समूह चुनें",

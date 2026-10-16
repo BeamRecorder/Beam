@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Screenshot Composition stays above Properties when moved across the inspector. Properties and Composition now use fully opaque backgrounds in both light and dark themes, including the docked layer list.
+
 - Opening projects now prioritizes the selected project location over stale copies in the default folder. Studio, Instant and Screenshot listings, media loading and cached search results use the same copy after changing drives or restarting Beam.
 
 - Windows screen recording uses an explicit H.264 profile instead of camera Auto settings and can select software encoding when accelerated Media Foundation type negotiation fails, including errors raised after transcoding starts. Initialization remains bounded and preserves the first captured image.
@@ -24,6 +26,8 @@ User-facing changes to Beam are documented in this file.
 - The private website uses client routing for all internal links and Download buttons, prepares nearby demo videos, prioritizes article images and caches production media. Download navigation stays responsive while fetching releases, and sections reveal before entering view.
 
 ### Added
+
+- Dock Screenshot Composition beside the project name by dropping anywhere in the title bar, with a dashed preview of its final heading and layer count that stays in the same place when docked and keeps the project title centered. Drag it back out or use its pin action; smooth transitions respect reduced motion, and Beam remembers the dock state and floating position. Dock actions are translated into all fifteen languages.
 
 - Orbit camera framing and lit 3D cursors with click contact, adjustable alongside existing camera and cursor controls in all fifteen languages.
 - Instant’s main video now follows a 24-second desktop workflow: launch Beam from a simple dock, preview two saved presets, ease back to the full canvas, export locally and switch to an illustrative chat. The light/dark loop uses native components, a macOS cursor and restrained 2D focus.

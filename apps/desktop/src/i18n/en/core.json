@@ -1234,6 +1234,8 @@
     "luminosity": "Luminosity"
   },
   "ScreenshotComposition": {
+    "dock": "Dock composition in the title bar",
+    "undock": "Undock composition",
     "expandGroup": "Expand {name} group",
     "collapseGroup": "Collapse {name} group",
     "selectGroup": "Select {name} group",

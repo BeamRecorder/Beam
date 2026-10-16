@@ -1222,6 +1222,8 @@
     "luminosity": "Jasność"
   },
   "ScreenshotComposition": {
+    "dock": "Zadokuj kompozycję na pasku tytułu",
+    "undock": "Oddokuj kompozycję",
     "expandGroup": "Rozwiń grupę {name}",
     "collapseGroup": "Zwiń grupę {name}",
     "selectGroup": "Zaznacz grupę {name}",

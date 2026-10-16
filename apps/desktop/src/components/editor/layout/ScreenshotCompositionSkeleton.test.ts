@@ -22,7 +22,7 @@ const create = () =>
   });
 it('uses the actual Composition shell and controls with placeholder rows before layer metadata arrives', () => {
   const wrapper = create();
-  expect(wrapper.find('.composition-surface.screenshot-chrome').exists()).toBe(true);
+  expect(wrapper.find('.composition-surface.screenshot-chrome.screenshot-panel').exists()).toBe(true);
   expect(wrapper.findAll('.layer-row')).toHaveLength(3);
   expect(wrapper.find('.compositing-controls').exists()).toBe(true);
 });

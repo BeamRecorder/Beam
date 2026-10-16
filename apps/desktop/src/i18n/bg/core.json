@@ -1222,6 +1222,8 @@
     "luminosity": "Осветеност"
   },
   "ScreenshotComposition": {
+    "dock": "Закачи композицията в горната лента",
+    "undock": "Откачи композицията",
     "expandGroup": "Разгъване на групата {name}",
     "collapseGroup": "Свиване на групата {name}",
     "selectGroup": "Избиране на групата {name}",

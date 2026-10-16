@@ -16,6 +16,7 @@ const compositionPosition = vi.hoisted(() => ({
   click: vi.fn(),
 }));
 const thumbnailLifecycle = vi.hoisted(() => ({ enabled: undefined as (() => boolean) | undefined }));
+vi.mock('../composition/composition-panel-dock', () => ({ useCompositionPanelDock: () => null }));
 vi.mock('../composition/thumbnails/useLayerThumbnails', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../composition/thumbnails/useLayerThumbnails')>();
   return {
@@ -390,6 +391,7 @@ describe('ScreenshotComposition', () => {
   });
 
   it('toggles group membership with Ctrl or Meta and marks every selected layer', async () => {
+    const platform = vi.spyOn(navigator, 'platform', 'get').mockReturnValue('Win32');
     const wrapper = mountComposition({
       selectedId: 'shape-1',
       selectedIds: ['shape-1', 'arrow-1'],
@@ -408,6 +410,7 @@ describe('ScreenshotComposition', () => {
     expect(wrapper.get('.layer-row[data-layer-id="text-1"]').classes()).toContain('selected');
     expect(wrapper.get('.layer-row[data-layer-id="text-1"] .layer-select').attributes('aria-pressed')).toBe('true');
 
+    platform.mockReturnValue('MacIntel');
     await wrapper.get('.layer-row[data-layer-id="drawing-1"] .layer-select').trigger('click', { metaKey: true });
     expect(wrapper.emitted('select')).toEqual([
       ['text-1', 'toggle'],
@@ -416,6 +419,7 @@ describe('ScreenshotComposition', () => {
     await wrapper.setProps({
       selectedIds: ['shape-1', 'arrow-1', 'text-1', 'drawing-1'],
     });
+    platform.mockReturnValue('Win32');
     await wrapper.get('.layer-row[data-layer-id="arrow-1"] .layer-select').trigger('click', { ctrlKey: true });
     expect(wrapper.emitted('select')?.at(-1)).toEqual(['arrow-1', 'toggle']);
     await wrapper.setProps({ selectedIds: ['shape-1', 'text-1', 'drawing-1'] });

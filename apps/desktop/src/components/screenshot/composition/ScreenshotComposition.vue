@@ -3,20 +3,10 @@ import { matchesGesture } from '~/shortcuts/action-bindings';
 import type { ScreenshotGroupDisabledReason } from '../screenshot-toolbar-types';
 import { computed, nextTick, ref, watch } from 'vue';
 import { useMediaQuery } from '@vueuse/core';
-import {
-  ChevronDown,
-  Eye,
-  EyeOff,
-  Layers,
-  LockKeyhole,
-  Trash2,
-  Sparkles,
-  UnlockKeyhole,
-  ZoomIn,
-  Group,
-} from '@lucide/vue';
+import { Eye, EyeOff, LockKeyhole, Trash2, Sparkles, UnlockKeyhole, ZoomIn, Group, Pin, PinOff } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
-import Badge from '~/ui/badge/Badge.vue';
+import ScreenshotCompositionHeading from './ScreenshotCompositionHeading.vue';
+import { useCompositionPanelDock } from './composition-panel-dock';
 import { useScrollShadow } from '~/ui/scroll-shadow/useScrollShadow';
 import ScreenshotLayerEffectList from '../gradient/ScreenshotLayerEffectList.vue';
 import ScreenshotEffectToolbar from '../gradient/ScreenshotEffectToolbar.vue';
@@ -77,12 +67,23 @@ const { t: tHighlight } = useTranslate('Highlight');
 const { t: elementsText } = useTranslate('Elements');
 const { t: editorText } = useTranslate('ScreenshotEditor');
 const { t: effectText } = useTranslate('LayerEffects');
+const dock = useCompositionPanelDock();
+watch(
+  () => props.layers.length,
+  (count) => {
+    if (dock) dock.count.value = count;
+  },
+  { immediate: true },
+);
 const compact = useMediaQuery('(max-width: 1180px)');
 const collapsed = ref(compact.value);
 const panel = ref<HTMLElement | null>(null);
 const content = ref<HTMLElement | null>(null);
 const {
   upward,
+  docked,
+  canDock,
+  toggleDock,
   dragging: movingPanel,
   ready,
   begin: movePanel,
@@ -259,187 +260,201 @@ const keyboard = (event: KeyboardEvent, id: string) => {
     :class="{
       collapsed,
       upward,
+      docked,
       'moving-panel': movingPanel,
       positioning: !ready,
     }"
     :aria-label="t('title')"
     @wheel.stop
   >
-    <div class="composition-surface screenshot-chrome">
-      <header class="composition-header">
-        <!-- Button forwards these styles to its native button, inside the component wrapper. -->
-        <Button
-          variant="card"
-          block
-          class="composition-toggle"
-          :style="{
-            height: 'var(--composition-header-height)',
-            minHeight: 'var(--composition-header-height)',
-            padding: '0 14px',
-            border: '0',
-            borderRadius: '0',
-            outlineOffset: '-2px',
-            background: 'transparent',
-            transform: 'none',
-            cursor: movingPanel ? 'grabbing' : 'grab',
-            touchAction: 'none',
-            '-webkit-app-region': 'no-drag',
-          }"
-          :aria-label="t(collapsed ? 'expand' : 'collapse')"
-          :aria-expanded="!collapsed"
-          @pointerdown="movePanel"
-          @click="togglePanel"
-        >
-          <span class="composition-heading">
-            <Layers :size="16" aria-hidden="true" />
-            <strong>{{ t('title') }}</strong>
-            <Badge class="layer-count" variant="outline">{{ layers.length }}</Badge>
-            <ChevronDown
-              :size="16"
-              class="composition-chevron"
-              :class="{ 'points-up': collapsed === upward }"
-              aria-hidden="true"
-            />
-          </span>
-        </Button>
-      </header>
-      <!-- Measure before the first visible frame, including when initially collapsed. -->
-      <div v-if="!collapsed || !ready" ref="content" class="composition-content">
-        <ScreenshotLayerControls
-          :layer="selected"
-          :disabled="disabled"
-          @update="selected && emit('update', selected.id, $event)"
-        />
-        <ScreenshotEffectToolbar
-          :disabled="!canAddEffect(selected)"
-          :disabled-reason="layerEffectDisabledReason(selected, disabled)"
-          :direction="upward ? 'up' : 'down'"
-          @add="selected && emit('add-effect', selected.id, $event)"
-        >
-          <span class="composition-action-spacer" />
+    <div class="composition-motion">
+      <div class="composition-surface screenshot-chrome screenshot-panel">
+        <header class="composition-header">
+          <!-- Button forwards these styles to its native button, inside the component wrapper. -->
           <Button
-            variant="ghost"
-            size="xs"
-            icon-only
-            :icon="Group"
-            :disabled="disabled || !canGroup"
-            :aria-label="editorText('group')"
-            :tooltip="
-              canGroup
-                ? editorText('group') + ' · Ctrl+G'
-                : effectText(disabled ? 'busy' : (groupDisabledReason ?? 'selectTwoToGroup'))
-            "
-            :tooltip-delay="200"
-            data-composition-group-action
-            @click="!disabled && canGroup && emit('group')"
-          />
-        </ScreenshotEffectToolbar>
+            variant="card"
+            block
+            class="composition-toggle"
+            :style="{
+              height: 'var(--composition-header-height)',
+              minHeight: 'var(--composition-header-height)',
+              padding: docked ? '0 8px' : '0 14px',
+              border: '0',
+              borderRadius: '0',
+              outlineOffset: '-2px',
+              background: 'transparent',
+              transform: 'none',
+              cursor: movingPanel ? 'grabbing' : 'grab',
+              touchAction: 'none',
+              '-webkit-app-region': 'no-drag',
+            }"
+            :aria-label="t(collapsed ? 'expand' : 'collapse')"
+            :aria-expanded="!collapsed"
+            @pointerdown="movePanel"
+            @click="togglePanel"
+          >
+            <ScreenshotCompositionHeading
+              :count="layers.length"
+              :collapsed="collapsed"
+              :upward="upward"
+              :compact="docked"
+            />
+          </Button>
+        </header>
+        <!-- Measure before the first visible frame, including when initially collapsed. -->
         <div
-          ref="list"
-          class="layer-list"
-          role="list"
-          :aria-label="t('layers')"
-          :inert="disabled || undefined"
-          :aria-disabled="disabled"
-          :style="{
-            maskImage: `${listMask}, linear-gradient(black, black)`,
-            maskSize: '100% 100%, 6px 100%',
-            maskPosition: '0 0, right top',
-            maskRepeat: 'no-repeat',
-          }"
+          v-if="!collapsed || !ready"
+          ref="content"
+          class="composition-content"
+          :class="{ 'screenshot-chrome': docked, 'screenshot-panel': docked }"
         >
-          <!-- Export disables the list once, without updating every row or remeasuring its buttons. -->
-          <TransitionGroup tag="div" name="layer" class="layer-rows">
-            <ScreenshotCompositionGroup
-              v-for="block in groupBlocks"
-              :key="block.key"
-              :group-id="block.groupId"
-              :block-key="block.key"
-              :name="label(block.layers[0]!)"
-              :count="block.layers.length"
-              :disabled="disabled"
-              :selected="block.layers.every((layer) => selectedSet.has(layer.id))"
-              :drop-target="dropGroupId === block.groupId"
-              :root-insertion="dropTarget?.blockKey === block.key ? dropTarget.side : undefined"
-              @select="selectLayer($event, block.layers[0]!.id, true)"
-            >
-              <div
-                v-for="layer in block.layers"
-                v-memo="[
-                  layer,
-                  selectedSet.has(layer.id),
-                  dragging === layer.id,
-                  editingId === layer.id,
-                  thumbnails[layer.id],
-                  effectThumbnailRevision(layer, thumbnails),
-                  locale,
-                  selectedEffectId,
-                  dropTarget?.anchorId === layer.id ? dropTarget.side : null,
-                ]"
-                :key="layer.id"
-                class="layer-row"
-                :class="{
-                  selected: selectedSet.has(layer.id),
-                  hidden: !layer.visible,
-                  dragging: dragging === layer.id,
-                  'has-effects': Boolean(layer.effects?.length),
-                  'drop-before':
-                    !dropTarget?.header && dropTarget?.anchorId === layer.id && dropTarget.side === 'before',
-                  'drop-after': !dropTarget?.header && dropTarget?.anchorId === layer.id && dropTarget.side === 'after',
-                }"
-                :data-layer-id="layer.id"
-                role="listitem"
-                @keydown="keyboard($event, layer.id)"
-                @contextmenu="openMenu($event, layer.id)"
+          <ScreenshotLayerControls
+            :layer="selected"
+            :disabled="disabled"
+            @update="selected && emit('update', selected.id, $event)"
+          />
+          <ScreenshotEffectToolbar
+            :disabled="!canAddEffect(selected)"
+            :disabled-reason="layerEffectDisabledReason(selected, disabled)"
+            :direction="upward ? 'up' : 'down'"
+            @add="selected && emit('add-effect', selected.id, $event)"
+          >
+            <span class="composition-action-spacer" />
+            <Button
+              v-if="canDock"
+              variant="ghost"
+              size="xs"
+              icon-only
+              :icon="docked ? PinOff : Pin"
+              :aria-label="t(docked ? 'undock' : 'dock')"
+              :tooltip="t(docked ? 'undock' : 'dock')"
+              @click="toggleDock"
+            />
+            <Button
+              variant="ghost"
+              size="xs"
+              icon-only
+              :icon="Group"
+              :disabled="disabled || !canGroup"
+              :aria-label="editorText('group')"
+              :tooltip="
+                canGroup
+                  ? editorText('group') + ' · Ctrl+G'
+                  : effectText(disabled ? 'busy' : (groupDisabledReason ?? 'selectTwoToGroup'))
+              "
+              :tooltip-delay="200"
+              data-composition-group-action
+              @click="!disabled && canGroup && emit('group')"
+            />
+          </ScreenshotEffectToolbar>
+          <div
+            ref="list"
+            class="layer-list"
+            role="list"
+            :aria-label="t('layers')"
+            :inert="disabled || undefined"
+            :aria-disabled="disabled"
+            :style="{
+              maskImage: `${listMask}, linear-gradient(black, black)`,
+              maskSize: '100% 100%, 6px 100%',
+              maskPosition: '0 0, right top',
+              maskRepeat: 'no-repeat',
+            }"
+          >
+            <!-- Export disables the list once, without updating every row or remeasuring its buttons. -->
+            <TransitionGroup tag="div" name="layer" class="layer-rows">
+              <ScreenshotCompositionGroup
+                v-for="block in groupBlocks"
+                :key="block.key"
+                :group-id="block.groupId"
+                :block-key="block.key"
+                :name="label(block.layers[0]!)"
+                :count="block.layers.length"
+                :disabled="disabled"
+                :selected="block.layers.every((layer) => selectedSet.has(layer.id))"
+                :drop-target="dropGroupId === block.groupId"
+                :root-insertion="dropTarget?.blockKey === block.key ? dropTarget.side : undefined"
+                @select="selectLayer($event, block.layers[0]!.id, true)"
               >
-                <button
-                  v-if="editingId !== layer.id"
-                  class="layer-select"
-                  :title="t('rename')"
-                  :aria-pressed="selectedSet.has(layer.id)"
-                  @pointerdown="!disabled && begin($event, layer.id)"
-                  @click="selectLayer($event, layer.id)"
-                  @dblclick.stop="rename(layer.id)"
+                <div
+                  v-for="layer in block.layers"
+                  v-memo="[
+                    layer,
+                    selectedSet.has(layer.id),
+                    dragging === layer.id,
+                    editingId === layer.id,
+                    thumbnails[layer.id],
+                    effectThumbnailRevision(layer, thumbnails),
+                    locale,
+                    selectedEffectId,
+                    dropTarget?.anchorId === layer.id ? dropTarget.side : null,
+                  ]"
+                  :key="layer.id"
+                  class="layer-row"
+                  :class="{
+                    selected: selectedSet.has(layer.id),
+                    hidden: !layer.visible,
+                    dragging: dragging === layer.id,
+                    'has-effects': Boolean(layer.effects?.length),
+                    'drop-before':
+                      !dropTarget?.header && dropTarget?.anchorId === layer.id && dropTarget.side === 'before',
+                    'drop-after':
+                      !dropTarget?.header && dropTarget?.anchorId === layer.id && dropTarget.side === 'after',
+                  }"
+                  :data-layer-id="layer.id"
+                  role="listitem"
+                  @keydown="keyboard($event, layer.id)"
+                  @contextmenu="openMenu($event, layer.id)"
                 >
-                  <ZoomIn v-if="layer.kind === 'zoom'" :size="24" aria-hidden="true" />
-                  <LayerThumbnail v-else :value="thumbnails[layer.id]" />
-                  <ScreenshotCompositionLabel class="layer-name" :text="label(layer)" />
-                </button>
-                <ScreenshotLayerName
-                  v-else
-                  inline
-                  :name="label(layer)"
-                  :disabled="layer.locked"
-                  @rename="!disabled && emit('rename', layer.id, $event)"
-                  @finish="finishRename(layer.id, $event)"
-                />
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  icon-only
-                  :icon="layer.locked ? LockKeyhole : UnlockKeyhole"
-                  :aria-label="t(layer.locked ? 'unlock' : 'lock', { name: label(layer) })"
-                  @click="!disabled && emit('update', layer.id, { locked: !layer.locked })"
-                />
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  icon-only
-                  :icon="layer.visible ? Eye : EyeOff"
-                  :aria-label="t(layer.visible ? 'hide' : 'show', { name: label(layer) })"
-                  @click="!disabled && emit('visibility', layer.id, !layer.visible)"
-                />
-                <ScreenshotLayerEffectList
-                  :layer="layer"
-                  :thumbnails="thumbnails"
-                  :disabled="disabled"
-                  :selected-effect-id="selectedId === layer.id ? selectedEffectId : null"
-                  @select="emit('select-effect', layer.id, $event)"
-                  @toggle="emit('toggle-effect', layer.id, $event)"
-                />
-              </div>
-            </ScreenshotCompositionGroup>
-          </TransitionGroup>
+                  <button
+                    v-if="editingId !== layer.id"
+                    class="layer-select"
+                    :title="t('rename')"
+                    :aria-pressed="selectedSet.has(layer.id)"
+                    @pointerdown="!disabled && begin($event, layer.id)"
+                    @click="selectLayer($event, layer.id)"
+                    @dblclick.stop="rename(layer.id)"
+                  >
+                    <ZoomIn v-if="layer.kind === 'zoom'" :size="24" aria-hidden="true" />
+                    <LayerThumbnail v-else :value="thumbnails[layer.id]" />
+                    <ScreenshotCompositionLabel class="layer-name" :text="label(layer)" />
+                  </button>
+                  <ScreenshotLayerName
+                    v-else
+                    inline
+                    :name="label(layer)"
+                    :disabled="layer.locked"
+                    @rename="!disabled && emit('rename', layer.id, $event)"
+                    @finish="finishRename(layer.id, $event)"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    icon-only
+                    :icon="layer.locked ? LockKeyhole : UnlockKeyhole"
+                    :aria-label="t(layer.locked ? 'unlock' : 'lock', { name: label(layer) })"
+                    @click="!disabled && emit('update', layer.id, { locked: !layer.locked })"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    icon-only
+                    :icon="layer.visible ? Eye : EyeOff"
+                    :aria-label="t(layer.visible ? 'hide' : 'show', { name: label(layer) })"
+                    @click="!disabled && emit('visibility', layer.id, !layer.visible)"
+                  />
+                  <ScreenshotLayerEffectList
+                    :layer="layer"
+                    :thumbnails="thumbnails"
+                    :disabled="disabled"
+                    :selected-effect-id="selectedId === layer.id ? selectedEffectId : null"
+                    @select="emit('select-effect', layer.id, $event)"
+                    @toggle="emit('toggle-effect', layer.id, $event)"
+                  />
+                </div>
+              </ScreenshotCompositionGroup>
+            </TransitionGroup>
+          </div>
         </div>
       </div>
     </div>

@@ -14,7 +14,7 @@ const { ready, upward } = useCompositionPanelPosition(panel, () => undefined, co
 
 <template>
   <div ref="panel" class="screenshot-composition" :class="{ positioning: !ready, upward }">
-    <div class="composition-surface screenshot-chrome">
+    <div class="composition-surface screenshot-chrome screenshot-panel">
       <header class="composition-header"><Skeleton variant="animated-gradient" width="100%" height="100%" /></header>
       <div v-if="!collapsed || !ready" ref="content" class="composition-content">
         <EditorSkeletonSurface

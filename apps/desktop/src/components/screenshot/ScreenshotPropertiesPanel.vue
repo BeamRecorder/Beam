@@ -15,7 +15,7 @@ const { t } = useI18n();
     <aside
       v-show="open"
       id="screenshot-properties-panel"
-      class="properties-island screenshot-chrome"
+      class="properties-island screenshot-chrome screenshot-panel"
       :aria-label="title"
       :inert="!open || undefined"
     >

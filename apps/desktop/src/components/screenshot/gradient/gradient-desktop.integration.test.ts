@@ -429,12 +429,12 @@ describe.skipIf(process.env.BEAM_RUN_DESKTOP_AGENT_TEST !== '1')('Screenshot gra
     }>(`(()=>{
       const panel=document.querySelector('#screenshot-properties-panel'),canvas=document.querySelector('.screenshot-stage'),slider=panel.querySelector('.big-slider-container'),button=document.querySelector('.screenshot-toolbar .btn-secondary');
       const a=panel.getBoundingClientRect(),b=canvas.getBoundingClientRect();
-      return { sliderBorder:parseFloat(getComputedStyle(slider).borderTopWidth),buttonBorder:parseFloat(getComputedStyle(button).borderTopWidth),transparency:getComputedStyle(panel,'::before').backgroundColor,blur:getComputedStyle(panel,'::before').backdropFilter,overlay:getComputedStyle(panel).position,overlap:a.right>b.left&&a.left<b.right };
+      return { sliderBorder:parseFloat(getComputedStyle(slider).borderTopWidth),buttonBorder:parseFloat(getComputedStyle(button).borderTopWidth),transparency:getComputedStyle(panel).backgroundColor,blur:getComputedStyle(panel).backdropFilter,overlay:getComputedStyle(panel).position,overlap:a.right>b.left&&a.left<b.right };
     })()`);
     expect(appearance.sliderBorder).toBe(1);
     expect(appearance.buttonBorder).toBe(1);
-    expect(appearance.transparency).toContain('0.86');
-    expect(appearance.blur).toBe('blur(12px)');
+    expect(appearance.transparency).toBe('rgb(247, 247, 248)');
+    expect(appearance.blur).toBe('none');
     expect(
       await evaluate("getComputedStyle(document.querySelector('#screenshot-properties-panel'),'::after').content"),
     ).toBe('none');
