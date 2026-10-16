@@ -7,9 +7,16 @@ fn screen_profile_has_explicit_h264_mp4_geometry_rate_and_no_audio() {
     let _apartment = super::super::RuntimeApartment::initialize().expect("WinRT");
     let profile = encoding_profile(1466, 1178, 15_000_000, 60).expect("screen profile");
     let video = profile.Video().expect("video");
-    assert_eq!(
-        video.Subtype().expect("codec"),
-        MediaEncodingSubtypes::H264Es().expect("H.264 elementary stream")
+    assert!(
+        video
+            .Subtype()
+            .expect("codec")
+            .to_string_lossy()
+            .eq_ignore_ascii_case(
+                &MediaEncodingSubtypes::H264Es()
+                    .expect("H.264 elementary stream")
+                    .to_string_lossy()
+            )
     );
     assert_eq!(
         profile
