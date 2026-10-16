@@ -7,8 +7,9 @@ import { createSceneAnimator } from '../scene/scene-animation';
 import { createScenePointMapper } from '../scene/scene-spatial';
 import { buildAutomaticGlassElements } from './glass-generation';
 import type { ZoomGenerationOptions } from './glass-generation-types';
-import { applyRecordingZoomMode } from './recording-zoom-preference';
 import { buildAutomaticZoomElements } from '@beam/engine/zoom/zoom-suggestions';
+import { compositionDurationMs } from '../shared/timeline-mapping';
+import { applyRecordingZoomMode } from './recording-zoom-preference';
 
 export function generateRecordingZooms(
   composition: ClipComposition,
@@ -20,6 +21,10 @@ export function generateRecordingZooms(
   composition = compileSceneComposition(composition);
   const animate = createSceneAnimator(composition);
   const scenePoint = options ? createScenePointMapper(composition, options.canvas.width, options.canvas.height) : null;
+  const totalDuration = compositionDurationMs(composition);
+  const recordingEndMs = composition.assets
+    .filter((asset) => asset.sessionId === sessionId && asset.kind === 'video')
+    .reduce((end, asset) => Math.max(end, (asset.sessionStartMs ?? 0) + asset.durationMs), 0);
   const assets = new Set(composition.assets.filter((asset) => asset.sessionId === sessionId).map((asset) => asset.id));
   const ids = new Set(reserved.map((zoom) => zoom.id));
   const allocateId = (base: string) => {
@@ -33,16 +38,25 @@ export function generateRecordingZooms(
     if (clip.kind !== 'screen' || clip.enabled === false || !assets.has(clip.assetId)) return [];
     const rate = clip.playbackRate;
     const durationMs = clip.timelineDurationMs;
+    const recordedAsset = composition.assets.find((asset) => asset.id === clip.assetId)!;
+    const sourceStartMs = (recordedAsset.sessionStartMs ?? 0) + clip.sourceInMs;
     const samples = telemetry
-      .filter((point) => point.timeMs >= clip.sourceInMs && point.timeMs < clip.sourceInMs + clip.sourceDurationMs)
-      .map((point) => ({ ...point, timeMs: (point.timeMs - clip.sourceInMs) / rate }));
-    const occupied = reserved
-      .filter((zoom) => zoom.startMs < clip.timelineStartMs + durationMs && zoom.endMs > clip.timelineStartMs)
-      .map((zoom) => ({
-        ...zoom,
-        startMs: Math.max(0, zoom.startMs - clip.timelineStartMs),
-        endMs: Math.min(durationMs, zoom.endMs - clip.timelineStartMs),
-      }));
+      .filter((point) => point.timeMs >= sourceStartMs && point.timeMs < sourceStartMs + clip.sourceDurationMs)
+      .map((point) => ({ ...point, timeMs: (point.timeMs - sourceStartMs) / rate }));
+    const occupied =
+      options?.style === 'glass'
+        ? reserved
+            .filter((zoom) => zoom.startMs < clip.timelineStartMs + durationMs && zoom.endMs > clip.timelineStartMs)
+            .map((zoom) => ({
+              ...zoom,
+              startMs: Math.max(0, zoom.startMs - clip.timelineStartMs),
+              endMs: Math.min(durationMs, zoom.endMs - clip.timelineStartMs),
+            }))
+        : reserved.map((zoom) => ({
+            ...zoom,
+            startMs: zoom.startMs - clip.timelineStartMs,
+            endMs: zoom.endMs - clip.timelineStartMs,
+          }));
     let generated: ZoomElement[];
     if (options?.style === 'glass') {
       const asset = composition.assets.find((asset) => asset.id === clip.assetId)!;
@@ -61,7 +75,18 @@ export function generateRecordingZooms(
         height,
         reserved: occupied,
       });
-    } else generated = buildAutomaticZoomElements({ sessionId, telemetry: samples, durationMs, reserved: occupied });
+    } else
+      generated = buildAutomaticZoomElements({
+        sessionId,
+        telemetry: samples,
+        durationMs,
+        reserved: occupied,
+        bounds: {
+          wideUntilMs: 0,
+          wideFromMs: Math.min(durationMs, totalDuration - 1000 - clip.timelineStartMs),
+          ignoreClicksFromMs: (recordingEndMs - 1000 - sourceStartMs) / rate,
+        },
+      });
     return generated.map((zoom) => ({
       ...zoom,
       ...(options?.style === '3d' || options?.style === 'orbit' ? applyRecordingZoomMode(zoom, options.style) : {}),

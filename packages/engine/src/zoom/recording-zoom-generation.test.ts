@@ -25,9 +25,9 @@ const screen = (id: string, assetId: string, overrides: Partial<VisualClip> = {}
   name: id,
   assetId,
   timelineStartMs: 0,
-  timelineDurationMs: 5_000,
+  timelineDurationMs: 20_000,
   sourceInMs: 0,
-  sourceDurationMs: 5_000,
+  sourceDurationMs: 20_000,
   playbackRate: 1,
   enabled: true,
   order: 0,
@@ -59,46 +59,96 @@ const manualZoom = (id: string, startMs: number, endMs: number, sessionId = 'ses
 });
 
 describe('generateRecordingZooms', () => {
+  it('reserves authored lenses independently and excludes disabled screens', () => {
+    const comp = composition([screen('screen', 'asset')], [asset('asset', 'session')]);
+    const lens = { ...manualZoom('lens', 5000, 7000), effect: 'glass' as const };
+    expect(
+      generateRecordingZooms(comp, 'session', [click(6000)], [lens], {
+        style: 'glass',
+        canvas: { width: 1920, height: 1080, showBackground: false },
+      }),
+    ).toEqual([]);
+    comp.clips[0]!.enabled = false;
+    expect(generateRecordingZooms(comp, 'session', [click(6000)], [])).toEqual([]);
+  });
+  it('reports missing recording dimensions rather than placing a guessed lens', () => {
+    const missing = asset('asset', 'session');
+    missing.width = null;
+    expect(() =>
+      generateRecordingZooms(composition([screen('screen', 'asset')], [missing]), 'session', [click(6000)], [], {
+        style: 'glass',
+        canvas: { width: 1920, height: 1080, showBackground: false },
+      }),
+    ).toThrow('dimensions');
+  });
+  it('maps resumed segment clocks without generating from another segment', () => {
+    const resumed = { ...asset('resumed', 'session'), sessionStartMs: 12000, durationMs: 20000 };
+    const comp = composition([screen('resumed-screen', 'resumed')], [resumed]);
+    const result = generateRecordingZooms(comp, 'session', [click(6000, 0.1, 0.1), click(18000, 0.4, 0.6)], [], {
+      style: 'orbit',
+      canvas: { width: 1920, height: 1080, showBackground: false },
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ startMs: 5500, endMs: 7500, focus: { cx: 0.4, cy: 0.6 }, projection: 'orbit' });
+  });
+  it('ignores the actual recording Stop click on resumed and sped-up clips', () => {
+    const resumed = { ...asset('resumed', 'session'), sessionStartMs: 12000, durationMs: 20000 };
+    const comp = composition(
+      [
+        screen('resumed-screen', 'resumed', {
+          timelineStartMs: 4000,
+          timelineDurationMs: 10000,
+          sourceDurationMs: 20000,
+          playbackRate: 2,
+        }),
+      ],
+      [resumed],
+    );
+    expect(generateRecordingZooms(comp, 'session', [click(31500)], [])).toEqual([]);
+    expect(generateRecordingZooms(comp, 'session', [click(18000)], [])[0]).toMatchObject({
+      startMs: 6500,
+      endMs: 8500,
+    });
+  });
   it('maps trimmed source telemetry into the clip timeline using playback rate and offset', () => {
     const result = generateRecordingZooms(
       composition(
         [
           screen('trimmed-screen', 'screen-asset', {
             timelineStartMs: 4_000,
-            timelineDurationMs: 2_000,
+            timelineDurationMs: 8_000,
             sourceInMs: 3_000,
-            sourceDurationMs: 4_000,
+            sourceDurationMs: 16_000,
             playbackRate: 2,
           }),
         ],
         [asset('screen-asset', 'session')],
       ),
       'session',
-      [click(2_999), click(4_000, 0.4, 0.6), click(7_001)],
+      [click(2_999), click(7_000, 0.4, 0.6), click(19_001)],
       [],
     );
 
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
       linkedClipId: 'trimmed-screen',
-      startMs: 4_000,
-      endMs: 5_000,
+      startMs: 5_500,
+      endMs: 7_500,
       focus: { cx: 0.4, cy: 0.6 },
       mode: 'auto',
       sessionId: 'session',
     });
   });
 
-  it('places generated zooms around the click while respecting reserved timeline space', () => {
+  it('leaves authored zooms untouched when there is no readable free shot', () => {
     const result = generateRecordingZooms(
       composition([screen('screen', 'screen-asset')], [asset('screen-asset', 'session')]),
       'session',
-      [click(1_000)],
-      [manualZoom('reserved', 0, 750)],
+      [click(6_000)],
+      [manualZoom('reserved', 3000, 7000)],
     );
 
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({ linkedClipId: 'screen', startMs: 750, endMs: 1_750 });
+    expect(result).toEqual([]);
   });
 
   it('generates only for screen assets belonging to the requested recording session', () => {
@@ -108,7 +158,7 @@ describe('generateRecordingZooms', () => {
         [asset('current-asset', 'session'), asset('other-asset', 'other-session')],
       ),
       'session',
-      [click(1_000)],
+      [click(6_000)],
       [],
     );
 
@@ -120,11 +170,16 @@ describe('generateRecordingZooms', () => {
 
 it('keeps generated IDs unique across recording copies and retained detached zooms', () => {
   const comp = composition(
-    [screen('one', 'asset'), screen('two', 'asset', { timelineStartMs: 6000 })],
+    [screen('one', 'asset'), screen('two', 'asset', { timelineStartMs: 24000 })],
     [asset('asset', 'session')],
   );
-  const reserved = { ...manualZoom('auto:session:1000:one', 3000, 4000), mode: 'auto' as const, linkedClipId: null };
-  const generated = generateRecordingZooms(comp, 'session', [click(1000)], [reserved]);
+  const reserved = {
+    ...manualZoom('auto:session:6000:one', 6000, 7000),
+    mode: 'auto' as const,
+    linkedClipId: null,
+    enabled: false,
+  };
+  const generated = generateRecordingZooms(comp, 'session', [click(6000)], [reserved]);
   expect(generated).toHaveLength(2);
   expect(new Set([reserved, ...generated].map((zoom) => zoom.id)).size).toBe(3);
   expect(generated.map((zoom) => zoom.linkedClipId)).toEqual(['one', 'two']);
@@ -158,10 +213,16 @@ it('maps automatic lenses to the output canvas and preserves trim/rate/linking',
   expect(result[0]!.startMs).toBeGreaterThanOrEqual(3000);
   expect(result[0]!.endMs).toBeLessThanOrEqual(5500);
   expect(
-    generateRecordingZooms(comp, 'session', [click(3000)], [], {
-      style: '3d',
-      canvas: { width: 1920, height: 1080, showBackground: false },
-    })[0]!.projection,
+    generateRecordingZooms(
+      composition([screen('wide', 'asset')], [asset('asset', 'session')]),
+      'session',
+      [click(6000)],
+      [],
+      {
+        style: '3d',
+        canvas: { width: 1920, height: 1080, showBackground: false },
+      },
+    )[0]!.projection,
   ).toBe('orbit');
   comp.clips[0]!.enabled = false;
   expect(generateRecordingZooms(comp, 'session', [click(3000)], [])).toEqual([]);

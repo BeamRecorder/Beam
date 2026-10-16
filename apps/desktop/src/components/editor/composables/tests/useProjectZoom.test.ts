@@ -44,7 +44,7 @@ const data = (overrides: Partial<ProjectEditorData> = {}): ProjectEditorData => 
   cursor: {
     available: true,
     events: [],
-    telemetry: [{ timeMs: 2_000, cx: 0.2, cy: 0.8, interactionType: 'click' }],
+    telemetry: [{ timeMs: 6_000, cx: 0.2, cy: 0.8, interactionType: 'click' }],
     shapes: {},
     catalog: {},
     missing: [],
@@ -94,7 +94,7 @@ const recordingComposition = (): ClipComposition =>
 
 const create = (
   initialData: ProjectEditorData | null = data(),
-  duration = 5_000,
+  duration = 10_000,
   defaults: EditorPreferenceDefaults = normalizeEditorPreferenceDefaults(undefined),
   mode: RecordingZoomMode | null = '2d',
   canvas?: OutputCanvasSettings,
@@ -138,7 +138,7 @@ describe('useProjectZoom', () => {
     ['2d', '3d'],
     ['3d', '2d'],
   ] as const)('honors an explicit %s generation style over the %s preference', (style, mode) => {
-    const { state } = create(data(), 5000, undefined, mode);
+    const { state } = create(data(), 10000, undefined, mode);
     state.generateZooms(true, style);
     expect(state.zoomElements.value.length).toBeGreaterThan(0);
     expect(state.zoomElements.value.every((item) => item.projection === (style === '3d' ? 'orbit' : style))).toBe(true);
@@ -146,7 +146,7 @@ describe('useProjectZoom', () => {
   it.each(['off', '2d', '3d', 'glass'] as const)(
     'keeps generated glass lenses independent of the %s recording preference',
     (mode) => {
-      const { state } = create(data(), 5000, undefined, mode, DEFAULT_OUTPUT_CANVAS);
+      const { state } = create(data(), 10000, undefined, mode, DEFAULT_OUTPUT_CANVAS);
       state.generateZooms(true, 'glass');
       expect(state.zoomElements.value.length).toBeGreaterThan(0);
       expect(
@@ -158,7 +158,7 @@ describe('useProjectZoom', () => {
     },
   );
   it('generates and regenerates editable timeline lenses from the saved Loupe preference', () => {
-    const { state } = create(data(), 5000, undefined, 'glass', DEFAULT_OUTPUT_CANVAS);
+    const { state } = create(data(), 10000, undefined, 'glass', DEFAULT_OUTPUT_CANVAS);
     state.ensureAutomaticZooms();
     const generated = [...state.zoomElements.value];
     expect(generated.length).toBeGreaterThan(0);
@@ -176,7 +176,7 @@ describe('useProjectZoom', () => {
     expect(state.generatedSessions.value).toHaveLength(1);
   });
   it('keeps OFF recordings without generated zooms but permits explicit regeneration from clicks', () => {
-    const { state } = create(data(), 5000, undefined, 'off');
+    const { state } = create(data(), 10000, undefined, 'off');
     expect(state.canGenerateZooms.value).toBe(true);
     state.ensureAutomaticZooms();
     expect(state.zoomElements.value).toEqual([]);
@@ -185,7 +185,7 @@ describe('useProjectZoom', () => {
     expect(state.zoomElements.value.every((item) => item.enabled && item.projection === '2d')).toBe(true);
   });
   it('generates 3D zooms and preserves manual, locked and detached zooms when regenerating', () => {
-    const { state } = create(data(), 5000, undefined, '3d');
+    const { state } = create(data(), 10000, undefined, '3d');
     const preserved = [
       { ...zoom('manual'), startMs: 0, endMs: 200 },
       { ...zoom('locked', 'auto'), startMs: 250, endMs: 450, locked: true },
@@ -199,7 +199,7 @@ describe('useProjectZoom', () => {
     expect(generated.every((item) => item.enabled && item.projection === 'orbit')).toBe(true);
   });
   it('waits for preferences before generating and does not offer regeneration without click data', () => {
-    const { state, recordingZoomMode } = create(data(), 5000, undefined, null);
+    const { state, recordingZoomMode } = create(data(), 10000, undefined, null);
     state.ensureAutomaticZooms();
     expect(state.zoomElements.value).toEqual([]);
     recordingZoomMode.value = '3d';
@@ -366,7 +366,7 @@ describe('useProjectZoom', () => {
         expect.objectContaining({ id: 'manual' }),
         expect.objectContaining({ id: 'other-auto' }),
         expect.objectContaining({
-          id: 'auto:session:2000:screen',
+          id: 'auto:session:6000:screen',
           mode: 'auto',
         }),
       ]),
@@ -391,14 +391,14 @@ describe('useProjectZoom', () => {
     state.generateZooms();
 
     expect(state.zoomElements.value).toContainEqual(detached);
-    expect(state.zoomElements.value.find((item) => item.id === 'auto:session:2000:screen')).toMatchObject({
+    expect(state.zoomElements.value.find((item) => item.id === 'auto:session:6000:screen')).toMatchObject({
       linkedClipId: 'screen',
       mode: 'auto',
     });
   });
 
   it('preserves locked automatic zooms while regenerating the active session', () => {
-    const { state } = create(data(), 5_000);
+    const { state } = create(data(), 10_000);
     const lockedAutomatic = {
       ...zoom('locked-auto', 'auto'),
       locked: true,
@@ -419,10 +419,10 @@ describe('useProjectZoom', () => {
     expect(state.zoomElements.value.find((entry) => entry.id === 'stale-auto')).toBeUndefined();
     expect(state.zoomElements.value).toContainEqual(
       expect.objectContaining({
-        id: 'auto:session:2000:screen',
+        id: 'auto:session:6000:screen',
         mode: 'auto',
-        startMs: 1_500,
-        endMs: 2_500,
+        startMs: 5_500,
+        endMs: 7_500,
       }),
     );
   });
@@ -434,9 +434,9 @@ describe('useProjectZoom', () => {
           available: true,
           events: [],
           telemetry: [
-            { timeMs: 1_400, cx: 0.1, cy: 0.5, interactionType: 'move' },
-            { timeMs: 1_600, cx: 0.2, cy: 0.5, interactionType: 'move' },
-            { timeMs: 2_000, cx: 0.8, cy: 0.5, interactionType: 'click' },
+            { timeMs: 5_400, cx: 0.1, cy: 0.5, interactionType: 'move' },
+            { timeMs: 5_600, cx: 0.2, cy: 0.5, interactionType: 'move' },
+            { timeMs: 6_000, cx: 0.8, cy: 0.5, interactionType: 'click' },
           ],
           shapes: {},
           catalog: {},
@@ -469,7 +469,7 @@ describe('useProjectZoom', () => {
     expect(state.zoomElements.value.find((item) => item.id === 'stale-auto')).toBeUndefined();
     expect(state.zoomElements.value).toContainEqual(
       expect.objectContaining({
-        id: 'auto:session:2000:screen',
+        id: 'auto:session:6000:screen',
         mode: 'auto',
         projection: '2d',
         tiltPreset: 'custom',
@@ -483,7 +483,7 @@ describe('useProjectZoom', () => {
     );
   });
 
-  it('generates an automatic zoom in the free gap after a reserved eight-second zoom', () => {
+  it('keeps authored zooms when no readable free shot fits', () => {
     const { state } = create(
       data({
         cursor: {
@@ -501,9 +501,8 @@ describe('useProjectZoom', () => {
 
     state.generateZooms();
 
-    expect(state.zoomElements.value).toContainEqual(
-      expect.objectContaining({ mode: 'auto', startMs: 8_000, endMs: 9_000 }),
-    );
+    expect(state.zoomElements.value).toHaveLength(1);
+    expect(state.zoomElements.value).toContainEqual(expect.objectContaining({ id: 'manual', startMs: 0, endMs: 8000 }));
   });
 
   it('does not generate when cursor data is unavailable', () => {
@@ -531,7 +530,7 @@ describe('useProjectZoom', () => {
     expect(state.zoomElements.value).toEqual([]);
     expect(state.generatedSessions.value).toEqual([]);
 
-    durationMs.value = 5_000;
+    durationMs.value = 10_000;
     state.ensureAutomaticZooms();
 
     expect(state.generatedSessions.value).toEqual([
@@ -543,7 +542,7 @@ describe('useProjectZoom', () => {
     expect(state.zoomElements.value).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: 'auto:session:2000:screen',
+          id: 'auto:session:6000:screen',
           mode: 'auto',
         }),
       ]),
@@ -691,12 +690,12 @@ describe('useProjectZoom', () => {
   });
 
   it('rejects a paste that would exceed timeline bounds without partially mutating zooms', () => {
-    const { state } = create(data(), 5_000);
+    const { state } = create(data(), 10_000);
     const existing = zoom('existing');
     const copied = { ...zoom('copied'), startMs: 0, endMs: 2_000 };
     state.zoomElements.value = [existing];
 
-    expect(() => state.pasteZoomAtTime(copied, 4_001)).toThrow();
+    expect(() => state.pasteZoomAtTime(copied, 9_001)).toThrow();
     expect(state.zoomElements.value).toEqual([existing]);
   });
 
@@ -713,4 +712,45 @@ describe('useProjectZoom', () => {
     state.ensureAutomaticZooms();
     expect(state.zoomElements.value).toEqual([zoom('saved')]);
   });
+
+  it.each([9, 10])('recalculates previously saved algorithm %d plans while preserving authored zooms', (version) => {
+    const { state } = create();
+    const authored = { ...zoom('authored'), startMs: 0, endMs: 200 };
+    state.zoomElements.value = [
+      authored,
+      { ...zoom('stale', 'auto'), generation: 'automatic', startMs: 3000, endMs: 9000, linkedClipId: 'screen' },
+    ];
+    state.generatedSessions.value = [{ sessionId: 'session', algorithmVersion: version, generatedAt: 'old' }];
+    state.ensureAutomaticZooms();
+    expect(state.zoomElements.value).toContainEqual(authored);
+    expect(state.zoomElements.value.some((zoom) => zoom.id === 'stale')).toBe(false);
+    expect(state.zoomElements.value).toContainEqual(expect.objectContaining({ startMs: 5500, endMs: 7500 }));
+    expect(state.generatedSessions.value).toContainEqual(expect.objectContaining({ algorithmVersion: 11 }));
+  });
+});
+
+it('reuses saved camera settings on a new zoom with independent values', () => {
+  const settings = {
+    yaw: -28,
+    pitch: 23,
+    roll: -6,
+    horizontal: 6,
+    vertical: 4,
+    pullback: 0.5,
+    fieldOfView: 46,
+    dolly: 0,
+    responseMs: 700,
+    leadMs: 100,
+  };
+  const defaults = normalizeEditorPreferenceDefaults({
+    zoom: { durationMs: 1000, depth: 3, mode: 'manual', projection: 'orbit', orbitSettings: settings },
+  });
+  const { state } = create(data(), 10000, defaults);
+  state.addZoomAtTime(0);
+  expect(state.zoomElements.value[0]).toMatchObject({
+    projection: 'orbit',
+    transition: 'cinematic',
+    orbitSettings: settings,
+  });
+  expect(state.zoomElements.value[0]!.orbitSettings).not.toBe(defaults.zoom!.orbitSettings);
 });

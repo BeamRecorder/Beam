@@ -56,7 +56,9 @@ export function useProjectZoom(options: {
     Boolean(
       editorData.value?.cursor.available &&
       editorData.value.sessionId &&
-      editorData.value.cursor.telemetry.some((point) => point.interactionType === 'click'),
+      editorData.value.cursor.telemetry.some((point) =>
+        ['click', 'double-click', 'right-click', 'middle-click'].includes(point.interactionType ?? ''),
+      ),
     ),
   );
   const hasAutomaticZooms = computed(() => zoomElements.value.some(isAutomaticZoom));

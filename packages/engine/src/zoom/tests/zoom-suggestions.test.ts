@@ -19,7 +19,11 @@ const sample = (
 ): CursorTelemetryPoint => ({ timeMs, cx, cy, interactionType });
 
 const suggestionFor = (telemetry: CursorTelemetryPoint[]) =>
-  buildAutomaticZoomElements({ telemetry, sessionId: 'session', durationMs: 6_000 })[0];
+  buildAutomaticZoomElements({
+    telemetry: telemetry.map((p) => ({ ...p, timeMs: p.timeMs + 3000 })),
+    sessionId: 'session',
+    durationMs: 15_000,
+  })[0];
 const AUTO_TILT_MIN_INTENSITY = 0.12;
 const AUTO_TILT_MAX_INTENSITY = 0.32;
 
@@ -39,16 +43,16 @@ const expectAutoTiltMetadata = (zoom: ReturnType<typeof suggestionFor>) => {
 describe('buildAutomaticZoomElements', () => {
   it('creates a sensible size region for an explicit click', () => {
     const zooms = buildAutomaticZoomElements({
-      telemetry: [sample(1_000, 0.25, 0.75, 'click')],
+      telemetry: [sample(6_000, 0.25, 0.75, 'click')],
       sessionId: 'session',
-      durationMs: 5_000,
+      durationMs: 15_000,
     });
     expect(zooms).toEqual([
       expect.objectContaining({
-        startMs: 500,
-        endMs: 1_500,
+        startMs: 5_500,
+        endMs: 7_500,
         focus: { cx: 0.25, cy: 0.75 },
-        depth: 2,
+        depth: 3,
         mode: 'auto',
         projection: '2d',
         tiltPreset: 'custom',
@@ -57,18 +61,18 @@ describe('buildAutomaticZoomElements', () => {
     expectAutoTiltMetadata(zooms[0]);
   });
 
-  it('clusters explicit clicks separated by at most 2500 ms regardless of position', () => {
+  it('frames nearby actions together but keeps distant actions separate', () => {
     const zooms = buildAutomaticZoomElements({
-      telemetry: [sample(1_000, 0.1, 0.1, 'click'), sample(3_400, 0.9, 0.9, 'double-click')],
+      telemetry: [
+        sample(6_000, 0.2, 0.3, 'click'),
+        sample(7_500, 0.3, 0.4, 'double-click'),
+        sample(16_000, 0.9, 0.9, 'click'),
+      ],
       sessionId: 'session',
-      durationMs: 5_000,
+      durationMs: 25_000,
     });
-    expect(zooms).toHaveLength(1);
-    expect(zooms[0]).toMatchObject({
-      startMs: 500,
-      endMs: 3_900,
-      focus: { cx: 0.9, cy: 0.9 },
-    });
+    expect(zooms).toHaveLength(2);
+    expect(zooms[0]).toMatchObject({ focus: { cx: 0.25, cy: 0.35 }, depth: 3, transition: 'cinematic' });
     expectAutoTiltMetadata(zooms[0]);
   });
 
@@ -94,31 +98,33 @@ describe('buildAutomaticZoomElements', () => {
     ).toEqual([]);
   });
 
-  it('fits an automatic click zoom into the free gap after a reserved eight-second zoom', () => {
+  it('keeps a readable wide gap around an authored zoom', () => {
     const reserved = [
       {
         id: 'manual',
         sessionId: 'session',
         startMs: 0,
-        endMs: 8_000,
+        endMs: 8000,
         focus: { cx: 0.5, cy: 0.5 },
         depth: 2 as const,
         mode: 'manual' as const,
       },
     ];
+    expect(
+      buildAutomaticZoomElements({
+        telemetry: [sample(8100, 0.25, 0.75, 'click')],
+        sessionId: 'session',
+        durationMs: 20_000,
+        reserved,
+      }),
+    ).toEqual([]);
     const zooms = buildAutomaticZoomElements({
-      telemetry: [sample(8_100, 0.25, 0.75, 'click')],
+      telemetry: [sample(14000, 0.25, 0.75, 'click')],
       sessionId: 'session',
-      durationMs: 10_000,
+      durationMs: 25_000,
       reserved,
     });
-    expect(zooms).toEqual([
-      expect.objectContaining({
-        startMs: 8_000,
-        endMs: 9_000,
-        focus: { cx: 0.25, cy: 0.75 },
-      }),
-    ]);
+    expect(zooms[0]).toMatchObject({ startMs: 13500, endMs: 15500 });
     expectAutoTiltMetadata(zooms[0]);
   });
 
@@ -228,8 +234,8 @@ describe('buildAutomaticZoomElements', () => {
     expect(zoom?.tiltVertical).toBeLessThanOrEqual(1);
   });
 
-  it('increments the automatic zoom algorithm version for perspective metadata', () => {
-    expect(ZOOM_ALGORITHM_VERSION).toBe(8);
+  it('increments the automatic zoom algorithm version for opening actions and drag framing', () => {
+    expect(ZOOM_ALGORITHM_VERSION).toBe(11);
   });
 });
 
