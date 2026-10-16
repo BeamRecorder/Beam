@@ -280,6 +280,52 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('Composition floating lay
     await page.emulateMediaFeatures([]);
   }, 30_000);
 
+  it.each([
+    { state: 'collapsed', top: true, bottom: true },
+    { state: 'downward', top: true, bottom: false },
+    { state: 'upward', top: false, bottom: true },
+    { state: 'docked', top: true, bottom: true },
+  ])(
+    'matches header hover corners to the $state panel',
+    async ({ state, top, bottom }) => {
+      await mount();
+      if (state === 'collapsed' || state === 'upward') await page.click('.composition-toggle');
+      if (state === 'upward') {
+        const from = await header();
+        await page.mouse.move(from.x, from.y);
+        await page.mouse.down();
+        await page.mouse.move(from.x, 760, { steps: 12 });
+        await page.mouse.up();
+        await page.click('.composition-toggle');
+        await page.waitForSelector('.screenshot-composition.upward:not(.collapsed)');
+      }
+      if (state === 'docked') {
+        await page.click('[aria-label="Dock composition in the title bar"]');
+        await page.waitForSelector('.screenshot-composition.docked');
+        await settled();
+        await page.click('.composition-toggle');
+      }
+      const location = await header();
+      await page.mouse.move(location.x, location.y);
+      const corners = await page.$eval('.composition-header', (element) => {
+        const style = getComputedStyle(element);
+        return {
+          hovered: element.matches(':hover'),
+          background: style.backgroundColor,
+          top: [style.borderTopLeftRadius, style.borderTopRightRadius].map(parseFloat),
+          bottom: [style.borderBottomLeftRadius, style.borderBottomRightRadius].map(parseFloat),
+          radius: parseFloat(getComputedStyle(element.parentElement!).borderTopLeftRadius),
+        };
+      });
+      expect(corners.hovered).toBe(true);
+      expect(corners.background).not.toBe('rgba(0, 0, 0, 0)');
+      expect(corners.top).toEqual([top ? corners.radius : 0, top ? corners.radius : 0]);
+      expect(corners.bottom).toEqual([bottom ? corners.radius : 0, bottom ? corners.radius : 0]);
+      await page.screenshot({ path: `/tmp/beam-composition-hover-${state}.png` });
+    },
+    30_000,
+  );
+
   it('keeps a scaled dock and its popup inside a small editor and honors reduced motion', async () => {
     await page.setViewport({ width: 960, height: 600 });
     await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);

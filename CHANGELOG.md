@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Composition header hover follows the panel corners when expanded: square edges toward its contents, rounded outer corners, and a fully rounded header when collapsed or docked.
+
 - Screenshot Composition stays above Properties when moved across the inspector. Properties and Composition share a nearly opaque frosted background in both light and dark themes, including the docked layer list, to keep controls readable.
 
 - Opening projects now prioritizes the selected project location over stale copies in the default folder. Studio, Instant and Screenshot listings, media loading and cached search results use the same copy after changing drives or restarting Beam.

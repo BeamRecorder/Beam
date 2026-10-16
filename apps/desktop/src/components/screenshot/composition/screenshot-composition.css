@@ -44,6 +44,12 @@
   height: var(--composition-header-height);
   border-radius: inherit;
 }
+.screenshot-composition:not(.collapsed):not(.docked) .composition-header {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.screenshot-composition.upward:not(.collapsed):not(.docked) .composition-header {
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
 .composition-header:hover {
   background: var(--color-bg-surface-hover);
 }
