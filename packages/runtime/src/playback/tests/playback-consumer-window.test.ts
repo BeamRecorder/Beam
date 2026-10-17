@@ -37,6 +37,7 @@ const makeConsumer = (clipId: string, timelineStartSeconds: number, timelineDura
     queue: [],
     iteratorGeneration: 0,
     lastTargetSeconds: null,
+    ended: false,
   };
 };
 

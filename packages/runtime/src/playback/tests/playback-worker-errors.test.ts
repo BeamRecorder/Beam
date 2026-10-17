@@ -31,6 +31,7 @@ const consumer = (): ClipConsumer => ({
   queue: [],
   iteratorGeneration: 0,
   lastTargetSeconds: null,
+  ended: false,
 });
 
 describe('playback error context', () => {

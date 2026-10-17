@@ -1,6 +1,7 @@
 import type { WrappedCanvas } from 'mediabunny';
 import type { PlaybackMetrics } from '@beam/runtime/playback/playback-types';
 import type { ClipConsumer, QueuedFrame } from '@beam/runtime/playback/playback-worker-consumers';
+import { snapTimeToBoundary } from '@beam/engine/shared/time-boundary';
 
 export function createPlaybackFrameQueue(
   metrics: PlaybackMetrics,
@@ -38,6 +39,7 @@ export function createPlaybackFrameQueue(
     // old iterator, and its replacement queue must survive this cleanup.
     consumer.iteratorGeneration += 1;
     consumer.iterator = null;
+    consumer.ended = false;
     consumer.lastTargetSeconds = null;
     for (const frame of consumer.queue) closeFrame(frame);
     consumer.queue.length = 0;
@@ -48,6 +50,7 @@ export function createPlaybackFrameQueue(
     await closeIterator(consumer.iterator);
     consumer.iteratorGeneration += 1;
     consumer.iterator = consumer.sink.canvases(startSeconds)[Symbol.asyncIterator]();
+    consumer.ended = false;
     consumer.lastTargetSeconds = startSeconds;
     for (const frame of consumer.queue) closeFrame(frame, true);
     consumer.queue.length = 0;
@@ -60,9 +63,15 @@ export function createPlaybackFrameQueue(
       if (iteratorGeneration !== consumer.iteratorGeneration || isDisposed()) return;
       if (result.done) {
         consumer.iterator = null;
+        consumer.ended = true;
         break;
       }
-      consumer.queue.push(await bitmapFor(result.value));
+      const frame = await bitmapFor(result.value);
+      if (iteratorGeneration !== consumer.iteratorGeneration || isDisposed()) {
+        closeFrame(frame, true);
+        return;
+      }
+      consumer.queue.push(frame);
     }
     updateQueueMetric();
   }
@@ -72,14 +81,18 @@ export function createPlaybackFrameQueue(
       consumer.lastTargetSeconds === null ||
       targetSeconds < consumer.lastTargetSeconds ||
       targetSeconds - consumer.lastTargetSeconds > 0.5;
-    if (!consumer.iterator || jumped) await resetSequential(consumer, targetSeconds);
+    if (jumped || (!consumer.iterator && !consumer.ended)) await resetSequential(consumer, targetSeconds);
     consumer.lastTargetSeconds = targetSeconds;
     await fillQueue(consumer);
-    while (consumer.queue.length > 1 && consumer.queue[1]!.timestampSeconds <= targetSeconds) {
+    while (
+      consumer.queue.length > 1 &&
+      consumer.queue[1]!.timestampSeconds <= snapTimeToBoundary(targetSeconds, consumer.queue[1]!.timestampSeconds)
+    ) {
       closeFrame(consumer.queue.shift()!, true);
+      await fillQueue(consumer);
     }
     const frame = consumer.queue[0];
-    if (!frame || frame.timestampSeconds > targetSeconds + frame.durationSeconds) return null;
+    if (!frame || frame.timestampSeconds > snapTimeToBoundary(targetSeconds, frame.timestampSeconds)) return null;
     consumer.queue.shift();
     await fillQueue(consumer);
     return frame;

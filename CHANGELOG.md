@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Video playback keeps long final frames without repeatedly restarting decoding, and presents prefetched frames at their recorded timestamps across display refresh rates and playback speeds.
+
 - Pasting timeline items at or beyond the project end extends the project instead of rejecting them. Text, shapes, drawings, effects, images, video, audio, zooms and mixed selections retain their complete timing; playback and export include the extended range.
 
 - Clicking the video editor background opens Canvas settings on the first press, including when leaving manual zoom focus or editing a scene without a screen recording.

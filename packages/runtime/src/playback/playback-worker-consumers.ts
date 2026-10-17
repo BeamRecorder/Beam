@@ -27,6 +27,7 @@ export type ClipConsumer = {
   asset: AssetDecoder;
   sink: CanvasSink;
   iterator: AsyncIterator<WrappedCanvas> | null;
+  ended: boolean;
   queue: QueuedFrame[];
   iteratorGeneration: number;
   lastTargetSeconds: number | null;
@@ -53,6 +54,7 @@ export const createPlaybackConsumer = (
   asset,
   sink: createPlaybackSink(asset, quality),
   iterator: null,
+  ended: false,
   queue: [],
   iteratorGeneration: 0,
   lastTargetSeconds: null,
