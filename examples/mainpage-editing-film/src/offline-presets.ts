@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import {
   BACKGROUND_COLORS,
   BACKGROUND_GRADIENTS,
@@ -40,7 +40,7 @@ export function useBackgroundPresets(select: (value: BackgroundValue) => void) {
     customGradientValue,
     showCustomEditor,
     editingPresetId,
-    isEditing: computed(() => editingPresetId.value !== null),
+    isEditing: (id: string) => showCustomEditor.value && editingPresetId.value === id,
     close,
     editColor,
     editGradient,

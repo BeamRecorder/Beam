@@ -4,7 +4,7 @@ import { createI18n } from 'vue-i18n';
 import core from '../../../apps/desktop/src/i18n/en/core.json';
 import editor from '../../../apps/desktop/src/i18n/en/editor.json';
 import Scene from './Scene.vue';
-import { DURATION, menuAt } from './motion';
+import { DURATION, TRIM_START, TRIM_END, menuAt } from './motion';
 import { snapshotAt } from './scene-model';
 import type { FilmHost } from './film-types';
 import './style.css';
@@ -60,7 +60,7 @@ host.beamComposition = {
     pose.time = Math.max(0, Math.min(DURATION, timeMs / 1000));
     await nextTick();
     await menu(menuAt(pose.time));
-    if (pose.time >= 8.05 && pose.time <= 9.05) {
+    if (pose.time >= TRIM_START && pose.time <= TRIM_END) {
       const handle = document.querySelector<HTMLElement>('[data-timeline-clip-id="screen"] .trim-handle.end');
       const bounds = handle?.getBoundingClientRect();
       if (handle && bounds)

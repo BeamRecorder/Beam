@@ -63,6 +63,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- The BeamMainPage editing film uses a filled shape, calmer cursor journeys and a smooth dissolve into the original Beam ending.
+
 - Reduced video preview work by sharing camera and cursor evaluation with selection controls, reusing scene hierarchy indexes across rendering passes, and skipping unused keyboard-caption placement.
 
 - Splitting clips reuses open video sources and surviving cached frames. Timeline links and lock checks scale better on heavily edited projects, while history and autosave avoid copying the entire clip composition after each edit.

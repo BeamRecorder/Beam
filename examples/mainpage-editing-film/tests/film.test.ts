@@ -14,22 +14,34 @@ import {
 } from '../src/scene-model';
 import {
   DURATION,
+  BLUR_START,
+  BLUR_END,
   EDIT_END,
   ENDING_START,
   INTRO_END,
+  OUTRO_START,
+  SHAPE_START,
+  SHAPE_END,
+  TRIM_START,
+  TRIM_END,
   blurAt,
   blurPercentAt,
   ease,
+  endingBlendAt,
+  cursorOpacityAt,
+  pressScaleAt,
   menuAt,
   modeAt,
   previewTimeAt,
   progress,
   shapeAt,
   transitionAt,
+  travel,
   trimAt,
   waypoints,
 } from '../src/motion';
 import { selectionAt } from '../src/selection';
+import { useBackgroundPresets } from '../src/offline-presets';
 
 describe('main page edit film', () => {
   it('retains the original ending records and font identity without mutating the source', () => {
@@ -43,19 +55,32 @@ describe('main page edit film', () => {
     expect(BASE.cursor.events).toBe(ORIGINAL.cursor.events);
     expect(BASE.cursor.telemetry).toBe(ORIGINAL.cursor.telemetry);
   });
-  it('contains 3.5 seconds of original footage, fifteen seconds of editing and the complete authored ending', () => {
+  it('retains the original opening and ending with enough time for calm editing gestures', () => {
     expect(INTRO_END).toBe(3.5);
-    expect(EDIT_END - INTRO_END).toBe(15);
+    expect(EDIT_END - INTRO_END).toBe(18);
     expect(DURATION - EDIT_END).toBeCloseTo(ORIGINAL.duration - ENDING_START, 8);
   });
-  it.each([0, 3.5, 4.7, 6.55, 7.1, 8.05, 8.5, 9.05, 10.8, 11.65, 13.8, 14.65, 15.3, 15.8, 17.5])(
-    'produces a valid native composition at %s seconds',
-    (time) => {
-      expect(() => validateComposition(compositionAt(time))).not.toThrow();
-    },
-  );
+  it.each([
+    0,
+    3.5,
+    4.8,
+    6.4,
+    7.05,
+    TRIM_START,
+    8.8,
+    TRIM_END,
+    SHAPE_START,
+    SHAPE_END,
+    BLUR_START,
+    BLUR_END,
+    18,
+    18.4,
+    20.5,
+  ])('produces a valid native composition at %s seconds', (time) => {
+    expect(() => validateComposition(compositionAt(time))).not.toThrow();
+  });
   it('reaches the exact native trim command result without retiming the ending', () => {
-    const result = compositionAt(9.2);
+    const result = compositionAt(TRIM_END);
     const committed = trimClip(BASE.composition, SCREEN.id, 'end', SCREEN.timelineDurationMs - 1200);
     const screen = result.clips.find((clip) => clip.id === SCREEN.id)!;
     const expected = committed.clips.find((clip) => clip.id === SCREEN.id)!;
@@ -64,14 +89,15 @@ describe('main page edit film', () => {
       expect(result.clips.find((clip) => clip.id === ending.id)?.timelineStartMs).toBe(ending.timelineStartMs);
   });
   it('draws genuine editable shape and effect records only after their insertion gestures', () => {
-    expect(compositionAt(10.79).clips.some((clip) => clip.id === 'film-rectangle')).toBe(false);
-    expect(compositionAt(10.8).clips.some((clip) => clip.id === 'film-rectangle')).toBe(true);
-    expect(compositionAt(13.79).clips.some((clip) => clip.kind === 'blur')).toBe(false);
-    expect(compositionAt(14.65).clips.find((clip) => clip.kind === 'blur')).toEqual(blurClip(14.65));
-    expect(shapeClip(11.65).fillEnabled).toBe(false);
-    expect(shapeClip(11.65).borderWidth).toBeGreaterThan(0);
-    expect(blurClip(15.3).mode).toBe('pixelated');
-    expect(blurClip(15.8).mode).toBe('blur');
+    expect(compositionAt(SHAPE_START - 0.01).clips.some((clip) => clip.id === 'film-rectangle')).toBe(false);
+    expect(compositionAt(SHAPE_START).clips.some((clip) => clip.id === 'film-rectangle')).toBe(true);
+    expect(compositionAt(BLUR_START - 0.01).clips.some((clip) => clip.kind === 'blur')).toBe(false);
+    expect(compositionAt(BLUR_END).clips.find((clip) => clip.kind === 'blur')).toEqual(blurClip(BLUR_END));
+    expect(shapeClip(SHAPE_END).fillEnabled).toBe(true);
+    expect(shapeClip(SHAPE_END).borderWidth).toBe(0);
+    expect(shapeClip(SHAPE_END).opacityEnabled).toBe(false);
+    expect(blurClip(18).mode).toBe('pixelated');
+    expect(blurClip(18.4).mode).toBe('blur');
   });
   it('keeps the local media, fonts and cursor artwork portable', () => {
     expect(BASE.composition.assets.every((asset) => !asset.src?.startsWith('project-media:'))).toBe(true);
@@ -82,10 +108,10 @@ describe('main page edit film', () => {
     expect(BASE.cursorPack?.cursors.every((cursor) => !!cursor.url)).toBe(true);
   });
   it('applies the wallpaper and background blur at their authored click and drag', () => {
-    expect(snapshotAt(4.69).background).toEqual(BASE.background);
-    expect(snapshotAt(4.7).background).not.toEqual(BASE.background);
-    expect(snapshotAt(5.85).blurPercent).toBe(5);
-    expect(snapshotAt(6.55).blurPercent).toBe(34);
+    expect(snapshotAt(4.79).background).toEqual(BASE.background);
+    expect(snapshotAt(4.8).background).not.toEqual(BASE.background);
+    expect(snapshotAt(5.55).blurPercent).toBe(5);
+    expect(snapshotAt(6.4).blurPercent).toBe(34);
     expect(snapshotAt(6).cursorSettings.enabled).toBe(BASE.cursorSettings.enabled);
     expect(snapshotAt(8).cursorSettings.enabled).toBe(false);
   });
@@ -93,9 +119,9 @@ describe('main page edit film', () => {
 
 describe('authored motion', () => {
   it.each([
-    [trimAt, 8.05, 9.05],
-    [shapeAt, 10.8, 11.65],
-    [blurAt, 13.8, 14.65],
+    [trimAt, TRIM_START, TRIM_END],
+    [shapeAt, SHAPE_START, SHAPE_END],
+    [blurAt, BLUR_START, BLUR_END],
   ] as const)('bounds a drag and keeps it monotonic across reversals', (sample, start, end) => {
     expect(sample(start - 1)).toBe(0);
     expect(sample(end + 1)).toBe(1);
@@ -108,10 +134,10 @@ describe('authored motion', () => {
     expect(sample((start + end) / 2)).toBeCloseTo(0.5, 8);
   });
   it('enters and leaves the editor continuously without clipping the ending', () => {
-    for (const time of [0, 3.5, 18.5, DURATION]) expect(transitionAt(time)).toBe(0);
-    for (const time of [4.3, 10, 17.85]) expect(transitionAt(time)).toBe(1);
-    expect(transitionAt(3.9)).toBeCloseTo(0.5, 8);
-    expect(transitionAt(18.175)).toBeCloseTo(0.5, 8);
+    for (const time of [0, INTRO_END, EDIT_END, DURATION]) expect(transitionAt(time)).toBe(0);
+    for (const time of [4.6, 10, OUTRO_START]) expect(transitionAt(time)).toBe(1);
+    expect(transitionAt((INTRO_END + 4.6) / 2)).toBeCloseTo(0.5, 8);
+    expect(transitionAt((OUTRO_START + EDIT_END) / 2)).toBeCloseTo(0.5, 8);
   });
   it('has zero entry and exit velocity in the easing envelope', () => {
     expect(ease(0)).toBe(0);
@@ -123,17 +149,110 @@ describe('authored motion', () => {
     expect(progress(2, 0, 1)).toBe(1);
   });
   it('retains menu dwell, panel selection and the paused source clock', () => {
-    expect(menuAt(9.6)).toBe('shape');
-    expect(menuAt(13)).toBe('blur');
-    expect(menuAt(15)).toBeNull();
-    expect([5, 8, 12, 16].map(modeAt)).toEqual(['canvas', 'clip', 'shape', 'blur']);
+    expect(menuAt(10.7)).toBe('shape');
+    expect(menuAt(14.5)).toBe('blur');
+    expect(menuAt(16)).toBeNull();
+    expect([5, 9, 13, 17].map(modeAt)).toEqual(['canvas', 'clip', 'shape', 'blur']);
     expect(previewTimeAt(6)).toBe(3.5);
     expect(previewTimeAt(12)).toBe(0.2);
-    expect(previewTimeAt(17)).toBeCloseTo(0.6, 8);
-    expect(previewTimeAt(20)).toBe(1.5);
+    expect(previewTimeAt(19.4)).toBeCloseTo(0.6, 8);
+    expect(previewTimeAt(22)).toBeCloseTo(1.4, 8);
     expect(blurPercentAt(5)).toBe(5);
     expect(blurPercentAt(7)).toBe(34);
     expect(waypoints.every((waypoint, index) => !index || waypoint.time > waypoints[index - 1]!.time)).toBe(true);
+  });
+});
+
+describe('calmer cursor and ending handoff', () => {
+  it('bounds travel and remains symmetric and monotonic, including the velocity ramp joins', () => {
+    expect(travel(-1)).toBe(0);
+    expect(travel(2)).toBe(1);
+    let previous = 0;
+    for (let value = 0; value <= 1; value += 0.001) {
+      expect(travel(value)).toBeGreaterThanOrEqual(previous);
+      expect(travel(value) + travel(1 - value)).toBeCloseTo(1, 10);
+      previous = travel(value);
+    }
+  });
+  it('limits peak travel speed below the former quintic easing', () => {
+    const step = 0.0001;
+    for (let value = 0; value < 1; value += step)
+      expect((travel(value + step) - travel(value)) / step).toBeLessThanOrEqual(4 / 3 + 0.00001);
+    expect((ease(0.5001) - ease(0.5)) / step).toBeGreaterThan(1.8);
+  });
+  it('has zero endpoint velocity and continuous velocity at both travel ramp joins', () => {
+    const step = 0.00001;
+    expect(travel(step) / step).toBeLessThan(0.000001);
+    expect((1 - travel(1 - step)) / step).toBeLessThan(0.000001);
+    for (const join of [0.25, 0.75])
+      expect((travel(join) - travel(join - step)) / step).toBeCloseTo((travel(join + step) - travel(join)) / step, 6);
+  });
+  it('fades the cursor in, settles its clicks gently and removes it before the outro', () => {
+    expect(cursorOpacityAt(0)).toBe(0);
+    expect(cursorOpacityAt(4.5)).toBe(1);
+    expect(cursorOpacityAt(20)).toBeCloseTo(0.5, 8);
+    expect(cursorOpacityAt(OUTRO_START)).toBe(0);
+    expect(cursorOpacityAt(DURATION)).toBe(0);
+  });
+  it('bounds click compression without an instantaneous scale change', () => {
+    expect(pressScaleAt(4.8)).toBeCloseTo(0.94, 8);
+    expect(pressScaleAt(0)).toBe(1);
+    for (let time = INTRO_END; time <= EDIT_END; time += 0.005) {
+      expect(pressScaleAt(time)).toBeGreaterThanOrEqual(0.94);
+      expect(pressScaleAt(time)).toBeLessThanOrEqual(1);
+      expect(Math.abs(pressScaleAt(time + 0.005) - pressScaleAt(time))).toBeLessThan(0.004);
+    }
+  });
+  it('allocates at least 0.8 seconds to each long cursor journey', () => {
+    for (const [start, end] of [
+      [3.5, 4.65],
+      [7.05, TRIM_START],
+      [TRIM_END, 10.6],
+      [11.35, SHAPE_START],
+      [SHAPE_END, 14.35],
+      [15.15, BLUR_START],
+      [BLUR_END, 17.8],
+      [18.4, 19.5],
+    ])
+      expect(end! - start!).toBeGreaterThanOrEqual(0.8 - 0.000001);
+  });
+  it('finishes the dissolve before resuming the unmodified ending clock', () => {
+    expect(endingBlendAt(0)).toBe(0);
+    expect(endingBlendAt(OUTRO_START)).toBe(0);
+    expect(endingBlendAt(EDIT_END)).toBe(1);
+    expect(endingBlendAt(DURATION)).toBe(1);
+  });
+  it('keeps the closing geometry and dissolve continuous at the final frame handoff', () => {
+    const step = 1 / 60;
+    expect(1 - endingBlendAt(EDIT_END - step)).toBeLessThan(0.0001);
+    expect(transitionAt(EDIT_END - step)).toBeLessThan(0.0001);
+    expect(transitionAt(EDIT_END + step)).toBe(0);
+  });
+});
+
+describe('filled shape catalogue host', () => {
+  it('exposes the native predicate contract while a colour preset is edited', () => {
+    const presets = useBackgroundPresets(() => undefined);
+    const color = presets.colorPresets.value[0]!;
+    expect(presets.isEditing(color.id)).toBe(false);
+    presets.editColor(color);
+    expect(presets.isEditing(color.id)).toBe(true);
+    expect(presets.isEditing('another-preset')).toBe(false);
+  });
+  it('clears the selected preset when its editor closes', () => {
+    const presets = useBackgroundPresets(() => undefined);
+    const color = presets.colorPresets.value[0]!;
+    presets.editColor(color);
+    presets.close();
+    expect(presets.isEditing(color.id)).toBe(false);
+  });
+  it('does not mark any preset as edited while creating a new fill', () => {
+    const presets = useBackgroundPresets(() => undefined);
+    const color = presets.colorPresets.value[0]!;
+    presets.editColor(color);
+    presets.beginAdd();
+    expect(presets.isEditing(color.id)).toBe(false);
+    expect(presets.isEditing('')).toBe(false);
   });
 });
 

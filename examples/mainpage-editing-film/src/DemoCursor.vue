@@ -2,7 +2,19 @@
 import { ref } from 'vue';
 import { cursorGeometry, resolveCursorAsset } from '@beam/engine/shared/cursor-assets';
 import { BASE, CURSOR_URLS } from './scene-model';
-import { ease, progress, waypoints } from './motion';
+import {
+  BLUR_END,
+  BLUR_START,
+  SHAPE_END,
+  SHAPE_START,
+  TRIM_END,
+  TRIM_START,
+  cursorOpacityAt,
+  pressScaleAt,
+  progress,
+  travel,
+  waypoints,
+} from './motion';
 import type { CursorWaypoint } from './film-types';
 const style = ref<Record<string, string>>({ opacity: '0' });
 const url = ref(CURSOR_URLS.get('default'));
@@ -21,7 +33,8 @@ const point = (waypoint: CursorWaypoint) => {
   return { x: rect.left + rect.width * (waypoint.x ?? 0.5), y: rect.top + rect.height * (waypoint.y ?? 0.5) };
 };
 function paint(time: number) {
-  if (time < 3.5 || time > 17.85) {
+  const opacity = cursorOpacityAt(time);
+  if (opacity === 0) {
     style.value = { opacity: '0' };
     return;
   }
@@ -31,9 +44,8 @@ function paint(time: number) {
     after = waypoints[Math.min(waypoints.length - 1, index)]!;
   const start = point(before),
     end = point(after),
-    p = before === after ? 0 : ease(progress(time, before.time, after.time));
-  const pressed = waypoints.some((waypoint) => waypoint.pressed && Math.abs(time - waypoint.time) < 0.09);
-  const dragging = (time >= 10.8 && time <= 11.65) || (time >= 13.8 && time <= 14.65);
+    p = before === after ? 0 : travel(progress(time, before.time, after.time));
+  const dragging = (time >= SHAPE_START && time <= SHAPE_END) || (time >= BLUR_START && time <= BLUR_END);
   const dragPoint = dragging ? point({ time, target: '.film-selection-layer .is-bottom-right' }) : null;
   const x = dragPoint?.x ?? start.x + (end.x - start.x) * p;
   const y = dragPoint?.y ?? start.y + (end.y - start.y) * p;
@@ -41,7 +53,7 @@ function paint(time: number) {
   const nativeCursor = hovered ? getComputedStyle(hovered).cursor : 'auto';
   const role = dragging
     ? 'cross'
-    : time >= 8.05 && time <= 9.05
+    : time >= TRIM_START && time <= TRIM_END
       ? 'resizewesteast'
       : nativeCursor === 'pointer'
         ? 'handpointing'
@@ -58,10 +70,10 @@ function paint(time: number) {
                   : 'default';
   const asset = resolveCursorAsset(BASE.cursorPack!, { packId: BASE.cursorPack!.id, mode: 'fixed', cursorId: role });
   const geometry = cursorGeometry(asset, 44);
-  const scale = dragging ? 0.92 : pressed ? 0.88 : 1;
+  const scale = dragging ? 0.96 : pressScaleAt(time);
   url.value = CURSOR_URLS.get(role)!;
   style.value = {
-    opacity: '1',
+    opacity: String(opacity),
     width: `${geometry.width}px`,
     height: `${geometry.height}px`,
     transformOrigin: `${geometry.hotspot.x}px ${geometry.hotspot.y}px`,

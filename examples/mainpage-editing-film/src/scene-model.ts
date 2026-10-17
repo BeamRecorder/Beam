@@ -12,7 +12,7 @@ import dark from '../assets/tahoe-dark.webp';
 import sunset from '../assets/golden-gate-sunset.webp';
 import night from '../assets/golden-gate-night.webp';
 import font from '../assets/HankenGrotesk.ttf';
-import { blurAt, blurPercentAt, shapeAt, trimAt } from './motion';
+import { BLUR_START, SHAPE_START, blurAt, blurPercentAt, shapeAt, trimAt } from './motion';
 
 export const ORIGINAL = frozen as unknown as CompositionSnapshot;
 export const WALLPAPERS = [
@@ -73,7 +73,8 @@ export function shapeClip(time: number): ShapeClip {
     kind: 'shape',
     trackId: 'film-rectangle-track',
     order: 1,
-    borderWidth: 7,
+    fillEnabled: true,
+    borderWidth: 0,
     transform: { x: 0.43, y: 0.39, width: Math.max(0.001, 0.17 * p), height: Math.max(0.001, 0.16 * p) },
   };
 }
@@ -87,7 +88,7 @@ export function blurClip(time: number): BlurClip {
     trackId: 'film-blur-track',
     order: 0,
     shape: 'rectangle',
-    mode: time >= 15.2 && time < 15.8 ? 'pixelated' : 'blur',
+    mode: time >= 17.8 && time < 18.4 ? 'pixelated' : 'blur',
     strength: 65,
     feather: 8,
     cornerRadius: 8,
@@ -104,8 +105,8 @@ export function compositionAt(time: number): ClipComposition {
     ...trimmed,
     clips: [
       ...trimmed.clips.map((clip) => ({ ...clip, order: clip.order + 2 })),
-      ...(time >= 10.8 ? [shapeClip(time)] : []),
-      ...(time >= 13.8 ? [blurClip(time)] : []),
+      ...(time >= SHAPE_START ? [shapeClip(time)] : []),
+      ...(time >= BLUR_START ? [blurClip(time)] : []),
     ],
   };
 }
@@ -113,9 +114,9 @@ export function snapshotAt(time: number): CompositionSnapshot {
   return {
     ...BASE,
     composition: compositionAt(time),
-    background: { kind: 'image', src: time >= 4.7 ? ventura : golden },
+    background: { kind: 'image', src: time >= 4.8 ? ventura : golden },
     blurPercent: blurPercentAt(time),
     // The edit pointer is separate from the pointer baked into the preview's recording.
-    cursorSettings: { ...BASE.cursorSettings, enabled: time < 7.1 && BASE.cursorSettings.enabled },
+    cursorSettings: { ...BASE.cursorSettings, enabled: time < 7.05 && BASE.cursorSettings.enabled },
   };
 }

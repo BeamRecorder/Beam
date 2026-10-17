@@ -23,6 +23,5 @@ export interface CursorWaypoint {
   target: string;
   x?: number;
   y?: number;
-  role?: string;
   pressed?: boolean;
 }

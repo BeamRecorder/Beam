@@ -62,6 +62,7 @@ try {
     console.error(error);
   });
   page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
     console.log(message.type(), message.text());
   });
   const origin = `http://127.0.0.1:${server.address().port}`;
@@ -72,7 +73,10 @@ try {
       new Promise((_, reject) => setTimeout(() => reject(new Error('Film readiness timeout')), 30000)),
     ]);
   });
-  const times = [0, 3.49, 4.4, 4.9, 6.6, 7.8, 8.6, 9.2, 10.1, 11.3, 12, 13.2, 14.7, 15.8, 17, 18.5, 19.5, 20.3];
+  const times = [
+    0, 3.49, 4.6, 4.9, 6.5, 7.8, 8.8, 9.4, 10.8, 12.6, 13.3, 14.7, 16.4, 17, 18, 18.5, 19.5, 20.2, 20.6, 21,
+    21.4833333333, 21.5, 21.5166666667, 22.5, 23.3,
+  ];
   const results = [];
   for (let index = 0; index < times.length; index++) {
     const time = times[index];
@@ -84,6 +88,8 @@ try {
     const state = await page.evaluate(() => ({
       heading: document.querySelector('.film-inspector .panel-title')?.textContent,
       cursor: document.querySelector('.film-cursor')?.getAttribute('src'),
+      cursorOpacity: document.querySelector('.film-cursor')?.style.opacity,
+      endingOpacity: document.querySelector('.film-ending')?.style.opacity,
       clips: [...document.querySelectorAll('[data-timeline-clip-id]')].map((clip) => ({
         id: clip.getAttribute('data-timeline-clip-id'),
         width: clip.getBoundingClientRect().width,
@@ -93,8 +99,34 @@ try {
     results.push({ time, file, state });
     console.log(`Verified frame ${time.toFixed(2)} s: ${state.heading}`);
   }
+  const endingHandoff = await page.evaluate(async () => {
+    const pixels = (selector) => {
+      const sample = document.createElement('canvas');
+      sample.width = 320;
+      sample.height = 180;
+      const context = sample.getContext('2d');
+      context.drawImage(document.querySelector(selector), 0, 0, 320, 180);
+      return context.getImageData(0, 0, 320, 180).data;
+    };
+    // A reverse seek must restore the same first ending frame as the retained dissolve plate.
+    await window.beamComposition.seek(19000);
+    await window.beamComposition.seek(21500);
+    const actual = pixels('.film-canvas:not(.film-ending)'),
+      reference = pixels('.film-ending');
+    let difference = 0;
+    for (let index = 0; index < actual.length; index++) difference += Math.abs(actual[index] - reference[index]);
+    return {
+      meanDifference: difference / actual.length,
+      endingOpacity: document.querySelector('.film-ending').style.opacity,
+    };
+  });
+  if (endingHandoff.meanDifference > 0.05 || endingHandoff.endingOpacity !== '0')
+    throw new Error(`Ending handoff does not match its retained plate: ${JSON.stringify(endingHandoff)}`);
   if (errors.length) throw new Error(errors.join('\n'));
-  await writeFile(resolve(proofs, 'verification.json'), JSON.stringify({ times: results, errors }, null, 2));
+  await writeFile(
+    resolve(proofs, 'verification.json'),
+    JSON.stringify({ times: results, endingHandoff, errors }, null, 2),
+  );
 } finally {
   await browser?.close();
   await new Promise((done) => server.close(done));

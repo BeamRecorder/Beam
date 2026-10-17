@@ -13,13 +13,24 @@ import DemoCursor from './DemoCursor.vue';
 import Inspector from './Inspector.vue';
 import icon from '../assets/BeamIcon.webp';
 import { BASE, compositionAt, shapeClip, blurClip } from './scene-model';
-import { modeAt, previewTimeAt, transitionAt } from './motion';
+import {
+  BLUR_START,
+  EDIT_END,
+  OUTRO_START,
+  PREVIEW_START,
+  SHAPE_START,
+  endingBlendAt,
+  modeAt,
+  previewTimeAt,
+  transitionAt,
+} from './motion';
 import { createFilmPainter } from './preview';
 import { selectionAt } from './selection';
 import type { CameraSample } from '@beam/engine/zoom/composition-camera-types';
 import type { FilmPose, FrameRect } from './film-types';
 const props = defineProps<{ pose: FilmPose }>();
 const filmCanvas = ref<HTMLCanvasElement | null>(null),
+  endingCanvas = ref<HTMLCanvasElement | null>(null),
   target = ref<HTMLDivElement | null>(null);
 const cursor = ref<InstanceType<typeof DemoCursor> | null>(null);
 const rect = ref<FrameRect>({ x: 500, y: 100, width: 1000, height: 562.5 });
@@ -44,8 +55,9 @@ const canvasStyle = computed(() => ({
   borderRadius: `${6 * open.value}px`,
 }));
 const selection = computed(() => {
-  if (props.pose.time < 10.8 || props.pose.time > 16.6) return null;
-  const transform = props.pose.time < 13.8 ? shapeClip(props.pose.time).transform : blurClip(props.pose.time).transform;
+  if (props.pose.time < SHAPE_START || props.pose.time > PREVIEW_START) return null;
+  const transform =
+    props.pose.time < BLUR_START ? shapeClip(props.pose.time).transform : blurClip(props.pose.time).transform;
   return selectionAt(transform, camera.value, rect.value.width, rect.value.height);
 });
 const anchors = computed(() =>
@@ -74,7 +86,7 @@ let painter: Awaited<ReturnType<typeof createFilmPainter>>;
 const ready = (async () => {
   await nextTick();
   await document.fonts.ready;
-  painter = await createFilmPainter(filmCanvas.value!);
+  painter = await createFilmPainter(filmCanvas.value!, endingCanvas.value!);
   await paint();
 })();
 async function paint() {
@@ -119,10 +131,10 @@ defineExpose({
           <TimelineToolbar
             :current-time="previewTimeAt(pose.time)"
             :duration="BASE.duration"
-            :is-playing="pose.time >= 16.6 && pose.time < 17.85"
+            :is-playing="pose.time >= PREVIEW_START && pose.time < OUTRO_START"
             :zoom-level="100"
             :can-split="mode === 'clip'"
-            :can-undo="pose.time > 4.7"
+            :can-undo="pose.time > 4.8"
           />
         </div>
         <template #after-upper>
@@ -144,6 +156,13 @@ defineExpose({
       </EditorWorkspace>
     </div>
     <canvas ref="filmCanvas" class="film-canvas" width="1920" height="1080" :style="canvasStyle" />
+    <canvas
+      ref="endingCanvas"
+      class="film-canvas film-ending"
+      width="1920"
+      height="1080"
+      :style="[canvasStyle, { opacity: pose.time < EDIT_END ? endingBlendAt(pose.time) : 0 }]"
+    />
     <div class="film-selection-layer">
       <CanvasLayerSelection
         v-if="selection"

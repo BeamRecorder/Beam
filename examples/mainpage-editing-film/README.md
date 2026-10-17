@@ -6,14 +6,17 @@ properties, complete TimelineTracks, playback toolbar and selection handles.
 The source recording, original macOS cursor artwork and Beam ending come from
 the user's open project. No project document is overwritten.
 
-The film has 3.5 seconds of original footage, fifteen seconds of editing, and
-the original 2.054-second ending: **20.554 seconds authored**, rounded to whole
+The film has 3.5 seconds of original footage, eighteen seconds of calmer editing, and
+the original 2.054-second ending: **23.554 seconds authored**, rounded to whole
 frames by the export. See [the shot plan](BRIEF.md).
 
 The native painter renders the original intro/ending, video framing, camera,
-cursor, background, outlined shape and privacy blur. Selection uses the same
+cursor, background, filled shape and privacy blur. Selection uses the same
 engine projection as the painter. The edit pointer samples native CSS cursor
-roles and draws original macOS sprites with their actual hotspots.
+roles and draws original macOS sprites with their actual hotspots. Cosine
+velocity ramps, longer journeys and gentle click compression keep motion calm.
+The closing expansion dissolves into the exact original ending's first frame
+before its original clock resumes, avoiding an abrupt background/source change.
 
 The timeline and inspectors are real application components. Offline host
 providers supply local font/catalogue state and real source thumbnails without
@@ -47,11 +50,11 @@ editable Vue/TypeScript source stays in this folder.
 
 ## Verification
 
-Thirty focused tests validate timing, easing, native composition records,
+Focused tests validate timing, easing, native composition records,
 source preservation, exact trim timing, portable resources and invertible
-selection projection. Coverage for motion, composition and selection is 100%
-statements/functions/lines and 97.61% branches. Eighteen Chromium captures cover
-the original opening, editor reveal, all actions and original ending.
+selection projection, bounded cursor velocity and the final dissolve handoff.
+Chromium captures cover the original opening, editor reveal, all actions and
+original ending, including adjacent frames at the closing transition.
 
 The user's original project remains authoritative for the intro and ending;
 the source movie's middle is replaced by this editing demonstration.

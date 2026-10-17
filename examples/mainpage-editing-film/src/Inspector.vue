@@ -34,7 +34,7 @@ const selectedScreen = computed(() => ({ ...SCREEN, ...SCREEN.appearance, clipTr
                 :key="wallpaper.id"
                 type="button"
                 class="media-tile"
-                :class="{ active: (pose.time >= 4.7 ? 'ventura' : 'golden') === wallpaper.id }"
+                :class="{ active: (pose.time >= 4.8 ? 'ventura' : 'golden') === wallpaper.id }"
                 :data-film-wallpaper="wallpaper.id"
                 :aria-label="wallpaper.name"
               >
