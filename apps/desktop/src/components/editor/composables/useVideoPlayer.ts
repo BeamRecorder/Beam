@@ -110,12 +110,12 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
       playbackError.value = null;
       const playback = ensureEngine();
       const targetTime = Math.min(previousTime, duration.value);
+      // Updates can close removed cached frames. Invalidate Vue consumers
+      // before they can retain one of those bitmaps across the update.
+      frameVersion.value += 1;
       if (playback.canRetimeComposition(composition)) {
         await playback.retimeComposition(composition, targetTime);
       } else {
-        // A full reload closes cached frames synchronously. Invalidate Vue
-        // consumers before they can render one of those closed bitmaps.
-        frameVersion.value += 1;
         await playback.loadComposition(composition, targetTime);
       }
       if (disposed || generation !== loadGeneration || playback !== engine) return;

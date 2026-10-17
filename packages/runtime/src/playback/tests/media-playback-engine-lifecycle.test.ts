@@ -91,7 +91,7 @@ describe('MediaPlaybackEngine lifecycle', () => {
 
     await load(engine, worker);
     const requestCount = worker.requests.length;
-    await expect(engine.retimeComposition(composition([videoClip('different-clip')]), 0.5)).rejects.toThrow(
+    await expect(engine.retimeComposition(composition([videoClip('different-clip', 'unused')]), 0.5)).rejects.toThrow(
       'topology changed',
     );
     await expect(engine.retimeComposition(composition(), Number.POSITIVE_INFINITY)).rejects.toThrow('finite');

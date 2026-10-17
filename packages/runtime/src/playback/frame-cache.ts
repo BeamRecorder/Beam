@@ -59,6 +59,12 @@ export class FrameLruCache {
     this.bytes = 0;
   }
 
+  retainClips(clipIds: ReadonlySet<string>): void {
+    for (const [key, frame] of this.frames) {
+      if (!clipIds.has(frame.clipId)) this.delete(key);
+    }
+  }
+
   findMatchingKey(clipId: string, timestampSeconds: number, keyPrefix = ''): string | undefined {
     let closestKey: string | undefined;
     let minDiff = Infinity;

@@ -4,6 +4,14 @@ import type { AudioPlaybackMetrics } from '@beam/runtime/playback/audio-playback
 import type { EngineMetricsSnapshot } from '@beam/runtime/performance/engine-metrics-types';
 
 export type PlaybackSeekMode = 'seek' | 'scrub';
+export interface PendingPlaybackLoad {
+  resolve(): void;
+  reject(error: Error): void;
+}
+export interface PendingPlaybackSeek {
+  mode: PlaybackSeekMode;
+  resolve(result: PlaybackSeekResult): void;
+}
 export type PlaybackSeekResult = 'presented' | 'superseded';
 export type PlaybackState = 'idle' | 'loading' | 'paused' | 'playing' | 'error' | 'disposed';
 

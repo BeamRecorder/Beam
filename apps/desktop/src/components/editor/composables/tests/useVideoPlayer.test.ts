@@ -378,15 +378,20 @@ describe('useVideoPlayer', () => {
     await player.loadComposition(composition);
     expect(engine.play).toHaveBeenCalledOnce();
   });
-  it('retimes media without invalidating its frames and changes epochs on seeks and play transitions', async () => {
+  it('invalidates borrowed frame references before retiming and changes epochs on seeks and play transitions', async () => {
     const player = useVideoPlayer([]);
     await player.loadComposition(composition);
     const engine = playback.instances.at(-1)!;
     engine.canRetimeComposition.mockReturnValueOnce(true);
     const before = player.frameVersion.value;
+    let versionAtRetime = -1;
+    engine.retimeComposition.mockImplementationOnce(async () => {
+      versionAtRetime = player.frameVersion.value;
+    });
     await player.loadComposition(composition);
     expect(engine.retimeComposition).toHaveBeenCalledWith(composition, 0);
-    expect(player.frameVersion.value).toBe(before);
+    expect(player.frameVersion.value).toBe(before + 1);
+    expect(versionAtRetime).toBe(before + 1);
     expect(player.previewEpoch.value).toBe(0);
     await player.togglePlay();
     await player.seek(1);
@@ -497,5 +502,54 @@ describe('useVideoPlayer', () => {
     expect(player.selectedBackground.value).toEqual(backgrounds[0]);
     player.restoreBackgrounds([], 'unknown-id');
     expect(player.selectedBackground.value).toEqual(backgrounds[0]);
+  });
+  it('releases an editor closed before media loaded without opening a player for pending controls', async () => {
+    const scope = effectScope(),
+      count = playback.instances.length;
+    const player = scope.run(() => useVideoPlayer([]))!;
+    player.volume.value = 40;
+    player.previewQuality.value = 'half';
+    player.resetEngineMetrics();
+    expect(player.frameFor('missing')).toBeNull();
+    await nextTick();
+    expect(playback.instances).toHaveLength(count);
+    scope.stop();
+    await expect(player.loadComposition(composition)).rejects.toThrow('disposed');
+    expect(playback.instances).toHaveLength(count);
+  });
+  it('keeps background restoration valid when imported sources disappear or are renamed', () => {
+    const player = useVideoPlayer([]),
+      [image, video] = backgrounds;
+    player.addBackground(image!);
+    player.setUserBackgrounds([{ ...image!, name: 'Renamed' }]);
+    expect(player.selectedBackground.value?.name).toBe('Renamed');
+    player.setUserBackgrounds([]);
+    expect(player.selectedBackground.value).toBeNull();
+    player.restoreBackgrounds([], 'missing');
+    expect(player.selectedBackground.value).toBeNull();
+    player.restoreBackgrounds([video!], video!.path);
+    expect(player.selectedBackground.value?.id).toBe(video!.id);
+    player.restoreBackgrounds([], null);
+    expect(player.selectedBackground.value).toBeNull();
+    player.restoreBackgrounds([], { id: 'color', name: 'Color', kind: 'color', color: '#112233' });
+    player.setUserBackgrounds([]);
+    expect(player.selectedBackground.value?.kind).toBe('color');
+    const videoOnly = useVideoPlayer([video!]);
+    expect(videoOnly.selectedBackground.value?.id).toBe(video!.id);
+  });
+  it('reports preview-quality reconfiguration failures and keeps the loaded frame references invalidated', async () => {
+    const scope = effectScope(),
+      player = scope.run(() => useVideoPlayer([]))!;
+    await player.loadComposition(composition);
+    const engine = playback.instances.at(-1)!,
+      failure = new Error('decoder unavailable');
+    engine.setPreviewQuality.mockRejectedValueOnce(failure);
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    player.previewQuality.value = 'half';
+    await nextTick();
+    await Promise.resolve();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('preview quality'), failure);
+    scope.stop();
+    log.mockRestore();
   });
 });

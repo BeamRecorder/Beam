@@ -157,7 +157,7 @@ describe('MediaPlaybackEngine', () => {
     expect(times).toEqual([0, 0.75]);
   });
 
-  it('reloads at the current non-zero time without emitting a transient zero', async () => {
+  it('retimes a split at the current non-zero time without emitting a transient zero', async () => {
     const worker = new FakeWorker();
     const audio = new FakeAudio();
     const engine = new MediaPlaybackEngine({
@@ -176,7 +176,7 @@ describe('MediaPlaybackEngine', () => {
     const reload = engine.loadComposition(composition([videoClip('split-left'), videoClip('split-right')]), 1.25);
     const loadRequest = [...worker.requests]
       .reverse()
-      .find((request): request is Extract<PlaybackWorkerRequest, { type: 'load' }> => request.type === 'load')!;
+      .find((request): request is Extract<PlaybackWorkerRequest, { type: 'retime' }> => request.type === 'retime')!;
     worker.emit({ type: 'ready', generation: loadRequest.generation });
     for (let index = 0; index < 4; index += 1) await Promise.resolve();
     const reloadSeek = latestSeekRequest(worker)!;
@@ -407,7 +407,7 @@ describe('MediaPlaybackEngine', () => {
     engine.dispose();
   });
 
-  it('uses a full load when retiming changes clip topology', async () => {
+  it('uses a full load when retiming needs a different video resource', async () => {
     const worker = new FakeWorker();
     const audio = new FakeAudio();
     const engine = new MediaPlaybackEngine({
@@ -419,7 +419,7 @@ describe('MediaPlaybackEngine', () => {
     audio.loadComposition.mockClear();
     worker.requests.length = 0;
 
-    const pending = engine.loadComposition(composition([videoClip('new-clip')]), 0.75);
+    const pending = engine.loadComposition(composition([videoClip('new-clip', 'unused')]), 0.75);
     await Promise.resolve();
     const request = worker.requests.at(-1) as { type?: string; generation?: number } | undefined;
     expect(request?.type).toBe('load');

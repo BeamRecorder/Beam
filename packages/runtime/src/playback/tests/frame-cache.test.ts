@@ -270,3 +270,28 @@ describe('FrameLruCache.findCoveringKey', () => {
     expect(cache.findCoveringKey('clip-2', 0.5, 'half:')).toBeUndefined();
   });
 });
+
+describe('FrameLruCache.findMatchingKey', () => {
+  it('chooses the closest source frame inside its duration tolerance', () => {
+    const cache = new FrameLruCache();
+    cache.set('full:old', frame('clip', 4, 0, 0.1));
+    cache.set('full:near', frame('clip', 4, 0.08, 0.1));
+    expect(cache.findMatchingKey('clip', 0.09, 'full:')).toBe('full:near');
+    expect(cache.findMatchingKey('clip', 0.5, 'full:')).toBeUndefined();
+  });
+  it('keeps equal-distance precedence and ignores other clips and preview qualities', () => {
+    const cache = new FrameLruCache();
+    cache.set('half:other', frame('clip', 4, 0.1, 0.1));
+    cache.set('full:first', frame('clip', 4, 0, 1));
+    cache.set('full:second', frame('clip', 4, 0, 1));
+    cache.set('full:other', frame('other', 4, 0.1, 0.1));
+    expect(cache.findMatchingKey('clip', 0.1, 'full:')).toBe('full:first');
+    expect(cache.findMatchingKey('missing', 0.1)).toBeUndefined();
+  });
+  it('uses at least forty milliseconds of tolerance for very short frames', () => {
+    const cache = new FrameLruCache();
+    cache.set('tiny', frame('clip', 4, 1, 0.001));
+    expect(cache.findMatchingKey('clip', 1.039)).toBe('tiny');
+    expect(cache.findMatchingKey('clip', 1.041)).toBeUndefined();
+  });
+});

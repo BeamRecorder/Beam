@@ -36,6 +36,8 @@ import type {
   PlaybackState,
   PlaybackWorkerRequest,
   PlaybackWorkerResponse,
+  PendingPlaybackLoad,
+  PendingPlaybackSeek,
 } from '@beam/runtime/playback/playback-types';
 const WORKER_DISPOSE_TIMEOUT_MS = 2_000;
 export class MediaPlaybackEngine {
@@ -55,11 +57,8 @@ export class MediaPlaybackEngine {
   private frameAliases = new Map<string, string>();
   private readonly reportedIssueSignatures = new Set<string>();
   private readonly listeners = new Map<keyof PlaybackEventMap, Set<(value: never) => void>>();
-  private readonly pendingSeeks = new Map<
-    number,
-    { mode: PlaybackSeekMode; resolve(result: PlaybackSeekResult): void }
-  >();
-  private readonly pendingLoads = new Map<number, { resolve(): void; reject(error: Error): void }>();
+  private readonly pendingSeeks = new Map<number, PendingPlaybackSeek>();
+  private readonly pendingLoads = new Map<number, PendingPlaybackLoad>();
   private composition: ClipComposition | null = null;
   private readonly topology = new PlaybackCompositionTopology();
   private clipIndex = createPlaybackClipIndex(null);
@@ -149,10 +148,11 @@ export class MediaPlaybackEngine {
     composition = compileSceneComposition(composition);
     if (!this.canRetimeComposition(composition)) throw new Error('Playback topology changed during retiming.');
     if (!Number.isFinite(timelineSeconds)) throw new RangeError('Playback time must be finite.');
-    const shouldReloadAudio = this.topology.updateAudio(composition);
+    const shouldReloadAudio = this.topology.updateForRetime(composition);
     this.pause();
     this.composition = composition;
     this.clipIndex = createPlaybackClipIndex(composition);
+    this.cache.retainClips(new Set(this.clipIndex.clips.keys()));
     this.durationSeconds = compositionDurationMs(composition) / 1_000;
     this.currentSeconds = this.clampTime(timelineSeconds);
     const requestGeneration = ++this.generation;

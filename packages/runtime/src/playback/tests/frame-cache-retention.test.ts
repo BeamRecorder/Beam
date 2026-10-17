@@ -88,4 +88,45 @@ describe('current scene frame retention', () => {
     ).toEqual(new Set(['new']));
     expect(createPlaybackClipIndex(null).retainedKeys(0, new Map(), new Map())).toEqual(new Set());
   });
+  it('releases every cached frame of removed clips while retaining surviving history', () => {
+    const cache = new FrameLruCache(),
+      removed = frame('gone'),
+      first = frame('keep'),
+      second = frame('keep');
+    cache.set('gone', removed);
+    cache.set('keep:first', first);
+    cache.set('keep:second', second);
+    cache.retainClips(new Set(['keep']));
+    expect(cache.size).toBe(2);
+    expect(cache.byteSize).toBe(16);
+    expect(removed.close).toHaveBeenCalledOnce();
+    expect(first.close).not.toHaveBeenCalled();
+    expect(second.close).not.toHaveBeenCalled();
+    cache.clear();
+    expect(removed.close).toHaveBeenCalledOnce();
+  });
+  it('keeps every frame when all clip IDs survive and clears empty timelines exactly once', () => {
+    const cache = new FrameLruCache(),
+      kept = frame('keep');
+    cache.set('keep', kept);
+    cache.retainClips(new Set(['keep']));
+    expect(kept.close).not.toHaveBeenCalled();
+    cache.retainClips(new Set());
+    cache.retainClips(new Set());
+    expect(cache.size).toBe(0);
+    expect(cache.byteSize).toBe(0);
+    expect(kept.close).toHaveBeenCalledOnce();
+  });
+  it('does not lend a removed clip cached pixels to another asset reusing its ID', () => {
+    const cache = new FrameLruCache(),
+      previous = frame('reused');
+    cache.set('old', previous);
+    cache.retainClips(new Set(['other']));
+    expect(cache.findCoveringKey('reused', 0.5)).toBeUndefined();
+    const current = frame('reused');
+    cache.set('new', current);
+    expect(cache.findCoveringKey('reused', 0.5)).toBe('new');
+    expect(previous.close).toHaveBeenCalledOnce();
+    expect(current.close).not.toHaveBeenCalled();
+  });
 });

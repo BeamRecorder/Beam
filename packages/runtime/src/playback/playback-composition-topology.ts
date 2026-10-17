@@ -1,19 +1,21 @@
 import { isVisualClip, type ClipComposition } from '@beam/runtime/shared/index';
 
 export function videoPlaybackTopology(composition: ClipComposition): string {
-  const clips = composition.clips
-    .flatMap((clip) => {
-      if (isVisualClip(clip) && clip.kind !== 'image') return [{ id: clip.id, assetId: clip.assetId }];
-      return [];
-    })
-    .sort((left, right) => left.id.localeCompare(right.id));
-  const assetIds = new Set(clips.map((clip) => clip.assetId));
+  const assetIds = new Set(videoBindings(composition).values());
   const assets = composition.assets
     .filter((asset) => assetIds.has(asset.id))
     .map((asset) => ({ id: asset.id, kind: asset.kind, src: asset.src }))
     .sort((left, right) => left.id.localeCompare(right.id));
-  return JSON.stringify({ clips, assets });
+  return JSON.stringify({ assetIds: [...assetIds].sort(), assets });
 }
+
+const videoBindings = (composition: ClipComposition) =>
+  new Map(
+    composition.clips.flatMap((clip) => {
+      if (isVisualClip(clip) && clip.kind !== 'image') return [[clip.id, clip.assetId] as const];
+      return [];
+    }),
+  );
 
 export function audioPlaybackTopology(composition: ClipComposition): string {
   const assets = new Map(composition.assets.map((asset) => [asset.id, asset]));
@@ -32,17 +34,25 @@ export function audioPlaybackTopology(composition: ClipComposition): string {
 export class PlaybackCompositionTopology {
   private video = '';
   private audio = '';
+  private bindings = new Map<string, string>();
 
   capture(composition: ClipComposition) {
     this.video = videoPlaybackTopology(composition);
     this.audio = audioPlaybackTopology(composition);
+    this.bindings = videoBindings(composition);
   }
 
   matchesVideo(composition: ClipComposition) {
-    return this.video === videoPlaybackTopology(composition);
+    return (
+      this.video === videoPlaybackTopology(composition) &&
+      [...videoBindings(composition)].every(
+        ([id, assetId]) => !this.bindings.has(id) || this.bindings.get(id) === assetId,
+      )
+    );
   }
 
-  updateAudio(composition: ClipComposition) {
+  updateForRetime(composition: ClipComposition) {
+    this.bindings = videoBindings(composition);
     const next = audioPlaybackTopology(composition);
     const changed = this.audio !== next;
     this.audio = next;

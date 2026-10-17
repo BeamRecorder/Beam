@@ -85,10 +85,10 @@ describe('playback topology fingerprints', () => {
       },
     });
     expect(topology.matchesVideo(next)).toBe(true);
-    expect(topology.updateAudio(next)).toBe(false);
+    expect(topology.updateForRetime(next)).toBe(false);
     next.clips.push(audio('audio'));
-    expect(topology.updateAudio(next)).toBe(true);
-    expect(topology.updateAudio(next)).toBe(false);
+    expect(topology.updateForRetime(next)).toBe(true);
+    expect(topology.updateForRetime(next)).toBe(false);
   });
 
   it('detects in-place resource changes and replacement loads instead of caching by mutable identity', () => {
@@ -103,5 +103,40 @@ describe('playback topology fingerprints', () => {
     topology.capture(empty);
     expect(topology.matchesVideo(doc)).toBe(false);
     expect(topology.matchesVideo(empty)).toBe(true);
+  });
+});
+
+describe('split-compatible video resources', () => {
+  it('accepts new and removed fragments using the same resources', () => {
+    const doc = composition([videoClip('left'), videoClip('unrelated')]);
+    const topology = new PlaybackCompositionTopology();
+    topology.capture(doc);
+    const split = composition([videoClip('left'), videoClip('right'), videoClip('unrelated')]);
+    expect(topology.matchesVideo(split)).toBe(true);
+    topology.updateForRetime(split);
+    expect(topology.matchesVideo(composition([videoClip('right')]))).toBe(true);
+    expect(topology.matchesVideo(composition([]))).toBe(false);
+  });
+  it('rejects reassignment of an existing ID even when both resources are loaded', () => {
+    const doc = composition([videoClip('one'), videoClip('two', 'unused')]);
+    const topology = new PlaybackCompositionTopology();
+    topology.capture(doc);
+    expect(topology.matchesVideo(composition([videoClip('one', 'unused'), videoClip('two')]))).toBe(false);
+    const added = { ...doc, clips: [...doc.clips, videoClip('new')] };
+    expect(topology.matchesVideo(added)).toBe(true);
+    topology.updateForRetime(added);
+    expect(topology.matchesVideo({ ...doc, clips: [...doc.clips, videoClip('new', 'unused')] })).toBe(false);
+  });
+  it('keeps missing-resource identities distinct and requires a reload after source/kind changes', () => {
+    const doc = composition();
+    doc.assets = [];
+    const topology = new PlaybackCompositionTopology();
+    topology.capture(doc);
+    expect(topology.matchesVideo(composition([videoClip('new', 'missing')]))).toBe(false);
+    expect(topology.matchesVideo(composition())).toBe(false);
+    const loaded = composition();
+    topology.capture(loaded);
+    expect(topology.matchesVideo({ ...loaded, assets: [{ ...loaded.assets[0]!, kind: 'audio' }] })).toBe(false);
+    expect(topology.matchesVideo({ ...loaded, assets: [{ ...loaded.assets[0]!, src: 'other.mp4' }] })).toBe(false);
   });
 });
