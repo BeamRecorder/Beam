@@ -63,7 +63,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
-- The BeamMainPage editing film uses a filled shape, calmer cursor journeys and a smooth dissolve into the original Beam ending.
+- The BeamMainPage editing film shows three background selections and a visible background blur adjustment, with a larger macOS cursor, native click springs, a filled shape, calm movements and a smooth dissolve into the original Beam ending.
 
 - Reduced video preview work by sharing camera and cursor evaluation with selection controls, reusing scene hierarchy indexes across rendering passes, and skipping unused keyboard-caption placement.
 

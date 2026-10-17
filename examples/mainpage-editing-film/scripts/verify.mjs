@@ -74,8 +74,8 @@ try {
     ]);
   });
   const times = [
-    0, 3.49, 4.6, 4.9, 6.5, 7.8, 8.8, 9.4, 10.8, 12.6, 13.3, 14.7, 16.4, 17, 18, 18.5, 19.5, 20.2, 20.6, 21,
-    21.4833333333, 21.5, 21.5166666667, 22.5, 23.3,
+    0, 3.49, 4.6, 4.9, 5.87, 5.98, 6.7, 7.6, 8.25, 8.6, 9.6, 11.3, 11.9, 13.4, 15.1, 15.7, 17.1, 18.9, 19.5, 20.4, 21,
+    22, 22.65, 23.1, 23.5, 23.9333333333, 23.95, 23.9666666667, 24.95, 25.8,
   ];
   const results = [];
   for (let index = 0; index < times.length; index++) {
@@ -90,6 +90,10 @@ try {
       cursor: document.querySelector('.film-cursor')?.getAttribute('src'),
       cursorOpacity: document.querySelector('.film-cursor')?.style.opacity,
       endingOpacity: document.querySelector('.film-ending')?.style.opacity,
+      background: document.querySelector('.media-tile.active')?.dataset.filmWallpaper,
+      blurPercent: document.querySelector('.film-inspector .big-slider-input')?.value,
+      cursorScale: new DOMMatrix(getComputedStyle(document.querySelector('.film-cursor')).transform).a,
+      cursorSize: document.querySelector('.film-cursor')?.dataset.nominalSize,
       clips: [...document.querySelectorAll('[data-timeline-clip-id]')].map((clip) => ({
         id: clip.getAttribute('data-timeline-clip-id'),
         width: clip.getBoundingClientRect().width,
@@ -109,8 +113,8 @@ try {
       return context.getImageData(0, 0, 320, 180).data;
     };
     // A reverse seek must restore the same first ending frame as the retained dissolve plate.
-    await window.beamComposition.seek(19000);
-    await window.beamComposition.seek(21500);
+    await window.beamComposition.seek(21000);
+    await window.beamComposition.seek(23950);
     const actual = pixels('.film-canvas:not(.film-ending)'),
       reference = pixels('.film-ending');
     let difference = 0;
@@ -122,10 +126,49 @@ try {
   });
   if (endingHandoff.meanDifference > 0.05 || endingHandoff.endingOpacity !== '0')
     throw new Error(`Ending handoff does not match its retained plate: ${JSON.stringify(endingHandoff)}`);
+  const appearance = await page.evaluate(async () => {
+    const samples = [];
+    for (const time of [7.6, 8.6, 9.6]) {
+      await window.beamComposition.seek(time * 1000);
+      const canvas = document.querySelector('.film-canvas:not(.film-ending)');
+      const width = 1880,
+        height = 60;
+      const { data } = canvas.getContext('2d').getImageData(20, 1000, width, height);
+      let energy = 0;
+      for (let y = 0; y < height; y++)
+        for (let x = 1; x < width; x++) {
+          const index = (y * width + x) * 4;
+          for (let channel = 0; channel < 3; channel++)
+            energy += Math.abs(data[index + channel] - data[index + channel - 4]);
+        }
+      samples.push({
+        time,
+        blur: Number(document.querySelector('.film-inspector .big-slider-input').value),
+        energy: energy / ((width - 1) * height * 3),
+      });
+    }
+    return samples;
+  });
+  if (
+    appearance.map((sample) => sample.blur).join(',') !== '0,20,65' ||
+    appearance[2].energy >= appearance[0].energy * 0.7
+  )
+    throw new Error(`The background blur must visibly soften the real rendered photo: ${JSON.stringify(appearance)}`);
+  if (
+    new Set(results.filter(({ time }) => [5.87, 6.7, 7.6].includes(time)).map(({ state }) => state.background)).size !==
+    3
+  )
+    throw new Error('Three distinct selected backgrounds must be visible.');
+  if (
+    results.find(({ time }) => time === 5.87).state.cursorScale >= 0.85 ||
+    results.find(({ time }) => time === 5.98).state.cursorScale <= 1.05 ||
+    results.find(({ time }) => time === 5.98).state.cursorSize !== '64'
+  )
+    throw new Error('The enlarged cursor must compress and spring back after a click.');
   if (errors.length) throw new Error(errors.join('\n'));
   await writeFile(
     resolve(proofs, 'verification.json'),
-    JSON.stringify({ times: results, endingHandoff, errors }, null, 2),
+    JSON.stringify({ times: results, appearance, endingHandoff, errors }, null, 2),
   );
 } finally {
   await browser?.close();

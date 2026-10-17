@@ -6,15 +6,20 @@ properties, complete TimelineTracks, playback toolbar and selection handles.
 The source recording, original macOS cursor artwork and Beam ending come from
 the user's open project. No project document is overwritten.
 
-The film has 3.5 seconds of original footage, eighteen seconds of calmer editing, and
-the original 2.054-second ending: **23.554 seconds authored**, rounded to whole
+The film has 3.5 seconds of original footage, 20.45 seconds of calmer editing, and
+the original 2.054-second ending: **26.004 seconds authored**, rounded to whole
 frames by the export. See [the shot plan](BRIEF.md).
 
 The native painter renders the original intro/ending, video framing, camera,
 cursor, background, filled shape and privacy blur. Selection uses the same
 engine projection as the painter. The edit pointer samples native CSS cursor
 roles and draws original macOS sprites with their actual hotspots. Cosine
-velocity ramps, longer journeys and gentle click compression keep motion calm.
+velocity ramps and longer journeys keep motion calm. The edit cursor is 64 px
+(45% larger), and clicks use Beam's native deterministic spring, including its
+compression and release overshoot during drawing and trimming.
+An early scrub widens the preview before three background selections: Ventura,
+Tahoe Light and Golden Gate Sunset. The detailed final photo stays sharp before
+the blur slider moves from 0% to 20%, holds briefly, then continues to 65%.
 The closing expansion dissolves into the exact original ending's first frame
 before its original clock resumes, avoiding an abrupt background/source change.
 
@@ -52,9 +57,12 @@ editable Vue/TypeScript source stays in this folder.
 
 Focused tests validate timing, easing, native composition records,
 source preservation, exact trim timing, portable resources and invertible
-selection projection, bounded cursor velocity and the final dissolve handoff.
+selection projection, bounded cursor velocity, native click spring parity,
+background selection and the final dissolve handoff.
 Chromium captures cover the original opening, editor reveal, all actions and
-original ending, including adjacent frames at the closing transition.
+original ending, including adjacent frames at the closing transition. Browser
+checks measure detail loss in the rendered background, confirm three selections,
+and verify cursor size, click compression and rebound.
 
 The user's original project remains authoritative for the intro and ending;
 the source movie's middle is replaced by this editing demonstration.

@@ -5,6 +5,9 @@ import { BASE, CURSOR_URLS } from './scene-model';
 import {
   BLUR_END,
   BLUR_START,
+  BACKGROUND_BLUR_START,
+  BACKGROUND_BLUR_END,
+  CURSOR_SIZE,
   SHAPE_END,
   SHAPE_START,
   TRIM_END,
@@ -53,7 +56,7 @@ function paint(time: number) {
   const nativeCursor = hovered ? getComputedStyle(hovered).cursor : 'auto';
   const role = dragging
     ? 'cross'
-    : time >= TRIM_START && time <= TRIM_END
+    : (time >= TRIM_START && time <= TRIM_END) || (time >= BACKGROUND_BLUR_START && time <= BACKGROUND_BLUR_END)
       ? 'resizewesteast'
       : nativeCursor === 'pointer'
         ? 'handpointing'
@@ -69,8 +72,8 @@ function paint(time: number) {
                   ? 'handgrabbing'
                   : 'default';
   const asset = resolveCursorAsset(BASE.cursorPack!, { packId: BASE.cursorPack!.id, mode: 'fixed', cursorId: role });
-  const geometry = cursorGeometry(asset, 44);
-  const scale = dragging ? 0.96 : pressScaleAt(time);
+  const geometry = cursorGeometry(asset, CURSOR_SIZE);
+  const scale = pressScaleAt(time);
   url.value = CURSOR_URLS.get(role)!;
   style.value = {
     opacity: String(opacity),
@@ -82,7 +85,9 @@ function paint(time: number) {
 }
 defineExpose({ paint, prime });
 </script>
-<template><img class="film-cursor" :src="url" :style="style" alt="" aria-hidden="true" /></template>
+<template>
+  <img class="film-cursor" :src="url" :style="style" :data-nominal-size="CURSOR_SIZE" alt="" aria-hidden="true" />
+</template>
 <style scoped>
 .film-cursor {
   position: fixed;

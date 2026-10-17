@@ -12,7 +12,18 @@ import dark from '../assets/tahoe-dark.webp';
 import sunset from '../assets/golden-gate-sunset.webp';
 import night from '../assets/golden-gate-night.webp';
 import font from '../assets/HankenGrotesk.ttf';
-import { BLUR_START, SHAPE_START, blurAt, blurPercentAt, shapeAt, trimAt } from './motion';
+import {
+  BLUR_START,
+  SHAPE_START,
+  NORMAL_BLUR_TIME,
+  PIXELATED_TIME,
+  SCRUB_TIME,
+  blurAt,
+  blurPercentAt,
+  shapeAt,
+  trimAt,
+  wallpaperAt,
+} from './motion';
 
 export const ORIGINAL = frozen as unknown as CompositionSnapshot;
 export const WALLPAPERS = [
@@ -88,7 +99,7 @@ export function blurClip(time: number): BlurClip {
     trackId: 'film-blur-track',
     order: 0,
     shape: 'rectangle',
-    mode: time >= 17.8 && time < 18.4 ? 'pixelated' : 'blur',
+    mode: time >= PIXELATED_TIME && time < NORMAL_BLUR_TIME ? 'pixelated' : 'blur',
     strength: 65,
     feather: 8,
     cornerRadius: 8,
@@ -114,9 +125,9 @@ export function snapshotAt(time: number): CompositionSnapshot {
   return {
     ...BASE,
     composition: compositionAt(time),
-    background: { kind: 'image', src: time >= 4.8 ? ventura : golden },
+    background: { kind: 'image', src: WALLPAPERS.find((wallpaper) => wallpaper.id === wallpaperAt(time))!.url },
     blurPercent: blurPercentAt(time),
     // The edit pointer is separate from the pointer baked into the preview's recording.
-    cursorSettings: { ...BASE.cursorSettings, enabled: time < 7.05 && BASE.cursorSettings.enabled },
+    cursorSettings: { ...BASE.cursorSettings, enabled: time < SCRUB_TIME && BASE.cursorSettings.enabled },
   };
 }

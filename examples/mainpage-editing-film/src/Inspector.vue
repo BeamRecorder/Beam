@@ -7,7 +7,7 @@ import ShapeLayerPropertiesPanel from '../../../apps/desktop/src/components/edit
 import BlurPropertiesPanel from '../../../apps/desktop/src/components/editor/properties/clip/BlurPropertiesPanel.vue';
 import type { FilmPose } from './film-types';
 import { BASE, SCREEN, WALLPAPERS, blurClip, shapeClip } from './scene-model';
-import { blurPercentAt, modeAt } from './motion';
+import { blurPercentAt, modeAt, wallpaperAt } from './motion';
 const props = defineProps<{ pose: FilmPose }>();
 const mode = computed(() => modeAt(props.pose.time));
 const title = computed(
@@ -34,7 +34,7 @@ const selectedScreen = computed(() => ({ ...SCREEN, ...SCREEN.appearance, clipTr
                 :key="wallpaper.id"
                 type="button"
                 class="media-tile"
-                :class="{ active: (pose.time >= 4.8 ? 'ventura' : 'golden') === wallpaper.id }"
+                :class="{ active: wallpaperAt(pose.time) === wallpaper.id }"
                 :data-film-wallpaper="wallpaper.id"
                 :aria-label="wallpaper.name"
               >

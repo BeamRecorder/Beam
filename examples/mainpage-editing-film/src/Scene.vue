@@ -16,6 +16,8 @@ import { BASE, compositionAt, shapeClip, blurClip } from './scene-model';
 import {
   BLUR_START,
   EDIT_END,
+  DURATION,
+  BACKGROUND_CHANGES,
   OUTRO_START,
   PREVIEW_START,
   SHAPE_START,
@@ -62,8 +64,8 @@ const selection = computed(() => {
 });
 const anchors = computed(() =>
   [
-    ['shape', shapeClip(18).transform],
-    ['blur', blurClip(18).transform],
+    ['shape', shapeClip(DURATION).transform],
+    ['blur', blurClip(DURATION).transform],
   ].flatMap(([name, transform]) => {
     const projected = selectionAt(
       transform as ReturnType<typeof shapeClip>['transform'],
@@ -134,7 +136,7 @@ defineExpose({
             :is-playing="pose.time >= PREVIEW_START && pose.time < OUTRO_START"
             :zoom-level="100"
             :can-split="mode === 'clip'"
-            :can-undo="pose.time > 4.8"
+            :can-undo="pose.time > BACKGROUND_CHANGES[0].time"
           />
         </div>
         <template #after-upper>

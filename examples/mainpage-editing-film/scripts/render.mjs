@@ -14,7 +14,7 @@ await writeFile(
       entry: '../dist/index.html',
       width: 1920,
       height: 1080,
-      duration: 23.554,
+      duration: 26.004,
       fps: 60,
       format: 'mp4',
       preset: 'high',

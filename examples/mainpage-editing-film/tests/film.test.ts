@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { validateComposition } from '@beam/engine/commands/clip-composition-validation';
 import { trimClip } from '@beam/engine/commands/trim-clip';
 import { projectPerspectivePoint, unprojectPerspectivePoint } from '@beam/engine/zoom/perspective-projection';
+import { cursorClickSpringScale } from '@beam/engine/cursor/cursor-click-spring';
 import {
   BASE,
   ORIGINAL,
@@ -11,6 +12,7 @@ import {
   shapeClip,
   blurClip,
   CURSOR_URLS,
+  WALLPAPERS,
 } from '../src/scene-model';
 import {
   DURATION,
@@ -24,6 +26,13 @@ import {
   SHAPE_END,
   TRIM_START,
   TRIM_END,
+  BACKGROUND_BLUR_START,
+  BACKGROUND_BLUR_END,
+  BACKGROUND_CHANGES,
+  CURSOR_SIZE,
+  SCRUB_TIME,
+  PIXELATED_TIME,
+  NORMAL_BLUR_TIME,
   blurAt,
   blurPercentAt,
   ease,
@@ -39,6 +48,7 @@ import {
   travel,
   trimAt,
   waypoints,
+  wallpaperAt,
 } from '../src/motion';
 import { selectionAt } from '../src/selection';
 import { useBackgroundPresets } from '../src/offline-presets';
@@ -57,25 +67,25 @@ describe('main page edit film', () => {
   });
   it('retains the original opening and ending with enough time for calm editing gestures', () => {
     expect(INTRO_END).toBe(3.5);
-    expect(EDIT_END - INTRO_END).toBe(18);
+    expect(EDIT_END - INTRO_END).toBeCloseTo(20.45, 8);
     expect(DURATION - EDIT_END).toBeCloseTo(ORIGINAL.duration - ENDING_START, 8);
   });
   it.each([
     0,
     3.5,
-    4.8,
-    6.4,
-    7.05,
+    5.8,
+    7.3,
+    BACKGROUND_BLUR_END,
     TRIM_START,
-    8.8,
+    11.3,
     TRIM_END,
     SHAPE_START,
     SHAPE_END,
     BLUR_START,
     BLUR_END,
-    18,
-    18.4,
-    20.5,
+    PIXELATED_TIME,
+    NORMAL_BLUR_TIME,
+    23,
   ])('produces a valid native composition at %s seconds', (time) => {
     expect(() => validateComposition(compositionAt(time))).not.toThrow();
   });
@@ -96,8 +106,8 @@ describe('main page edit film', () => {
     expect(shapeClip(SHAPE_END).fillEnabled).toBe(true);
     expect(shapeClip(SHAPE_END).borderWidth).toBe(0);
     expect(shapeClip(SHAPE_END).opacityEnabled).toBe(false);
-    expect(blurClip(18).mode).toBe('pixelated');
-    expect(blurClip(18.4).mode).toBe('blur');
+    expect(blurClip(PIXELATED_TIME).mode).toBe('pixelated');
+    expect(blurClip(NORMAL_BLUR_TIME).mode).toBe('blur');
   });
   it('keeps the local media, fonts and cursor artwork portable', () => {
     expect(BASE.composition.assets.every((asset) => !asset.src?.startsWith('project-media:'))).toBe(true);
@@ -108,11 +118,11 @@ describe('main page edit film', () => {
     expect(BASE.cursorPack?.cursors.every((cursor) => !!cursor.url)).toBe(true);
   });
   it('applies the wallpaper and background blur at their authored click and drag', () => {
-    expect(snapshotAt(4.79).background).toEqual(BASE.background);
-    expect(snapshotAt(4.8).background).not.toEqual(BASE.background);
-    expect(snapshotAt(5.55).blurPercent).toBe(5);
-    expect(snapshotAt(6.4).blurPercent).toBe(34);
-    expect(snapshotAt(6).cursorSettings.enabled).toBe(BASE.cursorSettings.enabled);
+    expect(snapshotAt(5.79).background).toEqual(BASE.background);
+    expect(snapshotAt(5.8).background).not.toEqual(BASE.background);
+    expect(snapshotAt(BACKGROUND_BLUR_START).blurPercent).toBe(0);
+    expect(snapshotAt(BACKGROUND_BLUR_END).blurPercent).toBe(65);
+    expect(snapshotAt(4).cursorSettings.enabled).toBe(BASE.cursorSettings.enabled);
     expect(snapshotAt(8).cursorSettings.enabled).toBe(false);
   });
 });
@@ -149,16 +159,16 @@ describe('authored motion', () => {
     expect(progress(2, 0, 1)).toBe(1);
   });
   it('retains menu dwell, panel selection and the paused source clock', () => {
-    expect(menuAt(10.7)).toBe('shape');
-    expect(menuAt(14.5)).toBe('blur');
-    expect(menuAt(16)).toBeNull();
-    expect([5, 9, 13, 17].map(modeAt)).toEqual(['canvas', 'clip', 'shape', 'blur']);
-    expect(previewTimeAt(6)).toBe(3.5);
+    expect(menuAt(13.2)).toBe('shape');
+    expect(menuAt(17)).toBe('blur');
+    expect(menuAt(20)).toBeNull();
+    expect([5, 11, 16, 20].map(modeAt)).toEqual(['canvas', 'clip', 'shape', 'blur']);
+    expect(previewTimeAt(4)).toBe(3.5);
     expect(previewTimeAt(12)).toBe(0.2);
-    expect(previewTimeAt(19.4)).toBeCloseTo(0.6, 8);
-    expect(previewTimeAt(22)).toBeCloseTo(1.4, 8);
-    expect(blurPercentAt(5)).toBe(5);
-    expect(blurPercentAt(7)).toBe(34);
+    expect(previewTimeAt(21.85)).toBeCloseTo(0.6, 8);
+    expect(previewTimeAt(25)).toBeCloseTo(1.4, 8);
+    expect(blurPercentAt(5)).toBe(0);
+    expect(blurPercentAt(10)).toBe(65);
     expect(waypoints.every((waypoint, index) => !index || waypoint.time > waypoints[index - 1]!.time)).toBe(true);
   });
 });
@@ -190,29 +200,33 @@ describe('calmer cursor and ending handoff', () => {
   it('fades the cursor in, settles its clicks gently and removes it before the outro', () => {
     expect(cursorOpacityAt(0)).toBe(0);
     expect(cursorOpacityAt(4.5)).toBe(1);
-    expect(cursorOpacityAt(20)).toBeCloseTo(0.5, 8);
+    expect(cursorOpacityAt(OUTRO_START - 0.2)).toBeCloseTo(0.5, 8);
     expect(cursorOpacityAt(OUTRO_START)).toBe(0);
     expect(cursorOpacityAt(DURATION)).toBe(0);
   });
-  it('bounds click compression without an instantaneous scale change', () => {
-    expect(pressScaleAt(4.8)).toBeCloseTo(0.94, 8);
+  it('uses the native Beam click spring, including its release overshoot', () => {
+    const click = BACKGROUND_CHANGES[0]!.time;
+    for (const age of [0, 0.03, 0.07, 0.15, 0.2, 0.3, 0.43])
+      expect(pressScaleAt(click + age)).toBeCloseTo(cursorClickSpringScale(age, true, 65), 8);
+    expect(pressScaleAt(click + 0.07)).toBeLessThan(0.85);
+    expect(pressScaleAt(click + 0.18)).toBeGreaterThan(1.05);
     expect(pressScaleAt(0)).toBe(1);
     for (let time = INTRO_END; time <= EDIT_END; time += 0.005) {
-      expect(pressScaleAt(time)).toBeGreaterThanOrEqual(0.94);
-      expect(pressScaleAt(time)).toBeLessThanOrEqual(1);
-      expect(Math.abs(pressScaleAt(time + 0.005) - pressScaleAt(time))).toBeLessThan(0.004);
+      expect(pressScaleAt(time)).toBeGreaterThanOrEqual(0.8);
+      expect(pressScaleAt(time)).toBeLessThanOrEqual(1.1);
     }
   });
   it('allocates at least 0.8 seconds to each long cursor journey', () => {
     for (const [start, end] of [
-      [3.5, 4.65],
-      [7.05, TRIM_START],
-      [TRIM_END, 10.6],
-      [11.35, SHAPE_START],
-      [SHAPE_END, 14.35],
-      [15.15, BLUR_START],
-      [BLUR_END, 17.8],
-      [18.4, 19.5],
+      [3.5, SCRUB_TIME],
+      [SCRUB_TIME, BACKGROUND_CHANGES[0]!.time],
+      [BACKGROUND_BLUR_END, TRIM_START],
+      [TRIM_END, 13.05],
+      [13.8, SHAPE_START],
+      [SHAPE_END, 16.8],
+      [17.6, BLUR_START],
+      [BLUR_END, PIXELATED_TIME],
+      [NORMAL_BLUR_TIME, 21.95],
     ])
       expect(end! - start!).toBeGreaterThanOrEqual(0.8 - 0.000001);
   });
@@ -253,6 +267,49 @@ describe('filled shape catalogue host', () => {
     presets.beginAdd();
     expect(presets.isEditing(color.id)).toBe(false);
     expect(presets.isEditing('')).toBe(false);
+  });
+});
+
+describe('visible background changes and cursor clicks', () => {
+  it('selects three distinct backgrounds at their clicks, including a detailed photo before blur', () => {
+    expect(wallpaperAt(0)).toBe('golden');
+    expect(wallpaperAt(5.799)).toBe('golden');
+    expect(BACKGROUND_CHANGES.map((change) => wallpaperAt(change.time))).toEqual(['ventura', 'light', 'sunset']);
+    for (const change of BACKGROUND_CHANGES) {
+      const wallpaper = WALLPAPERS.find((entry) => entry.id === change.id)!;
+      expect(snapshotAt(change.time).background).toEqual({ kind: 'image', src: wallpaper.url });
+      expect(waypoints.find((point) => point.time === change.time)).toMatchObject({ pressed: true });
+    }
+    expect(wallpaperAt(DURATION)).toBe('sunset');
+    expect(wallpaperAt(6)).toBe('ventura');
+  });
+  it('keeps the background sharp until its drag, pauses at 20% and finishes at a visible 65%', () => {
+    expect(blurPercentAt(7.9)).toBe(0);
+    expect(blurPercentAt(8.25)).toBeCloseTo(10, 8);
+    for (const time of [8.5, 8.6, 8.7]) expect(blurPercentAt(time)).toBe(20);
+    expect(blurPercentAt(9.05)).toBeCloseTo(42.5, 8);
+    expect(blurPercentAt(9.4)).toBe(65);
+    expect(blurPercentAt(DURATION)).toBe(65);
+  });
+  it('widens the preview before background selection and keeps the real slider aligned with its pointer', () => {
+    expect(previewTimeAt(SCRUB_TIME - 0.001)).toBe(3.5);
+    for (const change of BACKGROUND_CHANGES) expect(previewTimeAt(change.time)).toBe(0.2);
+    for (const point of waypoints.filter((point) => point.target.includes('big-slider-input')))
+      expect((point.x ?? 0) * 100).toBeCloseTo(blurPercentAt(point.time), 8);
+    expect(CURSOR_SIZE / 44).toBeGreaterThan(1.45);
+  });
+  it('starts a new spring for every click, settles and remains deterministic across reverse seeks', () => {
+    for (const point of waypoints.filter((point) => point.pressed)) {
+      expect(pressScaleAt(point.time - 0.001)).toBeCloseTo(1, 8);
+      expect(pressScaleAt(point.time)).toBe(1);
+      expect(pressScaleAt(point.time + 0.07)).toBeLessThan(0.85);
+      expect(pressScaleAt(point.time + 0.18)).toBeGreaterThan(1);
+      expect(pressScaleAt(point.time + 0.43)).toBe(1);
+    }
+    const times = [5.87, 6.73, 0, 7.37, 14.67, 25];
+    const first = times.map(pressScaleAt);
+    times.toReversed().forEach(pressScaleAt);
+    expect(times.map(pressScaleAt)).toEqual(first);
   });
 });
 
