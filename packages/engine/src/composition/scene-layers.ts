@@ -7,6 +7,8 @@ import { timingPreviewFor } from '@beam/engine/composition/timing-preview';
 import { compileSceneComposition } from '../scene/scene-clock';
 import { createSceneAnimator } from '../scene/scene-animation';
 import type { SceneGraph } from '../scene/scene-types';
+import { createSceneGraphIndex } from '../scene/scene-graph-index';
+import type { SceneGraphIndex } from '../scene/scene-graph-index-types';
 import type {
   BlurClip,
   CaptionClip,
@@ -24,6 +26,7 @@ export interface CompositionSceneLayers {
   visualStack: Array<VisualClip | ColorClip | ShapeClip | BlurClip>;
   captions: CaptionClip[];
   scene?: SceneGraph;
+  sceneIndex?: SceneGraphIndex;
 }
 
 export type CompositionSceneLayerResolver = (timeMs: number) => CompositionSceneLayers;
@@ -87,6 +90,7 @@ export function createCompositionSceneLayerResolver(composition: ClipComposition
   const animate = createSceneAnimator(authored);
   const animatedGroups = new Set(authored.animations?.tracks.map((track) => track.targetId));
   const animateGroups = authored.scene?.groups.some((group) => animatedGroups.has(group.id));
+  const sceneIndex = authored.scene ? createSceneGraphIndex(authored.scene) : undefined;
   composition = compileSceneComposition(composition);
   const preview = timingPreviewFor(composition);
   const order = preview ? null : new Map(composition.clips.map((clip, index) => [clip, index]));
@@ -135,17 +139,21 @@ export function createCompositionSceneLayerResolver(composition: ClipComposition
       visualStack.push(clip);
     }
 
+    const scene = animateGroups
+      ? { ...authored.scene!, groups: authored.scene!.groups.map((group) => animate(group, timeMs)) }
+      : authored.scene;
     return {
       screen,
       cameraVisuals,
       webcams,
       visualStack,
       captions,
-      ...(authored.scene
+      ...(scene && sceneIndex
         ? {
-            scene: animateGroups
-              ? { ...authored.scene, groups: authored.scene.groups.map((group) => animate(group, timeMs)) }
-              : authored.scene,
+            scene,
+            sceneIndex: animateGroups
+              ? { ...sceneIndex, groups: new Map(scene.groups.map((group) => [group.id, group])) }
+              : sceneIndex,
           }
         : {}),
     };

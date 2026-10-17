@@ -1,6 +1,8 @@
 import type { Clip } from '@beam/engine/shared/composition-types';
 import type { SceneGraph } from '@beam/engine/scene/scene-types';
 import type { Canvas2DContext } from '../canvas-types';
+import { createSceneGraphIndex } from '@beam/engine/scene/scene-graph-index';
+import type { SceneGraphIndex } from '@beam/engine/scene/scene-graph-index-types';
 
 // Sibling groups reuse one surface; only simultaneously nested isolations need separate buffers.
 const surfaces = new WeakMap<Canvas2DContext, Map<number, OffscreenCanvas>>();
@@ -9,14 +11,18 @@ const surfaces = new WeakMap<Canvas2DContext, Map<number, OffscreenCanvas>>();
 export function drawSceneStack<T extends Clip>(
   context: Canvas2DContext,
   clips: readonly T[],
-  graph: SceneGraph | undefined,
+  graph: SceneGraph | SceneGraphIndex | undefined,
   bounds: { x?: number; y?: number; width: number; height: number },
   draw: (context: Canvas2DContext, clips: readonly T[]) => void,
 ) {
   if (!graph) return draw(context, clips);
-  const groups = new Map(graph.groups.map((group) => [group.id, group]));
+  const {
+    groups,
+    parents,
+    roots: sceneRoots,
+    declaredRoots,
+  } = 'parents' in graph ? graph : createSceneGraphIndex(graph);
   const visible = new Map(clips.map((clip) => [clip.id, clip]));
-  const parents = new Map(graph.groups.flatMap((group) => group.children.map((child) => [child, group.id] as const)));
   const active = new Set(visible.keys());
   for (const clip of clips) {
     let parent = parents.get(clip.id);
@@ -25,11 +31,9 @@ export function drawSceneStack<T extends Clip>(
       parent = parents.get(parent);
     }
   }
-  const members = new Set(graph.groups.flatMap((group) => group.children));
-  const declaredRoots = new Set(graph.roots);
   const roots = [
-    ...graph.roots,
-    ...clips.filter((clip) => !members.has(clip.id) && !declaredRoots.has(clip.id)).map((clip) => clip.id),
+    ...sceneRoots,
+    ...clips.filter((clip) => !parents.has(clip.id) && !declaredRoots.has(clip.id)).map((clip) => clip.id),
   ];
   let buffers = surfaces.get(context);
   if (!buffers) {

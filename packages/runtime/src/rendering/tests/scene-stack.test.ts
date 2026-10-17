@@ -3,6 +3,7 @@ import { drawSceneStack, disposeSceneStack } from '../scene-stack';
 import { context } from './render.test-support';
 import { colorClip, group } from '../../../../engine/src/scene/tests/scene-fixtures';
 import type { SceneGraph } from '@beam/engine/scene/scene-types';
+import { createSceneGraphIndex } from '@beam/engine/scene/scene-graph-index';
 
 let available: boolean;
 const buffers: Array<{ width: number; height: number; context: CanvasRenderingContext2D }> = [];
@@ -37,6 +38,56 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 const graph = (): SceneGraph => ({ version: 1, roots: ['g'], groups: [group()] });
 const bounds = { width: 100, height: 50 };
+it('draws indexed nested groups in the same order and geometry as direct graph input', () => {
+  const inner = group('inner', ['a']);
+  const outer = group('outer', ['inner', 'b']);
+  inner.transform.rotation = 23;
+  outer.transform.x = 0.2;
+  const value: SceneGraph = { version: 1, roots: ['outer'], groups: [inner, outer] };
+  const clips = [colorClip(), colorClip('b'), colorClip('free')];
+  const direct = ctx(),
+    indexed = ctx();
+  const directPaint = vi.fn(),
+    indexedPaint = vi.fn();
+  drawSceneStack(direct, clips, value, bounds, directPaint);
+  drawSceneStack(indexed, clips, createSceneGraphIndex(value), bounds, indexedPaint);
+  expect(indexedPaint.mock.calls.map((call) => call[1].map((clip: { id: string }) => clip.id))).toEqual(
+    directPaint.mock.calls.map((call) => call[1].map((clip: { id: string }) => clip.id)),
+  );
+  for (const method of ['translate', 'rotate', 'scale', 'save', 'restore'] as const)
+    expect(vi.mocked(indexed[method]).mock.calls).toEqual(vi.mocked(direct[method]).mock.calls);
+});
+
+it('does not reread inactive group memberships during indexed shutter samples', () => {
+  const groups = Array.from({ length: 1000 }, (_, i) => group(`g-${i}`, [`clip-${i}`]));
+  const value: SceneGraph = { version: 1, roots: groups.map((entry) => entry.id), groups };
+  const index = createSceneGraphIndex(value);
+  const read = vi.fn();
+  for (const entry of groups.slice(1))
+    Object.defineProperty(entry, 'children', {
+      get() {
+        read();
+        return [];
+      },
+    });
+  const paint = vi.fn(),
+    context = ctx();
+  for (let sample = 0; sample < 5; sample++) drawSceneStack(context, [colorClip('clip-0')], index, bounds, paint);
+  expect(read).not.toHaveBeenCalled();
+  expect(paint).toHaveBeenCalledTimes(5);
+});
+
+it('uses current animated group values with shared membership and isolates alpha', () => {
+  const value = graph();
+  const index = createSceneGraphIndex(value);
+  const animated = { ...value.groups[0]!, opacity: 0.4, transform: { ...value.groups[0]!.transform, x: 0.3 } };
+  const context = ctx();
+  drawSceneStack(context, [colorClip()], { ...index, groups: new Map([['g', animated]]) }, bounds, vi.fn());
+  expect(context.translate).toHaveBeenCalledWith(80, 25);
+  expect(context.drawImage).toHaveBeenCalledOnce();
+  expect(context.globalAlpha).toBe(0.4);
+  disposeSceneStack(context);
+});
 it('preserves bulk drawing and its order for flat compositions', () => {
   const paint = vi.fn(),
     clips = [colorClip(), colorClip('b')],
