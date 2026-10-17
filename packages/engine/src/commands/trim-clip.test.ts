@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { clipTrimBounds, createComposition, holdClipAtPlayhead, trimClip } from '@beam/engine/commands/clip-engine';
-import type { ClipComposition, MediaAsset, VisualClip } from '@beam/engine/shared/composition-types';
+import type { AudioClip, ClipComposition, MediaAsset, VisualClip } from '@beam/engine/shared/composition-types';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import { sourceTimeAt } from '@beam/engine/shared/timeline-mapping';
 
@@ -118,6 +118,43 @@ const heldComposition = () => {
 };
 
 describe('trimClip ripple behavior', () => {
+  it('rejects an unknown target in both boundary lookup and commit without changing the document', () => {
+    const base = createComposition([videoAsset('video-asset')], [videoClip('video')]);
+    const before = JSON.stringify(base);
+    expect(() => clipTrimBounds(base, 'missing', 'start')).toThrow('Unknown clip');
+    expect(() => trimClip(base, 'missing', 'end', 500)).toThrow('Unknown clip');
+    expect(JSON.stringify(base)).toBe(before);
+  });
+
+  it.each([NaN, Infinity, -Infinity])('rejects a nonfinite trim time %s without altering the source', (time) => {
+    const base = createComposition([videoAsset('video-asset')], [videoClip('video')]);
+    const before = JSON.stringify(base);
+    expect(() => trimClip(base, 'video', 'end', time)).toThrow('Invalid trim target time');
+    expect(JSON.stringify(base)).toBe(before);
+  });
+
+  it('uses audio source duration independently of visual track collision bounds', () => {
+    const clip: AudioClip = {
+      id: 'audio',
+      kind: 'audio',
+      name: 'Audio',
+      assetId: 'audio-asset',
+      role: 'imported',
+      volume: 100,
+      timelineStartMs: 1000,
+      timelineDurationMs: 1000,
+      sourceInMs: 500,
+      sourceDurationMs: 1000,
+      playbackRate: 1,
+      enabled: true,
+      order: 0,
+      transitions: { entry: null, exit: null },
+    };
+    const base = createComposition([{ ...videoAsset('audio-asset', 5000), kind: 'audio' }], [clip]);
+    expect(clipTrimBounds(base, clip.id, 'end')).toEqual({ minMs: 1040, maxMs: 5500 });
+    expect(trimClip(base, clip.id, 'end', 5500).clips[0]).toMatchObject({ timelineDurationMs: 4500 });
+  });
+
   it('pushes downstream fragments and grouped companions when a hold is extended', () => {
     const { held, hold } = heldComposition();
     const oldEnd = hold.timelineStartMs + hold.timelineDurationMs;

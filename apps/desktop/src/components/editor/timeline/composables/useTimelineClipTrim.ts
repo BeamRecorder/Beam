@@ -1,41 +1,15 @@
 import { selectionHasLocks } from '@beam/engine/composition/timeline-locks';
-import { markRaw, nextTick, type Ref } from 'vue';
-import type { Clip, ClipComposition } from '@beam/engine/shared/composition-types';
+import { markRaw, nextTick, onScopeDispose, toRaw } from 'vue';
+import type { Clip } from '@beam/engine/shared/composition-types';
 import { MIN_CLIP_DURATION_MS } from '@beam/engine/commands/clip-composition-validation';
 import { clipTrimBounds } from '@beam/engine/commands/trim-clip';
-import { createAnimationFrameCoalescer } from './animation-frame-coalescer';
+import { prepareClipTrimPreview } from '@beam/engine/composition/clip-trim-preview';
 import { calculateSnapThresholdMs, collectSnapTargets, snapValue } from './timeline-snap';
-import { previewClipTrim } from './timeline-composition-preview';
-import type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
+import type { TimelineClipTrimOptions } from './timeline-clip-trim-types';
 
-type TrimState = {
-  ids: string[];
-  edge: 'start' | 'end';
-  durationMs: number;
-  atLimit?: boolean;
-} | null;
-type ClipPreview = Record<string, { startMs: number; durationMs: number }>;
-
-export function useTimelineClipTrim(options: {
-  props: TimelineTracksProps;
-  emit: TimelineTracksEmits;
-  tracksScrollRef: Ref<HTMLDivElement | null>;
-  displayedPlayheadTime: Ref<number>;
-  activeSnapTimeMs: Ref<number | null>;
-  previewDurationMs: Ref<number | null>;
-  clipPreview: Ref<ClipPreview>;
-  activeTrimState: Ref<TrimState>;
-  linkedIdsFor: (clip: Clip) => string[];
-  clearLinkedPreview: (ids: string[]) => void;
-  resolveMsPerPx: () => {
-    baseDurationMs: number;
-    width: number;
-    msPerPx: number;
-    visualScale: number;
-  };
-  updateAutoScroll: (clientX: number, onScroll?: ((deltaPx: number) => void) | null) => void;
-  stopAutoScroll: () => void;
-}) {
+export function useTimelineClipTrim(options: TimelineClipTrimOptions) {
+  let cancelTrim: (() => void) | null = null;
+  onScopeDispose(() => cancelTrim?.());
   const beginClipTrim = (event: PointerEvent, clip: Clip, edge: 'start' | 'end') => {
     if (
       event.button > 0 ||
@@ -45,6 +19,7 @@ export function useTimelineClipTrim(options: {
       })
     )
       return;
+    cancelTrim?.();
     event.preventDefault();
     event.stopPropagation();
     const ids = options.linkedIdsFor(clip);
@@ -52,7 +27,9 @@ export function useTimelineClipTrim(options: {
     const { baseDurationMs, width: baseRulerWidth, msPerPx } = options.resolveMsPerPx();
     const originalStartMs = clip.timelineStartMs;
     const originalEndMs = clip.timelineStartMs + clip.timelineDurationMs;
-    const bounds = clipTrimBounds(options.props.composition, clip.id, edge);
+    const composition = toRaw(options.props.composition);
+    const bounds = clipTrimBounds(composition, clip.id, edge);
+    const previewTrim = prepareClipTrimPreview(composition, clip.id, edge);
     const snapTargets = collectSnapTargets({
       composition: options.props.composition,
       zoomElements: options.props.zoomElements,
@@ -65,6 +42,9 @@ export function useTimelineClipTrim(options: {
     let previewedIds = ids;
     let trimActive = true;
     let autoScrollDeltaPx = 0;
+    let previewTimeMs: number | null = null;
+    let pointer: PointerEvent = event;
+    let autoScrollQueued = false;
     options.activeTrimState.value = {
       ids,
       edge,
@@ -99,43 +79,47 @@ export function useTimelineClipTrim(options: {
       finalTimeMs = proposedTimeMs;
       const startMs = edge === 'start' ? finalTimeMs : originalStartMs;
       const endMs = edge === 'end' ? finalTimeMs : originalEndMs;
-      const previewComposition = previewClipTrim(options.props.composition, clip, edge, finalTimeMs);
-      options.clearLinkedPreview(previewedIds);
-      previewedIds = changedTimingIds(options.props.composition, previewComposition);
-      const nextPreview = { ...options.clipPreview.value };
-      for (const entry of previewComposition.clips) {
-        if (previewedIds.includes(entry.id)) {
+      if (previewTimeMs !== finalTimeMs) {
+        previewTimeMs = finalTimeMs;
+        const preview = previewTrim(finalTimeMs);
+        const nextPreview = { ...options.clipPreview.value };
+        for (const id of previewedIds) delete nextPreview[id];
+        previewedIds = preview.clips.map((entry) => entry.id);
+        for (const entry of preview.clips) {
           nextPreview[entry.id] = {
             startMs: entry.timelineStartMs,
             durationMs: entry.timelineDurationMs,
           };
         }
+        options.clipPreview.value = nextPreview;
+        options.previewDurationMs.value = preview.durationMs;
+        options.emit('preview:composition', markRaw(preview.composition));
       }
-      options.clipPreview.value = nextPreview;
-      const previewEndMs = previewComposition.clips.reduce(
-        (maximum, entry) => Math.max(maximum, entry.timelineStartMs + entry.timelineDurationMs),
-        endMs,
-      );
-      options.previewDurationMs.value = previewEndMs;
-      options.emit('preview:composition', markRaw(previewComposition));
       options.activeTrimState.value = {
         ids,
         edge,
         durationMs: endMs - startMs,
         atLimit: raw <= bounds.minMs || raw >= bounds.maxMs,
       };
-      void nextTick(() => {
-        if (!trimActive) return;
-        options.updateAutoScroll(next.clientX, (scrollDeltaPx) => {
-          autoScrollDeltaPx += scrollDeltaPx;
-          applyMove(next);
+      pointer = next;
+      if (!autoScrollQueued) {
+        autoScrollQueued = true;
+        void nextTick(() => {
+          autoScrollQueued = false;
+          if (!trimActive) return;
+          options.updateAutoScroll(pointer.clientX, (scrollDeltaPx) => {
+            autoScrollDeltaPx += scrollDeltaPx;
+            applyMove(pointer);
+          });
         });
-      });
+      }
     };
-    const moveUpdates = createAnimationFrameCoalescer(applyMove);
-    const move = moveUpdates.schedule;
+    // Publish geometry before the shared canvas frame is scheduled. An extra RAF
+    // here makes the clip artwork trail its DOM handles by an entire refresh.
+    const move = applyMove;
     const cleanup = () => {
       trimActive = false;
+      cancelTrim = null;
       options.stopAutoScroll();
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', end);
@@ -147,27 +131,17 @@ export function useTimelineClipTrim(options: {
       options.emit('preview:composition', null);
     };
     const end = () => {
-      moveUpdates.flush();
       cleanup();
       const original = edge === 'start' ? originalStartMs : originalEndMs;
       if (finalTimeMs !== original) options.emit('trim:clip', { id: clip.id, edge, timeMs: finalTimeMs });
     };
     const cancel = () => {
-      moveUpdates.cancel();
       cleanup();
     };
+    cancelTrim = cancel;
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', end, { once: true });
     window.addEventListener('pointercancel', cancel, { once: true });
   };
   return { beginClipTrim };
 }
-
-const changedTimingIds = (before: ClipComposition, after: ClipComposition) =>
-  after.clips.flatMap((clip) => {
-    const original = before.clips.find((candidate) => candidate.id === clip.id);
-    return original &&
-      (original.timelineStartMs !== clip.timelineStartMs || original.timelineDurationMs !== clip.timelineDurationMs)
-      ? [clip.id]
-      : [];
-  });

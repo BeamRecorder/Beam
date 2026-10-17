@@ -16,6 +16,44 @@ import {
 } from './TimelineTracks.test-support';
 
 describe('TimelineTracks', () => {
+  it.each(['start', 'end'] as const)(
+    'updates the %s handle before the first animation frame and commits the latest position once',
+    async (edge) => {
+      const mounted = await mountTracks({ isSnappingEnabled: false });
+      const screen = mounted!
+        .findAllComponents(TimelineClipStub)
+        .find((component) => (component.props('clip') as VisualClip).id === 'screen-clip')!;
+      const original = screen.props('clip') as VisualClip;
+      const { pendingFrames } = queueAnimationFrames();
+      await triggerPointer(screen.find(`.trim-handle.${edge}`), 'pointerdown', { clientX: 300 });
+      // Do not flush RAF: the DOM must have current geometry before the canvas frame.
+      window.dispatchEvent(pointerEvent('pointermove', edge === 'start' ? 320 : 280));
+      window.dispatchEvent(pointerEvent('pointermove', edge === 'start' ? 350 : 250));
+      await flushPromises();
+      const updated = screen.props('clip') as VisualClip;
+      expect(updated.timelineDurationMs).toBeLessThan(original.timelineDurationMs);
+      if (edge === 'start') expect(updated.timelineStartMs).toBeGreaterThan(original.timelineStartMs);
+      expect(mounted!.emitted('trim:clip')).toBeUndefined();
+      // An identical pointer / clamped source boundary must not rebuild the preview.
+      const count = mounted!.emitted('preview:composition')!.length;
+      window.dispatchEvent(pointerEvent('pointermove', edge === 'start' ? 350 : 250));
+      await flushPromises();
+      expect(mounted!.emitted('preview:composition')).toHaveLength(count);
+      window.dispatchEvent(pointerEvent('pointerup', 350));
+      await flushPromises();
+      expect(mounted!.emitted('trim:clip')).toEqual([
+        [
+          {
+            id: original.id,
+            edge,
+            timeMs: edge === 'start' ? updated.timelineStartMs : updated.timelineStartMs + updated.timelineDurationMs,
+          },
+        ],
+      ]);
+      expect(pendingFrames.size).toBe(0);
+    },
+  );
+
   it('keeps the last hold trim preview bounded when viewport shrink clamps scrollLeft', async () => {
     const hold = visual({
       id: 'clamped-hold',
@@ -62,7 +100,6 @@ describe('TimelineTracks', () => {
       clientX: 620,
     });
     window.dispatchEvent(pointerEvent('pointermove', 120));
-    flushNextFrame();
     await flushPromises();
 
     const previewBeforeClamp = mounted!.emitted('preview:composition')?.at(-1)?.[0] as ClipComposition | undefined;

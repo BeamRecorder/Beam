@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Timeline start and end trim handles follow dragging without an extra frame of delay. Clip artwork stays aligned, repeated source-limit updates skip unnecessary work, and grouped/ripple trims retain matching preview and committed timing.
+
 - Video playback keeps long final frames without repeatedly restarting decoding, and presents prefetched frames at their recorded timestamps across display refresh rates and playback speeds.
 
 - Pasting timeline items at or beyond the project end extends the project instead of rejecting them. Text, shapes, drawings, effects, images, video, audio, zooms and mixed selections retain their complete timing; playback and export include the extended range.

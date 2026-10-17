@@ -8,7 +8,7 @@ import {
   type ClipComposition,
   type VisualClip,
 } from '@beam/engine/shared/composition-types';
-import { EMPTY_CLIP_TRANSITIONS, normalizeClipTransitions } from '@beam/engine/shared/clip-transitions';
+import { trimClipTiming } from './trim-clip-timing';
 import {
   CompositionEngineError,
   MIN_CLIP_DURATION_MS,
@@ -111,35 +111,7 @@ export function trimClip(
         ? { ...clip, timelineStartMs: clip.timelineStartMs + rippleDelta }
         : clip;
     }
-    const rate = Math.max(0.01, clip.playbackRate);
-    if (edge === 'start') {
-      const newTimelineDuration = clipEndMs(clip) - target;
-      const sourceDelta = integer((target - clip.timelineStartMs) * rate);
-      return {
-        ...clip,
-        timelineStartMs: target,
-        timelineDurationMs: newTimelineDuration,
-        sourceInMs:
-          clip.kind === 'caption'
-            ? 0
-            : isFreeze(clip)
-              ? clip.freezeFrameSourceMs!
-              : Math.max(0, clip.sourceInMs + sourceDelta),
-        sourceDurationMs: integer(newTimelineDuration * rate),
-        transitions: normalizeClipTransitions(
-          clip.transitions ?? EMPTY_CLIP_TRANSITIONS,
-          newTimelineDuration,
-          clip.kind,
-        ),
-      };
-    }
-    const newTimelineDuration = target - clip.timelineStartMs;
-    return {
-      ...clip,
-      timelineDurationMs: newTimelineDuration,
-      sourceDurationMs: integer(newTimelineDuration * rate),
-      transitions: normalizeClipTransitions(clip.transitions ?? EMPTY_CLIP_TRANSITIONS, newTimelineDuration, clip.kind),
-    };
+    return trimClipTiming(clip, edge, target);
   });
   validateComposition(next);
   return next;

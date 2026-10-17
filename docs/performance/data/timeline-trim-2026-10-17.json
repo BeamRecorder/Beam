@@ -1,0 +1,52 @@
+{
+  "baseline": "43741104",
+  "project": "Video for BeamMainPage",
+  "node": "v24.19.0",
+  "platform": "linux",
+  "method": "7 median batches, 20 warmups; pure pointer timing/geometry preparation, excluding Vue, decoding, painting and gesture initialization",
+  "results": [
+    {
+      "clips": 3,
+      "edge": "start",
+      "iterations": 1000,
+      "baselineMs": 0.002968,
+      "preparedMs": 0.00475
+    },
+    {
+      "clips": 3,
+      "edge": "end",
+      "iterations": 1000,
+      "baselineMs": 0.007863,
+      "preparedMs": 0.001684
+    },
+    {
+      "clips": 1000,
+      "edge": "start",
+      "iterations": 50,
+      "baselineMs": 20.243832,
+      "preparedMs": 0.004537
+    },
+    {
+      "clips": 1000,
+      "edge": "end",
+      "iterations": 50,
+      "baselineMs": 23.303206,
+      "preparedMs": 0.002427
+    },
+    {
+      "clips": 5000,
+      "edge": "start",
+      "iterations": 5,
+      "baselineMs": 543.332453,
+      "preparedMs": 0.003384
+    },
+    {
+      "clips": 5000,
+      "edge": "end",
+      "iterations": 5,
+      "baselineMs": 606.691688,
+      "preparedMs": 0.002824
+    }
+  ],
+  "checksum": 676810060
+}
