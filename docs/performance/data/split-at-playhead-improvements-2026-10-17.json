@@ -1,0 +1,114 @@
+{
+  "baselineCommit": "956ecf83",
+  "runtime": "Node v24.19.0 / V8",
+  "platform": "Linux",
+  "method": {
+    "statistic": "median of five batches after one warm-up",
+    "iterationsPerBatch": 3,
+    "linkedNameIterationsPerBatch": 1,
+    "before": "baseline implementations on unfrozen fixture compositions",
+    "after": "current implementations on owned immutable compositions",
+    "scope": "isolated CPU preparation; excludes media decoding, painting, IPC serialization and disk writes"
+  },
+  "observations": [
+    {
+      "clips": 300,
+      "visibleQueries": 24,
+      "lockedClips": 99,
+      "linkedNames": {
+        "beforeMs": 46.2427,
+        "afterMs": 0.3279
+      },
+      "lockValidation": {
+        "beforeMs": 1.657,
+        "afterMs": 0.1649
+      },
+      "historyRecord": {
+        "beforeMs": 1.808,
+        "afterMs": 0.0205
+      },
+      "saveCompositionCapture": {
+        "beforeMs": 5.5056,
+        "afterMs": 0.0002
+      }
+    },
+    {
+      "clips": 1500,
+      "visibleQueries": 24,
+      "lockedClips": 499,
+      "linkedNames": {
+        "beforeMs": 734.0136,
+        "afterMs": 4.3904
+      },
+      "lockValidation": {
+        "beforeMs": 59.1144,
+        "afterMs": 0.764
+      },
+      "historyRecord": {
+        "beforeMs": 17.2787,
+        "afterMs": 0.0136
+      },
+      "saveCompositionCapture": {
+        "beforeMs": 19.3284,
+        "afterMs": 0.0001
+      }
+    }
+  ],
+  "beforePlaybackTrace": {
+    "case": "split-screen-same-source",
+    "requests": [
+      "pause",
+      "load",
+      "seek"
+    ],
+    "states": [
+      "loading",
+      "paused"
+    ],
+    "oldCachedFrameClosed": true,
+    "assetIdsUnchanged": true,
+    "audioLoadCalls": 2,
+    "audioUpdateCalls": 0
+  },
+  "afterPlaybackTrace": {
+    "case": "split-screen-same-source",
+    "requests": [
+      "pause",
+      "retime",
+      "seek"
+    ],
+    "states": [],
+    "oldFrameClosedBeforeReady": false,
+    "assetIdsUnchanged": true,
+    "audioLoadCalls": 1,
+    "audioUpdateCalls": 1
+  },
+  "verification": {
+    "focusedTestCases": 317,
+    "focusedTestFiles": 24,
+    "changedImplementationModules": 15,
+    "coverage": {
+      "statements": 97.63,
+      "branches": 94.67,
+      "functions": 97.97,
+      "lines": 98.49
+    },
+    "minimumModuleCoverage": {
+      "statements": 94.79,
+      "branches": 91.21,
+      "functions": 93.18,
+      "lines": 95.28
+    },
+    "checks": [
+      "global vue-tsc",
+      "engine tsc",
+      "runtime tsc",
+      "Vite renderer build",
+      "scoped oxlint",
+      "scoped oxfmt",
+      "package boundaries and file sizes",
+      "git diff --check"
+    ]
+  },
+  "implementationCommit": "eb0f383a"
+}

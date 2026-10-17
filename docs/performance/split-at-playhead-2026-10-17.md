@@ -2,6 +2,8 @@
 
 Audited at `dcc4e071` on Linux, 2026-10-17. This report changes no application behavior.
 
+Implementation follow-up: [changes, measurements and regression checks](split-at-playhead-improvements-2026-10-17.md).
+
 ## Main findings
 
 ### 1. A video split reloads media even when the sources are unchanged
