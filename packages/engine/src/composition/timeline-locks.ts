@@ -2,28 +2,18 @@ import type { ClipComposition } from '@beam/engine/shared/composition-types';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type { LockableTimelineItem, TimelineLockRequest } from '@beam/engine/composition/timeline-lock-types';
 import type { TimelineSelectionIds } from '@beam/engine/composition/timeline-edit-types';
+import { preservesLockedOrder } from './timeline-lock-order';
 
 const content = (item: LockableTimelineItem) => JSON.stringify({ ...item, locked: undefined, order: undefined });
 export const preservesLockedItems = <T extends LockableTimelineItem>(before: readonly T[], after: readonly T[]) => {
   const locked = before.filter((item) => item.locked);
   if (!locked.length) return true;
   const next = new Map(after.map((item) => [item.id, item]));
-  return locked.every((item) => {
+  const contentPreserved = locked.every((item) => {
     const replacement = next.get(item.id);
-    if (!replacement || (replacement !== item && content(item) !== content(replacement))) return false;
-    return before.every((other) => {
-      const otherNext = next.get(other.id);
-      if (
-        !otherNext ||
-        item.order === undefined ||
-        replacement.order === undefined ||
-        other.order === undefined ||
-        otherNext.order === undefined
-      )
-        return true;
-      return Math.sign(item.order - other.order) === Math.sign(replacement.order - otherNext.order);
-    });
+    return Boolean(replacement && (replacement === item || content(item) === content(replacement)));
   });
+  return contentPreserved && preservesLockedOrder(before, next);
 };
 
 export const lockedTimelineSelection = (

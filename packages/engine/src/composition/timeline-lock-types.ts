@@ -4,6 +4,17 @@ export interface LockableTimelineItem {
   locked?: boolean;
   order?: number;
 }
+export interface TimelineOrderEntry {
+  before: number;
+  after: number;
+  locked: boolean;
+}
+export interface TimelineOrderBucket {
+  before: number;
+  min: number;
+  max: number;
+  locked: boolean;
+}
 export interface TimelineLockRequest extends TimelineSelectionIds {
   locked: boolean;
 }
