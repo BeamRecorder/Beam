@@ -1,0 +1,518 @@
+{
+  "baselineCommit": "d0602656",
+  "date": "2026-10-17",
+  "platform": "linux",
+  "node": "v24.19.0",
+  "measurementScope": "Isolated CPU functions in the same Node process, not end-to-end playback FPS. Scene index construction excluded from retained paint timings.",
+  "method": {
+    "warmups": 30,
+    "batches": 7,
+    "iterationsPerBatch": 50,
+    "statistic": "median milliseconds per call",
+    "drawing": "No-op Canvas2D target; one active clip, opaque identity groups. No pixel/decode/GPU time included in CPU paint timings."
+  },
+  "singleFinalFrameSimulation": [
+    {
+      "before": {
+        "hz": 60,
+        "openings": 60,
+        "converted": 60,
+        "presented": 60
+      },
+      "after": {
+        "hz": 60,
+        "openings": 1,
+        "converted": 1,
+        "presented": 1
+      }
+    },
+    {
+      "before": {
+        "hz": 120,
+        "openings": 120,
+        "converted": 120,
+        "presented": 120
+      },
+      "after": {
+        "hz": 120,
+        "openings": 1,
+        "converted": 1,
+        "presented": 1
+      }
+    },
+    {
+      "before": {
+        "hz": 144,
+        "openings": 144,
+        "converted": 144,
+        "presented": 144
+      },
+      "after": {
+        "hz": 144,
+        "openings": 1,
+        "converted": 1,
+        "presented": 1
+      }
+    }
+  ],
+  "sequentialAfter": {
+    "sparse": {
+      "hz": 60,
+      "openings": 1,
+      "converted": 2,
+      "presented": 2
+    },
+    "thirtyFps": {
+      "hz": 60,
+      "openings": 1,
+      "converted": 30,
+      "presented": 30
+    }
+  },
+  "sceneHierarchy": [
+    {
+      "groups": 0,
+      "activeClips": 1,
+      "baselineSceneStackMs": 0.016558,
+      "indexedSceneStackMs": 0.003342
+    },
+    {
+      "groups": 100,
+      "activeClips": 1,
+      "baselineSceneStackMs": 0.057809,
+      "indexedSceneStackMs": 0.009884
+    },
+    {
+      "groups": 1000,
+      "activeClips": 1,
+      "baselineSceneStackMs": 0.870215,
+      "indexedSceneStackMs": 0.058825
+    },
+    {
+      "groups": 5000,
+      "activeClips": 1,
+      "baselineSceneStackMs": 5.025944,
+      "indexedSceneStackMs": 0.189663
+    }
+  ],
+  "cursorSimulation": {
+    "frames": 120,
+    "sharedCenterTargetCalls": 7484,
+    "independentCenterTargetCalls": 14968,
+    "scope": "Target lookup counts for the same deterministic evaluator workload, not whole-editor time. Main preview tests also assert shared center samples without a second evaluation."
+  },
+  "verification": {
+    "focusedVitestCases": 533,
+    "focusedVitestFiles": 30,
+    "chromiumCases": 26,
+    "chromiumBackend": "Linux headless Chromium, SwiftShader WebGL",
+    "realDecode": {
+      "encoding": "WebM/VP8, one frame with a ten-second duration",
+      "ticks": 240,
+      "hz": 120,
+      "iteratorOpenings": 1,
+      "decodedBitmaps": 1,
+      "presentedFrames": 1,
+      "clock": "Supplied source timestamps spaced at 1/120 second, not wall-clock playback pacing."
+    },
+    "pixelComparisons": {
+      "modes": [
+        "flat",
+        "animated group",
+        "orbit with blur",
+        "3D cursor"
+      ],
+      "framesPerMode": 3,
+      "size": [
+        320,
+        180
+      ],
+      "channelsPerMode": 691200,
+      "differingChannels": 0,
+      "scope": "Prepared center/indexed graph versus ordinary center evaluation/direct graph. Each painter starts with equivalent GPU resource lifetime to avoid cross-context raster cache upgrades."
+    },
+    "coverage": {
+      "total": {
+        "lines": {
+          "total": 1223,
+          "covered": 1198,
+          "skipped": 0,
+          "pct": 97.95
+        },
+        "statements": {
+          "total": 1348,
+          "covered": 1307,
+          "skipped": 0,
+          "pct": 96.95
+        },
+        "functions": {
+          "total": 296,
+          "covered": 277,
+          "skipped": 0,
+          "pct": 93.58
+        },
+        "branches": {
+          "total": 1082,
+          "covered": 1000,
+          "skipped": 0,
+          "pct": 92.42
+        },
+        "branchesTrue": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "apps/desktop/src/components/editor/canvas/EditorCanvas.vue": {
+        "lines": {
+          "total": 218,
+          "covered": 199,
+          "skipped": 0,
+          "pct": 91.28
+        },
+        "functions": {
+          "total": 134,
+          "covered": 117,
+          "skipped": 0,
+          "pct": 87.31
+        },
+        "statements": {
+          "total": 235,
+          "covered": 213,
+          "skipped": 0,
+          "pct": 90.63
+        },
+        "branches": {
+          "total": 119,
+          "covered": 97,
+          "skipped": 0,
+          "pct": 81.51
+        }
+      },
+      "apps/desktop/src/components/editor/canvas/runtime-preview.ts": {
+        "lines": {
+          "total": 84,
+          "covered": 84,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 13,
+          "covered": 13,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 93,
+          "covered": 93,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 109,
+          "covered": 107,
+          "skipped": 0,
+          "pct": 98.16
+        }
+      },
+      "apps/desktop/src/components/editor/canvas/composables/useCameraZoom.ts": {
+        "lines": {
+          "total": 211,
+          "covered": 209,
+          "skipped": 0,
+          "pct": 99.05
+        },
+        "functions": {
+          "total": 25,
+          "covered": 25,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 235,
+          "covered": 231,
+          "skipped": 0,
+          "pct": 98.29
+        },
+        "branches": {
+          "total": 210,
+          "covered": 193,
+          "skipped": 0,
+          "pct": 91.9
+        }
+      },
+      "apps/desktop/src/components/editor/canvas/composables/useCompositionImages.ts": {
+        "lines": {
+          "total": 24,
+          "covered": 24,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 8,
+          "covered": 8,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 27,
+          "covered": 27,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 13,
+          "covered": 12,
+          "skipped": 0,
+          "pct": 92.3
+        }
+      },
+      "apps/desktop/src/components/editor/canvas/composables/useCompositionMedia.ts": {
+        "lines": {
+          "total": 115,
+          "covered": 111,
+          "skipped": 0,
+          "pct": 96.52
+        },
+        "functions": {
+          "total": 21,
+          "covered": 19,
+          "skipped": 0,
+          "pct": 90.47
+        },
+        "statements": {
+          "total": 132,
+          "covered": 124,
+          "skipped": 0,
+          "pct": 93.93
+        },
+        "branches": {
+          "total": 150,
+          "covered": 139,
+          "skipped": 0,
+          "pct": 92.66
+        }
+      },
+      "apps/desktop/src/components/editor/canvas/composables/useCursorOverlay.ts": {
+        "lines": {
+          "total": 186,
+          "covered": 186,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 19,
+          "covered": 19,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 196,
+          "covered": 194,
+          "skipped": 0,
+          "pct": 98.97
+        },
+        "branches": {
+          "total": 131,
+          "covered": 120,
+          "skipped": 0,
+          "pct": 91.6
+        }
+      },
+      "packages/engine/src/composition/scene-layers.ts": {
+        "lines": {
+          "total": 71,
+          "covered": 71,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 18,
+          "covered": 18,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 80,
+          "covered": 76,
+          "skipped": 0,
+          "pct": 95
+        },
+        "branches": {
+          "total": 69,
+          "covered": 63,
+          "skipped": 0,
+          "pct": 91.3
+        }
+      },
+      "packages/engine/src/scene/scene-graph-index.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 4,
+          "covered": 4,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 4,
+          "covered": 4,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "packages/runtime/src/playback/playback-frame-queue.ts": {
+        "lines": {
+          "total": 52,
+          "covered": 52,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 8,
+          "covered": 8,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 59,
+          "covered": 59,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 33,
+          "covered": 33,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "packages/runtime/src/playback/playback-worker-consumers.ts": {
+        "lines": {
+          "total": 17,
+          "covered": 17,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 6,
+          "covered": 6,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 18,
+          "covered": 17,
+          "skipped": 0,
+          "pct": 94.44
+        },
+        "branches": {
+          "total": 6,
+          "covered": 6,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "packages/runtime/src/rendering/render-snapshot-background.ts": {
+        "lines": {
+          "total": 6,
+          "covered": 6,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 1,
+          "covered": 1,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 7,
+          "covered": 7,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 8,
+          "covered": 8,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "packages/runtime/src/rendering/render.ts": {
+        "lines": {
+          "total": 160,
+          "covered": 160,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 33,
+          "covered": 33,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 172,
+          "covered": 172,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 185,
+          "covered": 174,
+          "skipped": 0,
+          "pct": 94.05
+        }
+      },
+      "packages/runtime/src/rendering/scene-stack.ts": {
+        "lines": {
+          "total": 76,
+          "covered": 76,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 6,
+          "covered": 6,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 90,
+          "covered": 90,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 49,
+          "covered": 48,
+          "skipped": 0,
+          "pct": 97.95
+        }
+      }
+    },
+    "nativeWindowsMacOS": "Not exercised on this Linux host.",
+    "newChromiumCases": 5,
+    "existingPreviewExportCases": {
+      "cases": 21,
+      "initialPassed": 19,
+      "initialTimeouts": 2,
+      "focusedRetryPassed": 2,
+      "focusedRetryDeadlineMs": 30000,
+      "note": "Two cases exceeded the default five-second test deadline while software rendering ran concurrently with global type checks. Their unchanged pixel assertions passed on a focused rerun with a 30-second software-rendering budget."
+    }
+  },
+  "implementationCommit": "419660ecf248bd053bee6d88551b083daaa5f9a4"
+}
