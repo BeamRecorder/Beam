@@ -478,7 +478,7 @@ describe('pasteTimelineClipboard', () => {
     ).toEqual([2_000, 3_000]);
   });
 
-  it('leaves legacy source tracks unchanged if a later pasted item is out of bounds', () => {
+  it('leaves legacy source tracks unchanged if a later pasted item has an invalid duration', () => {
     const first = caption('first', undefined, 0, 'First');
     const second = caption('second', undefined, 2_000, 'Second');
     const source = composition([first, second], []);
@@ -487,7 +487,7 @@ describe('pasteTimelineClipboard', () => {
       pasteTimelineClipboard({
         composition: source,
         zoomElements: [],
-        item: copySelection([first, second], [], [], first.id),
+        item: copySelection([first, { ...second, timelineDurationMs: 20, sourceDurationMs: 20 }], [], [], first.id),
         timeMs: 3_000,
         timelineDurationMs: 4_000,
         target: { category: 'caption', placement: 'auto' },
@@ -728,7 +728,7 @@ describe('pasteTimelineClipboard', () => {
     });
   });
 
-  it('does not mutate either timeline when a later bundle entry cannot fit', () => {
+  it('does not mutate either timeline when a later bundle entry has missing media', () => {
     const screenAsset = mediaAsset('screen-asset');
     const first = visual({
       id: 'first',
@@ -743,6 +743,7 @@ describe('pasteTimelineClipboard', () => {
       timelineStartMs: 3_000,
       timelineDurationMs: 500,
       sourceDurationMs: 500,
+      assetId: 'missing-media',
     });
     const source = composition([], [screenAsset]);
     const before = JSON.parse(JSON.stringify(source)) as ClipComposition;
@@ -761,7 +762,7 @@ describe('pasteTimelineClipboard', () => {
         target: { category: 'visual', placement: 'new-layer' },
         idFactory: queuedIds(['new-layer', 'pasted-first']),
       }),
-    ).toThrow('The copied item does not fit at the playhead.');
+    ).toThrow('The copied media is no longer available in this project.');
 
     expect(source).toEqual(before);
     expect(sourceZooms).toEqual(beforeZooms);

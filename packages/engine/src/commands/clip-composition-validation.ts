@@ -41,6 +41,8 @@ export function validateComposition(composition: ClipComposition): void {
   ) {
     throw new CompositionEngineError('Invalid composition schema.');
   }
+  if (composition.durationMs !== undefined && (!finite(composition.durationMs) || composition.durationMs < 0))
+    throw new CompositionEngineError('Invalid composition duration.');
   const assetIds = new Set<string>();
   validateSceneExtensions(composition);
   for (const asset of composition.assets) {

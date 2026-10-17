@@ -145,6 +145,7 @@ vi.mock('../useProjectEditorState', () => ({
     load: vi.fn().mockResolvedValue(undefined),
     scheduleSave: vi.fn(),
     enableDefaultCapture: vi.fn(),
+    disableDefaultCapture: vi.fn(),
   }),
 }));
 vi.mock('../../elements/useVideoElements', () => ({

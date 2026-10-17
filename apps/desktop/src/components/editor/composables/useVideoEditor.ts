@@ -26,6 +26,7 @@ import { isAudioClip, type AudioClip, type AudioRole } from '@beam/engine/shared
 import { setVolume } from '@beam/engine/commands/clip-engine';
 import { createDefaultCursorMotionSettings } from '@beam/engine/capture/cursor-settings';
 import { compositionPlaybackSignature } from './composition-playback-signature';
+import { compositionWithZoomDuration } from '@beam/engine/composition/composition-duration';
 import { useToastStore } from '~/ui/toast/toastStore';
 import { normalizeEditorPreferenceDefaults } from './editor-defaults';
 import { useEditorPresets } from './useEditorPresets';
@@ -89,6 +90,9 @@ export function useVideoEditor(options: {
     composition: compositionState.composition,
     canvas: outputCanvas,
   });
+  const playbackComposition = computed(() =>
+    compositionWithZoomDuration(compositionState.composition.value, zoomState.zoomElements.value),
+  );
   const htmlSceneAt = computed(() => createHtmlSceneResolver(toRaw(compositionState.composition.value)));
   const liveHtmlPreview = computed(() =>
     htmlSceneAt.value(player.currentTime.value * 1000, outputCanvas.value, zoomState.zoomElements.value.length > 0),
@@ -203,7 +207,7 @@ export function useVideoEditor(options: {
   });
   const createExportSnapshot = () =>
     createCompositionSnapshot({
-      duration: compositionDurationMs(compositionState.composition.value) / 1_000,
+      duration: compositionDurationMs(playbackComposition.value) / 1_000,
       canvas: outputCanvas.value,
       fps: sourceFps.value,
       background: player.selectedBackgroundMedia.value,
@@ -237,7 +241,7 @@ export function useVideoEditor(options: {
       projectName: project.value.name,
       includeAudio: includeAudioInExport.value,
       hasAudio: hasExportAudio(compositionState.composition.value),
-      duration: compositionDurationMs(compositionState.composition.value) / 1_000,
+      duration: compositionDurationMs(playbackComposition.value) / 1_000,
       fps: sourceFps.value,
       width: outputCanvas.value.width,
       height: outputCanvas.value.height,
@@ -297,11 +301,11 @@ export function useVideoEditor(options: {
   });
   watch(
     () =>
-      `${projectStateReady.value}:${project.value?.id ?? ''}:${editorData.value?.sessionId ?? ''}:${compositionPlaybackSignature(compositionState.composition.value)}`,
+      `${projectStateReady.value}:${project.value?.id ?? ''}:${editorData.value?.sessionId ?? ''}:${compositionPlaybackSignature(playbackComposition.value)}`,
     () => {
       if (!project.value || !projectStateReady.value) return;
       const request = ++playbackLoad;
-      const composition = compositionState.composition.value;
+      const composition = playbackComposition.value;
       void player
         .loadComposition(composition)
         .catch((error: unknown) => {

@@ -86,6 +86,8 @@ function normalizeComposition(value) {
   )
     throw new Error(`Version de composition inconnue: ${String(value.schemaVersion)}`);
   validateSceneExtensions(value);
+  if (value.durationMs !== undefined && (!finite(value.durationMs) || value.durationMs < 0))
+    throw new Error('Invalid composition duration.');
   const assetIds = new Set();
   const assets = value.assets.map((asset) => {
     if (asset?.html !== undefined) {
@@ -300,6 +302,7 @@ function normalizeComposition(value) {
   validateTrackLayout(normalizedClips);
   return {
     schemaVersion,
+    ...(value.durationMs === undefined ? {} : { durationMs: value.durationMs }),
     ...(value.scene === undefined ? {} : { scene: JSON.parse(JSON.stringify(value.scene)) }),
     ...(value.animations === undefined ? {} : { animations: JSON.parse(JSON.stringify(value.animations)) }),
     assets,

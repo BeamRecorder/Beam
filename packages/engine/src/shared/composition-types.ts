@@ -278,6 +278,8 @@ export type Clip = VisualClip | ColorClip | ShapeClip | BlurClip | AudioClip | C
 
 export interface ClipComposition {
   schemaVersion: number;
+  /** Optional minimum duration, independent of source media and clip ends. */
+  durationMs?: number;
   assets: MediaAsset[];
   clips: Clip[];
   keyboardCaptionSessions: string[];

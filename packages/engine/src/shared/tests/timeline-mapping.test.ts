@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { VisualClip } from '@beam/engine/shared/composition-types';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
-import { activeClipsAt, sessionTimeAt, sourceTimeAt } from '@beam/engine/shared/timeline-mapping';
+import {
+  activeClipsAt,
+  compositionDurationMs,
+  sessionTimeAt,
+  sourceTimeAt,
+} from '@beam/engine/shared/timeline-mapping';
 
 const frozenVideo = (): VisualClip => ({
   id: 'hold',
@@ -54,6 +59,23 @@ const contiguousComposition = (cutMs: number) => {
 };
 
 describe('timeline mapping', () => {
+  it('keeps the extended range empty after media ends without stretching or reactivating clips', () => {
+    const composition = { ...contiguousComposition(1000), durationMs: 5000 };
+    expect(compositionDurationMs(composition)).toBe(5000);
+    expect(activeClipsAt(composition, 2000)).toEqual([]);
+    expect(activeClipsAt(composition, 4999)).toEqual([]);
+    expect(activeClipsAt(composition, NaN)).toEqual([]);
+    expect(sessionTimeAt(composition.clips[0]!, 500, composition)).toBe(500);
+  });
+
+  it('orders overlapping active layers while skipping disabled media and missing session offsets', () => {
+    const first = { ...frozenVideo(), id: 'first', order: 2 };
+    const second = { ...frozenVideo(), id: 'second', order: 1 };
+    const composition = { ...contiguousComposition(1000), clips: [first, { ...first, enabled: false }, second] };
+    expect(activeClipsAt(composition, 750).map((clip) => clip.id)).toEqual(['second', 'first']);
+    expect(sessionTimeAt(first, 750, composition)).toBe(1234);
+  });
+
   it('maps a trimmed and accelerated session clip to its original recording clock', () => {
     const clip = {
       ...frozenVideo(),

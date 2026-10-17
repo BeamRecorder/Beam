@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- Pasting timeline items at or beyond the project end extends the project instead of rejecting them. Text, shapes, drawings, effects, images, video, audio, zooms and mixed selections retain their complete timing; playback and export include the extended range.
+
 - Clicking the video editor background opens Canvas settings on the first press, including when leaving manual zoom focus or editing a scene without a screen recording.
 
 - Automatic camera follow starts progressively before the safe-zone edge and anticipates recorded movement, avoiding delayed catch-up pans. Pauses retain calm framing, direction changes never freeze an axis, and camera interpolation preserves velocity in previews and exports. Follow descriptions are updated in all fifteen languages.

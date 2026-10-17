@@ -85,6 +85,40 @@ const loadAt = async (
 };
 
 describe('MediaPlaybackEngine', () => {
+  it('keeps playing after source media ends when a pasted item extends the project', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      clock: browserPlaybackClock,
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    const source = composition();
+    await loadAt(engine, worker, { ...source, durationMs: 4000 }, 0);
+    await engine.play(0.5);
+
+    audio.now = 2.5;
+    rafCallbacks.shift()?.(0);
+    expect(engine.currentTime).toBe(2.5);
+    expect(engine.state).toBe('playing');
+    expect(worker.requests.at(-1)).toMatchObject({ type: 'tick', timelineSeconds: 2.5 });
+
+    audio.now = 4;
+    rafCallbacks.shift()?.(0);
+    await Promise.resolve();
+    const loopSeek = worker.requests.at(-1) as Extract<PlaybackWorkerRequest, { type: 'seek' }>;
+    expect(loopSeek).toMatchObject({ type: 'seek', timelineSeconds: 0, mode: 'seek' });
+    worker.emit({
+      type: 'seek-result',
+      generation: loopSeek.generation,
+      requestId: loopSeek.requestId,
+      result: 'presented',
+      latencyMs: 1,
+    });
+    await Promise.resolve();
+    engine.dispose();
+  });
+
   it('loads, seeks, plays, pauses, and reports timeline time', async () => {
     const worker = new FakeWorker();
     const audio = new FakeAudio();

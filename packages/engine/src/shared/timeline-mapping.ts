@@ -9,7 +9,10 @@ import { snapTimeToBoundary } from '@beam/engine/shared/time-boundary';
 import { compileSceneComposition } from '../scene/scene-clock';
 
 export const compositionDurationMs = (composition: ClipComposition) =>
-  compileSceneComposition(composition).clips.reduce((duration, clip) => Math.max(duration, clipEndMs(clip)), 0);
+  compileSceneComposition(composition).clips.reduce(
+    (duration, clip) => Math.max(duration, clipEndMs(clip)),
+    composition.durationMs ?? 0,
+  );
 
 export const assetForClip = (composition: ClipComposition, clip: Clip) =>
   clip.kind === 'caption' || isColorClip(clip) || isShapeClip(clip) || clip.kind === 'blur'

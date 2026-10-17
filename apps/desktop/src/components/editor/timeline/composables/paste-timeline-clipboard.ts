@@ -5,6 +5,7 @@ import {
   type ClipComposition,
 } from '@beam/engine/shared/composition-types';
 import { createClipPasteTransaction } from '@beam/engine/commands/clip-paste';
+import { CompositionEngineError } from '@beam/engine/commands/clip-composition-validation';
 import { pasteZoomAt } from '@beam/engine/zoom/zoom-paste';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import { resolveCaptionPastePlacement } from './caption-paste-placement';
@@ -59,7 +60,16 @@ export function pasteTimelineClipboard(options: {
 }): TimelineClipboardPasteResult {
   const idFactory = options.idFactory ?? (() => crypto.randomUUID());
   const entries = entriesFor(options.item);
+  if (!entries.length || !Number.isFinite(options.timelineDurationMs) || options.timelineDurationMs < 0)
+    throw new CompositionEngineError('Invalid paste position.');
   const anchorMs = options.item.type === 'selection' ? options.item.anchorTimeMs : entryStartMs(entries[0]!);
+  // Plan the complete destination before staging any item. Zooms may appear
+  // before clips in a mixed bundle, and every item must keep its full duration.
+  const timelineDurationMs = entries.reduce((end, entry) => {
+    const start = Math.round(options.timeMs + entryStartMs(entry) - anchorMs);
+    const duration = entry.type === 'clip' ? entry.clip.timelineDurationMs : entry.zoom.endMs - entry.zoom.startMs;
+    return Math.max(end, start + Math.round(duration));
+  }, Math.round(options.timelineDurationMs));
   const primaryIndex = options.item.type === 'selection' ? options.item.primaryIndex : 0;
   const trackIds = new Map<string, string>();
   const captionPlacement = resolveCaptionPastePlacement({
@@ -104,7 +114,7 @@ export function pasteTimelineClipboard(options: {
     if (entry.type === 'clip') {
       const clipId = transaction.paste(copiedClipFor(entry), {
         timelineStartMs: timeMs,
-        timelineDurationMs: options.timelineDurationMs,
+        timelineDurationMs,
         targetTrackId: destinationTrackId(entry),
         asset: entry.asset,
         idFactory,
@@ -112,7 +122,7 @@ export function pasteTimelineClipboard(options: {
       clipIds.push(clipId);
       pastedByIndex[index] = { type: 'clip', id: clipId };
     } else {
-      const pasted = pasteZoomAt(zoomElements, entry.zoom, timeMs, options.timelineDurationMs, idFactory);
+      const pasted = pasteZoomAt(zoomElements, entry.zoom, timeMs, timelineDurationMs, idFactory);
       zoomElements = pasted.elements;
       zoomIds.push(pasted.zoomId);
       pastedByIndex[index] = { type: 'zoom', id: pasted.zoomId };

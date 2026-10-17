@@ -2,6 +2,7 @@ import { defineComponent, ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AudioClip, ClipComposition } from '@beam/engine/shared/composition-types';
+import { createManualZoom } from '@beam/engine/zoom/manual-zoom';
 import {
   audioClip,
   cloneComposition,
@@ -35,6 +36,32 @@ const state = vi.hoisted(() => ({
     | undefined,
   useVideoPlayer: vi.fn(),
   createCompositionSnapshot: vi.fn(),
+  openApplicationSettings: vi.fn().mockResolvedValue(true),
+  htmlOptions: undefined as
+    | Parameters<(typeof import('../../../authoring/useHtmlPreview'))['useHtmlPreview']>
+    | undefined,
+  searchOptions: undefined as
+    | Parameters<(typeof import('../../search/useVideoEditorSearch'))['provideVideoEditorSearch']>[0]
+    | undefined,
+  editorStateOptions: undefined as
+    | Parameters<(typeof import('../useProjectEditorState'))['useProjectEditorState']>[0]
+    | undefined,
+}));
+
+vi.mock('~/components/settings/open-application-settings', () => ({
+  openApplicationSettings: state.openApplicationSettings,
+}));
+
+vi.mock('../../../authoring/useHtmlPreview', () => ({
+  useHtmlPreview: (...options: NonNullable<typeof state.htmlOptions>) => {
+    state.htmlOptions = options;
+    return { frameFor: () => null };
+  },
+}));
+vi.mock('../../search/useVideoEditorSearch', () => ({
+  provideVideoEditorSearch: (options: NonNullable<typeof state.searchOptions>) => {
+    state.searchOptions = options;
+  },
 }));
 
 vi.mock('~/stores/preferences', () => ({
@@ -88,6 +115,7 @@ vi.mock('../useClipComposition', async () => {
         composition,
         synchronizeRecording: vi.fn(),
         addElement: vi.fn().mockResolvedValue('image-1'),
+        selectClips: vi.fn(),
       };
       state.compositionState = value;
       return value;
@@ -105,6 +133,7 @@ vi.mock('../useProjectZoom', async () => {
         selectedZoomId: ref(null),
         selectedZoomIds: ref([]),
         ensureAutomaticZooms: vi.fn(),
+        addZoomAtTime: vi.fn(),
       };
       state.zoomState = value;
       return value;
@@ -112,8 +141,10 @@ vi.mock('../useProjectZoom', async () => {
   };
 });
 vi.mock('../useProjectEditorState', () => ({
-  useProjectEditorState: () => {
+  useProjectEditorState: (options: NonNullable<typeof state.editorStateOptions>) => {
+    state.editorStateOptions = options;
     const value = {
+      loading: ref(false),
       load: vi.fn().mockResolvedValue(undefined),
       scheduleSave: vi.fn(),
       enableDefaultCapture: vi.fn(),
@@ -166,7 +197,8 @@ vi.mock('@beam/runtime/rendering/snapshot', () => ({
 import { useVideoEditor } from '../useVideoEditor';
 
 const project = { id: 'project-1', name: 'Demo project' } as any;
-const makeEditorData = (fps = 60) => ({ tracks: [{ kind: 'screen', format: { frameRate: fps } }] }) as any;
+const makeEditorData = (fps = 60) =>
+  ({ tracks: [{ kind: 'screen', format: { frameRate: fps } }], manifest: { cursorEmbedded: false } }) as any;
 const deferred = <T>() => {
   let resolve!: (value: T) => void;
   let reject!: (reason?: unknown) => void;
@@ -196,6 +228,43 @@ describe('useVideoEditor', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('extends playback and export for a trailing zoom, then shrinks again on undo without changing authored clips', async () => {
+    state.initialComposition = createCompositionFixture();
+    let api!: ReturnType<typeof useVideoEditor>;
+    const wrapper = mount(
+      defineComponent({
+        setup: () => ((api = useVideoEditor({ project: ref(project), editorData: ref(makeEditorData()) })), {}),
+        template: '<div />',
+      }),
+    );
+    await flushPromises();
+    const authored = state.compositionState.composition.value as ClipComposition;
+    const original = JSON.stringify(authored);
+    state.zoomState.zoomElements.value = [createManualZoom('pasted', 5000, 7500)];
+    await flushPromises();
+
+    expect(state.player.loadComposition).toHaveBeenLastCalledWith({ ...authored, durationMs: 7500 });
+    expect(api.exportRequest.value?.duration).toBe(7.5);
+    api.exportRequest.value!.createSnapshot();
+    expect(state.createCompositionSnapshot).toHaveBeenLastCalledWith(
+      expect.objectContaining({ duration: 7.5, composition: authored }),
+    );
+    expect(JSON.stringify(authored)).toBe(original);
+
+    // Editing an internal zoom's framing must not reload media or shorten its tail.
+    const calls = state.player.loadComposition.mock.calls.length;
+    state.zoomState.zoomElements.value = [{ ...state.zoomState.zoomElements.value[0], focus: { cx: 0.2, cy: 0.3 } }];
+    await flushPromises();
+    expect(state.player.loadComposition).toHaveBeenCalledTimes(calls);
+
+    state.zoomState.zoomElements.value = [];
+    await flushPromises();
+    expect(state.player.loadComposition).toHaveBeenLastCalledWith(authored);
+    expect(api.exportRequest.value?.duration).toBe(5);
+    expect(JSON.stringify(authored)).toBe(original);
+    wrapper.unmount();
   });
 
   it('connects the shared Image element action to Studio media import and reports import failures', async () => {
@@ -565,6 +634,53 @@ describe('useVideoEditor', () => {
     state.player.loadComposition.mockClear();
     return { api, wrapper };
   };
+
+  it('keeps preview invalidation, insertion readiness and cursor metadata connected after duration changes', async () => {
+    const { api, wrapper } = await mountWithComposition();
+    const frameVersion = state.player.frameVersion.value;
+    state.htmlOptions![2]();
+    expect(state.player.frameVersion.value).toBe(frameVersion + 1);
+    state.htmlOptions![3](new Error('preview failed'));
+    state.htmlOptions![3]('invalid preview');
+    expect(toast.error).toHaveBeenCalledWith('HTML composition: preview failed');
+    expect(toast.error).toHaveBeenCalledWith('HTML composition: invalid preview');
+    expect(api.player.frameFor('unknown')).toBeNull();
+    expect(state.editorStateOptions!.nativeCursorEmbedded!()).toBe(false);
+    expect(state.videoElementsOptions!.canvasSize!()).toEqual(api.outputCanvas.value);
+    expect(state.zoomOptions.recordingZoomMode.value).toBe('2d');
+    expect(state.searchOptions!.canInsert()).toBe(true);
+    state.editorState.loading.value = true;
+    expect(state.searchOptions!.canInsert()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it.each(['addBlur', 'addColor', 'addHighlight'] as const)(
+    'reports %s failures without leaving partial inserts',
+    async (action) => {
+      const { wrapper } = await mountWithComposition();
+      state.compositionState.addElement.mockRejectedValueOnce(new Error('insert failed'));
+      await state.videoElementsOptions![action]!();
+      expect(toast.error).toHaveBeenCalledWith('Error: insert failed');
+      wrapper.unmount();
+    },
+  );
+
+  it('pauses and adds a zoom at the playhead while allowing its separate duration to drive playback', async () => {
+    const { api, wrapper } = await mountWithComposition();
+    state.player.isPlaying.value = true;
+    state.player.currentTime.value = 5;
+    await api.compositionState.addElement('zoom');
+    expect(state.player.setPlaying).toHaveBeenCalledWith(false);
+    expect(state.compositionState.selectClips).toHaveBeenCalledWith([]);
+    expect(state.zoomState.addZoomAtTime).toHaveBeenCalledWith(5000);
+    state.player.isPlaying.value = false;
+    await api.compositionState.addElement('zoom');
+    expect(state.player.setPlaying).toHaveBeenCalledTimes(1);
+    api.handleSelectTab('settings');
+    expect(state.openApplicationSettings).toHaveBeenCalledOnce();
+    expect(api.activeTab.value).toBe('canvas');
+    wrapper.unmount();
+  });
 
   const flushCompositionWatcher = async (wrapper: { vm: { $nextTick: () => Promise<void> } }) => {
     await wrapper.vm.$nextTick();

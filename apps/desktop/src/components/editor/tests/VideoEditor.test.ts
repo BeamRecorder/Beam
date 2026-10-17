@@ -1398,7 +1398,49 @@ describe('VideoEditor', () => {
     );
   });
 
-  it('does not apply a partially valid clipboard bundle when a later item does not fit', async () => {
+  it('pastes a complete caption at the project end, extends the composition and commits once', async () => {
+    const mounted = mountEditor();
+    const source = addInlineCaption();
+    source.captionLayerId = source.id;
+    const state = editorState.store;
+    const sourceBefore = JSON.stringify(source);
+    const commits = historyState.commitNow.mock.calls.length;
+    const saves = state.editorState.scheduleSave.mock.calls.length;
+    const item: TimelineClipboardItem = {
+      type: 'clip',
+      scopeId: 'project-1',
+      category: 'caption',
+      clip: source,
+      asset: null,
+      descriptor: { kind: 'caption', text: 'Original caption' },
+    };
+
+    mounted.findComponent({ name: 'MockEditorTimeline' }).vm.$emit('paste:item', {
+      item,
+      timeMs: 2000,
+      target: { category: 'caption', placement: 'auto' },
+    });
+    await flushPromises();
+    await mounted.vm.$nextTick();
+
+    const composition = state.compositionState.composition.value as ClipComposition;
+    const pasted = composition.clips.find((clip) => clip.kind === 'caption' && clip.id !== source.id);
+    expect(pasted).toMatchObject({
+      timelineStartMs: 2000,
+      timelineDurationMs: 2000,
+      sourceInMs: 0,
+      sourceDurationMs: 2000,
+      playbackRate: 1,
+    });
+    expect(JSON.stringify(composition.clips.find((clip) => clip.id === source.id))).toBe(sourceBefore);
+    expect(state.compositionState.selectedClipId.value).toBe(pasted!.id);
+    expect(state.editorState.scheduleSave).toHaveBeenCalledTimes(saves + 1);
+    expect(historyState.commitNow).toHaveBeenCalledTimes(commits + 1);
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(toast.success).toHaveBeenCalled();
+  });
+
+  it('does not apply a partially valid clipboard bundle when a later item has missing media', async () => {
     const mounted = mountEditor();
     const state = editorState.store;
     const composition = state.compositionState.composition.value as ClipComposition;
@@ -1419,6 +1461,7 @@ describe('VideoEditor', () => {
       timelineDurationMs: 500,
       sourceInMs: 1_000,
       sourceDurationMs: 500,
+      assetId: 'missing-media',
     };
     const bundle: TimelineClipboardItem = {
       type: 'selection',
@@ -1475,7 +1518,7 @@ describe('VideoEditor', () => {
     expect(state.compositionState.selectClips).toHaveBeenCalledTimes(selectCalls);
     expect(state.editorState.scheduleSave).toHaveBeenCalledTimes(saveCount);
     expect(historyState.commitNow).toHaveBeenCalledTimes(commitCount);
-    expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/fit/i), expect.any(Number));
+    expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/available/i), expect.any(Number));
     expect(toast.success).not.toHaveBeenCalled();
   });
 
