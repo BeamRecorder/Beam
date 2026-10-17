@@ -1,6 +1,6 @@
 import { CompositionEngineError, MIN_CLIP_DURATION_MS } from '../commands/clip-engine';
 import { cameraLayoutTransform } from './camera-layout';
-import { recordingMediaOwner } from './recording-media-links';
+import { createRecordingMediaLinkIndex } from './recording-media-links';
 import { isCompositingClip, type ClipComposition, type VisualClip } from '../shared/composition-types';
 import { forkComposition } from '../document/immutable-document';
 import { normalizeClipOrders } from '../commands/visual-track-layout';
@@ -25,9 +25,8 @@ export function webcamRecordingTarget(composition: ClipComposition, selectedClip
 }
 
 export function hasRecordingWebcam(composition: ClipComposition, screen: VisualClip) {
-  return composition.clips.some(
-    (clip) => clip.kind === 'webcam' && recordingMediaOwner(composition, clip)?.id === screen.id,
-  );
+  const links = createRecordingMediaLinkIndex(composition);
+  return composition.clips.some((clip) => clip.kind === 'webcam' && links.owner(clip)?.id === screen.id);
 }
 
 /** Repeat a short project video on one webcam lane, preserving explicit recording links and real source bounds. */

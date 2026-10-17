@@ -3,7 +3,7 @@ import { createDefaultClipAppearance } from '@beam/engine/shared/composition-def
 import { createComposition } from '@beam/engine/commands/clip-engine';
 import type { AudioClip, ClipComposition, MediaAsset, VisualClip } from '@beam/engine/shared/composition-types';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
-import { prepareTimelineSelectionMove } from '@beam/engine/composition/timeline-selection-move';
+import { expandLinkedClipIds, prepareTimelineSelectionMove } from '@beam/engine/composition/timeline-selection-move';
 import type { TimelineSelectionIds } from '@beam/engine/composition/timeline-edit-types';
 
 const asset = (id: string, kind: MediaAsset['kind'] = 'video'): MediaAsset => ({
@@ -260,5 +260,43 @@ describe('prepareTimelineSelectionMove', () => {
     expect(empty.composition).toBe(fixture.composition);
     expect(empty.zoomElements[0]).toBe(fixture.zoomElements[0]);
     expect(emptyMove(0)).toBe(empty);
+  });
+});
+
+describe('linked selection expansion', () => {
+  it('expands a group once while retaining unknown selection IDs', () => {
+    const fixture = moveFixture();
+    expect(expandLinkedClipIds(fixture.composition, ['focus-video', 'missing', 'focus-video'])).toEqual([
+      'focus-video',
+      'missing',
+      'focus-audio',
+    ]);
+  });
+  it('keeps independent clips isolated and accepts empty selections', () => {
+    const fixture = moveFixture();
+    expect(expandLinkedClipIds(fixture.composition, ['ambient-00'])).toEqual(['ambient-00']);
+    expect(expandLinkedClipIds(fixture.composition, [])).toEqual([]);
+  });
+  it('retains explicit recording owners and automatic zoom links during a moved recording', () => {
+    const owner = visualClip('owner', { kind: 'screen', groupId: 'recording' });
+    const camera = visualClip('camera', { kind: 'webcam', groupId: 'recording', recordingClipId: owner.id });
+    const composition = createComposition(
+      [asset(owner.assetId, 'video'), asset(camera.assetId, 'video')].map((entry) => ({
+        ...entry,
+        origin: 'session' as const,
+        sessionId: 'session-1',
+      })),
+      [owner, camera],
+    );
+    const autoZoom: ZoomElement = { ...zoom('auto', 100, 500), mode: 'auto', linkedClipId: owner.id };
+    const move = prepareTimelineSelectionMove({
+      composition,
+      zoomElements: [autoZoom],
+      selection: selection([owner.id]),
+    });
+    const moved = move(500);
+    expect(moved.composition.clips.find((c) => c.id === camera.id)?.recordingClipId).toBe(owner.id);
+    expect(moved.zoomElements[0]).toMatchObject({ startMs: 600, linkedClipId: owner.id });
+    expect(move(0).composition).toBe(composition);
   });
 });

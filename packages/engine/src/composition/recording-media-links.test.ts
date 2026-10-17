@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import type { AudioClip, ClipComposition, MediaAsset, VisualClip } from '@beam/engine/shared/composition-types';
 import { prepareTimelineSelectionMove } from '@beam/engine/composition/timeline-selection-move';
-import { recordingLinkedClipIds, recordingMediaOwner } from '@beam/engine/composition/recording-media-links';
+import {
+  createRecordingMediaLinkIndex,
+  recordingLinkedClipIds,
+  recordingMediaOwner,
+} from '@beam/engine/composition/recording-media-links';
 
 const asset = (id: string, kind: MediaAsset['kind'], sessionId: string): MediaAsset => ({
   id,
@@ -230,5 +234,55 @@ describe('recording media links', () => {
     expect(result.deltaMs).toBe(0);
     expect(result.composition).toBe(next);
     expect(next.clips.map((clip) => clip.timelineStartMs)).toEqual([1_000, 1_000]);
+  });
+});
+
+describe('recording link index ownership', () => {
+  it('indexes one document for repeated different clip queries without rescanning its assets', () => {
+    const clips = Array.from({ length: 1000 }, (_, i) => [
+      screen(`screen-${i}`, { groupId: `group-${i}` }),
+      webcam(`camera-${i}`, { groupId: `group-${i}`, recordingClipId: `screen-${i}` }),
+    ]).flat();
+    const doc = composition(clips);
+    const index = createRecordingMediaLinkIndex(doc);
+    Object.defineProperty(doc, 'assets', {
+      get() {
+        throw new Error('Assets rescanned');
+      },
+    });
+    Object.defineProperty(doc, 'clips', {
+      get() {
+        throw new Error('Clips rescanned');
+      },
+    });
+    for (let i = 0; i < 1000; i += 37) {
+      expect(index.owner(clips[i * 2 + 1]!)).toBe(clips[i * 2]);
+      expect(index.linkedIds([`screen-${i}`])).toEqual([`screen-${i}`, `camera-${i}`]);
+      const linked = index.linkedClips(`screen-${i}`);
+      expect(linked).toEqual([clips[i * 2], clips[i * 2 + 1]]);
+      expect(index.linkedClips(`camera-${i}`)).toBe(linked);
+    }
+  });
+  it('retains first-screen precedence for overlapping times and duplicate group candidates', () => {
+    const first = screen('first', { groupId: 'g' });
+    const second = screen('second', { groupId: 'g' });
+    const camera = webcam('camera');
+    const index = createRecordingMediaLinkIndex(composition([first, second, camera]));
+    expect(index.owner(camera)).toBe(first);
+    expect(index.owner({ ...camera, recordingClipId: 'missing', groupId: 'g' })).toBe(first);
+    expect(index.linkedIds(['missing', 'missing', camera.id])).toEqual(['missing', camera.id, first.id, second.id]);
+  });
+  it('never crosses sessions for explicit links, even if a matching group exists elsewhere', () => {
+    const foreign = screen('foreign', { groupId: 'same' });
+    const own = screen('own', { groupId: 'own' });
+    const camera = webcam('camera', { groupId: 'same', recordingClipId: foreign.id });
+    const doc = composition([foreign, own, camera], { foreign: 'other' });
+    const index = createRecordingMediaLinkIndex(doc);
+    expect(index.owner(camera)).toBeNull();
+    expect(index.owner({ ...camera, recordingClipId: undefined })).toBe(own);
+    expect(createRecordingMediaLinkIndex(composition([])).linkedIds([])).toEqual([]);
+    expect(index.linkedClips('unknown')).toEqual([]);
+    delete doc.assets[0]!.sessionId;
+    expect(createRecordingMediaLinkIndex(doc).owner(foreign)).toBeNull();
   });
 });

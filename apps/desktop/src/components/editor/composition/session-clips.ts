@@ -1,4 +1,4 @@
-import { recordingMediaOwner } from '@beam/engine/composition/recording-media-links';
+import { createRecordingMediaLinkIndex } from '@beam/engine/composition/recording-media-links';
 import type { ProjectEditorData, SessionTrackAsset, SessionTrackData } from '../../../api/types/capture-api';
 import {
   COMPOSITION_SCHEMA_VERSION,
@@ -296,8 +296,9 @@ export function synchronizeRecordingClips(
     assets: [...assets.values()],
     clips: [...clips, ...candidates],
   };
+  const links = createRecordingMediaLinkIndex(associationComposition);
   for (const candidate of candidates) {
-    const owner = recordingMediaOwner(associationComposition, candidate);
+    const owner = links.owner(candidate);
     if (owner) candidate.recordingClipId = owner.id;
   }
 

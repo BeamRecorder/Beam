@@ -1,4 +1,4 @@
-import { recordingMediaOwner } from '@beam/engine/composition/recording-media-links';
+import { createRecordingMediaLinkIndex } from '@beam/engine/composition/recording-media-links';
 import { automaticZoomOwner, recordingMoveSelection } from '@beam/engine/composition/recording-sidecars';
 import { selectionHasLocks } from '@beam/engine/composition/timeline-locks';
 import type { ClipComposition } from '@beam/engine/shared/composition-types';
@@ -27,9 +27,8 @@ export const prepareTimelineSelectionMove = (options: TimelineSelectionMoveSourc
   const owners = new Map(
     options.zoomElements.map((zoom) => [zoom.id, automaticZoomOwner(options.composition, zoom)?.id]),
   );
-  const mediaOwners = new Map(
-    options.composition.clips.map((clip) => [clip.id, recordingMediaOwner(options.composition, clip)?.id]),
-  );
+  const mediaLinks = createRecordingMediaLinkIndex(options.composition);
+  const mediaOwners = new Map(options.composition.clips.map((clip) => [clip.id, mediaLinks.owner(clip)?.id]));
   const starts = [
     ...options.composition.clips.filter((clip) => clipIds.has(clip.id)).map((clip) => clip.timelineStartMs),
     ...options.zoomElements.filter((zoom) => zoomIds.has(zoom.id)).map((zoom) => zoom.startMs),
