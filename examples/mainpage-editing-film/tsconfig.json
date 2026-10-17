@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.app.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": true,
+    "tsBuildInfoFile": "./.beam/types.tsbuildinfo",
+    "paths": {
+      "~/ui/*": ["../../apps/desktop/src/components/ui/*"],
+      "~/*": ["../../apps/desktop/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.vue", "../../apps/desktop/src/vite-env.d.ts"],
+  "exclude": ["node_modules", "dist", ".beam"]
+}

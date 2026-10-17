@@ -1,0 +1,7 @@
+.beam/
+dist/
+renders/
+node_modules/
+assets/*
+!assets/NOTICE.md
+!assets/OFL.txt

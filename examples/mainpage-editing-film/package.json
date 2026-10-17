@@ -1,0 +1,10 @@
+{
+  "name": "@beam/example-mainpage-editing-film",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "verify": "node scripts/verify.mjs",
+    "render": "node scripts/render.mjs"
+  }
+}

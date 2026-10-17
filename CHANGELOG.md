@@ -45,6 +45,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- A reproducible Beam CLI film for Video for BeamMainPage shows the native editing interface, background and blur adjustments, clip trimming, shape drawing and text masking while preserving the original opening and Beam ending.
+
 - Dock Screenshot Composition beside the project name by dropping anywhere in the title bar, with a dashed preview of its final heading and layer count that stays in the same place when docked and keeps the project title centered. Drag it back out or use its pin action; smooth transitions respect reduced motion, and Beam remembers the dock state and floating position. Dock actions are translated into all fifteen languages.
 
 - Orbit camera framing and lit 3D cursors with click contact, adjustable alongside existing camera and cursor controls in all fifteen languages.
