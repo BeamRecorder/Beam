@@ -59,6 +59,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Reduced video preview work by sharing camera and cursor evaluation with selection controls, reusing scene hierarchy indexes across rendering passes, and skipping unused keyboard-caption placement.
+
 - Splitting clips reuses open video sources and surviving cached frames. Timeline links and lock checks scale better on heavily edited projects, while history and autosave avoid copying the entire clip composition after each edit.
 
 - Reduced timeline playback and editing overhead: scrubbing queries active video clips, playback follow reuses measured geometry, media topology checks retain loaded fingerprints, and audio asset lookups use an index. Future audio buffers open only within the scheduling window, and exhausted iterators are no longer polled.

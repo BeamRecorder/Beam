@@ -96,7 +96,7 @@ function host() {
     ctx = context();
   const layers = () => resolveCompositionSceneLayers(options.props.composition, options.props.currentTime * 1000);
   const draw = (frame: MediaFrame | null = null, width = 100, height = 50) =>
-    preview.draw(ctx, { x: 3, y: 4, width, height }, frame, layers());
+    preview.paint(ctx, preview.prepare({ x: 3, y: 4, width, height }, frame, layers()));
   const painted = () => ({
     snapshot: state.render.mock.lastCall![2] as CompositionSnapshot,
     layers: state.render.mock.lastCall![9] as CompositionSceneLayers,
@@ -167,6 +167,50 @@ it('delegates completed frames and caches camera/motion until their inputs chang
   expect(state.motion).toHaveBeenCalledTimes(2);
   draw(null, 201, 101);
   expect(state.camera).toHaveBeenCalledTimes(2);
+});
+it('prepares the center once and shares the exact samples with the completed-frame painter', () => {
+  const { options, ctx, preview } = host();
+  const camera = { scale: 2, focus: { cx: 0.3, cy: 0.6 } };
+  const cameraSample = vi.fn(() => camera);
+  const cursor = { ...snapshot().cursor, available: true };
+  options.props.editorData = { cursor } as NonNullable<typeof options.props.editorData>;
+  state.camera.mockReturnValue({ sample: cameraSample, invalidate: vi.fn() });
+  const motionValue = { x: 0.3, y: 0.6, visible: true };
+  const motionSample = vi.fn(() => motionValue);
+  state.motion.mockReturnValue({ sample: motionSample });
+  const media = { width: 100, height: 50, bitmap: {} } as MediaFrame;
+  const layers = resolveCompositionSceneLayers(options.props.composition, 500);
+  const prepared = preview.prepare({ x: 3, y: 4, width: 100, height: 50 }, media, layers);
+  expect(cameraSample).toHaveBeenCalledExactlyOnceWith(500);
+  expect(motionSample).toHaveBeenCalledOnce();
+  expect(prepared.evaluation.camera).toBe(camera);
+  expect(prepared.evaluation.cursorMotion).toBe(motionValue);
+  expect(state.render).not.toHaveBeenCalled();
+  preview.paint(ctx, prepared);
+  expect(state.render.mock.lastCall![10]).toBe(prepared.evaluation);
+  expect(state.render.mock.lastCall![7]).toBe(prepared.motion);
+  expect(cameraSample).toHaveBeenCalledOnce();
+  expect(motionSample).toHaveBeenCalledOnce();
+});
+
+it('does not sample cursor motion without the active screen pixels', () => {
+  const { options, preview } = host();
+  const layers = resolveCompositionSceneLayers(options.props.composition, 500);
+  const prepared = preview.prepare({ x: 0, y: 0, width: 100, height: 50 }, null, layers);
+  expect(prepared.evaluation.cursorMotion).toBeNull();
+  expect(prepared.motion.sample).not.toHaveBeenCalled();
+});
+
+it('maps prepared cursor samples through segment offsets and captures the current clock before painting', () => {
+  const { options, ctx, preview } = host();
+  options.props.composition.assets[0]!.sessionStartMs = 7000;
+  options.props.currentTime = 0.5;
+  const media = { width: 100, height: 50, bitmap: {} } as MediaFrame;
+  const layers = resolveCompositionSceneLayers(options.props.composition, 500);
+  const prepared = preview.prepare({ x: 0, y: 0, width: 100, height: 50 }, media, layers);
+  expect(prepared.motion.sample).toHaveBeenCalledWith(7.5, null);
+  preview.paint(ctx, prepared);
+  expect(state.render.mock.lastCall![3]).toBe(0.5);
 });
 it('updates the retained motion player when background hover analysis arrives', () => {
   const { draw, options } = host();
@@ -242,7 +286,7 @@ it('renders zoom drafts with unchanged companions and keeps edited captions out 
   options.editingCaptionId = () => 'another-caption';
   const evaluated = { ...layers, screen: null, captions: [caption] } as unknown as CompositionSceneLayers;
   const preview = createRuntimePreview(options);
-  preview.draw(context(), { x: 0, y: 0, width: 100, height: 50 }, null, evaluated);
+  preview.paint(context(), preview.prepare({ x: 0, y: 0, width: 100, height: 50 }, null, evaluated));
   expect(painted().layers.captions).toHaveLength(1);
   expect(painted().layers.screen).toBeNull();
 });
@@ -251,7 +295,7 @@ it('borrows unchanged evaluated layers and reads host editing state once per fra
   const layers = resolveCompositionSceneLayers(options.props.composition, 500);
   options.drafts = vi.fn(() => ({}));
   options.editingCaptionId = vi.fn(() => null);
-  preview.draw(ctx, { x: 0, y: 0, width: 100, height: 50 }, null, layers);
+  preview.paint(ctx, preview.prepare({ x: 0, y: 0, width: 100, height: 50 }, null, layers));
   expect(state.render.mock.lastCall![9]).toBe(layers);
   expect(options.drafts).toHaveBeenCalledOnce();
   expect(options.editingCaptionId).toHaveBeenCalledOnce();
@@ -287,7 +331,7 @@ it('copies only drafted layers and restores their original identities when editi
   const other = { ...layers.visualStack[0]!, id: 'constructor' };
   layers.visualStack.push(other);
   options.drafts = () => ({ [original.id]: { x: 0.2, y: 0, width: 0.5, height: 1 } });
-  const paint = () => preview.draw(ctx, { x: 0, y: 0, width: 100, height: 50 }, null, layers);
+  const paint = () => preview.paint(ctx, preview.prepare({ x: 0, y: 0, width: 100, height: 50 }, null, layers));
   paint();
   const modified = state.render.mock.lastCall![9] as CompositionSceneLayers;
   expect(modified.visualStack[0]).not.toBe(original);

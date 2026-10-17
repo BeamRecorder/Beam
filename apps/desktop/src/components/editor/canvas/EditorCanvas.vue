@@ -16,10 +16,10 @@ import { createCompositionSceneLayerResolver } from '@beam/engine/composition/sc
 import { engineMetrics } from '@beam/runtime/performance/engine-metrics';
 import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from '@beam/engine/layout/output-canvas';
 import { useCanvasBackground } from './composables/useCanvasBackground';
-import { useCompositionMedia } from './composables/useCompositionMedia';
+import { useCompositionImages } from './composables/useCompositionImages';
 import { createCanvasFrameScheduler } from './composables/canvas-frame-scheduler';
 import { useEditorCanvasCursor } from './composables/useEditorCanvasCursor';
-import { useCameraZoom, type RenderedVideoWindow } from './composables/useCameraZoom';
+import { useCameraZoom } from './composables/useCameraZoom';
 import { useLayerTransformAndCrop } from './composables/useLayerTransformAndCrop';
 import { useViewportZoom } from './composables/useViewportZoom';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -197,36 +197,7 @@ const elements = useCanvasElements({
   canEdit: () => !props.isPlaying && !props.isCropping && props.selectedZoom?.mode !== 'manual',
   render: renderOnce,
 });
-let currentRenderWindow: RenderedVideoWindow | null = null;
-const compositionMedia = useCompositionMedia({
-  composition: () => props.composition,
-  currentTime: () => props.currentTime,
-  frameFor: props.frameFor,
-  selectedTransformClip: () => props.selectedTransformClip,
-  transformDraft: () => transformAndCrop.transformDraft.value,
-  transformDraftFor: transformAndCrop.transformDraftFor,
-  isCropping: () => props.isCropping,
-  outputCanvas: () => props.outputCanvas,
-  captionViewport: () => {
-    const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
-    return {
-      x: preview.x,
-      y: preview.y,
-      width: preview.width,
-      height: preview.height,
-    };
-  },
-  keyboardCursorPosition: () =>
-    currentRenderWindow
-      ? cursorOverlay.cursorPositionForKeyboardCaption(
-          currentRenderWindow,
-          screenFrame.value?.width ?? 0,
-          screenFrame.value?.height ?? 0,
-        )
-      : null,
-  editingCaptionId: () => elements.editingId.value ?? captionEditing.editingCaptionId.value,
-  onRenderOnce: renderOnce,
-});
+const images = useCompositionImages(() => props.composition, renderOnce);
 const cursorOverlay = useEditorCanvasCursor(props, {
   deviceScale: () => deviceScale.value,
   screenClip: () => liveScreenClip.value,
@@ -261,7 +232,7 @@ const watermarkLogo = useEditorCanvasAssets(containerRef, resizeCanvas, renderOn
 const runtimePreview = createRuntimePreview({
   props,
   zoomDraft: () => glassSelection.value?.draft ?? null,
-  images: compositionMedia.images,
+  images,
   cursorImage: () => cursorOverlay.customCursorImage.value,
   watermarkImage: () => watermarkLogo.value,
   cursorEnabled: () => customCursorEnabled.value,
@@ -278,6 +249,7 @@ const runtimePreview = createRuntimePreview({
 const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
   const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
   const layers = currentSceneLayers.value;
+  const prepared = runtimePreview.prepare(preview, screenFrame.value, layers);
   const window = cameraZoom.drawVideoWindow(
     ctx,
     logicalSize.value.width,
@@ -285,8 +257,8 @@ const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
     screenFrame.value,
     layers,
     false,
+    { camera: prepared.evaluation.camera, evaluator: prepared.evaluator },
   );
-  currentRenderWindow = window;
   if (window)
     cursorOverlay.updateAndDrawRipplesAndCursor(
       ctx,
@@ -296,13 +268,14 @@ const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
       logicalSize.value.width,
       (draw) => cameraZoom.drawInCameraSpace(ctx, window, draw),
       false,
+      { player: prepared.motion, motion: prepared.evaluation.cursorMotion },
     );
   else cursorOverlay.clearCursorBounds();
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(preview.x, preview.y, preview.width, preview.height, OUTPUT_PREVIEW_RADIUS);
   ctx.clip();
-  runtimePreview.draw(ctx, preview, screenFrame.value, layers);
+  runtimePreview.paint(ctx, prepared);
   ctx.restore();
 };
 const renderCanvas = () => {

@@ -316,6 +316,19 @@ afterEach(() => {
 });
 
 describe('useCompositionMedia', () => {
+  it('draws a targeted blur through the same bounds as the full scene', () => {
+    const doc = composition();
+    doc.clips.push(blur());
+    mountComposable(doc);
+    const ctx = context();
+    state.drawComposition(ctx, { dx: 10, dy: 20, dw: 800, dh: 400 }, 'blur');
+    expect(applyBlurEffect).toHaveBeenCalledWith(ctx, expect.objectContaining({ id: 'blur' }), {
+      x: 170,
+      y: 140,
+      width: 240,
+      height: 80,
+    });
+  });
   it('primes independent adaptive video crops before any scene paint', () => {
     const prime = vi.spyOn(adaptiveShadows, 'primeAdaptiveShadowColors').mockImplementation(() => {});
     const base = composition();

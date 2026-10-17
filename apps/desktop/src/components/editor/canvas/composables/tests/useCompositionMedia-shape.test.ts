@@ -91,6 +91,31 @@ afterEach(() => {
 });
 
 describe('useCompositionMedia shape rendering', () => {
+  it('paints a small eligible rectangle through the ordered batch without losing its native fallback', () => {
+    const clip = shapeClip({
+      preset: 'rectangle',
+      cornerRadius: 0,
+      transform: { x: 0.2, y: 0.2, width: 0.2, height: 0.2 },
+    });
+    mountComposable([clip]);
+    const ctx = {
+      getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }),
+      canvas: { width: 800, height: 450 },
+      globalAlpha: 1,
+      globalCompositeOperation: 'source-over',
+      filter: 'none',
+      shadowBlur: 0,
+      shadowOffsetX: 0,
+      shadowOffsetY: 0,
+    } as unknown as CanvasRenderingContext2D;
+    state.drawVisualStack(ctx, { dx: 0, dy: 0, dw: 800, dh: 400, scale: 1 }, vi.fn());
+    expect(drawShapeClip).toHaveBeenCalledExactlyOnceWith(
+      ctx,
+      clip,
+      { x: 0, y: 0, width: 800, height: 400 },
+      clip.transform,
+    );
+  });
   it('draws an active shape in the visual stack', () => {
     const clip = shapeClip({ id: 'active-shape' });
     mountComposable([clip]);

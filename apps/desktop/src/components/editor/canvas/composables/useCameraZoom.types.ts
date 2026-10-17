@@ -4,6 +4,12 @@ import type { ZoomAutoFollowSettings, ZoomElement, ZoomMotionBlurSettings } from
 import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 import type { CompositionSceneLayers } from '@beam/engine/composition/scene-layers';
 import type { OrbitCameraPose } from '@beam/engine/zoom/orbit-camera-types';
+import type { CameraSample, CompositionCameraEvaluator } from '@beam/engine/zoom/composition-camera-types';
+
+export interface PreparedCameraEvaluation {
+  camera: CameraSample;
+  evaluator: CompositionCameraEvaluator;
+}
 
 export interface VideoWindowBounds {
   dx: number;

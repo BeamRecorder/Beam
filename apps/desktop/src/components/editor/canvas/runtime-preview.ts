@@ -9,7 +9,7 @@ import { renderCompositionFrame, disposeCompositionRenderer } from '@beam/runtim
 import { WATERMARK_LOGO_KEY } from '@beam/runtime/rendering/watermark-render';
 import type { CompositionSceneLayers } from '@beam/engine/composition/scene-layers';
 import type { CompositionVisuals, RenderableMedia } from '@beam/runtime/rendering/render-types';
-import type { RuntimePreviewOptions } from './runtime-preview-types';
+import type { RuntimePreviewOptions, RuntimePreviewFrame } from './runtime-preview-types';
 import type { MediaFrame } from '@beam/runtime/shared/index';
 import { selectedZoomPreviewTilt } from './composables/camera-preview-tilt';
 import { isVisualClip } from '@beam/engine/shared/composition-types';
@@ -30,219 +30,242 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
   let background: OffscreenCanvas | null = null;
   let backgroundKey: readonly unknown[] | null = null;
   const retainedCamera = createRetainedCamera();
-  let camera: ReturnType<typeof createSnapshotCameraEvaluator> | null = null;
   let motionKey: readonly unknown[] = [];
   let motion: ReturnType<typeof createCursorMotionPlayer> | undefined;
-  return {
-    draw(
-      ctx: CanvasRenderingContext2D,
-      bounds: { x: number; y: number; width: number; height: number },
-      frame: MediaFrame | null,
-      layers: CompositionSceneLayers,
-    ) {
-      const props = options.props;
-      const size = {
-        width: Math.max(1, Math.round(bounds.width)),
-        height: Math.max(1, Math.round(bounds.height)),
-      };
-      const drafts = options.drafts();
-      const editingId = options.editingCaptionId();
-      const cropped = props.isCropping ? props.selectedTransformClip : null;
-      const draft = <T extends { id: string }>(clip: T): T => {
-        const transform = Object.hasOwn(drafts, clip.id) ? drafts[clip.id] : undefined;
-        if (clip.id === editingId) return { ...clip, enabled: false };
-        if (cropped && clip.id === cropped.id && isVisualClip(cropped))
-          return {
-            ...clip,
-            crop: { x: 0, y: 0, width: 1, height: 1 },
-            cameraFramingPreset: isPhoneFrame(cropped.appearance.frame) ? 'fit' : 'custom',
-            ...(transform ? { transform } : {}),
+  const prepare = (
+    bounds: { x: number; y: number; width: number; height: number },
+    frame: MediaFrame | null,
+    layers: CompositionSceneLayers,
+  ): RuntimePreviewFrame => {
+    const props = options.props;
+    const size = {
+      width: Math.max(1, Math.round(bounds.width)),
+      height: Math.max(1, Math.round(bounds.height)),
+    };
+    const drafts = options.drafts();
+    const editingId = options.editingCaptionId();
+    const cropped = props.isCropping ? props.selectedTransformClip : null;
+    const draft = <T extends { id: string }>(clip: T): T => {
+      const transform = Object.hasOwn(drafts, clip.id) ? drafts[clip.id] : undefined;
+      if (clip.id === editingId) return { ...clip, enabled: false };
+      if (cropped && clip.id === cropped.id && isVisualClip(cropped))
+        return {
+          ...clip,
+          crop: { x: 0, y: 0, width: 1, height: 1 },
+          cameraFramingPreset: isPhoneFrame(cropped.appearance.frame) ? 'fit' : 'custom',
+          ...(transform ? { transform } : {}),
+        };
+      return transform ? { ...clip, transform } : clip;
+    };
+    const evaluated =
+      !editingId && !cropped && Object.keys(drafts).length === 0
+        ? layers
+        : {
+            ...layers,
+            screen: layers.screen ? draft(layers.screen) : null,
+            visualStack: layers.visualStack.map(draft),
+            captions: layers.captions.filter((clip) => clip.id !== editingId).map(draft),
           };
-        return transform ? { ...clip, transform } : clip;
-      };
-      const evaluated =
-        !editingId && !cropped && Object.keys(drafts).length === 0
-          ? layers
-          : {
-              ...layers,
-              screen: layers.screen ? draft(layers.screen) : null,
-              visualStack: layers.visualStack.map(draft),
-              captions: layers.captions.filter((clip) => clip.id !== editingId).map(draft),
-            };
-      const cursor = toRaw(props.editorData?.cursor ?? absentCursor);
-      const zoomDraft = toRaw(options.zoomDraft?.() ?? null);
-      const snapshot: CompositionSnapshot = {
-        duration: props.duration ?? compositionDurationMs(props.composition) / 1000,
-        render: {
-          fps: 60,
-          sourceWidth: frame?.width ?? null,
-          sourceHeight: frame?.height ?? null,
+    const cursor = toRaw(props.editorData?.cursor ?? absentCursor);
+    const zoomDraft = toRaw(options.zoomDraft?.() ?? null);
+    const snapshot: CompositionSnapshot = {
+      duration: props.duration ?? compositionDurationMs(props.composition) / 1000,
+      render: {
+        fps: 60,
+        sourceWidth: frame?.width ?? null,
+        sourceHeight: frame?.height ?? null,
+      },
+      referenceCanvas: props.outputCanvas,
+      canvas: { ...props.outputCanvas, ...size },
+      background: null,
+      blurPercent: 0,
+      zooms:
+        !props.isPlaying && props.selectedZoom?.mode === 'manual' && props.selectedZoom.effect !== 'glass'
+          ? toRaw(props.zoomElements).filter((zoom) => zoom.id !== props.selectedZoom!.id)
+          : zoomDraft
+            ? toRaw(props.zoomElements).map((zoom) => (zoom.id === props.selectedZoom?.id ? zoomDraft : zoom))
+            : toRaw(props.zoomElements),
+      zoomMotionBlur: props.zoomMotionBlur,
+      zoomAutoFollow: toRaw(props.zoomAutoFollow),
+      cursor,
+      cursorPack: props.cursorPack,
+      cursorSettings: {
+        enabled: options.cursorEnabled(),
+        selection: props.cursorSelection,
+        size: (props.cursorSize * size.width) / props.outputCanvas.width,
+        color: props.cursorColor,
+        shadow: {
+          enabled: props.enableShadow,
+          blur: (props.shadowBlur * size.width) / props.outputCanvas.width,
+          color: props.shadowColor,
+          direction: props.shadowDirection,
         },
-        referenceCanvas: props.outputCanvas,
-        canvas: { ...props.outputCanvas, ...size },
-        background: null,
-        blurPercent: 0,
-        zooms:
-          !props.isPlaying && props.selectedZoom?.mode === 'manual' && props.selectedZoom.effect !== 'glass'
-            ? toRaw(props.zoomElements).filter((zoom) => zoom.id !== props.selectedZoom!.id)
-            : zoomDraft
-              ? toRaw(props.zoomElements).map((zoom) => (zoom.id === props.selectedZoom?.id ? zoomDraft : zoom))
-              : toRaw(props.zoomElements),
-        zoomMotionBlur: props.zoomMotionBlur,
-        zoomAutoFollow: toRaw(props.zoomAutoFollow),
-        cursor,
-        cursorPack: props.cursorPack,
-        cursorSettings: {
-          enabled: options.cursorEnabled(),
-          selection: props.cursorSelection,
-          size: (props.cursorSize * size.width) / props.outputCanvas.width,
-          color: props.cursorColor,
-          shadow: {
-            enabled: props.enableShadow,
-            blur: (props.shadowBlur * size.width) / props.outputCanvas.width,
-            color: props.shadowColor,
-            direction: props.shadowDirection,
-          },
-          clickEffects: props.clickEffects,
-          motion: props.motion,
-          autoHide: props.autoHide,
-        },
-        composition: toRaw(props.composition),
-      };
-      const stableInputs = [
-        props.selectedZoom?.id,
-        props.selectedZoom?.mode,
-        props.isPlaying,
-        props.zoomAutoFollow?.safeZone,
-        props.zoomAutoFollow?.responsiveness,
-        props.zoomAutoFollow?.directionLock,
-        cursor.telemetry,
-        frame?.width,
-        frame?.height,
-        size.width,
-        size.height,
-        toRaw(props.outputCanvas),
-      ];
-      camera = retainedCamera.get({
-        composition: snapshot.composition,
-        zooms: snapshot.zooms,
-        stableInputs,
-        create: (reuse) =>
-          createSnapshotCameraEvaluator(snapshot, frame?.width ?? size.width, frame?.height ?? size.height, reuse),
-      });
-      const cursorKey = [
+        clickEffects: props.clickEffects,
+        motion: props.motion,
+        autoHide: props.autoHide,
+      },
+      composition: toRaw(props.composition),
+    };
+    const stableInputs = [
+      props.selectedZoom?.id,
+      props.selectedZoom?.mode,
+      props.isPlaying,
+      props.zoomAutoFollow?.safeZone,
+      props.zoomAutoFollow?.responsiveness,
+      props.zoomAutoFollow?.directionLock,
+      cursor.telemetry,
+      frame?.width,
+      frame?.height,
+      size.width,
+      size.height,
+      toRaw(props.outputCanvas),
+    ];
+    const camera = retainedCamera.get({
+      composition: snapshot.composition,
+      zooms: snapshot.zooms,
+      stableInputs,
+      create: (reuse) =>
+        createSnapshotCameraEvaluator(snapshot, frame?.width ?? size.width, frame?.height ?? size.height, reuse),
+    });
+    const cursorKey = [
+      cursor.events,
+      cursor.hoverSync,
+      props.motion.preset,
+      props.motion.smoothing,
+      props.motion.springMassMultiplier,
+      props.motion.motionBlur,
+      props.motion.stopSpringEnabled,
+      props.motion.stopSpringStrength,
+      frame?.width,
+      frame?.height,
+    ];
+    if (!motion || cursorKey.some((value, index) => value !== motionKey[index])) {
+      motionKey = cursorKey;
+      motion = createCursorMotionPlayer(
         cursor.events,
+        props.motion,
+        frame?.width ?? size.width,
+        frame?.height ?? size.height,
         cursor.hoverSync,
-        props.motion.preset,
-        props.motion.smoothing,
-        props.motion.springMassMultiplier,
-        props.motion.motionBlur,
-        props.motion.stopSpringEnabled,
-        props.motion.stopSpringStrength,
-        frame?.width,
-        frame?.height,
-      ];
-      if (!motion || cursorKey.some((value, index) => value !== motionKey[index])) {
-        motionKey = cursorKey;
-        motion = createCursorMotionPlayer(
-          cursor.events,
-          props.motion,
-          frame?.width ?? size.width,
-          frame?.height ?? size.height,
-          cursor.hoverSync,
-        );
-      }
-      const visuals = new Map<string, RenderableMedia>();
-      for (const clip of evaluated.visualStack) {
-        if (!isVisualClip(clip)) continue;
-        const media = props.frameFor(clip.id);
-        const image = options.images.get(clip.assetId);
-        if (media)
-          visuals.set(clip.id, {
-            source: media.bitmap,
-            width: media.width,
-            height: media.height,
-          });
-        else if (image?.complete && image.naturalWidth > 0)
-          visuals.set(clip.id, {
-            source: image,
-            width: image.naturalWidth,
-            height: image.naturalHeight,
-          });
-      }
-      const watermark = options.watermarkImage();
-      if (watermark?.complete)
-        visuals.set(WATERMARK_LOGO_KEY, {
-          source: watermark,
-          width: watermark.naturalWidth,
-          height: watermark.naturalHeight,
+      );
+    }
+    const tilt = selectedZoomPreviewTilt(props.selectedZoom, props.isPlaying);
+    const evaluator = tilt
+      ? {
+          sample: (timeMs: number) => ({
+            ...camera.sample(timeMs),
+            ...tilt,
+          }),
+          invalidate: () => camera.invalidate(),
+        }
+      : camera;
+    const cursorTime = evaluated.screen
+      ? (sessionTimeAt(evaluated.screen, props.currentTime * 1000, props.composition) ?? 0) / 1000
+      : props.currentTime;
+    return {
+      bounds,
+      size,
+      frame,
+      layers: evaluated,
+      snapshot,
+      motion,
+      evaluator,
+      time: props.currentTime,
+      evaluation: {
+        camera: evaluator.sample(props.currentTime * 1000),
+        cursorMotion:
+          evaluated.screen && frame ? motion.sample(cursorTime, cursorStateAt(cursor.events, cursorTime)) : null,
+      },
+    };
+  };
+  const paint = (ctx: CanvasRenderingContext2D, prepared: RuntimePreviewFrame) => {
+    const { bounds, size, frame, layers: evaluated, snapshot, motion, evaluator, time, evaluation } = prepared;
+    const props = options.props;
+    const cursor = snapshot.cursor;
+    const cursorTime = evaluated.screen
+      ? (sessionTimeAt(evaluated.screen, time * 1000, props.composition) ?? 0) / 1000
+      : time;
+    const visuals = new Map<string, RenderableMedia>();
+    for (const clip of evaluated.visualStack) {
+      if (!isVisualClip(clip)) continue;
+      const media = props.frameFor(clip.id);
+      const image = options.images.get(clip.assetId);
+      if (media)
+        visuals.set(clip.id, {
+          source: media.bitmap,
+          width: media.width,
+          height: media.height,
         });
-      const cursorImages = new Map<string, HTMLImageElement>();
-      const cursorTime = evaluated.screen
-        ? (sessionTimeAt(evaluated.screen, props.currentTime * 1000, props.composition) ?? 0) / 1000
-        : props.currentTime;
-      const asset = props.cursorPack
-        ? cursorAssetAt(props.cursorPack, props.cursorSelection, cursorStateAt(cursor.events, cursorTime))
-        : null;
-      const image = options.cursorImage();
-      if (asset && image) cursorImages.set(asset.id, image);
-      const resized = !background || background.width !== size.width || background.height !== size.height;
-      if (resized) backgroundKey = null;
-      background ??= new OffscreenCanvas(size.width, size.height);
-      if (background.width !== size.width) background.width = size.width;
-      if (background.height !== size.height) background.height = size.height;
-      const backgroundCtx = background.getContext('2d');
-      if (!backgroundCtx) throw new Error('Preview background canvas unavailable.');
-      const pixelInputs = options.backgroundCacheKey();
-      if (
-        resized ||
-        !pixelInputs ||
-        !backgroundKey ||
-        pixelInputs.length !== backgroundKey.length ||
-        pixelInputs.some((value, index) => !Object.is(value, backgroundKey![index]))
-      ) {
-        backgroundKey = null;
-        backgroundCtx.clearRect(0, 0, size.width, size.height);
-        options.drawBackground(backgroundCtx, { x: 0, y: 0, ...size });
-        backgroundKey = pixelInputs?.slice() ?? null;
-      }
-      const tilt = selectedZoomPreviewTilt(props.selectedZoom, props.isPlaying);
-      const evaluator = tilt
-        ? {
-            sample: (timeMs: number) => ({
-              ...camera!.sample(timeMs),
-              ...tilt,
-            }),
-            invalidate: () => camera!.invalidate(),
-          }
-        : camera;
-      ctx.save();
-      ctx.translate(bounds.x, bounds.y);
-      ctx.scale(bounds.width / size.width, bounds.height / size.height);
-      try {
-        renderCompositionFrame(
-          ctx,
-          frame ? { source: frame.bitmap, width: frame.width, height: frame.height } : null,
-          snapshot,
-          props.currentTime,
-          { source: background, ...size, preRendered: true },
-          cursorImages,
-          visuals as CompositionVisuals,
-          motion,
-          evaluator,
-          evaluated,
-        );
-      } finally {
-        ctx.restore();
-      }
-    },
+      else if (image?.complete && image.naturalWidth > 0)
+        visuals.set(clip.id, {
+          source: image,
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+        });
+    }
+    const watermark = options.watermarkImage();
+    if (watermark?.complete)
+      visuals.set(WATERMARK_LOGO_KEY, {
+        source: watermark,
+        width: watermark.naturalWidth,
+        height: watermark.naturalHeight,
+      });
+    const cursorImages = new Map<string, HTMLImageElement>();
+    const asset = props.cursorPack
+      ? cursorAssetAt(props.cursorPack, props.cursorSelection, cursorStateAt(cursor.events, cursorTime))
+      : null;
+    const image = options.cursorImage();
+    if (asset && image) cursorImages.set(asset.id, image);
+    const resized = !background || background.width !== size.width || background.height !== size.height;
+    if (resized) backgroundKey = null;
+    background ??= new OffscreenCanvas(size.width, size.height);
+    if (background.width !== size.width) background.width = size.width;
+    if (background.height !== size.height) background.height = size.height;
+    const backgroundCtx = background.getContext('2d');
+    if (!backgroundCtx) throw new Error('Preview background canvas unavailable.');
+    const pixelInputs = options.backgroundCacheKey();
+    if (
+      resized ||
+      !pixelInputs ||
+      !backgroundKey ||
+      pixelInputs.length !== backgroundKey.length ||
+      pixelInputs.some((value, index) => !Object.is(value, backgroundKey![index]))
+    ) {
+      backgroundKey = null;
+      backgroundCtx.clearRect(0, 0, size.width, size.height);
+      options.drawBackground(backgroundCtx, { x: 0, y: 0, ...size });
+      backgroundKey = pixelInputs?.slice() ?? null;
+    }
+    ctx.save();
+    ctx.translate(bounds.x, bounds.y);
+    ctx.scale(bounds.width / size.width, bounds.height / size.height);
+    try {
+      renderCompositionFrame(
+        ctx,
+        frame ? { source: frame.bitmap, width: frame.width, height: frame.height } : null,
+        snapshot,
+        time,
+        { source: background, ...size, preRendered: true },
+        cursorImages,
+        visuals as CompositionVisuals,
+        motion,
+        evaluator,
+        evaluated,
+        evaluation,
+      );
+    } finally {
+      ctx.restore();
+    }
+  };
+  return {
+    prepare,
+    paint,
     dispose() {
       disposeCompositionRenderer();
       if (background) background.width = background.height = 0;
       background = null;
       backgroundKey = null;
       retainedCamera.clear();
-      camera = null;
     },
   };
 }

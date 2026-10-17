@@ -1,4 +1,5 @@
 import { ref, shallowRef } from 'vue';
+import type { PreparedCursorMotion } from './editor-canvas-cursor-types';
 import type { ProjectEditorData } from '@beam/engine/capture/capture-session';
 import { buttonEventsBetween, cursorAutoHideOpacityAt, cursorStateAt } from '@beam/engine/cursor/cursorPlayback';
 import { useCursorReplacer } from '../../properties/cursor/useCursorReplacer';
@@ -246,6 +247,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     logicalWidth: number,
     drawInCameraSpace: (drawContent: () => void) => void,
     paint = true,
+    prepared?: PreparedCursorMotion,
   ) => {
     const screen = options.screenClip();
     if (options.enabled?.() === false || !screen || !options.isScreenEnabled()) {
@@ -268,7 +270,8 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     const screenTransition = resolveClipTransitionState(screen, options.currentTime() * 1_000);
     const state = cursorStateAt(cursorData.events, time);
     ensureCursorImage(state);
-    const { player, motion: motionState } = motionStateAt(cursorData.events, time, videoWidth, videoHeight, state);
+    const { player, motion: motionState } =
+      prepared ?? motionStateAt(cursorData.events, time, videoWidth, videoHeight, state);
     drawInCameraSpace(() =>
       drawWithClipTransition(
         ctx,

@@ -23,7 +23,7 @@ import {
 import ResizeHandle from '../../../ui/ResizeHandle/ResizeHandle.vue';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import CanvasMarqueeSurface from '../CanvasMarqueeSurface.vue';
-import type { RuntimePreviewOptions } from '../runtime-preview-types';
+import type { RuntimePreviewOptions, RuntimePreviewFrame } from '../runtime-preview-types';
 
 vi.mock('../../resources/editor-image-cache', () => ({
   requestEditorImage: (src: string) => {
@@ -37,6 +37,7 @@ const { state } = vi.hoisted(() => ({
   state: {
     drawVideoWindow: vi.fn(),
     runtimeDraw: vi.fn(),
+    runtimePrepare: vi.fn(),
     runtimeDispose: vi.fn(),
     runtimeOptions: undefined as RuntimePreviewOptions | undefined,
     geometryReads: vi.fn(),
@@ -167,7 +168,12 @@ vi.mock('../composables/useCursorOverlay', async () => {
 vi.mock('../runtime-preview', () => ({
   createRuntimePreview: (options: RuntimePreviewOptions) => {
     state.runtimeOptions = options;
-    return { draw: state.runtimeDraw, dispose: state.runtimeDispose };
+    return {
+      prepare: state.runtimePrepare,
+      paint: (ctx: CanvasRenderingContext2D, prepared: RuntimePreviewFrame) =>
+        state.runtimeDraw(ctx, prepared.bounds, prepared.frame, prepared.layers),
+      dispose: state.runtimeDispose,
+    };
   },
 }));
 
@@ -508,6 +514,14 @@ beforeEach(() => {
     get: () => 450,
   });
   state.drawVideoWindow.mockReturnValue(null);
+  state.runtimePrepare.mockImplementation((bounds, frame, layers) => ({
+    bounds,
+    frame,
+    layers,
+    evaluation: { camera: { scale: 1, focus: { cx: 0.5, cy: 0.5 } }, cursorMotion: null },
+    evaluator: { sample: vi.fn(), invalidate: vi.fn() },
+    motion: { sample: vi.fn() },
+  }));
   Object.defineProperty(window, 'devicePixelRatio', {
     configurable: true,
     value: 1,
@@ -1363,7 +1377,16 @@ describe('EditorCanvas', () => {
     runFrame();
 
     expect(state.runtimeDraw).toHaveBeenCalled();
-    expect(state.drawVideoWindow.mock.calls.at(-1)?.at(-1)).toBe(false);
+    expect(state.drawVideoWindow.mock.lastCall?.[5]).toBe(false);
+    const prepared = state.runtimePrepare.mock.results.at(-1)!.value;
+    expect(state.drawVideoWindow.mock.lastCall?.[6]).toEqual({
+      camera: prepared.evaluation.camera,
+      evaluator: prepared.evaluator,
+    });
+    expect(state.updateCursor.mock.lastCall?.[7]).toEqual({
+      player: prepared.motion,
+      motion: prepared.evaluation.cursorMotion,
+    });
   });
 
   it('reacts to playback, format, duration, and transition watchers', async () => {

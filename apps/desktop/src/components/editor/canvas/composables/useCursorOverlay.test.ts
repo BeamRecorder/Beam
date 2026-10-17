@@ -7,6 +7,8 @@ import {
 } from '@beam/engine/capture/cursor-settings';
 import { MACOS_CURSOR_PACK } from '../../properties/cursor/cursor-packs';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
+import * as cursorMotion from '@beam/engine/cursor/cursor-motion';
+import { cursorStateAt } from '@beam/engine/cursor/cursorPlayback';
 
 const getCursorImage = vi.hoisted(() => vi.fn());
 vi.mock('../../properties/cursor/useCursorReplacer', () => ({
@@ -212,6 +214,106 @@ it('can disable the Beam overlay while retaining recorded cursor telemetry', asy
 });
 
 describe('useCursorOverlay', () => {
+  it.each([0.2, 0.5, 0.8])(
+    'positions selection from the shared cursor sample at x=%s without a second simulation',
+    async (x) => {
+      const options = baseOptions();
+      const events = options.editorData()!.cursor.events;
+      const player = cursorMotion.createCursorMotionPlayer(events, options.motion(), 1920, 1080);
+      const raw = cursorStateAt(events, options.currentTime());
+      const motion = { ...player.sample(options.currentTime(), raw)!, x, y: 0.4 };
+      const create = vi.spyOn(cursorMotion, 'createCursorMotionPlayer');
+      const sample = vi.spyOn(player, 'sample');
+      getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
+      const overlay = useCursorOverlay(options);
+      const ctx = createContext();
+      const draw = () =>
+        overlay.updateAndDrawRipplesAndCursor(
+          ctx,
+          { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 400, focusY: 225, scale: 1 },
+          1920,
+          1080,
+          800,
+          (paint) => paint(),
+          false,
+          { player, motion },
+        );
+      try {
+        draw();
+        await settleCursorImage();
+        draw();
+        const bounds = overlay.cursorBounds.value!;
+        expect(bounds.hotspot.x).toBeCloseTo(x * 800);
+        expect(bounds.hotspot.y).toBeCloseTo(0.4 * 450);
+        expect(create).not.toHaveBeenCalled();
+        expect(sample).not.toHaveBeenCalled();
+        expect(ctx.drawImage).not.toHaveBeenCalled();
+        expect(ctx.arc).not.toHaveBeenCalled();
+        draw();
+        expect(overlay.cursorBounds.value).toBe(bounds);
+      } finally {
+        create.mockRestore();
+        sample.mockRestore();
+      }
+    },
+  );
+
+  it('clears cursor selection for a prepared frame with no cursor sample', async () => {
+    const options = baseOptions();
+    const player = cursorMotion.createCursorMotionPlayer(
+      options.editorData()!.cursor.events,
+      options.motion(),
+      1920,
+      1080,
+    );
+    getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
+    const overlay = useCursorOverlay(options);
+    drawOverlay(overlay);
+    await settleCursorImage();
+    drawOverlay(overlay);
+    expect(overlay.cursorBounds.value).not.toBeNull();
+    overlay.updateAndDrawRipplesAndCursor(
+      createContext(),
+      { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 400, focusY: 225, scale: 1 },
+      1920,
+      1080,
+      800,
+      (paint) => paint(),
+      false,
+      { player, motion: null },
+    );
+    expect(overlay.cursorBounds.value).toBeNull();
+    overlay.clearCursorBounds();
+    expect(
+      overlay.cursorPositionForKeyboardCaption(
+        { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 400, focusY: 225, scale: 1 },
+        1920,
+        1080,
+      ),
+    ).not.toBeNull();
+  });
+
+  it('keeps absent/hidden cursor data and invalid source dimensions out of keyboard placement and selection', async () => {
+    const options = baseOptions();
+    let data = options.editorData();
+    options.editorData = () => data;
+    const overlay = useCursorOverlay(options);
+    const window = { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 400, focusY: 225, scale: 1 };
+    expect(overlay.cursorPositionForKeyboardCaption(window, 1920, 1080)).toBeNull();
+    data = null;
+    drawOverlay(overlay);
+    expect(overlay.cursorBounds.value).toBeNull();
+    data = baseOptions().editorData();
+    overlay.updateAndDrawRipplesAndCursor(createContext(), window, 0, 1080, 800, (paint) => paint());
+    expect(overlay.cursorBounds.value).toBeNull();
+    getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
+    drawOverlay(overlay);
+    await settleCursorImage();
+    data!.cursor.events = data!.cursor.events.map((event) =>
+      event.event === 'move' ? { ...event, visible: false } : event,
+    );
+    expect(overlay.cursorPositionForKeyboardCaption(window, 1920, 1080)).toBeNull();
+  });
   it('updates keyboard-caption cursor positioning when hover analysis arrives', async () => {
     const options = baseOptions(),
       owner = options.editorData()!;

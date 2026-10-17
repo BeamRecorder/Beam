@@ -206,7 +206,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
           undefined,
           layers,
         );
-        host.draw(context, { x: 0, y: 0, width, height }, frame, layers);
+        host.paint(context, host.prepare({ x: 0, y: 0, width, height }, frame, layers));
         const a = output.getImageData(0, 0, width, height).data,
           b = context.getImageData(0, 0, width, height).data;
         let differingChannels = 0,

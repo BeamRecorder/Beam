@@ -253,6 +253,58 @@ const frame = (width = 1_280, height = 720): MediaFrame => ({
   close: vi.fn(),
 });
 
+it('uses the prepared camera center for hit bounds without building or sampling a second evaluator', () => {
+  const create = vi.spyOn(compositionCamera, 'createCompositionCameraEvaluator');
+  mountComposable();
+  const evaluator = {
+    sample: vi.fn(() => {
+      throw new Error('Duplicate center sample');
+    }),
+    invalidate: vi.fn(),
+  };
+  const camera = { scale: 2, focus: { cx: 0.3, cy: 0.6 }, tiltX: 0.1, tiltY: -0.2 };
+  options.selected.value = null;
+  const window = state.drawVideoWindow(context(), 800, 450, frame(), undefined, false, { camera, evaluator });
+  expect(create).not.toHaveBeenCalled();
+  expect(evaluator.sample).not.toHaveBeenCalled();
+  expect(window).toMatchObject({ scale: 2, tiltX: 0.1, tiltY: -0.2 });
+  expect(window!.focusX).toBeCloseTo(window!.dx + window!.dw * 0.3);
+  expect(window!.focusY).toBeCloseTo(window!.dy + window!.dh * 0.6);
+  expect(state.overlayWindowBounds.value?.scale).toBe(2);
+});
+
+it('updates prepared hit geometry after resize and the next camera frame', () => {
+  mountComposable();
+  options.selected.value = null;
+  const evaluator = { sample: vi.fn(), invalidate: vi.fn() };
+  const first = state.drawVideoWindow(context(), 800, 450, frame(), undefined, false, {
+    camera: { scale: 1, focus: { cx: 0.5, cy: 0.5 } },
+    evaluator,
+  });
+  const next = state.drawVideoWindow(context(), 600, 400, frame(), undefined, false, {
+    camera: { scale: 3, focus: { cx: 0.8, cy: 0.2 } },
+    evaluator,
+  });
+  expect(next!.dw).toBeLessThan(first!.dw);
+  expect(next!.focusX).toBeCloseTo(next!.dx + next!.dw * 0.8);
+  expect(next!.focusY).toBeCloseTo(next!.dy + next!.dh * 0.2);
+  expect(state.videoWindowBounds.value?.scale).toBe(3);
+  expect(evaluator.sample).not.toHaveBeenCalled();
+});
+
+it('retains prepared center values while using the same evaluator for shutter samples', () => {
+  mountComposable({ enabled: true, intensity: 0.8 });
+  options.selected.value = null;
+  const camera = { scale: 2, focus: { cx: 0.5, cy: 0.5 } };
+  const evaluator = {
+    sample: vi.fn((time: number) => ({ ...camera, focus: { cx: time / 1000, cy: 0.5 } })),
+    invalidate: vi.fn(),
+  };
+  state.drawVideoWindow(context(), 800, 450, frame(), undefined, true, { camera, evaluator });
+  expect(evaluator.sample).toHaveBeenCalledTimes(2);
+  expect(evaluator.sample.mock.calls.every(([time]) => time !== 500)).toBe(true);
+});
+
 const pointer = (type: string, x: number, y: number, pointerId = 1) =>
   Object.assign(new MouseEvent(type, { clientX: x, clientY: y, button: 0 }), {
     pointerId,
