@@ -2,7 +2,8 @@ import type { TimelineFrameQueue } from '@beam/runtime/timeline/frame-queue-type
 import { computed, onMounted, onUnmounted, reactive, ref, shallowRef, watch, type Ref } from 'vue';
 import { useCompositionAudioWaveforms } from './useCompositionAudioWaveforms';
 import { calculateSnapThresholdMs, collectSnapTargets, snapValue } from './timeline-snap';
-import { timelinePlaybackScrollDelta, timelineThumbnailSlots } from './timeline-viewport';
+import { timelineThumbnailSlots } from './timeline-viewport';
+import { createTimelinePlaybackFollow } from './timeline-playback-follow';
 import { zoomTimelineByWheel } from './timeline-zoom';
 import { timelineWheelPixels, timelineTimeAt, timelineOffsetAtAnchor } from '@beam/engine/shared/timeline-viewport';
 import type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
@@ -27,6 +28,7 @@ export function useTimelineViewport(
   const rulerWidth = ref(0);
   const rulerLayoutWidth = ref(0);
   const timelineViewport = reactive({ top: 0, left: 0, width: 0, height: 320 });
+  const playbackFollow = createTimelinePlaybackFollow();
   const currentDuration = computed(() => {
     const ms = typeof durationMs.value === 'number' && Number.isFinite(durationMs.value) ? durationMs.value : 1_000;
     return Math.max(1, ms / 1_000);
@@ -142,6 +144,7 @@ export function useTimelineViewport(
   let wheelZoomIdleTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingScrubTime: number | null = null;
   let resizeObserver: ResizeObserver | null = null;
+  let scaleObserver: MutationObserver | null = null;
   let syncedScrollTop = NaN;
   const syncScrollPosition = () => {
     const scroll = tracksScrollRef.value;
@@ -164,6 +167,7 @@ export function useTimelineViewport(
     });
     const scrollRect = scroll.getBoundingClientRect();
     const ticksRect = ticks.getBoundingClientRect();
+    playbackFollow.measure(scroll, scrollRect, ticksRect);
     const timelineWidth = Math.max(1, ticksRect.width || ticks.clientWidth);
     rulerWidth.value = timelineWidth;
     rulerLayoutWidth.value = Math.max(0, ticks.offsetWidth || ticks.clientWidth || ticksRect.width);
@@ -180,24 +184,18 @@ export function useTimelineViewport(
     scrollFrame = frameQueue.request('measure', () => {
       scrollFrame = null;
       updateVisibleRange();
+      followPlayback();
     });
   };
   const followPlayback = () => {
     if (!props.isPlaying || scrubPreviewTime.value !== null) return;
     const scroll = tracksScrollRef.value;
-    const ticks = ticksAreaRef.value;
-    if (!scroll || !ticks || currentDuration.value <= 0) return;
-    const scrollRect = scroll.getBoundingClientRect();
-    const ticksRect = ticks.getBoundingClientRect();
-    const timelineWidth = Math.max(1, ticksRect.width || ticks.clientWidth);
-    const currentTime = Number.isFinite(props.currentTime)
-      ? Math.max(0, Math.min(currentDuration.value, props.currentTime))
-      : 0;
-    const playheadX = ticksRect.left + (currentTime / currentDuration.value) * timelineWidth;
-    const delta = timelinePlaybackScrollDelta(playheadX, scrollRect.left, scrollRect.right);
+    if (!scroll) return;
+    const delta = playbackFollow.delta(props.currentTime, currentDuration.value, scroll.scrollLeft);
     if (Math.abs(delta) < 1) return;
-    scroll.scrollLeft += timelineVisualToLayoutPixels(delta, scroll, scrollRect.width);
-    onScroll();
+    const previous = scroll.scrollLeft;
+    scroll.scrollLeft += delta;
+    if (scroll.scrollLeft !== previous) onScroll();
   };
   let autoScrollRaf: number | null = null;
   let autoScrollVelocity = 0;
@@ -271,6 +269,9 @@ export function useTimelineViewport(
     resizeObserver = new ResizeObserver(onScroll);
     resizeObserver.observe(tracksScrollRef.value);
     if (tracksViewportRef.value) resizeObserver.observe(tracksViewportRef.value);
+    // UI scaling changes visual geometry even when CSS content sizes stay constant.
+    scaleObserver = new MutationObserver(onScroll);
+    scaleObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
     onScroll();
   });
   watch(
@@ -290,6 +291,7 @@ export function useTimelineViewport(
           zoomAnchor = null;
         }
         updateVisibleRange();
+        followPlayback();
       });
     },
     { flush: 'post' },
@@ -307,6 +309,7 @@ export function useTimelineViewport(
   watch(durationMs, onScroll, { flush: 'post' });
   onUnmounted(() => {
     resizeObserver?.disconnect();
+    scaleObserver?.disconnect();
     stopAutoScroll();
     if (scrollFrame !== null) frameQueue.cancel(scrollFrame);
     if (scrubFrame !== null) cancelAnimationFrame(scrubFrame);

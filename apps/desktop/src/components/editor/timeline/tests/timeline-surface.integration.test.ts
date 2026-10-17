@@ -880,6 +880,14 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
       state.isPlaying = true;
       await settle();
       repaints = 0;
+      let boundsReads = 0;
+      for (const element of [scroll, document.querySelector<HTMLElement>('.ruler-ticks-area')!]) {
+        const bounds = element.getBoundingClientRect.bind(element);
+        element.getBoundingClientRect = () => {
+          boundsReads++;
+          return bounds();
+        };
+      }
       const samples: number[] = [];
       for (let i = 1; i <= 60; i++) {
         await frame();
@@ -890,13 +898,83 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
       }
       await settle();
       samples.sort((a, b) => a - b);
-      const result = { repaints, medianMs: samples[30]!, p95Ms: samples[57]!, scroll: scroll.scrollLeft };
+      const result = { repaints, boundsReads, medianMs: samples[30]!, p95Ms: samples[57]!, scroll: scroll.scrollLeft };
       dispose();
       return result;
     }, composition);
     console.info('Timeline 10000-clip playback updates:', result);
     expect(result.scroll).toBe(0);
     expect(result.repaints).toBe(0);
+    expect(result.boundsReads).toBe(0);
+  }, 30000);
+
+  it('keeps playback follow aligned after UI scale, viewport resize and timeline zoom changes', async () => {
+    const composition: ClipComposition = {
+      schemaVersion: 14,
+      assets: [],
+      keyboardCaptionSessions: [],
+      clips: Array.from({ length: 20 }, (_, i) => ({ ...colorClip(String(i), i * 1000), trackId: 'track' })),
+    };
+    const results = await page.evaluate(async (composition) => {
+      const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+      const host = (await load(
+        '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
+      )) as typeof import('./timeline-browser-host');
+      const { dispose, state, scroll, settle } = await host.mountTimeline(composition, 20, 300);
+      const root = document.getElementById('test')!;
+      root.style.zoom = 'var(--ui-scale-timeline, 1)';
+      const previousScale = document.documentElement.style.getPropertyValue('--ui-scale-timeline');
+      const results: Array<{
+        scale: number;
+        distance: number;
+        scrollLeft: number;
+        rulerWidth: number;
+        layoutWidth: number;
+        viewport: number;
+        visible: number;
+      }> = [];
+      try {
+        const configurations = [
+          [1, 1000, 300],
+          [1.25, 800, 500],
+          [0.75, 600, 800],
+        ];
+        for (const [scale, width, zoom] of Array.from({ length: 3 }, () => configurations).flat()) {
+          state.isPlaying = false;
+          state.currentTime = 0;
+          document.documentElement.style.setProperty('--ui-scale-timeline', String(scale));
+          root.style.width = `${width}px`;
+          state.zoomLevel = zoom!;
+          scroll.scrollLeft = 0;
+          scroll.dispatchEvent(new Event('scroll'));
+          await settle();
+          state.isPlaying = true;
+          state.currentTime = 10;
+          await settle();
+          const viewport = scroll.getBoundingClientRect();
+          const playhead = document.querySelector<HTMLElement>('.timeline-playhead')!.getBoundingClientRect();
+          const ruler = document.querySelector<HTMLElement>('.ruler-ticks-area')!;
+          results.push({
+            scale: scale!,
+            distance: Math.abs(playhead.left - viewport.left - viewport.width * 0.15),
+            scrollLeft: scroll.scrollLeft,
+            rulerWidth: ruler.getBoundingClientRect().width,
+            layoutWidth: ruler.offsetWidth,
+            viewport: viewport.width,
+            visible: playhead.left - viewport.left,
+          });
+        }
+      } finally {
+        dispose();
+        if (previousScale) document.documentElement.style.setProperty('--ui-scale-timeline', previousScale);
+        else document.documentElement.style.removeProperty('--ui-scale-timeline');
+      }
+      return results;
+    }, composition);
+    // The 15% landing point is not a lock: subsequent layout changes may move
+    // the playhead inside the safe viewport without requiring another scroll.
+    console.info('Timeline playback follow after scale/resize/zoom:', results);
+    expect(results.every(({ visible, viewport }) => visible >= -1 && visible <= viewport * 0.9 + 1)).toBe(true);
   }, 30000);
 
   it('composites the playhead and viewport bitmap without allocating layers for all 10000 clips', async () => {

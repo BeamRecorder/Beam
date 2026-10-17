@@ -592,7 +592,9 @@ describe('TimelineTracks', () => {
     await mounted!.get('.keyboard-caption-track .track-content').trigger('click', { clientX: 950 });
     expect(mounted!.emitted('add:caption') ?? []).toHaveLength(0);
     await mounted!.get('.text-caption-track .track-content').trigger('click', { clientX: 950 });
-    expect(mounted!.emitted('add:caption')).toContainEqual([{ startMs: 7_300, durationMs: 2_000 }]);
+    expect(mounted!.emitted('add:caption')).toContainEqual([
+      { startMs: 7_300, durationMs: 2_000, targetClipId: 'caption-clip' },
+    ]);
   });
 
   it('does not render a keyboard track when the composition has no keyboard caption', async () => {

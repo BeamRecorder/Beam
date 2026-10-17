@@ -411,14 +411,17 @@ export const mountTracks = async (overrides: Record<string, unknown> = {}, initi
 
 export const setPlaybackViewportGeometry = (mounted: VueWrapper) => {
   const ticks = mounted.get('.ruler-ticks-area').element;
-  vi.mocked(ticks.getBoundingClientRect).mockReturnValue({
-    left: 120,
-    top: 0,
-    width: 2_000,
-    height: 28,
-    right: 2_120,
-    bottom: 28,
-  } as DOMRect);
+  vi.mocked(ticks.getBoundingClientRect).mockImplementation(
+    () =>
+      ({
+        left: 120 - scroll.scrollLeft,
+        top: 0,
+        width: 2_000,
+        height: 28,
+        right: 2_120 - scroll.scrollLeft,
+        bottom: 28,
+      }) as DOMRect,
+  );
   const scroll = mounted.get('.timeline-tracks-container').element;
   vi.spyOn(scroll, 'getBoundingClientRect').mockReturnValue({
     left: 120,
@@ -437,6 +440,7 @@ export const setPlaybackViewportGeometry = (mounted: VueWrapper) => {
     value: 2_000,
   });
   scroll.scrollLeft = 0;
+  scroll.dispatchEvent(new Event('scroll'));
   return scroll;
 };
 

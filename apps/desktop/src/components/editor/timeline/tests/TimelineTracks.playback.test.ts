@@ -62,9 +62,11 @@ describe('TimelineTracks', () => {
   it('coalesces playback follow-scroll measurement with the resulting scroll event', async () => {
     const mounted = await mountTracks({ isPlaying: true });
     const scroll = setPlaybackViewportGeometry(mounted!);
+    await flushPromises();
     const ticks = mounted!.get('.ruler-ticks-area').element;
     const scrollRect = vi.mocked(scroll.getBoundingClientRect);
     const ticksRect = vi.mocked(ticks.getBoundingClientRect);
+    scrollRect.mockClear();
     ticksRect.mockClear();
     const { pendingFrames, flushNextFrame } = queueAnimationFrames();
 
@@ -74,8 +76,42 @@ describe('TimelineTracks', () => {
     expect(pendingFrames.size).toBe(1);
     flushNextFrame();
 
-    expect(scrollRect).toHaveBeenCalledTimes(2);
-    expect(ticksRect).toHaveBeenCalledTimes(2);
+    expect(scrollRect).toHaveBeenCalledTimes(1);
+    expect(ticksRect).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not measure DOM geometry during 240 ordinary playback ticks inside the viewport', async () => {
+    const mounted = await mountTracks({ isPlaying: true });
+    const scroll = setPlaybackViewportGeometry(mounted!);
+    await flushPromises();
+    const ticks = mounted!.get('.ruler-ticks-area').element;
+    vi.mocked(scroll.getBoundingClientRect).mockClear();
+    vi.mocked(ticks.getBoundingClientRect).mockClear();
+    for (let i = 0; i < 240; i++) await mounted!.setProps({ currentTime: i / 240 });
+    expect(scroll.scrollLeft).toBe(0);
+    expect(scroll.getBoundingClientRect).not.toHaveBeenCalled();
+    expect(ticks.getBoundingClientRect).not.toHaveBeenCalled();
+  });
+
+  it('stops requesting layout frames when native scrolling clamps at the project end', async () => {
+    const mounted = await mountTracks({ isPlaying: true });
+    const scroll = setPlaybackViewportGeometry(mounted!);
+    await flushPromises();
+    let offset = 0;
+    Object.defineProperty(scroll, 'scrollLeft', {
+      configurable: true,
+      get: () => offset,
+      set: (value: number) => {
+        offset = Math.max(0, Math.min(1500, value));
+      },
+    });
+    const { pendingFrames, flushFrameBatch } = queueAnimationFrames();
+    await mounted!.setProps({ currentTime: 10 });
+    expect(scroll.scrollLeft).toBe(1500);
+    expect(pendingFrames.size).toBe(1);
+    flushFrameBatch();
+    await mounted!.vm.$nextTick();
+    expect(pendingFrames.size).toBe(0);
   });
 
   it('does not move the timeline when a paused playhead crosses the right boundary', async () => {
