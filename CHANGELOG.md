@@ -57,6 +57,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Changed
 
+- Reduced timeline playback and editing overhead: scrubbing queries active video clips, playback follow reuses measured geometry, media topology checks retain loaded fingerprints, and audio asset lookups use an index. Future audio buffers open only within the scheduling window, and exhausted iterators are no longer polled.
+
 - Screenshot Properties and Composition share a subtle frosted background in both themes, with a 96% theme tint to preserve readability, whether floating or docked. Reduced transparency keeps them opaque.
 
 - The Composition docking preview now pulses its dashed outline while dragging to highlight where to drop. Its label and position stay stable; reduced motion uses a static outline.

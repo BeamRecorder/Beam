@@ -1,0 +1,111 @@
+{
+  "baseline": "15758838",
+  "date": "2026-10-17",
+  "runtime": "Bun 1.4.2 (JavaScriptCore)",
+  "environment": {
+    "cpu": "Intel(R) Core(TM) Ultra 5 125H",
+    "platform": "linux",
+    "arch": "x64"
+  },
+  "method": "Median of seven batches after three warmups. Cached scrub: ten iterations per batch, all other comparisons: two. Index construction and initial loaded-fingerprint capture excluded. Frozen baseline functions run in the same process. Synthetic documents and result equality checked; not interactive playback FPS.",
+  "measurements": [
+    {
+      "task": "cached-scrub",
+      "count": 2000,
+      "label": "raw",
+      "beforeMs": 0.1233,
+      "afterMs": 0.0059
+    },
+    {
+      "task": "repeated-video-check",
+      "count": 2000,
+      "label": "raw",
+      "beforeMs": 1.3976,
+      "afterMs": 0.6404
+    },
+    {
+      "task": "cached-scrub",
+      "count": 2000,
+      "label": "reactive",
+      "beforeMs": 0.8627,
+      "afterMs": 0.0035
+    },
+    {
+      "task": "repeated-video-check",
+      "count": 2000,
+      "label": "reactive",
+      "beforeMs": 4.7308,
+      "afterMs": 2.2638
+    },
+    {
+      "task": "cached-scrub",
+      "count": 10000,
+      "label": "raw",
+      "beforeMs": 0.4676,
+      "afterMs": 0.0016
+    },
+    {
+      "task": "repeated-video-check",
+      "count": 10000,
+      "label": "raw",
+      "beforeMs": 6.0176,
+      "afterMs": 2.4559
+    },
+    {
+      "task": "cached-scrub",
+      "count": 10000,
+      "label": "reactive",
+      "beforeMs": 6.6394,
+      "afterMs": 0.0031
+    },
+    {
+      "task": "repeated-video-check",
+      "count": 10000,
+      "label": "reactive",
+      "beforeMs": 53.0283,
+      "afterMs": 46.0445
+    },
+    {
+      "task": "audio-topology",
+      "count": 200,
+      "label": "raw",
+      "beforeMs": 0.1909,
+      "afterMs": 0.0678
+    },
+    {
+      "task": "audio-topology",
+      "count": 200,
+      "label": "reactive",
+      "beforeMs": 5.5533,
+      "afterMs": 0.2948
+    },
+    {
+      "task": "audio-topology",
+      "count": 1000,
+      "label": "raw",
+      "beforeMs": 6.8177,
+      "afterMs": 0.2641
+    },
+    {
+      "task": "audio-topology",
+      "count": 1000,
+      "label": "reactive",
+      "beforeMs": 63.2048,
+      "afterMs": 1.1049
+    },
+    {
+      "task": "audio-topology",
+      "count": 2000,
+      "label": "raw",
+      "beforeMs": 42.3355,
+      "afterMs": 0.4214
+    },
+    {
+      "task": "audio-topology",
+      "count": 2000,
+      "label": "reactive",
+      "beforeMs": 226.4457,
+      "afterMs": 8.3033
+    }
+  ]
+}
