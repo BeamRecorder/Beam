@@ -1,0 +1,130 @@
+{
+  "auditedCommit": "dcc4e071",
+  "runtime": "Node v24.19.0 / V8",
+  "platform": "Linux",
+  "method": {
+    "statistic": "median of five batches after one warm-up",
+    "synchronousIterationsPerBatch": 3,
+    "linkedNamesIterationsPerBatch": 1,
+    "visibleLinkedNameQueries": 24,
+    "scope": "isolated functions; excludes actual media decoding, rendering and filesystem writes"
+  },
+  "compositionBenchmarks": [
+    {
+      "label": "FigmaDemo",
+      "clips": 10,
+      "bytes": 11479,
+      "splitPureMs": 0.1319,
+      "commandMs": 0.0906,
+      "validateAllMs": 0.0554,
+      "normalizeAllMs": 0.02,
+      "historyRecordMs": 0.1915,
+      "saveCloneMs": 0.5289,
+      "deepWatchMs": 0.1446,
+      "identityWatchMs": 0.0255,
+      "playbackSignatureMs": 0.054,
+      "visibleLinkedNamesMs": 0.3065,
+      "reloadDespiteSameAssets": true
+    },
+    {
+      "label": "synthetic-10-linked-segments",
+      "clips": 30,
+      "bytes": 20934,
+      "splitPureMs": 0.6104,
+      "commandMs": 0.961,
+      "validateAllMs": 0.1396,
+      "normalizeAllMs": 0.0246,
+      "historyRecordMs": 0.3168,
+      "saveCloneMs": 0.996,
+      "deepWatchMs": 0.0755,
+      "identityWatchMs": 0.0079,
+      "playbackSignatureMs": 0.3274,
+      "visibleLinkedNamesMs": 1.0036,
+      "reloadDespiteSameAssets": true
+    },
+    {
+      "label": "synthetic-100-linked-segments",
+      "clips": 300,
+      "bytes": 204809,
+      "splitPureMs": 0.8219,
+      "commandMs": 0.5015,
+      "validateAllMs": 0.53,
+      "normalizeAllMs": 0.0749,
+      "historyRecordMs": 2.2977,
+      "saveCloneMs": 1.455,
+      "deepWatchMs": 1.4553,
+      "identityWatchMs": 0.0279,
+      "playbackSignatureMs": 0.3512,
+      "visibleLinkedNamesMs": 49.3951,
+      "reloadDespiteSameAssets": true
+    },
+    {
+      "label": "synthetic-500-linked-segments",
+      "clips": 1500,
+      "bytes": 1028009,
+      "splitPureMs": 5.0032,
+      "commandMs": 11.3976,
+      "validateAllMs": 7.8959,
+      "normalizeAllMs": 0.2994,
+      "historyRecordMs": 15.1397,
+      "saveCloneMs": 17.0781,
+      "deepWatchMs": 6.7758,
+      "identityWatchMs": 0.0036,
+      "playbackSignatureMs": 1.7134,
+      "visibleLinkedNamesMs": 656.6771,
+      "reloadDespiteSameAssets": true
+    },
+    {
+      "label": "synthetic-1000-linked-segments",
+      "clips": 3000,
+      "bytes": 2057014,
+      "splitPureMs": 8.3102,
+      "commandMs": 8.9405,
+      "validateAllMs": 6.1524,
+      "normalizeAllMs": 0.7799,
+      "historyRecordMs": 25.312,
+      "saveCloneMs": 25.7513,
+      "deepWatchMs": 2.9221,
+      "identityWatchMs": 0.0034,
+      "playbackSignatureMs": 3.3094,
+      "visibleLinkedNamesMs": 3185.9579,
+      "reloadDespiteSameAssets": true
+    }
+  ],
+  "validLockedEditBenchmarks": [
+    {
+      "clips": 300,
+      "locked": 99,
+      "oneLockCheckMs": 3.8158,
+      "commandWithLocksMs": 2.8536
+    },
+    {
+      "clips": 1500,
+      "locked": 499,
+      "oneLockCheckMs": 35.194,
+      "commandWithLocksMs": 27.2619
+    },
+    {
+      "clips": 3000,
+      "locked": 999,
+      "oneLockCheckMs": 115.372,
+      "commandWithLocksMs": 121.4444
+    }
+  ],
+  "playbackEngineTrace": {
+    "case": "split-screen-same-source",
+    "requests": [
+      "pause",
+      "load",
+      "seek"
+    ],
+    "states": [
+      "loading",
+      "paused"
+    ],
+    "oldCachedFrameClosed": true,
+    "assetIdsUnchanged": true,
+    "audioLoadCalls": 2,
+    "audioUpdateCalls": 0
+  }
+}
