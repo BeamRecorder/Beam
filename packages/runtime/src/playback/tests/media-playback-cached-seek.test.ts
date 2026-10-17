@@ -40,6 +40,28 @@ function cacheFrame(
 }
 
 describe('MediaPlaybackEngine cached scrubbing', () => {
+  it('retains one shared cached bitmap for all simultaneously active video aliases', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      clock: browserPlaybackClock,
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    await load(engine, worker, composition([videoClip('base'), videoClip('alias')]));
+    const request = worker.requests.find((entry) => entry.type === 'load');
+    if (!request || request.type !== 'load') throw new Error('Expected media load');
+    expect(request.clips).toHaveLength(1);
+    const bitmap = cacheFrame(worker, latestSeekRequest(worker)!.generation, request.clips[0]!.clipId, 0.5);
+    const seeks = worker.requests.filter((entry) => entry.type === 'seek').length;
+    await expect(engine.seek(0.5, 'scrub')).resolves.toBe('presented');
+    expect(worker.requests.filter((entry) => entry.type === 'seek')).toHaveLength(seeks);
+    expect(engine.frameFor('base')?.bitmap).toBe(bitmap);
+    expect(engine.frameFor('alias')?.bitmap).toBe(bitmap);
+    engine.dispose();
+    expect(bitmap.close).toHaveBeenCalledOnce();
+  });
+
   it('presents a paused scrub from exact cached coverage without audio or worker decoding', async () => {
     const worker = new FakeWorker();
     const audio = new FakeAudio();

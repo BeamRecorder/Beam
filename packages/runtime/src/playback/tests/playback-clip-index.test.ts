@@ -76,6 +76,42 @@ function oldFindOracle(clips: readonly Clip[]) {
 }
 
 describe('createPlaybackClipIndex', () => {
+  it('queries only enabled moving media at exact and fractional clip boundaries', () => {
+    const first = visualClip('first', { timelineDurationMs: 32300 });
+    const second = visualClip('second', { timelineStartMs: 32300 });
+    const index = createPlaybackClipIndex(
+      makeComposition(
+        first,
+        second,
+        visualClip('still', { kind: 'image' }),
+        visualClip('hidden', { enabled: false }),
+        audioClip('audio'),
+      ),
+    );
+    expect(index.activeVideosAt(0).map((clip) => clip.id)).toEqual(['first']);
+    expect(index.activeVideosAt(969 / 30).map((clip) => clip.id)).toEqual(['second']);
+    expect(index.activeVideosAt(33.3)).toEqual([]);
+    expect(index.activeVideosAt(NaN)).toEqual([]);
+  });
+
+  it('does not rescan 10000 offscreen clip records when querying cached scrub candidates', () => {
+    let reads = 0;
+    const clips = Array.from({ length: 10000 }, (_, i) => {
+      const entry = visualClip(String(i), { timelineStartMs: i * 1000 });
+      Object.defineProperty(entry, 'enabled', {
+        get: () => {
+          reads++;
+          return true;
+        },
+      });
+      return entry;
+    });
+    const index = createPlaybackClipIndex(makeComposition(...clips));
+    reads = 0;
+    expect(index.activeVideosAt(5000.5).map((clip) => clip.id)).toEqual(['5000']);
+    expect(reads).toBeLessThan(10);
+  });
+
   it('returns empty maps for null and empty compositions', () => {
     for (const composition of [null, makeComposition()]) {
       const index = createPlaybackClipIndex(composition);

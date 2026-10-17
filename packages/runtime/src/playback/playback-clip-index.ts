@@ -1,5 +1,5 @@
 import { mayBeEnabled } from '@beam/engine/scene/scene-visibility';
-import { clipEndMs, isVisualClip, type Clip, type ClipComposition } from '@beam/runtime/shared/index';
+import { clipEndMs, isVisualClip, type Clip, type ClipComposition, type VisualClip } from '@beam/runtime/shared/index';
 import { createTimelineIntervalIndex } from '@beam/engine/shared/timeline-interval-index';
 
 export function createPlaybackClipIndex(composition: ClipComposition | null) {
@@ -24,15 +24,19 @@ export function createPlaybackClipIndex(composition: ClipComposition | null) {
   const activeAt = createTimelineIntervalIndex(
     [...clips.values()]
       .filter((clip) => mayBeEnabled(composition, clip) && isVisualClip(clip))
-      .map((clip) => ({ start: clip.timelineStartMs, end: clipEndMs(clip), value: clip })),
+      .map((clip) => ({ start: clip.timelineStartMs / 1000, end: clipEndMs(clip) / 1000, value: clip })),
   );
+  const activeVideosAt = (timeSeconds: number) =>
+    activeAt(timeSeconds).filter(
+      (clip): clip is VisualClip => clip.enabled && isVisualClip(clip) && clip.kind !== 'image',
+    );
   const retainedKeys = (
     timeSeconds: number,
     keys: ReadonlyMap<string, string>,
     aliases: ReadonlyMap<string, string>,
   ) => {
     const retained = new Set<string>();
-    for (const clip of activeAt(timeSeconds * 1000)) {
+    for (const clip of activeAt(timeSeconds)) {
       const key = keys.get(aliases.get(clip.id) ?? clip.id);
       if (key) retained.add(key);
       else {
@@ -43,5 +47,5 @@ export function createPlaybackClipIndex(composition: ClipComposition | null) {
     }
     return retained;
   };
-  return { clips, previous, retainedKeys };
+  return { clips, previous, retainedKeys, activeVideosAt };
 }

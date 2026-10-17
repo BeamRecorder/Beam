@@ -60,7 +60,13 @@ class FakeAudioContext {
   readonly close = vi.fn(async () => undefined);
   readonly resume = vi.fn(async () => undefined);
   readonly gains: Array<{
-    gain: { value: number; setTargetAtTime: ReturnType<typeof vi.fn>; setValueCurveAtTime: ReturnType<typeof vi.fn> };
+    gain: {
+      value: number;
+      setTargetAtTime: ReturnType<typeof vi.fn>;
+      setValueCurveAtTime: ReturnType<typeof vi.fn>;
+      setValueAtTime: ReturnType<typeof vi.fn>;
+      linearRampToValueAtTime: ReturnType<typeof vi.fn>;
+    };
     connect: ReturnType<typeof vi.fn>;
     disconnect: ReturnType<typeof vi.fn>;
   }> = [];
@@ -77,7 +83,13 @@ class FakeAudioContext {
 
   createGain() {
     const gain = {
-      gain: { value: 1, setTargetAtTime: vi.fn(), setValueCurveAtTime: vi.fn() },
+      gain: {
+        value: 1,
+        setTargetAtTime: vi.fn(),
+        setValueCurveAtTime: vi.fn(),
+        setValueAtTime: vi.fn(),
+        linearRampToValueAtTime: vi.fn(),
+      },
       connect: vi.fn(),
       disconnect: vi.fn(),
     };
@@ -210,6 +222,216 @@ afterEach(() => {
 });
 
 describe('AudioPlaybackScheduler', () => {
+  it.each([
+    [true, true],
+    [true, false],
+    [false, true],
+  ])('preserves fade automation when entry=%s and exit=%s', async (entry, exit) => {
+    runtime.buffersFactory.mockImplementation(() => iterator([{ timestamp: 0, duration: 1 }]));
+    const fade = { preset: { kind: 'fade' as const }, durationMs: 200 };
+    const scheduler = new AudioPlaybackScheduler();
+    await scheduler.loadComposition(
+      composition([
+        clip('fade', {
+          timelineDurationMs: 1000,
+          sourceDurationMs: 1000,
+          transitions: { entry: entry ? fade : null, exit: exit ? fade : null },
+        }),
+      ]),
+    );
+    await scheduler.play(0, 1);
+    const context = FakeAudioContext.instances[0]!;
+    const gain = context.gains[1]!.gain;
+    expect(gain.setValueAtTime).toHaveBeenCalledWith(entry ? 0 : 1, 0);
+    if (entry) expect(gain.linearRampToValueAtTime).toHaveBeenCalledWith(1, 0.2);
+    if (exit) expect(gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, 1);
+    context.sources[0]!.onended?.();
+    expect(context.sources[0]!.disconnect).toHaveBeenCalledOnce();
+    scheduler.dispose();
+  });
+
+  it('retains exact source timing when seeking into a fade and discards empty decoded intervals', async () => {
+    runtime.buffersFactory.mockImplementation(() =>
+      iterator([
+        { timestamp: 0.5, duration: 0 },
+        { timestamp: 0.5, duration: 0.4 },
+        { timestamp: 1, duration: 0.1 },
+      ]),
+    );
+    const fade = { preset: { kind: 'fade' as const }, durationMs: 200 };
+    const scheduler = new AudioPlaybackScheduler();
+    await scheduler.loadComposition(
+      composition([
+        clip('fade', { timelineDurationMs: 1000, sourceDurationMs: 1000, transitions: { entry: fade, exit: fade } }),
+      ]),
+    );
+    await scheduler.play(0.5, 1);
+    const context = FakeAudioContext.instances[0]!;
+    expect(context.sources).toHaveLength(1);
+    expect(context.sources[0]!.start).toHaveBeenCalledWith(0, 0, 0.4);
+    expect(context.gains[1]!.gain.linearRampToValueAtTime).toHaveBeenCalledWith(
+      expect.closeTo(0.5, 7),
+      expect.closeTo(0.4, 7),
+    );
+    scheduler.dispose();
+  });
+
+  it.each(['track', 'decode'] as const)('disposes a superseded load waiting for %s metadata', async (stage) => {
+    const ready = deferred<boolean>();
+    const track = {
+      canDecode: vi.fn(() => (stage === 'decode' ? ready.promise : Promise.resolve(true))),
+      getCodec: vi.fn(async () => 'aac'),
+    };
+    const opened = openedInput(track);
+    if (stage === 'track')
+      opened.input.getPrimaryAudioTrack.mockImplementation(async () => {
+        await ready.promise;
+        return track;
+      });
+    runtime.openMediaInput.mockResolvedValueOnce(opened);
+    const scheduler = new AudioPlaybackScheduler();
+    const pending = scheduler.loadComposition(composition());
+    await flushMicrotasks();
+    scheduler.dispose();
+    ready.resolve(true);
+    await pending;
+    expect(opened.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('does not publish a stale decoded buffer after pause and rejects an older play intent', async () => {
+    const ready = deferred<{ done: boolean; value: { timestamp: number; duration: number; buffer: object } }>();
+    const chunks = {
+      next: vi.fn(() => ready.promise),
+      return: vi.fn(async () => ({ done: true, value: undefined })),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    runtime.buffersFactory.mockReturnValue(chunks);
+    const scheduler = new AudioPlaybackScheduler();
+    await scheduler.loadComposition(composition());
+    const pending = scheduler.play(0, 1);
+    await flushMicrotasks();
+    scheduler.pause(0.25);
+    ready.resolve({ done: false, value: { timestamp: 0, duration: 0.5, buffer: {} } });
+    await pending;
+    expect(FakeAudioContext.instances[0]!.sources).toHaveLength(0);
+    await scheduler.play(0, 0);
+    expect(chunks.next).toHaveBeenCalledOnce();
+    expect(scheduler.currentTime()).toBe(0.25);
+    scheduler.dispose();
+  });
+
+  it('resumes a suspended context and preserves paused time with or without media', async () => {
+    const scheduler = new AudioPlaybackScheduler();
+    expect(scheduler.currentTime()).toBe(0);
+    await scheduler.seek(0.5, 1, false);
+    expect(scheduler.currentTime()).toBe(0.5);
+    scheduler.setVolume(100);
+    const context = FakeAudioContext.instances[0]!;
+    context.state = 'suspended';
+    await scheduler.play(0.5, 2);
+    expect(context.resume).toHaveBeenCalledOnce();
+    scheduler.pause();
+    expect(scheduler.currentTime()).toBe(0.5);
+    scheduler.dispose();
+  });
+
+  it('rejects asset topology changes on timing-only updates and reports non-Error input failures', async () => {
+    const scheduler = new AudioPlaybackScheduler();
+    await scheduler.loadComposition(composition());
+    expect(() => scheduler.updateComposition(composition([], []))).toThrow('Audio assets changed');
+    expect(() =>
+      scheduler.updateComposition(composition([clip('other', { assetId: 'other' })], [asset('other')])),
+    ).toThrow('Audio assets changed');
+    scheduler.dispose();
+    runtime.openMediaInput.mockRejectedValueOnce('invalid input');
+    expect(await new AudioPlaybackScheduler().loadComposition(composition())).toEqual([
+      expect.objectContaining({ message: 'Audio playback failed.' }),
+    ]);
+  });
+
+  it('reports asynchronous scheduling failures through the owning playback engine', async () => {
+    const chunks = iterator([{ timestamp: 1.1, duration: 0.1 }]);
+    chunks.next.mockRejectedValueOnce(new Error('decoder stopped'));
+    runtime.buffersFactory.mockReturnValue(chunks);
+    const failed = vi.fn();
+    const scheduler = new AudioPlaybackScheduler(failed);
+    // Keep the source unopened until the first timer pass, then fail that pass.
+    await scheduler.loadComposition(composition([clip('future', { timelineStartMs: 1100 })]));
+    await scheduler.play(0, 1);
+    FakeAudioContext.instances[0]!.now = 0.2;
+    vi.advanceTimersByTime(100);
+    await flushMicrotasks();
+    expect(failed).toHaveBeenCalledWith(expect.objectContaining({ message: 'decoder stopped' }));
+    scheduler.dispose();
+  });
+
+  it.each([1, 1000])('does not open or read buffers for %s clips beyond the scheduling horizon', async (count) => {
+    const scheduler = new AudioPlaybackScheduler();
+    await scheduler.loadComposition(
+      composition(
+        Array.from({ length: count }, (_, i) =>
+          clip(`future-${i}`, {
+            timelineStartMs: 60000 + i * 1000,
+            timelineDurationMs: 1000,
+            sourceDurationMs: 1000,
+          }),
+        ),
+      ),
+    );
+    runtime.buffersFactory.mockClear();
+    await scheduler.play(0, 1);
+    expect(runtime.buffersFactory).not.toHaveBeenCalled();
+    expect(FakeAudioContext.instances[0]!.sources).toHaveLength(0);
+
+    FakeAudioContext.instances[0]!.now = 59;
+    vi.advanceTimersByTime(100);
+    await flushMicrotasks();
+    expect(runtime.buffersFactory).toHaveBeenCalledTimes(1);
+    expect(FakeAudioContext.instances[0]!.sources[0]!.start).toHaveBeenCalledWith(60, 0, 0.5);
+    scheduler.dispose();
+  });
+
+  it('leaves future iterators unopened on pause and starts at the trimmed source when seeking into a gap', async () => {
+    const scheduler = new AudioPlaybackScheduler();
+    await scheduler.loadComposition(
+      composition([
+        clip('future', {
+          timelineStartMs: 60000,
+          timelineDurationMs: 1000,
+          sourceInMs: 2000,
+          sourceDurationMs: 2000,
+          playbackRate: 2,
+        }),
+      ]),
+    );
+    runtime.buffersFactory.mockClear();
+    await scheduler.play(0, 1);
+    scheduler.pause(0);
+    expect(runtime.buffersFactory).not.toHaveBeenCalled();
+    runtime.buffersFactory.mockImplementation(() => iterator([{ timestamp: 3, duration: 0.5 }]));
+    await scheduler.seek(60.5, 3, true);
+    expect(runtime.buffersFactory).toHaveBeenCalledWith(3, 4);
+    expect(FakeAudioContext.instances[0]!.sources[0]!.start).toHaveBeenCalledWith(0, 0, 0.5);
+    scheduler.dispose();
+  });
+
+  it('does not poll an exhausted audio iterator on subsequent scheduling passes', async () => {
+    const chunks = iterator([{ timestamp: 0, duration: 0.5 }]);
+    runtime.buffersFactory.mockReturnValue(chunks);
+    const scheduler = new AudioPlaybackScheduler();
+    await scheduler.loadComposition(composition());
+    await scheduler.play(0, 1);
+    expect(chunks.next).toHaveBeenCalledTimes(2);
+    for (let i = 0; i < 20; i++) {
+      vi.advanceTimersByTime(100);
+      await flushMicrotasks();
+    }
+    expect(chunks.next).toHaveBeenCalledTimes(2);
+    scheduler.dispose();
+  });
+
   it('starts with an unavailable context and zero scheduling counters', () => {
     const scheduler = new AudioPlaybackScheduler();
 

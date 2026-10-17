@@ -1,10 +1,10 @@
-import { isVisualClip, type ClipComposition } from '@beam/runtime/shared/index';
+import type { createPlaybackClipIndex } from './playback-clip-index';
 import { snapTimeToBoundary } from '@beam/engine/shared/time-boundary';
 import type { FrameLruCache } from '@beam/runtime/playback/frame-cache';
 import type { PreviewQuality } from '@beam/runtime/playback/playback-preview';
 
 export function cachedSeekFrames(
-  composition: ClipComposition | null,
+  clipIndex: Pick<ReturnType<typeof createPlaybackClipIndex>, 'activeVideosAt'>,
   cache: FrameLruCache,
   targetSeconds: number,
   quality: PreviewQuality,
@@ -12,8 +12,7 @@ export function cachedSeekFrames(
 ) {
   const frames = new Map<string, string>();
   let complete = true;
-  for (const clip of composition?.clips ?? []) {
-    if (!clip.enabled || !isVisualClip(clip) || clip.kind === 'image') continue;
+  for (const clip of clipIndex.activeVideosAt(targetSeconds)) {
     const start = clip.timelineStartMs / 1_000;
     const end = (clip.timelineStartMs + clip.timelineDurationMs) / 1_000;
     const time = snapTimeToBoundary(targetSeconds, start, end);

@@ -21,7 +21,7 @@ import type {
   PlaybackClock,
 } from '@beam/runtime/playback/playback-worker-binding-types';
 import { isPlaybackWorkerResponse } from '@beam/runtime/playback/playback-protocol';
-import { audioPlaybackTopology, videoPlaybackTopology } from '@beam/runtime/playback/playback-composition-topology';
+import { PlaybackCompositionTopology } from '@beam/runtime/playback/playback-composition-topology';
 import { videoPlaybackPlan } from '@beam/runtime/playback/playback-composition-plan';
 import { compileSceneComposition } from '@beam/engine/scene/scene-clock';
 import { sharedVideoPlan } from '@beam/runtime/playback/shared-video-plan';
@@ -29,6 +29,7 @@ import { createPlaybackClipIndex } from '@beam/runtime/playback/playback-clip-in
 import { isPreviewQuality, type PreviewQuality } from '@beam/runtime/playback/playback-preview';
 import type {
   PlaybackEventMap,
+  PlaybackListener,
   PlaybackMetrics,
   PlaybackSeekMode,
   PlaybackSeekResult,
@@ -36,7 +37,6 @@ import type {
   PlaybackWorkerRequest,
   PlaybackWorkerResponse,
 } from '@beam/runtime/playback/playback-types';
-type Listener<K extends keyof PlaybackEventMap> = (value: PlaybackEventMap[K]) => void;
 const WORKER_DISPOSE_TIMEOUT_MS = 2_000;
 export class MediaPlaybackEngine {
   reportAudioError(error: MediaError) {
@@ -61,6 +61,7 @@ export class MediaPlaybackEngine {
   >();
   private readonly pendingLoads = new Map<number, { resolve(): void; reject(error: Error): void }>();
   private composition: ClipComposition | null = null;
+  private readonly topology = new PlaybackCompositionTopology();
   private clipIndex = createPlaybackClipIndex(null);
   private generation = 0;
   private nextRequestId = 1;
@@ -72,7 +73,6 @@ export class MediaPlaybackEngine {
   private playbackState: PlaybackState = 'idle';
   private previewQuality: PreviewQuality;
   private metrics = createPlaybackMetrics();
-
   constructor(options: MediaPlaybackOptions) {
     if (!isPreviewQuality(options.previewQuality ?? 'full')) throw new RangeError('Invalid playback preview quality.');
     this.previewQuality = options.previewQuality ?? 'full';
@@ -96,6 +96,7 @@ export class MediaPlaybackEngine {
     if (this.canRetimeComposition(composition)) return this.retimeComposition(composition, timelineSeconds);
     this.pause();
     this.composition = composition;
+    this.topology.capture(composition);
     this.clipIndex = createPlaybackClipIndex(composition);
     this.durationSeconds = compositionDurationMs(composition) / 1_000;
     this.currentSeconds = this.clampTime(timelineSeconds);
@@ -139,7 +140,7 @@ export class MediaPlaybackEngine {
       this.composition !== null &&
       this.playbackState !== 'idle' &&
       this.playbackState !== 'loading' &&
-      videoPlaybackTopology(this.composition) === videoPlaybackTopology(composition)
+      this.topology.matchesVideo(composition)
     );
   }
 
@@ -148,8 +149,7 @@ export class MediaPlaybackEngine {
     composition = compileSceneComposition(composition);
     if (!this.canRetimeComposition(composition)) throw new Error('Playback topology changed during retiming.');
     if (!Number.isFinite(timelineSeconds)) throw new RangeError('Playback time must be finite.');
-    const previousComposition = this.composition!;
-    const shouldReloadAudio = audioPlaybackTopology(previousComposition) !== audioPlaybackTopology(composition);
+    const shouldReloadAudio = this.topology.updateAudio(composition);
     this.pause();
     this.composition = composition;
     this.clipIndex = createPlaybackClipIndex(composition);
@@ -228,7 +228,7 @@ export class MediaPlaybackEngine {
     this.currentSeconds = target;
     this.emit('time', target);
 
-    const cached = cachedSeekFrames(this.composition, this.cache, target, this.previewQuality, this.frameAliases);
+    const cached = cachedSeekFrames(this.clipIndex, this.cache, target, this.previewQuality, this.frameAliases);
     for (const [clipId, key] of cached.frames) {
       this.currentFrameKeys.set(clipId, key);
       this.emit('frame', { clipId });
@@ -276,7 +276,7 @@ export class MediaPlaybackEngine {
     return previousKey ? (this.cache.get(previousKey) ?? null) : null;
   }
 
-  on<K extends keyof PlaybackEventMap>(event: K, listener: Listener<K>): () => void {
+  on<K extends keyof PlaybackEventMap>(event: K, listener: PlaybackListener<K>): () => void {
     let listeners = this.listeners.get(event);
     if (!listeners) {
       listeners = new Set();

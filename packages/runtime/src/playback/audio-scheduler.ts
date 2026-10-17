@@ -16,29 +16,17 @@ import { effectiveAudioClipGain } from '@beam/engine/shared/audio-gain';
 import { AUDIO_LIMITER_RELEASE_SECONDS, AUDIO_LIMITER_THRESHOLD_DB } from '@beam/engine/shared/audio-limiter';
 import { emptyAudioPlaybackMetrics, type AudioPlaybackMetrics } from '@beam/runtime/playback/audio-playback-metrics';
 import { createAudioGainSampler } from '@beam/engine/scene/audio-animation';
+import { audioPlaybackTopology } from './playback-composition-topology';
+import type { AudioAssetDecoder, AudioConsumer, ScheduledAudioNode } from './audio-scheduler-types';
 
 const SCHEDULE_AHEAD_SECONDS = 1;
 const SCHEDULE_INTERVAL_MS = 100;
-
-type AudioAssetDecoder = {
-  opened: OpenedMediaInput;
-  sink: AudioBufferSink;
-};
-
-type AudioConsumer = {
-  clip: AudioClip;
-  decoder: AudioAssetDecoder;
-  iterator: AsyncIterator<WrappedAudioBuffer>;
-  pending: WrappedAudioBuffer | null;
-};
-
-type ScheduledNode = { source: AudioBufferSourceNode; gain: GainNode };
 
 export class AudioPlaybackScheduler {
   private composition: ClipComposition | null = null;
   private readonly decoders = new Map<string, AudioAssetDecoder>();
   private consumers: AudioConsumer[] = [];
-  private readonly scheduled = new Set<ScheduledNode>();
+  private readonly scheduled = new Set<ScheduledAudioNode>();
   private context: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private limiter: DynamicsCompressorNode | null = null;
@@ -69,12 +57,13 @@ export class AudioPlaybackScheduler {
     this.composition = composition;
     const clips = composition.clips.filter(isAudioClip);
     const assetIds = new Set(clips.map((clip) => clip.assetId));
+    const assets = new Map(composition.assets.map((asset) => [asset.id, asset]));
     const issues: MediaError[] = [];
     const loadedDecoders = new Map<string, AudioAssetDecoder>();
     for (const assetId of assetIds) {
       let opened: OpenedMediaInput | null = null;
       try {
-        const asset = composition.assets.find((entry) => entry.id === assetId);
+        const asset = assets.get(assetId);
         if (!asset) throw this.missingAsset(assetId);
         const descriptor = { ...mediaSourceDescriptor(asset), kind: 'audio' as const };
         opened = await openMediaInput(descriptor);
@@ -147,16 +136,7 @@ export class AudioPlaybackScheduler {
     if (nextAssetIds.size !== this.decoders.size || [...nextAssetIds].some((assetId) => !this.decoders.has(assetId))) {
       return false;
     }
-    const topology = (value: ClipComposition) => {
-      const assetIds = [...new Set(value.clips.filter(isAudioClip).map((clip) => clip.assetId))].sort();
-      return JSON.stringify(
-        assetIds.map((assetId) => {
-          const asset = value.assets.find((entry) => entry.id === assetId);
-          return { assetId, kind: asset?.kind, src: asset?.src };
-        }),
-      );
-    };
-    return topology(this.composition) === topology(composition);
+    return audioPlaybackTopology(this.composition) === audioPlaybackTopology(composition);
   }
 
   async play(timelineSeconds: number, generation: number): Promise<void> {
@@ -253,8 +233,11 @@ export class AudioPlaybackScheduler {
           {
             clip,
             decoder,
-            iterator: decoder.sink.buffers(sourceStart, sourceEnd)[Symbol.asyncIterator](),
+            sourceStart,
+            sourceEnd,
+            iterator: null,
             pending: null,
+            ended: false,
           },
         ];
       });
@@ -265,7 +248,11 @@ export class AudioPlaybackScheduler {
     this.metrics.contextState = this.context.state;
     this.metrics.schedulePasses += 1;
     const horizon = this.currentTime() + SCHEDULE_AHEAD_SECONDS;
-    await Promise.all(this.consumers.map((consumer) => this.scheduleConsumer(consumer, horizon, requestGeneration)));
+    await Promise.all(
+      this.consumers
+        .filter((consumer) => !consumer.ended && consumer.clip.timelineStartMs / 1000 <= horizon)
+        .map((consumer) => this.scheduleConsumer(consumer, horizon, requestGeneration)),
+    );
   }
 
   private requestSchedule(requestGeneration: number): Promise<void> {
@@ -286,11 +273,17 @@ export class AudioPlaybackScheduler {
   }
 
   private async scheduleConsumer(consumer: AudioConsumer, horizon: number, requestGeneration: number) {
+    consumer.iterator ??= consumer.decoder.sink
+      .buffers(consumer.sourceStart, consumer.sourceEnd)
+      [Symbol.asyncIterator]();
     while (this.playing && requestGeneration === this.generation) {
       const wrapped = consumer.pending ?? (await consumer.iterator.next()).value ?? null;
       if (!this.playing || requestGeneration !== this.generation) return;
       consumer.pending = null;
-      if (!wrapped) return;
+      if (!wrapped) {
+        consumer.ended = true;
+        return;
+      }
       const clip = consumer.clip;
       const clipSourceStart = clip.sourceInMs / 1_000;
       const clipSourceEnd = (clip.sourceInMs + clip.sourceDurationMs) / 1_000;
@@ -395,7 +388,7 @@ export class AudioPlaybackScheduler {
     const consumers = this.consumers;
     this.consumers = [];
     for (const consumer of consumers) {
-      void Promise.resolve(consumer.iterator.return?.()).catch(() => undefined);
+      void Promise.resolve(consumer.iterator?.return?.()).catch(() => undefined);
     }
   }
 
