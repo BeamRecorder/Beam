@@ -12,6 +12,10 @@ export interface EditorStateSnapshot {
   selectedBackground: BackgroundValue | null;
   backgroundBlurPercent: number;
 }
+export interface EditorHistorySnapshots {
+  capture(snapshot: EditorStateSnapshot): EditorStateSnapshot;
+  restore(snapshot: EditorStateSnapshot): EditorStateSnapshot;
+}
 export type {
   HistoryActionType,
   HistoryAction,

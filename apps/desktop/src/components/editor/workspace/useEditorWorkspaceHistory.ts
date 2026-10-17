@@ -1,6 +1,7 @@
 import { computed, watch } from 'vue';
 import type { CaptionInlineEditingEnd } from '~/components/editor/canvas/caption-inline-editing';
 import { useEditorUndoRedo, type EditorStateSnapshot } from '~/components/editor/composables/useEditorUndoRedo';
+import { createEditorHistorySnapshots } from '../composables/editor-history-snapshots';
 import { useAudioNormalization } from '../composables/useAudioNormalization';
 import { useEditorVoiceover } from '../voiceover/useEditorVoiceover';
 import type { EditorWorkspaceState } from './workspace-types';
@@ -25,16 +26,17 @@ export function useEditorWorkspaceHistory(state: EditorWorkspaceState) {
     isInlineCaptionEditing,
     props,
   } = state;
-  // History owns the JSON copy. Passing live values avoids copying each field twice.
-  const createEditorSnapshot = (): EditorStateSnapshot => ({
-    composition: composition.value,
-    zoomElements: zoomElements.value,
-    zoomMotionBlur: zoomMotionBlur.value,
-    zoomAutoFollow: zoomAutoFollow.value,
-    outputCanvas: outputCanvas.value,
-    selectedBackground: selectedBackground.value,
-    backgroundBlurPercent: backgroundBlurPercent.value,
-  });
+  const snapshots = createEditorHistorySnapshots();
+  const createEditorSnapshot = (): EditorStateSnapshot =>
+    snapshots.capture({
+      composition: composition.value,
+      zoomElements: zoomElements.value,
+      zoomMotionBlur: zoomMotionBlur.value,
+      zoomAutoFollow: zoomAutoFollow.value,
+      outputCanvas: outputCanvas.value,
+      selectedBackground: selectedBackground.value,
+      backgroundBlurPercent: backgroundBlurPercent.value,
+    });
   const {
     recordSnapshot,
     commitNow,
@@ -44,7 +46,9 @@ export function useEditorWorkspaceHistory(state: EditorWorkspaceState) {
     canRedo,
     lastAction: historyAction,
   } = useEditorUndoRedo({
-    onRestoreSnapshot: async (snapshot) => {
+    immutable: true,
+    onRestoreSnapshot: async (ownedSnapshot) => {
+      const snapshot = snapshots.restore(ownedSnapshot);
       compositionState.restoreComposition(snapshot.composition);
       zoomState.restoreZoomElements(snapshot.zoomElements);
       if (snapshot.zoomMotionBlur) zoomMotionBlur.value = snapshot.zoomMotionBlur;
@@ -116,14 +120,10 @@ export function useEditorWorkspaceHistory(state: EditorWorkspaceState) {
     },
     { immediate: true },
   );
-  watch(
-    composition,
-    () => {
-      if (historyInitialized && !editorState.loading.value && !isInlineCaptionEditing.value)
-        recordSnapshot(createEditorSnapshot, 300);
-    },
-    { deep: true },
-  );
+  watch(composition, () => {
+    if (historyInitialized && !editorState.loading.value && !isInlineCaptionEditing.value)
+      recordSnapshot(createEditorSnapshot, 300);
+  });
   watch(
     [zoomElements, zoomMotionBlur, zoomAutoFollow, outputCanvas, selectedBackground, backgroundBlurPercent],
     () => {

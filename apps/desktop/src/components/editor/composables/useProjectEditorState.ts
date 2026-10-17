@@ -2,6 +2,7 @@ import { computed, getCurrentScope, onScopeDispose, ref, toRaw, watch, type Ref 
 import { capture } from '../../../api/capture';
 import type { CaptureProject, ProjectEditorPresentation, ProjectEditorState } from '../../../api/types/capture-api';
 import type { Clip, ClipComposition } from '@beam/engine/shared/composition-types';
+import { freezeDocument } from '@beam/engine/document/immutable-document';
 import {
   DEFAULT_ZOOM_MOTION_BLUR,
   DEFAULT_ZOOM_AUTO_FOLLOW,
@@ -103,7 +104,7 @@ export function useProjectEditorState(options: {
 
   const snapshot = (): ProjectEditorState => ({
     schemaVersion: 3,
-    composition: clone(options.composition.value),
+    composition: freezeDocument(toRaw(options.composition.value)),
     zoom: {
       elements: options.zoomElements.value.map((zoom) => ({ ...toRaw(zoom), focus: { ...toRaw(zoom).focus } })),
       generatedSessions: options.generatedSessions.value.map((session) => ({ ...toRaw(session) })),

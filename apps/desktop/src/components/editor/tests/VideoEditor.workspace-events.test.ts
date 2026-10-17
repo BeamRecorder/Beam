@@ -1,11 +1,14 @@
 import './VideoEditor.test.setup';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { nextTick } from 'vue';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { computed, nextTick, ref, shallowRef } from 'vue';
+import { mount } from '@vue/test-utils';
+import { useEditorWorkspaceHistory } from '../workspace/useEditorWorkspaceHistory';
+import type { ClipComposition } from '@beam/engine/shared/composition-types';
 import type { VueWrapper } from '@vue/test-utils';
 import type { EditorWorkspaceContext } from '../workspace/workspace-types';
 import type { useEditorVoiceover } from '../voiceover/useEditorVoiceover';
 import type { useAudioNormalization } from '../composables/useAudioNormalization';
-import { capture, mountEditor, setEditorComponent } from './VideoEditor.test.setup';
+import { capture, mountEditor, setEditorComponent, historyState } from './VideoEditor.test.setup';
 
 const bridges = vi.hoisted(() => ({
   voiceover: undefined as Parameters<typeof useEditorVoiceover>[0] | undefined,
@@ -82,6 +85,8 @@ beforeEach(() => {
   bridges.normalize.mockResolvedValue(undefined);
   capture.pasteProjectClipboardImage.mockResolvedValue(null);
 });
+
+afterEach(() => vi.useRealTimers());
 
 describe('VideoEditor workspace host bindings', () => {
   it('keeps every properties model connected to its shared editor state', async () => {
@@ -264,7 +269,12 @@ describe('VideoEditor workspace host bindings', () => {
     workspace.commitNow(workspace.createEditorSnapshot());
     const first = workspace.composition.value.clips[0]!;
     const oldName = first.name;
-    workspace.composition.value.clips[0]!.name = 'Changed after commit';
+    workspace.composition.value = {
+      ...workspace.composition.value,
+      clips: workspace.composition.value.clips.map((clip) =>
+        clip.id === first.id ? { ...clip, name: 'Changed after commit' } : clip,
+      ),
+    };
     workspace.commitNow(workspace.createEditorSnapshot());
     await workspace.undo();
     expect(workspace.composition.value.clips[0]!.name).toBe(oldName);
@@ -301,5 +311,98 @@ describe('VideoEditor workspace host bindings', () => {
       expect.objectContaining({ kind: 'image', width: 100 }),
       0,
     );
+  });
+  it('observes document replacement without traversing clips and blocks history during loading or caption drafts', async () => {
+    vi.useFakeTimers();
+    const mounted = mountEditor(),
+      workspace = workspaceOf(mounted);
+    const loading = ref(true),
+      editing = ref(false),
+      reads = vi.fn(() => []);
+    const composition = shallowRef<ClipComposition>({
+      ...workspace.composition.value,
+      get clips() {
+        return reads();
+      },
+    });
+    const zoomElements = shallowRef<typeof workspace.zoomElements.value>([]);
+    let history!: ReturnType<typeof useEditorWorkspaceHistory>;
+    historyState.recordSnapshot.mockClear();
+    historyState.commitNow.mockClear();
+    const host = mount({
+      setup() {
+        history = useEditorWorkspaceHistory({
+          ...workspace,
+          composition: computed({
+            get: () => composition.value,
+            set: (value) => {
+              composition.value = value;
+            },
+          }),
+          zoomElements: computed({
+            get: () => zoomElements.value,
+            set: (value) => {
+              zoomElements.value = value;
+            },
+          }),
+          editorState: { ...workspace.editorState, loading },
+          isInlineCaptionEditing: editing,
+          props: { ...workspace.props, project: null },
+        });
+        return () => null;
+      },
+    });
+    expect(reads).not.toHaveBeenCalled();
+    composition.value = {
+      ...workspace.composition.value,
+      get clips() {
+        return reads();
+      },
+    };
+    zoomElements.value = [];
+    await nextTick();
+    expect(reads).not.toHaveBeenCalled();
+    expect(historyState.recordSnapshot).not.toHaveBeenCalled();
+    loading.value = false;
+    await nextTick();
+    expect(historyState.recordSnapshot).toHaveBeenCalledOnce();
+    historyState.recordSnapshot.mockClear();
+    loading.value = true;
+    await nextTick();
+    composition.value = { ...composition.value, durationMs: 1000 };
+    zoomElements.value = [];
+    await nextTick();
+    expect(historyState.recordSnapshot).not.toHaveBeenCalled();
+    loading.value = false;
+    await nextTick();
+    expect(historyState.recordSnapshot).not.toHaveBeenCalled();
+    history.beginInlineCaptionEditing();
+    composition.value = { ...composition.value, durationMs: 2000 };
+    await nextTick();
+    expect(historyState.recordSnapshot).not.toHaveBeenCalled();
+    history.endInlineCaptionEditing({ cancelled: false });
+    expect(historyState.commitNow).toHaveBeenCalledTimes(2);
+    composition.value = { ...composition.value, durationMs: 3000 };
+    await nextTick();
+    expect(historyState.recordSnapshot).toHaveBeenCalledOnce();
+    expect(bridges.voiceover!.projectId()).toBeNull();
+    host.unmount();
+    vi.useRealTimers();
+  });
+  it('keeps presentation mutable after undo and preserves redo across an unchanged commit', async () => {
+    const mounted = mountEditor(),
+      workspace = workspaceOf(mounted);
+    workspace.commitNow(workspace.createEditorSnapshot());
+    const original = workspace.outputCanvas.value.width;
+    workspace.outputCanvas.value.width = 720;
+    workspace.commitNow(workspace.createEditorSnapshot());
+    await workspace.undo();
+    expect(workspace.outputCanvas.value.width).toBe(original);
+    workspace.commitNow(workspace.createEditorSnapshot());
+    expect(workspace.canRedo.value).toBe(true);
+    await workspace.redo();
+    expect(workspace.outputCanvas.value.width).toBe(720);
+    workspace.outputCanvas.value.width = 1080;
+    expect(workspace.outputCanvas.value.width).toBe(1080);
   });
 });
