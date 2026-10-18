@@ -18,13 +18,18 @@ fn screen_profile_has_explicit_h264_mp4_geometry_rate_and_no_audio() {
                     .to_string_lossy()
             )
     );
-    assert_eq!(
+    assert!(
         profile
             .Container()
             .expect("container")
             .Subtype()
-            .expect("type"),
-        MediaEncodingSubtypes::Mpeg4().expect("MP4")
+            .expect("type")
+            .to_string_lossy()
+            .eq_ignore_ascii_case(
+                &MediaEncodingSubtypes::Mpeg4()
+                    .expect("MP4")
+                    .to_string_lossy()
+            )
     );
     assert!(profile.Audio().is_err(), "browser sidecars own audio");
     assert_eq!(video.Width().expect("width"), 1466);
