@@ -195,9 +195,16 @@ function createHudPanelManager({
     return panel;
   };
   const settingsOwner = (sender) => {
-    if (sender === hudWindow.webContents && available()) return hudWindow;
+    if (
+      sender === hudWindow.webContents &&
+      canAcceptWork() &&
+      !hudWindow.isDestroyed() &&
+      ['hud', 'preparation'].includes(hudController.mode)
+    )
+      return hudWindow;
     const owner = settingsOwnerFor(sender);
-    return owner && !owner.isDestroyed() && owner.webContents === sender ? owner : null;
+    const preparation = owner === hudWindow && hudController.mode === 'preparation';
+    return owner && !owner.isDestroyed() && (owner.webContents === sender || preparation) ? owner : null;
   };
   const open = (role, sender) => {
     if (disposed) throw new Error('The recorder is not available.');
@@ -255,6 +262,7 @@ function createHudPanelManager({
   };
   hudWindow.on('show', warm);
   hudWindow.on('hide', hideOwnedPanels);
+  hudWindow.on('capture-preparation-ended', hideOwnedPanels);
   hudWindow.on('always-on-top-changed', updateTopmost);
   Promise.resolve(captureWarmup)
     .catch(() => {})
@@ -324,6 +332,7 @@ function createHudPanelManager({
       releaseEditorActions();
       hudWindow.removeListener('show', warm);
       hudWindow.removeListener('hide', hideOwnedPanels);
+      hudWindow.removeListener('capture-preparation-ended', hideOwnedPanels);
       hudWindow.removeListener('always-on-top-changed', updateTopmost);
       for (const panel of panels.values()) {
         if (!panel.window.isDestroyed()) panel.window.destroy();

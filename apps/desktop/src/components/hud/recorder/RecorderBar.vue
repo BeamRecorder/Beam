@@ -155,31 +155,10 @@ watch(
   </aside>
 </template>
 
+<style scoped src="./recorder-surface.css"></style>
 <style scoped>
 .recorder-bar {
-  position: absolute;
-  inset: 16px;
-  height: 56px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  background: var(--color-bg-element);
-  box-shadow: var(--shadow-lg);
-  pointer-events: auto;
-  user-select: none;
-  -webkit-app-region: drag;
-  app-region: drag;
   transition: opacity 180ms ease;
-}
-.control-slot {
-  display: flex;
-  flex: none;
-  -webkit-app-region: no-drag;
-  app-region: no-drag;
 }
 .recorder-bar.is-preview {
   -webkit-app-region: no-drag;

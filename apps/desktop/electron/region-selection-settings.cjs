@@ -7,6 +7,8 @@ function regionRecordingSettings(value, platform) {
   }
   if (!Number.isInteger(value.countdownSeconds) || value.countdownSeconds < 0 || value.countdownSeconds > 10)
     throw new TypeError('Invalid region countdown');
+  if (value.startAutomatically !== undefined && typeof value.startAutomatically !== 'boolean')
+    throw new TypeError('Invalid region recording start');
   for (const key of ['systemAudio', 'hideTaskbar', 'hideDesktopIcons', 'showRealCursor'])
     if (typeof value[key] !== 'boolean') throw new TypeError(`Invalid region ${key}`);
   if (value.zoomMode !== undefined && !['off', '2d', '3d', 'orbit', 'glass'].includes(value.zoomMode))
@@ -18,6 +20,7 @@ function regionRecordingSettings(value, platform) {
     microphoneId: value.microphoneId,
     systemAudio: value.systemAudio,
     countdownSeconds: value.countdownSeconds,
+    ...(value.startAutomatically !== undefined ? { startAutomatically: value.startAutomatically } : {}),
     hideTaskbar: desktopSupported && value.hideTaskbar,
     hideDesktopIcons: desktopSupported && value.hideDesktopIcons,
     showRealCursor: value.showRealCursor,

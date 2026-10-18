@@ -567,7 +567,8 @@
     "screen": "螢幕",
     "window": "視窗",
     "cameraOff": "相機關閉",
-    "noAudio": "沒有音訊",
+    "noMicrophone": "無麥克風",
+    "noSystemAudio": "無系統音訊",
     "systemAudio": "系統音訊",
     "off": "關閉",
     "copied": "已複製",
@@ -738,7 +739,12 @@
     "categoryVideoEditor": "影片編輯器",
     "videoEditorDescription": "時間軸行為與影片匯出偏好設定。",
     "groupApplication": "應用程式",
-    "groupTools": "工具"
+    "groupTools": "工具",
+    "recordingStart": "開始錄製",
+    "recordingStartDescription": "「自動開始」：選擇螢幕、視窗或區域後立即開始倒數。「準備好後開始」：先在準備列中調整相機、麥克風和系統音訊，再按下「錄製」開始倒數。",
+    "startAutomatically": "自動開始",
+    "startWhenReady": "準備好後開始",
+    "preparationUnavailable": "錄製準備控制項無法使用。"
   },
   "ProjectPicker": {
     "projects": "專案",
@@ -821,7 +827,8 @@
     "hideDesktopIcons": "隱藏桌面圖示",
     "desktopUnavailable": "Linux 不支援此功能。",
     "captureOnly": "在 macOS 錄製中隱藏。",
-    "previewUnavailable": "無法載入桌面預覽。"
+    "previewUnavailable": "無法載入桌面預覽。",
+    "continue": "繼續"
   },
   "SettingsPanel": {
     "themeMode": "主題模式",

@@ -567,7 +567,8 @@
     "screen": "स्क्रीन",
     "window": "विंडो",
     "cameraOff": "कैमरा बंद",
-    "noAudio": "कोई ऑडियो नहीं",
+    "noMicrophone": "कोई माइक्रोफ़ोन नहीं",
+    "noSystemAudio": "कोई सिस्टम ऑडियो नहीं",
     "systemAudio": "सिस्टम ऑडियो",
     "off": "बंद",
     "copied": "कॉपी किया गया",
@@ -738,7 +739,12 @@
     "categoryVideoEditor": "वीडियो एडिटर",
     "videoEditorDescription": "टाइमलाइन का व्यवहार और वीडियो निर्यात प्राथमिकताएँ।",
     "groupApplication": "ऐप्लिकेशन",
-    "groupTools": "टूल"
+    "groupTools": "टूल",
+    "recordingStart": "रिकॉर्डिंग शुरू करना",
+    "recordingStartDescription": "“अपने आप”: स्क्रीन, विंडो या क्षेत्र चुनते ही उलटी गिनती शुरू होती है। “जब मैं तैयार होऊँ”: तैयारी बार में कैमरा, माइक्रोफ़ोन और सिस्टम ऑडियो सेट करें, फिर उलटी गिनती शुरू करने के लिए “रिकॉर्ड करें” दबाएँ।",
+    "startAutomatically": "अपने आप",
+    "startWhenReady": "जब मैं तैयार होऊँ",
+    "preparationUnavailable": "रिकॉर्डिंग की तैयारी के नियंत्रण उपलब्ध नहीं हैं।"
   },
   "ProjectPicker": {
     "projects": "प्रोजेक्ट",
@@ -821,7 +827,8 @@
     "hideDesktopIcons": "डेस्कटॉप आइकन छिपाएँ",
     "desktopUnavailable": "Linux पर उपलब्ध नहीं है।",
     "captureOnly": "macOS की रिकॉर्डिंग में छिपे रहते हैं।",
-    "previewUnavailable": "डेस्कटॉप पूर्वावलोकन लोड नहीं हो सका।"
+    "previewUnavailable": "डेस्कटॉप पूर्वावलोकन लोड नहीं हो सका।",
+    "continue": "जारी रखें"
   },
   "SettingsPanel": {
     "themeMode": "थीम मोड",

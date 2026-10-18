@@ -65,9 +65,6 @@
   color: var(--color-primary);
   border-color: var(--color-primary-border);
 }
-.is-unavailable {
-  color: var(--color-error);
-}
 .mode-description {
   color: var(--text-secondary);
   font-size: var(--font-size-body);

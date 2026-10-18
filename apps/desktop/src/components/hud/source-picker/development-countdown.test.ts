@@ -1,12 +1,15 @@
+import type { PrepareRecording } from '../recorder/capture-preparation-types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 const capture = vi.hoisted(() => ({
   setCountdown: vi.fn().mockResolvedValue(undefined),
+  showHud: vi.fn(),
   onCountdownCancelled: vi.fn<(listener: () => void) => () => void>(() => vi.fn()),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
 import { previewSelectionCountdown } from './development-countdown';
 afterEach(() => {
   vi.useRealTimers();
+  capture.showHud.mockClear();
   capture.setCountdown.mockReset().mockResolvedValue(undefined);
   capture.onCountdownCancelled.mockReset().mockImplementation(() => vi.fn());
 });
@@ -81,5 +84,29 @@ describe('development data selection handoff', () => {
     await result;
     expect(capture.setCountdown.mock.calls.map(([seconds]) => seconds)).toEqual([3, null]);
     expect(vi.getTimerCount()).toBe(0);
+  });
+  it.each([0, 3])('previews the manual preparation stage even with a %ss countdown', async (duration) => {
+    vi.useFakeTimers();
+    let begin!: () => Promise<void>;
+    const prepare = vi.fn(async (_request: Parameters<PrepareRecording>[0], start: Parameters<PrepareRecording>[1]) => {
+      begin = () => start(_request.settings);
+    });
+    await previewSelectionCountdown(duration, prepare);
+    expect(capture.setCountdown).not.toHaveBeenCalled();
+    expect(prepare).toHaveBeenCalledWith(
+      { settings: expect.objectContaining({ countdownSeconds: duration }) },
+      expect.any(Function),
+    );
+    const countdown = begin();
+    await vi.advanceTimersByTimeAsync(duration * 1000);
+    await countdown;
+    expect(capture.showHud).toHaveBeenCalledOnce();
+  });
+  it('restores the HUD if the development countdown fails after confirmation', async () => {
+    capture.setCountdown.mockRejectedValueOnce(new Error('Countdown failed'));
+    await expect(previewSelectionCountdown(3, async (request, start) => start(request.settings))).rejects.toThrow(
+      'Countdown failed',
+    );
+    expect(capture.showHud).toHaveBeenCalledOnce();
   });
 });

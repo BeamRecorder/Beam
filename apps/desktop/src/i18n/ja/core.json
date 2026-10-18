@@ -567,7 +567,8 @@
     "screen": "画面",
     "window": "ウィンドウ",
     "cameraOff": "カメラオフ",
-    "noAudio": "音声なし",
+    "noMicrophone": "マイクなし",
+    "noSystemAudio": "システム音声なし",
     "systemAudio": "システム音声",
     "off": "オフ",
     "copied": "コピーしました",
@@ -738,7 +739,12 @@
     "categoryVideoEditor": "動画エディター",
     "videoEditorDescription": "タイムラインの動作と動画の書き出し設定。",
     "groupApplication": "アプリケーション",
-    "groupTools": "ツール"
+    "groupTools": "ツール",
+    "recordingStart": "録画の開始",
+    "recordingStartDescription": "「自動で開始」：画面、ウィンドウ、範囲を選ぶとカウントダウンが始まります。「準備ができたら開始」：準備バーでカメラ、マイク、システム音声を調整してから「録画」を押すと、カウントダウンが始まります。",
+    "startAutomatically": "自動で開始",
+    "startWhenReady": "準備ができたら開始",
+    "preparationUnavailable": "録画準備の操作を利用できません。"
   },
   "ProjectPicker": {
     "projects": "プロジェクト",
@@ -821,7 +827,8 @@
     "hideDesktopIcons": "デスクトップアイコンを隠す",
     "desktopUnavailable": "Linux では利用できません。",
     "captureOnly": "macOS の録画では非表示です。",
-    "previewUnavailable": "デスクトップのプレビューを読み込めませんでした。"
+    "previewUnavailable": "デスクトップのプレビューを読み込めませんでした。",
+    "continue": "続ける"
   },
   "SettingsPanel": {
     "themeMode": "テーマモード",

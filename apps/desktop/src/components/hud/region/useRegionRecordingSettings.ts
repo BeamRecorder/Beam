@@ -10,6 +10,7 @@ export function useRegionRecordingSettings(state: HudRegionSettingRefs) {
   const hideDesktopIcons = ref(false);
   const showRealCursor = ref(false);
   const snapshot = (): RegionRecordingSettings => ({
+    startAutomatically: state.startAutomatically.value,
     zoomMode: zoomMode.value,
     cameraId: state.cameraId.value,
     microphoneId: state.microphoneId.value,
@@ -20,6 +21,7 @@ export function useRegionRecordingSettings(state: HudRegionSettingRefs) {
     showRealCursor: showRealCursor.value,
   });
   const apply = (settings: RegionRecordingSettings) => {
+    if (settings.startAutomatically !== undefined) state.startAutomatically.value = settings.startAutomatically;
     zoomMode.value = recordingZoomMode(settings.zoomMode);
     state.cameraId.value = settings.cameraId;
     state.microphoneId.value = settings.microphoneId;
@@ -33,6 +35,7 @@ export function useRegionRecordingSettings(state: HudRegionSettingRefs) {
         extras: {
           recordingZoomMode: zoomMode.value,
           recordingCountdownSeconds: settings.countdownSeconds,
+          recordingStartAutomatically: state.startAutomatically.value,
           hideTaskbar: settings.hideTaskbar,
           hideDesktopIcons: settings.hideDesktopIcons,
           showRealCursor: settings.showRealCursor,
@@ -43,6 +46,7 @@ export function useRegionRecordingSettings(state: HudRegionSettingRefs) {
       });
   };
   const hydrate = (preferences: PreferenceSettings) => {
+    state.startAutomatically.value = preferences.extras.recordingStartAutomatically !== false;
     zoomMode.value = recordingZoomMode(preferences.extras.recordingZoomMode);
     const countdown = preferences.extras.recordingCountdownSeconds;
     state.countdownSeconds.value =

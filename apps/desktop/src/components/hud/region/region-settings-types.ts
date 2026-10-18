@@ -4,5 +4,6 @@ export interface HudRegionSettingRefs {
   microphoneId: Ref<string>;
   systemAudioMode: Ref<'on' | 'off'>;
   countdownSeconds: Ref<number>;
+  startAutomatically: Ref<boolean>;
   error: Ref<string>;
 }

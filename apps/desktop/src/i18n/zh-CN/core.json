@@ -567,7 +567,8 @@
     "screen": "屏幕",
     "window": "窗口",
     "cameraOff": "摄像头关闭",
-    "noAudio": "无音频",
+    "noMicrophone": "无麦克风",
+    "noSystemAudio": "无系统音频",
     "systemAudio": "系统音频",
     "off": "关闭",
     "copied": "已复制",
@@ -738,7 +739,12 @@
     "categoryVideoEditor": "视频编辑器",
     "videoEditorDescription": "时间轴行为和视频导出偏好设置。",
     "groupApplication": "应用",
-    "groupTools": "工具"
+    "groupTools": "工具",
+    "recordingStart": "开始录制",
+    "recordingStartDescription": "“自动开始”：选择屏幕、窗口或区域后立即开始倒计时。“准备好后开始”：先在准备栏中调整摄像头、麦克风和系统音频，再点击“录制”开始倒计时。",
+    "startAutomatically": "自动开始",
+    "startWhenReady": "准备好后开始",
+    "preparationUnavailable": "录制准备控件不可用。"
   },
   "ProjectPicker": {
     "projects": "项目",
@@ -821,7 +827,8 @@
     "hideDesktopIcons": "隐藏桌面图标",
     "desktopUnavailable": "Linux 不支持此功能。",
     "captureOnly": "在 macOS 录制中隐藏。",
-    "previewUnavailable": "无法加载桌面预览。"
+    "previewUnavailable": "无法加载桌面预览。",
+    "continue": "继续"
   },
   "SettingsPanel": {
     "themeMode": "主题模式",

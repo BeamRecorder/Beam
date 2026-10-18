@@ -567,7 +567,8 @@
     "screen": "Schermo",
     "window": "Finestra",
     "cameraOff": "Fotocamera disattivata",
-    "noAudio": "Nessun audio",
+    "noMicrophone": "Nessun microfono",
+    "noSystemAudio": "Nessun audio di sistema",
     "systemAudio": "Audio di sistema",
     "off": "Disattivato",
     "copied": "Copiato",
@@ -738,7 +739,12 @@
     "categoryVideoEditor": "Editor video",
     "videoEditorDescription": "Comportamento della timeline e preferenze di esportazione.",
     "groupApplication": "Applicazione",
-    "groupTools": "Strumenti"
+    "groupTools": "Strumenti",
+    "recordingStart": "Avvio della registrazione",
+    "recordingStartDescription": "Automaticamente: il conto alla rovescia inizia dopo aver scelto uno schermo, una finestra o un’area. Quando sono pronto: regola fotocamera, microfono e audio di sistema nella barra di preparazione, poi premi Registra per avviare il conto alla rovescia.",
+    "startAutomatically": "Automaticamente",
+    "startWhenReady": "Quando sono pronto",
+    "preparationUnavailable": "I controlli di preparazione della registrazione non sono disponibili."
   },
   "ProjectPicker": {
     "projects": "Progetti",
@@ -821,7 +827,8 @@
     "hideDesktopIcons": "Nascondi icone del desktop",
     "desktopUnavailable": "Non disponibile su Linux.",
     "captureOnly": "Nascosti nella registrazione su macOS.",
-    "previewUnavailable": "Impossibile caricare l’anteprima del desktop."
+    "previewUnavailable": "Impossibile caricare l’anteprima del desktop.",
+    "continue": "Continua"
   },
   "SettingsPanel": {
     "themeMode": "Modalità tema",

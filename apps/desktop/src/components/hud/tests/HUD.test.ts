@@ -504,3 +504,19 @@ describe('Linux toolbar authorization', () => {
     expect(hud.find('.issues-indicator').exists()).toBe(false);
   });
 });
+it('names disabled audio devices explicitly and shares the crossed-out icon convention', async () => {
+  capture.getPreferences.mockResolvedValue({
+    ...preferences,
+    devices: { cameraId: 'off', micId: 'no-audio', systemAudioMode: 'off' },
+  });
+  const hud = await createHud();
+  const devices = hud.findAll('.hud-devices .select-trigger');
+  expect(devices.map((device) => device.text())).toEqual(['Camera Off', 'No microphone', 'No system audio']);
+  expect(devices.every((device) => device.find('svg.is-off').exists())).toBe(true);
+  const selects = hud.findAllComponents(Select);
+  selects[0]!.vm.$emit('update:modelValue', 'camera:1');
+  selects[1]!.vm.$emit('update:modelValue', 'mic:1');
+  selects[2]!.vm.$emit('update:modelValue', 'on');
+  await flushPromises();
+  expect(devices.every((device) => !device.find('svg.is-off').exists())).toBe(true);
+});

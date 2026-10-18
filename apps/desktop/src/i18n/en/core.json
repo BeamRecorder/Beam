@@ -567,7 +567,8 @@
     "screen": "Screen",
     "window": "Window",
     "cameraOff": "Camera Off",
-    "noAudio": "No Audio",
+    "noMicrophone": "No microphone",
+    "noSystemAudio": "No system audio",
     "systemAudio": "System audio",
     "off": "Off",
     "copied": "Copied",
@@ -750,7 +751,12 @@
     "categoryVideoEditor": "Video editor",
     "videoEditorDescription": "Timeline behavior and video export preferences.",
     "groupApplication": "Application",
-    "groupTools": "Tools"
+    "groupTools": "Tools",
+    "recordingStart": "Recording start",
+    "recordingStartDescription": "Automatically: the countdown starts after you choose a screen, window or region. When I’m ready: adjust camera, microphone and system audio in the preparation bar, then press Record to start the countdown.",
+    "startAutomatically": "Automatically",
+    "startWhenReady": "When I’m ready",
+    "preparationUnavailable": "The recording preparation controls are unavailable."
   },
   "ProjectPicker": {
     "projects": "Projects",
@@ -833,7 +839,8 @@
     "hideDesktopIcons": "Hide desktop icons",
     "desktopUnavailable": "Desktop visibility controls are unavailable on Linux.",
     "captureOnly": "These elements are hidden in the recording on macOS.",
-    "previewUnavailable": "The desktop preview could not be loaded."
+    "previewUnavailable": "The desktop preview could not be loaded.",
+    "continue": "Continue"
   },
   "SettingsPanel": {
     "themeMode": "Theme Mode",

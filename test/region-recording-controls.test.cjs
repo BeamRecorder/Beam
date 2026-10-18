@@ -34,6 +34,27 @@ test('Linux settings explicitly disable unavailable shell hiding', () => {
     hideDesktopIcons: false,
   });
 });
+test('region recording preserves explicit automatic and manual start across platforms', () => {
+  for (const platform of ['win32', 'darwin', 'linux']) {
+    for (const startAutomatically of [true, false]) {
+      assert.equal(
+        regionRecordingSettings({ ...settings, startAutomatically }, platform).startAutomatically,
+        startAutomatically,
+      );
+    }
+  }
+});
+test('region recording rejects malformed start policies without coercing them', () => {
+  for (const startAutomatically of [0, 1, 'false', null, {}, []]) {
+    assert.throws(
+      () => regionRecordingSettings({ ...settings, startAutomatically }, 'win32'),
+      /Invalid region recording start/,
+    );
+  }
+});
+test('legacy region settings retain their existing fields without inventing a start policy', () => {
+  assert.deepEqual(regionRecordingSettings(settings, 'win32'), settings);
+});
 for (const zoomMode of ['off', '2d', '3d', 'orbit', 'glass'])
   test(`accepts the ${zoomMode} region zoom algorithm through IPC`, () => {
     const next = { ...settings, zoomMode };

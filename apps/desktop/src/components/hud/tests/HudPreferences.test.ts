@@ -18,9 +18,12 @@ const Select = defineComponent({
       const recordingBar = props.options.some(
         (option) => option && typeof option === 'object' && 'value' in option && option.value === 'hover-only',
       );
+      const manualStart = props.options.some(
+        (option) => option && typeof option === 'object' && 'value' in option && option.value === 'manual',
+      );
       return h('button', {
-        class: recordingBar ? 'recording-bar-option' : 'countdown',
-        onClick: () => emit('update:modelValue', recordingBar ? 'hover-only' : 10),
+        class: recordingBar ? 'recording-bar-option' : manualStart ? 'recording-start' : 'countdown',
+        onClick: () => emit('update:modelValue', recordingBar ? 'hover-only' : manualStart ? 'manual' : 10),
       });
     };
   },
@@ -94,10 +97,12 @@ describe('HudPreferences', () => {
   it('relays recording preferences', async () => {
     const wrapper = mountPreferences({ view: 'recording' });
     await wrapper.get('.recording-bar-option').trigger('click');
+    await wrapper.get('.recording-start').trigger('click');
     await wrapper.find('.countdown').trigger('click');
     await wrapper.setProps({ view: 'accessibility' });
     await wrapper.get('.input-access-actions [role="switch"]').trigger('click');
     expect(wrapper.emitted('update:countdownSeconds')).toContainEqual([10]);
+    expect(wrapper.emitted('update:startAutomatically')).toContainEqual([false]);
     expect(wrapper.emitted('update:recordingBarVisibility')).toContainEqual(['hover-only']);
     expect(wrapper.emitted('update:recordInteractions')).toContainEqual([true]);
   });

@@ -114,6 +114,7 @@ function createRendererSetup({
       resizable: true,
       maximizable: true,
       hasShadow: false,
+      visualEffectState: 'active',
       show: false,
       webPreferences: {
         backgroundThrottling: false,

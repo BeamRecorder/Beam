@@ -47,12 +47,14 @@ export function useHudState(props: HudProps, emit: HudEmit) {
   watch(recordingBarVisibility, (value) => void capture.updatePreferences({ recordingBar: { visibility: value } }));
   const interactionAccess = useInteractionAccess(desktopPlatform);
   const captureCatalog = ref<CaptureCatalog | null>(null);
-  const { captureMode, hydrateMode, modeShortcut, captureWithMode } = useHudCaptureMode(
-    isBusy,
-    errorMessage,
-    props.embedded,
-    () => Boolean(props.recorderLauncherContext),
-  );
+  const { captureMode, hydrateMode, modeShortcut, captureWithMode, prepareCapture, startAutomatically } =
+    useHudCaptureMode(
+      isBusy,
+      errorMessage,
+      props.embedded,
+      () => Boolean(props.recorderLauncherContext),
+      props.prepareRecording,
+    );
   const { hudIssues, authorizeInteractionAccess, handleHudIssueAction } = useHudIssues(
     captureCatalog,
     shownError,
@@ -74,7 +76,7 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     ...sources.value
       .filter((source) => source.kind === 'microphone')
       .map((source) => ({ value: source.id, label: source.label })),
-    { value: 'no-audio', label: t('noAudio') },
+    { value: 'no-audio', label: t('noMicrophone') },
   ]);
   const selectedMicId = ref('no-audio');
   const isTeleprompterVisible = ref(false);
@@ -95,6 +97,7 @@ export function useHudState(props: HudProps, emit: HudEmit) {
     systemAudioMode,
     countdownSeconds,
     error: errorMessage,
+    startAutomatically,
   });
 
   const isMicEnabled = computed(() => selectedMicId.value !== 'no-audio');
@@ -176,7 +179,7 @@ export function useHudState(props: HudProps, emit: HudEmit) {
   });
   const systemAudioOptions = computed(() => [
     { value: 'on', label: t('systemAudio') },
-    { value: 'off', label: t('off') },
+    { value: 'off', label: t('noSystemAudio') },
   ]);
 
   const recordingTime = ref('00:00');
@@ -237,6 +240,7 @@ export function useHudState(props: HudProps, emit: HudEmit) {
               : null,
         },
         (configuration) => emit('start-recording', configuration),
+        regionSettings.apply,
       );
       return;
     }
@@ -423,7 +427,8 @@ export function useHudState(props: HudProps, emit: HudEmit) {
       }
       return selection;
     },
-    previewSelection: () => previewSelectionCountdown(countdownSeconds.value),
+    previewSelection: () =>
+      previewSelectionCountdown(countdownSeconds.value, prepareCapture, regionSettings.snapshot()),
     blocked: computed(
       () => isBusy.value || isRecording.value || props.preparingEditor || interactionAccess.requesting.value,
     ),

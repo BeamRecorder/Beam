@@ -35,7 +35,7 @@ describe('recording settings controls', () => {
     const wrapper = mount(RecordingPreferences, {
       props: { countdownSeconds: 3 },
     });
-    const [bar, countdown] = wrapper.findAllComponents(Select);
+    const [bar, , countdown] = wrapper.findAllComponents(Select);
     for (const value of ['always', 'auto-fade', 'hover-only', 'invalid', 42]) bar!.vm.$emit('update:modelValue', value);
     expect(wrapper.emitted('update:recordingBarVisibility')).toEqual([['always'], ['auto-fade'], ['hover-only']]);
     for (const value of [0, 10, 3, -1, 11, 2.5, '3', NaN]) countdown!.vm.$emit('update:modelValue', value);
@@ -46,7 +46,7 @@ describe('recording settings controls', () => {
     const wrapper = mount(RecordingPreferences, {
       props: { countdownSeconds: 0 },
     });
-    const [bar, countdown] = wrapper.findAllComponents(Select);
+    const [bar, , countdown] = wrapper.findAllComponents(Select);
     expect(countdown!.props('options')).toEqual(expect.arrayContaining([expect.objectContaining({ label: 'Off' })]));
     await setCurrentLocale('fr');
     expect(countdown!.props('options')).toEqual(
@@ -66,4 +66,25 @@ describe('recording settings controls', () => {
     expect(wrapper.findAll('[inert]')).toHaveLength(2);
     wrapper.unmount();
   });
+  it.each([true, false])('renders the saved start choice independently of countdown: %s', (startAutomatically) => {
+    const wrapper = mount(RecordingPreferences, { props: { countdownSeconds: 3, startAutomatically } });
+    const control = wrapper
+      .findAllComponents(Select)
+      .find((item) => item.attributes('aria-label') === 'Recording start')!;
+    expect(control.props('modelValue')).toBe(startAutomatically ? 'automatic' : 'manual');
+    expect(wrapper.findAllComponents(Select).at(-1)!.props('modelValue')).toBe(3);
+    for (const value of ['manual', 'automatic', 'unexpected', 0]) control.vm.$emit('update:modelValue', value);
+    expect(wrapper.emitted('update:startAutomatically')).toEqual([[false], [true]]);
+    wrapper.unmount();
+  });
+});
+it('explains both start choices and the preparation controls in French', async () => {
+  await setCurrentLocale('fr');
+  const wrapper = mount(RecordingPreferences, { props: { countdownSeconds: 3 } });
+  const description = wrapper.get('[data-setting="recording-start"] .preference-description').text();
+  expect(description).toContain('Automatiquement :');
+  expect(description).toContain('Quand je suis prêt :');
+  expect(description).toContain('caméra, le micro et l’audio système');
+  expect(description).toContain('Enregistrer pour lancer le compte à rebours');
+  wrapper.unmount();
 });

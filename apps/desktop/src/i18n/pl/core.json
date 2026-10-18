@@ -567,7 +567,8 @@
     "screen": "Ekran",
     "window": "Okno",
     "cameraOff": "Kamera wyłączona",
-    "noAudio": "Brak dźwięku",
+    "noMicrophone": "Brak mikrofonu",
+    "noSystemAudio": "Bez dźwięku systemowego",
     "systemAudio": "Dźwięk systemowy",
     "off": "Wyłączone",
     "copied": "Skopiowano",
@@ -738,7 +739,12 @@
     "categoryVideoEditor": "Edytor wideo",
     "videoEditorDescription": "Zachowanie osi czasu i preferencje eksportu wideo.",
     "groupApplication": "Aplikacja",
-    "groupTools": "Narzędzia"
+    "groupTools": "Narzędzia",
+    "recordingStart": "Rozpoczęcie nagrywania",
+    "recordingStartDescription": "Automatycznie: odliczanie zaczyna się po wybraniu ekranu, okna lub obszaru. Gdy będę gotowy: dostosuj kamerę, mikrofon i dźwięk systemowy na pasku przygotowania, a następnie kliknij Nagrywaj, aby rozpocząć odliczanie.",
+    "startAutomatically": "Automatycznie",
+    "startWhenReady": "Gdy będę gotowy",
+    "preparationUnavailable": "Elementy sterujące przygotowaniem nagrywania są niedostępne."
   },
   "ProjectPicker": {
     "projects": "Projekty",
@@ -821,7 +827,8 @@
     "hideDesktopIcons": "Ukryj ikony pulpitu",
     "desktopUnavailable": "Niedostępne w systemie Linux.",
     "captureOnly": "Ukryte w nagraniu na macOS.",
-    "previewUnavailable": "Nie udało się wczytać podglądu pulpitu."
+    "previewUnavailable": "Nie udało się wczytać podglądu pulpitu.",
+    "continue": "Kontynuuj"
   },
   "SettingsPanel": {
     "themeMode": "Tryb motywu",

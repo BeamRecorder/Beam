@@ -567,7 +567,8 @@
     "screen": "Екран",
     "window": "Прозорец",
     "cameraOff": "Камерата е изключена",
-    "noAudio": "Без звук",
+    "noMicrophone": "Без микрофон",
+    "noSystemAudio": "Без системен звук",
     "systemAudio": "Системен звук",
     "off": "Изкл.",
     "copied": "Копирано",
@@ -738,7 +739,12 @@
     "categoryVideoEditor": "Видео редактор",
     "videoEditorDescription": "Поведение на времевата линия и настройки за експортиране.",
     "groupApplication": "Приложение",
-    "groupTools": "Инструменти"
+    "groupTools": "Инструменти",
+    "recordingStart": "Начало на записа",
+    "recordingStartDescription": "Автоматично: отброяването започва след избора на екран, прозорец или област. Когато съм готов: настройте камерата, микрофона и системния звук в лентата за подготовка, след което натиснете „Запис“, за да започне отброяването.",
+    "startAutomatically": "Автоматично",
+    "startWhenReady": "Когато съм готов",
+    "preparationUnavailable": "Контролите за подготовка на записа не са достъпни."
   },
   "ProjectPicker": {
     "projects": "Проекти",
@@ -821,7 +827,8 @@
     "hideDesktopIcons": "Скриване на иконите на работния плот",
     "desktopUnavailable": "Не е налично в Linux.",
     "captureOnly": "Скрито в записа на macOS.",
-    "previewUnavailable": "Прегледът на работния плот не можа да се зареди."
+    "previewUnavailable": "Прегледът на работния плот не можа да се зареди.",
+    "continue": "Продължи"
   },
   "SettingsPanel": {
     "themeMode": "Режим на темата",

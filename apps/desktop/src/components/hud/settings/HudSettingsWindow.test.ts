@@ -42,6 +42,7 @@ const stub = {
     'focusedSetting',
     'view',
     'countdownSeconds',
+    'startAutomatically',
     'recordingBarVisibility',
     'inputAccess',
     'recordInteractions',
@@ -51,7 +52,7 @@ const stub = {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(document, 'hasFocus').mockReturnValue(true);
-  mocks.preferences.settings = reactive({ ...preferences });
+  mocks.preferences.settings = reactive(structuredClone(preferences));
   mocks.preferences.update.mockResolvedValue(preferences);
   mocks.capture.onPreferencesChanged.mockReturnValue(vi.fn());
   mocks.capture.getUpdateState.mockResolvedValue({ status: 'unsupported', currentVersion: '0.5.2' });
@@ -163,6 +164,12 @@ describe('separate HUD settings', () => {
     wrapper.unmount();
     expect(unsubscribe).toHaveBeenCalledOnce();
   });
+  it('restores an explicitly saved manual-start preference', async () => {
+    mocks.preferences.settings!.extras.recordingStartAutomatically = false;
+    const wrapper = await create();
+    expect(wrapper.getComponent(stub).props('startAutomatically')).toBe(false);
+    expect(wrapper.getComponent(stub).props('countdownSeconds')).toBe(3);
+  });
   it.each([null, 99, '3'])('rejects unsupported countdown preferences (%s)', async (invalid) => {
     mocks.preferences.settings!.extras.recordingCountdownSeconds = invalid;
     const wrapper = await create();
@@ -179,6 +186,10 @@ describe('separate HUD settings', () => {
         extras: { [option]: true },
       });
     }
+    expect(child.props('startAutomatically')).toBe(true);
+    child.vm.$emit('update:startAutomatically', false);
+    await flushPromises();
+    expect(mocks.preferences.update).toHaveBeenCalledWith({ extras: { recordingStartAutomatically: false } });
     child.vm.$emit('update:countdownSeconds', 10);
     await flushPromises();
     expect(mocks.preferences.update).toHaveBeenCalledWith({

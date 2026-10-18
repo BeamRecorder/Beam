@@ -72,6 +72,7 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.on('tray:stop-recording', callback);
       return () => ipcRenderer.removeListener('tray:stop-recording', callback);
     },
+    preparation: require('./preload-capture-preparation.cjs').capturePreparationApi(ipcRenderer),
     setWindowMode: (mode) => ipcRenderer.send('window:set-mode', mode),
     showHud: () => ipcRenderer.send('window:show-hud'),
     setShortcutCaptureActive: (active) => ipcRenderer.invoke('settings:shortcut-capture', active),

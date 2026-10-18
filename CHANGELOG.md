@@ -4,7 +4,15 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Studio and Instant can wait until you are ready before starting the saved countdown. Choose Automatic or When I’m ready in Recording settings; the draggable preparation bar lets you adjust camera, microphone, system audio and recording settings while leaving other applications usable and works with full-screen, window and region recording. The bar stays on top, uses native desktop blur on Windows/macOS where supported, and stays opaque on Linux. The choice and controls are translated into all fifteen languages.
+
 ### Fixed
+
+- Disabled camera, microphone and system audio use consistent red crossed-out icons. Device menus clearly name “No microphone” and “No system audio”, and the recording-start explanation describes both choices in all fifteen languages.
+
+- Recording preparation keeps Settings beside Record, centers the countdown, and opens application preferences without interrupting setup. The native bar fits its controls and translated labels.
 
 - Timeline start and end trim handles follow dragging without an extra frame of delay. Clip artwork stays aligned, repeated source-limit updates skip unnecessary work, and grouped/ripple trims retain matching preview and committed timing.
 

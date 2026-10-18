@@ -4,19 +4,40 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App.vue';
 import type { RecordingSessionResult } from '../components/hud/recorder/recording-types';
+import type { PrepareRecording } from '../components/hud/recorder/capture-preparation-types';
 import { setCurrentLocale } from '../i18n';
 
+const request = (countdownSeconds = 3) => ({
+  settings: {
+    cameraId: 'off',
+    microphoneId: 'no-audio',
+    systemAudio: false,
+    countdownSeconds,
+    hideTaskbar: false,
+    hideDesktopIcons: false,
+    showRealCursor: false,
+  },
+});
 const mocks = vi.hoisted(() => ({
   capture: {
+    updatePreferences: vi.fn().mockResolvedValue(undefined),
+    preparation: {
+      configure: vi.fn().mockResolvedValue(undefined),
+      onChanged: vi.fn().mockReturnValue(() => {}),
+      close: vi.fn(),
+    },
     platform: 'win32',
     getPreferences: vi.fn(),
     getUpdateState: vi.fn(),
     setInteractive: vi.fn(),
     setCameraOverlayActive: vi.fn(),
     setNormalRecordingActive: vi.fn(),
+    onWindowVisibility: vi.fn().mockReturnValue(() => undefined),
+    cancelRegionSelection: vi.fn().mockResolvedValue(undefined),
     hideScreenRegionOverlay: vi.fn(),
     setCountdown: vi.fn(async () => undefined),
     resetCameraOverlayPlacement: vi.fn(),
+    configureCameraOverlay: vi.fn(),
     setWindowMode: vi.fn(),
     setSize: vi.fn(),
     setWindowVisible: vi.fn(),
@@ -61,6 +82,7 @@ vi.mock('../components/hud/recorder/useRecordingController', async () => {
     useRecordingController: (onComplete: (session: RecordingSessionResult) => void, _onFailure?: unknown) => {
       const recording = {
         phase: ref('idle'),
+        error: ref(''),
         secondsRemaining: ref(0),
         recordingTime: ref('00:00.0'),
         cameraEnabled: ref(false),
@@ -84,6 +106,15 @@ vi.mock('../components/hud/recorder/useRecordingController', async () => {
   };
 });
 
+vi.mock('../components/hud/recorder/CapturePreparationBar.vue', () => ({
+  default: {
+    props: ['request', 'busy'],
+    emits: ['record', 'cancel', 'update:settings'],
+    template:
+      '<aside data-capture-preparation>{{ request.settings.countdownSeconds }}s<button :disabled="busy" @click="$emit(\'record\')">Record</button><button aria-label="Cancel" :disabled="busy" @click="$emit(\'cancel\')">Cancel</button></aside>',
+  },
+}));
+
 vi.mock('../components/hud/HUD.vue', async () => {
   const { defineComponent, h } = await import('vue');
   return {
@@ -91,6 +122,7 @@ vi.mock('../components/hud/HUD.vue', async () => {
       name: 'MockHud',
       props: {
         preparingEditor: { type: Boolean, default: false },
+        prepareRecording: { type: Function, required: true },
         editorLoadingProgress: {
           type: Object,
           default: () => ({ stage: 'openingWindow', value: 10 }),
@@ -920,5 +952,110 @@ describe('App', () => {
       disposition: 'reuse',
     });
     expect(mocks.capture.openScreenshot).not.toHaveBeenCalled();
+  });
+  it('holds capture ownership and hides the full HUD while waiting, then starts Studio only on Record', async () => {
+    const prepare = wrapper.getComponent({ name: 'MockHud' }).props('prepareRecording') as PrepareRecording;
+    const operation = prepare(request(3), async () => {
+      await wrapper.get('.start').trigger('click');
+    });
+    await settle();
+    expect(wrapper.get('.mock-hud').attributes('style')).toContain('display: none');
+    expect(wrapper.get('[data-capture-preparation]').text()).toContain('3s');
+    expect(mocks.capture.setNormalRecordingActive).toHaveBeenLastCalledWith(true);
+    expect(mocks.controller.recording.start).not.toHaveBeenCalled();
+    await wrapper.get('[data-capture-preparation] button:not([aria-label])').trigger('click');
+    await operation;
+    await settle();
+    expect(mocks.controller.recording.start).toHaveBeenCalledOnce();
+    expect(wrapper.find('[data-capture-preparation]').exists()).toBe(false);
+    expect(wrapper.find('.mock-recorder').exists()).toBe(true);
+    expect(mocks.capture.setNormalRecordingActive).toHaveBeenLastCalledWith(true);
+  });
+  it('lets the global recording shortcut confirm preparation exactly once', async () => {
+    const prepare = wrapper.getComponent({ name: 'MockHud' }).props('prepareRecording') as PrepareRecording;
+    const start = vi.fn(async () => {}),
+      operation = prepare(request(3), start);
+    await settle();
+    const shortcut = mocks.capture.onPreferenceShortcut.mock.calls[0][0];
+    shortcut('hud.startStopRecording');
+    shortcut('hud.startStopRecording');
+    await operation;
+    await settle();
+    expect(start).toHaveBeenCalledOnce();
+    expect(mocks.controller.recording.stop).not.toHaveBeenCalled();
+  });
+  it('allows Instant to acquire capture ownership before its IPC handoff', async () => {
+    const prepare = wrapper.getComponent({ name: 'MockHud' }).props('prepareRecording') as PrepareRecording;
+    const operation = prepare(request(0), async () => {
+      expect(mocks.capture.setNormalRecordingActive).toHaveBeenLastCalledWith(false);
+      mocks.capture.setWindowVisible(false);
+    });
+    await settle();
+    mocks.capture.showHud.mockClear();
+    await wrapper.get('[data-capture-preparation] button:not([aria-label])').trigger('click');
+    await operation;
+    await settle();
+    expect(mocks.capture.showHud).not.toHaveBeenCalled();
+    expect(mocks.capture.setWindowVisible).toHaveBeenLastCalledWith(false);
+  });
+  it('cancels preparation from the tray and releases retained region selection without starting capture', async () => {
+    const prepare = wrapper.getComponent({ name: 'MockHud' }).props('prepareRecording') as PrepareRecording;
+    const start = vi.fn(),
+      operation = prepare(request(3), start);
+    await settle();
+    mocks.capture.onTrayStopRecording.mock.calls[0][0]();
+    await operation;
+    await settle();
+    expect(start).not.toHaveBeenCalled();
+    expect(mocks.capture.cancelRegionSelection).toHaveBeenCalledOnce();
+    expect(mocks.capture.showHud).toHaveBeenCalled();
+    expect(mocks.capture.setNormalRecordingActive).toHaveBeenLastCalledWith(false);
+    expect(wrapper.find('[data-capture-preparation]').exists()).toBe(false);
+  });
+  it('does not replace a pending capture with a project requested from another window', async () => {
+    const prepare = wrapper.getComponent({ name: 'MockHud' }).props('prepareRecording') as PrepareRecording;
+    const operation = prepare(request(3), vi.fn());
+    await settle();
+    mocks.capture.listProjects.mockClear();
+    mocks.capture.openEditor.mockClear();
+    mocks.capture.onHudProjectRequested.mock.calls[0][0]({ id: 'project-1', mode: 'studio' });
+    await wrapper.get('.open').trigger('click');
+    await settle();
+    expect(mocks.capture.listProjects).not.toHaveBeenCalled();
+    expect(mocks.capture.openEditor).not.toHaveBeenCalled();
+    await wrapper.get('[data-capture-preparation] [aria-label="Cancel"]').trigger('click');
+    await operation;
+  });
+  it('ignores an older project lookup that completes during manual preparation', async () => {
+    let resolve!: (projects: (typeof project)[]) => void;
+    mocks.capture.listProjects.mockReturnValueOnce(
+      new Promise<(typeof project)[]>((done) => {
+        resolve = done;
+      }),
+    );
+    mocks.capture.onHudProjectRequested.mock.calls[0][0]({ id: project.id, mode: project.mode ?? 'studio' });
+    const prepare = wrapper.getComponent({ name: 'MockHud' }).props('prepareRecording') as PrepareRecording;
+    const operation = prepare(request(3), vi.fn());
+    await settle();
+    resolve([project]);
+    await settle();
+    expect(mocks.capture.openEditor).not.toHaveBeenCalled();
+    await wrapper.get('[data-capture-preparation] [aria-label="Cancel"]').trigger('click');
+    await operation;
+  });
+  it('refreshes native HUD hit testing after leaving preparation without a view change', async () => {
+    vi.mocked(document.elementFromPoint).mockReturnValue(wrapper.get('.start').element);
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 80, clientY: 45 }));
+    expect(mocks.capture.setInteractive).toHaveBeenLastCalledWith(true);
+    const prepare = wrapper.getComponent({ name: 'MockHud' }).props('prepareRecording') as PrepareRecording;
+    const operation = prepare(request(3), vi.fn());
+    await settle();
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 80, clientY: 45 }));
+    await wrapper.get('[data-capture-preparation] [aria-label="Cancel"]').trigger('click');
+    await operation;
+    await settle();
+    mocks.capture.setInteractive.mockClear();
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 80, clientY: 45 }));
+    expect(mocks.capture.setInteractive).toHaveBeenCalledExactlyOnceWith(true);
   });
 });

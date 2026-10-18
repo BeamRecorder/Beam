@@ -1,6 +1,8 @@
 const { DEFAULT_HUD_WINDOW_SIZE, normalizeHudWindowSize } = require('./hud-window-size.cjs');
 const { RECORDER_SIZE, bottomCenterRecorder } = require('./recorder-layout.cjs');
 
+const { applyPreparationMaterial, PREPARATION_SIZE } = require('./capture-preparation-layout.cjs');
+
 const HUD_SIZE = DEFAULT_HUD_WINDOW_SIZE;
 
 function clampToDisplayBounds(x, y, width, height, displayBounds) {
@@ -20,6 +22,7 @@ class WindowController {
     this.preferencesStore = preferencesStore;
     this.screen = screenModule || require('electron').screen;
     this.mode = 'hud';
+    this.preparationSize = { ...PREPARATION_SIZE };
     this.ready = false;
     this.interactive = false;
     this.hiddenByController = false;
@@ -58,6 +61,9 @@ class WindowController {
       this.applyInteractionPolicy();
       this.applyZOrderPolicy();
     };
+    this.window.on('system-context-menu', (event) => {
+      if (this.mode === 'preparation') event.preventDefault();
+    });
     this.window.on('show', () => {
       this.hiddenByController = false;
       applyNativeWindowPolicy();
@@ -192,21 +198,31 @@ class WindowController {
   }
 
   setMode(mode, { restoreMaximized = true } = {}) {
-    if (!['hud', 'recorder'].includes(mode)) throw new Error(`Mode de fenêtre invalide: ${mode}`);
+    if (!['hud', 'recorder', 'preparation'].includes(mode)) throw new Error(`Mode de fenêtre invalide: ${mode}`);
     if (this.mode === 'recorder' && mode !== 'recorder') {
       this.rememberRecorderPosition();
       this.flushRecorderPosition();
     }
-    if (this.mode === 'hud' && mode === 'recorder') {
+    if (this.mode === 'hud' && mode !== 'hud') {
       this.rememberHudPosition();
       this.flushHudPosition();
     }
+    if (this.mode === 'preparation' && mode !== 'preparation') this.window.emit('capture-preparation-ended');
     this.mode = mode;
+    applyPreparationMaterial(this.window, this.platform, mode === 'preparation');
     this.hudDragging = false;
     if (mode === 'hud') this.hudSize = this.readHudSize();
     this.applySizeConstraints();
     if (mode === 'hud') this.hudOverInteractive = false;
     if (mode === 'recorder') this.placeRecorder();
+    if (mode === 'preparation') {
+      const area = this.screen.getDisplayNearestPoint(this.screen.getCursorScreenPoint()).workArea;
+      this.window.setBounds({
+        ...this.preparationSize,
+        x: Math.round(area.x + (area.width - this.preparationSize.width) / 2),
+        y: area.y + area.height - this.preparationSize.height - 16,
+      });
+    }
     if (mode === 'hud') {
       const targetPos = this.hudPosition || this.readHudPosition();
       if (targetPos) {
@@ -272,7 +288,8 @@ class WindowController {
   }
 
   applySizeConstraints() {
-    const minimumSize = this.mode === 'recorder' ? RECORDER_SIZE : this.hudSize;
+    const minimumSize =
+      this.mode === 'preparation' ? this.preparationSize : this.mode === 'recorder' ? RECORDER_SIZE : this.hudSize;
     this.window.setMinimumSize?.(minimumSize.width, minimumSize.height);
   }
 
@@ -296,8 +313,8 @@ class WindowController {
     // Recording controls stay reachable during capture. The setup window uses
     // the user's preference; hidden/editor-transition windows stay demoted.
     const overlayIsVisible =
-      !this.hiddenByController && ['hud', 'recorder'].includes(this.mode) && this.window.isVisible();
-    const wantsTopmost = this.mode === 'recorder' || this.hudAlwaysOnTop;
+      !this.hiddenByController && ['hud', 'recorder', 'preparation'].includes(this.mode) && this.window.isVisible();
+    const wantsTopmost = this.mode !== 'hud' || this.hudAlwaysOnTop;
     this.setOverlayAlwaysOnTop(this.ready && overlayIsVisible && !this.window.isMinimized() && wantsTopmost);
   }
 
@@ -309,7 +326,7 @@ class WindowController {
   applyModePolicy({ restoreMaximized = true } = {}) {
     if (this.window.isDestroyed()) return;
     const isHud = this.mode === 'hud';
-    const isRecorder = this.mode === 'recorder';
+    const isRecorder = this.mode === 'recorder' || this.mode === 'preparation';
     this.applySizeConstraints();
     this.window.setResizable(false);
     this.window.setMaximizable(false);
@@ -392,7 +409,7 @@ class WindowController {
       } else {
         this.setMousePolicy(true, true);
       }
-    } else if (this.mode === 'recorder') {
+    } else if (this.mode === 'recorder' || this.mode === 'preparation') {
       // The compact Recorder window is itself the interactive hit target.
       // Global pointer polling is unreliable on Wayland once a window is
       // click-through, so Recorder mode must never depend on it to recover

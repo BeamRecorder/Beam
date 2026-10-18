@@ -567,7 +567,8 @@
     "screen": "Tela",
     "window": "Janela",
     "cameraOff": "Câmera desligada",
-    "noAudio": "Sem áudio",
+    "noMicrophone": "Sem microfone",
+    "noSystemAudio": "Sem áudio do sistema",
     "systemAudio": "Áudio do sistema",
     "off": "Desligado",
     "copied": "Copiado",
@@ -738,7 +739,12 @@
     "categoryVideoEditor": "Editor de vídeo",
     "videoEditorDescription": "Comportamento da linha do tempo e preferências de exportação.",
     "groupApplication": "Aplicativo",
-    "groupTools": "Ferramentas"
+    "groupTools": "Ferramentas",
+    "recordingStart": "Início da gravação",
+    "recordingStartDescription": "Automaticamente: a contagem regressiva começa após escolher uma tela, janela ou região. Quando eu estiver pronto: ajuste a câmera, o microfone e o áudio do sistema na barra de preparação e clique em Gravar para iniciar a contagem regressiva.",
+    "startAutomatically": "Automaticamente",
+    "startWhenReady": "Quando eu estiver pronto",
+    "preparationUnavailable": "Os controles de preparação da gravação estão indisponíveis."
   },
   "ProjectPicker": {
     "projects": "Projetos",
@@ -821,7 +827,8 @@
     "hideDesktopIcons": "Ocultar ícones da área de trabalho",
     "desktopUnavailable": "Indisponível no Linux.",
     "captureOnly": "Ocultos na gravação no macOS.",
-    "previewUnavailable": "Não foi possível carregar a prévia da área de trabalho."
+    "previewUnavailable": "Não foi possível carregar a prévia da área de trabalho.",
+    "continue": "Continuar"
   },
   "SettingsPanel": {
     "themeMode": "Modo do tema",

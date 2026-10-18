@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Mic, MicOff, Volume2, VolumeX } from '@lucide/vue';
+import { Mic, MicOff, Volume2, VolumeOff } from '@lucide/vue';
 
 const props = withDefaults(
   defineProps<{
@@ -45,9 +45,9 @@ const meterColor = computed(() => {
 
     <!-- Icon -->
     <component
-      :is="kind === 'mic' ? (enabled ? Mic : MicOff) : enabled ? Volume2 : VolumeX"
+      :is="kind === 'mic' ? (enabled ? Mic : MicOff) : enabled ? Volume2 : VolumeOff"
       class="meter-icon"
-      :class="{ 'is-disabled': !enabled }"
+      :class="{ 'is-off': !enabled }"
     />
   </div>
 </template>
@@ -97,9 +97,8 @@ const meterColor = computed(() => {
     color 0.15s ease,
     transform 0.08s ease;
 }
-.meter-icon.is-disabled {
-  color: var(--text-muted, #71717a);
-  opacity: 0.55;
+.meter-icon.is-off {
+  color: var(--color-error);
 }
 .audio-icon-meter.enabled .meter-icon {
   color: var(--text-primary, #f4f4f5);

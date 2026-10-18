@@ -2,13 +2,14 @@
 import { useCaptureActionShortcuts } from '~/shortcuts/useCaptureActionShortcuts';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import type { CaptureMode } from '@beam/engine/capture/capture-mode';
-import { Camera, CameraOff, ScrollText } from '@lucide/vue';
+import { ScrollText } from '@lucide/vue';
 import type { EditorLoadingProgress, RecorderLauncherContext } from '~/api/types/capture-api';
 import Button from '~/ui/button/Button.vue';
 import Select from '~/ui/select/Select.vue';
 import TopbarHUD from './TopbarHUD.vue';
 import CaptureModeGroup from './CaptureModeGroup.vue';
 import HudCaptureCards from './HudCaptureCards.vue';
+import CaptureCameraIcon from './CaptureCameraIcon.vue';
 import AudioIconMeter from './audio/AudioIconMeter.vue';
 import EditorPreparingHud from './EditorPreparingHud.vue';
 import InteractionAccessControl from './interactions/InteractionAccessControl.vue';
@@ -19,6 +20,7 @@ import CapturePresetSelect from './CapturePresetSelect.vue';
 import KeyboardChip from '~/ui/Kbd/KeyboardChip.vue';
 import type { HudCaptureTarget } from './hud-state-types';
 import { useHudPopoverViewport } from './useHudPopoverViewport';
+import type { PrepareRecording } from './recorder/capture-preparation-types';
 
 const props = withDefaults(
   defineProps<{
@@ -29,6 +31,7 @@ const props = withDefaults(
     editorLoadingProgress?: EditorLoadingProgress;
     externalError?: string;
     recorderLauncherContext?: RecorderLauncherContext | null;
+    prepareRecording?: PrepareRecording;
   }>(),
   {
     embedded: false,
@@ -145,7 +148,7 @@ useCaptureActionShortcuts({
   mode: captureMode,
   instant: true,
   choose,
-  disabled: () => isBusy.value || isRecording.value || !!props.recorderLauncherContext,
+  disabled: () => isBusy.value || choosingSource.value || isRecording.value || !!props.recorderLauncherContext,
 });
 </script>
 
@@ -238,12 +241,7 @@ useCaptureActionShortcuts({
               :disabled="captureDisabled"
               @update:model-value="emit('focus-feature', 'camera')"
             >
-              <template #icon
-                ><component
-                  :is="selectedCameraId === 'off' ? CameraOff : Camera"
-                  :size="14"
-                  :class="{ 'is-unavailable': selectedCameraId === 'off' }"
-              /></template>
+              <template #icon><CaptureCameraIcon :enabled="selectedCameraId !== 'off'" /></template>
             </Select>
             <Select
               size="compact"

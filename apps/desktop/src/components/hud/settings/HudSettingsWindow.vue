@@ -209,6 +209,8 @@ onBeforeUnmount(() => {
         v-model:view="view"
         :focused-setting="focusedSetting"
         :countdown-seconds="countdown"
+        :start-automatically="preferences.settings?.extras.recordingStartAutomatically !== false"
+        @update:start-automatically="save({ extras: { recordingStartAutomatically: $event } })"
         :show-real-cursor="preferences.settings?.extras.showRealCursor === true"
         :hide-taskbar="preferences.settings?.extras.hideTaskbar === true"
         :hide-desktop-icons="preferences.settings?.extras.hideDesktopIcons === true"

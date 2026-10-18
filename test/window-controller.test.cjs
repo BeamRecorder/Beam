@@ -798,3 +798,46 @@ test('failed HUD wake remains hidden and reports the failure', async (t) => {
   assert.equal(window.isVisible(), false);
   assert.equal(errors[0][0], '[HUD wake]');
 });
+
+for (const platform of ['linux', 'darwin', 'win32'])
+  test(`preparation stays compact, protected and topmost on ${platform} and restores native material`, () => {
+    const win = fakeWindow();
+    win.setVibrancy = (value) => win.calls.push(['vibrancy', value]);
+    win.setBackgroundMaterial = (value) => win.calls.push(['material', value]);
+    const screen = {
+      getCursorScreenPoint: () => ({ x: 200, y: 300 }),
+      getDisplayNearestPoint: () => ({
+        id: 1,
+        bounds: { x: 0, y: 0, width: 1920, height: 1080 },
+        workArea: { x: 0, y: 0, width: 1920, height: 1040 },
+      }),
+    };
+    const controller = new WindowController(win, { platform, screenModule: screen });
+    controller.markReadyToShow();
+    controller.setHudAlwaysOnTop(false);
+    controller.setMode('preparation');
+    assert.deepEqual(win.getBounds(), { x: 560, y: 936, width: 800, height: 88 });
+    assert.ok(win.calls.some((call) => call[0] === 'contentProtection' && call[1] === true));
+    assert.deepEqual(win.calls.filter((call) => call[0] === 'mouse').at(-1), ['mouse', false]);
+    assert.equal(win.calls.filter((call) => call[0] === 'top').at(-1)[1], true);
+    if (platform === 'linux')
+      assert.equal(
+        win.calls.some((call) => ['vibrancy', 'material'].includes(call[0])),
+        false,
+      );
+    else
+      assert.ok(
+        win.calls.some(
+          (call) =>
+            call[0] === (platform === 'darwin' ? 'vibrancy' : 'material') &&
+            call[1] === (platform === 'darwin' ? 'under-window' : 'acrylic'),
+        ),
+      );
+    controller.showHud();
+    assert.equal(controller.mode, 'hud');
+    if (platform !== 'linux')
+      assert.deepEqual(
+        win.calls.filter((call) => call[0] === (platform === 'darwin' ? 'vibrancy' : 'material')).at(-1),
+        platform === 'darwin' ? ['vibrancy', null] : ['material', 'none'],
+      );
+  });

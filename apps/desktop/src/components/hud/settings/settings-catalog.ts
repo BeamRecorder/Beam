@@ -146,6 +146,14 @@ const definitions = [
   ],
   ['hide-desktop-icons', 'recording', 'ScreenRegionOverlay.hideDesktopIcons', 'ScreenRegionOverlay.captureOnly'],
   ['countdown', 'recording', 'HudPreferences.countdown', 'HudPreferences.selectDelay', 'HudPreferences.off'],
+  [
+    'recording-start',
+    'recording',
+    'HudPreferences.recordingStart',
+    'HudPreferences.recordingStartDescription',
+    'HudPreferences.startAutomatically',
+    'HudPreferences.startWhenReady',
+  ],
   ['projects-directory', 'general', 'DirectoryPreferences.projects', 'DirectoryPreferences.projectsDescription'],
   [
     'exports-directory',

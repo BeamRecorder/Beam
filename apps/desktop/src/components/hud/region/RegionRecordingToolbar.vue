@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { Camera, CameraOff, Circle, ScrollText, X } from '@lucide/vue';
+import { Circle, ScrollText, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Select from '~/ui/select/Select.vue';
+import CaptureCameraIcon from '../CaptureCameraIcon.vue';
 import AudioIconMeter from '../audio/AudioIconMeter.vue';
 import { useAudioLevelMeter } from '../audio/useAudioLevelMeter';
 import { useNativeSystemAudioPreview } from '../recorder/useNativeSystemAudioPreview';
@@ -28,10 +29,10 @@ const { t: regionT } = useTranslate('ScreenRegionOverlay');
 const cameras = ref<SelectOption[]>([]);
 const microphones = ref<SelectOption[]>([]);
 const cameraOptions = computed(() => [...cameras.value, { value: 'off', label: t('cameraOff') }]);
-const micOptions = computed(() => [...microphones.value, { value: 'no-audio', label: t('noAudio') }]);
+const micOptions = computed(() => [...microphones.value, { value: 'no-audio', label: t('noMicrophone') }]);
 const audioOptions = computed(() => [
   { value: 'on', label: t('systemAudio') },
-  { value: 'off', label: t('off') },
+  { value: 'off', label: t('noSystemAudio') },
 ]);
 const { level: micLevel } = useAudioLevelMeter(
   computed(() => settings.value.microphoneId !== 'no-audio'),
@@ -124,7 +125,7 @@ onBeforeUnmount(() => {
         :label="t('camera')"
         tooltip-disabled
         @update:model-value="setCamera"
-        ><template #icon><component :is="settings.cameraId === 'off' ? CameraOff : Camera" :size="14" /></template
+        ><template #icon><CaptureCameraIcon :enabled="settings.cameraId !== 'off'" /></template
       ></Select>
     </div>
     <div class="device-field">
@@ -155,7 +156,7 @@ onBeforeUnmount(() => {
     </div>
     <RegionQuickSettings v-model="settings" />
     <Button data-region-start variant="primary" size="sm" :icon="Circle" :disabled="disabled" @click="emit('record')">{{
-      regionT('record')
+      settings.startAutomatically === false ? regionT('continue') : regionT('record')
     }}</Button>
     <p v-if="error" class="device-error" role="alert">{{ error }}</p>
   </aside>

@@ -1,4 +1,6 @@
-const { BrowserWindow, screen } = require('electron');
+const path = require('node:path');
+const { registerCapturePreparationIpc } = require('./capture-preparation-ipc.cjs');
+const { BrowserWindow, screen, app } = require('electron');
 const { resizeHudPopover } = require('./hud-popover-size.cjs');
 const { registerWindowVisibilityIpc } = require('./window-visibility.cjs');
 
@@ -7,6 +9,12 @@ function windowForEvent(event) {
 }
 
 function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {}) {
+  const preparation = registerCapturePreparationIpc(ipcMain, controllerForWindow, {
+    BrowserWindow,
+    screen,
+    applicationRoot: path.resolve(__dirname, '../../../..'),
+    isPackaged: app.isPackaged,
+  });
   registerWindowVisibilityIpc(ipcMain, windowForEvent);
   const logWindow = (message, details) => {
     if (!debug) return;
@@ -83,6 +91,7 @@ function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {})
       controllerForWindow(win)?.applyModePolicy();
     }, 16);
   });
+  return { preparation };
 }
 
 module.exports = { registerWindowIpc };

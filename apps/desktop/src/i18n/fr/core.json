@@ -567,7 +567,8 @@
     "screen": "Écran",
     "window": "Fenêtre",
     "cameraOff": "Caméra désactivée",
-    "noAudio": "Aucun audio",
+    "noMicrophone": "Aucun microphone",
+    "noSystemAudio": "Aucun audio système",
     "systemAudio": "Audio système",
     "off": "Désactivé",
     "copied": "Copié",
@@ -750,7 +751,12 @@
     "categoryVideoEditor": "Éditeur vidéo",
     "videoEditorDescription": "Comportement de la timeline et préférences d’export vidéo.",
     "groupApplication": "Application",
-    "groupTools": "Outils"
+    "groupTools": "Outils",
+    "recordingStart": "Démarrage de l’enregistrement",
+    "recordingStartDescription": "Automatiquement : le compte à rebours démarre après le choix de l’écran, de la fenêtre ou de la région. Quand je suis prêt : réglez la caméra, le micro et l’audio système dans la barre de préparation, puis cliquez sur Enregistrer pour lancer le compte à rebours.",
+    "startAutomatically": "Automatiquement",
+    "startWhenReady": "Quand je suis prêt",
+    "preparationUnavailable": "Les commandes de préparation de l’enregistrement sont indisponibles."
   },
   "ProjectPicker": {
     "projects": "Projets",
@@ -833,7 +839,8 @@
     "hideDesktopIcons": "Masquer les icônes du bureau",
     "desktopUnavailable": "Le masquage du bureau n’est pas disponible sur Linux.",
     "captureOnly": "Ces éléments sont masqués dans l’enregistrement sur macOS.",
-    "previewUnavailable": "L’aperçu du bureau n’a pas pu être chargé."
+    "previewUnavailable": "L’aperçu du bureau n’a pas pu être chargé.",
+    "continue": "Continuer"
   },
   "SettingsPanel": {
     "themeMode": "Mode du thème",

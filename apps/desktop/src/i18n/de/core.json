@@ -567,7 +567,8 @@
     "screen": "Bildschirm",
     "window": "Fenster",
     "cameraOff": "Kamera aus",
-    "noAudio": "Kein Audio",
+    "noMicrophone": "Kein Mikrofon",
+    "noSystemAudio": "Kein Systemaudio",
     "systemAudio": "Systemaudio",
     "off": "Aus",
     "copied": "Kopiert",
@@ -738,7 +739,12 @@
     "categoryVideoEditor": "Videoeditor",
     "videoEditorDescription": "Verhalten der Zeitleiste und Einstellungen für den Videoexport.",
     "groupApplication": "Anwendung",
-    "groupTools": "Werkzeuge"
+    "groupTools": "Werkzeuge",
+    "recordingStart": "Aufnahmestart",
+    "recordingStartDescription": "Automatisch: Der Countdown beginnt nach der Auswahl eines Bildschirms, Fensters oder Bereichs. Wenn ich bereit bin: Stelle Kamera, Mikrofon und Systemaudio in der Vorbereitungsleiste ein und klicke auf Aufnehmen, um den Countdown zu starten.",
+    "startAutomatically": "Automatisch",
+    "startWhenReady": "Wenn ich bereit bin",
+    "preparationUnavailable": "Die Steuerelemente zur Aufnahmevorbereitung sind nicht verfügbar."
   },
   "ProjectPicker": {
     "projects": "Projekte",
@@ -821,7 +827,8 @@
     "hideDesktopIcons": "Desktopsymbole ausblenden",
     "desktopUnavailable": "Unter Linux nicht verfügbar.",
     "captureOnly": "In macOS-Aufnahmen ausgeblendet.",
-    "previewUnavailable": "Desktopvorschau konnte nicht geladen werden."
+    "previewUnavailable": "Desktopvorschau konnte nicht geladen werden.",
+    "continue": "Weiter"
   },
   "SettingsPanel": {
     "themeMode": "Designmodus",

@@ -674,3 +674,49 @@ test('shortcut capture is Settings-owned and released on blur, hide and destruct
   f.manager.destroy();
   assert.deepEqual(calls, [true, false, false, false]);
 });
+test('the preparation HUD opens Settings while Projects remains blocked, and ending setup dismisses Settings', async () => {
+  const f = fixture();
+  f.controller.mode = 'preparation';
+  const opening = f.open('settings');
+  const panel = f.windows[0];
+  f.ready(panel);
+  assert.equal(await opening, true);
+  assert.equal(panel.visible, true);
+  assert.equal(panel.topmost, true);
+  assert.throws(() => f.open('projects'), /recorder/);
+  f.hud.emit('capture-preparation-ended');
+  assert.equal(panel.visible, false);
+  f.manager.destroy();
+  assert.equal(f.hud.listenerCount('capture-preparation-ended'), 0);
+});
+test('an authorized preparation menu opens Settings owned by the real HUD and survives menu closure', async () => {
+  const menu = editorOwner();
+  let active = true;
+  const f = fixture({ settingsOwnerFor: (sender) => (active && sender === menu.webContents ? f.hud : null) });
+  f.controller.mode = 'preparation';
+  const opening = f.handlers.get('hud:open-settings')({ sender: menu.webContents });
+  const panel = f.windows[0];
+  f.ready(panel);
+  await opening;
+  assert.equal(panel.topmost, true);
+  menu.emit('closed');
+  assert.equal(panel.visible, true);
+  active = false;
+  assert.throws(() => f.handlers.get('hud:open-settings')({ sender: menu.webContents }), /Settings/);
+  f.hud.emit('hide');
+  assert.equal(panel.visible, false);
+  f.manager.destroy();
+});
+test('a stale delegated menu is rejected after preparation and shutdown still blocks Settings', () => {
+  const menu = editorOwner();
+  const f = fixture({ settingsOwnerFor: () => f.hud });
+  for (const mode of ['hud', 'recorder']) {
+    f.controller.mode = mode;
+    assert.throws(() => f.handlers.get('hud:open-settings')({ sender: menu.webContents }), /Settings/);
+  }
+  f.controller.mode = 'preparation';
+  f.stop();
+  assert.throws(() => f.open('settings'), /Settings/);
+  assert.equal(f.windows.length, 0);
+  f.manager.destroy();
+});

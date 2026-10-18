@@ -43,6 +43,7 @@ export interface ScreenRegionSelectionResult {
 }
 
 export interface RegionRecordingSettings {
+  startAutomatically?: boolean;
   zoomMode?: import('./recording-zoom').RecordingZoomMode;
   cameraId: string;
   microphoneId: string;

@@ -27,16 +27,20 @@ describe('recorder startup', () => {
     await pending;
     expect(document.getElementById('beam-startup')).not.toBeNull();
   });
-  it.each(['cameraOverlay', 'screenRegion', 'quickSnipCrop', 'teleprompter'])(
-    'leaves the %s overlay transparent',
-    async (key) => {
-      history.replaceState({}, '', `/?${key}=1`);
-      const load = vi.fn(async () => undefined);
-      await startRecorder(load);
-      expect(document.getElementById('beam-startup')).toBeNull();
-      expect(load).toHaveBeenCalledOnce();
-    },
-  );
+  it.each([
+    'cameraOverlay',
+    'screenRegion',
+    'quickSnipCrop',
+    'quickSnipSettings',
+    'capturePreparationSettings',
+    'teleprompter',
+  ])('leaves the %s overlay transparent', async (key) => {
+    history.replaceState({}, '', `/?${key}=1`);
+    const load = vi.fn(async () => undefined);
+    await startRecorder(load);
+    expect(document.getElementById('beam-startup')).toBeNull();
+    expect(load).toHaveBeenCalledOnce();
+  });
   it('shows a readable import failure and a retry action without interpreting HTML', async () => {
     const reload = vi.fn();
     vi.stubGlobal('location', { search: '', reload });

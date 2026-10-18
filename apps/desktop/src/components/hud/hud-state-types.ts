@@ -1,6 +1,7 @@
 import type { Ref, ComputedRef } from 'vue';
 import type { SourcePickerSelection } from '~/api/types/source-picker';
 import type { RegionRecordingSettings } from '~/api/types/screen-region';
+import type { PrepareRecording } from './recorder/capture-preparation-types';
 import type {
   CapturePreview,
   CaptureSource,
@@ -15,6 +16,7 @@ export interface HudProps {
   editorLoadingProgress: EditorLoadingProgress;
   externalError?: string;
   recorderLauncherContext?: RecorderLauncherContext | null;
+  prepareRecording?: PrepareRecording;
 }
 export type HudEmit = (
   event:

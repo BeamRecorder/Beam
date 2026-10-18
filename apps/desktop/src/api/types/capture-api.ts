@@ -128,7 +128,8 @@ export interface DesktopCaptureApi
   }): void;
   setNormalRecordingActive(active: boolean): void;
   onTrayStopRecording?(listener: () => void): () => void;
-  setWindowMode(mode: 'hud' | 'recorder'): void;
+  preparation: import('./capture-preparation').CapturePreparationApi;
+  setWindowMode(mode: 'hud' | 'recorder' | 'preparation'): void;
   showHud(): void;
   openEditor(projectId: string, options?: EditorOpenOptions): Promise<boolean>;
   cancelEditorOpening(): Promise<boolean>;

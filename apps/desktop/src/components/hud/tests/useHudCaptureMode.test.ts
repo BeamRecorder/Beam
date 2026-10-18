@@ -1,4 +1,4 @@
-import { mount, type VueWrapper } from '@vue/test-utils';
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { defineComponent, nextTick, ref, type Ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PreferenceSettings } from '~/api/types/capture-api';
@@ -12,6 +12,7 @@ const captureMock = vi.hoisted(() => ({
   hideTeleprompter: vi.fn(),
   quickSnipFromHud: vi.fn(),
   setWindowVisible: vi.fn(),
+  showHud: vi.fn(),
   prepareRecordingSurface: vi.fn(),
   captureScreenshot: vi.fn(),
   openScreenshot: vi.fn(),
@@ -22,6 +23,7 @@ vi.mock('~/utils/screenshot-sound', () => ({ playScreenshotSound: soundMock }));
 
 vi.mock('~/api/capture', () => ({ capture: captureMock }));
 
+import type { PrepareRecording } from '../recorder/capture-preparation-types';
 import { useHudCaptureMode } from '../useHudCaptureMode';
 
 const preferences = (options: { mode?: string; shortcut?: string } = {}): PreferenceSettings => ({
@@ -63,13 +65,17 @@ describe('useHudCaptureMode', () => {
   let wrapper: VueWrapper;
   let unsubscribe!: ReturnType<typeof vi.fn>;
 
-  const mountMode = (embedded = false, isRecorderLauncher = () => false) => {
+  const mountMode = (
+    embedded = false,
+    isRecorderLauncher: (() => boolean) | undefined = undefined,
+    prepare?: PrepareRecording,
+  ) => {
     busy = ref(false);
     error = ref('');
     wrapper = mount(
       defineComponent({
         setup() {
-          api = useHudCaptureMode(busy, error, embedded, isRecorderLauncher);
+          api = useHudCaptureMode(busy, error, embedded, isRecorderLauncher, prepare);
           return () => null;
         },
       }),
@@ -356,4 +362,231 @@ describe('useHudCaptureMode', () => {
     await pending;
     expect(captureMock.openScreenshot).toHaveBeenCalledOnce();
   });
+  it.each(['studio', 'instant'] as const)(
+    'defers %s until the user explicitly starts, retaining the selected source and countdown',
+    async (mode) => {
+      let begin!: () => Promise<void>;
+      const prepare = vi.fn(
+        async (_request: Parameters<PrepareRecording>[0], start: Parameters<PrepareRecording>[1]) => {
+          begin = () => start(_request.settings);
+        },
+      );
+      mountMode(false, () => false, prepare);
+      const prefs = preferences({ mode });
+      prefs.extras.recordingStartAutomatically = false;
+      api.hydrateMode(prefs);
+      const config = configuration({ screenKind: 'window', screenId: 'window:42:0', countdownSeconds: 3 });
+      const studio = vi.fn();
+      await api.captureWithMode(config, studio);
+      expect(prepare).toHaveBeenCalledWith(
+        expect.objectContaining({ settings: expect.objectContaining({ countdownSeconds: 3 }) }),
+        expect.any(Function),
+      );
+      expect(studio).not.toHaveBeenCalled();
+      expect(captureMock.quickSnipFromHud).not.toHaveBeenCalled();
+      await begin();
+      if (mode === 'studio') expect(studio).toHaveBeenCalledExactlyOnceWith(expect.objectContaining(config));
+      else
+        expect(captureMock.quickSnipFromHud).toHaveBeenCalledWith(
+          expect.objectContaining({ screenId: 'window:42:0', screenKind: 'window', countdownSeconds: 3 }),
+        );
+    },
+  );
+  it('does not interpret a zero countdown as permission to bypass manual start', async () => {
+    const prepare = vi.fn();
+    mountMode(false, () => false, prepare);
+    const prefs = preferences();
+    prefs.extras.recordingStartAutomatically = false;
+    api.hydrateMode(prefs);
+    const studio = vi.fn();
+    await api.captureWithMode(configuration({ countdownSeconds: 0 }), studio);
+    expect(prepare).toHaveBeenCalledWith(
+      expect.objectContaining({ settings: expect.objectContaining({ countdownSeconds: 0 }) }),
+      expect.any(Function),
+    );
+    expect(studio).not.toHaveBeenCalled();
+  });
+  it('never silently records when manual preparation is unavailable', async () => {
+    mountMode();
+    const prefs = preferences();
+    prefs.extras.recordingStartAutomatically = false;
+    api.hydrateMode(prefs);
+    const studio = vi.fn();
+    await expect(api.captureWithMode(configuration(), studio)).rejects.toThrow('preparation controls are unavailable');
+    expect(studio).not.toHaveBeenCalled();
+  });
+  it('retains the chosen mode if preferences change while preparation is open', async () => {
+    let begin!: () => Promise<void>;
+    mountMode(
+      false,
+      () => false,
+      async (_request, start) => {
+        begin = () => start(_request.settings);
+      },
+    );
+    const prefs = preferences({ mode: 'instant' });
+    prefs.extras.recordingStartAutomatically = false;
+    api.hydrateMode(prefs);
+    const studio = vi.fn();
+    await api.captureWithMode(configuration(), studio);
+    api.captureMode.value = 'studio';
+    await begin();
+    expect(studio).not.toHaveBeenCalled();
+    expect(captureMock.quickSnipFromHud).toHaveBeenCalledOnce();
+  });
+  it('keeps screenshots immediate with manual video start selected', async () => {
+    const prepare = vi.fn();
+    mountMode(false, () => false, prepare);
+    const prefs = preferences({ mode: 'screenshot' });
+    prefs.extras.recordingStartAutomatically = false;
+    api.hydrateMode(prefs);
+    await api.captureWithMode(configuration(), vi.fn());
+    expect(prepare).not.toHaveBeenCalled();
+    expect(captureMock.captureScreenshot).toHaveBeenCalledOnce();
+  });
+  it.each([true, undefined, null, 0, 'false'])(
+    'keeps automatic start for a non-false preference: %s',
+    async (value) => {
+      const prepare = vi.fn();
+      mountMode(false, () => false, prepare);
+      const prefs = preferences();
+      prefs.extras.recordingStartAutomatically = value;
+      api.hydrateMode(prefs);
+      const studio = vi.fn();
+      await api.captureWithMode(configuration(), studio);
+      expect(prepare).not.toHaveBeenCalled();
+      expect(studio).toHaveBeenCalledOnce();
+    },
+  );
+  it('reports a failed mode preference save without starting or changing recording policy', async () => {
+    mountMode();
+    api.hydrateMode(preferences());
+    captureMock.updatePreferences.mockRejectedValueOnce(new Error('Preferences unavailable'));
+    api.captureMode.value = 'instant';
+    await flushPromises();
+    expect(error.value).toBe('Error: Preferences unavailable');
+    expect(api.startAutomatically.value).toBe(true);
+    expect(captureMock.quickSnipFromHud).not.toHaveBeenCalled();
+  });
+  it('restores the ordinary HUD if Instant fails after the preparation handoff', async () => {
+    mountMode(
+      false,
+      () => false,
+      async (_request, start) => start(_request.settings),
+    );
+    const prefs = preferences({ mode: 'instant' });
+    prefs.extras.recordingStartAutomatically = false;
+    api.hydrateMode(prefs);
+    captureMock.quickSnipFromHud.mockRejectedValueOnce(new Error('Capture failed'));
+    await api.captureWithMode(configuration(), vi.fn());
+    expect(captureMock.showHud).toHaveBeenCalledOnce();
+    expect(error.value).toBe('Capture failed');
+    expect(busy.value).toBe(false);
+  });
+
+  it('blocks duplicate capture and mode changes from bypassing a pending preparation', async () => {
+    let confirm!: () => void;
+    mountMode(
+      false,
+      () => false,
+      async (_request, start) => {
+        await new Promise<void>((resolve) => {
+          confirm = resolve;
+        });
+        await start(_request.settings);
+      },
+    );
+    const prefs = preferences();
+    prefs.extras.recordingStartAutomatically = false;
+    api.hydrateMode(prefs);
+    const studio = vi.fn();
+    const operation = api.captureWithMode(configuration(), studio);
+    expect(busy.value).toBe(true);
+    expect(studio).not.toHaveBeenCalled();
+    api.hydrateMode(preferences({ mode: 'instant' }));
+    await api.captureWithMode(configuration(), studio);
+    expect(captureMock.quickSnipFromHud).not.toHaveBeenCalled();
+    confirm();
+    await operation;
+    expect(studio).toHaveBeenCalledOnce();
+    expect(busy.value).toBe(false);
+  });
+  it('releases the busy state and permits another attempt if preparation fails', async () => {
+    const prepare = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('Preparation failed'))
+      .mockImplementationOnce(
+        async (_request: Parameters<PrepareRecording>[0], start: Parameters<PrepareRecording>[1]) =>
+          start(_request.settings),
+      );
+    mountMode(false, () => false, prepare);
+    const prefs = preferences();
+    prefs.extras.recordingStartAutomatically = false;
+    api.hydrateMode(prefs);
+    const studio = vi.fn();
+    await expect(api.captureWithMode(configuration(), studio)).rejects.toThrow('Preparation failed');
+    expect(error.value).toBe('Preparation failed');
+    expect(busy.value).toBe(false);
+    await api.captureWithMode(configuration(), studio);
+    expect(studio).toHaveBeenCalledOnce();
+  });
+  it.each(['studio', 'instant'] as const)(
+    'uses every edited preparation control for %s while preserving the source and captured mode',
+    async (mode) => {
+      let confirm!: () => Promise<void>;
+      mountMode(
+        false,
+        () => false,
+        async (request, start) => {
+          confirm = () =>
+            start({
+              ...request.settings,
+              cameraId: 'new-camera',
+              microphoneId: 'new-mic',
+              systemAudio: true,
+              countdownSeconds: 7,
+              hideTaskbar: true,
+              hideDesktopIcons: true,
+              showRealCursor: true,
+              zoomMode: '3d',
+            });
+        },
+      );
+      const prefs = preferences({ mode });
+      prefs.extras.recordingStartAutomatically = false;
+      api.hydrateMode(prefs);
+      const studio = vi.fn(),
+        apply = vi.fn();
+      const config = configuration({ screenId: 'window:original', screenKind: 'window' });
+      await api.captureWithMode(config, studio, apply);
+      api.hydrateMode(preferences({ mode: 'screenshot' }));
+      await confirm();
+      expect(apply).toHaveBeenCalledWith(
+        expect.objectContaining({ cameraId: 'new-camera', microphoneId: 'new-mic', countdownSeconds: 7 }),
+      );
+      if (mode === 'studio')
+        expect(studio).toHaveBeenCalledWith(
+          expect.objectContaining({
+            ...config,
+            cameraId: 'new-camera',
+            microphoneId: 'new-mic',
+            systemAudio: true,
+            countdownSeconds: 7,
+            hideTaskbar: true,
+            hideDesktopIcons: true,
+            showRealCursor: true,
+          }),
+        );
+      else
+        expect(captureMock.quickSnipFromHud).toHaveBeenCalledWith(
+          expect.objectContaining({
+            screenId: 'window:original',
+            screenKind: 'window',
+            countdownSeconds: 7,
+            devices: { cameraId: 'new-camera', micId: 'new-mic', systemAudioMode: 'on' },
+            showRealCursor: true,
+          }),
+        );
+    },
+  );
 });

@@ -113,11 +113,11 @@ it('uses the existing device and audio paths, including explicit off choices', a
     ],
     [
       { value: 'mic', label: 'Microphone' },
-      { value: 'no-audio', label: 'noAudio' },
+      { value: 'no-audio', label: 'noMicrophone' },
     ],
     [
       { value: 'on', label: 'systemAudio' },
-      { value: 'off', label: 'off' },
+      { value: 'off', label: 'noSystemAudio' },
     ],
   ]);
   const selects = wrapper.findAllComponents(Select);
@@ -220,7 +220,9 @@ it('retains independently available devices and exposes enumeration failures', a
   const wrapper = mountToolbar();
   await flushPromises();
   expect(wrapper.get('[role="alert"]').text()).toContain('Camera unavailable');
-  expect(wrapper.findAllComponents(Select)[1]!.props('options')).toEqual([{ value: 'no-audio', label: 'noAudio' }]);
+  expect(wrapper.findAllComponents(Select)[1]!.props('options')).toEqual([
+    { value: 'no-audio', label: 'noMicrophone' },
+  ]);
   wrapper.unmount();
 });
 it('does not revive the toolbar after delayed device enumeration completes', async () => {
@@ -263,5 +265,16 @@ it('applies quick settings and recomputes enabled camera and audio presentation'
     'mic',
     'on',
   ]);
+  wrapper.unmount();
+});
+
+it('validates framing with Continue before manual preparation, while automatic mode keeps Record', async () => {
+  const wrapper = mountToolbar();
+  await flushPromises();
+  expect(wrapper.get('[data-region-start]').text()).toBe('record');
+  await wrapper.setProps({ modelValue: { ...settings, startAutomatically: false } });
+  expect(wrapper.get('[data-region-start]').text()).toBe('continue');
+  await wrapper.get('[data-region-start]').trigger('click');
+  expect(wrapper.emitted('record')).toEqual([[]]);
   wrapper.unmount();
 });

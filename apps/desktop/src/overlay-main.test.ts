@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({
   camera: vi.fn(),
   crop: vi.fn(),
   settings: vi.fn(),
+  preparation: vi.fn(),
   locale: vi.fn(),
   complete: vi.fn(),
   zoom: vi.fn(),
@@ -31,6 +32,10 @@ vi.mock('./components/quick-snip/QuickSnipSettings.vue', () => {
   state.settings();
   return { default: { name: 'QuickSnipSettings' } };
 });
+vi.mock('./components/hud/recorder/CapturePreparationSettings.vue', () => {
+  state.preparation();
+  return { default: { name: 'CapturePreparationSettings' } };
+});
 vi.mock('./window-bootstrap', () => ({
   prepareWindowAppearance: state.appearance,
 }));
@@ -52,6 +57,7 @@ describe('overlay window bootstrap', () => {
     ['cameraOverlay', 'CameraOverlayApp', 'camera', 'crop'],
     ['quickSnipCrop', 'QuickSnipCropBar', 'crop', 'camera'],
     ['quickSnipSettings', 'QuickSnipSettings', 'settings', 'camera'],
+    ['capturePreparationSettings', 'CapturePreparationSettings', 'preparation', 'settings'],
   ] as const)('mounts only %s with the shared locale and theme', async (query, component, loaded, omitted) => {
     window.history.replaceState(null, '', `/?${query}=1`);
     await import('./overlay-main');

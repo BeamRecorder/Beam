@@ -4,7 +4,7 @@ const { fileURLToPath } = require('url');
 const { createFileClipboard } = require('../clipboard/file-clipboard.cjs');
 const { registerQuickSnipDeviceMenu } = require('./quick-snip-device-menu.cjs');
 const { createQuickSnipController } = require('./quick-snip-controller.cjs');
-const { createQuickSnipSettingsWindow } = require('./quick-snip-settings-window.cjs');
+const { createCaptureSettingsWindow } = require('../window/capture-settings-window.cjs');
 const { createQuickSnipWindow } = require('./quick-snip-window.cjs');
 const { createQuickSnipStatusWindow } = require('./quick-snip-status-window.cjs');
 const { createQuickSnipRenderer } = require('./quick-snip-renderer.cjs');
@@ -24,7 +24,7 @@ function createQuickSnipService(options) {
   let normalRecordingActive = false;
   let deviceMenu = null;
   const cropWindow = createQuickSnipWindow(options);
-  const settingsWindow = createQuickSnipSettingsWindow(options);
+  const settingsWindow = createCaptureSettingsWindow(options);
   const statusWindow = createQuickSnipStatusWindow(options);
   const renderer = createQuickSnipRenderer({ applicationIpc, statusWindow });
   const fileClipboard = createFileClipboard({

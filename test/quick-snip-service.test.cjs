@@ -65,7 +65,7 @@ function fixture(snapshot, extra = {}) {
         },
       };
     if (name === './quick-snip-window.cjs') return { createQuickSnipWindow: () => cropWindow };
-    if (name === './quick-snip-settings-window.cjs') return { createQuickSnipSettingsWindow: () => settingsWindow };
+    if (name === '../window/capture-settings-window.cjs') return { createCaptureSettingsWindow: () => settingsWindow };
     if (name === './quick-snip-status-window.cjs') return { createQuickSnipStatusWindow: () => statusWindow };
     if (name === './quick-snip-renderer.cjs')
       return {

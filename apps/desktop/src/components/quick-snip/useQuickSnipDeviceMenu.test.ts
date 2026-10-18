@@ -127,7 +127,7 @@ describe('Quick Snip device choices', () => {
     expect(f.synchronize).toHaveBeenCalledOnce();
   });
 
-  it('offers the native default system output and Off without enumerating microphones or cameras', async () => {
+  it('offers the native default system output and explicit No system audio without enumerating microphones or cameras', async () => {
     const f = fixture();
     mocks.choose.mockResolvedValue('on');
     await f.menu.chooseDevice('systemAudio', { x: 50, y: 48 });
@@ -137,7 +137,7 @@ describe('Quick Snip device choices', () => {
       selectedId: 'off',
       options: [
         { id: 'on', label: 'Default system output' },
-        { id: 'off', label: 'Off' },
+        { id: 'off', label: 'No system audio' },
       ],
     });
     expect(mocks.cameras).not.toHaveBeenCalled();
@@ -199,7 +199,7 @@ describe('Quick Snip device choices', () => {
       kind: 'microphone',
       position: { x: 50, y: 48 },
       selectedId: '',
-      options: [{ id: 'no-audio', label: 'No Audio' }],
+      options: [{ id: 'no-audio', label: 'No microphone' }],
     });
   });
 

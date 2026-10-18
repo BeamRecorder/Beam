@@ -567,7 +567,8 @@
     "screen": "Экран",
     "window": "Окно",
     "cameraOff": "Камера выключена",
-    "noAudio": "Без звука",
+    "noMicrophone": "Без микрофона",
+    "noSystemAudio": "Без системного звука",
     "systemAudio": "Системный звук",
     "off": "Выкл.",
     "copied": "Скопировано",
@@ -738,7 +739,12 @@
     "categoryVideoEditor": "Видеоредактор",
     "videoEditorDescription": "Поведение таймлайна и настройки экспорта видео.",
     "groupApplication": "Приложение",
-    "groupTools": "Инструменты"
+    "groupTools": "Инструменты",
+    "recordingStart": "Начало записи",
+    "recordingStartDescription": "Автоматически: обратный отсчёт начинается после выбора экрана, окна или области. Когда я буду готов: настройте камеру, микрофон и системный звук на панели подготовки, затем нажмите «Запись», чтобы начать обратный отсчёт.",
+    "startAutomatically": "Автоматически",
+    "startWhenReady": "Когда я буду готов",
+    "preparationUnavailable": "Элементы управления подготовкой записи недоступны."
   },
   "ProjectPicker": {
     "projects": "Проекты",
@@ -821,7 +827,8 @@
     "hideDesktopIcons": "Скрыть значки рабочего стола",
     "desktopUnavailable": "Недоступно в Linux.",
     "captureOnly": "Скрыто в записи на macOS.",
-    "previewUnavailable": "Не удалось загрузить предпросмотр рабочего стола."
+    "previewUnavailable": "Не удалось загрузить предпросмотр рабочего стола.",
+    "continue": "Продолжить"
   },
   "SettingsPanel": {
     "themeMode": "Режим темы",

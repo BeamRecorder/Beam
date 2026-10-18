@@ -13,6 +13,7 @@ const state = (): HudRegionSettingRefs => ({
   microphoneId: ref('no-audio'),
   systemAudioMode: ref('off'),
   countdownSeconds: ref(3),
+  startAutomatically: ref(true),
   error: ref(''),
 });
 const prefs = (extras: Record<string, unknown>) => ({ extras }) as PreferenceSettings;
@@ -28,6 +29,7 @@ it('snapshots independent device, audio, countdown and desktop settings', () => 
     microphoneId: 'no-audio',
     systemAudio: false,
     countdownSeconds: 3,
+    startAutomatically: true,
     hideTaskbar: false,
     hideDesktopIcons: false,
     showRealCursor: false,
@@ -44,6 +46,7 @@ it('applies chosen settings and persists countdown and desktop options', async (
     microphoneId: 'mic',
     systemAudio: true,
     countdownSeconds: 10,
+    startAutomatically: false,
     hideTaskbar: true,
     hideDesktopIcons: true,
     showRealCursor: true,
@@ -55,6 +58,7 @@ it('applies chosen settings and persists countdown and desktop options', async (
     extras: {
       recordingZoomMode: '3d',
       recordingCountdownSeconds: 10,
+      recordingStartAutomatically: false,
       hideTaskbar: true,
       hideDesktopIcons: true,
       showRealCursor: true,
@@ -113,3 +117,18 @@ describe('hydrate', () => {
     expect(settings.snapshot().hideDesktopIcons).toBe(false);
   });
 });
+
+it.each([true, false])(
+  'restores the independent start policy and preserves it when old selection settings omit it: %s',
+  (value) => {
+    const refs = state(),
+      settings = useRegionRecordingSettings(refs);
+    settings.hydrate(prefs({ recordingStartAutomatically: value, recordingCountdownSeconds: 3 }));
+    expect(settings.snapshot().startAutomatically).toBe(value);
+    expect(refs.countdownSeconds.value).toBe(3);
+    const old = settings.snapshot();
+    delete old.startAutomatically;
+    settings.apply(old);
+    expect(settings.snapshot().startAutomatically).toBe(value);
+  },
+);

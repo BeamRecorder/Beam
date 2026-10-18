@@ -39,6 +39,40 @@ describe.each(SUPPORTED_LOCALES)('%s recorder translations', (locale) => {
     expect(label).toBeTruthy();
     expect(label).toBe(messages[`./${locale}/editor.json`].default.GlassHighlight.loupe);
   });
+  it('translates manual recording start and its separate region confirmation', () => {
+    const text = messages[`./${locale}/core.json`].default.HudPreferences;
+    for (const key of [
+      'recordingStart',
+      'recordingStartDescription',
+      'startAutomatically',
+      'startWhenReady',
+      'preparationUnavailable',
+    ])
+      expect(text[key], key).toBeTruthy();
+    expect(text.startAutomatically).not.toBe(text.startWhenReady);
+    for (const label of [
+      text.startAutomatically,
+      text.startWhenReady,
+      messages[`./${locale}/core.json`].default.ScreenRegionOverlay.record,
+    ])
+      expect(text.recordingStartDescription).toContain(label);
+    expect(messages[`./${locale}/core.json`].default.ScreenRegionOverlay.continue).toBeTruthy();
+    if (locale !== 'en')
+      expect(text.recordingStartDescription).not.toBe(
+        messages['./en/core.json'].default.HudPreferences.recordingStartDescription,
+      );
+  });
+  it('names microphone and system-audio Off choices separately', () => {
+    const text = messages[`./${locale}/core.json`].default.HUD;
+    expect(text.noMicrophone).toBeTruthy();
+    expect(text.noSystemAudio).toBeTruthy();
+    expect(text.noMicrophone).not.toBe(text.noSystemAudio);
+    expect(text.noSystemAudio).not.toBe(text.off);
+    if (locale !== 'en') {
+      expect(text.noMicrophone).not.toBe('No microphone');
+      expect(text.noSystemAudio).not.toBe('No system audio');
+    }
+  });
   it('translates the compact recording issue warning', () => {
     const text = messages[`./${locale}/core.json`].default.RecorderBar;
     expect(text.captureIssue).toBeTruthy();

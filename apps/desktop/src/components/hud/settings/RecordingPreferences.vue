@@ -15,9 +15,11 @@ withDefaults(defineProps<RecordingPreferenceProps>(), {
   hideTaskbar: false,
   hideDesktopIcons: false,
   alwaysOnTop: true,
+  startAutomatically: true,
 });
 const emit = defineEmits<{
   'update:countdownSeconds': [number];
+  'update:startAutomatically': [boolean];
   'update:showRealCursor': [boolean];
   'update:hideTaskbar': [boolean];
   'update:hideDesktopIcons': [boolean];
@@ -36,6 +38,13 @@ const recordingBarOptions = computed(() => [
   { value: 'auto-fade', label: t('autoFade') },
   { value: 'hover-only', label: t('hiddenUntilHovered') },
 ]);
+const startOptions = computed(() => [
+  { value: 'automatic', label: t('startAutomatically') },
+  { value: 'manual', label: t('startWhenReady') },
+]);
+const updateStart = (value: string | number) => {
+  if (value === 'automatic' || value === 'manual') emit('update:startAutomatically', value === 'automatic');
+};
 const updateRecordingBarVisibility = (value: string | number) => {
   if (value === 'always' || value === 'auto-fade' || value === 'hover-only')
     emit('update:recordingBarVisibility', value);
@@ -91,6 +100,21 @@ const updateCountdownSeconds = (value: string | number) => {
             @update:model-value="updateRecordingBarVisibility"
           />
         </div>
+      </div>
+    </div>
+    <div class="preference-item" data-setting="recording-start" tabindex="-1">
+      <div class="preference-copy">
+        <p class="preference-title">{{ t('recordingStart') }}</p>
+        <p class="preference-description">{{ t('recordingStartDescription') }}</p>
+      </div>
+      <div class="preference-control">
+        <Select
+          :model-value="startAutomatically ? 'automatic' : 'manual'"
+          :options="startOptions"
+          size="sm"
+          :aria-label="t('recordingStart')"
+          @update:model-value="updateStart"
+        />
       </div>
     </div>
     <div class="preference-item" data-setting="countdown" tabindex="-1">

@@ -14,6 +14,7 @@ export type SettingsView =
 
 export interface HudPreferenceProps {
   countdownSeconds: number;
+  startAutomatically?: boolean;
   showRealCursor?: boolean;
   hideTaskbar?: boolean;
   hideDesktopIcons?: boolean;

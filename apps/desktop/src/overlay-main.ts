@@ -14,6 +14,8 @@ const camera = new URLSearchParams(window.location.search).has('cameraOverlay');
 // Keep imports in separate statements: production CSS preloading must follow
 // the selected overlay rather than the final arm of a conditional expression.
 async function loadOverlay() {
+  if (new URLSearchParams(window.location.search).has('capturePreparationSettings'))
+    return await import('./components/hud/recorder/CapturePreparationSettings.vue');
   if (settings) return await import('./components/quick-snip/QuickSnipSettings.vue');
   if (camera) return await import('./components/hud/camera/CameraOverlayApp.vue');
   return await import('./components/quick-snip/QuickSnipCropBar.vue');

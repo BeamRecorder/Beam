@@ -36,13 +36,13 @@ export function useQuickSnipDeviceMenu(controls: QuickSnipDeviceControls) {
         kind === 'systemAudio'
           ? [
               { id: 'on', label: quickText('defaultSystemAudio') },
-              { id: 'off', label: t('off') },
+              { id: 'off', label: t('noSystemAudio') },
             ]
           : [
               ...sources.map(({ id, label }) => ({ id, label })),
               {
                 id: off[kind],
-                label: t(kind === 'camera' ? 'cameraOff' : 'noAudio'),
+                label: t(kind === 'camera' ? 'cameraOff' : 'noMicrophone'),
               },
             ];
       const configuredId = controls.configuration.value?.devices[keys[kind]];

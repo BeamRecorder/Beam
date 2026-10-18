@@ -257,7 +257,7 @@ function initializeApplication() {
       });
       logStartup('Project IPC registered.');
       logStartup('Whisper model IPC registered.');
-      registerWindowIpc(applicationIpc, (win) => win && controllers.get(win), { debug: !app.isPackaged });
+      const uiIpc = registerWindowIpc(applicationIpc, (win) => win && controllers.get(win), { debug: !app.isPackaged });
       const lifecycleOptions = {
         applicationRoot,
         isPackaged: app.isPackaged,
@@ -436,7 +436,7 @@ function initializeApplication() {
       trayManager.init();
       if (!preferencesStore.read().onboardingCompleted) onboardingWindow.open();
       const hudPanels = createHudPanelManager({
-        ...settingsOwnerOptions(BrowserWindow, editorWindow, quickSnipService, preferencesCleanup),
+        ...settingsOwnerOptions(BrowserWindow, editorWindow, quickSnipService, preferencesCleanup, uiIpc.preparation),
         captureWarmup,
         ...lifecycleOptions,
         appIconPath,

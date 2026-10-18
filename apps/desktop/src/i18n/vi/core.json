@@ -567,7 +567,8 @@
     "screen": "Màn hình",
     "window": "Cửa sổ",
     "cameraOff": "Tắt camera",
-    "noAudio": "Không có âm thanh",
+    "noMicrophone": "Không dùng micrô",
+    "noSystemAudio": "Không thu âm thanh hệ thống",
     "systemAudio": "Âm thanh hệ thống",
     "off": "Tắt",
     "copied": "Đã sao chép",
@@ -738,7 +739,12 @@
     "categoryVideoEditor": "Trình chỉnh sửa video",
     "videoEditorDescription": "Hành vi dòng thời gian và tùy chọn xuất video.",
     "groupApplication": "Ứng dụng",
-    "groupTools": "Công cụ"
+    "groupTools": "Công cụ",
+    "recordingStart": "Bắt đầu ghi",
+    "recordingStartDescription": "Tự động: bắt đầu đếm ngược sau khi chọn màn hình, cửa sổ hoặc vùng. Khi tôi sẵn sàng: điều chỉnh camera, micrô và âm thanh hệ thống trên thanh chuẩn bị, rồi nhấn Ghi để bắt đầu đếm ngược.",
+    "startAutomatically": "Tự động",
+    "startWhenReady": "Khi tôi sẵn sàng",
+    "preparationUnavailable": "Không thể sử dụng các điều khiển chuẩn bị ghi."
   },
   "ProjectPicker": {
     "projects": "Dự án",
@@ -821,7 +827,8 @@
     "hideDesktopIcons": "Ẩn biểu tượng màn hình",
     "desktopUnavailable": "Không khả dụng trên Linux.",
     "captureOnly": "Ẩn trong bản ghi trên macOS.",
-    "previewUnavailable": "Không thể tải bản xem trước màn hình."
+    "previewUnavailable": "Không thể tải bản xem trước màn hình.",
+    "continue": "Tiếp tục"
   },
   "SettingsPanel": {
     "themeMode": "Chế độ giao diện",

@@ -1,14 +1,16 @@
 const path = require('node:path');
 const { developmentRendererUrl } = require('../lifecycle/development-session.cjs');
-const { validateSettingsAnchor, settingsLayout } = require('./quick-snip-settings-layout.cjs');
+const { validateSettingsAnchor, settingsLayout } = require('../quick-snip/quick-snip-settings-layout.cjs');
 
-function createQuickSnipSettingsWindow({
+function createCaptureSettingsWindow({
   BrowserWindow,
   applicationRoot,
   isPackaged,
   screen,
   environment = process.env,
   platform = process.platform,
+  channelPrefix = 'quick-snip',
+  rendererQuery = 'quickSnipSettings',
 }) {
   let window = null;
   let nativeReady = false;
@@ -25,9 +27,10 @@ function createQuickSnipSettingsWindow({
   let anchor = null;
   let device = null;
   let pendingDevice = null;
+  let expectedParentBounds = null;
   const notifyToolbar = () => {
     if (parentWindow && !parentWindow.isDestroyed())
-      parentWindow.webContents.send('quick-snip:settings-visibility', requested && !device);
+      parentWindow.webContents.send(`${channelPrefix}:settings-visibility`, requested && !device);
   };
   const finishDevice = (id = null, error = null) => {
     const pending = pendingDevice;
@@ -58,7 +61,7 @@ function createQuickSnipSettingsWindow({
     const layout = settingsLayout(bar, screen.getDisplayMatching(bar).workArea, contentHeight, anchor);
     window.setBounds(layout.bounds);
     if (rendererReady)
-      window.webContents.send('quick-snip:settings-content', {
+      window.webContents.send(`${channelPrefix}:settings-content`, {
         side: layout.side,
         anchorX: layout.anchorX,
         device,
@@ -72,7 +75,7 @@ function createQuickSnipSettingsWindow({
     if (!measurementRequested) {
       measurementRequested = true;
       position();
-      if (configuration) window.webContents.send('quick-snip:configure', configuration);
+      if (configuration) window.webContents.send(`${channelPrefix}:configure`, configuration);
       return;
     }
     if (!measured) return;
@@ -81,8 +84,22 @@ function createQuickSnipSettingsWindow({
     window.show();
     window.focus();
   };
+  const parentMoved = () => {
+    const bounds = parentWindow?.getBounds();
+    if (
+      expectedParentBounds &&
+      bounds &&
+      ['x', 'y', 'width', 'height'].every((key) => bounds[key] === expectedParentBounds[key])
+    ) {
+      if (requested && measured) position();
+      return;
+    }
+    expectedParentBounds = null;
+    hide();
+  };
   const detachParent = () => {
-    parentWindow?.removeListener('move', hide);
+    expectedParentBounds = null;
+    parentWindow?.removeListener('move', parentMoved);
     parentWindow?.removeListener('closed', hide);
   };
   const open = (parent, nextAnchor, show = true) => {
@@ -90,7 +107,7 @@ function createQuickSnipSettingsWindow({
     anchor = validateSettingsAnchor(nextAnchor, parent.getBounds());
     detachParent();
     parentWindow = parent;
-    parent.on('move', hide);
+    parent.on('move', parentMoved);
     parent.on('closed', hide);
     clearTimeout(closingTimer);
     requested = show;
@@ -162,8 +179,8 @@ function createQuickSnipSettingsWindow({
         }
       });
       const load = isPackaged
-        ? target.loadFile(path.join(applicationRoot, 'dist/html/index.html'), { query: { quickSnipSettings: '1' } })
-        : target.loadURL(developmentRendererUrl('index.html?quickSnipSettings=1', environment));
+        ? target.loadFile(path.join(applicationRoot, 'dist/html/index.html'), { query: { [rendererQuery]: '1' } })
+        : target.loadURL(developmentRendererUrl(`index.html?${rendererQuery}=1`, environment));
       void load.catch(dispose);
       timer = setTimeout(dispose, 30_000);
       timer.unref?.();
@@ -173,6 +190,9 @@ function createQuickSnipSettingsWindow({
     }
   };
   return {
+    expectParentBounds(bounds) {
+      expectedParentBounds = { ...bounds };
+    },
     toggle(parent, next, nextAnchor) {
       if (requested && !device) {
         hide(true);
@@ -234,7 +254,7 @@ function createQuickSnipSettingsWindow({
     update(next) {
       configuration = device ? null : next;
       if (configuration && window && !window.isDestroyed() && nativeReady && rendererReady)
-        window.webContents.send('quick-snip:configure', configuration);
+        window.webContents.send(`${channelPrefix}:configure`, configuration);
     },
     hide,
     dismiss: () => hide(true),
@@ -248,4 +268,4 @@ function createQuickSnipSettingsWindow({
     },
   };
 }
-module.exports = { createQuickSnipSettingsWindow };
+module.exports = { createCaptureSettingsWindow };

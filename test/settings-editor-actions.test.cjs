@@ -99,7 +99,25 @@ test('settings owner resolution accepts editors and both Quick Snip controls onl
     { contextFor: (sender) => (sender === editor ? { projectId: 'p' } : null) },
     { cropWindow: { owns: (sender) => sender === crop }, settingsWindow: { owns: (sender) => sender === settings } },
     { setShortcutCapture: () => {} },
+    { settingsOwnerFor: () => null },
   );
   for (const sender of [editor, crop, settings]) assert.equal(options.settingsOwnerFor(sender), owner);
   assert.equal(options.settingsOwnerFor({}), null);
+});
+test('preparation Settings ownership is resolved by its explicit host before ordinary window ownership', () => {
+  const sender = {},
+    parent = {},
+    other = {};
+  let active = true;
+  const options = settingsOwnerOptions(
+    { fromWebContents: () => other },
+    { contextFor: () => null },
+    { cropWindow: { owns: () => false }, settingsWindow: { owns: () => false } },
+    { setShortcutCapture: () => {} },
+    { settingsOwnerFor: (value) => (active && value === sender ? parent : null) },
+  );
+  assert.equal(options.settingsOwnerFor(sender), parent);
+  assert.equal(options.settingsOwnerFor({}), null);
+  active = false;
+  assert.equal(options.settingsOwnerFor(sender), null);
 });

@@ -5,6 +5,8 @@ import { useHudInteractivity } from './components/hud/useHudInteractivity';
 import ToastProvider from './components/ui/toast/ToastProvider.vue';
 import EditorOpenError from './components/hud/EditorOpenError.vue';
 import { useRecordingController } from './components/hud/recorder/useRecordingController';
+import { useCapturePreparation } from './components/hud/recorder/useCapturePreparation';
+import CapturePreparationBar from './components/hud/recorder/CapturePreparationBar.vue';
 import type {
   RecordingBarVisibility,
   RecordingConfiguration,
@@ -80,6 +82,7 @@ onBeforeUnmount(() => {
 });
 
 const currentView = ref<'hud' | 'recorder'>('hud');
+const preparation = useCapturePreparation();
 const isCameraOverlay = new URLSearchParams(window.location.search).has('cameraOverlay');
 const isQuickSnipCrop = new URLSearchParams(window.location.search).has('quickSnipCrop');
 const isTeleprompter = new URLSearchParams(window.location.search).has('teleprompter');
@@ -113,6 +116,7 @@ const recording = useRecordingController(
 
 const returnToHud = () => {
   if (currentView.value !== 'recorder') return;
+  capture.setNormalRecordingActive(false);
   if (recorderLauncherContext.value) capture.setRecorderLauncherActive(false);
   capture.hideScreenRegionOverlay();
   void capture.setCountdown(null);
@@ -127,12 +131,12 @@ const handleRecordingStartupFailure = (failure: RecordingStartFailure) => {
 };
 
 watch(
-  [recording.phase, isRestartingRecording],
-  ([phase, restarting]) => {
+  [recording.phase, isRestartingRecording, preparation.blocking],
+  ([phase, restarting, preparing]) => {
     syncTrayMenu();
     if (!isCameraOverlay && !isTeleprompter && !isQuickSnipCrop) {
       capture.setNormalRecordingActive(
-        restarting || ['countdown', 'starting', 'recording', 'paused', 'finalizing'].includes(phase),
+        preparing || restarting || ['countdown', 'starting', 'recording', 'paused', 'finalizing'].includes(phase),
       );
     }
     // A restart briefly becomes idle while discarding the old take. Keep the
@@ -154,7 +158,7 @@ const restartRecording = async () => {
   }
 };
 
-watch(currentView, (view) => {
+watch([currentView, preparation.active], ([view]) => {
   if (view !== 'hud') return;
   interactivity.reset();
 });
@@ -163,11 +167,11 @@ const isRecordingStartedFromEditor = ref(false);
 
 onMounted(() => {
   removeHudProjectListener = capture.onHudProjectRequested((request) => {
-    if (recording.phase.value !== 'idle' || isPreparingEditor.value) return;
+    if (preparation.active.value || recording.phase.value !== 'idle' || isPreparingEditor.value) return;
     void capture
       .listProjects()
       .then((projects) => {
-        if (disposed || recording.phase.value !== 'idle' || isPreparingEditor.value) return;
+        if (disposed || preparation.active.value || recording.phase.value !== 'idle' || isPreparingEditor.value) return;
         const project = projects.find(
           (candidate) => candidate.id === request.id && (candidate.mode ?? 'studio') === request.mode,
         );
@@ -189,10 +193,12 @@ onMounted(() => {
   });
   removeTrayStopListener =
     capture.onTrayStopRecording?.(() => {
+      if (preparation.active.value) return preparation.cancel();
       void cancelOrStopRecording();
     }) ?? null;
   removeRecordingShortcutListener = capture.onPreferenceShortcut((actionId) => {
     if (actionId === 'hud.startStopRecording') {
+      if (preparation.active.value) return preparation.confirm();
       if (!['countdown', 'starting', 'recording', 'paused'].includes(recording.phase.value)) return;
       void cancelOrStopRecording();
     } else if (actionId === 'hud.playPause' && ['recording', 'paused'].includes(recording.phase.value)) {
@@ -229,6 +235,7 @@ const startRecording = async (configuration: RecordingConfiguration) => {
   recordingStartupError.value = '';
   recordingBarVisibility.value = configuration.recordingBarVisibility;
   currentView.value = 'recorder';
+  capture.setNormalRecordingActive(true);
   capture.setWindowMode('recorder');
   capture.setCameraOverlayActive(true);
   try {
@@ -346,7 +353,7 @@ const handleStopRecording = async (session: RecordingSessionResult) => {
 
 const handleOpenProject = (project: CaptureProject) => {
   logEditor('Project open requested', { projectId: project.id });
-  if (isPreparingEditor.value) return;
+  if (preparation.active.value || isPreparingEditor.value) return;
   const attempt = editorOpening.begin();
   editorLoadError.value = '';
   currentProject.value = project;
@@ -385,6 +392,8 @@ const dismissRecorderLauncher = async () => {
   </template>
   <div v-if="!isTeleprompter && !isCameraOverlay && !isQuickSnipCrop" class="app-container">
     <HUD
+      v-show="!preparation.active.value"
+      :prepare-recording="preparation.run"
       @popover-toggle="interactivity.togglePopover"
       v-if="currentView === 'hud' && !editorLoadError"
       :preparing-editor="isPreparingEditor"
@@ -395,6 +404,14 @@ const dismissRecorderLauncher = async () => {
       @open-project="handleOpenProject"
       @dismiss-launcher="dismissRecorderLauncher"
       @cancel-editor-opening="cancelEditorOpening"
+    />
+    <CapturePreparationBar
+      v-if="currentView === 'hud' && preparation.active.value"
+      :request="preparation.request.value!"
+      @update:settings="preparation.update"
+      :busy="!preparation.waiting.value"
+      @record="preparation.confirm"
+      @cancel="preparation.cancel"
     />
     <Transition name="recorder-return">
       <RecorderBar

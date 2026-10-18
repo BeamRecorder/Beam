@@ -567,7 +567,8 @@
     "screen": "Pantalla",
     "window": "Ventana",
     "cameraOff": "Cámara desactivada",
-    "noAudio": "Sin audio",
+    "noMicrophone": "Sin micrófono",
+    "noSystemAudio": "Sin audio del sistema",
     "systemAudio": "Audio del sistema",
     "off": "Desactivado",
     "copied": "Copiado",
@@ -738,7 +739,12 @@
     "categoryVideoEditor": "Editor de vídeo",
     "videoEditorDescription": "Comportamiento de la línea de tiempo y preferencias de exportación.",
     "groupApplication": "Aplicación",
-    "groupTools": "Herramientas"
+    "groupTools": "Herramientas",
+    "recordingStart": "Inicio de la grabación",
+    "recordingStartDescription": "Automáticamente: la cuenta atrás empieza al elegir una pantalla, ventana o región. Cuando esté listo: ajusta la cámara, el micrófono y el audio del sistema en la barra de preparación y pulsa Grabar para iniciar la cuenta atrás.",
+    "startAutomatically": "Automáticamente",
+    "startWhenReady": "Cuando esté listo",
+    "preparationUnavailable": "Los controles de preparación de la grabación no están disponibles."
   },
   "ProjectPicker": {
     "projects": "Proyectos",
@@ -821,7 +827,8 @@
     "hideDesktopIcons": "Ocultar iconos del escritorio",
     "desktopUnavailable": "No disponible en Linux.",
     "captureOnly": "Se ocultan en la grabación en macOS.",
-    "previewUnavailable": "No se pudo cargar la vista del escritorio."
+    "previewUnavailable": "No se pudo cargar la vista del escritorio.",
+    "continue": "Continuar"
   },
   "SettingsPanel": {
     "themeMode": "Modo de tema",

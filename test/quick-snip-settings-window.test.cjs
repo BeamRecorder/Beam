@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const { EventEmitter } = require('node:events');
-const { createQuickSnipSettingsWindow } = require('../apps/desktop/electron/quick-snip/quick-snip-settings-window.cjs');
+const { createCaptureSettingsWindow } = require('../apps/desktop/electron/window/capture-settings-window.cjs');
 const area = { x: -1920, y: -100, width: 1920, height: 1080 };
 const anchor = { x: 500, y: 26, width: 32, height: 32 };
 function fixture(overrides = {}) {
@@ -60,7 +60,7 @@ function fixture(overrides = {}) {
   };
   parent.sent = [];
   parent.webContents = { send: (...args) => parent.sent.push(args) };
-  const settings = createQuickSnipSettingsWindow({
+  const settings = createCaptureSettingsWindow({
     BrowserWindow: Window,
     applicationRoot: '/beam',
     isPackaged: false,
@@ -325,3 +325,18 @@ for (const platform of ['linux', 'darwin', 'win32'])
     assert.equal(w.options.animationBehavior, platform === 'darwin' ? 'none' : undefined);
     f.settings.destroy();
   });
+test('measured toolbar resizing reanchors an open menu without dismissing it; user movement still dismisses', () => {
+  const f = fixture();
+  const menu = f.open();
+  const original = f.parent.getBounds();
+  let bounds = { ...original, width: 700, x: original.x - 34 };
+  f.settings.expectParentBounds(bounds);
+  f.parent.getBounds = () => bounds;
+  f.parent.emit('move');
+  f.parent.emit('move');
+  assert.equal(menu.visible, true);
+  bounds = { ...bounds, x: bounds.x + 10 };
+  f.parent.emit('move');
+  assert.equal(menu.visible, false);
+  f.settings.destroy();
+});
