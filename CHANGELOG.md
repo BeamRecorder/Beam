@@ -4,9 +4,52 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+## [0.5.5] - 2026-10-18
+
 ### Added
 
-- Studio and Instant can wait until you are ready before starting the saved countdown. Choose Automatic or When I’m ready in Recording settings; the draggable preparation bar lets you adjust camera, microphone, system audio and recording settings while leaving other applications usable and works with full-screen, window and region recording. The bar stays on top, uses native desktop blur on Windows/macOS where supported, and stays opaque on Linux. The choice and controls are translated into all fifteen languages.
+- Studio and Instant can wait until you are ready before starting the saved countdown. Automatic start remains the default; choose When I’m ready in Recording settings to adjust camera, microphone, system audio and recording settings in a draggable preparation bar before starting full-screen, window or region recording. The bar leaves other applications usable, stays on top, uses native desktop blur on Windows/macOS where supported, and stays opaque on Linux. The choice and controls are translated into all fifteen languages.
+
+- A reproducible Beam CLI film for Video for BeamMainPage shows the native editing interface, background and blur adjustments, clip trimming, shape drawing and text masking while preserving the original opening and Beam ending.
+
+- Dock Screenshot Composition beside the project name by dropping anywhere in the title bar, with a dashed preview of its final heading and layer count that stays in the same place when docked and keeps the project title centered. Drag it back out or use its pin action; smooth transitions respect reduced motion, and Beam remembers the dock state and floating position. Dock actions are translated into all fifteen languages.
+
+- Orbit camera framing and lit 3D cursors with click contact, adjustable alongside existing camera and cursor controls in all fifteen languages.
+- Instant’s main video now follows a 24-second desktop workflow: launch Beam from a simple dock, preview two saved presets, ease back to the full canvas, export locally and switch to an illustrative chat. The light/dark loop uses native components, a macOS cursor and restrained 2D focus.
+- The private website’s Instant header uses a lightweight orange WebGL light-trail background, matching Beam’s theme and reduced-motion preferences.
+- The private website’s Instant sections now show three eight-second light/dark loops of native Beam preset previews, local export and pasting the completed file into an illustrative team chat, with macOS cursor interactions and Beamy’s loading-to-success animation.
+- The private website’s local-rendering section now shows an eight-second themed loop of Beam CLI rendering HTML, encoding with Mediabunny and saving a video locally.
+- The private documentation site illustrates 2D, 3D Tilt and Loupe with three headless Beam CLI renders of the same HTML checklist, with editable native documents and English JSON example copy.
+- The private website’s AI-native frames section compares animated HTML and an actual PNG from the same source in a seven-second themed loop.
+- The private documentation site illustrates Recording, Screenshots, Studio and Exporting with eleven supplied captures, including centered native Beam compositions and readable portrait controls. Missing captures remain placeholders.
+- The private website’s agents section now presents real Beam CLI commands in a clean seven-second loop, with light/dark themes, matching posters, pause and reduced-motion support.
+- The private documentation site now includes Studio & editing, Zooms & lenses and Exporting guides based on Beam's current implementation, with image placeholders for future screenshots and English JSON catalogs. Future languages can be added through JSON catalogs and locale metadata without changing application configuration.
+- The private website’s Studio overview shows a real recording edited on the native multi-track timeline in a fifteen-second, 60 fps loop, including trim/split/cut, a caption, appearance and canvas adjustments, and a 2D zoom. Light/dark variants and editable source live in `examples/website-studio-loop/`.
+
+### Changed
+
+- The BeamMainPage editing film shows three background selections and a visible background blur adjustment, with a larger macOS cursor, native click springs, a filled shape, calm movements and a smooth dissolve into the original Beam ending.
+
+- Reduced video preview work by sharing camera and cursor evaluation with selection controls, reusing scene hierarchy indexes across rendering passes, and skipping unused keyboard-caption placement.
+
+- Splitting clips reuses open video sources and surviving cached frames. Timeline links and lock checks scale better on heavily edited projects, while history and autosave avoid copying the entire clip composition after each edit.
+
+- Reduced timeline playback and editing overhead: scrubbing queries active video clips, playback follow reuses measured geometry, media topology checks retain loaded fingerprints, and audio asset lookups use an index. Future audio buffers open only within the scheduling window, and exhausted iterators are no longer polled.
+
+- Screenshot Properties and Composition share a subtle frosted background in both themes, with a 96% theme tint to preserve readability, whether floating or docked. Reduced transparency keeps them opaque.
+
+- The Composition docking preview now pulses its dashed outline while dragging to highlight where to drop. Its label and position stay stable; reduced motion uses a static outline.
+
+- Preview and export rasterize a 2D cursor and its complete shadow once, then reuse that image for motion-blur samples. A bounded cache avoids repeating unchanged artwork, and 2D cursors no longer build unused 3D meshes.
+- Automatic zoom grouping has a bounded action window and preserves wide pauses between separate shots, while uninterrupted long drags remain continuous.
+- 3D camera motion blur prepares and uploads the scene once per frame for all shutter poses. Exports also skip empty cursor projections when the cursor is disabled, reducing software rendering work without removing shutter samples or lowering output resolution.
+- The Dynamic 3D camera preset uses gentler angles and perspective to preserve text readability while retaining its responsive follow movement.
+- Orbit is now part of the single 3D zoom style, with eight illustrated camera presets including a large pullback, plus rotation, perspective, framing and follow controls translated into all fifteen languages. Pullbacks keep the canvas background flat in videos and screenshots.
+- Automatic zooms frame nearby actions with an appropriate depth, preserve readable wide pauses and use smooth logarithmic transitions.
+- Cursor motion blur accumulates complete transparent samples on the GPU; preview and export use the same renderer.
+- Instant’s main video now has a calmer chat handoff: a polished dock icon, a held draft and slower Send, three replies below the video, and a clean shared preview without playback controls or editing handles.
+- The private documentation overview and sidebar share six workflow categories, grouping Files & storage with Exporting and replacing vague starting-point and More guides labels.
+- The website’s Studio overview now runs for 15 seconds with gentler cursor travel, longer reading pauses and two restrained camera views that stay fixed during edits.
 
 ### Fixed
 
@@ -50,49 +93,6 @@ User-facing changes to Beam are documented in this file.
 - The private website’s Instant page retains its main video below the animated header, with a themed preset-to-export-to-clipboard overview and all three detail videos.
 - The private website's topbar Download button shares the navigation's corner radius.
 - The private website uses client routing for all internal links and Download buttons, prepares nearby demo videos, prioritizes article images and caches production media. Download navigation stays responsive while fetching releases, and sections reveal before entering view.
-
-### Added
-
-- A reproducible Beam CLI film for Video for BeamMainPage shows the native editing interface, background and blur adjustments, clip trimming, shape drawing and text masking while preserving the original opening and Beam ending.
-
-- Dock Screenshot Composition beside the project name by dropping anywhere in the title bar, with a dashed preview of its final heading and layer count that stays in the same place when docked and keeps the project title centered. Drag it back out or use its pin action; smooth transitions respect reduced motion, and Beam remembers the dock state and floating position. Dock actions are translated into all fifteen languages.
-
-- Orbit camera framing and lit 3D cursors with click contact, adjustable alongside existing camera and cursor controls in all fifteen languages.
-- Instant’s main video now follows a 24-second desktop workflow: launch Beam from a simple dock, preview two saved presets, ease back to the full canvas, export locally and switch to an illustrative chat. The light/dark loop uses native components, a macOS cursor and restrained 2D focus.
-- The private website’s Instant header uses a lightweight orange WebGL light-trail background, matching Beam’s theme and reduced-motion preferences.
-- The private website’s Instant sections now show three eight-second light/dark loops of native Beam preset previews, local export and pasting the completed file into an illustrative team chat, with macOS cursor interactions and Beamy’s loading-to-success animation.
-- The private website’s local-rendering section now shows an eight-second themed loop of Beam CLI rendering HTML, encoding with Mediabunny and saving a video locally.
-- The private documentation site illustrates 2D, 3D Tilt and Loupe with three headless Beam CLI renders of the same HTML checklist, with editable native documents and English JSON example copy.
-- The private website’s AI-native frames section compares animated HTML and an actual PNG from the same source in a seven-second themed loop.
-- The private documentation site illustrates Recording, Screenshots, Studio and Exporting with eleven supplied captures, including centered native Beam compositions and readable portrait controls. Missing captures remain placeholders.
-- The private website’s agents section now presents real Beam CLI commands in a clean seven-second loop, with light/dark themes, matching posters, pause and reduced-motion support.
-- The private documentation site now includes Studio & editing, Zooms & lenses and Exporting guides based on Beam's current implementation, with image placeholders for future screenshots and English JSON catalogs. Future languages can be added through JSON catalogs and locale metadata without changing application configuration.
-- The private website’s Studio overview shows a real recording edited on the native multi-track timeline in a fifteen-second, 60 fps loop, including trim/split/cut, a caption, appearance and canvas adjustments, and a 2D zoom. Light/dark variants and editable source live in `examples/website-studio-loop/`.
-
-### Changed
-
-- The BeamMainPage editing film shows three background selections and a visible background blur adjustment, with a larger macOS cursor, native click springs, a filled shape, calm movements and a smooth dissolve into the original Beam ending.
-
-- Reduced video preview work by sharing camera and cursor evaluation with selection controls, reusing scene hierarchy indexes across rendering passes, and skipping unused keyboard-caption placement.
-
-- Splitting clips reuses open video sources and surviving cached frames. Timeline links and lock checks scale better on heavily edited projects, while history and autosave avoid copying the entire clip composition after each edit.
-
-- Reduced timeline playback and editing overhead: scrubbing queries active video clips, playback follow reuses measured geometry, media topology checks retain loaded fingerprints, and audio asset lookups use an index. Future audio buffers open only within the scheduling window, and exhausted iterators are no longer polled.
-
-- Screenshot Properties and Composition share a subtle frosted background in both themes, with a 96% theme tint to preserve readability, whether floating or docked. Reduced transparency keeps them opaque.
-
-- The Composition docking preview now pulses its dashed outline while dragging to highlight where to drop. Its label and position stay stable; reduced motion uses a static outline.
-
-- Preview and export rasterize a 2D cursor and its complete shadow once, then reuse that image for motion-blur samples. A bounded cache avoids repeating unchanged artwork, and 2D cursors no longer build unused 3D meshes.
-- Automatic zoom grouping has a bounded action window and preserves wide pauses between separate shots, while uninterrupted long drags remain continuous.
-- 3D camera motion blur prepares and uploads the scene once per frame for all shutter poses. Exports also skip empty cursor projections when the cursor is disabled, reducing software rendering work without removing shutter samples or lowering output resolution.
-- The Dynamic 3D camera preset uses gentler angles and perspective to preserve text readability while retaining its responsive follow movement.
-- Orbit is now part of the single 3D zoom style, with eight illustrated camera presets including a large pullback, plus rotation, perspective, framing and follow controls translated into all fifteen languages. Pullbacks keep the canvas background flat in videos and screenshots.
-- Automatic zooms frame nearby actions with an appropriate depth, preserve readable wide pauses and use smooth logarithmic transitions.
-- Cursor motion blur accumulates complete transparent samples on the GPU; preview and export use the same renderer.
-- Instant’s main video now has a calmer chat handoff: a polished dock icon, a held draft and slower Send, three replies below the video, and a clean shared preview without playback controls or editing handles.
-- The private documentation overview and sidebar share six workflow categories, grouping Files & storage with Exporting and replacing vague starting-point and More guides labels.
-- The website’s Studio overview now runs for 15 seconds with gentler cursor travel, longer reading pauses and two restrained camera views that stay fixed during edits.
 
 ## [0.5.4] - 2026-10-11
 
