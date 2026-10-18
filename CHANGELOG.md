@@ -4,6 +4,10 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Refreshed the repository README with current Beam workflows, website imagery, platform downloads, CLI guidance, and the community's non-expiring Discord invite.
+
 ## [0.5.5] - 2026-10-18
 
 ### Added
