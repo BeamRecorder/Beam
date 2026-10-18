@@ -26,15 +26,15 @@
 
 ## Get Beam
 
-The website downloads the latest release for your chosen system. For a direct download, use the **0.5.5** installers below.
+The website downloads the latest release for your chosen system. For a direct download, use the **0.5.6** installers below.
 
 <!-- Keep versioned installer links aligned with the release when bumping Beam. -->
 
-| System | Latest version | Direct · 0.5.5 |
+| System | Latest version | Direct · 0.5.6 |
 | --- | --- | --- |
-| Windows · x64 / ARM64 | [Download](https://beam.plinka.eu/download?os=windows) | [EXE](https://github.com/BeamRecorder/Beam/releases/download/0.5.5/Beam-Setup-0.5.5.exe) |
-| macOS · Apple silicon | [Download](https://beam.plinka.eu/download?os=macos) | [DMG](https://github.com/BeamRecorder/Beam/releases/download/0.5.5/Beam-0.5.5-arm64.dmg) |
-| Linux · x64 | [Download](https://beam.plinka.eu/download?os=linux) | [AppImage](https://github.com/BeamRecorder/Beam/releases/download/0.5.5/Beam-0.5.5-linux-x86_64.AppImage) · [DEB](https://github.com/BeamRecorder/Beam/releases/download/0.5.5/Beam-0.5.5-linux-amd64.deb) · [RPM](https://github.com/BeamRecorder/Beam/releases/download/0.5.5/Beam-0.5.5-linux-x86_64.rpm) |
+| Windows · x64 / ARM64 | [Download](https://beam.plinka.eu/download?os=windows) | [EXE](https://github.com/BeamRecorder/Beam/releases/download/0.5.6/Beam-Setup-0.5.6.exe) |
+| macOS · Apple silicon | [Download](https://beam.plinka.eu/download?os=macos) | [DMG](https://github.com/BeamRecorder/Beam/releases/download/0.5.6/Beam-0.5.6-arm64.dmg) |
+| Linux · x64 | [Download](https://beam.plinka.eu/download?os=linux) | [AppImage](https://github.com/BeamRecorder/Beam/releases/download/0.5.6/Beam-0.5.6-linux-x86_64.AppImage) · [DEB](https://github.com/BeamRecorder/Beam/releases/download/0.5.6/Beam-0.5.6-linux-amd64.deb) · [RPM](https://github.com/BeamRecorder/Beam/releases/download/0.5.6/Beam-0.5.6-linux-x86_64.rpm) |
 
 [All releases](https://github.com/BeamRecorder/Beam/releases) · [What's new](./CHANGELOG.md) · [Installation and getting started](https://beam.plinka.eu/docs/getting-started)
 

@@ -11,6 +11,7 @@ export async function prepareExportCursorHovers(
   assets: ExportAssets,
   signal: AbortSignal,
 ): Promise<ExportRequest> {
+  signal.throwIfAborted();
   const { snapshot } = request;
   if (
     snapshot.cursor.hoverSync ||
@@ -33,10 +34,20 @@ export async function prepareExportCursorHovers(
       }))
       .sort((a, b) => a.startSeconds - b.startSeconds);
   if (!sources.length) return request;
-  const input = { sources, path: packHoverPath(snapshot.cursor.events) };
-  const key = await hoverCacheKey(input);
-  const sync = (await readHoverCache(key)) ?? (await analyzeCursorHovers(input, signal));
-  signal.throwIfAborted();
-  await writeHoverCache(key, sync);
-  return { ...request, snapshot: { ...snapshot, cursor: { ...snapshot.cursor, hoverSync: sync } } };
+  try {
+    const input = { sources, path: packHoverPath(snapshot.cursor.events) };
+    const key = await hoverCacheKey(input);
+    signal.throwIfAborted();
+    const cached = await readHoverCache(key);
+    signal.throwIfAborted();
+    const sync = cached ?? (await analyzeCursorHovers(input, signal));
+    signal.throwIfAborted();
+    await writeHoverCache(key, sync);
+    signal.throwIfAborted();
+    return { ...request, snapshot: { ...snapshot, cursor: { ...snapshot.cursor, hoverSync: sync } } };
+  } catch (error) {
+    signal.throwIfAborted();
+    console.warn('[Beam export] Hover synchronization skipped; retaining configured cursor smoothing.', error);
+    return request;
+  }
 }

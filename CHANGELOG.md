@@ -8,6 +8,13 @@ User-facing changes to Beam are documented in this file.
 
 - Refreshed the repository README with current Beam workflows, website imagery, platform downloads, CLI guidance, and the community's non-expiring Discord invite.
 
+## [0.5.6] - 2026-10-18
+
+### Fixed
+
+- Video export continues with normal cursor smoothing if optional hover synchronization fails or times out. Cancellation and errors in the actual media or rendering still stop the export.
+- Cursor hover synchronization starts at each recording's first real video timestamp, avoiding false missing-frame errors that could block export when video begins slightly after zero.
+
 ## [0.5.5] - 2026-10-18
 
 ### Added

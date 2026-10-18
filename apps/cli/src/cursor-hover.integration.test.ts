@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createServer, type ViteDevServer } from 'vite';
 import puppeteer, { type Browser, type Page } from 'puppeteer-core';
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -84,6 +84,26 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('cursor synchronization f
     const fixtures = new Map(
       ['hover', 'dense-hover', 'static', 'scroll', 'animation'].map((kind) => [`/${kind}.mp4`, recording(kind)]),
     );
+    const delayed = resolve(temporary, 'delayed-hover.mp4');
+    execFileSync(
+      'ffmpeg',
+      [
+        '-hide_banner',
+        '-loglevel',
+        'error',
+        '-i',
+        'pipe:0',
+        '-c',
+        'copy',
+        '-output_ts_offset',
+        '0.125',
+        '-movflags',
+        '+faststart',
+        delayed,
+      ],
+      { input: fixtures.get('/hover.mp4') },
+    );
+    fixtures.set('/delayed-hover.mp4', await readFile(delayed));
     server = await createServer({
       root: fileURLToPath(new URL('../../../', import.meta.url)),
       cacheDir: resolve(temporary, 'vite'),
@@ -184,6 +204,59 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('cursor synchronization f
     expect(sync.ranges[1]!.startSeconds).toBeGreaterThanOrEqual(10);
     expect(sync.ranges[1]!.endSeconds).toBeLessThanOrEqual(12);
   }, 30_000);
+
+  it.each([0, 5])(
+    'analyzes positive first-frame timestamps on a segment starting at %s seconds',
+    async (start) => {
+      const result = await page.evaluate(async (start) => {
+        const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+        const { analyzeCursorHoversInBackground } = (await load(
+          '/packages/runtime/src/cursor/hover/hover-analysis-browser.ts',
+        )) as typeof import('@beam/runtime/cursor/hover/hover-analysis-browser');
+        const { packHoverPath } = (await load(
+          '/packages/runtime/src/cursor/hover/hover-path.ts',
+        )) as typeof import('@beam/runtime/cursor/hover/hover-path');
+        const { openMediaInput } = (await load(
+          '/packages/runtime/src/shared/media-input.ts',
+        )) as typeof import('@beam/runtime/shared/media-input');
+        const { mediaSourceDescriptor } = (await load(
+          '/packages/runtime/src/shared/media-source.ts',
+        )) as typeof import('@beam/runtime/shared/media-source');
+        const src = `${location.origin}/delayed-hover.mp4`;
+        const opened = await openMediaInput(
+          mediaSourceDescriptor({ id: 'delayed', name: 'delayed', kind: 'video', src }),
+        );
+        let first: number;
+        try {
+          first = await (await opened.input.getPrimaryVideoTrack())!.getFirstTimestamp();
+        } finally {
+          opened.dispose();
+        }
+        const events = Array.from({ length: 120 }, (_, frame) => ({
+          event: 'move' as const,
+          sessionNs: (start + first + frame / 60) * 1e9,
+          normalizedX: 100 / 384,
+          normalizedY: (30 + (Math.floor(frame / 3) % 12) * 12) / 216,
+          pixelX: 100,
+          pixelY: 30,
+          visible: true,
+        }));
+        const sync = await analyzeCursorHoversInBackground(
+          {
+            sources: [{ id: `delayed-${start}`, src, startSeconds: start, durationSeconds: first + 2 }],
+            path: packHoverPath(events),
+          },
+          new AbortController().signal,
+        );
+        return { first, sync };
+      }, start);
+      expect(result.first).toBeCloseTo(0.125, 6);
+      expect(result.sync.ranges.length).toBeGreaterThan(0);
+      expect(result.sync.ranges[0]!.startSeconds).toBeGreaterThanOrEqual(start + result.first);
+      expect(result.sync.ranges.at(-1)!.endSeconds).toBeLessThanOrEqual(start + result.first + 2);
+    },
+    30_000,
+  );
 
   it.each(['hover', 'dense-hover', 'static', 'scroll', 'animation'])(
     'analyzes the %s MP4 in a real worker and checks row alignment',

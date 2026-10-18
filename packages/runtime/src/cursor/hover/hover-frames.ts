@@ -1,6 +1,6 @@
 import { VideoSampleSink, type InputVideoTrack, type VideoSinkDecoderOptions } from 'mediabunny';
 
-/** Reject repeated capture frames before conversion; retain only one bounded analysis canvas. */
+/** Inspect only recorded timestamps and distinct frames, using one bounded analysis canvas. */
 export async function* uniqueHoverFrames(
   track: InputVideoTrack,
   timestamps: Iterable<number>,
@@ -14,9 +14,19 @@ export async function* uniqueHoverFrames(
     if (!context) throw new Error('Cursor synchronization analysis canvas is unavailable.');
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = 'high';
+    const firstTimestamp = await track.getFirstTimestamp();
+    check();
+    if (!Number.isFinite(firstTimestamp)) throw new Error('Invalid recorded screen start timestamp.');
+    function* recordedTimestamps() {
+      for (const timestamp of timestamps) {
+        // A valid recording may start after zero. There are no pixels to compare before its first image.
+        if (timestamp >= firstTimestamp) yield timestamp;
+        else check();
+      }
+    }
     const sink = new VideoSampleSink(track, decoderOptions);
     let previousTime = -Infinity;
-    for await (const sample of sink.samplesAtTimestamps(timestamps, { skipLiveWait: true })) {
+    for await (const sample of sink.samplesAtTimestamps(recordedTimestamps(), { skipLiveWait: true })) {
       if (!sample) throw new Error('A recorded screen frame is missing during cursor synchronization.');
       try {
         check();

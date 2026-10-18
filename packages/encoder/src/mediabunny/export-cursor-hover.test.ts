@@ -1,13 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { prepareExportCursorHovers } from './export-cursor-hover';
 import { snapshot } from '../../../runtime/src/rendering/tests/render.test-support';
 import type { ExportRequest } from '../export-types';
 import type { ExportAssets } from './export-worker-assets';
 import { isVisualClip } from '@beam/engine/shared/composition-types';
-const state = vi.hoisted(() => ({ analyze: vi.fn(), read: vi.fn(), write: vi.fn() }));
+const state = vi.hoisted(() => ({ analyze: vi.fn(), key: vi.fn(), read: vi.fn(), write: vi.fn() }));
 vi.mock('@beam/runtime/cursor/hover/hover-analysis', () => ({ analyzeCursorHovers: state.analyze }));
 vi.mock('@beam/runtime/cursor/hover/hover-analysis-cache', () => ({
-  hoverCacheKey: vi.fn(async () => 'key'),
+  hoverCacheKey: state.key,
   readHoverCache: state.read,
   writeHoverCache: state.write,
 }));
@@ -27,9 +27,11 @@ function fixture() {
 beforeEach(() => {
   vi.clearAllMocks();
   state.analyze.mockResolvedValue(sync);
+  state.key.mockResolvedValue('key');
   state.read.mockResolvedValue(undefined);
   state.write.mockResolvedValue(undefined);
 });
+afterEach(() => vi.restoreAllMocks());
 describe('export cursor synchronization', () => {
   it('waits for analysis and enriches a copy before rendering', async () => {
     const f = fixture();
@@ -90,12 +92,96 @@ describe('export cursor synchronization', () => {
     }
     expect(state.analyze).not.toHaveBeenCalled();
   });
-  it('surfaces analysis failure and cancellation instead of exporting a different cursor path', async () => {
+  it.each(['decoder lost', 'WebGL unavailable', 'Cursor synchronization decoder timed out.'])(
+    'continues with the configured cursor after optional analysis fails: %s',
+    async (message) => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const f = fixture();
+      const before = structuredClone(f.request);
+      const error = new Error(message);
+      state.analyze.mockRejectedValueOnce(error);
+      expect(await prepareExportCursorHovers(f.request, f.assets, f.signal)).toBe(f.request);
+      expect(f.request).toEqual(before);
+      expect(f.request.snapshot.cursor.hoverSync).toBeUndefined();
+      expect(state.write).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledExactlyOnceWith(
+        '[Beam export] Hover synchronization skipped; retaining configured cursor smoothing.',
+        error,
+      );
+    },
+  );
+  it.each(['key', 'read', 'write'] as const)('keeps optional cache %s failures from blocking export', async (stage) => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = fixture();
+    const error = new Error(`cache ${stage} failed`);
+    state[stage].mockRejectedValueOnce(error);
+    expect(await prepareExportCursorHovers(f.request, f.assets, f.signal)).toBe(f.request);
+    expect(warn).toHaveBeenCalledOnce();
+    expect(f.request.snapshot.cursor.hoverSync).toBeUndefined();
+    if (stage !== 'write') expect(state.write).not.toHaveBeenCalled();
+    if (stage === 'key') expect(state.read).not.toHaveBeenCalled();
+  });
+  it('does not cache a failed analysis and retries it on a later export', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
     const f = fixture();
     state.analyze.mockRejectedValueOnce(new Error('decoder lost'));
-    await expect(prepareExportCursorHovers(f.request, f.assets, f.signal)).rejects.toThrow('decoder lost');
-    const cancelled = new AbortController();
-    cancelled.abort();
-    await expect(prepareExportCursorHovers(f.request, f.assets, cancelled.signal)).rejects.toThrow();
+    expect(await prepareExportCursorHovers(f.request, f.assets, f.signal)).toBe(f.request);
+    expect(state.write).not.toHaveBeenCalled();
+    expect((await prepareExportCursorHovers(f.request, f.assets, f.signal)).snapshot.cursor.hoverSync).toEqual(sync);
+    expect(state.analyze).toHaveBeenCalledTimes(2);
+    expect(state.write).toHaveBeenCalledExactlyOnceWith('key', sync);
   });
+  it('retains smoothing after a non-Error analysis rejection', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = fixture();
+    state.analyze.mockRejectedValueOnce(undefined);
+    expect(await prepareExportCursorHovers(f.request, f.assets, f.signal)).toBe(f.request);
+    expect(warn).toHaveBeenCalledOnce();
+    expect(state.write).not.toHaveBeenCalled();
+  });
+  it('propagates cancellation before optional preparation or an already completed analysis', async () => {
+    const f = fixture();
+    const cancelled = new AbortController();
+    const reason = new Error('User cancelled');
+    cancelled.abort(reason);
+    await expect(prepareExportCursorHovers(f.request, f.assets, cancelled.signal)).rejects.toBe(reason);
+    f.request.snapshot.cursor.hoverSync = sync as typeof f.request.snapshot.cursor.hoverSync;
+    await expect(prepareExportCursorHovers(f.request, f.assets, cancelled.signal)).rejects.toBe(reason);
+    expect(state.key).not.toHaveBeenCalled();
+    expect(state.analyze).not.toHaveBeenCalled();
+  });
+  it.each(['key', 'read', 'analyze', 'write'] as const)(
+    'cancellation during %s stops export rather than continuing without synchronization',
+    async (stage) => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const f = fixture();
+      const controller = new AbortController();
+      const reason = new Error('User cancelled');
+      state[stage].mockImplementationOnce(async () => {
+        controller.abort(reason);
+        throw new Error('Stage rejected after cancellation');
+      });
+      await expect(prepareExportCursorHovers(f.request, f.assets, controller.signal)).rejects.toBe(reason);
+      expect(warn).not.toHaveBeenCalled();
+      expect(f.request.snapshot.cursor.hoverSync).toBeUndefined();
+      if (stage !== 'write') expect(state.write).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['key', 'read', 'analyze', 'write'] as const)(
+    'checks cancellation after successful %s work',
+    async (stage) => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const f = fixture();
+      const controller = new AbortController();
+      const reason = new Error('User cancelled');
+      state[stage].mockImplementationOnce(async () => {
+        controller.abort(reason);
+        return stage === 'key' ? 'key' : stage === 'write' ? undefined : sync;
+      });
+      await expect(prepareExportCursorHovers(f.request, f.assets, controller.signal)).rejects.toBe(reason);
+      expect(warn).not.toHaveBeenCalled();
+      expect(f.request.snapshot.cursor.hoverSync).toBeUndefined();
+      if (stage !== 'analyze' && stage !== 'write') expect(state.analyze).not.toHaveBeenCalled();
+    },
+  );
 });

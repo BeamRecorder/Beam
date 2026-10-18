@@ -5,6 +5,8 @@ import { uniqueHoverFrames } from './hover-frames';
 const state = vi.hoisted(() => ({
   samples: [] as Array<{ timestamp: number; draw: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> } | null>,
   options: vi.fn(),
+  timestamps: vi.fn(),
+  firstTimestamp: vi.fn(),
   failDecode: false,
 }));
 vi.mock('mediabunny', () => ({
@@ -13,7 +15,7 @@ vi.mock('mediabunny', () => ({
       state.options(track, options);
     }
     async *samplesAtTimestamps(times: Iterable<number>, options: unknown) {
-      expect([...times]).toEqual([0, 0.016, 0.033]);
+      state.timestamps([...times]);
       expect(options).toEqual({ skipLiveWait: true });
       for (const sample of state.samples) {
         if (state.failDecode) throw new Error('decoder lost');
@@ -22,7 +24,7 @@ vi.mock('mediabunny', () => ({
     }
   },
 }));
-const track = {} as InputVideoTrack;
+const track = { getFirstTimestamp: state.firstTimestamp } as unknown as InputVideoTrack;
 const sample = (timestamp: number) => ({ timestamp, draw: vi.fn(), close: vi.fn() });
 let canvases: Array<{ width: number; height: number }>;
 let context: { imageSmoothingEnabled: boolean; imageSmoothingQuality: string } | null;
@@ -40,6 +42,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   state.samples = [sample(0), sample(0.016), sample(0.033)];
   state.failDecode = false;
+  state.firstTimestamp.mockResolvedValue(0);
   canvases = [];
   context = { imageSmoothingEnabled: false, imageSmoothingQuality: 'low' };
   vi.stubGlobal(
@@ -67,6 +70,7 @@ describe('bounded unique hover frames', () => {
     expect(await consume()).toEqual([0, 0.016, 0.033]);
     expect(canvases).toEqual([{ width: 0, height: 0 }]);
     expect(context).toMatchObject({ imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
+    expect(state.timestamps).toHaveBeenCalledExactlyOnceWith([0, 0.016, 0.033]);
     for (const frame of state.samples) {
       expect(frame!.draw).toHaveBeenCalledExactlyOnceWith(context, 0, 0, 384, 232);
       expect(frame!.close).toHaveBeenCalledOnce();
@@ -76,7 +80,7 @@ describe('bounded unique hover frames', () => {
     state.samples = [sample(0), sample(0), sample(-0.01), sample(0.016), sample(0.016), sample(0.033)];
     const check = vi.fn();
     expect(await consume(check)).toEqual([0, 0.016, 0.033]);
-    expect(check).toHaveBeenCalledTimes(6);
+    expect(check).toHaveBeenCalledTimes(7);
     for (const index of [1, 2, 4]) expect(state.samples[index]!.draw).not.toHaveBeenCalled();
     for (const frame of state.samples) expect(frame!.close).toHaveBeenCalledOnce();
   });
@@ -93,6 +97,65 @@ describe('bounded unique hover frames', () => {
     expect(state.options).toHaveBeenCalledExactlyOnceWith(track, options);
     expect(canvases[0]).toEqual({ width: 0, height: 0 });
   });
+  it.each([
+    { first: 0.01, requested: [0.016, 0.033], decoded: [0.01, 0.033] },
+    { first: 0.016, requested: [0.016, 0.033], decoded: [0.016, 0.033] },
+    { first: 0.016000001, requested: [0.033], decoded: [0.016000001] },
+    { first: -0.25, requested: [0, 0.016, 0.033], decoded: [0, 0.016, 0.033] },
+  ])(
+    'queries recorded images from $first seconds without shifting their clock',
+    async ({ first, requested, decoded }) => {
+      state.firstTimestamp.mockResolvedValue(first);
+      state.samples = decoded.map(sample);
+      expect(await consume()).toEqual(decoded);
+      expect(state.timestamps).toHaveBeenCalledExactlyOnceWith(requested);
+      for (const frame of state.samples) expect(frame!.close).toHaveBeenCalledOnce();
+    },
+  );
+  it('returns no comparisons when movement only precedes the first recorded image', async () => {
+    state.firstTimestamp.mockResolvedValue(0.125);
+    state.samples = [];
+    const check = vi.fn();
+    expect(await consume(check)).toEqual([]);
+    expect(state.timestamps).toHaveBeenCalledExactlyOnceWith([]);
+    expect(check).toHaveBeenCalledTimes(4);
+    expect(canvases[0]).toEqual({ width: 0, height: 0 });
+  });
+  it('still rejects an unavailable image at a timestamp inside the recorded range', async () => {
+    state.firstTimestamp.mockResolvedValue(0.01);
+    state.samples = [sample(0.01), null];
+    await expect(consume()).rejects.toThrow('A recorded screen frame is missing');
+    expect(state.timestamps).toHaveBeenCalledExactlyOnceWith([0.016, 0.033]);
+    expect(state.samples[0]!.close).toHaveBeenCalledOnce();
+    expect(canvases[0]).toEqual({ width: 0, height: 0 });
+  });
+  it.each([NaN, Infinity, -Infinity])(
+    'rejects a non-finite first timestamp %s before creating a decoder',
+    async (value) => {
+      state.firstTimestamp.mockResolvedValue(value);
+      await expect(consume()).rejects.toThrow('Invalid recorded screen start timestamp.');
+      expect(state.options).not.toHaveBeenCalled();
+      expect(canvases[0]).toEqual({ width: 0, height: 0 });
+    },
+  );
+  it('releases its canvas when reading the first timestamp fails', async () => {
+    state.firstTimestamp.mockRejectedValueOnce(new Error('metadata unavailable'));
+    await expect(consume()).rejects.toThrow('metadata unavailable');
+    expect(state.options).not.toHaveBeenCalled();
+    expect(canvases[0]).toEqual({ width: 0, height: 0 });
+  });
+  it('checks cancellation during pre-roll without drawing a replacement image', async () => {
+    state.firstTimestamp.mockResolvedValue(1);
+    const check = vi
+      .fn()
+      .mockImplementationOnce(() => {})
+      .mockImplementation(() => {
+        throw new Error('cancelled');
+      });
+    await expect(consume(check)).rejects.toThrow('cancelled');
+    for (const frame of state.samples) expect(frame!.draw).not.toHaveBeenCalled();
+    expect(canvases[0]).toEqual({ width: 0, height: 0 });
+  });
   it('releases the current sample and canvas when the consumer stops early', async () => {
     for await (const _frame of frames()) break;
     expect(state.samples[0]!.close).toHaveBeenCalledOnce();
@@ -100,13 +163,25 @@ describe('bounded unique hover frames', () => {
     expect(canvases[0]).toEqual({ width: 0, height: 0 });
   });
   it('releases borrowed resources when cancellation occurs before drawing', async () => {
+    const check = vi
+      .fn()
+      .mockImplementationOnce(() => {})
+      .mockImplementation(() => {
+        throw new Error('cancelled');
+      });
+    await expect(consume(check)).rejects.toThrow('cancelled');
+    expect(state.samples[0]!.draw).not.toHaveBeenCalled();
+    expect(state.samples[0]!.close).toHaveBeenCalledOnce();
+    expect(canvases[0]).toEqual({ width: 0, height: 0 });
+  });
+  it('cancels after reading metadata without acquiring a frame or decoder', async () => {
     await expect(
       consume(() => {
         throw new Error('cancelled');
       }),
     ).rejects.toThrow('cancelled');
-    expect(state.samples[0]!.draw).not.toHaveBeenCalled();
-    expect(state.samples[0]!.close).toHaveBeenCalledOnce();
+    expect(state.options).not.toHaveBeenCalled();
+    for (const frame of state.samples) expect(frame!.close).not.toHaveBeenCalled();
     expect(canvases[0]).toEqual({ width: 0, height: 0 });
   });
   it('releases the source frame even when downsampling fails', async () => {
