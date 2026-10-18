@@ -10,25 +10,28 @@ function preload(argv = []) {
     listeners = new Map();
   vm.runInNewContext(source, {
     process: { platform: 'linux', argv },
-    require: () => ({
-      contextBridge: {
-        exposeInMainWorld: (_, value) => {
-          api = value;
-        },
-      },
-      webUtils: {},
-      ipcRenderer: {
-        send: (...args) => sent.push(args),
-        invoke: async (...args) => {
-          invoked.push(args);
-          return true;
-        },
-        on: (name, callback) => listeners.set(name, callback),
-        removeListener: (name, callback) => {
-          if (listeners.get(name) === callback) listeners.delete(name);
-        },
-      },
-    }),
+    require: (module) =>
+      module === './preload-capture-preparation.cjs'
+        ? require('../apps/desktop/electron/preload-capture-preparation.cjs')
+        : {
+            contextBridge: {
+              exposeInMainWorld: (_, value) => {
+                api = value;
+              },
+            },
+            webUtils: {},
+            ipcRenderer: {
+              send: (...args) => sent.push(args),
+              invoke: async (...args) => {
+                invoked.push(args);
+                return true;
+              },
+              on: (name, callback) => listeners.set(name, callback),
+              removeListener: (name, callback) => {
+                if (listeners.get(name) === callback) listeners.delete(name);
+              },
+            },
+          },
   });
   return { api, sent, invoked, listeners };
 }

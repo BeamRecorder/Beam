@@ -80,7 +80,9 @@ test('the actual preload imports a bundled webcam without requiring a disk-backe
               },
             },
           }
-        : {},
+        : module === './preload-capture-preparation.cjs'
+          ? require('../apps/desktop/electron/preload-capture-preparation.cjs')
+          : {},
   });
   await assert.rejects(capture.importDroppedProjectMedia(f.project.id, {}, 'video'), /système de fichiers/);
   assert.equal(invoked.length, 0);

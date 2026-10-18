@@ -70,15 +70,18 @@ test('the preload exposes only the named preview readiness signal with the exact
   const sent = [];
   vm.runInNewContext(fs.readFileSync(require.resolve('../apps/desktop/electron/preload.cjs'), 'utf8'), {
     process: { platform: 'win32', argv: [] },
-    require: () => ({
-      contextBridge: {
-        exposeInMainWorld: (_name, value) => {
-          api = value;
-        },
-      },
-      webUtils: {},
-      ipcRenderer: { send: (...args) => sent.push(args) },
-    }),
+    require: (module) =>
+      module === './preload-capture-preparation.cjs'
+        ? require('../apps/desktop/electron/preload-capture-preparation.cjs')
+        : {
+            contextBridge: {
+              exposeInMainWorld: (_name, value) => {
+                api = value;
+              },
+            },
+            webUtils: {},
+            ipcRenderer: { send: (...args) => sent.push(args) },
+          },
   });
   api.notifyScreenRegionPreviewReady(8, true);
   api.notifyScreenRegionPreviewReady(9, false);
