@@ -4,6 +4,10 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- HUD and recording controls start with an explicitly transparent, fixed native surface on Windows, without the system resize frame. Ordinary HUD/Recorder switches no longer reset the native backdrop; preparation still restores its material when it closes.
+
 ### Changed
 
 - Refreshed the repository README with current Beam workflows, website imagery, platform downloads, CLI guidance, and the community's non-expiring Discord invite.
