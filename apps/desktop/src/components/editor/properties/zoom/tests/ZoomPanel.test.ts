@@ -1,6 +1,6 @@
-import {ref,shallowRef} from 'vue';
-import {useZoomTrackProperties} from '../../../composables/useZoomTrackProperties';
-import {zoomPropertyScopeKey} from '../zoom-property-context';
+import { ref, shallowRef } from 'vue';
+import { useZoomTrackProperties } from '../../../composables/useZoomTrackProperties';
+import { zoomPropertyScopeKey } from '../zoom-property-context';
 import { flushPromises, mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import ZoomPanel from '../ZoomPanel.vue';
@@ -318,11 +318,24 @@ describe('ZoomPanel', () => {
   });
 });
 
-it('offers apply-to-all for zoom styling while keeping distinct focus points',async()=>{
- const zooms=shallowRef([{...selectedZoom,depth:5 as const},{...selectedZoom,id:'other',startMs:2000,endMs:3000,focus:{cx:0.2,cy:0.3}}]);
- const scope=useZoomTrackProperties(zooms,ref(selectedZoom.id),ref([selectedZoom.id]));
- const wrapper=mount(ZoomPanel,{props:{selectedZoom:zooms.value[0]!,canGenerate:true,hasAutomaticZooms:false,motionBlur:{enabled:false,intensity:0.55}},
- global:{provide:{[zoomPropertyScopeKey as symbol]:scope},stubs:{Button,ButtonGroup,BigSlider,Switch}}});
- await wrapper.get('[role="checkbox"]').trigger('click');expect(scope.enabled.value).toBe(true);
- expect(zooms.value[1]!.depth).toBe(5);expect(zooms.value[1]!.focus).toEqual({cx:0.2,cy:0.3});wrapper.unmount();
+it('offers apply-to-all for zoom styling while keeping distinct focus points', async () => {
+  const zooms = shallowRef([
+    { ...selectedZoom, depth: 5 as const },
+    { ...selectedZoom, id: 'other', startMs: 2000, endMs: 3000, focus: { cx: 0.2, cy: 0.3 } },
+  ]);
+  const scope = useZoomTrackProperties(zooms, ref(selectedZoom.id), ref([selectedZoom.id]));
+  const wrapper = mount(ZoomPanel, {
+    props: {
+      selectedZoom: zooms.value[0]!,
+      canGenerate: true,
+      hasAutomaticZooms: false,
+      motionBlur: { enabled: false, intensity: 0.55 },
+    },
+    global: { provide: { [zoomPropertyScopeKey as symbol]: scope }, stubs: { Button, ButtonGroup, BigSlider, Switch } },
+  });
+  await wrapper.get('[role="checkbox"]').trigger('click');
+  expect(scope.enabled.value).toBe(true);
+  expect(zooms.value[1]!.depth).toBe(5);
+  expect(zooms.value[1]!.focus).toEqual({ cx: 0.2, cy: 0.3 });
+  wrapper.unmount();
 });

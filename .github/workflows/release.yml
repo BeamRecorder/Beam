@@ -341,7 +341,7 @@ jobs:
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft >/dev/null 2>&1; then
             test "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = true
           else
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes --draft
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes --draft --target "$GITHUB_SHA"
           fi
       - name: Generate, upload, and re-download every draft asset before validation
         env:

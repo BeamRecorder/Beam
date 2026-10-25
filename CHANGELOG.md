@@ -4,6 +4,8 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+## [0.5.7] - 2026-10-25
+
 ### Added
 
 - Transitions are organized into seven remembered categories with neutral animated previews. Twenty new visual effects include color fades, panel and shape reveals, dynamic camera moves and digital effects, rendered consistently in preview and export. Existing transitions remain available.

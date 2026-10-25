@@ -17,7 +17,11 @@ export function screenWithWaterRipples(
 ): RenderableMedia {
   const enabled = screenCursorEnabled(screen, snapshot.cursorSettings.enabled !== false);
   if (!snapshot.cursor.available || !enabled) return media;
-  const samples = cursorWaterRipplesAt(snapshot.cursor.events, screenCursorPresentation(screen,snapshot.cursorSettings).clickEffects, sessionTime);
+  const samples = cursorWaterRipplesAt(
+    snapshot.cursor.events,
+    screenCursorPresentation(screen, snapshot.cursorSettings).clickEffects,
+    sessionTime,
+  );
   if (!samples.length) return media;
   gpu ??= new WaterRippleGpu();
   return { ...media, source: gpu.render(media, samples) };
