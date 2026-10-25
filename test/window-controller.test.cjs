@@ -804,15 +804,21 @@ for (const platform of ['linux', 'darwin', 'win32'])
     const win = fakeWindow();
     win.setVibrancy = (value) => win.calls.push(['vibrancy', value]);
     win.setBackgroundMaterial = (value) => win.calls.push(['material', value]);
-    const controller = new WindowController(win, { platform, screenModule: {
-      getCursorScreenPoint: () => ({ x: 960, y: 540 }),
-      getDisplayNearestPoint: () => ({ id: 1, workArea: { x: 0, y: 0, width: 1920, height: 1040 } }),
-    } });
+    const controller = new WindowController(win, {
+      platform,
+      screenModule: {
+        getCursorScreenPoint: () => ({ x: 960, y: 540 }),
+        getDisplayNearestPoint: () => ({ id: 1, workArea: { x: 0, y: 0, width: 1920, height: 1040 } }),
+      },
+    });
     controller.setMode('hud');
     controller.setMode('recorder');
     controller.setMode('recorder');
     controller.setMode('hud');
-    assert.deepEqual(win.calls.filter(([name]) => ['vibrancy', 'material'].includes(name)), []);
+    assert.deepEqual(
+      win.calls.filter(([name]) => ['vibrancy', 'material'].includes(name)),
+      [],
+    );
     assert.ok(win.calls.some(([name, bounds]) => name === 'bounds' && bounds.width === 352 && bounds.height === 88));
     assert.ok(win.calls.filter(([name]) => name === 'resizable').every((call) => call[1] === false));
   });
@@ -822,18 +828,30 @@ for (const platform of ['darwin', 'win32'])
     const win = fakeWindow();
     win.setVibrancy = (value) => win.calls.push(['vibrancy', value]);
     win.setBackgroundMaterial = (value) => win.calls.push(['material', value]);
-    const controller = new WindowController(win, { platform, screenModule: {
-      getCursorScreenPoint: () => ({ x: 960, y: 540 }),
-      getDisplayNearestPoint: () => ({ id: 1, workArea: { x: 0, y: 0, width: 1920, height: 1040 } }),
-    } });
+    const controller = new WindowController(win, {
+      platform,
+      screenModule: {
+        getCursorScreenPoint: () => ({ x: 960, y: 540 }),
+        getDisplayNearestPoint: () => ({ id: 1, workArea: { x: 0, y: 0, width: 1920, height: 1040 } }),
+      },
+    });
     controller.setMode('preparation');
     controller.setMode('preparation');
     controller.setMode('recorder');
     controller.setMode('recorder');
     controller.setMode('hud');
-    assert.deepEqual(win.calls.filter(([name]) => ['vibrancy', 'material'].includes(name)), platform === 'win32'
-      ? [['material', 'acrylic'], ['material', 'none']]
-      : [['vibrancy', 'under-window'], ['vibrancy', null]]);
+    assert.deepEqual(
+      win.calls.filter(([name]) => ['vibrancy', 'material'].includes(name)),
+      platform === 'win32'
+        ? [
+            ['material', 'acrylic'],
+            ['material', 'none'],
+          ]
+        : [
+            ['vibrancy', 'under-window'],
+            ['vibrancy', null],
+          ],
+    );
   });
 
 for (const platform of ['linux', 'darwin', 'win32'])

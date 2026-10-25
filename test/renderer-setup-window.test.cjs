@@ -175,8 +175,14 @@ test('creates the shared HUD/Recorder with a transparent native backing before i
   const fixture = createFixture();
   assert.equal(fixture.window.options.transparent, true);
   assert.equal(fixture.window.options.backgroundColor, '#00000000');
-  assert.equal(fixture.calls.some(([name]) => name === 'showInactive'), false);
-  assert.equal(fixture.calls.some(([name]) => name === 'setResizable'), false);
+  assert.equal(
+    fixture.calls.some(([name]) => name === 'showInactive'),
+    false,
+  );
+  assert.equal(
+    fixture.calls.some(([name]) => name === 'setResizable'),
+    false,
+  );
 });
 
 test('starts transparent overlays non-resizable instead of correcting them after ready-to-show', () => {
