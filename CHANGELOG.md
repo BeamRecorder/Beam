@@ -20,6 +20,7 @@ User-facing changes to Beam are documented in this file.
 
 ### Fixed
 
+- HUD and recording controls start with an explicitly transparent, fixed native surface on Windows, without the system resize frame. Ordinary HUD/Recorder switches no longer reset the native backdrop; preparation still restores its material when it closes.
 - Undo and redo restore Apply to all's checked state together with every propagated Clip, Cursor or Zoom change, keeping activation separate from nearby property edits.
 - Screen recording cursor visibility stays in the Cursor inspector instead of adding oversized Enabled/Disabled buttons to Clip properties. Select menus sit closer to their fields, with denser rows for compact controls.
 - Transition edge selectors stay compact, with a full-width None/reset action; duration controls appear only after choosing a transition.

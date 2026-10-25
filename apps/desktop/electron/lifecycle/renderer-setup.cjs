@@ -109,10 +109,14 @@ function createRendererSetup({
       height: initialSize.height,
       frame: false,
       transparent: true,
+      backgroundColor: '#00000000',
+      // Transparent overlays must be non-resizable from their first native frame.
+      // Changing that after ready-to-show can leave an opaque Windows surround.
+      thickFrame: false,
       alwaysOnTop: true,
       icon: appIconPath,
-      resizable: true,
-      maximizable: true,
+      resizable: false,
+      maximizable: false,
       hasShadow: false,
       visualEffectState: 'active',
       show: false,
