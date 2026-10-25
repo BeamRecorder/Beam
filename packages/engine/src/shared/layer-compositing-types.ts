@@ -1,3 +1,5 @@
+import type { LayerRotation3d } from '../layout/layer-perspective-types';
+import type { LayerEffect } from '../gradient/gradient-types';
 export type LayerBlendMode =
   | 'source-over'
   | 'darken'
@@ -18,9 +20,9 @@ export type LayerBlendMode =
   | 'luminosity';
 
 export interface LayerCompositing {
-  rotation3d?: import('../layout/layer-perspective-types').LayerRotation3d;
+  rotation3d?: LayerRotation3d;
   groupId?: string;
-  effects?: import('../gradient/gradient-types').LayerEffect[];
+  effects?: LayerEffect[];
   id: string;
   opacity: number;
   blendMode: LayerBlendMode;

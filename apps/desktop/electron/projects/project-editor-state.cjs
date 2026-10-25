@@ -5,6 +5,7 @@ const {
 } = require('../../../../packages/engine/src/capture/cursor-click-schema.js');
 const { validateGlassHighlight } = require('../../../../packages/engine/src/zoom/glass-highlight-schema.js');
 const { validateOrbitSettings } = require('../../../../packages/engine/src/zoom/orbit-schema.js');
+const { isTransitionPreset } = require('../../../../packages/engine/src/shared/transition-preset-schema.js');
 const CURSOR_TYPES = new Set([
   'automatic',
   'default',
@@ -69,18 +70,12 @@ const zoomAutoFollowState = (value) => {
     directionLock: typeof input.directionLock === 'boolean' ? input.directionLock : defaults.directionLock,
   };
 };
-const canvasTransitionKinds = new Set(['fade', 'slide', 'zoom', 'blur']);
 const canvasTransitionEasingPower = (value) =>
   value === undefined || !finite(value) ? undefined : clamp(Math.round(value), 1, 5);
 
 const canvasTransition = (value) => {
-  if (!value || typeof value !== 'object' || !value.preset || !canvasTransitionKinds.has(value.preset.kind))
-    return null;
+  if (!value || typeof value !== 'object' || !isTransitionPreset(value.preset)) return null;
   const preset = value.preset;
-  if (preset.kind === 'slide' && !['left', 'right', 'up', 'down'].includes(preset.direction)) return null;
-  if (preset.kind === 'zoom' && !['in', 'out'].includes(preset.direction)) return null;
-  if ((preset.kind === 'fade' || preset.kind === 'blur') && Object.keys(preset).some((key) => key !== 'kind'))
-    return null;
   if (!finite(value.durationMs)) return null;
   const durationMs = clamp(Math.round(value.durationMs), 1, 5000);
   const easingPower = canvasTransitionEasingPower(value.easingPower);
@@ -127,6 +122,8 @@ const zoomState = (value) => {
       typeof element.id !== 'string' ||
       !element.id ||
       ids.has(element.id) ||
+      (element.splitGroupId !== undefined &&
+        (typeof element.splitGroupId !== 'string' || !element.splitGroupId.trim())) ||
       (element.linkedClipId !== undefined &&
         element.linkedClipId !== null &&
         (typeof element.linkedClipId !== 'string' || !element.linkedClipId.trim())) ||
@@ -180,6 +177,7 @@ const zoomState = (value) => {
     return {
       id: element.id,
       ...(element.linkedClipId === undefined ? {} : { linkedClipId: element.linkedClipId }),
+      ...(element.splitGroupId === undefined ? {} : { splitGroupId: element.splitGroupId }),
       ...(element.locked === undefined ? {} : { locked: element.locked }),
       sessionId: element.sessionId,
       startMs: Math.round(element.startMs),

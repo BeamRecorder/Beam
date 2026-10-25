@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { loadHudPanelContent, readHudPanel } from './hud-panel-content';
 const views = vi.hoisted(() => ({
   projects: { name: 'Projects' },
   settings: { name: 'Settings' },
@@ -9,7 +10,6 @@ vi.mock('../hud/settings/HudSettingsWindow.vue', () => ({
   default: views.settings,
 }));
 vi.mock('../brand/lab/MascotLab.vue', () => ({ default: views.mascot }));
-import { loadHudPanelContent, readHudPanel } from './hud-panel-content';
 afterEach(() => vi.unstubAllEnvs());
 
 describe('HUD panel content loading', () => {

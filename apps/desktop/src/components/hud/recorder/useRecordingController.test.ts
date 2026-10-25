@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RecordingConfiguration } from './recording-types';
 import type { CaptureSession } from '../../../api/types/capture-api';
+import { useRecordingController } from './useRecordingController';
 
 const mocks = vi.hoisted(() => {
   const makeRecorder = () => ({
@@ -64,8 +65,6 @@ vi.mock('../../../api/microphone-recorder', () => ({
 vi.mock('../../../api/system-audio-recorder', () => ({
   BrowserSystemAudioRecorder: { request: mocks.systemAudioRequest },
 }));
-
-import { useRecordingController } from './useRecordingController';
 
 const baseConfig: RecordingConfiguration = {
   screenKind: 'display',

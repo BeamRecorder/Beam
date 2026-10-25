@@ -1,5 +1,7 @@
+import { snapshotCursorImageKey } from './snapshot-cursor';
 import type { VisualClip } from '@beam/engine/shared/composition-types';
 import { cursorClickSpringScale } from '@beam/engine/cursor/cursor-click-spring';
+import { screenCursorEnabled } from '@beam/engine/capture/screen-cursor';
 import { createCursorMotionPlayer, type CursorMotionSample } from '@beam/engine/cursor/cursor-motion';
 import { cursorExposureSamples } from '@beam/engine/cursor/cursor-exposure';
 import { drawGpuCursor } from './cursor-gpu-render';
@@ -43,7 +45,7 @@ export function cursorPositionForKeyboardCaption(
   const asset = snapshot.cursorPack
     ? cursorAssetAt(snapshot.cursorPack, snapshot.cursorSettings.selection, motionState)
     : null;
-  const image = asset ? cursorImages?.get(asset.id) : undefined;
+  const image = asset ? cursorImages?.get(snapshotCursorImageKey(snapshot, screen, asset.id)) : undefined;
   if (!snapshot.cursor.available || !motionState?.visible || !usableImage(image)) return null;
   const raw = transitionPointWithClip(
     screen,
@@ -89,7 +91,7 @@ export function drawCursorLayer(
   pixelScale = 1,
 ) {
   const settings = snapshot.cursorSettings;
-  if (settings.enabled === false) return;
+  if (!screenCursorEnabled(screen, settings.enabled !== false)) return;
   // Cursor size and shadow blur are output pixels. Keep the value selected in
   // the editor stable when the user exports at a different video resolution.
   // A supersampled lens pass preserves that size before the lens magnifies it.
@@ -149,7 +151,7 @@ export function drawCursorLayer(
   }
 
   const asset = snapshot.cursorPack ? cursorAssetAt(snapshot.cursorPack, settings.selection, motionCursor) : null;
-  const image = asset ? cursorImages?.get(asset.id) : undefined;
+  const image = asset ? cursorImages?.get(snapshotCursorImageKey(snapshot, screen, asset.id)) : undefined;
   const autoHideOpacity = cursorAutoHideOpacityAt(snapshot.cursor.events, time, settings.autoHide);
   if (!motionCursor?.visible || autoHideOpacity <= 0 || !usableImage(image)) return;
   const geometry = cursorGeometryAtSize(asset!, cursorSize);

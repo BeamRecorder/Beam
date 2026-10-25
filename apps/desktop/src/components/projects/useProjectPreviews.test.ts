@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CaptureProject } from '~/api/types/capture-api';
+import { useProjectPreviews } from './useProjectPreviews';
 const media = vi.hoisted(() => ({
   generate: vi.fn(),
   cache: {} as Record<string, string>,
@@ -12,7 +13,6 @@ vi.mock('../hud/useProjectThumbnailGenerator', () => ({
     thumbnailCache: media.cache,
   }),
 }));
-import { useProjectPreviews } from './useProjectPreviews';
 const project = (id: string, previewSrc = `video://${id}`, thumbnailSrc: string | null = null) =>
   ({
     id,

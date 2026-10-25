@@ -1,5 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import HudPanelApp from './HudPanelApp.vue';
+import type { HudPanel } from '~/api/types/hud-panel';
 const capture = vi.hoisted(() => ({
   platform: 'linux',
   notifyHudPanelReady: vi.fn(),
@@ -11,8 +13,6 @@ const capture = vi.hoisted(() => ({
   close: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-import HudPanelApp from './HudPanelApp.vue';
-import type { HudPanel } from '~/api/types/hud-panel';
 const settings = {
   name: 'HudSettingsWindow',
   emits: ['ready'],

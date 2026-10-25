@@ -2,6 +2,7 @@ import { defineComponent } from 'vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CaptureProject } from '~/api/types/capture-api';
+import { useEditorOpening } from './useEditorOpening';
 const capture = vi.hoisted(() => ({
   openEditor: vi.fn(),
   openScreenshot: vi.fn(),
@@ -11,7 +12,6 @@ const capture = vi.hoisted(() => ({
   showHud: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-import { useEditorOpening } from './useEditorOpening';
 const project = { id: 'project', mode: 'studio' } as CaptureProject;
 const setup = () => {
   let api!: ReturnType<typeof useEditorOpening>;

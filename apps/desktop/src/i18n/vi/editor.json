@@ -430,6 +430,7 @@
     "savingProject": "Đang lưu dự án"
   },
   "ZoomPanel": {
+    "applyToTrackHint": "Đồng bộ kiểu thu phóng cho các đoạn chưa khóa, giữ nguyên vị trí và thời gian.",
     "cameraFollow": "Theo dõi camera",
     "cameraFollowDesc": "Dự đoán chuyển động con trỏ đã ghi để máy quay bám theo mượt mà và từ từ.",
     "advanced": "Nâng cao",

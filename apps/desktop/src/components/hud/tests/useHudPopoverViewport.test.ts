@@ -1,12 +1,12 @@
 import { defineComponent } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useHudPopoverViewport } from '../useHudPopoverViewport';
 const capture = vi.hoisted(() => ({
   platform: 'win32',
   resizeHudPopover: vi.fn().mockResolvedValue(268),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-import { useHudPopoverViewport } from '../useHudPopoverViewport';
 let wrapper: ReturnType<typeof mount> | undefined;
 function create(embedded = false) {
   let state!: ReturnType<typeof useHudPopoverViewport>;

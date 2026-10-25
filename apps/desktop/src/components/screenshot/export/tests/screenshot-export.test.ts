@@ -6,9 +6,9 @@ import type {
   ScreenshotExportRequest,
   ScreenshotExportTransfer,
 } from '../screenshot-export-types';
+import { encodeScreenshot } from '../screenshot-export';
 const preparation = vi.hoisted(() => ({ assets: vi.fn() }));
 vi.mock('../screenshot-export-assets', () => ({ screenshotExportAssets: preparation.assets }));
-import { encodeScreenshot } from '../screenshot-export';
 
 let transfer: ScreenshotExportTransfer;
 let workers: FakeWorker[];

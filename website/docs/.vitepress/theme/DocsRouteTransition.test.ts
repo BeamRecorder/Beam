@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { nextTick, reactive } from 'vue';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import type * as DocsRouteTransitionModule from './DocsRouteTransition.vue';
 
 const websiteRoot = path.basename(process.cwd()) === 'website' ? process.cwd() : path.join(process.cwd(), 'website');
 const themeStylesheet = readFileSync(path.join(websiteRoot, 'docs/.vitepress/theme/theme.css'), 'utf8');
@@ -15,7 +16,7 @@ vi.mock('vitepress', () => ({
 const route = reactive({ path: '/docs/getting-started' });
 mocked.route = route;
 
-let DocsRouteTransition: typeof import('./DocsRouteTransition.vue').default;
+let DocsRouteTransition: typeof DocsRouteTransitionModule.default;
 const mountedWrappers: VueWrapper[] = [];
 
 const mountTransition = () => {

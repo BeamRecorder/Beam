@@ -630,6 +630,52 @@ test('preserves attached, detached and unspecified automatic zoom links', () => 
   }
 });
 
+test('retains cut zoom envelope provenance across save and reopen', () => {
+  const element = {
+    id: 'zoom',
+    sessionId: 'session',
+    startMs: 0,
+    endMs: 500,
+    focus: { cx: 0.5, cy: 0.5 },
+    depth: 2,
+    mode: 'auto',
+    splitGroupId: 'original-zoom',
+  };
+  const normalized = zoomState({ elements: [element], generatedSessions: [] });
+  assert.equal(normalized.elements[0].splitGroupId, 'original-zoom');
+  assert.deepEqual(zoomState(JSON.parse(JSON.stringify(normalized))), normalized);
+});
+test('rejects invalid cut zoom envelope provenance', () => {
+  for (const splitGroupId of ['', ' ', null, 7, false, {}]) {
+    const element = {
+      id: 'zoom',
+      sessionId: 'session',
+      startMs: 0,
+      endMs: 500,
+      focus: { cx: 0.5, cy: 0.5 },
+      depth: 2,
+      mode: 'auto',
+      splitGroupId,
+    };
+    assert.throws(() => zoomState({ elements: [element], generatedSessions: [] }));
+  }
+});
+test('does not manufacture cut provenance in existing zooms', () => {
+  const element = {
+    id: 'zoom',
+    sessionId: 'session',
+    startMs: 0,
+    endMs: 500,
+    focus: { cx: 0.5, cy: 0.5 },
+    depth: 2,
+    mode: 'auto',
+  };
+  assert.equal(
+    Object.hasOwn(zoomState({ elements: [element], generatedSessions: [] }).elements[0], 'splitGroupId'),
+    false,
+  );
+});
+
 test('rejects invalid recording link identifiers on zooms', () => {
   for (const linkedClipId of ['', '  ', 2, false, {}, []]) {
     assert.throws(() =>

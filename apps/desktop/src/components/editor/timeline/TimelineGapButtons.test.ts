@@ -5,11 +5,19 @@ import { nextTick } from 'vue';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import type { ClipComposition, MediaAsset, VisualClip } from '@beam/engine/shared/composition-types';
 import TimelineGapButtons from './TimelineGapButtons.vue';
+import { Lock, Trash2 } from '@lucide/vue';
 import Button from '~/components/ui/button/Button.vue';
 
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: () => ({
-    t: (key: string) => (key === 'removeGap' ? 'Remove gap' : key === 'removeGapBlocked' ? 'Cannot remove gap' : key),
+    t: (key: string, params?: Record<string, unknown>) =>
+      key === 'removeGap'
+        ? 'Remove gap'
+        : key === 'lockedMessage'
+          ? `${String(params?.name)} is locked.`
+          : key === 'zoomTitle'
+            ? `Zoom ${String(params?.level)}×`
+            : key,
   }),
 }));
 
@@ -113,7 +121,7 @@ describe('TimelineGapButtons', () => {
   it('keeps a narrow locked gap explanatory and prevents removal', async () => {
     const clips = [visual('before', 0), visual('locked-after', 3_000, { locked: true })];
     const wrapper = mountButtons({ clips, composition: composition(clips), durationMs: 180_000 });
-    const button = wrapper.get('button[aria-label="Cannot remove gap"]');
+    const button = wrapper.get('button[aria-label*="is locked"]');
     await button.trigger('click');
     expect(button.attributes('disabled')).toBeDefined();
     expect(wrapper.emitted('remove')).toBeUndefined();
@@ -130,12 +138,56 @@ describe('TimelineGapButtons', () => {
   it('keeps a locked gap visible with a disabled explanatory button', () => {
     const clips = [visual('before', 0), visual('locked-after', 3_000, { locked: true })];
     const wrapper = mountButtons({ clips, composition: composition(clips) });
-    const button = wrapper.get('button[aria-label="Cannot remove gap"]');
+    const button = wrapper.get('button[aria-label*="is locked"]');
 
     expect(wrapper.find('.timeline-gap').exists()).toBe(true);
     expect(button.attributes('disabled')).toBeDefined();
     expect(button.attributes('title')).toBeUndefined();
-    expect(wrapper.getComponent(Button).props('tooltip')).toBe('Cannot remove gap');
+    expect(wrapper.getComponent(Button).props('tooltip')).toContain('locked-after (03.0s) is locked');
+    expect(wrapper.findComponent(Lock).exists()).toBe(true);
+    expect(wrapper.findComponent(Trash2).exists()).toBe(false);
+  });
+  it('does not offer a trash action before an image placed above an existing screen recording', () => {
+    const image = visual('beam_transparent', 20672, {
+      kind: 'image',
+      trackId: 'image',
+      timelineDurationMs: 2054,
+      sourceDurationMs: 2054,
+    });
+    const screens = [
+      visual('screen', 0, { kind: 'screen', trackId: 'screen', timelineDurationMs: 5228, sourceDurationMs: 5228 }),
+      visual('screen-right', 5228, {
+        kind: 'screen',
+        trackId: 'screen',
+        timelineDurationMs: 15655,
+        sourceDurationMs: 15655,
+      }),
+    ];
+    const wrapper = mountButtons({ clips: [image], composition: composition([...screens, image]), durationMs: 22726 });
+    expect(wrapper.find('.timeline-gap').exists()).toBe(false);
+    expect(wrapper.findComponent(Trash2).exists()).toBe(false);
+  });
+  it.each([false, true])('offers the screen gap action when a crossing automatic zoom is locked=%s', (locked) => {
+    const clips = [
+      visual('left', 0, { kind: 'screen', timelineDurationMs: 5228, sourceDurationMs: 5228 }),
+      visual('right', 8125, { kind: 'screen' }),
+    ];
+    const zoomElements = [
+      {
+        id: 'auto',
+        sessionId: 'session',
+        startMs: 824,
+        endMs: 8125,
+        depth: 2 as const,
+        focus: { cx: 0.5, cy: 0.5 },
+        mode: 'auto' as const,
+        locked,
+      },
+    ];
+    const wrapper = mountButtons({ clips, composition: composition(clips), zoomElements });
+    expect(wrapper.findComponent(Trash2).exists()).toBe(!locked);
+    expect(wrapper.findComponent(Lock).exists()).toBe(locked);
+    expect(wrapper.getComponent(Button).props('tooltip')).toBe(locked ? 'Zoom 2× (00.8s) is locked.' : 'Remove gap');
   });
 
   it('enables the camera pause action when linked capture boundaries differ by milliseconds', async () => {
@@ -168,7 +220,7 @@ describe('TimelineGapButtons', () => {
     ]);
   });
 
-  it('keeps a colliding linked gap visible with a disabled explanatory button', () => {
+  it('does not suggest closing lane-local space covered by another clip', () => {
     const target = [
       visual('main-before', 0, { trackId: 'main-lane' }),
       visual('main-after', 3_000, {
@@ -188,12 +240,8 @@ describe('TimelineGapButtons', () => {
       clips: target,
       composition: composition(allClips),
     });
-    const button = wrapper.get('button[aria-label="Cannot remove gap"]');
-
-    expect(wrapper.find('.timeline-gap').exists()).toBe(true);
-    expect(button.attributes('disabled')).toBeDefined();
-    expect(button.attributes('title')).toBeUndefined();
-    expect(wrapper.getComponent(Button).props('tooltip')).toBe('Cannot remove gap');
+    expect(wrapper.find('.timeline-gap').exists()).toBe(false);
+    expect(wrapper.find('button').exists()).toBe(false);
   });
 
   it('stops pointer and click gestures on the gap container from reaching the timeline', async () => {
@@ -224,9 +272,9 @@ describe('TimelineGapButtons', () => {
       await nextTick();
       const tooltips = document.body.querySelectorAll('[role="tooltip"]');
       expect(tooltips).toHaveLength(1);
-      expect(tooltips[0]?.textContent).toBe(locked ? 'Cannot remove gap' : 'Remove gap');
+      expect(tooltips[0]?.textContent).toBe(locked ? 'after (03.0s) is locked.' : 'Remove gap');
       expect(wrapper.find('[title]').exists()).toBe(false);
-      expect(wrapper.get('button').attributes('aria-label')).toBe(locked ? 'Cannot remove gap' : 'Remove gap');
+      expect(wrapper.get('button').attributes('aria-label')).toBe(locked ? 'after (03.0s) is locked.' : 'Remove gap');
     },
   );
 });

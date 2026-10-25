@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { QuickSnipConfiguration } from '~/api/types/quick-snip';
 import type { ScreenshotEncodeOptions } from '~/components/screenshot/screenshot-types';
+import { captureQuickScreenshot } from '~/components/quick-snip/quick-snip-screenshot';
 const mocks = vi.hoisted(() => ({
   capture: {
     prepareRecordingSurface: vi.fn(),
@@ -24,7 +25,6 @@ vi.mock('~/components/screenshot/screenshot-render', () => ({
   encodeScreenshot: mocks.encodeScreenshot,
   screenshotPreview: mocks.screenshotPreview,
 }));
-import { captureQuickScreenshot } from '~/components/quick-snip/quick-snip-screenshot';
 const configuration = {
   name: 'Screenshot 1',
   mode: 'screenshot',

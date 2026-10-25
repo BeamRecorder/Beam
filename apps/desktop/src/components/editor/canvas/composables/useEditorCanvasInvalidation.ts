@@ -32,6 +32,8 @@ export function useEditorCanvasInvalidation(options: {
       [
         options.props.cursorSelection,
         options.props.cursorPack,
+        options.props.cursorPacks,
+        options.props.cursorPreviewSelection,
         options.props.cursorSize,
         options.props.cursorColor,
         options.props.enableShadow,

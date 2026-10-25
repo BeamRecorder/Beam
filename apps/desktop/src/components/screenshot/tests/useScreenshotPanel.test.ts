@@ -1,5 +1,3 @@
-const capture = vi.hoisted(() => ({ openHudSettings: vi.fn(async () => true) }));
-vi.mock('~/api/capture', () => ({ capture }));
 import { ref } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
 import { useScreenshotPanel } from '../useScreenshotPanel';
@@ -7,6 +5,8 @@ import type { ScreenshotPanel } from '../screenshot-types';
 import { documentFixture } from './screenshot-editor-test-helpers';
 import { screenshotState } from '../screenshot-state';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
+const capture = vi.hoisted(() => ({ openHudSettings: vi.fn(async () => true) }));
+vi.mock('~/api/capture', () => ({ capture }));
 const fixture = () => {
   const state = ref<ScreenshotState | null>(screenshotState(documentFixture()));
   const panel = ref<ScreenshotPanel>('shapes'),

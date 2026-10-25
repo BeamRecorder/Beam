@@ -65,6 +65,7 @@ export interface CursorPresentationSettings {
   motion: CursorMotionSettings;
   autoHide: CursorAutoHideSettings;
 }
+export type ScreenCursorSettings = Omit<CursorPresentationSettings, 'enabled'>;
 
 export const createDefaultCursorPresentation = (): CursorPresentationSettings => ({
   enabled: true,

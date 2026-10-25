@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { EventEmitter } from 'node:events';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { runExportProcess } from './export-process';
 const mocked = vi.hoisted(() => ({ spawn: vi.fn() }));
 vi.mock('node:child_process', () => ({ spawn: mocked.spawn }));
-import { runExportProcess } from './export-process';
 let child: EventEmitter & { stderr: EventEmitter; kill: ReturnType<typeof vi.fn> };
 beforeEach(() => {
   child = Object.assign(new EventEmitter(), { stderr: new EventEmitter(), kill: vi.fn() });

@@ -17,6 +17,23 @@ const fixture = (): EditorStateSnapshot => ({
 });
 
 describe('editor history snapshot ownership', () => {
+  it('owns all scope modes and restores editable copies without modifying document settings', () => {
+    const snapshots = createEditorHistorySnapshots(),
+      input = fixture();
+    input.trackPropertyScopes = { clipTracks: ['screen', 'camera'], cursorTracks: ['screen'], zoom: true };
+    const first = snapshots.capture(input),
+      restored = snapshots.restore(first);
+    expect(first.trackPropertyScopes).toEqual(input.trackPropertyScopes);
+    expect(restored.trackPropertyScopes).not.toBe(first.trackPropertyScopes);
+    restored.trackPropertyScopes!.zoom = false;
+    expect(first.trackPropertyScopes!.zoom).toBe(true);
+    const unchecked = snapshots.capture({
+      ...input,
+      trackPropertyScopes: { clipTracks: [], cursorTracks: [], zoom: false },
+    });
+    expect(unchecked).not.toBe(first);
+    expect(unchecked.composition).toBe(first.composition);
+  });
   it('shares and freezes composition without serializing it on each property edit', () => {
     const snapshots = createEditorHistorySnapshots(),
       input = fixture();

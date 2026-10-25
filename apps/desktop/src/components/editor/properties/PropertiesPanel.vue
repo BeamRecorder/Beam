@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ClipTrackPropertyToggle from './clip/ClipTrackPropertyToggle.vue';
 import CustomCursorToggle from './cursor/CustomCursorToggle.vue';
 import PropertiesDeleteAction from './PropertiesDeleteAction.vue';
 import ElementClipControls from '../elements/ElementClipControls.vue';
@@ -248,6 +249,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
               class="panel-body"
               :inert="editLocked && activeTab !== 'canvas' && activeTab !== 'settings' && activeTab !== 'cursor'"
             >
+              <ClipTrackPropertyToggle v-if="showsSelectedProperties && !transitionsOpen" />
               <ElementClipControls v-if="activeTab === 'clip' && !transitionsOpen" :show-properties="false" />
               <TransitionSettingsPanel
                 v-if="transitionsOpen && activeTab === 'canvas'"

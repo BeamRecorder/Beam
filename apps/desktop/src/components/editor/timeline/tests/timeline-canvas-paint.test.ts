@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { paintTimelineCanvas, timelineCanvasSpan } from '@beam/runtime/timeline/timeline-canvas-paint';
+import { timelineMetadataInset } from '@beam/runtime/timeline/timeline-canvas-layout';
 import type { TimelineCanvasPalette, TimelineCanvasArtwork } from '@beam/runtime/timeline/timeline-canvas-types';
 import type { Clip } from '@beam/engine/shared/composition-types';
 import { visual, importedAudio, keyboardCaption, zoom } from './TimelineTracks.test-support';
@@ -67,6 +68,32 @@ function context() {
 afterEach(() => vi.clearAllMocks());
 
 describe('viewport-only canvas timeline geometry', () => {
+  it.each([
+    [0, 0],
+    [1, 21],
+    [2, 36],
+    [3, 51],
+  ])('reserves icon padding and a clear title gap for %s badges', (count, inset) => {
+    expect(timelineMetadataInset(count!)).toBe(inset);
+  });
+  it.each([true, false])('paints the title with opposing ink and background on a bright=%s thumbnail', (bright) => {
+    const { ctx, fills } = context();
+    const ink = bright ? '#16161a' : '#ffffff',
+      background = bright ? '#ffffff' : '#16161a';
+    paintTimelineCanvas(
+      ctx,
+      [{ clip: visual({ timelineStartMs: 10000 }), labelInset: 21, selected: false }],
+      geometry,
+      palette,
+      new Map([['screen', { kind: 'image' }]]),
+      undefined,
+      () => ({ foreground: ink, background: background }),
+    );
+    expect(fills.at(-1)?.style).toBe(background);
+    expect(ctx.fillStyle).toBe(ink);
+    expect(ctx.roundRect).toHaveBeenCalledWith(26, 9, 50, 14, 6);
+    expect(ctx.fillText).toHaveBeenCalledWith('Screen capture', 29, 16);
+  });
   it('uses viewport-local layout pixels and the same minimum hit width as semantic buttons', () => {
     expect(timelineCanvasSpan(10000, 1000, 60000, 6000, 1000)).toEqual({
       x: 0,
@@ -183,7 +210,7 @@ describe('canvas timeline painter', () => {
       palette,
     );
     expect(ctx.fillText).toHaveBeenCalledWith('Text', 8, 16);
-    expect(ctx.fillText).toHaveBeenCalledWith('Explicit', 223, 16);
+    expect(ctx.fillText).toHaveBeenCalledWith('Explicit', 229, 16);
     expect(fills[1]!.style).toBe(palette.shape);
     expect(fills[3]!.style).toBe(palette.blur);
     paintTimelineCanvas(ctx, [], geometry, palette);
@@ -206,7 +233,7 @@ describe('canvas timeline painter', () => {
       palette,
       1000,
     );
-    expect(ctx.fillRect).toHaveBeenCalledWith(5, 3, 50, 13);
+    expect(ctx.roundRect).toHaveBeenCalledWith(5, 2, 50, 14, palette.radius);
     expect(ctx.fillText).toHaveBeenCalledWith('Screen capture', 8, 9);
     expect(ctx.fillStyle).toBe(palette.labelText);
   });
@@ -299,7 +326,7 @@ describe('canvas timeline painter', () => {
       text: { content: '  ' },
     } as unknown as Clip;
     paintTimelineCanvas(ctx, [{ clip, selected: false }], geometry, palette);
-    expect(ctx.fillText).toHaveBeenCalledWith('', 8, 16);
+    expect(ctx.fillText).not.toHaveBeenCalled();
   });
 
   it('keeps a partly offscreen title attached to its clip rather than pinning it ahead of DOM icons', () => {

@@ -126,7 +126,7 @@ const itemHeight = computed(() => {
   if (normalizedOptions.value.some((opt) => opt.thumbnail || opt.thumbnailFallback || opt.loading)) {
     return 52;
   }
-  return props.optionHeight;
+  return props.size === 'compact' ? 28 : props.optionHeight;
 });
 
 const handleSearchInput = (value: string | number) => {
@@ -272,6 +272,7 @@ onBeforeUnmount(() => {
 <template>
   <Popover
     align="left"
+    :gap="4"
     :direction="direction"
     :block="true"
     :disabled="disabled"

@@ -4,8 +4,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { CaptureProject } from '~/api/types/capture-api';
 import type { ProjectCatalogPage } from '~/api/types/project-catalog';
 import { captureMock as capture } from '../hud/tests/capture.mock';
-vi.mock('~/api/capture', () => ({ capture }));
 import { useProjectPicker } from './useProjectPicker';
+vi.mock('~/api/capture', () => ({ capture }));
 enableAutoUnmount(afterEach);
 const batch = (offset: number, count = 40, nextCursor: string | null = null): ProjectCatalogPage => ({
   projects: Array.from(

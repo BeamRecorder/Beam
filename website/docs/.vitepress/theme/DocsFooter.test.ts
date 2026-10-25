@@ -1,5 +1,6 @@
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import DocsFooter from './DocsFooter.vue';
 
 const state = vi.hoisted(() => ({
   page: { value: { relativePath: 'index.md' } },
@@ -27,8 +28,6 @@ vi.mock('vitepress', () => ({
   useData: () => ({ page: state.page, theme: state.theme }),
   withBase: (path: string) => `/docs${path}`,
 }));
-
-import DocsFooter from './DocsFooter.vue';
 
 const mounted: VueWrapper[] = [];
 

@@ -6,6 +6,7 @@ import type {
   ScreenshotImageLayer,
   ScreenshotZoomLayer,
 } from '@beam/engine/screenshot/screenshot-types';
+import type { LayerRotation3d } from '@beam/engine/layout/layer-perspective-types';
 
 export type ScreenshotClipboardLayer =
   | { type: 'shape'; value: ShapeClip }
@@ -20,7 +21,7 @@ export interface ScreenshotClipboardEntry {
   opacity: number;
   blendMode: LayerBlendMode;
   effects?: LayerEffect[];
-  rotation3d?: import('@beam/engine/layout/layer-perspective-types').LayerRotation3d;
+  rotation3d?: LayerRotation3d;
   groupId?: string;
 }
 

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { ScreenshotCursorAsset } from '@beam/runtime/screenshot/screenshot-types';
 import { bitmap, stateFixture } from './export-test-support';
+import { screenshotExportAssets } from '../screenshot-export-assets';
 const loading = vi.hoisted(() => ({ decorations: vi.fn() }));
 vi.mock('../../screenshot-render', () => ({ loadScreenshotDecorations: loading.decorations }));
-import { screenshotExportAssets } from '../screenshot-export-assets';
 
 let clone: ReturnType<typeof vi.fn>;
 beforeEach(() => {

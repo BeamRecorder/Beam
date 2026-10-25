@@ -1,10 +1,10 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-vi.mock('~/api/capture', () => ({ capture: {} }));
 import CursorClickEffectsPanel from '../CursorClickEffectsPanel.vue';
 import CursorRippleControls from '../CursorRippleControls.vue';
 import { createDefaultCursorClickEffects } from '@beam/engine/capture/cursor-settings';
 import { global } from './cursor-panel-test-helpers';
+vi.mock('~/api/capture', () => ({ capture: {} }));
 const build = () => {
   const value = createDefaultCursorClickEffects();
   return { value, wrapper: mount(CursorClickEffectsPanel, { props: { modelValue: value }, global }) };

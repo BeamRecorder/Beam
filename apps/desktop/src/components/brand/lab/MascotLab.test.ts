@@ -10,9 +10,10 @@ import { createMascotEngine, DEFAULT_LOOK } from './mascot-catalog';
 import type { MascotLook, MascotStep } from './mascot-types';
 import { defaultPreset, PRESET_KEY } from './mascot-storage';
 import { downloadBlob, mascotPng } from './mascot-export';
+import type * as MascotExportModule from './mascot-export';
 
 vi.mock('./mascot-export', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./mascot-export')>()),
+  ...(await importOriginal<typeof MascotExportModule>()),
   downloadBlob: vi.fn(),
   mascotPng: vi.fn(async () => new Blob(['png'])),
 }));

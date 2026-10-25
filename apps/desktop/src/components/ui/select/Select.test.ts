@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { h, nextTick } from 'vue';
 import { Mic } from '@lucide/vue';
 import Select from './Select.vue';
+import Popover from '../popover/Popover.vue';
 
 enableAutoUnmount(afterEach);
 
@@ -342,6 +343,25 @@ describe('Select', () => {
 });
 
 describe('compact and keyboard menus', () => {
+  it.each([
+    { size: 'compact' as const, optionHeight: 38, expected: 28, thumbnail: undefined },
+    { size: 'md' as const, optionHeight: 38, expected: 38, thumbnail: undefined },
+    { size: 'compact' as const, optionHeight: 44, expected: 44, thumbnail: undefined },
+    { size: 'compact' as const, optionHeight: 38, expected: 52, thumbnail: '/preview.png' },
+  ])(
+    'keeps the menu close and respects compact, explicit and media row sizes: $expected',
+    async ({ size, optionHeight, expected, thumbnail }) => {
+      const wrapper = mount(Select, {
+        attachTo: document.body,
+        props: { modelValue: 'top', size, optionHeight, options: [{ value: 'top', label: 'Top', thumbnail }] },
+      });
+      expect(wrapper.getComponent(Popover).props('gap')).toBe(4);
+      await wrapper.get('.select-trigger').trigger('click');
+      await nextTick();
+      expect(document.querySelector<HTMLElement>('[role="option"]')?.style.height).toBe(`${expected}px`);
+    },
+  );
+
   it.each([
     ['small', 22, '0.75rem'],
     ['small', 30, '0.7rem'],

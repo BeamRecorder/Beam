@@ -1,3 +1,4 @@
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import { defineComponent, ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -10,6 +11,11 @@ import {
   playbackMutations,
   visualMutations,
 } from './useVideoEditor.test-support';
+import { useVideoEditor } from '../useVideoEditor';
+import type * as UseVideoElementsModule from '../../elements/useVideoElements';
+import type * as UseHtmlPreviewModule from '../../../authoring/useHtmlPreview';
+import type * as UseVideoEditorSearchModule from '../../search/useVideoEditorSearch';
+import type * as UseProjectEditorStateModule from '../useProjectEditorState';
 
 const capture = vi.hoisted(() => ({
   listBackgroundLibrary: vi.fn(),
@@ -31,20 +37,16 @@ const state = vi.hoisted(() => ({
   editorState: undefined as any,
   cursor: undefined as any,
   initialComposition: undefined as ClipComposition | undefined,
-  videoElementsOptions: undefined as
-    | Parameters<(typeof import('../../elements/useVideoElements'))['useVideoElements']>[0]
-    | undefined,
+  videoElementsOptions: undefined as Parameters<(typeof UseVideoElementsModule)['useVideoElements']>[0] | undefined,
   useVideoPlayer: vi.fn(),
   createCompositionSnapshot: vi.fn(),
   openApplicationSettings: vi.fn().mockResolvedValue(true),
-  htmlOptions: undefined as
-    | Parameters<(typeof import('../../../authoring/useHtmlPreview'))['useHtmlPreview']>
-    | undefined,
+  htmlOptions: undefined as Parameters<(typeof UseHtmlPreviewModule)['useHtmlPreview']> | undefined,
   searchOptions: undefined as
-    | Parameters<(typeof import('../../search/useVideoEditorSearch'))['provideVideoEditorSearch']>[0]
+    | Parameters<(typeof UseVideoEditorSearchModule)['provideVideoEditorSearch']>[0]
     | undefined,
   editorStateOptions: undefined as
-    | Parameters<(typeof import('../useProjectEditorState'))['useProjectEditorState']>[0]
+    | Parameters<(typeof UseProjectEditorStateModule)['useProjectEditorState']>[0]
     | undefined,
 }));
 
@@ -99,6 +101,7 @@ vi.mock('../useVideoPlayer', async () => {
   };
 });
 vi.mock('../useClipComposition', async () => {
+  const { useClipTrackProperties } = await import('../useClipTrackProperties');
   const { ref } = await import('vue');
   return {
     useClipComposition: () => {
@@ -112,7 +115,10 @@ vi.mock('../useClipComposition', async () => {
           } as ClipComposition),
       );
       const value = {
+        clipTrackProperties: useClipTrackProperties(composition, ref(null), ref([])),
         composition,
+        selectedClipId: ref(null),
+        selectedClipIds: ref([]),
         synchronizeRecording: vi.fn(),
         addElement: vi.fn().mockResolvedValue('image-1'),
         selectClips: vi.fn(),
@@ -123,15 +129,20 @@ vi.mock('../useClipComposition', async () => {
   };
 });
 vi.mock('../useProjectZoom', async () => {
+  const { useZoomTrackProperties } = await import('../useZoomTrackProperties');
   const { ref } = await import('vue');
   return {
     useProjectZoom: (options: unknown) => {
       state.zoomOptions = options;
+      const zoomElements = ref<ZoomElement[]>([]),
+        selectedZoomId = ref<string | null>(null),
+        selectedZoomIds = ref<string[]>([]);
       const value = {
-        zoomElements: ref([]),
+        propertyScope: useZoomTrackProperties(zoomElements, selectedZoomId, selectedZoomIds),
+        zoomElements,
         generatedSessions: ref([]),
-        selectedZoomId: ref(null),
-        selectedZoomIds: ref([]),
+        selectedZoomId,
+        selectedZoomIds,
         ensureAutomaticZooms: vi.fn(),
         addZoomAtTime: vi.fn(),
       };
@@ -194,7 +205,6 @@ vi.mock('@beam/runtime/rendering/snapshot', () => ({
     return { snapshot: true };
   },
 }));
-import { useVideoEditor } from '../useVideoEditor';
 
 const project = { id: 'project-1', name: 'Demo project' } as any;
 const makeEditorData = (fps = 60) =>
@@ -632,8 +642,18 @@ describe('useVideoEditor', () => {
     await flushPromises();
     expect(state.player.loadComposition).toHaveBeenCalledOnce();
     state.player.loadComposition.mockClear();
-    return { api, wrapper };
+    return { api, wrapper, editorData };
   };
+
+  it.each([false, true, undefined])(
+    'forwards recording cursor visibility %s to initial editor defaults',
+    async (visible) => {
+      const { wrapper, editorData } = await mountWithComposition();
+      editorData.value = { ...makeEditorData(), manifest: { cursorEmbedded: false, cursorVisible: visible } };
+      expect(state.editorStateOptions!.recordingCursorVisible!()).toBe(visible);
+      wrapper.unmount();
+    },
+  );
 
   it('keeps preview invalidation, insertion readiness and cursor metadata connected after duration changes', async () => {
     const { api, wrapper } = await mountWithComposition();

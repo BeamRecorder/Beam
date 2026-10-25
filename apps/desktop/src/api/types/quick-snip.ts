@@ -1,7 +1,10 @@
 import type { EditorPreset } from './editor-preset';
 import type { ScreenRegion, ScreenRegionBounds } from './screen-region';
+import type { CaptureMode } from '@beam/engine/capture/capture-mode';
+import type { RecordingZoomMode } from './recording-zoom';
+import type { ProjectEditorData, ProjectEditorState } from './capture-api';
 
-export type QuickSnipMode = import('@beam/engine/capture/capture-mode').CaptureMode;
+export type QuickSnipMode = CaptureMode;
 
 export type QuickSnipDeviceKind = 'microphone' | 'camera' | 'systemAudio';
 
@@ -26,7 +29,7 @@ export type QuickSnipState =
 export interface QuickSnipConfiguration {
   captureTarget?: 'screen' | 'region' | 'window';
   sourceReady?: boolean;
-  zoomMode?: import('./recording-zoom').RecordingZoomMode;
+  zoomMode?: RecordingZoomMode;
   mode: QuickSnipMode;
   format: 'mp4' | 'webm';
   name: string;
@@ -73,8 +76,8 @@ export interface QuickSnipSnapshot {
 export interface QuickSnipRenderTask {
   id: string;
   configuration: QuickSnipConfiguration;
-  editorData: import('./capture-api').ProjectEditorData;
-  editorState: import('./capture-api').ProjectEditorState;
+  editorData: ProjectEditorData;
+  editorState: ProjectEditorState;
 }
 
 export type QuickSnipRenderReport =
@@ -83,7 +86,7 @@ export type QuickSnipRenderReport =
   | { id: string; type: 'failed'; error: string };
 
 export interface InstantCaptureOptions {
-  zoomMode?: import('./recording-zoom').RecordingZoomMode;
+  zoomMode?: RecordingZoomMode;
   countdownSeconds?: number;
   hideTaskbar?: boolean;
   hideDesktopIcons?: boolean;

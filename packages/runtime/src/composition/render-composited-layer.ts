@@ -5,11 +5,15 @@ import { disposeBlurEffect } from '@beam/runtime/composition/effects/blur-effect
 import { disposeGlassHighlights } from '../rendering/glass-highlight-render';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import type { LayerCompositing } from '@beam/engine/shared/layer-compositing-types';
+import { releaseTransitionLayer } from './transitions/transition-layer';
+import { disposeTransitionEffects } from './transitions/transition-effects';
 
 const surfaces = new WeakMap<Canvas2DContext, OffscreenCanvas>();
 
 /** Release the scratch surface when its owning renderer has finished. */
 export function releaseCompositedLayerSurface(ctx: Canvas2DContext) {
+  releaseTransitionLayer(ctx);
+  disposeTransitionEffects();
   disposeGlassHighlights(ctx);
   disposeAnimatedFrameRenderer();
   disposeBlurEffect(ctx);

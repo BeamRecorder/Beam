@@ -1,6 +1,13 @@
+import type { VisualClip } from '@beam/engine/shared/composition-types';
+import { createDefaultCursorPresentation } from '@beam/engine/capture/cursor-presentation';
+import { splitClip } from '@beam/engine/commands/clip-engine';
+import { setScreenCursorSettings, cursorImageKey } from '@beam/engine/capture/screen-cursor-settings';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CursorAssetDescriptor, CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import type { ExportRequest } from '@beam/encoder/export-types';
+import { cursorComposition } from '@beam/engine/capture/screen-cursor.test-support';
+import { setScreenCursorVisibility } from '@beam/engine/capture/screen-cursor';
+import { prepareExportCursorImages, requiredExportCursorAssets } from '@beam/encoder/mediabunny/export-cursor-images';
 
 const runtime = vi.hoisted(() => ({
   loadCursorImage: vi.fn(),
@@ -9,8 +16,6 @@ const runtime = vi.hoisted(() => ({
 vi.mock('@beam/runtime/cursor/cursor-image-loader', () => ({
   loadCursorImage: runtime.loadCursorImage,
 }));
-
-import { prepareExportCursorImages, requiredExportCursorAssets } from '@beam/encoder/mediabunny/export-cursor-images';
 
 const asset = (id: string, intrinsicSize = { width: 32, height: 32 }): CursorAssetDescriptor => ({
   id,
@@ -65,7 +70,7 @@ const request = (overrides: Record<string, unknown> = {}) =>
         color: '#ff00ff',
       },
       cursorPack: pack(),
-      composition: { assets: [], clips: [] },
+      composition: cursorComposition(),
     },
     ...overrides,
   }) as unknown as ExportRequest;
@@ -131,6 +136,21 @@ afterEach(() => {
 });
 
 describe('requiredExportCursorAssets', () => {
+  it('loads artwork for an explicitly visible clip even when the document cursor default is off', () => {
+    const value = request();
+    value.snapshot.cursorSettings.enabled = false;
+    value.snapshot.composition = setScreenCursorVisibility(value.snapshot.composition, ['screen'], true);
+    expect(requiredExportCursorAssets(value).map((entry) => entry.id)).toEqual(['pointer', 'default']);
+  });
+  it('skips artwork when every clip is off or no screen clip remains', async () => {
+    const value = request();
+    value.snapshot.composition = setScreenCursorVisibility(value.snapshot.composition, ['screen'], false);
+    expect(requiredExportCursorAssets(value)).toEqual([]);
+    expect(await prepareExportCursorImages(value)).toEqual([]);
+    value.snapshot.composition.clips = [];
+    expect(requiredExportCursorAssets(value)).toEqual([]);
+    expect(runtime.loadCursorImage).not.toHaveBeenCalled();
+  });
   it('deduplicates mapped automatic assets and falls back unknown roles to the pack default', () => {
     const assets = requiredExportCursorAssets(request());
 
@@ -251,5 +271,73 @@ describe('prepareExportCursorImages', () => {
     vi.stubGlobal('OffscreenCanvas', undefined);
     await expect(prepareExportCursorImages(request())).rejects.toThrow('OffscreenCanvas is required for export.');
     expect(runtime.loadCursorImage).not.toHaveBeenCalled();
+  });
+});
+
+describe('clip-specific export artwork', () => {
+  const styledRequest = () => {
+    const value = request();
+    value.snapshot.cursorSettings = { ...createDefaultCursorPresentation(), ...value.snapshot.cursorSettings };
+    value.snapshot.composition = splitClip(value.snapshot.composition, 'screen', 1000);
+    const right = value.snapshot.composition.clips.find((clip) => clip.timelineStartMs === 1000)!;
+    const { enabled: _, ...style } = value.snapshot.cursorSettings;
+    value.snapshot.composition = setScreenCursorSettings(value.snapshot.composition, ['screen'], {
+      ...style,
+      color: '#ff0000',
+      size: 20,
+    });
+    value.snapshot.composition = setScreenCursorSettings(value.snapshot.composition, [right.id], {
+      ...style,
+      color: '#0000ff',
+      size: 70,
+    });
+    return { value, right };
+  };
+  it('rasterizes separate colors and sizes for two segments using the same artwork', async () => {
+    installCanvasRuntime();
+    const { value } = styledRequest();
+    const images = await prepareExportCursorImages(value);
+    expect(images.map((image) => image.id)).toEqual([
+      cursorImageKey('pack:test', 'pointer', '#ff0000'),
+      cursorImageKey('pack:test', 'default', '#ff0000'),
+      cursorImageKey('pack:test', 'pointer', '#0000ff'),
+      cursorImageKey('pack:test', 'default', '#0000ff'),
+    ]);
+    expect(runtime.loadCursorImage.mock.calls.map((call) => call[4])).toEqual([
+      '#ff0000',
+      '#ff0000',
+      '#0000ff',
+      '#0000ff',
+    ]);
+    expect(images[3]!.bitmap.width).toBeGreaterThan(images[1]!.bitmap.width);
+  });
+  it('resolves imported packs per segment even when asset IDs overlap', async () => {
+    installCanvasRuntime();
+    const { value, right } = styledRequest();
+    const other = { ...pack(), id: 'pack:other' };
+    value.snapshot.cursorPacks = [other];
+    const style = (value.snapshot.composition.clips.find((clip) => clip.id === right.id) as VisualClip).cursorSettings!;
+    value.snapshot.composition = setScreenCursorSettings(value.snapshot.composition, [right.id], {
+      ...style,
+      selection: { ...style.selection, packId: other.id },
+    });
+    await prepareExportCursorImages(value);
+    expect(runtime.loadCursorImage.mock.calls.map((call) => call[0].id)).toEqual([
+      'pack:test',
+      'pack:test',
+      'pack:other',
+      'pack:other',
+    ]);
+  });
+  it('rejects a missing per-clip pack and skips it when that clip is hidden', () => {
+    const { value, right } = styledRequest();
+    const style = (value.snapshot.composition.clips.find((clip) => clip.id === right.id) as VisualClip).cursorSettings!;
+    value.snapshot.composition = setScreenCursorSettings(value.snapshot.composition, [right.id], {
+      ...style,
+      selection: { ...style.selection, packId: 'missing' },
+    });
+    expect(() => requiredExportCursorAssets(value)).toThrow('missing');
+    value.snapshot.composition = setScreenCursorVisibility(value.snapshot.composition, [right.id], false);
+    expect(() => requiredExportCursorAssets(value)).not.toThrow();
   });
 });

@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { Check } from '@lucide/vue';
+import Accordion from '~/ui/accordion/Accordion.vue';
+import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
+import { TRANSITION_CATEGORIES } from '@beam/engine/shared/transition-presets';
+import type { TransitionCard } from '@beam/engine/shared/transition-catalog-types';
+import { useTransitionGalleryState } from './useTransitionGalleryState';
+import { Check, RotateCcw } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
@@ -14,94 +19,37 @@ import {
 } from '@beam/engine/shared/clip-transitions';
 import { useTranslate } from '~/i18n/useTranslate';
 
-type Edge = 'entry' | 'exit';
-type PresetCard = {
-  id: string;
-  label: string;
-  detail: string;
-  preset: TransitionPreset | null;
-};
 const { t } = useTranslate('TransitionsPanel');
 const props = withDefaults(
   defineProps<{
     transitions: ClipTransitions;
     timelineDurationMs: number;
     domain?: 'visual' | 'audio';
-    initialEdge?: Edge;
+    initialEdge?: 'entry' | 'exit';
   }>(),
   { domain: 'visual', initialEdge: 'entry' },
 );
 const emit = defineEmits<{
-  (event: 'update', edge: Edge, value: ClipTransition | null): void;
+  (event: 'update', edge: 'entry' | 'exit', value: ClipTransition | null): void;
 }>();
-const edge = ref<Edge>(props.initialEdge);
+const edge = ref<'entry' | 'exit'>(props.initialEdge);
 const hovered = ref<string | null>(null);
 watch(
   () => props.initialEdge,
   (value) => (edge.value = value),
 );
 const current = computed(() => props.transitions[edge.value]);
-const oppositeEdge = computed<Edge>(() => (edge.value === 'entry' ? 'exit' : 'entry'));
+const oppositeEdge = computed<'entry' | 'exit'>(() => (edge.value === 'entry' ? 'exit' : 'entry'));
 const maxDuration = computed(() =>
   Math.max(1, Math.min(5_000, props.timelineDurationMs - (props.transitions[oppositeEdge.value]?.durationMs ?? 0))),
 );
-const cards = computed<PresetCard[]>(() => [
-  { id: 'none', label: t('none'), detail: t('noneDetail'), preset: null },
-  {
-    id: 'fade',
-    label: t('fade'),
-    detail: t('fadeDetail'),
-    preset: { kind: 'fade' },
-  },
-  ...(props.domain === 'audio'
-    ? []
-    : ([
-        {
-          id: 'slide-left',
-          label: t('slideLeft'),
-          detail: t('slideLeftDetail'),
-          preset: { kind: 'slide', direction: 'left' },
-        },
-        {
-          id: 'slide-right',
-          label: t('slideRight'),
-          detail: t('slideRightDetail'),
-          preset: { kind: 'slide', direction: 'right' },
-        },
-        {
-          id: 'slide-up',
-          label: t('slideUp'),
-          detail: t('slideUpDetail'),
-          preset: { kind: 'slide', direction: 'up' },
-        },
-        {
-          id: 'slide-down',
-          label: t('slideDown'),
-          detail: t('slideDownDetail'),
-          preset: { kind: 'slide', direction: 'down' },
-        },
-        {
-          id: 'zoom-in',
-          label: t('zoomIn'),
-          detail: t('zoomInDetail'),
-          preset: { kind: 'zoom', direction: 'in' },
-        },
-        {
-          id: 'zoom-out',
-          label: t('zoomOut'),
-          detail: t('zoomOutDetail'),
-          preset: { kind: 'zoom', direction: 'out' },
-        },
-        {
-          id: 'blur',
-          label: t('blur'),
-          detail: t('blurDetail'),
-          preset: { kind: 'blur' },
-        },
-      ] as PresetCard[])),
-]);
-const presetKey = (preset: TransitionPreset | null) => JSON.stringify(preset);
-const selected = (card: PresetCard) => presetKey(current.value?.preset ?? null) === presetKey(card.preset);
+const { category, setCategory } = useTransitionGalleryState();
+const fadeCard = TRANSITION_CATEGORIES[0].presets[0];
+const selected = (card: TransitionCard) =>
+  current.value?.preset.kind === card.preset.kind &&
+  ('direction' in card.preset
+    ? 'direction' in current.value.preset && current.value.preset.direction === card.preset.direction
+    : true);
 const choose = (preset: TransitionPreset | null) => {
   if (!preset) return emit('update', edge.value, null);
   const easingPower =
@@ -116,11 +64,11 @@ const choose = (preset: TransitionPreset | null) => {
 
 <template>
   <section class="transitions-panel" @pointerdown.stop @click.stop>
-    <ButtonGroup class="edge-selector" :columns="2" full size="sm" :aria-label="t('clipTransitions')">
+    <ButtonGroup class="edge-selector" :columns="2" full size="xs" :aria-label="t('clipTransitions')">
       <Button
         v-for="value in ['entry', 'exit'] as const"
         :key="value"
-        size="sm"
+        size="xs"
         :variant="edge === value ? 'secondary' : 'ghost'"
         :aria-pressed="edge === value"
         @click="edge = value"
@@ -128,9 +76,34 @@ const choose = (preset: TransitionPreset | null) => {
       >
     </ButtonGroup>
 
-    <div class="duration-control" :class="{ unavailable: !current }">
+    <div class="transition-choice-actions" role="radiogroup" :aria-label="t('presetLabel', { edge: t(edge) })">
+      <Button
+        :variant="current ? 'ghost' : 'secondary'"
+        size="xs"
+        block
+        :icon="current ? RotateCcw : Check"
+        data-transition-preset="none"
+        class="none-preset"
+        role="radio"
+        :aria-checked="!current"
+        @click="choose(null)"
+        >{{ t('none') }}</Button
+      >
+      <Button
+        v-if="domain === 'audio'"
+        :variant="selected(fadeCard) ? 'secondary' : 'ghost'"
+        size="xs"
+        class="audio-fade-preset"
+        data-transition-preset="fade"
+        role="radio"
+        :aria-checked="selected(fadeCard)"
+        @click="choose(fadeCard.preset)"
+        >{{ t('fade') }}</Button
+      >
+    </div>
+
+    <div v-if="current" class="duration-control">
       <BigSlider
-        v-if="current"
         class="duration-slider"
         :model-value="current.durationMs"
         :default-value="DEFAULT_TRANSITION_DURATION_MS"
@@ -141,7 +114,6 @@ const choose = (preset: TransitionPreset | null) => {
         :format-value="(value) => `${value} ms`"
         @update:model-value="emit('update', edge, { ...current, durationMs: $event })"
       />
-      <span v-else>{{ t('selectDuration') }}</span>
     </div>
 
     <BigSlider
@@ -157,30 +129,53 @@ const choose = (preset: TransitionPreset | null) => {
       @update:model-value="emit('update', edge, { ...current, easingPower: $event })"
     />
 
-    <div class="preset-gallery" role="radiogroup" :aria-label="t('presetLabel', { edge: t(edge) })">
-      <Button
-        v-for="card in cards"
-        :key="card.id"
-        variant="card"
-        class="preset-card"
-        :class="{ 'is-selected': selected(card) }"
-        role="radio"
-        :aria-checked="selected(card)"
-        @mouseenter="hovered = card.id"
-        @mouseleave="hovered = null"
-        @focus="hovered = card.id"
-        @blur="hovered = null"
-        @click="choose(card.preset)"
+    <ColorPicker
+      v-if="current && 'color' in current.preset"
+      :model-value="current.preset.color"
+      show-label
+      :label="t('color')"
+      @update:model-value="emit('update', edge, { ...current, preset: { ...current.preset, color: $event } })"
+    />
+    <div v-if="domain !== 'audio'" class="transition-categories">
+      <Accordion
+        v-for="group in TRANSITION_CATEGORIES"
+        :key="group.id"
+        appearance="inspector"
+        :data-transition-category="group.id"
+        :title="t(group.labelKey)"
+        :model-value="category === group.id"
+        @update:model-value="setCategory($event ? group.id : null)"
       >
-        <span class="preview-frame preset-card-media">
-          <TransitionPresetPreview :preset="card.preset" :active="hovered === card.id || selected(card)" />
-          <span v-if="selected(card)" class="selected-mark"><Check :size="11" stroke-width="2.5" /></span>
-        </span>
-        <span class="preset-card-info"
-          ><strong>{{ card.label }}</strong
-          ><small>{{ card.detail }}</small></span
-        >
-      </Button>
+        <div class="preset-gallery" role="radiogroup" :aria-label="t(group.labelKey)">
+          <Button
+            v-for="card in group.presets"
+            :key="card.id"
+            variant="card"
+            class="preset-card"
+            :data-transition-preset="card.id"
+            :class="{ 'is-selected': selected(card) }"
+            role="radio"
+            :aria-checked="selected(card)"
+            @mouseenter="hovered = card.id"
+            @mouseleave="hovered = null"
+            @focus="hovered = card.id"
+            @blur="hovered = null"
+            @click="choose(card.preset)"
+          >
+            <span class="preview-frame preset-card-media">
+              <TransitionPresetPreview
+                :preset="selected(card) ? current!.preset : card.preset"
+                :visible="category === group.id"
+                :active="category === group.id && (hovered === card.id || selected(card))"
+              />
+              <span v-if="selected(card)" class="selected-mark"><Check :size="11" stroke-width="2.5" /></span>
+            </span>
+            <span class="preset-card-info"
+              ><strong>{{ t(card.labelKey) }}</strong></span
+            >
+          </Button>
+        </div>
+      </Accordion>
     </div>
   </section>
 </template>
@@ -189,7 +184,7 @@ const choose = (preset: TransitionPreset | null) => {
 .transitions-panel {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   padding-top: 4px;
 }
 .edge-selector {
@@ -261,17 +256,12 @@ const choose = (preset: TransitionPreset | null) => {
   font-size: 9px;
   line-height: 1.1;
 }
-.duration-control {
-  min-height: 42px;
-}
-.duration-control.unavailable {
+.transition-choice-actions {
   display: flex;
-  align-items: center;
-  padding: 0 8px;
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--text-muted);
-  font-size: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  align-self: stretch;
 }
 @media (prefers-reduced-motion: reduce) {
   .preset-card {

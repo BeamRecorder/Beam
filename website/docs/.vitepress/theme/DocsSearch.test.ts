@@ -3,6 +3,8 @@ import { nextTick } from 'vue';
 import { createI18n } from 'vue-i18n';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import englishUiMessages from '../../../../apps/desktop/src/i18n/en/core.json';
+import DocsSearch from './DocsSearch.vue';
+import { getDocsCatalogs, getDocsSearchEntries } from '../content/docs-routes';
 
 const mocked = vi.hoisted(() => ({
   page: { value: { relativePath: 'index.md' } },
@@ -13,9 +15,6 @@ vi.mock('vitepress', () => ({
   useData: () => ({ page: mocked.page }),
   withBase: mocked.withBase,
 }));
-
-import DocsSearch from './DocsSearch.vue';
-import { getDocsCatalogs, getDocsSearchEntries } from '../content/docs-routes';
 
 const searchPayload = {
   featured: getDocsCatalogs('en').home.categories,

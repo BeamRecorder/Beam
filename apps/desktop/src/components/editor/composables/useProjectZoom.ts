@@ -1,3 +1,4 @@
+import { useZoomTrackProperties } from './useZoomTrackProperties';
 import type { ClipComposition } from '@beam/engine/shared/composition-types';
 import { applyRecordingZoomMode } from '@beam/engine/zoom/recording-zoom-preference';
 import type { RecordingZoomMode } from '@beam/engine/zoom/recording-zoom-types';
@@ -49,6 +50,7 @@ export function useProjectZoom(options: {
   });
   const selectedZoomId = ref<string | null>(null);
   const selectedZoomIds = ref<string[]>([]);
+  const propertyScope = useZoomTrackProperties(zoomElements, selectedZoomId, selectedZoomIds);
   const selectedZoom = computed(
     () => zoomElements.value.find((element) => element.id === selectedZoomId.value) ?? null,
   );
@@ -193,7 +195,9 @@ export function useProjectZoom(options: {
   );
   const updateZoom = (next: ZoomElement) => {
     if (next.startMs < 0 || next.endMs <= next.startMs) return;
-    zoomElements.value = zoomElements.value.map((element) => (element.id === next.id ? next : element));
+    zoomElements.value = propertyScope.synchronize(
+      zoomElements.value.map((element) => (element.id === next.id ? next : element)),
+    );
   };
   const previewZoomEdge = (id: string, edge: 'start' | 'end', timeMs: number) => {
     zoomElements.value = zoomElements.value.map((element) => {
@@ -249,6 +253,7 @@ export function useProjectZoom(options: {
   };
 
   return {
+    propertyScope,
     zoomElements,
     restoreZoomElements,
     generatedSessions,

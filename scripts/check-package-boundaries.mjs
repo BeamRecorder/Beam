@@ -3,6 +3,7 @@ import path from 'node:path';
 import { builtinModules } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { checkRepositoryTypeImports } from './check-type-imports.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const allowed = {
@@ -108,6 +109,7 @@ for (const application of ['desktop', 'cli']) {
   };
   checkSize(directory);
 }
+failures.push(...checkRepositoryTypeImports(root));
 if (failures.length) {
   process.stderr.write(failures.join('\n') + '\n');
   process.exitCode = 1;

@@ -6,7 +6,7 @@ const { randomUUID } = require('node:crypto');
 const test = require('node:test');
 const { createProjectStore } = require('../apps/desktop/electron/projects/project-store.cjs');
 
-function recording(t, cursorEmbedded) {
+function recording(t, cursorEmbedded, cursorVisible) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-recording-defaults-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const projectId = randomUUID();
@@ -36,11 +36,22 @@ function recording(t, cursorEmbedded) {
     tracks: [],
     completed: true,
     ...(cursorEmbedded === undefined ? {} : { cursorEmbedded }),
+    ...(cursorVisible === undefined ? {} : { cursorVisible }),
   };
   const projectFile = path.join(directory, 'project.json');
   fs.writeFileSync(projectFile, JSON.stringify(project));
   fs.writeFileSync(path.join(sessionDirectory, 'manifest.json'), JSON.stringify(manifest));
   return { store: createProjectStore(root), projectId, project, projectFile };
+}
+
+for (const visible of [false, true, undefined]) {
+  test(`forwards recording cursor visibility independently of embedded cursor (${visible})`, (t) => {
+    const { store, projectId } = recording(t, false, visible);
+    const data = store.editorData(projectId);
+    assert.equal(data.manifest.cursorVisible, visible);
+    assert.equal(data.manifest.cursorEmbedded, false);
+    assert.equal(store.editorState(projectId).isFresh, true);
+  });
 }
 
 for (const embedded of [true, false, undefined]) {

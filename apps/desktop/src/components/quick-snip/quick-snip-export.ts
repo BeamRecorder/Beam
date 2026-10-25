@@ -40,7 +40,8 @@ export function quickSnipExportRequest(
   }
   const defaults = normalizeEditorPreferenceDefaults(config.preset.settings.editor);
   const state = applyFreshPresentationDefaults(structuredClone(task.editorState), defaults);
-  if (editorData.manifest.cursorEmbedded) state.presentation.cursor.enabled = false;
+  if (editorData.manifest.cursorEmbedded || editorData.manifest.cursorVisible === false)
+    state.presentation.cursor.enabled = false;
   state.composition = synchronizeRecordingClips(state.composition, editorData, defaults);
   if (!state.composition.clips.some((clip) => clip.kind === 'screen' && clip.enabled && clip.timelineDurationMs > 0))
     throw new Error('Quick Snip has no active screen video to export.');

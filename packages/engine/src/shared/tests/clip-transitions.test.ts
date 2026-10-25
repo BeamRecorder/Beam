@@ -7,8 +7,10 @@ import {
   resolveCanvasTransitionState,
   normalizeClipTransitions,
   resolveClipTransitionState,
+  resolveTransitionState,
 } from '@beam/engine/shared/clip-transitions';
 import type { Clip, VisualClip } from '@beam/engine/shared/composition-types';
+import type { GpuTransitionPreset } from '@beam/engine/shared/transition-types';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import { activeClipsAt } from '@beam/engine/shared/timeline-mapping';
 
@@ -45,8 +47,8 @@ const poweredTransition = (transition: unknown, easingPower: number) => {
 };
 
 describe('clip transition evaluator', () => {
-  it('registers the four visual presets and exposes the shared default duration', () => {
-    expect(Object.keys(TRANSITION_DEFINITIONS)).toEqual(['fade', 'slide', 'zoom', 'blur']);
+  it('preserves the four legacy preset registrations and exposes the shared default duration', () => {
+    expect(Object.keys(TRANSITION_DEFINITIONS)).toEqual(expect.arrayContaining(['fade', 'slide', 'zoom', 'blur']));
     expect(DEFAULT_TRANSITION_DURATION_MS).toBe(500);
     expect(MAX_TRANSITION_DURATION_MS).toBe(5_000);
     expect(TRANSITION_DEFINITIONS.fade.domains).toEqual(['visual', 'audio']);
@@ -303,5 +305,72 @@ describe('clip transition evaluator', () => {
       scale: 1,
       blur: 0,
     });
+  });
+});
+
+describe('GPU transition timing', () => {
+  const preset: GpuTransitionPreset = { kind: 'circle-reveal' };
+  const transitions = {
+    entry: { preset, durationMs: 400 },
+    exit: { preset: { kind: 'rgb-split' } as GpuTransitionPreset, durationMs: 400 },
+  };
+  const identity = { opacity: 1, translateX: 0, translateY: 0, scale: 1, blur: 0 };
+
+  it('retains legacy identity fields and supplies eased GPU progress only during entry', () => {
+    expect(resolveTransitionState(transitions, 0, 1200)).toEqual({
+      ...identity,
+      effect: { preset, progress: 0, edge: 'entry' },
+    });
+    expect(resolveTransitionState(transitions, 200, 1200)).toEqual({
+      ...identity,
+      effect: { preset, progress: 0.875, edge: 'entry' },
+    });
+    expect(resolveTransitionState(transitions, 400, 1200)).toEqual(identity);
+    expect(resolveTransitionState(transitions, 600, 1200)).toEqual(identity);
+  });
+
+  it('uses remaining eased progress for exit without retaining an effect outside its active interval', () => {
+    expect(resolveTransitionState(transitions, 800, 1200)).toEqual(identity);
+    expect(resolveTransitionState(transitions, 1000, 1200)).toEqual({
+      ...identity,
+      effect: { preset: transitions.exit.preset, progress: 0.125, edge: 'exit' },
+    });
+    expect(resolveTransitionState(transitions, 1200, 1200)).toEqual({
+      ...identity,
+      effect: { preset: transitions.exit.preset, progress: 0, edge: 'exit' },
+    });
+    expect(resolveTransitionState(transitions, 1201, 1200)).toEqual(identity);
+    expect(resolveTransitionState(transitions, -1, 1200)).toEqual(identity);
+  });
+
+  it('supports authored easing and repeated reverse seeks without mutating the preset', () => {
+    const custom = {
+      entry: {
+        preset: { kind: 'dip-color', color: '#A1b2C3' } as GpuTransitionPreset,
+        durationMs: 400,
+        easingPower: 1,
+      },
+      exit: null,
+    };
+    const original = JSON.stringify(custom);
+    const first = resolveTransitionState(custom, 200, 1200);
+    resolveTransitionState(custom, 350, 1200);
+    expect(resolveTransitionState(custom, 200, 1200)).toEqual(first);
+    expect(first.effect).toEqual({ preset: custom.entry.preset, progress: 0.5, edge: 'entry' });
+    expect(JSON.stringify(custom)).toBe(original);
+  });
+
+  it('shares GPU timing between recording fragments and the full canvas while keeping legacy state exact', () => {
+    const clip = timedClip(transitions, 1200);
+    expect(resolveClipTransitionState(clip, 300)).toEqual(resolveCanvasTransitionState(transitions, 200, 1200));
+    expect(resolveCanvasTransitionState(transitions, 600, 1200)).toBeNull();
+    expect(resolveCanvasTransitionState(transitions, 1201, 1200)).toBeNull();
+    const legacy = resolveTransitionState(
+      { entry: { preset: { kind: 'blur' }, durationMs: 400 }, exit: null },
+      200,
+      1200,
+    );
+    expect(legacy).toEqual({ opacity: 0.875, translateX: 0, translateY: 0, scale: 1, blur: 1.5 });
+    expect(Object.hasOwn(legacy, 'effect')).toBe(false);
   });
 });

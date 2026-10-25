@@ -2,6 +2,8 @@ import { enableAutoUnmount, mount, flushPromises } from '@vue/test-utils';
 import { reactive } from 'vue';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import type { PreferenceSettings } from '~/api/types/capture-api';
+import HudSettingsWindow from './HudSettingsWindow.vue';
+import { setCurrentLocale } from '~/i18n';
 const mocks = vi.hoisted(() => ({
   preferences: { settings: null as PreferenceSettings | null, update: vi.fn() },
   capture: {
@@ -19,8 +21,6 @@ vi.mock('~/api/capture', () => ({ capture: mocks.capture }));
 vi.mock('~/stores/preferences', () => ({
   usePreferencesStore: () => mocks.preferences,
 }));
-import HudSettingsWindow from './HudSettingsWindow.vue';
-import { setCurrentLocale } from '~/i18n';
 enableAutoUnmount(afterEach);
 const preferences: PreferenceSettings = {
   schemaVersion: 3,

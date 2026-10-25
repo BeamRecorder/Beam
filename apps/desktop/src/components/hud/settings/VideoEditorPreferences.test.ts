@@ -1,6 +1,9 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import VideoEditorPreferences from './VideoEditorPreferences.vue';
+import { usePreferencesStore } from '~/stores/preferences';
+import { setCurrentLocale } from '~/i18n';
 const capture = vi.hoisted(() => ({
   platform: 'linux',
   canLaunchAtStartup: true,
@@ -10,9 +13,6 @@ const capture = vi.hoisted(() => ({
   openOnboarding: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-import VideoEditorPreferences from './VideoEditorPreferences.vue';
-import { usePreferencesStore } from '~/stores/preferences';
-import { setCurrentLocale } from '~/i18n';
 enableAutoUnmount(afterEach);
 const create = () => mount(VideoEditorPreferences);
 beforeEach(() => {

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CaptureProject } from '~/api/types/capture-api';
 import type { ProjectPickerProps } from './project-picker-types';
 import { captureMock as capture } from '../hud/tests/capture.mock.ts';
+import { useProjectPicker } from './useProjectPicker';
 vi.mock('~/api/capture', () => ({ capture }));
 const shadows = vi.hoisted(() => ({ top: false, bottom: false }));
 vi.mock('~/ui/scroll-shadow/useScrollShadow', () => ({
@@ -12,7 +13,6 @@ vi.mock('~/ui/scroll-shadow/useScrollShadow', () => ({
     hasBottomShadow: ref(shadows.bottom),
   }),
 }));
-import { useProjectPicker } from './useProjectPicker';
 enableAutoUnmount(afterEach);
 const first = {
   id: 'one',

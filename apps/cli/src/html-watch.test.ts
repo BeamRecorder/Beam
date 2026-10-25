@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EventEmitter } from 'node:events';
 import { watchHtml } from './html-watch';
+import type * as NodeFsModule from 'node:fs';
 
 const hooks = vi.hoisted(() => ({ watch: vi.fn(), client: vi.fn(), snapshot: vi.fn(), publish: vi.fn() }));
 vi.mock('node:fs', async (original) => {
-  const actual = await original<typeof import('node:fs')>();
+  const actual = await original<typeof NodeFsModule>();
   return { ...actual, default: { ...actual, watch: hooks.watch }, watch: hooks.watch };
 });
 vi.mock('./agent-client', () => ({ createAgentClient: hooks.client }));

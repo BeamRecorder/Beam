@@ -1,6 +1,9 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import AppearanceSettings from './AppearanceSettings.vue';
+import { useThemeStore } from '~/stores/theme';
+import { COLOR_PRESETS, DEFAULT_APPEARANCE, THEME_PRESETS } from '~/types/appearance';
 
 const capture = vi.hoisted(() => ({
   getPreferences: vi.fn(),
@@ -8,10 +11,6 @@ const capture = vi.hoisted(() => ({
   onPreferencesChanged: vi.fn(() => () => undefined),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-
-import AppearanceSettings from './AppearanceSettings.vue';
-import { useThemeStore } from '~/stores/theme';
-import { COLOR_PRESETS, DEFAULT_APPEARANCE, THEME_PRESETS } from '~/types/appearance';
 
 describe('AppearanceSettings.vue', () => {
   beforeEach(async () => {

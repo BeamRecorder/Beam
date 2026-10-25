@@ -1,6 +1,8 @@
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { enabledDocsLocales, getDocsCatalogs } from '../content/docs-routes';
+import DocsLanguageSelector from './DocsLanguageSelector.vue';
 
 const pageState = vi.hoisted(() => ({ value: { relativePath: 'recorder/interface.md' } }));
 
@@ -8,9 +10,6 @@ vi.mock('vitepress', () => ({
   useData: () => ({ page: pageState }),
   withBase: (path: string) => `/docs${path}`,
 }));
-
-import { enabledDocsLocales, getDocsCatalogs } from '../content/docs-routes';
-import DocsLanguageSelector from './DocsLanguageSelector.vue';
 
 const mounted: VueWrapper[] = [];
 

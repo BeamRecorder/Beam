@@ -6,6 +6,7 @@ export function validateZoomElement(zoom) {
     !zoom ||
     typeof zoom.id !== 'string' ||
     !zoom.id ||
+    (zoom.splitGroupId !== undefined && (typeof zoom.splitGroupId !== 'string' || !zoom.splitGroupId.trim())) ||
     typeof zoom.sessionId !== 'string' ||
     ![zoom.startMs, zoom.endMs, zoom.focus?.cx, zoom.focus?.cy].every(Number.isFinite) ||
     zoom.startMs < 0 ||

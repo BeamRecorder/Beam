@@ -1,10 +1,12 @@
+import { rippleZooms } from './timeline-ripple-zooms';
 import { clipEndMs, isVisualClip, type Clip, type ClipComposition } from '@beam/engine/shared/composition-types';
 import type { TimelineGap } from '@beam/engine/composition/timeline-lock-types';
 import { prepareTimelineSelectionMove } from '@beam/engine/composition/timeline-selection-move';
-import { selectionHasLocks } from '@beam/engine/composition/timeline-locks';
+import { lockedTimelineSelection } from '@beam/engine/composition/timeline-locks';
 import { recordingLinkedClipIds } from '@beam/engine/composition/recording-media-links';
 import type { TimelineRange, TimelineSelectionMoveResult } from '@beam/engine/composition/timeline-edit-types';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
+import type { TimelineGapRemovalPlan } from './timeline-gap-types';
 
 export const timelineGaps = (clips: readonly Clip[]): TimelineGap[] => {
   const ordered = [...clips].sort((a, b) => a.timelineStartMs - b.timelineStartMs);
@@ -42,17 +44,12 @@ const sharedRecordingGap = (composition: ClipComposition, lane: readonly Clip[],
   return { startMs, endMs };
 };
 
-export const removeTimelineGap = (
+export const planTimelineGapRemoval = (
   composition: ClipComposition,
   gap: TimelineGap,
   zoomElements: readonly ZoomElement[] = [],
-): TimelineSelectionMoveResult => {
-  const unchanged: TimelineSelectionMoveResult = {
-    composition,
-    zoomElements: [...zoomElements],
-    rippleRange: null,
-    deltaMs: 0,
-  };
+): TimelineGapRemovalPlan => {
+  const unchanged = { kind: 'invalid' } as const;
   const ids = new Set(gap.clipIds);
   const first = composition.clips.find((clip) => ids.has(clip.id));
   if (!first) return unchanged;
@@ -69,15 +66,30 @@ export const removeTimelineGap = (
     return unchanged;
   const range = sharedRecordingGap(composition, lane, gap);
   if (range.startMs >= range.endMs) return unchanged;
-  if (
-    composition.clips.some((clip) => clip.timelineStartMs < range.endMs && clipEndMs(clip) > range.startMs) ||
-    zoomElements.some((zoom) => zoom.startMs < range.endMs && zoom.endMs > range.startMs)
-  )
-    return unchanged;
+  const overlaps = composition.clips
+    .filter((clip) => clip.timelineStartMs < range.endMs && clipEndMs(clip) > range.startMs)
+    .map((clip) => clip.id);
+  if (overlaps.length) return { kind: 'overlap', blockers: { clipIds: overlaps, zoomIds: [] } };
   const clipIds = composition.clips.filter((clip) => clip.timelineStartMs >= range.endMs).map((clip) => clip.id);
-  const zoomIds = zoomElements.filter((zoom) => zoom.startMs >= range.endMs).map((zoom) => zoom.id);
-  if (selectionHasLocks(composition, zoomElements, { clipIds, zoomIds })) return unchanged;
+  const zoomIds = zoomElements.filter((zoom) => zoom.endMs > range.startMs).map((zoom) => zoom.id);
+  const locked = lockedTimelineSelection(composition, zoomElements, { clipIds, zoomIds });
+  if (locked.clipIds.length || locked.zoomIds.length) return { kind: 'locked', blockers: locked };
   const delta = range.startMs - range.endMs;
-  const result = prepareTimelineSelectionMove({ composition, zoomElements, selection: { clipIds, zoomIds } })(delta);
-  return result.deltaMs === delta ? { ...result, rippleRange: range } : unchanged;
+  const result = prepareTimelineSelectionMove({ composition, zoomElements: [], selection: { clipIds, zoomIds: [] } })(
+    delta,
+  );
+  return result.deltaMs === delta
+    ? { kind: 'removable', result: { ...result, zoomElements: rippleZooms(zoomElements, range), rippleRange: range } }
+    : unchanged;
+};
+
+export const removeTimelineGap = (
+  composition: ClipComposition,
+  gap: TimelineGap,
+  zoomElements: readonly ZoomElement[] = [],
+): TimelineSelectionMoveResult => {
+  const plan = planTimelineGapRemoval(composition, gap, zoomElements);
+  return plan.kind === 'removable'
+    ? plan.result
+    : { composition, zoomElements: [...zoomElements], rippleRange: null, deltaMs: 0 };
 };

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createVideoBackground } from '../src/video';
 const mocks = vi.hoisted(() => ({
   dispose: vi.fn(),
   canDecode: vi.fn(),
@@ -17,7 +18,6 @@ vi.mock('mediabunny', () => ({
     getCanvas = mocks.canvas;
   },
 }));
-import { createVideoBackground } from '../src/video';
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();

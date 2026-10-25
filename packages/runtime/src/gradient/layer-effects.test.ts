@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { createGradientEffect, createColorEffect, createDitheringEffect } from '@beam/engine';
 import type { Canvas2DContext } from '../canvas-types';
+import { drawWithLayerEffects, releaseLayerEffects } from './layer-effects';
 const gpu = vi.hoisted(() => ({ render: vi.fn(), dispose: vi.fn(), created: vi.fn() }));
 const dither = vi.hoisted(() => ({ render: vi.fn((..._args: unknown[]) => ({})), dispose: vi.fn(), created: vi.fn() }));
 vi.mock('./dithering-renderer', () => ({
@@ -21,7 +22,6 @@ vi.mock('./gradient-renderer', () => ({
     dispose = gpu.dispose;
   },
 }));
-import { drawWithLayerEffects, releaseLayerEffects } from './layer-effects';
 function context(canvas = { width: 100, height: 50 }) {
   let alpha = 1,
     operation = 'source-over';

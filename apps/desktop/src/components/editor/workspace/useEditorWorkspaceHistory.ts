@@ -5,6 +5,7 @@ import { createEditorHistorySnapshots } from '../composables/editor-history-snap
 import { useAudioNormalization } from '../composables/useAudioNormalization';
 import { useEditorVoiceover } from '../voiceover/useEditorVoiceover';
 import type { EditorWorkspaceState } from './workspace-types';
+import { bindTrackPropertyHistory } from '../composables/track-property-history';
 export function useEditorWorkspaceHistory(state: EditorWorkspaceState) {
   const {
     player,
@@ -36,6 +37,11 @@ export function useEditorWorkspaceHistory(state: EditorWorkspaceState) {
       outputCanvas: outputCanvas.value,
       selectedBackground: selectedBackground.value,
       backgroundBlurPercent: backgroundBlurPercent.value,
+      trackPropertyScopes: {
+        clipTracks: compositionState.clipTrackProperties.enabledTracks.value,
+        cursorTracks: state.cursorProperties.enabledTracks.value,
+        zoom: zoomState.propertyScope.enabled.value,
+      },
     });
   const {
     recordSnapshot,
@@ -45,6 +51,7 @@ export function useEditorWorkspaceHistory(state: EditorWorkspaceState) {
     canUndo,
     canRedo,
     lastAction: historyAction,
+    restoring,
   } = useEditorUndoRedo({
     immutable: true,
     onRestoreSnapshot: async (ownedSnapshot) => {
@@ -56,6 +63,9 @@ export function useEditorWorkspaceHistory(state: EditorWorkspaceState) {
       outputCanvas.value = snapshot.outputCanvas;
       selectedBackground.value = snapshot.selectedBackground;
       backgroundBlurPercent.value = snapshot.backgroundBlurPercent;
+      compositionState.clipTrackProperties.restore(snapshot.trackPropertyScopes?.clipTracks ?? []);
+      state.cursorProperties.restore(snapshot.trackPropertyScopes?.cursorTracks ?? []);
+      zoomState.propertyScope.restore(snapshot.trackPropertyScopes?.zoom ?? false);
       await editorState.saveNow();
     },
   });
@@ -111,6 +121,13 @@ export function useEditorWorkspaceHistory(state: EditorWorkspaceState) {
     if (!cancelled) commitNow(createEditorSnapshot());
   };
   let historyInitialized = false;
+  // A scope checkbox is a discrete edit: finish preceding drafts, then record the
+  // mode and all copied properties together, before a later slider edit can merge in.
+  bindTrackPropertyHistory(
+    [compositionState.clipTrackProperties, state.cursorProperties, zoomState.propertyScope],
+    () => commitNow(createEditorSnapshot()),
+    () => historyInitialized && !editorState.loading.value && !restoring.value,
+  );
   watch(
     editorState.loading,
     (loading) => {

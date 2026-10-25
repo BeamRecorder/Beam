@@ -8,6 +8,9 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromiumExecutable } from '../../../../../apps/cli/src/chromium-install';
 import { chromiumSettings } from '../../../../../apps/cli/src/chromium-settings';
+import type * as RenderMediaModule from '../../rendering/render-media';
+import type * as CompositionDefaultsModule from '@beam/engine/shared/composition-defaults';
+import type * as WebcamZoomModule from './webcam-zoom';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('webcam shadow pixels across zoom rendering surfaces', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temp: string;
@@ -62,13 +65,13 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('webcam shadow pixels acr
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const { drawWebcamClip } = (await load(
           '/packages/runtime/src/rendering/render-media.ts',
-        )) as typeof import('../../rendering/render-media');
+        )) as typeof RenderMediaModule;
         const { createDefaultClipAppearance } = (await load(
           '/packages/engine/src/shared/composition-defaults.ts',
-        )) as typeof import('@beam/engine/shared/composition-defaults');
+        )) as typeof CompositionDefaultsModule;
         const { computeWebcamLayout, webcamSettingsForAppearance } = (await load(
           '/packages/runtime/src/composition/webcam/webcam-zoom.ts',
-        )) as typeof import('./webcam-zoom');
+        )) as typeof WebcamZoomModule;
         const source = new OffscreenCanvas(160, 120);
         const sourceContext = source.getContext('2d')!;
         sourceContext.fillStyle = '#ffffff';

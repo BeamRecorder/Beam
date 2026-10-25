@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PreferenceSettings } from '~/api/types/capture-api';
 import type { ScreenRegion } from '~/api/types/screen-region';
 import type { RecordingConfiguration } from '../recorder/recording-types';
+import type { PrepareRecording } from '../recorder/capture-preparation-types';
+import { useHudCaptureMode } from '../useHudCaptureMode';
 
 const captureMock = vi.hoisted(() => ({
   onPreferencesChanged: vi.fn(),
@@ -22,9 +24,6 @@ const soundMock = vi.hoisted(() => vi.fn());
 vi.mock('~/utils/screenshot-sound', () => ({ playScreenshotSound: soundMock }));
 
 vi.mock('~/api/capture', () => ({ capture: captureMock }));
-
-import type { PrepareRecording } from '../recorder/capture-preparation-types';
-import { useHudCaptureMode } from '../useHudCaptureMode';
 
 const preferences = (options: { mode?: string; shortcut?: string } = {}): PreferenceSettings => ({
   schemaVersion: 3,

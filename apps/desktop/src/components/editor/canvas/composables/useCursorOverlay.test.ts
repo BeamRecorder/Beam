@@ -9,14 +9,13 @@ import { MACOS_CURSOR_PACK } from '../../properties/cursor/cursor-packs';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import * as cursorMotion from '@beam/engine/cursor/cursor-motion';
 import { cursorStateAt } from '@beam/engine/cursor/cursorPlayback';
+import { getRippleStyleColor, useCursorOverlay, type UseCursorOverlayOptions } from './useCursorOverlay';
 
 const getCursorImage = vi.hoisted(() => vi.fn());
 vi.mock('../../properties/cursor/useCursorReplacer', () => ({
   useCursorReplacer: () => ({ getCursorImage }),
   cursorTypeForKind: () => 'default',
 }));
-
-import { getRippleStyleColor, useCursorOverlay, type UseCursorOverlayOptions } from './useCursorOverlay';
 
 const second = (value: number) => value * 1_000_000_000;
 const effects = {

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AudioPlaybackScheduler } from '@beam/runtime/playback/audio-scheduler';
 import { MediaInputError, type AudioClip, type ClipComposition } from '@beam/runtime/shared/index';
+import type * as MediabunnyModule from 'mediabunny';
+import type * as IndexModule from '@beam/runtime/shared/index';
 
 const runtime = vi.hoisted(() => ({
   openMediaInput: vi.fn(),
@@ -9,7 +11,7 @@ const runtime = vi.hoisted(() => ({
 }));
 
 vi.mock('mediabunny', async () => {
-  const actual = await vi.importActual<typeof import('mediabunny')>('mediabunny');
+  const actual = await vi.importActual<typeof MediabunnyModule>('mediabunny');
   return {
     ...actual,
     AudioBufferSink: class AudioBufferSink {
@@ -23,7 +25,7 @@ vi.mock('mediabunny', async () => {
 });
 
 vi.mock('@beam/runtime/shared/index', async () => {
-  const actual = await vi.importActual<typeof import('@beam/runtime/shared/index')>('@beam/runtime/shared/index');
+  const actual = await vi.importActual<typeof IndexModule>('@beam/runtime/shared/index');
   return {
     ...actual,
     openMediaInput: runtime.openMediaInput,

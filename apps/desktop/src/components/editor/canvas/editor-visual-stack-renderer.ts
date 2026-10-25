@@ -1,3 +1,4 @@
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import type { CompositionSceneLayers } from '@beam/engine/composition/scene-layers';
 import type { useCompositionMedia } from './composables/useCompositionMedia';
 import type { RenderedVideoWindow } from './composables/useCameraZoom';
@@ -14,7 +15,7 @@ export function createEditorVisualStackRenderer(compositionMedia: ReturnType<typ
   const drawVisualStack = (
     context: CanvasRenderingContext2D,
     window: RenderedVideoWindow,
-    drawScreen: () => void,
+    drawScreen: (target: Canvas2DContext) => void,
     layers: CompositionSceneLayers,
   ) => {
     if (compositionMedia.drawVisualStack) {
@@ -22,7 +23,7 @@ export function createEditorVisualStackRenderer(compositionMedia: ReturnType<typ
       return;
     }
     for (const clip of layers.cameraVisuals) {
-      if (clip.kind === 'screen') drawScreen();
+      if (clip.kind === 'screen') drawScreen(context);
       else compositionMedia.drawComposition(context, window, clip.id);
     }
   };

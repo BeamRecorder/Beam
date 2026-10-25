@@ -1,19 +1,24 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import type { TransitionPreset } from '@beam/engine/shared/composition-types';
+import { drawCanvasTransitionFrame } from '@beam/runtime/composition/transitions/render-canvas-transition';
 import { resolveClipTransitionState } from '@beam/engine/shared/clip-transitions';
 
 const props = defineProps<{
   preset: TransitionPreset | null;
   active: boolean;
+  visible?: boolean;
 }>();
 const canvas = ref<HTMLCanvasElement | null>(null);
 let frame: number | null = null;
 let startedAt = 0;
+let resizeObserver: ResizeObserver | null = null;
+let source: OffscreenCanvas | null = null;
 let themeObserver: MutationObserver | null = null;
 
 const draw = (now = 0) => {
-  if (navigator.userAgent.includes('jsdom')) return;
+  frame = null;
+  if (navigator.userAgent.includes('jsdom') || props.visible === false) return;
   const element = canvas.value;
   const context = element?.getContext('2d');
   if (!element || !context) return;
@@ -36,6 +41,7 @@ const draw = (now = 0) => {
   const ratio = window.devicePixelRatio || 1;
   const width = element.clientWidth;
   const height = element.clientHeight;
+  if (width < 1 || height < 1) return;
   if (element.width !== width * ratio || element.height !== height * ratio) {
     element.width = width * ratio;
     element.height = height * ratio;
@@ -46,25 +52,34 @@ const draw = (now = 0) => {
   const color = (token: string, fallback: string) => theme.getPropertyValue(token).trim() || fallback;
   context.fillStyle = color('--color-bg-surface', '#1e1e1e');
   context.fillRect(0, 0, width, height);
-  context.save();
-  context.globalAlpha = state.opacity;
-  context.translate(state.translateX * width, state.translateY * height);
-  context.translate(width / 2, height / 2);
-  context.scale(state.scale, state.scale);
-  context.translate(-width / 2, -height / 2);
-  context.filter = state.blur ? `blur(${state.blur * 0.24}px)` : 'none';
+  source ??= new OffscreenCanvas(Math.round(width * ratio), Math.round(height * ratio));
+  if (source.width !== Math.round(width * ratio)) source.width = Math.round(width * ratio);
+  if (source.height !== Math.round(height * ratio)) source.height = Math.round(height * ratio);
+  const picture = source.getContext('2d');
+  if (!picture) throw new Error('Transition preview context is unavailable.');
+  picture.setTransform(ratio, 0, 0, ratio, 0, 0);
+  picture.clearRect(0, 0, width, height);
   const inset = 8;
-  context.fillStyle = color('--color-bg-element', '#292929');
-  context.roundRect(inset, inset, width - inset * 2, height - inset * 2, 5);
-  context.fill();
-  context.fillStyle = color('--color-primary', '#ff5a1f');
-  context.roundRect(inset + 6, inset + 6, width * 0.38, height - inset * 2 - 12, 3);
-  context.fill();
-  context.fillStyle = color('--text-primary', '#f5f5f5');
-  context.fillRect(width * 0.52, height * 0.34, width * 0.28, 3);
-  context.fillStyle = color('--text-muted', '#8a8a8a');
-  context.fillRect(width * 0.52, height * 0.5, width * 0.2, 3);
-  context.restore();
+  picture.fillStyle = color('--color-bg-element', '#292929');
+  picture.beginPath();
+  picture.roundRect(inset, inset, width - inset * 2, height - inset * 2, 5);
+  picture.fill();
+  picture.fillStyle = color('--text-secondary', '#a0a0a0');
+  picture.beginPath();
+  picture.roundRect(inset + 6, inset + 6, width * 0.38, height - inset * 2 - 12, 3);
+  picture.fill();
+  picture.fillStyle = color('--text-primary', '#f5f5f5');
+  picture.fillRect(width * 0.52, height * 0.34, width * 0.28, 3);
+  picture.fillStyle = color('--text-muted', '#8a8a8a');
+  picture.fillRect(width * 0.52, height * 0.5, width * 0.2, 3);
+  drawCanvasTransitionFrame(
+    context,
+    source,
+    { width, height },
+    { x: 0, y: 0, width, height },
+    state,
+    color('--color-bg-surface', '#1e1e1e'),
+  );
   if (props.active && !reduced) frame = requestAnimationFrame(draw);
 };
 
@@ -74,9 +89,11 @@ const sync = () => {
   startedAt = performance.now();
   draw(startedAt + (props.active ? 0 : 275));
 };
-watch(() => [props.active, props.preset], sync, { deep: true });
+watch(() => [props.active, props.preset, props.visible], sync, { deep: true });
 onMounted(() => {
   sync();
+  resizeObserver = new ResizeObserver(sync);
+  if (canvas.value) resizeObserver.observe(canvas.value);
   themeObserver = new MutationObserver(sync);
   themeObserver.observe(document.documentElement, {
     attributes: true,
@@ -86,6 +103,9 @@ onMounted(() => {
 onUnmounted(() => {
   if (frame !== null) cancelAnimationFrame(frame);
   themeObserver?.disconnect();
+  resizeObserver?.disconnect();
+  if (source) source.width = source.height = 1;
+  source = null;
 });
 </script>
 

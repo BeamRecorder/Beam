@@ -6,6 +6,7 @@ import { setCurrentLocale } from '~/i18n';
 import { type EditorExportSource } from '@beam/encoder/export-types';
 import { type CompositionSnapshot } from '@beam/engine/shared/render-document-types';
 import { usePreferencesStore } from '~/stores/preferences';
+import ExportDialog from '../ExportDialog.vue';
 
 const { mockJob, mockCapture } = vi.hoisted(() => ({
   mockJob: {
@@ -63,8 +64,6 @@ vi.mock('../useExportJob', async () => {
     }),
   };
 });
-
-import ExportDialog from '../ExportDialog.vue';
 
 const Dialog = {
   template: '<div class="dialog-stub"><slot /><slot name="footer" /></div>',

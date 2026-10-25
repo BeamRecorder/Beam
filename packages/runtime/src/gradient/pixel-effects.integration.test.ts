@@ -8,6 +8,8 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromiumExecutable } from '../../../../apps/cli/src/chromium-install';
 import { chromiumSettings } from '../../../../apps/cli/src/chromium-settings';
+import type * as PixelEffectBrowserHostModule from './tests/pixel-effect-browser-host';
+import type * as ScreenshotScrollBrowserHostModule from '../../../../apps/desktop/src/components/screenshot/tests/screenshot-scroll-browser-host';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('real pixel effect rendering', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temporary: string;
@@ -59,7 +61,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('real pixel effect render
     const results = await page.evaluate(async () => {
       const load = new Function('path', 'return import(path)') as (
         path: string,
-      ) => Promise<typeof import('./tests/pixel-effect-browser-host')>;
+      ) => Promise<typeof PixelEffectBrowserHostModule>;
       return (await load('/packages/runtime/src/gradient/tests/pixel-effect-browser-host.ts')).renderPixelEffects();
     });
     for (const result of results) {
@@ -74,7 +76,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('real pixel effect render
     const results = await page.evaluate(async () => {
       const load = new Function('path', 'return import(path)') as (
         path: string,
-      ) => Promise<typeof import('./tests/pixel-effect-browser-host')>;
+      ) => Promise<typeof PixelEffectBrowserHostModule>;
       return (await load('/packages/runtime/src/gradient/tests/pixel-effect-browser-host.ts')).exportPixelEffects();
     });
     for (const result of results) {
@@ -100,9 +102,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('real pixel effect render
           async ({ scale, tall }) => {
             const load = new Function('path', 'return import(path)') as (
               path: string,
-            ) => Promise<
-              typeof import('../../../../apps/desktop/src/components/screenshot/tests/screenshot-scroll-browser-host')
-            >;
+            ) => Promise<typeof ScreenshotScrollBrowserHostModule>;
             await (
               await load('/apps/desktop/src/components/screenshot/tests/screenshot-scroll-browser-host.ts')
             ).mountScrollPanels(scale, tall);

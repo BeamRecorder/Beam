@@ -2,6 +2,8 @@
 import { computed } from 'vue';
 import { formatTimelineTrimTime } from './timeline-clip-geometry';
 import type { TimelineTrimHandleProps } from './timeline-trim-handle-types';
+import { useTimelineOverlayContrast } from './timeline-overlay-contrast';
+const vTimelineOverlayContrast = useTimelineOverlayContrast();
 
 const props = defineProps<TimelineTrimHandleProps>();
 const emit = defineEmits<{ start: [event: PointerEvent] }>();
@@ -15,9 +17,13 @@ const active = computed(() => props.state?.edge === props.edge);
     :title="title"
     @pointerdown.stop="emit('start', $event)"
   >
-    <span v-if="active && state" class="trim-side-badge" :class="{ 'at-limit': state.atLimit }">{{
-      formatTimelineTrimTime(state.durationMs)
-    }}</span>
+    <span
+      v-if="active && state"
+      v-timeline-overlay-contrast
+      class="trim-side-badge timeline-overlay-contrast"
+      :class="{ 'at-limit': state.atLimit }"
+      >{{ formatTimelineTrimTime(state.durationMs) }}</span
+    >
   </span>
 </template>
 
@@ -61,8 +67,6 @@ const active = computed(() => props.state?.edge === props.edge);
   font-weight: 800;
   font-family: monospace;
   white-space: nowrap;
-  color: var(--color-timeline-media-label-text);
-  background: var(--color-timeline-media-label);
   pointer-events: none;
 }
 .start .trim-side-badge {
@@ -76,3 +80,4 @@ const active = computed(() => props.state?.edge === props.edge);
   background: var(--color-error);
 }
 </style>
+<style scoped src="./timeline-overlay-contrast.css"></style>

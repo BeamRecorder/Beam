@@ -2,9 +2,9 @@ import { defineComponent } from 'vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { stateFixture } from './export-test-support';
+import { useScreenshotExport } from '../useScreenshotExport';
 const engine = vi.hoisted(() => ({ encode: vi.fn(), dispose: vi.fn(), create: vi.fn() }));
 vi.mock('../screenshot-export-cache', () => ({ createScreenshotExporter: engine.create }));
-import { useScreenshotExport } from '../useScreenshotExport';
 const component = defineComponent({ setup: () => ({ encode: useScreenshotExport() }), template: '<div />' });
 beforeEach(() => {
   vi.clearAllMocks();

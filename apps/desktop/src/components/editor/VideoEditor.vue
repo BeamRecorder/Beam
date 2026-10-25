@@ -1,8 +1,5 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue';
-const EditorSettingsActions = import.meta.env.DEV
-  ? defineAsyncComponent(() => import('./properties/settings/EditorSettingsActions.vue'))
-  : null;
 import type { CaptureProject, ProjectEditorData } from '~/api/types/capture-api';
 import EditorWorkspace from './layout/EditorWorkspace.vue';
 import SidebarPanel from '~/components/editor/sidebar/SidebarPanel.vue';
@@ -13,6 +10,12 @@ import LinkedClipsDeleteDialog from '~/components/editor/LinkedClipsDeleteDialog
 import { Sparkles } from '@lucide/vue';
 import { useEditorWorkspace } from './workspace/useEditorWorkspace';
 import { provideEditorWorkspace } from './workspace/workspace-context';
+import VideoEditorProperties from './workspace/VideoEditorProperties.vue';
+import VideoEditorPreview from './workspace/VideoEditorPreview.vue';
+import VideoEditorTracks from './workspace/VideoEditorTracks.vue';
+const EditorSettingsActions = import.meta.env.DEV
+  ? defineAsyncComponent(() => import('./properties/settings/EditorSettingsActions.vue'))
+  : null;
 const props = withDefaults(
   defineProps<{
     project?: CaptureProject | null;
@@ -50,9 +53,6 @@ const {
   isResizingTimeline,
   startTimelineResize,
 } = workspace;
-import VideoEditorProperties from './workspace/VideoEditorProperties.vue';
-import VideoEditorPreview from './workspace/VideoEditorPreview.vue';
-import VideoEditorTracks from './workspace/VideoEditorTracks.vue';
 </script>
 <template>
   <div

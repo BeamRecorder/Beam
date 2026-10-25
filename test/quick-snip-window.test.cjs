@@ -17,7 +17,7 @@ for (const platform of ['linux', 'win32', 'darwin'])
     assert.equal(window.options.width, 616);
     assert.equal(window.options.height, 76);
     assert.equal(window.options.vibrancy, platform === 'darwin' ? 'under-window' : undefined);
-    assert.equal(window.backgroundMaterial, platform === 'win32' ? 'acrylic' : undefined);
+    assert.equal(window.backgroundMaterial, platform === 'win32' ? 'none' : undefined);
     f.crop.destroy();
   });
 

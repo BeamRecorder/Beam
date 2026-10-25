@@ -1,4 +1,5 @@
 import type { EngineMetricsSnapshot } from '@beam/runtime/performance/engine-metrics-types';
+import type { AudioSample } from 'mediabunny';
 export type VideoPipelineStats = {
   engine?: EngineMetricsSnapshot;
   elapsedMs: number;
@@ -13,7 +14,7 @@ export interface VideoFrameWriter {
   closeVideo(): void;
 }
 export interface AudioFrameWriter {
-  addAudio(sample: import('mediabunny').AudioSample): Promise<void>;
+  addAudio(sample: AudioSample): Promise<void>;
   closeAudio(): void;
 }
 export interface ExportFrameRange {

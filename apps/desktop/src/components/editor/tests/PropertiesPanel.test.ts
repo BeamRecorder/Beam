@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { computed, nextTick, ref } from 'vue';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createDefaultCursorAutoHideSettings,
   createDefaultCursorClickEffects,
@@ -25,11 +25,33 @@ import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import type { ElementEditorContext } from '../elements/element-editor-types';
 import { ELEMENT_EDITOR } from '../elements/useElementEditor';
 import { createElementText } from '@beam/engine/shared/element-text';
+import PropertiesPanel from '../properties/PropertiesPanel.vue';
+import { customCursorKey } from '../properties/cursor/custom-cursor-context';
+import RealClipPropertiesPanel from '../properties/clip/ClipPropertiesPanel.vue';
+import type { PreferencePatch } from '../../../api/types/capture-api';
 
 vi.mock('../../../api/capture', () => ({ capture: {} }));
-
-import PropertiesPanel from '../properties/PropertiesPanel.vue';
-import RealClipPropertiesPanel from '../properties/clip/ClipPropertiesPanel.vue';
+const transitionPreferences = vi.hoisted(() => ({
+  settings: { extras: {} as Record<string, unknown> },
+  update: vi.fn(),
+}));
+vi.mock('~/stores/preferences', () => ({ usePreferencesStore: () => transitionPreferences }));
+beforeEach(() => {
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+  transitionPreferences.settings.extras = { 'editor.transitionCategory': 'basics' };
+  transitionPreferences.update.mockReset().mockImplementation(async (patch: PreferencePatch) => {
+    Object.assign(transitionPreferences.settings.extras, patch.extras);
+    return transitionPreferences.settings;
+  });
+});
+afterEach(() => vi.unstubAllGlobals());
 
 const CanvasPanel = {
   props: ['showBackground', 'selectedBackground'],
@@ -401,6 +423,30 @@ const mountTransitionPropertiesPanel = (overrides: Record<string, unknown> = {},
   });
 
 describe('PropertiesPanel', () => {
+  it('keeps cursor visibility exclusively in the Cursor inspector while retaining the selected recording', async () => {
+    const enabled = ref(true);
+    const wrapper = mount(PropertiesPanel, {
+      props: {
+        ...baseProps,
+        activeTab: 'clip',
+        selectedClip: transitionScreenClip,
+        composition: transitionComposition,
+      },
+      global: {
+        ...global,
+        stubs: { ...global.stubs, ClipPropertiesPanel: false },
+        provide: { [customCursorKey as symbol]: enabled },
+      },
+    });
+    expect(wrapper.find('.custom-cursor-toggle').exists()).toBe(false);
+    expect(wrapper.find('.clip-properties').exists()).toBe(true);
+    await wrapper.setProps({ activeTab: 'cursor' });
+    expect(wrapper.get('.custom-cursor-toggle [role="switch"]').attributes('aria-checked')).toBe('true');
+    await wrapper.get('.custom-cursor-toggle [role="switch"]').trigger('click');
+    expect(enabled.value).toBe(false);
+    wrapper.unmount();
+  });
+
   it.each(['screen', 'video', 'image'] as const)(
     'shows six non-split layouts and seven framings for %s clips',
     (kind) => {
@@ -473,7 +519,7 @@ describe('PropertiesPanel', () => {
     expect(wrapper.get('.panel-title').text()).toBe('Canvas transitions');
     expect(wrapper.find('.transitions-panel').exists()).toBe(true);
 
-    await wrapper.findAll('.preset-card')[1]!.trigger('click');
+    await wrapper.get('[data-transition-preset="fade"]').trigger('click');
     expect(wrapper.emitted('update:canvas')).toContainEqual([
       expect.objectContaining({
         transitions: {
@@ -506,7 +552,7 @@ describe('PropertiesPanel', () => {
 
     await edgeButtons[1]!.trigger('click');
     expect(edgeButtons[1]!.attributes('aria-pressed')).toBe('true');
-    await wrapper.findAll('.preset-card')[1]!.trigger('click');
+    await wrapper.get('[data-transition-preset="fade"]').trigger('click');
 
     expect(wrapper.emitted('update:canvas')).toContainEqual([
       expect.objectContaining({
@@ -718,10 +764,10 @@ describe('PropertiesPanel', () => {
 
     await buttons[1]!.trigger('click');
     expect(wrapper.get('.panel-title').text()).toBe('Audio Transitions');
-    expect(wrapper.findAll('.preset-card-info strong').map((label) => label.text())).toEqual(['None', 'Fade']);
-    expect(wrapper.get('.duration-control').text()).toContain('Select a transition');
+    expect(wrapper.findAll('[data-transition-preset]').map((label) => label.text())).toEqual(['None', 'Fade']);
+    expect(wrapper.find('.duration-control').exists()).toBe(false);
 
-    await wrapper.findAll('.preset-card')[1]!.trigger('click');
+    await wrapper.get('[data-transition-preset="fade"]').trigger('click');
     expect(wrapper.emitted('update:composition')).toContainEqual([
       expect.objectContaining({
         clips: [

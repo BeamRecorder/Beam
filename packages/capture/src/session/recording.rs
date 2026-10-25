@@ -97,6 +97,7 @@ impl RecordingSession {
             completed: false,
             cursor_embedded: request.show_real_cursor
                 || matches!(request.cursor, crate::model::CursorSelection::Embedded),
+            cursor_visible: Some(request.show_real_cursor),
         };
         let writer = ManifestWriter::new(layout.clone());
         writer.checkpoint(&manifest)?;

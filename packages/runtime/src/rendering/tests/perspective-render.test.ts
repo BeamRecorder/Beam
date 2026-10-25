@@ -1,4 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
+import { renderPerspectiveLayers, renderPerspectiveSamples, disposePerspectiveRenderer } from '../perspective-render';
+import type { Canvas2DContext } from '../../canvas-types';
 const gpu = vi.hoisted(() => ({ constructed: vi.fn(), render: vi.fn(), renderSamples: vi.fn(), dispose: vi.fn() }));
 vi.mock('@beam/runtime/zoom/perspective-scene-compositor', () => ({
   PerspectiveSceneCompositor: class {
@@ -10,8 +12,6 @@ vi.mock('@beam/runtime/zoom/perspective-scene-compositor', () => ({
     dispose = gpu.dispose;
   },
 }));
-import { renderPerspectiveLayers, renderPerspectiveSamples, disposePerspectiveRenderer } from '../perspective-render';
-import type { Canvas2DContext } from '../../canvas-types';
 afterEach(() => {
   disposePerspectiveRenderer();
   vi.resetAllMocks();

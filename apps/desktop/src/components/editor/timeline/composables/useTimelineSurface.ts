@@ -1,7 +1,9 @@
 import type { TimelineFrameQueue } from '@beam/runtime/timeline/frame-queue-types';
 import { onMounted, onScopeDispose, provide, ref } from 'vue';
 import type { Ref } from 'vue';
-import { paintTimelineCanvas } from '@beam/runtime/timeline/timeline-canvas-paint';
+import { paintTimelineBodies, paintTimelineCanvas } from '@beam/runtime/timeline/timeline-canvas-paint';
+import { createTimelineOverlayContrast } from '../timeline-overlay-contrast';
+import { TIMELINE_OVERLAY_CONTRAST_KEY } from '../timeline-overlay-contrast-types';
 import { engineMetrics } from '@beam/runtime/performance/engine-metrics';
 import { TIMELINE_SURFACE_KEY } from '../timeline-surface-types';
 import type { TimelineSurface, TimelineSurfaceLane } from '../timeline-surface-types';
@@ -21,6 +23,8 @@ export function useTimelineSurface(
     theme: MutationObserver | null = null;
   let palette: ReturnType<typeof timelineSurfacePalette> | undefined;
   const context = () => canvas.value?.getContext('2d') ?? null;
+  const contrast = createTimelineOverlayContrast(() => invalidate());
+  provide(TIMELINE_OVERLAY_CONTRAST_KEY, contrast);
   const draw = () => {
     frame = null;
     const element = canvas.value,
@@ -59,6 +63,8 @@ export function useTimelineSurface(
             })
             .map(({ lane }) => lane)
         : lanes;
+      const probe = contrast.prepare(element, bounds, width, height);
+      const foreground: (() => void)[] = [];
       for (const lane of paintedLanes) {
         const rect = lane.element.getBoundingClientRect();
         const x = (rect.left - bounds.left) / scale,
@@ -68,27 +74,42 @@ export function useTimelineSurface(
         const left = Math.max(0, -x),
           paintedWidth = Math.min(lane.props.width - left, width - Math.max(0, x));
         if (paintedWidth <= 0 || laneHeight <= 0) continue;
-        ctx.save();
-        ctx.translate(Math.max(0, x), y);
-        ctx.beginPath();
-        ctx.rect(0, 0, paintedWidth, laneHeight);
-        ctx.clip();
-        paintTimelineCanvas(
-          ctx,
-          lane.props.items,
-          {
-            durationMs: lane.props.durationMs,
-            width: lane.props.width,
-            left,
-            viewportWidth: paintedWidth,
-            height: laneHeight,
-          },
-          palette!,
-          lane.props.artworks,
-          lane.marquee(),
-        );
-        ctx.restore();
+        const geometry = {
+          durationMs: lane.props.durationMs,
+          width: lane.props.width,
+          left,
+          viewportWidth: paintedWidth,
+          height: laneHeight,
+        };
+        if (probe) {
+          probe.save();
+          probe.translate(Math.max(0, x), y);
+          probe.beginPath();
+          probe.rect(0, 0, paintedWidth, laneHeight);
+          probe.clip();
+          paintTimelineBodies(probe, lane.props.items, geometry, palette!, lane.props.artworks);
+          probe.restore();
+        }
+        foreground.push(() => {
+          ctx.save();
+          ctx.translate(Math.max(0, x), y);
+          ctx.beginPath();
+          ctx.rect(0, 0, paintedWidth, laneHeight);
+          ctx.clip();
+          paintTimelineCanvas(
+            ctx,
+            lane.props.items,
+            geometry,
+            palette!,
+            lane.props.artworks,
+            lane.marquee(),
+            (labelX, labelY) => contrast.at((Math.max(0, x) + labelX) * scale, (y + labelY) * scale),
+          );
+          ctx.restore();
+        });
       }
+      contrast.capture();
+      for (const paint of foreground) paint();
     });
     // Native sticky placement retains coverage during compositor scrolling, before the next JS paint.
     element.style.width = `${width}px`;
@@ -137,6 +158,7 @@ export function useTimelineSurface(
   });
   onScopeDispose(() => {
     disposed = true;
+    contrast.dispose();
     if (frame !== null) frameQueue.cancel(frame);
     resize?.disconnect();
     theme?.disconnect();

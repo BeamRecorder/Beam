@@ -7,9 +7,9 @@ import type {
   SnapshotSource,
   SnapshotOwnership,
 } from './editor-history-types';
+import { createSnapshotHistory } from '@beam/engine/history/snapshot-history';
 export type { EditorStateSnapshot, HistoryAction, HistoryActionType } from './editor-history-types';
 
-import { createSnapshotHistory } from '@beam/engine/history/snapshot-history';
 export { MAX_HISTORY_DEPTH } from '@beam/engine/history/snapshot-history';
 
 export function useEditorUndoRedo<T extends object = EditorStateSnapshot>(options: EditorHistoryOptions<T>) {

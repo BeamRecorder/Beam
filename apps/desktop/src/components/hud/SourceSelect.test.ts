@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CapturePreview, CaptureSource } from '../../api/types/capture-api';
+import SourceSelect from './SourceSelect.vue';
 
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: () => ({
@@ -17,8 +18,6 @@ vi.mock('~/i18n/useTranslate', () => ({
     },
   }),
 }));
-
-import SourceSelect from './SourceSelect.vue';
 
 const mountSourceSelect = (props: {
   modelValue: string | null;

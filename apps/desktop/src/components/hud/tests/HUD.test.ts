@@ -4,6 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { captureMock as capture } from './capture.mock';
 import { browserCameraMock } from './camera-recorder.mock';
 import { browserMicrophoneMock } from './microphone-recorder.mock';
+import HUD from '../HUD.vue';
+import Select from '~/ui/select/Select.vue';
+import HudIssuesPopover from '../HudIssuesPopover.vue';
 
 vi.mock('../../../api/capture', async () => ({
   capture: (await import('./capture.mock')).captureMock,
@@ -16,9 +19,6 @@ vi.mock('../audio/useAudioLevelMeter', () => ({
 vi.mock('../recorder/useNativeSystemAudioPreview', () => ({
   useNativeSystemAudioPreview: () => ({ level: ref(0) }),
 }));
-import HUD from '../HUD.vue';
-import Select from '~/ui/select/Select.vue';
-import HudIssuesPopover from '../HudIssuesPopover.vue';
 
 const screen = {
   id: 'native:display:1',

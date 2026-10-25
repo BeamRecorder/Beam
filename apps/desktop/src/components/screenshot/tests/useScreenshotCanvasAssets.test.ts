@@ -7,12 +7,12 @@ import { screenshotShape } from '../screenshot-state';
 import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 import { createScreenshotCursor } from '@beam/runtime/screenshot/screenshot-cursors';
 import { BUILTIN_CURSOR_PACKS } from '../../editor/properties/cursor/cursor-packs';
+import { useScreenshotCanvasAssets } from '../useScreenshotCanvasAssets';
 const dependencies = vi.hoisted(() => ({ load: vi.fn(), record: vi.fn() }));
 vi.mock('../screenshot-render', () => ({ loadScreenshotAssets: dependencies.load }));
 vi.mock('../loading/screenshot-startup-context', () => ({
   injectScreenshotStartup: () => ({ record: dependencies.record }),
 }));
-import { useScreenshotCanvasAssets } from '../useScreenshotCanvasAssets';
 
 let wrappers: ReturnType<typeof mount>[];
 const setup = (changes: Partial<ScreenshotCanvasProps> = {}) => {

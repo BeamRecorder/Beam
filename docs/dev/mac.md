@@ -34,6 +34,8 @@ Stop the session with `Ctrl+C`. See the [session guide](CONTRIBUTING.md#4-instal
 
 On first launch, grant Beam the macOS permissions it requests for Screen Recording, Microphone, and Camera when those sources are enabled.
 
+Automatic zooms also need Input Monitoring access to record mouse clicks, including trackpad taps. Beam checks this before recording; enable Beam in System Settings → Privacy & Security → Input Monitoring when prompted. Authorizing clicks does not enable optional keyboard shortcut recording.
+
 `bun run electron:dev` checks Cargo before starting. When Cargo is available, it rebuilds the engine and stops if compilation fails. Without Cargo, it looks for the exact application version and Apple Silicon architecture in [`packages/native-recorder`](../../packages/native-recorder/README.md). If the engine is missing in an interactive terminal, confirm the verified download with `Y`; answer `N` to stop. A non-interactive process never prompts and downloads only when `BEAM_DOWNLOAD_CAPTURE_ENGINE=1` is set explicitly.
 
 ## Build a macOS executable

@@ -1,3 +1,8 @@
+import {ref,shallowRef} from 'vue';
+import {useRecordingCursorProperties} from '../../../composables/useRecordingCursorProperties';
+import {cursorPropertyScopeKey} from '../cursor-property-types';
+import {createDefaultCursorPresentation} from '@beam/engine/capture/cursor-presentation';
+import {trackPropertyComposition} from '@beam/engine/composition/clip-track-properties.test-support';
 import { createPinia, setActivePinia } from 'pinia';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -433,4 +438,13 @@ describe('CursorPanel', () => {
     await flushPromises();
     expect(useToastStore().toasts.at(-1)).toMatchObject({ type: 'error', message: 'Invalid cursor pack' });
   });
+});
+
+it('offers a real apply-to-all cursor scope alongside the cursor settings',async()=>{
+ const composition=shallowRef(trackPropertyComposition());
+ const scope=useRecordingCursorProperties({composition,selectedId:ref('first'),selectedIds:ref(['first']),time:ref(0),defaults:ref(createDefaultCursorPresentation())});
+ const wrapper=mount(CursorPanel,{props:baseProps(),global:{...global,provide:{[cursorPropertyScopeKey as symbol]:scope}}});
+ expect(wrapper.get('[role="checkbox"]').attributes('aria-checked')).toBe('false');
+ await wrapper.get('[role="checkbox"]').trigger('click');expect(scope.enabled.value).toBe(true);
+ expect(wrapper.text()).toContain('unlocked recordings');wrapper.unmount();
 });

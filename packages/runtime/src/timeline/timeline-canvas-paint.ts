@@ -2,35 +2,24 @@ import type {
   TimelineCanvasItem,
   TimelineCanvasPalette,
   TimelineCanvasMarquee,
+  TimelineCanvasGeometry,
+  TimelineLabelContrast,
 } from '@beam/runtime/timeline/timeline-canvas-types';
 import type { TimelineCanvasArtwork } from '@beam/runtime/timeline/timeline-canvas-types';
 import { paintTimelineArtwork } from './timeline-canvas-artwork';
 import { paintTimelineTransition } from './timeline-canvas-transition';
+import { timelineCanvasSpan } from './timeline-canvas-layout';
+import { paintTimelineLabels } from './timeline-canvas-labels';
 const emptyArtworks: ReadonlyMap<string, TimelineCanvasArtwork> = new Map();
 
-/** Geometry is in layout pixels, never the CSS-scaled screenshot coordinates. */
-export function timelineCanvasSpan(startMs: number, durationMs: number, duration: number, width: number, left: number) {
-  if (![startMs, durationMs, duration, width, left].every(Number.isFinite) || duration <= 0 || width <= 0)
-    throw new RangeError('Invalid timeline canvas geometry.');
-  return {
-    x: (startMs / duration) * width - left,
-    width: Math.max(14, (durationMs / duration) * width),
-  };
-}
+export { timelineCanvasSpan } from './timeline-canvas-layout';
 
-export function paintTimelineCanvas(
+export function paintTimelineBodies(
   ctx: CanvasRenderingContext2D,
   items: readonly TimelineCanvasItem[],
-  geometry: {
-    durationMs: number;
-    width: number;
-    left: number;
-    viewportWidth: number;
-    height: number;
-  },
+  geometry: TimelineCanvasGeometry,
   palette: TimelineCanvasPalette,
   artworks: ReadonlyMap<string, TimelineCanvasArtwork> = emptyArtworks,
-  marquee?: TimelineCanvasMarquee,
 ): void {
   ctx.clearRect(0, 0, geometry.viewportWidth, geometry.height);
   ctx.font = '500 9px system-ui';
@@ -122,21 +111,6 @@ export function paintTimelineCanvas(
         palette,
       );
     }
-    const label = item.label ?? ((clip && 'text' in clip ? clip.text?.content.trim() : '') || clip?.name || '');
-    const icons = item.labelInset ?? (clip?.locked || zoom?.locked ? 15 : 0) + (kind === 'blur' ? 15 : 0);
-    const labelX = span.x + 8 + icons;
-    const labelWidth = Math.max(1, Math.min(span.x + span.width - labelX - 8, geometry.viewportWidth - labelX - 8));
-    if (artwork && ['thumbnails', 'shape', 'image', 'color'].includes(artwork.kind)) {
-      ctx.fillStyle = palette.labelBackground;
-      ctx.fillRect(labelX - 3, 3, Math.min(labelWidth + 6, ctx.measureText(label).width + 8), 13);
-    }
-    ctx.fillStyle = artwork ? palette.labelText : canvasTransition ? palette.text : palette.itemText;
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(labelX, y, labelWidth, height);
-    ctx.clip();
-    ctx.fillText(label, labelX - (marquee?.id === id ? marquee.offset : 0), artwork ? 9 : y + height / 2);
-    ctx.restore();
     ctx.beginPath();
     const lineWidth = item.selected ? 2 : 1;
     const inset = lineWidth / 2;
@@ -153,4 +127,18 @@ export function paintTimelineCanvas(
     ctx.stroke();
     ctx.restore();
   }
+}
+
+/** Complete portable painter; the desktop shares a body pass before resolving local overlay contrast. */
+export function paintTimelineCanvas(
+  ctx: CanvasRenderingContext2D,
+  items: readonly TimelineCanvasItem[],
+  geometry: TimelineCanvasGeometry,
+  palette: TimelineCanvasPalette,
+  artworks: ReadonlyMap<string, TimelineCanvasArtwork> = emptyArtworks,
+  marquee?: TimelineCanvasMarquee,
+  contrast?: TimelineLabelContrast,
+): void {
+  paintTimelineBodies(ctx, items, geometry, palette, artworks);
+  paintTimelineLabels(ctx, items, geometry, palette, artworks, marquee, contrast);
 }

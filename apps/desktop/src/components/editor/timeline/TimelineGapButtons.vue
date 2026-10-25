@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Trash2 } from '@lucide/vue';
+import { Trash2, Lock } from '@lucide/vue';
 import Button from '~/components/ui/button/Button.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { Clip, ClipComposition } from '@beam/engine/shared/composition-types';
-import { timelineGaps, removeTimelineGap } from '@beam/engine/composition/timeline-gaps';
+import { timelineGaps, planTimelineGapRemoval } from '@beam/engine/composition/timeline-gaps';
 import type { TimelineGap } from '@beam/engine/composition/timeline-lock-types';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
-import { timelineSpanStyle } from './timeline-clip-geometry';
+import { timelineSpanStyle, formatTimelineTrimTime } from './timeline-clip-geometry';
 import { useTimelineVirtualWindow } from './composables/useTimelineVirtualization';
 import { createTimelineRangeIndex } from './composables/timeline-range-index';
 const props = defineProps<{
@@ -28,30 +28,48 @@ const gapsAt = computed(() =>
   })),
 );
 const gaps = computed(() =>
-  gapsAt.value(window?.timeRange.value.start ?? 0, window?.timeRange.value.end ?? props.durationMs).map((gap) => ({
-    gap,
-    removable: removeTimelineGap(props.composition, gap, props.zoomElements).composition !== props.composition,
-  })),
+  gapsAt.value(window?.timeRange.value.start ?? 0, window?.timeRange.value.end ?? props.durationMs).flatMap((gap) => {
+    const plan = planTimelineGapRemoval(props.composition, gap, props.zoomElements);
+    if (plan.kind === 'invalid' || plan.kind === 'overlap') return [];
+    const names =
+      plan.kind === 'locked'
+        ? [
+            ...props.composition.clips
+              .filter((clip) => plan.blockers.clipIds.includes(clip.id))
+              .map((clip) => `${clip.name} (${formatTimelineTrimTime(clip.timelineStartMs)})`),
+            ...(props.zoomElements ?? [])
+              .filter((zoom) => plan.blockers.zoomIds.includes(zoom.id))
+              .map((zoom) => `${t('zoomTitle', { level: zoom.depth })} (${formatTimelineTrimTime(zoom.startMs)})`),
+          ]
+        : [];
+    return [
+      {
+        gap,
+        locked: plan.kind === 'locked',
+        label: names.length ? t('lockedMessage', { name: names.join(', ') }) : t('removeGap'),
+      },
+    ];
+  }),
 );
 </script>
 <template>
   <template v-if="!moving">
     <div
-      v-for="{ gap, removable } in gaps"
+      v-for="{ gap, locked, label } in gaps"
       :key="gap.startMs"
       class="timeline-gap"
       :style="timelineSpanStyle(gap.startMs, gap.endMs - gap.startMs, durationMs / 1000, widthPx)"
     >
-      <div class="gap-action" @pointerdown.stop @click.stop>
+      <div class="gap-action" :class="{ locked }" @pointerdown.stop @click.stop>
         <Button
           variant="ghost"
           size="xs"
           icon-only
           :style="{ color: 'inherit' }"
-          :icon="Trash2"
-          :disabled="!removable"
-          :tooltip="removable ? t('removeGap') : t('removeGapBlocked')"
-          :aria-label="removable ? t('removeGap') : t('removeGapBlocked')"
+          :icon="locked ? Lock : Trash2"
+          :disabled="locked"
+          :tooltip="label"
+          :aria-label="label"
           @click.stop="emit('remove', gap)"
         />
       </div>
@@ -82,7 +100,7 @@ const gaps = computed(() =>
   opacity: 1;
   pointer-events: auto;
 }
-.gap-action:hover {
+.gap-action:not(.locked):hover {
   color: var(--color-error);
 }
 </style>

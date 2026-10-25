@@ -1,4 +1,4 @@
-const transitionKinds = new Set(['fade', 'slide', 'zoom', 'blur']);
+const { isTransitionPreset } = require('../../../../packages/engine/src/shared/transition-preset-schema.js');
 
 const easingPower = (value) => {
   if (value === undefined) return undefined;
@@ -17,14 +17,8 @@ const transition = (value, clipKind) => {
   )
     throw new Error('Transition de clip invalide');
   const preset = value.preset;
-  if (!preset || !transitionKinds.has(preset.kind) || (clipKind === 'audio' && preset.kind !== 'fade'))
+  if (!isTransitionPreset(preset, clipKind === 'audio' ? 'audio' : 'visual'))
     throw new Error('Preset de transition invalide');
-  if (preset.kind === 'slide' && !['left', 'right', 'up', 'down'].includes(preset.direction))
-    throw new Error('Direction de transition invalide');
-  if (preset.kind === 'zoom' && !['in', 'out'].includes(preset.direction))
-    throw new Error('Direction de transition invalide');
-  if ((preset.kind === 'fade' || preset.kind === 'blur') && Object.keys(preset).some((key) => key !== 'kind'))
-    throw new Error('Paramètres de transition invalides');
   const power = easingPower(value.easingPower);
   return {
     preset: { ...preset },

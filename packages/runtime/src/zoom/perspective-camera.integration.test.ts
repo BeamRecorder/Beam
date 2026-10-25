@@ -8,6 +8,20 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromiumExecutable } from '../../../../apps/cli/src/chromium-install';
 import { chromiumSettings } from '../../../../apps/cli/src/chromium-settings';
+import type * as WebglPerspectiveProjectorModule from './webgl-perspective-projector';
+import type * as CameraPlaneModule from '@beam/engine/zoom/camera-plane';
+import type * as RenderDecoratedMediaModule from '../composition/appearance/render-decorated-media';
+import type * as CompositionDefaultsModule from '@beam/engine/shared/composition-defaults';
+import type * as OrbitCameraModule from '@beam/engine/zoom/orbit-camera';
+import type * as OrbitSettingsModule from '@beam/engine/zoom/orbit-settings';
+import type * as RenderModule from '../rendering/render';
+import type * as RenderDocumentModule from '@beam/engine/document/render-document';
+import type * as ZoomMotionBlurModule from '@beam/engine/zoom/zoom-motion-blur';
+import type * as ScreenshotRenderModule from '../screenshot/screenshot-render';
+import type * as StillDocumentModule from '@beam/engine/screenshot/still-document';
+import type * as ScreenshotLayersModule from '@beam/engine/screenshot/screenshot-layers';
+import type * as ManualZoomModule from '@beam/engine/zoom/manual-zoom';
+import type { VisualClip } from '@beam/engine/shared/composition-types';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('complete 3D camera planes in real Chromium', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temp: string;
@@ -58,22 +72,22 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('complete 3D camera plane
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const { WebGlPerspectiveProjector } = (await load(
           '/packages/runtime/src/zoom/webgl-perspective-projector.ts',
-        )) as typeof import('./webgl-perspective-projector');
+        )) as typeof WebglPerspectiveProjectorModule;
         const { cameraPlaneGeometry } = (await load(
           '/packages/engine/src/zoom/camera-plane.ts',
-        )) as typeof import('@beam/engine/zoom/camera-plane');
+        )) as typeof CameraPlaneModule;
         const { drawDecoratedMedia } = (await load(
           '/packages/runtime/src/composition/appearance/render-decorated-media.ts',
-        )) as typeof import('../composition/appearance/render-decorated-media');
+        )) as typeof RenderDecoratedMediaModule;
         const { createDefaultClipAppearance } = (await load(
           '/packages/engine/src/shared/composition-defaults.ts',
-        )) as typeof import('@beam/engine/shared/composition-defaults');
+        )) as typeof CompositionDefaultsModule;
         const { orbitCameraPose } = (await load(
           '/packages/engine/src/zoom/orbit-camera.ts',
-        )) as typeof import('@beam/engine/zoom/orbit-camera');
+        )) as typeof OrbitCameraModule;
         const { ORBIT_PRESETS } = (await load(
           '/packages/engine/src/zoom/orbit-settings.ts',
-        )) as typeof import('@beam/engine/zoom/orbit-settings');
+        )) as typeof OrbitSettingsModule;
         const bounds = { x: 0, y: 0, width: 400, height: 240 },
           sourceBounds = { x: -120, y: -120, width: 640, height: 480 };
         const source = new OffscreenCanvas(800, 480),
@@ -180,16 +194,16 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('complete 3D camera plane
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const { renderCompositionFrame, disposeCompositionRenderer } = (await load(
           '/packages/runtime/src/rendering/render.ts',
-        )) as typeof import('../rendering/render');
+        )) as typeof RenderModule;
         const { createRenderDocument } = (await load(
           '/packages/engine/src/document/render-document.ts',
-        )) as typeof import('@beam/engine/document/render-document');
+        )) as typeof RenderDocumentModule;
         const { createDefaultClipAppearance } = (await load(
           '/packages/engine/src/shared/composition-defaults.ts',
-        )) as typeof import('@beam/engine/shared/composition-defaults');
+        )) as typeof CompositionDefaultsModule;
         const { createCameraMotionBlurPlan } = (await load(
           '/packages/engine/src/zoom/zoom-motion-blur.ts',
-        )) as typeof import('@beam/engine/zoom/zoom-motion-blur');
+        )) as typeof ZoomMotionBlurModule;
         const snapshot = createRenderDocument(undefined, 400, 240, 60);
         snapshot.duration = 10;
         snapshot.canvas.showBackground = true;
@@ -241,7 +255,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('complete 3D camera plane
             id: 'camera',
             kind: 'webcam',
             transform: { x: 0.75, y: 0.7, width: 0.18, height: 0.2 },
-          } as import('@beam/engine/shared/composition-types').VisualClip);
+          } as VisualClip);
         const image = new OffscreenCanvas(400, 240),
           paint = image.getContext('2d')!;
         paint.fillStyle = '#eeeeee';
@@ -319,19 +333,19 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('complete 3D camera plane
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const { drawScreenshot } = (await load(
           '/packages/runtime/src/screenshot/screenshot-render.ts',
-        )) as typeof import('../screenshot/screenshot-render');
+        )) as typeof ScreenshotRenderModule;
         const { createStillDocument } = (await load(
           '/packages/engine/src/screenshot/still-document.ts',
-        )) as typeof import('@beam/engine/screenshot/still-document');
+        )) as typeof StillDocumentModule;
         const { insertScreenshotLayer } = (await load(
           '/packages/engine/src/screenshot/screenshot-layers.ts',
-        )) as typeof import('@beam/engine/screenshot/screenshot-layers');
+        )) as typeof ScreenshotLayersModule;
         const { DEFAULT_ORBIT_SETTINGS } = (await load(
           '/packages/engine/src/zoom/orbit-settings.ts',
-        )) as typeof import('@beam/engine/zoom/orbit-settings');
+        )) as typeof OrbitSettingsModule;
         const { createManualZoom, manualCameraZoom } = (await load(
           '/packages/engine/src/zoom/manual-zoom.ts',
-        )) as typeof import('@beam/engine/zoom/manual-zoom');
+        )) as typeof ManualZoomModule;
         const image = new OffscreenCanvas(1600, 960),
           paint = image.getContext('2d')!;
         paint.fillStyle = '#ffffff';
@@ -399,28 +413,28 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('complete 3D camera plane
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const { drawScreenshot } = (await load(
           '/packages/runtime/src/screenshot/screenshot-render.ts',
-        )) as typeof import('../screenshot/screenshot-render');
+        )) as typeof ScreenshotRenderModule;
         const { createStillDocument } = (await load(
           '/packages/engine/src/screenshot/still-document.ts',
-        )) as typeof import('@beam/engine/screenshot/still-document');
+        )) as typeof StillDocumentModule;
         const { insertScreenshotLayer, updateScreenshotLayer } = (await load(
           '/packages/engine/src/screenshot/screenshot-layers.ts',
-        )) as typeof import('@beam/engine/screenshot/screenshot-layers');
+        )) as typeof ScreenshotLayersModule;
         const { applyOrbitPreset, ORBIT_PRESETS } = (await load(
           '/packages/engine/src/zoom/orbit-settings.ts',
-        )) as typeof import('@beam/engine/zoom/orbit-settings');
+        )) as typeof OrbitSettingsModule;
         const { createManualZoom } = (await load(
           '/packages/engine/src/zoom/manual-zoom.ts',
-        )) as typeof import('@beam/engine/zoom/manual-zoom');
+        )) as typeof ManualZoomModule;
         const { createRenderDocument } = (await load(
           '/packages/engine/src/document/render-document.ts',
-        )) as typeof import('@beam/engine/document/render-document');
+        )) as typeof RenderDocumentModule;
         const { createDefaultClipAppearance } = (await load(
           '/packages/engine/src/shared/composition-defaults.ts',
-        )) as typeof import('@beam/engine/shared/composition-defaults');
+        )) as typeof CompositionDefaultsModule;
         const { renderCompositionFrame, disposeCompositionRenderer } = (await load(
           '/packages/runtime/src/rendering/render.ts',
-        )) as typeof import('../rendering/render');
+        )) as typeof RenderModule;
         const image = new OffscreenCanvas(400, 240),
           paint = image.getContext('2d')!;
         paint.fillStyle = '#eeeeee';

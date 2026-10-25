@@ -12,6 +12,11 @@ import { chromiumSettings } from './chromium-settings';
 import { snapshot as renderSnapshot } from '../../../packages/runtime/src/rendering/tests/render.test-support';
 import { isVisualClip } from '@beam/engine/shared/composition-types';
 import { ANIMATED_FRAME_PRESETS } from '@beam/engine/shared/animated-frame-schema';
+import type * as AnimatedFrameRendererModule from '@beam/runtime/composition/appearance/animated-frame-renderer';
+import type * as RenderDecoratedMediaModule from '@beam/runtime/composition/appearance/render-decorated-media';
+import type * as CompositionDefaultsModule from '@beam/engine/shared/composition-defaults';
+import type * as AnimatedFrameModule from '@beam/runtime/composition/appearance/animated-frame';
+import type * as RenderModule from '@beam/runtime/rendering/render';
 
 const controlsEntry = `
 import {createApp, h, reactive} from 'vue';
@@ -89,7 +94,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('animated frame completed
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const { AnimatedFrameRenderer } = (await load(
           '/packages/runtime/src/composition/appearance/animated-frame-renderer.ts',
-        )) as typeof import('@beam/runtime/composition/appearance/animated-frame-renderer');
+        )) as typeof AnimatedFrameRendererModule;
         const renderer = new AnimatedFrameRenderer();
         const render = (timeMs: number, speed = 1) => {
           const { canvas, padding } = renderer.render({
@@ -150,13 +155,13 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('animated frame completed
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const { drawDecoratedMedia } = (await load(
           '/packages/runtime/src/composition/appearance/render-decorated-media.ts',
-        )) as typeof import('@beam/runtime/composition/appearance/render-decorated-media');
+        )) as typeof RenderDecoratedMediaModule;
         const { createDefaultClipAppearance } = (await load(
           '/packages/engine/src/shared/composition-defaults.ts',
-        )) as typeof import('@beam/engine/shared/composition-defaults');
+        )) as typeof CompositionDefaultsModule;
         const { disposeAnimatedFrameRenderer } = (await load(
           '/packages/runtime/src/composition/appearance/animated-frame.ts',
-        )) as typeof import('@beam/runtime/composition/appearance/animated-frame');
+        )) as typeof AnimatedFrameModule;
         const target = new OffscreenCanvas(400, 400),
           source = new OffscreenCanvas(100, 100);
         const pixels = source.getContext('2d')!;
@@ -216,7 +221,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('animated frame completed
           const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
           const { renderCompositionFrame, disposeCompositionRenderer } = (await load(
             '/packages/runtime/src/rendering/render.ts',
-          )) as typeof import('@beam/runtime/rendering/render');
+          )) as typeof RenderModule;
           const source = new OffscreenCanvas(200, 100),
             ctx = source.getContext('2d')!;
           ctx.fillStyle = '#336699';

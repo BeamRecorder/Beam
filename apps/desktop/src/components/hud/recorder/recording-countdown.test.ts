@@ -1,12 +1,12 @@
 import { ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createRecordingCountdown } from './recording-countdown';
 
 const capture = vi.hoisted(() => ({
   setCountdown: vi.fn(),
   onCountdownCancelled: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-import { createRecordingCountdown } from './recording-countdown';
 
 describe('recording countdown', () => {
   let cancelEvent: () => void;

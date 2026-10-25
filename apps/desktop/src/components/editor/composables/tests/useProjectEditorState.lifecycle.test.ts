@@ -6,9 +6,9 @@ import type { ProjectEditorState } from '~/api/types/capture-api';
 import { DEFAULT_ZOOM_AUTO_FOLLOW } from '@beam/engine/zoom/zoom-types';
 import { createDefaultCursorPresentation } from '@beam/engine/capture/cursor-presentation';
 import { beginPropertyInteraction, endPropertyInteraction } from '~/composables/property-interaction';
+import { useProjectEditorState } from '../useProjectEditorState';
 const capture = vi.hoisted(() => ({ saveProjectEditorState: vi.fn(), getProjectEditorState: vi.fn() }));
 vi.mock('~/api/capture', () => ({ capture }));
-import { useProjectEditorState } from '../useProjectEditorState';
 
 describe('project editor lifecycle', () => {
   it('observes immutable document replacement without walking all clips at setup', async () => {

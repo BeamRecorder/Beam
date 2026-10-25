@@ -3,6 +3,8 @@ import { defineComponent, h } from 'vue';
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { PreferenceSettings } from '~/api/types/capture-api';
+import { useExportBackendPreference } from '../useExportBackendPreference';
+import { usePreferencesStore } from '~/stores/preferences';
 const capture = vi.hoisted(() => ({
   platform: 'linux',
   getPreferences: vi.fn(),
@@ -10,8 +12,6 @@ const capture = vi.hoisted(() => ({
   onPreferencesChanged: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-import { useExportBackendPreference } from '../useExportBackendPreference';
-import { usePreferencesStore } from '~/stores/preferences';
 
 const settings = (videoExportBackend?: string): PreferenceSettings => ({
   schemaVersion: 3,

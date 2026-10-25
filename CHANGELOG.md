@@ -4,9 +4,32 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Transitions are organized into seven remembered categories with neutral animated previews. Twenty new visual effects include color fades, panel and shape reveals, dynamic camera moves and digital effects, rendered consistently in preview and export. Existing transitions remain available.
+
+- Cursor appearance, movement and click effects can be edited independently on each screen recording clip. Cursor and Zoom panels include Apply to all with timeline shimmer feedback; shared zoom styling preserves each shot’s target and timing.
+
+- Clip properties can apply visual settings to every unlocked clip on the same timeline track, keeping paused recording segments consistent. A brief shimmer travels across affected clips to confirm each application and respects reduced motion.
+
+- Each screen recording clip can show or hide its Beam cursor independently. Cuts retain the choice, multiple selected recordings can be changed together, and cursor on/off icons identify each clip in the timeline. Preview and export use the same setting.
+
 ### Changed
 
 - Refreshed the repository README with current Beam workflows, website imagery, platform downloads, CLI guidance, and the community's non-expiring Discord invite.
+
+### Fixed
+
+- Undo and redo restore Apply to all's checked state together with every propagated Clip, Cursor or Zoom change, keeping activation separate from nearby property edits.
+- Screen recording cursor visibility stays in the Cursor inspector instead of adding oversized Enabled/Disabled buttons to Clip properties. Select menus sit closer to their fields, with denser rows for compact controls.
+- Transition edge selectors stay compact, with a full-width None/reset action; duration controls appear only after choosing a transition.
+- Timeline clip names, cursor and status icons, and speed/trim badges use contrasting light or dark backgrounds that adapt to the thumbnail. Icon badges keep a clear gap before the clip name.
+- Gap removal no longer appears over empty space on an image/video lane when another media clip occupies that time. Zooms crossing a genuine gap are trimmed with it; locked gap actions identify the blocking clips or zooms instead of showing a generic error.
+- Cutting a screen recording also cuts its linked automatic zooms. Each zoom fragment follows its own recording fragment when moved; manual and detached zooms keep their independent timing.
+- Timeline add prompts no longer show duplicate native tooltips.
+- Vietnamese capture controls consistently use “Ghi hình” and the shorter “Chụp ảnh”. The Windows Quick Capture toolbar keeps its outer margins transparent instead of showing a rectangular acrylic background.
+- macOS records mouse press and release events directly so brief clicks and trackpad taps can create automatic zooms at their recorded positions. Recording checks Input Monitoring access first and reports a stopped interaction listener.
+- Recordings made with Show real cursor off start with the editor cursor off, even when the selected preset or saved defaults enable it. Click data remains available for automatic zooms, and later editor choices are preserved when reopening the project.
 
 ## [0.5.6] - 2026-10-18
 

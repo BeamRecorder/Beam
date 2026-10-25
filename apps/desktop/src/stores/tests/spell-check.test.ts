@@ -1,5 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useSpellCheckStore } from '../spell-check';
 
 const capture = vi.hoisted(() => ({
   getPreferences: vi.fn(),
@@ -8,8 +9,6 @@ const capture = vi.hoisted(() => ({
 }));
 
 vi.mock('~/api/capture', () => ({ capture }));
-
-import { useSpellCheckStore } from '../spell-check';
 
 type SpellCheckPreferences = { spellCheck?: { enabled?: boolean } };
 

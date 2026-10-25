@@ -430,6 +430,7 @@
     "savingProject": "Saving project"
   },
   "ZoomPanel": {
+    "applyToTrackHint": "Share zoom appearance with unlocked zooms, keeping each target and timing.",
     "cameraFollow": "Camera follow",
     "cameraFollowDesc": "Anticipates recorded cursor movements with gentle, progressive camera tracking.",
     "advanced": "Advanced",

@@ -1,6 +1,7 @@
 import { defineComponent, nextTick, watch } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useCapturePreparation } from './useCapturePreparation';
 
 const capture = vi.hoisted(() => ({
   configureCameraOverlay: vi.fn(),
@@ -16,7 +17,6 @@ const capture = vi.hoisted(() => ({
   onWindowVisibility: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-import { useCapturePreparation } from './useCapturePreparation';
 
 const request = (countdownSeconds = 3) => ({
   settings: {

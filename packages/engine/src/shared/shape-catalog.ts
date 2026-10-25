@@ -1,6 +1,5 @@
-type ShapeFillRule = 'nonzero' | 'evenodd';
-
 import { SHAPE_GALLERY_PATHS } from '@beam/engine/shared/shape-gallery-paths';
+type ShapeFillRule = 'nonzero' | 'evenodd';
 
 export interface ShapeDefinition {
   id: string;

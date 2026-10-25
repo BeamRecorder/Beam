@@ -2,6 +2,8 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h } from 'vue';
 import type { ImportedFont } from '~/api/types/capture-api';
+import { loadCaptionFont, useFontCatalog } from './useFontCatalog';
+import type { CaptionFontOption } from './font-catalog-types';
 
 const capture = vi.hoisted(() => ({
   listImportedFonts: vi.fn(),
@@ -9,9 +11,6 @@ const capture = vi.hoisted(() => ({
   onFontLibraryChanged: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-
-import { loadCaptionFont, useFontCatalog } from './useFontCatalog';
-import type { CaptionFontOption } from './font-catalog-types';
 
 const fontId = (value: string) => value.padEnd(64, '0').slice(0, 64);
 const importedFont = (family: string, id = fontId(family.toLowerCase().replace(/[^a-z]/g, ''))) =>

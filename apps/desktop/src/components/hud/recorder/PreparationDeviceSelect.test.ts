@@ -1,8 +1,8 @@
 import { mount, flushPromises, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import PreparationDeviceSelect from './PreparationDeviceSelect.vue';
 const chooseDevice = vi.hoisted(() => vi.fn());
 vi.mock('~/api/capture', () => ({ capture: { preparation: { chooseDevice } } }));
-import PreparationDeviceSelect from './PreparationDeviceSelect.vue';
 let wrapper: VueWrapper;
 const render = (disabled = false) =>
   (wrapper = mount(PreparationDeviceSelect, {

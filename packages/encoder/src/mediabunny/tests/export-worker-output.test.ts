@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ExportRequest } from '@beam/encoder/export-types';
 import { isExportWorkerResponse } from '@beam/encoder/mediabunny/export-worker-protocol';
+import type * as MediabunnyModule from 'mediabunny';
+import type { AudioSample } from 'mediabunny';
 
 const runtime = vi.hoisted(() => ({
   probe: vi.fn(),
@@ -27,7 +29,7 @@ const runtime = vi.hoisted(() => ({
 }));
 
 vi.mock('mediabunny', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('mediabunny')>();
+  const actual = await importOriginal<typeof MediabunnyModule>();
 
   class FakeStreamTarget {
     constructor(stream: WritableStream<{ data: Uint8Array; position: number }>, options: Record<string, unknown>) {
@@ -280,7 +282,7 @@ describe('ExportWorkerOutput diagnostics and IPC backpressure', () => {
   it('forwards lifecycle operations and closes encoded sources', async () => {
     const { ExportWorkerOutput } = await import('@beam/encoder/mediabunny/export-worker-output');
     const output = await ExportWorkerOutput.create(request(), { width: 16, height: 16 } as OffscreenCanvas, true);
-    const sample = { close: vi.fn() } as unknown as import('mediabunny').AudioSample;
+    const sample = { close: vi.fn() } as unknown as AudioSample;
 
     await output.start();
     await output.addVideo(250, 500);
@@ -303,7 +305,7 @@ describe('ExportWorkerOutput diagnostics and IPC backpressure', () => {
   it('closes an audio sample immediately when no audio track was selected', async () => {
     const { ExportWorkerOutput } = await import('@beam/encoder/mediabunny/export-worker-output');
     const output = await ExportWorkerOutput.create(request(), { width: 16, height: 16 } as OffscreenCanvas, false);
-    const sample = { close: vi.fn() } as unknown as import('mediabunny').AudioSample;
+    const sample = { close: vi.fn() } as unknown as AudioSample;
 
     await output.addAudio(sample);
     output.closeAudio();
@@ -318,7 +320,7 @@ describe('ExportWorkerOutput diagnostics and IPC backpressure', () => {
     runtime.audioAddReject = new Error('audio source failed');
     const { ExportWorkerOutput } = await import('@beam/encoder/mediabunny/export-worker-output');
     const output = await ExportWorkerOutput.create(request(), { width: 16, height: 16 } as OffscreenCanvas, true);
-    const sample = { close: vi.fn() } as unknown as import('mediabunny').AudioSample;
+    const sample = { close: vi.fn() } as unknown as AudioSample;
 
     await expect(output.addAudio(sample)).rejects.toThrow('audio source failed');
 

@@ -6,8 +6,36 @@ import TimelineAddMenu from '../../../editor/timeline/TimelineAddMenu.vue';
 import CanvasAddMenu from '../../../editor/search/CanvasAddMenu.vue';
 import { provideEditorSearch } from '../../../editor/search/useEditorSearch';
 import ContextMenu from '../../context-menu/ContextMenu.vue';
+import Select from '../../select/Select.vue';
 
 let active: ReturnType<typeof createApp> | undefined;
+export async function mountCompactSelect(scale: number, direction: 'up' | 'down') {
+  unmountMenus();
+  document.documentElement.className = 'dark editor-window-root';
+  document.body.innerHTML =
+    '<div id="compact-select-root" style="position:absolute;left:90px;top:230px;width:180px"></div>';
+  const root = document.querySelector<HTMLElement>('#compact-select-root')!;
+  root.style.zoom = String(scale);
+  active = createApp({
+    setup() {
+      return () =>
+        h(Select, {
+          modelValue: null,
+          size: 'compact',
+          placeholder: 'Custom',
+          direction,
+          options: [
+            { value: 0, label: 'Top' },
+            { value: 0.5, label: 'Middle' },
+            { value: 1, label: 'Bottom' },
+          ],
+        });
+    },
+  });
+  active.use(i18n);
+  active.mount(root);
+  await nextTick();
+}
 export function unmountMenus() {
   active?.unmount();
   active = undefined;

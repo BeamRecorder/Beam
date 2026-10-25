@@ -11,7 +11,9 @@ export const drawExportGeneratedLayer = (
   frame: TransitionFrame,
 ) => {
   const viewport = { x: frame.x ?? 0, y: frame.y ?? 0, width: frame.width, height: frame.height };
-  drawWithClipTransition(ctx, clip, timeMs, frame, () =>
-    clip.kind === 'color' ? drawColorClip(ctx, clip, viewport) : drawShapeClip(ctx, clip, viewport),
+  drawWithClipTransition(ctx, clip, timeMs, frame, (transitionTarget) =>
+    clip.kind === 'color'
+      ? drawColorClip(transitionTarget, clip, viewport)
+      : drawShapeClip(transitionTarget, clip, viewport),
   );
 };

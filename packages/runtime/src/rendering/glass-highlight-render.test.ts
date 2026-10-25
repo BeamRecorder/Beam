@@ -4,6 +4,7 @@ import { createManualZoom } from '@beam/engine/zoom/manual-zoom';
 import { createGlassHighlight } from '@beam/engine/zoom/glass-highlight';
 import { normalizeOutputCanvas } from '@beam/engine/layout/output-canvas';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
+import { disposeGlassHighlights, renderGlassHighlights } from './glass-highlight-render';
 
 const fixture = vi.hoisted(() => {
   const scopes: Array<{
@@ -41,7 +42,6 @@ vi.mock('../zoom/glass-highlight-gpu', () => ({
     return scene;
   },
 }));
-import { disposeGlassHighlights, renderGlassHighlights } from './glass-highlight-render';
 
 function context(scale = 1) {
   const inverse = { a: 1 / scale, b: 0, c: 0, d: 1 / scale, e: -20, f: -30 };

@@ -4,8 +4,9 @@ import { capture } from '~/api/capture';
 import type { PreferenceSettings } from '~/api/types/capture-api';
 import type { RegionRecordingSettings } from '~/api/types/screen-region';
 import type { HudRegionSettingRefs } from './region-settings-types';
+import type { RecordingZoomMode } from '~/api/types/recording-zoom';
 export function useRegionRecordingSettings(state: HudRegionSettingRefs) {
-  const zoomMode = ref<import('~/api/types/recording-zoom').RecordingZoomMode>('2d');
+  const zoomMode = ref<RecordingZoomMode>('2d');
   const hideTaskbar = ref(false);
   const hideDesktopIcons = ref(false);
   const showRealCursor = ref(false);

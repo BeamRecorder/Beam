@@ -22,6 +22,7 @@ class InputAccess {
     this.resolveTargetDirectory = resolveTargetDirectory;
     this.targetDirectory = undefined;
     this.pendingRequest = null;
+    this.pendingActivation = null;
     this.onAvailable = null;
   }
 
@@ -45,6 +46,20 @@ class InputAccess {
   }
 
   request() {
+    if (this.pendingActivation) return this.pendingActivation;
+    const promise = this.authorize().then(async (status) => {
+      if (status.state === 'available') await this.onAvailable?.();
+      return status;
+    });
+    this.pendingActivation = promise;
+    const clear = () => {
+      if (this.pendingActivation === promise) this.pendingActivation = null;
+    };
+    void promise.then(clear, clear);
+    return promise;
+  }
+
+  authorize() {
     if (this.pendingRequest) return this.pendingRequest;
     const promise = this.requestNativeAccess();
     this.pendingRequest = promise;
@@ -59,9 +74,7 @@ class InputAccess {
     this.lastError = null;
     if (this.platform === 'linux' && !this.helperForCapture()) return unavailableStatus('input-helper-unavailable');
     try {
-      const status = await this.nativeRequest('request-input-access');
-      if (status.state === 'available') await this.onAvailable?.();
-      return status;
+      return await this.nativeRequest('request-input-access');
     } catch (error) {
       this.lastError = accessError(error);
       throw error;
@@ -70,17 +83,20 @@ class InputAccess {
 
   async ensureReady(cursor) {
     let status = await this.status();
-    if (status.state !== 'available' && status.canRequest) status = await this.request();
+    if (status.state !== 'available' && status.canRequest)
+      status = await (this.platform === 'darwin' ? this.authorize() : this.request());
     if (status.state !== 'available') {
-      const cancelled = !status.error && ['permission-required', 'installation-required'].includes(status.state);
-      const error = new Error(
-        status.error?.message || 'Linux input access is required to record clicks and shortcuts.',
-      );
+      const cancelled =
+        this.platform === 'linux' &&
+        !status.error &&
+        ['permission-required', 'installation-required'].includes(status.state);
+      const accessName = this.platform === 'darwin' ? 'macOS Input Monitoring' : 'Linux input access';
+      const error = new Error(status.error?.message || `${accessName} is required to record clicks and shortcuts.`);
       error.code = cancelled ? 'cancelled' : status.error?.code || 'input-access-unavailable';
       throw error;
     }
     if ((cursor.captureClicks && !status.clicks) || (cursor.captureShortcuts && !status.shortcuts)) {
-      const error = new Error('The Linux input helper could not access the required mouse or keyboard devices.');
+      const error = new Error('Input capture could not access the required mouse or keyboard devices.');
       error.code = 'input-devices-unavailable';
       throw error;
     }

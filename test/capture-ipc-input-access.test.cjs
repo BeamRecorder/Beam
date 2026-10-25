@@ -20,7 +20,7 @@ function recordingIpc({ ensureReady = async () => {}, platform = 'linux' } = {})
     inputAccess: {
       ensureReady: async (requestedCursor) => {
         calls.push('input-access');
-        assert.deepEqual(requestedCursor, { ...requestedCursor, ...cursor });
+        assert.equal(requestedCursor.mode, 'separate');
         await ensureReady();
       },
     },
@@ -30,7 +30,7 @@ function recordingIpc({ ensureReady = async () => {}, platform = 'linux' } = {})
         calls.push(command);
         if (command === 'discover')
           return {
-            sources: [],
+            sources: platform === 'darwin' ? [{ id: 'sck:display:3', kind: 'display', isDefault: true }] : [],
             capabilities: { separateCursor: true, cursorClicks: true, inputShortcuts: true },
           };
         return { state: command === 'start' ? 'recording' : 'armed', sessionId: 'session-input' };
@@ -115,11 +115,43 @@ for (const requestedCursor of [
   });
 }
 
-test('does not launch the Linux helper for a macOS recording', async () => {
+for (const command of ['prepare', 'start-recording']) {
+  test(`${command} checks macOS Input Monitoring before native preparation`, async () => {
+    const { request, calls } = recordingIpc({ platform: 'darwin' });
+    await request({}, command, { config: { cursor: { ...cursor, captureShortcuts: false } } });
+    assert.deepEqual(calls, ['input-access', 'prepare', ...(command.startsWith('start') ? ['start'] : [])]);
+  });
+}
+
+for (const command of ['prepare-default-recording', 'start-default-recording']) {
+  test(`${command} checks macOS clicks even when optional shortcut recording is off`, async () => {
+    const { request, calls } = recordingIpc({ platform: 'darwin' });
+    await request({}, command, { options: { recordInteractions: false } });
+    assert.deepEqual(calls, ['discover', 'input-access', 'prepare', ...(command.startsWith('start') ? ['start'] : [])]);
+  });
+}
+
+test('denied macOS Input Monitoring prevents silent recording without clicks', async () => {
   const { request, calls } = recordingIpc({
     platform: 'darwin',
-    ensureReady: () => assert.fail('Linux helper requested on macOS'),
+    ensureReady: async () => {
+      throw Object.assign(new Error('macOS Input Monitoring is required'), { code: 'input-access-unavailable' });
+    },
   });
-  await request({}, 'prepare', { config: { cursor } });
-  assert.deepEqual(calls, ['prepare']);
+  await assert.rejects(request({}, 'start-recording', { config: { cursor } }), {
+    code: 'input-access-unavailable',
+  });
+  assert.deepEqual(calls, ['input-access']);
 });
+
+for (const requestedCursor of [
+  { mode: 'separate', captureClicks: false, captureShortcuts: false },
+  { mode: 'embedded' },
+  { mode: 'disabled' },
+]) {
+  test(`does not request macOS input access for ${JSON.stringify(requestedCursor)}`, async () => {
+    const { request, calls } = recordingIpc({ platform: 'darwin', ensureReady: () => assert.fail('input requested') });
+    await request({}, 'prepare', { config: { cursor: requestedCursor } });
+    assert.deepEqual(calls, ['prepare']);
+  });
+}

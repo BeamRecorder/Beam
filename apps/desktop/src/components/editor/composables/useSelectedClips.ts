@@ -1,3 +1,4 @@
+import { useClipTrackProperties } from './useClipTrackProperties';
 import { setClipRotation } from '@beam/engine/commands/clip-rotation';
 import { cropSourceDimensions } from '@beam/engine/layout/crop/crop-pixels';
 import { computed, ref, watch, type Ref } from 'vue';
@@ -54,6 +55,7 @@ export function useSelectedClips(options: { composition: Ref<ClipComposition>; a
     selectedClip.value && isCaptionClip(selectedClip.value) ? selectedClip.value : null,
   );
   const selectedWebcamClip = computed(() => (selectedClip.value?.kind === 'webcam' ? selectedClip.value : null));
+  const clipTrackProperties = useClipTrackProperties(options.composition, selectedClipId, selectedClipIds);
   const allSelectedEnabled = computed(() => selectedClips.value.every((clip) => clip.enabled));
 
   watch(
@@ -92,12 +94,13 @@ export function useSelectedClips(options: { composition: Ref<ClipComposition>; a
   const updateCompositionEach = (
     accepts: (clip: (typeof selectedClips.value)[number]) => boolean,
     update: (composition: ClipComposition, clipId: string) => ClipComposition,
+    applyToTrack = false,
   ) => {
     let next = options.composition.value;
     updateEach(accepts, (id) => {
       next = update(next, id);
     });
-    options.composition.value = next;
+    options.composition.value = applyToTrack ? clipTrackProperties.synchronize(next) : next;
   };
 
   const selectedClipInfo = computed(() => {
@@ -162,25 +165,30 @@ export function useSelectedClips(options: { composition: Ref<ClipComposition>; a
     selectedClipId.value = null;
   };
   const updateSelectedAppearance = (patch: Partial<ClipAppearance>) =>
-    updateCompositionEach(isVisualClip, (next, id) => {
-      const clip = next.clips.find((item) => item.id === id);
-      if (!clip || !isVisualClip(clip)) return next;
-      return setAppearance(next, id, {
-        ...createDefaultClipAppearance(clip.kind),
-        ...clip.appearance,
-        ...patch,
-      });
-    });
+    updateCompositionEach(
+      isVisualClip,
+      (next, id) => {
+        const clip = next.clips.find((item) => item.id === id);
+        if (!clip || !isVisualClip(clip)) return next;
+        return setAppearance(next, id, {
+          ...createDefaultClipAppearance(clip.kind),
+          ...clip.appearance,
+          ...patch,
+        });
+      },
+      true,
+    );
   const updateSelectedTransform = (transform: NormalizedTransform) =>
     updateCompositionEach(
       (clip) => !isAudioClip(clip),
       (next, id) => setTransform(next, id, transform),
+      true,
     );
   const updateSelectedTransforms = (transforms: readonly ClipTransformUpdate[]) => {
     const selected = new Set(selectedClipIds.value);
     let next = options.composition.value;
     for (const { id, transform } of transforms) if (selected.has(id)) next = setTransform(next, id, transform);
-    options.composition.value = next;
+    options.composition.value = clipTrackProperties.synchronize(next);
   };
   const updateSelectedBlur = (
     patch: Partial<
@@ -189,11 +197,11 @@ export function useSelectedClips(options: { composition: Ref<ClipComposition>; a
         'shape' | 'mode' | 'strength' | 'feather' | 'cornerRadius' | 'tintOpacity' | 'color' | 'highlightColor'
       >
     >,
-  ) => updateCompositionEach(isBlurClip, (next, id) => setBlurEffect(next, id, patch));
+  ) => updateCompositionEach(isBlurClip, (next, id) => setBlurEffect(next, id, patch), true);
   const updateSelectedCrop = (crop: NormalizedCrop) =>
-    updateCompositionEach(isVisualClip, (next, id) => setCrop(next, id, crop));
+    updateCompositionEach(isVisualClip, (next, id) => setCrop(next, id, crop), true);
   const updateSelectedVisual = (update: (composition: ClipComposition, clipId: string) => ClipComposition) =>
-    updateCompositionEach(isVisualClip, update);
+    updateCompositionEach(isVisualClip, update, true);
   const updateSelectedCameraLayout = (preset: Exclude<CameraLayoutPreset, 'custom'>) =>
     updateSelectedVisual((next, id) => setCameraLayout(next, id, preset));
   const updateSelectedCameraFraming = (preset: Exclude<CameraFramingPreset, 'custom'>) =>
@@ -206,13 +214,14 @@ export function useSelectedClips(options: { composition: Ref<ClipComposition>; a
     updateCompositionEach(
       (clip) => clip.kind === 'webcam',
       (next, id) => setWebcamReactToZoom(next, id, reactToZoom),
+      true,
     );
   const updateSelectedMirrored = (mirrored: boolean) =>
-    updateCompositionEach(isVisualClip, (next, id) => setMirrored(next, id, mirrored));
+    updateCompositionEach(isVisualClip, (next, id) => setMirrored(next, id, mirrored), true);
   const updateSelectedMirroredY = (mirroredY: boolean) =>
-    updateCompositionEach(isVisualClip, (next, id) => setMirroredY(next, id, mirroredY));
+    updateCompositionEach(isVisualClip, (next, id) => setMirroredY(next, id, mirroredY), true);
   const updateSelectedRotation = (degrees: number) =>
-    updateCompositionEach(isVisualClip, (next, id) => setClipRotation(next, id, degrees));
+    updateCompositionEach(isVisualClip, (next, id) => setClipRotation(next, id, degrees), true);
   const updateSelectedRate = (rate: number) =>
     updateCompositionEach(
       (clip) => !isCaptionClip(clip) && !isColorClip(clip) && !isShapeClip(clip) && !isBlurClip(clip),
@@ -232,6 +241,7 @@ export function useSelectedClips(options: { composition: Ref<ClipComposition>; a
     );
 
   return {
+    clipTrackProperties,
     selectedClipId,
     selectedClipIds,
     selectedClips,

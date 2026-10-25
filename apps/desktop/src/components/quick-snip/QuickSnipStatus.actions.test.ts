@@ -2,6 +2,7 @@ import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { setCurrentLocale } from '~/i18n';
 import type { QuickSnipSnapshot, QuickSnipRenderTask } from '~/api/types/quick-snip';
+import QuickSnipStatus from './QuickSnipStatus.vue';
 const api = vi.hoisted(() => ({
   getQuickSnipState: vi.fn(),
   getQuickSnipRenderTask: vi.fn(),
@@ -25,7 +26,6 @@ vi.mock('~/api/capture', () => ({ capture: api }));
 vi.mock('./quick-snip-export', () => ({ renderQuickSnip: render }));
 vi.mock('../screenshot/screenshot-render', () => ({ encodeScreenshot: encode }));
 vi.mock('../screenshot/screenshot-state', () => ({ screenshotState: () => ({ canvas: {}, format: 'webp' }) }));
-import QuickSnipStatus from './QuickSnipStatus.vue';
 enableAutoUnmount(afterEach);
 const snapshot = (patch: Partial<QuickSnipSnapshot> = {}) =>
   ({

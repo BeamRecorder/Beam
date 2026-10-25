@@ -1,7 +1,8 @@
 import { enableAutoUnmount, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, ref, type Ref } from 'vue';
-import { ImageOff, Link2, Lock } from '@lucide/vue';
+import { ImageOff, Link2, Lock, MousePointer2, MousePointer2Off } from '@lucide/vue';
+import { customCursorKey } from '../../properties/cursor/custom-cursor-context';
 import TimelineCanvasClip from '../TimelineCanvasClip.vue';
 import type { TimelineClipProps } from '../timeline-clip-types';
 import type { AudioClip, ShapeClip } from '@beam/engine/shared/composition-types';
@@ -76,6 +77,34 @@ beforeEach(() => {
 });
 
 describe('canvas clip semantic controls', () => {
+  it.each([true, false])('shows an accessible cursor %s icon on each screen fragment', (showCursor) => {
+    const wrapper = create({ clip: { ...clip, kind: 'screen', showCursor } });
+    const icon = wrapper.getComponent(showCursor ? MousePointer2 : MousePointer2Off);
+    expect(icon.attributes('data-cursor-visible')).toBe(String(showCursor));
+    expect(wrapper.findComponent(showCursor ? MousePointer2Off : MousePointer2).exists()).toBe(false);
+    const state = showCursor ? 'Enabled' : 'Disabled';
+    expect(wrapper.get('button').attributes('aria-label')).toContain(`Custom cursor: ${state}`);
+    expect(wrapper.get('button').attributes('title')).toContain(`Custom cursor: ${state}`);
+  });
+  it('updates inherited cursor indicators when the document default changes and keeps other media unmarked', async () => {
+    const defaults = ref(false);
+    const wrapper = mount(TimelineCanvasClip, {
+      props: {
+        clip: { ...clip, kind: 'screen' },
+        selected: false,
+        duration: 10,
+        timelineWidthPx: 1000,
+        thumbnailSlots: [],
+      },
+      global: { provide: { [customCursorKey as symbol]: defaults } },
+    });
+    expect(wrapper.findComponent(MousePointer2Off).exists()).toBe(true);
+    defaults.value = true;
+    await wrapper.vm.$nextTick();
+    expect(wrapper.findComponent(MousePointer2).exists()).toBe(true);
+    await wrapper.setProps({ clip });
+    expect(wrapper.find('[data-cursor-visible]').exists()).toBe(false);
+  });
   it('retains native keyboard-accessible selection, move, context menu and precise clip geometry', async () => {
     const wrapper = create(),
       button = wrapper.get('button');
@@ -215,7 +244,7 @@ describe('canvas clip GPU audio surface', () => {
     const foreground = wrapper.get('.audio-clip-label');
     expect(foreground.text()).toBe('System audio');
     expect(foreground.attributes('aria-hidden')).toBe('true');
-    expect(foreground.attributes('style')).toContain('left: 38px');
+    expect(foreground.attributes('style')).toContain('left: 44px');
     expect(wrapper.get('.waveform').find('.audio-clip-label').exists()).toBe(false);
     expect(
       wrapper.get('.waveform').element.compareDocumentPosition(foreground.element) & Node.DOCUMENT_POSITION_FOLLOWING,

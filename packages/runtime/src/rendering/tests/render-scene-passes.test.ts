@@ -5,6 +5,7 @@ import type { CameraSample } from '@beam/engine/zoom/composition-camera-types';
 import type { BlurClip, ColorClip, ShapeClip, VisualClip } from '@beam/engine/shared/composition-types';
 import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '@beam/engine/shared/shape-layer-style';
 import { context, snapshot } from './render.test-support';
+import { drawCompositionLayers, renderCompositionFrame, disposeCompositionRenderer } from '../render';
 
 const state = vi.hoisted(() => ({
   screen: vi.fn(),
@@ -76,7 +77,6 @@ vi.mock('@beam/runtime/composition/shape/ordered-gpu-shapes', () => ({
       }),
   }),
 }));
-import { drawCompositionLayers, renderCompositionFrame, disposeCompositionRenderer } from '../render';
 
 beforeEach(() => {
   vi.clearAllMocks();

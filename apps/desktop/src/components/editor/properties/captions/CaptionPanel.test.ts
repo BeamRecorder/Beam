@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CaptionClip, CaptionSentence, ClipComposition } from '@beam/engine/shared/composition-types';
 import type { TranscriptionDiagnostics, WhisperResult } from '../../captions/whisper-types';
 import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
+import CaptionPanel from './CaptionPanel.vue';
 
 type MockWhisperProgress = {
   status: 'idle' | 'loading' | 'running' | 'completed' | 'error';
@@ -47,8 +48,6 @@ vi.mock('../../captions/useWhisperTranscription', async () => {
   };
 });
 vi.mock('@beam/engine/commands/clip-engine', () => ({ createComposition }));
-
-import CaptionPanel from './CaptionPanel.vue';
 
 const Button = {
   inheritAttrs: true,

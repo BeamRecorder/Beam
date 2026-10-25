@@ -8,9 +8,10 @@ import type {
 import type { RecordingSessionResult } from '../../components/hud/recorder/recording-types';
 import type { ProjectEditorState } from './capture-api';
 import type { QuickSnipSettingsAnchor, QuickSnipSettingsContent } from './quick-snip-settings';
+import type { InstantCaptureOptions, QuickSnipDeviceMenu } from './quick-snip';
 
 export interface QuickSnipApi {
-  quickSnipFromHud(options: import('./quick-snip').InstantCaptureOptions): Promise<QuickSnipSnapshot>;
+  quickSnipFromHud(options: InstantCaptureOptions): Promise<QuickSnipSnapshot>;
   quickSnipToggle(): Promise<QuickSnipSnapshot>;
   notifyQuickSnipCropReady(): void;
   notifyQuickSnipCropIdle(): void;
@@ -24,7 +25,7 @@ export interface QuickSnipApi {
   dismissQuickSnipSettings(): void;
   fitQuickSnipSettings(height: number): void;
   notifyQuickSnipSettingsReady(): void;
-  chooseQuickSnipDevice(request: import('./quick-snip').QuickSnipDeviceMenu): Promise<string | null>;
+  chooseQuickSnipDevice(request: QuickSnipDeviceMenu): Promise<string | null>;
   quickSnipStop(): Promise<QuickSnipSnapshot>;
   quickSnipCancel(): Promise<QuickSnipSnapshot>;
   getQuickSnipState(): Promise<QuickSnipSnapshot>;

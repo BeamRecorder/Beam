@@ -27,6 +27,8 @@ export interface ZoomElement {
   locked?: boolean;
   /** Undefined resolves legacy automatic links; null explicitly detaches a zoom. */
   linkedClipId?: string | null;
+  /** Shared envelope identity for adjacent fragments created by a recording cut. */
+  splitGroupId?: string;
   sessionId: string;
   startMs: number;
   endMs: number;

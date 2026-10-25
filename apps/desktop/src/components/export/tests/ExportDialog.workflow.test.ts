@@ -5,6 +5,7 @@ import { nextTick, type Ref } from 'vue';
 import { editorSearchKey, type EditorSearchAction } from '../../editor/search/editor-search-types';
 import type { EditorExportSource } from '@beam/encoder/export-types';
 import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
+import ExportDialog from '../ExportDialog.vue';
 
 const api = vi.hoisted(() => ({
   platform: 'win32',
@@ -31,7 +32,6 @@ vi.mock('../useExportJob', async () => {
   );
   return { useExportJob: () => ({ ...job.state, start: job.start, cancel: job.cancel }) };
 });
-import ExportDialog from '../ExportDialog.vue';
 
 const request: EditorExportSource = {
   projectName: 'Demo',

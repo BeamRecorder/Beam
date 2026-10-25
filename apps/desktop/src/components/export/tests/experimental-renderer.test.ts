@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fixture from '../../../../../../test/fixtures/ffmpeg-export/request.json';
 import type { ExportRequest } from '@beam/encoder/export-types';
 import type { ExperimentalGpuExportApi } from '@beam/encoder/gpu-export/gpu-export-types';
+import { renderExperimentalExport } from '@beam/encoder/gpu-export/experimental-renderer';
+import { createCompositionSnapshot } from '@beam/runtime/rendering/snapshot';
 const mocks = vi.hoisted(() => ({
   assets: vi.fn(),
   fonts: vi.fn(),
@@ -23,8 +25,6 @@ vi.mock('@beam/encoder/mediabunny/export-worker-pipelines', () => ({
   renderExportAudio: mocks.audio,
 }));
 vi.mock('@beam/runtime/frames/http-frame-source', () => ({ createHttpFrameSource: mocks.frameSource }));
-import { renderExperimentalExport } from '@beam/encoder/gpu-export/experimental-renderer';
-import { createCompositionSnapshot } from '@beam/runtime/rendering/snapshot';
 const stats = { elapsedMs: 200, decodeMs: 10, renderMs: 20, encoderBackpressureMs: 170 };
 let request: ExportRequest;
 let api: ExperimentalGpuExportApi;

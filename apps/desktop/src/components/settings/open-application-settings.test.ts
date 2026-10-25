@@ -1,8 +1,8 @@
 import { beforeEach, expect, it, vi } from 'vitest';
+import { openApplicationSettings } from './open-application-settings';
 const mocks = vi.hoisted(() => ({ open: vi.fn(), error: vi.fn() }));
 vi.mock('~/api/capture', () => ({ capture: { openHudSettings: mocks.open } }));
 vi.mock('~/ui/toast/toastStore', () => ({ useToastStore: () => ({ error: mocks.error }) }));
-import { openApplicationSettings } from './open-application-settings';
 beforeEach(() => vi.clearAllMocks());
 it('opens the shared native Settings window', async () => {
   mocks.open.mockResolvedValueOnce(true);

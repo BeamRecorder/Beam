@@ -3,6 +3,9 @@ import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { screenshotShape } from '../screenshot-state';
+import { drawScreenshot } from '@beam/runtime/screenshot/screenshot-render';
+import { encodeScreenshot, loadScreenshotAssets, screenshotPreview } from '../screenshot-render';
+import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot-types';
 
 const renderers = vi.hoisted(() => ({
   renderBackground: vi.fn(),
@@ -31,10 +34,6 @@ vi.mock('@beam/runtime/screenshot/screenshot-cursors', async (importOriginal) =>
   ...(await importOriginal()),
   loadScreenshotCursors: cursorLoad.loadScreenshotCursors,
 }));
-
-import { drawScreenshot } from '@beam/runtime/screenshot/screenshot-render';
-import { encodeScreenshot, loadScreenshotAssets, screenshotPreview } from '../screenshot-render';
-import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot-types';
 
 const image = {} as CanvasImageSource;
 const backgroundImage = {} as CanvasImageSource;

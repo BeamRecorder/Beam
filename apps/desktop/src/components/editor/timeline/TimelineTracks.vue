@@ -347,7 +347,7 @@ const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.t
               <div
                 class="track-content visual-content"
                 :class="{ 'addable-content': visualKindFor(track) }"
-                :title="visualKindFor(track) ? visualAddLabel(visualKindFor(track)) : undefined"
+                :aria-description="visualKindFor(track) ? visualAddLabel(visualKindFor(track)) : undefined"
                 @pointerdown.stop
                 @mousemove="visualKindFor(track) && hoverAt($event, track)"
                 @mouseleave="visualKindFor(track) && leaveTrack(track)"

@@ -1,5 +1,6 @@
 import type { GlassPoint } from '@beam/engine/zoom/glass-highlight-types';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
+import type { CSSProperties } from 'vue';
 
 export interface GlassSelectionGesture {
   pointerId: number;
@@ -13,6 +14,6 @@ export interface GlassSelectionGesture {
 export interface GlassSelectionProps {
   zoom: ZoomElement;
   canvasSize: { width: number; height: number };
-  viewportStyle: import('vue').CSSProperties;
+  viewportStyle: CSSProperties;
   panning: boolean;
 }

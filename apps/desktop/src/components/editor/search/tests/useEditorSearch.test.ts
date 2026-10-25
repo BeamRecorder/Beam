@@ -1,11 +1,11 @@
-const capture = vi.hoisted(() => ({ openHudSettings: vi.fn(async () => true) }));
-vi.mock('~/api/capture', () => ({ capture }));
 import { mount, enableAutoUnmount, flushPromises } from '@vue/test-utils';
 import { defineComponent, h, ref } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setCurrentLocale } from '~/i18n';
 import { provideEditorSearch } from '../useEditorSearch';
 import type { EditorSearchContext, EditorSearchOptions } from '../editor-search-types';
+const capture = vi.hoisted(() => ({ openHudSettings: vi.fn(async () => true) }));
+vi.mock('~/api/capture', () => ({ capture }));
 const focus = vi.hoisted(() => vi.fn(async () => true));
 vi.mock('../focus-editor-property', () => ({ focusEditorProperty: focus }));
 enableAutoUnmount(afterEach);

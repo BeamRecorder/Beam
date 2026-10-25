@@ -5,6 +5,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./shared/transition-preset-schema": {
+      "types": "./src/shared/transition-preset-schema.d.ts",
+      "default": "./src/shared/transition-preset-schema.js"
+    },
     ".": "./src/index.ts",
     "./*": "./src/*.ts",
     "./shared/shape-vector-schema": {

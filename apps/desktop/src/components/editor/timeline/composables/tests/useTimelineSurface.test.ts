@@ -6,7 +6,10 @@ import { useTimelineSurface } from '../useTimelineSurface';
 import TimelineCanvasLane from '../../TimelineCanvasLane.vue';
 import TimelineSurfaceCanvas from '../../TimelineSurfaceCanvas.vue';
 const paint = vi.hoisted(() => vi.fn());
-vi.mock('@beam/runtime/timeline/timeline-canvas-paint', () => ({ paintTimelineCanvas: paint }));
+vi.mock('@beam/runtime/timeline/timeline-canvas-paint', () => ({
+  paintTimelineCanvas: paint,
+  paintTimelineBodies: vi.fn(),
+}));
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();

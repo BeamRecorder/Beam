@@ -14,6 +14,7 @@ import { chromiumSettings } from './chromium-settings';
 import { buildRenderBundle } from './render-bundle';
 import { serveRenderBundle } from './bundle-server';
 import { closeExportBrowser } from './browser-lifecycle';
+import type { createMotionPage as createMotionPage2 } from './motion-page';
 
 /** Independent Chromium host: no editor window, Vue mount, capture API or running Beam application. */
 export async function exportInChromium(
@@ -48,7 +49,7 @@ export async function exportInChromium(
     await mkdir(tempRoot, { recursive: true });
     browserTemp = await mkdtemp(resolve(tempRoot, 'beam-'));
     const bundle = await buildRenderBundle(resolve(browserTemp, 'bundle'));
-    let motionPage: Awaited<ReturnType<typeof import('./motion-page').createMotionPage>> | undefined;
+    let motionPage: Awaited<ReturnType<typeof createMotionPage2>> | undefined;
     if (motion) {
       const { buildMotionBundle } = await import('./motion-bundle');
       for (const [route, file] of await buildMotionBundle(motion.entry, resolve(browserTemp, 'motion')))

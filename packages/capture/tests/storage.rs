@@ -26,6 +26,7 @@ fn manifest(project_id: ProjectId, session_id: SessionId) -> SessionManifest {
         warnings: Vec::new(),
         completed: false,
         cursor_embedded: false,
+        cursor_visible: None,
     }
 }
 

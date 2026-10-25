@@ -1,12 +1,11 @@
 import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
+import Throbber from './Throbber.vue';
+import { getThrobberGlobalTime } from './useThrobberSync';
 
 const reducedMotion = vi.hoisted(() => ({ value: true }));
 vi.mock('@vueuse/motion', () => ({ useReducedMotion: () => reducedMotion }));
-
-import Throbber from './Throbber.vue';
-import { getThrobberGlobalTime } from './useThrobberSync';
 
 describe('Throbber', () => {
   it('renders accessible text for assistive technologies', () => {

@@ -7,12 +7,12 @@ import { EventEmitter } from 'node:events';
 import { createRenderDocument } from '@beam/engine';
 import type { ExportRequest } from '@beam/encoder';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { exportWithFfmpeg } from './ffmpeg-export';
 const mocks = vi.hoisted(() => ({ paths: vi.fn(), bundle: vi.fn(), server: vi.fn(), run: vi.fn(), close: vi.fn() }));
 vi.mock('./ffmpeg-host-paths', () => ({ ffmpegHostPaths: mocks.paths }));
 vi.mock('./render-bundle', () => ({ buildRenderBundle: mocks.bundle }));
 vi.mock('./bundle-server', () => ({ serveRenderBundle: mocks.server }));
 vi.mock('./export-process', () => ({ runExportProcess: mocks.run }));
-import { exportWithFfmpeg } from './ffmpeg-export';
 let directory: string;
 const request = (): ExportRequest => ({
   projectName: 'test',

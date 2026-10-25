@@ -1,3 +1,4 @@
+const { createDefaultCursorClickEffects } = require('../packages/engine/src/capture/cursor-click-schema.js');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -17,6 +18,83 @@ const setup = () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-clips-'));
   return { directory };
 };
+
+test('screen cursor visibility survives project storage for independently cut fragments', () => {
+  const asset = {
+    id: 'screen',
+    kind: 'video',
+    name: 'Recording',
+    fileName: 'screen.mp4',
+    durationMs: 2000,
+    width: 100,
+    height: 50,
+    origin: 'project',
+  };
+  const composition = {
+    ...emptyComposition(),
+    assets: [asset],
+    clips: [
+      visualClip(asset.id, { id: 'left', kind: 'screen', trackId: 'recording', showCursor: true }),
+      visualClip(asset.id, {
+        id: 'right',
+        kind: 'screen',
+        trackId: 'recording',
+        timelineStartMs: 1000,
+        sourceInMs: 1000,
+        showCursor: false,
+      }),
+    ],
+  };
+  const saved = normalizeComposition(composition);
+  const reopened = normalizeComposition(JSON.parse(JSON.stringify(saved)));
+  assert.deepEqual(
+    reopened.clips.map((clip) => clip.showCursor),
+    [true, false],
+  );
+  assert.deepEqual(
+    composition.clips.map((clip) => clip.showCursor),
+    [true, false],
+  );
+});
+
+test('legacy screen clips keep inherited cursor visibility when saved', () => {
+  const asset = {
+    id: 'screen',
+    kind: 'video',
+    name: 'Recording',
+    fileName: 'screen.mp4',
+    durationMs: 2000,
+    width: 100,
+    height: 50,
+    origin: 'project',
+  };
+  const composition = { ...emptyComposition(), assets: [asset], clips: [visualClip(asset.id, { kind: 'screen' })] };
+  assert.equal(Object.hasOwn(normalizeComposition(composition).clips[0], 'showCursor'), false);
+});
+
+test('project storage rejects invalid cursor visibility and visibility on non-screen clips', () => {
+  const asset = {
+    id: 'screen',
+    kind: 'video',
+    name: 'Recording',
+    fileName: 'screen.mp4',
+    durationMs: 2000,
+    width: 100,
+    height: 50,
+    origin: 'project',
+  };
+  for (const patch of [
+    { kind: 'screen', showCursor: 'off' },
+    { kind: 'screen', showCursor: null },
+    { kind: 'video', showCursor: true },
+    { kind: 'webcam', showCursor: false },
+  ]) {
+    assert.throws(
+      () => normalizeComposition({ ...emptyComposition(), assets: [asset], clips: [visualClip(asset.id, patch)] }),
+      /cursor visibility/i,
+    );
+  }
+});
 
 const visualClip = (assetId, overrides = {}) => ({
   id: 'clip-video',
@@ -2265,6 +2343,142 @@ test('validates canonical transition presets, durations, domains, and edge budge
   );
 });
 
+test('preserves every categorized GPU transition through clip normalization and JSON reopening', () => {
+  const kinds = [
+    'fade-black',
+    'fade-white',
+    'cross-zoom',
+    'zoom-bounce',
+    'split',
+    'push-panels',
+    'sliding-panels',
+    'circle-reveal',
+    'diamond-wipe',
+    'linear-wipe',
+    'gradient-wipe',
+    'whip-pan',
+    'push',
+    'camera-shake',
+    'rgb-split',
+    'digital-glitch',
+    'pixel-blocks',
+  ];
+  const presets = [
+    ...kinds.map((kind) => ({ kind })),
+    ...['dip-color', 'color-fade', 'color-flash'].map((kind) => ({ kind, color: '#A1b2C3' })),
+  ];
+  const asset = {
+    id: 'gpu-video',
+    kind: 'video',
+    name: 'Video',
+    fileName: 'video.mp4',
+    durationMs: 1000,
+    width: 1920,
+    height: 1080,
+    origin: 'project',
+  };
+  for (const preset of presets) {
+    const transitions = {
+      entry: { preset, durationMs: 300, easingPower: 1 },
+      exit: { preset, durationMs: 200, easingPower: 5 },
+    };
+    const initial = { ...emptyComposition(), assets: [asset], clips: [visualClip(asset.id, { transitions })] };
+    const normalized = normalizeComposition(initial);
+    assert.deepEqual(normalized.clips[0].transitions, transitions, preset.kind);
+    assert.deepEqual(
+      normalizeComposition(JSON.parse(JSON.stringify(normalized))).clips[0].transitions,
+      transitions,
+      preset.kind,
+    );
+    assert.deepEqual(initial.clips[0].transitions, transitions, 'normalization must not change the authoring input');
+  }
+});
+
+test('rejects GPU transition colors outside explicit hex6 and visual presets on audio clips', () => {
+  const asset = {
+    id: 'gpu-video',
+    kind: 'video',
+    name: 'Video',
+    fileName: 'video.mp4',
+    durationMs: 1000,
+    width: 1920,
+    height: 1080,
+    origin: 'project',
+  };
+  const canonical = (preset) =>
+    normalizeComposition({
+      ...emptyComposition(),
+      assets: [asset],
+      clips: [visualClip(asset.id, { transitions: { entry: { preset, durationMs: 200 }, exit: null } })],
+    });
+  for (const kind of ['dip-color', 'color-fade', 'color-flash']) {
+    for (const color of [undefined, null, '', '#fff', '#ffffffff', 'red', '#GG0000', 42]) {
+      assert.throws(() => canonical({ kind, color }), /preset|transition|couleur|color/i, `${kind}: ${String(color)}`);
+    }
+  }
+  const audio = { ...asset, id: 'gpu-audio', kind: 'audio', fileName: 'audio.wav', width: null, height: null };
+  for (const kind of [
+    'fade-black',
+    'cross-zoom',
+    'split',
+    'circle-reveal',
+    'gradient-wipe',
+    'whip-pan',
+    'digital-glitch',
+  ]) {
+    assert.throws(
+      () =>
+        normalizeComposition({
+          ...emptyComposition(),
+          assets: [audio],
+          clips: [audioClip(audio.id, { transitions: { entry: { preset: { kind }, durationMs: 200 }, exit: null } })],
+        }),
+      /preset|transition/i,
+    );
+  }
+});
+
+test('persists categorized GPU canvas transitions without changing their color, timing or easing', (context) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-gpu-canvas-transitions-'));
+  context.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'GPU canvas transitions' });
+  const kinds = [
+    'fade-black',
+    'fade-white',
+    'cross-zoom',
+    'zoom-bounce',
+    'split',
+    'push-panels',
+    'sliding-panels',
+    'circle-reveal',
+    'diamond-wipe',
+    'linear-wipe',
+    'gradient-wipe',
+    'whip-pan',
+    'push',
+    'camera-shake',
+    'rgb-split',
+    'digital-glitch',
+    'pixel-blocks',
+  ];
+  const presets = [
+    ...kinds.map((kind) => ({ kind })),
+    ...['dip-color', 'color-fade', 'color-flash'].map((kind) => ({ kind, color: '#A1b2C3' })),
+  ];
+  for (const preset of presets) {
+    const state = store.editorState(project.id);
+    const transitions = {
+      entry: { preset, durationMs: 250, easingPower: 2 },
+      exit: { preset, durationMs: 350, easingPower: 4 },
+    };
+    state.presentation.canvas = { ...state.presentation.canvas, transitions };
+    const saved = store.saveEditorState(project.id, state);
+    assert.deepEqual(saved.presentation.canvas.transitions, transitions, preset.kind);
+    assert.deepEqual(store.editorState(project.id).presentation.canvas.transitions, transitions, preset.kind);
+  }
+});
+
 test('preserves every supported non-custom canvas preset through editor-state persistence', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-canvas-presets-'));
   const store = createProjectStore(root);
@@ -3420,4 +3634,78 @@ test('text rotation survives native normalization while malformed angles are rej
       () => normalizeComposition({ ...emptyComposition(), clips: [captionClip(textCaption(), { rotation })] }),
       /Rotation/,
     );
+});
+
+const cursorStyle = () => ({
+  selection: { packId: 'builtin:macos', mode: 'automatic', cursorId: null },
+  size: 45,
+  color: '#000000',
+  shadow: { enabled: true, blur: 6, color: '#000000', direction: 'bottom' },
+  clickEffects: createDefaultCursorClickEffects(),
+  motion: {
+    preset: 'smooth',
+    smoothing: 0.67,
+    springMassMultiplier: 1.29,
+    motionBlur: 0.4,
+    stopSpringEnabled: true,
+    stopSpringStrength: 0.45,
+  },
+  autoHide: { enabled: false, delaySeconds: 2, fadeDurationMs: 250 },
+});
+const cursorComposition = () => ({
+  ...emptyComposition(),
+  assets: [
+    {
+      id: 'recording',
+      kind: 'video',
+      name: 'Recording',
+      fileName: 'screen.mp4',
+      durationMs: 2000,
+      width: 100,
+      height: 50,
+      origin: 'project',
+    },
+  ],
+  clips: [
+    visualClip('recording', { id: 'first', kind: 'screen', trackId: 'recording', cursorSettings: cursorStyle() }),
+    visualClip('recording', {
+      id: 'second',
+      kind: 'screen',
+      trackId: 'recording',
+      timelineStartMs: 1000,
+      sourceInMs: 1000,
+      cursorSettings: { ...cursorStyle(), size: 90, color: '#ff0000' },
+    }),
+  ],
+});
+test('independent cursor settings survive project serialization and reopening', () => {
+  const before = cursorComposition(),
+    saved = normalizeComposition(before),
+    reopened = normalizeComposition(JSON.parse(JSON.stringify(saved)));
+  assert.deepEqual(
+    reopened.clips.map((clip) => [clip.cursorSettings.size, clip.cursorSettings.color]),
+    [
+      [45, '#000000'],
+      [90, '#ff0000'],
+    ],
+  );
+  before.clips[0].cursorSettings.shadow.blur = 30;
+  assert.equal(saved.clips[0].cursorSettings.shadow.blur, 6);
+});
+test('cursor settings are rejected on other clip kinds or with malformed nested values', () => {
+  const badKind = cursorComposition();
+  badKind.clips[0].kind = 'video';
+  assert.throws(() => normalizeComposition(badKind), /screen recordings/);
+  const badValue = cursorComposition();
+  badValue.clips[0].cursorSettings.motion.smoothing = NaN;
+  assert.throws(() => normalizeComposition(badValue), /cursor/);
+  const badEffects = cursorComposition();
+  badEffects.clips[0].cursorSettings.clickEffects.left = {};
+  assert.throws(() => normalizeComposition(badEffects), /cursor/i);
+});
+test('older clips inherit project cursor settings and packaged applications include the shared validator', () => {
+  const value = cursorComposition();
+  delete value.clips[0].cursorSettings;
+  assert.equal(normalizeComposition(value).clips[0].cursorSettings, undefined);
+  assert.ok(require('../package.json').build.files.includes('packages/engine/src/capture/screen-cursor-schema.js'));
 });

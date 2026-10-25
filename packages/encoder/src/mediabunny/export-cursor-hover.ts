@@ -1,4 +1,6 @@
+import { screenCursorPresentation } from '@beam/engine/capture/screen-cursor-settings';
 import type { ExportRequest } from '../export-types';
+import { compositionHasScreenCursor } from '@beam/engine/capture/screen-cursor';
 import type { ExportAssets } from './export-worker-assets';
 import type { HoverSource } from '@beam/runtime/cursor/hover/hover-types';
 import { packHoverPath } from '@beam/runtime/cursor/hover/hover-path';
@@ -15,8 +17,14 @@ export async function prepareExportCursorHovers(
   const { snapshot } = request;
   if (
     snapshot.cursor.hoverSync ||
-    !snapshot.cursorSettings.enabled ||
-    snapshot.cursorSettings.motion.smoothing <= 0 ||
+    !compositionHasScreenCursor(snapshot.composition, snapshot.cursorSettings.enabled !== false) ||
+    !snapshot.composition.clips.some(
+      (clip) =>
+        clip.kind === 'screen' &&
+        clip.enabled &&
+        screenCursorPresentation(clip, snapshot.cursorSettings).enabled &&
+        screenCursorPresentation(clip, snapshot.cursorSettings).motion.smoothing > 0,
+    ) ||
     !snapshot.cursor.available ||
     !snapshot.cursor.events.length
   )

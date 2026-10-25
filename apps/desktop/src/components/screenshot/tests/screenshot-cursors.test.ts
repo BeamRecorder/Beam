@@ -2,12 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CursorAssetDescriptor, CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import type { ScreenshotCursorLayer } from '@beam/engine/screenshot/screenshot-types';
-
-const runtime = vi.hoisted(() => ({ loadCursorImage: vi.fn() }));
-vi.mock('@beam/runtime/cursor/cursor-image-loader', () => ({
-  loadCursorImage: runtime.loadCursorImage,
-}));
-
 import {
   createScreenshotCursor,
   drawScreenshotCursor,
@@ -15,6 +9,11 @@ import {
   screenshotCursorTransform,
   transformScreenshotCursor,
 } from '@beam/runtime/screenshot/screenshot-cursors';
+
+const runtime = vi.hoisted(() => ({ loadCursorImage: vi.fn() }));
+vi.mock('@beam/runtime/cursor/cursor-image-loader', () => ({
+  loadCursorImage: runtime.loadCursorImage,
+}));
 
 const pointer: CursorAssetDescriptor = {
   id: 'pointer',

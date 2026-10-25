@@ -11,6 +11,8 @@ import { chromiumExecutable } from './chromium-install';
 import { chromiumSettings } from './chromium-settings';
 import { snapshot } from '../../../packages/runtime/src/rendering/tests/render.test-support';
 import { isVisualClip } from '@beam/engine/shared/composition-types';
+import type * as WaterRippleGpuModule from '@beam/runtime/cursor/water-ripple-gpu';
+import type * as RenderModule from '@beam/runtime/rendering/render';
 
 const controlsEntry = `
 import {createApp,h,reactive} from 'vue';
@@ -92,7 +94,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('water ripple completed p
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const { WaterRippleGpu } = (await load(
         '/packages/runtime/src/cursor/water-ripple-gpu.ts',
-      )) as typeof import('@beam/runtime/cursor/water-ripple-gpu');
+      )) as typeof WaterRippleGpuModule;
       const source = new OffscreenCanvas(400, 240),
         target = new OffscreenCanvas(400, 240);
       const ctx = source.getContext('2d')!,
@@ -156,7 +158,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('water ripple completed p
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const { WaterRippleGpu } = (await load(
         '/packages/runtime/src/cursor/water-ripple-gpu.ts',
-      )) as typeof import('@beam/runtime/cursor/water-ripple-gpu');
+      )) as typeof WaterRippleGpuModule;
       const source = new OffscreenCanvas(400, 240),
         ctx = source.getContext('2d')!;
       for (let x = 0; x < 400; x += 4) {
@@ -205,7 +207,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('water ripple completed p
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const { WaterRippleGpu } = (await load(
         '/packages/runtime/src/cursor/water-ripple-gpu.ts',
-      )) as typeof import('@beam/runtime/cursor/water-ripple-gpu');
+      )) as typeof WaterRippleGpuModule;
       const source = new OffscreenCanvas(300, 180),
         target = new OffscreenCanvas(300, 180);
       const ctx = source.getContext('2d')!,
@@ -268,7 +270,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('water ripple completed p
           const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
           const { renderCompositionFrame, disposeCompositionRenderer } = (await load(
             '/packages/runtime/src/rendering/render.ts',
-          )) as typeof import('@beam/runtime/rendering/render');
+          )) as typeof RenderModule;
           const source = new OffscreenCanvas(400, 240),
             sourceCtx = source.getContext('2d')!;
           for (let x = 0; x < 400; x += 8) {

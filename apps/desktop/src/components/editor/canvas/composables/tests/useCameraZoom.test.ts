@@ -11,6 +11,7 @@ import { createDefaultClipAppearance } from '@beam/engine/shared/composition-def
 import { clampFocusToScale } from '@beam/engine/zoom/zoom-playback';
 import { ZOOM_DEPTH_SCALES } from '@beam/engine/zoom/zoom-types';
 import { frameOuterRect } from '@beam/engine/shared/frame-layout';
+import type * as FramesModule from '@beam/runtime/composition/appearance/frames';
 
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
 const drawFrameOverlay = vi.hoisted(() => vi.fn());
@@ -26,7 +27,7 @@ vi.mock('@beam/runtime/composition/appearance/render-decorated-media', () => ({
   drawDecoratedMedia,
 }));
 vi.mock('@beam/runtime/composition/appearance/frames', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@beam/runtime/composition/appearance/frames')>()),
+  ...(await importOriginal<typeof FramesModule>()),
   drawFrameOverlay,
 }));
 vi.mock('@beam/runtime/zoom/zoom-motion-blur-compositor', () => motionBlurCompositor);
@@ -215,7 +216,7 @@ const mountComposable = (
         screenTransformDraft: () => screenTransformDraft.value,
         isCropping: () => cropping.value,
         renderVisualStack: (ctx, bounds, drawScreen) => {
-          drawScreen();
+          drawScreen(ctx);
           callbacks.onSelectCanvas(ctx, bounds);
         },
         ...callbacks,

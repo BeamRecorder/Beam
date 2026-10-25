@@ -3,6 +3,7 @@ import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { CursorAssetDescriptor } from '@beam/engine/capture/cursor-pack';
 import type { ScreenshotLayer } from '@beam/engine/screenshot/screenshot-types';
 import type { ThumbnailImageAsset, ThumbnailReply, ThumbnailRequest } from '../thumbnail-types';
+import { createThumbnailWorker } from '../thumbnail-worker';
 
 const dependencies = vi.hoisted(() => ({
   loadFonts: vi.fn(),
@@ -19,8 +20,6 @@ vi.mock('../thumbnail-assets', () => ({
 vi.mock('../thumbnail-render', () => ({
   renderLayerThumbnail: dependencies.render,
 }));
-
-import { createThumbnailWorker } from '../thumbnail-worker';
 
 const asset: CursorAssetDescriptor = {
   id: 'pointer',

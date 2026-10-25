@@ -10,6 +10,13 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromiumExecutable } from './chromium-install';
 import { chromiumSettings } from './chromium-settings';
+import type * as HoverDifferenceGpuModule from '@beam/runtime/cursor/hover/hover-difference-gpu';
+import type * as HoverAnalysisBrowserModule from '@beam/runtime/cursor/hover/hover-analysis-browser';
+import type * as HoverPathModule from '@beam/runtime/cursor/hover/hover-path';
+import type * as MediaInputModule from '@beam/runtime/shared/media-input';
+import type * as MediaSourceModule from '@beam/runtime/shared/media-source';
+import type * as CursorMotionModule from '@beam/engine/cursor/cursor-motion';
+import type * as CursorSettingsModule from '@beam/engine/capture/cursor-settings';
 
 function recording(kind: string) {
   const width = 384,
@@ -152,7 +159,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('cursor synchronization f
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const { HoverDifferenceGpu } = (await load(
         '/packages/runtime/src/cursor/hover/hover-difference-gpu.ts',
-      )) as typeof import('@beam/runtime/cursor/hover/hover-difference-gpu');
+      )) as typeof HoverDifferenceGpuModule;
       const canvas = new OffscreenCanvas(384, 216),
         ctx = canvas.getContext('2d')!;
       ctx.fillStyle = '#000';
@@ -175,10 +182,10 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('cursor synchronization f
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const { analyzeCursorHoversInBackground } = (await load(
         '/packages/runtime/src/cursor/hover/hover-analysis-browser.ts',
-      )) as typeof import('@beam/runtime/cursor/hover/hover-analysis-browser');
+      )) as typeof HoverAnalysisBrowserModule;
       const { packHoverPath } = (await load(
         '/packages/runtime/src/cursor/hover/hover-path.ts',
-      )) as typeof import('@beam/runtime/cursor/hover/hover-path');
+      )) as typeof HoverPathModule;
       const events = [5, 10].flatMap((start) =>
         Array.from({ length: 120 }, (_, frame) => ({
           event: 'move' as const,
@@ -212,16 +219,16 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('cursor synchronization f
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const { analyzeCursorHoversInBackground } = (await load(
           '/packages/runtime/src/cursor/hover/hover-analysis-browser.ts',
-        )) as typeof import('@beam/runtime/cursor/hover/hover-analysis-browser');
+        )) as typeof HoverAnalysisBrowserModule;
         const { packHoverPath } = (await load(
           '/packages/runtime/src/cursor/hover/hover-path.ts',
-        )) as typeof import('@beam/runtime/cursor/hover/hover-path');
+        )) as typeof HoverPathModule;
         const { openMediaInput } = (await load(
           '/packages/runtime/src/shared/media-input.ts',
-        )) as typeof import('@beam/runtime/shared/media-input');
+        )) as typeof MediaInputModule;
         const { mediaSourceDescriptor } = (await load(
           '/packages/runtime/src/shared/media-source.ts',
-        )) as typeof import('@beam/runtime/shared/media-source');
+        )) as typeof MediaSourceModule;
         const src = `${location.origin}/delayed-hover.mp4`;
         const opened = await openMediaInput(
           mediaSourceDescriptor({ id: 'delayed', name: 'delayed', kind: 'video', src }),
@@ -265,16 +272,16 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('cursor synchronization f
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const { analyzeCursorHoversInBackground } = (await load(
           '/packages/runtime/src/cursor/hover/hover-analysis-browser.ts',
-        )) as typeof import('@beam/runtime/cursor/hover/hover-analysis-browser');
+        )) as typeof HoverAnalysisBrowserModule;
         const { packHoverPath } = (await load(
           '/packages/runtime/src/cursor/hover/hover-path.ts',
-        )) as typeof import('@beam/runtime/cursor/hover/hover-path');
+        )) as typeof HoverPathModule;
         const { createCursorMotionPlayer } = (await load(
           '/packages/engine/src/cursor/cursor-motion.ts',
-        )) as typeof import('@beam/engine/cursor/cursor-motion');
+        )) as typeof CursorMotionModule;
         const { createDefaultCursorMotionSettings } = (await load(
           '/packages/engine/src/capture/cursor-settings.ts',
-        )) as typeof import('@beam/engine/capture/cursor-settings');
+        )) as typeof CursorSettingsModule;
         const events = Array.from({ length: 120 }, (_, frame) => ({
           event: 'move' as const,
           sessionNs: (frame / 60) * 1e9,

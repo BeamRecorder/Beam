@@ -430,6 +430,7 @@
     "savingProject": "プロジェクトを保存中"
   },
   "ZoomPanel": {
+    "applyToTrackHint": "対象とタイミングを維持したまま、ロックされていないズームの表示を統一します。",
     "cameraFollow": "カメラ追従",
     "cameraFollowDesc": "記録されたカーソルの動きを先読みし、カメラが滑らかに徐々に追従します。",
     "advanced": "詳細設定",

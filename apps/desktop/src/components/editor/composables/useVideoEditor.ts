@@ -2,7 +2,13 @@ import { openApplicationSettings } from '~/components/settings/open-application-
 import { usePreferencesStore } from '~/stores/preferences';
 import { recordingZoomMode } from '@beam/engine/zoom/recording-zoom-preference';
 import { getCurrentInstance, provide } from 'vue';
-import { customCursorKey } from '../properties/cursor/custom-cursor-context';
+import { customCursorKey, screenCursorSelectionKey } from '../properties/cursor/custom-cursor-context';
+import { clipTrackPropertyScopeKey } from '../properties/clip/clip-track-property-context';
+import { useRecordingCursorProperties } from './useRecordingCursorProperties';
+import { cursorPropertyScopeKey } from '../properties/cursor/cursor-property-types';
+import { zoomPropertyScopeKey } from '../properties/zoom/zoom-property-context';
+import { useScreenCursorVisibility } from './useScreenCursorVisibility';
+import { useRecordingClipSplit } from './useRecordingClipSplit';
 import { provideVideoEditorSearch } from '../search/useVideoEditorSearch';
 import { useVideoElements } from '../elements/useVideoElements';
 import { computed, nextTick, onScopeDispose, ref, toRaw, watch, type Ref } from 'vue';
@@ -47,7 +53,6 @@ export function useVideoEditor(options: {
   const projectStateReady = ref(false);
   const authoringReady = ref(false);
   const cursor = useCursorReplacer();
-  if (getCurrentInstance()) provide(customCursorKey, cursor.enabled);
   const cursorMotion = ref(createDefaultCursorMotionSettings());
   const includeAudioInExport = ref(true);
   const editorDefaults = ref(normalizeEditorPreferenceDefaults(undefined));
@@ -59,6 +64,47 @@ export function useVideoEditor(options: {
     activeTab,
     editorDefaults,
   });
+  const cursorProperties = useRecordingCursorProperties({
+    composition: compositionState.composition,
+    selectedId: compositionState.selectedClipId,
+    selectedIds: compositionState.selectedClipIds,
+    time: player.currentTime,
+    defaults: computed(() => ({
+      enabled: cursor.enabled.value,
+      selection: cursor.selection.value,
+      size: cursor.cursorSize.value,
+      color: cursor.cursorColor.value,
+      shadow: {
+        enabled: cursor.enableShadow.value,
+        blur: cursor.shadowBlur.value,
+        color: cursor.shadowColor.value,
+        direction: cursor.shadowDirection.value,
+      },
+      clickEffects: cursor.clickEffects.value,
+      motion: cursorMotion.value,
+      autoHide: cursor.autoHide.value,
+    })),
+  });
+  const screenCursor = useScreenCursorVisibility(
+    compositionState.composition,
+    compositionState.selectedClipIds,
+    player.currentTime,
+    cursor.enabled,
+    cursorProperties.synchronizeVisibility,
+  );
+  if (getCurrentInstance()) {
+    provide(clipTrackPropertyScopeKey, compositionState.clipTrackProperties);
+    provide(cursorPropertyScopeKey, cursorProperties);
+    provide(customCursorKey, cursor.enabled);
+    provide(screenCursorSelectionKey, screenCursor);
+  }
+  watch(
+    () => project.value?.id,
+    () => {
+      compositionState.clipTrackProperties.reset();
+      cursorProperties.reset();
+    },
+  );
   const roleVolume = (role: Extract<AudioRole, 'system' | 'microphone'>) =>
     computed({
       get: () =>
@@ -90,8 +136,19 @@ export function useVideoEditor(options: {
     composition: compositionState.composition,
     canvas: outputCanvas,
   });
+  if (getCurrentInstance()) provide(zoomPropertyScopeKey, zoomState.propertyScope);
+  watch(
+    () => project.value?.id,
+    () => zoomState.propertyScope.reset(),
+  );
   const playbackComposition = computed(() =>
     compositionWithZoomDuration(compositionState.composition.value, zoomState.zoomElements.value),
+  );
+  const splitSelectedClip = useRecordingClipSplit(
+    compositionState.composition,
+    zoomState.zoomElements,
+    compositionState.selectedClip,
+    player.currentTime,
   );
   const htmlSceneAt = computed(() => createHtmlSceneResolver(toRaw(compositionState.composition.value)));
   const liveHtmlPreview = computed(() =>
@@ -127,6 +184,7 @@ export function useVideoEditor(options: {
     cursorAutoHide: cursor.autoHide,
     cursorEnabled: cursor.enabled,
     nativeCursorEmbedded: () => editorData.value?.manifest.cursorEmbedded === true,
+    recordingCursorVisible: () => editorData.value?.manifest.cursorVisible,
     cursorSelection: cursor.selection,
     cursorSize: cursor.cursorSize,
     cursorColor: cursor.cursorColor,
@@ -140,6 +198,12 @@ export function useVideoEditor(options: {
     selectedZoom: zoomState.selectedZoom,
   });
   const editorPresets = useEditorPresets(editorDefaults, resources);
+  const elementComposition = computed({
+    get: () => compositionState.composition.value,
+    set: (next) => {
+      compositionState.composition.value = compositionState.clipTrackProperties.synchronize(next);
+    },
+  });
   const elements = useVideoElements({
     editorDefaults,
     canvasSize: () => outputCanvas.value,
@@ -161,7 +225,7 @@ export function useVideoEditor(options: {
       compositionState.addElement('image').catch((error) => {
         toastStore.error(String(error));
       }),
-    composition: compositionState.composition,
+    composition: elementComposition,
     selectedId: compositionState.selectedClipId,
     activeTab,
     currentTime: player.currentTime,
@@ -234,6 +298,7 @@ export function useVideoEditor(options: {
         autoHide: cursor.autoHide.value,
       },
       cursorPack: cursor.selectedPack.value,
+      cursorPacks: cursor.packs.value,
     });
   const exportRequest = computed<EditorExportSource | null>(() => {
     if (!project.value) return null;
@@ -348,6 +413,7 @@ export function useVideoEditor(options: {
     canInsert: () => projectStateReady.value && !editorState.loading.value,
   });
   return {
+    cursorProperties,
     activeTab,
     systemVolume,
     micVolume,
@@ -364,6 +430,7 @@ export function useVideoEditor(options: {
     cursorMotion,
     compositionState: {
       ...compositionState,
+      splitSelectedClip,
       addElement: addEditorElement,
     },
     editorState,

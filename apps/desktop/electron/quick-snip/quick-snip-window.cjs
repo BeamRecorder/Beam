@@ -118,7 +118,8 @@ function createQuickSnipWindow({
     });
     window.setContentProtection(true);
     window.on('system-context-menu', (event) => event.preventDefault());
-    if (platform === 'win32') window.setBackgroundMaterial('acrylic');
+    // Native acrylic paints the entire rectangular HWND, including the pill's transparent margins.
+    if (platform === 'win32') window.setBackgroundMaterial('none');
     window.setAlwaysOnTop(true, 'screen-saver');
     const target = window;
     positionTracker = createCommittedWindowPosition({

@@ -1,6 +1,7 @@
 import { nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import PropertiesSelectionSummary from './PropertiesSelectionSummary.vue';
 
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: () => ({
@@ -8,8 +9,6 @@ vi.mock('~/i18n/useTranslate', () => ({
       key === 'selectionAndMore' ? `… et ${params?.count ?? 0} autres` : key,
   }),
 }));
-
-import PropertiesSelectionSummary from './PropertiesSelectionSummary.vue';
 
 class ResizeObserverMock {
   observe() {}

@@ -1,5 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import RegionRecordingToolbar from './RegionRecordingToolbar.vue';
+import type { ScreenRegionOverlayOptions } from '~/api/types/screen-region';
 const { capture, cameras, microphones, disconnect, unsubscribe, micMeter, systemMeter } = vi.hoisted(() => ({
   capture: {
     platform: 'linux',
@@ -28,8 +30,6 @@ vi.mock('../audio/useAudioLevelMeter', () => ({
 vi.mock('../recorder/useNativeSystemAudioPreview', () => ({
   useNativeSystemAudioPreview: systemMeter,
 }));
-import RegionRecordingToolbar from './RegionRecordingToolbar.vue';
-import type { ScreenRegionOverlayOptions } from '~/api/types/screen-region';
 const settings = {
   cameraId: 'off',
   microphoneId: 'no-audio',

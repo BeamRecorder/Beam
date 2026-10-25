@@ -1,9 +1,9 @@
 import { defineComponent } from 'vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useHudInteractivity } from '../useHudInteractivity';
 const capture = vi.hoisted(() => ({ setInteractive: vi.fn() }));
 vi.mock('~/api/capture', () => ({ capture }));
-import { useHudInteractivity } from '../useHudInteractivity';
 let wrapper: ReturnType<typeof mount> | undefined;
 let target: Element | null = null;
 const move = () => window.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 40 }));

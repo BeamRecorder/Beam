@@ -1,10 +1,12 @@
-vi.mock('@beam/runtime/rendering/snapshot-camera', () => ({ createSnapshotCameraEvaluator: vi.fn() }));
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ExportRequest } from '@beam/encoder/export-types';
 import type { ExportAssets } from '@beam/encoder/mediabunny/export-worker-assets';
 import type { ExportWorkerOutput } from '@beam/encoder/mediabunny/export-worker-output';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import { COMPOSITION_SCHEMA_VERSION, type VisualClip } from '@beam/engine/shared/composition-types';
+import { renderExportVideo } from '@beam/encoder/mediabunny/export-worker-pipelines';
+import type * as MediabunnyModule from 'mediabunny';
+vi.mock('@beam/runtime/rendering/snapshot-camera', () => ({ createSnapshotCameraEvaluator: vi.fn() }));
 
 const runtime = vi.hoisted(() => ({
   sinks: vi.fn(),
@@ -14,7 +16,7 @@ const runtime = vi.hoisted(() => ({
   render: vi.fn(),
 }));
 vi.mock('mediabunny', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('mediabunny')>()),
+  ...(await importOriginal<typeof MediabunnyModule>()),
   VideoSampleSink: class {
     constructor(track: unknown, options: unknown) {
       runtime.sinks(track, options);
@@ -53,7 +55,6 @@ vi.mock('@beam/runtime/rendering/render', () => ({
   renderCompositionFrame: runtime.render,
   disposeCompositionRenderer: vi.fn(),
 }));
-import { renderExportVideo } from '@beam/encoder/mediabunny/export-worker-pipelines';
 
 const clip = (id: string, sourceInMs = 0): VisualClip => ({
   id,

@@ -2,6 +2,10 @@ import { ref } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScreenshotEditingShortcutOptions } from '../screenshot-editing-shortcut-types';
 import type { useScreenshotLayerShortcuts } from '../useScreenshotLayerShortcuts';
+import { useScreenshotEditingShortcuts } from '../useScreenshotEditingShortcuts';
+import { screenshotState, screenshotShape } from '../screenshot-state';
+import { initializeScreenshotComposition } from '@beam/engine/screenshot/screenshot-layers';
+import { documentFixture } from './screenshot-editor-test-helpers';
 const mocks = vi.hoisted(() => ({ bind: vi.fn(), duplicate: vi.fn(), begin: vi.fn(), end: vi.fn() }));
 vi.mock('../useScreenshotLayerShortcuts', () => ({ useScreenshotLayerShortcuts: mocks.bind }));
 vi.mock('../duplicate-screenshot-selection', () => ({ duplicateScreenshotSelection: mocks.duplicate }));
@@ -9,10 +13,6 @@ vi.mock('~/composables/property-interaction', () => ({
   beginPropertyInteraction: mocks.begin,
   endPropertyInteraction: mocks.end,
 }));
-import { useScreenshotEditingShortcuts } from '../useScreenshotEditingShortcuts';
-import { screenshotState, screenshotShape } from '../screenshot-state';
-import { initializeScreenshotComposition } from '@beam/engine/screenshot/screenshot-layers';
-import { documentFixture } from './screenshot-editor-test-helpers';
 const fixture = () => {
   const state = screenshotState(documentFixture());
   state.shapes = [screenshotShape('rectangle', 'shape')];

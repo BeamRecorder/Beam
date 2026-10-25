@@ -4,14 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CursorAssetDescriptor, CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { ScreenshotCursorLayer } from '@beam/engine/screenshot/screenshot-types';
+import { useScreenshotCursors } from '../useScreenshotCursors';
 
 const runtime = vi.hoisted(() => ({
   listCursorPacks: vi.fn(),
   onCursorPacksChanged: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture: runtime }));
-
-import { useScreenshotCursors } from '../useScreenshotCursors';
 
 const asset = (id: string): CursorAssetDescriptor => ({
   id,

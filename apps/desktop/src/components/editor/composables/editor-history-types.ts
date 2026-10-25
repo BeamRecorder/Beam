@@ -11,6 +11,12 @@ export interface EditorStateSnapshot {
   outputCanvas: OutputCanvasSettings;
   selectedBackground: BackgroundValue | null;
   backgroundBlurPercent: number;
+  /** Project-local editing modes restored alongside the changes they propagated. */
+  trackPropertyScopes?: {
+    clipTracks: readonly string[];
+    cursorTracks: readonly string[];
+    zoom: boolean;
+  };
 }
 export interface EditorHistorySnapshots {
   capture(snapshot: EditorStateSnapshot): EditorStateSnapshot;

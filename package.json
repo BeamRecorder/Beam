@@ -62,6 +62,7 @@
     "electron:build": "bun run build && electron-builder --publish never",
     "typecheck:packages": "bun run --filter @beam/engine --filter @beam/runtime --filter @beam/encoder --filter @beam/cli --filter @beam/storage --filter @beam/system-metrics typecheck",
     "beam": "bun apps/cli/src/index.ts",
+    "check:imports": "node scripts/check-type-imports.mjs",
     "check:boundaries": "node scripts/check-package-boundaries.mjs",
     "build:cli": "bun scripts/build-cli.mjs"
   },
@@ -115,7 +116,9 @@
       "packages/engine/src/scene/scene-schema.js",
       "packages/engine/src/shared/shape-vector-schema.js",
       "packages/engine/src/shared/animated-frame-schema.js",
+      "packages/engine/src/shared/transition-preset-schema.js",
       "packages/engine/src/capture/cursor-click-schema.js",
+      "packages/engine/src/capture/screen-cursor-schema.js",
       "packages/engine/src/zoom/glass-highlight-schema.js",
       "packages/engine/src/zoom/orbit-schema.js",
       "packages/engine/src/zoom/zoom-schema.js",

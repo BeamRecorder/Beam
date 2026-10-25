@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CameraRecordingCommand } from '../../../api/types/camera-recording';
 import { defineComponent, h } from 'vue';
+import CameraOverlayApp from '../camera/CameraOverlayApp.vue';
 
 const capture = vi.hoisted(() => ({
   status: vi.fn(),
@@ -22,8 +23,6 @@ vi.mock('../../../api/capture', () => ({ capture }));
 vi.mock('../../../stores/theme', () => ({
   useThemeStore: () => ({ theme: 'dark' }),
 }));
-
-import CameraOverlayApp from '../camera/CameraOverlayApp.vue';
 
 const readyStream = vi.fn();
 

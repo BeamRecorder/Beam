@@ -10,6 +10,7 @@ import { chromiumExecutable } from '../../../../../../cli/src/chromium-install';
 import { chromiumSettings } from '../../../../../../cli/src/chromium-settings';
 import { SUPPORTED_LOCALES } from '../../../../i18n/locales';
 import type { AppLocale } from '../../../../i18n/types';
+import type * as PresetPreviewBrowserHostModule from './preset-preview-browser-host';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('Preset previews in Chromium', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temporary: string;
@@ -27,7 +28,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('Preset previews in Chrom
           });
         const load = new Function('path', 'return import(path)') as (
           path: string,
-        ) => Promise<typeof import('./preset-preview-browser-host')>;
+        ) => Promise<typeof PresetPreviewBrowserHostModule>;
         await (
           await load('/apps/desktop/src/components/editor/presets/tests/preset-preview-browser-host.ts')
         ).mountPresetPreview(mode, locale, dark);
@@ -136,7 +137,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('Preset previews in Chrom
       page.evaluate(async () => {
         const load = new Function('path', 'return import(path)') as (
           path: string,
-        ) => Promise<typeof import('./preset-preview-browser-host')>;
+        ) => Promise<typeof PresetPreviewBrowserHostModule>;
         return (
           await load('/apps/desktop/src/components/editor/presets/tests/preset-preview-browser-host.ts')
         ).committedPreset();

@@ -2,6 +2,10 @@ import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setCurrentLocale } from '~/i18n';
 import type { DirectorySnapshot } from '~/api/types/storage-directories';
+import DirectoryPreference from './DirectoryPreference.vue';
+import StoragePreferences from './StoragePreferences.vue';
+import Select from '~/ui/select/Select.vue';
+import Button from '~/ui/button/Button.vue';
 const bridge = vi.hoisted(() => ({
   getDirectories: vi.fn(),
   chooseDirectory: vi.fn(),
@@ -9,10 +13,6 @@ const bridge = vi.hoisted(() => ({
   onPreferencesChanged: vi.fn(() => vi.fn()),
 }));
 vi.mock('~/api/capture', () => ({ capture: bridge }));
-import DirectoryPreference from './DirectoryPreference.vue';
-import StoragePreferences from './StoragePreferences.vue';
-import Select from '~/ui/select/Select.vue';
-import Button from '~/ui/button/Button.vue';
 enableAutoUnmount(afterEach);
 const initial: DirectorySnapshot = {
   projects: { directory: null, recent: ['/external'] },

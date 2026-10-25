@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MediaFrame, MediaSourceDescriptor } from '@beam/runtime/shared/media-types';
+import { decodeVideoPoster } from '@beam/runtime/playback/video-poster';
 
 const { openMediaInput, sinkGetCanvas, sinkConstructor, CanvasSink, MediaInputError, ownedMediaFrame } = vi.hoisted(
   () => {
@@ -59,8 +60,6 @@ const { openMediaInput, sinkGetCanvas, sinkConstructor, CanvasSink, MediaInputEr
 
 vi.mock('@beam/runtime/shared/index', () => ({ openMediaInput, MediaInputError, ownedMediaFrame }));
 vi.mock('mediabunny', () => ({ CanvasSink }));
-
-import { decodeVideoPoster } from '@beam/runtime/playback/video-poster';
 
 const descriptor: MediaSourceDescriptor = {
   assetId: 'video-1',

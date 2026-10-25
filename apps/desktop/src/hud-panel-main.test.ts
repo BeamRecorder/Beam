@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type * as VueModule from 'vue';
 const state = vi.hoisted(() => {
   const deferred = () => {
     let resolve!: (value: unknown) => void;
@@ -21,7 +22,7 @@ const state = vi.hoisted(() => {
   };
 });
 vi.mock('vue', async (original) => ({
-  ...(await original<typeof import('vue')>()),
+  ...(await original<typeof VueModule>()),
   createApp: state.createApp,
 }));
 vi.mock('pinia', () => ({ createPinia: () => ({ id: 'pinia' }) }));

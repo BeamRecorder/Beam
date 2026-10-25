@@ -1,3 +1,4 @@
+import { snapshotWithScreenCursor, snapshotCursorImageKey } from '@beam/runtime/rendering/snapshot-cursor';
 import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
 import { compositionDurationMs } from '@beam/engine/shared/timeline-mapping';
 import { cursorAssetAt } from '@beam/runtime/cursor/cursor-rendering';
@@ -68,7 +69,7 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
           };
     const cursor = toRaw(props.editorData?.cursor ?? absentCursor);
     const zoomDraft = toRaw(options.zoomDraft?.() ?? null);
-    const snapshot: CompositionSnapshot = {
+    let snapshot: CompositionSnapshot = {
       duration: props.duration ?? compositionDurationMs(props.composition) / 1000,
       render: {
         fps: 60,
@@ -89,6 +90,7 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
       zoomAutoFollow: toRaw(props.zoomAutoFollow),
       cursor,
       cursorPack: props.cursorPack,
+      cursorPacks: props.cursorPacks,
       cursorSettings: {
         enabled: options.cursorEnabled(),
         selection: props.cursorSelection,
@@ -106,6 +108,13 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
       },
       composition: toRaw(props.composition),
     };
+    snapshot = snapshotWithScreenCursor(
+      snapshot,
+      layers.screen,
+      size.width / props.outputCanvas.width,
+      props.cursorPreviewSelection,
+    );
+    const motionSettings = snapshot.cursorSettings.motion;
     const stableInputs = [
       props.selectedZoom?.id,
       props.selectedZoom?.mode,
@@ -130,12 +139,13 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
     const cursorKey = [
       cursor.events,
       cursor.hoverSync,
-      props.motion.preset,
-      props.motion.smoothing,
-      props.motion.springMassMultiplier,
-      props.motion.motionBlur,
-      props.motion.stopSpringEnabled,
-      props.motion.stopSpringStrength,
+      motionSettings.preset,
+      motionSettings.smoothing,
+      motionSettings.springMassMultiplier,
+      motionSettings.motionBlur,
+      motionSettings.stopSpringEnabled,
+      motionSettings.stopSpringStrength,
+      motionSettings.model3d,
       frame?.width,
       frame?.height,
     ];
@@ -143,7 +153,7 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
       motionKey = cursorKey;
       motion = createCursorMotionPlayer(
         cursor.events,
-        props.motion,
+        motionSettings,
         frame?.width ?? size.width,
         frame?.height ?? size.height,
         cursor.hoverSync,
@@ -211,11 +221,12 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
         height: watermark.naturalHeight,
       });
     const cursorImages = new Map<string, HTMLImageElement>();
-    const asset = props.cursorPack
-      ? cursorAssetAt(props.cursorPack, props.cursorSelection, cursorStateAt(cursor.events, cursorTime))
+    const asset = snapshot.cursorPack
+      ? cursorAssetAt(snapshot.cursorPack, snapshot.cursorSettings.selection, cursorStateAt(cursor.events, cursorTime))
       : null;
     const image = options.cursorImage();
-    if (asset && image) cursorImages.set(asset.id, image);
+    if (evaluated.screen && asset && image)
+      cursorImages.set(snapshotCursorImageKey(snapshot, evaluated.screen, asset.id), image);
     const resized = !background || background.width !== size.width || background.height !== size.height;
     if (resized) backgroundKey = null;
     background ??= new OffscreenCanvas(size.width, size.height);

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { bitmap, requestFixture } from './export-test-support';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
+import { renderScreenshotExport, runScreenshotExport } from '../screenshot-export-worker';
 const dependencies = vi.hoisted(() => ({
   draw: vi.fn(),
   fonts: vi.fn(),
@@ -18,7 +19,6 @@ vi.mock('../screenshot-export-images', () => ({
   createScreenshotExportImages: () => ({ assets: dependencies.assets, dispose: dependencies.dispose }),
 }));
 vi.mock('../screenshot-export-preview', () => ({ screenshotExportPreview: dependencies.preview }));
-import { renderScreenshotExport, runScreenshotExport } from '../screenshot-export-worker';
 
 let context: Canvas2DContext | null;
 let surfaces: Array<{ width: number; height: number }>;

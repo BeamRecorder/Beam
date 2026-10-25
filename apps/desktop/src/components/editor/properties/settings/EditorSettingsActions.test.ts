@@ -2,6 +2,7 @@ import { flushPromises, mount, enableAutoUnmount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
 import type { SettingsEditorAction } from '~/api/types/hud-panel';
+import EditorSettingsActions from './EditorSettingsActions.vue';
 const mocks = vi.hoisted(() => ({
   capture: { toggleDevTools: vi.fn(), openRecorderFromEditor: vi.fn(), onSettingsEditorAction: vi.fn() },
   webcam: { add: vi.fn(), unavailable: { value: '' }, busy: { value: false }, error: { value: '' } },
@@ -21,7 +22,6 @@ vi.mock('../../workspace/workspace-context', () => ({
     createEditorSnapshot: vi.fn(),
   }),
 }));
-import EditorSettingsActions from './EditorSettingsActions.vue';
 enableAutoUnmount(afterEach);
 let run: (action: SettingsEditorAction) => Promise<void>;
 beforeEach(() => {

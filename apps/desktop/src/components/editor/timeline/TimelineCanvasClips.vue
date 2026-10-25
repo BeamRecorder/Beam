@@ -6,6 +6,7 @@ import TimelineCanvasClip from './TimelineCanvasClip.vue';
 import TimelineCanvasLane from './TimelineCanvasLane.vue';
 import { useTimelineCanvasRegistry } from './timeline-canvas-registry';
 import type { TimelineVisualClipsProps } from './timeline-canvas-types';
+import { timelineMetadataInset } from '@beam/runtime/timeline/timeline-canvas-layout';
 const props = defineProps<TimelineVisualClipsProps>();
 const emit = defineEmits<{
   select: [event: MouseEvent, clip: Clip];
@@ -17,9 +18,10 @@ const registry = useTimelineCanvasRegistry();
 const { t } = useTranslate('TimelineTracks');
 // Reuse each displayed clip for the bitmap and its controls. Artwork completion
 // rerenders this lane and must not create another timing preview in that render.
+const displayedClips = computed(() => props.clips.map((clip) => props.displayedClip(clip)));
 const items = computed(() =>
-  props.clips.map((clip) => ({
-    clip: props.displayedClip(clip),
+  props.clips.map((clip, index) => ({
+    clip: displayedClips.value[index]!,
     label:
       clip.kind === 'audio'
         ? ''
@@ -27,7 +29,13 @@ const items = computed(() =>
           ('freezeFrameSourceMs' in clip
             ? t('holdSegment')
             : (clip.kind === 'shape' ? clip.text?.content.trim() : '') || clip.name)),
-    labelInset: (clip.locked ? 15 : 0) + (clip.kind === 'blur' ? 15 : 0) + (props.linkedNames(clip).length ? 15 : 0),
+    labelInset: timelineMetadataInset(
+      Number(Boolean(clip.locked)) +
+        Number(clip.kind === 'blur' || clip.kind === 'screen') +
+        Number(props.linkedNames(clip).length > 0) +
+        Number(Boolean(registry.artworks.value.get(clip.id)?.error)),
+    ),
+    labelEndInset: Math.abs(clip.playbackRate - 1) > 0.01 ? 48 : 8,
     selected: props.selectedIds.has(clip.id),
     pasteHighlight: props.pasteId === clip.id,
   })),

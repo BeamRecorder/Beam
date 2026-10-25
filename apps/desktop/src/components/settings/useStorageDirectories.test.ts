@@ -3,6 +3,7 @@ import { defineComponent } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PreferenceSettings } from '~/api/types/preferences';
 import type { DirectorySettings, DirectorySnapshot, StorageDirectoryApi } from '~/api/types/storage-directories';
+import { useStorageDirectories } from './useStorageDirectories';
 
 const bridge = vi.hoisted(() => ({
   getDirectories: vi.fn<StorageDirectoryApi['getDirectories']>(),
@@ -11,7 +12,6 @@ const bridge = vi.hoisted(() => ({
   onPreferencesChanged: vi.fn<(listener: (preferences: PreferenceSettings) => void) => () => void>(),
 }));
 vi.mock('~/api/capture', () => ({ capture: bridge }));
-import { useStorageDirectories } from './useStorageDirectories';
 enableAutoUnmount(afterEach);
 const initial: DirectorySnapshot = {
   projects: { directory: null, recent: [] },

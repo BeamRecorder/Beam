@@ -1,6 +1,12 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import GeneralPreferences from './GeneralPreferences.vue';
+import { usePreferencesStore } from '~/stores/preferences';
+import { useLocaleStore } from '~/stores/locale';
+import Select from '~/ui/select/Select.vue';
+import { i18n, setCurrentLocale } from '~/i18n';
+import { SUPPORTED_LOCALES } from '~/i18n/locales';
 const capture = vi.hoisted(() => ({
   platform: 'linux',
   canLaunchAtStartup: true,
@@ -10,12 +16,6 @@ const capture = vi.hoisted(() => ({
   openOnboarding: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-import GeneralPreferences from './GeneralPreferences.vue';
-import { usePreferencesStore } from '~/stores/preferences';
-import { useLocaleStore } from '~/stores/locale';
-import Select from '~/ui/select/Select.vue';
-import { i18n, setCurrentLocale } from '~/i18n';
-import { SUPPORTED_LOCALES } from '~/i18n/locales';
 enableAutoUnmount(afterEach);
 const create = () => {
   const preferences = usePreferencesStore();

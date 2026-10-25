@@ -1,8 +1,8 @@
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import ShortcutInput from '../ShortcutInput.vue';
 const capture = vi.hoisted(() => ({ setShortcutCaptureActive: vi.fn() }));
 vi.mock('~/api/capture', () => ({ capture }));
-import ShortcutInput from '../ShortcutInput.vue';
 enableAutoUnmount(afterEach);
 afterEach(() => vi.unstubAllGlobals());
 beforeEach(() => {

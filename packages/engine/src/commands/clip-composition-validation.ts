@@ -1,3 +1,4 @@
+import { validateScreenCursorSettings } from '../capture/screen-cursor-schema';
 import {
   COMPOSITION_SCHEMA_VERSION,
   isAudioClip,
@@ -144,6 +145,16 @@ export function validateComposition(composition: ClipComposition): void {
     }
     if ((isVisualClip(clip) || isCaptionClip(clip)) && clip.rotation !== undefined && !finite(clip.rotation))
       throw new CompositionEngineError('Invalid media rotation.');
+    if (
+      'showCursor' in clip &&
+      clip.showCursor !== undefined &&
+      (clip.kind !== 'screen' || typeof clip.showCursor !== 'boolean')
+    )
+      throw new CompositionEngineError('Invalid screen cursor visibility.');
+    if ('cursorSettings' in clip && clip.cursorSettings !== undefined) {
+      if (clip.kind !== 'screen') throw new CompositionEngineError('Only screen recordings have cursor settings.');
+      validateScreenCursorSettings(clip.cursorSettings);
+    }
     if (
       isVisualClip(clip) &&
       ((clip.freezeFrameSourceMs !== undefined &&

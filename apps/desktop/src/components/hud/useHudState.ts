@@ -20,10 +20,10 @@ import { useNativeSystemAudioPreview } from './recorder/useNativeSystemAudioPrev
 import { useHudIssues } from './useHudIssues';
 import { useHudCaptureMode } from './useHudCaptureMode';
 import { useHudPreviewVisibility } from './useHudPreviewVisibility';
-
 import { useCaptureSourcePreviews } from './useCaptureSourcePreviews';
 import { useHudWindow } from './useHudWindow';
 import type { HudProps, HudEmit, SavedDevices } from './hud-state-types';
+import type { PreferenceSettings } from '~/api/types/capture-api';
 
 export function useHudState(props: HudProps, emit: HudEmit) {
   const { t } = useTranslate('HUD');
@@ -303,7 +303,7 @@ export function useHudState(props: HudProps, emit: HudEmit) {
   };
 
   let unsubscribePreferences: (() => void) | null = null;
-  const syncRecordingPreferences = (preferences: import('~/api/types/capture-api').PreferenceSettings) => {
+  const syncRecordingPreferences = (preferences: PreferenceSettings) => {
     regionSettings.hydrate(preferences);
     recordingBarVisibility.value = preferences.recordingBar.visibility;
     interactionAccess.hydrate(preferences);

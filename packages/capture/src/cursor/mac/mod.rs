@@ -1,5 +1,6 @@
 mod appkit;
 mod bitmap;
+mod buttons;
 mod keyboard;
 mod recording;
 

@@ -9,6 +9,9 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromiumExecutable } from './chromium-install';
 import { chromiumSettings } from './chromium-settings';
+import type * as CursorGpuPainterModule from '@beam/runtime/cursor/cursor-gpu-painter';
+import type * as FlatCursorExposureModule from '@beam/runtime/cursor/flat-cursor-exposure';
+import type { CursorRasterSurface } from '@beam/runtime/cursor/cursor-gpu-types';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('GPU cursor exposure and volume', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temporary: string;
@@ -296,7 +299,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('GPU cursor exposure and 
     const result = await page.evaluate(async () => {
       const load = new Function('path', 'return import(path)') as (
         path: string,
-      ) => Promise<typeof import('@beam/runtime/cursor/cursor-gpu-painter')>;
+      ) => Promise<typeof CursorGpuPainterModule>;
       const { CursorGpuPainter } = await load('/packages/runtime/src/cursor/cursor-gpu-painter.ts');
       const image = new Image();
       image.src = '/macOsSvgCursors/resizenortheastsouthwest.svg';
@@ -354,10 +357,10 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('GPU cursor exposure and 
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const { CursorGpuPainter } = (await load(
         '/packages/runtime/src/cursor/cursor-gpu-painter.ts',
-      )) as typeof import('@beam/runtime/cursor/cursor-gpu-painter');
+      )) as typeof CursorGpuPainterModule;
       const { FlatCursorExposurePainter } = (await load(
         '/packages/runtime/src/cursor/flat-cursor-exposure.ts',
-      )) as typeof import('@beam/runtime/cursor/flat-cursor-exposure');
+      )) as typeof FlatCursorExposureModule;
       const rasterizer = new CursorGpuPainter(),
         reference = new CursorGpuPainter(),
         flat = new FlatCursorExposurePainter(rasterizer);
@@ -372,7 +375,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('GPU cursor exposure and 
         resize = new Image();
       resize.src = '/macOsSvgCursors/resizenortheastsouthwest.svg';
       await resize.decode();
-      const read = (surface: import('@beam/runtime/cursor/cursor-gpu-types').CursorRasterSurface) => {
+      const read = (surface: CursorRasterSurface) => {
         const canvas = new OffscreenCanvas(400, 350),
           context = canvas.getContext('2d')!;
         context.drawImage(surface.canvas, surface.x, surface.y, surface.width, surface.height);

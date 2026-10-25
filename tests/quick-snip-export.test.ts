@@ -1,4 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { quickSnipExportRequest, renderQuickSnip } from '../apps/desktop/src/components/quick-snip/quick-snip-export';
+import type { QuickSnipRenderTask } from '~/api/types/quick-snip';
+import type { ProjectEditorData, SessionTrackData } from '~/api/types/capture-api';
+import { emptyComposition } from '@beam/engine/shared/composition-types';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
+import {
+  createDefaultCursorMotionSettings,
+  createDefaultCursorAutoHideSettings,
+  createDefaultCursorClickEffects,
+} from '@beam/engine/capture/cursor-settings';
 const captureMock = vi.hoisted(() => ({
   platform: 'linux',
   getPreferences: vi.fn(async () => ({ extras: {} as Record<string, unknown> })),
@@ -18,16 +28,6 @@ const exporterMock = vi.hoisted(() => ({
 }));
 vi.mock('~/api/capture', () => ({ capture: captureMock }));
 vi.mock('../apps/desktop/src/components/export/mediabunny/exporter', () => exporterMock);
-import { quickSnipExportRequest, renderQuickSnip } from '../apps/desktop/src/components/quick-snip/quick-snip-export';
-import type { QuickSnipRenderTask } from '~/api/types/quick-snip';
-import type { ProjectEditorData, SessionTrackData } from '~/api/types/capture-api';
-import { emptyComposition } from '@beam/engine/shared/composition-types';
-import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
-import {
-  createDefaultCursorMotionSettings,
-  createDefaultCursorAutoHideSettings,
-  createDefaultCursorClickEffects,
-} from '@beam/engine/capture/cursor-settings';
 const task = (): QuickSnipRenderTask => {
   const tracks: SessionTrackData[] = (['screen', 'microphone'] as const).map((kind) => ({
     trackId: kind,

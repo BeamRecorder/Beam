@@ -4,7 +4,6 @@ import type {
   CompositionCameraInputs,
   CameraSimulationState as SimulationState,
 } from './composition-camera-types';
-export type { CameraSample, CompositionCameraEvaluator, CompositionCameraInputs } from './composition-camera-types';
 import { createCameraVelocity, stepCameraSpring, type CameraTransform } from '@beam/engine/zoom/zoom-spring';
 import { clampFocusToScale, createZoomTimeEvaluator, cursorFocusAt } from '@beam/engine/zoom/zoom-playback';
 import { cameraSpringOmega, createAutoFollowState, updateAutoFollowTarget } from '@beam/engine/zoom/auto-follow-camera';
@@ -18,6 +17,7 @@ import { orbitCameraPose } from './orbit-camera';
 import { connectedCameraFocus } from './camera-connection';
 import { createAutomaticFollowGate } from './camera-follow-gate';
 import { createCameraFollowCursor } from './camera-follow-cursor';
+export type { CameraSample, CompositionCameraEvaluator, CompositionCameraInputs } from './composition-camera-types';
 
 const STEP_MS = 1_000 / 120;
 const CHECKPOINT_STEPS = 30;

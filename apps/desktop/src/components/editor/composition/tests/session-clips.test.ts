@@ -11,6 +11,10 @@ import { deleteClip, splitClip } from '@beam/engine/commands/clip-engine';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import { sessionTimeAt } from '@beam/engine/shared/timeline-mapping';
 import { removeTimelineGap, timelineGaps } from '@beam/engine/composition/timeline-gaps';
+import { normalizeEditorPreferenceDefaults } from '../../composables/editor-defaults';
+import { createDefaultCursorPresentation } from '@beam/engine/capture/cursor-presentation';
+import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
+import { setScreenCursorVisibility } from '@beam/engine/capture/screen-cursor';
 
 const segment = (overrides: Partial<SessionTrackAsset> = {}): SessionTrackAsset => ({
   path: 'segment.webm',
@@ -89,6 +93,55 @@ const shortcut = (sessionNs: number, key: 'a' | 'b', pressed = true) => ({
 });
 
 describe('synchronizeRecordingClips', () => {
+  it.each([true, false])('initializes recording clips OFF over a saved cursor default of %s', (saved) => {
+    const data = editorData([track('screen', [segment()]), track('camera', [segment()])]);
+    data.manifest.cursorVisible = false;
+    const defaults = normalizeEditorPreferenceDefaults(undefined);
+    defaults.presentation = {
+      canvas: { ...DEFAULT_OUTPUT_CANVAS },
+      selectedBackgroundId: null,
+      background: null,
+      blurPercent: 0,
+      cursor: { ...createDefaultCursorPresentation(), enabled: saved },
+    };
+    const result = synchronizeRecordingClips(emptyComposition(), data, defaults);
+    expect(result.clips.find((clip) => clip.kind === 'screen')).toHaveProperty('showCursor', false);
+    expect(result.clips.find((clip) => clip.kind === 'webcam')).not.toHaveProperty('showCursor');
+  });
+  it.each([true, false])('inherits the legacy default of %s when recording metadata is absent', (saved) => {
+    const data = editorData([track('screen', [segment()])]);
+    const defaults = normalizeEditorPreferenceDefaults(undefined);
+    defaults.presentation = {
+      canvas: { ...DEFAULT_OUTPUT_CANVAS },
+      selectedBackgroundId: null,
+      background: null,
+      blurPercent: 0,
+      cursor: { ...createDefaultCursorPresentation(), enabled: saved },
+    };
+    expect(synchronizeRecordingClips(emptyComposition(), data, defaults).clips[0]).toHaveProperty('showCursor', saved);
+  });
+  it('preserves independent cursor choices across cuts and subsequent session synchronization', () => {
+    const data = editorData([track('screen', [segment()])]);
+    data.manifest.cursorVisible = false;
+    const original = synchronizeRecordingClips(emptyComposition(), data);
+    const cut = splitClip(original, 'screen', 1000);
+    const right = cut.clips.find((clip) => clip.timelineStartMs === 1000)!;
+    const edited = setScreenCursorVisibility(cut, [right.id], true);
+    const reopened = synchronizeRecordingClips(edited, data);
+    expect(reopened.clips.map((clip) => clip.kind === 'screen' && clip.showCursor)).toEqual([false, true]);
+    expect(reopened).toBe(edited);
+  });
+  it.each([true, false])('does not duplicate an embedded cursor even with recording visibility %s', (visible) => {
+    const data = editorData([track('screen', [segment()])]);
+    data.manifest.cursorEmbedded = true;
+    data.manifest.cursorVisible = visible;
+    expect(synchronizeRecordingClips(emptyComposition(), data).clips[0]).toHaveProperty('showCursor', false);
+  });
+  it('uses recording visibility when only the manifest primary video can be materialized', () => {
+    const data = editorData([], '/primary.mp4', { videoSessionPath: 'screen/primary.mp4' });
+    data.manifest.cursorVisible = false;
+    expect(synchronizeRecordingClips(emptyComposition(), data).clips[0]).toHaveProperty('showCursor', false);
+  });
   it('keeps cursor time aligned after removing a pause gap from two recording segments', () => {
     const first = segment({ path: 'first.webm', src: '/first.webm' });
     const second = segment({ path: 'second.webm', src: '/second.webm', startNs: 7_000_000_000, endNs: 9_000_000_000 });

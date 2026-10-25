@@ -6,6 +6,7 @@ import Slider from '~/ui/slider/Slider.vue';
 import TeleprompterToolbar from './TeleprompterToolbar.vue';
 import enEditor from '~/i18n/en/editor.json';
 import frEditor from '~/i18n/fr/editor.json';
+import Teleprompter from './Teleprompter.vue';
 
 enableAutoUnmount(afterEach);
 
@@ -27,8 +28,6 @@ const capture = vi.hoisted(() => ({
 }));
 
 vi.mock('~/api/capture', () => ({ capture }));
-
-import Teleprompter from './Teleprompter.vue';
 
 const i18n = createI18n({
   legacy: false,

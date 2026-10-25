@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useProjectThumbnailGenerator } from './useProjectThumbnailGenerator';
 
 const media = vi.hoisted(() => ({
   ALL_FORMATS: ['all'],
@@ -11,8 +12,6 @@ vi.mock('mediabunny', () => {
   media.loaded();
   return media;
 });
-
-import { useProjectThumbnailGenerator } from './useProjectThumbnailGenerator';
 
 describe('useProjectThumbnailGenerator', () => {
   let input: {

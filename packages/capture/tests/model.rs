@@ -159,9 +159,8 @@ fn excluded_process_id_roundtrips_when_present() {
     );
 }
 
-#[test]
-fn manifest_schema_is_versioned_and_roundtrips() {
-    let manifest = SessionManifest {
+fn session_manifest() -> SessionManifest {
+    SessionManifest {
         schema_version: SCHEMA_VERSION,
         project_id: ProjectId::new(),
         session_id: SessionId::new(),
@@ -184,13 +183,54 @@ fn manifest_schema_is_versioned_and_roundtrips() {
         warnings: Vec::new(),
         completed: false,
         cursor_embedded: false,
-    };
+        cursor_visible: None,
+    }
+}
+
+#[test]
+fn manifest_schema_is_versioned_and_roundtrips() {
+    let manifest = session_manifest();
     let json = serde_json::to_value(&manifest).expect("serialize manifest");
     assert_eq!(json["schemaVersion"], SCHEMA_VERSION);
     assert_eq!(
         serde_json::from_value::<SessionManifest>(json).expect("deserialize manifest"),
         manifest
     );
+}
+
+#[test]
+fn cursor_visibility_is_absent_on_legacy_manifests() {
+    let manifest = session_manifest();
+    let json = serde_json::to_value(&manifest).expect("legacy manifest");
+    assert!(json.get("cursorVisible").is_none());
+    let decoded: SessionManifest = serde_json::from_value(json).expect("read legacy manifest");
+    assert_eq!(decoded.cursor_visible, None);
+}
+
+#[test]
+fn cursor_visibility_preserves_an_explicit_off_choice() {
+    let manifest = SessionManifest {
+        cursor_visible: Some(false),
+        ..session_manifest()
+    };
+    let json = serde_json::to_value(&manifest).expect("hidden cursor manifest");
+    assert_eq!(json["cursorVisible"], false);
+    let decoded: SessionManifest =
+        serde_json::from_value(json).expect("read hidden cursor manifest");
+    assert_eq!(decoded.cursor_visible, Some(false));
+}
+
+#[test]
+fn cursor_visibility_preserves_an_explicit_on_choice() {
+    let manifest = SessionManifest {
+        cursor_visible: Some(true),
+        ..session_manifest()
+    };
+    let json = serde_json::to_value(&manifest).expect("visible cursor manifest");
+    assert_eq!(json["cursorVisible"], true);
+    let decoded: SessionManifest =
+        serde_json::from_value(json).expect("read visible cursor manifest");
+    assert_eq!(decoded.cursor_visible, Some(true));
 }
 
 #[test]

@@ -1,16 +1,17 @@
+import { rippleZooms } from './timeline-ripple-zooms';
 import { preservesLockedItems, selectionHasLocks } from '@beam/engine/composition/timeline-locks';
 import type { ClipComposition } from '@beam/engine/shared/composition-types';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import { deleteClip } from '@beam/engine/commands/clip-engine';
 import { validateComposition } from '@beam/engine/commands/clip-composition-validation';
 import { prepareTimelineSelectionMove } from '@beam/engine/composition/timeline-selection-move';
-export { expandLinkedClipIds } from '@beam/engine/composition/timeline-selection-move';
 import type {
   TimelineDeleteMode,
   TimelineEditResult,
   TimelineRange,
   TimelineSelectionIds,
 } from '@beam/engine/composition/timeline-edit-types';
+export { expandLinkedClipIds } from '@beam/engine/composition/timeline-selection-move';
 
 export type {
   TimelineDeleteMode,
@@ -36,19 +37,6 @@ export const rippleRangeForSelection = (
     (clip) => !selectedIds.has(clip.id) && clip.timelineStartMs < rangeEndMs && endMs(clip) > startMs,
   );
   return overlapsUnselected ? null : { startMs, endMs: rangeEndMs };
-};
-
-const rippleZooms = (zooms: ZoomElement[], range: TimelineRange): ZoomElement[] => {
-  const durationMs = range.endMs - range.startMs;
-  return zooms.flatMap((zoom) => {
-    if (zoom.endMs <= range.startMs) return [zoom];
-    if (zoom.startMs >= range.endMs)
-      return [{ ...zoom, startMs: zoom.startMs - durationMs, endMs: zoom.endMs - durationMs }];
-    if (zoom.startMs >= range.startMs && zoom.endMs <= range.endMs) return [];
-    const startMs = zoom.startMs < range.startMs ? zoom.startMs : range.startMs;
-    const endMs = zoom.endMs - Math.min(durationMs, zoom.endMs - range.startMs);
-    return endMs - startMs >= 200 ? [{ ...zoom, startMs, endMs }] : [];
-  });
 };
 
 export const deleteTimelineItems = (options: {

@@ -1,12 +1,12 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { expect, it, vi } from 'vitest';
+import CaptureSettingsWindow from './CaptureSettingsWindow.vue';
 const resize = vi.hoisted(() => ({ measure: () => {} }));
 vi.mock('@vueuse/core', () => ({
   useResizeObserver: (_target: unknown, callback: () => void) => {
     resize.measure = callback;
   },
 }));
-import CaptureSettingsWindow from './CaptureSettingsWindow.vue';
 it('reports bounded content including border and internal overflow, ignoring a hidden panel', async () => {
   const wrapper = mount(CaptureSettingsWindow, {
     props: { content: { visible: false, side: 'above', anchorX: 100, device: null }, label: 'Settings' },

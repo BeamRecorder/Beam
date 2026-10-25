@@ -7,6 +7,8 @@ import Button from '~/ui/button/Button.vue';
 import ScreenshotEffectToolbar from '../gradient/ScreenshotEffectToolbar.vue';
 import ScreenshotOpacity from '../composition/ScreenshotOpacity.vue';
 import type { ScreenshotLayer } from '@beam/engine/screenshot/screenshot-types';
+import ScreenshotComposition from '../composition/ScreenshotComposition.vue';
+import type * as UseLayerThumbnailsModule from '../composition/thumbnails/useLayerThumbnails';
 
 const compositionPosition = vi.hoisted(() => ({
   upward: null as { value: boolean } | null,
@@ -18,7 +20,7 @@ const compositionPosition = vi.hoisted(() => ({
 const thumbnailLifecycle = vi.hoisted(() => ({ enabled: undefined as (() => boolean) | undefined }));
 vi.mock('../composition/composition-panel-dock', () => ({ useCompositionPanelDock: () => null }));
 vi.mock('../composition/thumbnails/useLayerThumbnails', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../composition/thumbnails/useLayerThumbnails')>();
+  const actual = await importOriginal<typeof UseLayerThumbnailsModule>();
   return {
     ...actual,
     useLayerThumbnails: (...args: Parameters<typeof actual.useLayerThumbnails>) => {
@@ -52,8 +54,6 @@ vi.mock('../composition/useCompositionPanelPosition', () => ({
     };
   },
 }));
-
-import ScreenshotComposition from '../composition/ScreenshotComposition.vue';
 
 const SelectStub = defineComponent({
   inheritAttrs: false,

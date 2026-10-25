@@ -25,6 +25,7 @@ export function useEditorWorkspaceCanvas(
     editorState,
     outputCanvas,
     composition,
+    compositionState,
     selectedClipId,
     selectedClipIds,
     updateSelectedTransform,
@@ -76,9 +77,10 @@ export function useEditorWorkspaceCanvas(
     const clip = selectedTransformClip.value;
     if (!clip || clip.locked || !(isShapeClip(clip) || isVisualClip(clip) || isCaptionClip(clip))) return;
     layerCompositionPreview.value = null;
-    composition.value = isShapeClip(clip)
+    const next = isShapeClip(clip)
       ? setShapeLayerStyle(composition.value, clip.id, { rotation })
       : setClipRotation(composition.value, clip.id, rotation);
+    composition.value = compositionState.clipTrackProperties.synchronize(next);
     commitNow(createEditorSnapshot());
     editorState.scheduleSave();
   };

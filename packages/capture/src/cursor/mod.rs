@@ -10,6 +10,8 @@ mod coordinates;
 mod event_writer;
 #[cfg(target_os = "macos")]
 pub mod mac;
+#[cfg(any(target_os = "macos", test))]
+mod mac_button_event;
 #[cfg(any(windows, target_os = "macos", test))]
 mod recording_support;
 #[cfg(any(target_os = "macos", test))]

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import { createComposition, moveClip, splitClip } from '@beam/engine/commands/clip-engine';
 import type { AudioClip, Clip, ClipComposition, MediaAsset, VisualClip } from '@beam/engine/shared/composition-types';
-import { removeTimelineGap, timelineGaps } from '@beam/engine/composition/timeline-gaps';
+import { removeTimelineGap, timelineGaps, planTimelineGapRemoval } from '@beam/engine/composition/timeline-gaps';
 import type { TimelineGap } from '@beam/engine/composition/timeline-lock-types';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 
@@ -98,6 +98,38 @@ const manualZoom = (id: string, startMs: number, endMs: number): ZoomElement => 
 });
 
 describe('timeline gaps', () => {
+  it('identifies the actual occupied clips and zooms instead of a generic gap failure', () => {
+    const next = composition([
+      visual('before', 0, { trackId: 'main' }),
+      visual('after', 3000, { trackId: 'main' }),
+      visual('other', 1500, { trackId: 'other' }),
+    ]);
+    const gap = gapBetween(next, ['before', 'after'], 1000);
+    expect(planTimelineGapRemoval(next, gap, [manualZoom('zoom', 1800, 2100)])).toEqual({
+      kind: 'overlap',
+      blockers: { clipIds: ['other'], zoomIds: [] },
+    });
+  });
+  it('identifies the exact locked linked partner and locked downstream zoom', () => {
+    const next = composition([
+      visual('before', 0, { trackId: 'main' }),
+      visual('after', 3000, { trackId: 'main', groupId: 'recording' }),
+      microphone('microphone', 3000, { groupId: 'recording', locked: true }),
+    ]);
+    const gap = gapBetween(next, ['before', 'after'], 1000);
+    expect(planTimelineGapRemoval(next, gap, [{ ...manualZoom('locked-zoom', 3500, 3800), locked: true }])).toEqual({
+      kind: 'locked',
+      blockers: { clipIds: ['microphone'], zoomIds: ['locked-zoom'] },
+    });
+  });
+  it('separates a stale gap from a genuine removable interval and shares the same edit', () => {
+    const next = composition([visual('before', 0, { trackId: 'main' }), visual('after', 3000, { trackId: 'main' })]);
+    const gap = gapBetween(next, ['before', 'after'], 1000);
+    expect(planTimelineGapRemoval(next, { ...gap, startMs: 1500 })).toEqual({ kind: 'invalid' });
+    const plan = planTimelineGapRemoval(next, gap);
+    expect(plan.kind).toBe('removable');
+    if (plan.kind === 'removable') expect(plan.result).toEqual(removeTimelineGap(next, gap));
+  });
   it('finds leading and internal gaps, ignores overlaps, and omits the trailing range', () => {
     const clips = [
       visual('first', 1_000, { trackId: 'lane' }),
@@ -306,14 +338,16 @@ describe('timeline gaps', () => {
     expect(result).toBe(next);
   });
 
-  it('blocks an overlapping manual zoom but allows a downstream zoom', () => {
+  it('removes zooms entirely inside the gap and shifts downstream zooms', () => {
     const next = composition([
       visual('target-before', 0, { trackId: 'target-lane' }),
       visual('target-after', 3_000, { trackId: 'target-lane' }),
     ]);
     const gap = gapBetween(next, ['target-before', 'target-after'], 1_000);
 
-    expect(removeTimelineGap(next, gap, [manualZoom('overlapping-zoom', 1_500, 2_500)]).composition).toBe(next);
+    const removed = removeTimelineGap(next, gap, [manualZoom('overlapping-zoom', 1_500, 2_500)]);
+    expect(removed.composition).not.toBe(next);
+    expect(removed.zoomElements).toEqual([]);
 
     const result = removeTimelineGap(next, gap, [manualZoom('downstream-zoom', 3_000, 3_500)]).composition;
     expect(result).not.toBe(next);

@@ -1,5 +1,6 @@
 import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
 import type { ExportDiagnostics, ExportRuntimeDiagnostics } from '@beam/encoder/export-diagnostics-types';
+import type { HttpFrameSourceDescriptor } from '@beam/runtime/frames/frame-source-types';
 
 export type ExportFormat = 'webm' | 'mp4';
 export type ExportPreset = 'low' | 'medium' | 'high';
@@ -30,7 +31,7 @@ export interface ExportRequest {
   /** Defaults to true for requests created before this option existed. */
   includeAudio?: boolean;
   snapshot: CompositionSnapshot;
-  frameSources?: import('@beam/runtime/frames/frame-source-types').HttpFrameSourceDescriptor[];
+  frameSources?: HttpFrameSourceDescriptor[];
 }
 
 /** Live UI metadata; expensive, owned render data is captured only when export starts. */

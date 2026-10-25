@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AssetDecoder } from '@beam/runtime/playback/playback-worker-consumers';
+import { scrubSourceTime } from '@beam/runtime/playback/scrub-source-time';
 const mocks = vi.hoisted(() => ({ packet: vi.fn(), reader: vi.fn() }));
 vi.mock('mediabunny', () => ({ EncodedPacketSink: mocks.reader }));
-import { scrubSourceTime } from '@beam/runtime/playback/scrub-source-time';
 
 beforeEach(() => {
   mocks.packet.mockReset();

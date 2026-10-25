@@ -5,6 +5,7 @@ import type { LayerCompositing } from '../shared/layer-compositing-types';
 import type { CursorSelection } from '../capture/cursor-pack';
 import type { CursorShadowDirection as ShadowDirection } from '../capture/cursor-presentation';
 import type { ZoomElement } from '../zoom/zoom-types';
+import type { HtmlComposition } from '../html/html-types';
 
 export interface ScreenshotState {
   canvas: OutputCanvasSettings;
@@ -36,7 +37,7 @@ export interface ScreenshotZoomLayer extends ZoomElement {
   enabled: boolean;
 }
 export interface ScreenshotImageLayer extends VisualClip {
-  html?: import('../html/html-types').HtmlComposition;
+  html?: HtmlComposition;
   kind: 'image';
   source: string;
   width: number;

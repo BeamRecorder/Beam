@@ -85,4 +85,31 @@ describe('CLI local asset capabilities', () => {
     input.snapshot.background = { kind: 'color', color: '#ffffff' };
     expect(registerLocalAssets(input, '/base', 'key').request.snapshot.background).toEqual(input.snapshot.background);
   });
+  it('registers per-clip cursor packs without altering the original artwork library', () => {
+    const input = request('');
+    input.snapshot.cursorPacks = ['red', 'blue'].map((id) => ({
+      id,
+      name: id,
+      source: 'imported',
+      colorMode: 'tintable',
+      defaultCursorId: 'arrow',
+      automaticMap: {},
+      cursors: [
+        {
+          id: 'arrow',
+          label: 'Arrow',
+          url: `${id}/arrow.svg`,
+          nominalSize: 32,
+          intrinsicSize: { width: 32, height: 32 },
+          hotspot: { x: 0, y: 0 },
+        },
+      ],
+    }));
+    const result = registerLocalAssets(input, '/base', 'secret');
+    expect([...result.files.values()]).toEqual(['/base/red/arrow.svg', '/base/blue/arrow.svg']);
+    const urls = result.request.snapshot.cursorPacks!.map((pack) => pack.cursors[0]!.url);
+    expect(urls.every((url) => /^\/beam-cli\/asset\/.+\?auth=secret$/.test(url))).toBe(true);
+    expect(new Set(urls).size).toBe(2);
+    expect(input.snapshot.cursorPacks.map((pack) => pack.cursors[0]!.url)).toEqual(['red/arrow.svg', 'blue/arrow.svg']);
+  });
 });

@@ -35,6 +35,7 @@ const {
   performanceSnapshot,
   cursorSelection,
   cursorPack,
+  cursorPacks,
   cursorSize,
   cursorColor,
   enableShadow,
@@ -157,7 +158,9 @@ useActionShortcuts(
         :is-playing="isPlaying"
         :current-time="currentTime"
         :duration="duration"
-        :cursor-selection="cursorPreview ?? cursorSelection"
+        :cursor-selection="cursorSelection"
+        :cursor-preview-selection="cursorPreview"
+        :cursor-packs="cursorPacks"
         :cursor-pack="cursorPack"
         :cursor-size="cursorSize"
         :cursor-color="cursorColor"

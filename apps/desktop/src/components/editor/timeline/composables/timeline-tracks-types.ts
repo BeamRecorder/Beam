@@ -12,6 +12,7 @@ import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 import type { AddVisualElementRequest } from '@beam/engine/composition/visual-element-types';
 import type { TimelineElementKind } from '../timeline-element-types';
 import type { CaptionPlacementRequest } from '@beam/engine/composition/caption-element-types';
+import type { TimelineLockRequest, TimelineGap } from '@beam/engine/composition/timeline-lock-types';
 
 export interface VisualTimelineTrack {
   id: string;
@@ -98,8 +99,8 @@ export interface TimelineTracksEmits {
   (event: 'select:track', selection: TrackClipSelection): void;
   (event: 'select:item', selection: TimelineItemSelectionRequest): void;
   (event: 'select:all'): void;
-  (event: 'lock:selection', request: import('@beam/engine/composition/timeline-lock-types').TimelineLockRequest): void;
-  (event: 'remove:gap', gap: import('@beam/engine/composition/timeline-lock-types').TimelineGap): void;
+  (event: 'lock:selection', request: TimelineLockRequest): void;
+  (event: 'remove:gap', gap: TimelineGap): void;
   (event: 'select:box', selection: TimelineSelectionIds): void;
   (event: 'toggle:clip', clipId: string): void;
   (event: 'delete:clips', clipIds: string[]): void;

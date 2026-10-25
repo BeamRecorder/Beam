@@ -1,10 +1,10 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-vi.mock('~/api/capture', () => ({ capture: {} }));
 import CursorRippleControls from '../CursorRippleControls.vue';
 import { createDefaultCursorClickEffects } from '@beam/engine/capture/cursor-settings';
 import { DEFAULT_CURSOR_WATER_RIPPLE } from '@beam/engine/capture/cursor-click-schema';
 import { global, Select } from './cursor-panel-test-helpers';
+vi.mock('~/api/capture', () => ({ capture: {} }));
 const effect = () => ({ ...createDefaultCursorClickEffects().left, rippleEnabled: true });
 const build = (modelValue = effect()) => mount(CursorRippleControls, { props: { modelValue }, global });
 

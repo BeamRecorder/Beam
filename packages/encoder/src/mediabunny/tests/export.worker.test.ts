@@ -1,9 +1,10 @@
-vi.mock('@beam/runtime/rendering/snapshot-camera', () => ({ createSnapshotCameraEvaluator: vi.fn() }));
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isExportWorkerRequest } from '@beam/encoder/mediabunny/export-worker-protocol';
 import type { PreparedCursorImage } from '@beam/encoder/mediabunny/export-cursor-images';
 import type { ExportRequest } from '@beam/encoder/export-types';
 import { BUNDLED_CURSOR_PACKS } from '@desktop/components/editor/properties/cursor/cursor-packs';
+import type * as MediabunnyModule from 'mediabunny';
+vi.mock('@beam/runtime/rendering/snapshot-camera', () => ({ createSnapshotCameraEvaluator: vi.fn() }));
 
 const runtime = vi.hoisted(() => ({
   openExportAssets: vi.fn(),
@@ -57,7 +58,7 @@ vi.mock('@beam/encoder/audio/pcm-mixer', () => ({
   createProgressiveAudioMixer: runtime.createProgressiveAudioMixer,
 }));
 vi.mock('mediabunny', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('mediabunny')>();
+  const actual = await importOriginal<typeof MediabunnyModule>();
   return {
     ...actual,
     VideoSampleSink: class VideoSampleSink {

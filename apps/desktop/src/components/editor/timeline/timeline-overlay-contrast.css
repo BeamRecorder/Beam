@@ -1,0 +1,6 @@
+.timeline-overlay-contrast {
+  color: var(--timeline-overlay-ink, var(--text-light));
+  background: var(--timeline-overlay-background, var(--canvas-control-dark));
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+}

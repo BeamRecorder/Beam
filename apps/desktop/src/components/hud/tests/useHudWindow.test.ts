@@ -4,13 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CapturePreview, CaptureSource } from '~/api/types/capture-api';
 import type { HudProps, HudWindowOptions, PreviewKind } from '../hud-state-types';
 import type { ScreenRegion, ScreenRegionBounds } from '~/api/types/screen-region';
+import { captureMock as capture } from './capture.mock';
+import { useHudWindow } from '../useHudWindow';
 
 vi.mock('../../../api/capture', async () => ({
   capture: (await import('./capture.mock')).captureMock,
 }));
-
-import { captureMock as capture } from './capture.mock';
-import { useHudWindow } from '../useHudWindow';
 
 const bounds: ScreenRegionBounds = { x: 4, y: 8, width: 1920, height: 1080 };
 const preview = (displayBounds: ScreenRegionBounds | null = bounds): CapturePreview => ({

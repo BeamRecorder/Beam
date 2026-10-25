@@ -1,6 +1,7 @@
 import type { CursorHoverSync } from '@beam/engine/cursor/cursor-hover-types';
+import type { CursorHoverSource } from '@beam/engine/cursor/cursor-hover-types';
 
-export type HoverSource = import('@beam/engine/cursor/cursor-hover-types').CursorHoverSource;
+export type HoverSource = CursorHoverSource;
 
 export interface HoverPoint {
   time: number;

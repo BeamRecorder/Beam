@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { chromiumExecutable } from '../../../../../cli/src/chromium-install';
 import { chromiumSettings } from '../../../../../cli/src/chromium-settings';
 import type { SpeechBubbleBrowserState } from './speech-bubble-browser-types';
+import type * as SpeechBubbleBrowserHostModule from './speech-bubble-browser-host';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('speech bubbles in the complete editor workspace', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temporary: string, url: string;
@@ -73,7 +74,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('speech bubbles in the co
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const host = (await load(
         '/apps/desktop/src/components/editor/tests/speech-bubble-browser-host.ts',
-      )) as typeof import('./speech-bubble-browser-host');
+      )) as typeof SpeechBubbleBrowserHostModule;
       window.speechBubbleHost = await host.mountSpeechBubbleEditor(effects);
     }, effects);
     await page.waitForFunction(() => window.speechBubbleHost.state().settled);

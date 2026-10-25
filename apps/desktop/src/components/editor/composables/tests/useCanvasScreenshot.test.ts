@@ -2,6 +2,7 @@ import { mount, type VueWrapper } from '@vue/test-utils';
 import { defineComponent, shallowRef } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CaptureProject } from '~/api/types/capture-api';
+import { canvasScreenshotName, useCanvasScreenshot } from '../useCanvasScreenshot';
 
 const mocks = vi.hoisted(() => ({
   createScreenshotFromCanvas: vi.fn(),
@@ -13,8 +14,6 @@ const mocks = vi.hoisted(() => ({
 vi.mock('~/api/capture', () => ({ capture: mocks }));
 vi.mock('~/utils/screenshot-sound', () => ({ playScreenshotSound: mocks.playScreenshotSound }));
 vi.mock('~/ui/toast/toastStore', () => ({ useToastStore: () => mocks }));
-
-import { canvasScreenshotName, useCanvasScreenshot } from '../useCanvasScreenshot';
 
 describe('canvas screenshot confirmation', () => {
   let wrapper: VueWrapper;

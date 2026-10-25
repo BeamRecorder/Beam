@@ -1,5 +1,8 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import PreparationDeviceSelect from './PreparationDeviceSelect.vue';
+import CapturePreparationBar from './CapturePreparationBar.vue';
+import type * as CoreModule from '@vueuse/core';
 const mocks = vi.hoisted(() => ({
   capture: {
     platform: 'linux',
@@ -19,7 +22,7 @@ const mocks = vi.hoisted(() => ({
   microphones: vi.fn(),
 }));
 vi.mock('@vueuse/core', async (original) => ({
-  ...(await original<typeof import('@vueuse/core')>()),
+  ...(await original<typeof CoreModule>()),
   useResizeObserver: (_target: unknown, callback: () => void) => {
     mocks.measure = callback;
   },
@@ -50,8 +53,6 @@ vi.mock('./useNativeSystemAudioPreview', async () => {
     },
   };
 });
-import PreparationDeviceSelect from './PreparationDeviceSelect.vue';
-import CapturePreparationBar from './CapturePreparationBar.vue';
 
 let wrapper: VueWrapper;
 beforeEach(() => {

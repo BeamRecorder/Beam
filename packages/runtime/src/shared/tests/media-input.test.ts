@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { EDITOR_INPUT_FORMATS, inspectMedia, openMediaInput } from '@beam/runtime/shared/media-input';
+import { MediaSourcePool } from '@beam/runtime/shared/media-source';
+import type { MediaSourceDescriptor } from '@beam/runtime/shared/media-types';
+import type * as MediaSourceModule from '@beam/runtime/shared/media-source';
 
 const runtime = vi.hoisted(() => {
   class UnsupportedInputFormatError extends Error {}
@@ -40,15 +44,9 @@ vi.mock('mediabunny', () => ({
 }));
 
 vi.mock('@beam/runtime/shared/media-source', async () => {
-  const actual = await vi.importActual<typeof import('@beam/runtime/shared/media-source')>(
-    '@beam/runtime/shared/media-source',
-  );
+  const actual = await vi.importActual<typeof MediaSourceModule>('@beam/runtime/shared/media-source');
   return actual;
 });
-
-import { EDITOR_INPUT_FORMATS, inspectMedia, openMediaInput } from '@beam/runtime/shared/media-input';
-import { MediaSourcePool } from '@beam/runtime/shared/media-source';
-import type { MediaSourceDescriptor } from '@beam/runtime/shared/media-types';
 
 const descriptor = (kind: 'video' | 'audio' = 'video'): MediaSourceDescriptor => ({
   assetId: `asset-${kind}`,

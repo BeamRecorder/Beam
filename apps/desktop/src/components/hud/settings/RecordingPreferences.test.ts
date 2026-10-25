@@ -1,12 +1,12 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-vi.mock('~/api/capture', () => ({ capture: { platform: 'win32' } }));
-vi.mock('~/components/settings/StoragePreferences.vue', () => ({ default: { template: '<div />' } }));
 import { setCurrentLocale } from '~/i18n';
 import RecordingPreferences from './RecordingPreferences.vue';
 import Select from '~/ui/select/Select.vue';
 import RealCursorPreference from './RealCursorPreference.vue';
 import RecordingDesktopPreferences from './RecordingDesktopPreferences.vue';
+vi.mock('~/api/capture', () => ({ capture: { platform: 'win32' } }));
+vi.mock('~/components/settings/StoragePreferences.vue', () => ({ default: { template: '<div />' } }));
 
 describe('recording settings controls', () => {
   it('uses and relays the same real-cursor and desktop controls as the region menu', () => {

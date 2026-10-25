@@ -1,3 +1,4 @@
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import { computed, getCurrentScope, onScopeDispose, ref, toRaw } from 'vue';
 import { createRetainedCamera } from '@beam/runtime/zoom/retained-camera';
 import { createCompositionCameraEvaluator } from '@beam/engine/zoom/composition-camera';
@@ -327,7 +328,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       orbit: camera.orbit,
     };
     if (paint) {
-      const drawScreen = (target = ctx) => {
+      const drawScreen = (target: Canvas2DContext = ctx) => {
         if (!screen) return;
         if (frame) {
           drawDecoratedMedia(target, {
@@ -394,7 +395,12 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
         target.translate(-projectedCamera.focusX, -projectedCamera.focusY);
         options.drawBackground(target, { x: dx, y: dy, width: dw, height: dh });
         if (options.renderVisualStack)
-          options.renderVisualStack(target, sampleWindow, () => drawScreen(target), sceneLayers);
+          options.renderVisualStack(
+            target,
+            sampleWindow,
+            (transitionTarget) => drawScreen(transitionTarget),
+            sceneLayers,
+          );
         else drawScreen(target);
         target.restore();
       };

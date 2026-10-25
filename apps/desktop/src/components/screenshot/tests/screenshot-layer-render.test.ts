@@ -5,6 +5,7 @@ import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import { DEFAULT_OUTPUT_CANVAS, DEFAULT_WATERMARK } from '@beam/engine/layout/output-canvas';
 import type { ScreenshotCursorAsset } from '@beam/runtime/screenshot/screenshot-types';
 import type { ScreenshotCursorLayer, ScreenshotLayer } from '@beam/engine/screenshot/screenshot-types';
+import { drawScreenshotLayer } from '@beam/runtime/screenshot/screenshot-layer-render';
 
 const renderers = vi.hoisted(() => ({
   decoratedMedia: vi.fn(),
@@ -21,8 +22,6 @@ vi.mock('@beam/runtime/composition/shape/render-shape-clip', () => ({
 vi.mock('@beam/runtime/screenshot/screenshot-cursors', () => ({
   drawScreenshotCursor: renderers.screenshotCursor,
 }));
-
-import { drawScreenshotLayer } from '@beam/runtime/screenshot/screenshot-layer-render';
 
 const defaultImage = {
   id: 'screenshot',

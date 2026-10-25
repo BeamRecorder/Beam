@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import TimelineTrackPropertyFeedback from './TimelineTrackPropertyFeedback.vue';
 import { Lock } from '@lucide/vue';
 import { computed } from 'vue';
 import TimelineTrimHandle from './TimelineTrimHandle.vue';
@@ -31,7 +32,7 @@ const items = computed(() =>
   >
     <div
       class="track-content cursor-content"
-      :title="t('clickToAddZoom')"
+      :aria-description="t('clickToAddZoom')"
       @pointerdown.stop
       @mousemove="hoverAt($event, 'zoom')"
       @mouseleave="leaveTrack('zoom')"
@@ -74,6 +75,7 @@ const items = computed(() =>
         @contextmenu.prevent.stop="openZoomContextMenu($event, zoom)"
         @pointerdown="startZoomMove($event, zoom)"
       >
+        <TimelineTrackPropertyFeedback :clip-id="zoom.id" kind="zoom" />
         <TimelineTrimHandle
           edge="start"
           :state="trimStateFor(zoom.id)"

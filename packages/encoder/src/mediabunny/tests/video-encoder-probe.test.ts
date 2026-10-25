@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Quality } from 'mediabunny';
 import { probeHardwareVideoEncoder } from '@beam/encoder/mediabunny/video-encoder-probe';
 import type { VideoEncoderRequirements } from '@beam/encoder/mediabunny/video-encoder-selection-types';
+import type * as MediabunnyModule from 'mediabunny';
+import type { VideoEncodingConfig, EncodedPacket } from 'mediabunny';
 
 const runtime = vi.hoisted(() => ({
   context: { fillRect: vi.fn() },
@@ -12,16 +14,16 @@ const runtime = vi.hoisted(() => ({
   finalize: vi.fn(),
   cancel: vi.fn(),
   state: 'pending' as 'pending' | 'started' | 'canceled' | 'finalized',
-  options: null as import('mediabunny').VideoEncodingConfig | null,
+  options: null as VideoEncodingConfig | null,
   frameRate: 0,
   packets: 1,
 }));
 vi.mock('mediabunny', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('mediabunny')>();
+  const actual = await importOriginal<typeof MediabunnyModule>();
   return {
     ...actual,
     CanvasSource: class {
-      constructor(_canvas: OffscreenCanvas, options: import('mediabunny').VideoEncodingConfig) {
+      constructor(_canvas: OffscreenCanvas, options: VideoEncodingConfig) {
         runtime.options = options;
       }
       add = runtime.add;
@@ -65,8 +67,7 @@ beforeEach(() => {
   });
   runtime.add.mockResolvedValue(undefined);
   runtime.finalize.mockImplementation(async () => {
-    for (let i = 0; i < runtime.packets; i++)
-      runtime.options?.onEncodedPacket?.({} as import('mediabunny').EncodedPacket, undefined);
+    for (let i = 0; i < runtime.packets; i++) runtime.options?.onEncodedPacket?.({} as EncodedPacket, undefined);
     runtime.state = 'finalized';
   });
   runtime.cancel.mockImplementation(async () => {

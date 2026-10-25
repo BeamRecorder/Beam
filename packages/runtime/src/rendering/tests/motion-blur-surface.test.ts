@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  disposeExportMotionBlurSurface,
+  getExportMotionBlurSurface,
+} from '@beam/runtime/rendering/motion-blur-surface';
 
 const compositor = vi.hoisted(() => ({ create: vi.fn(), resize: vi.fn() }));
 vi.mock('@beam/runtime/zoom/zoom-motion-blur-compositor', () => ({
   createMotionBlurSurface: compositor.create,
   resizeMotionBlurSurface: compositor.resize,
 }));
-import {
-  disposeExportMotionBlurSurface,
-  getExportMotionBlurSurface,
-} from '@beam/runtime/rendering/motion-blur-surface';
 
 afterEach(() => {
   disposeExportMotionBlurSurface();

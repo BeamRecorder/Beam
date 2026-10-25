@@ -1,8 +1,8 @@
 import { enableAutoUnmount, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import RecordingDesktopPreferences from './RecordingDesktopPreferences.vue';
 const capture = vi.hoisted(() => ({ platform: 'win32' }));
 vi.mock('~/api/capture', () => ({ capture }));
-import RecordingDesktopPreferences from './RecordingDesktopPreferences.vue';
 enableAutoUnmount(afterEach);
 beforeEach(() => {
   capture.platform = 'win32';

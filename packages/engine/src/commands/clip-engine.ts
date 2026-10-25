@@ -39,6 +39,9 @@ import {
   MIN_PLAYBACK_RATE,
   validateComposition,
 } from '@beam/engine/commands/clip-composition-validation';
+import { forkComposition } from '../document/immutable-document';
+import { validateSceneEdit } from '../scene/scene-edit';
+import { byId, targetIds } from './clip-targets';
 export {
   setCameraLayout,
   setCameraSplitPadding,
@@ -56,13 +59,9 @@ export {
 
 const finite = (value: number) => Number.isFinite(value);
 const integer = (value: number) => Math.round(value);
-import { forkComposition } from '../document/immutable-document';
-import { validateSceneEdit } from '../scene/scene-edit';
 const cloneValue = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const clone = forkComposition<ClipComposition>;
 const createId = (): string => crypto.randomUUID();
-
-import { byId, targetIds } from './clip-targets';
 
 const normalizeGroups = (clips: Clip[]) => {
   const counts = new Map<string, number>();

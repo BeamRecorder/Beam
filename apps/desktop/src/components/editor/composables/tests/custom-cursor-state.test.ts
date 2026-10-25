@@ -28,7 +28,7 @@ const state = (isFresh: boolean, enabled: boolean): ProjectEditorState => ({
     cursor: { ...createDefaultCursorPresentation(), enabled },
   },
 });
-const harness = (embedded: boolean) => {
+const harness = (embedded: boolean, visible?: boolean) => {
   const refs = createState();
   const scope = effectScope();
   scopes.push(scope);
@@ -36,6 +36,7 @@ const harness = (embedded: boolean) => {
     useProjectEditorState({
       ...refs,
       nativeCursorEmbedded: () => embedded,
+      recordingCursorVisible: () => visible,
       restoreComposition: (value) => {
         refs.composition.value = value;
       },
@@ -95,3 +96,30 @@ it.each([false, true])(
     expect(reopened.refs.cursorEnabled.value).toBe(enabled);
   },
 );
+
+it.each([false, true])('starts an OFF recording hidden even when the saved cursor default is %s', async (saved) => {
+  const h = harness(false, false);
+  h.refs.editorDefaults.value.presentation = state(false, true).presentation;
+  await h.controller.load('project', state(true, saved));
+  expect(h.refs.cursorEnabled.value).toBe(false);
+  expect(h.refs.editorDefaults.value.presentation.cursor.enabled).toBe(true);
+  await h.controller.saveNow(false);
+  expect(capture.saveProjectEditorState.mock.calls.at(-1)![1].presentation.cursor.enabled).toBe(false);
+});
+
+it.each([false, true])('preserves later cursor choice %s when reopening an OFF recording', async (enabled) => {
+  const h = harness(false, false);
+  await h.controller.load('project', state(false, enabled));
+  expect(h.refs.cursorEnabled.value).toBe(enabled);
+});
+
+it('keeps recording visibility independent when loading another project with the same preset', async () => {
+  const hidden = harness(false, false);
+  const legacy = harness(false);
+  for (const h of [hidden, legacy]) {
+    h.refs.editorDefaults.value.presentation = state(false, true).presentation;
+    await h.controller.load('project', state(true, true));
+  }
+  expect(hidden.refs.cursorEnabled.value).toBe(false);
+  expect(legacy.refs.cursorEnabled.value).toBe(true);
+});

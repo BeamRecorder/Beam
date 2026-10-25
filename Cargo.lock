@@ -186,6 +186,7 @@ dependencies = [
  "ashpd",
  "base64",
  "beam-system-metrics",
+ "core-foundation",
  "core-graphics",
  "crossbeam-channel",
  "evdev",

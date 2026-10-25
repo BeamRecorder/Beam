@@ -19,6 +19,13 @@ import type { CompositionSnapshot } from '@beam/engine/shared/render-document-ty
 import { ORBIT_PRESETS } from '@beam/engine/zoom/orbit-settings';
 import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '@beam/engine/shared/shape-layer-style';
 import type { ShapeClip } from '@beam/engine';
+import type * as RenderModule from '@beam/runtime/rendering/render';
+import type * as RuntimePreviewModule from '../../desktop/src/components/editor/canvas/runtime-preview';
+import type * as SceneLayersModule from '@beam/engine/composition/scene-layers';
+import type * as RenderShapeClipModule from '../../../packages/runtime/src/composition/shape/render-shape-clip';
+import type * as OrderedGpuShapesModule from '../../../packages/runtime/src/composition/shape/ordered-gpu-shapes';
+import type * as RenderCaptionTextModule from '@beam/runtime/composition/captions/render-caption-text';
+import type { CaptionClip } from '@beam/engine';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export frames in displayless Chrome', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temp: string;
@@ -97,13 +104,9 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
         const layersPath = '/packages/engine/src/composition/scene-layers.ts';
         // Keep imports inside the browser realm; Vitest rewrites lexical imports to SSR helpers.
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
-        const { renderCompositionFrame } = (await load(renderPath)) as typeof import('@beam/runtime/rendering/render');
-        const { createRuntimePreview } = (await load(
-          previewPath,
-        )) as typeof import('../../desktop/src/components/editor/canvas/runtime-preview');
-        const { resolveCompositionSceneLayers } = (await load(
-          layersPath,
-        )) as typeof import('@beam/engine/composition/scene-layers');
+        const { renderCompositionFrame } = (await load(renderPath)) as typeof RenderModule;
+        const { createRuntimePreview } = (await load(previewPath)) as typeof RuntimePreviewModule;
+        const { resolveCompositionSceneLayers } = (await load(layersPath)) as typeof SceneLayersModule;
         const width = snapshot.canvas.width,
           height = snapshot.canvas.height;
         const preview = document.createElement('canvas');
@@ -386,10 +389,10 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const { drawShapeClip } = (await load(
         '/packages/runtime/src/composition/shape/render-shape-clip.ts',
-      )) as typeof import('../../../packages/runtime/src/composition/shape/render-shape-clip');
+      )) as typeof RenderShapeClipModule;
       const { withOrderedGpuShapes, disposeGpuShapes } = (await load(
         '/packages/runtime/src/composition/shape/ordered-gpu-shapes.ts',
-      )) as typeof import('../../../packages/runtime/src/composition/shape/ordered-gpu-shapes');
+      )) as typeof OrderedGpuShapesModule;
       const canvas = new OffscreenCanvas(300, 180),
         ctx = canvas.getContext('2d')!;
       const viewport = { x: 1.25, y: 2.5, width: 277.3, height: 155.9 };
@@ -496,7 +499,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const { drawCaptionText } = (await load(
         '/packages/runtime/src/composition/captions/render-caption-text.ts',
-      )) as typeof import('@beam/runtime/composition/captions/render-caption-text');
+      )) as typeof RenderCaptionTextModule;
       const value = {
         id: 'cache-text',
         kind: 'caption',
@@ -510,7 +513,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('completed preview/export
         playbackRate: 1,
         transform: { x: 0.1, y: 0.2, width: 0.7, height: 0.3 },
         caption: { type: 'text', sentences: [], style },
-      } satisfies import('@beam/engine').CaptionClip;
+      } satisfies CaptionClip;
       const canvas = new OffscreenCanvas(256, 144),
         ctx = canvas.getContext('2d')!;
       let measured = 0;

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import TrackPropertyToggle from '../TrackPropertyToggle.vue';
+import { zoomPropertyScopeKey } from './zoom-property-context';
+import { computed, ref, watch, inject } from 'vue';
 import { Info } from '@lucide/vue';
 import Accordion from '~/ui/accordion/Accordion.vue';
 import Button from '~/ui/button/Button.vue';
@@ -32,6 +34,7 @@ import { createGlassHighlight } from '@beam/engine/zoom/glass-highlight';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('ZoomPanel');
+const propertyScope = inject(zoomPropertyScopeKey, null);
 const { t: glassText } = useTranslate('GlassHighlight');
 const props = withDefaults(defineProps<ZoomPanelProps>(), { autoFollow: () => ({ ...DEFAULT_ZOOM_AUTO_FOLLOW }) });
 const emit = defineEmits<ZoomPanelEmits>();
@@ -110,6 +113,7 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) =>
 
 <template>
   <div class="zoom-panel">
+    <TrackPropertyToggle :scope="propertyScope" :hint="t('applyToTrackHint')" />
     <template v-if="selectedZoom || !still">
       <Accordion v-model="sections.style" :title="glassText('style')" appearance="inspector">
         <div class="section-block">

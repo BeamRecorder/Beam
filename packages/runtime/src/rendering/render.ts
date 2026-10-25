@@ -1,4 +1,6 @@
+import { snapshotWithScreenCursor, snapshotCursorMotion } from './snapshot-cursor';
 import { disposeAnimatedFrameRenderer } from '../composition/appearance/animated-frame';
+import { screenCursorEnabled } from '@beam/engine/capture/screen-cursor';
 import { drawVisualClip, drawWebcamClip } from './render-media';
 import { drawScreenMedia } from './render-screen';
 import { disposeWaterRippleRenderer, screenWithWaterRipples } from './render-water-ripple';
@@ -86,25 +88,29 @@ export function drawCompositionLayers(
           continue;
         }
         if (isBlurClip(clip)) {
-          drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () => drawBlurClip(ctx, clip, snapshot.canvas));
+          drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, (transitionTarget) =>
+            drawBlurClip(transitionTarget, clip, snapshot.canvas),
+          );
           continue;
         }
         const media = visuals.get(clip.id);
         if (!media) continue;
         if (clip.kind === 'webcam') {
-          drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
-            drawWebcamClip(ctx, clip, media, snapshot.canvas, timeMs, appearanceScale),
+          drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, (transitionTarget) =>
+            drawWebcamClip(transitionTarget, clip, media, snapshot.canvas, timeMs, appearanceScale),
           );
         } else
-          drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
-            drawVisualClip(ctx, clip, media, snapshot.canvas, timeMs, appearanceScale),
+          drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, (transitionTarget) =>
+            drawVisualClip(transitionTarget, clip, media, snapshot.canvas, timeMs, appearanceScale),
           );
       }
     }),
   );
   drawSceneStack(ctx, layers.captions, layers.sceneIndex ?? layers.scene, snapshot.canvas, (ctx, clips) => {
     for (const clip of clips)
-      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () => drawCaption(ctx, clip, timeMs, snapshot));
+      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, (transitionTarget) =>
+        drawCaption(transitionTarget, clip, timeMs, snapshot),
+      );
   });
 }
 
@@ -133,7 +139,7 @@ function renderCompositionFrameContent(
   primeAdaptiveShadowColors(visualAdaptiveShadowRequests(layers.visualStack, visuals, snapshot.canvas));
   const screen = layers.screen;
   const screenTime = screen ? (sessionTimeAt(screen, timeMs, snapshot.composition) ?? timeMs) / 1_000 : time;
-  const screenMedia = screen && video ? screenWithWaterRipples(video, snapshot, screenTime) : video;
+  const screenMedia = screen && video ? screenWithWaterRipples(video, snapshot, screenTime, screen) : video;
   const sourceWidth = video?.width ?? width;
   const sourceHeight = video?.height ?? height;
   const screenGeometry = screen
@@ -198,11 +204,19 @@ function renderCompositionFrameContent(
               if (clip.kind === 'screen') {
                 const media = clip.id === screen?.id ? screenMedia : visuals?.get(clip.id);
                 if (!media) continue;
-                drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () => {
-                  drawScreenMedia(target, clip, media, snapshot.canvas, timeMs, appearanceScale, shadowPixelRatio);
+                drawWithClipTransition(target, clip, timeMs, snapshot.canvas, (transitionTarget) => {
+                  drawScreenMedia(
+                    transitionTarget,
+                    clip,
+                    media,
+                    snapshot.canvas,
+                    timeMs,
+                    appearanceScale,
+                    shadowPixelRatio,
+                  );
                   if (layers.scene && clip.id === screen?.id && resolvedCursorMotionPlayer)
                     drawCursorLayer(
-                      target,
+                      transitionTarget,
                       snapshot,
                       screenTime,
                       clip,
@@ -223,25 +237,25 @@ function renderCompositionFrameContent(
                 continue;
               }
               if (isBlurClip(clip)) {
-                drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
-                  drawBlurClip(target, clip, snapshot.canvas),
+                drawWithClipTransition(target, clip, timeMs, snapshot.canvas, (transitionTarget) =>
+                  drawBlurClip(transitionTarget, clip, snapshot.canvas),
                 );
                 continue;
               }
               const sourceVisual = visuals?.get(clip.id);
               if (!sourceVisual) continue;
               if (clip.kind === 'webcam')
-                drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
-                  drawWebcamClip(target, clip, sourceVisual, snapshot.canvas, timeMs, appearanceScale, {
+                drawWithClipTransition(target, clip, timeMs, snapshot.canvas, (transitionTarget) =>
+                  drawWebcamClip(transitionTarget, clip, sourceVisual, snapshot.canvas, timeMs, appearanceScale, {
                     scale: sampleCamera.scale,
                     focusX: sampleCamera.focusX * width,
                     focusY: sampleCamera.focusY * height,
                   }),
                 );
               else
-                drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
+                drawWithClipTransition(target, clip, timeMs, snapshot.canvas, (transitionTarget) =>
                   drawVisualClip(
-                    target,
+                    transitionTarget,
                     clip,
                     sourceVisual,
                     snapshot.canvas,
@@ -273,14 +287,7 @@ function renderCompositionFrameContent(
   };
   const hasRenderableScreen = Boolean(screen && video && positionedMedia && source);
   const resolvedCursorMotionPlayer = hasRenderableScreen
-    ? (cursorMotionPlayer ??
-      createCursorMotionPlayer(
-        snapshot.cursor.events,
-        snapshot.cursorSettings.motion,
-        sourceWidth,
-        sourceHeight,
-        snapshot.cursor.hoverSync,
-      ))
+    ? (cursorMotionPlayer ?? snapshotCursorMotion(snapshot, sourceWidth, sourceHeight))
     : null;
   const cursorMotion = evaluation
     ? evaluation.cursorMotion
@@ -331,7 +338,7 @@ function renderCompositionFrameContent(
       hasRenderableScreen &&
       screen &&
       resolvedCursorMotionPlayer &&
-      snapshot.cursorSettings.enabled !== false
+      screenCursorEnabled(screen, snapshot.cursorSettings.enabled !== false)
     ) {
       const drawCursor = (target: Canvas2DContext) => {
         target.save();
@@ -340,9 +347,9 @@ function renderCompositionFrameContent(
           target.scale(scale, scale);
           target.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
         }
-        drawWithClipTransition(target, screen, timeMs, snapshot.canvas, () =>
+        drawWithClipTransition(target, screen, timeMs, snapshot.canvas, (transitionTarget) =>
           drawCursorLayer(
-            target,
+            transitionTarget,
             snapshot,
             screenTime,
             screen,
@@ -374,8 +381,8 @@ function renderCompositionFrameContent(
   drawCameraLayers(ctx);
   drawSceneStack(ctx, layers.captions, layers.sceneIndex ?? layers.scene, snapshot.canvas, (ctx, clips) => {
     for (const clip of clips)
-      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
-        drawCaption(ctx, clip, timeMs, snapshot, keyboardCursorPosition),
+      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, (transitionTarget) =>
+        drawCaption(transitionTarget, clip, timeMs, snapshot, keyboardCursorPosition),
       );
   });
   if (!decorations) return;
@@ -435,6 +442,9 @@ export function renderCompositionFrame(
   evaluation?: CompositionFrameEvaluation,
 ) {
   const layers = resolvedLayers ?? resolveCompositionSceneLayers(snapshot.composition, time * 1_000);
+  snapshot = snapshotWithScreenCursor(snapshot, layers.screen);
+  if (layers.screen?.cursorSettings && video && !evaluation)
+    cursorMotionPlayer = snapshotCursorMotion(snapshot, video.width, video.height);
   const transition = resolveCanvasTransitionState(
     snapshot.canvas.transitions ?? EMPTY_CLIP_TRANSITIONS,
     time * 1_000,

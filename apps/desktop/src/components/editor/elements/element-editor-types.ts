@@ -4,6 +4,7 @@ import type { ShapeLayerFamily, ShapeLayerStyle } from '@beam/engine/shared/shap
 import type { ArrowPreset, VectorNode, VectorNodeSelection } from '@beam/engine/shared/shape-vector-types';
 import type { DrawingSettings, DrawnElement, ElementText } from '@beam/engine/shared/element-types';
 import type { ElementTextDefaults } from './element-text-default-types';
+import type { OrbitCameraPose } from '@beam/engine/zoom/orbit-camera-types';
 
 export type ElementLayerPatch = Partial<ShapeLayerStyle> & { transform?: NormalizedTransform };
 
@@ -62,7 +63,7 @@ export interface ElementEditorContext {
 }
 export type ElementViewport = NormalizedTransform;
 export interface ElementCamera {
-  orbit?: import('@beam/engine/zoom/orbit-camera-types').OrbitCameraPose;
+  orbit?: OrbitCameraPose;
   scale?: number;
   focusX?: number;
   focusY?: number;

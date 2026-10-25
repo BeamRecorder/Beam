@@ -92,7 +92,7 @@ describe('sparse timing previews', () => {
     expect(createCompositionScreenResolver(simultaneous)(0)?.id).toBe('first');
     const exhausted = build([
       { ...base.clips[0]!, sourceDurationMs: 0 },
-      { ...(base.clips[2]! as import('@beam/engine/shared/composition-types').VisualClip), kind: 'webcam' },
+      { ...(base.clips[2]! as VisualClip), kind: 'webcam' },
     ]);
     expect(createCompositionScreenResolver(exhausted)(0)?.id).toBe('second');
   });

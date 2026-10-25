@@ -1,11 +1,11 @@
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { captureMock as capture } from './capture.mock';
+import ProjectPicker from '../../projects/ProjectPicker.vue';
 
 vi.mock('../../../api/capture', async () => ({
   capture: (await import('./capture.mock')).captureMock,
 }));
-import ProjectPicker from '../../projects/ProjectPicker.vue';
 
 enableAutoUnmount(afterEach);
 

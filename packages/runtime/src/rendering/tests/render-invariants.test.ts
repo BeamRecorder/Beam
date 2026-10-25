@@ -1,4 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
+import { drawCompositionLayers, renderCompositionFrame, type RenderableMedia } from '@beam/runtime/rendering/render';
+import { resolveCameraFraming } from '@beam/engine/composition/camera-layout';
+import { drawCanvasTransitionFrame } from '@beam/runtime/composition/transitions/render-canvas-transition';
+import type { ColorClip, VisualClip } from '@beam/engine/shared/composition-types';
+import * as decoratedMedia from '@beam/runtime/composition/appearance/render-decorated-media';
+import * as mediaShadows from '@beam/runtime/composition/appearance/media-shadow-cache';
+import { context, screenAppearance as appearance, snapshot } from '@beam/runtime/rendering/tests/render.test-support';
+import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 
 const perspectiveState = vi.hoisted(() => ({
   render: vi.fn(),
@@ -28,14 +36,6 @@ vi.mock('@beam/runtime/zoom/perspective-scene-compositor', () => ({
     }
   },
 }));
-import { drawCompositionLayers, renderCompositionFrame, type RenderableMedia } from '@beam/runtime/rendering/render';
-import { resolveCameraFraming } from '@beam/engine/composition/camera-layout';
-import { drawCanvasTransitionFrame } from '@beam/runtime/composition/transitions/render-canvas-transition';
-import type { ColorClip, VisualClip } from '@beam/engine/shared/composition-types';
-import * as decoratedMedia from '@beam/runtime/composition/appearance/render-decorated-media';
-import * as mediaShadows from '@beam/runtime/composition/appearance/media-shadow-cache';
-import { context, screenAppearance as appearance, snapshot } from '@beam/runtime/rendering/tests/render.test-support';
-import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 
 const testCaptionStyle = (fontSize: number) => {
   const style = createDefaultCaptionStyle(fontSize);

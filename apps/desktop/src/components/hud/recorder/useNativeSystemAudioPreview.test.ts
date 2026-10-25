@@ -1,6 +1,7 @@
 import { defineComponent, h, nextTick, ref } from 'vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useNativeSystemAudioPreview } from './useNativeSystemAudioPreview';
 
 const { capture } = vi.hoisted(() => ({
   capture: {
@@ -12,8 +13,6 @@ const { capture } = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../api/capture', () => ({ capture }));
-
-import { useNativeSystemAudioPreview } from './useNativeSystemAudioPreview';
 
 const PreviewHarness = defineComponent({
   props: {

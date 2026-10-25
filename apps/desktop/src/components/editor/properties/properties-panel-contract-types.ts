@@ -23,9 +23,12 @@ import type { CameraFramingPreset, CameraLayoutPreset } from '@beam/engine/share
 import type { AnimatedFrameSettings } from '@beam/engine/shared/animated-frame-types';
 import type { PhoneFrameFill } from '@beam/engine/shared/color-fill-types';
 import type { ZoomAutoFollowSettings, ZoomElement, ZoomMotionBlurSettings } from '@beam/engine/zoom/zoom-types';
+import type { TimelineSelectionIds } from '@beam/engine/composition/timeline-edit-types';
+import type { ZoomStyle } from '@beam/engine/zoom/zoom-types';
+import type { RecordingSidecarUnlink } from '@beam/engine/composition/recording-sidecar-types';
 
 export interface PropertiesPanelProps {
-  lockedSelection?: import('@beam/engine/composition/timeline-edit-types').TimelineSelectionIds;
+  lockedSelection?: TimelineSelectionIds;
   activeTab: string;
   selectedClip?: SelectedClipProperties | null;
   selectedCaptionClip?: CaptionClip | null;
@@ -92,7 +95,7 @@ export interface PropertiesPanelEmits {
   (event: 'update:zoomAutoFollow', value: ZoomAutoFollowSettings): void;
   (event: 'update:zoomMotionBlur', value: ZoomMotionBlurSettings): void;
   (event: 'delete:zoom'): void;
-  (event: 'generate:zooms', style: import('@beam/engine/zoom/zoom-types').ZoomStyle): void;
+  (event: 'generate:zooms', style: ZoomStyle): void;
   (event: 'update:caption', value: CaptionClip): void;
   (event: 'update:composition', value: ClipComposition): void;
   (event: 'preview:composition', value: ClipComposition | null): void;
@@ -145,10 +148,7 @@ export interface PropertiesPanelEmits {
   (event: 'update:camera-split-padding', padding: number): void;
   (event: 'update:webcam-react-to-zoom', enabled: boolean): void;
   (event: 'reset:clip-transform'): void;
-  (
-    event: 'unlink-sidecars',
-    request: import('@beam/engine/composition/recording-sidecar-types').RecordingSidecarUnlink,
-  ): void;
+  (event: 'unlink-sidecars', request: RecordingSidecarUnlink): void;
   (event: 'delete-clip'): void;
   (event: 'delete:system-audio'): void;
   (event: 'delete:mic-audio'): void;

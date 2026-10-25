@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { documentFixture, presetFixture } from '../tests/screenshot-editor-test-helpers';
 import { stateFixture } from '../export/tests/export-test-support';
+import { createScreenshotStartup } from './screenshot-startup';
 const api = vi.hoisted(() => ({ getScreenshot: vi.fn(), listBackgroundLibrary: vi.fn(), getEditorPresets: vi.fn() }));
 vi.mock('~/api/capture', () => ({ capture: api }));
-import { createScreenshotStartup } from './screenshot-startup';
 beforeEach(() => {
   api.getScreenshot.mockReset().mockResolvedValue(documentFixture());
   api.listBackgroundLibrary.mockReset().mockResolvedValue([]);

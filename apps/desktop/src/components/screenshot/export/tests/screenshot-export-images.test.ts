@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { bitmap, requestFixture } from './export-test-support';
+import { createScreenshotExportImages } from '../screenshot-export-images';
 const raster = vi.hoisted(() => ({ scale: 1 }));
 vi.mock('../screenshot-export-raster', () => ({ screenshotExportRasterScale: () => raster.scale }));
-import { createScreenshotExportImages } from '../screenshot-export-images';
 
 let fetchImage: ReturnType<typeof vi.fn>;
 let decode: ReturnType<typeof vi.fn>;

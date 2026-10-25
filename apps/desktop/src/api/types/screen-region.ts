@@ -1,3 +1,4 @@
+import type { RecordingZoomMode } from './recording-zoom';
 export interface ScreenRegion {
   x: number;
   y: number;
@@ -44,7 +45,7 @@ export interface ScreenRegionSelectionResult {
 
 export interface RegionRecordingSettings {
   startAutomatically?: boolean;
-  zoomMode?: import('./recording-zoom').RecordingZoomMode;
+  zoomMode?: RecordingZoomMode;
   cameraId: string;
   microphoneId: string;
   systemAudio: boolean;

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CanvasSink } from 'mediabunny';
 import type { AssetDecoder, ClipConsumer } from '@beam/runtime/playback/playback-worker-consumers';
+import { PlaybackConsumerWindow } from '@beam/runtime/playback/playback-consumer-window';
 
 const runtime = vi.hoisted(() => ({
   CanvasSink: vi.fn(),
@@ -8,8 +9,6 @@ const runtime = vi.hoisted(() => ({
 }));
 
 vi.mock('mediabunny', () => ({ CanvasSink: runtime.CanvasSink }));
-
-import { PlaybackConsumerWindow } from '@beam/runtime/playback/playback-consumer-window';
 
 const clip = (clipId: string, timelineStartSeconds: number, timelineDurationSeconds: number) => ({
   clipId,

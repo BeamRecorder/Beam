@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CaptionClip } from '@beam/engine/shared/composition-types';
 import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
+import KeyboardCaptionClipPanel from './KeyboardCaptionClipPanel.vue';
 
 const capture = vi.hoisted(() => ({
   listImportedFonts: vi.fn(),
@@ -10,8 +11,6 @@ const capture = vi.hoisted(() => ({
   onFontLibraryChanged: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-
-import KeyboardCaptionClipPanel from './KeyboardCaptionClipPanel.vue';
 
 const Input = {
   inheritAttrs: false,

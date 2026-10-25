@@ -87,6 +87,14 @@ export function registerLocalAssets(request: ExportRequest, directory: string, a
           snapshot.background && 'src' in snapshot.background
             ? { ...snapshot.background, src: source(snapshot.background.src) }
             : snapshot.background,
+        ...(snapshot.cursorPacks
+          ? {
+              cursorPacks: snapshot.cursorPacks.map((pack) => ({
+                ...pack,
+                cursors: pack.cursors.map((cursor) => ({ ...cursor, url: source(cursor.url) })),
+              })),
+            }
+          : {}),
         cursorPack: snapshot.cursorPack
           ? {
               ...snapshot.cursorPack,

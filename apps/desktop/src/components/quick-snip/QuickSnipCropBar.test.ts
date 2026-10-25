@@ -72,7 +72,7 @@ describe('Quick Snip capture assets', () => {
     expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     recorder.error.value = 'Input capture stopped';
     await nextTick();
-    expect(wrapper.get('[role="alert"]').attributes('title')).toBe('Input capture stopped');
+    expect(wrapper.get('[role="alert"]').attributes('aria-label')).toBe('Input capture stopped');
     recorder.error.value = '';
     await nextTick();
     expect(wrapper.find('[role="alert"]').exists()).toBe(false);

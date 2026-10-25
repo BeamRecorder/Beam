@@ -1,8 +1,8 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { stateFixture } from './export-test-support';
+import { createScreenshotExporter } from '../screenshot-export-cache';
 const rendering = vi.hoisted(() => ({ encode: vi.fn() }));
 vi.mock('../screenshot-export', () => ({ encodeScreenshot: rendering.encode }));
-import { createScreenshotExporter } from '../screenshot-export-cache';
 beforeEach(() => rendering.encode.mockReset().mockResolvedValue(new Uint8Array([1, 2, 3]).buffer));
 
 it('reuses the actual output thumbnail and reports a cache hit without invoking the worker again', async () => {

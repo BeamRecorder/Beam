@@ -1,7 +1,7 @@
 use std::{
     path::Path,
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicBool, AtomicU64, Ordering},
         mpsc,
     },
@@ -9,10 +9,7 @@ use std::{
     time::Duration,
 };
 
-use core_graphics::{
-    event::{CGEvent, CGMouseButton},
-    event_source::CGEventSourceStateID,
-};
+use core_graphics::event::CGEvent;
 use foreign_types::ForeignType;
 
 use crate::{
@@ -29,6 +26,7 @@ pub struct MacCursorMetrics {
     interruptions: AtomicU64,
     shape_source: super::MacCursorShapeSource,
     shape_failure_baseline: u64,
+    input_failure: Mutex<Option<String>>,
 }
 
 impl MacCursorMetrics {
@@ -39,6 +37,7 @@ impl MacCursorMetrics {
             interruptions: AtomicU64::new(0),
             shape_source,
             shape_failure_baseline,
+            input_failure: Mutex::new(None),
         }
     }
 
@@ -53,6 +52,24 @@ impl MacCursorMetrics {
                 .failures()
                 .saturating_sub(self.shape_failure_baseline),
         )
+    }
+
+    pub fn failure_reason(&self) -> Option<String> {
+        self.input_failure
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
+    }
+
+    pub(super) fn record_input_failure(&self, message: String) {
+        let mut failure = self
+            .input_failure
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if failure.is_none() {
+            *failure = Some(message);
+            self.interruptions.fetch_add(1, Ordering::Relaxed);
+        }
     }
 }
 
@@ -99,7 +116,7 @@ impl MacCursorRecording {
             .name("capture-macos-cursor".into())
             .spawn(move || {
                 let _permit = permit;
-                capture_loop(
+                let result = capture_loop(
                     &thread_path,
                     &thread_input_path,
                     region,
@@ -112,7 +129,11 @@ impl MacCursorRecording {
                     &thread_metrics,
                     &ready_sender,
                     &worker_gate,
-                )
+                );
+                if let Err(error) = &result {
+                    thread_metrics.record_input_failure(error.to_string());
+                }
+                result
             })
             .map_err(backend_error)?;
         let ready = ready_receiver
@@ -220,18 +241,31 @@ fn capture_loop(
     shape_source: super::MacCursorShapeSource,
     segment_start_ns: u64,
     cancel: &AtomicBool,
-    metrics: &MacCursorMetrics,
+    metrics: &Arc<MacCursorMetrics>,
     ready: &mpsc::SyncSender<Result<(), CaptureError>>,
     start_gate: &Arc<StartGate>,
 ) -> Result<(), CaptureError> {
     let mut writer = CursorEventWriter::open(path)?;
     let mut input_writer = InputEventWriter::open(input_path)?;
+    let buttons = if capture_clicks {
+        match super::buttons::MacButtonCapture::open(region, start_gate.clone(), metrics.clone()) {
+            Ok(buttons) => Some(buttons),
+            Err(error) => {
+                let _sent = ready.send(Err(error));
+                return Ok(());
+            }
+        }
+    } else {
+        None
+    };
     ready
         .send(Ok(()))
         .map_err(|_| CaptureError::Backend("cursor startup receiver closed".into()))?;
     start_gate.wait()?;
+    if let Some(buttons) = &buttons {
+        buttons.start()?;
+    }
     let mut next_move_sample_ns = segment_start_ns;
-    let mut previous_buttons = [false; 3];
     push(
         &mut writer,
         metrics,
@@ -245,6 +279,12 @@ fn capture_loop(
     let mut successful_samples = 0_u64;
     let mut last_sampling_error = None;
     while !cancel.load(Ordering::Acquire) {
+        flush_buttons(buttons.as_ref(), &mut writer, &mut input_writer, metrics)?;
+        if buttons.is_some()
+            && let Some(reason) = metrics.failure_reason()
+        {
+            return Err(CaptureError::Backend(reason));
+        }
         let session_ns = start_gate.session_time_ns()?;
         let event = match current_cursor_event() {
             Ok(event) => {
@@ -254,7 +294,7 @@ fn capture_loop(
             Err(error) => {
                 metrics.interruptions.fetch_add(1, Ordering::Relaxed);
                 last_sampling_error = Some(error.to_string());
-                std::thread::sleep(Duration::from_millis(8));
+                wait_for_events(buttons.as_ref());
                 continue;
             }
         };
@@ -297,38 +337,6 @@ fn capture_loop(
                 },
             )?;
         }
-        if capture_clicks {
-            for (index, button) in [
-                CGMouseButton::Left,
-                CGMouseButton::Right,
-                CGMouseButton::Center,
-            ]
-            .into_iter()
-            .enumerate()
-            {
-                let pressed = button_state(button);
-                if previous_buttons[index] != pressed {
-                    let button = u8::try_from(index + 1).unwrap_or(u8::MAX);
-                    push(
-                        &mut writer,
-                        metrics,
-                        CursorEvent::Button {
-                            session_ns,
-                            button,
-                            pressed,
-                            normalized_x: position.normalized_x,
-                            normalized_y: position.normalized_y,
-                        },
-                    )?;
-                    input_writer.push(&InputEvent::MouseButton {
-                        session_ns,
-                        button,
-                        pressed,
-                    })?;
-                    previous_buttons[index] = pressed;
-                }
-            }
-        }
         if capture_shortcuts {
             for event in shortcuts.sample(
                 session_ns,
@@ -338,8 +346,12 @@ fn capture_loop(
                 input_writer.push(&event)?;
             }
         }
-        std::thread::sleep(Duration::from_millis(8));
+        wait_for_events(buttons.as_ref());
     }
+    if let Some(buttons) = &buttons {
+        buttons.stop();
+    }
+    flush_buttons(buttons.as_ref(), &mut writer, &mut input_writer, metrics)?;
     writer.flush()?;
     input_writer.flush()?;
     if successful_samples == 0
@@ -378,13 +390,43 @@ fn push(
 }
 
 #[allow(clippy::cast_possible_truncation)]
-fn coordinate(value: f64) -> i32 {
+pub(super) fn coordinate(value: f64) -> i32 {
     value.clamp(f64::from(i32::MIN), f64::from(i32::MAX)) as i32
 }
 
-fn button_state(button: CGMouseButton) -> bool {
-    // SAFETY: CoreGraphics accepts these value enums and reads no caller-owned memory.
-    unsafe { CGEventSourceButtonState(CGEventSourceStateID::CombinedSessionState, button) }
+fn wait_for_events(buttons: Option<&super::buttons::MacButtonCapture>) {
+    if let Some(buttons) = buttons {
+        buttons.poll();
+    } else {
+        std::thread::sleep(Duration::from_millis(8));
+    }
+}
+
+fn flush_buttons(
+    buttons: Option<&super::buttons::MacButtonCapture>,
+    writer: &mut CursorEventWriter,
+    input_writer: &mut InputEventWriter,
+    metrics: &MacCursorMetrics,
+) -> Result<(), CaptureError> {
+    if let Some(buttons) = buttons {
+        for event in buttons.events() {
+            if let CursorEvent::Button {
+                session_ns,
+                button,
+                pressed,
+                ..
+            } = &event
+            {
+                input_writer.push(&InputEvent::MouseButton {
+                    session_ns: *session_ns,
+                    button: *button,
+                    pressed: *pressed,
+                })?;
+            }
+            push(writer, metrics, event)?;
+        }
+    }
+    Ok(())
 }
 
 #[link(name = "CoreGraphics", kind = "framework")]
@@ -392,9 +434,12 @@ unsafe extern "C" {
     fn CGEventCreate(
         source: core_graphics::sys::CGEventSourceRef,
     ) -> core_graphics::sys::CGEventRef;
-    fn CGEventSourceButtonState(state: CGEventSourceStateID, button: CGMouseButton) -> bool;
 }
 
 fn backend_error(error: impl std::fmt::Display) -> CaptureError {
     CaptureError::Backend(format!("macOS cursor capture failed: {error}"))
 }
+
+#[cfg(test)]
+#[path = "recording_metrics_tests.rs"]
+mod tests;

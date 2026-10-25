@@ -71,7 +71,7 @@ impl ActiveRecordings {
             .and_then(crate::screen::ScreenRecording::failure_reason)
     }
 
-    #[cfg(all(windows, feature = "cursor"))]
+    #[cfg(all(any(windows, target_os = "macos"), feature = "cursor"))]
     pub(super) fn input_failure_reason(&self) -> Option<String> {
         self.cursor
             .as_ref()

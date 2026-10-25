@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ExportRequest } from '@beam/encoder/export-types';
 import type { ExportWorkerResponse } from '@beam/encoder/mediabunny/export-worker-protocol';
 import type { ExportRuntimeDiagnostics } from '@beam/encoder/export-diagnostics-types';
+import { exportWithMediabunny } from '@desktop/components/export/mediabunny/exporter';
 
 const { prepareExportCursorImages, environment } = vi.hoisted(() => ({
   prepareExportCursorImages: vi.fn(),
@@ -14,8 +15,6 @@ vi.mock('@desktop/components/authoring/html-export', () => ({
   withHtmlFrameSources: async <T>(request: T) => request,
 }));
 vi.mock('@desktop/components/export/export-environment', () => ({ collectExportEnvironment: environment }));
-
-import { exportWithMediabunny } from '@desktop/components/export/mediabunny/exporter';
 
 type WorkerMessage = { type: string; [key: string]: unknown };
 

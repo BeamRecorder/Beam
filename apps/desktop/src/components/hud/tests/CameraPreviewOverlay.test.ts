@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import CameraPreviewOverlay from '../camera/CameraPreviewOverlay.vue';
 
 type FrameCallback = (now: number, metadata: { width: number; height: number }) => void;
 
@@ -7,8 +8,6 @@ const { capture } = vi.hoisted(() => ({
   capture: { configureCameraOverlay: vi.fn() },
 }));
 vi.mock('../../../api/capture', () => ({ capture }));
-
-import CameraPreviewOverlay from '../camera/CameraPreviewOverlay.vue';
 
 class FakeTrack {
   stop = vi.fn();

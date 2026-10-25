@@ -3,6 +3,7 @@ import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { SCREENSHOT_BACKGROUND_ID, SCREENSHOT_WATERMARK_ID } from '@beam/engine/screenshot/screenshot-layers';
+import { rasterizeScreenshotLayer } from '../screenshot-layer-clipboard-raster';
 
 const rendering = vi.hoisted(() => ({ draw: vi.fn(), alphaBounds: vi.fn() }));
 vi.mock('@beam/runtime/screenshot/screenshot-layer-render', () => ({
@@ -11,8 +12,6 @@ vi.mock('@beam/runtime/screenshot/screenshot-layer-render', () => ({
 vi.mock('../composition/thumbnails/thumbnail-pixels', () => ({
   alphaBounds: rendering.alphaBounds,
 }));
-
-import { rasterizeScreenshotLayer } from '../screenshot-layer-clipboard-raster';
 
 const makeState = (): ScreenshotState => ({
   canvas: {

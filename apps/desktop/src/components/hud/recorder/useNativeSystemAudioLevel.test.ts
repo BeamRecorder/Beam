@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RecordingPhase } from './recording-types';
+import { useNativeSystemAudioLevel } from './useNativeSystemAudioLevel';
 
 const { capture } = vi.hoisted(() => ({
   capture: {
@@ -10,8 +11,6 @@ const { capture } = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../api/capture', () => ({ capture }));
-
-import { useNativeSystemAudioLevel } from './useNativeSystemAudioLevel';
 
 const useLevel = (options: { enabled?: boolean; phase?: RecordingPhase } = {}) =>
   useNativeSystemAudioLevel(ref(options.enabled ?? true), ref(options.phase ?? 'recording'));

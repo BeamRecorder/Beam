@@ -10,6 +10,9 @@ import { createScreenshotEditorTestHarness, documentFixture, presetFixture } fro
 import { registerScreenshotEditorHistoryAndFooterTests } from './screenshot-editor-history-cases';
 import { registerScreenshotEditorSearchTests } from './screenshot-editor-search-cases';
 import { registerScreenshotEditorRenameTests } from './screenshot-editor-rename-cases';
+import ScreenshotEditor from '../ScreenshotEditor.vue';
+import TransformControls from '../../editor/properties/shared/TransformControls.vue';
+import MediaOrientationControls from '../../editor/properties/shared/MediaOrientationControls.vue';
 
 const capture = vi.hoisted(() => ({
   onAuthoringRequest: vi.fn(() => vi.fn()),
@@ -53,9 +56,6 @@ vi.mock('../screenshot-layer-clipboard-raster', () => ({
   rasterizeScreenshotLayer: clipboardRaster.rasterize,
 }));
 
-import ScreenshotEditor from '../ScreenshotEditor.vue';
-import TransformControls from '../../editor/properties/shared/TransformControls.vue';
-import MediaOrientationControls from '../../editor/properties/shared/MediaOrientationControls.vue';
 const editorHarness = createScreenshotEditorTestHarness(ScreenshotEditor, (editor) => {
   screenshotCanvasEditor = editor;
 });

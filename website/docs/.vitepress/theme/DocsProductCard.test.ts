@@ -1,11 +1,10 @@
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import DocsProductCard from './DocsProductCard.vue';
 
 const withBase = vi.hoisted(() => vi.fn((path: string) => (path.startsWith('/') ? `/docs${path}` : path)));
 
 vi.mock('vitepress', () => ({ withBase }));
-
-import DocsProductCard from './DocsProductCard.vue';
 
 type CardProps = {
   title: string;

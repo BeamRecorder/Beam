@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useCursorPropertyFields } from '../properties/cursor/useCursorPropertyFields';
 import PropertiesPanel from '~/components/editor/properties/PropertiesPanel.vue';
 import { useEditorWorkspaceContext } from './workspace-context';
 import { toRefs } from 'vue';
@@ -7,7 +8,6 @@ const {
   activeTab,
   systemVolume,
   micVolume,
-  cursorMotion,
   zoomState,
   outputCanvas,
   duration,
@@ -16,17 +16,9 @@ const {
   backgroundBlurPercent,
   backgroundGroups,
   addBackground,
-  cursorSelection,
   cursorPacks,
-  cursorSize,
-  cursorColor,
-  enableShadow,
-  shadowBlur,
-  shadowColor,
-  shadowDirection,
-  clickEffects,
-  cursorAutoHide,
   composition,
+  compositionState,
   selectedClipId,
   selectedClipIds,
   selectedClipInfo,
@@ -79,6 +71,18 @@ const {
   commitSelectedTransform,
   commitSelectedCrop,
 } = workspace;
+const {
+  cursorMotion,
+  cursorSelection,
+  cursorSize,
+  cursorColor,
+  enableShadow,
+  shadowBlur,
+  shadowColor,
+  shadowDirection,
+  clickEffects,
+  cursorAutoHide,
+} = useCursorPropertyFields(workspace.cursorProperties);
 const { project, editorData } = toRefs(workspace.props);
 </script>
 <template>
@@ -137,7 +141,7 @@ const { project, editorData } = toRefs(workspace.props);
     @delete:zoom="deleteSelectedTimelineZooms"
     @generate:zooms="generateZooms(false, $event)"
     @update:caption="commitCaption"
-    @update:composition="replaceComposition"
+    @update:composition="replaceComposition(compositionState.clipTrackProperties.synchronize($event))"
     @preview:composition="previewComposition"
     @select-caption="selectEditorClip"
     @delete-clip="

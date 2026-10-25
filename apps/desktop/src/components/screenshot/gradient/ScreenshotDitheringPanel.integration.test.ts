@@ -9,6 +9,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromiumExecutable } from '../../../../../cli/src/chromium-install';
 import { chromiumSettings } from '../../../../../cli/src/chromium-settings';
+import type * as DitheringPanelBrowserHostModule from '../tests/dithering-panel-browser-host';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('Dithering inspector in Chromium', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temporary: string;
@@ -72,7 +73,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('Dithering inspector in C
             });
             const load = new Function('path', 'return import(path)') as (
               path: string,
-            ) => Promise<typeof import('../tests/dithering-panel-browser-host')>;
+            ) => Promise<typeof DitheringPanelBrowserHostModule>;
             await (
               await load('/apps/desktop/src/components/screenshot/tests/dithering-panel-browser-host.ts')
             ).mountDitheringPanel(locale, scale, scale === 1.25);
@@ -117,7 +118,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('Dithering inspector in C
     await page.evaluate(async () => {
       const load = new Function('path', 'return import(path)') as (
         path: string,
-      ) => Promise<typeof import('../tests/dithering-panel-browser-host')>;
+      ) => Promise<typeof DitheringPanelBrowserHostModule>;
       await (
         await load('/apps/desktop/src/components/screenshot/tests/dithering-panel-browser-host.ts')
       ).mountDitheringPanel('fr', 1);
@@ -134,7 +135,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('Dithering inspector in C
       page.evaluate(async () => {
         const load = new Function('path', 'return import(path)') as (
           path: string,
-        ) => Promise<typeof import('../tests/dithering-panel-browser-host')>;
+        ) => Promise<typeof DitheringPanelBrowserHostModule>;
         return (
           await load('/apps/desktop/src/components/screenshot/tests/dithering-panel-browser-host.ts')
         ).currentDitheringEffect();

@@ -2,9 +2,11 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, h, ref, type Ref } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CaptureProject } from '~/api/types/capture-api';
+import { useProjectGrid } from './useProjectGrid';
+import type * as CoreModule from '@vueuse/core';
 const observed = vi.hoisted(() => ({ width: null as Ref<number> | null }));
 vi.mock('@vueuse/core', async (original) => {
-  const actual = await original<typeof import('@vueuse/core')>();
+  const actual = await original<typeof CoreModule>();
   const { ref } = await import('vue');
   return {
     ...actual,
@@ -14,7 +16,6 @@ vi.mock('@vueuse/core', async (original) => {
     }),
   };
 });
-import { useProjectGrid } from './useProjectGrid';
 
 const create = async (count = 30, width = 680) => {
   const projects = ref(Array.from({ length: count }, (_, index) => ({ id: String(index) }) as CaptureProject));

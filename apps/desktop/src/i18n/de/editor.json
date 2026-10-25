@@ -430,6 +430,7 @@
     "savingProject": "Projekt wird gespeichert"
   },
   "ZoomPanel": {
+    "applyToTrackHint": "Zoomdarstellung für entsperrte Zooms angleichen; Ziele und Zeitpunkte bleiben erhalten.",
     "cameraFollow": "Kameraführung",
     "cameraFollowDesc": "Folgt den aufgezeichneten Cursorbewegungen vorausschauend mit sanften, gleichmäßigen Kamerabewegungen.",
     "advanced": "Erweitert",

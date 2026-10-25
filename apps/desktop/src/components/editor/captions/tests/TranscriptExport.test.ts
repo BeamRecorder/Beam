@@ -4,11 +4,10 @@ import type { CaptionClip, ClipComposition } from '@beam/engine/shared/compositi
 import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 import { i18n } from '~/i18n';
 import Button from '~/ui/button/Button.vue';
+import TranscriptExport from '../TranscriptExport.vue';
 
 const capture = vi.hoisted(() => ({ exportTranscript: vi.fn() }));
 vi.mock('~/api/capture', () => ({ capture }));
-
-import TranscriptExport from '../TranscriptExport.vue';
 
 type CaptionOptions = {
   id: string;

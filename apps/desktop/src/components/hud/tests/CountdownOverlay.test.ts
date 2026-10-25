@@ -1,5 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import CountdownOverlay from '../recorder/CountdownOverlay.vue';
 
 const { capture } = vi.hoisted(() => ({
   capture: {
@@ -12,8 +13,6 @@ const { capture } = vi.hoisted(() => ({
   },
 }));
 vi.mock('../../../api/capture', () => ({ capture }));
-
-import CountdownOverlay from '../recorder/CountdownOverlay.vue';
 
 const preferences = (shortcuts: Record<string, string> = {}) => ({
   shortcuts: Object.fromEntries(

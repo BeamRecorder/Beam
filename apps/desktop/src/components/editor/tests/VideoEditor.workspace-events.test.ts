@@ -1,3 +1,8 @@
+import { useCursorPropertyFields } from '../properties/cursor/useCursorPropertyFields';
+import {
+  createDefaultCursorClickEffects,
+  createDefaultCursorMotionSettings,
+} from '@beam/engine/capture/cursor-settings';
 import './VideoEditor.test.setup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { computed, nextTick, ref, shallowRef } from 'vue';
@@ -89,10 +94,11 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe('VideoEditor workspace host bindings', () => {
-  it('keeps every properties model connected to its shared editor state', async () => {
+  it('routes cursor models to the selected recording while other models retain their editor scope', async () => {
     const mounted = mountEditor();
     const workspace = workspaceOf(mounted);
     const panel = mounted.findComponent({ name: 'MockProperties' });
+    const cursorFields = useCursorPropertyFields(workspace.cursorProperties);
     const values = [
       ['cursor-selection', 'cursorSelection', { packId: 'builtin:macos', mode: 'fixed', cursorId: 'pointer' }],
       ['cursor-size', 'cursorSize', 36],
@@ -101,8 +107,8 @@ describe('VideoEditor workspace host bindings', () => {
       ['shadow-blur', 'shadowBlur', 12],
       ['shadow-color', 'shadowColor', '#abcdef'],
       ['shadow-direction', 'shadowDirection', 'all'],
-      ['click-effects', 'clickEffects', { enabled: false }],
-      ['motion', 'cursorMotion', { preset: 'smooth' }],
+      ['click-effects', 'clickEffects', createDefaultCursorClickEffects()],
+      ['motion', 'cursorMotion', createDefaultCursorMotionSettings()],
       ['auto-hide', 'cursorAutoHide', { enabled: true, delaySeconds: 1, fadeDurationMs: 200 }],
       ['volume', 'volume', 75],
       ['system-volume', 'systemVolume', 80],
@@ -117,7 +123,8 @@ describe('VideoEditor workspace host bindings', () => {
       panel.vm.$emit(`update:${event}`, value);
       await nextTick();
       // Role volume only changes existing clips; this fixture has no microphone clip.
-      if (key !== 'micVolume') expect(workspace[key].value).toEqual(value);
+      if (key in cursorFields) expect(cursorFields[key as keyof typeof cursorFields].value).toEqual(value);
+      else if (key !== 'micVolume') expect(workspace[key].value).toEqual(value);
     }
     panel.vm.$emit('preview:cursor-selection', null);
     panel.vm.$emit('corner-radius-interaction', true);

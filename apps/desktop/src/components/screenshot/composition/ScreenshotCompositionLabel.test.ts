@@ -3,9 +3,10 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import ScreenshotCompositionLabel from './ScreenshotCompositionLabel.vue';
 import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
+import type * as CoreModule from '@vueuse/core';
 const resize = vi.hoisted(() => ({ measure: undefined as (() => void) | undefined }));
 vi.mock('@vueuse/core', async (original) => ({
-  ...(await original<typeof import('@vueuse/core')>()),
+  ...(await original<typeof CoreModule>()),
   useResizeObserver: (_target: unknown, callback: () => void) => {
     resize.measure = callback;
   },

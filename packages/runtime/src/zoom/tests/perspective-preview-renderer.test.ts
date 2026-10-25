@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PerspectivePreviewRenderer } from '@beam/runtime/zoom/perspective-preview-renderer';
+import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 
 const render = vi.fn();
 const dispose = vi.fn();
@@ -9,9 +11,6 @@ vi.mock('@beam/runtime/zoom/perspective-scene-compositor', () => ({
     dispose = dispose;
   },
 }));
-
-import { PerspectivePreviewRenderer } from '@beam/runtime/zoom/perspective-preview-renderer';
-import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 
 const perspectiveZoom: ZoomElement = {
   id: 'zoom',

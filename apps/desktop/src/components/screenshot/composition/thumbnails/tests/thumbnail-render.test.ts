@@ -3,13 +3,12 @@ import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import { screenshotShape } from '../../../screenshot-state';
 import type { ThumbnailRequest } from '../thumbnail-types';
+import { renderLayerThumbnail } from '../thumbnail-render';
 
 const renderer = vi.hoisted(() => ({ draw: vi.fn() }));
 vi.mock('@beam/runtime/screenshot/screenshot-layer-render', () => ({
   drawScreenshotLayer: renderer.draw,
 }));
-
-import { renderLayerThumbnail } from '../thumbnail-render';
 
 type TestContext = Canvas2DContext & {
   translate: ReturnType<typeof vi.fn>;

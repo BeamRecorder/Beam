@@ -76,9 +76,9 @@ const targets = [
         variant="tab"
         size="sm"
         :class="{ active: state.displayMode === choice }"
+        :style="{ paddingInline: '8px', gap: '6px' }"
         :aria-pressed="state.displayMode === choice"
         :aria-label="t(choice === 'studio' ? 'video' : 'image')"
-        :title="t(choice === 'studio' ? 'video' : 'image')"
         :disabled="state.settingsDisabled"
         @click="emit('update:displayMode', choice)"
       >

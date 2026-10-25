@@ -8,6 +8,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromiumExecutable } from '../../../../../cli/src/chromium-install';
 import { chromiumSettings } from '../../../../../cli/src/chromium-settings';
+import type * as PopoverBrowserHostModule from './tests/popover-browser-host';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('floating menu blur in Chromium', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temporary: string;
@@ -115,6 +116,42 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('floating menu blur in Ch
       [...png],
     );
   };
+
+  it.each([0.75, 1, 1.5].flatMap((scale) => ['up', 'down'].map((direction) => ({ scale, direction }))))(
+    'keeps compact Select menus close at scale $scale opening $direction',
+    async ({ scale, direction }) => {
+      await page.evaluate(
+        async ({ scale, direction }) => {
+          const load = new Function('path', 'return import(path)') as (
+            path: string,
+          ) => Promise<typeof PopoverBrowserHostModule>;
+          const host = await load('/apps/desktop/src/components/ui/popover/tests/popover-browser-host.ts');
+          await host.mountCompactSelect(scale, direction as 'up' | 'down');
+        },
+        { scale, direction },
+      );
+      await page.click('.select-trigger');
+      await page.waitForSelector('.popover-content');
+      await page.waitForFunction(() => {
+        const panel = document.querySelector('.popover-content');
+        return (
+          panel && getComputedStyle(panel).visibility === 'visible' && getComputedStyle(panel).transform === 'none'
+        );
+      });
+      const geometry = await page.evaluate((direction) => {
+        const trigger = document.querySelector('.select-trigger')!.getBoundingClientRect();
+        const menu = document.querySelector('.popover-content')!.getBoundingClientRect();
+        const option = document.querySelector('[role="option"]')!.getBoundingClientRect();
+        return {
+          gap: direction === 'down' ? menu.top - trigger.bottom : trigger.top - menu.bottom,
+          row: option.height,
+        };
+      }, direction);
+      expect(geometry.gap).toBeCloseTo(4, 1);
+      expect(geometry.row).toBe(28);
+    },
+    30000,
+  );
   const cases = ([false, true] as const).flatMap((gpu) =>
     (['light', 'dark'] as const).flatMap((theme) =>
       (['add', 'canvas', 'context'] as const).map((kind) => ({ theme, kind, gpu })),
@@ -130,7 +167,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('floating menu blur in Ch
           const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
           const host = (await load(
             '/apps/desktop/src/components/ui/popover/tests/popover-browser-host.ts',
-          )) as typeof import('./tests/popover-browser-host');
+          )) as typeof PopoverBrowserHostModule;
           await host.mountMenus(kind, theme, gpu);
         },
         { kind, theme, gpu },

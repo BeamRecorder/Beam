@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
+import { useExportJob } from '../useExportJob';
+import type { ExportRequest } from '@beam/encoder/export-types';
 
 const { exportWithMediabunny } = vi.hoisted(() => ({
   exportWithMediabunny: vi.fn(),
 }));
 vi.mock('../mediabunny/exporter', () => ({ exportWithMediabunny }));
-import { useExportJob } from '../useExportJob';
-import type { ExportRequest } from '@beam/encoder/export-types';
 
 const request = {
   projectName: 'Demo',

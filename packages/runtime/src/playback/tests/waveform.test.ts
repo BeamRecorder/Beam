@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MediaSourceDescriptor } from '@beam/runtime/shared/media-types';
+import { extractWaveformPeaks } from '@beam/runtime/playback/waveform';
 
 const { openMediaInput, sinkSamples, AudioSampleSink, MediaInputError } = vi.hoisted(() => {
   class TestMediaInputError extends Error {
@@ -32,8 +33,6 @@ const { openMediaInput, sinkSamples, AudioSampleSink, MediaInputError } = vi.hoi
 
 vi.mock('@beam/runtime/shared/index', () => ({ openMediaInput, MediaInputError }));
 vi.mock('mediabunny', () => ({ AudioSampleSink }));
-
-import { extractWaveformPeaks } from '@beam/runtime/playback/waveform';
 
 const descriptor: MediaSourceDescriptor = {
   assetId: 'audio-1',

@@ -1,4 +1,5 @@
 import type { GpuFilterProgram, GpuFilterUniform } from '@beam/runtime/gpu/gpu-filter-types';
+import type { GpuFilterTarget } from '@beam/runtime/gpu/gpu-filter-types';
 
 const vertex = `#version 300 es
 out vec2 v_uv;
@@ -117,11 +118,7 @@ export function createGpuFilterProgram(gl: WebGL2RenderingContext): GpuFilterPro
   }
 }
 
-export function createGpuFilterTarget(
-  gl: WebGL2RenderingContext,
-  width: number,
-  height: number,
-): import('@beam/runtime/gpu/gpu-filter-types').GpuFilterTarget {
+export function createGpuFilterTarget(gl: WebGL2RenderingContext, width: number, height: number): GpuFilterTarget {
   if (
     ![width, height].every((v) => Number.isSafeInteger(v) && v > 0) ||
     Math.max(width, height) > gl.getParameter(gl.MAX_TEXTURE_SIZE)

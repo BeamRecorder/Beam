@@ -2,6 +2,9 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { setCurrentLocale } from '~/i18n';
 import type { QuickSnipSnapshot } from '~/api/types/quick-snip';
+import QuickSnipStatus from './QuickSnipStatus.vue';
+import BeamySvg from '../brand/Beamy/BeamySvg.vue';
+import Beamy from '../brand/Beamy/Beamy.vue';
 
 const capture = vi.hoisted(() => ({
   getQuickSnipState: vi.fn(),
@@ -17,9 +20,6 @@ vi.mock('./quick-snip-export', () => ({ renderQuickSnip: vi.fn() }));
 vi.mock('../screenshot/screenshot-render', () => ({
   encodeScreenshot: vi.fn(),
 }));
-import QuickSnipStatus from './QuickSnipStatus.vue';
-import BeamySvg from '../brand/Beamy/BeamySvg.vue';
-import Beamy from '../brand/Beamy/Beamy.vue';
 
 const removeStatusBlur = vi.fn();
 

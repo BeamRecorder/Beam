@@ -1,8 +1,8 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import RegionSelectionBackdrop from '../region/RegionSelectionBackdrop.vue';
 const { ready } = vi.hoisted(() => ({ ready: vi.fn() }));
 vi.mock('../../../api/capture', () => ({ capture: { notifyScreenRegionPreviewReady: ready } }));
-import RegionSelectionBackdrop from '../region/RegionSelectionBackdrop.vue';
 
 describe('RegionSelectionBackdrop', () => {
   const frames = new Map<number, FrameRequestCallback>();

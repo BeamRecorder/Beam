@@ -13,6 +13,7 @@ import {
 } from '~/composables/property-interaction';
 import type { MediaProcessingMetrics } from '../media-processing-pressure';
 import type { PreviewPerformanceMonitorOptions } from '../preview-performance-types';
+import { usePreviewMonitorActivity } from '../usePreviewMonitorActivity';
 
 const exportState = vi.hoisted(() => ({
   isExporting: null as Ref<boolean> | null,
@@ -22,8 +23,6 @@ let clock = 0;
 vi.mock('~/components/export/useExportJob', () => ({
   useExportJob: () => ({ isExporting: exportState.isExporting }),
 }));
-
-import { usePreviewMonitorActivity } from '../usePreviewMonitorActivity';
 
 const mediaMetrics = (overrides: Partial<MediaProcessingMetrics> = {}): MediaProcessingMetrics => ({
   activeJobs: 0,

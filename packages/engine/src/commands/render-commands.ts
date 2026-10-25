@@ -37,6 +37,7 @@ export function createRenderCommands() {
         'zoomAutoFollow',
         'cursorSettings',
         'cursorPack',
+        'cursorPacks',
         'fontSources',
         'render',
       ]);

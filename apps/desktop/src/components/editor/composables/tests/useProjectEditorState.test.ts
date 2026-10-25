@@ -28,6 +28,7 @@ import {
   endPropertyInteraction,
   resetPropertyInteractions,
 } from '../../../../composables/property-interaction';
+import { useProjectEditorState } from '../useProjectEditorState';
 
 const mocks = vi.hoisted(() => ({
   saveProjectEditorState: vi.fn(),
@@ -36,8 +37,6 @@ const mocks = vi.hoisted(() => ({
   updatePreferences: vi.fn(),
 }));
 vi.mock('../../../../api/capture', () => ({ capture: mocks }));
-
-import { useProjectEditorState } from '../useProjectEditorState';
 
 const createState = () => {
   const cursor = createDefaultCursorPresentation();

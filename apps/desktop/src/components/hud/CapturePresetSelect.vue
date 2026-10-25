@@ -4,10 +4,10 @@ import { defineAsyncComponent, onBeforeUnmount, ref, watch } from 'vue';
 import { capture } from '~/api/capture';
 import EditorPresetSelect from '../editor/presets/EditorPresetSelect.vue';
 import Tooltip from '~/ui/tooltip/Tooltip.vue';
-const CapturePresetPreview = defineAsyncComponent(() => import('./CapturePresetPreview.vue'));
 import CaptureModeIcon from '../capture/CaptureModeIcon.vue';
 import type { PresetKind } from '@beam/engine/capture/capture-mode';
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
+const CapturePresetPreview = defineAsyncComponent(() => import('./CapturePresetPreview.vue'));
 
 const { t } = useTranslate('QuickSnipCropBar');
 

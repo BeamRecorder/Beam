@@ -1,6 +1,7 @@
 import { getCaptionTransform, type Clip } from '@beam/engine/shared/composition-types';
 import { resolveClipTransitionState } from '@beam/engine/shared/clip-transitions';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
+import { drawTransitionLayer } from './transition-layer';
 
 export interface TransitionFrame {
   x?: number;
@@ -42,11 +43,24 @@ export function drawWithClipTransition(
   clip: Clip,
   timeMs: number,
   frame: TransitionFrame,
-  draw: () => void,
+  draw: (target: Canvas2DContext) => void,
 ) {
-  if (!clip.transitions?.entry && !clip.transitions?.exit) return draw();
+  if (!clip.transitions?.entry && !clip.transitions?.exit) return draw(ctx);
   const state = resolveClipTransitionState(clip, timeMs);
   const clipFrame = transitionFrameForClip(clip, frame);
+  if (state.effect)
+    return drawTransitionLayer(
+      ctx,
+      {
+        x: clipFrame.x ?? 0,
+        y: clipFrame.y ?? 0,
+        width: clipFrame.width,
+        height: clipFrame.height,
+      },
+      state.effect,
+      draw,
+      clip.kind === 'blur',
+    );
   const centerX = (clipFrame.x ?? 0) + clipFrame.width / 2;
   const centerY = (clipFrame.y ?? 0) + clipFrame.height / 2;
   ctx.save();
@@ -58,6 +72,9 @@ export function drawWithClipTransition(
     ctx.translate(-centerX, -centerY);
   }
   if (state.blur > 0) ctx.filter = `blur(${state.blur * (clipFrame.height / 1080)}px)`;
-  draw();
-  ctx.restore();
+  try {
+    draw(ctx);
+  } finally {
+    ctx.restore();
+  }
 }

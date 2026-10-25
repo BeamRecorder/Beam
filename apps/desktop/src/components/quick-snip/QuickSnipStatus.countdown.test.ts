@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, type PropType } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { QuickSnipAutoClose, QuickSnipSnapshot } from '~/api/types/quick-snip';
+import QuickSnipStatus from './QuickSnipStatus.vue';
 
 const capture = vi.hoisted(() => {
   let statusListener: ((status: unknown) => void) | undefined;
@@ -31,8 +32,6 @@ vi.mock('./quick-snip-export', () => ({ renderQuickSnip: vi.fn() }));
 vi.mock('../screenshot/screenshot-render', () => ({
   encodeScreenshot: vi.fn(),
 }));
-
-import QuickSnipStatus from './QuickSnipStatus.vue';
 
 const CountdownProbe = defineComponent({
   name: 'QuickSnipCountdown',

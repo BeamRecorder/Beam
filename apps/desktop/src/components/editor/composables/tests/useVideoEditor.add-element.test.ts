@@ -6,6 +6,7 @@ import type { Mock } from 'vitest';
 import type { CaptureProject, ProjectEditorData } from '~/api/types/capture-api';
 import type { ShapeLayerFamily } from '@beam/engine/shared/shape-layer-types';
 import type { useVideoElements } from '../../elements/useVideoElements';
+import { useVideoEditor } from '../useVideoEditor';
 
 type ElementEditorOptions = Parameters<typeof useVideoElements>[0];
 interface HarnessPlayer {
@@ -187,8 +188,6 @@ vi.mock('../../properties/cursor/useCursorReplacer', async () => {
 vi.mock('@beam/runtime/rendering/snapshot', () => ({
   createCompositionSnapshot: () => ({ snapshot: true }),
 }));
-
-import { useVideoEditor } from '../useVideoEditor';
 
 const wrappers: Array<{ unmount: () => void }> = [];
 const project: CaptureProject = {

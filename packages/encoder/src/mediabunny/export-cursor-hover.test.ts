@@ -4,6 +4,8 @@ import { snapshot } from '../../../runtime/src/rendering/tests/render.test-suppo
 import type { ExportRequest } from '../export-types';
 import type { ExportAssets } from './export-worker-assets';
 import { isVisualClip } from '@beam/engine/shared/composition-types';
+import { setScreenCursorVisibility } from '@beam/engine/capture/screen-cursor';
+import { createComposition } from '@beam/engine/commands/clip-engine';
 const state = vi.hoisted(() => ({ analyze: vi.fn(), key: vi.fn(), read: vi.fn(), write: vi.fn() }));
 vi.mock('@beam/runtime/cursor/hover/hover-analysis', () => ({ analyzeCursorHovers: state.analyze }));
 vi.mock('@beam/runtime/cursor/hover/hover-analysis-cache', () => ({
@@ -33,6 +35,27 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 describe('export cursor synchronization', () => {
+  it('analyzes explicit clip visibility even when the document default is off', async () => {
+    const f = fixture();
+    f.request.snapshot.cursorSettings.enabled = false;
+    f.request.snapshot.composition = createComposition(
+      f.request.snapshot.composition.assets,
+      f.request.snapshot.composition.clips.map((clip) => ({ ...clip, trackId: clip.id })),
+    );
+    f.request.snapshot.composition = setScreenCursorVisibility(f.request.snapshot.composition, ['screen'], true);
+    await prepareExportCursorHovers(f.request, f.assets, f.signal);
+    expect(state.analyze).toHaveBeenCalledOnce();
+  });
+  it('skips analysis when all screen clips have their cursor off', async () => {
+    const f = fixture();
+    f.request.snapshot.composition = createComposition(
+      f.request.snapshot.composition.assets,
+      f.request.snapshot.composition.clips.map((clip) => ({ ...clip, trackId: clip.id })),
+    );
+    f.request.snapshot.composition = setScreenCursorVisibility(f.request.snapshot.composition, ['screen'], false);
+    expect(await prepareExportCursorHovers(f.request, f.assets, f.signal)).toBe(f.request);
+    expect(state.analyze).not.toHaveBeenCalled();
+  });
   it('waits for analysis and enriches a copy before rendering', async () => {
     const f = fixture();
     const enriched = await prepareExportCursorHovers(f.request, f.assets, f.signal);

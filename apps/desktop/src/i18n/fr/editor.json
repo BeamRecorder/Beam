@@ -430,6 +430,7 @@
     "savingProject": "Sauvegarde du projet"
   },
   "ZoomPanel": {
+    "applyToTrackHint": "Partager le style des zooms non verrouillés en conservant leurs cibles et leur timing.",
     "cameraFollow": "Suivi de caméra",
     "cameraFollowDesc": "Anticipe les mouvements enregistrés du curseur avec un suivi de caméra doux et progressif.",
     "advanced": "Avancé",

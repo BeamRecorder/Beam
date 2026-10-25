@@ -15,6 +15,7 @@ The goal is maintainable, readable code with the smallest implementation that ma
 ## TypeScript rules
 
 - Use strict TypeScript settings and avoid `any` in new code.
+- Put static imports and type imports at the top of each file or Vue script block. Never use inline `import('module').Type` or `typeof import('module')` type expressions, including in tests. `bun run check:imports` checks this across the repository.
 - Put shared types in `src/types/` or a dedicated `{feature}-types.ts` file.
 - Avoid files that mix a large type catalog with substantial implementations.
 - Validate untrusted IPC, JSON, and filesystem data at the boundary before using it as a domain type.

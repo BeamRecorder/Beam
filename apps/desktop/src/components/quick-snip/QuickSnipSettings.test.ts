@@ -4,6 +4,8 @@ import type { QuickSnipConfiguration } from '~/api/types/quick-snip';
 import type { EditorPresetDocument } from '~/api/types/editor-preset';
 import type { QuickSnipSettingsContent } from '~/api/types/quick-snip-settings';
 import type { RegionRecordingSettings } from '~/api/types/screen-region';
+import QuickSnipSettings from './QuickSnipSettings.vue';
+import CaptureQuickSettingsPanel from '../hud/region/CaptureQuickSettingsPanel.vue';
 const bridge = vi.hoisted(() => ({
   listener: null as ((value: QuickSnipConfiguration) => void) | null,
   contentListener: null as ((value: QuickSnipSettingsContent) => void) | null,
@@ -24,8 +26,6 @@ const bridge = vi.hoisted(() => ({
 }));
 vi.mock('~/api/capture', () => ({ capture: bridge.capture }));
 vi.mock('~/i18n/useTranslate', () => ({ useTranslate: () => ({ t: (key: string) => key }) }));
-import QuickSnipSettings from './QuickSnipSettings.vue';
-import CaptureQuickSettingsPanel from '../hud/region/CaptureQuickSettingsPanel.vue';
 enableAutoUnmount(afterEach);
 const preset = {
   id: 'default',

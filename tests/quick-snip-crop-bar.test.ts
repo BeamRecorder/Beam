@@ -1,6 +1,11 @@
 import { triggerPointer } from './support/pointer';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { QuickSnipConfiguration } from '~/api/types/quick-snip';
+import type { ScreenshotDocument } from '~/api/types/screenshot';
+import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
+import type { RecordingSessionResult, RecordingStartFailure } from '~/components/hud/recorder/recording-types';
+import QuickSnipCropBar from '../apps/desktop/src/components/quick-snip/QuickSnipCropBar.vue';
 
 const showPickerTargets: HTMLSelectElement[] = [];
 const showPicker = vi.fn(function (this: HTMLSelectElement) {
@@ -136,12 +141,6 @@ vi.mock('~/components/hud/recorder/useRecordingController', async () => {
     },
   };
 });
-
-import type { QuickSnipConfiguration } from '~/api/types/quick-snip';
-import type { ScreenshotDocument } from '~/api/types/screenshot';
-import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
-import type { RecordingSessionResult, RecordingStartFailure } from '~/components/hud/recorder/recording-types';
-import QuickSnipCropBar from '../apps/desktop/src/components/quick-snip/QuickSnipCropBar.vue';
 
 const preset = {
   id: 'default',

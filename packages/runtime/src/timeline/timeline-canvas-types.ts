@@ -31,6 +31,7 @@ export type TimelineCanvasItem = (
   label?: string;
   pasteHighlight?: boolean;
   labelInset?: number;
+  labelEndInset?: number;
 };
 export interface TimelineCanvasFrame {
   mediaSecond?: number;
@@ -51,3 +52,16 @@ export interface TimelineCanvasMarquee {
   id: string;
   offset: number;
 }
+
+export interface TimelineCanvasGeometry {
+  durationMs: number;
+  width: number;
+  left: number;
+  viewportWidth: number;
+  height: number;
+}
+export interface TimelineOverlayColors {
+  foreground: string;
+  background: string;
+}
+export type TimelineLabelContrast = (x: number, y: number) => TimelineOverlayColors | null;

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h } from 'vue';
 import type { CaptureCatalog } from '~/api/types/capture-api';
 import { latestCaptureCatalog, rememberCaptureCatalog } from '~/api/capture-diagnostics';
+import { buildSystemInformation, useCopySystemInformation } from './useCopySystemInformation';
 
 const capture = vi.hoisted(() => ({
   getUpdateState: vi.fn(),
@@ -11,8 +12,6 @@ const capture = vi.hoisted(() => ({
   inputAccessStatus: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-
-import { buildSystemInformation, useCopySystemInformation } from './useCopySystemInformation';
 
 let clipboardWriteText: ReturnType<typeof vi.fn>;
 let execCommand: ReturnType<typeof vi.fn>;

@@ -14,11 +14,12 @@ import type { ExportRequest } from '@beam/encoder/export-types';
 import type { ExportWorkerResponse } from '@beam/encoder/mediabunny/export-worker-protocol';
 import { selectVideoEncoder } from '@beam/encoder/mediabunny/video-encoder-selection';
 import type { VideoEncoderSelection } from '@beam/encoder/mediabunny/video-encoder-selection-types';
+import type { AudioCodec } from 'mediabunny';
 
 type Ack = { resolve(): void; reject(error: Error): void; sentAt: number };
 type AudioEncoderImplementation = 'webcodecs' | 'mediabunny-aac';
 type AudioEncoderSelection = {
-  codec: import('mediabunny').AudioCodec;
+  codec: AudioCodec;
   implementation: AudioEncoderImplementation;
 };
 
@@ -30,7 +31,7 @@ const AUDIO_ENCODING_OPTIONS = {
 
 async function selectAudioEncoder(request: ExportRequest, withAudio: boolean): Promise<AudioEncoderSelection | null> {
   if (!withAudio) return null;
-  const codecs: import('mediabunny').AudioCodec[] = request.format === 'webm' ? ['opus'] : ['aac'];
+  const codecs: AudioCodec[] = request.format === 'webm' ? ['opus'] : ['aac'];
   let codec = await getFirstEncodableAudioCodec(codecs, AUDIO_ENCODING_OPTIONS);
   if (codec) return { codec, implementation: 'webcodecs' };
 

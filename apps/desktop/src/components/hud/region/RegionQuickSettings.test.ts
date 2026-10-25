@@ -1,12 +1,12 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, expect, it, vi } from 'vitest';
+import RegionQuickSettings from './RegionQuickSettings.vue';
+import CaptureQuickSettingsPanel from './CaptureQuickSettingsPanel.vue';
 const { capture } = vi.hoisted(() => ({ capture: { platform: 'win32' } }));
 vi.mock('~/api/capture', () => ({ capture }));
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: () => ({ t: (key: string) => key }),
 }));
-import RegionQuickSettings from './RegionQuickSettings.vue';
-import CaptureQuickSettingsPanel from './CaptureQuickSettingsPanel.vue';
 const settings = {
   cameraId: 'off',
   microphoneId: 'no-audio',

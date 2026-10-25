@@ -5,6 +5,7 @@ import type { ClipComposition } from '@beam/engine/shared/composition-types';
 import type { OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 import type { CursorPresentationSettings } from '@beam/engine/capture/cursor-presentation';
 import type { CursorPackDescriptor } from '@beam/engine/capture/cursor-pack';
+import type { GradientBackground } from '@beam/engine/shared/background-types';
 export interface ExportRenderSettings {
   fps: number;
   sourceWidth: number | null;
@@ -19,7 +20,7 @@ export interface CompositionSnapshot {
   canvas: OutputCanvasSettings;
   background:
     | { kind: 'color'; color: string }
-    | { kind: 'gradient'; gradient: import('@beam/engine/shared/background-types').GradientBackground }
+    | { kind: 'gradient'; gradient: GradientBackground }
     | { kind: 'image' | 'video'; src: string }
     | null;
   blurPercent: number;
@@ -29,6 +30,8 @@ export interface CompositionSnapshot {
   cursor: ProjectEditorData['cursor'];
   cursorSettings: CursorRenderSettings;
   cursorPack: CursorPackDescriptor | null;
+  /** Host-resolved packs used by independently styled recording clips. */
+  cursorPacks?: CursorPackDescriptor[];
   composition: ClipComposition;
   /** Host-resolved URLs for imported fonts. Worker code never invents platform URLs. */
   fontSources?: Record<string, string>;

@@ -1,3 +1,4 @@
+import type { MediaSourceDescriptor } from '@beam/runtime/shared/index';
 export const THUMBNAIL_WIDTH = 240;
 export const MAX_THUMBNAIL_WIDTH = 960;
 const THUMBNAIL_WIDTH_TIERS = [THUMBNAIL_WIDTH, 480, MAX_THUMBNAIL_WIDTH] as const;
@@ -83,4 +84,3 @@ export function isThumbnailWorkerResponse(value: unknown): value is ThumbnailWor
 export function assertThumbnailWorkerResponse(value: unknown): asserts value is ThumbnailWorkerResponse {
   if (!isThumbnailWorkerResponse(value)) throw new TypeError('Invalid thumbnail worker response.');
 }
-import type { MediaSourceDescriptor } from '@beam/runtime/shared/index';

@@ -15,6 +15,9 @@ import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '@beam/engine/shared/shape-layer-
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import { createElementText } from '@beam/engine/shared/element-text';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
+import type * as CaptionClipboardBrowserHostModule from './caption-clipboard-browser-host';
+import type * as WorkspaceBrowserHostModule from './workspace-browser-host';
+import type * as TimelineBrowserHostModule from './timeline-browser-host';
 
 const shape = {
   ...colorClip('shape', 0, -1),
@@ -179,7 +182,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
           const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
           const host = (await load(
             '/apps/desktop/src/components/editor/timeline/tests/caption-clipboard-browser-host.ts',
-          )) as typeof import('./caption-clipboard-browser-host');
+          )) as typeof CaptionClipboardBrowserHostModule;
           await host.mountCaptionTimeline(composition, timeMs);
         },
         { composition, timeMs },
@@ -212,7 +215,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
             const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
             const host = (await load(
               '/apps/desktop/src/components/editor/timeline/tests/caption-clipboard-browser-host.ts',
-            )) as typeof import('./caption-clipboard-browser-host');
+            )) as typeof CaptionClipboardBrowserHostModule;
             return host.captionTimelineSnapshot();
           });
           expect(await page.$$eval('.tracks-stack .text-caption-layer', (rows) => rows.length)).toBe(1);
@@ -230,7 +233,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
           const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
           const host = (await load(
             '/apps/desktop/src/components/editor/timeline/tests/caption-clipboard-browser-host.ts',
-          )) as typeof import('./caption-clipboard-browser-host');
+          )) as typeof CaptionClipboardBrowserHostModule;
           host.unmountCaptionTimeline();
         });
       }
@@ -254,7 +257,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
           const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
           const host = (await load(
             '/apps/desktop/src/components/editor/timeline/tests/workspace-browser-host.ts',
-          )) as typeof import('./workspace-browser-host');
+          )) as typeof WorkspaceBrowserHostModule;
           await host.mountWorkspace(composition);
         }, composition);
         const content = (await page.$('.tracks-stack .text-caption-layer .annotation-content'))!;
@@ -275,7 +278,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
           const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
           const host = (await load(
             '/apps/desktop/src/components/editor/timeline/tests/workspace-browser-host.ts',
-          )) as typeof import('./workspace-browser-host');
+          )) as typeof WorkspaceBrowserHostModule;
           host.unmountWorkspace();
         });
       }
@@ -315,7 +318,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
           const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
           const host = (await load(
             '/apps/desktop/src/components/editor/timeline/tests/workspace-browser-host.ts',
-          )) as typeof import('./workspace-browser-host');
+          )) as typeof WorkspaceBrowserHostModule;
           await host.mountWorkspace(composition);
         }, composition);
         for (const id of [clip.id, 'other', clip.id]) {
@@ -340,7 +343,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
           const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
           const host = (await load(
             '/apps/desktop/src/components/editor/timeline/tests/workspace-browser-host.ts',
-          )) as typeof import('./workspace-browser-host');
+          )) as typeof WorkspaceBrowserHostModule;
           host.unmountWorkspace();
         });
       }
@@ -361,7 +364,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const host = (await load(
           '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
-        )) as typeof import('./timeline-browser-host');
+        )) as typeof TimelineBrowserHostModule;
         const { canvas, state, settle, dispose } = await host.mountTimeline(composition, 10, 100);
         const ctx = canvas.getContext('2d')!,
           fill = ctx.fillText.bind(ctx),
@@ -414,7 +417,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const host = (await load(
         '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
-      )) as typeof import('./timeline-browser-host');
+      )) as typeof TimelineBrowserHostModule;
       const { scroll, frame, nextTick, dispose, canvas } = await host.mountTimeline(composition, 50, 2000);
       const times: number[] = [],
         nodes: number[] = [],
@@ -475,7 +478,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
           const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
           const host = (await load(
             '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
-          )) as typeof import('./timeline-browser-host');
+          )) as typeof TimelineBrowserHostModule;
           const { dispose, settle } = await host.mountTimeline(composition, 10, 100, [zoom]);
           await settle();
           const rows = [...document.querySelectorAll<HTMLElement>('.tracks-stack [data-timeline-row-id]')];
@@ -524,7 +527,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const host = (await load(
           '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
-        )) as typeof import('./timeline-browser-host');
+        )) as typeof TimelineBrowserHostModule;
         const { state, canvas, nextTick, frame, dispose } = await host.mountTimeline(composition, 10, 100);
         state.composition = { ...composition, clips: [...composition.clips, shape] };
         await nextTick();
@@ -567,7 +570,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const host = (await load(
           '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
-        )) as typeof import('./timeline-browser-host');
+        )) as typeof TimelineBrowserHostModule;
         await host.mountTimeline(composition, 10, 100, [zoom]);
         return [...document.querySelectorAll<HTMLElement>('[data-timeline-clip-id], [data-timeline-zoom-id]')].map(
           (element) => {
@@ -618,7 +621,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const host = (await load(
         '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
-      )) as typeof import('./timeline-browser-host');
+      )) as typeof TimelineBrowserHostModule;
       host.unmountTimeline();
     });
   }, 30000);
@@ -628,7 +631,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const host = (await load(
         '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
-      )) as typeof import('./timeline-browser-host');
+      )) as typeof TimelineBrowserHostModule;
       await host.mountTimeline({ schemaVersion: 14, assets: [], keyboardCaptionSessions: [], clips: [] }, 10, 100, [
         { ...zoom, endMs: 5000 },
       ]);
@@ -674,7 +677,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const host = (await load(
         '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
-      )) as typeof import('./timeline-browser-host');
+      )) as typeof TimelineBrowserHostModule;
       host.unmountTimeline();
     });
   }, 30000);
@@ -696,7 +699,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
           const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
           const host = (await load(
             '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
-          )) as typeof import('./timeline-browser-host');
+          )) as typeof TimelineBrowserHostModule;
           const { state, canvas, nextTick, frame, dispose } = await host.mountTimeline(composition, 10, 100);
           if (dragged)
             document
@@ -768,7 +771,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const host = (await load(
         '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
-      )) as typeof import('./timeline-browser-host');
+      )) as typeof TimelineBrowserHostModule;
       const { dispose, scroll, canvas, settle, painted } = await host.mountTimeline(composition, 10000, 10000);
       const first = {
         canvases: document.querySelectorAll('canvas').length,
@@ -814,7 +817,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const host = (await load(
         '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
-      )) as typeof import('./timeline-browser-host');
+      )) as typeof TimelineBrowserHostModule;
       const { dispose, scroll, canvas, frame, painted } = await host.mountTimeline(composition, 50, 2000);
       const samples = [];
       for (const [x, y] of [
@@ -864,7 +867,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const host = (await load(
         '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
-      )) as typeof import('./timeline-browser-host');
+      )) as typeof TimelineBrowserHostModule;
       const { dispose, state, canvas, scroll, frame, settle, nextTick } = await host.mountTimeline(
         composition,
         10000,
@@ -919,7 +922,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const host = (await load(
         '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
-      )) as typeof import('./timeline-browser-host');
+      )) as typeof TimelineBrowserHostModule;
       const { dispose, state, scroll, settle } = await host.mountTimeline(composition, 20, 300);
       const root = document.getElementById('test')!;
       root.style.zoom = 'var(--ui-scale-timeline, 1)';
@@ -999,7 +1002,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const host = (await load(
           '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
-        )) as typeof import('./timeline-browser-host');
+        )) as typeof TimelineBrowserHostModule;
         const { state, scroll, settle } = await host.mountTimeline(composition, 10000, 10000);
         state.isPlaying = true;
         state.currentTime = 0.5;
@@ -1034,7 +1037,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('timeline surface in real
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const host = (await load(
           '/apps/desktop/src/components/editor/timeline/tests/timeline-browser-host.ts',
-        )) as typeof import('./timeline-browser-host');
+        )) as typeof TimelineBrowserHostModule;
         host.unmountTimeline();
       });
       await cdp.detach();

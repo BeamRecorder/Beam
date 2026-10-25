@@ -3,6 +3,8 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { ScreenRegionOverlayOptions } from '~/api/types/screen-region';
 import RegionRecordingToolbar from './RegionRecordingToolbar.vue';
+import ScreenRegionOverlayApp from './ScreenRegionOverlayApp.vue';
+import RegionDimensions from './RegionDimensions.vue';
 const { capture } = vi.hoisted(() => ({
   capture: {
     platform: 'linux',
@@ -22,8 +24,6 @@ vi.mock('~/api/capture', () => ({ capture }));
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: () => ({ t: (key: string) => key }),
 }));
-import ScreenRegionOverlayApp from './ScreenRegionOverlayApp.vue';
-import RegionDimensions from './RegionDimensions.vue';
 const crop = { x: 0.2, y: 0.2, width: 0.4, height: 0.4 };
 const recording = {
   cameraId: 'off',

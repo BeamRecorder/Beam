@@ -1,9 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import type { ScreenshotExportReport } from '../screenshot-export-diagnostics-types';
+import { useScreenshotExportToast } from '../screenshot-export-toast';
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock('~/ui/toast/toastStore', () => ({ useToastStore: () => toast }));
 vi.mock('~/i18n/useTranslate', () => ({ useTranslate: () => ({ t: (key: string) => key }) }));
-import { useScreenshotExportToast } from '../screenshot-export-toast';
 const report = (patch: Partial<ScreenshotExportReport> = {}): ScreenshotExportReport => ({
   operation: 'copy',
   status: 'success',

@@ -1,11 +1,10 @@
 import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-
-vi.mock('~/api/capture', () => ({ capture: {} }));
-
 import SidebarPanel from '../sidebar/SidebarPanel.vue';
 import { getCurrentLocale, setCurrentLocale } from '~/i18n';
+
+vi.mock('~/api/capture', () => ({ capture: {} }));
 
 const UpdateAvailableBadge = { template: '<span class="update-badge-stub" />' };
 

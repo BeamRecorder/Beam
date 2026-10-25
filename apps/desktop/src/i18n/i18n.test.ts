@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { i18n, setCurrentLocale } from './index';
 import { localeOptions, SUPPORTED_LOCALES } from './locales';
+import { TRANSITION_CATEGORIES } from '@beam/engine/shared/transition-presets';
 
 const messageLeaves = (value: unknown, prefix = ''): Array<[string, unknown]> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return prefix ? [[prefix, value]] : [];
@@ -27,6 +28,37 @@ afterEach(async () => {
 });
 
 describe('internationalization', () => {
+  it('translates all transition categories and presets in every supported locale', async () => {
+    const keys = [
+      'none',
+      'color',
+      ...TRANSITION_CATEGORIES.flatMap((group) => [group.labelKey, ...group.presets.map((card) => card.labelKey)]),
+    ];
+    for (const locale of SUPPORTED_LOCALES) {
+      await setCurrentLocale(locale);
+      for (const key of keys) {
+        const path = `TransitionsPanel.${key}`;
+        expect(i18n.global.te(path, locale), `${locale}: ${path}`).toBe(true);
+        expect(i18n.global.t(path).trim()).not.toBe('');
+      }
+    }
+  });
+  it('localizes the apply-to-track checkbox and its scope in every supported locale', async () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      await setCurrentLocale(locale);
+      for (const key of [
+        'ClipPropertiesPanel.applyToTrack',
+        'ClipPropertiesPanel.applyToTrackHint',
+        'CursorPanel.applyToTrackHint',
+        'ZoomPanel.applyToTrackHint',
+      ]) {
+        expect(i18n.global.te(key, locale), `${locale}: ${key}`).toBe(true);
+        expect(i18n.global.t(key).trim()).not.toBe('');
+      }
+    }
+    await setCurrentLocale('fr');
+    expect(i18n.global.t('ClipPropertiesPanel.applyToTrack')).toBe('Appliquer à tous');
+  });
   it('translates screenshot layer names and rename hints in every supported locale', async () => {
     for (const locale of SUPPORTED_LOCALES) {
       await setCurrentLocale(locale);
@@ -41,8 +73,10 @@ describe('internationalization', () => {
   it('uses an imperative Vietnamese label for screenshot actions and keeps screenshot names nominal', async () => {
     await setCurrentLocale('vi');
 
-    expect(i18n.global.t('HUD.screenshot')).toBe('Chụp ảnh màn hình');
-    expect(i18n.global.t('QuickSnipCropBar.screenshot')).toBe('Chụp ảnh màn hình');
+    expect(i18n.global.t('HUD.screenshot')).toBe('Chụp ảnh');
+    expect(i18n.global.t('QuickSnipCropBar.screenshot')).toBe('Chụp ảnh');
+    expect(i18n.global.t('QuickSnipCropBar.video')).toBe('Ghi hình');
+    expect(i18n.global.t('QuickSnipCropBar.image')).toBe('Chụp ảnh');
     expect(i18n.global.t('ScreenshotEditor.title')).toBe('Ảnh chụp màn hình');
     expect(i18n.global.t('ScreenshotEditor.screenshots')).toBe('Ảnh chụp màn hình');
     expect(i18n.global.t('ProjectPicker.explore')).toBe('Mở thư mục');

@@ -3,8 +3,8 @@ import { defineComponent } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CaptureProject } from '~/api/types/capture-api';
 import { captureMock as capture } from '../hud/tests/capture.mock';
-vi.mock('~/api/capture', () => ({ capture }));
 import { useProjectCreation } from './useProjectCreation';
+vi.mock('~/api/capture', () => ({ capture }));
 
 enableAutoUnmount(afterEach);
 const project = { id: 'new', name: 'New', mode: 'screenshot' } as CaptureProject;

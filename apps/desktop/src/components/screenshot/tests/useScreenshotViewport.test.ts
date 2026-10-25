@@ -1,12 +1,12 @@
 import { defineComponent, h, ref } from 'vue';
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useScreenshotViewport } from '../useScreenshotViewport';
 
 vi.mock('@vueuse/core', async () => {
   const { ref } = await import('vue');
   return { useElementSize: () => ({ width: ref(0), height: ref(0) }) };
 });
-import { useScreenshotViewport } from '../useScreenshotViewport';
 
 enableAutoUnmount(afterEach);
 beforeEach(() => {

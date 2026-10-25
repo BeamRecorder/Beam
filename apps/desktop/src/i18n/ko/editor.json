@@ -430,6 +430,7 @@
     "savingProject": "프로젝트 저장 중"
   },
   "ZoomPanel": {
+    "applyToTrackHint": "각 대상과 시간을 유지하면서 잠금 해제된 줌의 스타일을 공유합니다.",
     "cameraFollow": "카메라 따라가기",
     "cameraFollowDesc": "녹화된 커서 움직임을 미리 파악하여 카메라가 부드럽고 점진적으로 따라갑니다.",
     "advanced": "고급",

@@ -4,10 +4,10 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { stateFixture } from './export-test-support';
 import { documentFixture } from '../../tests/screenshot-editor-test-helpers';
 import type { ScreenshotThumbnailHost } from '../screenshot-thumbnail-types';
+import { useScreenshotProjectThumbnail } from '../useScreenshotProjectThumbnail';
 const dependencies = vi.hoisted(() => ({ encode: vi.fn(), persist: vi.fn(), digest: vi.fn() }));
 vi.mock('../screenshot-export', () => ({ encodeScreenshot: dependencies.encode }));
 vi.mock('~/api/capture', () => ({ capture: { saveScreenshotThumbnail: dependencies.persist } }));
-import { useScreenshotProjectThumbnail } from '../useScreenshotProjectThumbnail';
 
 let wrappers: ReturnType<typeof mount>[];
 const setup = () => {

@@ -147,6 +147,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     const key = `${pack.id}:${asset.id}:${asset.format ?? 'svg'}:${asset.url}:${Math.ceil(geometry.width)}x${Math.ceil(geometry.height)}:${tint}`;
     if (key === imageRequestKey) return;
     imageRequestKey = key;
+    customCursorImage.value = null;
     const requestId = ++imageRequestId;
     options.onRenderOnce?.();
     void loadCursorImage(requestId, key, pack, asset, geometry.width, geometry.height);
@@ -283,7 +284,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
           width: videoWindow.dw,
           height: videoWindow.dh,
         },
-        () => {
+        (transitionTarget) => {
           const previewScale = previewScaleFor(videoWindow);
           for (const button of paint ? buttonEventsBetween(cursorData.events, Math.max(0, time - 0.5), time) : []) {
             const effect = settingsForButton(button.button);
@@ -302,16 +303,16 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
             );
             for (const ring of ripple.rings) {
               if (ring.filled) {
-                ctx.fillStyle = getRippleStyleColor(effect.rippleColor, ring.opacity);
-                ctx.beginPath();
-                ctx.arc(position.x, position.y, ring.radius * previewScale, 0, Math.PI * 2);
-                ctx.fill();
+                transitionTarget.fillStyle = getRippleStyleColor(effect.rippleColor, ring.opacity);
+                transitionTarget.beginPath();
+                transitionTarget.arc(position.x, position.y, ring.radius * previewScale, 0, Math.PI * 2);
+                transitionTarget.fill();
               } else {
-                ctx.strokeStyle = getRippleStyleColor(effect.rippleColor, ring.opacity);
-                ctx.lineWidth = Math.max(1, 2.5 * previewScale);
-                ctx.beginPath();
-                ctx.arc(position.x, position.y, ring.radius * previewScale, 0, Math.PI * 2);
-                ctx.stroke();
+                transitionTarget.strokeStyle = getRippleStyleColor(effect.rippleColor, ring.opacity);
+                transitionTarget.lineWidth = Math.max(1, 2.5 * previewScale);
+                transitionTarget.beginPath();
+                transitionTarget.arc(position.x, position.y, ring.radius * previewScale, 0, Math.PI * 2);
+                transitionTarget.stroke();
               }
             }
           }
@@ -362,20 +363,26 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
           for (const sample of trail) {
             const sampleState = { ...motionState, x: sample.x, y: sample.y };
             const samplePosition = positionAt(sampleState, videoWindow, videoWidth, videoHeight);
-            ctx.save();
-            ctx.globalAlpha *= sample.alpha * autoHideOpacity;
+            transitionTarget.save();
+            transitionTarget.globalAlpha *= sample.alpha * autoHideOpacity;
             if (options.enableShadow()) {
-              ctx.shadowColor = options.shadowColor();
+              transitionTarget.shadowColor = options.shadowColor();
               const shadowBlur = options.shadowBlur() * previewScale;
-              ctx.shadowBlur = shadowBlur;
+              transitionTarget.shadowBlur = shadowBlur;
               const offset = cursorShadowOffset(shadowBlur, options.shadowDirection());
-              ctx.shadowOffsetX = offset.x;
-              ctx.shadowOffsetY = offset.y;
+              transitionTarget.shadowOffsetX = offset.x;
+              transitionTarget.shadowOffsetY = offset.y;
             }
-            ctx.translate(samplePosition.x, samplePosition.y);
-            ctx.scale(scale, scale);
-            ctx.drawImage(image, -geometry.hotspot.x, -geometry.hotspot.y, geometry.width, geometry.height);
-            ctx.restore();
+            transitionTarget.translate(samplePosition.x, samplePosition.y);
+            transitionTarget.scale(scale, scale);
+            transitionTarget.drawImage(
+              image,
+              -geometry.hotspot.x,
+              -geometry.hotspot.y,
+              geometry.width,
+              geometry.height,
+            );
+            transitionTarget.restore();
           }
         },
       ),

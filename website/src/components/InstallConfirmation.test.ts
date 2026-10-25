@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import type { GitHubRelease } from '@website/lib/platform-downloads';
 import { websiteI18n } from '../i18n';
+import InstallConfirmation from './InstallConfirmation.vue';
 
 const githubState = vi.hoisted(() => ({
   release: {
@@ -39,8 +40,6 @@ const githubState = vi.hoisted(() => ({
 vi.mock('@website/composables/useGitHubRepository', () => ({
   useGitHubRepository: () => githubState,
 }));
-
-import InstallConfirmation from './InstallConfirmation.vue';
 
 describe('InstallConfirmation', () => {
   it('shows the version with the OS icon after the title name and offers all alternatives', () => {

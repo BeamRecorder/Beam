@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import { createElementText } from '@beam/engine/shared/element-text';
+import { drawShapeClip } from '@beam/runtime/composition/shape/render-shape-clip';
 const blurEffect = vi.hoisted(() => ({ applyBlurEffect: vi.fn() }));
 const elementContent = vi.hoisted(() => ({ drawElementText: vi.fn(), drawFreehand: vi.fn() }));
 vi.mock('@beam/runtime/composition/effects/blur-effect', () => blurEffect);
 vi.mock('@beam/runtime/composition/shape/render-element-content', () => elementContent);
-import { drawShapeClip } from '@beam/runtime/composition/shape/render-shape-clip';
 
 const shapeClip = (overrides: Partial<ShapeClip> = {}): ShapeClip => ({
   id: 'shape',

@@ -1,8 +1,13 @@
+import type { VisualClip } from '@beam/engine/shared/composition-types';
+import { createDefaultCursorPresentation } from '@beam/engine/capture/cursor-presentation';
+import { setScreenCursorSettings, cursorImageKey } from '@beam/engine/capture/screen-cursor-settings';
 import { describe, expect, it, vi } from 'vitest';
 import { renderCompositionFrame } from '@beam/runtime/rendering/render';
 import type { ClipTransitions } from '@beam/engine/shared/composition-types';
 import { cursorRippleAt } from '@beam/engine/cursor/cursor-ripple';
 import { context, snapshot } from '@beam/runtime/rendering/tests/render.test-support';
+import { createComposition, splitClip } from '@beam/engine/commands/clip-engine';
+import { setScreenCursorVisibility } from '@beam/engine/capture/screen-cursor';
 
 const transitionContext = () => {
   const ctx = context();
@@ -15,6 +20,65 @@ const transitionContext = () => {
 };
 
 describe('cursor and ripple composition rendering', () => {
+  it.each([false, true])('renders cursor and clicks only on the visible cut fragment, scene hierarchy %s', (scene) => {
+    const value = snapshot();
+    value.composition = splitClip(
+      createComposition(
+        value.composition.assets,
+        value.composition.clips.map((clip) => ({ ...clip, trackId: clip.id })),
+      ),
+      'screen',
+      500,
+    );
+    const right = value.composition.clips.find((clip) => clip.timelineStartMs === 500)!;
+    value.composition = setScreenCursorVisibility(value.composition, ['screen'], true);
+    value.composition = setScreenCursorVisibility(value.composition, [right.id], false);
+    if (scene)
+      value.composition.scene = { version: 1, roots: value.composition.clips.map((clip) => clip.id), groups: [] };
+    value.cursorSettings.enabled = false;
+    value.cursorSettings.motion.motionBlur = 0;
+    value.cursorSettings.clickEffects.left.rippleEnabled = true;
+    value.cursor.available = true;
+    const events = [
+      {
+        event: 'move' as const,
+        sessionNs: 0,
+        pixelX: 25,
+        pixelY: 25,
+        normalizedX: 0.25,
+        normalizedY: 0.5,
+        visible: true,
+      },
+      { event: 'button' as const, sessionNs: 0, button: 1, pressed: true, normalizedX: 0.25, normalizedY: 0.5 },
+      {
+        event: 'button' as const,
+        sessionNs: 500_000_000,
+        button: 1,
+        pressed: true,
+        normalizedX: 0.25,
+        normalizedY: 0.5,
+      },
+    ];
+    value.cursor.events = events;
+    const cursorImage = { complete: true, naturalWidth: 24 } as HTMLImageElement;
+    const media = { source: {} as CanvasImageSource, width: 100, height: 50 };
+    const images = new Map([['default', cursorImage]]);
+    const visible = context();
+    renderCompositionFrame(visible, media, value, 0.1, null, images);
+    expect((visible.drawImage as ReturnType<typeof vi.fn>).mock.calls.some(([image]) => image === cursorImage)).toBe(
+      true,
+    );
+    expect(visible.arc).toHaveBeenCalled();
+    for (const time of [0.5, 0.6]) {
+      const hidden = context();
+      renderCompositionFrame(hidden, media, value, time, null, images);
+      expect((hidden.drawImage as ReturnType<typeof vi.fn>).mock.calls.some(([image]) => image === cursorImage)).toBe(
+        false,
+      );
+      expect(hidden.arc).not.toHaveBeenCalled();
+    }
+    expect(value.cursor.events).toBe(events);
+  });
   it('exports post-pause cursor activity at the joined clip position', () => {
     const value = snapshot();
     const screen = value.composition.clips[0]!;
@@ -477,5 +541,89 @@ describe('independent ring appearance and lifetime', () => {
     const expired = context();
     renderCompositionFrame(expired, { source: {} as CanvasImageSource, width: 100, height: 50 }, value, 1.6);
     expect(expired.arc).not.toHaveBeenCalled();
+  });
+});
+
+describe('independent cursor styles on cut recordings', () => {
+  const styled = () => {
+    const value = snapshot();
+    value.composition = splitClip(
+      createComposition(
+        value.composition.assets,
+        value.composition.clips.map((clip) => ({ ...clip, trackId: clip.id })),
+      ),
+      'screen',
+      500,
+    );
+    const right = value.composition.clips.find((clip) => clip.timelineStartMs === 500)!;
+    const { enabled: _, ...style } = createDefaultCursorPresentation();
+    style.selection = { packId: value.cursorPack!.id, mode: 'fixed', cursorId: value.cursorPack!.defaultCursorId };
+    style.motion = { ...style.motion, smoothing: 0, motionBlur: 0 };
+    style.shadow.enabled = false;
+    style.clickEffects.left.springEnabled = false;
+    style.clickEffects.right.springEnabled = false;
+    value.composition = setScreenCursorSettings(value.composition, ['screen'], {
+      ...style,
+      color: '#ff0000',
+      size: 30,
+    });
+    value.composition = setScreenCursorSettings(value.composition, [right.id], {
+      ...style,
+      color: '#0000ff',
+      size: 80,
+    });
+    value.cursor.available = true;
+    value.cursor.events = [
+      { event: 'move', sessionNs: 0, pixelX: 25, pixelY: 25, normalizedX: 0.25, normalizedY: 0.5, visible: true },
+    ];
+    const red = { complete: true, naturalWidth: 24 } as HTMLImageElement,
+      blue = { complete: true, naturalWidth: 24 } as HTMLImageElement;
+    const id = value.cursorPack!.defaultCursorId;
+    const images = new Map([
+      [cursorImageKey(value.cursorPack!.id, id, '#ff0000'), red],
+      [cursorImageKey(value.cursorPack!.id, id, '#0000ff'), blue],
+    ]);
+    return { value, right, red, blue, images, media: { source: {} as CanvasImageSource, width: 100, height: 50 } };
+  };
+  it('switches artwork color and size at the cut rather than using the project cursor for both', () => {
+    const h = styled(),
+      left = context(),
+      right = context();
+    renderCompositionFrame(left, h.media, h.value, 0.1, null, h.images);
+    renderCompositionFrame(right, h.media, h.value, 0.6, null, h.images);
+    const a = vi.mocked(left.drawImage).mock.calls.find((call) => call[0] === h.red),
+      b = vi.mocked(right.drawImage).mock.calls.find((call) => call[0] === h.blue);
+    expect(a).toBeTruthy();
+    expect(b).toBeTruthy();
+    expect(b![3] / a![3]).toBeCloseTo(80 / 30);
+    expect(vi.mocked(right.drawImage).mock.calls.some((call) => call[0] === h.red)).toBe(false);
+  });
+  it('applies each segment’s click effects independently', () => {
+    const h = styled();
+    const left = (h.value.composition.clips.find((clip) => clip.id === 'screen') as VisualClip).cursorSettings!;
+    h.value.composition = setScreenCursorSettings(h.value.composition, ['screen'], {
+      ...left,
+      clickEffects: { ...left.clickEffects, left: { ...left.clickEffects.left, rippleEnabled: true } },
+    });
+    h.value.cursor.events.push(
+      { event: 'button', sessionNs: 0, button: 1, pressed: true, normalizedX: 0.25, normalizedY: 0.5 },
+      { event: 'button', sessionNs: 500_000_000, button: 1, pressed: true, normalizedX: 0.25, normalizedY: 0.5 },
+    );
+    const a = context(),
+      b = context();
+    renderCompositionFrame(a, h.media, h.value, 0.1, null, h.images);
+    renderCompositionFrame(b, h.media, h.value, 0.6, null, h.images);
+    expect(a.arc).toHaveBeenCalled();
+    expect(b.arc).not.toHaveBeenCalled();
+  });
+  it('retains each style when cursor visibility is changed on another segment', () => {
+    const h = styled();
+    h.value.composition = setScreenCursorVisibility(h.value.composition, ['screen'], false);
+    const a = context(),
+      b = context();
+    renderCompositionFrame(a, h.media, h.value, 0.1, null, h.images);
+    renderCompositionFrame(b, h.media, h.value, 0.6, null, h.images);
+    expect(vi.mocked(a.drawImage).mock.calls.some((call) => call[0] === h.red)).toBe(false);
+    expect(vi.mocked(b.drawImage).mock.calls.some((call) => call[0] === h.blue)).toBe(true);
   });
 });

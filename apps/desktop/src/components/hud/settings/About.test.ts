@@ -1,5 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import About from './About.vue';
 
 const capture = vi.hoisted(() => ({
   getUpdateState: vi.fn(),
@@ -9,8 +10,6 @@ const capture = vi.hoisted(() => ({
   openGithubRepository: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-
-import About from './About.vue';
 
 beforeEach(() => {
   vi.clearAllMocks();

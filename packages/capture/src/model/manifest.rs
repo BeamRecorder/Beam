@@ -41,6 +41,8 @@ pub struct SessionManifest {
     pub completed: bool,
     #[serde(default)]
     pub cursor_embedded: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cursor_visible: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

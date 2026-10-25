@@ -1,4 +1,6 @@
 import type { ZoomElement } from '../zoom/zoom-types';
+import type { CaptureMode } from '@beam/engine/capture/capture-mode';
+import type { CursorHoverSync, CursorHoverSource } from '../cursor/cursor-hover-types';
 export type { ZoomElement, ZoomFocus } from '../zoom/zoom-types';
 
 export type CaptureState =
@@ -30,7 +32,7 @@ export interface CaptureSession {
 }
 
 export interface CaptureProject {
-  mode?: import('@beam/engine/capture/capture-mode').CaptureMode;
+  mode?: CaptureMode;
   id: string;
   name: string;
   createdAt: string;
@@ -235,6 +237,8 @@ export interface SessionTrackData {
 
 export interface SessionManifestData {
   cursorEmbedded?: boolean;
+  /** Recording-time visibility choice. Missing on recordings made before this metadata existed. */
+  cursorVisible?: boolean;
   schemaVersion: number;
   projectId: string;
   sessionId: string;
@@ -256,8 +260,8 @@ export interface ProjectEditorData {
   videoSessionPath: string | null;
   tracks: SessionTrackData[];
   cursor: {
-    hoverSync?: import('../cursor/cursor-hover-types').CursorHoverSync;
-    hoverSources?: import('../cursor/cursor-hover-types').CursorHoverSource[];
+    hoverSync?: CursorHoverSync;
+    hoverSources?: CursorHoverSource[];
     available: boolean;
     events: CursorEvent[];
     telemetry: CursorTelemetryPoint[];

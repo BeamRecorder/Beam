@@ -8,6 +8,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromiumExecutable } from '../../../../../../../cli/src/chromium-install';
 import { chromiumSettings } from '../../../../../../../cli/src/chromium-settings';
+import type * as ThumbnailBrowserHostModule from './thumbnail-browser-host';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('screenshot thumbnail viewport in real Chromium', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temporary: string;
@@ -67,7 +68,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('screenshot thumbnail vie
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const { mountThumbnails } = (await load(
         '/apps/desktop/src/components/screenshot/composition/thumbnails/tests/thumbnail-browser-host.ts',
-      )) as typeof import('./thumbnail-browser-host');
+      )) as typeof ThumbnailBrowserHostModule;
       const requests: string[] = [],
         realPost = Worker.prototype.postMessage;
       Worker.prototype.postMessage = function (

@@ -2,6 +2,9 @@ import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { RegionRecordingSettings } from '~/api/types/screen-region';
 import type { QuickSnipSettingsContent } from '~/api/types/quick-snip-settings';
+import CapturePreparationSettings from './CapturePreparationSettings.vue';
+import CaptureQuickSettingsPanel from '../region/CaptureQuickSettingsPanel.vue';
+import QuickSnipDeviceChoices from '../../quick-snip/QuickSnipDeviceChoices.vue';
 const api = vi.hoisted(() => ({
   onConfigure: vi.fn<(listener: (settings: RegionRecordingSettings) => void) => () => void>(),
   onContent: vi.fn<(listener: (content: QuickSnipSettingsContent) => void) => () => void>(),
@@ -13,9 +16,6 @@ const api = vi.hoisted(() => ({
   off: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture: { preparation: api } }));
-import CapturePreparationSettings from './CapturePreparationSettings.vue';
-import CaptureQuickSettingsPanel from '../region/CaptureQuickSettingsPanel.vue';
-import QuickSnipDeviceChoices from '../../quick-snip/QuickSnipDeviceChoices.vue';
 enableAutoUnmount(afterEach);
 const settings: RegionRecordingSettings = {
   cameraId: 'off',

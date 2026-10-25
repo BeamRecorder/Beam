@@ -432,6 +432,7 @@ export function useClipComposition(options: {
     currentTimeSec: options.currentTimeSec,
   });
   return {
+    clipTrackProperties: selection.clipTrackProperties,
     composition,
     restoreComposition,
     selectedClipId,

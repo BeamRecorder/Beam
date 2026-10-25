@@ -5,6 +5,13 @@ import { resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { chromiumExecutable } from '../../apps/cli/src/chromium-install';
 import { chromiumSettings } from '../../apps/cli/src/chromium-settings';
+import type * as RenderDocumentModule from '../../packages/engine/src/document/render-document';
+import type * as CompositionDefaultsModule from '../../packages/engine/src/shared/composition-defaults';
+import type * as OrbitSettingsModule from '../../packages/engine/src/zoom/orbit-settings';
+import type * as ExportWorkerAssetsModule from '../../packages/encoder/src/mediabunny/export-worker-assets';
+import type * as ExportWorkerPipelinesModule from '../../packages/encoder/src/mediabunny/export-worker-pipelines';
+import type * as VideoEncoderSelectionModule from '../../packages/encoder/src/mediabunny/video-encoder-selection';
+import type * as MediabunnyModule from 'mediabunny';
 
 const [directory, label = 'trial', mode = 'orbit', repetitions = '1'] = process.argv.slice(2);
 if (!directory || !['orbit', 'flat'].includes(mode))
@@ -102,27 +109,17 @@ try {
     const result = await page.evaluate(
       async ({ mode, withCursor }) => {
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
-        const { createRenderDocument } = (await load(
-          '/beam-profile-bundle.js',
-        )) as typeof import('../../packages/engine/src/document/render-document');
+        const { createRenderDocument } = (await load('/beam-profile-bundle.js')) as typeof RenderDocumentModule;
         const { createDefaultClipAppearance } = (await load(
           '/beam-profile-bundle.js',
-        )) as typeof import('../../packages/engine/src/shared/composition-defaults');
-        const { ORBIT_PRESETS } = (await load(
-          '/beam-profile-bundle.js',
-        )) as typeof import('../../packages/engine/src/zoom/orbit-settings');
-        const { openExportAssets } = (await load(
-          '/beam-profile-bundle.js',
-        )) as typeof import('../../packages/encoder/src/mediabunny/export-worker-assets');
-        const { renderExportVideo } = (await load(
-          '/beam-profile-bundle.js',
-        )) as typeof import('../../packages/encoder/src/mediabunny/export-worker-pipelines');
-        const { selectVideoEncoder } = (await load(
-          '/beam-profile-bundle.js',
-        )) as typeof import('../../packages/encoder/src/mediabunny/video-encoder-selection');
+        )) as typeof CompositionDefaultsModule;
+        const { ORBIT_PRESETS } = (await load('/beam-profile-bundle.js')) as typeof OrbitSettingsModule;
+        const { openExportAssets } = (await load('/beam-profile-bundle.js')) as typeof ExportWorkerAssetsModule;
+        const { renderExportVideo } = (await load('/beam-profile-bundle.js')) as typeof ExportWorkerPipelinesModule;
+        const { selectVideoEncoder } = (await load('/beam-profile-bundle.js')) as typeof VideoEncoderSelectionModule;
         const { Output, BufferTarget, Mp4OutputFormat, CanvasSource } = (await load(
           '/beam-profile-bundle.js',
-        )) as typeof import('mediabunny');
+        )) as typeof MediabunnyModule;
         const snapshot = createRenderDocument(undefined, 1280, 720, 30);
         snapshot.duration = 4;
         snapshot.canvas.showBackground = true;

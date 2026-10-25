@@ -5,7 +5,6 @@ import type { ProjectCatalogPage, ProjectCatalogRequest } from './project-catalo
 import type { SourcePickerApi } from './source-picker';
 import type { InputAccessStatus } from './input-access';
 import type { AuthoringApi } from './authoring-api';
-export type { InputAccessStatus } from './input-access';
 import type { ScreenshotApi } from './screenshot';
 import type { TranscriptExportRequest, TranscriptExportResult } from './transcript';
 import type { PresetKind } from '@beam/engine/capture/capture-mode';
@@ -42,7 +41,6 @@ import type {
 } from './editor-window';
 import type { PreferenceSettings, PreferencePatch } from './preferences';
 import type { StorageDirectoryApi } from './storage-directories';
-export type * from './preferences';
 import type {
   CameraRecordingCommand,
   CameraRecordingCommandResult,
@@ -52,6 +50,11 @@ import type {
 } from './camera-recording';
 import type { EditorPresetDocument, EditorPresetSettings } from './editor-preset';
 import type { QuickSnipApi } from './quick-snip-api';
+import type { CapturePreparationApi } from './capture-preparation';
+import type { RegionRecordingSettings } from './screen-region';
+import type { CaptureMode } from '@beam/engine/capture/capture-mode';
+export type { InputAccessStatus } from './input-access';
+export type * from './preferences';
 
 export type * from './capture-config';
 export type * from './screen-region';
@@ -128,7 +131,7 @@ export interface DesktopCaptureApi
   }): void;
   setNormalRecordingActive(active: boolean): void;
   onTrayStopRecording?(listener: () => void): () => void;
-  preparation: import('./capture-preparation').CapturePreparationApi;
+  preparation: CapturePreparationApi;
   setWindowMode(mode: 'hud' | 'recorder' | 'preparation'): void;
   showHud(): void;
   openEditor(projectId: string, options?: EditorOpenOptions): Promise<boolean>;
@@ -169,7 +172,7 @@ export interface DesktopCaptureApi
   notifyRegionMarkerReady(): void;
   notifyScreenRegionReady(): void;
   notifyScreenRegionPreviewReady(id: number, success: boolean): void;
-  confirmScreenRegion(region: ScreenRegion, recording?: import('./screen-region').RegionRecordingSettings): void;
+  confirmScreenRegion(region: ScreenRegion, recording?: RegionRecordingSettings): void;
   updateScreenRegion(region: ScreenRegion): void;
   cancelScreenRegion(): void;
   getWindowBounds(): Promise<{ x: number; y: number; width: number; height: number } | null>;
@@ -237,13 +240,9 @@ export interface DesktopCaptureApi
   onCursorPacksChanged(listener: () => void): () => void;
   openCursorPackDiscovery(): Promise<void>;
   createProject(options?: CreateProjectOptions): Promise<CaptureProject>;
-  renameProject(
-    projectId: string,
-    name: string,
-    mode?: import('@beam/engine/capture/capture-mode').CaptureMode,
-  ): Promise<CaptureProject>;
-  deleteProject(projectId: string, mode?: import('@beam/engine/capture/capture-mode').CaptureMode): Promise<void>;
-  revealProject(projectId: string, mode?: import('@beam/engine/capture/capture-mode').CaptureMode): Promise<boolean>;
+  renameProject(projectId: string, name: string, mode?: CaptureMode): Promise<CaptureProject>;
+  deleteProject(projectId: string, mode?: CaptureMode): Promise<void>;
+  revealProject(projectId: string, mode?: CaptureMode): Promise<boolean>;
   saveProjectThumbnail(projectId: string, dataUrl: string): Promise<string | null>;
   whisperModels(): Promise<
     Array<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>

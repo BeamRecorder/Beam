@@ -2,15 +2,15 @@ import { createPinia, setActivePinia } from 'pinia';
 import { defineComponent, h } from 'vue';
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { useTimelineInsertPreference } from './useTimelineInsertPreference';
+import EditorAccessibilitySettings from '../../properties/settings/EditorAccessibilitySettings.vue';
+import { usePreferencesStore } from '~/stores/preferences';
 const capture = vi.hoisted(() => ({
   getPreferences: vi.fn(),
   updatePreferences: vi.fn(),
   onPreferencesChanged: vi.fn(() => () => {}),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-import { useTimelineInsertPreference } from './useTimelineInsertPreference';
-import EditorAccessibilitySettings from '../../properties/settings/EditorAccessibilitySettings.vue';
-import { usePreferencesStore } from '~/stores/preferences';
 enableAutoUnmount(afterEach);
 beforeEach(() => {
   setActivePinia(createPinia());

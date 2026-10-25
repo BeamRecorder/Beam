@@ -1,9 +1,9 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
+import OverlayWindowApp from './OverlayWindowApp.vue';
 vi.mock('~/components/ui/toast/ToastProvider.vue', () => ({
   default: { template: '<div class="toast-provider" />' },
 }));
-import OverlayWindowApp from './OverlayWindowApp.vue';
 
 describe('overlay window root', () => {
   it.each(['camera', 'crop', 'replacement'])('renders the supplied %s component with its toast host', (role) => {

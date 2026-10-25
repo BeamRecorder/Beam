@@ -6,10 +6,11 @@ import { join } from 'node:path';
 import { hashSkillFile } from './skills-source';
 import { inspectSkill, writeSkill } from './skills-store';
 import type { InstalledSkill } from './skills-types';
+import type * as PromisesModule from 'node:fs/promises';
 
 const faults = vi.hoisted(() => ({ publish: false, backup: false, stage: false }));
 vi.mock('node:fs/promises', async (importOriginal) => {
-  const fs = await importOriginal<typeof import('node:fs/promises')>();
+  const fs = await importOriginal<typeof PromisesModule>();
   return {
     ...fs,
     rename: async (...args: Parameters<typeof fs.rename>) => {

@@ -3,14 +3,15 @@ import { isDeepStrictEqual } from 'node:util';
 import { Quality } from 'mediabunny';
 import type { VideoEncoderRequirements } from '@beam/encoder/mediabunny/video-encoder-selection-types';
 import { selectVideoEncoder } from '@beam/encoder/mediabunny/video-encoder-selection';
+import type * as MediabunnyModule from 'mediabunny';
+import type { canEncodeVideo as canEncodeVideo2 } from 'mediabunny';
+import type { probeHardwareVideoEncoder as probeHardwareVideoEncoder2 } from '@beam/encoder/mediabunny/video-encoder-probe';
 
-const supports = vi.hoisted(() => vi.fn<typeof import('mediabunny').canEncodeVideo>());
-const probe = vi.hoisted(() =>
-  vi.fn<typeof import('@beam/encoder/mediabunny/video-encoder-probe').probeHardwareVideoEncoder>(),
-);
+const supports = vi.hoisted(() => vi.fn<typeof canEncodeVideo2>());
+const probe = vi.hoisted(() => vi.fn<typeof probeHardwareVideoEncoder2>());
 vi.mock('@beam/encoder/mediabunny/video-encoder-probe', () => ({ probeHardwareVideoEncoder: probe }));
 vi.mock('mediabunny', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('mediabunny')>()),
+  ...(await importOriginal<typeof MediabunnyModule>()),
   canEncodeVideo: supports,
 }));
 

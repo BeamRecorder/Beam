@@ -1,4 +1,6 @@
 import type { PreferenceShortcut } from '~/api/types/preferences';
+import type { Ref } from 'vue';
+import type { CaptureMode } from '@beam/engine/capture/capture-mode';
 export type ActionContext = 'global' | 'video' | 'screenshot' | 'hud' | 'quick-snip';
 export type ActionGroup =
   | 'recording'
@@ -44,7 +46,7 @@ export interface ShortcutAction {
   run: () => void | Promise<unknown>;
 }
 export interface CaptureActionShortcutOptions {
-  mode: import('vue').Ref<import('@beam/engine/capture/capture-mode').CaptureMode>;
+  mode: Ref<CaptureMode>;
   disabled: () => boolean;
   instant?: boolean;
   choose: (target: 'screen' | 'region' | 'window') => void | Promise<unknown>;

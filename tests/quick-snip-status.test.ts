@@ -2,6 +2,9 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { QuickSnipRenderTask, QuickSnipSnapshot } from '~/api/types/quick-snip';
 import messages from '../apps/desktop/src/i18n/en/core.json';
+import QuickSnipStatus from '../apps/desktop/src/components/quick-snip/QuickSnipStatus.vue';
+import type { ScreenshotDocument } from '~/api/types/screenshot';
+import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 const mocks = vi.hoisted(() => ({
   status: null as ((value: QuickSnipSnapshot) => void) | null,
   statusBlur: null as (() => void) | null,
@@ -44,9 +47,6 @@ vi.mock('../apps/desktop/src/components/quick-snip/quick-snip-export', () => {
   mocks.videoRenderModuleLoaded();
   return { renderQuickSnip: mocks.renderQuickSnip };
 });
-import QuickSnipStatus from '../apps/desktop/src/components/quick-snip/QuickSnipStatus.vue';
-import type { ScreenshotDocument } from '~/api/types/screenshot';
-import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 const snapshot: QuickSnipSnapshot = {
   state: 'processing',
   progress: 0.42,

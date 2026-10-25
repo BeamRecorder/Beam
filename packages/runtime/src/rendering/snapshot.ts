@@ -29,6 +29,7 @@ export function createCompositionSnapshot(input: {
   composition: ClipComposition;
   cursorSettings: CursorRenderSettings;
   cursorPack: CursorPackDescriptor | null;
+  cursorPacks?: CursorPackDescriptor[];
   fontSources?: Record<string, string>;
 }): CompositionSnapshot {
   const canvas = normalizeOutputCanvas(input.canvas);
@@ -75,6 +76,7 @@ export function createCompositionSnapshot(input: {
       autoHide: normalizeCursorAutoHideSettings(input.cursorSettings.autoHide),
     },
     cursorPack: input.cursorPack,
+    ...(input.cursorPacks ? { cursorPacks: input.cursorPacks } : {}),
     composition: input.composition,
     fontSources: input.fontSources ?? {},
   });

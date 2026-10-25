@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mediaSourceDescriptor, MediaSourcePool, URL_SOURCE_CACHE_BYTES } from '@beam/runtime/shared/media-source';
+import { MediaInputError } from '@beam/runtime/shared/media-types';
 
 const runtime = vi.hoisted(() => ({
   UrlSource: vi.fn(),
@@ -12,9 +14,6 @@ const runtime = vi.hoisted(() => ({
 }));
 
 vi.mock('mediabunny', () => ({ UrlSource: runtime.UrlSource }));
-
-import { mediaSourceDescriptor, MediaSourcePool, URL_SOURCE_CACHE_BYTES } from '@beam/runtime/shared/media-source';
-import { MediaInputError } from '@beam/runtime/shared/media-types';
 
 const asset = (overrides: Partial<{ id: string; kind: 'video' | 'audio' | 'image'; name: string; src: string }>) => ({
   id: 'asset-1',

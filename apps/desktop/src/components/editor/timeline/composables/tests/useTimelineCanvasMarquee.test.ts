@@ -75,6 +75,26 @@ function setup(patch: Partial<TimelineCanvasLaneProps> = {}, measuredWidth = 200
 }
 
 describe('canvas lane hover marquee ownership', () => {
+  it('reveals the end of a filename when icon and speed badges reduce the available width', async () => {
+    const state = setup(
+      {
+        items: [
+          {
+            clip: visual({ id: 'clip', timelineDurationMs: 1000 }),
+            selected: false,
+            labelInset: 21,
+            labelEndInset: 48,
+          },
+        ],
+      },
+      60,
+    );
+    await state.enter();
+    await vi.advanceTimersByTimeAsync(250);
+    expect(state.raf).toHaveBeenCalledOnce();
+    state.tick(4000);
+    expect(state.read()?.offset).toBeCloseTo(37);
+  });
   it('owns no frame while idle and starts only after a hover delay for overflow text', async () => {
     const state = setup();
     expect(state.raf).not.toHaveBeenCalled();

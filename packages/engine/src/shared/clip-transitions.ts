@@ -6,6 +6,8 @@ import type {
   TransitionPreset,
 } from '@beam/engine/shared/composition-types';
 import { snapTimeToBoundary } from '@beam/engine/shared/time-boundary';
+import { isTransitionPreset, isGpuTransitionPreset, TRANSITION_EFFECT_KINDS } from './transition-preset-schema';
+import type { TransitionEffectState } from './transition-types';
 
 export const DEFAULT_TRANSITION_DURATION_MS = 500;
 export const MAX_TRANSITION_DURATION_MS = 5_000;
@@ -20,6 +22,7 @@ export interface ClipTransitionState {
   translateY: number;
   scale: number;
   blur: number;
+  effect?: TransitionEffectState;
 }
 
 export interface TransitionDefinition {
@@ -29,22 +32,33 @@ export interface TransitionDefinition {
   defaultDurationMs: number;
 }
 
-export const TRANSITION_DEFINITIONS = {
-  fade: { kind: 'fade', domains: ['visual', 'audio'], labelKey: 'fade', defaultDurationMs: 500 },
-  slide: { kind: 'slide', domains: ['visual'], labelKey: 'slide', defaultDurationMs: 500 },
-  zoom: { kind: 'zoom', domains: ['visual'], labelKey: 'zoom', defaultDurationMs: 500 },
-  blur: { kind: 'blur', domains: ['visual'], labelKey: 'blur', defaultDurationMs: 500 },
-} as const satisfies Record<TransitionPreset['kind'], TransitionDefinition>;
+const effectDefinitions = Object.fromEntries(
+  TRANSITION_EFFECT_KINDS.map((kind): [typeof kind, TransitionDefinition] => [
+    kind,
+    {
+      kind,
+      domains: ['visual'],
+      labelKey: kind,
+      defaultDurationMs: 500,
+    },
+  ]),
+);
+
+export const TRANSITION_DEFINITIONS = Object.assign(
+  {
+    fade: { kind: 'fade', domains: ['visual', 'audio'], labelKey: 'fade', defaultDurationMs: 500 },
+    slide: { kind: 'slide', domains: ['visual'], labelKey: 'slide', defaultDurationMs: 500 },
+    zoom: { kind: 'zoom', domains: ['visual'], labelKey: 'zoom', defaultDurationMs: 500 },
+    blur: { kind: 'blur', domains: ['visual'], labelKey: 'blur', defaultDurationMs: 500 },
+  },
+  effectDefinitions,
+);
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 const visualKind = (kind: ClipKind) => kind !== 'audio';
 
 const presetAllowed = (kind: ClipKind, preset: TransitionPreset) =>
-  (visualKind(kind) || preset.kind === 'fade') &&
-  (preset.kind === 'fade' ||
-    preset.kind === 'blur' ||
-    (preset.kind === 'slide' && ['left', 'right', 'up', 'down'].includes(preset.direction)) ||
-    (preset.kind === 'zoom' && ['in', 'out'].includes(preset.direction)));
+  isTransitionPreset(preset, visualKind(kind) ? 'visual' : 'audio');
 
 export function normalizeClipTransitions(
   transitions: ClipTransitions,
@@ -94,6 +108,7 @@ const identity = (): ClipTransitionState => ({ opacity: 1, translateX: 0, transl
 
 function evaluatePreset(preset: TransitionPreset, progress: number, edge: 'entry' | 'exit'): ClipTransitionState {
   const state = identity();
+  if (isGpuTransitionPreset(preset)) return { ...state, effect: { preset, progress, edge } };
   state.opacity = progress;
   const remaining = 1 - progress;
   const arrival = edge === 'entry' ? 1 : -1;

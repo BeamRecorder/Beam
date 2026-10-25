@@ -9,6 +9,7 @@ import type { EditorCanvasProps } from '../editor-canvas-types';
 import type { UseCursorOverlayOptions } from './useCursorOverlay';
 import { customCursorKey } from '../../properties/cursor/custom-cursor-context';
 import { useEditorCanvasCursor } from './useEditorCanvasCursor';
+import { screenClip as recordedScreen } from '@beam/engine/capture/screen-cursor.test-support';
 
 const overlay = vi.hoisted(() => ({
   use: vi.fn(),
@@ -93,8 +94,10 @@ const create = (provided?: boolean) => {
 };
 
 it('defaults to an enabled overlay without an editor context and reads live appearance/playback props', () => {
-  const { props, options, result } = create();
+  const { props, options, result, screenClip } = create();
   expect(result).toBe(overlay.result);
+  expect(options.enabled?.()).toBe(false);
+  screenClip.value = recordedScreen();
   expect(options.enabled?.()).toBe(true);
   const keys = [
     'cursorSelection',
@@ -126,12 +129,24 @@ it('defaults to an enabled overlay without an editor context and reads live appe
   expect(options.isPlaying()).toBe(true);
   expect(options.showBackground()).toBe(false);
 });
-it('follows the custom cursor titlebar toggle without recreating the overlay', () => {
-  const { enabled, options } = create(false);
+it('follows the saved document cursor default on legacy clips without recreating the overlay', () => {
+  const { enabled, options, screenClip } = create(false);
+  screenClip.value = recordedScreen();
   expect(options.enabled?.()).toBe(false);
   enabled.value = true;
   expect(options.enabled?.()).toBe(true);
   enabled.value = false;
+  expect(options.enabled?.()).toBe(false);
+});
+it.each([true, false])('uses the active clip choice %s over the document default', (showCursor) => {
+  const { enabled, options, screenClip } = create(!showCursor);
+  screenClip.value = recordedScreen('first', { showCursor });
+  expect(options.enabled?.()).toBe(showCursor);
+  enabled.value = showCursor;
+  expect(options.enabled?.()).toBe(showCursor);
+  screenClip.value = recordedScreen('second', { showCursor: !showCursor });
+  expect(options.enabled?.()).toBe(!showCursor);
+  screenClip.value = null;
   expect(options.enabled?.()).toBe(false);
 });
 it('draws only with a live screen clip and a decoded frame while forwarding scaling and redraws', () => {
@@ -164,4 +179,35 @@ it('draws only with a live screen clip and a decoded frame while forwarding scal
   expect(options.deviceScale()).toBe(2);
   options.onRenderOnce?.();
   expect(renderOnce).toHaveBeenCalledOnce();
+});
+it('resolves per-fragment artwork from the pack library and preserves its styling during temporary previews', () => {
+  const { props, screenClip, options } = create(true);
+  const pack = {
+    id: 'custom',
+    name: 'Custom',
+    source: 'imported' as const,
+    colorMode: 'original' as const,
+    cursors: [],
+    automaticMap: {},
+    defaultCursorId: 'arrow',
+  };
+  props.cursorPacks = [pack];
+  const { enabled: _, ...style } = createDefaultCursorPresentation();
+  screenClip.value = recordedScreen('first', {
+    cursorSettings: {
+      ...style,
+      size: 80,
+      color: '#ff0000',
+      selection: { packId: 'custom', mode: 'fixed', cursorId: 'arrow' },
+    },
+  });
+  expect(options.cursorPack()).toEqual(pack);
+  expect(options.cursorColor()).toBe('#ff0000');
+  expect(options.cursorSize()).toBe(80);
+  props.cursorPreviewSelection = { packId: 'missing', mode: 'fixed', cursorId: 'pointer' };
+  expect(options.cursorPack()).toBeNull();
+  expect(options.cursorSelection().cursorId).toBe('pointer');
+  expect(options.cursorColor()).toBe('#ff0000');
+  props.cursorPack = { ...pack, id: 'missing' };
+  expect(options.cursorPack()?.id).toBe('missing');
 });

@@ -1,12 +1,12 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import DeveloperPreferences from './DeveloperPreferences.vue';
+import Button from '~/ui/button/Button.vue';
 const capture = vi.hoisted(() => ({
   openDeveloperTools: vi.fn(),
   openMascotLab: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-import DeveloperPreferences from './DeveloperPreferences.vue';
-import Button from '~/ui/button/Button.vue';
 
 beforeEach(() => {
   vi.resetAllMocks();

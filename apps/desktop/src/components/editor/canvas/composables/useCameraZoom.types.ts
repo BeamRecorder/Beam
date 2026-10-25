@@ -1,3 +1,4 @@
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import type { ProjectEditorData } from '~/api/types/capture-api';
 import type { ClipComposition, NormalizedTransform } from '@beam/engine/shared/composition-types';
 import type { ZoomAutoFollowSettings, ZoomElement, ZoomMotionBlurSettings } from '@beam/engine/zoom/zoom-types';
@@ -53,7 +54,7 @@ export interface UseCameraZoomOptions {
   renderVisualStack?: (
     ctx: CanvasRenderingContext2D,
     videoWindow: RenderedVideoWindow,
-    drawScreen: () => void,
+    drawScreen: (target: Canvas2DContext) => void,
     layers: CompositionSceneLayers,
   ) => void;
   onUpdateZoom: (zoom: ZoomElement) => void;

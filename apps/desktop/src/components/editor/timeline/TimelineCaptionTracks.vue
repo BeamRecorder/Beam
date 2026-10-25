@@ -234,7 +234,7 @@ onUnmounted(() => {
     >
       <div
         class="track-content annotation-content"
-        :title="t('clickToAddCaption')"
+        :aria-description="t('clickToAddCaption')"
         @pointerdown.stop
         @mousemove="hoverTextLayer($event, layer.id, layer.representative.id)"
         @mouseleave="leaveTextLayer"
@@ -306,7 +306,7 @@ onUnmounted(() => {
   >
     <div
       class="track-content annotation-content"
-      :title="t('clickToAddCaption')"
+      :aria-description="t('clickToAddCaption')"
       @pointerdown.stop
       @mousemove="hoverTextLayer($event, 'empty')"
       @mouseleave="leaveTextLayer"

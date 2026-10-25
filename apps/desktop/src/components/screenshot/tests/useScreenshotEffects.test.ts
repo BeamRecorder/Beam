@@ -6,14 +6,13 @@ import { createDefaultClipAppearance } from '@beam/engine/shared/composition-def
 import { defaultLayerCompositing } from '@beam/engine/shared/layer-compositing';
 import { HIGHLIGHT_DEFAULTS } from '@beam/engine/shared/highlight-defaults';
 import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
+import { useScreenshotEffects } from '../useScreenshotEffects';
 
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: (namespace: string) => ({
     t: (key: string) => `${namespace}.${key}`,
   }),
 }));
-
-import { useScreenshotEffects } from '../useScreenshotEffects';
 
 const makeState = (overrides: Partial<ScreenshotState> = {}): ScreenshotState => ({
   canvas: {

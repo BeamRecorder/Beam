@@ -55,7 +55,8 @@ export function useTimelineCanvasMarquee(
         props.viewport.left,
       );
       const label = item.label ?? ((clip && 'text' in clip ? clip.text?.content.trim() : '') || clip?.name || '');
-      const distance = ctx.measureText(label).width - Math.max(1, span.width - 16 - (item.labelInset ?? 0));
+      const distance =
+        ctx.measureText(label).width - Math.max(1, span.width - 8 - (item.labelEndInset ?? 8) - (item.labelInset ?? 0));
       if (distance <= 0) return;
       const start = performance.now(),
         duration = Math.max(3000, (distance / 36) * 1000);

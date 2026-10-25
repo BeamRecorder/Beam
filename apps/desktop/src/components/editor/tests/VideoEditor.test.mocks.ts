@@ -7,6 +7,7 @@ import { setCrop, setVolume } from '@beam/engine/commands/clip-engine';
 import { DEFAULT_SHAPE_LAYER_STYLE } from '@beam/engine/shared/shape-layer-style';
 import type { AddVisualElementRequest } from '@beam/engine/composition/visual-element-types';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
+import type * as UseEditorUndoRedoModule from '../composables/useEditorUndoRedo';
 
 const { editorState } = vi.hoisted(() => ({
   editorState: { store: undefined as any, previewInitiallySettled: true },
@@ -62,6 +63,10 @@ vi.mock('../canvas/composables/useElementFullscreen', async () => {
 });
 
 vi.mock('../composables/useVideoEditor', async () => {
+  const { useRecordingCursorProperties } = await import('../composables/useRecordingCursorProperties');
+  const { createDefaultCursorPresentation } = await import('@beam/engine/capture/cursor-presentation');
+  const { useZoomTrackProperties } = await import('../composables/useZoomTrackProperties');
+  const { useClipTrackProperties } = await import('../composables/useClipTrackProperties');
   const { computed, ref } = await import('vue');
   return {
     useVideoEditor: vi.fn(() => {
@@ -184,6 +189,7 @@ vi.mock('../composables/useVideoEditor', async () => {
         motionBlur: 0.4,
       });
       const compositionState = {
+        clipTrackProperties: useClipTrackProperties(composition, selectedClipId, selectedClipIds),
         composition,
         restoreComposition: vi.fn((value: ClipComposition) => {
           composition.value = value;
@@ -301,6 +307,7 @@ vi.mock('../composables/useVideoEditor', async () => {
         return pasted;
       });
       const zoomState = {
+        propertyScope: useZoomTrackProperties(zoomElements, selectedZoomId, selectedZoomIds),
         zoomElements,
         restoreZoomElements: vi.fn((value: ZoomElement[]) => {
           zoomElements.value = value;
@@ -340,6 +347,13 @@ vi.mock('../composables/useVideoEditor', async () => {
           },
         });
       const store = {
+        cursorProperties: useRecordingCursorProperties({
+          composition,
+          selectedId: selectedClipId,
+          selectedIds: selectedClipIds,
+          time: player.currentTime,
+          defaults: ref(createDefaultCursorPresentation()),
+        }),
         activeTab,
         // This fixture exposes export metadata without an authorable render document.
         projectStateReady: ref(false),
@@ -391,7 +405,7 @@ vi.mock('../composables/useVideoEditor', async () => {
 });
 
 vi.mock('../composables/useEditorUndoRedo', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../composables/useEditorUndoRedo')>();
+  const actual = await importOriginal<typeof UseEditorUndoRedoModule>();
   return {
     ...actual,
     useEditorUndoRedo: vi.fn((options: Parameters<typeof actual.useEditorUndoRedo>[0]) => {

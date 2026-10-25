@@ -9,6 +9,7 @@ import type { BeamyPhase } from '../brand/Beamy/beamy-types';
 import { capture } from '~/api/capture';
 import { useTranslate } from '../../i18n/useTranslate';
 import type { QuickSnipSnapshot } from '~/api/types/quick-snip';
+import type { QuickSnipRenderTask } from '~/api/types/quick-snip';
 
 const { t } = useTranslate('QuickSnipStatus');
 const { t: presetText } = useTranslate('QuickSnipCropBar');
@@ -76,7 +77,7 @@ const off = capture.onQuickSnipStatus(receive);
 let renderingId: string | null = null;
 let renderRevision = 0;
 let renderAbort = new AbortController();
-const startRender = (task: import('~/api/types/quick-snip').QuickSnipRenderTask | null) => {
+const startRender = (task: QuickSnipRenderTask | null) => {
   if (!task) {
     renderAbort.abort();
     return;

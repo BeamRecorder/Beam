@@ -1,3 +1,4 @@
+const { validateScreenCursorSettings } = require('../../../../packages/engine/src/capture/screen-cursor-schema.js');
 const { normalizeEffectSettings } = require('./composition-effect.cjs');
 const path = require('path');
 const { normalizeCaption } = require('./composition-captions.cjs');
@@ -141,6 +142,12 @@ function normalizeComposition(value) {
     if (!clip || !id(clip.id) || clipIds.has(clip.id) || !clipKinds.has(clip.kind) || typeof clip.enabled !== 'boolean')
       throw new Error('Clip invalide');
     if (clip.locked !== undefined && typeof clip.locked !== 'boolean') throw new Error('Verrouillage de clip invalide');
+    if (clip.showCursor !== undefined && (clip.kind !== 'screen' || typeof clip.showCursor !== 'boolean'))
+      throw new Error('Invalid screen cursor visibility.');
+    if (clip.cursorSettings !== undefined) {
+      if (clip.kind !== 'screen') throw new Error('Only screen recordings have cursor settings.');
+      validateScreenCursorSettings(clip.cursorSettings);
+    }
     clipIds.add(clip.id);
     const numbers = [
       clip.timelineStartMs,
@@ -287,6 +294,8 @@ function normalizeComposition(value) {
       ...(clip.freezeFrameSourceMs !== undefined ? { freezeFrameSourceMs: Math.round(clip.freezeFrameSourceMs) } : {}),
       ...cameraPresets,
       ...(clip.rotation === undefined ? {} : { rotation: clip.rotation }),
+      ...(clip.showCursor === undefined ? {} : { showCursor: clip.showCursor }),
+      ...(clip.cursorSettings === undefined ? {} : { cursorSettings: structuredClone(clip.cursorSettings) }),
       ...(typeof clip.isMirrored === 'boolean' && typeof clip.isMirroredY === 'boolean'
         ? { isMirrored: clip.isMirrored, isMirroredY: clip.isMirroredY }
         : (() => {

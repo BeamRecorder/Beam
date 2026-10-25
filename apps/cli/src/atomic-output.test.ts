@@ -5,9 +5,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { writeJsonOutput } from '@beam/storage/node/atomic-output';
 import { createBinaryOutput } from '@beam/storage/node/binary-output';
+import type * as PromisesModule from 'node:fs/promises';
 
 vi.mock('node:fs/promises', async (importOriginal) => {
-  const original = await importOriginal<typeof import('node:fs/promises')>();
+  const original = await importOriginal<typeof PromisesModule>();
   return {
     ...original,
     open: vi.fn(original.open),

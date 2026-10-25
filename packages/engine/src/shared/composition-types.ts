@@ -6,6 +6,10 @@ import type { ColorLayerStyle } from '@beam/engine/shared/color-layer-style-type
 import type { ShapeLayerStyle } from '@beam/engine/shared/shape-layer-types';
 import type { AudioAnalysis, AudioNormalization } from '@beam/engine/shared/audio-normalization-types';
 import type { SceneGraph, CompositionAnimations } from '../scene/scene-types';
+import type { AnimatedFrameSettings } from './animated-frame-types';
+import type { HtmlComposition } from '../html/html-types';
+import type { ScreenCursorSettings } from '../capture/cursor-presentation';
+import type { GpuTransitionPreset } from './transition-types';
 
 export const COMPOSITION_SCHEMA_VERSION = 14 as const;
 export const SCREEN_CLIP_ID = 'screen';
@@ -20,7 +24,8 @@ export type TransitionPreset =
   | { kind: 'fade' }
   | { kind: 'slide'; direction: 'left' | 'right' | 'up' | 'down' }
   | { kind: 'zoom'; direction: 'in' | 'out' }
-  | { kind: 'blur' };
+  | { kind: 'blur' }
+  | GpuTransitionPreset;
 
 export interface ClipTransition {
   preset: TransitionPreset;
@@ -142,14 +147,14 @@ export interface ClipAppearance extends WebcamAppearance {
   frameShowScrollbars: boolean;
   frameChromeScale: number;
   phoneFrameFill?: PhoneFrameFill;
-  animatedFrame?: import('./animated-frame-types').AnimatedFrameSettings;
+  animatedFrame?: AnimatedFrameSettings;
 }
 
 export type ClipFrame = 'none' | 'safari' | 'windows-95' | 'animated' | 'iphone-16-max' | 'pixel-9-pro';
 export type ClipFrameTheme = 'auto' | 'light' | 'dark';
 
 export interface MediaAsset {
-  html?: import('../html/html-types').HtmlComposition;
+  html?: HtmlComposition;
   id: string;
   kind: MediaKind;
   name: string;
@@ -190,6 +195,10 @@ export interface ClipBase {
 }
 
 export interface VisualClip extends ClipBase {
+  /** Editable cursor overlay visibility for screen recordings; omitted clips inherit presentation defaults. */
+  showCursor?: boolean;
+  /** Independent presentation for this recording fragment; omitted clips inherit project settings. */
+  cursorSettings?: ScreenCursorSettings;
   /** Clockwise degrees around the framed media center. Missing values mean zero. */
   rotation?: number;
   kind: 'screen' | 'video' | 'image' | 'webcam';

@@ -3,12 +3,12 @@ import { defineComponent, nextTick, ref } from 'vue';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { CaptureProject } from '~/api/types/capture-api';
 import type { ProjectCatalogPage, ProjectCatalogRequest } from '~/api/types/project-catalog';
+import { useProjectCatalog } from './useProjectCatalog';
 const bridge = vi.hoisted(() => ({
   onProjectLocationsChanged: vi.fn<(listener: () => void) => () => void>(() => vi.fn()),
   listProjectsPage: vi.fn<(request?: ProjectCatalogRequest) => Promise<ProjectCatalogPage>>(),
 }));
 vi.mock('~/api/capture', () => ({ capture: bridge }));
-import { useProjectCatalog } from './useProjectCatalog';
 enableAutoUnmount(afterEach);
 const project = (id: string, name = id) =>
   ({

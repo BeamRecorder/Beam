@@ -14,6 +14,10 @@ use super::RecordingSession;
 use crate::session::SessionState;
 
 fn prepared_session_without_screen() -> (tempfile::TempDir, RecordingSession) {
+    prepared_session_with_cursor_visibility(false)
+}
+
+fn prepared_session_with_cursor_visibility(visible: bool) -> (tempfile::TempDir, RecordingSession) {
     let temporary = tempfile::tempdir().expect("temporary directory");
     let request = CaptureRequest {
         project_id: ProjectId::new(),
@@ -31,7 +35,7 @@ fn prepared_session_without_screen() -> (tempfile::TempDir, RecordingSession) {
         excluded_window_handles: vec![],
         hide_taskbar: false,
         hide_desktop_icons: false,
-        show_real_cursor: false,
+        show_real_cursor: visible,
     };
     let snapshot = CatalogSnapshot {
         generation: 1,
@@ -55,6 +59,19 @@ fn assert_output_root_is_empty(temporary: &tempfile::TempDir) {
             .next()
             .is_none()
     );
+}
+
+#[test]
+fn recording_visibility_is_saved_explicitly_without_changing_cursor_selection() {
+    for visible in [false, true] {
+        let (_temporary, session) = prepared_session_with_cursor_visibility(visible);
+        assert_eq!(session.manifest.cursor_visible, Some(visible));
+        assert_eq!(session.request.cursor, CursorSelection::Disabled);
+        let saved: serde_json::Value =
+            crate::storage::read_json(&session.layout.partial_manifest())
+                .expect("saved capture metadata");
+        assert_eq!(saved["cursorVisible"], visible);
+    }
 }
 
 #[test]

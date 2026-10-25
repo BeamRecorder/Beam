@@ -430,6 +430,7 @@
     "savingProject": "正在保存项目"
   },
   "ZoomPanel": {
+    "applyToTrackHint": "统一未锁定缩放片段的样式，保留各自的目标和时间。",
     "cameraFollow": "镜头跟随",
     "cameraFollowDesc": "预判已录制的光标移动，让镜头平滑、渐进地跟随。",
     "advanced": "高级",

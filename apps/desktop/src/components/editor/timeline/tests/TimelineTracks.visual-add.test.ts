@@ -67,6 +67,17 @@ const visualTrackComposition = (extraClips: ClipComposition['clips'] = []): Clip
 };
 
 describe('TimelineTracks visual add placement', () => {
+  it('keeps add instructions accessible without native titles over the visible hover prompt', async () => {
+    const mounted = await mountTracks({
+      composition: visualTrackComposition([colorClip(), shapeClip()]),
+      selectedClipId: null,
+    });
+    for (const content of mounted!.findAll('.track-content[aria-description]')) {
+      expect(content.attributes('title')).toBeUndefined();
+      expect(content.attributes('aria-description')).toBeTruthy();
+    }
+    expect(mounted!.find('.track-content[title]').exists()).toBe(false);
+  });
   it('renders Add in the ruler spacer, opens upward, and emits the selected element', async () => {
     const mounted = await mountTracks({
       composition: visualTrackComposition(),
@@ -134,7 +145,7 @@ describe('TimelineTracks visual add placement', () => {
     expect(ghost.classes()).toContain(`kind-${kind}`);
     if (kind === 'highlight') {
       expect(ghost.classes()).not.toContain('kind-blur');
-      expect(content.attributes('title')).toBe('Add Highlight');
+      expect(content.attributes('aria-description')).toBe('Add Highlight');
       expect(mounted!.get(`[data-track-id="${trackId}"] .track-title`).text()).toBe('Highlight');
     }
 

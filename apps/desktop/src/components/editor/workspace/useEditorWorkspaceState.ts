@@ -36,6 +36,7 @@ export function useEditorWorkspaceState(props: EditorWorkspaceProps, emit: Edito
 
   const {
     activeTab,
+    cursorProperties,
     systemVolume,
     micVolume,
     player,
@@ -221,6 +222,7 @@ export function useEditorWorkspaceState(props: EditorWorkspaceProps, emit: Edito
   });
 
   return {
+    cursorProperties,
     t,
     tTopbarHud,
     tTimelineTracks,

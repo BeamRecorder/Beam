@@ -8,6 +8,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromiumExecutable } from '../../../../../../cli/src/chromium-install';
 import { chromiumSettings } from '../../../../../../cli/src/chromium-settings';
+import type * as CompositionDockBrowserHostModule from './composition-dock-browser-host';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('Composition floating layer and titlebar docking', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temporary: string, url: string;
@@ -85,7 +86,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('Composition floating lay
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const { mountCompositionDock } = (await load(
         '/apps/desktop/src/components/screenshot/composition/tests/composition-dock-browser-host.ts',
-      )) as typeof import('./composition-dock-browser-host');
+      )) as typeof CompositionDockBrowserHostModule;
       await mountCompositionDock();
     }, reset);
     await page.waitForSelector('.screenshot-composition:not(.positioning)');

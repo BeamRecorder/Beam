@@ -1,5 +1,10 @@
 use crate::{CaptureError, input::InputAccessError};
-#[cfg(any(all(windows, feature = "cursor"), target_os = "linux", test))]
+#[cfg(any(
+    all(windows, feature = "cursor"),
+    target_os = "macos",
+    target_os = "linux",
+    test
+))]
 use crate::{
     input::{InputAccessState, InputAccessStatus},
     model::{CursorSelection, HealthEvent},
@@ -9,12 +14,12 @@ use super::RecordingSession;
 
 impl RecordingSession {
     pub fn input_capture_error(&mut self) -> Result<Option<InputAccessError>, CaptureError> {
-        #[cfg(all(windows, feature = "cursor"))]
+        #[cfg(all(any(windows, target_os = "macos"), feature = "cursor"))]
         if let Some(reason) = self.active.input_failure_reason() {
             return self
                 .update_input_health(&InputAccessStatus::failed(&CaptureError::Backend(reason)));
         }
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
         if matches!(
             self.state,
             crate::session::SessionState::Recording | crate::session::SessionState::Paused
@@ -35,7 +40,12 @@ impl RecordingSession {
         Ok(self.input_capture_error.clone())
     }
 
-    #[cfg(any(all(windows, feature = "cursor"), target_os = "linux", test))]
+    #[cfg(any(
+        all(windows, feature = "cursor"),
+        target_os = "macos",
+        target_os = "linux",
+        test
+    ))]
     pub(super) fn update_input_health(
         &mut self,
         status: &InputAccessStatus,
@@ -73,7 +83,12 @@ impl RecordingSession {
     }
 }
 
-#[cfg(any(all(windows, feature = "cursor"), target_os = "linux", test))]
+#[cfg(any(
+    all(windows, feature = "cursor"),
+    target_os = "macos",
+    target_os = "linux",
+    test
+))]
 fn requested_input_error(
     cursor: &CursorSelection,
     status: &InputAccessStatus,
@@ -97,8 +112,7 @@ fn requested_input_error(
     }
     Some(status.error.clone().unwrap_or_else(|| InputAccessError {
         code: "input-capture-unavailable".into(),
-        message:
-            "Linux input access or the required mouse/keyboard devices became unavailable.".into(),
+        message: "Input access or the required mouse/keyboard devices became unavailable.".into(),
     }))
 }
 

@@ -14,6 +14,8 @@ import { createScreenshotCursor, screenshotCursorTransform } from '@beam/runtime
 import { initializeScreenshotComposition } from '@beam/engine/screenshot/screenshot-layers';
 import { screenshotShape, screenshotState } from '../screenshot-state';
 import { HIGHLIGHT_DEFAULTS } from '@beam/engine/shared/highlight-defaults';
+import ScreenshotCanvas from '../ScreenshotCanvas.vue';
+import CanvasMarqueeSurface from '../../editor/canvas/CanvasMarqueeSurface.vue';
 
 const renderer = vi.hoisted(() => ({
   loadScreenshotAssets: vi.fn(),
@@ -40,9 +42,6 @@ vi.mock('@vueuse/core', async () => {
     },
   };
 });
-
-import ScreenshotCanvas from '../ScreenshotCanvas.vue';
-import CanvasMarqueeSurface from '../../editor/canvas/CanvasMarqueeSurface.vue';
 
 const stateFixture = (): ScreenshotState => {
   const document: ScreenshotDocument = {

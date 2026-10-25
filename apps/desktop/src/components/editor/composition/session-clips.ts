@@ -26,6 +26,9 @@ import { cameraLayoutTransform } from '@beam/engine/composition/camera-layout';
 const milliseconds = (nanoseconds: number | null | undefined) =>
   Math.max(0, Math.round((nanoseconds ?? 0) / 1_000_000));
 
+const recordingCursorVisible = (data: ProjectEditorData, defaults: EditorPreferenceDefaults): boolean =>
+  !data.manifest.cursorEmbedded && (data.manifest.cursorVisible ?? defaults.presentation?.cursor.enabled ?? true);
+
 const safeDuration = (asset: SessionTrackAsset, fallbackEndNs: number) => {
   const endNs = asset.endNs ?? fallbackEndNs;
   return Math.max(40, milliseconds(endNs - asset.startNs));
@@ -132,6 +135,7 @@ const sessionClip = (
     trackId: `session:${editorData.sessionId}:track:${track.trackId}`,
     assetId: id,
     ...defaults,
+    ...(kind === 'screen' ? { showCursor: recordingCursorVisible(editorData, editorDefaults) } : {}),
     playbackRate: 1,
     transitions: { entry: null, exit: null },
     ...(track.kind === 'camera' && !editorDefaults.visual?.webcam ? { transform: placement(track) } : {}),
@@ -248,6 +252,7 @@ export function synchronizeRecordingClips(
       enabled: true,
       order: 30_000,
       ...visualClipDefaultProps(defaults, 'screen', durationMs),
+      showCursor: recordingCursorVisible(editorData, defaults),
       playbackRate: 1,
       transitions: { entry: null, exit: null },
     });

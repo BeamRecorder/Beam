@@ -52,6 +52,7 @@ export function useProjectEditorState(options: {
   cursorAutoHide: Ref<CursorAutoHideSettings>;
   cursorEnabled: Ref<boolean>;
   nativeCursorEmbedded?: () => boolean;
+  recordingCursorVisible?: () => boolean | undefined;
   cursorSelection: Ref<CursorSelection>;
   cursorSize: Ref<number>;
   cursorColor: Ref<string>;
@@ -208,7 +209,9 @@ export function useProjectEditorState(options: {
       options.canvas.value = state.presentation.canvas;
       const cursor = state.presentation.cursor;
       options.cursorEnabled.value =
-        loadedState.isFresh && options.nativeCursorEmbedded?.() ? false : cursor.enabled !== false;
+        loadedState.isFresh && (options.nativeCursorEmbedded?.() || options.recordingCursorVisible?.() === false)
+          ? false
+          : cursor.enabled !== false;
       options.cursorSelection.value = clone(cursor.selection);
       options.cursorSize.value = cursor.size;
       options.cursorColor.value = cursor.color;

@@ -1,12 +1,12 @@
 import type { PrepareRecording } from '../recorder/capture-preparation-types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { previewSelectionCountdown } from './development-countdown';
 const capture = vi.hoisted(() => ({
   setCountdown: vi.fn().mockResolvedValue(undefined),
   showHud: vi.fn(),
   onCountdownCancelled: vi.fn<(listener: () => void) => () => void>(() => vi.fn()),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-import { previewSelectionCountdown } from './development-countdown';
 afterEach(() => {
   vi.useRealTimers();
   capture.showHud.mockClear();

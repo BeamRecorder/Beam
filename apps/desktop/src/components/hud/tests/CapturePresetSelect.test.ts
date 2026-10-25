@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PresetKind } from '@beam/engine/capture/capture-mode';
 import type { EditorPresetDocument, EditorPresetSettings } from '~/api/types/editor-preset';
+import CapturePresetSelect from '../CapturePresetSelect.vue';
 
 const capture = vi.hoisted(() => ({
   getEditorPresets: vi.fn(),
@@ -10,8 +11,6 @@ const capture = vi.hoisted(() => ({
   onEditorPresetsChanged: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-
-import CapturePresetSelect from '../CapturePresetSelect.vue';
 
 const subscriptions: Array<{
   kind: PresetKind | undefined;

@@ -12,6 +12,7 @@ import type { ScreenshotDocument } from '~/api/types/screenshot';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
 import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot-types';
 import { screenshotShape, screenshotState } from '../screenshot-state';
+import ScreenshotCanvas from '../ScreenshotCanvas.vue';
 
 const renderer = vi.hoisted(() => ({
   loadScreenshotAssets: vi.fn(),
@@ -44,8 +45,6 @@ vi.mock('@vueuse/core', async () => {
     },
   };
 });
-
-import ScreenshotCanvas from '../ScreenshotCanvas.vue';
 
 const assets: ScreenshotRenderAssets = {
   image: {} as CanvasImageSource,

@@ -1,6 +1,7 @@
 import { triggerPointer } from '../../../../../../tests/support/pointer';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import ScreenRegionOverlayApp from '../region/ScreenRegionOverlayApp.vue';
 
 const { capture } = vi.hoisted(() => ({
   capture: {
@@ -19,8 +20,6 @@ vi.mock('../../../api/capture', () => ({ capture }));
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: () => ({ t: (key: string) => key }),
 }));
-
-import ScreenRegionOverlayApp from '../region/ScreenRegionOverlayApp.vue';
 
 const Button = {
   props: ['disabled'],

@@ -1,10 +1,10 @@
-const capture = vi.hoisted(() => ({ openHudSettings: vi.fn(async () => true) }));
-vi.mock('~/api/capture', () => ({ capture }));
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import EditorTimeline from '../EditorTimeline.vue';
 import type { ClipComposition } from '@beam/engine/shared/composition-types';
 import type { TimelineClipboardItem } from '../composables/timeline-clipboard-types';
+const capture = vi.hoisted(() => ({ openHudSettings: vi.fn(async () => true) }));
+vi.mock('~/api/capture', () => ({ capture }));
 
 const copiedItem = {
   descriptor: { kind: 'item', name: 'recording.mp4' },

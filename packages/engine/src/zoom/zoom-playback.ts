@@ -1,10 +1,9 @@
 import type { CursorTelemetryPoint } from '@beam/engine/capture/capture-session';
 import { cinematicZoomStrength, interpolateZoomScale, CONNECTED_GAP_MS, CONNECTED_PAN_MS } from './zoom-transitions';
-export { CONNECTED_GAP_MS } from './zoom-transitions';
 import { interpolateOrbitSettings } from './orbit-settings';
 import { cinematicZoomConnection } from './cinematic-zoom-connection';
+import { prepareSplitZoomContinuity } from './zoom-split-continuity';
 import { clampFocusToScale } from './zoom-focus';
-export { clampFocusToScale } from './zoom-focus';
 import {
   DEFAULT_ZOOM_TILT_HORIZONTAL,
   DEFAULT_ZOOM_TILT_VERTICAL,
@@ -17,6 +16,8 @@ import {
   type ZoomFocus,
   type ZoomFocusMapper,
 } from '@beam/engine/zoom/zoom-types';
+export { CONNECTED_GAP_MS } from './zoom-transitions';
+export { clampFocusToScale } from './zoom-focus';
 
 export const ZOOM_IN_MS = 1522.575;
 export const ZOOM_OUT_MS = 1015.05;
@@ -238,7 +239,13 @@ export function createZoomTimeEvaluator(
   const sortedElements = elements
     .filter((element) => element.enabled !== false && element.effect !== 'glass')
     .sort((left, right) => left.startMs - right.startMs);
-  return (timeMs: number) => zoomAtSortedTime(sortedElements, timeMs, mapFocus);
+  const continuity = prepareSplitZoomContinuity(sortedElements);
+  return (timeMs: number) => {
+    const result = zoomAtSortedTime(continuity.elements, timeMs, mapFocus);
+    if (!result) return null;
+    const elementId = continuity.elementIdAt(result.elementId, timeMs);
+    return elementId === result.elementId ? result : { ...result, elementId };
+  };
 }
 
 export function zoomAtTime(

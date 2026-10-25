@@ -1,9 +1,8 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
+import PropertiesPanel from './PropertiesPanel.vue';
 
 vi.mock('../../../api/capture', () => ({ capture: {} }));
-
-import PropertiesPanel from './PropertiesPanel.vue';
 
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: (component: string) => ({

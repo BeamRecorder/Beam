@@ -4,6 +4,7 @@ import { gpuFixture } from '../gpu/tests/gpu-fixtures';
 import { disposeWaterRippleRenderer, screenWithWaterRipples } from '../rendering/render-water-ripple';
 import { snapshot, context } from '../rendering/tests/render.test-support';
 import { disposeCompositionRenderer, renderCompositionFrame } from '../rendering/render';
+import type { VisualClip } from '@beam/engine/shared/composition-types';
 import type { CursorWaterRipple } from '@beam/engine/cursor/cursor-ripple-types';
 
 function fixture() {
@@ -194,31 +195,48 @@ describe('water ripple GPU ownership and live pixels', () => {
 });
 
 describe('water ripple completed composition', () => {
+  it('uses clip visibility for water effects independently from the document default', () => {
+    const { gl } = fixture();
+    const value = waterSnapshot();
+    const source = media();
+    const screen = value.composition.clips[0] as VisualClip;
+    screen.showCursor = false;
+    expect(screenWithWaterRipples(source, value, 0.2, screen)).toBe(source);
+    expect(gl.drawArrays).not.toHaveBeenCalled();
+    screen.showCursor = true;
+    value.cursorSettings.enabled = false;
+    expect(screenWithWaterRipples(source, value, 0.2, screen).source).not.toBe(source.source);
+    expect(gl.drawArrays).toHaveBeenCalledOnce();
+  });
   it('leaves screen media unchanged without active clicks, enabled presentation or telemetry', () => {
     const { gl } = fixture();
     const source = media();
     const value = waterSnapshot();
     value.cursor.available = false;
-    expect(screenWithWaterRipples(source, value, 0.2)).toBe(source);
+    expect(screenWithWaterRipples(source, value, 0.2, value.composition.clips[0] as VisualClip)).toBe(source);
     value.cursor.available = true;
     value.cursorSettings.enabled = false;
-    expect(screenWithWaterRipples(source, value, 0.2)).toBe(source);
+    expect(screenWithWaterRipples(source, value, 0.2, value.composition.clips[0] as VisualClip)).toBe(source);
     value.cursorSettings.enabled = true;
-    expect(screenWithWaterRipples(source, value, 2)).toBe(source);
+    expect(screenWithWaterRipples(source, value, 2, value.composition.clips[0] as VisualClip)).toBe(source);
     expect(gl.createProgram).not.toHaveBeenCalled();
   });
   it('preserves source metadata and disposes/recreates the singleton explicitly', () => {
     const { gl } = fixture();
     const source = media(),
       value = waterSnapshot();
-    const first = screenWithWaterRipples(source, value, 0.2);
+    const first = screenWithWaterRipples(source, value, 0.2, value.composition.clips[0] as VisualClip);
     expect(first).toMatchObject({ width: 200, height: 100 });
     expect(first.source).not.toBe(source.source);
-    expect(screenWithWaterRipples(source, value, 0.6).source).toBe(first.source);
+    expect(screenWithWaterRipples(source, value, 0.6, value.composition.clips[0] as VisualClip).source).toBe(
+      first.source,
+    );
     disposeWaterRippleRenderer();
     disposeWaterRippleRenderer();
     expect(gl.deleteTexture).toHaveBeenCalledTimes(1);
-    expect(screenWithWaterRipples(source, value, 0.2).source).not.toBe(first.source);
+    expect(screenWithWaterRipples(source, value, 0.2, value.composition.clips[0] as VisualClip).source).not.toBe(
+      first.source,
+    );
   });
   it('uses source session timing after trims/rate changes and draws no superficial rings', () => {
     const { gl } = fixture();

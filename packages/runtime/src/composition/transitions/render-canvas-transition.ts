@@ -1,5 +1,6 @@
 import type { ClipTransitionState } from '@beam/engine/shared/clip-transitions';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
+import { drawTransitionEffect } from './transition-effects';
 
 export interface TransitionFrameRect {
   x: number;
@@ -19,6 +20,19 @@ export function drawCanvasTransitionFrame(
   ctx.save();
   ctx.fillStyle = fallbackColor;
   ctx.fillRect(frame.x, frame.y, frame.width, frame.height);
+  if (state.effect) {
+    try {
+      drawTransitionEffect(ctx, source, { x: 0, y: 0, ...sourceSize }, state.effect, {
+        x: frame.x / sourceSize.width,
+        y: frame.y / sourceSize.height,
+        width: frame.width / sourceSize.width,
+        height: frame.height / sourceSize.height,
+      });
+    } finally {
+      ctx.restore();
+    }
+    return;
+  }
   ctx.globalAlpha *= state.opacity;
   ctx.translate(state.translateX * frame.width, state.translateY * frame.height);
   ctx.translate(frame.x + frame.width / 2, frame.y + frame.height / 2);

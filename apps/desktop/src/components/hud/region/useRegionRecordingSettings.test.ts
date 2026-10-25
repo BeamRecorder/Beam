@@ -1,13 +1,13 @@
 import { ref } from 'vue';
 import { flushPromises } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useRegionRecordingSettings } from './useRegionRecordingSettings';
+import type { PreferenceSettings } from '~/api/types/capture-api';
+import type { HudRegionSettingRefs } from './region-settings-types';
 const { updatePreferences } = vi.hoisted(() => ({
   updatePreferences: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture: { updatePreferences } }));
-import { useRegionRecordingSettings } from './useRegionRecordingSettings';
-import type { PreferenceSettings } from '~/api/types/capture-api';
-import type { HudRegionSettingRefs } from './region-settings-types';
 const state = (): HudRegionSettingRefs => ({
   cameraId: ref('off'),
   microphoneId: ref('no-audio'),

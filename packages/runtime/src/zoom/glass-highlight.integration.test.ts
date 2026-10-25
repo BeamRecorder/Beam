@@ -8,6 +8,19 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromiumExecutable } from '../../../../apps/cli/src/chromium-install';
 import { chromiumSettings } from '../../../../apps/cli/src/chromium-settings';
+import type * as GlassHighlightRenderModule from '../rendering/glass-highlight-render';
+import type * as ManualZoomModule from '@beam/engine/zoom/manual-zoom';
+import type * as GlassHighlightModule from '@beam/engine/zoom/glass-highlight';
+import type * as OutputCanvasModule from '@beam/engine/layout/output-canvas';
+import type * as RenderModule from '../rendering/render';
+import type * as ScreenshotRenderModule from '../screenshot/screenshot-render';
+import type * as RenderDocumentModule from '@beam/engine/document/render-document';
+import type * as StillDocumentModule from '@beam/engine/screenshot/still-document';
+import type * as ScreenshotLayersModule from '@beam/engine/screenshot/screenshot-layers';
+import type * as CompositionDefaultsModule from '@beam/engine/shared/composition-defaults';
+import type * as CompositionTypesModule from '@beam/engine/shared/composition-types';
+import type * as OrbitSettingsModule from '@beam/engine/zoom/orbit-settings';
+import type * as ScreenshotDragRendererModule from '../../../../apps/desktop/src/components/screenshot/screenshot-drag-renderer';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('glass zoom pixels in real Chromium', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temp: string;
@@ -57,16 +70,16 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('glass zoom pixels in rea
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const { renderGlassHighlights, disposeGlassHighlights } = (await load(
           '/packages/runtime/src/rendering/glass-highlight-render.ts',
-        )) as typeof import('../rendering/glass-highlight-render');
+        )) as typeof GlassHighlightRenderModule;
         const { createManualZoom } = (await load(
           '/packages/engine/src/zoom/manual-zoom.ts',
-        )) as typeof import('@beam/engine/zoom/manual-zoom');
+        )) as typeof ManualZoomModule;
         const { createGlassHighlight } = (await load(
           '/packages/engine/src/zoom/glass-highlight.ts',
-        )) as typeof import('@beam/engine/zoom/glass-highlight');
+        )) as typeof GlassHighlightModule;
         const { normalizeOutputCanvas } = (await load(
           '/packages/engine/src/layout/output-canvas.ts',
-        )) as typeof import('@beam/engine/layout/output-canvas');
+        )) as typeof OutputCanvasModule;
         const source = new OffscreenCanvas(256, 256),
           sourceCtx = source.getContext('2d')!;
         for (let x = 0; x < 256; x++) {
@@ -147,25 +160,25 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('glass zoom pixels in rea
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const { renderCompositionFrame, disposeCompositionRenderer } = (await load(
           '/packages/runtime/src/rendering/render.ts',
-        )) as typeof import('../rendering/render');
+        )) as typeof RenderModule;
         const { drawScreenshot } = (await load(
           '/packages/runtime/src/screenshot/screenshot-render.ts',
-        )) as typeof import('../screenshot/screenshot-render');
+        )) as typeof ScreenshotRenderModule;
         const { createRenderDocument } = (await load(
           '/packages/engine/src/document/render-document.ts',
-        )) as typeof import('@beam/engine/document/render-document');
+        )) as typeof RenderDocumentModule;
         const { createStillDocument } = (await load(
           '/packages/engine/src/screenshot/still-document.ts',
-        )) as typeof import('@beam/engine/screenshot/still-document');
+        )) as typeof StillDocumentModule;
         const { createManualZoom } = (await load(
           '/packages/engine/src/zoom/manual-zoom.ts',
-        )) as typeof import('@beam/engine/zoom/manual-zoom');
+        )) as typeof ManualZoomModule;
         const { createGlassHighlight } = (await load(
           '/packages/engine/src/zoom/glass-highlight.ts',
-        )) as typeof import('@beam/engine/zoom/glass-highlight');
+        )) as typeof GlassHighlightModule;
         const { insertScreenshotLayer } = (await load(
           '/packages/engine/src/screenshot/screenshot-layers.ts',
-        )) as typeof import('@beam/engine/screenshot/screenshot-layers');
+        )) as typeof ScreenshotLayersModule;
         const source = new OffscreenCanvas(1280, 720),
           sourceCtx = source.getContext('2d')!;
         sourceCtx.fillStyle = 'white';
@@ -234,22 +247,20 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('glass zoom pixels in rea
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const { renderCompositionFrame, disposeCompositionRenderer } = (await load(
         '/packages/runtime/src/rendering/render.ts',
-      )) as typeof import('../rendering/render');
+      )) as typeof RenderModule;
       const { createRenderDocument } = (await load(
         '/packages/engine/src/document/render-document.ts',
-      )) as typeof import('@beam/engine/document/render-document');
+      )) as typeof RenderDocumentModule;
       const { createDefaultClipAppearance } = (await load(
         '/packages/engine/src/shared/composition-defaults.ts',
-      )) as typeof import('@beam/engine/shared/composition-defaults');
+      )) as typeof CompositionDefaultsModule;
       const { emptyComposition } = (await load(
         '/packages/engine/src/shared/composition-types.ts',
-      )) as typeof import('@beam/engine/shared/composition-types');
-      const { createManualZoom } = (await load(
-        '/packages/engine/src/zoom/manual-zoom.ts',
-      )) as typeof import('@beam/engine/zoom/manual-zoom');
+      )) as typeof CompositionTypesModule;
+      const { createManualZoom } = (await load('/packages/engine/src/zoom/manual-zoom.ts')) as typeof ManualZoomModule;
       const { createGlassHighlight } = (await load(
         '/packages/engine/src/zoom/glass-highlight.ts',
-      )) as typeof import('@beam/engine/zoom/glass-highlight');
+      )) as typeof GlassHighlightModule;
       const snapshot = createRenderDocument(
         {
           ...emptyComposition(),
@@ -359,25 +370,23 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('glass zoom pixels in rea
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const { renderCompositionFrame, disposeCompositionRenderer } = (await load(
         '/packages/runtime/src/rendering/render.ts',
-      )) as typeof import('../rendering/render');
+      )) as typeof RenderModule;
       const { drawScreenshot } = (await load(
         '/packages/runtime/src/screenshot/screenshot-render.ts',
-      )) as typeof import('../screenshot/screenshot-render');
+      )) as typeof ScreenshotRenderModule;
       const { createRenderDocument } = (await load(
         '/packages/engine/src/document/render-document.ts',
-      )) as typeof import('@beam/engine/document/render-document');
+      )) as typeof RenderDocumentModule;
       const { createStillDocument } = (await load(
         '/packages/engine/src/screenshot/still-document.ts',
-      )) as typeof import('@beam/engine/screenshot/still-document');
-      const { createManualZoom } = (await load(
-        '/packages/engine/src/zoom/manual-zoom.ts',
-      )) as typeof import('@beam/engine/zoom/manual-zoom');
+      )) as typeof StillDocumentModule;
+      const { createManualZoom } = (await load('/packages/engine/src/zoom/manual-zoom.ts')) as typeof ManualZoomModule;
       const { createGlassHighlight } = (await load(
         '/packages/engine/src/zoom/glass-highlight.ts',
-      )) as typeof import('@beam/engine/zoom/glass-highlight');
+      )) as typeof GlassHighlightModule;
       const { insertScreenshotLayer } = (await load(
         '/packages/engine/src/screenshot/screenshot-layers.ts',
-      )) as typeof import('@beam/engine/screenshot/screenshot-layers');
+      )) as typeof ScreenshotLayersModule;
       const source = new OffscreenCanvas(256, 144),
         paint = source.getContext('2d')!;
       for (let x = 0; x < 256; x++) {
@@ -428,19 +437,17 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('glass zoom pixels in rea
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
       const { drawScreenshot } = (await load(
         '/packages/runtime/src/screenshot/screenshot-render.ts',
-      )) as typeof import('../screenshot/screenshot-render');
+      )) as typeof ScreenshotRenderModule;
       const { createStillDocument } = (await load(
         '/packages/engine/src/screenshot/still-document.ts',
-      )) as typeof import('@beam/engine/screenshot/still-document');
+      )) as typeof StillDocumentModule;
       const { insertScreenshotLayer, updateScreenshotLayer } = (await load(
         '/packages/engine/src/screenshot/screenshot-layers.ts',
-      )) as typeof import('@beam/engine/screenshot/screenshot-layers');
+      )) as typeof ScreenshotLayersModule;
       const { applyOrbitPreset, ORBIT_PRESETS } = (await load(
         '/packages/engine/src/zoom/orbit-settings.ts',
-      )) as typeof import('@beam/engine/zoom/orbit-settings');
-      const { createManualZoom } = (await load(
-        '/packages/engine/src/zoom/manual-zoom.ts',
-      )) as typeof import('@beam/engine/zoom/manual-zoom');
+      )) as typeof OrbitSettingsModule;
+      const { createManualZoom } = (await load('/packages/engine/src/zoom/manual-zoom.ts')) as typeof ManualZoomModule;
       const state = createStillDocument('still', 'source.png', 400, 240).state;
       state.canvas.showBackground = options.visible;
       state.canvas.watermark!.enabled = false;
@@ -464,7 +471,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('glass zoom pixels in rea
       drawScreenshot(ctx, state, { image, background: null, logo: null, width: 400, height: 240 }, 400, 240);
       const { createScreenshotDragRenderer } = (await load(
         '/apps/desktop/src/components/screenshot/screenshot-drag-renderer.ts',
-      )) as typeof import('../../../../apps/desktop/src/components/screenshot/screenshot-drag-renderer');
+      )) as typeof ScreenshotDragRendererModule;
       const gesture = new OffscreenCanvas(400, 240),
         g = gesture.getContext('2d')!,
         drag = createScreenshotDragRenderer();
@@ -494,19 +501,19 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('glass zoom pixels in rea
         const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
         const { drawScreenshot } = (await load(
           '/packages/runtime/src/screenshot/screenshot-render.ts',
-        )) as typeof import('../screenshot/screenshot-render');
+        )) as typeof ScreenshotRenderModule;
         const { createStillDocument } = (await load(
           '/packages/engine/src/screenshot/still-document.ts',
-        )) as typeof import('@beam/engine/screenshot/still-document');
+        )) as typeof StillDocumentModule;
         const { insertScreenshotLayer } = (await load(
           '/packages/engine/src/screenshot/screenshot-layers.ts',
-        )) as typeof import('@beam/engine/screenshot/screenshot-layers');
+        )) as typeof ScreenshotLayersModule;
         const { applyOrbitPreset, ORBIT_PRESETS } = (await load(
           '/packages/engine/src/zoom/orbit-settings.ts',
-        )) as typeof import('@beam/engine/zoom/orbit-settings');
+        )) as typeof OrbitSettingsModule;
         const { createManualZoom } = (await load(
           '/packages/engine/src/zoom/manual-zoom.ts',
-        )) as typeof import('@beam/engine/zoom/manual-zoom');
+        )) as typeof ManualZoomModule;
         const state = createStillDocument('still', 'source.png', 400, 240).state;
         state.canvas.watermark!.enabled = false;
         state.image.appearance.shadowSize = 'none';

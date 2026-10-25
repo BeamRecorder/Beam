@@ -57,7 +57,7 @@ const addInlineCaption = (): CaptionClip => {
       },
     },
   };
-  composition.clips.push(caption);
+  editorState.store.compositionState.composition.value = { ...composition, clips: [...composition.clips, caption] };
   return caption;
 };
 

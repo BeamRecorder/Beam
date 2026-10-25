@@ -249,7 +249,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       focusX?: number;
       focusY?: number;
     },
-    drawScreen: () => void,
+    drawScreen: (target: Canvas2DContext) => void,
     resolvedLayers?: CompositionSceneLayers,
   ) => {
     const layers =
@@ -322,13 +322,13 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
                 width: window.dw,
                 height: window.dh,
               },
-              () => {
-                if (clip.kind === 'screen') drawScreen();
-                else if (clip.kind === 'color') drawColor(ctx, clip, window);
-                else if (clip.kind === 'shape') drawShape(ctx, clip, window);
-                else if (clip.kind === 'blur') drawBlur(ctx, clip, window);
-                else if (clip.kind === 'webcam') drawWebcam(ctx, clip, window);
-                else drawVisual(ctx, clip, window);
+              (transitionTarget) => {
+                if (clip.kind === 'screen') drawScreen(transitionTarget);
+                else if (clip.kind === 'color') drawColor(transitionTarget, clip, window);
+                else if (clip.kind === 'shape') drawShape(transitionTarget, clip, window);
+                else if (clip.kind === 'blur') drawBlur(transitionTarget, clip, window);
+                else if (clip.kind === 'webcam') drawWebcam(transitionTarget, clip, window);
+                else drawVisual(transitionTarget, clip, window);
               },
             );
           }
@@ -352,12 +352,12 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         clip,
         timeMs,
         { x: window.dx, y: window.dy, width: window.dw, height: window.dh },
-        () => {
-          if (clip.kind === 'caption') drawCaption(ctx, clip, timeMs);
-          else if (isColorClip(clip)) drawColor(ctx, clip, window);
-          else if (isShapeClip(clip)) drawShape(ctx, clip, window);
-          else if (isBlurClip(clip)) drawBlur(ctx, clip, window);
-          else if (isVisualClip(clip) && clip.kind !== 'webcam') drawVisual(ctx, clip, window);
+        (transitionTarget) => {
+          if (clip.kind === 'caption') drawCaption(transitionTarget, clip, timeMs);
+          else if (isColorClip(clip)) drawColor(transitionTarget, clip, window);
+          else if (isShapeClip(clip)) drawShape(transitionTarget, clip, window);
+          else if (isBlurClip(clip)) drawBlur(transitionTarget, clip, window);
+          else if (isVisualClip(clip) && clip.kind !== 'webcam') drawVisual(transitionTarget, clip, window);
         },
       );
     }

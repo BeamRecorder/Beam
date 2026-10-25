@@ -1,8 +1,8 @@
 import { flushPromises, mount, enableAutoUnmount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import SettingsEditorTools from './SettingsEditorTools.vue';
 const capture = vi.hoisted(() => ({ getSettingsEditorContext: vi.fn(), runSettingsEditorAction: vi.fn() }));
 vi.mock('~/api/capture', () => ({ capture }));
-import SettingsEditorTools from './SettingsEditorTools.vue';
 enableAutoUnmount(afterEach);
 beforeEach(() => {
   vi.clearAllMocks();

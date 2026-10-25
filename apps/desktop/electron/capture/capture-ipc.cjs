@@ -83,7 +83,7 @@ function registerCaptureIpc({
       const cursor = payload.config?.cursor;
       if (
         command === 'prepare' &&
-        platform === 'linux' &&
+        (platform === 'linux' || platform === 'darwin') &&
         cursor?.mode === 'separate' &&
         (cursor.captureClicks === true || cursor.captureShortcuts === true)
       )

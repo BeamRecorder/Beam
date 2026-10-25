@@ -430,6 +430,7 @@
     "savingProject": "Salvataggio progetto"
   },
   "ZoomPanel": {
+    "applyToTrackHint": "Condividi lo stile tra gli zoom sbloccati, mantenendo destinazioni e tempi.",
     "cameraFollow": "Segui fotocamera",
     "cameraFollowDesc": "Anticipa i movimenti registrati del cursore con un inseguimento della videocamera fluido e graduale.",
     "advanced": "Avanzate",

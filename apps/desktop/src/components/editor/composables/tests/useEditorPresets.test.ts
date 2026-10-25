@@ -5,6 +5,7 @@ import { normalizeEditorPreferenceDefaults } from '../editor-defaults';
 import { createElementText } from '@beam/engine/shared/element-text';
 import { normalizeElementTextDefaults } from '../../elements/element-text-defaults';
 import type { EditorPresetDocument, EditorPresetSettings } from '~/api/types/editor-preset';
+import { useEditorPresets } from '../useEditorPresets';
 
 const mocks = vi.hoisted(() => ({
   getEditorPresets: vi.fn(),
@@ -17,8 +18,6 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../../api/capture', () => ({ capture: mocks }));
-
-import { useEditorPresets } from '../useEditorPresets';
 
 const editor = (selectedBackgroundId: string | null = null): EditorPreferenceDefaults =>
   normalizeEditorPreferenceDefaults({

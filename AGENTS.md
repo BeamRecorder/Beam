@@ -16,6 +16,7 @@ When a task affects Electron windows, read `docs/electron_window.md` first and f
 - Keep UI code consistent with `docs/UI.md`: use the existing `src/components/ui/` primitives, Lucide icons, theme tokens, and scoped styles without deep selectors whenever possible.
 - Keep code organized according to `docs/ARCHITECTURE.md`: preserve the Electron security boundary and keep capture-domain logic in Rust.
 - Keep changes consistent with `docs/CODE_QUALITY.md`: no source file over 500 lines, types in dedicated type files, readable small units, and tests for TypeScript and Rust changes.
+- Put every static import, including every `import type`, at the top of the file (or the top of its Vue `<script>` block). Inline import types such as `import('module').Type` and `typeof import('module')` are forbidden everywhere, including tests and type annotations. Run `bun run check:imports` to enforce this rule.
 
 ## Verification
 

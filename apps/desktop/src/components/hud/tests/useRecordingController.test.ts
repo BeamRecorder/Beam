@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useRecordingController } from '../recorder/useRecordingController';
+import type { RecordingConfiguration } from '../recorder/recording-types';
 
 const capture = vi.hoisted(() => ({
   getCameraOverlayState: vi.fn().mockResolvedValue(null),
@@ -32,9 +34,6 @@ vi.mock('../../../api/microphone-recorder', () => ({
 vi.mock('../../../api/system-audio-recorder', () => ({
   BrowserSystemAudioRecorder: { request: vi.fn() },
 }));
-
-import { useRecordingController } from '../recorder/useRecordingController';
-import type { RecordingConfiguration } from '../recorder/recording-types';
 
 const configuration = (countdownSeconds: number): RecordingConfiguration => ({
   screenKind: 'display',

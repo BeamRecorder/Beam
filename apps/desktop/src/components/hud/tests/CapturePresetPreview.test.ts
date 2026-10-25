@@ -4,14 +4,14 @@ import { nextTick } from 'vue';
 import type { EditorPreset } from '~/api/types/editor-preset';
 import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { createDefaultCursorPresentation } from '@beam/engine/capture/cursor-presentation';
+import CapturePresetPreview from '../CapturePresetPreview.vue';
+import { presetSample } from '../preset-sample';
 const runtime = vi.hoisted(() => ({ render: vi.fn(), dispose: vi.fn(), decode: vi.fn() }));
 vi.mock('@beam/runtime/rendering/render', () => ({
   renderCompositionFrame: runtime.render,
   disposeCompositionRenderer: runtime.dispose,
 }));
 vi.mock('@beam/runtime/playback/index', () => ({ decodeVideoPoster: runtime.decode }));
-import CapturePresetPreview from '../CapturePresetPreview.vue';
-import { presetSample } from '../preset-sample';
 enableAutoUnmount(afterEach);
 const preset = (): EditorPreset => ({
   id: 'custom',

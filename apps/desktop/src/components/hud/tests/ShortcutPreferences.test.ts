@@ -4,13 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setCurrentLocale } from '~/i18n';
 import { usePreferencesStore } from '~/stores/preferences';
 import { hydrateActionBindings } from '~/shortcuts/action-bindings';
+import ShortcutPreferences from '../settings/ShortcutPreferences.vue';
 const capture = vi.hoisted(() => ({
   getPreferences: vi.fn(),
   updatePreferences: vi.fn(),
   onPreferencesChanged: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-import ShortcutPreferences from '../settings/ShortcutPreferences.vue';
 const settings = () => ({
   schemaVersion: 3,
   theme: 'dark',

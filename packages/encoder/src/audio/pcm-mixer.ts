@@ -38,7 +38,7 @@ export function stereoSample(channels: readonly Float32Array[], frame: number): 
 
 class ClipPcmReader {
   readonly clip: AudioClip;
-  private readonly iterator: AsyncIterator<import('mediabunny').AudioSample>;
+  private readonly iterator: AsyncIterator<AudioSample>;
   private blocks: DecodedBlock[] = [];
   private ended = false;
   private closed = false;

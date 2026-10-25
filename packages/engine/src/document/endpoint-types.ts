@@ -1,4 +1,5 @@
 import type { DocumentTransaction } from './transaction-types';
+import type { DocumentTransactionEvent } from './transaction-types';
 export type DocumentRequest =
   | { version: 1; id: string; method: 'snapshot' }
   | {
@@ -31,4 +32,4 @@ export interface DocumentHistoryEvent<T> {
   revision: number;
   document: T;
 }
-export type DocumentEvent<T> = import('./transaction-types').DocumentTransactionEvent | DocumentHistoryEvent<T>;
+export type DocumentEvent<T> = DocumentTransactionEvent | DocumentHistoryEvent<T>;

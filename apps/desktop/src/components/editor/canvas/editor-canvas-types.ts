@@ -1,3 +1,4 @@
+import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import type { CompositionSceneLayers } from '@beam/engine/composition/scene-layers';
 import type { RenderedVideoWindow } from './composables/useCameraZoom';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
@@ -41,6 +42,8 @@ export interface EditorCanvasProps {
   duration?: number;
   cursorSelection: CursorSelection;
   cursorPack: CursorPackDescriptor | null;
+  cursorPacks?: CursorPackDescriptor[];
+  cursorPreviewSelection?: CursorSelection | null;
   cursorSize: number;
   cursorColor: string;
   enableShadow: boolean;
@@ -102,6 +105,6 @@ export interface EditorCanvasEmits {
 export type DrawVisualStack = (
   ctx: CanvasRenderingContext2D,
   videoWindow: RenderedVideoWindow,
-  drawScreen: () => void,
+  drawScreen: (target: Canvas2DContext) => void,
   layers: CompositionSceneLayers,
 ) => void;

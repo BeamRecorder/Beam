@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { PerspectiveSceneCompositor } from '@beam/runtime/zoom/perspective-scene-compositor';
 
 const projector = vi.hoisted(() => ({
   failInitialization: false,
@@ -21,8 +22,6 @@ vi.mock('@beam/runtime/zoom/webgl-perspective-projector', () => ({
     dispose = projector.dispose;
   },
 }));
-
-import { PerspectiveSceneCompositor } from '@beam/runtime/zoom/perspective-scene-compositor';
 
 const context = {
   setTransform: vi.fn(),

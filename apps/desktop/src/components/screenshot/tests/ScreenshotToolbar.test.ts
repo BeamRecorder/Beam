@@ -1,10 +1,13 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Ref } from 'vue';
+import ScreenshotToolbar from '../ScreenshotToolbar.vue';
+import type { ScreenshotToolbarProps } from '../screenshot-toolbar-types';
+import type * as CoreModule from '@vueuse/core';
 
 const size = vi.hoisted(() => ({ height: null as Ref<number> | null, options: null as unknown }));
 vi.mock('@vueuse/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@vueuse/core')>();
+  const actual = await importOriginal<typeof CoreModule>();
   const { ref } = await import('vue');
   return {
     ...actual,
@@ -15,8 +18,6 @@ vi.mock('@vueuse/core', async (importOriginal) => {
     },
   };
 });
-import ScreenshotToolbar from '../ScreenshotToolbar.vue';
-import type { ScreenshotToolbarProps } from '../screenshot-toolbar-types';
 
 const wrappers: ReturnType<typeof mount>[] = [];
 const makeToolbar = (props: Partial<ScreenshotToolbarProps> = {}) => {

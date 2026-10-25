@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { CircleDashed, Focus, ImageOff, Link2, Lock } from '@lucide/vue';
+import { computed, inject } from 'vue';
+import { CircleDashed, Focus, ImageOff, Link2, Lock, MousePointer2, MousePointer2Off } from '@lucide/vue';
+import { screenCursorEnabled } from '@beam/engine/capture/screen-cursor';
+import { customCursorKey } from '../properties/cursor/custom-cursor-context';
 import { useTranslate } from '~/i18n/useTranslate';
 import TimelineTrimHandle from './TimelineTrimHandle.vue';
+import TimelineTrackPropertyFeedback from './TimelineTrackPropertyFeedback.vue';
 import BlickWaveformCanvas from './waveform/BlickWaveformCanvas.vue';
 import { timelineClipStyle } from './timeline-clip-geometry';
 import type { TimelineClipProps } from './timeline-clip-types';
 import { useTimelineCanvasArtwork } from './composables/useTimelineCanvasArtwork';
+import { useTimelineOverlayContrast } from './timeline-overlay-contrast';
+import { timelineMetadataInset } from '@beam/runtime/timeline/timeline-canvas-layout';
+const vTimelineOverlayContrast = useTimelineOverlayContrast();
 
 const props = defineProps<TimelineClipProps>();
 const emit = defineEmits<{
@@ -17,6 +23,13 @@ const emit = defineEmits<{
 }>();
 const { t } = useTranslate('TimelineTracks');
 const { t: mediaText } = useTranslate('ScreenshotComposition');
+const { t: cursorText } = useTranslate('CursorRecording');
+const { t: clipText } = useTranslate('ClipPropertiesPanel');
+const cursorDefault = inject(customCursorKey, null);
+const cursorVisible = computed(() => screenCursorEnabled(props.clip, cursorDefault?.value ?? true));
+const cursorLabel = computed(
+  () => `${cursorText('customCursor')}: ${clipText(cursorVisible.value ? 'enabled' : 'disabled')}`,
+);
 const { error } = useTimelineCanvasArtwork(props);
 const label = computed(() =>
   'freezeFrameSourceMs' in props.clip
@@ -26,15 +39,22 @@ const label = computed(() =>
 const icon = computed(() =>
   props.clip.kind === 'blur' ? (props.clip.mode === 'highlight' ? Focus : CircleDashed) : null,
 );
-const title = computed(() => (props.linkedClipNames?.length ? props.linkedClipNames.join(' · ') : label.value));
-const labelInset = computed(() => (props.clip.locked ? 15 : 0) + (props.linkedClipNames?.length ? 15 : 0));
+const title = computed(() =>
+  [
+    props.linkedClipNames?.length ? props.linkedClipNames.join(' · ') : label.value,
+    ...(props.clip.kind === 'screen' ? [cursorLabel.value] : []),
+  ].join(' · '),
+);
+const labelInset = computed(() =>
+  timelineMetadataInset(Number(Boolean(props.clip.locked)) + Number(Boolean(props.linkedClipNames?.length))),
+);
 </script>
 <template>
   <button
     type="button"
     class="timeline-clip canvas-clip-target"
     :data-timeline-clip-id="clip.id"
-    :aria-label="label"
+    :aria-label="clip.kind === 'screen' ? `${label} · ${cursorLabel}` : label"
     :title="title"
     :data-paste-highlight="pasteHighlight || undefined"
     :class="{
@@ -47,6 +67,7 @@ const labelInset = computed(() => (props.clip.locked ? 15 : 0) + (props.linkedCl
     @pointerdown="emit('move', $event)"
     @contextmenu.prevent.stop="emit('contextmenu', $event)"
   >
+    <TimelineTrackPropertyFeedback :clip-id="clip.id" />
     <div v-if="clip.kind === 'audio'" class="waveform" aria-hidden="true">
       <BlickWaveformCanvas
         v-if="waveformBars?.length && waveformBands"
@@ -66,7 +87,8 @@ const labelInset = computed(() => (props.clip.locked ? 15 : 0) + (props.linkedCl
     </div>
     <span
       v-if="clip.kind === 'audio'"
-      class="audio-clip-label"
+      v-timeline-overlay-contrast
+      class="audio-clip-label timeline-overlay-contrast"
       :style="{
         left: `${8 + labelInset}px`,
         maxWidth: `calc(100% - ${16 + labelInset}px)`,
@@ -74,13 +96,29 @@ const labelInset = computed(() => (props.clip.locked ? 15 : 0) + (props.linkedCl
       aria-hidden="true"
       >{{ label }}</span
     >
-    <span class="canvas-clip-icons" aria-hidden="true">
+    <span
+      v-if="clip.locked || clip.kind === 'screen' || icon || linkedClipNames?.length || error"
+      v-timeline-overlay-contrast
+      class="canvas-clip-icons timeline-overlay-contrast"
+      aria-hidden="true"
+    >
       <Lock v-if="clip.locked" :size="12" />
+      <component
+        v-if="clip.kind === 'screen'"
+        :is="cursorVisible ? MousePointer2 : MousePointer2Off"
+        :size="12"
+        :data-cursor-visible="cursorVisible"
+      />
       <component :is="icon" v-if="icon" :size="12" />
       <Link2 v-if="linkedClipNames?.length" :size="12" />
       <ImageOff v-if="error" :size="12" :title="error" />
     </span>
-    <span v-if="Math.abs(clip.playbackRate - 1) > 0.01" class="speed-badge">{{ clip.playbackRate.toFixed(2) }}×</span>
+    <span
+      v-if="Math.abs(clip.playbackRate - 1) > 0.01"
+      v-timeline-overlay-contrast
+      class="speed-badge timeline-overlay-contrast"
+      >{{ clip.playbackRate.toFixed(2) }}×</span
+    >
     <TimelineTrimHandle
       v-for="edge in ['start', 'end'] as const"
       :key="edge"
@@ -120,15 +158,15 @@ const labelInset = computed(() => (props.clip.locked ? 15 : 0) + (props.linkedCl
   gap: 3px;
   left: 8px;
   top: 3px;
-  color: var(--color-timeline-media-label-text);
+  padding: 2px;
+  margin: -2px;
   pointer-events: none;
 }
 .speed-badge {
   position: absolute;
   top: 2px;
   right: 8px;
-  color: var(--color-timeline-media-label-text);
-  background: var(--color-timeline-media-label);
+  padding: 1px 4px;
   font-size: 9px;
   border-radius: var(--radius-sm);
   pointer-events: none;
@@ -158,9 +196,8 @@ const labelInset = computed(() => (props.clip.locked ? 15 : 0) + (props.linkedCl
   white-space: nowrap;
   font-size: 9px;
   line-height: 1.1;
-  color: var(--color-timeline-media-label-text);
-  background: var(--color-timeline-media-label);
   pointer-events: none;
 }
 </style>
 <style scoped src="./timeline-item-states.css"></style>
+<style scoped src="./timeline-overlay-contrast.css"></style>

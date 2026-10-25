@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 import type { CaptionShapeStyle } from '@beam/engine/shared/caption-shape-types';
+import CaptionStyleControls from './CaptionStyleControls.vue';
 
 const capture = vi.hoisted(() => ({
   listImportedFonts: vi.fn(),
@@ -9,8 +10,6 @@ const capture = vi.hoisted(() => ({
   pickImportedFont: vi.fn(),
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-
-import CaptionStyleControls from './CaptionStyleControls.vue';
 
 const makeShapeStyle = (overrides: Partial<CaptionShapeStyle> = {}) => {
   const defaults = createDefaultCaptionStyle(42);

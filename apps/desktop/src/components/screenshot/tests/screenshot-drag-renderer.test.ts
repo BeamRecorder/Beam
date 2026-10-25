@@ -5,6 +5,7 @@ import { screenshotShape, screenshotState } from '../screenshot-state';
 import { updateScreenshotLayer, insertScreenshotLayer } from '@beam/engine/screenshot/screenshot-layers';
 import type { ScreenshotLayer } from '@beam/engine/screenshot/screenshot-types';
 import type { ScreenshotRenderAssets } from '@beam/runtime/screenshot/screenshot-types';
+import { createScreenshotDragRenderer } from '../screenshot-drag-renderer';
 
 const render = vi.hoisted(() => ({
   drawLayer: vi.fn(),
@@ -23,8 +24,6 @@ vi.mock('@beam/runtime/composition/render-composited-layer', () => ({
   renderCompositedLayer: render.compositedLayer,
   releaseCompositedLayerSurface: render.release,
 }));
-
-import { createScreenshotDragRenderer } from '../screenshot-drag-renderer';
 
 const makeState = (): ScreenshotState => {
   const state = screenshotState({

@@ -2,6 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import { createElementText } from '@beam/engine/shared/element-text';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
+import {
+  drawElementText,
+  drawFreehand,
+  elementTextCanvas,
+} from '@beam/runtime/composition/shape/render-element-content';
 
 const drawingHelpers = vi.hoisted(() => ({
   applyCanvasCaptionFont: vi.fn(),
@@ -15,12 +20,6 @@ vi.mock('@beam/runtime/shared/freehand-render', () => ({ traceFreehand: drawingH
 vi.mock('@beam/runtime/composition/captions/render-caption-text', () => ({
   drawCaptionText: drawingHelpers.drawCaptionText,
 }));
-
-import {
-  drawElementText,
-  drawFreehand,
-  elementTextCanvas,
-} from '@beam/runtime/composition/shape/render-element-content';
 
 const shapeClip = (overrides: Partial<ShapeClip> = {}): ShapeClip => ({
   id: 'element',

@@ -2,6 +2,7 @@ import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createWebsiteI18n } from '../i18n';
 import Button from '~/ui/button/Button.vue';
+import WebsiteTopbar from './WebsiteTopbar.vue';
 
 const githubState = vi.hoisted(() => ({
   stars: { value: 42 },
@@ -11,8 +12,6 @@ const githubState = vi.hoisted(() => ({
 vi.mock('@website/composables/useGitHubRepository', () => ({
   useGitHubRepository: () => githubState,
 }));
-
-import WebsiteTopbar from './WebsiteTopbar.vue';
 
 const ClientOnlyStub = {
   template: '<span class="client-only"><slot /><slot name="placeholder" /></span>',

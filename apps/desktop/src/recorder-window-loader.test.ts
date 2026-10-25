@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import { loadRecorderWindow } from './recorder-window-loader';
 vi.mock('./overlay-main', () => ({ role: 'overlay' }));
 vi.mock('./main', () => ({ role: 'hud' }));
-import { loadRecorderWindow } from './recorder-window-loader';
 
 describe('recorder window module selection', () => {
   it.each([

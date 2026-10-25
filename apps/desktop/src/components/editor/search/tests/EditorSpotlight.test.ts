@@ -1,5 +1,3 @@
-const capture = vi.hoisted(() => ({ openHudSettings: vi.fn(async () => true) }));
-vi.mock('~/api/capture', () => ({ capture }));
 import { mount, enableAutoUnmount, flushPromises } from '@vue/test-utils';
 import { defineComponent, h, nextTick, ref } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -9,6 +7,8 @@ import EditorSearchButton from '../EditorSearchButton.vue';
 import EditorHistoryControls from '../../EditorHistoryControls.vue';
 import TimelineAddMenu from '../../timeline/TimelineAddMenu.vue';
 import type { EditorSearchContext } from '../editor-search-types';
+const capture = vi.hoisted(() => ({ openHudSettings: vi.fn(async () => true) }));
+vi.mock('~/api/capture', () => ({ capture }));
 enableAutoUnmount(afterEach);
 afterEach(() => {
   vi.unstubAllGlobals();

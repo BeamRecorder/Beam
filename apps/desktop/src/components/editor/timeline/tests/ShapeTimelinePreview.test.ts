@@ -6,6 +6,7 @@ import { createElementText } from '@beam/engine/shared/element-text';
 import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { vectorForShape } from '@beam/engine/shared/shape-vector-presets';
 import { projectFontSource } from '~/api/project-font-source';
+import ShapeTimelinePreview from '../ShapeTimelinePreview.vue';
 
 const dependencies = vi.hoisted(() => ({
   loadElementFonts: vi.fn(),
@@ -18,7 +19,6 @@ vi.mock('../shape-timeline-preview', () => ({
   renderShapeTimelinePreview: dependencies.renderShapeTimelinePreview,
 }));
 
-import ShapeTimelinePreview from '../ShapeTimelinePreview.vue';
 enableAutoUnmount(afterEach);
 
 const shapeClip = (overrides: Partial<ShapeClip> = {}): ShapeClip => ({

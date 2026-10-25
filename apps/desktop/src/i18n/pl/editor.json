@@ -430,6 +430,7 @@
     "savingProject": "Zapisywanie projektu"
   },
   "ZoomPanel": {
+    "applyToTrackHint": "Ujednolić wygląd odblokowanych zbliżeń, zachowując ich cele i czas.",
     "cameraFollow": "Śledzenie kamery",
     "cameraFollowDesc": "Przewiduje nagrane ruchy kursora, płynnie i stopniowo przesuwając kamerę.",
     "advanced": "Zaawansowane",

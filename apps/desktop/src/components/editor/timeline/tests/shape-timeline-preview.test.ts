@@ -2,13 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import { createElementText } from '@beam/engine/shared/element-text';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
+import { renderShapeTimelinePreview } from '../shape-timeline-preview';
 
 const renderers = vi.hoisted(() => ({ drawShapeClip: vi.fn() }));
 vi.mock('@beam/runtime/composition/shape/render-shape-clip', () => ({
   drawShapeClip: renderers.drawShapeClip,
 }));
-
-import { renderShapeTimelinePreview } from '../shape-timeline-preview';
 
 const shapeClip = (overrides: Partial<ShapeClip> = {}): ShapeClip => ({
   id: 'shape-1',

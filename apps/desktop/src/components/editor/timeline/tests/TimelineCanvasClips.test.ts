@@ -140,7 +140,7 @@ describe('always-canvas timeline group', () => {
     expect(wrapper.getComponent(Lane).props('items')[0]).toMatchObject({
       clip: displayed,
       label: 'Custom label',
-      labelInset: 15,
+      labelInset: 36,
     });
     await wrapper.setProps({ selectedIds: new Set(['a']), deferMedia: true });
     expect(wrapper.get('[data-timeline-clip-id="a"]').element).toBe(button);
@@ -191,7 +191,7 @@ describe('always-canvas timeline group', () => {
     const wrapper = create({ clips: [effect], linkedNames: () => ['Screen'] });
     expect(wrapper.getComponent(Lane).props('items')[0]).toMatchObject({
       clip: effect,
-      labelInset: 45,
+      labelInset: 51,
     });
     expect(wrapper.getComponent(TimelineClipStub).props('linkedClipNames')).toEqual(['Screen']);
   });
@@ -244,7 +244,7 @@ describe('always-canvas timeline group', () => {
     expect(wrapper.getComponent(Lane).props('items')[0]).toMatchObject({
       clip: audio,
       label: '',
-      labelInset: 30,
+      labelInset: 36,
     });
     expect(wrapper.getComponent(TimelineClipStub).props('clip').name).toBe('System audio');
     expect(wrapper.getComponent(TimelineClipStub).props('linkedClipNames')).toEqual(['Screen']);

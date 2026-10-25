@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import TeleprompterWindowApp from '../teleprompter/TeleprompterWindowApp.vue';
 
 const { capture } = vi.hoisted(() => ({
   capture: {
@@ -12,8 +13,6 @@ const { capture } = vi.hoisted(() => ({
   },
 }));
 vi.mock('~/api/capture', () => ({ capture }));
-
-import TeleprompterWindowApp from '../teleprompter/TeleprompterWindowApp.vue';
 
 const Teleprompter = {
   template: '<div class="teleprompter-stub">Teleprompter</div>',

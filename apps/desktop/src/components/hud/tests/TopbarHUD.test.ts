@@ -1,14 +1,14 @@
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import TopbarHUD from '../TopbarHUD.vue';
+import { defineComponent, ref } from 'vue';
+import Popover from '~/ui/popover/Popover.vue';
 vi.mock('../../../api/capture', () => ({
   capture: {
     getUpdateState: vi.fn().mockResolvedValue({ status: 'unsupported', currentVersion: '0.1.0' }),
     onUpdateState: vi.fn().mockReturnValue(() => undefined),
   },
 }));
-import TopbarHUD from '../TopbarHUD.vue';
-import { defineComponent, ref } from 'vue';
-import Popover from '~/ui/popover/Popover.vue';
 enableAutoUnmount(afterEach);
 
 describe('TopbarHUD', () => {

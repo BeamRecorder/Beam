@@ -1,6 +1,7 @@
 import { TextEncoder as NodeTextEncoder } from 'node:util';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import type * as DocsScreenshotModule from './DocsScreenshot.vue';
 
 class JsdomTextEncoder {
   encode(input = ''): Uint8Array {
@@ -13,7 +14,7 @@ vi.mock('vitepress', () => ({
   withBase: (path: string) => `/docs${path}`,
 }));
 
-let DocsScreenshot: typeof import('./DocsScreenshot.vue').default;
+let DocsScreenshot: typeof DocsScreenshotModule.default;
 
 const mountScreenshot = (props: { path: string; alt: string; caption?: string; aspectRatio?: string }) =>
   mount(DocsScreenshot, { props });
