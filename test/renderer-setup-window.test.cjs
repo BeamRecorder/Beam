@@ -171,6 +171,32 @@ test('loads the HUD from its session port and trusts only that renderer origin',
   assert.equal(setup.isTrustedRenderer('http://localhost:6508/html/untrusted.html'), false);
 });
 
+test('creates the shared HUD/Recorder with a transparent native backing before its first paint', () => {
+  const fixture = createFixture();
+  assert.equal(fixture.window.options.transparent, true);
+  assert.equal(fixture.window.options.backgroundColor, '#00000000');
+  assert.equal(fixture.calls.some(([name]) => name === 'showInactive'), false);
+  assert.equal(fixture.calls.some(([name]) => name === 'setResizable'), false);
+});
+
+test('starts transparent overlays non-resizable instead of correcting them after ready-to-show', () => {
+  const fixture = createFixture();
+  assert.equal(fixture.window.options.resizable, false);
+  assert.equal(fixture.window.options.maximizable, false);
+  fixture.window.emit('ready-to-show');
+  assert.ok(fixture.calls.filter(([name]) => name === 'setResizable').every((call) => call[1] === false));
+  assert.ok(fixture.calls.filter(([name]) => name === 'setMaximizable').every((call) => call[1] === false));
+});
+
+test('excludes the Windows native frame and shadow from the transparent recorder surface', () => {
+  const fixture = createFixture();
+  assert.equal(fixture.window.options.frame, false);
+  assert.equal(fixture.window.options.thickFrame, false);
+  assert.equal(fixture.window.options.hasShadow, false);
+  assert.equal(fixture.window.options.width, 672);
+  assert.equal(fixture.window.options.height, 268);
+});
+
 test('packaged renderers cannot obtain media permissions from a development origin', () => {
   const setup = createRendererSetup({
     app: { isPackaged: true },

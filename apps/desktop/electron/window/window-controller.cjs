@@ -199,6 +199,7 @@ class WindowController {
 
   setMode(mode, { restoreMaximized = true } = {}) {
     if (!['hud', 'recorder', 'preparation'].includes(mode)) throw new Error(`Mode de fenêtre invalide: ${mode}`);
+    const changesPreparationMaterial = (this.mode === 'preparation') !== (mode === 'preparation');
     if (this.mode === 'recorder' && mode !== 'recorder') {
       this.rememberRecorderPosition();
       this.flushRecorderPosition();
@@ -209,7 +210,8 @@ class WindowController {
     }
     if (this.mode === 'preparation' && mode !== 'preparation') this.window.emit('capture-preparation-ended');
     this.mode = mode;
-    applyPreparationMaterial(this.window, this.platform, mode === 'preparation');
+    // Do not reset the Windows native backdrop during ordinary HUD/Recorder switches.
+    if (changesPreparationMaterial) applyPreparationMaterial(this.window, this.platform, mode === 'preparation');
     this.hudDragging = false;
     if (mode === 'hud') this.hudSize = this.readHudSize();
     this.applySizeConstraints();
