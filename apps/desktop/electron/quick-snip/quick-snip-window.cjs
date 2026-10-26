@@ -97,6 +97,7 @@ function createQuickSnipWindow({
       frame: false,
       transparent: true,
       backgroundColor: '#00000000',
+      thickFrame: false,
       resizable: false,
       maximizable: false,
       minimizable: false,
@@ -118,8 +119,8 @@ function createQuickSnipWindow({
     });
     window.setContentProtection(true);
     window.on('system-context-menu', (event) => event.preventDefault());
-    // Native acrylic paints the entire rectangular HWND, including the pill's transparent margins.
-    if (platform === 'win32') window.setBackgroundMaterial('none');
+    // Even setBackgroundMaterial('none') resets Windows DWM margins and breaks
+    // the transparent surround. Keep the native surface created above untouched.
     window.setAlwaysOnTop(true, 'screen-saver');
     const target = window;
     positionTracker = createCommittedWindowPosition({

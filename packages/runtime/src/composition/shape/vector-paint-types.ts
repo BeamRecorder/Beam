@@ -4,6 +4,7 @@ export interface VectorPaintPaths {
   vector: ShapeVector;
   closed: Path2D;
   open: Path2D;
+  borderOpen: Path2D;
   filledMarkers: Path2D;
   openMarkers: Path2D;
 }

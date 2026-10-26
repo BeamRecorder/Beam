@@ -4,7 +4,7 @@ import type { ColorFill } from '@beam/engine/shared/color-fill-types';
 export interface ElementText {
   content: string;
   style: CaptionStyle;
-  /** Percentage of the element's shorter side. */
+  /** Percentage of the text body's shorter side. */
   padding: number;
   verticalAlign: 'top' | 'center' | 'bottom';
 }

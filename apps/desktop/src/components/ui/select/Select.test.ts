@@ -363,17 +363,18 @@ describe('compact and keyboard menus', () => {
   );
 
   it.each([
-    ['small', 22, '0.75rem'],
-    ['small', 30, '0.7rem'],
-    ['medium', 22, '0.82rem'],
-    ['medium', 30, '0.75rem'],
-    ['large', 22, '0.85rem'],
-    ['large', 30, '0.75rem'],
-  ] as const)('keeps long labels readable in the %s trigger', (size, length, fontSize) => {
+    ['small', 22],
+    ['small', 30],
+    ['medium', 22],
+    ['medium', 30],
+    ['large', 22],
+    ['large', 30],
+  ] as const)('preserves the configured font size and scrollable text in the %s trigger', (size, length) => {
     const wrapper = mount(Select, {
       props: { modelValue: 'device', options: [{ value: 'device', label: 'x'.repeat(length) }], size },
     });
-    expect(wrapper.get<HTMLElement>('.select-label').element.style.fontSize).toBe(fontSize);
+    expect(wrapper.get<HTMLElement>('.select-label').element.style.fontSize).toBe('');
+    expect(wrapper.get('.select-label .marquee-label').text()).toBe('x'.repeat(length));
   });
   it('renders compact icon slots, accessible names and explicit empty device lists', async () => {
     const wrapper = mount(Select, {

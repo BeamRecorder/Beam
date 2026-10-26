@@ -1,7 +1,7 @@
 const PREPARATION_SIZE = { width: 800, height: 88 };
 function applyPreparationMaterial(window, platform, active) {
   if (platform === 'darwin') window.setVibrancy?.(active ? 'under-window' : null);
-  if (platform === 'win32') window.setBackgroundMaterial?.(active ? 'acrylic' : 'none');
+  // Windows must retain its original transparent surface across mode changes.
 }
 function fitPreparationBar(controller, screen, contentWidth, beforeResize = () => {}) {
   if (!Number.isFinite(contentWidth) || contentWidth <= 0 || contentWidth > 2000)

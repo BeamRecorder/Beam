@@ -13,6 +13,8 @@ import { DEFAULT_OUTPUT_CANVAS } from '@beam/engine/layout/output-canvas';
 import { createDefaultCursorPresentation } from '@beam/engine/capture/cursor-presentation';
 import type { EditorWorkspaceContext } from '../workspace/workspace-types';
 import type { SpeechBubbleBrowserHost } from './speech-bubble-browser-types';
+import { ELEMENT_EDITOR } from '../elements/useElementEditor';
+import type { ElementEditorContext } from '../elements/element-editor-types';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(toRaw(value))) as T;
 
@@ -124,6 +126,7 @@ export async function mountSpeechBubbleEditor(effects: boolean): Promise<SpeechB
     platform: 'linux',
     getPreferences: async () => clone(preferences),
     onPreferencesChanged: subscribe,
+    onSettingsEditorAction: subscribe,
     updatePreferences: async () => clone(preferences),
     listBackgroundLibrary: async () => [],
     onBackgroundLibraryChanged: subscribe,
@@ -168,6 +171,7 @@ export async function mountSpeechBubbleEditor(effects: boolean): Promise<SpeechB
   document.body.classList.add('editor-window-root');
   document.body.append(container);
   let workspace: EditorWorkspaceContext;
+  let elementEditor: ElementEditorContext;
   let app: App;
   const mount = () => {
     app = createApp({
@@ -186,6 +190,9 @@ export async function mountSpeechBubbleEditor(effects: boolean): Promise<SpeechB
             const instance = component as ComponentPublicInstance;
             workspace = (instance.$ as unknown as { setupState: { workspace: EditorWorkspaceContext } }).setupState
               .workspace;
+            elementEditor = (instance.$ as unknown as { provides: Record<symbol, unknown> }).provides[
+              ELEMENT_EDITOR as symbol
+            ] as ElementEditorContext;
           },
         }),
     })
@@ -219,6 +226,10 @@ export async function mountSpeechBubbleEditor(effects: boolean): Promise<SpeechB
     state,
     async select() {
       workspace.selectEditorClip('bubble');
+      await nextTick();
+    },
+    async editText() {
+      if (!elementEditor.beginText('bubble')) throw new Error('The workspace refused text editing.');
       await nextTick();
     },
     async clear() {

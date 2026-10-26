@@ -137,6 +137,8 @@ test('one transparent centered chooser remains owned above the HUD', async () =>
   assert.equal(chooser.options.transparent, true);
   assert.equal(chooser.options.frame, false);
   assert.equal(chooser.options.backgroundColor, '#00000000');
+  assert.equal(chooser.options.thickFrame, false);
+  assert.equal(chooser.options.backgroundMaterial, undefined);
   assert.equal(chooser.options.alwaysOnTop, true);
   assert.ok(
     chooser.calls.some(([name, enabled, level]) => name === 'alwaysOnTop' && enabled && level === 'screen-saver'),

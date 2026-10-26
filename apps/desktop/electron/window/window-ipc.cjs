@@ -77,7 +77,6 @@ function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {})
     const targetHeight = Math.round(height);
     if (Math.abs(currentHeight - targetHeight) < 5) return win.setSize(targetWidth, targetHeight);
     let step = 0;
-    win.setResizable(true);
     resizeTimer = setInterval(() => {
       step += 1;
       const ease = 1 - Math.pow(1 - step / 12, 3);

@@ -13,11 +13,20 @@ for (const platform of ['linux', 'win32', 'darwin'])
     const f = createFixture(display, platform);
     f.crop.show({ mode: 'studio', devices: {} }, display);
     const window = f.windows[0];
+    assert.equal(window.options.frame, false);
     assert.equal(window.options.transparent, true);
+    assert.equal(window.options.backgroundColor, '#00000000');
+    assert.equal(window.options.thickFrame, false);
+    assert.equal(window.options.resizable, false);
+    assert.equal(window.options.hasShadow, false);
     assert.equal(window.options.width, 616);
     assert.equal(window.options.height, 76);
     assert.equal(window.options.vibrancy, platform === 'darwin' ? 'under-window' : undefined);
-    assert.equal(window.backgroundMaterial, platform === 'win32' ? 'none' : undefined);
+    assert.equal(window.options.backgroundMaterial, undefined);
+    assert.deepEqual(
+      f.calls.filter((call) => call[0] === 'backgroundMaterial'),
+      [],
+    );
     f.crop.destroy();
   });
 
@@ -96,7 +105,7 @@ function createFixture(
     }
 
     setBackgroundMaterial(value) {
-      this.backgroundMaterial = value;
+      calls.push(['backgroundMaterial', value]);
     }
     setContentProtection(value) {
       calls.push(['contentProtection', value]);
@@ -183,6 +192,77 @@ function linuxWindowConfiguration() {
     region: null,
   };
 }
+
+test('Windows recording and source cancellation preserve the original transparent surface', () => {
+  const f = createFixture(display, 'win32');
+  f.crop.show(configuration(), display);
+  const window = f.windows[0];
+  window.emit('ready-to-show');
+  f.crop.rendererReady(window.webContents);
+  const selectionBounds = window.getBounds();
+
+  f.crop.command('start');
+  f.crop.setRecording();
+  assert.equal(window.getBounds().width, 352);
+  assert.equal(window.getBounds().height, 88);
+  assert.equal(f.crop.showExisting(), true);
+  assert.deepEqual(window.getBounds(), selectionBounds);
+  assert.equal(f.windows.length, 1);
+  assert.deepEqual(
+    f.calls.filter((call) => call[0] === 'backgroundMaterial'),
+    [],
+  );
+  f.crop.destroy();
+});
+
+test('Windows screenshot capture and toolbar reopening do not reset native transparency', () => {
+  const f = createFixture(display, 'win32');
+  const screenshot = { ...configuration(), mode: 'screenshot' };
+  f.crop.show(screenshot, display);
+  const window = f.windows[0];
+  window.emit('ready-to-show');
+  f.crop.rendererReady(window.webContents);
+  const selectionBounds = window.getBounds();
+
+  f.crop.command('start');
+  assert.deepEqual(window.getBounds(), selectionBounds);
+  f.crop.hide();
+  assert.equal(window.visible, false);
+  f.crop.show(screenshot, display);
+  assert.equal(window.visible, true);
+  assert.equal(f.windows.length, 1);
+  assert.deepEqual(
+    f.calls.filter((call) => call[0] === 'backgroundMaterial'),
+    [],
+  );
+  f.crop.destroy();
+});
+
+test('Windows recreates a closed toolbar with a transparent surface before its own readiness', () => {
+  const f = createFixture(display, 'win32');
+  f.crop.show(configuration(), display);
+  const previous = f.windows[0];
+  previous.emit('ready-to-show');
+  f.crop.rendererReady(previous.webContents);
+  previous.destroy();
+
+  f.crop.show(configuration(), display);
+  const current = f.windows[1];
+  assert.equal(current.options.transparent, true);
+  assert.equal(current.options.backgroundColor, '#00000000');
+  assert.equal(current.options.thickFrame, false);
+  assert.equal(current.visible, false);
+  assert.equal(f.crop.rendererReady(previous.webContents), false);
+  current.emit('ready-to-show');
+  assert.equal(current.visible, false);
+  assert.equal(f.crop.rendererReady(current.webContents), true);
+  assert.equal(current.visible, true);
+  assert.deepEqual(
+    f.calls.filter((call) => call[0] === 'backgroundMaterial'),
+    [],
+  );
+  f.crop.destroy();
+});
 
 test('switches capture to a bottom-centered horizontal recorder before starting, without moving it on later reports', () => {
   const f = createFixture();

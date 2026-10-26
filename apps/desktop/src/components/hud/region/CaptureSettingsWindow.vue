@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useResizeObserver } from '@vueuse/core';
+import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
 import type { QuickSnipSettingsContent } from '~/api/types/quick-snip-settings';
 defineProps<{ content: QuickSnipSettingsContent; label: string; preview?: boolean }>();
 const emit = defineEmits<{ fit: [height: number] }>();
 const panel = ref<HTMLElement | null>(null);
+const body = ref<HTMLElement | null>(null);
 const fit = () => {
   const element = panel.value;
-  if (element?.offsetHeight) emit('fit', Math.ceil(element.scrollHeight + element.offsetHeight - element.clientHeight));
+  if (element?.offsetHeight && body.value)
+    emit('fit', Math.ceil(body.value.scrollHeight + element.offsetHeight - element.clientHeight));
 };
-useResizeObserver(panel, fit);
+useResizeObserver([panel, body], fit);
 defineExpose({ fit });
 </script>
 <template>
@@ -26,7 +29,9 @@ defineExpose({ fit });
       :aria-label="label"
       :role="content.device ? undefined : 'dialog'"
     >
-      <slot />
+      <ScrollShadow class="settings-scroll" stable-scrollbar>
+        <div ref="body" class="settings-content"><slot /></div>
+      </ScrollShadow>
     </main>
   </div>
 </template>
@@ -79,6 +84,8 @@ defineExpose({ fit });
   transform: rotate(225deg);
 }
 .quick-settings-window {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   background: var(--color-bg-element);
   color: var(--text-primary);
@@ -86,12 +93,19 @@ defineExpose({ fit });
   border-radius: var(--radius-md);
   box-sizing: border-box;
   max-height: calc(100vh - 26px);
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   box-shadow: var(--shadow-sm);
 }
 .preview .quick-settings-window {
   max-height: 100vh;
+}
+.settings-scroll {
+  flex: 1 1 auto;
+  border-radius: inherit;
+}
+.settings-content {
+  flex-shrink: 0;
+  min-width: 0;
 }
 .quick-settings-window.floating-surface {
   position: relative;

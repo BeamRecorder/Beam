@@ -4,6 +4,7 @@ import { interpolateOrbitSettings } from './orbit-settings';
 import { cinematicZoomConnection } from './cinematic-zoom-connection';
 import { prepareSplitZoomContinuity } from './zoom-split-continuity';
 import { clampFocusToScale } from './zoom-focus';
+import { boundedZoomStrength } from './zoom-timing';
 import {
   DEFAULT_ZOOM_TILT_HORIZONTAL,
   DEFAULT_ZOOM_TILT_VERTICAL,
@@ -36,6 +37,7 @@ const horizontalTiltFor = (zoom: ZoomElement) =>
 const verticalTiltFor = (zoom: ZoomElement) => normalizeZoomTiltAxis(zoom.tiltVertical, DEFAULT_ZOOM_TILT_VERTICAL);
 
 export function regionStrength(region: ZoomElement, timeMs: number): number {
+  if (region.timing) return boundedZoomStrength(region, timeMs);
   if (region.transition === 'cinematic') return cinematicZoomStrength(region, timeMs);
   const adjusted = timeMs - LEAD_MS;
   const inStart = region.startMs + IN_OVERLAP_MS - ZOOM_IN_MS;
@@ -85,6 +87,8 @@ function zoomAtSortedTime(
     const next = elements[index + 1];
     return (
       next &&
+      !current.timing &&
+      !next.timing &&
       !(current.transition === 'cinematic' && next.transition === 'cinematic') &&
       next.startMs - current.endMs <= CONNECTED_GAP_MS &&
       timeMs >= current.endMs + LEAD_MS &&
@@ -175,6 +179,8 @@ function zoomAtSortedTime(
   let scale = currentScale;
   if (
     next &&
+    !current.element.timing &&
+    !next.timing &&
     !(current.element.transition === 'cinematic' && next.transition === 'cinematic') &&
     timeMs >= current.element.endMs + LEAD_MS &&
     timeMs <= current.element.endMs + LEAD_MS + CONNECTED_PAN_MS
@@ -214,7 +220,7 @@ function zoomAtSortedTime(
   return {
     elementId: current.element.id,
     scale:
-      current.element.transition === 'cinematic'
+      current.element.transition === 'cinematic' || current.element.timing
         ? interpolateZoomScale(1, scale, current.strength)
         : 1 + (scale - 1) * current.strength,
     focus,
@@ -228,6 +234,7 @@ function zoomAtSortedTime(
       ? { orbit: orbitFor(current.element) * current.strength, orbitSettings: current.element.orbitSettings }
       : {}),
     ...(current.element.transition === 'cinematic' ? { cinematic: true } : {}),
+    ...(current.element.timing ? { cinematic: true, bounded: true } : {}),
   };
 }
 

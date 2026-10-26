@@ -225,6 +225,10 @@ test('prewarms hidden and waits for both readiness signals plus an update before
     const window = fixture.windows[0];
     const statusMessages = () => fixture.calls.filter((call) => call[0] === 'send' && call[1] === 'quick-snip:status');
 
+    assert.equal(window.options.transparent, true);
+    assert.equal(window.options.backgroundColor, '#00000000');
+    assert.equal(window.options.thickFrame, false);
+    assert.equal(window.options.backgroundMaterial, undefined);
     assert.equal(window.visible, false);
     assert.equal(fixture.timers.size, 0);
     assert.equal(statusMessages().length, 0);

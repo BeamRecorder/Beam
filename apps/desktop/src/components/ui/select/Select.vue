@@ -4,6 +4,7 @@ import { useVirtualList } from '@vueuse/core';
 import Popover from '../popover/Popover.vue';
 import Skeleton from '../skeleton/Skeleton.vue';
 import Input from '../input/Input.vue';
+import MarqueeText from '../text/MarqueeText.vue';
 import { ChevronDown, Check, Eye, Monitor, PanelsTopLeft, Search } from '@lucide/vue';
 import { createFuzzySearchEngine } from './fuzzy-search';
 import type { SelectOption } from './select-types';
@@ -194,23 +195,6 @@ const normalizedSize = computed(() => {
   return props.size ?? 'lg';
 });
 
-const labelStyle = computed(() => {
-  if (normalizedSize.value === 'compact') return {};
-  const text = selectedOption.value ? selectedOption.value.label : props.placeholder;
-  const len = text.length;
-  if (normalizedSize.value === 'sm') {
-    if (len > 28) return { fontSize: '0.7rem' };
-    if (len > 20) return { fontSize: '0.75rem' };
-  } else if (normalizedSize.value === 'md') {
-    if (len > 28) return { fontSize: '0.75rem' };
-    if (len > 20) return { fontSize: '0.82rem' };
-  } else {
-    if (len > 28) return { fontSize: '0.75rem' };
-    if (len > 20) return { fontSize: '0.85rem' };
-  }
-  return {};
-});
-
 const marqueeRuns = new WeakMap<HTMLElement, { frame: number; timer: number }>();
 
 const stopMarqueeRun = (option: HTMLElement) => {
@@ -337,9 +321,14 @@ onBeforeUnmount(() => {
             </div>
           </slot>
 
-          <span class="select-label" :class="{ 'is-placeholder': !selectedOption }" :style="labelStyle">
+          <MarqueeText
+            class="select-label"
+            :class="{ 'is-placeholder': !selectedOption }"
+            :trigger="selectTrigger"
+            :disabled="disabled"
+          >
             {{ selectedOption ? selectedOption.label : placeholder }}
-          </span>
+          </MarqueeText>
         </div>
         <ChevronDown class="select-chevron" :class="{ rotate: isOpen }" />
       </button>

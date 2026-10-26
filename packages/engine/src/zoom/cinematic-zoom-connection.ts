@@ -56,6 +56,7 @@ export function cinematicZoomConnection(
     mode: current.mode === 'auto' || next.mode === 'auto' ? 'auto' : 'manual',
     tracksCursor: false,
     cinematic: true,
+    ...(current.timing && next.timing ? { bounded: true } : {}),
     connection: { from: current, to: next, startMs: start, endMs: end, progress },
     tilt: mix(tiltFor(current, '3d'), tiltFor(next, '3d')),
     tiltHorizontal: mix(

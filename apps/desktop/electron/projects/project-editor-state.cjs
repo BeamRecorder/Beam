@@ -6,6 +6,7 @@ const {
 const { validateGlassHighlight } = require('../../../../packages/engine/src/zoom/glass-highlight-schema.js');
 const { validateOrbitSettings } = require('../../../../packages/engine/src/zoom/orbit-schema.js');
 const { isTransitionPreset } = require('../../../../packages/engine/src/shared/transition-preset-schema.js');
+const { validateZoomTiming } = require('../../../../packages/engine/src/zoom/zoom-schema.js');
 const CURSOR_TYPES = new Set([
   'automatic',
   'default',
@@ -164,6 +165,7 @@ const zoomState = (value) => {
       throw new Error('Propriétés de zoom invalides');
     ids.add(element.id);
     validateGlassHighlight(element);
+    validateZoomTiming(element.timing);
     if (element.orbitSettings !== undefined) validateOrbitSettings(element.orbitSettings);
     const tiltIntensity = clamp(element.tiltIntensity === undefined ? 0.6 : element.tiltIntensity, 0, 1);
     const inferredTiltPreset =
@@ -193,6 +195,9 @@ const zoomState = (value) => {
         : { glass: { ...element.glass, path: element.glass.path.map((point) => ({ x: point.x, y: point.y })) } }),
       projection: element.projection === '3d' || element.projection === 'orbit' ? element.projection : '2d',
       ...(element.transition ? { transition: element.transition } : {}),
+      ...(element.timing
+        ? { timing: { version: 1, entryMs: element.timing.entryMs, exitMs: element.timing.exitMs } }
+        : {}),
       ...(element.orbitSettings === undefined ? {} : { orbitSettings: { ...element.orbitSettings } }),
       tiltIntensity,
       tiltHorizontal: clamp(element.tiltHorizontal === undefined ? 0.65 : element.tiltHorizontal, -1, 1),

@@ -232,6 +232,8 @@ describe('useProjectZoom', () => {
           startMs: 0,
           endMs: 1_000,
           mode: 'manual',
+          transition: 'cinematic',
+          timing: { version: 1, entryMs: expect.any(Number), exitMs: expect.any(Number) },
         }),
       ]),
     );
@@ -421,8 +423,8 @@ describe('useProjectZoom', () => {
       expect.objectContaining({
         id: 'auto:session:6000:screen',
         mode: 'auto',
-        startMs: 5_500,
-        endMs: 6_500,
+        startMs: 4_576,
+        endMs: 7_424,
       }),
     );
   });
@@ -726,7 +728,7 @@ describe('useProjectZoom', () => {
       state.ensureAutomaticZooms();
       expect(state.zoomElements.value).toContainEqual(authored);
       expect(state.zoomElements.value.some((zoom) => zoom.id === 'stale')).toBe(false);
-      expect(state.zoomElements.value).toContainEqual(expect.objectContaining({ startMs: 5500, endMs: 6500 }));
+      expect(state.zoomElements.value).toContainEqual(expect.objectContaining({ startMs: 4576, endMs: 7424 }));
       expect(state.generatedSessions.value).toContainEqual(
         expect.objectContaining({ algorithmVersion: ZOOM_ALGORITHM_VERSION }),
       );

@@ -23,6 +23,7 @@ function createSourcePickerSurface({
     frame: false,
     transparent: true,
     backgroundColor: '#00000000',
+    thickFrame: false,
     hasShadow: false,
     resizable: false,
     movable: false,

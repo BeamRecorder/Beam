@@ -206,6 +206,7 @@ it('reports the full menu content height including its border to the native wind
     clientHeight: { value: 178 },
     scrollHeight: { value: 312 },
   });
+  Object.defineProperty(wrapper.get('.settings-content').element, 'scrollHeight', { value: 312 });
   bridge.contentListener?.({ side: 'above', anchorX: 240, device: null, visible: true });
   await flushPromises();
   expect(bridge.capture.fitQuickSnipSettings).toHaveBeenLastCalledWith(314);

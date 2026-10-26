@@ -824,7 +824,7 @@ for (const platform of ['linux', 'darwin', 'win32'])
   });
 
 for (const platform of ['darwin', 'win32'])
-  test(`preparation applies and removes its native backdrop exactly once on ${platform}`, () => {
+  test(`preparation changes only supported native material across mode switches on ${platform}`, () => {
     const win = fakeWindow();
     win.setVibrancy = (value) => win.calls.push(['vibrancy', value]);
     win.setBackgroundMaterial = (value) => win.calls.push(['material', value]);
@@ -843,10 +843,7 @@ for (const platform of ['darwin', 'win32'])
     assert.deepEqual(
       win.calls.filter(([name]) => ['vibrancy', 'material'].includes(name)),
       platform === 'win32'
-        ? [
-            ['material', 'acrylic'],
-            ['material', 'none'],
-          ]
+        ? []
         : [
             ['vibrancy', 'under-window'],
             ['vibrancy', null],
@@ -875,24 +872,19 @@ for (const platform of ['linux', 'darwin', 'win32'])
     assert.ok(win.calls.some((call) => call[0] === 'contentProtection' && call[1] === true));
     assert.deepEqual(win.calls.filter((call) => call[0] === 'mouse').at(-1), ['mouse', false]);
     assert.equal(win.calls.filter((call) => call[0] === 'top').at(-1)[1], true);
-    if (platform === 'linux')
+    if (platform !== 'darwin')
       assert.equal(
         win.calls.some((call) => ['vibrancy', 'material'].includes(call[0])),
         false,
       );
-    else
-      assert.ok(
-        win.calls.some(
-          (call) =>
-            call[0] === (platform === 'darwin' ? 'vibrancy' : 'material') &&
-            call[1] === (platform === 'darwin' ? 'under-window' : 'acrylic'),
-        ),
-      );
+    else assert.ok(win.calls.some((call) => call[0] === 'vibrancy' && call[1] === 'under-window'));
     controller.showHud();
     assert.equal(controller.mode, 'hud');
-    if (platform !== 'linux')
+    if (platform === 'darwin')
+      assert.deepEqual(win.calls.filter((call) => call[0] === 'vibrancy').at(-1), ['vibrancy', null]);
+    else
       assert.deepEqual(
-        win.calls.filter((call) => call[0] === (platform === 'darwin' ? 'vibrancy' : 'material')).at(-1),
-        platform === 'darwin' ? ['vibrancy', null] : ['material', 'none'],
+        win.calls.filter((call) => call[0] === 'material'),
+        [],
       );
   });

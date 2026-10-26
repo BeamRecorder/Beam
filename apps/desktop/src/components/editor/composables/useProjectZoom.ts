@@ -26,6 +26,7 @@ import {
   type ZoomMotionBlurSettings,
 } from '@beam/engine/zoom/zoom-types';
 import { ZOOM_ALGORITHM_VERSION } from '@beam/engine/zoom/zoom-suggestions';
+import { createZoomTiming } from '@beam/engine/zoom/zoom-timing';
 import { pasteZoomAt } from '@beam/engine/zoom/zoom-paste';
 import { fitZoomPlacement } from '@beam/engine/zoom/zoom-placement';
 import type { EditorPreferenceDefaults } from './editor-default-types';
@@ -115,7 +116,8 @@ export function useProjectZoom(options: {
       depth: defaults?.depth ?? 2,
       mode: defaults?.mode ?? 'manual',
       projection: defaults?.projection ?? DEFAULT_ZOOM_PROJECTION,
-      ...(defaults?.projection === 'orbit' ? { transition: 'cinematic' as const } : {}),
+      transition: 'cinematic',
+      timing: createZoomTiming(defaults?.depth ?? 2),
       ...(defaults?.orbitSettings ? { orbitSettings: { ...defaults.orbitSettings } } : {}),
       tiltIntensity: defaults?.tiltIntensity ?? DEFAULT_ZOOM_TILT_INTENSITY,
       tiltHorizontal: defaults?.tiltHorizontal ?? DEFAULT_ZOOM_TILT_HORIZONTAL,

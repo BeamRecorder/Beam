@@ -24,7 +24,7 @@ export function createAutomaticFollowGate(
     const ramp = zoom.transition === 'cinematic' ? cinematicZoomDurationMs(ZOOM_DEPTH_SCALES[zoom.depth]) : ZOOM_IN_MS;
     // A previous hold owns its presses even when the next entry ramp overlaps it.
     // Flooring includes a press at the exact clip opening after rounded generation.
-    const entry = Math.max(0, Math.floor(zoom.startMs - ramp), ordered[index - 1]?.endMs ?? 0);
+    const entry = Math.max(0, Math.floor(zoom.startMs - (zoom.timing ? 0 : ramp)), ordered[index - 1]?.endMs ?? 0);
     const from = inputs.mapTelemetryTime?.(entry) ?? entry;
     const until = inputs.mapTelemetryTime?.(zoom.endMs) ?? zoom.endMs;
     let low = 0,

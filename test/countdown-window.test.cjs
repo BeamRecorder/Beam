@@ -202,6 +202,11 @@ function loadCountdownWindow({
 for (const platform of ['win32', 'darwin', 'linux']) {
   test(`${platform}: hidden countdown never forwards mouse movement to its renderer`, () => {
     const fixture = loadCountdownWindow({ platform });
+    const options = fixture.calls.find(([name]) => name === 'constructor')[1];
+    assert.equal(options.transparent, true);
+    assert.equal(options.backgroundColor, '#00000000');
+    assert.equal(options.thickFrame, false);
+    assert.equal(options.backgroundMaterial, undefined);
     const mouse = () => fixture.calls.filter(([name]) => name === 'mouse');
     assert.deepEqual(mouse(), [['mouse', true]]);
     fixture.overlay.show(3);

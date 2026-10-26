@@ -17,6 +17,28 @@ const fixture = (): EditorStateSnapshot => ({
 });
 
 describe('editor history snapshot ownership', () => {
+  it('undoes and redoes visible zoom bounds with their independent transition timing', async () => {
+    const snapshots = createEditorHistorySnapshots();
+    let live = fixture();
+    live.zoomElements[0]!.timing = { version: 1, entryMs: 823, exitMs: 823 };
+    const history = createSnapshotHistory<EditorStateSnapshot>({
+      immutable: true,
+      onRestoreSnapshot: (snapshot) => {
+        live = snapshots.restore(snapshot);
+      },
+    });
+    history.record(snapshots.capture(live));
+    const original = { ...live.zoomElements[0]!, timing: { ...live.zoomElements[0]!.timing } };
+    live.zoomElements[0]!.endMs += 1000;
+    live.zoomElements[0]!.timing!.exitMs = 400;
+    history.record(snapshots.capture(live));
+    await history.undo();
+    expect(live.zoomElements[0]).toEqual(original);
+    await history.redo();
+    expect(live.zoomElements[0]!.endMs).toBe(original.endMs + 1000);
+    expect(live.zoomElements[0]!.timing!.exitMs).toBe(400);
+    expect(original.timing.exitMs).toBe(823);
+  });
   it('owns all scope modes and restores editable copies without modifying document settings', () => {
     const snapshots = createEditorHistorySnapshots(),
       input = fixture();

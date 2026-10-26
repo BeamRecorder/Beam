@@ -15,6 +15,7 @@ export interface SpeechBubbleBrowserState {
 export interface SpeechBubbleBrowserHost {
   state(): SpeechBubbleBrowserState;
   select(): Promise<void>;
+  editText(): Promise<void>;
   clear(): Promise<void>;
   seek(seconds: number): Promise<void>;
   play(): Promise<void>;

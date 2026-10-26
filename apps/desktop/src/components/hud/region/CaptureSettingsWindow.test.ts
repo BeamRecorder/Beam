@@ -18,6 +18,7 @@ it('reports bounded content including border and internal overflow, ignoring a h
     clientHeight: { value: 198 },
     scrollHeight: { value: 220 },
   });
+  Object.defineProperty(wrapper.get('.settings-content').element, 'scrollHeight', { value: 220 });
   resize.measure();
   expect(wrapper.emitted('fit')).toEqual([[222]]);
   (wrapper.vm as unknown as { fit: () => void }).fit();

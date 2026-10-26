@@ -168,6 +168,11 @@ for (const platform of ['linux', 'win32', 'darwin']) {
       overlay = loadOverlayWindow().createCameraOverlayWindow({ applicationRoot: '/app', isPackaged: false, platform });
       overlay.configure({ cameraId: 'camera:front' });
       assert.equal(fixture.windows[0].options.webPreferences.zoomFactor, 1);
+      assert.equal(fixture.windows[0].options.frame, false);
+      assert.equal(fixture.windows[0].options.transparent, platform !== 'linux');
+      assert.equal(fixture.windows[0].options.backgroundColor, platform === 'linux' ? '#000000' : '#00000000');
+      assert.equal(fixture.windows[0].options.thickFrame, platform === 'linux');
+      assert.equal(fixture.windows[0].options.backgroundMaterial, undefined);
       assert.deepEqual(
         fixture.calls.filter((call) => call[0] === 'showInactive'),
         [['showInactive', 1]],

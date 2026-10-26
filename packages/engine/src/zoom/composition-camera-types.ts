@@ -4,11 +4,19 @@ import type { CameraTransform, CameraVelocity } from './zoom-spring';
 import type { AutoFollowState } from './auto-follow-camera-types';
 import type { OrbitCameraPose } from './orbit-camera-types';
 
+export interface CameraTarget {
+  camera: Required<CameraTransform>;
+  tracksCursor: boolean;
+  cinematic?: boolean;
+  bounded?: boolean;
+}
+
 export interface CameraSimulationState {
   camera: Required<CameraTransform>;
   velocity: CameraVelocity;
   autoFollow: AutoFollowState;
   connection?: CameraConnectionState;
+  boundedCamera?: boolean;
 }
 
 export interface CameraConnectionState {

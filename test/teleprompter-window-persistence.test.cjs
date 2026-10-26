@@ -610,6 +610,9 @@ test('creates a transparent teleprompter and clamps owned resize requests before
     const window = fixture.windows[0];
     assert.equal(window.options.transparent, true);
     assert.equal(window.options.backgroundColor, '#00000000');
+    assert.equal(window.options.frame, false);
+    assert.equal(window.options.thickFrame, false);
+    assert.equal(window.options.backgroundMaterial, undefined);
     teleprompter.resize(window.webContents, { width: 20, height: 30 });
     assert.deepEqual(window.getBounds(), {
       x: 640,

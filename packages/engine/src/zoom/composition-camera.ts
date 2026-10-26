@@ -2,9 +2,10 @@ import type {
   CameraCheckpointReuse,
   CompositionCameraEvaluator,
   CompositionCameraInputs,
+  CameraTarget,
   CameraSimulationState as SimulationState,
 } from './composition-camera-types';
-import { createCameraVelocity, stepCameraSpring, type CameraTransform } from '@beam/engine/zoom/zoom-spring';
+import { createCameraVelocity, stepCameraSpring } from '@beam/engine/zoom/zoom-spring';
 import { clampFocusToScale, createZoomTimeEvaluator, cursorFocusAt } from '@beam/engine/zoom/zoom-playback';
 import { cameraSpringOmega, createAutoFollowState, updateAutoFollowTarget } from '@beam/engine/zoom/auto-follow-camera';
 import {
@@ -35,6 +36,7 @@ export function cameraTiltForControls(intensity: number, horizontal: number, ver
   };
 }
 const cloneState = (state: SimulationState): SimulationState => ({
+  boundedCamera: state.boundedCamera,
   camera: { ...state.camera },
   velocity: { ...state.velocity },
   autoFollow: {
@@ -62,16 +64,17 @@ export function createCompositionCameraEvaluator(
   const sortedTelemetry = [...inputs.telemetry].sort((left, right) => left.timeMs - right.timeMs);
   const canFollow = createAutomaticFollowGate(inputs, sortedTelemetry);
   const followCursorAt = createCameraFollowCursor(inputs, sortedTelemetry, canFollow);
-  const targetAt = (
-    timeMs: number,
-    state: SimulationState,
-  ): { camera: Required<CameraTransform>; tracksCursor: boolean; cinematic?: boolean } => {
+  const targetAt = (timeMs: number, state: SimulationState): CameraTarget => {
     const autoFollow = state.autoFollow;
     const zoom = zoomAt(timeMs);
     if (!zoom?.connection) state.connection = undefined;
     if (!zoom) {
       updateAutoFollowTarget(autoFollow, null, { cx: 0.5, cy: 0.5 }, 1, 0, timeMs);
-      return { camera: { focusX: 0.5, focusY: 0.5, scale: 1, tiltX: 0, tiltY: 0 }, tracksCursor: false };
+      return {
+        camera: { focusX: 0.5, focusY: 0.5, scale: 1, tiltX: 0, tiltY: 0 },
+        tracksCursor: false,
+        bounded: state.boundedCamera,
+      };
     }
     let focus = zoom.cinematic ? zoom.focus : clampFocusToScale(zoom.focus, zoom.scale);
     const connectedFollow =
@@ -92,6 +95,7 @@ export function createCompositionCameraEvaluator(
       camera: { focusX: focus.cx, focusY: focus.cy, scale: zoom.scale, ...tilt },
       tracksCursor: connectedFollow || zoom.tracksCursor === true,
       cinematic: zoom.cinematic,
+      bounded: zoom.bounded,
     };
   };
   const initialState = (): SimulationState => {
@@ -101,7 +105,9 @@ export function createCompositionCameraEvaluator(
       velocity: createCameraVelocity(),
       autoFollow,
     };
-    state.camera = targetAt(0, state).camera;
+    const initial = targetAt(0, state);
+    state.camera = initial.camera;
+    state.boundedCamera = initial.bounded;
     return state;
   };
   const reset = () => {
@@ -139,10 +145,16 @@ export function createCompositionCameraEvaluator(
         STEP_MS,
         target.tracksCursor ? cameraSpringOmega(autoFollowSettings.responsiveness) : undefined,
       );
-      if (target.cinematic) {
+      if (target.cinematic || target.bounded) {
         state.camera.scale = target.camera.scale;
         state.velocity.scale = 0;
       }
+      if (target.bounded) {
+        state.camera.tiltX = target.camera.tiltX;
+        state.camera.tiltY = target.camera.tiltY;
+        state.velocity.tiltX = state.velocity.tiltY = 0;
+      }
+      state.boundedCamera = target.bounded;
       if (step % CHECKPOINT_STEPS === 0) checkpoints.set(step, cloneState(state));
     }
     return state;
@@ -156,6 +168,15 @@ export function createCompositionCameraEvaluator(
       const lowerState = stateAtStep(lowerStep);
       const lower = lowerState.camera;
       const zoom = zoomAt(time);
+      let boundedTilt = zoom?.bounded
+        ? cameraTiltForControls(
+            zoom.tilt,
+            zoom.tiltHorizontal ?? DEFAULT_ZOOM_TILT_HORIZONTAL,
+            zoom.tiltVertical ?? DEFAULT_ZOOM_TILT_VERTICAL,
+          )
+        : !zoom && lowerState.boundedCamera
+          ? { tiltX: 0, tiltY: 0 }
+          : undefined;
       const orbit = zoom?.orbit
         ? orbitCameraPose({
             timeMs: time,
@@ -172,13 +193,17 @@ export function createCompositionCameraEvaluator(
         : undefined;
       if (progress <= 0.000_000_1)
         return {
-          focus: clampFocusToScale({ cx: lower.focusX, cy: lower.focusY }, zoom?.cinematic ? zoom.scale : lower.scale),
-          scale: zoom?.cinematic ? zoom.scale : lower.scale,
-          tiltX: lower.tiltX,
-          tiltY: lower.tiltY,
+          focus: clampFocusToScale(
+            zoom?.bounded && zoom.mode === 'manual' ? zoom.focus : { cx: lower.focusX, cy: lower.focusY },
+            zoom?.cinematic ? zoom.scale : boundedTilt ? 1 : lower.scale,
+          ),
+          scale: zoom?.cinematic ? zoom.scale : boundedTilt ? 1 : lower.scale,
+          tiltX: boundedTilt?.tiltX ?? lower.tiltX,
+          tiltY: boundedTilt?.tiltY ?? lower.tiltY,
           ...(orbit ? { orbit } : {}),
         };
       const upperState = stateAtStep(lowerStep + 1);
+      if (!zoom && upperState.boundedCamera) boundedTilt = { tiltX: 0, tiltY: 0 };
       const upper = upperState.camera;
       // Hermite interpolation preserves the spring's velocity between fixed
       // simulation ticks. Linear interpolation introduces a speed jump at 120 Hz.
@@ -194,18 +219,24 @@ export function createCompositionCameraEvaluator(
       };
       const velocity = lowerState.velocity,
         nextVelocity = upperState.velocity;
-      const scale = zoom?.cinematic ? zoom.scale : mix(lower.scale, upper.scale, velocity.scale, nextVelocity.scale);
+      const scale = zoom?.cinematic
+        ? zoom.scale
+        : boundedTilt
+          ? 1
+          : mix(lower.scale, upper.scale, velocity.scale, nextVelocity.scale);
       return {
         focus: clampFocusToScale(
-          {
-            cx: mix(lower.focusX, upper.focusX, velocity.focusX, nextVelocity.focusX),
-            cy: mix(lower.focusY, upper.focusY, velocity.focusY, nextVelocity.focusY),
-          },
+          zoom?.bounded && zoom.mode === 'manual'
+            ? zoom.focus
+            : {
+                cx: mix(lower.focusX, upper.focusX, velocity.focusX, nextVelocity.focusX),
+                cy: mix(lower.focusY, upper.focusY, velocity.focusY, nextVelocity.focusY),
+              },
           scale,
         ),
         scale,
-        tiltX: mix(lower.tiltX, upper.tiltX, velocity.tiltX ?? 0, nextVelocity.tiltX ?? 0),
-        tiltY: mix(lower.tiltY, upper.tiltY, velocity.tiltY ?? 0, nextVelocity.tiltY ?? 0),
+        tiltX: boundedTilt?.tiltX ?? mix(lower.tiltX, upper.tiltX, velocity.tiltX ?? 0, nextVelocity.tiltX ?? 0),
+        tiltY: boundedTilt?.tiltY ?? mix(lower.tiltY, upper.tiltY, velocity.tiltY ?? 0, nextVelocity.tiltY ?? 0),
         ...(orbit ? { orbit } : {}),
       };
     },

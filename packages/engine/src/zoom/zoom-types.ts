@@ -1,6 +1,7 @@
 import type { ZoomTiltDirectionPreset } from '@beam/engine/zoom/zoom-tilt-preset-types';
 import type { GlassHighlightSettings } from './glass-highlight-types';
 import type { OrbitCameraSettings } from './orbit-camera-types';
+import type { ZoomTiming } from './zoom-timing-types';
 
 export interface ZoomFocus {
   cx: number;
@@ -32,6 +33,8 @@ export interface ZoomElement {
   sessionId: string;
   startMs: number;
   endMs: number;
+  /** Omitted in saved legacy zooms, whose original trajectory remains unchanged. */
+  timing?: ZoomTiming;
   focus: ZoomFocus;
   depth: ZoomDepth;
   mode: ZoomMode;
@@ -68,6 +71,7 @@ export interface AppliedZoom {
   tiltVertical?: number;
   orbit?: number;
   cinematic?: boolean;
+  bounded?: boolean;
   orbitSettings?: OrbitCameraSettings;
   /** Runtime-only handoff metadata; never persisted in a project. */
   connection?: ZoomConnection;

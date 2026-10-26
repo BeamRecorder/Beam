@@ -1,6 +1,18 @@
 import { validateGlassHighlight } from './glass-highlight-schema.js';
 import { validateOrbitSettings } from './orbit-schema.js';
 
+export function validateZoomTiming(timing) {
+  if (timing === undefined) return;
+  if (
+    !timing ||
+    timing.version !== 1 ||
+    ![timing.entryMs, timing.exitMs, timing.entryMs + timing.exitMs].every(Number.isFinite) ||
+    timing.entryMs < 0 ||
+    timing.exitMs < 0
+  )
+    throw new TypeError('Invalid zoom timing.');
+}
+
 export function validateZoomElement(zoom) {
   if (
     !zoom ||
@@ -22,6 +34,7 @@ export function validateZoomElement(zoom) {
   )
     throw new TypeError('Invalid zoom.');
   validateGlassHighlight(zoom);
+  validateZoomTiming(zoom.timing);
   if (zoom.orbitSettings !== undefined) validateOrbitSettings(zoom.orbitSettings);
 }
 

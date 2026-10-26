@@ -45,6 +45,7 @@ const descriptionId = useId();
   display: grid;
   gap: 5px;
   min-width: 0;
+  flex: 1 1 0;
 }
 .preference-label {
   display: flex;
@@ -54,6 +55,11 @@ const descriptionId = useId();
   font-size: var(--font-size-body);
   font-weight: var(--weight-title);
   line-height: 1.5;
+}
+.preference-label > span,
+.preference-description {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .preference-description {
   margin: 0;

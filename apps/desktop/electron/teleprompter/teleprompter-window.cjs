@@ -165,6 +165,7 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
       frame: false,
       transparent: true,
       backgroundColor: '#00000000',
+      thickFrame: false,
       alwaysOnTop: true,
       skipTaskbar: false,
       resizable: true,

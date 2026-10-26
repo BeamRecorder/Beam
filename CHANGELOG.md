@@ -4,6 +4,20 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+## [0.5.8] - 2026-10-26
+
+### Fixed
+
+- Long translated labels in Quick Capture and Settings stay readable with scrolling text and edge fades on controls, wrapping preference labels, and scroll shadows in capture settings panels.
+
+- Borders close the bare ends of open arrow shafts instead of leaving the colored interior exposed. The shared fix covers straight, curved and custom arrows while preserving their arrowheads.
+
+- Text in speech bubbles aligns within the rectangular body instead of including the tail. Padding, multiline text and inline editing share the same area in preview and export, including after editing the tail. Shape text follows its layer rotation once.
+
+- New zooms keep their complete entry and exit inside their timeline blocks, including 3D rotation. Automatic zoom markers include their anticipation and return to normal; saved legacy zooms keep their original animation.
+
+- Quick Capture on Windows preserves transparent margins around its rounded toolbar instead of displaying an opaque white rectangle. Recording preparation no longer resets the native backdrop when returning to the HUD or recording controls; camera, teleprompter and auxiliary overlays explicitly exclude the Windows frame.
+
 ## [0.5.7] - 2026-10-25
 
 ### Added

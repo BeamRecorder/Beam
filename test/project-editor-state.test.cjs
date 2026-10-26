@@ -861,3 +861,65 @@ test('round trips bounded 3D camera settings without sharing or losing pullback,
   for (const orbitSettings of [null, [], {}, false, { ...zoom.orbitSettings, extra: true }])
     assert.throws(() => zoomState({ elements: [{ ...zoom, orbitSettings }], generatedSessions: [] }), /Invalid orbit/);
 });
+
+test('round trips full-interval zoom timing without sharing mutable input', () => {
+  const element = {
+    id: 'timed',
+    sessionId: 'take',
+    startMs: 6000,
+    endMs: 8000,
+    depth: 2,
+    mode: 'manual',
+    focus: { cx: 0.5, cy: 0.5 },
+    transition: 'cinematic',
+    timing: { version: 1, entryMs: 823, exitMs: 823 },
+  };
+  const saved = zoomState({ elements: [element], generatedSessions: [] });
+  assert.deepEqual(saved.elements[0].timing, element.timing);
+  assert.notEqual(saved.elements[0].timing, element.timing);
+  assert.deepEqual(zoomState(JSON.parse(JSON.stringify(saved))), saved);
+  element.timing.entryMs = 12;
+  assert.equal(saved.elements[0].timing.entryMs, 823);
+});
+
+test('does not add new timing or shift the bounds of a released zoom', () => {
+  const element = {
+    id: 'legacy',
+    sessionId: 'take',
+    startMs: 6000,
+    endMs: 8000,
+    depth: 2,
+    mode: 'manual',
+    focus: { cx: 0.5, cy: 0.5 },
+  };
+  const saved = zoomState({ elements: [element], generatedSessions: [] }).elements[0];
+  assert.equal(Object.hasOwn(saved, 'timing'), false);
+  assert.equal(Object.hasOwn(saved, 'transition'), false);
+  assert.equal(saved.startMs, 6000);
+  assert.equal(saved.endMs, 8000);
+});
+
+test('rejects corrupt or unsupported persisted timing instead of changing its meaning', () => {
+  const element = {
+    id: 'timed',
+    sessionId: 'take',
+    startMs: 6000,
+    endMs: 8000,
+    depth: 2,
+    mode: 'manual',
+    focus: { cx: 0.5, cy: 0.5 },
+  };
+  for (const timing of [
+    null,
+    {},
+    false,
+    { version: 2, entryMs: 10, exitMs: 10 },
+    { version: 1, entryMs: -1, exitMs: 10 },
+    { version: 1, entryMs: 10, exitMs: Infinity },
+    { version: 1, entryMs: '823', exitMs: 823 },
+  ])
+    assert.throws(
+      () => zoomState({ elements: [{ ...element, timing }], generatedSessions: [] }),
+      /Invalid zoom timing/,
+    );
+});

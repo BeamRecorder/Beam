@@ -43,8 +43,8 @@ export function planZoomShots(options: ZoomShotOptions): ZoomShot[] {
     .filter((zoom) => zoom.enabled !== false && zoom.effect !== 'glass')
     .map((zoom) => {
       return {
-        start: zoom.startMs - (zoom.transition === 'cinematic' ? rampFor(zoom) : ZOOM_IN_MS),
-        end: zoom.endMs + (zoom.transition === 'cinematic' ? rampFor(zoom) : ZOOM_OUT_MS),
+        start: zoom.startMs - (zoom.timing ? 0 : zoom.transition === 'cinematic' ? rampFor(zoom) : ZOOM_IN_MS),
+        end: zoom.endMs + (zoom.timing ? 0 : zoom.transition === 'cinematic' ? rampFor(zoom) : ZOOM_OUT_MS),
       };
     });
   const blocked = (shot: ZoomShot) =>

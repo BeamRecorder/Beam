@@ -22,6 +22,7 @@ import type * as StillDocumentModule from '@beam/engine/screenshot/still-documen
 import type * as ScreenshotLayersModule from '@beam/engine/screenshot/screenshot-layers';
 import type * as ManualZoomModule from '@beam/engine/zoom/manual-zoom';
 import type { VisualClip } from '@beam/engine/shared/composition-types';
+import type * as ZoomTimingModule from '@beam/engine/zoom/zoom-timing';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('complete 3D camera planes in real Chromium', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temp: string;
@@ -63,6 +64,104 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('complete 3D camera plane
     await browser?.close();
     await server?.close();
     if (temp) await rm(temp, { recursive: true, force: true });
+  });
+
+  it('renders normal pixels outside new zoom markers and a real camera effect inside, in every projection', async () => {
+    const result = await page.evaluate(async () => {
+      const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+      const { createRenderDocument } = (await load(
+        '/packages/engine/src/document/render-document.ts',
+      )) as typeof RenderDocumentModule;
+      const { createDefaultClipAppearance } = (await load(
+        '/packages/engine/src/shared/composition-defaults.ts',
+      )) as typeof CompositionDefaultsModule;
+      const { createZoomTiming } = (await load('/packages/engine/src/zoom/zoom-timing.ts')) as typeof ZoomTimingModule;
+      const { renderCompositionFrame, disposeCompositionRenderer } = (await load(
+        '/packages/runtime/src/rendering/render.ts',
+      )) as typeof RenderModule;
+      const width = 160,
+        height = 100;
+      const source = new OffscreenCanvas(width, height),
+        paint = source.getContext('2d')!;
+      paint.fillStyle = '#325acb';
+      paint.fillRect(0, 0, width, height);
+      paint.fillStyle = '#f48b36';
+      paint.fillRect(20, 15, 60, 40);
+      paint.fillStyle = '#ffffff';
+      paint.fillRect(110, 65, 30, 20);
+      const base = createRenderDocument(undefined, width, height, 60);
+      base.duration = 12;
+      base.canvas.watermark!.enabled = false;
+      base.zoomMotionBlur = { enabled: false, intensity: 0 };
+      base.composition.assets = [
+        {
+          id: 'source',
+          kind: 'video',
+          name: 'Recording',
+          fileName: 'source.mp4',
+          src: 'source',
+          origin: 'project',
+          durationMs: 12000,
+          width,
+          height,
+        },
+      ];
+      base.composition.clips = [
+        {
+          id: 'screen',
+          kind: 'screen',
+          name: 'Recording',
+          assetId: 'source',
+          timelineStartMs: 0,
+          timelineDurationMs: 12000,
+          sourceInMs: 0,
+          sourceDurationMs: 12000,
+          playbackRate: 1,
+          order: 0,
+          enabled: true,
+          transform: { x: 0, y: 0, width: 1, height: 1 },
+          appearance: createDefaultClipAppearance('screen'),
+          isMirrored: false,
+          isMirroredY: false,
+        },
+      ];
+      const render = (zooms: typeof base.zooms, timeMs: number) => {
+        const canvas = new OffscreenCanvas(width, height),
+          target = canvas.getContext('2d')!;
+        renderCompositionFrame(target, { source, width, height }, { ...base, zooms }, timeMs / 1000);
+        const pixels = target.getImageData(0, 0, width, height).data;
+        disposeCompositionRenderer();
+        return pixels;
+      };
+      const differences = (left: Uint8ClampedArray, right: Uint8ClampedArray) => {
+        let count = 0;
+        for (let i = 0; i < left.length; i += 4)
+          if (left[i] !== right[i] || left[i + 1] !== right[i + 1] || left[i + 2] !== right[i + 2]) count++;
+        return count;
+      };
+      return (['2d', '3d', 'orbit'] as const).map((projection) => {
+        const zoom = {
+          id: 'bounded',
+          sessionId: 'take',
+          startMs: 6003,
+          endMs: 8003,
+          depth: 2 as const,
+          mode: 'manual' as const,
+          focus: { cx: 0.6, cy: 0.4 },
+          projection,
+          transition: 'cinematic' as const,
+          timing: createZoomTiming(2),
+          tiltIntensity: 0.6,
+        };
+        const outside = [5900, 6003, 8003, 8100].map((time) => differences(render([], time), render([zoom], time)));
+        const inside = differences(render([], 7003), render([zoom], 7003));
+        return { projection, outside, inside };
+      });
+    });
+    for (const projection of result) {
+      expect(projection.outside, projection.projection).toEqual([0, 0, 0, 0]);
+      expect(projection.inside, projection.projection).toBeGreaterThan(100);
+    }
   });
 
   it.each([3, 5])(

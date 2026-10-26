@@ -143,6 +143,7 @@ function createQuickSnipStatusWindow({
       frame: false,
       transparent: true,
       backgroundColor: '#00000000',
+      thickFrame: false,
       resizable: false,
       maximizable: false,
       minimizable: false,

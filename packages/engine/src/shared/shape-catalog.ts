@@ -1,16 +1,6 @@
 import { SHAPE_GALLERY_PATHS } from '@beam/engine/shared/shape-gallery-paths';
-type ShapeFillRule = 'nonzero' | 'evenodd';
-
-export interface ShapeDefinition {
-  id: string;
-  name: string;
-  keywords: readonly string[];
-  viewBox: string;
-  width: number;
-  height: number;
-  path: string;
-  fillRule?: ShapeFillRule;
-}
+import type { ShapeDefinition, ShapeFillRule } from './shape-catalog-types';
+export type { ShapeDefinition } from './shape-catalog-types';
 
 const shape = <const T extends Omit<ShapeDefinition, 'fillRule'> & { fillRule?: ShapeFillRule }>(definition: T) => ({
   fillRule: 'nonzero' as ShapeFillRule,
@@ -152,6 +142,10 @@ const BASE_SHAPE_CATALOG = [
     width: 100,
     height: 100,
     path: 'M12 8H88Q97 8 97 17V68Q97 77 88 77H48L23 96L29 77H12Q3 77 3 68V17Q3 8 12 8Z',
+    textRegion: {
+      bounds: { x: 0.03, y: 0.08, width: 0.94, height: 0.69 },
+      vectorNodeIds: ['node-0', 'node-1', 'node-2', 'node-3', 'node-4', 'node-8', 'node-9', 'node-10'],
+    },
   }),
   shape({
     id: 'cloud',

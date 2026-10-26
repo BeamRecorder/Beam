@@ -5,7 +5,8 @@ export default {
 </script>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, onUpdated, ref, type Component } from 'vue';
+import { computed, ref, type Component } from 'vue';
+import MarqueeText from '../text/MarqueeText.vue';
 import Tooltip from '../tooltip/Tooltip.vue';
 import { Loader } from '@lucide/vue';
 import type { ButtonVariant } from './button-types';
@@ -53,32 +54,7 @@ const emit = defineEmits<{
   (e: 'click', event: MouseEvent): void;
 }>();
 
-const content = ref<HTMLElement | null>(null);
-const contentLabel = ref<HTMLElement | null>(null);
-const contentOverflow = ref(0);
-let contentResizeObserver: ResizeObserver | null = null;
-
-const measureContentOverflow = () => {
-  const viewport = content.value;
-  const label = contentLabel.value;
-  const overflow = viewport && label ? Math.max(0, Math.ceil(label.scrollWidth - viewport.clientWidth)) : 0;
-  if (contentOverflow.value !== overflow) contentOverflow.value = overflow;
-};
-
-onMounted(() => {
-  void nextTick(measureContentOverflow);
-  if (typeof ResizeObserver === 'undefined') return;
-  contentResizeObserver = new ResizeObserver(measureContentOverflow);
-  if (content.value) contentResizeObserver.observe(content.value);
-  if (contentLabel.value) contentResizeObserver.observe(contentLabel.value);
-});
-onUpdated(measureContentOverflow);
-onBeforeUnmount(() => contentResizeObserver?.disconnect());
-
-const marqueeStyle = computed(() => ({
-  '--button-marquee-distance': `${contentOverflow.value}px`,
-  '--button-marquee-duration': `${Math.min(5, Math.max(1.4, contentOverflow.value / 28))}s`,
-}));
+const button = ref<HTMLElement | null>(null);
 
 const buttonClasses = computed(() => {
   return [
@@ -122,6 +98,7 @@ const handleClick = (event: MouseEvent) => {
   >
     <component
       :is="href ? 'a' : 'button'"
+      ref="button"
       v-bind="$attrs"
       :href="href"
       :type="href ? undefined : type"
@@ -137,14 +114,17 @@ const handleClick = (event: MouseEvent) => {
       <span v-if="$slots.icon && !loading" class="btn-icon-wrapper">
         <slot name="icon" />
       </span>
-      <span
-        v-if="$slots.default && !iconOnly"
-        ref="content"
+      <MarqueeText
+        v-if="$slots.default && !iconOnly && !wrap && contentLayout !== 'custom' && variant !== 'card'"
         class="btn-content"
-        :class="{ 'is-overflowing': contentOverflow > 1 }"
-        :style="marqueeStyle"
-      >
-        <span ref="contentLabel" class="btn-content-label"><slot /></span>
+        label-class="btn-content-label"
+        :trigger="button"
+        :disabled="disabled || loading"
+        :align="align"
+        ><slot
+      /></MarqueeText>
+      <span v-else-if="$slots.default && !iconOnly" class="btn-content">
+        <span class="btn-content-label"><slot /></span>
       </span>
     </component>
   </component>
@@ -456,6 +436,7 @@ const handleClick = (event: MouseEvent) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .btn-content {
@@ -465,6 +446,10 @@ const handleClick = (event: MouseEvent) => {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.btn-content.marquee-text {
+  display: block;
+  text-overflow: clip;
 }
 
 .btn-content-label {

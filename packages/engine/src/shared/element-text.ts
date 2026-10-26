@@ -8,6 +8,7 @@ import type {
 import { createDefaultCaptionStyle } from '@beam/engine/shared/composition-defaults';
 import { layoutCaptionText, type CaptionTextMeasurer } from '@beam/engine/shared/caption-text-layout';
 import type { ElementText } from '@beam/engine/shared/element-types';
+import { elementTextRegion } from './element-text-region';
 
 export function createElementText(content = ''): ElementText {
   const style = createDefaultCaptionStyle(48);
@@ -35,6 +36,8 @@ export function elementTextCaption(
   return {
     ...clip,
     kind: 'caption',
+    // The enclosing shape renderer/editor already rotates around the layer center.
+    rotation: 0,
     transform,
     caption: { type: 'text', sentences: [], style: { ...text.style, customText: text.content } },
   };
@@ -47,6 +50,7 @@ export function elementTextLayout(
   transform: NormalizedTransform = clip.transform,
 ): NormalizedTransform {
   const text = clip.text ?? createElementText();
+  transform = elementTextRegion(clip, transform);
   const inset = (Math.min(transform.width * canvas.width, transform.height * canvas.height) * text.padding) / 100;
   const box = {
     x: transform.x + inset / canvas.width,

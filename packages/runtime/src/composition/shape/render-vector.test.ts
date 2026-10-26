@@ -66,6 +66,30 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 describe('vector painter shared by preview and export', () => {
+  it('paints a closed border at a bare shaft end while keeping the fill and arrowhead in place', () => {
+    const clip = shape({ vector: arrowVector('line'), fillEnabled: true, borderWidth: 6 });
+    const { ctx, strokes } = context();
+    drawVector(ctx, clip, rect, clip, 1);
+    const data = (path: TestPath) => vectorFromSvg(path.data.split('|')[0]!, rect.width, rect.height);
+    const outline = data(strokes[2]!.path),
+      fill = data(strokes[4]!.path);
+    expect(outline.contours[0]!.nodes[0]!.x).toBe(0.06);
+    expect(fill.contours[0]!.nodes[0]!.x).toBe(0.08);
+    expect({ ...outline.contours[0]!.nodes.at(-1), id: '' }).toEqual({ ...fill.contours[0]!.nodes.at(-1), id: '' });
+    expect(strokes[2]!.cap).toBe('butt');
+  });
+
+  it('invalidates border geometry when border width changes on the same vector', () => {
+    const clip = shape({ vector: arrowVector('curved'), borderWidth: 0 });
+    const first = vectorPaintPaths(clip, rect, clip, 1);
+    expect(first.borderOpen).toBe(first.open);
+    clip.borderWidth = 8;
+    const second = vectorPaintPaths(clip, rect, clip, 1);
+    expect(second).not.toBe(first);
+    expect(second.borderOpen).not.toBe(second.open);
+    expect(vectorPaintPaths(clip, rect, clip, 1)).toBe(second);
+  });
+
   it('retains paths across frames and invalidates geometry, transform and scale', () => {
     const clip = shape({ vector: arrowVector('curved'), rotation: 30 });
     const first = vectorPaintPaths(clip, rect, clip, 1);

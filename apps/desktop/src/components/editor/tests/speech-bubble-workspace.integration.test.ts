@@ -10,6 +10,8 @@ import { chromiumExecutable } from '../../../../../cli/src/chromium-install';
 import { chromiumSettings } from '../../../../../cli/src/chromium-settings';
 import type { SpeechBubbleBrowserState } from './speech-bubble-browser-types';
 import type * as SpeechBubbleBrowserHostModule from './speech-bubble-browser-host';
+import type * as ShapeRenderModule from '@beam/runtime/composition/shape/render-shape-clip';
+import type * as ElementTextModule from '@beam/engine/shared/element-text';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('speech bubbles in the complete editor workspace', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temporary: string, url: string;
@@ -68,7 +70,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('speech bubbles in the co
     page.on('console', (message) => {
       if (message.type() === 'error') errors.push(message.text());
     });
-    await page.setViewport({ width: 1440, height: 1000 });
+    await page.setViewport({ width: 1280, height: 800 });
     await page.goto(url);
     await page.evaluate(async (effects) => {
       const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
@@ -134,6 +136,85 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('speech bubbles in the co
     expect(after.shape.vector).toEqual(before.shape.vector);
     expect(errors).toEqual([]);
   };
+
+  it('aligns top, center and bottom inside the body in the real inline editor and rendered pixels', async () => {
+    await mount(true);
+    for (const alignment of ['Top', 'Center', 'Bottom']) {
+      await page.click(`.element-text-controls button[aria-label="${alignment}"]`);
+      await page.evaluate(() => window.speechBubbleHost.editText());
+      await page.waitForSelector('.text-frame .caption-text-editor');
+      const bounds = await page.evaluate(() => {
+        const frame = document.querySelector('.text-frame')!.getBoundingClientRect();
+        const text = document.querySelector('.text-frame .caption-text-editor')!.getBoundingClientRect();
+        const padding = window.speechBubbleHost.state().shape.text!.padding;
+        const inset = (Math.min(frame.width * 0.94, frame.height * 0.69) * padding) / 100;
+        return {
+          textTop: text.top,
+          textHeight: text.height,
+          top: frame.top + frame.height * 0.08 + inset,
+          bottom: frame.top + frame.height * 0.77 - inset,
+        };
+      });
+      const expected =
+        alignment === 'Top'
+          ? bounds.top
+          : alignment === 'Bottom'
+            ? bounds.bottom - bounds.textHeight
+            : (bounds.top + bounds.bottom - bounds.textHeight) / 2;
+      expect(Math.abs(bounds.textTop - expected), alignment).toBeLessThan(2);
+      await page.keyboard.press('Escape');
+    }
+    const pixels = await page.evaluate(async () => {
+      const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+      const { drawShapeClip } = (await load(
+        '/packages/runtime/src/composition/shape/render-shape-clip.ts',
+      )) as typeof ShapeRenderModule;
+      const { createElementText } = (await load(
+        '/packages/engine/src/shared/element-text.ts',
+      )) as typeof ElementTextModule;
+      return (['top', 'center', 'bottom'] as const).map((verticalAlign) => {
+        const clip = window.speechBubbleHost.state().shape;
+        clip.text = createElementText('TEXT');
+        clip.text.verticalAlign = verticalAlign;
+        clip.text.style.color = '#111111';
+        clip.text.style.fontFamily = 'sans-serif';
+        clip.opacityEnabled = false;
+        clip.shadowEnabled = false;
+        clip.backdropBlur = 0;
+        clip.fillEnabled = true;
+        clip.fill = { kind: 'color', color: '#ffffa3' };
+        clip.borderColor = '#ff6600';
+        clip.transform = { x: 0.1, y: 0.1, width: 0.8, height: 0.8 };
+        const canvas = new OffscreenCanvas(800, 600),
+          ctx = canvas.getContext('2d')!;
+        drawShapeClip(ctx, clip, { x: 0, y: 0, width: 800, height: 600 });
+        const rgba = ctx.getImageData(0, 0, 800, 600).data;
+        let top = 600,
+          bottom = -1;
+        for (let y = 0; y < 600; y++)
+          for (let x = 0; x < 800; x++) {
+            const at = (y * 800 + x) * 4;
+            if (rgba[at]! < 80 && rgba[at + 1]! < 80 && rgba[at + 2]! < 80 && rgba[at + 3]! > 200) {
+              top = Math.min(top, y);
+              bottom = Math.max(bottom, y);
+            }
+          }
+        return { top, bottom };
+      });
+    });
+    const bodyTop = 60 + 480 * 0.08,
+      bodyBottom = 60 + 480 * 0.77;
+    for (const text of pixels) {
+      expect(text.top).toBeGreaterThan(bodyTop);
+      expect(text.bottom).toBeLessThan(bodyBottom);
+      expect(text.bottom).toBeGreaterThan(text.top);
+    }
+    expect(Math.abs((pixels[1]!.top + pixels[1]!.bottom) / 2 - (bodyTop + bodyBottom) / 2)).toBeLessThan(8);
+    expect(pixels[0]!.bottom).toBeLessThan(pixels[1]!.top);
+    expect(pixels[1]!.bottom).toBeLessThan(pixels[2]!.top);
+    expect(errors).toEqual([]);
+    await page.evaluate(() => window.speechBubbleHost.dispose());
+  }, 60000);
 
   it.each([false, true])(
     'keeps an edited SVG peak selectable through playback and seeks (text/blur/shadow: %s)',

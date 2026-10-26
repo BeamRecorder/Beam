@@ -173,6 +173,7 @@ function createCameraOverlayWindow({
       // backing preserves its appearance while restoring native resize edges.
       transparent: platform !== 'linux',
       backgroundColor: platform === 'linux' ? '#000000' : '#00000000',
+      thickFrame: platform === 'linux',
       alwaysOnTop: true,
       skipTaskbar: true,
       resizable: true,

@@ -131,6 +131,7 @@ function createCaptureSettingsWindow({
         fullscreenable: false,
         transparent: true,
         backgroundColor: '#00000000',
+        thickFrame: false,
         skipTaskbar: true,
         alwaysOnTop: true,
         show: false,

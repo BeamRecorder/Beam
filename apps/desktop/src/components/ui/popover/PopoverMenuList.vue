@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { nextTick, ref, type CSSProperties } from 'vue';
+import { nextTick, ref, shallowReactive, type CSSProperties } from 'vue';
+import MarqueeText from '../text/MarqueeText.vue';
 import { Check, ChevronRight } from '@lucide/vue';
 import type { PopoverMenuItem } from './popover-menu-types';
 
@@ -14,7 +15,7 @@ const emit = defineEmits<{
 const openItemId = ref<string | null>(null);
 const submenuSides = ref<Record<string, 'left' | 'right'>>({});
 const submenuStyles = ref<Record<string, CSSProperties>>({});
-const itemElements = new Map<string, HTMLButtonElement>();
+const itemElements = shallowReactive(new Map<string, HTMLButtonElement>());
 
 const setItemElement = (id: string, element: Element | null) => {
   if (element instanceof HTMLButtonElement) itemElements.set(id, element);
@@ -119,7 +120,9 @@ const handleKeydown = (event: KeyboardEvent, item: PopoverMenuItem) => {
         <span v-if="item.icon" class="item-icon-wrapper" aria-hidden="true">
           <component :is="item.icon" class="menu-item-icon" />
         </span>
-        <span class="item-label">{{ item.label }}</span>
+        <MarqueeText class="item-label" :trigger="itemElements.get(item.id)" :disabled="item.disabled">{{
+          item.label
+        }}</MarqueeText>
         <span v-if="item.checked !== undefined" class="item-check-wrapper" aria-hidden="true">
           <Check v-if="item.checked" class="menu-item-icon" />
         </span>

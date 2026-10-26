@@ -120,6 +120,10 @@ test('waits for native and mounted readiness and ignores foreign senders', () =>
   );
   assert.equal(w.options.parent, f.parent);
   assert.equal(w.options.hasShadow, false);
+  assert.equal(w.options.transparent, true);
+  assert.equal(w.options.backgroundColor, '#00000000');
+  assert.equal(w.options.thickFrame, false);
+  assert.equal(w.options.backgroundMaterial, undefined);
   f.settings.destroy();
 });
 for (const [requested, expected] of [

@@ -13,7 +13,7 @@ const paths = new WeakMap<ShapeClip, VectorPaintPaths>();
 
 export function vectorPaintPaths(clip: ShapeClip, rect: EffectRect, style: ShapeLayerStyle, scale: number) {
   const vector = style.vector!;
-  const key = JSON.stringify([rect, style.rotation, scale]);
+  const key = JSON.stringify([rect, style.rotation, scale, style.borderWidth]);
   const cached = paths.get(clip);
   if (cached?.vector === vector && cached.key === key) return cached;
   const matrix = new DOMMatrix()
@@ -26,20 +26,19 @@ export function vectorPaintPaths(clip: ShapeClip, rect: EffectRect, style: Shape
     return p;
   };
   const markers = vectorMarkerPaths(vector, rect.width, rect.height, scale);
+  const openVector = { ...vector, contours: vector.contours.filter((c) => !c.closed) };
+  const open = transform(vectorStrokePathData(openVector, rect.width, rect.height, scale));
   const result: VectorPaintPaths = {
     key,
     vector,
     closed: transform(
       vectorPathData({ ...vector, contours: vector.contours.filter((c) => c.closed) }, rect.width, rect.height),
     ),
-    open: transform(
-      vectorStrokePathData(
-        { ...vector, contours: vector.contours.filter((c) => !c.closed) },
-        rect.width,
-        rect.height,
-        scale,
-      ),
-    ),
+    open,
+    borderOpen:
+      style.borderWidth > 0
+        ? transform(vectorStrokePathData(openVector, rect.width, rect.height, scale, style.borderWidth * scale))
+        : open,
     filledMarkers: transform(markers.filled),
     openMarkers: transform(markers.outlined),
   };
@@ -73,7 +72,7 @@ export function drawVector(
     ctx.stroke(paint.filledMarkers);
     ctx.lineWidth = (vector.strokeWidth + 2 * style.borderWidth) * scale;
     ctx.lineCap = shaftCap;
-    ctx.stroke(paint.open);
+    ctx.stroke(paint.borderOpen);
     ctx.lineCap = 'round';
     ctx.stroke(paint.openMarkers);
     if (style.fillEnabled !== false) ctx.shadowColor = 'transparent';

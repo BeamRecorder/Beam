@@ -226,7 +226,7 @@ describe('ButtonGroup', () => {
 
     const content = wrapper.get('.btn-content');
     expect(content.classes()).toContain('is-overflowing');
-    expect(content.attributes('style')).toContain('--button-marquee-distance: 160px');
+    expect(content.attributes('style')).toContain('--marquee-distance: 160px');
   });
 
   it('does not activate the marquee for text that fits its button', async () => {
@@ -242,7 +242,7 @@ describe('ButtonGroup', () => {
 
     const content = wrapper.get('.btn-content');
     expect(content.classes()).not.toContain('is-overflowing');
-    expect(content.attributes('style')).toContain('--button-marquee-distance: 0px');
+    expect(content.attributes('style')).toContain('--marquee-distance: 0px');
   });
 
   it('recalculates the marquee distance when ResizeObserver reports a resize', async () => {
@@ -255,16 +255,16 @@ describe('ButtonGroup', () => {
 
     setButtonMetrics(wrapper, 120, 100);
     await triggerResize();
-    expect(wrapper.get('.btn-content').attributes('style')).toContain('--button-marquee-distance: 20px');
+    expect(wrapper.get('.btn-content').attributes('style')).toContain('--marquee-distance: 20px');
 
     setButtonMetrics(wrapper, 280, 100);
     await triggerResize();
-    expect(wrapper.get('.btn-content').attributes('style')).toContain('--button-marquee-distance: 180px');
+    expect(wrapper.get('.btn-content').attributes('style')).toContain('--marquee-distance: 180px');
 
     setButtonMetrics(wrapper, 80, 100);
     await triggerResize();
     expect(wrapper.get('.btn-content').classes()).not.toContain('is-overflowing');
-    expect(wrapper.get('.btn-content').attributes('style')).toContain('--button-marquee-distance: 0px');
+    expect(wrapper.get('.btn-content').attributes('style')).toContain('--marquee-distance: 0px');
   });
 
   it('keeps the native accessible button structure inside the marquee wrappers', () => {
