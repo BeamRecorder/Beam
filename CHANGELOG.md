@@ -4,33 +4,29 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
-### Changed
-
-- Windows recordings allow up to one minute for encoder finalization and explain longer waits after 15 seconds.
+## [0.5.9] - 2026-11-01
 
 ### Added
 
-- Saved shapes and arrows show previews of their customized artwork, including colors, borders, text and shadows, inside their libraries.
-- Save customized shapes, arrows and speech bubbles as reusable elements shared by Screenshot and the video editor. Saved elements retain their appearance, text and geometry; inserting creates an independent copy fitted to the current canvas. Removing a saved element leaves project copies intact.
-- Screenshot dock tools can be reordered by dragging between dashed insertion markers or with Alt+Left/Right. Right-click removes a shortcut, and More explains how to personalize the dock. Custom tool order is remembered.
-- Screenshot's dock can remember tools chosen from More, remove shortcuts and restore defaults. Arrow is included by default; optional grouping tools stay in More. Overflow uses hover and click scroll arrows.
-- Screenshot and video crops share source-pixel measurements and editable top, bottom, left, right, width and height fields in px or percent.
-- Screenshot's View menu shows the current canvas zoom and offers fit, actual size (100%), zoom in and zoom out commands.
-- Export failures report the exact operation, frame/time context, original codec error, final encoder counters, and nearby custom 3D zoom settings in copied diagnostics.
-- Copied playback error reports include recording health, Windows encoder attempts and timings, MP4 structure, file sizes, and machine details to help diagnose damaged recordings.
+- Reuse customized shapes, arrows and speech bubbles across Screenshot and video projects. Their picker libraries include artwork previews, Add and Delete controls, and retain geometry, colors, borders, text and shadows. Each insertion creates an independent copy fitted to the current canvas.
+- Customize Screenshot's dock with remembered shortcuts, drag-and-drop reordering with dashed insertion markers, Alt+Left/Right keyboard moves, right-click removal and hover/click scroll arrows. Arrow is included by default; optional grouping tools remain available in More.
+- Screenshot's View menu shows the actual canvas zoom percentage and offers Fit to Window, Actual Size (100%), Zoom In and Zoom Out.
+- Screenshot and video share precise crop measurements and editable top, bottom, left, right, width and height fields in pixels or percentages.
+- Copied playback reports include recording health, Windows encoder attempts and timings, MP4 structure, file sizes and machine details. Export reports include the failing operation, frame/time, codec error and nearby custom 3D zoom settings.
+
+### Changed
+
+- Windows recordings allow up to one minute for encoder finalization. The editor-preparation window explains longer waits after 15 seconds before proceeding to project loading.
 
 ### Fixed
 
-- Saved shapes and arrows open from a small library icon inside their respective pickers, with only Add and direct Delete controls instead of a permanent inspector section.
-- Screenshot's dock menu separates Remove from toolbar and Reset toolbar with a divider and extra spacing.
-- Opening a popover immediately hides its trigger tooltip and suppresses it until the popover closes, while keeping hints inside the popover available.
-- Crop confirmation stays inside the editor viewport while zooming or panning, and remains labelled OK in compact toolbars. Screenshot crops retain precise source-pixel dimensions instead of expanding small crops to a 5% minimum.
-- Screenshot previews start centered, reduce oversized images to fit, and leave smaller images at 100%. Zoom percentages reflect the actual canvas scale, and manual zoom survives window resizing without changing export dimensions.
-- Screenshot previews extend the selected background into unused window space, avoiding pale side bands when the full image is fitted to the editor.
-- The Vietnamese tray menu calls the main screen “Mở màn hình chính” instead of “Mở HUD”.
-- 3D camera pans reuse their scene surfaces and GPU textures instead of repeatedly reallocating them for one-pixel rounding changes, preserving framing and text clarity.
-- Failed export reports retain the last known progress instead of incorrectly resetting to zero frames.
-- Video exports preserve the selected canvas background behind cropped recordings, matching the preview instead of leaving a dark strip where pixels were removed.
+- Video exports preserve the selected background behind cropped recordings, matching the preview instead of leaving a dark strip.
+- Crop confirmation stays visible while zooming or panning and keeps its OK label in compact toolbars. Screenshot crops retain one-pixel precision instead of expanding small crops to a 5% minimum.
+- Screenshot images start centered, shrink to fit when oversized and remain at 100% when smaller. Manual zoom survives resizing without changing export dimensions, and the selected background fills unused window space without pale side bands.
+- 3D camera pans reuse scene surfaces and GPU textures instead of reallocating them for one-pixel rounding changes, preserving framing and text clarity.
+- Failed export reports retain the last known progress instead of resetting to zero frames.
+- Opening a popover immediately hides its trigger tooltip until it closes. Screenshot's dock menu separates Remove from toolbar and Reset toolbar with a divider and extra spacing.
+- The Vietnamese tray menu uses “Mở màn hình chính” instead of “Mở HUD”. New editor controls are translated into all fifteen supported languages.
 
 ## [0.5.8] - 2026-10-26
 
