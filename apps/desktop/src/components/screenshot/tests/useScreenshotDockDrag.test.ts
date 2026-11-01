@@ -122,7 +122,7 @@ it('keeps a child-to-child drag active, clears the indicator on leaving and allo
   const { wrapper, drag } = create();
   drag.start(event(), 'shape');
   drag.over(event(0));
-  drag.outside({ relatedTarget: wrapper.get('[data-dock-tool]').element } as DragEvent);
+  drag.outside(Object.assign(event(), { relatedTarget: wrapper.get('[data-dock-tool]').element }));
   expect(drag.marker(0)).toBe(true);
   drag.outside(event());
   expect(drag.marker(0)).toBe(false);

@@ -1628,13 +1628,12 @@ describe('ScreenshotEditor', () => {
     await flushPromises();
     const controls = wrapper.findComponent(ScreenshotViewControls),
       state = wrapper.findComponent(ScreenshotCanvasStub).props('state')!,
-      original = JSON.stringify(state),
-      preview = wrapper.findComponent(ScreenshotCanvasStub).vm;
+      original = JSON.stringify(state);
     expect(controls.props('zoomPercent')).toBe(67);
     expect(controls.props('viewMode')).toBe('fit');
     for (const action of ['actual', 'fit', 'zoom-in', 'zoom-out'] as const) {
       controls.vm.$emit('view', action);
-      expect(preview.setView).toHaveBeenLastCalledWith(action);
+      expect(editorHarness.canvasSetView).toHaveBeenLastCalledWith(action);
     }
     expect(JSON.stringify(state)).toBe(original);
     wrapper.unmount();
