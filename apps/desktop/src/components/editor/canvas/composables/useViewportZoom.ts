@@ -1,10 +1,12 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import type { ViewportZoomOptions } from './viewport-zoom-types';
 
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 5.0;
 
-export function useViewportZoom() {
-  const zoomScale = ref(1.0);
+export function useViewportZoom(options: ViewportZoomOptions = {}) {
+  const defaultScale = () => options.defaultScale?.() ?? 1;
+  const zoomScale = ref(defaultScale());
   const panX = ref(0);
   const panY = ref(0);
   const isPanning = ref(false);
@@ -18,12 +20,13 @@ export function useViewportZoom() {
   } | null = null;
 
   const zoomPercent = computed(() => Math.round(zoomScale.value * 100));
-  const isZoomedOrPanned = computed(() => zoomScale.value !== 1.0 || panX.value !== 0 || panY.value !== 0);
+  const isZoomedOrPanned = computed(() => zoomScale.value !== defaultScale() || panX.value !== 0 || panY.value !== 0);
   const isOutOfBounds = computed(
-    () => Math.abs(zoomScale.value - 1.0) >= 0.3 || Math.abs(panX.value) > 160 || Math.abs(panY.value) > 160,
+    () =>
+      Math.abs(zoomScale.value / defaultScale() - 1) >= 0.3 || Math.abs(panX.value) > 160 || Math.abs(panY.value) > 160,
   );
 
-  const clampZoom = (scale: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, scale));
+  const clampZoom = (scale: number) => Math.min(MAX_ZOOM, Math.max(options.minScale?.() ?? MIN_ZOOM, scale));
 
   const setZoomScale = (targetScale: number, focalX?: number, focalY?: number) => {
     const nextScale = clampZoom(targetScale);
@@ -42,7 +45,7 @@ export function useViewportZoom() {
   const zoomOut = () => setZoomScale(zoomScale.value / 1.25);
 
   const resetZoom = () => {
-    zoomScale.value = 1.0;
+    zoomScale.value = defaultScale();
     panX.value = 0;
     panY.value = 0;
   };

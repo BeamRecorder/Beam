@@ -4,6 +4,8 @@ mod crop;
 mod desktop_policy;
 #[cfg(any(windows, test))]
 mod encoder_negotiation;
+#[cfg(any(windows, test))]
+mod encoding_diagnostics;
 mod frame;
 #[cfg(test)]
 mod frame_buffer;

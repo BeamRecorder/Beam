@@ -240,6 +240,9 @@
     "zoomOut": "Отдалить холст",
     "resetZoom": "Сбросить вид холста",
     "canvasZoom": "Масштаб холста",
+    "view": "Вид",
+    "fitToWindow": "Вписать большие изображения в окно",
+    "actualSize": "Реальный размер (100%)",
     "toggleGrid": "Показать сетку 3×3",
     "takeScreenshot": "Сделать снимок холста",
     "screenshotCreated": "Снимок экрана создан",
@@ -530,7 +533,8 @@
     "videoFormatUnsupported": "Этот формат видео не поддерживается.",
     "videoFileUnavailable": "Видеофайл недоступен.",
     "ok": "OK",
-    "recenter": "Центрировать вид"
+    "recenter": "Центрировать вид",
+    "editCrop": "Изменить обрезку"
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU (экспериментально)",
@@ -826,6 +830,8 @@
     "moveRecorderBar": "Переместить панель записи",
     "ready": "Готово",
     "preparing": "Подготовка…",
+    "finalizing": "Завершение записи…",
+    "finalizingSlow": "Это занимает больше времени. Ожидание до 60 секунд.",
     "resumeRecording": "Продолжить запись",
     "pauseRecording": "Приостановить запись",
     "stopRecording": "Остановить запись",
@@ -1117,7 +1123,14 @@
     "perspective": "Перспектива",
     "group": "Сгруппировать",
     "selectionTitle": "Выделение · {count} элементов",
-    "ungroup": "Разгруппировать"
+    "ungroup": "Разгруппировать",
+    "moreTools": "Другие инструменты",
+    "personalizeDock": "Настроить док",
+    "customizeDockHint": "Перетаскивайте инструменты для изменения порядка. Нажмите правой кнопкой мыши на инструмент, чтобы убрать его из дока.",
+    "removeFromDock": "Убрать с панели",
+    "resetToolbar": "Сбросить панель",
+    "scrollToolsLeft": "Прокрутить инструменты влево",
+    "scrollToolsRight": "Прокрутить инструменты вправо"
   },
   "EditorPresetControls": {
     "preview": "Предпросмотр пресета",
@@ -1155,6 +1168,10 @@
     "close": "Закрыть"
   },
   "Elements": {
+    "savedElements": "Сохранённые элементы",
+    "saveElement": "Сохранить выбранный элемент",
+    "removeSavedElement": "Удалить сохранённый элемент",
+    "noSavedElements": "Пока нет сохранённых элементов.",
     "image": "Изображение",
     "deleteNamed": "Удалить {name}",
     "title": "Элементы",

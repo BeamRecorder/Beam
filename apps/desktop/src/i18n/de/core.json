@@ -240,6 +240,9 @@
     "zoomOut": "Aus der Arbeitsfläche herauszoomen",
     "resetZoom": "Arbeitsflächenansicht zurücksetzen",
     "canvasZoom": "Arbeitsflächen-Zoom",
+    "view": "Ansicht",
+    "fitToWindow": "Große Bilder ans Fenster anpassen",
+    "actualSize": "Originalgröße (100 %)",
     "toggleGrid": "3×3-Raster umschalten",
     "takeScreenshot": "Screenshot der Arbeitsfläche aufnehmen",
     "screenshotCreated": "Screenshot erstellt",
@@ -530,7 +533,8 @@
     "videoFormatUnsupported": "Dieses Videoformat wird nicht unterstützt.",
     "videoFileUnavailable": "Die Videodatei ist nicht verfügbar.",
     "ok": "OK",
-    "recenter": "Ansicht zentrieren"
+    "recenter": "Ansicht zentrieren",
+    "editCrop": "Zuschnitt bearbeiten"
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU (experimentell)",
@@ -826,6 +830,8 @@
     "moveRecorderBar": "Aufnahmeleiste verschieben",
     "ready": "Bereit",
     "preparing": "Wird vorbereitet…",
+    "finalizing": "Aufnahme wird abgeschlossen…",
+    "finalizingSlow": "Es dauert länger. Wir warten bis zu 60 Sekunden.",
     "resumeRecording": "Aufnahme fortsetzen",
     "pauseRecording": "Aufnahme pausieren",
     "stopRecording": "Aufnahme stoppen",
@@ -1117,7 +1123,14 @@
     "perspective": "Perspektive",
     "group": "Gruppieren",
     "selectionTitle": "Auswahl · {count} Elemente",
-    "ungroup": "Gruppierung aufheben"
+    "ungroup": "Gruppierung aufheben",
+    "moreTools": "Mehr Werkzeuge",
+    "personalizeDock": "Dock anpassen",
+    "customizeDockHint": "Werkzeuge zum Umordnen ziehen. Rechtsklick auf ein Werkzeug, um es aus dem Dock zu entfernen.",
+    "removeFromDock": "Aus Symbolleiste entfernen",
+    "resetToolbar": "Symbolleiste zurücksetzen",
+    "scrollToolsLeft": "Werkzeuge nach links scrollen",
+    "scrollToolsRight": "Werkzeuge nach rechts scrollen"
   },
   "EditorPresetControls": {
     "preview": "Vorschau der Vorgabe",
@@ -1155,6 +1168,10 @@
     "close": "Schließen"
   },
   "Elements": {
+    "savedElements": "Gespeicherte Elemente",
+    "saveElement": "Ausgewähltes Element speichern",
+    "removeSavedElement": "Gespeichertes Element entfernen",
+    "noSavedElements": "Noch keine gespeicherten Elemente.",
     "image": "Bild",
     "deleteNamed": "{name} löschen",
     "title": "Elemente",

@@ -37,6 +37,29 @@ const validProgress = {
 } as const;
 
 describe('export worker protocol', () => {
+  it('validates final failure diagnostics in error responses', () => {
+    const failure = {
+      operation: 'submit-video-frame',
+      errorName: 'EncodingError',
+      errorMessage: 'Encoding error.',
+      frame: { index: 0, timeMs: 0, width: 1920, height: 1080, clipIds: ['screen'] },
+    };
+    const response = {
+      type: 'error',
+      error: { name: 'EncodingError', message: 'Encoding error.' },
+      diagnostics: { ...diagnostics, failure },
+    };
+    expect(isExportWorkerResponse(response)).toBe(true);
+    expect(
+      isExportWorkerResponse({
+        ...response,
+        diagnostics: { ...diagnostics, failure: { ...failure, frame: { ...failure.frame, index: -1 } } },
+      }),
+    ).toBe(false);
+    expect(isExportWorkerResponse({ ...response, diagnostics: { ...diagnostics, encodedPacketCount: NaN } })).toBe(
+      false,
+    );
+  });
   it.each(['webm', 'mp4'] as const)('accepts a %s start with prepared cursor images', (format) => {
     expect(
       isExportWorkerRequest({

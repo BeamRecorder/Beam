@@ -5,6 +5,7 @@ import type { ArrowPreset, VectorNode, VectorNodeSelection } from '@beam/engine/
 import type { DrawingSettings, DrawnElement, ElementText } from '@beam/engine/shared/element-types';
 import type { ElementTextDefaults } from './element-text-default-types';
 import type { OrbitCameraPose } from '@beam/engine/zoom/orbit-camera-types';
+import type { ElementAsset } from '@beam/engine/shared/element-asset-types';
 
 export type ElementLayerPatch = Partial<ShapeLayerStyle> & { transform?: NormalizedTransform };
 
@@ -38,6 +39,7 @@ export interface ElementEditorContext {
   beginVector: (id?: string) => boolean;
   finishVector: () => void;
   addArrow: (preset: ArrowPreset) => void;
+  addAsset: (asset: ElementAsset) => void;
   drawArrow: () => void;
   anchorDraft: Ref<VectorNode[] | null>;
   finishDrawing: () => void;

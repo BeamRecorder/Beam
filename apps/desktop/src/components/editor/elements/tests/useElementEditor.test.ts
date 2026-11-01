@@ -10,6 +10,7 @@ import type { ColorFill } from '@beam/engine/shared/color-fill-types';
 import type { DrawingSettings, DrawnElement } from '@beam/engine/shared/element-types';
 import type { ElementEditorContext, ElementEditorOptions } from '../element-editor-types';
 import { provideElementEditor, useElementEditor } from '../useElementEditor';
+import { saveElementAsset } from '@beam/engine/shared/element-assets';
 
 vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: () => ({ t: (key: string) => `translated:${key}` }),
@@ -118,6 +119,33 @@ afterEach(() => {
 });
 
 describe('useElementEditor', () => {
+  it('inserts independent saved elements with fresh identity and current project timing', () => {
+    const source = createClip('old-project', { name: 'My bubble' });
+    const asset = saveElementAsset(source, { width: 1920, height: 1080 });
+    const target = mountEditor();
+    Object.assign(asset.style, { id: 'poisoned', timelineStartMs: 99, locked: true });
+    target.context.addAsset(asset);
+    target.context.addAsset(asset);
+    const [first, second] = target.layers.value;
+    expect(first.id).not.toBe(source.id);
+    expect(second.id).not.toBe(first.id);
+    expect(first.timelineStartMs).toBe(1250);
+    expect(first.timelineDurationMs).toBe(4000);
+    expect(first.name).toBe('My bubble');
+    expect(first.locked).toBeUndefined();
+    expect(first.id).not.toBe('poisoned');
+    first.fillColor = '#ffffff';
+    expect(second.fillColor).not.toBe('#ffffff');
+  });
+  it('does not insert saved elements while interaction is blocked or canvas dimensions are unavailable', () => {
+    const asset = saveElementAsset(createClip('original'), { width: 1920, height: 1080 });
+    const blocked = mountEditor({ canInteract: false }),
+      missing = mountEditor({ canvasSize: false });
+    blocked.context.addAsset(asset);
+    missing.context.addAsset(asset);
+    expect(blocked.insert).not.toHaveBeenCalled();
+    expect(missing.insert).not.toHaveBeenCalled();
+  });
   it('returns null without a provider and injects the reactive editor context into descendants', async () => {
     let outside: ElementEditorContext | null = null;
     const wrapper = mount(

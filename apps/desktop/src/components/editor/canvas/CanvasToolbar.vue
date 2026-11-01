@@ -66,13 +66,14 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
           />
           <Button
             class="crop-button"
+            :class="{ 'is-cropping': isCropping }"
             :variant="isCropping ? 'selected' : 'ghost'"
             size="xs"
             :icon="isCropping ? Check : Crop"
-            :disabled="!canCrop"
+            :disabled="!isCropping && !canCrop"
             :aria-pressed="isCropping"
             :aria-label="isCropping ? t('confirmCrop') : t('cropSelected')"
-            :tooltip="canCrop ? (isCropping ? t('confirmCrop') : t('cropSelected')) : t('selectElementToCrop')"
+            :tooltip="isCropping ? undefined : canCrop ? t('cropSelected') : t('selectElementToCrop')"
             @click="emit('toggle:crop')"
           >
             <span class="crop-label">{{ isCropping ? t('ok') : t('crop') }}</span>
@@ -217,7 +218,7 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
 }
 
 @container (max-width: 430px) {
-  .crop-label {
+  .crop-button:not(.is-cropping) .crop-label {
     display: none;
   }
   .toolbar-controls {

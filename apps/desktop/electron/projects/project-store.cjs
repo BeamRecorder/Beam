@@ -18,6 +18,7 @@ const { createProjectPreview } = require('./project-preview.cjs');
 const { createProjectFeatureDetector } = require('./project-feature-detection.cjs');
 const { listProjectDirectories } = require('./project-directories.cjs');
 const { createProjectMediaLocations, safePath } = require('./project-media-locations.cjs');
+const { recordingDiagnostics } = require('./recording-diagnostics.cjs');
 function createProjectStore(
   root,
   { mediaHost = 'asset', category = null, repairMetadata = true, roots = () => [root], writeRoot = () => root } = {},
@@ -215,6 +216,7 @@ function createProjectStore(
       return {
         sessionId: session.sessionId,
         manifest: sessionManifest,
+        diagnostics: recordingDiagnostics(sessionDirectory, tracks),
         videoSrc: video ? mediaUrlFor(pathToFileURL(path.join(screenDirectory, video)).href) : null,
         videoSessionPath: video ? path.posix.join('screen', video) : null,
         tracks,

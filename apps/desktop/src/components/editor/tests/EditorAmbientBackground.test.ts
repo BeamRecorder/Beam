@@ -116,6 +116,38 @@ describe('EditorAmbientBackground', () => {
     wrapper.unmount();
   });
 
+  it.each([color(), gradient(), image()])(
+    'extends the selected $kind into screenshot margins only when opted in',
+    (background) => {
+      const wrapper = mount(EditorAmbientBackground, { props: { background, variant: 'canvas-extension' } });
+      expect(wrapper.classes()).toContain('is-canvas-extension');
+      expect(wrapper.attributes('aria-hidden')).toBe('true');
+      expect(wrapper.findAll('button, a, input, select, textarea')).toHaveLength(0);
+      wrapper.unmount();
+    },
+  );
+
+  it('retains the normal ambient treatment for Studio and when the screenshot background is hidden', async () => {
+    const wrapper = mount(EditorAmbientBackground, { props: { background: color() } });
+    expect(wrapper.classes()).not.toContain('is-canvas-extension');
+    await wrapper.setProps({ variant: 'canvas-extension' });
+    expect(wrapper.classes()).toContain('is-canvas-extension');
+    await wrapper.setProps({ background: null });
+    expect(wrapper.classes()).not.toContain('is-canvas-extension');
+    expect(wrapper.find('.ambient-surface, .ambient-media').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('releases the extension treatment after an image fails and restores it for a valid replacement', async () => {
+    const wrapper = mount(EditorAmbientBackground, { props: { background: image(), variant: 'canvas-extension' } });
+    await wrapper.get('img').trigger('error');
+    expect(wrapper.classes()).not.toContain('is-canvas-extension');
+    expect(wrapper.find('.ambient-media').exists()).toBe(false);
+    await wrapper.setProps({ background: color() });
+    expect(wrapper.classes()).toContain('is-canvas-extension');
+    wrapper.unmount();
+  });
+
   it('renders color and gradient backgrounds without introducing a grid', async () => {
     const wrapper = mount(EditorAmbientBackground, {
       props: { background: color() },

@@ -1,16 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { defineComponent, h } from 'vue';
+import { defineComponent, h, ref } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { useViewportZoom } from '../useViewportZoom';
+import type { ViewportZoomOptions } from '../viewport-zoom-types';
 
 const wrappers: VueWrapper[] = [];
-const mountedZoom = () => {
+const mountedZoom = (options?: ViewportZoomOptions) => {
   let zoom!: ReturnType<typeof useViewportZoom>;
   wrappers.push(
     mount(
       defineComponent({
         setup() {
-          zoom = useViewportZoom();
+          zoom = useViewportZoom(options);
           return () => h('div');
         },
       }),
@@ -24,6 +25,40 @@ afterEach(() => {
 });
 
 describe('useViewportZoom', () => {
+  it('resets to the current host fit scale and detects view changes relative to that fit', () => {
+    const fit = ref(0.1),
+      zoom = mountedZoom({ defaultScale: () => fit.value, minScale: () => 0.01 });
+    expect(zoom.zoomPercent.value).toBe(10);
+    expect(zoom.isZoomedOrPanned.value).toBe(false);
+    zoom.setZoomScale(1);
+    expect(zoom.zoomPercent.value).toBe(100);
+    expect(zoom.isOutOfBounds.value).toBe(true);
+    fit.value = 0.05;
+    zoom.resetZoom();
+    expect(zoom.zoomPercent.value).toBe(5);
+    expect(zoom.isOutOfBounds.value).toBe(false);
+    expect(zoom.isZoomedOrPanned.value).toBe(false);
+  });
+
+  it('honors a host lower bound below 25% without changing the 500% upper bound', () => {
+    const zoom = mountedZoom({ minScale: () => 0.01 });
+    zoom.setZoomScale(0.001);
+    expect(zoom.zoomPercent.value).toBe(1);
+    zoom.setZoomScale(10);
+    expect(zoom.zoomPercent.value).toBe(500);
+  });
+
+  it('uses live minimum limits while retaining the wheel focal point at a bound', () => {
+    const limit = ref(0.05),
+      zoom = mountedZoom({ minScale: () => limit.value });
+    zoom.setZoomScale(0.01, 100, 50);
+    const pan = [zoom.panX.value, zoom.panY.value];
+    zoom.setZoomScale(0.01, 100, 50);
+    expect([zoom.panX.value, zoom.panY.value]).toEqual(pan);
+    limit.value = 0.01;
+    zoom.setZoomScale(0.01);
+    expect(zoom.zoomScale.value).toBe(0.01);
+  });
   it('initializes with default 100% zoom and (0,0) pan offset', () => {
     const zoom = mountedZoom();
     expect(zoom.zoomScale.value).toBe(1.0);

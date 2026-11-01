@@ -72,7 +72,7 @@ const viewport = useScreenshotViewport(
   () => Boolean(props.zoomDisabled ?? props.disabled) || dragging.value || Boolean(elements?.editing.value),
 );
 const { available, stageSize, stageStyle } = viewport;
-defineExpose({ resetView: viewport.viewport.resetZoom, zoomPercent: viewport.viewport.zoomPercent });
+defineExpose(viewport.controls);
 const canvas = ref<HTMLCanvasElement | null>(null);
 const contrast = provideCanvasControlContrast(() => canvas.value);
 const initialFramePending = ref(true);
@@ -489,7 +489,7 @@ onBeforeUnmount(() => {
     <div v-if="viewport.viewport.isOutOfBounds.value" class="canvas-recenter-float" @pointerdown.stop>
       <CanvasRecenterButton
         :disabled="Boolean(zoomDisabled ?? disabled) || dragging || Boolean(elements?.editing.value)"
-        @click="viewport.viewport.resetZoom"
+        @click="viewport.resetView"
       />
     </div>
     <div class="canvas-controls"><slot name="controls" /></div>

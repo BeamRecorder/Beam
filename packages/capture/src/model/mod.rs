@@ -1,6 +1,7 @@
 mod capability;
 mod config;
 mod diagnostics;
+mod encoding;
 mod event;
 mod ids;
 mod manifest;
@@ -10,6 +11,7 @@ mod track;
 pub use capability::*;
 pub use config::*;
 pub use diagnostics::*;
+pub use encoding::*;
 pub use event::*;
 pub use ids::*;
 pub use manifest::*;

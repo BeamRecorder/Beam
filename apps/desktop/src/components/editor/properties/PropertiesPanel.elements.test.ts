@@ -197,6 +197,7 @@ const globalStubs = {
 const createEditor = (shape: ShapeClip | null, layers: ShapeClip[] = shape ? [shape] : []) => {
   const remove = vi.fn();
   const editor: ElementEditorContext = {
+    addAsset: vi.fn(),
     createText: createElementText,
     canInteract: computed(() => true),
     layers: computed(() => layers),

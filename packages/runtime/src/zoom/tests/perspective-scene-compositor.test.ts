@@ -76,11 +76,11 @@ describe('PerspectiveSceneCompositor', () => {
     });
     expect(draw).toHaveBeenCalledOnce();
     expect(projector.renderSamples).toHaveBeenCalledWith(
-      expect.objectContaining({ width: 960, height: 640 }),
+      expect.objectContaining({ width: 961, height: 641 }),
       400,
       240,
       expect.arrayContaining([expect.objectContaining({ weight: 1 / 3 })]),
-      { width: 960, height: 640 },
+      { width: 961, height: 641 },
     );
     expect(target.drawImage).toHaveBeenCalledOnce();
     expect(target.drawImage).toHaveBeenCalledWith(projected, 0, 0, 400, 240);
@@ -175,11 +175,11 @@ describe('PerspectiveSceneCompositor', () => {
     });
     expect(context.setTransform).toHaveBeenLastCalledWith(2, 0, 0, 2, 200, 160);
     expect(projector.renderGeometry).toHaveBeenCalledWith(
-      expect.objectContaining({ width: 1200, height: 800 }),
+      expect.objectContaining({ width: 1201, height: 801 }),
       400,
       240,
       expect.any(Float32Array),
-      { width: 1200, height: 800 },
+      { width: 1201, height: 801 },
     );
     expect(target.drawImage).toHaveBeenCalledWith({}, 0, 0, 400, 240);
   });
@@ -194,7 +194,7 @@ describe('PerspectiveSceneCompositor', () => {
       sourceBounds: { x: -90, y: -60, width: 600, height: 400 },
       draw: () => ({ tiltX: 0, tiltY: 0 }),
     });
-    expect(target.drawImage).toHaveBeenCalledWith(expect.any(TestOffscreenCanvas), -190, -380, 1200, 800);
+    expect(target.drawImage).toHaveBeenCalledWith(expect.any(TestOffscreenCanvas), -190, -380, 1201, 801);
     expect(projector.renderGeometry).not.toHaveBeenCalled();
   });
 
@@ -214,9 +214,9 @@ describe('PerspectiveSceneCompositor', () => {
     expect(sources[0]).toBe(sources[1]);
     expect(sources[1]).toBe(sources[2]);
     expect(projector.renderGeometry.mock.calls.map((c) => c[4])).toEqual([
-      { width: 100, height: 50 },
-      { width: 200, height: 100 },
-      { width: 100, height: 50 },
+      { width: 101, height: 51 },
+      { width: 201, height: 101 },
+      { width: 101, height: 51 },
     ]);
   });
 
@@ -235,13 +235,13 @@ describe('PerspectiveSceneCompositor', () => {
       });
     render();
     const first = projector.renderGeometry.mock.calls[0]![0] as TestOffscreenCanvas;
-    expect(first).toMatchObject({ width: 800, height: 480 });
+    expect(first).toMatchObject({ width: 801, height: 481 });
     compositor.dispose();
     expect(first).toMatchObject({ width: 0, height: 0 });
     render();
     const second = projector.renderGeometry.mock.calls[1]![0];
     expect(second).not.toBe(first);
-    expect(second).toMatchObject({ width: 800, height: 480 });
+    expect(second).toMatchObject({ width: 801, height: 481 });
     compositor.dispose();
   });
 });

@@ -19,7 +19,7 @@ import { capture } from './api/capture';
 import { useLocaleStore } from './stores/locale';
 import { useTranslate } from './i18n/useTranslate';
 import type { CaptureProject, RecorderLauncherContext } from './api/types/capture-api';
-import { useEditorOpening } from './components/hud/useEditorOpening';
+import { projectForCompletedRecording, useEditorOpening } from './components/hud/useEditorOpening';
 
 const RecorderBar = defineAsyncComponent(() =>
   import('./components/hud/recorder/RecorderBar.vue').then((module) => module.default),
@@ -94,6 +94,7 @@ const TeleprompterWindowApp = defineAsyncComponent(
 const editorOpening = useEditorOpening();
 const currentProject = editorOpening.project;
 const isPreparingEditor = editorOpening.preparing;
+const isFinalizingRecording = ref(false);
 const editorLoadError = ref('');
 const editorLoadErrorCode = ref('');
 const editorLoadErrorAt = ref('');
@@ -256,7 +257,25 @@ const startRecording = async (configuration: RecordingConfiguration) => {
 
 const cancelOrStopRecording = async () => {
   const wasStartup = recording.phase.value === 'countdown' || recording.phase.value === 'starting';
-  await recording.stop();
+  const showFinalization = !wasStartup && ['recording', 'paused'].includes(recording.phase.value);
+  const stopping = recording.stop();
+  if (showFinalization) {
+    isFinalizingRecording.value = true;
+    currentView.value = 'hud';
+    capture.hideScreenRegionOverlay();
+    capture.showHud();
+  }
+  try {
+    await stopping;
+  } finally {
+    isFinalizingRecording.value = false;
+    if (showFinalization && recording.phase.value !== 'idle') {
+      currentView.value = 'recorder';
+      capture.setWindowMode('recorder');
+    } else if (showFinalization && !isPreparingEditor.value && recording.error.value) {
+      recordingStartupError.value = recording.error.value;
+    }
+  }
   if (!wasStartup && recording.phase.value !== 'idle') capture.setCameraOverlayActive(true);
   if (wasStartup) returnToHud();
 };
@@ -277,12 +296,6 @@ const revealEditor = async (attempt: number, disposition: 'reuse' | 'new-window'
 
 const cancelEditorOpening = () => {
   void editorOpening.cancel().catch(showEditorLoadError);
-};
-
-const projectForCompletedRecording = (projects: CaptureProject[], session: RecordingSessionResult) => {
-  const projectId = typeof session?.projectId === 'string' ? session.projectId.trim() : '';
-  if (projectId) return projects.find((project) => project.id === projectId) ?? null;
-  return session?.videoSrc ? (projects.find((project) => project.previewSrc === session.videoSrc) ?? null) : null;
 };
 
 const handleStopRecording = async (session: RecordingSessionResult) => {
@@ -396,7 +409,8 @@ const dismissRecorderLauncher = async () => {
       :prepare-recording="preparation.run"
       @popover-toggle="interactivity.togglePopover"
       v-if="currentView === 'hud' && !editorLoadError"
-      :preparing-editor="isPreparingEditor"
+      :preparing-editor="isPreparingEditor || isFinalizingRecording"
+      :finalizing-recording="isFinalizingRecording"
       :editor-loading-progress="editorLoadingProgress"
       :external-error="recordingStartupError"
       :recorder-launcher-context="recorderLauncherContext"
@@ -413,7 +427,7 @@ const dismissRecorderLauncher = async () => {
       @record="preparation.confirm"
       @cancel="preparation.cancel"
     />
-    <Transition name="recorder-return">
+    <Transition name="recorder-return" :css="!isFinalizingRecording">
       <RecorderBar
         v-if="currentView === 'recorder'"
         :phase="recording.phase.value"

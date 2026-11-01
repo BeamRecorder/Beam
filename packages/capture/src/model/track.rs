@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::{SegmentId, SourceId, TrackId};
+use super::{SegmentId, SourceId, TrackId, VideoEncodingDiagnostics};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -31,6 +31,8 @@ pub struct SegmentMetadata {
     pub start_ns: u64,
     pub end_ns: Option<u64>,
     pub complete: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub encoding: Option<VideoEncodingDiagnostics>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

@@ -240,6 +240,9 @@
     "zoomOut": "Thu nhỏ khung vẽ",
     "resetZoom": "Đặt lại góc nhìn",
     "canvasZoom": "Thu phóng khung vẽ",
+    "view": "Xem",
+    "fitToWindow": "Thu nhỏ ảnh lớn vừa cửa sổ",
+    "actualSize": "Kích thước thực (100%)",
     "toggleGrid": "Bật/tắt lưới 3x3",
     "takeScreenshot": "Chụp ảnh canvas",
     "screenshotCreated": "Đã tạo ảnh chụp màn hình",
@@ -530,7 +533,8 @@
     "videoFormatUnsupported": "Định dạng video này không được hỗ trợ.",
     "videoFileUnavailable": "Tệp video không khả dụng.",
     "ok": "OK",
-    "recenter": "Căn giữa góc nhìn"
+    "recenter": "Căn giữa góc nhìn",
+    "editCrop": "Chỉnh sửa cắt ảnh"
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU (thử nghiệm)",
@@ -619,7 +623,7 @@
     "screenRegionSelected": "Đã chọn vùng màn hình",
     "openTeleprompter": "Mở máy nhắc chữ",
     "closeTeleprompter": "Ẩn máy nhắc chữ",
-    "openHud": "Mở HUD",
+    "openHud": "Mở màn hình chính",
     "quit": "Thoát Beam",
     "preparingEditor": "Đang mở trình chỉnh sửa",
     "interactionAccessNoticeTitle": "Cho phép ghi phím tắt",
@@ -837,6 +841,8 @@
     "turnSystemAudioOff": "Tắt âm thanh hệ thống",
     "turnSystemAudioOn": "Bật âm thanh hệ thống",
     "preparing": "Đang chuẩn bị…",
+    "finalizing": "Đang hoàn tất bản ghi…",
+    "finalizingSlow": "Lâu hơn bình thường. Chờ tối đa 60 giây.",
     "restartRecording": "Bắt đầu ghi lại",
     "restartConfirmation": "Bắt đầu lại?",
     "restartDescription": "Bản ghi này sẽ bị xóa.",
@@ -1117,7 +1123,14 @@
     "perspective": "Phối cảnh",
     "group": "Nhóm",
     "selectionTitle": "Vùng chọn · {count} phần tử",
-    "ungroup": "Bỏ nhóm"
+    "ungroup": "Bỏ nhóm",
+    "moreTools": "Thêm công cụ",
+    "personalizeDock": "Tùy chỉnh thanh công cụ",
+    "customizeDockHint": "Kéo công cụ để sắp xếp lại. Nhấp chuột phải vào công cụ để xóa khỏi thanh công cụ.",
+    "removeFromDock": "Xóa khỏi thanh công cụ",
+    "resetToolbar": "Đặt lại thanh công cụ",
+    "scrollToolsLeft": "Cuộn công cụ sang trái",
+    "scrollToolsRight": "Cuộn công cụ sang phải"
   },
   "EditorPresetControls": {
     "preview": "Xem trước thiết lập sẵn",
@@ -1155,6 +1168,10 @@
     "close": "Đóng"
   },
   "Elements": {
+    "savedElements": "Phần tử đã lưu",
+    "saveElement": "Lưu phần tử đã chọn",
+    "removeSavedElement": "Xóa phần tử đã lưu",
+    "noSavedElements": "Chưa có phần tử nào được lưu.",
     "image": "Hình ảnh",
     "deleteNamed": "Xóa {name}",
     "title": "Phần tử",

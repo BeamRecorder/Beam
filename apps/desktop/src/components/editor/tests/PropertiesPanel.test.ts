@@ -1055,6 +1055,7 @@ describe('PropertiesPanel', () => {
       selected.value = null;
     });
     const editor: ElementEditorContext = {
+      addAsset: vi.fn(),
       createText: createElementText,
       canInteract: computed(() => true),
       layers: computed(() => (selected.value ? [selected.value] : [])),

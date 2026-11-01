@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import type { CropPixels } from '@beam/engine/shared/crop-types';
-import { nextTick, onBeforeUnmount, onMounted, ref, watch, type CSSProperties } from 'vue';
-import { Check } from '@lucide/vue';
+import { nextTick, ref, watch, type CSSProperties } from 'vue';
+import { Check, Settings2 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import ResizeHandle from '~/ui/ResizeHandle/ResizeHandle.vue';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
 import { useTranslate } from '~/i18n/useTranslate';
+import Popover from '~/ui/popover/Popover.vue';
+import CropNumericFields from './CropNumericFields.vue';
+import { useCropHudPosition } from './composables/useCropHudPosition';
+import type { NormalizedCrop } from '@beam/engine/shared/composition-types';
+import '~/ui/floating-surface.css';
 
 const props = defineProps<{
   containerStyle: CSSProperties;
@@ -20,65 +25,27 @@ const emit = defineEmits<{
   (event: 'resize-move', value: PointerEvent): void;
   (event: 'resize-end', value: PointerEvent): void;
   (event: 'done'): void;
+  (event: 'crop-edit', value: NormalizedCrop): void;
 }>();
 const { t } = useTranslate('EditorCanvas');
 const overlay = ref<HTMLElement | null>(null);
 const hud = ref<HTMLElement | null>(null);
-const hudStyle = ref<CSSProperties>({ visibility: 'hidden' });
-let frame = 0;
-let observer: ResizeObserver | null = null;
-
-const positionHud = () => {
-  frame = 0;
-  if (!overlay.value || !hud.value) return;
-  const crop = overlay.value.getBoundingClientRect();
-  const controls = hud.value.getBoundingClientRect();
-  const gap = 10;
-  const margin = 8;
-  const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
-  const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
-  const roomBelow = viewportHeight - crop.bottom - margin;
-  const roomAbove = crop.top - margin;
-  const placeBelow = roomBelow >= controls.height + gap || roomBelow >= roomAbove;
-  const unclampedTop = placeBelow ? crop.bottom + gap : crop.top - controls.height - gap;
-  const top = Math.max(margin, Math.min(viewportHeight - controls.height - margin, unclampedTop));
-  const left = Math.max(
-    margin,
-    Math.min(viewportWidth - controls.width - margin, crop.left + crop.width / 2 - controls.width / 2),
-  );
-  hudStyle.value = {
-    top: `${Math.round(top)}px`,
-    left: `${Math.round(left)}px`,
-    visibility: 'visible',
-  };
+const numeric = ref<InstanceType<typeof CropNumericFields> | null>(null);
+const blurCropField = () => {
+  numeric.value?.flush();
+  const active = document.activeElement;
+  if (active instanceof HTMLInputElement && active.closest('.crop-numeric-fields')) active.blur();
 };
-const scheduleHudPosition = () => {
-  cancelAnimationFrame(frame);
-  frame = requestAnimationFrame(positionHud);
+const finish = () => {
+  numeric.value?.flush();
+  emit('done');
 };
+const { hudStyle, scheduleHudPosition } = useCropHudPosition(overlay, hud);
 watch(
   () => [props.containerStyle, props.overlayStyle, props.measurements],
   () => void nextTick(scheduleHudPosition),
   { deep: true, flush: 'post' },
 );
-onMounted(() => {
-  void nextTick(() => {
-    scheduleHudPosition();
-    if (typeof ResizeObserver !== 'undefined') {
-      observer = new ResizeObserver(scheduleHudPosition);
-      if (overlay.value) observer.observe(overlay.value);
-      if (hud.value) observer.observe(hud.value);
-    }
-  });
-  window.addEventListener('resize', scheduleHudPosition);
-  window.addEventListener('scroll', scheduleHudPosition, true);
-});
-onBeforeUnmount(() => {
-  cancelAnimationFrame(frame);
-  observer?.disconnect();
-  window.removeEventListener('resize', scheduleHudPosition);
-  window.removeEventListener('scroll', scheduleHudPosition, true);
-});
 </script>
 
 <template>
@@ -111,7 +78,7 @@ onBeforeUnmount(() => {
     <Teleport to="body">
       <div
         ref="hud"
-        class="crop-hud"
+        class="crop-hud floating-surface"
         :class="{ 'has-measurements': measurements }"
         :style="hudStyle"
         @pointerdown.stop
@@ -125,7 +92,29 @@ onBeforeUnmount(() => {
           <span class="crop-measurement">↓ {{ measurements.bottom }}</span>
           <span class="crop-measurement">← {{ measurements.left }}</span>
         </div>
-        <Button variant="primary" size="xs" :icon="Check" class="crop-ok-button" @click.stop="emit('done')">
+        <Popover v-if="measurements" direction="up" :match-trigger-width="false" @toggle="!$event && numeric?.flush()">
+          <template #trigger="{ isOpen }">
+            <Button
+              variant="ghost"
+              size="xs"
+              icon-only
+              :icon="Settings2"
+              :aria-label="t('editCrop')"
+              :tooltip="t('editCrop')"
+              aria-haspopup="dialog"
+              :aria-expanded="isOpen"
+            />
+          </template>
+          <CropNumericFields ref="numeric" :measurements="measurements" @update="emit('crop-edit', $event)" />
+        </Popover>
+        <Button
+          variant="primary"
+          size="xs"
+          :icon="Check"
+          class="crop-ok-button"
+          @pointerdown.stop="blurCropField"
+          @click.stop="finish"
+        >
           {{ t('ok') }}
         </Button>
       </div>
@@ -200,13 +189,15 @@ onBeforeUnmount(() => {
   padding: 5px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-bg-surface) 94%, transparent);
   box-shadow: var(--shadow-lg);
   pointer-events: auto;
-  backdrop-filter: blur(12px);
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
 }
 .crop-hud-measurements {
   display: flex;
+  flex: 1;
+  flex-wrap: wrap;
   min-width: 0;
   align-items: center;
   gap: 7px;
@@ -245,8 +236,8 @@ onBeforeUnmount(() => {
 }
 @media (prefers-reduced-transparency: reduce) {
   .crop-hud {
-    background: var(--color-bg-surface);
-    backdrop-filter: none;
+    --floating-surface-background: var(--color-bg-surface);
+    --popover-backdrop-filter: none;
   }
 }
 </style>

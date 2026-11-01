@@ -166,6 +166,13 @@ export function useCropSelection(options: UseLayerTransformAndCropOptions, displ
     if (cropDraft.value) options.onUpdateCrop(cropDraft.value);
     clearDraft();
   };
+  const editCrop = (crop: NormalizedCrop) => {
+    const clip = options.selectedTransformClip();
+    if (!options.isCropping() || !clip || !isVisualClip(clip) || !dimensions.value) return;
+    const next = normalize(sourceCrop(crop));
+    if (!cropsEqual(next, cropValue.value)) options.onUpdateCrop(next);
+    clearDraft();
+  };
   const cropMeasurements = computed(() =>
     dimensions.value ? cropPixels(displayCrop(cropValue.value), dimensions.value) : null,
   );
@@ -178,5 +185,6 @@ export function useCropSelection(options: UseLayerTransformAndCropOptions, displ
     moveCropDrag,
     endCropDrag,
     commitCrop,
+    editCrop,
   };
 }

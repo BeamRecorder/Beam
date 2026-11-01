@@ -2,6 +2,13 @@ import { onBeforeUnmount, ref, shallowRef } from 'vue';
 import { capture } from '~/api/capture';
 import type { CaptureProject } from '~/api/types/capture-api';
 import type { EditorLoadingProgress, EditorOpenOptions } from '~/api/types/editor-window';
+import type { RecordingSessionResult } from './recorder/recording-types';
+
+export const projectForCompletedRecording = (projects: CaptureProject[], session: RecordingSessionResult) => {
+  const projectId = typeof session?.projectId === 'string' ? session.projectId.trim() : '';
+  if (projectId) return projects.find((project) => project.id === projectId) ?? null;
+  return session?.videoSrc ? (projects.find((project) => project.previewSrc === session.videoSrc) ?? null) : null;
+};
 
 /** Owns an opening attempt, including project resolution before a native window exists. */
 export function useEditorOpening() {

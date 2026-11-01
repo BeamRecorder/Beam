@@ -11,6 +11,7 @@ import {
 } from '@beam/engine/shared/composition-types';
 import {
   changeCropEdge,
+  changeCropDimension,
   cropsEqual,
   cropFromPixels,
   cropPixels,
@@ -80,6 +81,28 @@ const expectCropPixels = (actual: CropPixels, expected: CropPixels) => {
 };
 
 describe('crop pixel conversion', () => {
+  it.each(['width', 'height'] as const)('changes retained %s while preserving the opposite origin', (axis) => {
+    const size = { width: 100, height: 80 },
+      crop = { x: 0.1, y: 0.25, width: 0.6, height: 0.5 };
+    const pixels = cropPixels(changeCropDimension(crop, size, axis, 30), size);
+    expect(pixels[axis]).toBe(30);
+    expect(pixels.left).toBe(10);
+    expect(pixels.top).toBe(20);
+  });
+  it.each(['width', 'height'] as const)('bounds %s to one pixel and the remaining source', (axis) => {
+    const size = { width: 100, height: 80 },
+      crop = { x: 0.1, y: 0.25, width: 0.6, height: 0.5 };
+    expect(cropPixels(changeCropDimension(crop, size, axis, -5), size)[axis]).toBe(1);
+    expect(cropPixels(changeCropDimension(crop, size, axis, 9999), size)[axis]).toBe(axis === 'width' ? 90 : 60);
+  });
+  it.each([NaN, Infinity, -Infinity])('ignores nonfinite retained dimensions: %s', (value) => {
+    expect(changeCropDimension(undefined, { width: 100, height: 80 }, 'width', value)).toEqual({
+      x: 0,
+      y: 0,
+      width: 1,
+      height: 1,
+    });
+  });
   it('returns linked integer source dimensions for a valid media asset', () => {
     const clip = visualClip();
     const composition = compositionFor([assetFor('video', 1_920, 1_080)]);

@@ -53,6 +53,7 @@ const ShapeLayerPropertiesPanelStub = defineComponent({
 });
 
 const panelStubs = {
+  ElementAssets: true,
   Button: ButtonStub,
   Divider: true,
   DrawingControls: DrawingControlsStub,

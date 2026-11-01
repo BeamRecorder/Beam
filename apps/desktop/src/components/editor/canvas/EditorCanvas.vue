@@ -454,6 +454,7 @@ defineExpose({ viewportZoom, captureCurrentFrame });
         :container-style="transformAndCrop.cropContainerStyle.value"
         :overlay-style="transformAndCrop.cropOverlayStyle.value"
         :measurements="transformAndCrop.cropMeasurements.value"
+        @crop-edit="transformAndCrop.editCrop"
         @move-start="transformAndCrop.beginCropDrag($event, 'move')"
         @move="transformAndCrop.moveCropDrag"
         @move-end="transformAndCrop.endCropDrag"

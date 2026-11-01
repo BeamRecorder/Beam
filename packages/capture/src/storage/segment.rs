@@ -6,6 +6,7 @@ pub fn segment(path: String, start_ns: u64) -> SegmentMetadata {
         start_ns,
         end_ns: None,
         complete: false,
+        encoding: None,
     }
 }
 pub fn finish_segment(

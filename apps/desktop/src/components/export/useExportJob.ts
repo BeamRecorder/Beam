@@ -68,7 +68,7 @@ export function useExportJob() {
     } finally {
       isChoosingDestination.value = false;
       controller.value = null;
-      progress.value = null;
+      if (error.value === null) progress.value = null;
     }
   };
   const cancel = () => controller.value?.abort();

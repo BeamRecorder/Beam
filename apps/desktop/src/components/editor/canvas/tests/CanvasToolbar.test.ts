@@ -66,13 +66,15 @@ describe('CanvasToolbar', () => {
     expect(wrapper.text()).toContain('Crop');
   });
 
-  it('disables crop when no selected element exists and renders confirmation text while cropping', () => {
+  it('keeps the labelled confirmation enabled while already cropping', async () => {
     const wrapper = mount(CanvasToolbar, {
       props: { preset: 'custom', canCrop: false, isCropping: true },
       global: { stubs: { PopoverMenuButton, Button } },
     });
-    expect(wrapper.get('.crop-button').attributes('disabled')).toBeDefined();
+    expect(wrapper.get('.crop-button').attributes('disabled')).toBeUndefined();
     expect(wrapper.text()).toContain('OK');
+    await wrapper.setProps({ isCropping: false });
+    expect(wrapper.get('.crop-button').attributes('disabled')).toBeDefined();
   });
 
   it('renders zoom, grid and screenshot controls and emits events', async () => {

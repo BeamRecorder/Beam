@@ -16,6 +16,7 @@ import { screenshotShape, screenshotState } from '../screenshot-state';
 import { HIGHLIGHT_DEFAULTS } from '@beam/engine/shared/highlight-defaults';
 import ScreenshotCanvas from '../ScreenshotCanvas.vue';
 import CanvasMarqueeSurface from '../../editor/canvas/CanvasMarqueeSurface.vue';
+import type * as VueUseCore from '@vueuse/core';
 
 const renderer = vi.hoisted(() => ({
   loadScreenshotAssets: vi.fn(),
@@ -28,9 +29,11 @@ const originalDevicePixelRatio = window.devicePixelRatio;
 
 vi.mock('../screenshot-render', () => ({ loadScreenshotAssets: renderer.loadScreenshotAssets }));
 vi.mock('@beam/runtime/screenshot/screenshot-render', () => ({ drawScreenshot: renderer.drawScreenshot }));
-vi.mock('@vueuse/core', async () => {
+vi.mock('@vueuse/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof VueUseCore>();
   const { ref } = await import('vue');
   return {
+    ...actual,
     useElementSize: () => {
       const width = ref(0);
       const height = ref(0);
@@ -270,11 +273,34 @@ describe('ScreenshotCanvas', () => {
     expect(wrapper.find('.recenter-button').exists()).toBe(false);
     await stage.trigger('wheel', { deltaY: -120 });
     await stage.trigger('wheel', { deltaY: -120 });
-    expect(wrapper.vm.zoomPercent).toBe(140);
+    expect(wrapper.vm.zoomPercent).toBe(56);
     expect(wrapper.get('.recenter-button').attributes('disabled')).toBeUndefined();
     await wrapper.get('.recenter-button').trigger('click');
-    expect(wrapper.vm.zoomPercent).toBe(100);
+    expect(wrapper.vm.zoomPercent).toBe(40);
     expect(wrapper.find('.recenter-button').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('keeps a small canvas at actual size and exposes View commands without editing the image', async () => {
+    const state = stateFixture();
+    state.canvas.width = 320;
+    state.canvas.height = 200;
+    const original = JSON.stringify(state), wrapper = mountCanvas(state);
+    measurement.set?.(800, 600);
+    await flushPromises();
+    expect(wrapper.vm.zoomPercent).toBe(100);
+    expect((wrapper.get('.image-stage').element as HTMLElement).style.width).toBe('320px');
+    wrapper.vm.setView('zoom-in');
+    await nextTick();
+    expect(wrapper.vm.zoomPercent).toBe(125);
+    measurement.set?.(1000, 700);
+    await nextTick();
+    expect((wrapper.get('.image-stage').element as HTMLElement).style.width).toBe('400px');
+    wrapper.vm.setView('fit');
+    await nextTick();
+    expect(wrapper.vm.zoomPercent).toBe(100);
+    expect((wrapper.get('.image-stage').element as HTMLElement).style.width).toBe('320px');
+    expect(JSON.stringify(state)).toBe(original);
     wrapper.unmount();
   });
 
@@ -332,7 +358,7 @@ describe('ScreenshotCanvas', () => {
     const stage = wrapper.get('.stage-bounds');
     vi.spyOn(stage.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 800, 600));
     await stage.trigger('wheel', { deltaY: -120 });
-    expect(wrapper.vm.zoomPercent).toBe(100);
+    expect(wrapper.vm.zoomPercent).toBe(40);
     selection.vm.$emit('rotate-end', 90);
     expect(wrapper.emitted('rotate')).toEqual([[45], [90]]);
     expect(propertyInteractionActive.value).toBe(false);
@@ -404,7 +430,7 @@ describe('ScreenshotCanvas', () => {
       new WheelEvent('wheel', { deltaY: -120, clientX: 500, clientY: 350, bubbles: true, cancelable: true }),
     );
     await nextTick();
-    expect(wrapper.vm.zoomPercent).toBe(112);
+    expect(wrapper.vm.zoomPercent).toBe(45);
     expect(Number.parseFloat((wrapper.get('.image-stage').element as HTMLElement).style.width)).toBeCloseTo(
       Number.parseFloat(width) * 1.12,
     );
@@ -415,7 +441,7 @@ describe('ScreenshotCanvas', () => {
     expect(wrapper.emitted('select')).toBeUndefined();
     wrapper.vm.resetView();
     await nextTick();
-    expect(wrapper.vm.zoomPercent).toBe(100);
+    expect(wrapper.vm.zoomPercent).toBe(40);
     expect((wrapper.get('.image-stage').element as HTMLElement).style.width).toBe(width);
     wrapper.unmount();
   });
@@ -428,10 +454,10 @@ describe('ScreenshotCanvas', () => {
     vi.spyOn(stage.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 800, 600));
     await wrapper.setProps({ disabled: true });
     await stage.trigger('wheel', { deltaY: -120 });
-    expect(wrapper.vm.zoomPercent).toBe(100);
+    expect(wrapper.vm.zoomPercent).toBe(40);
     await wrapper.setProps({ zoomDisabled: false });
     await stage.trigger('wheel', { deltaY: -120 });
-    expect(wrapper.vm.zoomPercent).toBe(112);
+    expect(wrapper.vm.zoomPercent).toBe(45);
     wrapper.unmount();
   });
 

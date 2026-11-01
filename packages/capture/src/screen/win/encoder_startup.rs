@@ -18,6 +18,7 @@ use windows_future::IAsyncActionWithProgress;
 
 use super::{async_wait, sample_pump::SamplePump};
 use crate::screen::encoder_negotiation::{EncoderMode, EncoderStartFailure, negotiate_encoder};
+use crate::screen::{ScreenCaptureMetrics, encoding_diagnostics};
 
 pub(super) struct EncoderStartup {
     pub sender: Option<Sender<MediaStreamSample>>,
@@ -44,57 +45,78 @@ impl Drop for EncoderStartup {
 
 pub(super) fn initialize(
     path: &Path,
-    width: u32,
-    height: u32,
+    (width, height): (u32, u32),
     bitrate: u32,
     fps: u32,
     capacity: usize,
     mode: Option<EncoderMode>,
+    metrics: &ScreenCaptureMetrics,
 ) -> Result<EncoderStartup, String> {
-    let deadline = async_wait::initialization_deadline();
-    std::fs::OpenOptions::new()
-        .create_new(true)
-        .write(true)
-        .open(path)
-        .map_err(|error| format!("Windows encoder create output: {error}"))?;
-    let canonical = std::fs::canonicalize(path).map_err(|error| error.to_string())?;
-    // WinRT requires a DOS/UNC path rather than Rust's extended-length prefix.
-    let path = canonical.to_string_lossy();
-    let path = path.strip_prefix("\\\\?\\UNC\\").map_or_else(
-        || path.strip_prefix("\\\\?\\").unwrap_or(&path).to_owned(),
-        |unc| format!("\\\\{unc}"),
+    let started = Instant::now();
+    let result = (|| {
+        let deadline = async_wait::initialization_deadline();
+        std::fs::OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(path)
+            .map_err(|error| format!("Windows encoder create output: {error}"))?;
+        let canonical = std::fs::canonicalize(path).map_err(|error| error.to_string())?;
+        // WinRT requires a DOS/UNC path rather than Rust's extended-length prefix.
+        let path = canonical.to_string_lossy();
+        let path = path.strip_prefix("\\\\?\\UNC\\").map_or_else(
+            || path.strip_prefix("\\\\?\\").unwrap_or(&path).to_owned(),
+            |unc| format!("\\\\{unc}"),
+        );
+        let output = (|| -> windows::core::Result<_> {
+            let file = async_wait::wait(
+                StorageFile::GetFileFromPathAsync(&HSTRING::from(path))?,
+                deadline,
+            )?;
+            async_wait::wait(file.OpenAsync(FileAccessMode::ReadWrite)?, deadline)
+        })()
+        .map_err(|error| format!("Windows encoder open output: {error}"))?;
+        let attempt = |mode: EncoderMode| {
+            let started = Instant::now();
+            // Only this newly created, sample-free output belongs to negotiation.
+            // An existing recording file is never opened or truncated by this path.
+            let result = (|| {
+                output
+                    .SetSize(0)
+                    .and_then(|()| output.Seek(0))
+                    .map_err(|error| {
+                        EncoderStartFailure::terminal(format!(
+                            "Windows encoder reset output: {error}"
+                        ))
+                    })?;
+                start(
+                    &output,
+                    (width, height),
+                    bitrate,
+                    fps,
+                    capacity,
+                    mode,
+                    deadline,
+                )
+            })();
+            encoding_diagnostics::attempt(
+                metrics,
+                mode.label(),
+                started.elapsed(),
+                result.as_ref().err().map(|error| error.message.as_str()),
+            );
+            result
+        };
+        match mode {
+            Some(mode) => attempt(mode).map_err(|error| error.message),
+            None => negotiate_encoder(deadline, attempt),
+        }
+    })();
+    encoding_diagnostics::initialized(
+        metrics,
+        started.elapsed(),
+        result.as_ref().err().map(String::as_str),
     );
-    let output = (|| -> windows::core::Result<_> {
-        let file = async_wait::wait(
-            StorageFile::GetFileFromPathAsync(&HSTRING::from(path))?,
-            deadline,
-        )?;
-        async_wait::wait(file.OpenAsync(FileAccessMode::ReadWrite)?, deadline)
-    })()
-    .map_err(|error| format!("Windows encoder open output: {error}"))?;
-    let attempt = |mode| {
-        // Only this newly created, sample-free output belongs to negotiation.
-        // An existing recording file is never opened or truncated by this path.
-        output
-            .SetSize(0)
-            .and_then(|()| output.Seek(0))
-            .map_err(|error| {
-                EncoderStartFailure::terminal(format!("Windows encoder reset output: {error}"))
-            })?;
-        start(
-            &output,
-            (width, height),
-            bitrate,
-            fps,
-            capacity,
-            mode,
-            deadline,
-        )
-    };
-    match mode {
-        Some(mode) => attempt(mode).map_err(|error| error.message),
-        None => negotiate_encoder(deadline, attempt),
-    }
+    result
 }
 
 fn start(

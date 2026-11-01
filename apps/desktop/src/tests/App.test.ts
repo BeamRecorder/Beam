@@ -122,6 +122,7 @@ vi.mock('../components/hud/HUD.vue', async () => {
       name: 'MockHud',
       props: {
         preparingEditor: { type: Boolean, default: false },
+        finalizingRecording: { type: Boolean, default: false },
         prepareRecording: { type: Function, required: true },
         editorLoadingProgress: {
           type: Object,
@@ -137,6 +138,7 @@ vi.mock('../components/hud/HUD.vue', async () => {
             {
               class: 'mock-hud',
               'data-preparing-editor': String(props.preparingEditor),
+              'data-finalizing-recording': String(props.finalizingRecording),
               'data-editor-progress': String((props.editorLoadingProgress as { value: number }).value),
               'data-launcher-kind': props.recorderLauncherContext?.preferredKind ?? '',
               'data-launcher-source': props.recorderLauncherContext?.preferredSourceId ?? '',
@@ -470,6 +472,29 @@ describe('App', () => {
     await settle();
     expect(wrapper.get('.mock-recorder').attributes('data-busy')).toBe('false');
     expect(mocks.capture.showHud).not.toHaveBeenCalled();
+  });
+
+  it('shows finalization in the project loading surface while Stop is pending, then restores an active recorder', async () => {
+    await wrapper.get('.start').trigger('click');
+    await settle();
+    let resolveStop!: () => void;
+    mocks.controller.recording.stop.mockImplementationOnce(() => {
+      mocks.controller.recording.phase.value = 'finalizing';
+      return new Promise<void>((resolve) => {
+        resolveStop = resolve;
+      });
+    });
+    const stopping = wrapper.get('.stop').trigger('click');
+    await nextTick();
+    expect(wrapper.get('.mock-hud').attributes('data-finalizing-recording')).toBe('true');
+    expect(wrapper.get('.mock-hud').attributes('data-preparing-editor')).toBe('true');
+    expect(wrapper.find('.mock-recorder').exists()).toBe(false);
+    mocks.controller.recording.phase.value = 'recording';
+    resolveStop();
+    await stopping;
+    await settle();
+    expect(wrapper.find('.mock-recorder').exists()).toBe(true);
+    expect(mocks.capture.setWindowMode).toHaveBeenLastCalledWith('recorder');
   });
 
   it('keeps the camera overlay active until recording stop succeeds', async () => {

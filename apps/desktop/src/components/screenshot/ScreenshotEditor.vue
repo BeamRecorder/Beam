@@ -184,7 +184,10 @@ const navigateSearch = (tab: string) => {
 </script>
 <template>
   <main class="screenshot-editor">
-    <EditorAmbientBackground :background="state?.canvas.showBackground ? state.background : null" />
+    <EditorAmbientBackground
+      :background="state?.canvas.showBackground ? state.background : null"
+      variant="canvas-extension"
+    />
     <ScreenshotSearch
       v-if="state && document && !canvasFullscreen.isFullscreen.value"
       :navigate="navigateSearch"
@@ -262,10 +265,11 @@ const navigateSearch = (tab: string) => {
           :disabled="busy"
           :can-fullscreen="!busy && !cropping && !elements.editing.value && !elements.drawingMode.value"
           :zoom-percent="canvasPreview?.zoomPercent ?? 100"
+          :view-mode="canvasPreview?.viewMode ?? 'fit'"
           v-model:canvas="state.canvas"
           v-model:advanced="advanced"
           v-model:keep-aspect="keepAspect"
-          @reset-view="canvasPreview?.resetView()"
+          @view="canvasPreview?.setView($event)"
           @fullscreen="toggleFullscreen"
         />
         <Button
@@ -354,6 +358,7 @@ const navigateSearch = (tab: string) => {
           </Button>
         </div>
         <ScreenshotCanvas
+          :key="document.id"
           ref="canvasPreview"
           :class="{
             'is-preview-fullscreen': canvasFullscreen.isFullscreen.value,

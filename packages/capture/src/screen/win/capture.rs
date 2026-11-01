@@ -153,14 +153,19 @@ impl WindowsRecording {
         let finalized = self.finalized.clone();
         let output = self.output.clone();
         let metrics = self.metrics.clone();
-        let mut result = run_native("wgc-stop", Duration::from_secs(25), move || {
-            let stopped = control.map_or(Ok(()), |control| control.stop().map_err(backend_error));
-            let finished = callback.lock().finish_at(stopped_at);
-            if finished.is_ok() && validate_output(&output, metrics.frames_received()).is_ok() {
-                finalized.store(true, Ordering::Release);
-            }
-            stopped.and(finished)
-        })
+        let mut result = run_native(
+            "wgc-stop",
+            super::super::encoding_diagnostics::WINDOWS_STOP_TIMEOUT,
+            move || {
+                let stopped =
+                    control.map_or(Ok(()), |control| control.stop().map_err(backend_error));
+                let finished = callback.lock().finish_at(stopped_at);
+                if finished.is_ok() && validate_output(&output, metrics.frames_received()).is_ok() {
+                    finalized.store(true, Ordering::Release);
+                }
+                stopped.and(finished)
+            },
+        )
         .and_then(|()| {
             if let Some(error) = &self.health.lock().failure {
                 return Err(CaptureError::Backend(error.clone()));

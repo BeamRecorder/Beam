@@ -1,11 +1,23 @@
 import { mount } from '@vue/test-utils';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createPinia, setActivePinia } from 'pinia';
+import { flushPromises } from '@vue/test-utils';
 import type { Ref } from 'vue';
 import ScreenshotToolbar from '../ScreenshotToolbar.vue';
 import type { ScreenshotToolbarProps } from '../screenshot-toolbar-types';
 import type * as CoreModule from '@vueuse/core';
 
 const size = vi.hoisted(() => ({ height: null as Ref<number> | null, options: null as unknown }));
+vi.mock('~/api/capture', () => ({
+  capture: {
+    updatePreferences: async (patch: { extras: Record<string, unknown> }) => ({
+      extras: patch.extras,
+      shortcuts: {},
+      schemaVersion: 3,
+    }),
+  },
+}));
+beforeEach(() => setActivePinia(createPinia()));
 vi.mock('@vueuse/core', async (importOriginal) => {
   const actual = await importOriginal<typeof CoreModule>();
   const { ref } = await import('vue');
@@ -37,10 +49,10 @@ const makeToolbar = (props: Partial<ScreenshotToolbarProps> = {}) => {
     },
     global: {
       stubs: {
-        ScreenshotAddMenu: {
-          name: 'ScreenshotAddMenu',
-          props: ['disabled', 'direction'],
-          template: '<button :disabled="disabled" aria-label="Add">Add</button>',
+        ScreenshotDockMore: {
+          name: 'ScreenshotDockMore',
+          props: ['disabled', 'items'],
+          template: '<button :disabled="disabled" aria-label="More tools">…</button>',
         },
       },
     },
@@ -60,10 +72,11 @@ describe('Screenshot toolbar', () => {
     await wrapper.vm.$nextTick();
     expect(wrapper.emitted('resize')).toEqual([[96]]);
   });
-  it('offers direct still-image tools and keeps the complete insertion menu opening upward', async () => {
+  it('offers Arrow before the other direct tools and retains More for customization', async () => {
     const wrapper = makeToolbar();
     expect(wrapper.get('[role="toolbar"]').attributes('aria-label')).toBe('Tools');
     for (const [label, kind] of [
+      ['Arrow', 'arrow'],
       ['Text', 'text'],
       ['Shape', 'shape'],
       ['Draw', 'drawing'],
@@ -72,16 +85,19 @@ describe('Screenshot toolbar', () => {
       await wrapper.get(`button[aria-label="${label}"]`).trigger('click');
       expect(wrapper.emitted('add')?.at(-1)).toEqual([kind]);
     }
-    expect(wrapper.findComponent({ name: 'ScreenshotAddMenu' }).props('direction')).toBe('up');
+    expect(wrapper.findComponent({ name: 'ScreenshotDockMore' }).exists()).toBe(true);
+    expect(wrapper.find('button[aria-label="Group"]').exists()).toBe(false);
+    expect(wrapper.find('button[aria-label="Ungroup"]').exists()).toBe(false);
   });
 
   it('exposes crop and canvas actions without dimensions or settings in the editing dock', async () => {
     const wrapper = makeToolbar({ cropping: true, panel: 'canvas' });
-    expect(wrapper.get('button[aria-label="Crop"]').attributes('aria-pressed')).toBe('true');
+    expect(wrapper.get('button[aria-label="Confirm crop"]').text()).toBe('OK');
+    expect(wrapper.get('button[aria-label="Confirm crop"]').attributes('aria-pressed')).toBe('true');
     expect(wrapper.get('button[aria-label="Select"]').attributes('aria-pressed')).toBe('false');
     expect(wrapper.find('button[aria-label="Settings"]').exists()).toBe(false);
     expect(wrapper.find('button[aria-label="Dimensions"]').exists()).toBe(false);
-    await wrapper.get('button[aria-label="Crop"]').trigger('click');
+    await wrapper.get('button[aria-label="Confirm crop"]').trigger('click');
     expect(wrapper.emitted('crop')).toEqual([[]]);
     await wrapper.setProps({ cropping: false });
     await wrapper.get('button[aria-label="Canvas"]').trigger('click');
@@ -179,8 +195,8 @@ describe('Screenshot toolbar', () => {
   it('moves keyboard focus between enabled buttons and wraps in both directions', async () => {
     const wrapper = makeToolbar({ canCrop: false });
     const first = wrapper.get('button[aria-label="Select"]');
-    const next = wrapper.get('button[aria-label="Text"]');
-    const last = wrapper.get('button[aria-label="Canvas"]');
+    const next = wrapper.get('button[aria-label="Arrow"]');
+    const last = wrapper.get('button[aria-label="Properties"]');
     (first.element as HTMLElement).focus();
     await first.trigger('keydown', { key: 'ArrowRight' });
     expect(document.activeElement).toBe(next.element);
@@ -193,7 +209,7 @@ describe('Screenshot toolbar', () => {
   it('supports Home and End without intercepting modified keys or other controls', async () => {
     const wrapper = makeToolbar();
     const first = wrapper.get('button[aria-label="Select"]');
-    const last = wrapper.get('button[aria-label="Canvas"]');
+    const last = wrapper.get('button[aria-label="Properties"]');
     (first.element as HTMLElement).focus();
     await first.trigger('keydown', { key: 'End' });
     expect(document.activeElement).toBe(last.element);
@@ -208,31 +224,72 @@ describe('Screenshot toolbar', () => {
   });
 });
 
-it('exposes enabled grouping and detaching actions in the toolbar', async () => {
+it('adds grouping from More only when selected and keeps it as a pinned tool', async () => {
   const wrapper = makeToolbar({ canGroup: true, canUngroup: true });
-  await wrapper.get('button[aria-label="Group"]').trigger('click');
-  await wrapper.get('button[aria-label="Ungroup"]').trigger('click');
+  const more = wrapper.findComponent({ name: 'ScreenshotDockMore' });
+  expect(more.props('items')).toContainEqual(expect.objectContaining({ id: 'reset-tools', separatorBefore: true }));
+  more.vm.$emit('select', 'group');
+  more.vm.$emit('select', 'ungroup');
+  await flushPromises();
   expect(wrapper.emitted('group')).toEqual([[]]);
   expect(wrapper.emitted('ungroup')).toEqual([[]]);
+  expect(wrapper.find('button[aria-label="Group"]').exists()).toBe(true);
+  expect(wrapper.find('button[aria-label="Ungroup"]').exists()).toBe(true);
 });
-it('disables unavailable group actions', () => {
+it('keeps unavailable group actions disabled in More', () => {
   const wrapper = makeToolbar();
-  expect(wrapper.get('button[aria-label="Group"]').attributes('disabled')).toBeDefined();
-  expect(wrapper.get('button[aria-label="Ungroup"]').attributes('disabled')).toBeDefined();
+  const items = wrapper.findComponent({ name: 'ScreenshotDockMore' }).props('items');
+  expect(items.find((item: { id: string }) => item.id === 'group')?.disabled).toBe(true);
+  expect(items.find((item: { id: string }) => item.id === 'ungroup')?.disabled).toBe(true);
 });
-it('shows selection-specific group instructions on both actions', async () => {
+it('retains selection-specific instructions on an optional pinned Group tool', async () => {
   const { default: Button } = await import('~/ui/button/Button.vue');
-  const wrapper = makeToolbar();
+  const wrapper = makeToolbar({ canGroup: true });
+  wrapper.findComponent({ name: 'ScreenshotDockMore' }).vm.$emit('select', 'group');
+  await flushPromises();
   const group = () =>
     wrapper.findAllComponents(Button).find((button) => button.find('button[aria-label="Group"]').exists())!;
-  const ungroup = () =>
-    wrapper.findAllComponents(Button).find((button) => button.find('button[aria-label="Ungroup"]').exists())!;
-  expect(group().props('tooltip')).toBe('Select 2 elements to group');
-  expect(ungroup().props('tooltip')).toBe('Select a grouped element to ungroup');
-  await wrapper.setProps({ groupDisabledReason: 'selectOneMoreToGroup' });
+  expect(group().props('tooltip')).toBe('Group · Ctrl+G');
+  await wrapper.setProps({ canGroup: false, groupDisabledReason: 'selectOneMoreToGroup' });
   expect(group().props('tooltip')).toBe('Select 1 more element to group');
   await wrapper.setProps({ groupDisabledReason: 'alreadyGrouped' });
   expect(group().props('tooltip')).toBe('These elements are already grouped');
-  await wrapper.setProps({ canGroup: true });
-  expect(group().props('tooltip')).toBe('Group · Ctrl+G');
+});
+it('pins a chosen tool, removes it, resets defaults and rejects unavailable or unknown menu actions', async () => {
+  const wrapper = makeToolbar();
+  const more = wrapper.findComponent({ name: 'ScreenshotDockMore' });
+  more.vm.$emit('select', 'blur');
+  await flushPromises();
+  expect(wrapper.find('button[aria-label="Blur"]').exists()).toBe(true);
+  expect(wrapper.emitted('add')?.at(-1)).toEqual(['blur']);
+  more.vm.$emit('select', 'remove:blur');
+  await flushPromises();
+  expect(wrapper.find('button[aria-label="Blur"]').exists()).toBe(false);
+  more.vm.$emit('select', 'remove:arrow');
+  more.vm.$emit('select', 'reset-tools');
+  await flushPromises();
+  expect(wrapper.find('button[aria-label="Arrow"]').exists()).toBe(true);
+  const count = wrapper.emitted('add')?.length;
+  more.vm.$emit('select', 'video');
+  more.vm.$emit('select', 'remove:unknown');
+  more.vm.$emit('select', 'group');
+  await wrapper.setProps({ cropping: true });
+  more.vm.$emit('select', 'cursor');
+  expect(wrapper.emitted('add')?.length).toBe(count);
+});
+it('persists order and removals emitted by the dock without activating a tool', async () => {
+  const wrapper = makeToolbar(),
+    tools = wrapper.findComponent({ name: 'ScreenshotDockTools' });
+  tools.vm.$emit('reorder', 'shape', 0);
+  await flushPromises();
+  expect(
+    wrapper
+      .findAll('[data-dock-tool]')
+      .map((entry) => entry.attributes('data-dock-tool'))
+      .slice(0, 3),
+  ).toEqual(['shape', 'arrow', 'text']);
+  tools.vm.$emit('remove', 'text');
+  await flushPromises();
+  expect(wrapper.find('[data-dock-tool="text"]').exists()).toBe(false);
+  expect(wrapper.emitted('add')).toBeUndefined();
 });

@@ -23,6 +23,8 @@ import type * as ScreenshotLayersModule from '@beam/engine/screenshot/screenshot
 import type * as ManualZoomModule from '@beam/engine/zoom/manual-zoom';
 import type { VisualClip } from '@beam/engine/shared/composition-types';
 import type * as ZoomTimingModule from '@beam/engine/zoom/zoom-timing';
+import type * as PerspectiveSourceModule from './perspective-source';
+import type * as PerspectiveSceneCompositorModule from './perspective-scene-compositor';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('complete 3D camera planes in real Chromium', () => {
   let server: ViteDevServer, browser: Browser, page: Page, temp: string;
@@ -64,6 +66,104 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('complete 3D camera plane
     await browser?.close();
     await server?.close();
     if (temp) await rm(temp, { recursive: true, force: true });
+  });
+
+  it('preserves text, framing and transparent pixels with stable allocations throughout camera pans', async () => {
+    const result = await page.evaluate(async () => {
+      const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+      const { PerspectiveSceneCompositor } = (await load(
+        '/packages/runtime/src/zoom/perspective-scene-compositor.ts',
+      )) as typeof PerspectiveSceneCompositorModule;
+      const { perspectiveSourceRaster } = (await load(
+        '/packages/runtime/src/zoom/perspective-source.ts',
+      )) as typeof PerspectiveSourceModule;
+      const { WebGlPerspectiveProjector } = (await load(
+        '/packages/runtime/src/zoom/webgl-perspective-projector.ts',
+      )) as typeof WebglPerspectiveProjectorModule;
+      const { cameraPlaneGeometry } = (await load(
+        '/packages/engine/src/zoom/camera-plane.ts',
+      )) as typeof CameraPlaneModule;
+      const bounds = { x: 0, y: 0, width: 160, height: 100 },
+        sourceBounds = { x: -12, y: -8, width: 184, height: 116 },
+        compositor = new PerspectiveSceneCompositor(),
+        referenceProjector = new WebGlPerspectiveProjector(),
+        output = new OffscreenCanvas(160, 100),
+        target = output.getContext('2d')!,
+        reference = new OffscreenCanvas(160, 100),
+        referenceTarget = reference.getContext('2d')!;
+      const comparisons = [];
+      try {
+        for (const scale of [1.25, 3])
+          for (const tilted of [false, true])
+            for (let frame = 0; frame < 4; frame++) {
+              const camera = { scale, focusX: 0.371 + frame * 0.037, focusY: 0.629 - frame * 0.019 },
+                transform = { tiltX: tilted ? 0.12 : 0, tiltY: tilted ? -0.08 : 0 };
+              const draw = (ctx: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D) => {
+                // Start opaque, then leave holes: a reused allocation must not retain the previous frame.
+                if (frame === 0) {
+                  ctx.fillStyle = '#7854bc';
+                  ctx.fillRect(0, 0, 160, 100);
+                }
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(20, 20, 120, 60);
+                ctx.fillStyle = '#143a5f';
+                ctx.font = '9px monospace';
+                ctx.fillText('Beam 0123456789', 28, 43);
+                ctx.fillStyle = '#ed713b';
+                ctx.fillRect(24, 55, 112, 1);
+                return transform;
+              };
+              target.clearRect(0, 0, 160, 100);
+              compositor.render({ target, bounds, sourceBounds, pixelScale: 1, camera, draw });
+              const tight = perspectiveSourceRaster(sourceBounds, bounds, camera, 1, referenceProjector.maxTextureSize),
+                plane = new OffscreenCanvas(tight.size.width, tight.size.height),
+                paint = plane.getContext('2d')!,
+                density = tight.size.width / tight.bounds.width;
+              paint.setTransform(density, 0, 0, density, -tight.bounds.x * density, -tight.bounds.y * density);
+              draw(paint);
+              referenceTarget.clearRect(0, 0, 160, 100);
+              if (tilted)
+                referenceTarget.drawImage(
+                  referenceProjector.renderGeometry(
+                    plane,
+                    160,
+                    100,
+                    cameraPlaneGeometry(160, 100, transform, camera, tight.bounds).positions,
+                    tight.size,
+                  ),
+                  0,
+                  0,
+                );
+              else
+                referenceTarget.drawImage(
+                  plane,
+                  80 + (tight.bounds.x - camera.focusX * 160) * scale,
+                  50 + (tight.bounds.y - camera.focusY * 100) * scale,
+                  tight.bounds.width * scale,
+                  tight.bounds.height * scale,
+                );
+              const actual = target.getImageData(0, 0, 160, 100).data,
+                expected = referenceTarget.getImageData(0, 0, 160, 100).data;
+              let total = 0,
+                maximum = 0;
+              for (let i = 0; i < actual.length; i++) {
+                const delta = Math.abs(actual[i]! - expected[i]!);
+                total += delta;
+                maximum = Math.max(maximum, delta);
+              }
+              comparisons.push({ scale, tilted, frame, mean: total / actual.length, maximum });
+              plane.width = plane.height = 0;
+            }
+      } finally {
+        compositor.dispose();
+        referenceProjector.dispose();
+      }
+      return comparisons;
+    });
+    for (const comparison of result) {
+      expect(comparison.mean, JSON.stringify(comparison)).toBeLessThan(0.15);
+      expect(comparison.maximum, JSON.stringify(comparison)).toBeLessThanOrEqual(8);
+    }
   });
 
   it('renders normal pixels outside new zoom markers and a real camera effect inside, in every projection', async () => {

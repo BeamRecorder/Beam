@@ -486,3 +486,19 @@ it('rotates crop handles and projects movement into local image axes', () => {
   expect(mounted.state.cropDraft.value?.x).toBeCloseTo(0.3);
   expect(mounted.state.cropDraft.value?.y).toBeCloseTo(0.2);
 });
+
+it.each([false, true])('commits numeric crop fields on the source pixel grid, mirrored: %s', (mirrored) => {
+  const mounted = mountCropSelection({ isMirrored: mirrored, isMirroredY: mirrored });
+  mounted.state.editCrop({ x: 0.2, y: 0.25, width: 0.3, height: 0.5 });
+  expect(mounted.onUpdateCrop).toHaveBeenCalledTimes(1);
+  expect(mounted.onUpdateCrop.mock.calls[0]![0]).toEqual({ x: mirrored ? 0.5 : 0.2, y: 0.25, width: 0.3, height: 0.5 });
+  expect(mounted.onPreviewCrop).toHaveBeenLastCalledWith(null);
+});
+it('avoids unchanged numeric commits and ignores detached selections', () => {
+  const mounted = mountCropSelection();
+  mounted.state.editCrop({ x: 0, y: 0, width: 1, height: 1 });
+  expect(mounted.onUpdateCrop).not.toHaveBeenCalled();
+  const missing = mountCropSelection({}, { selected: null });
+  missing.state.editCrop({ x: 0, y: 0, width: 0.5, height: 0.5 });
+  expect(missing.onUpdateCrop).not.toHaveBeenCalled();
+});

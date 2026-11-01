@@ -17,6 +17,7 @@ const create = (realPopover = false, realSizes = false) => {
       disabled: false,
       canFullscreen: true,
       zoomPercent: 112,
+      viewMode: 'fit',
     },
     global: {
       stubs: {
@@ -25,7 +26,8 @@ const create = (realPopover = false, realSizes = false) => {
           : {
               name: 'Popover',
               props: ['direction', 'align', 'matchTriggerWidth'],
-              template: '<div><slot name="trigger" /><slot /></div>',
+              methods: { close() {} },
+              template: '<div><slot name="trigger" :is-open="false" /><slot :close="close" /></div>',
             },
         ScreenshotSizeControls: realSizes
           ? false
@@ -39,14 +41,20 @@ const create = (realPopover = false, realSizes = false) => {
     },
   });
 };
-it('groups dimensions, fullscreen and a resettable preview percentage with a downward popover', async () => {
+it('keeps the view percentage visible and offers fit and actual size separately from dimensions', async () => {
   const wrapper = create();
   expect(wrapper.get('button[aria-label="Dimensions"]').text()).toContain('1200 × 800');
+  expect(wrapper.get('button[aria-label="Canvas zoom: 112%"] span').text()).toBe('View · 112%');
   expect(wrapper.findComponent({ name: 'Popover' }).props('direction')).toBe('down');
-  const reset = wrapper.get('button[aria-label="Reset canvas view"]');
-  expect(reset.text()).toBe('112%');
-  await reset.trigger('click');
-  expect(wrapper.emitted('resetView')).toEqual([[]]);
+  const fit = wrapper.findAll('button').find((button) => button.text().includes('Fit large images to window'))!;
+  expect(fit.attributes('aria-checked')).toBe('true');
+  await fit.trigger('click');
+  expect(wrapper.emitted('view')).toEqual([['fit']]);
+  await wrapper
+    .findAll('button')
+    .find((button) => button.text().includes('Actual size (100%)'))!
+    .trigger('click');
+  expect(wrapper.emitted('view')?.at(-1)).toEqual(['actual']);
   await wrapper.get('button[aria-label="Fullscreen preview"]').trigger('click');
   expect(wrapper.emitted('fullscreen')).toHaveLength(1);
 });
@@ -86,8 +94,11 @@ it('keeps dimensions editable when entering fullscreen is unavailable and disabl
   expect(wrapper.emitted('fullscreen')).toBeUndefined();
   await wrapper.setProps({ disabled: true });
   expect(wrapper.get('fieldset').attributes('disabled')).toBeDefined();
-  await wrapper.get('button[aria-label="Reset canvas view"]').trigger('click');
-  expect(wrapper.emitted('resetView')).toBeUndefined();
+  await wrapper
+    .findAll('button')
+    .find((button) => button.text().includes('Fit large images to window'))!
+    .trigger('click');
+  expect(wrapper.emitted('view')).toBeUndefined();
 });
 it('forwards output dimensions and disclosure models independently from the preview zoom', async () => {
   const wrapper = create();
@@ -101,4 +112,18 @@ it('forwards output dimensions and disclosure models independently from the prev
   expect(wrapper.emitted('update:advanced')).toEqual([[true]]);
   expect(wrapper.emitted('update:keepAspect')).toEqual([[false]]);
   expect(wrapper.props('zoomPercent')).toBe(112);
+});
+
+it('updates the visible percentage and selection after view changes', async () => {
+  const wrapper = create();
+  await wrapper.setProps({ zoomPercent: 100, viewMode: 'actual' });
+  expect(wrapper.get('button[aria-label="Canvas zoom: 100%"] span').text()).toBe('View · 100%');
+  const actual = wrapper.findAll('button').find((button) => button.text().includes('Actual size (100%)'))!;
+  expect(actual.attributes('aria-checked')).toBe('true');
+  for (const label of ['Zoom in canvas', 'Zoom out canvas'])
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().includes(label))!
+      .trigger('click');
+  expect(wrapper.emitted('view')).toEqual([['zoom-in'], ['zoom-out']]);
 });

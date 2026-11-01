@@ -4,6 +4,7 @@ import type { PreparedCursorImage } from '@beam/encoder/mediabunny/export-cursor
 import type { ExportRequest } from '@beam/encoder/export-types';
 import { BUNDLED_CURSOR_PACKS } from '@desktop/components/editor/properties/cursor/cursor-packs';
 import type * as MediabunnyModule from 'mediabunny';
+import { cursorComposition } from '@beam/engine/capture/screen-cursor.test-support';
 vi.mock('@beam/runtime/rendering/snapshot-camera', () => ({ createSnapshotCameraEvaluator: vi.fn() }));
 
 const runtime = vi.hoisted(() => ({
@@ -333,6 +334,7 @@ describe('export worker', () => {
     expect(worker.postMessage).toHaveBeenCalledWith({
       type: 'error',
       error: expect.objectContaining({ message: 'OffscreenCanvas is required for export.' }),
+      diagnostics: expect.objectContaining({ failure: expect.objectContaining({ operation: 'validate-assets' }) }),
     });
     expect(runtime.openExportAssets).not.toHaveBeenCalled();
     expect(prepared.close).toHaveBeenCalledOnce();
@@ -414,7 +416,17 @@ describe('export worker', () => {
     installCanvasRuntime();
     const base = request();
     const worker = await importWorker();
-    startWorker(worker, request({ snapshot: { ...base.snapshot, cursorPack: null } }));
+    startWorker(
+      worker,
+      request({
+        snapshot: {
+          ...base.snapshot,
+          cursorPack: null,
+          composition: cursorComposition(),
+          cursorSettings: { ...base.snapshot.cursorSettings, enabled: true },
+        },
+      }),
+    );
 
     await vi.waitFor(() =>
       expect(worker.postMessage).toHaveBeenCalledWith({
@@ -422,6 +434,7 @@ describe('export worker', () => {
         error: expect.objectContaining({
           issue: expect.objectContaining({ code: 'missing-asset', assetId: 'builtin:macos' }),
         }),
+        diagnostics: expect.objectContaining({ failure: expect.objectContaining({ operation: 'load-assets' }) }),
       }),
     );
     expect(runtime.output.start).not.toHaveBeenCalled();
@@ -475,6 +488,8 @@ describe('export worker', () => {
       request({
         snapshot: {
           ...base.snapshot,
+          composition: cursorComposition(),
+          cursorSettings: { ...base.snapshot.cursorSettings, enabled: true },
           cursor: {
             ...base.snapshot.cursor,
             available: true,
@@ -491,6 +506,7 @@ describe('export worker', () => {
           message: 'Cursor "default" was not rasterized before export.',
           issue: expect.objectContaining({ code: 'decode-failure', assetId: 'default' }),
         }),
+        diagnostics: expect.objectContaining({ failure: expect.objectContaining({ operation: 'load-assets' }) }),
       }),
     );
     expect(runtime.output.start).not.toHaveBeenCalled();
@@ -747,6 +763,63 @@ describe('export worker', () => {
     }
   });
 
+  it.each(['addVideo', 'finalize'] as const)(
+    'retains the real error context and final counters after %s fails',
+    async (operation) => {
+      installCanvasRuntime();
+      const dispose = vi.fn();
+      runtime.openExportAssets.mockResolvedValueOnce({ assets: new Map(), screenSize: null, dispose });
+      runtime.output[operation].mockImplementationOnce(async () => {
+        runtime.output.diagnostics.mockReturnValue({
+          videoCodec: 'avc',
+          audioCodec: null,
+          chunkCount: 0,
+          bytesWritten: 0,
+          ipcWriteWaitMs: 0,
+          encodedPacketCount: 7,
+        });
+        throw new DOMException('Encoding error.', 'EncodingError');
+      });
+      const worker = await importWorker();
+      startWorker(worker);
+      await vi.waitFor(() =>
+        expect(worker.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' })),
+      );
+      const response = worker.postMessage.mock.calls.find(([message]) => message.type === 'error')![0];
+      expect(response.error.name).toBe('EncodingError');
+      expect(response.diagnostics).toMatchObject({
+        encodedPacketCount: 7,
+        videoCodec: 'avc',
+        failure: {
+          errorName: 'EncodingError',
+          errorMessage: 'Encoding error.',
+          operation: operation === 'addVideo' ? 'submit-video-frame' : 'finalize-output',
+        },
+      });
+      if (operation === 'addVideo') {
+        expect(response.diagnostics.failure.frame).toEqual({ index: 0, timeMs: 0, width: 2, height: 2, clipIds: [] });
+        expect(response.error.message).toContain('frame 1 at 0.000 s');
+      } else expect(response.diagnostics.failure.frame).toBeUndefined();
+      expect(runtime.output.cancel).toHaveBeenCalledOnce();
+      expect(dispose).toHaveBeenCalledOnce();
+    },
+  );
+
+  it('identifies render failures separately from video encoder failures', async () => {
+    installCanvasRuntime();
+    const { renderCompositionFrame } = await import('@beam/runtime/rendering/render');
+    vi.mocked(renderCompositionFrame).mockImplementationOnce(() => {
+      throw new Error('Perspective zoom WebGL context was lost.');
+    });
+    const worker = await importWorker();
+    startWorker(worker);
+    await vi.waitFor(() => expect(worker.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' })));
+    const response = worker.postMessage.mock.calls.find(([message]) => message.type === 'error')![0];
+    expect(response.diagnostics.failure.operation).toBe('render-frame');
+    expect(response.diagnostics.failure.errorMessage).toContain('WebGL context was lost');
+    expect(runtime.output.addVideo).not.toHaveBeenCalled();
+  });
+
   it('disposes opened assets and cancels output when rendering fails', async () => {
     installCanvasRuntime();
     const dispose = vi.fn();
@@ -761,6 +834,7 @@ describe('export worker', () => {
     expect(worker.postMessage).toHaveBeenCalledWith({
       type: 'error',
       error: expect.objectContaining({ message: 'encoder startup failed' }),
+      diagnostics: expect.objectContaining({ failure: expect.objectContaining({ operation: 'configure-output' }) }),
     });
   });
 
@@ -796,6 +870,7 @@ describe('export worker', () => {
     expect(worker.postMessage).toHaveBeenCalledWith({
       type: 'error',
       error: expect.objectContaining({ message: 'audio pipeline failed' }),
+      diagnostics: expect.objectContaining({ failure: expect.objectContaining({ operation: 'encode-audio' }) }),
     });
   });
 

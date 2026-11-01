@@ -7,6 +7,7 @@ import { createDefaultClipAppearance } from '@beam/engine/shared/composition-def
 import { MACOS_CURSOR_PACK } from '@desktop/components/editor/properties/cursor/cursor-packs';
 import { createDefaultCursorAutoHideSettings } from '@beam/engine/capture/cursor-settings';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
+import type { BackgroundValue } from '@beam/engine/shared/background-types';
 
 const composition = (): ClipComposition => ({
   schemaVersion: 6,
@@ -87,13 +88,13 @@ describe('createCompositionSnapshot', () => {
       events: [],
       telemetry: [],
       shapes: {},
-      catalog: {},
       missing: [],
       hoverSync: { version: 1 as const, ranges: [{ startSeconds: 1, endSeconds: 2 }] },
       hoverSources: [{ id: 'screen', src: 'project-media://asset/screen.mp4', startSeconds: 0, durationSeconds: 4 }],
     };
     input.editorData = { cursor } as unknown as NonNullable<typeof input.editorData>;
     const snapshot = createCompositionSnapshot(input);
+    expect(snapshot.cursor.catalog).toEqual({});
     expect(snapshot.cursor.hoverSync).toEqual(cursor.hoverSync);
     expect(snapshot.cursor.hoverSources).toEqual(cursor.hoverSources);
     cursor.hoverSync.ranges[0]!.endSeconds = 3;
@@ -173,7 +174,7 @@ describe('createCompositionSnapshot', () => {
     expect(snapshot.referenceCanvas).toEqual({ width: 1_920, height: 1_080 });
   });
 
-  it('omits the selected background when the output canvas background is disabled', () => {
+  it('retains the selected background behind cropped clips when canvas framing is disabled', () => {
     const snapshot = createCompositionSnapshot({
       ...base(),
       canvas: { ...DEFAULT_OUTPUT_CANVAS, showBackground: false },
@@ -186,8 +187,62 @@ describe('createCompositionSnapshot', () => {
       },
     });
 
-    expect(snapshot.background).toBeNull();
+    expect(snapshot.canvas.showBackground).toBe(false);
+    expect(snapshot.background).toEqual({ kind: 'image', src: 'wallpapers/image/wallpaper.webp' });
   });
+
+  it.each([false, true])(
+    'preserves every background kind without changing crop or layout with framing=%s',
+    (showBackground) => {
+      const backgrounds: BackgroundValue[] = [
+        { id: 'color', name: 'Color', kind: 'color', color: '#e3d5ff' },
+        {
+          id: 'gradient',
+          name: 'Gradient',
+          kind: 'gradient',
+          gradient: {
+            type: 'linear',
+            angle: 90,
+            stops: [
+              { id: 'a', color: '#ff0000', alpha: 1, position: 0 },
+              { id: 'b', color: '#0000ff', alpha: 1, position: 1 },
+            ],
+          },
+        },
+        { id: 'video', name: 'Video', kind: 'video', path: 'https://beam.test/background.mp4', extension: 'mp4' },
+        { id: 'image', name: 'Image', kind: 'image', path: 'https://beam.test/background.png', extension: 'png' },
+      ];
+      for (const background of backgrounds) {
+        const input = base();
+        const clip = input.composition.clips[0]!;
+        if (clip.kind !== 'screen') throw new Error('Missing recording fixture');
+        clip.crop = { x: 0, y: 0, width: 1, height: 1040 / 1080 };
+        input.background = background;
+        input.fontSources = { imported: 'https://beam.test/font.woff2' };
+        input.cursorPacks = [MACOS_CURSOR_PACK];
+        input.canvas = { ...DEFAULT_OUTPUT_CANVAS, showBackground };
+        const snapshot = createCompositionSnapshot(input);
+        const expected =
+          background.kind === 'color'
+            ? { kind: 'color', color: background.color }
+            : background.kind === 'gradient'
+              ? { kind: 'gradient', gradient: background.gradient }
+              : { kind: background.kind, src: background.path };
+        expect(snapshot.background).toEqual(expected);
+        expect(snapshot.canvas).toMatchObject({ width: 1920, height: 1080, showBackground });
+        expect(snapshot.composition.clips[0]).toEqual(clip);
+        expect(snapshot.fontSources).toEqual(input.fontSources);
+        expect(snapshot.cursorPacks).toEqual(input.cursorPacks);
+        input.background.name = 'Changed after exporting';
+        if (background.kind === 'gradient') {
+          background.gradient.stops[0]!.color = '#ffffff';
+          expect(snapshot.background).toMatchObject({
+            gradient: { stops: [{ color: '#ff0000' }, { color: '#0000ff' }] },
+          });
+        }
+      }
+    },
+  );
 
   it('normalizes motion settings in the export snapshot', () => {
     const snapshot = createCompositionSnapshot({

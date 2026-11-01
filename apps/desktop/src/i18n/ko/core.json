@@ -240,6 +240,9 @@
     "zoomOut": "캔버스 축소",
     "resetZoom": "캔버스 보기 초기화",
     "canvasZoom": "캔버스 확대/축소",
+    "view": "보기",
+    "fitToWindow": "큰 이미지를 창에 맞추기",
+    "actualSize": "실제 크기(100%)",
     "toggleGrid": "3×3 격자 전환",
     "takeScreenshot": "캔버스 스크린샷 찍기",
     "screenshotCreated": "스크린샷을 만들었습니다",
@@ -530,7 +533,8 @@
     "videoFormatUnsupported": "지원하지 않는 동영상 형식입니다.",
     "videoFileUnavailable": "동영상 파일을 사용할 수 없습니다.",
     "ok": "확인",
-    "recenter": "보기 중앙 정렬"
+    "recenter": "보기 중앙 정렬",
+    "editCrop": "자르기 편집"
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU (실험적)",
@@ -826,6 +830,8 @@
     "moveRecorderBar": "녹화 막대 이동",
     "ready": "준비됨",
     "preparing": "준비 중…",
+    "finalizing": "녹화 마무리 중…",
+    "finalizingSlow": "평소보다 오래 걸립니다. 최대 60초 동안 기다립니다.",
     "resumeRecording": "녹화 재개",
     "pauseRecording": "녹화 일시 중지",
     "stopRecording": "녹화 중지",
@@ -1117,7 +1123,14 @@
     "perspective": "원근감",
     "group": "그룹화",
     "selectionTitle": "선택 · 요소 {count}개",
-    "ungroup": "그룹 해제"
+    "ungroup": "그룹 해제",
+    "moreTools": "더 많은 도구",
+    "personalizeDock": "도크 맞춤 설정",
+    "customizeDockHint": "도구를 드래그하여 순서를 바꾸세요. 도구를 마우스 오른쪽 버튼으로 클릭하면 도크에서 제거할 수 있습니다.",
+    "removeFromDock": "도구 모음에서 제거",
+    "resetToolbar": "도구 모음 초기화",
+    "scrollToolsLeft": "도구를 왼쪽으로 스크롤",
+    "scrollToolsRight": "도구를 오른쪽으로 스크롤"
   },
   "EditorPresetControls": {
     "preview": "프리셋 미리보기",
@@ -1155,6 +1168,10 @@
     "close": "닫기"
   },
   "Elements": {
+    "savedElements": "저장된 요소",
+    "saveElement": "선택한 요소 저장",
+    "removeSavedElement": "저장된 요소 삭제",
+    "noSavedElements": "저장된 요소가 없습니다.",
     "image": "이미지",
     "deleteNamed": "{name} 삭제",
     "title": "요소",

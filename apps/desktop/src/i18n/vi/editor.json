@@ -293,7 +293,7 @@
     "close": "Đóng"
   },
   "Tray": {
-    "openHud": "Mở HUD",
+    "openHud": "Mở màn hình chính",
     "quit": "Thoát Beam",
     "tooltip": "Beam"
   },

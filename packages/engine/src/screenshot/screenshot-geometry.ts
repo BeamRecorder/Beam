@@ -4,6 +4,8 @@ import type { ResizeCorner } from './screenshot-types';
 import { frameMediaRect } from '@beam/engine/shared/frame-layout';
 import { containedMediaRect } from '@beam/engine/layout/output-canvas';
 import { clampNormalizedCrop } from '../shared/normalized-crop';
+import type { CropDimensions } from '../shared/crop-types';
+import { snapCropToPixels } from '../layout/crop/crop-pixels';
 
 export function screenshotImageFraming(
   state: ScreenshotState,
@@ -14,7 +16,9 @@ export function screenshotImageFraming(
   uncropped = false,
 ) {
   const crop =
-    !uncropped && state.image.crop ? clampNormalizedCrop(state.image.crop) : { x: 0, y: 0, width: 1, height: 1 };
+    !uncropped && state.image.crop
+      ? clampNormalizedCrop(state.image.crop, { width: sourceWidth, height: sourceHeight })
+      : { x: 0, y: 0, width: 1, height: 1 };
   const sourceRect = {
     x: crop.x * sourceWidth,
     y: crop.y * sourceHeight,
@@ -43,23 +47,32 @@ export function moveScreenshotCrop(
   dx: number,
   dy: number,
   corner?: ResizeCorner,
+  size?: CropDimensions,
 ): NormalizedCrop {
-  if (!corner)
-    return clampNormalizedCrop({
-      ...initial,
-      x: initial.x + dx,
-      y: initial.y + dy,
-    });
+  if (!corner) {
+    const next = clampNormalizedCrop(
+      {
+        ...initial,
+        x: initial.x + dx,
+        y: initial.y + dy,
+      },
+      size,
+    );
+    return size ? snapCropToPixels(next, size) : next;
+  }
+  const minWidth = size ? 1 / size.width : 0.05,
+    minHeight = size ? 1 / size.height : 0.05;
   const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
-  const left = corner.includes('left') ? clamp(initial.x + dx, 0, initial.x + initial.width - 0.05) : initial.x;
-  const top = corner.includes('top') ? clamp(initial.y + dy, 0, initial.y + initial.height - 0.05) : initial.y;
+  const left = corner.includes('left') ? clamp(initial.x + dx, 0, initial.x + initial.width - minWidth) : initial.x;
+  const top = corner.includes('top') ? clamp(initial.y + dy, 0, initial.y + initial.height - minHeight) : initial.y;
   const right = corner.includes('right')
-    ? clamp(initial.x + initial.width + dx, left + 0.05, 1)
+    ? clamp(initial.x + initial.width + dx, left + minWidth, 1)
     : initial.x + initial.width;
   const bottom = corner.includes('bottom')
-    ? clamp(initial.y + initial.height + dy, top + 0.05, 1)
+    ? clamp(initial.y + initial.height + dy, top + minHeight, 1)
     : initial.y + initial.height;
-  return { x: left, y: top, width: right - left, height: bottom - top };
+  const next = { x: left, y: top, width: right - left, height: bottom - top };
+  return size ? snapCropToPixels(next, size) : next;
 }
 
 export function screenshotCropBounds(state: ScreenshotState, sourceWidth: number, sourceHeight: number) {

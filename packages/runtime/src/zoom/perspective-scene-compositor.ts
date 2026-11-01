@@ -87,7 +87,14 @@ export class PerspectiveSceneCompositor {
     if (camera) this.projector ??= new WebGlPerspectiveProjector();
     // Rasterize at the authored zoom density before projection, preserving small text.
     const raster = camera
-      ? perspectiveSourceRaster(sourceBounds ?? bounds, bounds, camera, pixelScale, this.projector!.maxTextureSize)
+      ? perspectiveSourceRaster(
+          sourceBounds ?? bounds,
+          bounds,
+          camera,
+          pixelScale,
+          this.projector!.maxTextureSize,
+          'stable',
+        )
       : { bounds, size: { width, height } };
     const { bounds: actualBounds, size } = raster;
     this.surface ??= createSceneSurface(size.width, size.height);

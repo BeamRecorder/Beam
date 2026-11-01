@@ -240,6 +240,9 @@
     "zoomOut": "Riduci canvas",
     "resetZoom": "Reimposta vista canvas",
     "canvasZoom": "Zoom canvas",
+    "view": "Visualizza",
+    "fitToWindow": "Adatta le immagini grandi alla finestra",
+    "actualSize": "Dimensioni reali (100%)",
     "toggleGrid": "Attiva/disattiva griglia 3×3",
     "takeScreenshot": "Cattura il canvas",
     "screenshotCreated": "Screenshot creato",
@@ -530,7 +533,8 @@
     "videoFormatUnsupported": "Questo formato video non è supportato.",
     "videoFileUnavailable": "Il file video non è disponibile.",
     "ok": "OK",
-    "recenter": "Ricentra visuale"
+    "recenter": "Ricentra visuale",
+    "editCrop": "Modifica ritaglio"
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU (sperimentale)",
@@ -826,6 +830,8 @@
     "moveRecorderBar": "Sposta barra di registrazione",
     "ready": "Pronto",
     "preparing": "Preparazione…",
+    "finalizing": "Finalizzazione della registrazione…",
+    "finalizingSlow": "Sta richiedendo più tempo. Attesa fino a 60 secondi.",
     "resumeRecording": "Riprendi registrazione",
     "pauseRecording": "Metti in pausa registrazione",
     "stopRecording": "Ferma registrazione",
@@ -1117,7 +1123,14 @@
     "perspective": "Prospettiva",
     "group": "Raggruppa",
     "selectionTitle": "Selezione · {count} elementi",
-    "ungroup": "Separa"
+    "ungroup": "Separa",
+    "moreTools": "Altri strumenti",
+    "personalizeDock": "Personalizza il dock",
+    "customizeDockHint": "Trascina gli strumenti per riordinarli. Fai clic destro su uno strumento per rimuoverlo dal dock.",
+    "removeFromDock": "Rimuovi dalla barra",
+    "resetToolbar": "Ripristina la barra",
+    "scrollToolsLeft": "Scorri gli strumenti a sinistra",
+    "scrollToolsRight": "Scorri gli strumenti a destra"
   },
   "EditorPresetControls": {
     "preview": "Anteprima della preimpostazione",
@@ -1155,6 +1168,10 @@
     "close": "Chiudi"
   },
   "Elements": {
+    "savedElements": "Elementi salvati",
+    "saveElement": "Salva l’elemento selezionato",
+    "removeSavedElement": "Rimuovi l’elemento salvato",
+    "noSavedElements": "Nessun elemento salvato.",
     "image": "Immagine",
     "deleteNamed": "Elimina {name}",
     "title": "Elementi",

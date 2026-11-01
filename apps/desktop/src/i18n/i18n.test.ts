@@ -28,6 +28,45 @@ afterEach(async () => {
 });
 
 describe('internationalization', () => {
+  it('localizes saved element assets in all languages', async () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      await setCurrentLocale(locale);
+      for (const key of ['savedElements', 'saveElement', 'removeSavedElement', 'noSavedElements']) {
+        expect(i18n.global.te(`Elements.${key}`, locale)).toBe(true);
+        expect(i18n.global.t(`Elements.${key}`).trim()).not.toBe('');
+      }
+    }
+  });
+  it('localizes customizable dock and precise crop controls in every locale', async () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      await setCurrentLocale(locale);
+      for (const path of [
+        'EditorCanvas.editCrop',
+        ...[
+          'moreTools',
+          'personalizeDock',
+          'customizeDockHint',
+          'removeFromDock',
+          'resetToolbar',
+          'scrollToolsLeft',
+          'scrollToolsRight',
+        ].map((key) => `ScreenshotEditor.${key}`),
+      ]) {
+        expect(i18n.global.te(path, locale), `${locale}: ${path}`).toBe(true);
+        expect(i18n.global.t(path).trim()).not.toBe('');
+      }
+    }
+  });
+  it('translates screenshot view, fit and actual size commands in every locale', async () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      await setCurrentLocale(locale);
+      for (const key of ['view', 'fitToWindow', 'actualSize']) {
+        const path = `CanvasToolbar.${key}`;
+        expect(i18n.global.te(path, locale), `${locale}: ${path}`).toBe(true);
+        expect(i18n.global.t(path).trim()).not.toBe('');
+      }
+    }
+  });
   it('translates all transition categories and presets in every supported locale', async () => {
     const keys = [
       'none',
@@ -82,6 +121,12 @@ describe('internationalization', () => {
     expect(i18n.global.t('ProjectPicker.explore')).toBe('Mở thư mục');
   });
 
+  it('names the main screen consistently in Vietnamese tray actions', async () => {
+    await setCurrentLocale('vi');
+    expect(i18n.global.t('HUD.openHud')).toBe('Mở màn hình chính');
+    expect(i18n.global.t('Tray.openHud')).toBe('Mở màn hình chính');
+  });
+
   it('provides screenshot, preset and capture-mode UI in all locales without falling back to English', async () => {
     const namespaces = [
       'ScreenshotEditor',
@@ -130,6 +175,16 @@ describe('internationalization', () => {
   it('registers every supported locale in the language picker', () => {
     expect(i18n.global.availableLocales).toEqual(expect.arrayContaining([...SUPPORTED_LOCALES]));
     expect(localeOptions.map((option) => option.value)).toEqual([...SUPPORTED_LOCALES]);
+  });
+
+  it('translates recording finalization and the one-minute Windows wait in every locale', async () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      await setCurrentLocale(locale);
+      for (const key of ['RecorderBar.finalizing', 'RecorderBar.finalizingSlow']) {
+        expect(i18n.global.te(key, locale), `${locale}: ${key}`).toBe(true);
+        expect(i18n.global.t(key).trim()).not.toBe('');
+      }
+    }
   });
 
   it('keeps the merged English message leaf keys and placeholders in every locale', () => {

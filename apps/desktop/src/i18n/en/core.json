@@ -240,6 +240,9 @@
     "zoomOut": "Zoom out canvas",
     "resetZoom": "Reset canvas view",
     "canvasZoom": "Canvas zoom",
+    "view": "View",
+    "fitToWindow": "Fit large images to window",
+    "actualSize": "Actual size (100%)",
     "toggleGrid": "Toggle 3x3 grid",
     "takeScreenshot": "Take canvas screenshot",
     "screenshotCreated": "Screenshot created",
@@ -530,7 +533,8 @@
     "videoFormatUnsupported": "This video format is not supported.",
     "videoFileUnavailable": "The video file is unavailable.",
     "ok": "OK",
-    "recenter": "Recenter view"
+    "recenter": "Recenter view",
+    "editCrop": "Edit crop"
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU (experimental)",
@@ -838,6 +842,8 @@
     "moveRecorderBar": "Move recording bar",
     "ready": "Ready",
     "preparing": "Preparing…",
+    "finalizing": "Finalizing recording…",
+    "finalizingSlow": "Taking longer than usual. Waiting up to 60 seconds.",
     "resumeRecording": "Resume recording",
     "pauseRecording": "Pause recording",
     "stopRecording": "Stop recording",
@@ -1129,7 +1135,14 @@
     "perspective": "Perspective",
     "group": "Group",
     "selectionTitle": "Selection · {count} elements",
-    "ungroup": "Ungroup"
+    "ungroup": "Ungroup",
+    "moreTools": "More tools",
+    "personalizeDock": "Personalize dock",
+    "customizeDockHint": "Drag tools to reorder. Right-click a tool to remove it from the dock.",
+    "removeFromDock": "Remove from toolbar",
+    "resetToolbar": "Reset toolbar",
+    "scrollToolsLeft": "Scroll tools left",
+    "scrollToolsRight": "Scroll tools right"
   },
   "EditorPresetControls": {
     "preview": "Preset preview",
@@ -1167,6 +1180,10 @@
     "close": "Close"
   },
   "Elements": {
+    "savedElements": "Saved elements",
+    "saveElement": "Save selected element",
+    "removeSavedElement": "Remove saved element",
+    "noSavedElements": "No saved elements yet.",
     "image": "Image",
     "deleteNamed": "Delete {name}",
     "title": "Elements",

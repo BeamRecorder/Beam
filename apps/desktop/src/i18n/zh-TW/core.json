@@ -240,6 +240,9 @@
     "zoomOut": "縮小畫布",
     "resetZoom": "重設畫布檢視",
     "canvasZoom": "畫布縮放",
+    "view": "檢視",
+    "fitToWindow": "大型圖片符合視窗",
+    "actualSize": "實際大小（100%）",
     "toggleGrid": "切換 3×3 網格",
     "takeScreenshot": "擷取畫布",
     "screenshotCreated": "已建立螢幕截圖",
@@ -530,7 +533,8 @@
     "videoFormatUnsupported": "不支援此影片格式。",
     "videoFileUnavailable": "影片檔案無法使用。",
     "ok": "確定",
-    "recenter": "重新置中"
+    "recenter": "重新置中",
+    "editCrop": "編輯裁切"
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU（實驗性）",
@@ -826,6 +830,8 @@
     "moveRecorderBar": "移動錄影列",
     "ready": "準備就緒",
     "preparing": "準備中…",
+    "finalizing": "正在完成錄製…",
+    "finalizingSlow": "耗時比平時更長，最多等待60秒。",
     "resumeRecording": "繼續錄影",
     "pauseRecording": "暫停錄影",
     "stopRecording": "停止錄影",
@@ -1117,7 +1123,14 @@
     "perspective": "透視",
     "group": "群組",
     "selectionTitle": "選取 · {count} 個元素",
-    "ungroup": "取消群組"
+    "ungroup": "取消群組",
+    "moreTools": "更多工具",
+    "personalizeDock": "自訂工具列",
+    "customizeDockHint": "拖曳工具以調整順序。以滑鼠右鍵點擊工具，即可將其從工具列移除。",
+    "removeFromDock": "從工具列移除",
+    "resetToolbar": "重設工具列",
+    "scrollToolsLeft": "向左捲動工具",
+    "scrollToolsRight": "向右捲動工具"
   },
   "EditorPresetControls": {
     "preview": "預設預覽",
@@ -1155,6 +1168,10 @@
     "close": "關閉"
   },
   "Elements": {
+    "savedElements": "已儲存的元素",
+    "saveElement": "儲存所選元素",
+    "removeSavedElement": "刪除已儲存的元素",
+    "noSavedElements": "尚無已儲存的元素。",
     "image": "圖片",
     "deleteNamed": "刪除{name}",
     "title": "元素",

@@ -163,6 +163,34 @@ describe('useExportJob', () => {
     await first;
     expect(exportWithMediabunny).toHaveBeenCalledOnce();
   });
+  it('retains the last reported frame and timestamp for failed export reports', async () => {
+    const reported = {
+      stage: 'encoding',
+      overallProgress: 0.5,
+      completedImages: 150,
+      totalImages: 300,
+      audioProgress: null,
+      currentTimeMs: 6250,
+      totalTimeMs: 12_500,
+    };
+    exportWithMediabunny.mockImplementationOnce(async (_request, onProgress) => {
+      onProgress(reported);
+      throw new Error('Encoding error at frame 151');
+    });
+    const job = useExportJob();
+    await job.start(request);
+    expect(job.progress.value).toEqual(reported);
+    expect(job.error.value).toBe('Encoding error at frame 151');
+    expect(job.isExporting.value).toBe(false);
+    exportWithMediabunny.mockImplementationOnce(async (_request, onProgress) => {
+      onProgress(reported);
+      throw new DOMException('Cancelled', 'AbortError');
+    });
+    await job.start(request);
+    expect(job.progress.value).toBeNull();
+    expect(job.error.value).toBeNull();
+  });
+
   it('reports regular errors and suppresses cancellation errors', async () => {
     const job = useExportJob();
     exportWithMediabunny.mockRejectedValueOnce(new Error('disk full'));

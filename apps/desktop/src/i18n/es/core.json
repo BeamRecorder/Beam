@@ -240,6 +240,9 @@
     "zoomOut": "Alejar el lienzo",
     "resetZoom": "Restablecer vista del lienzo",
     "canvasZoom": "Zoom del lienzo",
+    "view": "Vista",
+    "fitToWindow": "Ajustar imágenes grandes a la ventana",
+    "actualSize": "Tamaño real (100 %)",
     "toggleGrid": "Alternar cuadrícula 3×3",
     "takeScreenshot": "Capturar el lienzo",
     "screenshotCreated": "Captura creada",
@@ -530,7 +533,8 @@
     "videoFormatUnsupported": "Este formato de vídeo no es compatible.",
     "videoFileUnavailable": "El archivo de vídeo no está disponible.",
     "ok": "Aceptar",
-    "recenter": "Recentrar vista"
+    "recenter": "Recentrar vista",
+    "editCrop": "Editar recorte"
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU (experimental)",
@@ -826,6 +830,8 @@
     "moveRecorderBar": "Mover la barra de grabación",
     "ready": "Listo",
     "preparing": "Preparando…",
+    "finalizing": "Finalizando la grabación…",
+    "finalizingSlow": "Está tardando más. Esperaremos hasta 60 segundos.",
     "resumeRecording": "Reanudar grabación",
     "pauseRecording": "Pausar grabación",
     "stopRecording": "Detener grabación",
@@ -1117,7 +1123,14 @@
     "perspective": "Perspectiva",
     "group": "Agrupar",
     "selectionTitle": "Selección · {count} elementos",
-    "ungroup": "Desagrupar"
+    "ungroup": "Desagrupar",
+    "moreTools": "Más herramientas",
+    "personalizeDock": "Personalizar dock",
+    "customizeDockHint": "Arrastra las herramientas para reordenarlas. Haz clic derecho en una para quitarla del dock.",
+    "removeFromDock": "Quitar de la barra",
+    "resetToolbar": "Restablecer la barra",
+    "scrollToolsLeft": "Desplazar herramientas a la izquierda",
+    "scrollToolsRight": "Desplazar herramientas a la derecha"
   },
   "EditorPresetControls": {
     "preview": "Vista previa del preajuste",
@@ -1155,6 +1168,10 @@
     "close": "Cerrar"
   },
   "Elements": {
+    "savedElements": "Elementos guardados",
+    "saveElement": "Guardar el elemento seleccionado",
+    "removeSavedElement": "Eliminar el elemento guardado",
+    "noSavedElements": "Aún no hay elementos guardados.",
     "image": "Imagen",
     "deleteNamed": "Eliminar {name}",
     "title": "Elementos",

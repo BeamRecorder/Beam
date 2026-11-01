@@ -13,6 +13,9 @@ import { registerScreenshotEditorRenameTests } from './screenshot-editor-rename-
 import ScreenshotEditor from '../ScreenshotEditor.vue';
 import TransformControls from '../../editor/properties/shared/TransformControls.vue';
 import MediaOrientationControls from '../../editor/properties/shared/MediaOrientationControls.vue';
+import ScreenshotViewControls from '../ScreenshotViewControls.vue';
+import { saveElementAsset } from '@beam/engine/shared/element-assets';
+import { shape } from '@beam/runtime/composition/shape/tests/gpu-shape.fixtures';
 
 const capture = vi.hoisted(() => ({
   onAuthoringRequest: vi.fn(() => vi.fn()),
@@ -113,6 +116,23 @@ describe('ScreenshotEditor', () => {
     vi.useRealTimers();
   });
 
+  it('inserts a saved element through the shared screenshot editor with fresh identity and still timing', async () => {
+    const wrapper = mountEditor();
+    await flushPromises();
+    const asset = saveElementAsset(shape({ name: 'Shared bubble', preset: 'speech-bubble' }), {
+      width: 1920,
+      height: 1080,
+    });
+    screenshotCanvasEditor!.addAsset(asset);
+    await flushPromises();
+    const state = wrapper.findComponent(ScreenshotCanvasStub).props('state') as ScreenshotState;
+    const copy = state.shapes.find((clip) => clip.name === 'Shared bubble')!;
+    expect(copy).toMatchObject({ preset: 'speech-bubble', timelineStartMs: 0, timelineDurationMs: 1 });
+    expect(copy.id).not.toBe(asset.id);
+    asset.style.borderColor = '#ffffff';
+    expect(copy.borderColor).not.toBe('#ffffff');
+    wrapper.unmount();
+  });
   it('surfaces load errors and still signals that initialization finished', async () => {
     capture.getScreenshot.mockRejectedValueOnce(new Error('Screenshot unavailable'));
     const wrapper = mountEditor();
@@ -1573,7 +1593,7 @@ describe('ScreenshotEditor', () => {
     expect(useToastStore().toasts[0]).toMatchObject({ type: 'error', message: 'Image copy failed' });
     wrapper.unmount();
   });
-  it('shares Studio’s ambient background across the editor and centers project navigation with presets on the left', async () => {
+  it('extends its selected background outside the canvas and centers project navigation with presets on the left', async () => {
     const wrapper = mountEditor();
     await flushPromises();
     expect(wrapper.get('.screenshot-topbar').text()).toContain('Back to HUD');
@@ -1581,6 +1601,7 @@ describe('ScreenshotEditor', () => {
     expect(wrapper.find('.center-actions [data-testid="project-switcher"]').exists()).toBe(true);
     expect(wrapper.find('.right-actions [data-testid="preset-controls"]').exists()).toBe(false);
     const background = wrapper.findComponent({ name: 'EditorAmbientBackground' });
+    expect(background.props('variant')).toBe('canvas-extension');
     expect(background.element.parentElement).toBe(wrapper.get('.screenshot-editor').element);
     expect(background.classes()).not.toContain('is-workspace-background');
     expect(wrapper.find('.screenshot-topbar .editor-ambient-background').exists()).toBe(false);
@@ -1599,6 +1620,23 @@ describe('ScreenshotEditor', () => {
     state.canvas.showBackground = false;
     await wrapper.vm.$nextTick();
     expect(background.props('background')).toBeNull();
+    wrapper.unmount();
+  });
+
+  it('routes view commands to the preview without editing the document', async () => {
+    const wrapper = mountEditor();
+    await flushPromises();
+    const controls = wrapper.findComponent(ScreenshotViewControls),
+      state = wrapper.findComponent(ScreenshotCanvasStub).props('state')!,
+      original = JSON.stringify(state),
+      preview = wrapper.findComponent(ScreenshotCanvasStub).vm;
+    expect(controls.props('zoomPercent')).toBe(67);
+    expect(controls.props('viewMode')).toBe('fit');
+    for (const action of ['actual', 'fit', 'zoom-in', 'zoom-out'] as const) {
+      controls.vm.$emit('view', action);
+      expect(preview.setView).toHaveBeenLastCalledWith(action);
+    }
+    expect(JSON.stringify(state)).toBe(original);
     wrapper.unmount();
   });
 

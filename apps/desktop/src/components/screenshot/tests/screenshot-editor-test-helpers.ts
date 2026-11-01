@@ -6,6 +6,7 @@ import type { ElementEditorContext } from '../../editor/elements/element-editor-
 import type { EditorPresetDocument, EditorPresetSettings } from '~/api/types/editor-preset';
 import type { ScreenshotDocument } from '~/api/types/screenshot';
 import type { ScreenshotLayer } from '@beam/engine/screenshot/screenshot-types';
+import type { ScreenshotViewAction } from '../screenshot-view-types';
 
 export const settings = (format: 'png' | 'webp' = 'png'): EditorPresetSettings => ({
   editor: { schemaVersion: 1 },
@@ -43,6 +44,7 @@ export function createScreenshotEditorTestHarness(
   onCanvasEditor: (editor: ElementEditorContext | null) => void,
 ) {
   const canvasResetView = vi.fn();
+  const canvasSetView = vi.fn<(action: ScreenshotViewAction) => void>();
   const ButtonStub = defineComponent({
     name: 'Button',
     inheritAttrs: false,
@@ -109,7 +111,7 @@ export function createScreenshotEditorTestHarness(
       'cropRequest',
     ],
     setup(_props, { expose }) {
-      expose({ resetView: canvasResetView });
+      expose({ resetView: canvasResetView, setView: canvasSetView, zoomPercent: 67, viewMode: 'fit' });
       onCanvasEditor(useElementEditor());
     },
     template:
@@ -198,6 +200,7 @@ export function createScreenshotEditorTestHarness(
           Select: SelectStub,
           ColorFillPresetControls: ColorFillPresetControlsStub,
           ShapeLayerPropertiesPanel: ShapePropertiesStub,
+          ElementAssets: true,
           ScreenshotCanvas: ScreenshotCanvasStub,
           ScreenshotComposition: ScreenshotCompositionStub,
           ScreenshotCursorControls: ScreenshotCursorControlsStub,
@@ -244,6 +247,7 @@ export function createScreenshotEditorTestHarness(
 
   return {
     canvasResetView,
+    canvasSetView,
     ScreenshotCanvasStub,
     ScreenshotCompositionStub,
     ShapePropertiesStub,

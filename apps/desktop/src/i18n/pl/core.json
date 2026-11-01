@@ -240,6 +240,9 @@
     "zoomOut": "Pomniejsz płótno",
     "resetZoom": "Zresetuj widok płótna",
     "canvasZoom": "Powiększenie płótna",
+    "view": "Widok",
+    "fitToWindow": "Dopasuj duże obrazy do okna",
+    "actualSize": "Rozmiar rzeczywisty (100%)",
     "toggleGrid": "Przełącz siatkę 3×3",
     "takeScreenshot": "Utwórz zrzut płótna",
     "screenshotCreated": "Utworzono zrzut ekranu",
@@ -530,7 +533,8 @@
     "videoFormatUnsupported": "Ten format wideo nie jest obsługiwany.",
     "videoFileUnavailable": "Plik wideo jest niedostępny.",
     "ok": "OK",
-    "recenter": "Wyśrodkuj widok"
+    "recenter": "Wyśrodkuj widok",
+    "editCrop": "Edytuj kadrowanie"
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU (eksperymentalne)",
@@ -826,6 +830,8 @@
     "moveRecorderBar": "Przenieś pasek nagrywania",
     "ready": "Gotowe",
     "preparing": "Przygotowywanie…",
+    "finalizing": "Kończenie nagrania…",
+    "finalizingSlow": "To trwa dłużej. Czekamy do 60 sekund.",
     "resumeRecording": "Wznów nagrywanie",
     "pauseRecording": "Wstrzymaj nagrywanie",
     "stopRecording": "Zatrzymaj nagrywanie",
@@ -1117,7 +1123,14 @@
     "perspective": "Perspektywa",
     "group": "Grupuj",
     "selectionTitle": "Zaznaczenie · {count} elementów",
-    "ungroup": "Rozgrupuj"
+    "ungroup": "Rozgrupuj",
+    "moreTools": "Więcej narzędzi",
+    "personalizeDock": "Dostosuj dok",
+    "customizeDockHint": "Przeciągnij narzędzia, aby zmienić kolejność. Kliknij narzędzie prawym przyciskiem myszy, aby usunąć je z doku.",
+    "removeFromDock": "Usuń z paska narzędzi",
+    "resetToolbar": "Resetuj pasek narzędzi",
+    "scrollToolsLeft": "Przewiń narzędzia w lewo",
+    "scrollToolsRight": "Przewiń narzędzia w prawo"
   },
   "EditorPresetControls": {
     "preview": "Podgląd ustawienia wstępnego",
@@ -1155,6 +1168,10 @@
     "close": "Zamknij"
   },
   "Elements": {
+    "savedElements": "Zapisane elementy",
+    "saveElement": "Zapisz zaznaczony element",
+    "removeSavedElement": "Usuń zapisany element",
+    "noSavedElements": "Brak zapisanych elementów.",
     "image": "Obraz",
     "deleteNamed": "Usuń {name}",
     "title": "Elementy",

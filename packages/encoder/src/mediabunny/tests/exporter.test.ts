@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ExportRequest } from '@beam/encoder/export-types';
 import type { ExportWorkerResponse } from '@beam/encoder/mediabunny/export-worker-protocol';
-import type { ExportRuntimeDiagnostics } from '@beam/encoder/export-diagnostics-types';
+import type { ExportDiagnostics, ExportRuntimeDiagnostics } from '@beam/encoder/export-diagnostics-types';
 import { exportWithMediabunny } from '@desktop/components/export/mediabunny/exporter';
 
 const { prepareExportCursorImages, environment } = vi.hoisted(() => ({
@@ -125,6 +125,31 @@ afterEach(() => {
 });
 
 describe('export worker client', () => {
+  it('preserves final failure diagnostics before aborting the output and terminating the worker', async () => {
+    const started = vi.fn();
+    const running = exportWithMediabunny(request(), vi.fn(), new AbortController().signal, started);
+    await flush();
+    const final = {
+      ...diagnostics(),
+      encodedPacketCount: 7,
+      failure: {
+        operation: 'submit-video-frame' as const,
+        errorName: 'EncodingError',
+        errorMessage: 'Encoding error.',
+        frame: { index: 3, timeMs: 50, width: 1920, height: 1080, clipIds: ['screen'] },
+      },
+    };
+    FakeWorker.instances[0]!.emit({
+      type: 'error',
+      error: { name: 'EncodingError', message: 'Encoding error at frame 4' },
+      diagnostics: final,
+    });
+    await expect(running).rejects.toMatchObject({ name: 'EncodingError', message: 'Encoding error at frame 4' });
+    const captured = started.mock.calls[0]![0] as ExportDiagnostics;
+    expect(captured.runtime).toEqual(final);
+    expect(abortExport).toHaveBeenCalledWith('job-1');
+    expect(FakeWorker.instances[0]!.terminate).toHaveBeenCalledOnce();
+  });
   it('forwards a custom filename to the native destination without renaming the project', async () => {
     beginExport.mockResolvedValueOnce({ canceled: true });
     await expect(

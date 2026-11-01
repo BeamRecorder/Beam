@@ -88,7 +88,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="editor-ambient-background" aria-hidden="true">
+  <div
+    class="editor-ambient-background"
+    :class="{ 'is-canvas-extension': variant === 'canvas-extension' && background && !mediaFailed }"
+    aria-hidden="true"
+  >
     <Transition name="ambient-fade">
       <div
         v-if="background && (background.kind === 'color' || background.kind === 'gradient')"
@@ -170,13 +174,38 @@ onUnmounted(() => {
   transition: opacity 0.4s ease;
 }
 
+.is-canvas-extension .ambient-media,
+.is-canvas-extension .ambient-surface {
+  opacity: 1;
+}
+
+.is-canvas-extension .ambient-media {
+  /* Three blur radii prevent the opaque background fading into the theme at the window edges. */
+  inset: -168px;
+  width: calc(100% + 336px);
+  height: calc(100% + 336px);
+  filter: blur(56px);
+}
+
+.is-canvas-extension .ambient-surface {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: none;
+  transform: none;
+}
+
+.is-canvas-extension .ambient-veil {
+  opacity: 0;
+}
+
 @media (prefers-reduced-transparency: reduce) {
-  .ambient-media,
-  .ambient-surface {
+  .editor-ambient-background:not(.is-canvas-extension) .ambient-media,
+  .editor-ambient-background:not(.is-canvas-extension) .ambient-surface {
     display: none;
   }
 
-  .ambient-veil {
+  .editor-ambient-background:not(.is-canvas-extension) .ambient-veil {
     opacity: 1;
   }
 }

@@ -1,7 +1,9 @@
 import type { GpuUsageSummary } from '@beam/system-metrics';
 import type { EngineMetricsSnapshot } from '@beam/runtime/performance/engine-metrics-types';
+import type { ExportFailureContext } from './export-failure-types';
 
 export interface ExportRuntimeDiagnostics {
+  failure?: ExportFailureContext;
   engine?: EngineMetricsSnapshot;
   elapsedMs: number;
   phase: 'validating_assets' | 'loading_assets' | 'encoding' | 'finalizing';

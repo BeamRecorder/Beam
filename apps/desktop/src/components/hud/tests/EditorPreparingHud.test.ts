@@ -16,6 +16,37 @@ afterEach(() => {
 });
 
 describe('editor preparation', () => {
+  it('explains a slow Windows finalization in the loading surface after 15 seconds', async () => {
+    const previous = Object.getOwnPropertyDescriptor(window, 'capture');
+    Object.defineProperty(window, 'capture', { configurable: true, value: { platform: 'win32' } });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const wrapper = setup({ progress: { stage: 'openingWindow', value: 10 } });
+      await wrapper.setProps({ finalizingRecording: true });
+      await vi.advanceTimersByTimeAsync(14_999);
+      expect(wrapper.text()).not.toContain('60 seconds');
+      await vi.advanceTimersByTimeAsync(1);
+      expect(wrapper.text()).toContain('60 seconds');
+      await wrapper.setProps({ finalizingRecording: false });
+      expect(wrapper.text()).not.toContain('60 seconds');
+    } finally {
+      vi.useRealTimers();
+      if (previous) Object.defineProperty(window, 'capture', previous);
+      else Reflect.deleteProperty(window, 'capture');
+    }
+  });
+
+  it('shows finalization before project loading and blocks cancellation until the writer finishes', async () => {
+    const wrapper = setup({ progress: { stage: 'loadingProject', value: 32 } });
+    await wrapper.setProps({ finalizingRecording: true });
+    expect(wrapper.getComponent(Throbber).props('text')).toBe('Finalizing recording…');
+    expect(wrapper.get('button').attributes('disabled')).toBeDefined();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));
+    expect(wrapper.emitted('cancel')).toBeUndefined();
+    await wrapper.setProps({ finalizingRecording: false });
+    expect(wrapper.get('button').attributes('disabled')).toBeUndefined();
+    expect(wrapper.getComponent(Throbber).props('text')).not.toContain('Finalizing');
+  });
   it('shows one live status, a loading mascot and a ghost cancel action', async () => {
     const wrapper = setup({ progress: { stage: 'openingWindow', value: 10 } });
     expect(wrapper.findAllComponents(Throbber)).toHaveLength(1);

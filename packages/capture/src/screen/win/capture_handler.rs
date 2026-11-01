@@ -126,16 +126,14 @@ impl CaptureHandler {
         if let Some(settings) = self.pending_encoder.take() {
             // The first actual frame supplies physical dimensions. A second
             // frame is not required: an idle selected region may never send one.
-            self.encoder = Some(
-                RecordingEncoder::new(
-                    &settings.output,
-                    crop.width(),
-                    crop.height(),
-                    settings.bitrate,
-                    settings.fps,
-                )?
-                .with_metrics(self.metrics.clone()),
-            );
+            self.encoder = Some(RecordingEncoder::with_metrics(
+                &settings.output,
+                crop.width(),
+                crop.height(),
+                settings.bitrate,
+                settings.fps,
+                self.metrics.clone(),
+            )?);
             self.health.lock().encoded_size = Some((crop.width(), crop.height()));
             self.metrics
                 .observe_video_format(crate::screen::VideoFormat {

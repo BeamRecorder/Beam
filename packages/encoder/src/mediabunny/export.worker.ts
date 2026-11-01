@@ -13,6 +13,8 @@ import type { PreparedCursorImage } from '@beam/encoder/mediabunny/export-cursor
 import { requiredExportCursorAssets } from '@beam/encoder/mediabunny/export-cursor-selection';
 import { createExportPreview } from './export-preview';
 import type { ExportPreview } from './export-preview-types';
+import { ExportOperationError, exportOperationError } from '../export-failure';
+import type { ExportOperationContext } from '../export-failure-types';
 
 let controller: AbortController | null = null;
 let output: ExportWorkerOutput | null = null;
@@ -71,6 +73,8 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
         )
       : [];
   const totalFrames = Math.max(1, Math.ceil(request.snapshot.duration * request.snapshot.render.fps));
+  let operation: ExportOperationContext['operation'] = 'validate-assets';
+  let phase: ExportProgress['stage'] = 'validating_assets';
   let preview: ExportPreview | null = null;
   let assets: ExportAssets | null = null;
   const bitmaps = new Map<string, ImageBitmap>();
@@ -108,8 +112,10 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
     elapsedMs: performance.now() - started,
     phase,
   });
-  const report = (value: ExportProgress, force = false) =>
+  const report = (value: ExportProgress, force = false) => {
+    phase = value.stage;
     progress({ ...value, preview: preview?.current, diagnostics: diagnostics(value.stage) }, force);
+  };
   try {
     if (typeof OffscreenCanvas === 'undefined') throw new Error('OffscreenCanvas is required for export.');
     if (typeof VideoEncoder === 'undefined' || typeof VideoDecoder === 'undefined')
@@ -136,6 +142,7 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
     console.info('[Beam export] asset validation', { elapsedMs: Math.round(measured.validationMs) });
     report(baseProgress('loading_assets', 0.05, totalFrames, audioClips.length > 0, totalTimeMs), true);
     const loadingStarted = performance.now();
+    operation = 'load-assets';
     const images = await loadExportImages(request, bitmaps);
     const cursorImages = loadCursors(request, transferredCursors);
     measured.assetLoadingMs = performance.now() - loadingStarted;
@@ -148,6 +155,7 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = 'high';
     const setupStarted = performance.now();
+    operation = 'configure-output';
     output = await ExportWorkerOutput.create(request, canvas, audioClips.length > 0);
     outputCancelPromise = null;
     await output.start();
@@ -176,11 +184,15 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
     const abortPipeline = () => pipelineController.abort();
     signal.addEventListener('abort', abortPipeline, { once: true });
     if (signal.aborted) abortPipeline();
-    const stopPipelines = async <T>(task: Promise<T>) =>
+    report(baseProgress('encoding', 0.08, totalFrames, audioClips.length > 0, totalTimeMs), true);
+    const stopPipelines = async <T>(task: Promise<T>, pipeline: ExportOperationContext['operation']) =>
       task.catch(async (error) => {
+        const failure = exportOperationError(error, { operation: pipeline });
+        if (failure instanceof ExportOperationError)
+          failure.diagnostics = { ...diagnostics(phase), failure: failure.failure };
         pipelineController.abort();
         await cancelOutput();
-        throw error;
+        throw failure;
       });
     const videoTask = stopPipelines(
       renderExportVideo(
@@ -201,6 +213,7 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
         },
         new Map((request.frameSources ?? []).map((source) => [source.assetId, createHttpFrameSource(source.url)])),
       ),
+      'prepare-video',
     );
     const audioTask = stopPipelines(
       renderExportAudio(request, assets, audioClips, output, pipelineController.signal, (done, total, stats) => {
@@ -209,6 +222,7 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
         shared.audio = total ? done / total : 1;
         reportEncoding(Math.round(shared.video * totalTimeMs));
       }),
+      'encode-audio',
     );
     const [videoResult, audioResult] = await Promise.allSettled([videoTask, audioTask]);
     signal.removeEventListener('abort', abortPipeline);
@@ -247,6 +261,7 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
       true,
     );
     const finalizingStarted = performance.now();
+    operation = 'finalize-output';
     await output.finalize();
     measured.muxFinalizationMs = performance.now() - finalizingStarted;
     console.info('[Beam export] finalization', { elapsedMs: Math.round(measured.muxFinalizationMs) });
@@ -256,8 +271,12 @@ async function run(request: ExportRequest, preparedCursorImages: PreparedCursorI
     });
     post({ type: 'complete', diagnostics: diagnostics('finalizing') });
   } catch (error) {
+    const failure = exportOperationError(error, { operation });
+    if (failure instanceof ExportOperationError) {
+      failure.diagnostics ??= { ...diagnostics(phase), failure: failure.failure };
+    }
     await cancelOutput();
-    throw error;
+    throw failure;
   } finally {
     preview?.dispose();
     if (activeAssets === assets) {
@@ -306,12 +325,14 @@ function loadCursors(request: ExportRequest, prepared: Map<string, ImageBitmap>)
 function postError(error: unknown) {
   if (error instanceof DOMException && error.name === 'AbortError') return;
   const value = error instanceof Error ? error : new Error('Export failed.');
+  const original = value instanceof ExportOperationError ? value.cause : value;
   post({
     type: 'error',
     error: {
       name: value.name,
       message: value.message,
-      ...(value instanceof ExportValidationError ? { issue: value.issue } : {}),
+      ...(original instanceof ExportValidationError ? { issue: original.issue } : {}),
     },
+    ...(value instanceof ExportOperationError && value.diagnostics ? { diagnostics: value.diagnostics } : {}),
   });
 }

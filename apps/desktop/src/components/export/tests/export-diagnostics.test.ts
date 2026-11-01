@@ -93,6 +93,88 @@ const progress: ExportProgress = {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('buildBeamExportReport', () => {
+  it('reports final failure counters instead of stale progress and includes reproducible custom 3D settings', () => {
+    const latest = {
+      ...diagnostics,
+      runtime: {
+        ...diagnostics.runtime!,
+        elapsedMs: 5000,
+        encodedPacketCount: 17,
+        failure: {
+          operation: 'submit-video-frame' as const,
+          errorName: 'EncodingError',
+          errorMessage: 'Encoding error.',
+          frame: { index: 150, timeMs: 6250, width: 1920, height: 1080, clipIds: ['screen-clip'] },
+        },
+      },
+    };
+    const value = {
+      ...request,
+      snapshot: {
+        ...request.snapshot,
+        zooms: [
+          {
+            id: 'custom-3d',
+            sessionId: 'session',
+            mode: 'manual' as const,
+            startMs: 6000,
+            endMs: 8000,
+            depth: 3 as const,
+            focus: { cx: 0.4, cy: 0.6 },
+            projection: '3d' as const,
+            tiltIntensity: 1.4,
+            tiltHorizontal: -0.75,
+            tiltVertical: 0.25,
+            tiltPreset: 'custom' as const,
+          },
+        ],
+      },
+    };
+    const report = buildBeamExportReport({
+      request: value,
+      format: 'mp4',
+      preset: 'medium',
+      status: 'failed',
+      progress: { ...progress, diagnostics: { ...diagnostics.runtime!, encodedPacketCount: 0 } },
+      diagnostics: latest,
+      error: 'Encoding error.',
+    });
+    expect(report).toContain('Encoded Video Packets: 17');
+    expect(report).toContain('Operation: submit-video-frame');
+    expect(report).toContain('Original Error: EncodingError: Encoding error.');
+    expect(report).toContain('Operation Frame: 151 (index 150); 00:06.250');
+    expect(report).toContain('Frame Dimensions: 1920x1080');
+    expect(report).toContain('Visual Clips: screen-clip');
+    expect(report).toContain('Asynchronous encoder errors may refer to an earlier submitted frame.');
+    expect(report).toContain('"tiltHorizontal":-0.75');
+    expect(report).toContain('"tiltPreset":"custom"');
+  });
+
+  it('redacts filesystem paths in the original failure without inventing a frame for mux errors', () => {
+    const latest = {
+      ...diagnostics,
+      runtime: {
+        ...diagnostics.runtime!,
+        failure: {
+          operation: 'finalize-output' as const,
+          errorName: 'EncodingError',
+          errorMessage: 'Failed file:///home/private/input.mp4 C:\\Users\\private\\input.mp4',
+        },
+      },
+    };
+    const report = buildBeamExportReport({
+      request,
+      format: 'mp4',
+      preset: 'medium',
+      status: 'failed',
+      progress: null,
+      diagnostics: latest,
+    });
+    expect(report).toContain('Operation: finalize-output');
+    expect(report).not.toContain('Operation Frame:');
+    expect(report).not.toContain('/home/private');
+    expect(report).not.toContain('C:\\Users');
+  });
   it('reports the native hardware encoder, direct GPU transfer and separate process measurement scope', () => {
     const native = {
       ...diagnostics,

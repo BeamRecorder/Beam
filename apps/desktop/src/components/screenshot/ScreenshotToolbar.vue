@@ -1,16 +1,22 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { useElementSize } from '@vueuse/core';
-import { Crop, MousePointer2, Paintbrush, PanelLeft, Group, Ungroup } from '@lucide/vue';
+import { Check, Crop, MousePointer2, PanelLeft, RotateCcw } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import Button from '~/ui/button/Button.vue';
-import ScreenshotAddMenu from './ScreenshotAddMenu.vue';
+import ArrowScroll from '~/ui/scroll-shadow/ArrowScroll.vue';
+import type { PopoverMenuItem } from '~/ui/popover/popover-menu-types';
+import ScreenshotDockMore from './ScreenshotDockMore.vue';
+import ScreenshotDockTools from './ScreenshotDockTools.vue';
 import EditorHistoryControls from '../editor/EditorHistoryControls.vue';
-import { editorInsertItems } from '../editor/search/editor-insert-items';
-import type { EditorInsertKind } from '../editor/search/editor-search-types';
 import type { ScreenshotToolbarProps } from './screenshot-toolbar-types';
+import type { EditorInsertKind } from '../editor/search/editor-search-types';
+import type { ScreenshotDockToolId } from './screenshot-dock-types';
+import { isDockTool } from './screenshot-dock-model';
+import { useScreenshotDock } from './useScreenshotDock';
+import { screenshotDockTools } from './screenshot-dock-tools';
 
-defineProps<ScreenshotToolbarProps>();
+const props = defineProps<ScreenshotToolbarProps>();
 const emit = defineEmits<{
   add: [kind: EditorInsertKind];
   select: [];
@@ -23,22 +29,65 @@ const emit = defineEmits<{
   group: [];
   ungroup: [];
 }>();
-const toolbar = ref<HTMLElement | null>(null);
+const toolbar = ref<HTMLElement | null>(null),
+  scroller = ref<InstanceType<typeof ArrowScroll> | null>(null);
 const focusInspector = () => toolbar.value?.querySelector<HTMLButtonElement>('button[aria-controls]')?.focus();
 defineExpose({ focusInspector });
 const bounds = useElementSize(toolbar, { width: 0, height: 0 }, { box: 'border-box' });
 watch(bounds.height, (height) => emit('resize', height));
-const { t } = useI18n();
-const tools = computed(() =>
-  editorInsertItems('screenshot', t).filter((item) => ['shape', 'text', 'drawing', 'image'].includes(item.id)),
+const { t } = useI18n(),
+  dock = useScreenshotDock();
+const tools = computed(() => screenshotDockTools(props, t));
+const pinnedTools = computed(() =>
+  dock.pinned.value.map((id) => tools.value.find((tool) => tool.id === id)).filter((tool) => tool !== undefined),
 );
+const moreItems = computed<PopoverMenuItem[]>(() => [
+  ...tools.value.filter((tool) => !dock.pinned.value.includes(tool.id)),
+  {
+    id: 'remove-tool',
+    label: t('ScreenshotEditor.removeFromDock'),
+    disabled: !pinnedTools.value.length,
+    children: pinnedTools.value.map(({ id, label, icon }) => ({ id: `remove:${id}`, label, icon })),
+  },
+  { id: 'reset-tools', label: t('ScreenshotEditor.resetToolbar'), icon: RotateCcw, separatorBefore: true },
+]);
+const runTool = (id: ScreenshotDockToolId) => {
+  if (props.disabled || tools.value.find((tool) => tool.id === id)?.disabled) return;
+  const added = !dock.pinned.value.includes(id);
+  dock.pin(id);
+  if (id === 'canvas') emit('canvas');
+  else if (id === 'group') emit('group');
+  else if (id === 'ungroup') emit('ungroup');
+  else emit('add', id);
+  if (added) void nextTick(() => scroller.value?.revealEnd());
+};
+const selectMore = (id: string) => {
+  if (props.disabled || props.cropping) return;
+  if (id === 'reset-tools') dock.reset();
+  else if (id.startsWith('remove:')) {
+    const tool = id.slice(7);
+    if (isDockTool(tool)) dock.remove(tool);
+  } else if (isDockTool(id)) runTool(id);
+};
+const activeTools = computed<ScreenshotDockToolId[]>(() => [
+  ...(props.drawing ? ['drawing' as const] : []),
+  ...(props.editingText ? ['text' as const] : []),
+  ...(props.panel === 'canvas' && props.inspectorOpen ? ['canvas' as const] : []),
+]);
 const toolStyle = { width: '36px', height: '36px', padding: '0' };
 const navigate = (event: KeyboardEvent) => {
-  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-  const toolbar = event.currentTarget as HTMLElement;
-  const buttons = [...toolbar.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
-  const index = buttons.indexOf(event.target as HTMLButtonElement);
+  if (
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.shiftKey ||
+    !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)
+  )
+    return;
+  const buttons = [
+      ...(event.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),
+    ],
+    index = buttons.indexOf(event.target as HTMLButtonElement);
   if (index < 0) return;
   event.preventDefault();
   const next =
@@ -59,7 +108,7 @@ const navigate = (event: KeyboardEvent) => {
     :aria-label="t('ScreenshotEditor.tools')"
     @keydown="navigate"
   >
-    <div class="tool-group">
+    <div class="tool-group fixed-tools">
       <Button
         :variant="!drawing && !cropping && !editingText ? 'primary' : 'ghost'"
         size="sm"
@@ -75,36 +124,39 @@ const navigate = (event: KeyboardEvent) => {
       <Button
         :variant="cropping ? 'primary' : 'ghost'"
         size="sm"
-        icon-only
-        :icon="Crop"
-        :style="toolStyle"
-        :disabled="disabled || !canCrop"
-        :aria-label="t('ScreenshotEditor.crop')"
-        :tooltip="t('ScreenshotEditor.crop')"
+        :icon-only="!cropping"
+        :icon="cropping ? Check : Crop"
+        :style="cropping ? { height: '36px' } : toolStyle"
+        :disabled="disabled || (!cropping && !canCrop)"
+        :aria-label="t(cropping ? 'CanvasToolbar.confirmCrop' : 'ScreenshotEditor.crop')"
+        :tooltip="cropping ? undefined : t('ScreenshotEditor.crop')"
         :aria-pressed="cropping"
         @click="emit('crop')"
-      />
+        ><template v-if="cropping">{{ t('CanvasToolbar.ok') }}</template></Button
+      >
     </div>
     <span class="tool-divider" aria-hidden="true" />
-    <div class="tool-group">
-      <Button
-        v-for="tool in tools"
-        :key="tool.id"
-        :variant="(tool.id === 'drawing' && drawing) || (tool.id === 'text' && editingText) ? 'primary' : 'ghost'"
-        size="sm"
-        icon-only
-        :icon="tool.icon"
-        :style="toolStyle"
+    <ArrowScroll
+      ref="scroller"
+      class="tool-scroll"
+      :disabled="disabled"
+      :left-label="t('ScreenshotEditor.scrollToolsLeft')"
+      :right-label="t('ScreenshotEditor.scrollToolsRight')"
+    >
+      <ScreenshotDockTools
+        :tools="pinnedTools"
+        :active="activeTools"
         :disabled="disabled || cropping"
-        :aria-label="tool.label"
-        :tooltip="tool.label"
-        :aria-pressed="tool.id === 'drawing' ? drawing : tool.id === 'text' ? editingText : undefined"
-        @click="emit('add', tool.id)"
+        @run="runTool"
+        @remove="dock.remove"
+        @reorder="dock.reorder"
       />
-      <ScreenshotAddMenu :disabled="disabled || cropping" direction="up" @add="emit('add', $event)" />
+    </ArrowScroll>
+    <div class="tool-group fixed-tools">
+      <ScreenshotDockMore :items="moreItems" :disabled="disabled || cropping" @select="selectMore" />
     </div>
     <span class="tool-divider" aria-hidden="true" />
-    <div class="tool-group">
+    <div class="tool-group fixed-tools">
       <Button
         :variant="inspectorOpen ? 'secondary' : 'ghost'"
         size="sm"
@@ -115,58 +167,8 @@ const navigate = (event: KeyboardEvent) => {
         :aria-expanded="inspectorOpen"
         aria-controls="screenshot-properties-panel"
         @click="emit('toggleInspector')"
-        >{{ t('PropertiesPanel.properties') }}</Button
+        ><span class="properties-label">{{ t('PropertiesPanel.properties') }}</span></Button
       >
-      <Button
-        :variant="panel === 'canvas' && inspectorOpen ? 'secondary' : 'ghost'"
-        size="sm"
-        icon-only
-        :icon="Paintbrush"
-        :style="toolStyle"
-        :disabled="disabled || cropping"
-        :aria-label="t('ScreenshotEditor.canvas')"
-        :tooltip="t('ScreenshotEditor.canvas')"
-        :aria-pressed="panel === 'canvas' && inspectorOpen"
-        @click="emit('canvas')"
-      />
-    </div>
-    <span class="tool-divider" aria-hidden="true" />
-    <div class="tool-group">
-      <Button
-        variant="ghost"
-        size="sm"
-        icon-only
-        :icon="Group"
-        :style="toolStyle"
-        :disabled="disabled || !canGroup"
-        :aria-label="t('ScreenshotEditor.group')"
-        :tooltip="
-          canGroup
-            ? t('ScreenshotEditor.group') + ' · Ctrl+G'
-            : t(`LayerEffects.${disabled ? 'busy' : (groupDisabledReason ?? 'selectTwoToGroup')}`)
-        "
-        :tooltip-delay="200"
-        @click="emit('group')"
-      />
-      <Button
-        variant="ghost"
-        size="sm"
-        icon-only
-        :icon="Ungroup"
-        :style="toolStyle"
-        :disabled="disabled || !canUngroup"
-        :aria-label="t('ScreenshotEditor.ungroup')"
-        :tooltip="
-          canUngroup
-            ? t('ScreenshotEditor.ungroup') + ' · Ctrl+Shift+G'
-            : t(`LayerEffects.${disabled ? 'busy' : (ungroupDisabledReason ?? 'selectGroupToUngroup')}`)
-        "
-        :tooltip-delay="200"
-        @click="emit('ungroup')"
-      />
-    </div>
-    <span class="tool-divider" aria-hidden="true" />
-    <div class="tool-group">
       <EditorHistoryControls
         :can-undo="canUndo && !disabled"
         :can-redo="canRedo && !disabled"
@@ -184,9 +186,8 @@ const navigate = (event: KeyboardEvent) => {
   z-index: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
   gap: 6px;
+  min-width: 0;
   max-width: 100%;
   padding: 6px;
   box-sizing: border-box;
@@ -201,11 +202,24 @@ const navigate = (event: KeyboardEvent) => {
   gap: 2px;
   zoom: var(--ui-scale-canvas-controls, 1);
 }
+.fixed-tools {
+  flex-shrink: 0;
+}
+.tool-scroll {
+  flex: 1;
+  min-width: 0;
+  max-width: 300px;
+}
 .tool-divider {
   width: 1px;
   height: 20px;
   flex-shrink: 0;
   background: var(--color-border);
+}
+@media (max-width: 720px) {
+  .properties-label {
+    display: none;
+  }
 }
 </style>
 <style scoped src="./screenshot-chrome.css"></style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, defineAsyncComponent, ref } from 'vue';
 import { ChevronDown, PenTool, Search } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Input from '~/ui/input/Input.vue';
@@ -12,9 +12,12 @@ import { vectorStrokePathData } from '@beam/engine/shared/shape-vector-stroke';
 import { vectorMarkerPaths } from '@beam/engine/shared/shape-vector-markers';
 import type { ArrowPreset } from '@beam/engine/shared/shape-vector-types';
 import { useTranslate } from '~/i18n/useTranslate';
+import { useElementEditor } from './useElementEditor';
 const props = defineProps<{ modelValue?: ArrowPreset; disabled?: boolean; allowDrawing?: boolean; active?: boolean }>();
 const emit = defineEmits<{ 'update:modelValue': [preset: ArrowPreset]; draw: [] }>();
 const { t } = useTranslate('Elements');
+const editor = useElementEditor();
+const ElementAssets = defineAsyncComponent(() => import('./ElementAssets.vue'));
 const query = ref('');
 const options = ARROW_CATALOG.map((definition) => {
   const vector = arrowVector(definition.id),
@@ -63,8 +66,11 @@ const choose = (preset: ArrowPreset, close: () => void) => {
     <template #default="{ close }">
       <div class="arrow-picker" @keydown.stop="$event.key === 'Escape' && close()">
         <div class="header">
-          <strong>{{ t('arrowLibrary') }}</strong
-          ><span>{{ t('arrowCount', { count: options.length }) }}</span>
+          <strong>{{ t('arrowLibrary') }}</strong>
+          <div class="library-actions">
+            <span>{{ t('arrowCount', { count: options.length }) }}</span>
+            <ElementAssets v-if="editor" family="arrow" :disabled="disabled" @select="close" />
+          </div>
         </div>
         <Input v-model="query" size="sm" autofocus :placeholder="t('searchArrows')" :aria-label="t('searchArrows')">
           <template #prefix><Search :size="14" /></template>
@@ -132,6 +138,11 @@ const choose = (preset: ArrowPreset, close: () => void) => {
   flex-direction: column;
   gap: 8px;
   box-sizing: border-box;
+}
+.library-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .header {
   display: flex;

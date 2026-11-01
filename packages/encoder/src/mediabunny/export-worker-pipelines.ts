@@ -26,6 +26,8 @@ import type { ExportRequest } from '@beam/encoder/export-types';
 import type { ExportAssets } from '@beam/encoder/mediabunny/export-worker-assets';
 import { WATERMARK_LOGO_KEY } from '@beam/runtime/rendering/watermark-render';
 import { prepareExportCursorHovers } from './export-cursor-hover';
+import { exportOperationError } from '../export-failure';
+import type { ExportOperationContext } from '../export-failure-types';
 
 const abortIfNeeded = (signal: AbortSignal) => {
   if (signal.aborted) throw new DOMException('Export cancelled.', 'AbortError');
@@ -132,6 +134,9 @@ export async function renderExportVideo(
     throw new RangeError('Invalid render frame range.');
   const consumers = new Map<string, AsyncIterator<VideoSample | null>>();
   const sharedConsumers = new Map<string, AsyncIterator<VideoSample | null>>();
+  let operation: ExportOperationContext = { operation: 'prepare-video' };
+  let currentFrame: number | null = null;
+  let currentVisuals: readonly VisualClip[] = [];
   let backgroundReader: BackgroundVideoReader | null = null;
   try {
     request = await prepareExportCursorHovers(request, assets, signal);
@@ -195,8 +200,13 @@ export async function renderExportVideo(
     for (let frame = firstFrame; frame < endFrame; frame += 1) {
       abortIfNeeded(signal);
       const time = frame / fps;
+      currentFrame = frame;
+      currentVisuals = [];
+      operation.operation = 'prepare-frame';
       const layers = sceneAt(time * 1_000);
       const activeVisuals = [...layers.cameraVisuals, ...layers.webcams];
+      currentVisuals = activeVisuals;
+      operation.operation = 'decode-frame';
       const samples: VideoSample[] = [];
       const leasedFrames: FrameLease[] = [];
       const decoded: Array<{ clip: VisualClip; sample: VideoSample }> = [];
@@ -259,7 +269,9 @@ export async function renderExportVideo(
         const decodeElapsed = performance.now() - decodeStarted;
         decodeMs += decodeElapsed;
         engineMetrics.observe('decode', decodeElapsed);
+        operation.operation = 'prepare-frame';
         await mediaOutput.prepareVideo?.(frame);
+        operation.operation = 'render-frame';
         const renderStarted = performance.now();
         renderCompositionFrame(
           context,
@@ -281,6 +293,7 @@ export async function renderExportVideo(
         for (const lease of leasedFrames) lease.close();
       }
       const encoderStarted = performance.now();
+      operation.operation = 'submit-video-frame';
       await mediaOutput.addVideo(time, Math.min(1 / fps, Math.max(0, request.snapshot.duration - time)));
       const encodeElapsed = performance.now() - encoderStarted;
       encoderBackpressureMs += encodeElapsed;
@@ -288,6 +301,8 @@ export async function renderExportVideo(
       engineMetrics.count('frames');
       await onFrame(frame + 1, { decodeMs, renderMs, encoderBackpressureMs });
     }
+    operation.operation = 'close-video';
+    currentFrame = null;
     mediaOutput.closeVideo();
     return {
       elapsedMs: performance.now() - started,
@@ -296,6 +311,16 @@ export async function renderExportVideo(
       encoderBackpressureMs,
       engine: engineMetrics.snapshot(),
     };
+  } catch (error) {
+    if (currentFrame !== null)
+      operation.frame = {
+        index: currentFrame,
+        timeMs: (currentFrame / fps) * 1000,
+        width: request.snapshot.canvas.width,
+        height: request.snapshot.canvas.height,
+        clipIds: currentVisuals.slice(0, 100).map((clip) => clip.id.slice(0, 512)),
+      };
+    throw exportOperationError(error, operation);
   } finally {
     disposeGpuShapes(context);
     disposeMediaShadowCache(context);

@@ -50,6 +50,21 @@ export function snapCropToPixels(crop: NormalizedCrop, size: CropDimensions): No
   return cropFromPixels(cropPixels(crop, size), size);
 }
 
+/** Resize the retained region from its top-left source pixel without crossing the source boundary. */
+export function changeCropDimension(
+  crop: NormalizedCrop | undefined,
+  size: CropDimensions,
+  axis: keyof CropDimensions,
+  value: number,
+): NormalizedCrop {
+  const pixels = cropPixels(crop, size);
+  if (Number.isFinite(value)) {
+    if (axis === 'width') pixels.right = size.width - pixels.left - Math.max(1, bound(value, size.width - pixels.left));
+    else pixels.bottom = size.height - pixels.top - Math.max(1, bound(value, size.height - pixels.top));
+  }
+  return cropFromPixels(pixels, size);
+}
+
 export function cropsEqual(a: NormalizedCrop | undefined, b: NormalizedCrop | undefined): boolean {
   const left = a ?? FULL_CROP;
   const right = b ?? FULL_CROP;

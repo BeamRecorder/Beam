@@ -177,3 +177,32 @@ describe('screenshot crop controls', () => {
     expect(phone.width / phone.height).toBeCloseTo(2);
   });
 });
+
+it.each([false, true])('shares source-pixel measurements and numeric edits with video, mirrored: %s', (mirrored) => {
+  const state = stateFixture();
+  state.image.crop = { x: 0.1, y: 0.2, width: 0.6, height: 0.5 };
+  state.image.isMirrored = mirrored;
+  state.image.isMirroredY = mirrored;
+  const wrapper = mount(ScreenshotCropSelection, { props: { state, sourceSize: { width: 2000, height: 1000 } } });
+  const shared = wrapper.findComponent(CanvasCropSelection);
+  expect(shared.props('measurements')).toEqual({
+    left: mirrored ? 600 : 200,
+    right: mirrored ? 200 : 600,
+    top: mirrored ? 300 : 200,
+    bottom: mirrored ? 200 : 300,
+    width: 1200,
+    height: 500,
+  });
+  shared.vm.$emit('crop-edit', { x: 0.2, y: 0.1, width: 0.5, height: 0.6 });
+  const edited = wrapper.emitted('crop')![0]![0] as { x: number; y: number };
+  expect(edited.x).toBeCloseTo(mirrored ? 0.3 : 0.2);
+  expect(edited.y).toBeCloseTo(mirrored ? 0.3 : 0.1);
+  wrapper.unmount();
+});
+it('retains one-pixel source dimensions in the screenshot crop HUD', () => {
+  const state = stateFixture();
+  state.image.crop = { x: 0, y: 0, width: 1 / 2000, height: 1 / 1000 };
+  const wrapper = mount(ScreenshotCropSelection, { props: { state, sourceSize: { width: 2000, height: 1000 } } });
+  expect(wrapper.findComponent(CanvasCropSelection).props('measurements')).toMatchObject({ width: 1, height: 1 });
+  wrapper.unmount();
+});

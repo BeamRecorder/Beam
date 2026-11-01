@@ -15,6 +15,7 @@ import { finishAnchorPath } from '@beam/engine/shared/shape-vector-anchors';
 import type { VectorNode, VectorNodeSelection } from '@beam/engine/shared/shape-vector-types';
 import type { ShapeLayerFamily } from '@beam/engine/shared/shape-layer-types';
 import type { ElementEditorContext, ElementEditorOptions } from './element-editor-types';
+import { elementAssetTransform, isElementAsset } from '@beam/engine/shared/element-assets';
 
 export const ELEMENT_EDITOR: InjectionKey<ElementEditorContext> = Symbol('element-editor');
 export const useElementEditor = () => inject(ELEMENT_EDITOR, null);
@@ -93,6 +94,20 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
     return true;
   };
   const context: ElementEditorContext = {
+    addAsset: (asset) => {
+      if (!allowed() || !canvasSize.value || !isElementAsset(asset)) return;
+      finishText();
+      finishVector();
+      drawingMode.value = false;
+      const clip = {
+        ...create(asset.style.family),
+        ...normalizeShapeLayerStyle(JSON.parse(JSON.stringify(asset.style))),
+        name: asset.name,
+        transform: elementAssetTransform(asset, canvasSize.value),
+      } as ShapeClip;
+      options.insert(clip);
+      options.select(clip.id);
+    },
     createText,
     canInteract: computed(allowed),
     canvasSize,

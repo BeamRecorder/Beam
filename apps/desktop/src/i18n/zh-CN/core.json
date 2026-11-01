@@ -240,6 +240,9 @@
     "zoomOut": "缩小画布",
     "resetZoom": "重置画布视图",
     "canvasZoom": "画布缩放",
+    "view": "视图",
+    "fitToWindow": "大图适应窗口",
+    "actualSize": "实际大小（100%）",
     "toggleGrid": "切换 3×3 网格",
     "takeScreenshot": "截取画布",
     "screenshotCreated": "截图已创建",
@@ -530,7 +533,8 @@
     "videoFormatUnsupported": "不支持此视频格式。",
     "videoFileUnavailable": "视频文件不可用。",
     "ok": "确定",
-    "recenter": "重新居中"
+    "recenter": "重新居中",
+    "editCrop": "编辑裁剪"
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU（实验性）",
@@ -826,6 +830,8 @@
     "moveRecorderBar": "移动录制栏",
     "ready": "准备就绪",
     "preparing": "准备中…",
+    "finalizing": "正在完成录制…",
+    "finalizingSlow": "耗时比平时更长，最多等待60秒。",
     "resumeRecording": "继续录制",
     "pauseRecording": "暂停录制",
     "stopRecording": "停止录制",
@@ -1117,7 +1123,14 @@
     "perspective": "透视",
     "group": "编组",
     "selectionTitle": "选择 · {count} 个元素",
-    "ungroup": "取消编组"
+    "ungroup": "取消编组",
+    "moreTools": "更多工具",
+    "personalizeDock": "自定义工具栏",
+    "customizeDockHint": "拖动工具以调整顺序。右键点击工具可将其从工具栏中移除。",
+    "removeFromDock": "从工具栏移除",
+    "resetToolbar": "重置工具栏",
+    "scrollToolsLeft": "向左滚动工具",
+    "scrollToolsRight": "向右滚动工具"
   },
   "EditorPresetControls": {
     "preview": "预设预览",
@@ -1155,6 +1168,10 @@
     "close": "关闭"
   },
   "Elements": {
+    "savedElements": "已保存的元素",
+    "saveElement": "保存所选元素",
+    "removeSavedElement": "删除已保存的元素",
+    "noSavedElements": "尚无已保存的元素。",
     "image": "图片",
     "deleteNamed": "删除{name}",
     "title": "元素",

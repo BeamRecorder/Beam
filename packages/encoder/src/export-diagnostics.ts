@@ -4,6 +4,7 @@ import type { ExportDiagnostics, ExportRuntimeDiagnostics } from '@beam/encoder/
 import type { ExportProgress, ExportRequest } from '@beam/encoder/export-types';
 import { bitrateFor } from '@beam/encoder/export-presets';
 import { formatEngineMetrics } from '@beam/runtime/performance/engine-metrics-report';
+import { exportZoomReport } from './export-zoom-report';
 
 type ReportStatus = 'running' | 'completed' | 'failed' | 'cancelled';
 
@@ -64,7 +65,9 @@ export function buildBeamExportReport(options: {
   error?: string;
 }) {
   const { request, progress, diagnostics } = options;
-  const runtime = progress?.diagnostics ?? diagnostics?.runtime ?? null;
+  const runtime = diagnostics?.runtime?.failure
+    ? diagnostics.runtime
+    : (progress?.diagnostics ?? diagnostics?.runtime ?? null);
   const environment = diagnostics?.environment ?? null;
   const width = request.snapshot.canvas.width;
   const height = request.snapshot.canvas.height;
@@ -199,6 +202,23 @@ export function buildBeamExportReport(options: {
     '',
     ...formatGpuUsage(diagnostics?.gpuUsage),
     ...(runtime?.engine ? ['', '--- Engine Stages ---', ...formatEngineMetrics(runtime.engine)] : []),
+    ...(runtime?.failure
+      ? [
+          '',
+          '--- Failure Context ---',
+          `Operation: ${runtime.failure.operation}`,
+          `Original Error: ${cleanedError(runtime.failure.errorName)}: ${cleanedError(runtime.failure.errorMessage)}`,
+          ...(runtime.failure.frame
+            ? [
+                `Operation Frame: ${runtime.failure.frame.index + 1} (index ${runtime.failure.frame.index}); ${duration(runtime.failure.frame.timeMs)}`,
+                `Frame Dimensions: ${runtime.failure.frame.width}x${runtime.failure.frame.height}`,
+                `Visual Clips: ${runtime.failure.frame.clipIds.join(', ') || 'None'}`,
+                'Frame identifies the operation where the error surfaced. Asynchronous encoder errors may refer to an earlier submitted frame.',
+              ]
+            : []),
+        ]
+      : []),
+    ...exportZoomReport(request.snapshot, runtime?.failure?.frame?.timeMs),
     ...(cleanedError(options.error) ? ['', '--- Error ---', cleanedError(options.error)!] : []),
     '===================',
   ].join('\n');

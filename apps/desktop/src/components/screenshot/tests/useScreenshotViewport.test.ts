@@ -14,9 +14,9 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 
-const create = async () => {
+const create = async (size = { width: 1200, height: 800 }) => {
   const disabled = ref(false);
-  const canvas = ref({ width: 1200, height: 800 });
+  const canvas = ref(size);
   let context!: ReturnType<typeof useScreenshotViewport>;
   const wrapper = mount(
     defineComponent({
@@ -60,7 +60,7 @@ describe('Screenshot viewport', () => {
     expect(context.available.height.value).toBe(600);
     expect(context.stageSize.value.width).toBe(800);
     expect(context.stageSize.value.height).toBeCloseTo(533.333);
-    expect(context.viewport.zoomPercent.value).toBe(100);
+    expect(context.viewport.zoomPercent.value).toBe(67);
     expect(canvas.value).toEqual({ width: 1200, height: 800 });
   });
   it('zooms at the pointer and reverses the wheel without mutating the output size', async () => {
@@ -68,12 +68,12 @@ describe('Screenshot viewport', () => {
     const event = wheel(-120, 600, 450);
     context.wheel(event);
     expect(event.defaultPrevented).toBe(true);
-    expect(context.viewport.zoomPercent.value).toBe(112);
+    expect(context.viewport.zoomPercent.value).toBe(75);
     expect(context.viewport.panX.value).toBeCloseTo(-12);
     expect(context.viewport.panY.value).toBeCloseTo(-12);
     expect(context.stageSize.value.width).toBeCloseTo(896);
     context.wheel(wheel(120, 600, 450));
-    expect(context.viewport.zoomPercent.value).toBe(100);
+    expect(context.viewport.zoomPercent.value).toBe(67);
     expect(context.viewport.panX.value).toBeCloseTo(0);
     expect(canvas.value).toEqual({ width: 1200, height: 800 });
   });
@@ -82,10 +82,10 @@ describe('Screenshot viewport', () => {
     for (let i = 0; i < 100; i++) context.wheel(wheel());
     expect(context.viewport.zoomScale.value).toBe(5);
     for (let i = 0; i < 100; i++) context.wheel(wheel(120));
-    expect(context.viewport.zoomScale.value).toBe(0.25);
+    expect(context.viewport.zoomScale.value).toBe(0.01);
     context.viewport.panX.value = 20;
     context.viewport.resetZoom();
-    expect(context.viewport.zoomPercent.value).toBe(100);
+    expect(context.viewport.zoomPercent.value).toBe(67);
     expect(context.viewport.panX.value).toBe(0);
     expect(context.viewport.panY.value).toBe(0);
   });
@@ -104,7 +104,7 @@ describe('Screenshot viewport', () => {
     context.wheel(wheel());
     wrapper.unmount();
     context.wheel(wheel());
-    expect(context.viewport.zoomScale.value).toBe(1);
+    expect(context.viewport.zoomScale.value).toBeCloseTo(2 / 3);
   });
   it('pans with the middle button, preserves zoom while dragging and releases pointer capture', async () => {
     const { context, capture, release } = await create();
@@ -143,5 +143,65 @@ describe('Screenshot viewport', () => {
     context.endPan(pointer(0));
     window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }));
     expect(context.viewport.isSpacePressed.value).toBe(false);
+  });
+
+  it.each([
+    { width: 320, height: 200, expectedWidth: 320, expectedHeight: 200, percent: 100 },
+    { width: 12000, height: 2000, expectedWidth: 800, expectedHeight: 800 / 6, percent: 7 },
+    { width: 200, height: 1600, expectedWidth: 75, expectedHeight: 600, percent: 38 },
+  ])('centers $width × $height without enlarging small images or distorting large ones', async (size) => {
+    const { context } = await create(size);
+    expect(context.stageSize.value.width).toBeCloseTo(size.expectedWidth);
+    expect(context.stageSize.value.height).toBeCloseTo(size.expectedHeight);
+    expect(context.controls.zoomPercent.value).toBe(size.percent);
+    expect(context.stageStyle.value.transform).toBe('translate(-50%, -50%) translate3d(0px, 0px, 0)');
+  });
+
+  it('shows actual size at 100% even for a very wide capture and keeps it on window resize', async () => {
+    const { context, canvas } = await create({ width: 12000, height: 2000 });
+    const original = { ...canvas.value };
+    context.controls.setView('actual');
+    expect(context.controls.viewMode.value).toBe('actual');
+    expect(context.controls.zoomPercent.value).toBe(100);
+    expect(context.stageSize.value).toEqual(original);
+    context.available.width.value = 400;
+    context.available.height.value = 300;
+    expect(context.stageSize.value).toEqual(original);
+    expect(context.controls.zoomPercent.value).toBe(100);
+    context.controls.setView('fit');
+    expect(context.stageSize.value.width).toBe(400);
+    expect(context.controls.viewMode.value).toBe('fit');
+    expect(canvas.value).toEqual(original);
+  });
+
+  it('adjusts a fitted view on resize while retaining a manual zoom and pan', async () => {
+    const { context } = await create();
+    context.available.width.value = 600;
+    expect(context.stageSize.value.width).toBe(600);
+    context.controls.setView('zoom-in');
+    expect(context.controls.viewMode.value).toBe('manual');
+    expect(context.viewport.zoomScale.value).toBe(0.625);
+    context.controls.setView('zoom-out');
+    expect(context.viewport.zoomScale.value).toBe(0.5);
+    context.viewport.panX.value = 30;
+    context.available.width.value = 800;
+    expect(context.stageSize.value.width).toBe(600);
+    expect(context.viewport.panX.value).toBe(30);
+    context.controls.resetView();
+    expect(context.stageSize.value.width).toBe(800);
+    expect(context.viewport.panX.value).toBe(0);
+    expect(context.controls.viewMode.value).toBe('fit');
+  });
+
+  it('can fit below 1% and blocks menu actions and reset while disabled', async () => {
+    const { context, disabled } = await create({ width: 16384, height: 100 });
+    context.available.width.value = 80;
+    expect(context.stageSize.value.width).toBe(80);
+    expect(context.controls.zoomPercent.value).toBe(0.49);
+    disabled.value = true;
+    for (const action of ['actual', 'fit', 'zoom-in', 'zoom-out'] as const) context.controls.setView(action);
+    context.controls.resetView();
+    expect(context.stageSize.value.width).toBe(80);
+    expect(context.controls.viewMode.value).toBe('fit');
   });
 });

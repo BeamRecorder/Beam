@@ -1,6 +1,8 @@
 #[cfg(any(windows, target_os = "linux"))]
 use super::VideoFormat;
-#[cfg(any(windows, target_os = "linux"))]
+#[cfg(any(windows, test))]
+use crate::model::VideoEncodingDiagnostics;
+#[cfg(any(windows, target_os = "linux", test))]
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -27,6 +29,8 @@ pub struct ScreenCaptureMetrics {
     last_native_pts_ns: AtomicU64,
     #[cfg(any(windows, target_os = "linux"))]
     first_video_format: Mutex<Option<VideoFormat>>,
+    #[cfg(any(windows, test))]
+    encoding: Mutex<Option<VideoEncodingDiagnostics>>,
 }
 
 impl Default for ScreenCaptureMetrics {
@@ -45,11 +49,34 @@ impl Default for ScreenCaptureMetrics {
             last_native_pts_ns: AtomicU64::new(Self::NO_NATIVE_PTS),
             #[cfg(any(windows, target_os = "linux"))]
             first_video_format: Mutex::new(None),
+            #[cfg(any(windows, test))]
+            encoding: Mutex::new(None),
         }
     }
 }
 
 impl ScreenCaptureMetrics {
+    #[cfg(any(windows, test))]
+    pub(crate) fn update_encoding(
+        &self,
+        update: impl FnOnce(&mut Option<VideoEncodingDiagnostics>),
+    ) {
+        update(
+            &mut self
+                .encoding
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner),
+        );
+    }
+
+    #[cfg(any(windows, test))]
+    pub(crate) fn encoding(&self) -> Option<VideoEncodingDiagnostics> {
+        self.encoding
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
+    }
+
     const NO_NATIVE_PTS: u64 = u64::MAX;
     #[cfg(windows)]
     pub(crate) fn acquired_frame(&self) {

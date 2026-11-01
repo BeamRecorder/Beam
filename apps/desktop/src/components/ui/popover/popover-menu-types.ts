@@ -7,5 +7,6 @@ export interface PopoverMenuItem {
   disabled?: boolean;
   active?: boolean;
   checked?: boolean;
+  separatorBefore?: boolean;
   children?: readonly PopoverMenuItem[];
 }

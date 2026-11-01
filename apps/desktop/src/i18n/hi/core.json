@@ -240,6 +240,9 @@
     "zoomOut": "कैनवास ज़ूम आउट करें",
     "resetZoom": "कैनवास व्यू रीसेट करें",
     "canvasZoom": "कैनवास ज़ूम",
+    "view": "दृश्य",
+    "fitToWindow": "बड़ी छवियों को विंडो में फ़िट करें",
+    "actualSize": "वास्तविक आकार (100%)",
     "toggleGrid": "3×3 ग्रिड टॉगल करें",
     "takeScreenshot": "कैनवास का स्क्रीनशॉट लें",
     "screenshotCreated": "स्क्रीनशॉट बनाया गया",
@@ -530,7 +533,8 @@
     "videoFormatUnsupported": "यह वीडियो फ़ॉर्मैट समर्थित नहीं है।",
     "videoFileUnavailable": "वीडियो फ़ाइल उपलब्ध नहीं है।",
     "ok": "ठीक है",
-    "recenter": "दृश्य पुनः केंद्रित करें"
+    "recenter": "दृश्य पुनः केंद्रित करें",
+    "editCrop": "क्रॉप संपादित करें"
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU (प्रायोगिक)",
@@ -826,6 +830,8 @@
     "moveRecorderBar": "रिकॉर्डर बार खिसकाएँ",
     "ready": "तैयार",
     "preparing": "तैयारी हो रही है…",
+    "finalizing": "रिकॉर्डिंग पूरी की जा रही है…",
+    "finalizingSlow": "सामान्य से अधिक समय लग रहा है। 60 सेकंड तक प्रतीक्षा करेंगे।",
     "resumeRecording": "रिकॉर्डिंग जारी रखें",
     "pauseRecording": "रिकॉर्डिंग रोकें",
     "stopRecording": "रिकॉर्डिंग बंद करें",
@@ -1117,7 +1123,14 @@
     "perspective": "परिप्रेक्ष्य",
     "group": "समूह बनाएँ",
     "selectionTitle": "चयन · {count} तत्व",
-    "ungroup": "समूह हटाएँ"
+    "ungroup": "समूह हटाएँ",
+    "moreTools": "और उपकरण",
+    "personalizeDock": "डॉक को अनुकूलित करें",
+    "customizeDockHint": "क्रम बदलने के लिए टूल खींचें। डॉक से हटाने के लिए टूल पर राइट-क्लिक करें।",
+    "removeFromDock": "टूलबार से हटाएँ",
+    "resetToolbar": "टूलबार रीसेट करें",
+    "scrollToolsLeft": "उपकरण बाईं ओर स्क्रॉल करें",
+    "scrollToolsRight": "उपकरण दाईं ओर स्क्रॉल करें"
   },
   "EditorPresetControls": {
     "preview": "प्रीसेट का पूर्वावलोकन",
@@ -1155,6 +1168,10 @@
     "close": "बंद करें"
   },
   "Elements": {
+    "savedElements": "सहेजे गए एलिमेंट",
+    "saveElement": "चुने हुए एलिमेंट को सहेजें",
+    "removeSavedElement": "सहेजा गया एलिमेंट हटाएँ",
+    "noSavedElements": "अभी कोई एलिमेंट सहेजा नहीं गया है।",
     "image": "छवि",
     "deleteNamed": "{name} हटाएँ",
     "title": "एलिमेंट",

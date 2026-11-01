@@ -302,6 +302,85 @@ describe('WebGlPerspectiveProjector', () => {
 });
 
 describe('PerspectiveSceneCompositor', () => {
+  it.each([1.25, 3, 5].flatMap((scale) => [false, true].map((shutter) => ({ scale, shutter }))))(
+    'reuses Canvas2D storage and one GPU texture during a 48-frame pan / $scale zoom / shutter $shutter',
+    ({ scale, shutter }) => {
+      const gl = createWebGlMock(),
+        surfaceContext = create2dContext(),
+        allocations: Array<{ canvas: PerspectiveCanvas; resize: ReturnType<typeof vi.fn> }> = [];
+      vi.stubGlobal(
+        'OffscreenCanvas',
+        class {
+          constructor(initialWidth: number, initialHeight: number) {
+            const canvas = {
+                ...createCanvas(gl),
+                getContext: vi.fn((kind: string) => (kind === '2d' ? surfaceContext : gl)),
+              },
+              resize = vi.fn();
+            let width = initialWidth,
+              height = initialHeight;
+            Object.defineProperties(canvas, {
+              width: {
+                get: () => width,
+                set: (value: number) => {
+                  resize();
+                  width = value;
+                },
+              },
+              height: {
+                get: () => height,
+                set: (value: number) => {
+                  resize();
+                  height = value;
+                },
+              },
+            });
+            allocations.push({ canvas: canvas as unknown as PerspectiveCanvas, resize });
+            return canvas;
+          }
+        },
+      );
+      const compositor = new PerspectiveSceneCompositor(),
+        target = create2dContext();
+      try {
+        for (let frame = 0; frame < 48; frame++) {
+          const camera = { scale, focusX: 0.45 + frame / 470, focusY: 0.4 + frame / 530 },
+            transform = { tiltX: 0.1, tiltY: -0.2 };
+          const options = {
+            target,
+            bounds: { x: 0, y: 0, width: 1920, height: 1080 },
+            pixelScale: 1,
+            camera,
+            draw: () => transform,
+          };
+          if (shutter)
+            compositor.renderSamples({
+              ...options,
+              sourceBounds: options.bounds,
+              samples: [-0.001, 0, 0.001].map((offset) => ({
+                camera: { ...camera, focusX: camera.focusX + offset },
+                transform,
+                weight: 1 / 3,
+              })),
+            });
+          else compositor.render(options);
+          if (frame === 0) for (const allocation of allocations) allocation.resize.mockClear();
+        }
+        expect(allocations).toHaveLength(2);
+        for (const allocation of allocations) expect(allocation.resize).not.toHaveBeenCalled();
+        expect(gl.texImage2D).toHaveBeenCalledOnce();
+        expect(gl.texSubImage2D).toHaveBeenCalledTimes(48);
+        expect(surfaceContext.clearRect).toHaveBeenCalledTimes(48);
+        expect(target.drawImage).toHaveBeenCalledTimes(48);
+        const [, , , width, height] = vi.mocked(gl.texImage2D).mock.calls[0]!;
+        expect(Number(width) * Number(height) * 4).toBeLessThanOrEqual(64 * 1024 * 1024);
+      } finally {
+        compositor.dispose();
+        vi.unstubAllGlobals();
+      }
+    },
+  );
+
   it('caps an oversized preview pixel scale at 1.25 while preserving logical output bounds', () => {
     const gl = createWebGlMock();
     const canvases: ReturnType<typeof createCanvas>[] = [];

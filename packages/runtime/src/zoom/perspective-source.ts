@@ -87,6 +87,7 @@ export function perspectiveSourceRaster(
   camera: CameraPlaneView,
   pixelScale: number,
   maxSize: number,
+  sizing: 'tight' | 'stable' = 'tight',
 ) {
   if (
     ![viewport.x, viewport.y, viewport.width, viewport.height, camera.scale, camera.focusX, camera.focusY].every(
@@ -113,13 +114,17 @@ export function perspectiveSourceRaster(
     top = Math.floor(bounds.y * density + phaseY + 1e-8);
   const right = Math.ceil((bounds.x + bounds.width) * density + phaseX - 1e-8),
     bottom = Math.ceil((bounds.y + bounds.height) * density + phaseY - 1e-8);
+  // Reserve the focus-dependent rounding pixel once instead of resizing CPU/GPU surfaces on every pan.
+  // Tight captures remain idempotent when their bounds are rasterized again (screenshot zoom layers).
+  const width = sizing === 'stable' ? Math.ceil(bounds.width * density) + 1 : Math.max(1, right - left),
+    height = sizing === 'stable' ? Math.ceil(bounds.height * density) + 1 : Math.max(1, bottom - top);
   return {
     bounds: {
       x: (left - phaseX) / density,
       y: (top - phaseY) / density,
-      width: (right - left) / density,
-      height: (bottom - top) / density,
+      width: width / density,
+      height: height / density,
     },
-    size: { width: Math.max(1, right - left), height: Math.max(1, bottom - top) },
+    size: { width, height },
   };
 }

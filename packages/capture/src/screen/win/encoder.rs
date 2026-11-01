@@ -14,10 +14,9 @@ use windows_capture::frame::Frame;
 use super::encoder_startup::{self, EncoderStartup};
 use super::encoder_surface::{OwnedSurface, SurfaceCopies};
 use crate::screen::encoder_negotiation::{EncoderMode, EncoderStartFailure};
+use crate::screen::encoding_diagnostics::{self, WINDOWS_ENCODER_FINALIZATION_TIMEOUT};
 use crate::screen::recording_queue::{FrameQueuePressure, frame_queue_capacity};
 use crate::screen::{PixelCrop, ScreenCaptureMetrics};
-
-const FINALIZE_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// Own the native encoder queue: windows-capture's VideoEncoder uses an
 /// unbounded channel and joins its transcode thread without an exit deadline.
@@ -34,6 +33,7 @@ pub(super) struct RecordingEncoder {
 }
 
 impl RecordingEncoder {
+    #[cfg(all(test, feature = "hardware-tests"))]
     pub(super) fn new(
         output: &Path,
         width: u32,
@@ -44,6 +44,7 @@ impl RecordingEncoder {
         Self::with_mode(output, width, height, bitrate, fps, None)
     }
 
+    #[cfg(all(test, feature = "hardware-tests"))]
     fn with_mode(
         output: &Path,
         width: u32,
@@ -51,6 +52,35 @@ impl RecordingEncoder {
         bitrate: u32,
         fps: u32,
         mode: Option<EncoderMode>,
+    ) -> Result<Self, String> {
+        Self::create(
+            output,
+            (width, height),
+            bitrate,
+            fps,
+            mode,
+            Arc::new(ScreenCaptureMetrics::default()),
+        )
+    }
+
+    pub(super) fn with_metrics(
+        output: &Path,
+        width: u32,
+        height: u32,
+        bitrate: u32,
+        fps: u32,
+        metrics: Arc<ScreenCaptureMetrics>,
+    ) -> Result<Self, String> {
+        Self::create(output, (width, height), bitrate, fps, None, metrics)
+    }
+
+    fn create(
+        output: &Path,
+        (width, height): (u32, u32),
+        bitrate: u32,
+        fps: u32,
+        mode: Option<EncoderMode>,
+        metrics: Arc<ScreenCaptureMetrics>,
     ) -> Result<Self, String> {
         if width == 0
             || height == 0
@@ -62,13 +92,21 @@ impl RecordingEncoder {
             return Err("Windows encoder requires nonempty even dimensions, a nonzero bitrate and frame rate".into());
         }
         let capacity = frame_queue_capacity(width, height).map_err(message)?;
-        let startup =
-            encoder_startup::initialize(output, width, height, bitrate, fps, capacity, mode)?;
+        encoding_diagnostics::begin(&metrics, (width, height), bitrate, fps, capacity);
+        let startup = encoder_startup::initialize(
+            output,
+            (width, height),
+            bitrate,
+            fps,
+            capacity,
+            mode,
+            &metrics,
+        )?;
         Ok(Self {
             startup,
             completion_result: None,
             surfaces: SurfaceCopies::new(width, height, capacity + 1),
-            metrics: Arc::new(ScreenCaptureMetrics::default()),
+            metrics,
             last_frame: None,
             last_output_timestamp: None,
             frame_duration: (10_000_000 / i64::from(fps)).max(1),
@@ -88,11 +126,6 @@ impl RecordingEncoder {
         self.pressure
             .check(available, self.metrics.frames_processed(), Instant::now())
             .map_err(message)
-    }
-
-    pub(super) fn with_metrics(mut self, metrics: Arc<ScreenCaptureMetrics>) -> Self {
-        self.metrics = metrics;
-        self
     }
 
     pub(super) fn send_frame(
@@ -262,7 +295,18 @@ impl RecordingEncoder {
     }
 
     pub(super) fn finish_at(mut self, stopped_at: Instant) -> Result<(), String> {
-        let deadline = Instant::now() + FINALIZE_TIMEOUT;
+        let started = Instant::now();
+        let result = self.finish_inner(stopped_at);
+        encoding_diagnostics::finalized(
+            &self.metrics,
+            started.elapsed(),
+            result.as_ref().err().map(String::as_str),
+        );
+        result
+    }
+
+    fn finish_inner(&mut self, stopped_at: Instant) -> Result<(), String> {
+        let deadline = Instant::now() + WINDOWS_ENCODER_FINALIZATION_TIMEOUT;
         // WGC reports changed content. Publish the retained image at Stop so
         // the final static interval is represented in the media timeline.
         while self.last_frame.is_some() && self.startup.sender.as_ref().is_some_and(Sender::is_full)
@@ -287,7 +331,8 @@ impl RecordingEncoder {
             .completion
             .recv_timeout(deadline.saturating_duration_since(Instant::now()))
             .map_err(|_| {
-                "Windows encoder did not finish within 15 seconds; recording was stopped".to_owned()
+                "Windows encoder did not finish within 60 seconds; recorded media was preserved"
+                    .to_owned()
             })?;
         let stopped = self.startup.pump.stop();
         result.map_err(|error| error.message).and(stopped)

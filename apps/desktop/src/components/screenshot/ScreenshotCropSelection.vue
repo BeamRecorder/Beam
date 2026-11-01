@@ -10,6 +10,7 @@ import { clampNormalizedCrop } from '@beam/engine/shared/normalized-crop';
 import { mirrorCrop } from '../editor/canvas/composables/layer-transform-geometry';
 import { moveScreenshotCrop, screenshotCropBounds } from '@beam/engine/screenshot/screenshot-geometry';
 import type { ScreenshotDimensions, ScreenshotCropDrag } from './screenshot-types';
+import { cropPixels, snapCropToPixels } from '@beam/engine/layout/crop/crop-pixels';
 
 const props = defineProps<{
   state: ScreenshotState;
@@ -20,7 +21,10 @@ const container = ref<HTMLElement | null>(null);
 let drag: ScreenshotCropDrag | null = null;
 const mirror = (crop: NormalizedCrop) =>
   mirrorCrop(crop, Boolean(props.state.image.isMirrored), Boolean(props.state.image.isMirroredY));
-const crop = computed(() => mirror(clampNormalizedCrop(props.state.image.crop ?? { x: 0, y: 0, width: 1, height: 1 })));
+const crop = computed(() =>
+  mirror(clampNormalizedCrop(props.state.image.crop ?? { x: 0, y: 0, width: 1, height: 1 }, props.sourceSize)),
+);
+const measurements = computed(() => cropPixels(crop.value, props.sourceSize));
 const full = computed(() => screenshotCropBounds(props.state, props.sourceSize.width, props.sourceSize.height));
 const containerStyle = computed(() => ({
   left: `${(full.value.x / props.state.canvas.width) * 100}%`,
@@ -64,6 +68,7 @@ const move = (event: PointerEvent) => {
         delta.x / (full.value.width * scale),
         delta.y / (full.value.height * scale),
         drag.corner,
+        props.sourceSize,
       ),
     ),
   );
@@ -85,6 +90,8 @@ const end = (event: PointerEvent) => {
     <CanvasCropSelection
       :container-style="{ inset: '0' }"
       :overlay-style="overlayStyle"
+      :measurements="measurements"
+      @crop-edit="emit('crop', mirror(snapCropToPixels($event, sourceSize)))"
       @move-start="start($event)"
       @move="move"
       @move-end="end"

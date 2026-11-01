@@ -33,6 +33,12 @@ impl ActiveRecordings {
             let metrics = recording.metrics();
             let mut recording = recording;
             let result = recording.stop();
+            #[cfg(windows)]
+            if let Some(segment) =
+                track_mut(tracks, TrackKind::Screen).and_then(|track| track.segments.last_mut())
+            {
+                segment.encoding = metrics.encoding();
+            }
             #[cfg(any(windows, target_os = "linux"))]
             if let Some(format) = recording.video_format() {
                 update_video_format(tracks, TrackKind::Screen, format);

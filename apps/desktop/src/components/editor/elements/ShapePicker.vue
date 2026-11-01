@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, defineAsyncComponent, ref } from 'vue';
 import { ChevronDown, Search } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Input from '~/ui/input/Input.vue';
@@ -8,6 +8,7 @@ import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
 import { createFuzzySearchEngine } from '~/ui/select/fuzzy-search';
 import { SHAPE_CATALOG, shapeDefinition, shapeDisplayName, type ShapeKind } from '@beam/engine/shared/shape-catalog';
 import { useTranslate } from '~/i18n/useTranslate';
+import { useElementEditor } from './useElementEditor';
 
 const props = withDefaults(
   defineProps<{
@@ -29,6 +30,8 @@ const emit = defineEmits<{
 }>();
 
 const { t, locale } = useTranslate('Elements');
+const editor = useElementEditor();
+const ElementAssets = defineAsyncComponent(() => import('./ElementAssets.vue'));
 const query = ref('');
 const selected = computed(() => shapeDefinition(props.modelValue));
 const displayName = (value: ShapeKind) => shapeDisplayName(value, String(locale?.value ?? 'en'));
@@ -83,7 +86,10 @@ const handleKeydown = (event: KeyboardEvent, close: () => void) => {
         <div class="shape-picker-header">
           <div>
             <strong>{{ t('shapeLibrary') }}</strong>
-            <span>{{ t('shapeCount', { count: SHAPE_CATALOG.length }) }}</span>
+            <div class="library-actions">
+              <span>{{ t('shapeCount', { count: SHAPE_CATALOG.length }) }}</span>
+              <ElementAssets v-if="editor" family="shape" :disabled="disabled" @select="close" />
+            </div>
           </div>
           <Input v-model="query" size="sm" autofocus :placeholder="t('searchShapes')" :aria-label="t('searchShapes')">
             <template #prefix><Search :size="14" /></template>
@@ -131,6 +137,11 @@ const handleKeydown = (event: KeyboardEvent, close: () => void) => {
   gap: 8px;
   padding: 8px;
   box-sizing: border-box;
+}
+.library-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .shape-picker-header {

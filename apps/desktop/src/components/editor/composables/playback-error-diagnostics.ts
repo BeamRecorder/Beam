@@ -19,12 +19,38 @@ export function playbackErrorDiagnostic(error: MediaError, context: PlaybackErro
   if (asset?.origin === 'session' && asset.sessionId && asset.sessionPath)
     expectedProjectPath = `session-${asset.sessionId}/${asset.sessionPath}`;
   else if (asset?.fileName) expectedProjectPath = `media/${asset.fileName}`;
+  const data = asset?.sessionId && asset.sessionId !== context.editorData?.sessionId ? null : context.editorData;
+  const manifest = data?.manifest;
   return {
     project: context.project,
-    recordingSession: context.editorData
+    recordingSession: data
       ? {
-          id: context.editorData.sessionId,
-          completed: context.editorData.manifest.completed,
+          id: data.sessionId,
+          completed: data.manifest.completed,
+          ...(manifest?.platform ? { platform: manifest.platform } : {}),
+          ...(manifest?.durationNs !== undefined ? { durationNs: manifest.durationNs } : {}),
+          ...(manifest?.warnings ? { warnings: manifest.warnings } : {}),
+          ...(manifest?.tracks
+            ? {
+                tracks: manifest.tracks.map(
+                  ({ trackId, kind, format, metrics, status, terminationReason, segments }) => ({
+                    trackId,
+                    kind,
+                    format,
+                    metrics,
+                    status,
+                    terminationReason,
+                    segments: segments.map(({ path, startNs, endNs, complete, encoding }) => ({
+                      path,
+                      startNs,
+                      endNs,
+                      complete,
+                      ...(encoding ? { encoding } : {}),
+                    })),
+                  }),
+                ),
+              }
+            : {}),
         }
       : null,
     media: {
@@ -33,5 +59,6 @@ export function playbackErrorDiagnostic(error: MediaError, context: PlaybackErro
       expectedProjectPath,
     },
     error: playbackErrorDetails(error),
+    ...(data?.diagnostics ? { diagnostics: data.diagnostics } : {}),
   };
 }

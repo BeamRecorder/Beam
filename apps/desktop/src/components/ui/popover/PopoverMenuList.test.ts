@@ -79,6 +79,27 @@ afterEach(() => {
 });
 
 describe('PopoverMenuList choices', () => {
+  it('separates action groups without adding a keyboard focus stop or changing selection', async () => {
+    const wrapper = mount(PopoverMenuList, {
+      attachTo: document.body,
+      props: {
+        items: [
+          { id: 'remove', label: 'Remove' },
+          { id: 'reset', label: 'Reset', separatorBefore: true },
+        ],
+      },
+    });
+    wrappers.push(wrapper);
+    const separator = wrapper.get('[role="separator"]');
+    expect(separator.element.previousElementSibling?.textContent).toContain('Remove');
+    expect(separator.element.nextElementSibling?.textContent).toContain('Reset');
+    expect(separator.attributes('tabindex')).toBeUndefined();
+    const buttons = wrapper.findAll('button');
+    await buttons[0]!.trigger('keydown', { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(buttons[1]!.element);
+    await buttons[1]!.trigger('click');
+    expect(wrapper.emitted('select')).toEqual([['reset']]);
+  });
   it.each([true, false, undefined])(
     'renders checked=%s with a separate selection slot and preserves action icons',
     (checked) => {

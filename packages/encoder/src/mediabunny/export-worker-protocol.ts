@@ -2,6 +2,7 @@ import type { ExportProgress, ExportRequest, ExportValidationIssue } from '@beam
 import type { ExportRuntimeDiagnostics } from '@beam/encoder/export-diagnostics-types';
 import type { PreparedCursorImage } from '@beam/encoder/mediabunny/export-cursor-images';
 import { isEngineMetricsSnapshot } from '@beam/runtime/performance/engine-metrics-protocol';
+import { isExportFailureContext } from '../export-failure-protocol';
 
 export type ExportWorkerRequest =
   | { type: 'start'; request: ExportRequest; cursorImages: PreparedCursorImage[] }
@@ -14,7 +15,11 @@ export type ExportWorkerResponse =
   | { type: 'chunk'; sequence: number; position: number; data: Uint8Array }
   | { type: 'disposed' }
   | { type: 'complete'; diagnostics: ExportRuntimeDiagnostics }
-  | { type: 'error'; error: { name: string; message: string; issue?: ExportValidationIssue } };
+  | {
+      type: 'error';
+      error: { name: string; message: string; issue?: ExportValidationIssue };
+      diagnostics?: ExportRuntimeDiagnostics;
+    };
 
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === 'object');
 const sequence = (value: unknown) => Number.isSafeInteger(value) && (value as number) >= 0;
@@ -26,6 +31,7 @@ const strings = (value: unknown): value is string[] =>
 const runtimeDiagnostics = (value: unknown): value is ExportRuntimeDiagnostics => {
   if (!record(value)) return false;
   return (
+    (value.failure === undefined || isExportFailureContext(value.failure)) &&
     (value.engine === undefined || isEngineMetricsSnapshot(value.engine)) &&
     ['validating_assets', 'loading_assets', 'encoding', 'finalizing'].includes(value.phase as string) &&
     finite(value.elapsedMs) &&
@@ -142,5 +148,10 @@ export function isExportWorkerResponse(value: unknown): value is ExportWorkerRes
       (progress.diagnostics === undefined || runtimeDiagnostics(progress.diagnostics))
     );
   }
-  return value.type === 'error' && record(value.error) && typeof value.error.message === 'string';
+  return (
+    value.type === 'error' &&
+    record(value.error) &&
+    typeof value.error.message === 'string' &&
+    (value.diagnostics === undefined || runtimeDiagnostics(value.diagnostics))
+  );
 }

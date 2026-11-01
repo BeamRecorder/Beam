@@ -6,6 +6,7 @@ export default {
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { usePopoverTriggerSuppression } from './usePopoverTriggerSuppression';
 
 const props = withDefaults(
   defineProps<{
@@ -35,6 +36,13 @@ const tooltipStyle = ref<Record<string, string>>({});
 const resolvedPosition = ref<'top' | 'bottom' | 'left' | 'right'>(props.position);
 let showTimer: ReturnType<typeof setTimeout> | null = null;
 let hideTimer: ReturnType<typeof setTimeout> | null = null;
+const { suppressed, isSuppressed } = usePopoverTriggerSuppression(wrapperRef);
+const dismissImmediately = () => {
+  if (showTimer) clearTimeout(showTimer);
+  if (hideTimer) clearTimeout(hideTimer);
+  showTimer = hideTimer = null;
+  visible.value = false;
+};
 
 const updatePosition = () => {
   const wrapper = wrapperRef.value;
@@ -95,12 +103,14 @@ const updatePosition = () => {
 };
 
 const show = () => {
-  if (props.disabled) return;
+  if (props.disabled || isSuppressed()) return;
   if (showTimer) clearTimeout(showTimer);
   if (hideTimer) clearTimeout(hideTimer);
   const delayMs = props.delay;
   if (delayMs > 0) {
     showTimer = setTimeout(async () => {
+      showTimer = null;
+      if (props.disabled || isSuppressed()) return;
       visible.value = true;
       await nextTick();
       updatePosition();
@@ -143,10 +153,20 @@ const hide = () => {
 };
 
 const keepOpen = () => {
+  if (props.disabled || isSuppressed()) return dismissImmediately();
   if (hideTimer) clearTimeout(hideTimer);
   hideTimer = null;
   visible.value = true;
 };
+
+watch(
+  suppressed,
+  (blocked) => {
+    if (blocked) dismissImmediately();
+    else if (props.open === true && !props.disabled) show();
+  },
+  { flush: 'sync' },
+);
 
 const closeInteractive = () => {
   if (!props.interactive) return;
@@ -206,9 +226,9 @@ onBeforeUnmount(() => {
     <slot />
   </component>
   <Teleport to="body">
-    <Transition name="fade">
+    <Transition name="fade" :css="!suppressed">
       <div
-        v-if="visible && (content || $slots.content)"
+        v-if="visible && !suppressed && (content || $slots.content)"
         ref="contentRef"
         class="tooltip-content"
         :class="[resolvedPosition, `tooltip-${variant}`, { 'tooltip-interactive': interactive }]"

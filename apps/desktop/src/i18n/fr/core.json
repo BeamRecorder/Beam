@@ -240,6 +240,9 @@
     "zoomOut": "Dézoomer le canvas",
     "resetZoom": "Réinitialiser la vue canvas",
     "canvasZoom": "Zoom canvas",
+    "view": "Affichage",
+    "fitToWindow": "Réduire les grandes images à la fenêtre",
+    "actualSize": "Taille réelle (100 %)",
     "toggleGrid": "Afficher/Masquer la grille 3x3",
     "takeScreenshot": "Capturer le canvas",
     "screenshotCreated": "Capture d’écran créée",
@@ -530,7 +533,8 @@
     "videoFormatUnsupported": "Ce format vidéo n’est pas pris en charge.",
     "videoFileUnavailable": "Le fichier vidéo est introuvable.",
     "ok": "OK",
-    "recenter": "Recentrer la vue"
+    "recenter": "Recentrer la vue",
+    "editCrop": "Modifier le recadrage"
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU (expérimental)",
@@ -838,6 +842,8 @@
     "moveRecorderBar": "Déplacer la barre d’enregistrement",
     "ready": "Prêt",
     "preparing": "Préparation…",
+    "finalizing": "Finalisation de l’enregistrement…",
+    "finalizingSlow": "Cela prend plus de temps. Attente jusqu’à 60 secondes.",
     "resumeRecording": "Reprendre l'enregistrement",
     "pauseRecording": "Mettre en pause",
     "stopRecording": "Arrêter l'enregistrement",
@@ -1129,7 +1135,14 @@
     "perspective": "Perspective",
     "group": "Grouper",
     "selectionTitle": "Sélection · {count} éléments",
-    "ungroup": "Dégrouper"
+    "ungroup": "Dégrouper",
+    "moreTools": "Outils supplémentaires",
+    "personalizeDock": "Personnaliser le dock",
+    "customizeDockHint": "Glissez les outils pour les réordonner. Faites un clic droit sur un outil pour le retirer du dock.",
+    "removeFromDock": "Retirer du dock",
+    "resetToolbar": "Réinitialiser le dock",
+    "scrollToolsLeft": "Faire défiler les outils à gauche",
+    "scrollToolsRight": "Faire défiler les outils à droite"
   },
   "EditorPresetControls": {
     "preview": "Aperçu du preset",
@@ -1167,6 +1180,10 @@
     "close": "Fermer"
   },
   "Elements": {
+    "savedElements": "Éléments enregistrés",
+    "saveElement": "Enregistrer l’élément sélectionné",
+    "removeSavedElement": "Supprimer l’élément enregistré",
+    "noSavedElements": "Aucun élément enregistré.",
     "image": "Image",
     "deleteNamed": "Supprimer {name}",
     "title": "Éléments",

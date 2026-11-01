@@ -96,50 +96,53 @@ const handleKeydown = (event: KeyboardEvent, item: PopoverMenuItem) => {
 
 <template>
   <div class="menu-content" :class="{ 'floating-surface': level > 0 }" role="menu" @mouseleave="openItemId = null">
-    <div v-for="item in items" :key="item.id" class="menu-entry">
-      <button
-        :ref="(element) => setItemElement(item.id, element as Element | null)"
-        class="menu-item"
-        :class="{
-          active: item.active,
-          'has-icon': Boolean(item.icon),
-          'has-check': item.checked !== undefined,
-          'has-children': Boolean(item.children?.length),
-        }"
-        :disabled="item.disabled"
-        :role="item.checked === undefined ? 'menuitem' : 'menuitemradio'"
-        :aria-checked="item.checked"
-        :aria-haspopup="item.children?.length ? 'menu' : undefined"
-        :aria-expanded="item.children?.length ? openItemId === item.id : undefined"
-        @mouseenter="
-          item.children?.length ? openSubmenu(item, $event.currentTarget as HTMLElement) : (openItemId = null)
-        "
-        @click="activate(item, $event)"
-        @keydown="handleKeydown($event, item)"
-      >
-        <span v-if="item.icon" class="item-icon-wrapper" aria-hidden="true">
-          <component :is="item.icon" class="menu-item-icon" />
-        </span>
-        <MarqueeText class="item-label" :trigger="itemElements.get(item.id)" :disabled="item.disabled">{{
-          item.label
-        }}</MarqueeText>
-        <span v-if="item.checked !== undefined" class="item-check-wrapper" aria-hidden="true">
-          <Check v-if="item.checked" class="menu-item-icon" />
-        </span>
-        <ChevronRight v-if="item.children?.length" class="submenu-chevron" aria-hidden="true" />
-      </button>
-      <PopoverMenuList
-        v-if="item.children?.length && openItemId === item.id"
-        class="submenu-panel"
-        :class="`opens-${submenuSides[item.id] ?? 'right'}`"
-        :style="submenuStyles[item.id]"
-        :items="item.children"
-        :level="level + 1"
-        @select="emit('select', $event)"
-        @dismiss="emit('dismiss')"
-        @close="closeSubmenu(item)"
-      />
-    </div>
+    <template v-for="item in items" :key="item.id">
+      <div v-if="item.separatorBefore" class="menu-separator" role="separator" />
+      <div class="menu-entry">
+        <button
+          :ref="(element) => setItemElement(item.id, element as Element | null)"
+          class="menu-item"
+          :class="{
+            active: item.active,
+            'has-icon': Boolean(item.icon),
+            'has-check': item.checked !== undefined,
+            'has-children': Boolean(item.children?.length),
+          }"
+          :disabled="item.disabled"
+          :role="item.checked === undefined ? 'menuitem' : 'menuitemradio'"
+          :aria-checked="item.checked"
+          :aria-haspopup="item.children?.length ? 'menu' : undefined"
+          :aria-expanded="item.children?.length ? openItemId === item.id : undefined"
+          @mouseenter="
+            item.children?.length ? openSubmenu(item, $event.currentTarget as HTMLElement) : (openItemId = null)
+          "
+          @click="activate(item, $event)"
+          @keydown="handleKeydown($event, item)"
+        >
+          <span v-if="item.icon" class="item-icon-wrapper" aria-hidden="true">
+            <component :is="item.icon" class="menu-item-icon" />
+          </span>
+          <MarqueeText class="item-label" :trigger="itemElements.get(item.id)" :disabled="item.disabled">{{
+            item.label
+          }}</MarqueeText>
+          <span v-if="item.checked !== undefined" class="item-check-wrapper" aria-hidden="true">
+            <Check v-if="item.checked" class="menu-item-icon" />
+          </span>
+          <ChevronRight v-if="item.children?.length" class="submenu-chevron" aria-hidden="true" />
+        </button>
+        <PopoverMenuList
+          v-if="item.children?.length && openItemId === item.id"
+          class="submenu-panel"
+          :class="`opens-${submenuSides[item.id] ?? 'right'}`"
+          :style="submenuStyles[item.id]"
+          :items="item.children"
+          :level="level + 1"
+          @select="emit('select', $event)"
+          @dismiss="emit('dismiss')"
+          @close="closeSubmenu(item)"
+        />
+      </div>
+    </template>
   </div>
 </template>
 
@@ -158,6 +161,12 @@ const handleKeydown = (event: KeyboardEvent, item: PopoverMenuItem) => {
 }
 .menu-entry {
   position: relative;
+}
+.menu-separator {
+  height: 1px;
+  flex-shrink: 0;
+  margin: 6px 8px;
+  background: var(--color-border);
 }
 .menu-item {
   display: grid;

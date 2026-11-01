@@ -240,6 +240,9 @@
     "zoomOut": "Reduzir tela",
     "resetZoom": "Redefinir visualização da tela",
     "canvasZoom": "Zoom da tela",
+    "view": "Visualização",
+    "fitToWindow": "Ajustar imagens grandes à janela",
+    "actualSize": "Tamanho real (100%)",
     "toggleGrid": "Alternar grade 3×3",
     "takeScreenshot": "Capturar a tela do canvas",
     "screenshotCreated": "Captura de tela criada",
@@ -530,7 +533,8 @@
     "videoFormatUnsupported": "Este formato de vídeo não é compatível.",
     "videoFileUnavailable": "O arquivo de vídeo está indisponível.",
     "ok": "OK",
-    "recenter": "Recentralizar exibição"
+    "recenter": "Recentralizar exibição",
+    "editCrop": "Editar recorte"
   },
   "ExportPopover": {
     "experimentalFfmpeg": "FFmpeg GPU (experimental)",
@@ -826,6 +830,8 @@
     "moveRecorderBar": "Mover barra de gravação",
     "ready": "Pronto",
     "preparing": "Preparando…",
+    "finalizing": "Finalizando a gravação…",
+    "finalizingSlow": "Está demorando mais. Aguardando até 60 segundos.",
     "resumeRecording": "Retomar gravação",
     "pauseRecording": "Pausar gravação",
     "stopRecording": "Parar gravação",
@@ -1117,7 +1123,14 @@
     "perspective": "Perspectiva",
     "group": "Agrupar",
     "selectionTitle": "Seleção · {count} elementos",
-    "ungroup": "Desagrupar"
+    "ungroup": "Desagrupar",
+    "moreTools": "Mais ferramentas",
+    "personalizeDock": "Personalizar dock",
+    "customizeDockHint": "Arraste as ferramentas para reordenar. Clique com o botão direito em uma ferramenta para removê-la do dock.",
+    "removeFromDock": "Remover da barra",
+    "resetToolbar": "Redefinir a barra",
+    "scrollToolsLeft": "Rolar ferramentas para a esquerda",
+    "scrollToolsRight": "Rolar ferramentas para a direita"
   },
   "EditorPresetControls": {
     "preview": "Prévia da predefinição",
@@ -1155,6 +1168,10 @@
     "close": "Fechar"
   },
   "Elements": {
+    "savedElements": "Elementos salvos",
+    "saveElement": "Salvar elemento selecionado",
+    "removeSavedElement": "Remover elemento salvo",
+    "noSavedElements": "Nenhum elemento salvo ainda.",
     "image": "Imagem",
     "deleteNamed": "Excluir {name}",
     "title": "Elementos",

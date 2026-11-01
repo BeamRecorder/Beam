@@ -1,6 +1,7 @@
 import type { ZoomElement } from '../zoom/zoom-types';
 import type { CaptureMode } from '@beam/engine/capture/capture-mode';
 import type { CursorHoverSync, CursorHoverSource } from '../cursor/cursor-hover-types';
+import type { RecordingDiagnostics, VideoEncodingDiagnostics } from './recording-diagnostics-types';
 export type { ZoomElement, ZoomFocus } from '../zoom/zoom-types';
 
 export type CaptureState =
@@ -221,6 +222,7 @@ export interface SessionTrackAsset {
   complete: boolean;
   src: string | null;
   exists: boolean;
+  encoding?: VideoEncodingDiagnostics;
 }
 
 export interface SessionTrackData {
@@ -256,6 +258,7 @@ export interface SessionManifestData {
 export interface ProjectEditorData {
   sessionId: string;
   manifest: SessionManifestData;
+  diagnostics?: RecordingDiagnostics;
   videoSrc: string | null;
   videoSessionPath: string | null;
   tracks: SessionTrackData[];

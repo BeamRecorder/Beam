@@ -70,6 +70,7 @@ export async function encodeWithWorker(
         return onProgress(message.progress);
       }
       if (message.type === 'error') {
+        diagnostics.runtime = message.diagnostics ?? diagnostics.runtime;
         const error = message.error.issue
           ? new ExportValidationError(message.error.issue)
           : Object.assign(new Error(message.error.message), { name: message.error.name });

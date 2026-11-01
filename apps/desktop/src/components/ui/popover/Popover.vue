@@ -351,6 +351,7 @@ defineExpose({
   <div :class="['popover-container', { 'popover-block': block }]" ref="popoverRef">
     <div
       :class="['popover-trigger', { 'popover-block': block }]"
+      :data-popover-open="isOpen"
       @pointerdown="handleTriggerPress"
       @click.stop="handleTriggerClick"
       @mouseenter="openTransient"

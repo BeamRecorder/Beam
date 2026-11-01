@@ -28,6 +28,7 @@ const props = withDefaults(
     embeddedCaptureMode?: CaptureMode;
     showTopbar?: boolean;
     preparingEditor?: boolean;
+    finalizingRecording?: boolean;
     editorLoadingProgress?: EditorLoadingProgress;
     externalError?: string;
     recorderLauncherContext?: RecorderLauncherContext | null;
@@ -203,6 +204,7 @@ useCaptureActionShortcuts({
     <EditorPreparingHud
       v-if="preparingEditor"
       :progress="editorLoadingProgress"
+      :finalizing-recording="finalizingRecording"
       @cancel="emit('cancel-editor-opening')"
     />
     <div v-else class="hud-body">
