@@ -285,7 +285,8 @@ describe('ScreenshotCanvas', () => {
     const state = stateFixture();
     state.canvas.width = 320;
     state.canvas.height = 200;
-    const original = JSON.stringify(state), wrapper = mountCanvas(state);
+    const original = JSON.stringify(state),
+      wrapper = mountCanvas(state);
     measurement.set?.(800, 600);
     await flushPromises();
     expect(wrapper.vm.zoomPercent).toBe(100);
