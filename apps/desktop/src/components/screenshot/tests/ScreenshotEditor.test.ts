@@ -328,6 +328,20 @@ describe('ScreenshotEditor', () => {
       wrapper.unmount();
     },
   );
+  it.each(['left', 'right', 'floating'] as const)('opens image properties from Canvas in %s mode', async (position) => {
+    setScreenshotPropertiesPosition(position);
+    const wrapper = mountEditor(true);
+    await flushPromises();
+    const canvas = wrapper.findComponent(ScreenshotCanvasStub);
+    expect(wrapper.find('[data-testid="canvas-panel"]').exists()).toBe(true);
+    const before = JSON.stringify(canvas.props('state'));
+    await wrapper.get('.screenshot-toolbar button[aria-label="Properties"]').trigger('click');
+    expect(wrapper.find('[data-testid="canvas-panel"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="clip-properties"]').isVisible()).toBe(true);
+    expect(canvas.props('selectedId')).toBe('screenshot');
+    expect(JSON.stringify(canvas.props('state'))).toBe(before);
+    wrapper.unmount();
+  });
   it('hides the inspector without altering the document and restores it from the toolbar', async () => {
     setScreenshotPropertiesPosition('floating');
     const wrapper = mountEditor(true);
@@ -343,6 +357,8 @@ describe('ScreenshotEditor', () => {
     expect(wrapper.get('.properties-island').isVisible()).toBe(true);
     expect(wrapper.get('.properties-island').attributes('inert')).toBeUndefined();
     expect(wrapper.find('[data-testid="canvas-panel"]').exists()).toBe(true);
+    await wrapper.get('.screenshot-toolbar button[aria-label="Properties"]').trigger('click');
+    expect(wrapper.get('[data-testid="clip-properties"]').isVisible()).toBe(true);
     await wrapper.get('.screenshot-toolbar button[aria-label="Properties"]').trigger('click');
     expect(wrapper.get('.properties-island').isVisible()).toBe(false);
     wrapper.unmount();

@@ -24,6 +24,9 @@ defineProps<EditorWorkspaceProps>();
   padding: 0;
   gap: 0;
 }
+.editor-workspace[data-editor-kind='screenshot'] > .workspace-upper {
+  gap: 0;
+}
 .workspace-upper {
   position: relative;
   flex: 1;

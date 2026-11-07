@@ -17,6 +17,11 @@ User-facing changes to Beam are documented in this file.
 
 - Saved-element trash buttons have a larger 44 × 44 px click target.
 
+### Fixed
+
+- Docked Screenshot Properties now meet the canvas edge without a workspace gap.
+- The Properties toolbar button opens image or element controls when Canvas controls are already displayed, including while the inspector is pinned.
+
 ## [0.5.9] - 2026-11-01
 
 ### Added

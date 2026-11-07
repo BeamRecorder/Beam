@@ -346,14 +346,15 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('custom dock and crop in 
         (side) => {
           const panel = document.querySelector('.properties-island')!.getBoundingClientRect();
           const image = document.querySelector('#properties-image')!.getBoundingClientRect();
+          const viewport = document.querySelector('.screenshot-stage')!.getBoundingClientRect();
           const header = document.querySelector('.editor-titlebar')!.getBoundingClientRect();
           return (
             image.width > 500 &&
             Math.abs(panel.top - header.bottom) < 1 &&
             Math.abs(panel.bottom - innerHeight) < 1 &&
             (side === 'left'
-              ? panel.left === 0 && panel.right <= image.left + 1
-              : panel.right === innerWidth && image.right <= panel.left + 1)
+              ? panel.left === 0 && Math.abs(panel.right - viewport.left) < 0.01
+              : panel.right === innerWidth && Math.abs(viewport.right - panel.left) < 0.01)
           );
         },
         {},

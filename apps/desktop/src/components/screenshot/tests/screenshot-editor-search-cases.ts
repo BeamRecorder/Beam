@@ -49,7 +49,7 @@ export function registerScreenshotEditorSearchTests(harness: ScreenshotEditorTes
     const wrapper = mountEditor(true);
     try {
       await flushPromises();
-      await wrapper.get('button[aria-label="Properties"]').trigger('click');
+      await wrapper.get('.properties-island button[aria-label="Close"]').trigger('click');
       expect(wrapper.findComponent(ScreenshotPropertiesPanel).props('open')).toBe(false);
       await run(wrapper, 'navigate:clip');
       expect(wrapper.findComponent(ScreenshotPropertiesPanel).props('open')).toBe(true);

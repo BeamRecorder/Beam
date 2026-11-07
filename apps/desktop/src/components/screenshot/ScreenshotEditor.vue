@@ -158,6 +158,11 @@ const chooseSelection = () => {
   else selectPanel('clip');
   inspectorOpen.value = true;
 };
+const toggleInspector = () => {
+  if (inspectorVisible.value && panel.value === 'canvas') chooseSelection();
+  else if (inspectorVisible.value) hideInspector();
+  else inspectorOpen.value = true;
+};
 const panelLabels = computed<Record<string, string>>(() => ({
   canvas: t('canvas'),
   settings: sidebarText('settings'),
@@ -450,7 +455,7 @@ const navigateSearch = (tab: string) => {
               @canvas="choosePanel('canvas')"
               @undo="history.undo().catch(fail)"
               @redo="history.redo().catch(fail)"
-              @toggle-inspector="inspectorVisible ? hideInspector() : (inspectorOpen = true)"
+              @toggle-inspector="toggleInspector"
               @resize="toolbarHeight = $event"
             />
           </template>
