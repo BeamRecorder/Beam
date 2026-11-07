@@ -169,6 +169,7 @@ export const EDITOR_PROPERTY_GROUPS: readonly EditorPropertyGroup[] = [
     videoOnly: true,
     keys: [
       'cameraFollow',
+      'followCursor',
       'safeZone',
       'responsiveness',
       'straightPaths',

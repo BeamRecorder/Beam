@@ -1,3 +1,4 @@
+import { provideElementAssetSaving } from './useElementAssetSaving';
 import { computed, inject, provide, ref, watch, type InjectionKey } from 'vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { ShapeClip } from '@beam/engine/shared/composition-types';
@@ -268,8 +269,12 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
       } else options.update(selected.value.id, patch);
       if (patch.text) options.rememberTextStyle?.(patch.text);
     },
-    remove: () => {
-      if (selected.value) options.remove(selected.value.id);
+    remove: (id) => {
+      const clip = id === undefined ? selected.value : layers.value.find((layer) => layer.id === id);
+      if (!allowed() || !clip || clip.locked) return;
+      if (editing.value?.id === clip.id) editing.value = null;
+      if (vectorEditing.value === clip.id) finishVector();
+      options.remove(clip.id);
     },
     beginText,
     beginElement: (id) => {
@@ -307,6 +312,7 @@ export function provideElementEditor(options: ElementEditorOptions): ElementEdit
       drawingMode.value = false;
     }
   });
+  provideElementAssetSaving(context, () => t('addToAssets'));
   provide(ELEMENT_EDITOR, context);
   return context;
 }

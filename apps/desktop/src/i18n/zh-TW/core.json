@@ -1169,6 +1169,8 @@
   },
   "Elements": {
     "savedElements": "已儲存的元素",
+    "addToAssets": "新增至已儲存元素",
+    "assetName": "元素名稱",
     "saveElement": "儲存所選元素",
     "removeSavedElement": "刪除已儲存的元素",
     "noSavedElements": "尚無已儲存的元素。",

@@ -1181,6 +1181,8 @@
   },
   "Elements": {
     "savedElements": "Éléments enregistrés",
+    "addToAssets": "Ajouter aux éléments enregistrés",
+    "assetName": "Nom de l’élément",
     "saveElement": "Enregistrer l’élément sélectionné",
     "removeSavedElement": "Supprimer l’élément enregistré",
     "noSavedElements": "Aucun élément enregistré.",

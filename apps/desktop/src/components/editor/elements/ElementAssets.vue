@@ -97,7 +97,9 @@ const save = () => {
               {{ asset.name }}
             </Button>
             <Button
-              size="xs"
+              class="asset-remove"
+              :style="{ width: '44px', height: '44px' }"
+              size="md"
               icon-only
               variant="ghost"
               :icon="Trash2"

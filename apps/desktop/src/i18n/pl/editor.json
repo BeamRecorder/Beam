@@ -432,6 +432,8 @@
   "ZoomPanel": {
     "applyToTrackHint": "Ujednolić wygląd odblokowanych zbliżeń, zachowując ich cele i czas.",
     "cameraFollow": "Śledzenie kamery",
+    "followCursor": "Śledź kursor",
+    "followCursorDesc": "Wyłącz, aby każde automatyczne zbliżenie pozostało na klikniętym obszarze. Wybierz tryb Stabilny, aby ograniczyć ruch kamery.",
     "cameraFollowDesc": "Przewiduje nagrane ruchy kursora, płynnie i stopniowo przesuwając kamerę.",
     "advanced": "Zaawansowane",
     "followPresetStable": "Stabilny",

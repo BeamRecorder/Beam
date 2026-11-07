@@ -1347,3 +1347,20 @@ describe('useCameraZoom', () => {
     });
   });
 });
+
+it('invalidates the camera used for hit geometry when cursor follow is toggled', () => {
+  const follow = ref({ enabled: true, safeZone: 0.5, responsiveness: 0.55, directionLock: true });
+  const create = vi.spyOn(compositionCamera, 'createCompositionCameraEvaluator');
+  mountComposable(undefined, false, { zoomAutoFollow: () => follow.value });
+  options.selected.value = null;
+  options.playing.value = true;
+  state.drawVideoWindow(context(), 800, 450, frame());
+  expect(create).toHaveBeenCalledTimes(1);
+  follow.value.enabled = false;
+  state.drawVideoWindow(context(), 800, 450, frame());
+  expect(create).toHaveBeenCalledTimes(2);
+  expect(create.mock.lastCall![0].autoFollow?.enabled).toBe(false);
+  expect(create.mock.lastCall![1]).toBeUndefined();
+  state.drawVideoWindow(context(), 800, 450, frame());
+  expect(create).toHaveBeenCalledTimes(2);
+});

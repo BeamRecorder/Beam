@@ -9,6 +9,7 @@ const { t } = useTranslate('TextInputDialog');
 const props = withDefaults(
   defineProps<{
     isOpen: boolean;
+    busy?: boolean;
     title: string;
     initialValue?: string;
     label: string;
@@ -55,6 +56,7 @@ watch(
 );
 
 const confirm = () => {
+  if (props.busy) return;
   submitted.value = true;
   if (validationError.value) return;
   emit('confirm', normalizedValue.value);
@@ -67,6 +69,7 @@ const confirm = () => {
       <label class="field-label" :for="inputId">{{ label }}</label>
       <Input
         :id="inputId"
+        :disabled="busy"
         ref="input"
         v-model="value"
         :placeholder="placeholder"
@@ -82,8 +85,12 @@ const confirm = () => {
 
     <template #footer>
       <div class="dialog-actions">
-        <Button variant="ghost" size="sm" @click="emit('close')">{{ cancelLabel ?? t('cancel') }}</Button>
-        <Button variant="primary" size="sm" @click="confirm">{{ confirmLabel ?? t('save') }}</Button>
+        <Button variant="ghost" size="sm" :disabled="busy" @click="emit('close')">{{
+          cancelLabel ?? t('cancel')
+        }}</Button>
+        <Button variant="primary" size="sm" :loading="busy" :disabled="busy" @click="confirm">{{
+          confirmLabel ?? t('save')
+        }}</Button>
       </div>
     </template>
   </Dialog>

@@ -432,6 +432,8 @@
   "ZoomPanel": {
     "applyToTrackHint": "Share zoom appearance with unlocked zooms, keeping each target and timing.",
     "cameraFollow": "Camera follow",
+    "followCursor": "Follow cursor",
+    "followCursorDesc": "Turn off to keep each automatic zoom focused on the clicked area. Choose Stable for less camera movement.",
     "cameraFollowDesc": "Anticipates recorded cursor movements with gentle, progressive camera tracking.",
     "advanced": "Advanced",
     "followPresetStable": "Stable",

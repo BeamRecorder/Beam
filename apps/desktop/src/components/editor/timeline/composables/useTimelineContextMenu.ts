@@ -1,7 +1,8 @@
+import { useElementAssetSaving } from '../../elements/useElementAssetSaving';
 import { actionKeys } from '~/shortcuts/action-bindings';
 import { computed, ref, type Ref } from 'vue';
 import { engineMetrics } from '@beam/runtime/performance/engine-metrics';
-import { AudioLines, ClipboardPaste, Copy, Lock, Unlock, Pause, Trash2 } from '@lucide/vue';
+import { AudioLines, ClipboardPaste, Copy, Library, Lock, Unlock, Pause, Trash2 } from '@lucide/vue';
 import { isAudioClip, type Clip, type ClipComposition, type MediaAsset } from '@beam/engine/shared/composition-types';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
 import type { ContextMenuItemOrDivider } from '~/components/ui/context-menu';
@@ -39,6 +40,7 @@ export function useTimelineContextMenu(options: {
   t: (key: string) => string;
 }) {
   const clipboard = useTimelineClipboard();
+  const saving = useElementAssetSaving();
   const contextMenuState = ref<TimelineContextMenuState>({
     isOpen: false,
     x: 0,
@@ -266,6 +268,11 @@ export function useTimelineContextMenu(options: {
         },
         { isDivider: true },
       );
+    if (saving?.supports(clip))
+      items.push(
+        { id: 'save-asset', label: saving.label(), icon: Library, disabled: !saving.canSave(clip) },
+        { isDivider: true },
+      );
     const audioClipIds = clipIds.filter((id) => {
       const selected = options.composition.value.clips.find((item) => item.id === id);
       return selected ? isAudioClip(selected) : false;
@@ -343,6 +350,7 @@ export function useTimelineContextMenu(options: {
         id: clip.id,
         timeMs: options.currentTimeMs.value,
       });
+    else if (actionId === 'save-asset') saving?.request(clip);
     else if (actionId === 'normalize-audio') options.emit('normalize:audio', clipIds);
     else if (actionId === 'copy') copySelection(clipIds, zoomIds, zoom ?? clip);
     else if (actionId === 'paste') pasteClipboard({ category, trackId });

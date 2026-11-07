@@ -4,6 +4,17 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Turn off Follow cursor in Zoom settings to keep automatic zooms on their clicked area in preview and exports, including 3D. The Stable preset remains available for gentler tracking.
+
+- Right-click a customized shape or arrow on the Screenshot or video canvas, Composition panel or timeline to save it as a reusable asset with a name of your choice.
+- Shape and arrow context menus include Delete below a separator, with lock protection and normal project undo/redo.
+
+### Changed
+
+- Saved-element trash buttons have a larger 44 × 44 px click target.
+
 ## [0.5.9] - 2026-11-01
 
 ### Added

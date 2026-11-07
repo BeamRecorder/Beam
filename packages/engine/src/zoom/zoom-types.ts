@@ -108,6 +108,8 @@ export interface ZoomMotionBlurSettings {
 }
 
 export interface ZoomAutoFollowSettings {
+  /** Older projects follow the cursor by default; false keeps the authored click focus. */
+  enabled?: boolean;
   /** Fraction of the viewport used for the quiet core and progressive follow shoulder. */
   safeZone: number;
   /** Normalized critical-spring response from stable (0) to responsive (1). */
@@ -119,9 +121,9 @@ export interface ZoomAutoFollowSettings {
 export type ZoomAutoFollowPreset = 'stable' | 'balanced' | 'responsive';
 
 export const ZOOM_AUTO_FOLLOW_PRESETS: Record<ZoomAutoFollowPreset, ZoomAutoFollowSettings> = {
-  stable: { safeZone: 0.65, responsiveness: 0.3, directionLock: true },
-  balanced: { safeZone: 0.5, responsiveness: 0.55, directionLock: true },
-  responsive: { safeZone: 0.35, responsiveness: 0.85, directionLock: true },
+  stable: { enabled: true, safeZone: 0.65, responsiveness: 0.3, directionLock: true },
+  balanced: { enabled: true, safeZone: 0.5, responsiveness: 0.55, directionLock: true },
+  responsive: { enabled: true, safeZone: 0.35, responsiveness: 0.85, directionLock: true },
 };
 
 export const DEFAULT_ZOOM_AUTO_FOLLOW: ZoomAutoFollowSettings = { ...ZOOM_AUTO_FOLLOW_PRESETS.balanced };
@@ -131,6 +133,7 @@ export const ZOOM_AUTO_FOLLOW_SAFE_ZONE_MAX = 0.75;
 export const normalizeZoomAutoFollow = (
   value: Partial<ZoomAutoFollowSettings> | null | undefined,
 ): ZoomAutoFollowSettings => ({
+  enabled: value?.enabled !== false,
   safeZone:
     typeof value?.safeZone === 'number' && Number.isFinite(value.safeZone)
       ? Math.min(ZOOM_AUTO_FOLLOW_SAFE_ZONE_MAX, Math.max(ZOOM_AUTO_FOLLOW_SAFE_ZONE_MIN, value.safeZone))

@@ -133,6 +133,30 @@ describe('ScreenshotEditor', () => {
     expect(copy.borderColor).not.toBe('#ffffff');
     wrapper.unmount();
   });
+  it('deletes a specified shape independently of selection with undo and redo', async () => {
+    const wrapper = mountEditor();
+    await flushPromises();
+    const asset = saveElementAsset(shape({ name: 'Reusable shape' }), { width: 1920, height: 1080 });
+    screenshotCanvasEditor!.addAsset(asset);
+    await flushPromises();
+    const first = screenshotCanvasEditor!.selected.value!.id;
+    screenshotCanvasEditor!.addAsset(asset);
+    await flushPromises();
+    const second = screenshotCanvasEditor!.selected.value!.id;
+    screenshotCanvasEditor!.remove(first);
+    await flushPromises();
+    const state = () => wrapper.findComponent(ScreenshotCanvasStub).props('state') as ScreenshotState;
+    expect(state().shapes.some((clip) => clip.id === first)).toBe(false);
+    expect(screenshotCanvasEditor!.selected.value?.id).toBe(second);
+    const history = wrapper.findComponent({ name: 'EditorHistoryControls' });
+    history.vm.$emit('undo');
+    await flushPromises();
+    expect(state().shapes.some((clip) => clip.id === first)).toBe(true);
+    history.vm.$emit('redo');
+    await flushPromises();
+    expect(state().shapes.some((clip) => clip.id === first)).toBe(false);
+    wrapper.unmount();
+  });
   it('surfaces load errors and still signals that initialization finished', async () => {
     capture.getScreenshot.mockRejectedValueOnce(new Error('Screenshot unavailable'));
     const wrapper = mountEditor();

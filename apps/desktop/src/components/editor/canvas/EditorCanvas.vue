@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ElementAssetCanvasMenu from '../elements/ElementAssetCanvasMenu.vue';
 import { customCursorKey } from '../properties/cursor/custom-cursor-context';
 import CanvasAddMenu from '../search/CanvasAddMenu.vue';
 import { canvasDoubleClick } from './composables/canvas-double-click';
@@ -321,6 +322,7 @@ const {
 });
 const customCursorEnabled = inject(customCursorKey, ref(true));
 watch(customCursorEnabled, () => renderOnce());
+const assetMenu = ref<InstanceType<typeof ElementAssetCanvasMenu> | null>(null);
 const addMenu = ref<InstanceType<typeof CanvasAddMenu> | null>(null);
 const editCanvasContent = (event: MouseEvent) =>
   canvasDoubleClick(event, {
@@ -361,8 +363,14 @@ defineExpose({ viewportZoom, captureCurrentFrame });
     @pointerup="handleIslandPointerUp"
     @pointercancel="handleIslandPointerUp"
     @dblclick="editCanvasContent"
+    @contextmenu="assetMenu?.open($event)"
   >
     <CanvasAddMenu ref="addMenu" />
+    <ElementAssetCanvasMenu
+      ref="assetMenu"
+      :disabled="isPlaying || Boolean(isCropping)"
+      :id-at="(event) => transformAndCrop.clipIdAt(event, canvasRef, true)"
+    />
     <Transition name="fade-slide">
       <div v-if="viewportZoom.isOutOfBounds.value" class="canvas-recenter-float" @pointerdown.stop>
         <CanvasRecenterButton @click="viewportZoom.resetZoom" />

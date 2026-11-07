@@ -432,6 +432,8 @@
   "ZoomPanel": {
     "applyToTrackHint": "각 대상과 시간을 유지하면서 잠금 해제된 줌의 스타일을 공유합니다.",
     "cameraFollow": "카메라 따라가기",
+    "followCursor": "커서 따라가기",
+    "followCursorDesc": "끄면 자동 줌이 클릭한 영역에 고정됩니다. 카메라 움직임을 줄이려면 안정 모드를 선택하세요.",
     "cameraFollowDesc": "녹화된 커서 움직임을 미리 파악하여 카메라가 부드럽고 점진적으로 따라갑니다.",
     "advanced": "고급",
     "followPresetStable": "안정적",

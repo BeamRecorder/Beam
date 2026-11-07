@@ -1169,6 +1169,8 @@
   },
   "Elements": {
     "savedElements": "सहेजे गए एलिमेंट",
+    "addToAssets": "सहेजे गए तत्वों में जोड़ें",
+    "assetName": "तत्व का नाम",
     "saveElement": "चुने हुए एलिमेंट को सहेजें",
     "removeSavedElement": "सहेजा गया एलिमेंट हटाएँ",
     "noSavedElements": "अभी कोई एलिमेंट सहेजा नहीं गया है।",

@@ -1,4 +1,4 @@
-import type { ZoomElement } from '../zoom/zoom-types';
+import type { ZoomAutoFollowSettings, ZoomElement } from '../zoom/zoom-types';
 import type { CaptureMode } from '@beam/engine/capture/capture-mode';
 import type { CursorHoverSync, CursorHoverSource } from '../cursor/cursor-hover-types';
 import type { RecordingDiagnostics, VideoEncodingDiagnostics } from './recording-diagnostics-types';
@@ -212,7 +212,7 @@ export interface ProjectZoomState {
   /** Missing only in projects saved before zoom motion blur was introduced. */
   motionBlur?: { enabled: boolean; intensity: number };
   /** Missing only in projects saved before automatic camera follow controls were introduced. */
-  autoFollow?: { safeZone: number; responsiveness: number; directionLock: boolean };
+  autoFollow?: ZoomAutoFollowSettings;
 }
 
 export interface SessionTrackAsset {

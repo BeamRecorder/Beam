@@ -21,6 +21,7 @@ const emit = defineEmits<{
 }>();
 
 const advancedOpen = ref(false);
+const enabled = computed(() => props.modelValue.enabled !== false);
 const presets: ZoomAutoFollowPreset[] = ['stable', 'balanced', 'responsive'];
 const activePreset = computed(() =>
   presets.find((preset) => {
@@ -42,30 +43,39 @@ const selectPreset = (preset: ZoomAutoFollowPreset) =>
   <div class="section-block auto-follow-settings">
     <div class="section-header">
       <div class="setting-copy">
-        <span class="section-title">{{ t('cameraFollow') }}</span>
-        <span class="section-description">{{ t('cameraFollowDesc') }}</span>
+        <span class="section-title">{{ t('followCursor') }}</span>
+        <span class="section-description">{{ t('followCursorDesc') }}</span>
       </div>
-      <AdvancedButton
-        :open="advancedOpen"
-        controls="zoom-auto-follow-advanced-panel"
-        :label="t('advanced')"
-        @update:open="advancedOpen = $event"
+      <Switch
+        :model-value="enabled"
+        :aria-label="t('followCursor')"
+        @update:model-value="update({ enabled: $event })"
       />
     </div>
-    <ButtonGroup class="auto-follow-presets" full>
-      <Button
-        v-for="preset in presets"
-        :key="preset"
-        size="xs"
-        :variant="activePreset === preset ? 'selected' : 'ghost'"
-        :data-auto-follow-preset="preset"
-        @click="selectPreset(preset)"
-      >
-        {{ t(`followPreset${preset[0]!.toUpperCase()}${preset.slice(1)}`) }}
-      </Button>
-    </ButtonGroup>
+    <div v-if="enabled" class="follow-options">
+      <ButtonGroup class="auto-follow-presets" full>
+        <Button
+          v-for="preset in presets"
+          :key="preset"
+          size="xs"
+          :variant="activePreset === preset ? 'selected' : 'ghost'"
+          :data-auto-follow-preset="preset"
+          @click="selectPreset(preset)"
+        >
+          {{ t(`followPreset${preset[0]!.toUpperCase()}${preset.slice(1)}`) }}
+        </Button>
+      </ButtonGroup>
+      <div class="follow-advanced">
+        <AdvancedButton
+          :open="advancedOpen"
+          controls="zoom-auto-follow-advanced-panel"
+          :label="t('advanced')"
+          @update:open="advancedOpen = $event"
+        />
+      </div>
+    </div>
     <RafRevealTransition>
-      <div v-if="advancedOpen" id="zoom-auto-follow-advanced-panel" class="advanced-options">
+      <div v-if="enabled && advancedOpen" id="zoom-auto-follow-advanced-panel" class="advanced-options">
         <BigSlider
           :model-value="modelValue.safeZone * 100"
           :min="25"
@@ -116,6 +126,14 @@ const selectPreset = (preset: ZoomAutoFollowPreset) =>
   min-height: 20px;
 }
 
+.follow-options {
+  display: grid;
+  gap: 8px;
+}
+.follow-advanced {
+  display: flex;
+  justify-content: flex-end;
+}
 .setting-copy,
 .advanced-options {
   display: grid;

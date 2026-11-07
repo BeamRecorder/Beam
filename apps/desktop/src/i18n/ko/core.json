@@ -1169,6 +1169,8 @@
   },
   "Elements": {
     "savedElements": "저장된 요소",
+    "addToAssets": "저장된 요소에 추가",
+    "assetName": "요소 이름",
     "saveElement": "선택한 요소 저장",
     "removeSavedElement": "저장된 요소 삭제",
     "noSavedElements": "저장된 요소가 없습니다.",

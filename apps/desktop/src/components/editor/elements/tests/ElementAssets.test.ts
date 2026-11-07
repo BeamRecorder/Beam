@@ -134,6 +134,7 @@ it.each(['shape', 'arrow'] as const)(
     expect(preview.props('canvas')).toEqual({ width: 1080, height: 1920 });
     expect(preview.props('presentation')).toBe('thumbnail');
     expect(document.querySelector('.asset-row .menu-button')).toBeNull();
+    expect(document.querySelector('.asset-row .asset-remove')?.classList.contains('btn-md')).toBe(true);
     document.querySelector<HTMLButtonElement>('.asset-row button[aria-label^="Remove saved element"]')!.click();
     await flushPromises();
     expect(useElementAssets().assets).toEqual([]);

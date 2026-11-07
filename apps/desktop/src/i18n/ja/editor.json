@@ -432,6 +432,8 @@
   "ZoomPanel": {
     "applyToTrackHint": "対象とタイミングを維持したまま、ロックされていないズームの表示を統一します。",
     "cameraFollow": "カメラ追従",
+    "followCursor": "カーソルを追従",
+    "followCursorDesc": "オフにすると、自動ズームはクリックした領域に固定されます。カメラの動きを抑えるには「安定」を選びます。",
     "cameraFollowDesc": "記録されたカーソルの動きを先読みし、カメラが滑らかに徐々に追従します。",
     "advanced": "詳細設定",
     "followPresetStable": "安定",

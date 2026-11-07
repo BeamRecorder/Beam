@@ -432,6 +432,8 @@
   "ZoomPanel": {
     "applyToTrackHint": "統一未鎖定縮放片段的樣式，保留各自的目標和時間。",
     "cameraFollow": "鏡頭跟隨",
+    "followCursor": "跟隨游標",
+    "followCursorDesc": "關閉後，自動縮放會固定在點擊的區域。選擇「穩定」可減少鏡頭移動。",
     "cameraFollowDesc": "預判已錄製的游標移動，讓鏡頭平滑、漸進地跟隨。",
     "advanced": "進階",
     "followPresetStable": "穩定",

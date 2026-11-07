@@ -1,3 +1,4 @@
+import { cameraFollowInputs } from '../camera-follow-inputs';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import { computed, getCurrentScope, onScopeDispose, ref, toRaw } from 'vue';
 import { createRetainedCamera } from '@beam/runtime/zoom/retained-camera';
@@ -245,9 +246,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
         toRaw(output),
         selectedZoom?.id,
         selectedZoom?.mode,
-        options.zoomAutoFollow?.()?.safeZone,
-        options.zoomAutoFollow?.()?.responsiveness,
-        options.zoomAutoFollow?.()?.directionLock,
+        ...cameraFollowInputs(options.zoomAutoFollow?.()),
         options.isPlaying(),
         videoWidth,
         videoHeight,

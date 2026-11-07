@@ -56,7 +56,7 @@ export interface ElementEditorContext {
   updateDrawingSettings: (settings: DrawingSettings) => void;
   select: (id: string) => void;
   update: (patch: ElementLayerPatch) => void;
-  remove: () => void;
+  remove: (id?: string) => void;
   beginText: (id: string) => boolean;
   beginElement: (id: string) => boolean;
   updateText: (content: string) => void;

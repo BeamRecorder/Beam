@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ElementAssetMenuItem from '../../editor/elements/ElementAssetMenuItem.vue';
 import { matchesGesture } from '~/shortcuts/action-bindings';
 import type { ScreenshotGroupDisabledReason } from '../screenshot-toolbar-types';
 import { computed, nextTick, ref, watch } from 'vue';
@@ -459,6 +460,7 @@ const keyboard = (event: KeyboardEvent, id: string) => {
       </div>
     </div>
     <ContextMenu :is-open="menuId !== null" :x="menuPosition.x" :y="menuPosition.y" @close="closeMenu">
+      <ElementAssetMenuItem v-if="menuId" :id="menuId" divider-after @select="closeMenu" />
       <ContextMenuItem
         ref="menuDelete"
         :label="t('delete')"

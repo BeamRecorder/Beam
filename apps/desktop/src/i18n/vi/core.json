@@ -1169,6 +1169,8 @@
   },
   "Elements": {
     "savedElements": "Phần tử đã lưu",
+    "addToAssets": "Thêm vào tài nguyên",
+    "assetName": "Tên tài nguyên",
     "saveElement": "Lưu phần tử đã chọn",
     "removeSavedElement": "Xóa phần tử đã lưu",
     "noSavedElements": "Chưa có phần tử nào được lưu.",

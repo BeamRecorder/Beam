@@ -432,6 +432,8 @@
   "ZoomPanel": {
     "applyToTrackHint": "Condividi lo stile tra gli zoom sbloccati, mantenendo destinazioni e tempi.",
     "cameraFollow": "Segui fotocamera",
+    "followCursor": "Segui il cursore",
+    "followCursorDesc": "Disattiva per mantenere ogni zoom automatico sull’area cliccata. Scegli Stabile per ridurre i movimenti.",
     "cameraFollowDesc": "Anticipa i movimenti registrati del cursore con un inseguimento della videocamera fluido e graduale.",
     "advanced": "Avanzate",
     "followPresetStable": "Stabile",

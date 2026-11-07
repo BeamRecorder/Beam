@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { emptyComposition, createDefaultClipAppearance } from '@beam/engine';
 import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
 import type { CompositionCameraInputs } from '@beam/engine/zoom/composition-camera';
+import { DEFAULT_ZOOM_AUTO_FOLLOW } from '@beam/engine/zoom/zoom-types';
 import type { AppliedZoom } from '@beam/engine/zoom/zoom-types';
 import * as camera from '@beam/engine/zoom/composition-camera';
 import * as mapping from '@beam/engine/shared/timeline-mapping';
@@ -181,3 +182,22 @@ it('follows the first Calm Orbit drag progressively instead of waiting then catc
     previous = focus;
   }
 });
+
+it.each(['2d', '3d', 'orbit'] as const)(
+  'exports fixed click framing in %s with real source mapping when follow is off',
+  (projection) => {
+    const input = calmOrbitSnapshot();
+    input.zoomAutoFollow = { ...DEFAULT_ZOOM_AUTO_FOLLOW, enabled: false };
+    input.zooms = input.zooms.map((zoom) => ({ ...zoom, projection }));
+    const alternate = {
+      ...input,
+      cursor: {
+        ...input.cursor,
+        telemetry: input.cursor.telemetry.map((point) => ({ ...point, cx: 1 - point.cx, cy: 1 - point.cy })),
+      },
+    };
+    const original = createSnapshotCameraEvaluator(input, 3072, 1862);
+    const changed = createSnapshotCameraEvaluator(alternate, 3072, 1862);
+    for (const time of [500, 1104, 2655, 3500, 6000, 9000]) expect(changed.sample(time)).toEqual(original.sample(time));
+  },
+);

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ElementAssetSavePrompt from './elements/ElementAssetSavePrompt.vue';
 import { defineAsyncComponent } from 'vue';
 import type { CaptureProject, ProjectEditorData } from '~/api/types/capture-api';
 import EditorWorkspace from './layout/EditorWorkspace.vue';
@@ -62,6 +63,7 @@ const {
     @dragleave="mediaDrop.onMediaDragLeave"
     @drop="mediaDrop.onMediaDrop"
   >
+    <ElementAssetSavePrompt />
     <EditorSettingsActions v-if="EditorSettingsActions" />
     <EditorAmbientBackground :background="renderedBackground" />
     <EditorMediaDropOverlay

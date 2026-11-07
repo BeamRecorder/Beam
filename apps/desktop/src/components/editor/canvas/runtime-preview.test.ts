@@ -441,3 +441,21 @@ it('restores host state on renderer failure and releases owned backgrounds', () 
   expect(draw).toThrow('background canvas');
   createRuntimePreview(host().options).dispose();
 });
+
+it('rebuilds the preview camera immediately when cursor follow is toggled', () => {
+  const { draw, options, painted } = host();
+  options.props.zoomAutoFollow = { enabled: true, safeZone: 0.5, responsiveness: 0.55, directionLock: true };
+  draw();
+  expect(state.camera).toHaveBeenCalledTimes(1);
+  options.props.zoomAutoFollow.enabled = false;
+  draw();
+  expect(state.camera).toHaveBeenCalledTimes(2);
+  expect(painted().snapshot.zoomAutoFollow?.enabled).toBe(false);
+  expect(state.camera.mock.lastCall![3]).toBeUndefined();
+  draw();
+  expect(state.camera).toHaveBeenCalledTimes(2);
+  options.props.zoomAutoFollow.enabled = true;
+  draw();
+  expect(state.camera).toHaveBeenCalledTimes(3);
+  expect(painted().snapshot.zoomAutoFollow?.enabled).toBe(true);
+});

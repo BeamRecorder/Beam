@@ -30,7 +30,7 @@ const Switch = {
   props: ['modelValue'],
   emits: ['update:modelValue'],
   template:
-    "<button :class=\"$attrs['aria-label']?.toLowerCase().includes('direction') ? 'auto-follow-direction-lock-switch' : 'motion-blur-switch'\" @click=\"$emit('update:modelValue', !modelValue)\">Switch</button>",
+    "<button :class=\"$attrs['aria-label']?.toLowerCase().includes('direction') ? 'auto-follow-direction-lock-switch' : $attrs['aria-label']?.toLowerCase().includes('follow cursor') ? 'auto-follow-enabled-switch' : 'motion-blur-switch'\" @click=\"$emit('update:modelValue', !modelValue)\">Switch</button>",
 };
 
 const selectedZoom: ZoomElement = {
@@ -44,6 +44,7 @@ const selectedZoom: ZoomElement = {
 };
 
 const balancedAutoFollow: ZoomAutoFollowSettings = {
+  enabled: true,
   safeZone: 0.5,
   responsiveness: 0.55,
   directionLock: true,
@@ -243,6 +244,23 @@ describe('ZoomPanel', () => {
     expect(wrapper.get('[data-auto-follow-preset="balanced"]')).toBeDefined();
   });
 
+  it('forwards the follow switch without changing automatic zoom generation or the shot', async () => {
+    const wrapper = mount(ZoomPanel, {
+      props: {
+        selectedZoom,
+        canGenerate: true,
+        hasAutomaticZooms: true,
+        motionBlur: { enabled: true, intensity: 0.55 },
+        autoFollow: balancedAutoFollow,
+      },
+      global: { stubs: { Button, ButtonGroup, BigSlider, Switch } },
+    });
+    await wrapper.get('.auto-follow-enabled-switch').trigger('click');
+    expect(wrapper.emitted('update:autoFollow')).toEqual([[{ ...balancedAutoFollow, enabled: false }]]);
+    expect(wrapper.emitted('generate')).toBeUndefined();
+    expect(wrapper.emitted('update')).toBeUndefined();
+    wrapper.unmount();
+  });
   it('marks auto-follow Custom after editing and returns to the Balanced preset', async () => {
     const wrapper = mount(ZoomPanel, {
       props: {
@@ -269,22 +287,22 @@ describe('ZoomPanel', () => {
 
     await wrapper.get('.auto-follow-response-slider').trigger('click');
     expect(wrapper.emitted('update:autoFollow')).toContainEqual([
-      { safeZone: 0.5, responsiveness: 1, directionLock: true },
+      { enabled: true, safeZone: 0.5, responsiveness: 1, directionLock: true },
     ]);
 
     await wrapper.get('.auto-follow-direction-lock-switch').trigger('click');
     expect(wrapper.emitted('update:autoFollow')).toContainEqual([
-      { safeZone: 0.5, responsiveness: 0.55, directionLock: false },
+      { enabled: true, safeZone: 0.5, responsiveness: 0.55, directionLock: false },
     ]);
 
     await wrapper.get('[data-auto-follow-preset="stable"]').trigger('click');
     expect(wrapper.emitted('update:autoFollow')).toContainEqual([
-      { safeZone: 0.65, responsiveness: 0.3, directionLock: true },
+      { enabled: true, safeZone: 0.65, responsiveness: 0.3, directionLock: true },
     ]);
 
     await wrapper.get('[data-auto-follow-preset="responsive"]').trigger('click');
     expect(wrapper.emitted('update:autoFollow')).toContainEqual([
-      { safeZone: 0.35, responsiveness: 0.85, directionLock: true },
+      { enabled: true, safeZone: 0.35, responsiveness: 0.85, directionLock: true },
     ]);
 
     await wrapper.get('[data-auto-follow-preset="balanced"]').trigger('click');

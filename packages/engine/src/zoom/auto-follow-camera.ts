@@ -63,7 +63,7 @@ export function updateAutoFollowTarget(
   timeMs: number,
 ): ZoomFocus {
   const fallback = clampFocusToScale(regionFocus, scale);
-  if (strength < 0.01 || (state.initialized && timeMs + 0.5 < state.lastTimeMs)) {
+  if (state.settings.enabled === false || strength < 0.01 || (state.initialized && timeMs + 0.5 < state.lastTimeMs)) {
     state.initialized = false;
     state.reachedFullZoom = false;
     state.lastTimeMs = timeMs;

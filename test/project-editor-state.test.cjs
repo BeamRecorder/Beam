@@ -62,6 +62,7 @@ const canvas = (value) => ({
 });
 
 const balancedAutoFollow = () => ({
+  enabled: true,
   safeZone: 0.5,
   responsiveness: 0.55,
   directionLock: true,
@@ -326,10 +327,11 @@ test('clamps and round-trips persisted auto-follow settings', () => {
   const state = zoomState({
     elements: [],
     generatedSessions: [],
-    autoFollow: { safeZone: 2, responsiveness: -1, directionLock: false },
+    autoFollow: { enabled: false, safeZone: 2, responsiveness: -1, directionLock: false },
   });
 
   assert.deepEqual(state.autoFollow, {
+    enabled: false,
     safeZone: 0.75,
     responsiveness: 0,
     directionLock: false,
@@ -922,4 +924,16 @@ test('rejects corrupt or unsupported persisted timing instead of changing its me
       () => zoomState({ elements: [{ ...element, timing }], generatedSessions: [] }),
       /Invalid zoom timing/,
     );
+});
+
+test('keeps cursor follow enabled for missing or malformed legacy flags', () => {
+  for (const enabled of [undefined, null, 'false', 0, {}, true]) {
+    assert.equal(zoomState({ elements: [], generatedSessions: [], autoFollow: { enabled } }).autoFollow.enabled, true);
+  }
+});
+test('preserves disabled cursor follow independently of the tuning values', () => {
+  const autoFollow = { enabled: false, safeZone: 0.65, responsiveness: 0.3, directionLock: true };
+  const value = zoomState({ elements: [], generatedSessions: [], autoFollow });
+  assert.deepEqual(value.autoFollow, autoFollow);
+  assert.deepEqual(zoomState(value).autoFollow, autoFollow);
 });

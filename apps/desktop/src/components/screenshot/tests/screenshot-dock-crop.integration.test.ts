@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { chromiumExecutable } from '../../../../../cli/src/chromium-install';
 import { chromiumSettings } from '../../../../../cli/src/chromium-settings';
 import type * as Host from './screenshot-dock-crop-browser-host';
+import type * as AssetContextHost from '../../editor/elements/tests/element-asset-context-browser-host';
 import type { PreferencePatch } from '../../../api/types/capture-api';
 
 describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('custom dock and crop in real Chromium', () => {
@@ -245,8 +246,74 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('custom dock and crop in 
         const surface = document.querySelector('.asset-library')?.closest('.popover-content');
         return surface && getComputedStyle(surface).opacity === '1';
       });
+      const trash = await page.$eval('.asset-remove', (element) => {
+        const rect = element.getBoundingClientRect();
+        return { width: rect.width, height: rect.height };
+      });
+      expect(trash.width).toBeGreaterThanOrEqual(44);
+      expect(trash.height).toBeGreaterThanOrEqual(44);
       await page.screenshot({ path: `/tmp/beam-saved-${family}-preview.png` });
     }
+  }, 20_000);
+
+  it('saves named assets from real canvas and Composition right-clicks after their menus close', async () => {
+    await page.setViewport({ width: 1280, height: 800 });
+    await mount(true);
+    await page.evaluate(async () => {
+      const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+      const { mountAssetContextFixture } = (await load(
+        '/apps/desktop/src/components/editor/elements/tests/element-asset-context-browser-host.ts',
+      )) as typeof AssetContextHost;
+      mountAssetContextFixture();
+    });
+    for (const [target, name] of [
+      ['#asset-canvas-hit', 'Canvas bubble'],
+      ['.layer-row[data-layer-id="bubble"]', 'Composition bubble'],
+    ]) {
+      await page.click(target!, { button: 'right' });
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll('[role="menuitem"]')].some((item) => item.textContent?.includes('Add to assets')),
+      );
+      await page.evaluate(() =>
+        [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+          .find((item) => item.textContent?.includes('Add to assets'))!
+          .click(),
+      );
+      await page.waitForSelector('.text-input-dialog input');
+      await page.waitForFunction(() => document.activeElement?.matches('.text-input-dialog input'));
+      expect(await page.$eval<HTMLInputElement>('.text-input-dialog input', (input) => input.value)).toBe(
+        'My speech bubble',
+      );
+      await page.waitForSelector('[role="menu"]', { hidden: true });
+      await page.keyboard.type(name!);
+      if (name === 'Composition bubble') await page.screenshot({ path: '/tmp/beam-add-asset-dialog.png' });
+      await page.keyboard.press('Enter');
+      await page.waitForSelector('.text-input-dialog', { hidden: true });
+      await page.waitForSelector('.dialog-overlay', { hidden: true });
+    }
+    const assets = await page.evaluate(
+      () =>
+        JSON.parse(localStorage.getItem('dock-crop-preferences') ?? '{}').elementAssets as Array<{
+          name: string;
+          style: { text: { content: string } };
+        }>,
+    );
+    expect(assets.map((asset) => asset.name)).toEqual(['Canvas bubble', 'Composition bubble']);
+    expect(assets.every((asset) => asset.style.text.content === 'Hello')).toBe(true);
+    expect(await page.$eval('.composition-label .label-text', (element) => element.textContent)).toBe(
+      'My speech bubble',
+    );
+    await page.click('#asset-canvas-hit', { button: 'right' });
+    await page.waitForSelector('[role="menu"] [role="separator"]');
+    await page.evaluate(() =>
+      [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+        .find((item) => item.textContent?.trim() === 'Delete')!
+        .click(),
+    );
+    await page.waitForSelector('.layer-row[data-layer-id="bubble"]', { hidden: true });
+    expect(
+      await page.evaluate(() => JSON.parse(localStorage.getItem('dock-crop-preferences') ?? '{}').elementAssets.length),
+    ).toBe(2);
   }, 20_000);
 
   it('keeps OK on screen after ancestor panning and commits px and percent edits before confirmation', async () => {

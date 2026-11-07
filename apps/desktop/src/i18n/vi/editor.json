@@ -432,6 +432,8 @@
   "ZoomPanel": {
     "applyToTrackHint": "Đồng bộ kiểu thu phóng cho các đoạn chưa khóa, giữ nguyên vị trí và thời gian.",
     "cameraFollow": "Theo dõi camera",
+    "followCursor": "Theo con trỏ",
+    "followCursorDesc": "Tắt để giữ mỗi lần thu phóng tự động tại vùng đã nhấp. Chọn Ổn định để giảm chuyển động của máy quay.",
     "cameraFollowDesc": "Dự đoán chuyển động con trỏ đã ghi để máy quay bám theo mượt mà và từ từ.",
     "advanced": "Nâng cao",
     "followPresetStable": "Ổn định",

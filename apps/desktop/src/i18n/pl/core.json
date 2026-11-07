@@ -1169,6 +1169,8 @@
   },
   "Elements": {
     "savedElements": "Zapisane elementy",
+    "addToAssets": "Dodaj do zapisanych elementów",
+    "assetName": "Nazwa elementu",
     "saveElement": "Zapisz zaznaczony element",
     "removeSavedElement": "Usuń zapisany element",
     "noSavedElements": "Brak zapisanych elementów.",

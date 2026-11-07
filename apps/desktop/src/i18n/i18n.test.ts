@@ -28,10 +28,27 @@ afterEach(async () => {
 });
 
 describe('internationalization', () => {
+  it('localizes the zoom follow toggle and its fixed framing explanation in all languages', async () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      await setCurrentLocale(locale);
+      for (const key of ['followCursor', 'followCursorDesc']) {
+        expect(i18n.global.te(`ZoomPanel.${key}`, locale)).toBe(true);
+        expect(i18n.global.t(`ZoomPanel.${key}`).trim()).not.toBe('');
+      }
+    }
+  });
   it('localizes saved element assets in all languages', async () => {
     for (const locale of SUPPORTED_LOCALES) {
       await setCurrentLocale(locale);
-      for (const key of ['savedElements', 'saveElement', 'removeSavedElement', 'noSavedElements']) {
+      for (const key of [
+        'savedElements',
+        'saveElement',
+        'removeSavedElement',
+        'noSavedElements',
+        'addToAssets',
+        'assetName',
+        'delete',
+      ]) {
         expect(i18n.global.te(`Elements.${key}`, locale)).toBe(true);
         expect(i18n.global.t(`Elements.${key}`).trim()).not.toBe('');
       }

@@ -83,3 +83,18 @@ describe('TextInputDialog', () => {
     expect(wrapper.emitted('close')).toHaveLength(2);
   });
 });
+
+it('blocks form resubmission and disables fields and buttons while busy', async () => {
+  const wrapper = mountDialog({ initialValue: 'Asset', busy: true });
+  await nextTick();
+  expect(input().disabled).toBe(true);
+  expect(button('Cancel').disabled).toBe(true);
+  expect(button('Save').disabled).toBe(true);
+  document
+    .querySelector<HTMLFormElement>('.text-input-dialog')!
+    .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  expect(wrapper.emitted('confirm')).toBeUndefined();
+  await wrapper.setProps({ busy: false });
+  button('Save').click();
+  expect(wrapper.emitted('confirm')).toEqual([['Asset']]);
+});

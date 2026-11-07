@@ -58,6 +58,7 @@ const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const defaultZoomMotionBlur = () => ({ enabled: true, intensity: 0.55 });
 const defaultZoomAutoFollow = () => ({
+  enabled: true,
   safeZone: 0.5,
   responsiveness: 0.55,
   directionLock: true,
@@ -66,6 +67,7 @@ const zoomAutoFollowState = (value) => {
   const input = value && typeof value === 'object' ? value : {};
   const defaults = defaultZoomAutoFollow();
   return {
+    enabled: typeof input.enabled === 'boolean' ? input.enabled : defaults.enabled,
     safeZone: clamp(finite(input.safeZone) ? input.safeZone : defaults.safeZone, 0.25, 0.75),
     responsiveness: clamp(finite(input.responsiveness) ? input.responsiveness : defaults.responsiveness, 0, 1),
     directionLock: typeof input.directionLock === 'boolean' ? input.directionLock : defaults.directionLock,

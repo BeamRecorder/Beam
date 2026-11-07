@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ElementAssetCanvasMenu from '../editor/elements/ElementAssetCanvasMenu.vue';
 import { ref } from 'vue';
 import CanvasMarqueeSurface from '../editor/canvas/CanvasMarqueeSurface.vue';
 import type { CanvasMarqueeSelection } from '../editor/canvas/canvas-marquee-types';
@@ -6,6 +7,7 @@ import type { ScreenshotMarqueeSurfaceProps } from './screenshot-marquee-types';
 import { screenshotMarqueeTargetsInSurface } from './screenshot-marquee-geometry';
 const props = defineProps<ScreenshotMarqueeSurfaceProps>();
 const emit = defineEmits<{ select: [value: CanvasMarqueeSelection] }>();
+const assetMenu = ref<InstanceType<typeof ElementAssetCanvasMenu> | null>(null);
 const surface = ref<InstanceType<typeof CanvasMarqueeSurface> | null>(null);
 const targets = () => {
   const root = surface.value?.$el as HTMLElement | undefined;
@@ -35,7 +37,9 @@ const canStartLeft = (event: PointerEvent) =>
     :disabled="disabled"
     :can-start-left="canStartLeft"
     @select="emit('select', $event)"
+    @contextmenu="assetMenu?.open($event)"
   >
+    <ElementAssetCanvasMenu ref="assetMenu" :id-at="layerAt" :disabled="disabled" />
     <slot />
   </CanvasMarqueeSurface>
 </template>

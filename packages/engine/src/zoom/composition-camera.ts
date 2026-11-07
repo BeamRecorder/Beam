@@ -78,9 +78,11 @@ export function createCompositionCameraEvaluator(
     }
     let focus = zoom.cinematic ? zoom.focus : clampFocusToScale(zoom.focus, zoom.scale);
     const connectedFollow =
-      zoom.connection && (zoom.connection.from.mode === 'auto' || zoom.connection.to.mode === 'auto');
+      autoFollowSettings.enabled !== false &&
+      zoom.connection &&
+      (zoom.connection.from.mode === 'auto' || zoom.connection.to.mode === 'auto');
     if (connectedFollow) focus = connectedCameraFocus(state, zoom, timeMs, zoomAt, followCursorAt);
-    else if (zoom.tracksCursor) {
+    else if (autoFollowSettings.enabled !== false && zoom.tracksCursor) {
       const entering = zoom.cinematic && !autoFollow.reachedFullZoom && zoom.strength < 0.99;
       const cursor = followCursorAt(zoom, timeMs);
       focus = updateAutoFollowTarget(autoFollow, cursor, focus, zoom.scale, zoom.strength, timeMs);
@@ -93,7 +95,7 @@ export function createCompositionCameraEvaluator(
     );
     return {
       camera: { focusX: focus.cx, focusY: focus.cy, scale: zoom.scale, ...tilt },
-      tracksCursor: connectedFollow || zoom.tracksCursor === true,
+      tracksCursor: autoFollowSettings.enabled !== false && (connectedFollow || zoom.tracksCursor === true),
       cinematic: zoom.cinematic,
       bounded: zoom.bounded,
     };
@@ -184,7 +186,7 @@ export function createCompositionCameraEvaluator(
             intensity: 1,
             scale: zoom.scale,
             settings: zoom.orbitSettings,
-            ...(zoom.mode === 'manual' ? { fixed: zoom.focus } : {}),
+            ...(zoom.mode === 'manual' || autoFollowSettings.enabled === false ? { fixed: zoom.focus } : {}),
             pointAt: (at) => {
               const point = cursorFocusAt(sortedTelemetry, inputs.mapTelemetryTime?.(at) ?? at);
               return point ? (inputs.mapFocus?.(point, zoom, at) ?? point) : null;

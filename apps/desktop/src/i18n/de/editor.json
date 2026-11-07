@@ -432,6 +432,8 @@
   "ZoomPanel": {
     "applyToTrackHint": "Zoomdarstellung für entsperrte Zooms angleichen; Ziele und Zeitpunkte bleiben erhalten.",
     "cameraFollow": "Kameraführung",
+    "followCursor": "Mauszeiger folgen",
+    "followCursorDesc": "Deaktivieren, um jeden automatischen Zoom auf den angeklickten Bereich zu fixieren. Stabil reduziert Kamerabewegungen.",
     "cameraFollowDesc": "Folgt den aufgezeichneten Cursorbewegungen vorausschauend mit sanften, gleichmäßigen Kamerabewegungen.",
     "advanced": "Erweitert",
     "followPresetStable": "Stabil",

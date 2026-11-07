@@ -1169,6 +1169,8 @@
   },
   "Elements": {
     "savedElements": "保存した要素",
+    "addToAssets": "保存済み要素に追加",
+    "assetName": "要素名",
     "saveElement": "選択した要素を保存",
     "removeSavedElement": "保存した要素を削除",
     "noSavedElements": "保存した要素はありません。",

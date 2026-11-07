@@ -941,3 +941,37 @@ describe('vector editing and arrows', () => {
     expect(state.insert).not.toHaveBeenCalled();
   });
 });
+
+describe('targeted element removal', () => {
+  it('removes a specified clip independently of the current selection', () => {
+    const editor = mountEditor({
+      initialLayers: [createClip('selected'), createClip('target')],
+      selectedId: 'selected',
+    });
+    editor.context.remove('target');
+    expect(editor.remove).toHaveBeenCalledExactlyOnceWith('target');
+    expect(editor.context.selected.value?.id).toBe('selected');
+  });
+  it('refuses locked, missing and interaction-disabled targets', () => {
+    const editor = mountEditor({
+      initialLayers: [createClip('locked', { locked: true }), createClip('target')],
+      selectedId: 'target',
+    });
+    editor.context.remove('locked');
+    editor.context.remove('missing');
+    editor.context.remove('');
+    editor.canInteract!.value = false;
+    editor.context.remove('target');
+    expect(editor.remove).not.toHaveBeenCalled();
+  });
+  it('discards an active text or vector draft before deleting its source', () => {
+    const editor = mountEditor({ initialLayers: [createClip('text'), createClip('vector')], selectedId: 'text' });
+    editor.context.beginText('text');
+    editor.context.remove('text');
+    expect(editor.context.editing.value).toBeNull();
+    editor.context.beginVector('vector');
+    editor.context.remove('vector');
+    expect(editor.context.vectorEditing.value).toBeNull();
+    expect(editor.remove).toHaveBeenCalledTimes(2);
+  });
+});

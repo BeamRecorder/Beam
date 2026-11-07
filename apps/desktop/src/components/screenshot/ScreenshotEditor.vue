@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ElementAssetSavePrompt from '../editor/elements/ElementAssetSavePrompt.vue';
 import EditorTitlebar from '../editor/EditorTitlebar.vue';
 import UndoRedoToast from '../editor/canvas/UndoRedoToast.vue';
 import PropertiesDeleteAction from '../editor/properties/PropertiesDeleteAction.vue';
@@ -184,6 +185,7 @@ const navigateSearch = (tab: string) => {
 </script>
 <template>
   <main class="screenshot-editor">
+    <ElementAssetSavePrompt />
     <EditorAmbientBackground
       :background="state?.canvas.showBackground ? state.background : null"
       variant="canvas-extension"

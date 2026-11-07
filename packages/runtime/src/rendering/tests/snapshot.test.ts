@@ -55,7 +55,7 @@ const base = (): Parameters<typeof createCompositionSnapshot>[0] => ({
   editorData: null,
   zooms: [],
   zoomMotionBlur: { enabled: true, intensity: 0.55 },
-  zoomAutoFollow: { safeZone: 0.5, responsiveness: 0.55, directionLock: true },
+  zoomAutoFollow: { enabled: true, safeZone: 0.5, responsiveness: 0.55, directionLock: true },
   composition: composition(),
   cursorSettings: {
     enabled: true,
@@ -394,14 +394,20 @@ describe('createCompositionSnapshot', () => {
   it('copies auto-follow settings into the export snapshot without retaining mutable references', () => {
     const input = {
       ...base(),
-      zoomAutoFollow: { safeZone: 0.42, responsiveness: 0.31, directionLock: false },
+      zoomAutoFollow: { enabled: false, safeZone: 0.42, responsiveness: 0.31, directionLock: false },
     };
 
     const snapshot = createCompositionSnapshot(input);
+    input.zoomAutoFollow.enabled = true;
     input.zoomAutoFollow.safeZone = 0.1;
     input.zoomAutoFollow.responsiveness = 0.8;
 
-    expect(snapshot.zoomAutoFollow).toEqual({ safeZone: 0.42, responsiveness: 0.31, directionLock: false });
+    expect(snapshot.zoomAutoFollow).toEqual({
+      enabled: false,
+      safeZone: 0.42,
+      responsiveness: 0.31,
+      directionLock: false,
+    });
   });
 
   it('copies reactive editor data and composition without retaining Vue proxies', () => {

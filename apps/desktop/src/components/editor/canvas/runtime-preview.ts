@@ -1,3 +1,4 @@
+import { cameraFollowInputs } from './camera-follow-inputs';
 import { snapshotWithScreenCursor, snapshotCursorImageKey } from '@beam/runtime/rendering/snapshot-cursor';
 import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
 import { compositionDurationMs } from '@beam/engine/shared/timeline-mapping';
@@ -119,9 +120,7 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
       props.selectedZoom?.id,
       props.selectedZoom?.mode,
       props.isPlaying,
-      props.zoomAutoFollow?.safeZone,
-      props.zoomAutoFollow?.responsiveness,
-      props.zoomAutoFollow?.directionLock,
+      ...cameraFollowInputs(props.zoomAutoFollow),
       cursor.telemetry,
       frame?.width,
       frame?.height,

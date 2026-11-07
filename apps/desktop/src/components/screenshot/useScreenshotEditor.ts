@@ -206,12 +206,6 @@ export function useScreenshotEditor(
   });
   const addImage = () => importImage((projectId) => capture.pickScreenshotImage(projectId));
   const pasteImage = () => importImage((projectId) => capture.pasteScreenshotClipboardImage(projectId));
-  const removeShape = () => {
-    if (!state.value || !selectedShape.value) return;
-    removeScreenshotLayer(state.value, selectedShape.value.id);
-    selectedId.value = state.value.shapes.at(-1)?.id ?? null;
-    panel.value = 'shapes';
-  };
   const effects = useScreenshotEffects(
     state,
     selectedId,
@@ -244,7 +238,7 @@ export function useScreenshotEditor(
       const clip = state.value?.shapes.find((c) => c.id === id);
       if (clip) Object.assign(clip, patch);
     },
-    remove: () => removeShape(),
+    remove: removeLayer,
     timing: () => ({ startMs: 0, durationMs: 1 }),
     canInteract: () => !busy.value && !cropping.value && !previewFullscreen() && !selectedLayer.value?.locked,
   });
