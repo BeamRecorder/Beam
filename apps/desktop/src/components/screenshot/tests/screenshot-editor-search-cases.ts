@@ -3,6 +3,7 @@ import { expect, it, vi } from 'vitest';
 import CommandPalette from '~/ui/command-palette/CommandPalette.vue';
 import type { CommandPaletteItem } from '~/ui/command-palette/command-palette-types';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
+import { setScreenshotPropertiesPosition } from './screenshot-editor-test-helpers';
 import type { ScreenshotEditorTestHarness } from './screenshot-editor-test-helpers';
 import ScreenshotPropertiesPanel from '../ScreenshotPropertiesPanel.vue';
 import ScreenshotSearch from '../ScreenshotSearch.vue';
@@ -44,6 +45,7 @@ export function registerScreenshotEditorSearchTests(harness: ScreenshotEditorTes
     }
   });
   it('reopens the left inspector from search without toggling it closed, and chooses an image when none is selected', async () => {
+    setScreenshotPropertiesPosition('floating');
     const wrapper = mountEditor(true);
     try {
       await flushPromises();

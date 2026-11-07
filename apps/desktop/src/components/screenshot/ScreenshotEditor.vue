@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useScreenshotPropertiesDock } from './useScreenshotPropertiesDock';
 import ElementAssetSavePrompt from '../editor/elements/ElementAssetSavePrompt.vue';
 import EditorTitlebar from '../editor/EditorTitlebar.vue';
 import UndoRedoToast from '../editor/canvas/UndoRedoToast.vue';
@@ -123,8 +124,14 @@ useClipboardImagePaste({
   onError: fail,
 });
 const inspectorOpen = ref(true);
+const propertiesDock = useScreenshotPropertiesDock();
+const inspectorVisible = computed(() => propertiesDock.position.value !== 'floating' || inspectorOpen.value);
+watch(propertiesDock.position, () => {
+  inspectorOpen.value = true;
+});
 const inspectorToolbar = ref<InstanceType<typeof ScreenshotToolbar> | null>(null);
 const hideInspector = () => {
+  if (propertiesDock.position.value !== 'floating') return;
   inspectorOpen.value = false;
   inspectorToolbar.value?.focusInspector();
 };
@@ -140,7 +147,7 @@ const choosePanel = (target: 'canvas' | 'settings') => {
     void capture.openHudSettings().catch(fail);
     return;
   }
-  inspectorOpen.value = panel.value !== target || !inspectorOpen.value;
+  inspectorOpen.value = propertiesDock.position.value !== 'floating' || panel.value !== target || !inspectorOpen.value;
   selectPanel(target);
 };
 const chooseSelection = () => {
@@ -306,9 +313,21 @@ const navigateSearch = (tab: string) => {
       visible
       :label="preparingText('title')"
       :show-topbar-skeleton="false"
+      :screenshot-properties-position="propertiesDock.position.value"
     />
-    <EditorWorkspace v-if="state && document" kind="screenshot" class="editor-body">
-      <ScreenshotPropertiesPanel :open="inspectorOpen" :title="panelTitle" @close="hideInspector">
+    <EditorWorkspace
+      v-if="state && document"
+      kind="screenshot"
+      :class="['editor-body', `properties-${propertiesDock.position.value}`]"
+    >
+      <ScreenshotPropertiesPanel
+        :open="inspectorVisible"
+        :title="panelTitle"
+        :position="propertiesDock.position.value"
+        :dock-saving="propertiesDock.saving.value"
+        @update:position="propertiesDock.setPosition"
+        @close="hideInspector"
+      >
         <template
           v-if="selectedLayer && selectedIds.length < 2 && panel !== 'settings' && panel !== 'layer-effect'"
           #title
@@ -317,7 +336,7 @@ const navigateSearch = (tab: string) => {
             :key="selectedLayer.id"
             :name="selectedLayer.name || panelTitle"
             :disabled="busy || cropping || selectedLayer.locked"
-            :active="inspectorOpen"
+            :active="inspectorVisible"
             @rename="renameLayer(selectedLayer.id, $event)"
           />
         </template>
@@ -416,7 +435,7 @@ const navigateSearch = (tab: string) => {
               :drawing="elements.drawingMode.value"
               :editing-text="Boolean(elements.editing.value)"
               :panel="panel"
-              :inspector-open="inspectorOpen"
+              :inspector-open="inspectorVisible"
               :can-group="groups.canGroup.value"
               :group-disabled-reason="groups.groupDisabledReason.value"
               :can-ungroup="groups.canUngroup.value"
@@ -431,7 +450,7 @@ const navigateSearch = (tab: string) => {
               @canvas="choosePanel('canvas')"
               @undo="history.undo().catch(fail)"
               @redo="history.redo().catch(fail)"
-              @toggle-inspector="inspectorOpen = !inspectorOpen"
+              @toggle-inspector="inspectorVisible ? hideInspector() : (inspectorOpen = true)"
               @resize="toolbarHeight = $event"
             />
           </template>

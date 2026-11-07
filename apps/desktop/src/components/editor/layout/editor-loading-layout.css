@@ -32,6 +32,21 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
 }
+.loading-properties.screenshot.is-docked {
+  position: relative;
+  inset: auto;
+  height: 100%;
+  align-self: stretch;
+  border-radius: 0;
+  border: 0;
+  border-right: 1px solid var(--color-border);
+  box-shadow: none;
+}
+.loading-properties.screenshot.is-right {
+  order: 1;
+  border-right: 0;
+  border-left: 1px solid var(--color-border);
+}
 .loading-properties-content {
   zoom: var(--ui-scale-properties, 1);
 }

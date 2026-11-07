@@ -28,6 +28,15 @@ afterEach(async () => {
 });
 
 describe('internationalization', () => {
+  it('localizes fixed and floating Screenshot Properties in all languages', async () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      await setCurrentLocale(locale);
+      for (const key of ['dockProperties', 'dockPropertiesRight', 'floatProperties', 'propertiesPosition']) {
+        expect(i18n.global.te(`ScreenshotEditor.${key}`, locale)).toBe(true);
+        expect(i18n.global.t(`ScreenshotEditor.${key}`).trim()).not.toBe('');
+      }
+    }
+  });
   it('localizes the zoom follow toggle and its fixed framing explanation in all languages', async () => {
     for (const locale of SUPPORTED_LOCALES) {
       await setCurrentLocale(locale);

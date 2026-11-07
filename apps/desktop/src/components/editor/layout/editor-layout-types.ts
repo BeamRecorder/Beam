@@ -1,3 +1,4 @@
+import type { ScreenshotPropertiesPosition } from '../../screenshot/screenshot-properties-types';
 export type EditorLayoutKind = 'video' | 'screenshot';
 
 export interface EditorWorkspaceProps {
@@ -14,12 +15,14 @@ export interface EditorLoadingPropertiesProps {
 
 export interface EditorLoadingLayoutProps {
   kind: EditorLayoutKind;
+  screenshotPropertiesPosition?: ScreenshotPropertiesPosition;
   timelineHeight?: number;
   aspectRatio?: number;
 }
 
 export interface EditorProjectLoadingProps {
   kind?: EditorLayoutKind;
+  screenshotPropertiesPosition?: ScreenshotPropertiesPosition;
   timelineHeight?: number;
   aspectRatio?: number;
   visible: boolean;

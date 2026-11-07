@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import {
+  SCREENSHOT_PROPERTIES_POSITION_KEY,
+  readScreenshotPropertiesPosition,
+} from '../screenshot/screenshot-properties-position';
+import type { ScreenshotPropertiesPosition } from '../screenshot/screenshot-properties-types';
 import { nextTick, onBeforeUnmount, onMounted, ref, shallowRef, type Component } from 'vue';
 import { DEFAULT_EDITOR_TITLE, editorTitle } from './editor-window-title';
 import { capture } from '~/api/capture';
@@ -27,6 +32,7 @@ const loadingKind = ref<EditorLayoutKind | null>(null);
 const error = ref('');
 const editorGeneration = ref(0);
 const loadingTimelineHeight = ref(DEFAULT_TIMELINE_HEIGHT);
+const loadingPropertiesPosition = ref<ScreenshotPropertiesPosition>('left');
 let loadGeneration = 0;
 let removeContextListener: (() => void) | null = null;
 let removePreferencesListener: (() => void) | null = null;
@@ -39,7 +45,10 @@ const syncTitlebarTheme = () => {
   capture.setEditorTitlebarTheme(dark);
 };
 
-const syncTimelineHeight = (preferences: PreferenceSettings) => {
+const syncLoadingPreferences = (preferences: PreferenceSettings) => {
+  loadingPropertiesPosition.value = readScreenshotPropertiesPosition(
+    preferences.extras?.[SCREENSHOT_PROPERTIES_POSITION_KEY],
+  );
   const savedHeight = Number(preferences.extras?.timelineHeight);
   if (Number.isFinite(savedHeight) && savedHeight > 0) {
     loadingTimelineHeight.value = clampTimelineHeight(savedHeight);
@@ -177,10 +186,10 @@ onMounted(async () => {
   });
   removeContextListener = capture.onEditorContext((context) => void loadContext(context));
   try {
-    removePreferencesListener = capture.onPreferencesChanged(syncTimelineHeight);
+    removePreferencesListener = capture.onPreferencesChanged(syncLoadingPreferences);
     void capture
       .getPreferences()
-      .then(syncTimelineHeight)
+      .then(syncLoadingPreferences)
       .catch(() => undefined);
   } catch {
     // The editor remains usable with the default timeline height.
@@ -232,6 +241,7 @@ onBeforeUnmount(() => {
     :label="t('title')"
     :show-topbar-skeleton="!project"
     :timeline-height="loadingTimelineHeight"
+    :screenshot-properties-position="loadingPropertiesPosition"
   />
 </template>
 

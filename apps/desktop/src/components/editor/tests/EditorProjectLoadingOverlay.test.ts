@@ -1,3 +1,4 @@
+import { createPinia } from 'pinia';
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import EditorProjectLoadingOverlay from '../EditorProjectLoadingOverlay.vue';
@@ -16,6 +17,7 @@ const create = (props = {}) =>
   mount(EditorProjectLoadingOverlay, {
     props: { visible: true, label: 'Preparing editor', showTopbarSkeleton: true, ...props },
     global: {
+      plugins: [createPinia()],
       stubs: { ScreenshotCompositionSkeleton: true, EditorSkeletonSurface: { template: '<div><slot /></div>' } },
     },
   });
@@ -101,4 +103,15 @@ describe('shared editor loading layout', () => {
     await flushPromises();
     expect(element.isConnected).toBe(false);
   });
+});
+
+it('matches Screenshot loading geometry to its fixed or floating Properties mode', async () => {
+  const wrapper = create({ kind: 'screenshot', screenshotPropertiesPosition: 'left' });
+  expect(wrapper.get('.loading-properties').classes()).toContain('is-docked');
+  await wrapper.setProps({ screenshotPropertiesPosition: 'floating' });
+  expect(wrapper.get('.loading-properties').classes()).not.toContain('is-docked');
+  await wrapper.setProps({ screenshotPropertiesPosition: 'right' });
+  expect(wrapper.get('.loading-properties').classes()).toContain('is-right');
+  await wrapper.setProps({ kind: 'video', screenshotPropertiesPosition: 'left' });
+  expect(wrapper.get('.loading-properties').classes()).not.toContain('is-docked');
 });

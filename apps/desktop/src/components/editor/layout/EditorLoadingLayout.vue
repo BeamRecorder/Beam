@@ -25,11 +25,23 @@ const toolbarHeight = ref(50);
       </div>
       <Skeleton height="48px" radius="var(--radius-sm)" />
     </div>
-    <aside class="loading-properties" :class="kind">
+    <aside
+      class="loading-properties"
+      :class="[
+        kind,
+        {
+          'is-docked': kind === 'screenshot' && screenshotPropertiesPosition !== 'floating',
+          'is-right': kind === 'screenshot' && screenshotPropertiesPosition === 'right',
+        },
+      ]"
+    >
       <div class="loading-properties-content">
         <PropertiesPanelHeader title="">
           <template #title><Skeleton width="96px" height="24px" /></template>
-          <template #actions><Skeleton width="24px" height="24px" /></template>
+          <template #actions>
+            <Skeleton v-if="kind === 'screenshot'" width="24px" height="24px" />
+            <Skeleton width="24px" height="24px" />
+          </template>
         </PropertiesPanelHeader>
         <div class="loading-property-fields"><EditorLoadingProperties :still="kind === 'screenshot'" /></div>
       </div>

@@ -6,6 +6,8 @@ User-facing changes to Beam are documented in this file.
 
 ### Added
 
+- Dock Screenshot Properties flush to the left or right without covering the canvas, or choose Floating from its pin menu. Docked panels stay open at full height. Beam remembers the placement across projects.
+
 - Turn off Follow cursor in Zoom settings to keep automatic zooms on their clicked area in preview and exports, including 3D. The Stable preset remains available for gentler tracking.
 
 - Right-click a customized shape or arrow on the Screenshot or video canvas, Composition panel or timeline to save it as a reusable asset with a name of your choice.

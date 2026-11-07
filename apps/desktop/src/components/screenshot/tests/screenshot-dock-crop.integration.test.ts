@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { chromiumExecutable } from '../../../../../cli/src/chromium-install';
 import { chromiumSettings } from '../../../../../cli/src/chromium-settings';
 import type * as Host from './screenshot-dock-crop-browser-host';
+import type * as PropertiesHost from './screenshot-properties-browser-host';
 import type * as AssetContextHost from '../../editor/elements/tests/element-asset-context-browser-host';
 import type { PreferencePatch } from '../../../api/types/capture-api';
 
@@ -314,6 +315,86 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('custom dock and crop in 
     expect(
       await page.evaluate(() => JSON.parse(localStorage.getItem('dock-crop-preferences') ?? '{}').elementAssets.length),
     ).toBe(2);
+  }, 20_000);
+
+  it('pins Properties flush left or right without collapse, remembers placement and retains actual-size zoom', async () => {
+    await page.setViewport({ width: 1280, height: 800 });
+    await mount(true);
+    const show = () =>
+      page.evaluate(async () => {
+        const load = new Function('path', 'return import(path)') as (path: string) => Promise<unknown>;
+        const { mountPropertiesDock } = (await load(
+          '/apps/desktop/src/components/screenshot/tests/screenshot-properties-browser-host.ts',
+        )) as typeof PropertiesHost;
+        await mountPropertiesDock();
+      });
+    const placement = async (label: string) => {
+      await page.click('[aria-label="Properties position"]');
+      await page.waitForSelector('[role="menuitemradio"]');
+      await page.evaluate(
+        (label) =>
+          [...document.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]')]
+            .find((item) => item.textContent?.trim() === label)!
+            .click(),
+        label,
+      );
+      await page.waitForSelector('[role="menuitemradio"]', { hidden: true });
+      await page.waitForSelector('[aria-label="Properties position"]:not(:disabled)');
+    };
+    const pinnedFits = (side: 'left' | 'right') =>
+      page.waitForFunction(
+        (side) => {
+          const panel = document.querySelector('.properties-island')!.getBoundingClientRect();
+          const image = document.querySelector('#properties-image')!.getBoundingClientRect();
+          const header = document.querySelector('.editor-titlebar')!.getBoundingClientRect();
+          return (
+            image.width > 500 &&
+            Math.abs(panel.top - header.bottom) < 1 &&
+            Math.abs(panel.bottom - innerHeight) < 1 &&
+            (side === 'left'
+              ? panel.left === 0 && panel.right <= image.left + 1
+              : panel.right === innerWidth && image.right <= panel.left + 1)
+          );
+        },
+        {},
+        side,
+      );
+    await show();
+    await pinnedFits('left');
+    expect(await page.$('#screenshot-properties-panel [aria-label="Close"]')).toBeNull();
+    await page.screenshot({ path: '/tmp/beam-properties-left.png' });
+    await placement('Dock properties on the right');
+    await pinnedFits('right');
+    expect(await page.$('#screenshot-properties-panel [aria-label="Close"]')).toBeNull();
+    await page.screenshot({ path: '/tmp/beam-properties-right.png' });
+    await show();
+    await pinnedFits('right');
+    await placement('Float properties');
+    await page.waitForFunction(
+      () => document.querySelector('#properties-image')!.getBoundingClientRect().width === 1280,
+    );
+    expect(await page.$('#screenshot-properties-panel [aria-label="Close"]')).not.toBeNull();
+    await page.click('button[aria-haspopup="menu"][aria-label^="Canvas zoom"]');
+    await page.waitForSelector('[role="menuitemradio"]');
+    await page.focus('[role="menuitemradio"]');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(
+      () => document.querySelector('#properties-image')!.getBoundingClientRect().width === 2000,
+    );
+    await placement('Dock properties on the left');
+    expect(await page.$eval('#properties-image', (element) => element.getBoundingClientRect().width)).toBe(2000);
+    await page.click('button[aria-haspopup="menu"][aria-label^="Canvas zoom"]');
+    await page.waitForSelector('[role="menuitemradio"]');
+    await page.focus('[role="menuitemradio"]');
+    await page.keyboard.press('Enter');
+    await pinnedFits('left');
+    expect(
+      await page.$eval('#properties-state', (element) => [
+        element.getAttribute('data-width'),
+        element.getAttribute('data-height'),
+      ]),
+    ).toEqual(['2000', '1000']);
   }, 20_000);
 
   it('keeps OK on screen after ancestor panning and commits px and percent edits before confirmation', async () => {

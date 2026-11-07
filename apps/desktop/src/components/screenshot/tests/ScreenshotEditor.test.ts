@@ -6,7 +6,12 @@ import type { CursorAssetDescriptor, CursorPackDescriptor } from '@beam/engine/c
 import type { ElementEditorContext } from '../../editor/elements/element-editor-types';
 import type { ScreenshotDocument } from '~/api/types/screenshot';
 import type { ScreenshotState } from '@beam/engine/screenshot/screenshot-types';
-import { createScreenshotEditorTestHarness, documentFixture, presetFixture } from './screenshot-editor-test-helpers';
+import {
+  createScreenshotEditorTestHarness,
+  documentFixture,
+  presetFixture,
+  setScreenshotPropertiesPosition,
+} from './screenshot-editor-test-helpers';
 import { registerScreenshotEditorHistoryAndFooterTests } from './screenshot-editor-history-cases';
 import { registerScreenshotEditorSearchTests } from './screenshot-editor-search-cases';
 import { registerScreenshotEditorRenameTests } from './screenshot-editor-rename-cases';
@@ -308,7 +313,23 @@ describe('ScreenshotEditor', () => {
     wrapper.unmount();
   });
 
+  it.each(['left', 'right'] as const)(
+    'keeps pinned %s Properties visible when the dock control is pressed',
+    async (position) => {
+      setScreenshotPropertiesPosition(position);
+      const wrapper = mountEditor(true);
+      await flushPromises();
+      expect(wrapper.get('.properties-island').classes()).toContain('is-docked');
+      expect(wrapper.get('.editor-workspace').classes()).toContain(`properties-${position}`);
+      expect(wrapper.get('.properties-island').classes().includes('is-right')).toBe(position === 'right');
+      expect(wrapper.find('.properties-island [aria-label="Close"]').exists()).toBe(false);
+      await wrapper.get('.screenshot-toolbar button[aria-label="Properties"]').trigger('click');
+      expect(wrapper.get('.properties-island').isVisible()).toBe(true);
+      wrapper.unmount();
+    },
+  );
   it('hides the inspector without altering the document and restores it from the toolbar', async () => {
+    setScreenshotPropertiesPosition('floating');
     const wrapper = mountEditor(true);
     await flushPromises();
     const canvas = wrapper.findComponent(ScreenshotCanvasStub);
@@ -344,6 +365,7 @@ describe('ScreenshotEditor', () => {
   });
 
   it('restores the same layer properties and mounted controls without changing crop or selection', async () => {
+    setScreenshotPropertiesPosition('floating');
     const wrapper = mountEditor();
     await flushPromises();
     const canvas = wrapper.findComponent(ScreenshotCanvasStub);
@@ -363,6 +385,7 @@ describe('ScreenshotEditor', () => {
   });
 
   it('reopens contextual properties when the same canvas layer is selected again', async () => {
+    setScreenshotPropertiesPosition('floating');
     const wrapper = mountEditor();
     await flushPromises();
     const canvas = wrapper.findComponent(ScreenshotCanvasStub);

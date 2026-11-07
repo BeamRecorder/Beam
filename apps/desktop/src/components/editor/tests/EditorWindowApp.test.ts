@@ -628,6 +628,20 @@ describe('EditorWindowApp', () => {
     await flushPromises();
     expect(overlay.props('timelineHeight')).toBe(320);
   });
+  it('matches the loading inspector to the remembered left, right or floating placement', async () => {
+    capture.getPreferences.mockResolvedValue({ extras: { screenshotPropertiesPosition: 'right' } });
+    capture.getProjectEditorData.mockReturnValue(new Promise(() => undefined));
+    const wrapper = mountEditor();
+    await flushPromises();
+    const overlay = wrapper.findComponent(EditorProjectLoadingOverlay);
+    expect(overlay.props('screenshotPropertiesPosition')).toBe('right');
+    for (const position of ['floating', 'left']) {
+      state.preferencesListener?.({ extras: { screenshotPropertiesPosition: position } });
+      await flushPromises();
+      expect(overlay.props('screenshotPropertiesPosition')).toBe(position);
+    }
+    wrapper.unmount();
+  });
   it('continues when preferences are unavailable or subscribing throws', async () => {
     capture.getPreferences.mockRejectedValueOnce(new Error('preferences unavailable'));
     const first = mountEditor();

@@ -20,7 +20,7 @@ export async function mountScrollPanels(scale: number, tall: boolean) {
       h('div', [
         h(
           ScreenshotPropertiesPanel,
-          { title: 'Effect', open: true },
+          { title: 'Effect', open: true, position: 'floating' },
           {
             default: () =>
               tall

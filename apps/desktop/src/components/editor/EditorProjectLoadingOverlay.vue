@@ -50,7 +50,12 @@ onBeforeUnmount(cancelExit);
       </template>
     </EditorTitlebar>
     <div v-else class="loading-titlebar-spacer" aria-hidden="true" />
-    <EditorLoadingLayout :kind="kind" :timeline-height="timelineHeight" :aspect-ratio="aspectRatio" />
+    <EditorLoadingLayout
+      :kind="kind"
+      :timeline-height="timelineHeight"
+      :aspect-ratio="aspectRatio"
+      :screenshot-properties-position="screenshotPropertiesPosition"
+    />
   </div>
 </template>
 

@@ -1,3 +1,6 @@
+import { usePreferencesStore } from '~/stores/preferences';
+import { SCREENSHOT_PROPERTIES_POSITION_KEY } from '../screenshot-properties-position';
+import type { ScreenshotPropertiesPosition } from '../screenshot-properties-types';
 import { defineComponent, type Component, type PropType } from 'vue';
 import { vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
@@ -7,6 +10,21 @@ import type { EditorPresetDocument, EditorPresetSettings } from '~/api/types/edi
 import type { ScreenshotDocument } from '~/api/types/screenshot';
 import type { ScreenshotLayer } from '@beam/engine/screenshot/screenshot-types';
 import type { ScreenshotViewAction } from '../screenshot-view-types';
+
+export function setScreenshotPropertiesPosition(position: ScreenshotPropertiesPosition) {
+  const preferences = usePreferencesStore();
+  preferences.settings = {
+    schemaVersion: 3,
+    theme: 'system',
+    recordingBar: { visibility: 'always' },
+    recordingInteractions: { enabled: true, noticeDismissed: false },
+    devices: {},
+    shortcuts: {},
+    backgroundPresets: { colors: [], gradients: [] },
+    ...preferences.settings,
+    extras: { ...preferences.settings?.extras, [SCREENSHOT_PROPERTIES_POSITION_KEY]: position },
+  };
+}
 
 export const settings = (format: 'png' | 'webp' = 'png'): EditorPresetSettings => ({
   editor: { schemaVersion: 1 },
