@@ -5,6 +5,7 @@ import { createPinia } from 'pinia';
 import { i18n } from '../../../../i18n';
 import { elementAssetPreviewClip } from '../element-asset-preview';
 import { normalizeShapeLayerStyle } from '@beam/engine/shared/shape-layer-style';
+import { defaultLayerCompositing } from '@beam/engine/shared/layer-compositing';
 import { createElementText } from '@beam/engine/shared/element-text';
 import { provideElementEditor } from '../useElementEditor';
 import ElementAssetSavePrompt from '../ElementAssetSavePrompt.vue';
@@ -61,13 +62,10 @@ export function mountAssetContextFixture() {
           source: '',
           previewReady: false,
           layers: layers.value.map((clip) => ({
-            id: clip.id,
+            ...defaultLayerCompositing(clip.id),
             kind: clip.family,
             name: clip.name,
             visible: true,
-            opacity: 1,
-            blendMode: 'normal' as const,
-            locked: false,
           })),
           selectedId: selected.value,
           selectedIds: selected.value ? [selected.value] : [],
