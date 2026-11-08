@@ -103,7 +103,9 @@ outside that timed process.
 
 The manual [ScrollWeave evaluation workflow](../../.github/workflows/scrollweave-evaluation.yml)
 runs the same isolated Rust tests, formatting and Clippy on Linux, Windows and
-macOS. It has been prepared, not remotely dispatched. Native capture must still
+macOS. All three jobs passed their 11 Rust tests, formatting and Clippy in
+[run 42534473338](https://github.com/BeamRecorder/Beam/actions/runs/42534473338)
+on commit `988fc6295facfbfb7ce853ab421d5a1c821c6c76`. Native capture must still
 be validated on each platform; portable image tests cannot prove that behavior.
 
 ## Beam integration findings

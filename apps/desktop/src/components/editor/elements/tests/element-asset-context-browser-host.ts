@@ -66,7 +66,7 @@ export function mountAssetContextFixture() {
             name: clip.name,
             visible: true,
             opacity: 1,
-            blendMode: 'normal',
+            blendMode: 'normal' as const,
             locked: false,
           })),
           selectedId: selected.value,
