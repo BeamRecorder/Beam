@@ -4,6 +4,8 @@ import {
   isCompositingClip,
   type ClipComposition,
 } from '@beam/engine/shared/composition-types';
+import { findTextElementTrack, isTextElementClip } from '@beam/engine/commands/text-element-tracks';
+import type { ShapeClip } from '@beam/engine/shared/composition-types';
 import { createClipPasteTransaction } from '@beam/engine/commands/clip-paste';
 import { CompositionEngineError } from '@beam/engine/commands/clip-composition-validation';
 import { pasteZoomAt } from '@beam/engine/zoom/zoom-paste';
@@ -72,6 +74,19 @@ export function pasteTimelineClipboard(options: {
   }, Math.round(options.timelineDurationMs));
   const primaryIndex = options.item.type === 'selection' ? options.item.primaryIndex : 0;
   const trackIds = new Map<string, string>();
+  const textGroups = new Map<string, ShapeClip[]>();
+  const mixedTextTracks = new Set<string>();
+  for (const entry of entries) {
+    if (entry.type !== 'clip' || !isCompositingClip(entry.clip)) continue;
+    if (!isTextElementClip(entry.clip)) {
+      mixedTextTracks.add(entry.clip.trackId!);
+      continue;
+    }
+    const clip = { ...entry.clip, timelineStartMs: Math.round(options.timeMs + entryStartMs(entry) - anchorMs) };
+    const group = textGroups.get(clip.trackId!);
+    if (group) group.push(clip);
+    else textGroups.set(clip.trackId!, [clip]);
+  }
   const captionPlacement = resolveCaptionPastePlacement({
     composition: options.composition,
     captions: entries.flatMap((entry) => (entry.type === 'clip' && isCaptionClip(entry.clip) ? [entry.clip] : [])),
@@ -94,7 +109,15 @@ export function pasteTimelineClipboard(options: {
     const mapped = trackIds.get(sourceTrackId);
     if (mapped) return mapped;
     let next = sourceTrackId;
-    if (options.target?.placement === 'new-layer' || options.target?.placement === 'auto') next = idFactory();
+    if (options.target?.placement === 'auto' && isTextElementClip(entry.clip) && !mixedTextTracks.has(sourceTrackId)) {
+      next =
+        findTextElementTrack(
+          options.composition,
+          textGroups.get(sourceTrackId)!,
+          options.target.trackId ?? sourceTrackId,
+          new Set(trackIds.values()),
+        )?.trackId ?? idFactory();
+    } else if (options.target?.placement === 'new-layer' || options.target?.placement === 'auto') next = idFactory();
     else if (options.target?.category === 'visual' && options.target.trackId && !targetTrackClaimed) {
       next = options.target.trackId;
       targetTrackClaimed = true;

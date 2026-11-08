@@ -5,6 +5,7 @@ export function useTimelineVisualLabels() {
   const { t } = useTranslate('TimelineTracks');
   const { t: canvas } = useTranslate('CanvasPanel');
   const { t: toolbar } = useTranslate('TimelineToolbar');
+  const { t: elements } = useTranslate('Elements');
   const { t: highlight } = useTranslate('Highlight');
   return (kind: TimelineAddableVisualKind | null) => {
     const label =
@@ -12,13 +13,15 @@ export function useTimelineVisualLabels() {
         ? highlight('title')
         : kind === 'color'
           ? canvas('color')
-          : kind === 'shape'
-            ? canvas('shapesAndArrows')
-            : kind === 'blur'
-              ? t('blur')
-              : kind === 'image'
-                ? canvas('image')
-                : '';
+          : kind === 'text'
+            ? elements('text')
+            : kind === 'shape'
+              ? canvas('shapesAndArrows')
+              : kind === 'blur'
+                ? t('blur')
+                : kind === 'image'
+                  ? canvas('image')
+                  : '';
     return `${toolbar('add')} ${label}`;
   };
 }

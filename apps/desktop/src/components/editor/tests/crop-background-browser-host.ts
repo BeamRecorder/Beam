@@ -37,7 +37,7 @@ async function encode(canvas: OffscreenCanvas) {
   return target.buffer!;
 }
 
-export async function checkCropBackground(kind: 'color' | 'image') {
+export async function checkCropBackground(kind: 'color' | 'image', showBackground = true) {
   const width = 1920,
     height = 1080;
   const source = new OffscreenCanvas(width, height),
@@ -93,7 +93,7 @@ export async function checkCropBackground(kind: 'color' | 'image') {
   const snapshot = createCompositionSnapshot({
     duration: 1,
     fps: 1,
-    canvas: { ...document.canvas, preset: '16:9', showBackground: false },
+    canvas: { ...document.canvas, preset: '16:9', showBackground },
     background,
     blurPercent: 0,
     editorData: null,
@@ -209,15 +209,17 @@ export async function checkCropBackground(kind: 'color' | 'image') {
     const decodedCanvas = new OffscreenCanvas(width, height),
       decodedContext = decodedCanvas.getContext('2d')!;
     decodedContext.drawImage(exportedFrame.toCanvasImageSource(), 0, 0);
+    const gapY = showBackground ? 980 : 1060;
+    const contentY = showBackground ? 940 : 1020;
     const result = {
       bytes: target.buffer!.byteLength,
       dimensions: [await exportedTrack.getDisplayWidth(), await exportedTrack.getDisplayHeight()],
-      previewGap: pixel(previewContext, 1060),
-      exportGap: pixel(context, 1060),
-      encodedGap: pixel(decodedContext, 1060),
-      previewContent: pixel(previewContext, 1020),
-      exportContent: pixel(context, 1020),
-      encodedContent: pixel(decodedContext, 1020),
+      previewGap: pixel(previewContext, gapY),
+      exportGap: pixel(context, gapY),
+      encodedGap: pixel(decodedContext, gapY),
+      previewContent: pixel(previewContext, contentY),
+      exportContent: pixel(context, contentY),
+      encodedContent: pixel(decodedContext, contentY),
     };
     exportedFrame.close();
     decoded.dispose();

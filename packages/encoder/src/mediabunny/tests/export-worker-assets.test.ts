@@ -142,6 +142,55 @@ describe('openExportAssets', () => {
     vi.unstubAllGlobals();
   });
 
+  it.each([false, true])('only opens the video background when showBackground=%s', async (showBackground) => {
+    const value = request([], []);
+    value.snapshot.canvas.showBackground = showBackground;
+    value.snapshot.background = { kind: 'video', src: 'project-media://wallpaper.mp4' };
+    const opened = openedInput({ audio: null });
+    runtime.openMediaInput.mockResolvedValue(opened);
+    const result = await openExportAssets(value, new AbortController().signal, vi.fn());
+    expect(runtime.openMediaInput).toHaveBeenCalledTimes(showBackground ? 1 : 0);
+    expect(result.assets.has('export-background')).toBe(showBackground);
+    result.dispose();
+    expect(opened.dispose).toHaveBeenCalledTimes(showBackground ? 1 : 0);
+  });
+
+  it.each(['missing', 'unsupported'] as const)('rejects a %s video track in an enabled background', async (kind) => {
+    const value = request([], []);
+    value.snapshot.canvas.showBackground = true;
+    value.snapshot.background = { kind: 'video', src: 'wallpaper.mp4' };
+    const track = videoTrack();
+    track.canDecode.mockResolvedValue(false);
+    const opened = openedInput({ video: kind === 'missing' ? null : track });
+    runtime.openMediaInput.mockResolvedValue(opened);
+    await expect(openExportAssets(value, new AbortController().signal, vi.fn())).rejects.toThrow(
+      'Background has no decodable video track',
+    );
+    expect(opened.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('releases the enabled background when its duration is invalid', async () => {
+    const value = request([], []);
+    value.snapshot.canvas.showBackground = true;
+    value.snapshot.background = { kind: 'video', src: 'wallpaper.mp4' };
+    const opened = openedInput({ metadata: NaN });
+    runtime.openMediaInput.mockResolvedValue(opened);
+    await expect(openExportAssets(value, new AbortController().signal, vi.fn())).rejects.toThrow(
+      'Background has no valid duration',
+    );
+    expect(opened.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('does not open a selected background after export has already been cancelled', async () => {
+    const value = request([], []),
+      controller = new AbortController();
+    value.snapshot.canvas.showBackground = true;
+    value.snapshot.background = { kind: 'video', src: 'wallpaper.mp4' };
+    controller.abort();
+    await expect(openExportAssets(value, controller.signal, vi.fn())).rejects.toMatchObject({ name: 'AbortError' });
+    expect(runtime.openMediaInput).not.toHaveBeenCalled();
+  });
+
   it('does not require or open audio-only assets when audio is excluded', async () => {
     const withoutAudio = { ...request([], [audioClip('missing')]), includeAudio: false };
 
@@ -310,6 +359,27 @@ describe('loadBitmap', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
+
+  it('reports an unavailable background image with its HTTP status and source', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 404 })));
+    await expect(loadBitmap('missing.png', 'background image')).rejects.toThrow(
+      'Unable to load background image: HTTP 404. Source: missing.png',
+    );
+  });
+
+  it.each([new Error('invalid PNG'), 'decoder unavailable'])(
+    'includes the failed background image decoder details (%s)',
+    async (error) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(new Response('bad', { headers: { 'Content-Type': 'image/png' } })),
+      );
+      vi.stubGlobal('createImageBitmap', vi.fn().mockRejectedValue(error));
+      await expect(loadBitmap('broken.png', 'background image')).rejects.toThrow(
+        /Unable to decode background image.*MIME: image\/png; bytes: 3; source: broken.png; decoder:/,
+      );
+    },
+  );
 
   it('decodes exported images with premultiplied alpha and the default color space', async () => {
     const blob = new Blob(['image']);

@@ -13,6 +13,7 @@ const DEFAULT_CAPTION_DURATION_MS = 2_000;
 
 const visualKindFor = (track: VisualTimelineTrack): TimelineAddableVisualKind | null => {
   if (track.representative.kind === 'blur' && track.representative.mode === 'highlight') return 'highlight';
+  if (track.representative.kind === 'shape' && track.representative.family === 'text') return 'text';
   const kind = track.representative.kind;
   return kind === 'image' || kind === 'color' || kind === 'shape' || kind === 'blur' ? kind : null;
 };
@@ -31,7 +32,11 @@ export function useTimelineAddPlacement(options: {
     typeof target === 'string' ? target : `visual:${target.id}`;
   const placementAt = (event: MouseEvent, target: BasicTarget | VisualTimelineTrack, targetClipId?: string) => {
     const visualKind = typeof target === 'string' ? null : visualKindFor(target);
-    if (typeof target !== 'string' && !visualKind) return null;
+    if (
+      typeof target !== 'string' &&
+      (!visualKind || (visualKind === 'text' && target.clips.some((clip) => clip.locked)))
+    )
+      return null;
     const captionTarget =
       target === 'caption' && targetClipId ? options.textCaptionClips().find((clip) => clip.id === targetClipId) : null;
     if (target === 'caption' && targetClipId && !captionTarget) return null;

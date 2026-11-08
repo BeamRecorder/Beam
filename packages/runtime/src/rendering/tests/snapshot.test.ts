@@ -174,7 +174,7 @@ describe('createCompositionSnapshot', () => {
     expect(snapshot.referenceCanvas).toEqual({ width: 1_920, height: 1_080 });
   });
 
-  it('retains the selected background behind cropped clips when canvas framing is disabled', () => {
+  it('retains the selected background configuration when canvas background is disabled', () => {
     const snapshot = createCompositionSnapshot({
       ...base(),
       canvas: { ...DEFAULT_OUTPUT_CANVAS, showBackground: false },

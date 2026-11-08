@@ -4,6 +4,8 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+## [0.5.10] - 2026-11-09
+
 ### Added
 
 - Dock Screenshot Properties flush to the left or right without covering the canvas, or choose Floating from its pin menu. Docked panels stay open at full height. Beam remembers the placement across projects.
@@ -18,6 +20,12 @@ User-facing changes to Beam are documented in this file.
 - Saved-element trash buttons have a larger 44 × 44 px click target.
 
 ### Fixed
+
+- Add text into gaps on an existing text track and paste sequential text on available text tracks without creating a staircase of layers. The global Add Text action still creates a separate track, and adding inside a text track inserts text rather than a generic shape.
+
+- Teleprompter autoscroll no longer stalls or runs at the wrong speed at low settings, including on high-refresh-rate displays.
+
+- Cropped screen recordings fill their frame without a leftover strip when the background is removed. Preview and export now honor the disabled background and keep selection and resize handles aligned.
 
 - Docked Screenshot Properties now meet the canvas edge without a workspace gap.
 - The Properties toolbar button opens image or element controls when Canvas controls are already displayed, including while the inspector is pinned.

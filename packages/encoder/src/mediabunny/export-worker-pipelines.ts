@@ -86,6 +86,7 @@ class BackgroundVideoReader {
 }
 
 function prepareStaticBackground(request: ExportRequest, images: ReadonlyMap<string, RenderableMedia>) {
+  if (request.snapshot.canvas.showBackground === false) return null;
   const value = request.snapshot.background;
   if (!value || value.kind === 'video') return null;
   const original = value.kind === 'image' ? images.get('export-background') : null;

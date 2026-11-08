@@ -1,6 +1,7 @@
 import type { NormalizedTransform, VisualClip } from '@beam/engine/shared/composition-types';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
 import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
+import { screenCropFillsFrame } from '@beam/engine/composition/camera-layout';
 import { mirrorCrop } from './layer-transform-geometry';
 
 /** Keep the visible crop edge under the pointer while resizing the full source. */
@@ -10,7 +11,9 @@ export function resizeCroppedLayer(
   resized: NormalizedTransform,
   corner?: ResizeCorner,
   preserveAspect = false,
+  showBackground = true,
 ): NormalizedTransform {
+  if (clip.kind === 'screen' && screenCropFillsFrame(clip, showBackground)) return resized;
   if (!clip.crop || (clip.cameraFramingPreset ?? 'custom') !== 'custom' || isPhoneFrame(clip.appearance.frame))
     return resized;
   const crop = mirrorCrop(clip.crop, Boolean(clip.isMirrored), Boolean(clip.isMirroredY));

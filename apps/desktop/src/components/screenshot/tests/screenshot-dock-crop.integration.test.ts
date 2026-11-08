@@ -282,7 +282,7 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('custom dock and crop in 
       );
       await page.waitForSelector('.text-input-dialog input');
       await page.waitForFunction(() => document.activeElement?.matches('.text-input-dialog input'));
-      expect(await page.$eval<HTMLInputElement>('.text-input-dialog input', (input) => input.value)).toBe(
+      expect(await page.$eval('.text-input-dialog input', (input) => (input as HTMLInputElement).value)).toBe(
         'My speech bubble',
       );
       await page.waitForSelector('[role="menu"]', { hidden: true });

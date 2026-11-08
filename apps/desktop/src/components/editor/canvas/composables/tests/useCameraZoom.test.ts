@@ -503,7 +503,7 @@ describe('useCameraZoom', () => {
       expect.anything(),
       expect.objectContaining({
         sourceRect: { x: 128, y: 72, width: 1024, height: 576 },
-        rect: { x: 240, y: 112.5, width: 320, height: 180 },
+        rect: { x: 200, y: 90, width: 400, height: 225 },
       }),
     );
   });
@@ -701,8 +701,13 @@ describe('useCameraZoom', () => {
     expect(drawDecoratedMedia).toHaveBeenLastCalledWith(
       expect.anything(),
       expect.objectContaining({
-        sourceRect: { x: 128, y: 72, width: 1024, height: 576 },
-        rect: { x: 136, y: 94.5, width: 448, height: 216 },
+        sourceRect: {
+          x: 128,
+          y: expect.closeTo(72 + (576 - (1024 * 270) / 560) / 2, 8),
+          width: 1024,
+          height: expect.closeTo((1024 * 270) / 560, 8),
+        },
+        rect: { x: 80, y: 67.5, width: 560, height: 270 },
       }),
     );
   });

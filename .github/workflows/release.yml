@@ -296,11 +296,19 @@ jobs:
   publish:
     needs: [prepare, package-windows, smoke-windows-arm64, package-macos, package-linux]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Require successful CI for this release commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/release/require-ci.cjs
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.2

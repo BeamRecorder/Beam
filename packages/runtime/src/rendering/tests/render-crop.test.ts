@@ -23,7 +23,7 @@ const drawCall = (value: ReturnType<typeof snapshot>, media = source()) => {
 };
 
 describe('composition crop rendering', () => {
-  it('keeps a bottom screen crop at its original destination scale', () => {
+  it('fills the screen frame with the retained crop when the background is removed', () => {
     const value = snapshot();
     const screen = value.composition.clips[0];
     if (screen.kind !== 'screen') throw new Error('screen fixture missing');
@@ -37,8 +37,8 @@ describe('composition crop rendering', () => {
       rect: { x: 0, y: 0, width: 100, height: 50 },
     });
     expect(cropped).toMatchObject({
-      sourceRect: { x: 0, y: 37.5, width: 100, height: 12.5 },
-      rect: { x: 0, y: 37.5, width: 100, height: 12.5 },
+      sourceRect: { x: 37.5, y: 37.5, width: 25, height: 12.5 },
+      rect: { x: 0, y: 0, width: 100, height: 50 },
     });
   });
 
@@ -52,15 +52,17 @@ describe('composition crop rendering', () => {
     const cropped = drawCall(value);
     const destination = showBackground
       ? { x: 7, y: 35.75, width: 86, height: 10.75 }
-      : { x: 0, y: 37.5, width: 100, height: 12.5 };
+      : { x: 0, y: 0, width: 100, height: 50 };
 
     expect(cropped).toMatchObject({
-      sourceRect: { x: 0, y: 37.5, width: 100, height: 12.5 },
+      sourceRect: showBackground
+        ? { x: 0, y: 37.5, width: 100, height: 12.5 }
+        : { x: 37.5, y: 37.5, width: 25, height: 12.5 },
       rect: destination,
     });
   });
 
-  it('mirrors the destination crop while preserving source coordinates', () => {
+  it('mirrors and rotates the retained crop within the filled screen frame', () => {
     const value = snapshot();
     const screen = value.composition.clips[0];
     if (screen.kind !== 'screen') throw new Error('screen fixture missing');
@@ -68,12 +70,13 @@ describe('composition crop rendering', () => {
     screen.isMirrored = true;
     screen.isMirroredY = true;
     screen.rotation = 90;
+    value.canvas.showBackground = false;
 
     const cropped = drawCall(value);
 
     expect(cropped).toMatchObject({
-      sourceRect: { x: 10, y: 12.5, width: 50, height: 12.5 },
-      rect: { x: 40, y: 25, width: 50, height: 12.5 },
+      sourceRect: { x: 22.5, y: 12.5, width: 25, height: 12.5 },
+      rect: { x: 0, y: 0, width: 100, height: 50 },
       mirrored: true,
       mirroredY: true,
       rotation: 90,

@@ -496,6 +496,44 @@ describe('useVideoElements', () => {
     expect(state.clearZoom.mock.invocationCallOrder[0]).toBeLessThan(state.select.mock.invocationCallOrder[0]!);
   });
 
+  it('keeps explicit Add Text on a new track even when an existing text track has space', () => {
+    const first = makeShapeClip('first-text', 0, {
+      ...normalizeShapeLayerStyle({ family: 'text' }),
+      text: createElementText('First'),
+      timelineDurationMs: 1000,
+      sourceDurationMs: 1000,
+    });
+    const state = mountVideoElements({
+      composition: createComposition([], [first]),
+      currentTime: 1,
+      selectedId: first.id,
+    });
+    state.editor.add('text');
+    expect(state.editor.editing.value?.id).toBe(state.selectedId.value);
+    expect(state.editor.selected.value?.trackId).not.toBe(first.trackId);
+    state.editor.finishText();
+    state.currentTime.value = 4;
+    state.editor.add('text');
+    expect(state.composition.value.clips).toHaveLength(3);
+    expect(new Set(state.composition.value.clips.map((clip) => clip.trackId)).size).toBe(3);
+    expect(state.composition.value.clips.map((clip) => clip.timelineStartMs).sort((a, b) => a - b)).toEqual([
+      0, 1000, 4000,
+    ]);
+  });
+
+  it('creates another text lane when the existing text overlaps the playhead', () => {
+    const first = makeShapeClip('first-text', 0, {
+      ...normalizeShapeLayerStyle({ family: 'text' }),
+      text: createElementText('First'),
+      timelineDurationMs: 1000,
+      sourceDurationMs: 1000,
+    });
+    const state = mountVideoElements({ composition: createComposition([], [first]), currentTime: 0.5 });
+    state.editor.add('text');
+    expect(state.editor.selected.value?.trackId).not.toBe(first.trackId);
+    expect(state.composition.value.clips.find((clip) => clip.id === first.id)?.timelineDurationMs).toBe(1000);
+  });
+
   it('inserts a validated drawing as a real shape clip with current timing and drawing color', () => {
     const state = mountVideoElements({ currentTime: 4.5 });
     state.editor.drawingSettings.value.color = '#13579b';

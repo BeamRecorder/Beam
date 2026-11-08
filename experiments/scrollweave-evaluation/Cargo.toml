@@ -1,0 +1,17 @@
+[package]
+name = "beam-scrollweave-evaluation"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "MPL-2.0"
+
+# Keep this candidate and its build outside Beam's production dependency graph.
+[workspace]
+
+[dependencies]
+scrollweave = { git = "https://github.com/xtr-hub/scrollweave", rev = "81b5a49b4cedb2a0c65c4ec74155fc0c259a69d5" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.dev]
+opt-level = 2

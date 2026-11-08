@@ -23,7 +23,8 @@ import {
 } from '@beam/engine/shared/composition-types';
 import { DEFAULT_COLOR_LAYER_STYLE } from '@beam/engine/shared/color-layer-style';
 import { DEFAULT_COLOR_FILL } from '@beam/engine/shared/color-fill-types';
-import { DEFAULT_ANNOTATION_SHAPE_STYLE } from '@beam/engine/shared/shape-layer-style';
+import { elementTextFromDefaults } from '../elements/element-text-defaults';
+import { normalizeShapeLayerStyle, DEFAULT_ANNOTATION_SHAPE_STYLE } from '@beam/engine/shared/shape-layer-style';
 import type { EditorPreferenceDefaults } from './editor-default-types';
 import {
   audioDefaultsFor,
@@ -53,6 +54,7 @@ export function useClipComposition(options: {
   editorDefaults: Ref<EditorPreferenceDefaults>;
 }) {
   const { t } = useTranslate('TimelineToolbar');
+  const { t: tElements } = useTranslate('Elements');
   const { t: tCanvas } = useTranslate('CanvasPanel');
   const { state: composition, restore: restoreComposition } = useLockedState<ClipComposition>(
     emptyComposition(),
@@ -231,7 +233,7 @@ export function useClipComposition(options: {
 
   const { t: tHighlight } = useTranslate('Highlight');
   const addElement = async (
-    kind: 'video' | 'image' | 'sound' | 'caption' | 'color' | 'shape' | 'blur' | 'highlight',
+    kind: 'video' | 'sound' | 'caption' | TimelineAddableVisualKind,
     requestedStartMs?: number,
     requestedDurationMs?: number,
     targetTrackId?: string,
@@ -246,14 +248,16 @@ export function useClipComposition(options: {
     )
       return;
     const generatedKind: TimelineAddableVisualKind | null =
-      kind === 'color' || kind === 'shape' || kind === 'blur' || kind === 'highlight' ? kind : null;
+      kind === 'color' || kind === 'shape' || kind === 'text' || kind === 'blur' || kind === 'highlight' ? kind : null;
+    const generatedClipKind = kind === 'highlight' ? 'blur' : kind === 'text' ? 'shape' : kind;
     const targetTrackClip =
       generatedKind && targetTrackId
         ? composition.value.clips.find(
             (clip) =>
               isCompositingClip(clip) &&
               clip.trackId === targetTrackId &&
-              clip.kind === (generatedKind === 'highlight' ? 'blur' : generatedKind) &&
+              clip.kind === generatedClipKind &&
+              (clip.kind !== 'shape' || (clip.family === 'text') === (generatedKind === 'text')) &&
               (clip.kind !== 'blur' || (clip.mode === 'highlight') === (generatedKind === 'highlight')),
           )
         : null;
@@ -317,14 +321,14 @@ export function useClipComposition(options: {
       selectClip(clip.id);
       return;
     }
-    if (kind === 'shape') {
+    if (kind === 'shape' || kind === 'text') {
       const clipId = crypto.randomUUID();
       const clip: ShapeClip = {
         id: clipId,
         trackId: generatedTrackId ?? clipId,
         kind: 'shape',
         assetId: '',
-        name: tCanvas('shapesAndArrows'),
+        name: kind === 'text' ? tElements('text') : tCanvas('shapesAndArrows'),
         timelineStartMs: startMs,
         timelineDurationMs: generatedDurationMs,
         sourceInMs: 0,
@@ -333,8 +337,13 @@ export function useClipComposition(options: {
         transitions: { entry: null, exit: null },
         enabled: true,
         order: generatedOrder,
-        transform: { x: 0.3, y: 0.3, width: 0.4, height: 0.4 },
-        ...DEFAULT_ANNOTATION_SHAPE_STYLE,
+        transform: { x: 0.3, y: 0.3, width: 0.4, height: kind === 'text' ? 0.16 : 0.4 },
+        ...(kind === 'text'
+          ? {
+              ...normalizeShapeLayerStyle({ family: 'text' }),
+              text: elementTextFromDefaults(tElements('newText'), options.editorDefaults.value.elementText),
+            }
+          : DEFAULT_ANNOTATION_SHAPE_STYLE),
       };
       composition.value = addClip(composition.value, clip);
       selectClip(clip.id);

@@ -157,6 +157,22 @@ export interface ScreenRenderGeometry {
   mask?: 'circle' | 'squircle';
 }
 
+/** A cropped recording fills its assigned frame when the canvas background is removed. */
+export function screenCropFillsFrame(
+  clip: VisualClip,
+  showBackground: boolean,
+  crop = clip.crop,
+  preset = clip.cameraFramingPreset ?? 'custom',
+) {
+  return Boolean(
+    !showBackground &&
+    preset === 'custom' &&
+    !isPhoneFrame(clip.appearance?.frame ?? 'none') &&
+    crop &&
+    (crop.x > 0 || crop.y > 0 || crop.width < 1 || crop.height < 1),
+  );
+}
+
 export function resolveScreenRenderGeometry(
   clip: VisualClip,
   sourceWidth: number,
@@ -178,6 +194,12 @@ export function resolveScreenRenderGeometry(
     height: media.height * transform.height,
   };
   if (framingPreset === 'custom') {
+    if (screenCropFillsFrame(clip, showBackground, crop, framingPreset) && crop) {
+      const source = coverSourceRect(crop.width * sourceWidth, crop.height * sourceHeight, layout.width, layout.height);
+      source.x += crop.x * sourceWidth;
+      source.y += crop.y * sourceHeight;
+      return { source, media, positioned: layout };
+    }
     const framing = resolveCameraFraming(
       'custom',
       layout,

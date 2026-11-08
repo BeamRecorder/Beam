@@ -9,6 +9,7 @@ import {
   type VisualClip,
 } from '@beam/engine/shared/composition-types';
 import { effectShapeRect } from '@beam/runtime/composition/effects/effect-shape';
+import { screenCropFillsFrame } from '@beam/engine/composition/camera-layout';
 import { visualClipDisplayLayout } from '@beam/engine/composition/visual-framing';
 import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
 import { projectCameraRect } from './layer-transform-geometry';
@@ -30,6 +31,7 @@ export function transformClipDisplayLayout(options: {
   transform: NormalizedTransform;
   bounds: VideoWindowBounds;
   isCropping: boolean;
+  showBackground?: boolean;
 }) {
   const { bounds, transform } = options;
   const clip = options.isCropping && isVisualClip(options.clip) ? { ...options.clip, crop: undefined } : options.clip;
@@ -45,8 +47,9 @@ export function transformClipDisplayLayout(options: {
     const asset = options.composition.assets.find((entry) => entry.id === clip.assetId);
     const editingPhoneCrop = options.isCropping && isPhoneFrame(clip.appearance.frame);
     const editingDesktopFrameCrop = options.isCropping && clip.appearance.frame !== 'none' && !editingPhoneCrop;
+    const fillsFrame = clip.kind === 'screen' && screenCropFillsFrame(clip, options.showBackground ?? true);
     const visible = visualClipDisplayLayout(
-      clip,
+      fillsFrame ? { ...clip, crop: undefined } : clip,
       transform,
       { x: bounds.dx, y: bounds.dy, width: bounds.dw, height: bounds.dh },
       asset?.width ?? bounds.dw,

@@ -60,7 +60,7 @@ function host() {
       isPlaying: true,
       currentTime: 0.5,
       composition: value.composition,
-      outputCanvas: value.canvas,
+      outputCanvas: { ...value.canvas, showBackground: true },
       frameFor: () => null,
       frameVersion: 0,
       previewQuality: 'full',
@@ -458,4 +458,22 @@ it('rebuilds the preview camera immediately when cursor follow is toggled', () =
   draw();
   expect(state.camera).toHaveBeenCalledTimes(3);
   expect(painted().snapshot.zoomAutoFollow?.enabled).toBe(true);
+});
+
+it('skips disabled background surfaces and restores the selected background when re-enabled', () => {
+  const { draw, options } = host();
+  options.props.outputCanvas.showBackground = false;
+  state.background = false;
+  draw();
+  expect(options.drawBackground).not.toHaveBeenCalled();
+  expect(state.render.mock.lastCall![4]).toBeNull();
+  state.background = true;
+  options.props.outputCanvas.showBackground = true;
+  draw();
+  expect(options.drawBackground).toHaveBeenCalledOnce();
+  expect(state.render.mock.lastCall![4]).toMatchObject({ preRendered: true });
+  options.props.outputCanvas.showBackground = false;
+  draw();
+  expect(options.drawBackground).toHaveBeenCalledOnce();
+  expect(state.render.mock.lastCall![4]).toBeNull();
 });

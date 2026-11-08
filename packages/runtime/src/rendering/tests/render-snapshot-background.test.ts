@@ -7,7 +7,9 @@ beforeEach(() => paint.mockClear());
 
 it('does no background work when neither a value nor pixels are present', () => {
   const ctx = context();
-  drawSnapshotBackground(ctx, snapshot(), undefined);
+  const value = snapshot();
+  value.canvas.showBackground = true;
+  drawSnapshotBackground(ctx, value, undefined);
   expect(ctx.drawImage).not.toHaveBeenCalled();
   expect(paint).not.toHaveBeenCalled();
 });
@@ -15,6 +17,7 @@ it('copies an already rendered preview background without filtering it again', (
   const ctx = context(),
     value = snapshot(),
     source = {} as CanvasImageSource;
+  value.canvas.showBackground = true;
   drawSnapshotBackground(ctx, value, { source, width: 100, height: 50, preRendered: true });
   expect(ctx.drawImage).toHaveBeenCalledExactlyOnceWith(source, 0, 0, 100, 50);
   expect(paint).not.toHaveBeenCalled();
@@ -22,6 +25,7 @@ it('copies an already rendered preview background without filtering it again', (
 it('renders configured colors and media with their source geometry and blur', () => {
   const value = snapshot(),
     ctx = context();
+  value.canvas.showBackground = true;
   value.background = { kind: 'color', color: '#123456' };
   value.blurPercent = 25;
   drawSnapshotBackground(ctx, value, null);
@@ -35,4 +39,14 @@ it('renders configured colors and media with their source geometry and blur', ()
     ctx,
     expect.objectContaining({ source, sourceSize: { width: 200, height: 50 } }),
   );
+});
+
+it.each([false, true])('does not draw disabled background pixels, preRendered=%s', (preRendered) => {
+  const value = snapshot(),
+    ctx = context();
+  value.canvas.showBackground = false;
+  value.background = { kind: 'image', src: 'wallpaper.png' };
+  drawSnapshotBackground(ctx, value, { source: {} as CanvasImageSource, width: 200, height: 100, preRendered });
+  expect(ctx.drawImage).not.toHaveBeenCalled();
+  expect(paint).not.toHaveBeenCalled();
 });

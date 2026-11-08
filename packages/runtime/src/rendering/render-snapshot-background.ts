@@ -8,6 +8,7 @@ export function drawSnapshotBackground(
   snapshot: CompositionSnapshot,
   background: RenderableMedia | null | undefined,
 ) {
+  if (snapshot.canvas.showBackground === false) return;
   const value = snapshot.background;
   if (!value && !background) return;
   if (background?.preRendered) {

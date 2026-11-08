@@ -295,4 +295,29 @@ describe('transform clip display layout', () => {
       height: 45,
     });
   });
+  it('keeps cropped recording handles on the filled frame with the background removed', () => {
+    const clip = visual({ kind: 'screen' });
+    for (const isCropping of [false, true]) {
+      expect(
+        transformClipDisplayLayout({
+          composition: compositionFor([asset()]),
+          clip,
+          transform,
+          bounds,
+          isCropping,
+          showBackground: false,
+        }),
+      ).toEqual({ left: 10, top: -25, width: 800, height: 360 });
+    }
+    expect(
+      transformClipDisplayLayout({
+        composition: compositionFor([asset()]),
+        clip,
+        transform,
+        bounds,
+        isCropping: false,
+        showBackground: true,
+      }),
+    ).toEqual({ left: 90, top: 47, width: 560, height: 216 });
+  });
 });

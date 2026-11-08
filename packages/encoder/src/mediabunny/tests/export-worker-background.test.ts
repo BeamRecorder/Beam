@@ -252,6 +252,23 @@ describe('export worker background pipeline', () => {
     }
   });
 
+  it.each([
+    { kind: 'color', color: '#123456' },
+    { kind: 'image', src: 'project-media://missing-wallpaper.png' },
+  ] as const)('does not prepare a disabled $kind background', async (background) => {
+    installCanvasRuntime();
+    const worker = await importWorker();
+    const value = request();
+    value.snapshot.canvas.showBackground = false;
+    value.snapshot.background = background;
+    startWorker(worker, value);
+    await vi.waitFor(() => expect(runtime.output.finalize).toHaveBeenCalledOnce());
+    expect(runtime.loadBitmap).not.toHaveBeenCalled();
+    expect(runtime.canvasContexts).toHaveLength(1);
+    expect(runtime.renderCompositionFrame).toHaveBeenCalledTimes(30);
+    for (const call of runtime.renderCompositionFrame.mock.calls) expect(call[4]).toBeNull();
+  });
+
   it('uses timestamp iterators for looping video backgrounds and closes every iterator', async () => {
     installCanvasRuntime();
     const backgroundTrack = { getCodec: vi.fn().mockResolvedValue('vp9') };

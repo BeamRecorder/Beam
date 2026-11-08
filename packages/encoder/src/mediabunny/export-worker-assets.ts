@@ -26,6 +26,7 @@ export type ExportAssets = {
 };
 
 const backgroundAsset = (request: ExportRequest): MediaAsset | null => {
+  if (request.snapshot.canvas.showBackground === false) return null;
   const background = request.snapshot.background;
   if (!background || background.kind === 'color' || background.kind === 'gradient') return null;
   return {

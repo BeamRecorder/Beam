@@ -45,8 +45,8 @@ export function createCompositionSnapshot(input: {
     },
     referenceCanvas: { width: canvas.width, height: canvas.height },
     canvas,
-    // Preview paints this underlay even without the inset frame; crops and
-    // rounded corners can expose it. Export must retain the same pixels.
+    // Keep the selected background so it can be restored; canvas.showBackground
+    // controls whether preview and export load or paint it.
     background:
       input.background?.kind === 'color'
         ? { kind: 'color', color: input.background.color }

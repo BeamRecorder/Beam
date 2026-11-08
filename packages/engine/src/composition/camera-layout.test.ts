@@ -238,19 +238,20 @@ describe('camera layout geometry', () => {
         'custom',
       );
 
-      expect(geometry.source).toEqual({ x: 480, y: 135, width: 960, height: 810 });
       if (showBackground) {
+        expect(geometry.source).toEqual({ x: 480, y: 135, width: 960, height: 810 });
         expectRectToMatch(geometry.media, { x: 56, y: 106.5, width: 688, height: 387 });
         expectRectToMatch(geometry.positioned, { x: 296.8, y: 169.3875, width: 206.4, height: 145.125 });
       } else {
         expectRectToMatch(geometry.media, { x: 0, y: 0, width: 800, height: 600 });
-        expectRectToMatch(geometry.positioned, { x: 280, y: 97.5, width: 240, height: 225 });
+        expect(geometry.source).toEqual({ x: 480, y: 240, width: 960, height: 600 });
+        expectRectToMatch(geometry.positioned, { x: 160, y: 60, width: 480, height: 300 });
       }
     },
   );
 
   it.each([false, true] as const)(
-    'preserves source point scale when a custom crop is projected with showBackground=%s',
+    'maps source points using the rendered crop with showBackground=%s',
     (showBackground) => {
       const sourceWidth = 1_920;
       const sourceHeight = 1_080;
@@ -292,9 +293,11 @@ describe('camera layout geometry', () => {
       );
       const croppedPoint = mapSourcePointToScreen(point, sourceWidth, sourceHeight, canvasWidth, canvasHeight, cropped);
 
-      expect(croppedPoint.cx).toBeCloseTo(uncroppedPoint.cx, 10);
-      expect(croppedPoint.cy).toBeCloseTo(uncroppedPoint.cy, 10);
-      const expectedPoint = showBackground ? { cx: 0.4355, cy: 0.3065 } : { cx: 0.425, cy: 0.2 };
+      if (showBackground) {
+        expect(croppedPoint.cx).toBeCloseTo(uncroppedPoint.cx, 10);
+        expect(croppedPoint.cy).toBeCloseTo(uncroppedPoint.cy, 10);
+      }
+      const expectedPoint = showBackground ? { cx: 0.4355, cy: 0.3065 } : { cx: 0.35, cy: 0.08 };
       expect(croppedPoint.cx).toBeCloseTo(expectedPoint.cx, 10);
       expect(croppedPoint.cy).toBeCloseTo(expectedPoint.cy, 10);
     },
@@ -331,13 +334,20 @@ describe('camera layout geometry', () => {
       const crop: NormalizedCrop = { x: 0.25, y: 0.125, width: 0.5, height: 0.75 };
       const geometry = resolveScreenRenderGeometry(clip, 1920, 1080, 1920, 1080, false, transform, crop);
 
-      expect(geometry.source).toEqual({ x: 480, y: 135, width: 960, height: 810 });
+      expect(geometry.source.x).toBeGreaterThanOrEqual(480);
+      expect(geometry.source.y).toBeGreaterThanOrEqual(135);
+      expect(geometry.source.x + geometry.source.width).toBeLessThanOrEqual(1440);
+      expect(geometry.source.y + geometry.source.height).toBeLessThanOrEqual(945);
+      expect(geometry.source.width / geometry.source.height).toBeCloseTo(
+        (transform.width * 1920) / (transform.height * 1080),
+        10,
+      );
       expectRectToMatch(geometry.media, { x: 0, y: 0, width: 1920, height: 1080 });
       expectRectToMatch(geometry.positioned, {
-        x: transform.x * 1920 + crop.x * transform.width * 1920,
-        y: transform.y * 1080 + crop.y * transform.height * 1080,
-        width: transform.width * crop.width * 1920,
-        height: transform.height * crop.height * 1080,
+        x: transform.x * 1920,
+        y: transform.y * 1080,
+        width: transform.width * 1920,
+        height: transform.height * 1080,
       });
 
       const mappedCenter = mapSourcePointToScreen({ cx: 0.5, cy: 0.5 }, 1920, 1080, 1920, 1080, geometry);
@@ -351,8 +361,24 @@ describe('camera layout geometry', () => {
     const clip = { transform } as VisualClip;
     const crop: NormalizedCrop = { x: 0.25, y: 0.125, width: 0.5, height: 0.75 };
     const geometry = resolveScreenRenderGeometry(clip, 1920, 1080, 1920, 1080, false, transform, crop);
-    const mapped = mapSourcePointToScreen({ cx: 0.25, cy: 0.5 }, 1920, 1080, 1920, 1080, geometry);
+    const mapped = mapSourcePointToScreen({ cx: geometry.source.x / 1920, cy: 0.5 }, 1920, 1080, 1920, 1080, geometry);
 
-    expect(mapped).toEqual({ cx: 0.625, cy: 0.5 });
+    expect(mapped).toEqual({ cx: 0.5, cy: 0.5 });
+  });
+  it.each([false, true])('fills a 16:9 frame after removing 40 source pixels, mirrored=%s', (mirrored) => {
+    const clip = {
+      transform: { x: 0, y: 0, width: 1, height: 1 },
+      crop: { x: 0, y: 0, width: 1, height: 1040 / 1080 },
+      isMirrored: mirrored,
+      isMirroredY: mirrored,
+    } as VisualClip;
+    const geometry = resolveScreenRenderGeometry(clip, 1920, 1080, 1920, 1080, false);
+    expectRectToMatch(geometry.positioned, { x: 0, y: 0, width: 1920, height: 1080 });
+    expectRectToMatch(geometry.source, { x: 320 / 9, y: 0, width: 16640 / 9, height: 1040 });
+    expect(geometry.source.width / geometry.source.height).toBeCloseTo(16 / 9, 10);
+    expect(mapSourcePointToScreen({ cx: 0.5, cy: 520 / 1080 }, 1920, 1080, 1920, 1080, geometry)).toEqual({
+      cx: 0.5,
+      cy: 0.5,
+    });
   });
 });

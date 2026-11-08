@@ -1016,14 +1016,16 @@ describe('useLayerTransformAndCrop', () => {
     const target = document.createElement('div');
     Object.assign(target, { setPointerCapture: vi.fn(), hasPointerCapture: () => false });
 
+    const centeredX = kind === 'screen' ? 0.2 : 0.05;
+    const dx = (centeredX - clip.transform.x) * scale + 0.002;
     mounted.state.beginTransformDrag(pointer(target), 'move');
-    mounted.state.moveTransformDrag(pointer(target, { clientX: 100 - (0.05 * scale - 0.002) * 800 }));
-    expect(mounted.state.transformDraft.value?.x).toBeCloseTo(0.05);
+    mounted.state.moveTransformDrag(pointer(target, { clientX: 100 + dx * 800 }));
+    expect(mounted.state.transformDraft.value?.x).toBeCloseTo(centeredX);
     expect(mounted.state.transformDraft.value?.width).toBe(0.6);
     expect(mounted.state.activeGuideLines.value).toContainEqual({ type: 'vertical', position: 0.5 });
     mounted.state.endTransformDrag(pointer(target));
     expect(mounted.options.onUpdateTransform).toHaveBeenCalledWith(
-      expect.objectContaining({ x: expect.closeTo(0.05) }),
+      expect.objectContaining({ x: expect.closeTo(centeredX) }),
     );
     expect(mounted.state.activeGuideLines.value).toEqual([]);
     expect(clip.crop).toEqual({ x: 0.5, y: 0.2, width: 0.5, height: 0.6 });
@@ -1106,8 +1108,8 @@ describe('useLayerTransformAndCrop', () => {
     mounted.state.endTransformDrag(pointer(target));
     expect(mounted.options.onUpdateTransform).not.toHaveBeenCalled();
     mounted.state.beginTransformDrag(pointer(target), 'move');
-    mounted.state.moveTransformDrag(pointer(target, { clientX: 100 - 0.048 * 800 }));
-    expect(mounted.state.transformDraft.value?.x).toBeCloseTo(0.05, 8);
+    mounted.state.moveTransformDrag(pointer(target, { clientX: 100 + 0.102 * 800 }));
+    expect(mounted.state.transformDraft.value?.x).toBeCloseTo(0.2, 8);
     expect(mounted.state.activeGuideLines.value).toContainEqual({ type: 'vertical', position: 0.5 });
   });
 

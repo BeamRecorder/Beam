@@ -1,0 +1,344 @@
+[
+  {
+    "name": "plain-document",
+    "mode": "automatic",
+    "elapsedMs": 749,
+    "positions": [
+      0,
+      220,
+      440
+    ],
+    "expectedPositions": [
+      0,
+      220,
+      440
+    ],
+    "dimensions": [
+      640,
+      840
+    ],
+    "expectedDimensions": [
+      640,
+      840
+    ],
+    "meanAbsoluteError": 0.0,
+    "exactPixelRatio": 1.0,
+    "warnings": [
+      "1 inconsistent geometry edges excluded"
+    ],
+    "passed": false,
+    "error": null
+  },
+  {
+    "name": "plain-document",
+    "mode": "known-positions-control",
+    "elapsedMs": 505,
+    "positions": [
+      0,
+      220,
+      440
+    ],
+    "expectedPositions": [
+      0,
+      220,
+      440
+    ],
+    "dimensions": [
+      640,
+      840
+    ],
+    "expectedDimensions": [
+      640,
+      840
+    ],
+    "meanAbsoluteError": 0.0,
+    "exactPixelRatio": 1.0,
+    "warnings": [],
+    "passed": true,
+    "error": null
+  },
+  {
+    "name": "plain-document",
+    "mode": "known-geometry-control",
+    "elapsedMs": 683,
+    "positions": [
+      0,
+      220,
+      440
+    ],
+    "expectedPositions": [
+      0,
+      220,
+      440
+    ],
+    "dimensions": [
+      640,
+      840
+    ],
+    "expectedDimensions": [
+      640,
+      840
+    ],
+    "meanAbsoluteError": 0.0,
+    "exactPixelRatio": 1.0,
+    "warnings": [],
+    "passed": true,
+    "error": null
+  },
+  {
+    "name": "fixed-header-sidebar",
+    "mode": "automatic",
+    "elapsedMs": 1146,
+    "positions": [
+      0,
+      176,
+      352
+    ],
+    "expectedPositions": [
+      0,
+      176,
+      352
+    ],
+    "dimensions": [
+      560,
+      672
+    ],
+    "expectedDimensions": [
+      560,
+      672
+    ],
+    "meanAbsoluteError": 0.0,
+    "exactPixelRatio": 1.0,
+    "warnings": [
+      "1 inconsistent geometry edges excluded"
+    ],
+    "passed": false,
+    "error": null
+  },
+  {
+    "name": "fixed-header-sidebar",
+    "mode": "known-positions-control",
+    "elapsedMs": 732,
+    "positions": [
+      0,
+      176,
+      352
+    ],
+    "expectedPositions": [
+      0,
+      176,
+      352
+    ],
+    "dimensions": [
+      560,
+      672
+    ],
+    "expectedDimensions": [
+      560,
+      672
+    ],
+    "meanAbsoluteError": 0.0,
+    "exactPixelRatio": 1.0,
+    "warnings": [],
+    "passed": true,
+    "error": null
+  },
+  {
+    "name": "fixed-header-sidebar",
+    "mode": "known-geometry-control",
+    "elapsedMs": 709,
+    "positions": [
+      0,
+      176,
+      352
+    ],
+    "expectedPositions": [
+      0,
+      176,
+      352
+    ],
+    "dimensions": [
+      560,
+      672
+    ],
+    "expectedDimensions": [
+      560,
+      672
+    ],
+    "meanAbsoluteError": 0.0,
+    "exactPixelRatio": 1.0,
+    "warnings": [],
+    "passed": true,
+    "error": null
+  },
+  {
+    "name": "nested-app-pane",
+    "mode": "automatic",
+    "elapsedMs": 730,
+    "positions": [
+      0,
+      160,
+      321
+    ],
+    "expectedPositions": [
+      0,
+      160,
+      321
+    ],
+    "dimensions": [
+      382,
+      612
+    ],
+    "expectedDimensions": [
+      384,
+      613
+    ],
+    "meanAbsoluteError": null,
+    "exactPixelRatio": null,
+    "warnings": [
+      "1 inconsistent geometry edges excluded"
+    ],
+    "passed": false,
+    "error": null
+  },
+  {
+    "name": "nested-app-pane",
+    "mode": "known-positions-control",
+    "elapsedMs": 594,
+    "positions": [
+      0,
+      160,
+      321
+    ],
+    "expectedPositions": [
+      0,
+      160,
+      321
+    ],
+    "dimensions": [
+      382,
+      612
+    ],
+    "expectedDimensions": [
+      384,
+      613
+    ],
+    "meanAbsoluteError": null,
+    "exactPixelRatio": null,
+    "warnings": [],
+    "passed": false,
+    "error": null
+  },
+  {
+    "name": "nested-app-pane",
+    "mode": "known-geometry-control",
+    "elapsedMs": 473,
+    "positions": [
+      0,
+      160,
+      321
+    ],
+    "expectedPositions": [
+      0,
+      160,
+      321
+    ],
+    "dimensions": [
+      384,
+      613
+    ],
+    "expectedDimensions": [
+      384,
+      613
+    ],
+    "meanAbsoluteError": 0.0,
+    "exactPixelRatio": 1.0,
+    "warnings": [],
+    "passed": true,
+    "error": null
+  },
+  {
+    "name": "repeated-rows",
+    "mode": "automatic",
+    "elapsedMs": 1165,
+    "positions": [
+      0,
+      0,
+      0
+    ],
+    "expectedPositions": [
+      0,
+      240,
+      480
+    ],
+    "dimensions": [
+      640,
+      239
+    ],
+    "expectedDimensions": [
+      640,
+      880
+    ],
+    "meanAbsoluteError": null,
+    "exactPixelRatio": null,
+    "warnings": [],
+    "passed": false,
+    "error": null
+  },
+  {
+    "name": "repeated-rows",
+    "mode": "known-positions-control",
+    "elapsedMs": 477,
+    "positions": [
+      0,
+      240,
+      480
+    ],
+    "expectedPositions": [
+      0,
+      240,
+      480
+    ],
+    "dimensions": [
+      640,
+      719
+    ],
+    "expectedDimensions": [
+      640,
+      880
+    ],
+    "meanAbsoluteError": null,
+    "exactPixelRatio": null,
+    "warnings": [],
+    "passed": false,
+    "error": null
+  },
+  {
+    "name": "repeated-rows",
+    "mode": "known-geometry-control",
+    "elapsedMs": 620,
+    "positions": [
+      0,
+      240,
+      480
+    ],
+    "expectedPositions": [
+      0,
+      240,
+      480
+    ],
+    "dimensions": [
+      640,
+      880
+    ],
+    "expectedDimensions": [
+      640,
+      880
+    ],
+    "meanAbsoluteError": 0.0,
+    "exactPixelRatio": 1.0,
+    "warnings": [],
+    "passed": true,
+    "error": null
+  }
+]

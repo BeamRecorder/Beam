@@ -60,7 +60,15 @@ export function mountAssetContextFixture() {
         h(ScreenshotComposition, {
           source: '',
           previewReady: false,
-          layers: layers.value.map((clip) => ({ id: clip.id, kind: clip.family, name: clip.name, visible: true })),
+          layers: layers.value.map((clip) => ({
+            id: clip.id,
+            kind: clip.family,
+            name: clip.name,
+            visible: true,
+            opacity: 1,
+            blendMode: 'normal',
+            locked: false,
+          })),
           selectedId: selected.value,
           selectedIds: selected.value ? [selected.value] : [],
           onSelect: (id: string) => {

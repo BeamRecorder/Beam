@@ -107,6 +107,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       transform,
       bounds,
       isCropping: Boolean(options.isCropping()),
+      showBackground: options.outputCanvas().showBackground,
     });
   };
   const selectedLayerMove = useSelectedLayerMove({
@@ -371,7 +372,14 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       height,
     };
     const cropped = isVisualClip(clip)
-      ? resizeCroppedLayer(clip, initial, resized, transformDrag.corner, corner && preserveAspect)
+      ? resizeCroppedLayer(
+          clip,
+          initial,
+          resized,
+          transformDrag.corner,
+          corner && preserveAspect,
+          options.outputCanvas().showBackground,
+        )
       : resized;
     const anchored = anchorResize(cropped);
     transformDraft.value = clip.kind === 'webcam' ? clampEditedWebcamTransform(clip, anchored, bounds.scale) : anchored;

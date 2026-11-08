@@ -118,4 +118,10 @@ describe('resizeCroppedLayer', () => {
 
     expect(resizeCroppedLayer(clip, initial, resized, 'bottom-right')).toBe(resized);
   });
+  it('resizes the whole recording frame when its cropped source fills the frame', () => {
+    const clip = clipFor({ kind: 'screen' });
+    const resized = { x: 0.1, y: 0.2, width: 0.6, height: 0.5 };
+    expect(resizeCroppedLayer(clip, clip.transform, resized, 'top-left', false, false)).toBe(resized);
+    expect(resizeCroppedLayer(clip, clip.transform, resized, 'top-left', false, true)).not.toEqual(resized);
+  });
 });

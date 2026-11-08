@@ -36,7 +36,8 @@
 .kind-caption {
   --timeline-track-color: var(--color-timeline-caption);
 }
-.kind-shape {
+.kind-shape,
+.kind-text {
   --timeline-track-color: var(--color-timeline-shape);
 }
 .kind-highlight {

@@ -5,9 +5,12 @@ import type { CaptureProject, ProjectEditorData } from '../../../../api/types/ca
 import { DEFAULT_COLOR_FILL } from '@beam/engine/shared/color-fill-types';
 import { DEFAULT_COLOR_LAYER_STYLE } from '@beam/engine/shared/color-layer-style';
 import { DEFAULT_SHAPE_LAYER_STYLE } from '@beam/engine/shared/shape-layer-style';
+import { createElementText } from '@beam/engine/shared/element-text';
+import { normalizeShapeLayerStyle } from '@beam/engine/shared/shape-layer-style';
 import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
 import { HIGHLIGHT_DEFAULTS } from '@beam/engine/shared/highlight-defaults';
 import {
+  type AudioClip,
   type BlurClip,
   type ColorClip,
   type MediaAsset,
@@ -118,9 +121,11 @@ const targetFor = (kind: TimelineAddableVisualKind) =>
     ? imageClip()
     : kind === 'color'
       ? colorClip()
-      : kind === 'shape'
-        ? shapeClip()
-        : blurClip(kind === 'highlight' ? { mode: 'highlight' } : {});
+      : kind === 'text'
+        ? { ...shapeClip(), ...normalizeShapeLayerStyle({ family: 'text' }), text: createElementText('Original text') }
+        : kind === 'shape'
+          ? shapeClip()
+          : blurClip(kind === 'highlight' ? { mode: 'highlight' } : {});
 
 const mountComposable = () => {
   const currentTimeSec = ref(0);
@@ -154,7 +159,7 @@ beforeEach(() => {
 afterEach(() => randomUuid?.mockRestore());
 
 describe('useClipComposition visual continuation', () => {
-  it.each(['color', 'blur', 'shape', 'image', 'highlight'] as const)(
+  it.each(['color', 'blur', 'shape', 'text', 'image', 'highlight'] as const)(
     'continues a %s track with the requested duration, track, and order',
     async (kind) => {
       const mounted = mountComposable();
@@ -170,7 +175,7 @@ describe('useClipComposition visual continuation', () => {
       };
       await mounted.state.addVisualElementAtTime(request);
 
-      const storedKind = kind === 'highlight' ? 'blur' : kind;
+      const storedKind = kind === 'highlight' ? 'blur' : kind === 'text' ? 'shape' : kind;
       const clips = mounted.state.composition.value.clips.filter(
         (clip) => clip.kind === storedKind && 'trackId' in clip && clip.trackId === original.trackId,
       );
@@ -183,6 +188,7 @@ describe('useClipComposition visual continuation', () => {
         timelineDurationMs: request.durationMs,
         sourceDurationMs: request.durationMs,
         ...(kind === 'highlight' ? { mode: 'highlight' } : {}),
+        ...(kind === 'text' ? { family: 'text', preset: 'text', text: { content: 'Text' } } : {}),
       });
       expect(clips[1]!.order).toBe(clips[0]!.order);
       if (kind === 'image') {
@@ -192,6 +198,53 @@ describe('useClipComposition visual continuation', () => {
       }
     },
   );
+
+  it('preserves video and audio visibility while continuing a text track', async () => {
+    const { state } = mountComposable();
+    const original = targetFor('text');
+    const videoAsset = { ...imageAsset(), id: 'video', kind: 'video' as const };
+    const audioAsset = { ...imageAsset(), id: 'audio', kind: 'audio' as const };
+    const screen: VisualClip = {
+      ...imageClip(),
+      id: 'screen',
+      trackId: 'screen',
+      kind: 'screen',
+      assetId: videoAsset.id,
+      appearance: createDefaultClipAppearance('screen'),
+    };
+    const camera: VisualClip = {
+      ...screen,
+      id: 'camera',
+      trackId: 'camera',
+      kind: 'webcam',
+      appearance: createDefaultClipAppearance('webcam'),
+    };
+    const audio: AudioClip[] = (['system', 'microphone', 'voiceover'] as const).map((role, order) => ({
+      ...baseClip,
+      id: role,
+      name: role,
+      kind: 'audio',
+      assetId: audioAsset.id,
+      role,
+      volume: 1,
+      order: order + 3,
+    }));
+    state.composition.value = createComposition([videoAsset, audioAsset], [original, screen, camera, ...audio]);
+    expect(state.isVideoEnabled.value).toBe(true);
+    expect(state.isWebcamEnabled.value).toBe(true);
+    expect(state.isSystemAudioEnabled.value).toBe(true);
+    expect(state.isMicAudioEnabled.value).toBe(true);
+    expect(state.hasSystemAudio.value).toBe(true);
+    expect(state.hasMicAudio.value).toBe(true);
+    expect(state.hasVoiceoverAudio.value).toBe(true);
+    state.isVideoEnabled.value = false;
+    await state.addVisualElementAtTime({ kind: 'text', trackId: original.trackId!, startMs: 4000, durationMs: 1000 });
+    expect(state.selectedClip.value).toMatchObject({ family: 'text', trackId: original.trackId });
+    expect(state.isVideoEnabled.value).toBe(false);
+    expect(state.isWebcamEnabled.value).toBe(true);
+    expect(state.isSystemAudioEnabled.value).toBe(true);
+    expect(state.isMicAudioEnabled.value).toBe(true);
+  });
 
   it('creates a default highlight blur clip with its own visual track and duration', async () => {
     const mounted = mountComposable();

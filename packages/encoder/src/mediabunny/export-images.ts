@@ -46,7 +46,7 @@ export async function loadExportImages(request: ExportRequest, owned: Map<string
     images.set(asset.id, { source: bitmap, width: bitmap.width, height: bitmap.height });
   }
   const background = request.snapshot.background;
-  if (background?.kind === 'image') {
+  if (request.snapshot.canvas.showBackground !== false && background?.kind === 'image') {
     if (!owned.has(background.src)) owned.set(background.src, await loadBitmap(background.src, 'background image'));
     const bitmap = owned.get(background.src)!;
     images.set('export-background', { source: bitmap, width: bitmap.width, height: bitmap.height });

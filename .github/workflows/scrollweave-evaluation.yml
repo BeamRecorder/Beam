@@ -1,0 +1,29 @@
+name: ScrollWeave candidate evaluation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reconstruction:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    env:
+      CARGO_BUILD_JOBS: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Format isolated evaluation package
+        run: cargo fmt --manifest-path experiments/scrollweave-evaluation/Cargo.toml -- --check
+      - name: Test pixel reconstruction and ambiguity cases
+        run: cargo test --locked --manifest-path experiments/scrollweave-evaluation/Cargo.toml -- --test-threads=1
+      - name: Check isolated evaluation package
+        run: cargo clippy --locked --manifest-path experiments/scrollweave-evaluation/Cargo.toml --all-targets -- -D warnings

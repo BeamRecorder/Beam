@@ -17,8 +17,10 @@ describe('useTimelineVisualLabels', () => {
   it('labels every addable visual kind without merging blur and highlight', () => {
     const label = labels();
     expect(
-      ['color', 'shape', 'blur', 'image', 'highlight'].map((kind) => label(kind as Parameters<typeof label>[0])),
-    ).toEqual(['Add Color', 'Add Elements', 'Add Blur', 'Add Image', 'Add Highlight']);
+      ['color', 'shape', 'text', 'blur', 'image', 'highlight'].map((kind) =>
+        label(kind as Parameters<typeof label>[0]),
+      ),
+    ).toEqual(['Add Color', 'Add Elements', 'Add Text', 'Add Blur', 'Add Image', 'Add Highlight']);
   });
   it('preserves the empty element label for non-addable tracks', () => {
     expect(labels()(null)).toBe('Add ');

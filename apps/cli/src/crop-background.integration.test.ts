@@ -86,4 +86,26 @@ describe.runIf(process.env.BEAM_HEADLESS_TEST === '1')('cropped recording previe
     },
     45000,
   );
+  it.each(['color', 'image'] as const)(
+    'removes the bottom 40 px without a bar or disabled %s background in a decoded MP4',
+    async (kind) => {
+      const result = await page.evaluate(async (kind) => {
+        const load = new Function('path', 'return import(path)') as (path: string) => Promise<typeof CropBrowserHost>;
+        return (
+          await load('/apps/desktop/src/components/editor/tests/crop-background-browser-host.ts')
+        ).checkCropBackground(kind, false);
+      }, kind);
+      expect(result.bytes).toBeGreaterThan(500);
+      expect(result.dimensions).toEqual([1920, 1080]);
+      expect(result.previewGap).toEqual(result.previewContent);
+      expect(result.exportGap).toEqual(result.previewGap);
+      expect(result.exportContent).toEqual(result.previewContent);
+      for (const pixel of [result.previewGap, result.encodedGap, result.encodedContent]) {
+        for (let channel = 0; channel < 4; channel++) {
+          expect(Math.abs(pixel[channel]! - [51, 102, 204, 255][channel]!)).toBeLessThanOrEqual(8);
+        }
+      }
+    },
+    45000,
+  );
 });

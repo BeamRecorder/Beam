@@ -26,7 +26,9 @@ export function useTeleprompter() {
   const displayRef = ref<HTMLElement | null>(null);
   const lines = computed(() => splitTeleprompterLines(document.value.text));
   let frame: number | null = null;
-  let lastFrameAt = 0;
+  let lastFrameAt: number | null = null;
+  let scrollPosition = 0;
+  let appliedScrollTop = 0;
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   let preferencesSaveTimer: ReturnType<typeof setTimeout> | null = null;
   let lineTimer: ReturnType<typeof setTimeout> | null = null;
@@ -85,7 +87,7 @@ export function useTeleprompter() {
   const cancelFrame = () => {
     if (frame !== null) window.cancelAnimationFrame(frame);
     frame = null;
-    lastFrameAt = 0;
+    lastFrameAt = null;
   };
   const cancelLineTimer = () => {
     if (lineTimer !== null) window.clearTimeout(lineTimer);
@@ -194,16 +196,21 @@ export function useTeleprompter() {
       frame = window.requestAnimationFrame(tick);
       return;
     }
-    const elapsed = lastFrameAt ? Math.min(100, now - lastFrameAt) : 0;
+    const elapsed = lastFrameAt !== null ? Math.min(100, now - lastFrameAt) : 0;
     lastFrameAt = now;
     const maxScroll = Math.max(0, element.scrollHeight - element.clientHeight);
-    element.scrollTop = Math.min(maxScroll, element.scrollTop + (document.value.scrollSpeed * elapsed) / 1000);
-    if (element.scrollTop < maxScroll) frame = window.requestAnimationFrame(tick);
+    if (element.scrollTop !== appliedScrollTop) scrollPosition = element.scrollTop;
+    // Chromium may round scrollTop. Retain subpixel progress instead of losing it every frame.
+    scrollPosition = Math.min(maxScroll, scrollPosition + (document.value.scrollSpeed * elapsed) / 1000);
+    element.scrollTop = scrollPosition;
+    appliedScrollTop = element.scrollTop;
+    if (scrollPosition < maxScroll) frame = window.requestAnimationFrame(tick);
   };
 
   const startAutoscroll = () => {
     cancelFrame();
     cancelLineTimer();
+    scrollPosition = appliedScrollTop = displayRef.value?.scrollTop ?? 0;
     if (!visible || isEditing.value || !document.value.autoscroll || isPaused.value) return;
     if (document.value.mode === 'continuous') frame = window.requestAnimationFrame(tick);
     else scheduleLineAdvance();

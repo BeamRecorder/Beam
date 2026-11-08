@@ -189,6 +189,73 @@ describe('useTeleprompter composable', () => {
     expect(target.scrollTo).toHaveBeenCalled();
   });
 
+  it.each([60, 144, 240])('keeps slow scrolling accurate on a %s Hz display with rounded offsets', async (hz) => {
+    for (const speed of [5, 10, 25, 50, 88, 89, 150]) {
+      api.updateDocument({ mode: 'continuous', autoscroll: true, scrollSpeed: speed });
+      api.isEditing.value = false;
+      await flushPromises();
+      const target = display();
+      let top = 0;
+      Object.defineProperty(target, 'scrollTop', {
+        configurable: true,
+        get: () => top,
+        set: (value: number) => {
+          top = Math.round(value);
+        },
+      });
+      frames = [];
+      api.setDisplayElement(target);
+      for (let index = 0; index <= hz; index++) frames.shift()!((index * 1000) / hz);
+      expect(Math.abs(target.scrollTop - speed), `speed ${speed} at ${hz} Hz`).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('preserves fractional progress and picks up manual scrolling, pause and visibility changes', async () => {
+    api.updateDocument({ mode: 'continuous', autoscroll: true, scrollSpeed: 5 });
+    api.isEditing.value = false;
+    await flushPromises();
+    const target = display();
+    let top = 40;
+    Object.defineProperty(target, 'scrollTop', {
+      configurable: true,
+      get: () => top,
+      set: (value: number) => {
+        top = Math.floor(value);
+      },
+    });
+    frames = [];
+    api.setDisplayElement(target);
+    frames.shift()!(0);
+    frames.shift()!(100);
+    frames.shift()!(200);
+    expect(target.scrollTop).toBe(41);
+    target.scrollTop = 180;
+    frames.shift()!(300);
+    frames.shift()!(400);
+    expect(target.scrollTop).toBe(181);
+    api.togglePause();
+    frames = [];
+    target.scrollTop = 240;
+    api.togglePause();
+    frames.shift()!(10000);
+    frames.shift()!(10100);
+    frames.shift()!(10200);
+    expect(target.scrollTop).toBe(241);
+    api.setVisible(false);
+    frames = [];
+    api.setVisible(true);
+    frames.shift()!(20000);
+    expect(target.scrollTop).toBe(241);
+    frames.shift()!(20100);
+    frames.shift()!(20200);
+    expect(target.scrollTop).toBe(242);
+    target.scrollTop = 399;
+    frames.shift()!(20300);
+    frames.shift()!(20400);
+    expect(target.scrollTop).toBe(400);
+    expect(frames).toHaveLength(0);
+  });
+
   it('does not autoscroll when disabled and saves during unmount cleanup', async () => {
     api.updateDocument({ autoscroll: false });
     api.setDisplayElement(display());

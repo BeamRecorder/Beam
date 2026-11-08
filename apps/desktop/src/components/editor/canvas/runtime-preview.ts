@@ -226,25 +226,27 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
     const image = options.cursorImage();
     if (evaluated.screen && asset && image)
       cursorImages.set(snapshotCursorImageKey(snapshot, evaluated.screen, asset.id), image);
-    const resized = !background || background.width !== size.width || background.height !== size.height;
-    if (resized) backgroundKey = null;
-    background ??= new OffscreenCanvas(size.width, size.height);
-    if (background.width !== size.width) background.width = size.width;
-    if (background.height !== size.height) background.height = size.height;
-    const backgroundCtx = background.getContext('2d');
-    if (!backgroundCtx) throw new Error('Preview background canvas unavailable.');
-    const pixelInputs = options.backgroundCacheKey();
-    if (
-      resized ||
-      !pixelInputs ||
-      !backgroundKey ||
-      pixelInputs.length !== backgroundKey.length ||
-      pixelInputs.some((value, index) => !Object.is(value, backgroundKey![index]))
-    ) {
-      backgroundKey = null;
-      backgroundCtx.clearRect(0, 0, size.width, size.height);
-      options.drawBackground(backgroundCtx, { x: 0, y: 0, ...size });
-      backgroundKey = pixelInputs?.slice() ?? null;
+    if (snapshot.canvas.showBackground) {
+      const resized = !background || background.width !== size.width || background.height !== size.height;
+      if (resized) backgroundKey = null;
+      background ??= new OffscreenCanvas(size.width, size.height);
+      if (background.width !== size.width) background.width = size.width;
+      if (background.height !== size.height) background.height = size.height;
+      const backgroundCtx = background.getContext('2d');
+      if (!backgroundCtx) throw new Error('Preview background canvas unavailable.');
+      const pixelInputs = options.backgroundCacheKey();
+      if (
+        resized ||
+        !pixelInputs ||
+        !backgroundKey ||
+        pixelInputs.length !== backgroundKey.length ||
+        pixelInputs.some((value, index) => !Object.is(value, backgroundKey![index]))
+      ) {
+        backgroundKey = null;
+        backgroundCtx.clearRect(0, 0, size.width, size.height);
+        options.drawBackground(backgroundCtx, { x: 0, y: 0, ...size });
+        backgroundKey = pixelInputs?.slice() ?? null;
+      }
     }
     ctx.save();
     ctx.translate(bounds.x, bounds.y);
@@ -255,7 +257,7 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
         frame ? { source: frame.bitmap, width: frame.width, height: frame.height } : null,
         snapshot,
         time,
-        { source: background, ...size, preRendered: true },
+        snapshot.canvas.showBackground && background ? { source: background, ...size, preRendered: true } : null,
         cursorImages,
         visuals as CompositionVisuals,
         motion,

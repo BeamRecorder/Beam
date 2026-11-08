@@ -1,5 +1,6 @@
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
+import { textElement } from '@beam/engine/commands/tests/text-element-fixtures';
 import type { ClipComposition } from '@beam/engine/shared/composition-types';
 import { composition, mountTracks, zoom } from './TimelineTracks.test-support';
 
@@ -37,6 +38,31 @@ describe('TimelineTracks', () => {
 
     await cursor.trigger('click', { clientX: 120 + visualWidth * 0.6 });
     expect(mounted!.emitted('add:zoom')).toContainEqual([{ startMs: 5_400, durationMs: 1_200 }]);
+  });
+
+  it('offers Add Text on a text-element lane and emits a text continuation', async () => {
+    const text = textElement('text', 0, 'text-lane');
+    const base = composition();
+    const mounted = await mountTracks({ composition: { ...base, clips: [...base.clips, text] } });
+    const lane = mounted!.get('.tracks-stack .visual-track[data-track-id="text-lane"] .visual-content');
+    await lane.trigger('mousemove', { clientX: 600 });
+    expect(lane.text()).toContain('Add Text');
+    expect(lane.text()).not.toContain('Add Elements');
+    await lane.trigger('click', { clientX: 600 });
+    expect(mounted!.emitted('add:visual-element')).toContainEqual([
+      { kind: 'text', trackId: 'text-lane', startMs: 3300, durationMs: 3000 },
+    ]);
+  });
+
+  it('does not offer text insertion on a locked text track', async () => {
+    const text = textElement('text', 0, 'text-lane', { locked: true });
+    const base = composition();
+    const mounted = await mountTracks({ composition: { ...base, clips: [...base.clips, text] } });
+    const lane = mounted!.get('.tracks-stack .visual-track[data-track-id="text-lane"] .visual-content');
+    await lane.trigger('mousemove', { clientX: 600 });
+    await lane.trigger('click', { clientX: 600 });
+    expect(lane.find('.visual-add-indicator').exists()).toBe(false);
+    expect(mounted!.emitted('add:visual-element')).toBeUndefined();
   });
 
   it('previews and adds zooms/captions fitted into available gaps', async () => {
