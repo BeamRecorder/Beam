@@ -4,6 +4,13 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-09
+
+### Fixed
+
+- macOS mouse and trackpad click capture resumes when a temporarily disabled event listener can be restored, instead of permanently stopping cursor capture and leaving automatic zooms without clicks. Revoked access and failed recovery remain explicit recording errors.
+- macOS exposes Input Monitoring access in the HUD and Settings, opens the correct system permission pane when access is denied, and refreshes permission status on return. Click access stays independent of optional keyboard shortcut recording, with guidance in all fifteen languages.
+
 ## [0.5.10] - 2026-11-09
 
 ### Added

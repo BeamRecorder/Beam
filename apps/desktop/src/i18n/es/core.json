@@ -626,6 +626,8 @@
     "openHud": "Abrir HUD",
     "quit": "Salir de Beam",
     "preparingEditor": "Abriendo el editor",
+    "interactionAccessNoticeTitleMac": "Acceso a clics del ratón y del trackpad",
+    "interactionAccessNoticeDescriptionMac": "La monitorización de entrada de macOS es necesaria para capturar clics del ratón y del trackpad para los zooms automáticos. Activa Beam en Ajustes del Sistema > Privacidad y seguridad > Monitorización de entrada e inicia una nueva grabación. Grabar atajos de teclado es opcional; nunca se almacena el texto escrito.",
     "interactionAccessNoticeTitle": "Permitir la grabación de atajos de teclado",
     "interactionAccessNoticeDescription": "Beam necesita acceso adicional para grabar atajos de teclado. En Linux, este acceso también activa los metadatos de clics del ratón. El texto escrito nunca se guarda.",
     "interactionAccessDeniedDescription": "No se concedió el acceso. Intenta activarlo de nuevo desde el HUD.",

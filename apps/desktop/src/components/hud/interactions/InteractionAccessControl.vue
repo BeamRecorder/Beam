@@ -12,6 +12,8 @@ defineProps<{
   enablingLabel: string;
   checkingLabel: string;
   unavailableLabel: string;
+  permissionOnly?: boolean;
+  readyLabel?: string;
 }>();
 
 const emit = defineEmits<{
@@ -21,8 +23,9 @@ const emit = defineEmits<{
 </script>
 
 <template>
+  <Badge v-if="permissionOnly && status.state === 'available'" variant="outline">{{ readyLabel }}</Badge>
   <Switch
-    v-if="status.state === 'available'"
+    v-else-if="status.state === 'available'"
     :model-value="enabled"
     @update:model-value="emit('update:enabled', $event)"
   />

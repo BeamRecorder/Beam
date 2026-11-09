@@ -128,3 +128,5 @@ Timeline names and metadata over thumbnails share opposing neutral badge colors:
 - Do all new CSS tokens match the existing theme keys?
 - Are empty, loading, error, disabled, and keyboard states handled?
 - Is every visible value backed by real state or real recorded data?
+
+macOS exposes mouse and trackpad click access in HUD issues and Accessibility settings, independently of optional keyboard shortcut recording. Its permission row shows an authorization action or Ready status, never a switch that appears to disable granted system access. Denied authorization opens the fixed Input Monitoring pane in System Settings; returning to Beam refreshes access without changing the keyboard recording choice. Keep this guidance translated in all supported languages.

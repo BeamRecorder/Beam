@@ -180,6 +180,8 @@ jobs:
           shared-key: cargo-package-macos-aarch64-apple-darwin-release
           cache-on-failure: true
       - run: node scripts/ci/bun-install-retry.cjs
+      - name: Test macOS click capture and listener recovery
+        run: cargo test -p capture --release --target aarch64-apple-darwin --lib cursor::mac -- --test-threads=1
       - name: Build and stage the Apple Silicon engine
         run: |
           cargo build -p capture --bin capture-engine --release --target aarch64-apple-darwin

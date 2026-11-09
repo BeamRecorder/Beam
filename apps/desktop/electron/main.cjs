@@ -130,7 +130,7 @@ function initializeApplication() {
       });
       const { userPaths, projectStore, directories, screenshotStore } = storage;
       const { preferencesStore, startupPreferences, launchAtStartup } = storage;
-      registerInputAccessIpc(applicationIpc, inputAccess, { store: preferencesStore, BrowserWindow });
+      registerInputAccessIpc(applicationIpc, inputAccess, { store: preferencesStore, BrowserWindow, shell });
       const { editorPresetStore, screenshotPresetStore } = storage;
       let screenshotService = null;
       let quickSnipController = null;

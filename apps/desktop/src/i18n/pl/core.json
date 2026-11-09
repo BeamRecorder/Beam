@@ -626,6 +626,8 @@
     "openHud": "Otwórz HUD",
     "quit": "Zakończ Beam",
     "preparingEditor": "Otwieranie edytora",
+    "interactionAccessNoticeTitleMac": "Dostęp do kliknięć myszy i gładzika",
+    "interactionAccessNoticeDescriptionMac": "Monitorowanie wprowadzania w macOS jest wymagane do rejestrowania kliknięć myszy i gładzika na potrzeby automatycznego powiększania. Włącz Beam w Ustawieniach systemowych > Prywatność i ochrona > Monitorowanie wprowadzania, a następnie rozpocznij nowe nagranie. Nagrywanie skrótów klawiszowych jest opcjonalne; wpisywany tekst nigdy nie jest zapisywany.",
     "interactionAccessNoticeTitle": "Zezwól na nagrywanie skrótów klawiaturowych",
     "interactionAccessNoticeDescription": "Beam potrzebuje dodatkowego dostępu, aby nagrywać skróty klawiaturowe. W systemie Linux ten dostęp włącza też metadane kliknięć myszy. Wpisywany tekst nigdy nie jest zapisywany.",
     "interactionAccessDeniedDescription": "Nie przyznano dostępu. Spróbuj włączyć go ponownie w HUD.",

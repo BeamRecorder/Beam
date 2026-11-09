@@ -13,7 +13,9 @@ use crossbeam_channel::{Receiver, bounded};
 
 use crate::{
     CaptureError,
-    cursor::{CaptureRegion, CursorEvent, mac_button_event::mac_button_event},
+    cursor::{
+        CaptureRegion, CursorEvent, mac_button_event::mac_button_event, mac_tap::restore_mouse_tap,
+    },
     session::StartGate,
 };
 
@@ -57,8 +59,9 @@ impl MacButtonCapture {
                     event_type,
                     CGEventType::TapDisabledByTimeout | CGEventType::TapDisabledByUserInput
                 ) {
-                    callback_metrics
-                        .record_input_failure("macOS disabled mouse event capture".into());
+                    // Notifications can be stale after preparation. Recovery checks
+                    // the current tap and permission state outside this callback.
+                    callback_metrics.record_input_interruption();
                 } else if start_gate.is_released() {
                     let location = event.location();
                     let result = start_gate.session_time_ns().and_then(|session_ns| {
@@ -106,15 +109,15 @@ impl MacButtonCapture {
     }
 
     pub(super) fn start(&self) -> Result<(), CaptureError> {
-        self.tap.enable();
-        // SAFETY: the event tap owns this Mach port throughout the query.
-        if unsafe { CGEventTapIsEnabled(self.tap.mach_port().as_concrete_TypeRef()) } {
-            Ok(())
-        } else {
-            Err(CaptureError::Backend(
-                "macOS could not enable mouse event capture".into(),
-            ))
-        }
+        restore_mouse_tap(
+            super::input_access_granted,
+            || {
+                // SAFETY: the event tap owns this Mach port throughout the query.
+                unsafe { CGEventTapIsEnabled(self.tap.mach_port().as_concrete_TypeRef()) }
+            },
+            || self.tap.enable(),
+        )?;
+        Ok(())
     }
 
     pub(super) fn stop(&self) {
@@ -123,6 +126,10 @@ impl MacButtonCapture {
     }
 
     pub(super) fn poll(&self) {
+        if let Err(error) = self.start() {
+            self.metrics.record_input_failure(error.to_string());
+            return;
+        }
         // Service every press/release, including pairs shorter than the sampling interval.
         let result = CFRunLoop::run_in_mode(
             unsafe { kCFRunLoopDefaultMode },
@@ -135,6 +142,9 @@ impl MacButtonCapture {
         ) {
             self.metrics
                 .record_input_failure("macOS mouse event run loop stopped".into());
+        }
+        if let Err(error) = self.start() {
+            self.metrics.record_input_failure(error.to_string());
         }
     }
 

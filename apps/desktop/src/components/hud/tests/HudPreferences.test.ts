@@ -155,7 +155,7 @@ describe('HudPreferences', () => {
     expect(wrapper.emitted('update:recordInteractions')).toContainEqual([false]);
   });
 
-  it.each(['darwin', 'win32'] as const)(
+  it.each(['win32'] as const)(
     'uses generic keyboard-shortcut labels on %s without Linux or mouse metadata',
     (platform) => {
       const wrapper = mountPreferences({ platform });
@@ -340,4 +340,27 @@ describe('HudPreferences', () => {
     expect(wrapper.emitted('update:alwaysOnTop')).toContainEqual([false]);
     wrapper.unmount();
   });
+  it('shows macOS click permission separately from optional keyboard recording', async () => {
+    const wrapper = mountPreferences({ platform: 'darwin', inputAccess: availableAccess, recordInteractions: false });
+    expect(wrapper.get('.input-access-item .preference-title').text()).toContain('Mouse and trackpad');
+    expect(wrapper.get('.input-access-item .preference-description').text()).toContain('Input Monitoring');
+    expect(wrapper.find('.input-access-actions [role="switch"]').exists()).toBe(false);
+    expect(wrapper.get('[data-setting="keyboard-shortcuts"] [role="switch"]').attributes('aria-checked')).toBe('false');
+    await wrapper.get('[data-setting="keyboard-shortcuts"] [role="switch"]').trigger('click');
+    expect(wrapper.emitted('update:recordInteractions')).toContainEqual([true]);
+    wrapper.unmount();
+  });
+
+  it.each([permissionRequiredAccess, deniedAccess])(
+    'offers macOS authorization for $state access',
+    async (inputAccess) => {
+      const wrapper = mountPreferences({ platform: 'darwin', inputAccess });
+      expect(wrapper.get('.input-access-item .preference-description').text()).toContain('System Settings');
+      expect(wrapper.find('[data-setting="keyboard-shortcuts"]').exists()).toBe(false);
+      await wrapper.get('.input-access-actions button').trigger('click');
+      expect(wrapper.emitted('requestInputAccess')).toHaveLength(1);
+      expect(wrapper.emitted('update:recordInteractions')).toBeUndefined();
+      wrapper.unmount();
+    },
+  );
 });

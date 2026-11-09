@@ -626,6 +626,8 @@
     "openHud": "HUDを開く",
     "quit": "Beamを終了",
     "preparingEditor": "エディターを開いています",
+    "interactionAccessNoticeTitleMac": "マウスとトラックパッドのクリックへのアクセス",
+    "interactionAccessNoticeDescriptionMac": "自動ズーム用のマウスとトラックパッドのクリックを記録するには、macOSの入力監視が必要です。システム設定 > プライバシーとセキュリティ > 入力監視でBeamを有効にしてから、新しい録画を開始してください。キーボードショートカットの記録は任意で、入力したテキストは保存されません。",
     "interactionAccessNoticeTitle": "キーボードショートカットの記録を許可",
     "interactionAccessNoticeDescription": "キーボードショートカットを記録するには、Beam に追加のアクセス権が必要です。Linux では、このアクセスでマウスクリックのメタデータも有効になります。入力した文章は保存されません。",
     "interactionAccessDeniedDescription": "アクセスが許可されませんでした。HUDからもう一度有効にしてください。",

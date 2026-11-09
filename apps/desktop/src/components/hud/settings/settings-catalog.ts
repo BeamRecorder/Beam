@@ -169,6 +169,8 @@ const definitions = [
     'HudPreferences.recordInteractionsDescription',
     'HudPreferences.recordInteractionsLinux',
     'HudPreferences.recordInteractionsDescriptionLinux',
+    'HUD.interactionAccessNoticeTitleMac',
+    'HUD.interactionAccessNoticeDescriptionMac',
     'HudPreferences.interactionAccessDescriptionLinux',
     'HudPreferences.interactionAccessUnavailableDescription',
   ],

@@ -4,6 +4,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import InteractionAccessControl from '../interactions/InteractionAccessControl.vue';
 import InteractionAccessError from '../interactions/InteractionAccessError.vue';
 import SpellCheckPreference from '~/components/settings/SpellCheckPreference.vue';
+import Switch from '~/ui/switch/Switch.vue';
 import type { InteractionAccessViewState } from '../interactions/interaction-access-types';
 
 const props = defineProps<{
@@ -19,13 +20,16 @@ const emit = defineEmits<{
 const { t } = useTranslate('HudPreferences');
 const { t: tHud } = useTranslate('HUD');
 const inputDescription = computed(() => {
+  if (props.platform === 'darwin') return tHud('interactionAccessNoticeDescriptionMac');
   if (props.inputAccess.state === 'unavailable') return t('interactionAccessUnavailableDescription');
   if (props.inputAccess.state === 'available')
     return t(props.platform === 'linux' ? 'recordInteractionsDescriptionLinux' : 'recordInteractionsDescription');
   return t(props.platform === 'linux' ? 'interactionAccessDescriptionLinux' : 'interactionAccessDescription');
 });
 const interactionTitle = computed(() =>
-  t(props.platform === 'linux' ? 'recordInteractionsLinux' : 'recordInteractions'),
+  props.platform === 'darwin'
+    ? tHud('interactionAccessNoticeTitleMac')
+    : t(props.platform === 'linux' ? 'recordInteractionsLinux' : 'recordInteractions'),
 );
 </script>
 
@@ -42,6 +46,8 @@ const interactionTitle = computed(() =>
           :status="inputAccess"
           :enabled="recordInteractions"
           :requesting="requestingInputAccess"
+          :permission-only="platform === 'darwin'"
+          :ready-label="t('accessReady')"
           :enable-label="tHud('authorizeInteractions')"
           :enabling-label="tHud('authorizingInteractions')"
           :checking-label="t('checkingAccess')"
@@ -50,6 +56,17 @@ const interactionTitle = computed(() =>
           @update:enabled="emit('update:recordInteractions', $event)"
         />
       </div>
+    </div>
+    <div
+      v-if="platform === 'darwin' && inputAccess.state === 'available'"
+      class="preference-item"
+      data-setting="keyboard-shortcuts"
+    >
+      <div class="preference-copy">
+        <p class="preference-title">{{ t('recordInteractions') }}</p>
+        <p class="preference-description">{{ t('recordInteractionsDescription') }}</p>
+      </div>
+      <Switch :model-value="recordInteractions" @update:model-value="emit('update:recordInteractions', $event)" />
     </div>
     <div class="preference-item" data-setting="spell-check" tabindex="-1">
       <SpellCheckPreference />

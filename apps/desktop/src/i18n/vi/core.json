@@ -626,6 +626,8 @@
     "openHud": "Mở màn hình chính",
     "quit": "Thoát Beam",
     "preparingEditor": "Đang mở trình chỉnh sửa",
+    "interactionAccessNoticeTitleMac": "Quyền ghi nhận nhấp chuột và bàn di chuột",
+    "interactionAccessNoticeDescriptionMac": "Cần quyền Giám sát đầu vào của macOS để ghi nhận thao tác nhấp chuột và bàn di chuột cho tính năng thu phóng tự động. Bật Beam trong Cài đặt hệ thống > Quyền riêng tư & Bảo mật > Giám sát đầu vào, rồi bắt đầu bản ghi mới. Ghi phím tắt là tùy chọn; văn bản đã nhập không bao giờ được lưu.",
     "interactionAccessNoticeTitle": "Cho phép ghi phím tắt",
     "interactionAccessNoticeDescription": "Beam cần thêm quyền truy cập để ghi lại các phím tắt. Trên Linux, quyền này cũng cho phép ghi dữ liệu nhấp chuột. Văn bản gõ không bao giờ được lưu trữ.",
     "interactionAccessDeniedDescription": "Quyền truy cập không được cấp. Hãy thử bật lại từ HUD.",

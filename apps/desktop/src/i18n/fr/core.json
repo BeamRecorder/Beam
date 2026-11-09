@@ -630,6 +630,8 @@
     "stopQuickSnip": "Arrêter la capture rapide",
     "quit": "Quitter Beam",
     "preparingEditor": "Ouverture de l’éditeur",
+    "interactionAccessNoticeTitleMac": "Accès aux clics de souris et du trackpad",
+    "interactionAccessNoticeDescriptionMac": "La surveillance des entrées de macOS est nécessaire pour capturer les clics de souris et du trackpad utilisés par les zooms automatiques. Activez Beam dans Réglages Système > Confidentialité et sécurité > Surveillance des entrées, puis démarrez un nouvel enregistrement. Les raccourcis clavier sont facultatifs ; le texte saisi n’est jamais stocké.",
     "interactionAccessNoticeTitle": "Autoriser l’enregistrement des raccourcis clavier",
     "interactionAccessNoticeDescription": "Beam a besoin d’un accès supplémentaire pour enregistrer les raccourcis clavier. Sous Linux, cet accès active aussi les métadonnées de clics souris. Le texte saisi n’est jamais conservé.",
     "interactionAccessDeniedDescription": "L’accès n’a pas été accordé. Réessayez de l’activer depuis la HUD.",

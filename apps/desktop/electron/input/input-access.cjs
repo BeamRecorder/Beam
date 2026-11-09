@@ -11,12 +11,14 @@ class InputAccess {
     app,
     applicationRoot,
     nativeRequest,
+    openExternal,
     platform = process.platform,
     resolveTargetDirectory = resolveCargoTargetDirectory,
   }) {
     this.app = app;
     this.applicationRoot = applicationRoot;
     this.nativeRequest = nativeRequest;
+    this.openExternal = openExternal;
     this.platform = platform;
     this.lastError = null;
     this.resolveTargetDirectory = resolveTargetDirectory;
@@ -74,7 +76,10 @@ class InputAccess {
     this.lastError = null;
     if (this.platform === 'linux' && !this.helperForCapture()) return unavailableStatus('input-helper-unavailable');
     try {
-      return await this.nativeRequest('request-input-access');
+      const status = await this.nativeRequest('request-input-access');
+      if (this.platform === 'darwin' && ['permission-required', 'denied'].includes(status.state))
+        await this.openExternal?.('x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent');
+      return status;
     } catch (error) {
       this.lastError = accessError(error);
       throw error;
@@ -91,7 +96,13 @@ class InputAccess {
         !status.error &&
         ['permission-required', 'installation-required'].includes(status.state);
       const accessName = this.platform === 'darwin' ? 'macOS Input Monitoring' : 'Linux input access';
-      const error = new Error(status.error?.message || `${accessName} is required to record clicks and shortcuts.`);
+      const guidance =
+        this.platform === 'darwin'
+          ? ' Enable Beam in System Settings > Privacy & Security > Input Monitoring, then start a new recording.'
+          : '';
+      const error = new Error(
+        status.error?.message || `${accessName} is required to record clicks and shortcuts.${guidance}`,
+      );
       error.code = cancelled ? 'cancelled' : status.error?.code || 'input-access-unavailable';
       throw error;
     }
@@ -160,8 +171,10 @@ function executable(candidate) {
   }
 }
 
-function registerInputAccessIpc(ipcMain, inputAccess, { store, BrowserWindow }) {
-  inputAccess.onAvailable = createInputAccessPreferenceWriter({ store, BrowserWindow });
+function registerInputAccessIpc(ipcMain, inputAccess, { store, BrowserWindow, shell }) {
+  if (shell) inputAccess.openExternal = (url) => shell.openExternal(url);
+  if (inputAccess.platform !== 'darwin')
+    inputAccess.onAvailable = createInputAccessPreferenceWriter({ store, BrowserWindow });
   ipcMain.handle('input-access:status', () => inputAccess.status());
   ipcMain.handle('input-access:request', () => inputAccess.request());
 }

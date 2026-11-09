@@ -126,7 +126,7 @@ const mountHudIssues = (
       },
     }),
   );
-  return { state, wrapper, interaction };
+  return { state, wrapper, interaction, shownError };
 };
 
 describe('useHudIssues input access', () => {
@@ -194,6 +194,137 @@ describe('useHudIssues input access', () => {
       copyText: expect.stringContaining('sudo apt update && sudo apt install pkexec'),
     });
     expect(state.hudIssues.value[0]?.actionLabel).toBeUndefined();
+    wrapper.unmount();
+  });
+});
+
+describe('macOS click access guidance', () => {
+  beforeEach(() => {
+    capture.platform = 'darwin';
+  });
+
+  it.each(['permission-required', 'denied'] as const)('shows a macOS authorization action for %s access', (status) => {
+    const { state, wrapper } = mountHudIssues({
+      ...available,
+      state: status,
+      canRequest: true,
+      clicks: false,
+      shortcuts: false,
+    });
+    expect(state.hudIssues.value).toEqual([
+      expect.objectContaining({
+        id: 'interaction-access',
+        title: 'interactionAccessNoticeTitleMac',
+        details: ['interactionAccessNoticeDescriptionMac'],
+        actionLabel: 'authorizeInteractions',
+      }),
+    ]);
+    wrapper.unmount();
+  });
+
+  it('clears the permission issue after macOS authorization', async () => {
+    const { state, wrapper } = mountHudIssues(
+      { ...available, state: 'permission-required', canRequest: true },
+      async (status) => {
+        status.value = available;
+      },
+    );
+    await state.handleHudIssueAction('interaction-access');
+    expect(state.hudIssues.value).toEqual([expect.objectContaining({ id: 'interaction-success' })]);
+    wrapper.unmount();
+  });
+
+  it('does not show Linux helper instructions for an unavailable macOS listener', () => {
+    const { state, wrapper } = mountHudIssues({ ...available, state: 'unavailable', canRequest: false });
+    expect(state.hudIssues.value[0]).toMatchObject({ details: ['interactionAccessNoticeDescriptionMac'] });
+    expect(state.hudIssues.value[0]?.copyText).toBeUndefined();
+    wrapper.unmount();
+  });
+});
+
+describe('interaction issue lifecycle', () => {
+  beforeEach(() => {
+    capture.platform = 'linux';
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('shows recording errors alongside native setup requirements', () => {
+    const diagnostics = {
+      ...linuxDiagnostics,
+      recordingAvailable: false,
+      pipewire: { available: false, errorCode: 'pipewire-missing', detail: 'PipeWire is missing.' },
+    };
+    const { state, wrapper, shownError } = mountHudIssues(available, undefined, diagnostics);
+    shownError.value = 'Recording could not start';
+    expect(state.hudIssues.value.map((issue) => issue.id)).toEqual(['linux-requirements', 'recording-error']);
+    expect(state.hudIssues.value[0]?.copyText).toContain('PipeWire');
+    expect(state.hudIssues.value[1]?.details).toEqual(['Recording could not start']);
+    wrapper.unmount();
+  });
+
+  it('expires successful authorization feedback and ignores unrelated actions', async () => {
+    vi.useFakeTimers();
+    const { state, wrapper, interaction } = mountHudIssues(available);
+    await state.handleHudIssueAction('unrelated');
+    expect(state.hudIssues.value).toEqual([]);
+    await state.authorizeInteractionAccess();
+    await state.authorizeInteractionAccess();
+    expect(state.hudIssues.value[0]?.id).toBe('interaction-success');
+    vi.advanceTimersByTime(1800);
+    expect(state.hudIssues.value).toEqual([]);
+    interaction.access.status.value = available;
+    wrapper.unmount();
+  });
+
+  it.each(['checking', 'available'] as const)('does not show an access action while %s', (status) => {
+    const { state, wrapper } = mountHudIssues({
+      ...available,
+      state: status,
+      canRequest: false,
+      ...(status === 'checking' ? { clicks: false, shortcuts: false } : {}),
+    } as InteractionAccessViewState);
+    expect(state.hudIssues.value).toEqual([]);
+    wrapper.unmount();
+  });
+
+  it('explains a denied Linux authorization without inventing a native error', async () => {
+    const { state, wrapper, interaction } = mountHudIssues({ ...available, state: 'denied', canRequest: true });
+    interaction.access.requesting.value = true;
+    expect(state.hudIssues.value[0]).toMatchObject({
+      details: ['interactionAccessDeniedDescription'],
+      actionLabel: 'authorizingInteractions',
+      actionLoading: true,
+      actionDisabled: true,
+    });
+    await state.authorizeInteractionAccess();
+    expect(state.hudIssues.value[0]?.id).toBe('interaction-access');
+    wrapper.unmount();
+  });
+
+  it('shows retryable unavailable access without assuming a denial', () => {
+    const { state, wrapper } = mountHudIssues({ ...available, state: 'unavailable', canRequest: true });
+    expect(state.hudIssues.value[0]?.details).toEqual(['interactionAccessNoticeDescription']);
+    wrapper.unmount();
+  });
+
+  it('keeps native macOS failures actionable without Linux helper copy', () => {
+    capture.platform = 'darwin';
+    const { state, wrapper } = mountHudIssues({
+      ...available,
+      state: 'unavailable',
+      canRequest: false,
+      error: { code: 'tap-disabled', message: 'Native listener could not resume.' },
+    });
+    expect(state.hudIssues.value[0]?.details).toEqual(['Native listener could not resume.']);
+    wrapper.unmount();
+  });
+
+  it('does not show an input permission banner on Windows', () => {
+    capture.platform = 'win32';
+    const { state, wrapper } = mountHudIssues({ ...available, state: 'permission-required', canRequest: true });
+    expect(state.hudIssues.value).toEqual([]);
     wrapper.unmount();
   });
 });

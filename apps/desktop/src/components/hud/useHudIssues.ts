@@ -13,11 +13,14 @@ export function useHudIssues(
 ) {
   const { t } = useTranslate('HUD');
   const desktopPlatform = capture.platform;
+  const needsInteractionAccess = desktopPlatform === 'linux' || desktopPlatform === 'darwin';
+  const macInputGuidance = () => t('interactionAccessNoticeDescriptionMac');
   const interactionAuthorizedFeedback = ref(false);
   let interactionFeedbackTimeout: ReturnType<typeof setTimeout> | null = null;
 
   const requirementGuidance = computed(() => linuxRequirementGuidance(captureCatalog.value?.diagnostics?.linux));
   const interactionGuidance = computed(() => {
+    if (desktopPlatform !== 'linux') return null;
     const status = interactionAccess.status.value;
     if (status.state === 'checking') return null;
     return linuxInteractionGuidance(captureCatalog.value?.diagnostics?.linux, status);
@@ -46,7 +49,7 @@ export function useHudIssues(
         copiedLabel: t('copied'),
       });
     }
-    if (desktopPlatform === 'linux' && interactionAuthorizedFeedback.value) {
+    if (needsInteractionAccess && interactionAuthorizedFeedback.value) {
       issues.push({
         id: 'interaction-success',
         title: t('interactionAccessGranted'),
@@ -54,32 +57,42 @@ export function useHudIssues(
         tone: 'success',
       });
     } else if (
-      desktopPlatform === 'linux' &&
+      needsInteractionAccess &&
       (['permission-required', 'installation-required', 'denied'].includes(interactionAccess.status.value.state) ||
         (interactionAccess.status.value.state === 'unavailable' && interactionAccess.status.value.canRequest))
     ) {
       issues.push({
         id: 'interaction-access',
         title: t(
-          interactionAccess.status.value.error ? 'interactionAccessUnavailableTitle' : 'interactionAccessNoticeTitle',
+          interactionAccess.status.value.error
+            ? 'interactionAccessUnavailableTitle'
+            : desktopPlatform === 'darwin'
+              ? 'interactionAccessNoticeTitleMac'
+              : 'interactionAccessNoticeTitle',
         ),
         details: [
           interactionAccess.status.value.error?.message ||
-            (interactionAccess.status.value.state === 'denied'
-              ? t('interactionAccessDeniedDescription')
-              : t('interactionAccessNoticeDescription')),
+            (desktopPlatform === 'darwin'
+              ? macInputGuidance()
+              : interactionAccess.status.value.state === 'denied'
+                ? t('interactionAccessDeniedDescription')
+                : t('interactionAccessNoticeDescription')),
         ],
         tone: interactionAccess.status.value.error ? 'error' : 'warning',
         actionLabel: interactionAccess.requesting.value ? t('authorizingInteractions') : t('authorizeInteractions'),
         actionLoading: interactionAccess.requesting.value,
         actionDisabled: interactionAccess.requesting.value,
       });
-    } else if (desktopPlatform === 'linux' && interactionAccess.status.value.state === 'unavailable') {
+    } else if (needsInteractionAccess && interactionAccess.status.value.state === 'unavailable') {
       const guidance = interactionGuidance.value;
       issues.push({
         id: 'interaction-unavailable',
         title: guidance?.title || t('interactionAccessUnavailableTitle'),
-        details: [guidance?.description || t('interactionAccessUnavailableDescription')],
+        details: [
+          desktopPlatform === 'darwin'
+            ? interactionAccess.status.value.error?.message || macInputGuidance()
+            : guidance?.description || t('interactionAccessUnavailableDescription'),
+        ],
         tone: 'info',
         copyText: guidance?.copyText,
         copyLabel: t('copyFix'),

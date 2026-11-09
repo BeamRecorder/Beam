@@ -626,6 +626,8 @@
     "openHud": "Apri HUD",
     "quit": "Esci da Beam",
     "preparingEditor": "Apertura dell’editor",
+    "interactionAccessNoticeTitleMac": "Accesso ai clic di mouse e trackpad",
+    "interactionAccessNoticeDescriptionMac": "Il monitoraggio input di macOS è necessario per acquisire i clic di mouse e trackpad per gli zoom automatici. Abilita Beam in Impostazioni di Sistema > Privacy e sicurezza > Monitoraggio input, poi avvia una nuova registrazione. La registrazione delle scorciatoie da tastiera è facoltativa; il testo digitato non viene mai memorizzato.",
     "interactionAccessNoticeTitle": "Consenti la registrazione delle scorciatoie",
     "interactionAccessNoticeDescription": "Beam richiede un accesso aggiuntivo per registrare le scorciatoie da tastiera. Su Linux, questo accesso abilita anche i metadati dei clic del mouse. Il testo digitato non viene mai salvato.",
     "interactionAccessDeniedDescription": "L’accesso non è stato concesso. Riprova ad abilitarlo dall’HUD.",

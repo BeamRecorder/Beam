@@ -626,6 +626,8 @@
     "openHud": "HUD öffnen",
     "quit": "Beam beenden",
     "preparingEditor": "Editor wird geöffnet",
+    "interactionAccessNoticeTitleMac": "Zugriff auf Maus- und Trackpad-Klicks",
+    "interactionAccessNoticeDescriptionMac": "Die macOS-Eingabeüberwachung ist nötig, um Maus- und Trackpad-Klicks für automatische Zooms zu erfassen. Aktiviere Beam unter Systemeinstellungen > Datenschutz & Sicherheit > Eingabeüberwachung und starte eine neue Aufnahme. Tastenkürzel können optional aufgezeichnet werden; eingegebener Text wird nie gespeichert.",
     "interactionAccessNoticeTitle": "Aufzeichnung von Tastenkürzeln erlauben",
     "interactionAccessNoticeDescription": "Beam benötigt zusätzlichen Zugriff, um Tastenkürzel aufzuzeichnen. Unter Linux aktiviert dieser Zugriff auch Metadaten für Mausklicks. Eingegebener Text wird nie gespeichert.",
     "interactionAccessDeniedDescription": "Der Zugriff wurde nicht gewährt. Versuche die Aktivierung erneut im HUD.",

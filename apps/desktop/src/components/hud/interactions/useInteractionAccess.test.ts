@@ -518,4 +518,61 @@ describe('useInteractionAccess', () => {
     expect(access.recordingRequested.value).toBe(false);
     wrapper.unmount();
   });
+  it.each([false, true])('macOS authorization preserves keyboard recording choice %s', async (enabled) => {
+    const { access, wrapper } = mountAccess('darwin');
+    access.hydrate(preferences(enabled));
+    await access.request();
+    expect(access.status.value).toEqual(available);
+    expect(access.enabled.value).toBe(enabled);
+    expect(capture.updatePreferences).toHaveBeenCalledWith({
+      recordingInteractions: { enabled, noticeDismissed: true },
+    });
+    wrapper.unmount();
+  });
+
+  it('refreshes macOS permission after returning from System Settings without enabling shortcuts', async () => {
+    capture.inputAccessStatus.mockResolvedValue(available);
+    const { access, wrapper } = mountAccess('darwin');
+    window.dispatchEvent(new Event('focus'));
+    await new Promise((done) => setTimeout(done, 0));
+    expect(access.status.value).toEqual(available);
+    expect(access.enabled.value).toBe(false);
+    expect(capture.requestInputAccess).not.toHaveBeenCalled();
+    expect(capture.updatePreferences).not.toHaveBeenCalled();
+    wrapper.unmount();
+    window.dispatchEvent(new Event('focus'));
+    expect(capture.inputAccessStatus).toHaveBeenCalledOnce();
+  });
+
+  it('reports a failed focus permission refresh and allows retry', async () => {
+    capture.inputAccessStatus.mockRejectedValueOnce(new Error('permission check failed')).mockResolvedValue(available);
+    const { access, wrapper } = mountAccess('darwin');
+    window.dispatchEvent(new Event('focus'));
+    await new Promise((done) => setTimeout(done, 0));
+    expect(access.status.value).toMatchObject({
+      state: 'unavailable',
+      canRequest: true,
+      error: { message: 'permission check failed' },
+    });
+    window.dispatchEvent(new Event('focus'));
+    await new Promise((done) => setTimeout(done, 0));
+    expect(access.status.value).toEqual(available);
+    wrapper.unmount();
+  });
+
+  it('does not issue a focus check while macOS authorization is pending', async () => {
+    let resolve!: (value: InputAccessStatus) => void;
+    capture.requestInputAccess.mockReturnValueOnce(
+      new Promise<InputAccessStatus>((done) => {
+        resolve = done;
+      }),
+    );
+    const { access, wrapper } = mountAccess('darwin');
+    const pending = access.request();
+    window.dispatchEvent(new Event('focus'));
+    expect(capture.inputAccessStatus).not.toHaveBeenCalled();
+    resolve(available);
+    await pending;
+    wrapper.unmount();
+  });
 });

@@ -626,6 +626,8 @@
     "openHud": "Abrir HUD",
     "quit": "Sair do Beam",
     "preparingEditor": "Abrindo o editor",
+    "interactionAccessNoticeTitleMac": "Acesso aos cliques do mouse e trackpad",
+    "interactionAccessNoticeDescriptionMac": "O Monitoramento de Entrada do macOS é necessário para capturar cliques do mouse e trackpad para os zooms automáticos. Ative o Beam em Ajustes do Sistema > Privacidade e Segurança > Monitoramento de Entrada e inicie uma nova gravação. Gravar atalhos de teclado é opcional; o texto digitado nunca é armazenado.",
     "interactionAccessNoticeTitle": "Permitir gravação de atalhos de teclado",
     "interactionAccessNoticeDescription": "O Beam precisa de acesso adicional para gravar atalhos de teclado. No Linux, esse acesso também ativa os metadados de cliques do mouse. O texto digitado nunca é salvo.",
     "interactionAccessDeniedDescription": "O acesso não foi concedido. Tente ativá-lo novamente pelo HUD.",

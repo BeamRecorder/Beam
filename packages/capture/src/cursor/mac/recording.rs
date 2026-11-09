@@ -71,6 +71,10 @@ impl MacCursorMetrics {
             self.interruptions.fetch_add(1, Ordering::Relaxed);
         }
     }
+
+    pub(super) fn record_input_interruption(&self) {
+        self.interruptions.fetch_add(1, Ordering::Relaxed);
+    }
 }
 
 pub struct MacCursorRecording {

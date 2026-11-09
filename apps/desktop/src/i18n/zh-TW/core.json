@@ -626,6 +626,8 @@
     "openHud": "開啟 HUD",
     "quit": "結束 Beam",
     "preparingEditor": "正在開啟編輯器",
+    "interactionAccessNoticeTitleMac": "滑鼠和觸控式軌跡板點擊權限",
+    "interactionAccessNoticeDescriptionMac": "自動縮放需要 macOS 輸入監控權限來記錄滑鼠和觸控式軌跡板的點擊。請在系統設定 > 隱私權與安全性 > 輸入監控中啟用 Beam，然後開始新的錄製。鍵盤快速鍵錄製為選用功能，絕不會儲存輸入的文字。",
     "interactionAccessNoticeTitle": "允許錄製鍵盤快速鍵",
     "interactionAccessNoticeDescription": "Beam 需要額外權限來錄製鍵盤快速鍵。在 Linux 上，此權限也會啟用滑鼠點擊中繼資料。輸入的文字不會被儲存。",
     "interactionAccessDeniedDescription": "未取得權限。請從 HUD 再次嘗試啟用。",

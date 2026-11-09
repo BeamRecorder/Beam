@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { capture } from '~/api/capture';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { PreferenceSettings } from '~/api/types/capture-api';
@@ -19,6 +19,20 @@ export function useInteractionAccess(platform: string = window.capture?.platform
   const noticeDismissed = ref(false);
   const requesting = ref(false);
   let autoResumeAttempted = false;
+
+  const reportFailure = (error: unknown) => {
+    status.value = {
+      state: 'unavailable',
+      canRequest: true,
+      clicks: false,
+      shortcuts: false,
+      recordsText: false,
+      error: {
+        code: 'input-access-failed',
+        message: error instanceof Error ? error.message : t('inputAccessFailed'),
+      },
+    };
+  };
 
   const hydrate = (preferences: PreferenceSettings) => {
     enabled.value = preferences.recordingInteractions.enabled;
@@ -71,29 +85,19 @@ export function useInteractionAccess(platform: string = window.capture?.platform
     try {
       status.value = await window.capture.requestInputAccess();
     } catch (error) {
-      status.value = {
-        state: 'unavailable',
-        canRequest: true,
-        clicks: false,
-        shortcuts: false,
-        recordsText: false,
-        error: {
-          code: 'input-access-failed',
-          message: error instanceof Error ? error.message : t('inputAccessFailed'),
-        },
-      };
+      reportFailure(error);
     } finally {
       requesting.value = false;
     }
     const available = status.value.state === 'available';
     if (!available && platform === 'linux') return;
-    enabled.value = available;
+    enabled.value = available && (platform === 'darwin' ? enabled.value : true);
     if (available) noticeDismissed.value = true;
     else if (status.value.state === 'denied' || status.value.error) noticeDismissed.value = false;
     try {
       await capture.updatePreferences({
         recordingInteractions: {
-          enabled: available,
+          enabled: enabled.value,
           ...(available || status.value.state === 'denied' || status.value.error
             ? { noticeDismissed: noticeDismissed.value }
             : {}),
@@ -116,6 +120,16 @@ export function useInteractionAccess(platform: string = window.capture?.platform
   const recordingRequested = computed(() =>
     platform === 'linux' ? enabled.value && noticeDismissed.value : recordingEnabled.value,
   );
+
+  const focused = () => {
+    if (!requesting.value) void refresh().catch(reportFailure);
+  };
+  onMounted(() => {
+    if (platform === 'darwin') window.addEventListener('focus', focused);
+  });
+  onBeforeUnmount(() => {
+    if (platform === 'darwin') window.removeEventListener('focus', focused);
+  });
 
   return {
     status,

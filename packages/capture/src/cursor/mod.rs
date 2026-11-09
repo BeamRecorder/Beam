@@ -12,6 +12,8 @@ mod event_writer;
 pub mod mac;
 #[cfg(any(target_os = "macos", test))]
 mod mac_button_event;
+#[cfg(any(target_os = "macos", test))]
+mod mac_tap;
 #[cfg(any(windows, target_os = "macos", test))]
 mod recording_support;
 #[cfg(any(target_os = "macos", test))]
