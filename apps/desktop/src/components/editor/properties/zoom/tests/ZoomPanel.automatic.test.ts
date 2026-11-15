@@ -53,3 +53,27 @@ describe('automatic zoom inspector action', () => {
     expect(wrapper.findComponent(ZoomGenerationButton).exists()).toBe(false);
   });
 });
+
+it('offers the opt-in switch directly in Zoom and emits the complete project setting', async () => {
+  const wrapper = create();
+  const toggle = wrapper.get('[role="switch"][aria-label="Experimental zoom"]');
+  expect(toggle.attributes('aria-checked')).toBe('false');
+  await toggle.trigger('click');
+  expect(wrapper.emitted('update:autoFollow')?.[0]?.[0]).toMatchObject({
+    experimentalZoom: true,
+    safeZone: 0.5,
+    responsiveness: 0.55,
+  });
+  expect(create({ still: true }).find('[aria-label="Experimental zoom"]').exists()).toBe(false);
+});
+it('generates free-slot experimental zooms without presenting a replace confirmation', async () => {
+  const wrapper = create({
+    canGenerate: true,
+    hasAutomaticZooms: true,
+    autoFollow: { experimentalZoom: true, safeZone: 0.5, responsiveness: 0.55, directionLock: true },
+  });
+  expect(wrapper.get('.zoom-generation-button').text()).toContain('Generate Auto Zooms');
+  await wrapper.get('.header-action button').trigger('click');
+  expect(wrapper.emitted('generate')).toEqual([['2d']]);
+  expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+});

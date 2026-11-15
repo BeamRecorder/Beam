@@ -271,7 +271,7 @@ function drawOrientedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions)
   const outerRadius = frameRadius(appearance.frame, appearanceRadius, outer);
   const shadowBlur = shadowBlurForAppearance(appearance) * shadowScale;
   let sourceDrawn = false;
-  if (shadowBlur > 0) {
+  if (options.paintPass !== 'content' && shadowBlur > 0) {
     const alphaSurface =
       options.shadowFollowsSourceAlpha && (appearance.frame === 'none' || appearance.frame === 'animated')
         ? alphaShadowSurface(options, outerRadius)
@@ -312,6 +312,7 @@ function drawOrientedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions)
         paint(ctx);
     }
   }
+  if (options.paintPass === 'shadow') return;
   const title = appearance.frameTitle.trim() || options.title;
   ctx.save();
   clipRect(ctx, outer, outerRadius, mask);

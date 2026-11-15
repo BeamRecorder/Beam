@@ -124,6 +124,7 @@ const { project, editorData } = toRefs(workspace.props);
     :has-automatic-zooms="hasAutomaticZooms"
     :zoom-motion-blur="zoomMotionBlur"
     :zoom-auto-follow="zoomAutoFollow"
+    :zoom-generation-status="zoomState.generationStatus.value"
     :composition="composition"
     :editor-data="editorData"
     :timeline-duration-ms="Math.round(duration * 1000)"

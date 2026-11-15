@@ -441,6 +441,7 @@ defineExpose({ openCanvasTransitions: openTransitionEdge });
                 :has-automatic-zooms="hasAutomaticZooms"
                 :motion-blur="zoomMotionBlur"
                 :auto-follow="zoomAutoFollow"
+                :generation-status="zoomGenerationStatus"
                 @update="emit('update:zoom', $event)"
                 @update:motion-blur="emit('update:zoomMotionBlur', $event)"
                 @update:auto-follow="emit('update:zoomAutoFollow', $event)"

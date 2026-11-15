@@ -152,3 +152,81 @@ describe('createCanvasFrameScheduler', () => {
     expect(pendingFrames).toHaveLength(0);
   });
 });
+
+it('caps experimental playback with the same cadence remainder as the reference Pixi ticker', () => {
+  const render = vi.fn(),
+    scheduler = createCanvasFrameScheduler(
+      render,
+      () => true,
+      () => true,
+      () => 60,
+    );
+  scheduler.requestRender();
+  let referenceClock: number | null = null,
+    expected = 0;
+  for (let frame = 0; frame < 144; frame++) {
+    const timestamp = (frame * 1000) / 144;
+    const next = pendingFrames.entries().next().value!;
+    pendingFrames.delete(next[0]);
+    next[1](timestamp);
+    if (referenceClock === null) {
+      referenceClock = timestamp;
+      expected++;
+    } else {
+      const delta = (timestamp - referenceClock) | 0;
+      if (delta >= 1000 / 60) {
+        referenceClock = timestamp - (delta % (1000 / 60));
+        expected++;
+      }
+    }
+  }
+  expect(render).toHaveBeenCalledTimes(expected);
+  expect(expected).toBeGreaterThan(55);
+  expect(expected).toBeLessThanOrEqual(60);
+  scheduler.dispose();
+});
+it('keeps uncapped standard playback and renders paused edits immediately after capped playback', () => {
+  let playing = true;
+  const render = vi.fn(),
+    scheduler = createCanvasFrameScheduler(
+      render,
+      () => playing,
+      () => true,
+      () => (playing ? 60 : 0),
+    );
+  scheduler.requestRender();
+  const paint = (time: number) => {
+    const next = pendingFrames.entries().next().value!;
+    pendingFrames.delete(next[0]);
+    next[1](time);
+  };
+  paint(0);
+  paint(7);
+  expect(render).toHaveBeenCalledOnce();
+  playing = false;
+  paint(8);
+  expect(render).toHaveBeenCalledTimes(2);
+  expect(pendingFrames.size).toBe(0);
+  scheduler.requestRender();
+  paint(9);
+  expect(render).toHaveBeenCalledTimes(3);
+  scheduler.dispose();
+});
+it('releases a pending skipped frame on dispose instead of continuing to poll', () => {
+  const render = vi.fn(),
+    scheduler = createCanvasFrameScheduler(
+      render,
+      () => true,
+      () => true,
+      () => 60,
+    );
+  scheduler.requestRender();
+  for (const time of [0, 7]) {
+    const next = pendingFrames.entries().next().value!;
+    pendingFrames.delete(next[0]);
+    next[1](time);
+  }
+  scheduler.dispose();
+  expect(pendingFrames.size).toBe(0);
+  expect(render).toHaveBeenCalledOnce();
+});

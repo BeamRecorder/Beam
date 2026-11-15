@@ -1,8 +1,17 @@
-import type { CursorTelemetryPoint } from '../capture/capture-session';
+import type { RecordlyZoomSettings } from './recordly-settings-types';
+import type { CursorTelemetryPoint, CursorEvent } from '../capture/capture-session';
 import type { ZoomElement, ZoomStyle } from './zoom-types';
+export interface ZoomGenerationCanvas {
+  width: number;
+  height: number;
+  showBackground: boolean;
+}
 export interface ZoomGenerationOptions {
+  experimentalZoom?: boolean;
+  recordly?: RecordlyZoomSettings;
+  cursorEvents?: readonly CursorEvent[];
   style: ZoomStyle;
-  canvas: { width: number; height: number; showBackground: boolean };
+  canvas?: ZoomGenerationCanvas;
 }
 export interface GlassGenerationInputs {
   telemetry: CursorTelemetryPoint[];

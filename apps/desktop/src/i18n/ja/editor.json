@@ -430,6 +430,8 @@
     "savingProject": "プロジェクトを保存中"
   },
   "ZoomPanel": {
+    "experimentalZoom": "試験的なズーム",
+    "experimentalZoomDesc": "Recordly風の2Dズームを使用します。切り替えるとロックされていない自動ズームが再生成され、元に戻すで復元できます。3Dと拡大レンズはBeamの動作を維持します。",
     "applyToTrackHint": "対象とタイミングを維持したまま、ロックされていないズームの表示を統一します。",
     "cameraFollow": "カメラ追従",
     "followCursor": "カーソルを追従",
@@ -507,7 +509,28 @@
     "cameraLeadMs": "先読み",
     "cameraFollowHint": "回転で基本の角度を設定します。追従でカーソルの動きを加え、応答時間で滑らかさを調整します。",
     "cameraManualHint": "カメラの角度は固定されます。フォーカス設定で拡大する領域を選択してください。",
-    "cameraIntensity": "3Dの強さ"
+    "cameraIntensity": "3Dの強さ",
+    "zoomBackground": "背景もズーム",
+    "zoomBackgroundDesc": "背景をカメラと一緒に動かします。オフにすると背景を固定します。",
+    "recordlyFocused": "フォーカス",
+    "recordlyCinematic": "シネマティック",
+    "recordlyClassic": "クラシックアニメーション",
+    "recordlyConnect": "近接するズームを接続",
+    "recordlyGap": "接続する最大間隔",
+    "recordlyPan": "接続時の移動時間",
+    "recordlyEntry": "ズームイン時間",
+    "recordlyExit": "ズームアウト時間",
+    "recordlyDuration": "新しい自動ズームの長さ",
+    "recordlySmoothness": "カメラの滑らかさ",
+    "recordlyStiffness": "カメラの剛性",
+    "recordlyDamping": "カメラの減衰",
+    "recordlyMass": "カメラの質量",
+    "recordlyNoSlots": "自動ズームを追加する空きがありません。",
+    "recordlyNoTelemetry": "自動ズームの生成に必要なカーソルデータが不足しています。",
+    "recordlyPanThreshold": "パン速度のしきい値",
+    "recordlyZoomThreshold": "ズーム速度のしきい値",
+    "recordlyDirectionalMax": "最大方向ブラー",
+    "recordlyRadialMax": "最大放射状ブラー"
   },
   "backgroundCatalog": {
     "images": "画像",

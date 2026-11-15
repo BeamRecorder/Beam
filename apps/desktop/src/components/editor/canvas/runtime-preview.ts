@@ -1,3 +1,5 @@
+import type { CompositionCameraEvaluator } from '@beam/engine/zoom/composition-camera-types';
+import { recordingFrameRate } from '@beam/engine/capture/recording-frame-rate';
 import { cameraFollowInputs } from './camera-follow-inputs';
 import { snapshotWithScreenCursor, snapshotCursorImageKey } from '@beam/runtime/rendering/snapshot-cursor';
 import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
@@ -32,6 +34,8 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
   let background: OffscreenCanvas | null = null;
   let backgroundKey: readonly unknown[] | null = null;
   const retainedCamera = createRetainedCamera();
+  let lastComposedEvaluator: CompositionCameraEvaluator | undefined;
+  let composedSeekVersion: number | undefined;
   let motionKey: readonly unknown[] = [];
   let motion: ReturnType<typeof createCursorMotionPlayer> | undefined;
   const prepare = (
@@ -73,7 +77,7 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
     let snapshot: CompositionSnapshot = {
       duration: props.duration ?? compositionDurationMs(props.composition) / 1000,
       render: {
-        fps: 60,
+        fps: props.zoomAutoFollow?.experimentalZoom ? recordingFrameRate(props.editorData?.tracks) : 60,
         sourceWidth: frame?.width ?? null,
         sourceHeight: frame?.height ?? null,
       },
@@ -82,7 +86,10 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
       background: null,
       blurPercent: 0,
       zooms:
-        !props.isPlaying && props.selectedZoom?.mode === 'manual' && props.selectedZoom.effect !== 'glass'
+        !props.zoomAutoFollow?.experimentalZoom &&
+        !props.isPlaying &&
+        props.selectedZoom?.mode === 'manual' &&
+        props.selectedZoom.effect !== 'glass'
           ? toRaw(props.zoomElements).filter((zoom) => zoom.id !== props.selectedZoom!.id)
           : zoomDraft
             ? toRaw(props.zoomElements).map((zoom) => (zoom.id === props.selectedZoom?.id ? zoomDraft : zoom))
@@ -119,8 +126,9 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
     const stableInputs = [
       props.selectedZoom?.id,
       props.selectedZoom?.mode,
-      props.isPlaying,
+      props.zoomAutoFollow?.experimentalZoom ? undefined : props.isPlaying,
       ...cameraFollowInputs(props.zoomAutoFollow),
+      snapshot.render.fps,
       cursor.telemetry,
       frame?.width,
       frame?.height,
@@ -130,6 +138,7 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
     ];
     const camera = retainedCamera.get({
       composition: snapshot.composition,
+      liveKey: props.zoomAutoFollow?.experimentalZoom ? cursor.telemetry : undefined,
       zooms: snapshot.zooms,
       stableInputs,
       create: (reuse) =>
@@ -171,6 +180,19 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
     const cursorTime = evaluated.screen
       ? (sessionTimeAt(evaluated.screen, props.currentTime * 1000, props.composition) ?? 0) / 1000
       : props.currentTime;
+    const seekChanged = composedSeekVersion !== props.seekVersion;
+    const center = evaluator.compose
+      ? evaluator.compose({
+          timeMs: props.currentTime * 1000,
+          isPlaying: props.isPlaying,
+          isSeeking: props.isSeeking,
+          shouldSnapPausedFrame: seekChanged || (!props.isPlaying && evaluator !== lastComposedEvaluator),
+        })
+      : evaluator.sample(props.currentTime * 1000);
+    if (!props.isSeeking) {
+      composedSeekVersion = props.seekVersion;
+      lastComposedEvaluator = evaluator;
+    }
     return {
       bounds,
       size,
@@ -181,7 +203,7 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
       evaluator,
       time: props.currentTime,
       evaluation: {
-        camera: evaluator.sample(props.currentTime * 1000),
+        camera: center,
         cursorMotion:
           evaluated.screen && frame ? motion.sample(cursorTime, cursorStateAt(cursor.events, cursorTime)) : null,
       },

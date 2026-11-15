@@ -1,3 +1,4 @@
+const { normalizeRecordlyZoom } = require('../../../../packages/engine/src/zoom/recordly-settings-schema.js');
 const {
   createDefaultCursorClickEffects,
   normalizeCursorClickEffect,
@@ -67,6 +68,9 @@ const zoomAutoFollowState = (value) => {
   const input = value && typeof value === 'object' ? value : {};
   const defaults = defaultZoomAutoFollow();
   return {
+    ...(input.experimentalZoom === true ? { experimentalZoom: true } : {}),
+    ...(input.recordly !== undefined ? { recordly: normalizeRecordlyZoom(input.recordly) } : {}),
+    ...(typeof input.zoomBackground === 'boolean' ? { zoomBackground: input.zoomBackground } : {}),
     enabled: typeof input.enabled === 'boolean' ? input.enabled : defaults.enabled,
     safeZone: clamp(finite(input.safeZone) ? input.safeZone : defaults.safeZone, 0.25, 0.75),
     responsiveness: clamp(finite(input.responsiveness) ? input.responsiveness : defaults.responsiveness, 0, 1),
@@ -145,6 +149,7 @@ const zoomState = (value) => {
       ![1, 2, 3, 4, 5, 6].includes(element.depth) ||
       !['auto', 'manual'].includes(element.mode) ||
       (element.enabled !== undefined && typeof element.enabled !== 'boolean') ||
+      (element.focusSpace !== undefined && !['source', 'viewport'].includes(element.focusSpace)) ||
       (element.projection !== undefined && !['2d', '3d', 'orbit'].includes(element.projection)) ||
       (element.transition !== undefined && element.transition !== 'cinematic') ||
       (element.tiltIntensity !== undefined && !finite(element.tiltIntensity)) ||
@@ -187,6 +192,7 @@ const zoomState = (value) => {
       startMs: Math.round(element.startMs),
       endMs: Math.round(element.endMs),
       focus: { cx: element.focus.cx, cy: element.focus.cy },
+      ...(element.focusSpace === undefined ? {} : { focusSpace: element.focusSpace }),
       depth: element.depth,
       mode: element.mode,
       enabled: element.enabled !== false,

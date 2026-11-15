@@ -1,3 +1,4 @@
+import { normalizeRecordlyZoom } from '@beam/engine/zoom/recordly-settings';
 import { reactive } from 'vue';
 import { describe, expect, it } from 'vitest';
 import { createCompositionSnapshot } from '@beam/runtime/rendering/snapshot';
@@ -394,15 +395,28 @@ describe('createCompositionSnapshot', () => {
   it('copies auto-follow settings into the export snapshot without retaining mutable references', () => {
     const input = {
       ...base(),
-      zoomAutoFollow: { enabled: false, safeZone: 0.42, responsiveness: 0.31, directionLock: false },
+      zoomAutoFollow: {
+        experimentalZoom: true,
+        zoomBackground: false,
+        recordly: normalizeRecordlyZoom({ loopCursor: true }),
+        enabled: false,
+        safeZone: 0.42,
+        responsiveness: 0.31,
+        directionLock: false,
+      },
     };
 
     const snapshot = createCompositionSnapshot(input);
+    input.zoomAutoFollow.recordly.zoomMotionBlurTuning.panVelocityThreshold = 123;
+    input.zoomAutoFollow.zoomBackground = true;
     input.zoomAutoFollow.enabled = true;
     input.zoomAutoFollow.safeZone = 0.1;
     input.zoomAutoFollow.responsiveness = 0.8;
 
     expect(snapshot.zoomAutoFollow).toEqual({
+      experimentalZoom: true,
+      zoomBackground: false,
+      recordly: normalizeRecordlyZoom({ loopCursor: true }),
       enabled: false,
       safeZone: 0.42,
       responsiveness: 0.31,

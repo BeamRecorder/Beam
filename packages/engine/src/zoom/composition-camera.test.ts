@@ -204,3 +204,69 @@ describe('composition camera evaluator', () => {
     }
   });
 });
+
+describe('opt-in experimental camera dispatch', () => {
+  it('keeps legacy project trajectories unchanged when the flag is absent or false', () => {
+    const input = { zooms, telemetry: [], autoFollow };
+    const legacy = createCompositionCameraEvaluator(input),
+      off = createCompositionCameraEvaluator({ ...input, autoFollow: { ...autoFollow, experimentalZoom: false } });
+    for (const time of [0, 300, 1000, 1500, 2000]) expect(off.sample(time)).toEqual(legacy.sample(time));
+  });
+  it('uses the experimental envelope and cursor rules without Beam tuning', () => {
+    const input = {
+      zooms: [autoZoom],
+      telemetry: [{ timeMs: 0, cx: 0.6, cy: 0.5 }],
+      autoFollow: { ...autoFollow, experimentalZoom: true },
+    };
+    const first = createCompositionCameraEvaluator(input),
+      second = createCompositionCameraEvaluator({
+        ...input,
+        autoFollow: { ...input.autoFollow, safeZone: 0.75, responsiveness: 1, directionLock: false },
+      });
+    expect(first.sample(2000)).toEqual(second.sample(2000));
+    expect(first.sample(2000).focus.cx).toBe(0.5);
+    first.invalidate();
+    expect(first.sample(2000)).toEqual(second.sample(2000));
+  });
+  it('preserves authored perspective effects alongside experimental 2D zooms', () => {
+    const perspective = { ...zooms[0]!, projection: '3d' as const };
+    const mixed = createCompositionCameraEvaluator({
+      zooms: [perspective, { ...zooms[0]!, id: 'later', startMs: 5000, endMs: 8000 }],
+      telemetry: [],
+      autoFollow: { ...autoFollow, experimentalZoom: true },
+    });
+    const standard = createCompositionCameraEvaluator({ zooms: [perspective], telemetry: [], autoFollow });
+    expect(mixed.sample(1000)).toEqual(standard.sample(1000));
+    expect(mixed.sample(6000).scale).toBeGreaterThan(1);
+    mixed.invalidate();
+    expect(mixed.sample(1000)).toEqual(standard.sample(1000));
+  });
+});
+
+it('retains the live experimental camera when an unrelated perspective effect exists later in the project', () => {
+  const inputs = {
+    zooms: [
+      { ...autoZoom, startMs: 0, endMs: 10000 },
+      { ...zooms[0]!, id: 'perspective-later', startMs: 12000, endMs: 16000, projection: '3d' as const },
+    ],
+    telemetry: [
+      { timeMs: 0, cx: 0.1, cy: 0.5 },
+      { timeMs: 4000, cx: 0.9, cy: 0.5 },
+    ],
+    autoFollow: { ...autoFollow, experimentalZoom: true },
+  };
+  const previous = createCompositionCameraEvaluator(inputs);
+  for (const timeMs of [0, 1000, 3000, 3017]) previous.compose!({ timeMs, isPlaying: true });
+  const expected = previous.compose!({ timeMs: 3034, isPlaying: true });
+  const continued = createCompositionCameraEvaluator(inputs, { previous, preserveLive: true, unchangedBeforeMs: 0 });
+  expect(continued.compose!({ timeMs: 3034, isPlaying: true })).toEqual(expected);
+  continued.invalidate();
+  const resumed = createCompositionCameraEvaluator(inputs, {
+    previous: continued,
+    preserveLive: true,
+    unchangedBeforeMs: 0,
+  });
+  expect(resumed.compose!({ timeMs: 4000, isPlaying: true })).toEqual(
+    createCompositionCameraEvaluator(inputs).compose!({ timeMs: 4000, isPlaying: true }),
+  );
+});

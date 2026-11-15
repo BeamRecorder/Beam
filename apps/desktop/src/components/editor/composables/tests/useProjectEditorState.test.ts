@@ -535,6 +535,7 @@ describe('useProjectEditorState property persistence', () => {
   it('round-trips project auto-follow settings through save and load', async () => {
     const savedState = createState();
     savedState.zoomAutoFollow.value = {
+      experimentalZoom: true,
       enabled: false,
       safeZone: 0.42,
       responsiveness: 0.31,
@@ -546,6 +547,7 @@ describe('useProjectEditorState property persistence', () => {
     await savingEditor.saveNow();
     const persistedState = mocks.saveProjectEditorState.mock.calls[0][1] as ProjectEditorState;
     expect(persistedState.zoom.autoFollow).toEqual({
+      experimentalZoom: true,
       enabled: false,
       safeZone: 0.42,
       responsiveness: 0.31,
@@ -558,6 +560,7 @@ describe('useProjectEditorState property persistence', () => {
     await loadingEditor.load('project');
 
     expect(loadingState.zoomAutoFollow.value).toEqual({
+      experimentalZoom: true,
       enabled: false,
       safeZone: 0.42,
       responsiveness: 0.31,

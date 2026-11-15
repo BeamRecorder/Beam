@@ -430,6 +430,8 @@
     "savingProject": "Projekt wird gespeichert"
   },
   "ZoomPanel": {
+    "experimentalZoom": "Experimenteller Zoom",
+    "experimentalZoomDesc": "2D-Zooms im Stil von Recordly verwenden. Beim Umschalten werden entsperrte automatische Zooms neu erstellt; Rückgängig stellt sie wieder her. 3D und Lupen behalten das Verhalten von Beam.",
     "applyToTrackHint": "Zoomdarstellung für entsperrte Zooms angleichen; Ziele und Zeitpunkte bleiben erhalten.",
     "cameraFollow": "Kameraführung",
     "followCursor": "Mauszeiger folgen",
@@ -507,7 +509,28 @@
     "cameraLeadMs": "Vorausschau",
     "cameraFollowHint": "Die Drehung legt den Grundwinkel fest. Die Verfolgung ergänzt Cursorbewegungen; die Reaktionszeit steuert deren Glätte.",
     "cameraManualHint": "Der Kamerawinkel bleibt fest. Wähle den zu vergrößernden Bereich mit den Fokusreglern.",
-    "cameraIntensity": "3D-Intensität"
+    "cameraIntensity": "3D-Intensität",
+    "zoomBackground": "Hintergrund zoomen",
+    "zoomBackgroundDesc": "Den Hintergrund mit der Kamera bewegen. Ausschalten, um ihn festzuhalten.",
+    "recordlyFocused": "Fokussiert",
+    "recordlyCinematic": "Filmisch",
+    "recordlyClassic": "Klassische Animation",
+    "recordlyConnect": "Nahe Zooms verbinden",
+    "recordlyGap": "Maximaler Verbindungsabstand",
+    "recordlyPan": "Dauer des Verbindungsschwenks",
+    "recordlyEntry": "Dauer des Heranzoomens",
+    "recordlyExit": "Dauer des Herauszoomens",
+    "recordlyDuration": "Dauer neuer automatischer Zooms",
+    "recordlySmoothness": "Kameraglättung",
+    "recordlyStiffness": "Kamerasteifigkeit",
+    "recordlyDamping": "Kameradämpfung",
+    "recordlyMass": "Kameramasse",
+    "recordlyNoSlots": "Kein freier Platz für weitere automatische Zooms.",
+    "recordlyNoTelemetry": "Nicht genügend aufgezeichnete Mauszeigerdaten für automatische Zooms.",
+    "recordlyPanThreshold": "Schwenkgeschwindigkeitsschwelle",
+    "recordlyZoomThreshold": "Zoomgeschwindigkeitsschwelle",
+    "recordlyDirectionalMax": "Maximale Richtungsunschärfe",
+    "recordlyRadialMax": "Maximale radiale Unschärfe"
   },
   "backgroundCatalog": {
     "images": "Bilder",

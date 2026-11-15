@@ -1,3 +1,4 @@
+import { experimentalRecordingZooms } from './experimental/experimental-recording-zooms';
 import type { ClipComposition } from '@beam/engine/shared/composition-types';
 import type { CursorTelemetryPoint } from '@beam/engine/capture/capture-session';
 import type { ZoomElement } from '@beam/engine/zoom/zoom-types';
@@ -19,8 +20,19 @@ export function generateRecordingZooms(
   options?: ZoomGenerationOptions,
 ): ZoomElement[] {
   composition = compileSceneComposition(composition);
+  if (options?.experimentalZoom && options.style === '2d')
+    return experimentalRecordingZooms(
+      composition,
+      sessionId,
+      telemetry,
+      reserved,
+      options.cursorEvents,
+      options.recordly,
+    );
   const animate = createSceneAnimator(composition);
-  const scenePoint = options ? createScenePointMapper(composition, options.canvas.width, options.canvas.height) : null;
+  const scenePoint = options?.canvas
+    ? createScenePointMapper(composition, options.canvas.width, options.canvas.height)
+    : null;
   const totalDuration = compositionDurationMs(composition);
   const recordingEndMs = composition.assets
     .filter((asset) => asset.sessionId === sessionId && asset.kind === 'video')
@@ -59,12 +71,14 @@ export function generateRecordingZooms(
           }));
     let generated: ZoomElement[];
     if (options?.style === 'glass') {
+      if (!options.canvas) throw new Error('Automatic lenses require an output canvas.');
       const asset = composition.assets.find((asset) => asset.id === clip.assetId)!;
       if (!asset.width || !asset.height) throw new Error('Automatic lenses require recording dimensions.');
-      const { width, height } = options.canvas;
+      const canvas = options.canvas;
+      const { width, height } = canvas;
       const mapped = samples.flatMap((point) => {
         const time = clip.timelineStartMs + point.timeMs;
-        const focus = recordingFocus(animate(clip, time), point, asset.width!, asset.height!, options.canvas);
+        const focus = recordingFocus(animate(clip, time), point, asset.width!, asset.height!, canvas);
         return focus ? [{ ...point, ...scenePoint!(clip.id, focus, time) }] : [];
       });
       generated = buildAutomaticGlassElements({

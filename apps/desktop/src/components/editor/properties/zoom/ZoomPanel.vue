@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import RecordlyBlurControls from './RecordlyBlurControls.vue';
+import RecordlyZoomControls from './RecordlyZoomControls.vue';
+import { cameraZoomsBackground, normalizeRecordlyZoom } from '@beam/engine/zoom/recordly-settings';
 import TrackPropertyToggle from '../TrackPropertyToggle.vue';
 import { zoomPropertyScopeKey } from './zoom-property-context';
 import { computed, ref, watch, inject } from 'vue';
@@ -107,12 +110,57 @@ const setStyle = (value: ZoomStyle) => {
       value === '3d' && zoom.mode === 'auto' ? 'custom' : normalizeZoomTiltPreset(zoom.tiltPreset, zoom.tiltIntensity),
   });
 };
-const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) =>
-  emit('update:motionBlur', { ...props.motionBlur, ...patch });
+const usesRecordlyCamera = computed(() => props.autoFollow.experimentalZoom && style.value === '2d');
+const experimentalMotionBlur = computed(() => normalizeRecordlyZoom(props.autoFollow.recordly).zoomMotionBlur);
+const motionEnabled = computed(() =>
+  usesRecordlyCamera.value ? experimentalMotionBlur.value > 0 : props.motionBlur.enabled,
+);
+const motionIntensity = computed(() =>
+  usesRecordlyCamera.value ? experimentalMotionBlur.value : props.motionBlur.intensity,
+);
+const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
+  if (usesRecordlyCamera.value) {
+    const recordly = normalizeRecordlyZoom(props.autoFollow.recordly);
+    emit('update:autoFollow', {
+      ...props.autoFollow,
+      recordly: {
+        ...recordly,
+        zoomMotionBlur: patch.enabled === false ? 0 : (patch.intensity ?? (recordly.zoomMotionBlur || 0.35)),
+      },
+    });
+  } else emit('update:motionBlur', { ...props.motionBlur, ...patch });
+};
 </script>
 
 <template>
   <div class="zoom-panel">
+    <div v-if="!still" class="section-block experimental-zoom-setting">
+      <div class="section-header">
+        <span class="section-title">{{ t('experimentalZoom') }}</span>
+        <Switch
+          :model-value="autoFollow.experimentalZoom === true"
+          :aria-label="t('experimentalZoom')"
+          @update:model-value="emit('update:autoFollow', { ...autoFollow, experimentalZoom: $event })"
+        />
+      </div>
+      <p class="section-description">{{ t('experimentalZoomDesc') }}</p>
+    </div>
+    <div v-if="!still" class="section-block background-zoom-setting">
+      <div class="section-header">
+        <span class="section-title">{{ t('zoomBackground') }}</span
+        ><Switch
+          :model-value="cameraZoomsBackground(autoFollow)"
+          :aria-label="t('zoomBackground')"
+          @update:model-value="emit('update:autoFollow', { ...autoFollow, zoomBackground: $event })"
+        />
+      </div>
+      <p class="section-description">{{ t('zoomBackgroundDesc') }}</p>
+    </div>
+    <RecordlyZoomControls
+      v-if="!still && autoFollow.experimentalZoom"
+      :model-value="autoFollow"
+      @update:model-value="emit('update:autoFollow', $event)"
+    />
     <TrackPropertyToggle :scope="propertyScope" :hint="t('applyToTrackHint')" />
     <template v-if="selectedZoom || !still">
       <Accordion v-model="sections.style" :title="glassText('style')" appearance="inspector">
@@ -237,28 +285,37 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) =>
     <ZoomClickEmptyState v-if="!selectedZoom" />
     <template v-if="!still && style !== 'glass'">
       <Accordion v-model="sections.camera" :title="t('cameraFollow')" appearance="inspector">
-        <ZoomAutoFollowControls :model-value="autoFollow" @update:model-value="emit('update:autoFollow', $event)" />
+        <ZoomAutoFollowControls
+          :model-value="autoFollow"
+          :reference-active="autoFollow.experimentalZoom === true && style === '2d'"
+          @update:model-value="emit('update:autoFollow', $event)"
+        />
       </Accordion>
       <Accordion v-model="sections.animation" :title="t('motionBlur')" appearance="inspector">
         <div class="section-block motion-blur-settings">
           <div class="section-header">
             <span class="section-description">{{ t('motionBlurDesc') }}</span>
             <Switch
-              :model-value="motionBlur.enabled"
+              :model-value="motionEnabled"
               :aria-label="t('motionBlur')"
               @update:model-value="updateMotionBlur({ enabled: $event })"
             />
           </div>
           <BigSlider
-            v-if="motionBlur.enabled"
-            :model-value="motionBlur.intensity * 100"
+            v-if="motionEnabled"
+            :model-value="motionIntensity * 100"
             :min="0"
-            :max="100"
+            :max="usesRecordlyCamera ? 200 : 100"
             :step="1"
-            :default-value="55"
+            :default-value="usesRecordlyCamera ? 35 : 55"
             :label="t('motionBlurIntensity')"
             :format-value="(value) => `${Math.round(value)}%`"
             @update:model-value="updateMotionBlur({ intensity: $event / 100 })"
+          />
+          <RecordlyBlurControls
+            v-if="usesRecordlyCamera && motionEnabled"
+            :model-value="autoFollow"
+            @update:model-value="emit('update:autoFollow', $event)"
           />
         </div>
       </Accordion>
@@ -266,11 +323,20 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) =>
     <Accordion v-if="!still" v-model="sections.automatic" :title="glassText('automatic')" appearance="inspector">
       <div class="header-action section-block">
         <p class="hint">{{ glassText('automaticHint') }}</p>
+        <p v-if="generationStatus === 'no-slots'" role="status" class="section-description">
+          {{ t('recordlyNoSlots') }}
+        </p>
+        <p v-else-if="generationStatus === 'no-telemetry'" role="status" class="section-description">
+          {{ t('recordlyNoTelemetry') }}
+        </p>
+        <p v-else-if="generationStatus === 'no-interactions'" role="status" class="section-description">
+          {{ t('autoZoomNoClicks') }}
+        </p>
         <ZoomGenerationButton
           :can-generate="canGenerate"
-          :has-automatic-zooms="hasAutomaticZooms"
+          :has-automatic-zooms="hasAutomaticZooms && !(autoFollow.experimentalZoom && style === '2d')"
           :editor-data="editorData"
-          @click="confirmingGeneration = true"
+          @click="autoFollow.experimentalZoom && style === '2d' ? confirmGeneration() : (confirmingGeneration = true)"
         />
       </div>
     </Accordion>

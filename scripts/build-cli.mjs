@@ -54,6 +54,10 @@ await packageCliCompiler(root, output);
 for (const file of [
   'LICENSE',
   'LICENSING.md',
+  'THIRD_PARTY_NOTICES.md',
+  'packages/engine/src/zoom/recordly/LICENSE.md',
+  'packages/engine/src/zoom/recordly/upstream.json',
+  'packages/runtime/src/zoom/recordly/LICENSE.pixi-filters',
   'docs/licensing/LEGACY-MIT.txt',
   'docs/licensing/DESKTOP-PRO.md',
   'apps/desktop/src/components/brand/Beamy/engine/LICENSE',

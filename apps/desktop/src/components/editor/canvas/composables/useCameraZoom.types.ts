@@ -38,6 +38,8 @@ export interface UseCameraZoomOptions {
   zoomElements: () => ZoomElement[];
   zoomMotionBlur?: () => ZoomMotionBlurSettings;
   zoomAutoFollow?: () => ZoomAutoFollowSettings;
+  isSeeking?: () => boolean | undefined;
+  seekVersion?: () => number | undefined;
   selectedZoom: () => ZoomElement | null;
   currentTime: () => number;
   isPlaying: () => boolean;

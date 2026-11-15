@@ -1,3 +1,4 @@
+import { recordingFrameRate } from '@beam/engine/capture/recording-frame-rate';
 import { openApplicationSettings } from '~/components/settings/open-application-settings';
 import { usePreferencesStore } from '~/stores/preferences';
 import { recordingZoomMode } from '@beam/engine/zoom/recording-zoom-preference';
@@ -135,6 +136,7 @@ export function useVideoEditor(options: {
     editorDefaults,
     composition: compositionState.composition,
     canvas: outputCanvas,
+    freshRecording: (): boolean => !editorState.loading.value && editorState.isFreshProject.value,
   });
   if (getCurrentInstance()) provide(zoomPropertyScopeKey, zoomState.propertyScope);
   watch(
@@ -264,11 +266,7 @@ export function useVideoEditor(options: {
     librariesDisposed = true;
   });
 
-  const sourceFps = computed(() => {
-    const screen = editorData.value?.tracks.find((track) => track.kind === 'screen');
-    const value = screen?.format.frameRate ?? screen?.format.fps;
-    return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 30;
-  });
+  const sourceFps = computed(() => recordingFrameRate(editorData.value?.tracks));
   const createExportSnapshot = () =>
     createCompositionSnapshot({
       duration: compositionDurationMs(playbackComposition.value) / 1_000,

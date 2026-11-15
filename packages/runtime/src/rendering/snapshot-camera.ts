@@ -1,3 +1,7 @@
+import { createRecordlySourceClock } from '@beam/engine/zoom/experimental/recordly-source-clock';
+import { recordlyCompositionClips } from '@beam/engine/zoom/experimental/recordly-inputs';
+import { experimentalScreenGeometry } from '@beam/engine/zoom/experimental/experimental-camera-geometry';
+import { FULL_EXPERIMENTAL_GEOMETRY } from '@beam/engine/zoom/experimental/experimental-camera-geometry';
 import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
 import {
   createCompositionCameraEvaluator,
@@ -26,6 +30,30 @@ export const createSnapshotCameraEvaluator = (
   const scenePoint = createScenePointMapper(snapshot.composition, snapshot.canvas.width, snapshot.canvas.height);
   return createCompositionCameraEvaluator(
     {
+      frameRate: snapshot.render.fps,
+      viewport: { width: snapshot.canvas.width, height: snapshot.canvas.height },
+      recordlyClips: recordlyCompositionClips(compileSceneComposition(snapshot.composition)),
+      recordlySourceAt: createRecordlySourceClock(snapshot.composition, screenAt),
+      sourceDurationMs: Math.max(
+        0,
+        ...snapshot.composition.assets
+          .filter((asset) => asset.kind === 'video')
+          .map((asset) => (asset.sessionStartMs ?? 0) + asset.durationMs),
+      ),
+      experimentalGeometryAt: (timeMs) => {
+        const screen = screenAt(timeMs);
+        const asset = snapshot.composition.assets.find((asset) => asset.id === screen?.assetId);
+        return screen
+          ? experimentalScreenGeometry(
+              screen,
+              asset?.width ?? sourceWidth,
+              asset?.height ?? sourceHeight,
+              snapshot.canvas.width,
+              snapshot.canvas.height,
+              snapshot.canvas.showBackground,
+            )
+          : FULL_EXPERIMENTAL_GEOMETRY;
+      },
       zooms: snapshot.zooms,
       telemetry: snapshot.cursor.telemetry,
       autoFollow: snapshot.zoomAutoFollow,

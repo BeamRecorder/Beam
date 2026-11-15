@@ -430,6 +430,8 @@
     "savingProject": "Saving project"
   },
   "ZoomPanel": {
+    "experimentalZoom": "Experimental zoom",
+    "experimentalZoomDesc": "Use Recordly-style 2D zooms. Switching regenerates unlocked automatic zooms; undo restores them. 3D and lenses keep Beam’s behavior.",
     "applyToTrackHint": "Share zoom appearance with unlocked zooms, keeping each target and timing.",
     "cameraFollow": "Camera follow",
     "followCursor": "Follow cursor",
@@ -507,7 +509,28 @@
     "cameraLeadMs": "Look-ahead",
     "cameraFollowHint": "Rotation sets the base angle. Follow adds cursor-driven movement; response time controls its smoothness.",
     "cameraManualHint": "The camera angle stays fixed. Use the focus controls to choose the area to magnify.",
-    "cameraIntensity": "3D intensity"
+    "cameraIntensity": "3D intensity",
+    "zoomBackground": "Zoom background",
+    "zoomBackgroundDesc": "Move the background with the camera. Turn off to keep it fixed.",
+    "recordlyFocused": "Focused",
+    "recordlyCinematic": "Cinematic",
+    "recordlyClassic": "Classic animation",
+    "recordlyConnect": "Connect nearby zooms",
+    "recordlyGap": "Maximum connection gap",
+    "recordlyPan": "Connection pan duration",
+    "recordlyEntry": "Zoom in duration",
+    "recordlyExit": "Zoom out duration",
+    "recordlyDuration": "New auto zoom duration",
+    "recordlySmoothness": "Camera smoothness",
+    "recordlyStiffness": "Camera stiffness",
+    "recordlyDamping": "Camera damping",
+    "recordlyMass": "Camera mass",
+    "recordlyNoSlots": "No free space for additional automatic zooms.",
+    "recordlyNoTelemetry": "Not enough recorded cursor data to generate automatic zooms.",
+    "recordlyPanThreshold": "Pan speed threshold",
+    "recordlyZoomThreshold": "Zoom speed threshold",
+    "recordlyDirectionalMax": "Maximum directional blur",
+    "recordlyRadialMax": "Maximum radial blur"
   },
   "backgroundCatalog": {
     "images": "Images",

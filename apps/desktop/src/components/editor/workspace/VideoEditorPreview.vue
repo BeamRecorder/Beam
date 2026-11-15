@@ -30,6 +30,8 @@ const {
   playbackState,
   playbackError,
   frameVersion,
+  isSeeking,
+  seekVersion,
   previewQuality,
   backgroundBlurPercent,
   performanceSnapshot,
@@ -175,6 +177,8 @@ useActionShortcuts(
         :background-blur-percent="backgroundBlurPercent"
         :frame-for="player.frameFor"
         :frame-version="frameVersion"
+        :is-seeking="isSeeking"
+        :seek-version="seekVersion"
         :capture-composition-preview="captureCompositionPreview"
         :dom-preview-active="Boolean(liveHtmlPreview)"
         :preview-quality="previewQuality"

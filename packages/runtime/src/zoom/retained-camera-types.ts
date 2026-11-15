@@ -5,6 +5,8 @@ import type { CameraCheckpointReuse, CompositionCameraEvaluator } from '@beam/en
 export interface RetainedCameraRequest {
   composition: ClipComposition;
   zooms: readonly ZoomElement[];
+  /** Same immutable source telemetry allows live springs to survive edits/settings changes. */
+  liveKey?: object;
   stableInputs: readonly unknown[];
   create(reuse?: CameraCheckpointReuse): CompositionCameraEvaluator;
 }

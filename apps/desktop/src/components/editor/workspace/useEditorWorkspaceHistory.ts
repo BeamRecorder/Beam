@@ -1,3 +1,4 @@
+import { bindZoomAlgorithmHistory } from '../composables/zoom-algorithm-history';
 import { computed, watch } from 'vue';
 import type { CaptionInlineEditingEnd } from '~/components/editor/canvas/caption-inline-editing';
 import { useEditorUndoRedo, type EditorStateSnapshot } from '~/components/editor/composables/useEditorUndoRedo';
@@ -125,6 +126,11 @@ export function useEditorWorkspaceHistory(state: EditorWorkspaceState) {
   // mode and all copied properties together, before a later slider edit can merge in.
   bindTrackPropertyHistory(
     [compositionState.clipTrackProperties, state.cursorProperties, zoomState.propertyScope],
+    () => commitNow(createEditorSnapshot()),
+    () => historyInitialized && !editorState.loading.value && !restoring.value,
+  );
+  bindZoomAlgorithmHistory(
+    zoomState,
     () => commitNow(createEditorSnapshot()),
     () => historyInitialized && !editorState.loading.value && !restoring.value,
   );

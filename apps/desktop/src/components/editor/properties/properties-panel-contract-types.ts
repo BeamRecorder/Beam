@@ -1,3 +1,4 @@
+import type { InteractionZoomSuggestionStatus } from '@beam/engine/zoom/recordly/timeline/zoomSuggestionUtils';
 import type { CursorPackDescriptor, CursorSelection } from '@beam/engine/capture/cursor-pack';
 import type { BackgroundMedia, BackgroundMediaGroup, BackgroundValue } from '@beam/engine/shared/background-types';
 import type {
@@ -60,6 +61,7 @@ export interface PropertiesPanelProps {
   canGenerateZooms: boolean;
   hasAutomaticZooms: boolean;
   zoomAutoFollow?: ZoomAutoFollowSettings;
+  zoomGenerationStatus?: InteractionZoomSuggestionStatus | null;
   zoomMotionBlur?: ZoomMotionBlurSettings;
   composition: ClipComposition;
   editorData?: ProjectEditorData | null;

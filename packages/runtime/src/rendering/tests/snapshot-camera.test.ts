@@ -63,6 +63,7 @@ const withScreen = () => {
 
 const snapshot = (): CompositionSnapshot =>
   ({
+    render: { fps: 60, sourceWidth: 640, sourceHeight: 480 },
     composition: emptyComposition(),
     zooms: [],
     cursor: { telemetry: [] },

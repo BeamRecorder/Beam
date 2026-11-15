@@ -430,6 +430,8 @@
     "savingProject": "正在儲存專案"
   },
   "ZoomPanel": {
+    "experimentalZoom": "實驗性縮放",
+    "experimentalZoomDesc": "使用 Recordly 風格的 2D 縮放。切換時會重新產生未鎖定的自動縮放，復原可還原。3D 和放大鏡仍保留 Beam 的行為。",
     "applyToTrackHint": "統一未鎖定縮放片段的樣式，保留各自的目標和時間。",
     "cameraFollow": "鏡頭跟隨",
     "followCursor": "跟隨游標",
@@ -507,7 +509,28 @@
     "cameraLeadMs": "預判時間",
     "cameraFollowHint": "旋轉設定基礎角度。跟隨疊加游標移動，回應時間控制平滑程度。",
     "cameraManualHint": "相機角度保持固定。使用焦點控制項選擇要放大的區域。",
-    "cameraIntensity": "3D 強度"
+    "cameraIntensity": "3D 強度",
+    "zoomBackground": "縮放背景",
+    "zoomBackgroundDesc": "讓背景隨鏡頭移動。關閉後背景保持固定。",
+    "recordlyFocused": "聚焦",
+    "recordlyCinematic": "電影感",
+    "recordlyClassic": "經典動畫",
+    "recordlyConnect": "連接相鄰縮放",
+    "recordlyGap": "最大連接間隔",
+    "recordlyPan": "連接平移時間",
+    "recordlyEntry": "放大時間",
+    "recordlyExit": "縮小時間",
+    "recordlyDuration": "新自動縮放時間",
+    "recordlySmoothness": "鏡頭平滑度",
+    "recordlyStiffness": "鏡頭剛度",
+    "recordlyDamping": "鏡頭阻尼",
+    "recordlyMass": "鏡頭質量",
+    "recordlyNoSlots": "沒有空間新增更多自動縮放。",
+    "recordlyNoTelemetry": "記錄的游標資料不足，無法產生自動縮放。",
+    "recordlyPanThreshold": "平移速度閾值",
+    "recordlyZoomThreshold": "縮放速度閾值",
+    "recordlyDirectionalMax": "最大方向模糊",
+    "recordlyRadialMax": "最大徑向模糊"
   },
   "backgroundCatalog": {
     "images": "圖片",

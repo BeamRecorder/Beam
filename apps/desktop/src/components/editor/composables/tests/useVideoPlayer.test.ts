@@ -553,3 +553,49 @@ describe('useVideoPlayer', () => {
     log.mockRestore();
   });
 });
+
+it('keeps a superseded seek from releasing the pending frame and snaps only the newest presented seek', async () => {
+  const scope = effectScope(),
+    player = scope.run(() => useVideoPlayer([]))!;
+  await player.loadComposition(composition);
+  const engine = playback.instances.at(-1)!;
+  const pending: Array<(value: 'presented') => void> = [];
+  engine.seek.mockImplementation(() => new Promise((resolve) => pending.push(resolve)));
+  const first = player.seek(0.5),
+    second = player.seek(1);
+  expect(player.isSeeking.value).toBe(true);
+  expect(player.seekVersion.value).toBe(0);
+  pending[0]!('presented');
+  await first;
+  expect(player.isSeeking.value).toBe(true);
+  expect(player.seekVersion.value).toBe(0);
+  pending[1]!('presented');
+  await second;
+  expect(player.isSeeking.value).toBe(false);
+  expect(player.seekVersion.value).toBe(1);
+  scope.stop();
+});
+it('releases seek state after decode failure and preserves the last presented revision', async () => {
+  const scope = effectScope(),
+    player = scope.run(() => useVideoPlayer([]))!;
+  await player.loadComposition(composition);
+  const engine = playback.instances.at(-1)!;
+  engine.seek.mockRejectedValueOnce(new Error('decode'));
+  await expect(player.seek(0.5)).rejects.toThrow('decode');
+  expect(player.isSeeking.value).toBe(false);
+  expect(player.seekVersion.value).toBe(0);
+  await player.seek(0.5);
+  expect(player.seekVersion.value).toBe(1);
+  scope.stop();
+});
+it('does not publish a completed frame for a superseded decode result', async () => {
+  const scope = effectScope(),
+    player = scope.run(() => useVideoPlayer([]))!;
+  await player.loadComposition(composition);
+  // The real playback API distinguishes cancellation from a presented image.
+  playback.instances.at(-1)!.seek.mockImplementationOnce(async () => 'superseded' as never);
+  expect(await player.seek(0.5)).toBe('superseded');
+  expect(player.isSeeking.value).toBe(false);
+  expect(player.seekVersion.value).toBe(0);
+  scope.stop();
+});

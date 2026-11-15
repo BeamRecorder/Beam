@@ -430,6 +430,8 @@
     "savingProject": "Salvando projeto"
   },
   "ZoomPanel": {
+    "experimentalZoom": "Zoom experimental",
+    "experimentalZoomDesc": "Usar zooms 2D no estilo do Recordly. Ao alternar, os zooms automáticos desbloqueados são gerados novamente; Desfazer os restaura. Os efeitos 3D e as lupas mantêm o comportamento do Beam.",
     "applyToTrackHint": "Compartilhar o estilo dos zooms desbloqueados, mantendo os alvos e os tempos.",
     "cameraFollow": "Acompanhamento da câmera",
     "followCursor": "Seguir o cursor",
@@ -507,7 +509,28 @@
     "cameraLeadMs": "Antecipação",
     "cameraFollowHint": "A rotação define o ângulo base. O seguimento adiciona os movimentos do cursor; o tempo de resposta controla a suavidade.",
     "cameraManualHint": "O ângulo da câmera permanece fixo. Use os controles de foco para escolher a área a ampliar.",
-    "cameraIntensity": "Intensidade 3D"
+    "cameraIntensity": "Intensidade 3D",
+    "zoomBackground": "Ampliar o fundo",
+    "zoomBackgroundDesc": "Mover o fundo com a câmera. Desative para mantê-lo fixo.",
+    "recordlyFocused": "Focado",
+    "recordlyCinematic": "Cinematográfico",
+    "recordlyClassic": "Animação clássica",
+    "recordlyConnect": "Conectar zooms próximos",
+    "recordlyGap": "Intervalo máximo de conexão",
+    "recordlyPan": "Duração do movimento de conexão",
+    "recordlyEntry": "Duração da aproximação",
+    "recordlyExit": "Duração do afastamento",
+    "recordlyDuration": "Duração de novos zooms automáticos",
+    "recordlySmoothness": "Suavidade da câmera",
+    "recordlyStiffness": "Rigidez da câmera",
+    "recordlyDamping": "Amortecimento da câmera",
+    "recordlyMass": "Massa da câmera",
+    "recordlyNoSlots": "Não há espaço livre para mais zooms automáticos.",
+    "recordlyNoTelemetry": "Dados do cursor insuficientes para gerar zooms automáticos.",
+    "recordlyPanThreshold": "Limite de velocidade de movimento",
+    "recordlyZoomThreshold": "Limite de velocidade de zoom",
+    "recordlyDirectionalMax": "Desfoque direcional máximo",
+    "recordlyRadialMax": "Desfoque radial máximo"
   },
   "backgroundCatalog": {
     "images": "Imagens",

@@ -15,13 +15,16 @@ import {
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('ZoomPanel');
-const props = defineProps<{ modelValue: ZoomAutoFollowSettings }>();
+const props = withDefaults(defineProps<{ modelValue: ZoomAutoFollowSettings; referenceActive?: boolean }>(), {
+  referenceActive: undefined,
+});
 const emit = defineEmits<{
   (event: 'update:modelValue', value: ZoomAutoFollowSettings): void;
 }>();
 
 const advancedOpen = ref(false);
 const enabled = computed(() => props.modelValue.enabled !== false);
+const referenceActive = computed(() => props.referenceActive ?? props.modelValue.experimentalZoom === true);
 const presets: ZoomAutoFollowPreset[] = ['stable', 'balanced', 'responsive'];
 const activePreset = computed(() =>
   presets.find((preset) => {
@@ -36,7 +39,7 @@ const activePreset = computed(() =>
 const update = (patch: Partial<ZoomAutoFollowSettings>) =>
   emit('update:modelValue', normalizeZoomAutoFollow({ ...props.modelValue, ...patch }));
 const selectPreset = (preset: ZoomAutoFollowPreset) =>
-  emit('update:modelValue', { ...ZOOM_AUTO_FOLLOW_PRESETS[preset] });
+  emit('update:modelValue', { ...props.modelValue, ...ZOOM_AUTO_FOLLOW_PRESETS[preset] });
 </script>
 
 <template>
@@ -52,7 +55,7 @@ const selectPreset = (preset: ZoomAutoFollowPreset) =>
         @update:model-value="update({ enabled: $event })"
       />
     </div>
-    <div v-if="enabled" class="follow-options">
+    <div v-if="enabled && !referenceActive" class="follow-options">
       <ButtonGroup class="auto-follow-presets" full>
         <Button
           v-for="preset in presets"
@@ -75,7 +78,11 @@ const selectPreset = (preset: ZoomAutoFollowPreset) =>
       </div>
     </div>
     <RafRevealTransition>
-      <div v-if="enabled && advancedOpen" id="zoom-auto-follow-advanced-panel" class="advanced-options">
+      <div
+        v-if="enabled && !referenceActive && advancedOpen"
+        id="zoom-auto-follow-advanced-panel"
+        class="advanced-options"
+      >
         <BigSlider
           :model-value="modelValue.safeZone * 100"
           :min="25"

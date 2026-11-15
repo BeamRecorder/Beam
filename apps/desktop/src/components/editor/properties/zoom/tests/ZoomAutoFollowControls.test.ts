@@ -48,3 +48,22 @@ it('retains the toggle while advanced sliders and direction lock change', async 
     [{ ...DEFAULT_ZOOM_AUTO_FOLLOW, directionLock: false }],
   ]);
 });
+
+it('hides Beam tuning while the reference algorithm is active and preserves the flag when disabling follow', async () => {
+  const value = { ...DEFAULT_ZOOM_AUTO_FOLLOW, experimentalZoom: true };
+  const wrapper = create(value);
+  expect(wrapper.find('[data-auto-follow-preset]').exists()).toBe(false);
+  expect(wrapper.find('[aria-controls="zoom-auto-follow-advanced-panel"]').exists()).toBe(false);
+  await wrapper.get('[role="switch"]').trigger('click');
+  expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([{ ...value, enabled: false }]);
+});
+
+it('keeps Beam tuning available for a perspective shot without clearing the global experimental flag', async () => {
+  const value = { ...DEFAULT_ZOOM_AUTO_FOLLOW, experimentalZoom: true };
+  const wrapper = create(value);
+  await wrapper.setProps({ referenceActive: false });
+  await wrapper.get('[data-auto-follow-preset="stable"]').trigger('click');
+  expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([
+    { ...ZOOM_AUTO_FOLLOW_PRESETS.stable, experimentalZoom: true },
+  ]);
+});

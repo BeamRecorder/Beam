@@ -25,6 +25,9 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   const playbackState = ref<PlaybackState>('idle');
   const playbackError = ref<MediaError | null>(null);
   const frameVersion = ref(0);
+  const isSeeking = ref(false);
+  const seekVersion = ref(0);
+  let seekRequest = 0;
   const previewQuality = ref<PreviewQuality>('full');
   const playbackMetrics = ref<PlaybackMetrics | null>(null);
   const audioMetrics = ref<AudioPlaybackMetrics | null>(null);
@@ -144,7 +147,15 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     const target = Math.max(0, Math.min(time, duration.value));
     previewEpoch.value++;
     currentTime.value = target;
-    return engineMetrics.measureAsync('seek', () => ensureEngine().seek(target, mode));
+    const request = ++seekRequest;
+    isSeeking.value = true;
+    try {
+      const result = await engineMetrics.measureAsync('seek', () => ensureEngine().seek(target, mode));
+      if (request === seekRequest && result === 'presented') seekVersion.value++;
+      return result;
+    } finally {
+      if (request === seekRequest) isSeeking.value = false;
+    }
   };
   const formatTime = (seconds: number) => {
     if (!Number.isFinite(seconds) || seconds < 0)
@@ -164,6 +175,8 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     playbackState,
     playbackError,
     frameVersion,
+    isSeeking,
+    seekVersion,
     previewEpoch,
     previewQuality,
     playbackMetrics,

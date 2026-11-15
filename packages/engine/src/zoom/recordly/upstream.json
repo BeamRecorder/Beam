@@ -1,0 +1,127 @@
+{
+  "repository": "https://github.com/webadderallorg/Recordly",
+  "revision": "0ea5bd753050874a6d157cab818489aa398d6161",
+  "license": "AGPL-3.0",
+  "files": [
+    {
+      "path": "cursorMotionPresets.ts",
+      "sourceSha256": "cc5a9e18d3ecaa64bcdb6df61a868e337023e57b3b5f57fb3c0a0d8b4a8d481c",
+      "localSha256": "cc5a9e18d3ecaa64bcdb6df61a868e337023e57b3b5f57fb3c0a0d8b4a8d481c",
+      "adaptation": "none"
+    },
+    {
+      "path": "timeline/zoomSuggestionUtils.ts",
+      "sourceSha256": "33ab77865246715d4a6f7435ba20ca63b6e7e2b4577dfb4f38be81caab12255f",
+      "localSha256": "33ab77865246715d4a6f7435ba20ca63b6e7e2b4577dfb4f38be81caab12255f",
+      "adaptation": "none"
+    },
+    {
+      "path": "timeline/cursorInteractionCandidates.ts",
+      "sourceSha256": "def1792d946c656e30c5e067825355ca13f54968f9955cbaec7612ec48a565cc",
+      "localSha256": "def1792d946c656e30c5e067825355ca13f54968f9955cbaec7612ec48a565cc",
+      "adaptation": "none"
+    },
+    {
+      "path": "videoPlayback/cursorPress.ts",
+      "sourceSha256": "c3c7d5dcfbbec15dd4bcea150fb75b3b153e87a21243280bcb3ce5d0cdf13e29",
+      "localSha256": "c3c7d5dcfbbec15dd4bcea150fb75b3b153e87a21243280bcb3ce5d0cdf13e29",
+      "adaptation": "none"
+    },
+    {
+      "path": "videoPlayback/mathUtils.ts",
+      "sourceSha256": "839522a36e834054a241cf5f24f398a1abb38ec8a96c6a7471b4b2160d456341",
+      "localSha256": "839522a36e834054a241cf5f24f398a1abb38ec8a96c6a7471b4b2160d456341",
+      "adaptation": "none"
+    },
+    {
+      "path": "videoPlayback/motionSmoothing.ts",
+      "sourceSha256": "c447e84fea9b6f183f3e07406d71b4345d40dc22ac39974d76227650dc7755a3",
+      "localSha256": "c447e84fea9b6f183f3e07406d71b4345d40dc22ac39974d76227650dc7755a3",
+      "adaptation": "none"
+    },
+    {
+      "path": "videoPlayback/zoomTransition.ts",
+      "sourceSha256": "ee187fc5c4761889dec094bfe351c669bbb6df7111f96f6c3aea54b797c64776",
+      "localSha256": "ee187fc5c4761889dec094bfe351c669bbb6df7111f96f6c3aea54b797c64776",
+      "adaptation": "none"
+    },
+    {
+      "path": "videoPlayback/zoomRegionUtils.ts",
+      "sourceSha256": "8da350d44a246953e663c9faa43e3a90d195b17c5a548f9e0744e236f4a2a4ff",
+      "localSha256": "8da350d44a246953e663c9faa43e3a90d195b17c5a548f9e0744e236f4a2a4ff",
+      "adaptation": "none"
+    },
+    {
+      "path": "videoPlayback/cursorPosition.ts",
+      "sourceSha256": "aec46154377b24b69341a3e1f21cb5f232456e8a2abde6d349ff79dbe3718452",
+      "localSha256": "aec46154377b24b69341a3e1f21cb5f232456e8a2abde6d349ff79dbe3718452",
+      "adaptation": "none"
+    },
+    {
+      "path": "videoPlayback/cursorViewport.ts",
+      "sourceSha256": "20ca6b33f8c95e7124858b5b042bc010aaf6cf4b40548a5d86643aba12020e5b",
+      "localSha256": "20ca6b33f8c95e7124858b5b042bc010aaf6cf4b40548a5d86643aba12020e5b",
+      "adaptation": "none"
+    },
+    {
+      "path": "videoPlayback/focusUtils.ts",
+      "sourceSha256": "48c8a350541960fa8cd21aaa52c073e221e975ddbda83c978228cb4307f50268",
+      "localSha256": "48c8a350541960fa8cd21aaa52c073e221e975ddbda83c978228cb4307f50268",
+      "adaptation": "none"
+    },
+    {
+      "path": "videoPlayback/cursorFollowCamera.ts",
+      "sourceSha256": "02aeec964d5297f84cceb52955e9d02db1a9769d6af06a209a60f0218dbf197c",
+      "localSha256": "02aeec964d5297f84cceb52955e9d02db1a9769d6af06a209a60f0218dbf197c",
+      "adaptation": "none"
+    },
+    {
+      "path": "videoPlayback/sceneMotion.ts",
+      "sourceSha256": "3590cd345e080e19012ada15804d265c9cf816fc4202b46fa323959baa341e06",
+      "localSha256": "3590cd345e080e19012ada15804d265c9cf816fc4202b46fa323959baa341e06",
+      "adaptation": "none"
+    },
+    {
+      "path": "videoPlayback/cameraTransform.ts",
+      "sourceSha256": "f7d3cc9e95701342ff800d15c4d0c6f512757acf7cec965cf88eaf27f0df3104",
+      "localSha256": "f7d3cc9e95701342ff800d15c4d0c6f512757acf7cec965cf88eaf27f0df3104",
+      "adaptation": "none"
+    },
+    {
+      "path": "videoPlayback/constants.ts",
+      "sourceSha256": "b293471fe0c5da6bcbe8f9a2153384805e4ef5dc16252190d216fb2685ec0425",
+      "localSha256": "b293471fe0c5da6bcbe8f9a2153384805e4ef5dc16252190d216fb2685ec0425",
+      "adaptation": "none"
+    },
+    {
+      "path": "videoPlayback/cursorLoopTelemetry.ts",
+      "sourceSha256": "e753df28c4c69e302bdf1aec0388af71a4544ca8b2d68071af9ffbf1e621cac0",
+      "localSha256": "e753df28c4c69e302bdf1aec0388af71a4544ca8b2d68071af9ffbf1e621cac0",
+      "adaptation": "none"
+    },
+    {
+      "path": "videoPlayback/cameraMotionBlur.ts",
+      "sourceSha256": "9e3c73ca02fae085ba92c69fdc46aa0f2bd0a45dfc493a1e604167ebf958d67b",
+      "localSha256": "cf7298f6c563475658e48d8769298af3bf5fbfc861ee0800681d9af9d745be29",
+      "adaptation": "type-only renderer controls and import ordering; executable statements unchanged"
+    },
+    {
+      "path": "videoPlayback/zoomTransform.ts",
+      "sourceSha256": "43d128a5030aed283b7d77a726e814e13bc72af95d58c06b3fa8dd9205416c66",
+      "localSha256": "ee3d9a9f4fb97a5c2f8e7e0bee89ba1bd57ae8a91324657ccb56ca56dde12cc7",
+      "adaptation": "type-only renderer controls and import ordering; executable statements unchanged"
+    },
+    {
+      "path": "videoPlayback/frameMotionSample.ts",
+      "sourceSha256": "8487fa28d37c163b843bc5cd8c5c24b9889f5edaa64899e6d3f743977661f11b",
+      "localSha256": "8487fa28d37c163b843bc5cd8c5c24b9889f5edaa64899e6d3f743977661f11b",
+      "adaptation": "none"
+    },
+    {
+      "path": "types.ts",
+      "sourceSha256": "ebc787792889c84b42c6bcbff88b55b9143adbfbd700fdc5dc0cea515e93ab9c",
+      "localSha256": "f02c96119533c8e3bf23e2163d17e9e003e3e627584cfdf0f00312df621ca3d5",
+      "adaptation": "Only transitive declarations referenced by the zoom/cursor modules; declaration bodies retained verbatim."
+    }
+  ]
+}

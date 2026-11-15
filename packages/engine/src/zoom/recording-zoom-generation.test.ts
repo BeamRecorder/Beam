@@ -227,3 +227,65 @@ it('maps automatic lenses to the output canvas and preserves trim/rate/linking',
   comp.clips[0]!.enabled = false;
   expect(generateRecordingZooms(comp, 'session', [click(3000)], [])).toEqual([]);
 });
+
+describe('experimental recording zoom adapter', () => {
+  const experimental = { style: '2d' as const, experimentalZoom: true };
+  it('uses one unbounded temporal click cluster at depth three only when opted in', () => {
+    const comp = composition([screen('screen', 'asset')], [asset('asset', 'session')]);
+    const telemetry = [click(5000, 0.2, 0.5), click(6000, 0.8, 0.5), click(7000, 0.2, 0.5)];
+    const actual = generateRecordingZooms(comp, 'session', telemetry, [], experimental);
+    expect(actual).toHaveLength(1);
+    expect(actual[0]).toMatchObject({
+      startMs: 2500,
+      endMs: 7500,
+      depth: 3,
+      mode: 'auto',
+      linkedClipId: 'screen',
+      projection: '2d',
+    });
+    expect(generateRecordingZooms(comp, 'session', telemetry, []).length).toBeGreaterThan(1);
+  });
+  it('maps resumed recording clocks, trim, speed and duplicated source independently', () => {
+    const source = { ...asset('asset', 'session'), sessionStartMs: 10000 };
+    const clips = [
+      screen('first', 'asset', { timelineDurationMs: 4000, sourceInMs: 4000, sourceDurationMs: 8000, playbackRate: 2 }),
+      screen('copy', 'asset', {
+        timelineStartMs: 4000,
+        timelineDurationMs: 4000,
+        sourceInMs: 4000,
+        sourceDurationMs: 8000,
+        playbackRate: 2,
+      }),
+    ];
+    const actual = generateRecordingZooms(composition(clips, [source]), 'session', [click(16000)], [], experimental);
+    expect(actual.map((z) => [z.startMs, z.endMs, z.linkedClipId])).toEqual([
+      [0, 2000, 'first'],
+      [4000, 6000, 'copy'],
+    ]);
+  });
+  it('keeps authored markers reserved and never uses a disabled or foreign screen', () => {
+    const comp = composition(
+      [screen('disabled', 'asset', { enabled: false }), screen('foreign', 'other')],
+      [asset('asset', 'session'), asset('other', 'other')],
+    );
+    expect(generateRecordingZooms(comp, 'session', [click(5000)], [], experimental)).toEqual([]);
+    const active = composition([screen('screen', 'asset')], [asset('asset', 'session')]);
+    expect(
+      generateRecordingZooms(active, 'session', [click(5000)], [manualZoom('manual', 4000, 6000)], experimental),
+    ).toEqual([]);
+    expect(generateRecordingZooms(active, 'session', [], [], experimental)).toEqual([]);
+  });
+  it('allocates unique IDs against retained markers even outside their timing', () => {
+    const comp = composition([screen('screen', 'asset')], [asset('asset', 'session')]);
+    const first = generateRecordingZooms(comp, 'session', [click(5000)], [], experimental)[0]!;
+    const reserved = { ...first, startMs: 10000, endMs: 12000 };
+    const second = generateRecordingZooms(comp, 'session', [click(5000)], [reserved], experimental)[0]!;
+    expect(second.id).toBe(`${first.id}:1`);
+  });
+  it('rejects lens generation without real canvas geometry', () => {
+    const comp = composition([screen('screen', 'asset')], [asset('asset', 'session')]);
+    expect(() => generateRecordingZooms(comp, 'session', [click(5000)], [], { style: 'glass' })).toThrow(
+      'output canvas',
+    );
+  });
+});

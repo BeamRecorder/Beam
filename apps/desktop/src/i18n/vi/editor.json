@@ -430,6 +430,8 @@
     "savingProject": "Đang lưu dự án"
   },
   "ZoomPanel": {
+    "experimentalZoom": "Thu phóng thử nghiệm",
+    "experimentalZoomDesc": "Dùng thu phóng 2D kiểu Recordly. Khi chuyển chế độ, các vùng thu phóng tự động chưa khóa được tạo lại; Hoàn tác sẽ khôi phục chúng. Hiệu ứng 3D và kính lúp vẫn dùng cách hoạt động của Beam.",
     "applyToTrackHint": "Đồng bộ kiểu thu phóng cho các đoạn chưa khóa, giữ nguyên vị trí và thời gian.",
     "cameraFollow": "Theo dõi camera",
     "followCursor": "Theo con trỏ",
@@ -507,7 +509,28 @@
     "cameraLeadMs": "Đón trước",
     "cameraFollowHint": "Góc xoay xác định góc cơ bản. Chế độ theo thêm chuyển động con trỏ; thời gian phản hồi điều chỉnh độ mượt.",
     "cameraManualHint": "Góc camera giữ cố định. Dùng điều khiển lấy nét để chọn vùng cần phóng to.",
-    "cameraIntensity": "Cường độ 3D"
+    "cameraIntensity": "Cường độ 3D",
+    "zoomBackground": "Thu phóng nền",
+    "zoomBackgroundDesc": "Di chuyển nền theo máy quay. Tắt để giữ nền cố định.",
+    "recordlyFocused": "Tập trung",
+    "recordlyCinematic": "Điện ảnh",
+    "recordlyClassic": "Chuyển động cổ điển",
+    "recordlyConnect": "Kết nối các đoạn thu phóng gần nhau",
+    "recordlyGap": "Khoảng cách kết nối tối đa",
+    "recordlyPan": "Thời gian di chuyển kết nối",
+    "recordlyEntry": "Thời gian phóng to",
+    "recordlyExit": "Thời gian thu nhỏ",
+    "recordlyDuration": "Thời lượng thu phóng tự động mới",
+    "recordlySmoothness": "Độ mượt máy quay",
+    "recordlyStiffness": "Độ cứng máy quay",
+    "recordlyDamping": "Độ giảm chấn máy quay",
+    "recordlyMass": "Khối lượng máy quay",
+    "recordlyNoSlots": "Không còn khoảng trống để thêm thu phóng tự động.",
+    "recordlyNoTelemetry": "Không đủ dữ liệu con trỏ đã ghi để tạo thu phóng tự động.",
+    "recordlyPanThreshold": "Ngưỡng tốc độ di chuyển",
+    "recordlyZoomThreshold": "Ngưỡng tốc độ thu phóng",
+    "recordlyDirectionalMax": "Độ mờ theo hướng tối đa",
+    "recordlyRadialMax": "Độ mờ xuyên tâm tối đa"
   },
   "backgroundCatalog": {
     "images": "Hình ảnh",

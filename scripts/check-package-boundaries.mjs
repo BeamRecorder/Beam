@@ -3,6 +3,7 @@ import path from 'node:path';
 import { builtinModules } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { isIterationBinding } from './iteration-bindings.mjs';
 import { checkRepositoryTypeImports } from './check-type-imports.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -66,7 +67,8 @@ for (const [name, dependencies] of Object.entries(allowed)) {
         ['window', 'document', 'navigator', 'FontFace', 'OffscreenCanvas', 'HTMLCanvasElement'].includes(node.text)
       ) {
         // Properties/parameters named document are ordinary domain data.
-        if (!['document'].includes(node.text)) failures.push(`${filename}: browser global ${node.text}`);
+        if (!['document'].includes(node.text) && !isIterationBinding(node))
+          failures.push(`${filename}: browser global ${node.text}`);
       }
       ts.forEachChild(node, inspect);
     };

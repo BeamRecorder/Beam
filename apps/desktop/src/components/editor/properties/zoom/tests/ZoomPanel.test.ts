@@ -218,7 +218,7 @@ describe('ZoomPanel', () => {
     });
 
     await wrapper.get('.motion-blur-slider').trigger('click');
-    await wrapper.get('.motion-blur-switch').trigger('click');
+    await wrapper.get('.motion-blur-settings .motion-blur-switch').trigger('click');
 
     expect(wrapper.emitted('update:motionBlur')).toEqual([
       [{ enabled: true, intensity: 0.8 }],

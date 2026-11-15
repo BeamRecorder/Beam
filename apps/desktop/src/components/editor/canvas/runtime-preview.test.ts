@@ -477,3 +477,25 @@ it('skips disabled background surfaces and restores the selected background when
   expect(options.drawBackground).toHaveBeenCalledOnce();
   expect(state.render.mock.lastCall![4]).toBeNull();
 });
+
+it('switches the experimental camera to the recording/export cadence and invalidates retained history', () => {
+  const { draw, options, painted } = host();
+  draw();
+  expect(painted().snapshot.render.fps).toBe(60);
+  options.props.zoomAutoFollow = {
+    experimentalZoom: true,
+    enabled: true,
+    safeZone: 0.5,
+    responsiveness: 0.55,
+    directionLock: true,
+  };
+  draw();
+  expect(painted().snapshot.render.fps).toBe(30);
+  expect(state.camera).toHaveBeenCalledTimes(2);
+  draw();
+  expect(state.camera).toHaveBeenCalledTimes(2);
+  options.props.zoomAutoFollow.experimentalZoom = false;
+  draw();
+  expect(painted().snapshot.render.fps).toBe(60);
+  expect(state.camera).toHaveBeenCalledTimes(3);
+});

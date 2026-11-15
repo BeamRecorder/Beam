@@ -347,3 +347,15 @@ Recorder, video, Screenshot and Quick Snip open one native Settings window. Appe
 `apps/desktop/shared/action-bindings.json` defines stable action IDs, default keys, contexts and scope for both Electron and Vue. The renderer action catalog adds existing property-focus commands without duplicating their labels. Keyboard handlers and pointer modifiers read the same hydrated preferences, including explicit empty bindings. Global shortcuts register only in main; editing actions remain scoped to the focused workspace and yield to native text editing and modal controls. Context-overlapping key conflicts are rejected before saving.
 
 The shortcut page groups actions into translated subsections within each main category; search also matches these subsection names across categories. Quick Snip's screen, region and window recording actions are global and initially unassigned. They select an Instant video source and start through the existing Quick Snip controller, source selection and saved countdown, regardless of the last Screenshot/Studio choice. Active jobs are left untouched; the existing toggle shortcut retains its open/confirm/stop behavior.
+
+## Experimental camera source boundary
+
+The project Zoom switch selects a pinned, licensed Recordly 2D algorithm under
+`packages/engine/src/zoom/recordly/`. Its copied math stays independent of DOM,
+Electron and Pixi; a structural type boundary describes scale/position/filter
+controls. Beam adapters own document identities, source clocks, geometry and
+transport state. `packages/runtime/src/zoom/recordly/` owns WebGL filter surfaces
+and cleanup. Background motion is an independent project setting. Preview and
+export consume the same camera math and video layer painter, while retaining
+separate playback/export state. See `docs/experimental-zoom.md` for the pinned
+source inventory, actual parity checks and explicit application boundaries.

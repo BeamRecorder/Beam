@@ -1,3 +1,5 @@
+import type { RecordlyZoomSettings } from './recordly-settings-types';
+import { normalizeRecordlyZoom } from './recordly-settings-schema.js';
 import type { ZoomTiltDirectionPreset } from '@beam/engine/zoom/zoom-tilt-preset-types';
 import type { GlassHighlightSettings } from './glass-highlight-types';
 import type { OrbitCameraSettings } from './orbit-camera-types';
@@ -36,6 +38,7 @@ export interface ZoomElement {
   /** Omitted in saved legacy zooms, whose original trajectory remains unchanged. */
   timing?: ZoomTiming;
   focus: ZoomFocus;
+  focusSpace?: 'source' | 'viewport';
   depth: ZoomDepth;
   mode: ZoomMode;
   enabled?: boolean;
@@ -108,6 +111,10 @@ export interface ZoomMotionBlurSettings {
 }
 
 export interface ZoomAutoFollowSettings {
+  /** Opt-in reference camera and interaction grouping; omitted means the standard Beam algorithm. */
+  experimentalZoom?: boolean;
+  recordly?: RecordlyZoomSettings;
+  zoomBackground?: boolean;
   /** Older projects follow the cursor by default; false keeps the authored click focus. */
   enabled?: boolean;
   /** Fraction of the viewport used for the quiet core and progressive follow shoulder. */
@@ -133,6 +140,9 @@ export const ZOOM_AUTO_FOLLOW_SAFE_ZONE_MAX = 0.75;
 export const normalizeZoomAutoFollow = (
   value: Partial<ZoomAutoFollowSettings> | null | undefined,
 ): ZoomAutoFollowSettings => ({
+  ...(value?.experimentalZoom === true ? { experimentalZoom: true } : {}),
+  ...(value?.recordly !== undefined ? { recordly: normalizeRecordlyZoom(value.recordly) } : {}),
+  ...(typeof value?.zoomBackground === 'boolean' ? { zoomBackground: value.zoomBackground } : {}),
   enabled: value?.enabled !== false,
   safeZone:
     typeof value?.safeZone === 'number' && Number.isFinite(value.safeZone)

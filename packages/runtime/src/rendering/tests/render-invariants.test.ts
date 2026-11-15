@@ -739,6 +739,7 @@ describe('composition rendering invariants', () => {
 
   it('applies the configured blur to gradients in export rendering', () => {
     const value = snapshot();
+    value.canvas.showBackground = true;
     value.composition.clips = [];
     value.background = {
       kind: 'gradient',

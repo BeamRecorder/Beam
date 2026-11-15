@@ -1,3 +1,4 @@
+import { createRecordlyCamera, shareRecordlyLiveState } from './experimental/recordly-camera';
 import type {
   CameraCheckpointReuse,
   CompositionCameraEvaluator,
@@ -58,6 +59,40 @@ export function createCompositionCameraEvaluator(
   inputs: CompositionCameraInputs,
   reuse?: CameraCheckpointReuse,
 ): CompositionCameraEvaluator {
+  if (inputs.autoFollow?.experimentalZoom) {
+    const perspective = inputs.zooms.filter((zoom) => zoom.projection === '3d' || zoom.projection === 'orbit');
+    const experimental = createRecordlyCamera(
+      {
+        ...inputs,
+        zooms: inputs.zooms.filter((zoom) => !perspective.includes(zoom)),
+      },
+      reuse,
+    );
+    if (!perspective.length) return experimental;
+    // Recordly has no perspective camera; those authored effects keep Beam's renderer.
+    const standard = createCompositionCameraEvaluator({
+      ...inputs,
+      zooms: perspective,
+      autoFollow: { ...inputs.autoFollow, experimentalZoom: false },
+    });
+    const dispatcher: CompositionCameraEvaluator = {
+      sample(timeMs) {
+        const camera = standard.sample(timeMs);
+        return camera.scale > 1 ? camera : experimental.sample(timeMs);
+      },
+      compose(request) {
+        const camera = standard.sample(request.timeMs);
+        const next = experimental.compose!(request);
+        return camera.scale > 1 ? camera : next;
+      },
+      invalidate() {
+        standard.invalidate();
+        experimental.invalidate();
+      },
+    };
+    shareRecordlyLiveState(dispatcher, experimental);
+    return dispatcher;
+  }
   const checkpoints = new Map<number, SimulationState>();
   const zoomAt = createZoomTimeEvaluator(inputs.zooms, inputs.telemetry, inputs.mapFocus);
   const autoFollowSettings = normalizeZoomAutoFollow(inputs.autoFollow ?? DEFAULT_ZOOM_AUTO_FOLLOW);

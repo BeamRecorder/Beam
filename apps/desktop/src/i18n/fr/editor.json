@@ -430,6 +430,8 @@
     "savingProject": "Sauvegarde du projet"
   },
   "ZoomPanel": {
+    "experimentalZoom": "Zoom expérimental",
+    "experimentalZoomDesc": "Utiliser les zooms 2D de type Recordly. Le changement régénère les zooms automatiques déverrouillés ; Annuler les restaure. La 3D et les loupes gardent le comportement de Beam.",
     "applyToTrackHint": "Partager le style des zooms non verrouillés en conservant leurs cibles et leur timing.",
     "cameraFollow": "Suivi de caméra",
     "followCursor": "Suivre le curseur",
@@ -507,7 +509,28 @@
     "cameraLeadMs": "Anticipation",
     "cameraFollowHint": "La rotation définit l’angle de base. Le suivi ajoute les mouvements du curseur ; le temps de réponse règle leur fluidité.",
     "cameraManualHint": "L’angle de caméra reste fixe. Les réglages de focus choisissent la zone à agrandir.",
-    "cameraIntensity": "Intensité 3D"
+    "cameraIntensity": "Intensité 3D",
+    "zoomBackground": "Zoomer le fond",
+    "zoomBackgroundDesc": "Déplacer le fond avec la caméra. Désactiver pour le garder fixe.",
+    "recordlyFocused": "Précis",
+    "recordlyCinematic": "Cinématique",
+    "recordlyClassic": "Animation classique",
+    "recordlyConnect": "Relier les zooms proches",
+    "recordlyGap": "Écart maximal de liaison",
+    "recordlyPan": "Durée du mouvement de liaison",
+    "recordlyEntry": "Durée du zoom avant",
+    "recordlyExit": "Durée du zoom arrière",
+    "recordlyDuration": "Durée des nouveaux zooms auto",
+    "recordlySmoothness": "Fluidité de la caméra",
+    "recordlyStiffness": "Rigidité de la caméra",
+    "recordlyDamping": "Amortissement de la caméra",
+    "recordlyMass": "Masse de la caméra",
+    "recordlyNoSlots": "Aucun espace libre pour ajouter des zooms automatiques.",
+    "recordlyNoTelemetry": "Données du curseur insuffisantes pour générer des zooms automatiques.",
+    "recordlyPanThreshold": "Seuil de vitesse du déplacement",
+    "recordlyZoomThreshold": "Seuil de vitesse du zoom",
+    "recordlyDirectionalMax": "Flou directionnel maximal",
+    "recordlyRadialMax": "Flou radial maximal"
   },
   "backgroundCatalog": {
     "images": "Images",

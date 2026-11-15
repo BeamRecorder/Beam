@@ -430,6 +430,8 @@
     "savingProject": "Guardando proyecto"
   },
   "ZoomPanel": {
+    "experimentalZoom": "Zoom experimental",
+    "experimentalZoomDesc": "Usar zooms 2D al estilo de Recordly. Al cambiar, se regeneran los zooms automáticos desbloqueados; Deshacer los restaura. Los efectos 3D y las lupas conservan el comportamiento de Beam.",
     "applyToTrackHint": "Compartir el estilo entre los zooms desbloqueados, conservando sus destinos y tiempos.",
     "cameraFollow": "Seguimiento de cámara",
     "followCursor": "Seguir el cursor",
@@ -507,7 +509,28 @@
     "cameraLeadMs": "Anticipación",
     "cameraFollowHint": "La rotación define el ángulo base. El seguimiento añade los movimientos del cursor; el tiempo de respuesta controla su suavidad.",
     "cameraManualHint": "El ángulo de la cámara permanece fijo. Usa los controles de enfoque para elegir el área que ampliar.",
-    "cameraIntensity": "Intensidad 3D"
+    "cameraIntensity": "Intensidad 3D",
+    "zoomBackground": "Ampliar el fondo",
+    "zoomBackgroundDesc": "Mover el fondo con la cámara. Desactívalo para mantenerlo fijo.",
+    "recordlyFocused": "Enfocado",
+    "recordlyCinematic": "Cinemático",
+    "recordlyClassic": "Animación clásica",
+    "recordlyConnect": "Conectar zooms cercanos",
+    "recordlyGap": "Separación máxima de conexión",
+    "recordlyPan": "Duración del desplazamiento de conexión",
+    "recordlyEntry": "Duración de acercamiento",
+    "recordlyExit": "Duración de alejamiento",
+    "recordlyDuration": "Duración de nuevos zooms automáticos",
+    "recordlySmoothness": "Suavidad de la cámara",
+    "recordlyStiffness": "Rigidez de la cámara",
+    "recordlyDamping": "Amortiguación de la cámara",
+    "recordlyMass": "Masa de la cámara",
+    "recordlyNoSlots": "No hay espacio libre para más zooms automáticos.",
+    "recordlyNoTelemetry": "No hay suficientes datos del cursor para generar zooms automáticos.",
+    "recordlyPanThreshold": "Umbral de velocidad de desplazamiento",
+    "recordlyZoomThreshold": "Umbral de velocidad de zoom",
+    "recordlyDirectionalMax": "Desenfoque direccional máximo",
+    "recordlyRadialMax": "Desenfoque radial máximo"
   },
   "backgroundCatalog": {
     "images": "Imágenes",

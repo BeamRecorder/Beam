@@ -1,3 +1,10 @@
+import type { ClipRegion } from './recordly/types';
+import type {
+  CameraComposeRequest,
+  RecordlyFrameEffect,
+  RecordlySourceSample,
+} from './experimental/recordly-camera-types';
+import type { ExperimentalGeometry } from './experimental/experimental-camera-types';
 import type { CursorTelemetryPoint } from '../capture/capture-session';
 import type { AppliedZoom, ZoomAutoFollowSettings, ZoomElement, ZoomFocus } from './zoom-types';
 import type { CameraTransform, CameraVelocity } from './zoom-spring';
@@ -32,14 +39,22 @@ export interface CameraSample {
   tiltX?: number;
   tiltY?: number;
   orbit?: OrbitCameraPose;
+  recordly?: RecordlyFrameEffect;
 }
 
 export interface CompositionCameraEvaluator {
   sample(timeMs: number): CameraSample;
+  compose?(request: CameraComposeRequest): CameraSample;
   invalidate(): void;
 }
 
 export interface CompositionCameraInputs {
+  frameRate?: number;
+  viewport?: { width: number; height: number };
+  sourceDurationMs?: number;
+  recordlyClips?: ClipRegion[];
+  recordlySourceAt?: (timeMs: number) => RecordlySourceSample | null;
+  experimentalGeometryAt?: (timeMs: number) => ExperimentalGeometry;
   zooms: readonly ZoomElement[];
   telemetry: readonly CursorTelemetryPoint[];
   mapFocus?: (focus: ZoomFocus, zoom: AppliedZoom, timeMs: number) => ZoomFocus;
@@ -51,6 +66,7 @@ export interface CompositionCameraInputs {
 
 export interface CameraCheckpointReuse {
   previous: CompositionCameraEvaluator;
+  preserveLive?: boolean;
   unchangedBeforeMs: number;
 }
 

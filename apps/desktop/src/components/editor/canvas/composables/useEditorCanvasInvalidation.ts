@@ -23,6 +23,15 @@ export function useEditorCanvasInvalidation(options: {
     },
   );
   watch(() => options.props.isCropping, options.renderOnce);
+  watch(() => [options.props.isSeeking, options.props.seekVersion], options.renderOnce);
+  watch(
+    () => options.props.zoomAutoFollow,
+    () => {
+      options.resetCamera();
+      options.renderOnce();
+    },
+    { deep: true },
+  );
   watch(() => options.props.editorData?.cursor.telemetry, options.resetCamera);
   watch(() => [options.props.zoomElements, options.props.selectedZoom] as const, options.resetCamera, {
     deep: true,

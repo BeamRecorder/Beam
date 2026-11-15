@@ -68,6 +68,7 @@ export function useProjectEditorState(options: {
   const zoomMotionBlur = options.zoomMotionBlur ?? ref<ZoomMotionBlurSettings>({ ...DEFAULT_ZOOM_MOTION_BLUR });
   const zoomAutoFollow = options.zoomAutoFollow ?? ref<ZoomAutoFollowSettings>({ ...DEFAULT_ZOOM_AUTO_FOLLOW });
   const loading = ref(false);
+  const isFreshProject = ref(false);
   const scheduledSave = ref(false);
   const pendingSaves = ref(0);
   const isSaving = computed(() => scheduledSave.value || pendingSaves.value > 0);
@@ -177,6 +178,7 @@ export function useProjectEditorState(options: {
     try {
       const loadedState = initialState ?? (await capture.getProjectEditorState(projectId));
       if (generation !== loadGeneration) return;
+      isFreshProject.value = loadedState.isFresh === true;
       const state = loadedState.isFresh
         ? applyGlobalCursorDefaults(
             applyFreshPresentationDefaults(loadedState, options.editorDefaults.value),
@@ -297,6 +299,7 @@ export function useProjectEditorState(options: {
   );
 
   return {
+    isFreshProject,
     load,
     saveNow,
     scheduleSave,

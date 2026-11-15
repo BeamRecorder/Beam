@@ -1,7 +1,7 @@
 {
   "name": "@beam/runtime",
   "version": "0.1.0",
-  "license": "MPL-2.0",
+  "license": "(MPL-2.0 AND MIT)",
   "private": true,
   "type": "module",
   "exports": {

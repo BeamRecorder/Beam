@@ -1,3 +1,6 @@
+import { renderCanvasTransitionPass } from './canvas-transition-pass';
+import { cameraZoomsBackground } from '@beam/engine/zoom/recordly-settings';
+import { drawRecordlyVideoLayer, hasRecordlyBlur, disposeRecordlyVideoLayer } from '../zoom/recordly/video-layer';
 import { snapshotWithScreenCursor, snapshotCursorMotion } from './snapshot-cursor';
 import { disposeAnimatedFrameRenderer } from '../composition/appearance/animated-frame';
 import { screenCursorEnabled } from '@beam/engine/capture/screen-cursor';
@@ -7,7 +10,7 @@ import { disposeWaterRippleRenderer, screenWithWaterRipples } from './render-wat
 import { drawSceneStack } from './scene-stack';
 import { createSnapshotCameraEvaluator } from './snapshot-camera';
 import type { CompositionSnapshot } from '@beam/engine/shared/render-document-types';
-import { isBlurClip, isColorClip, isShapeClip, type BlurClip } from '@beam/engine/shared/composition-types';
+import { isBlurClip, isColorClip, isShapeClip } from '@beam/engine/shared/composition-types';
 import { primeAdaptiveShadowColors } from '@beam/runtime/composition/appearance/adaptive-shadow';
 import { visualAdaptiveShadowRequests } from '@beam/runtime/composition/appearance/visual-media-options';
 import { createCursorMotionPlayer } from '@beam/engine/cursor/cursor-motion';
@@ -19,11 +22,9 @@ import { drawSnapshotBackground } from './render-snapshot-background';
 import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '@beam/engine/composition/scene-layers';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import { renderGlassHighlights, disposeGlassHighlights } from './glass-highlight-render';
-import { applyBlurEffect } from '@beam/runtime/composition/effects/blur-effect';
+import { drawBlurClip } from './render-blur';
 import { drawBeamWatermark, WATERMARK_LOGO_KEY } from '@beam/runtime/rendering/watermark-render';
 import { drawWithClipTransition } from '@beam/runtime/composition/transitions/render-transition';
-import { EMPTY_CLIP_TRANSITIONS, resolveCanvasTransitionState } from '@beam/engine/shared/clip-transitions';
-import { drawCanvasTransitionFrame } from '@beam/runtime/composition/transitions/render-canvas-transition';
 import { resolveScreenRenderGeometry } from '@beam/engine/composition/camera-layout';
 import { OUTPUT_FALLBACK_COLOR } from '@beam/engine/layout/output-canvas';
 import { createCameraMotionBlurPlan } from '@beam/engine/zoom/zoom-motion-blur';
@@ -38,10 +39,7 @@ import {
   renderPerspectiveLayers,
   renderPerspectiveSamples,
 } from '@beam/runtime/rendering/perspective-render';
-import {
-  disposeCanvasTransitionSurface,
-  getCanvasTransitionSurface,
-} from '@beam/runtime/rendering/canvas-transition-surface';
+import { disposeCanvasTransitionSurface } from '@beam/runtime/rendering/canvas-transition-surface';
 import { createGpuShapeScope } from '@beam/runtime/composition/shape/ordered-gpu-shapes';
 import { perspectiveSourceBounds } from '../zoom/perspective-source';
 import { releaseCompositedLayerSurface } from '../composition/render-composited-layer';
@@ -49,15 +47,6 @@ import { releaseCompositedLayerSurface } from '../composition/render-composited-
 import type { RenderableMedia, CompositionVisuals, CompositionFrameEvaluation } from './render-types';
 export type { RenderableMedia, CompositionVisuals } from '@beam/runtime/rendering/render-types';
 const gpuShapes = createGpuShapeScope();
-
-function drawBlurClip(ctx: Canvas2DContext, clip: BlurClip, canvas: { width: number; height: number }) {
-  applyBlurEffect(ctx, clip, {
-    x: clip.transform.x * canvas.width,
-    y: clip.transform.y * canvas.height,
-    width: clip.transform.width * canvas.width,
-    height: clip.transform.height * canvas.height,
-  });
-}
 
 export function drawCompositionLayers(
   ctx: Canvas2DContext,
@@ -148,11 +137,20 @@ function renderCompositionFrameContent(
   const source = screenGeometry?.source;
   const positionedMedia = screenGeometry?.positioned ?? null;
   const resolvedCameraEvaluator = cameraEvaluator ?? createSnapshotCameraEvaluator(snapshot, sourceWidth, sourceHeight);
-  const camera = evaluation?.camera ?? resolvedCameraEvaluator.sample(timeMs);
+  const camera =
+    evaluation?.camera ??
+    (resolvedCameraEvaluator.compose
+      ? resolvedCameraEvaluator.compose({ timeMs, isPlaying: true, exporting: true })
+      : resolvedCameraEvaluator.sample(timeMs));
+  const frameBaseMatrix = ctx.getTransform();
   const scale = camera.scale;
   const cameraFocus = camera.focus;
   const blurSettings = normalizeZoomMotionBlur(snapshot.zoomMotionBlur);
-  const blurIntensity = blurSettings.enabled ? blurSettings.intensity : 0;
+  const recordlyCamera =
+    snapshot.zoomAutoFollow?.experimentalZoom &&
+    !camera.orbit &&
+    !hasPerspectiveTilt({ tiltX: camera.tiltX ?? 0, tiltY: camera.tiltY ?? 0 });
+  const blurIntensity = recordlyCamera ? 0 : blurSettings.enabled ? blurSettings.intensity : 0;
   const blurPlan = createCameraMotionBlurPlan({
     sampleAt: (sampleTimeMs) => resolvedCameraEvaluator.sample(sampleTimeMs),
     center: camera,
@@ -161,7 +159,9 @@ function renderCompositionFrameContent(
     viewportWidth: width,
     viewportHeight: height,
   });
-  const flatBackground = Boolean(camera.orbit || blurPlan.some((sample) => sample.camera.orbit));
+  const flatBackground = Boolean(
+    !cameraZoomsBackground(snapshot.zoomAutoFollow) || camera.orbit || blurPlan.some((sample) => sample.camera.orbit),
+  );
   if (flatBackground) drawSnapshotBackground(ctx, snapshot, background);
   const sourceBounds = flatBackground
     ? perspectiveSourceBounds(
@@ -204,6 +204,40 @@ function renderCompositionFrameContent(
               if (clip.kind === 'screen') {
                 const media = clip.id === screen?.id ? screenMedia : visuals?.get(clip.id);
                 if (!media) continue;
+                if (hasRecordlyBlur(camera.recordly)) {
+                  drawRecordlyVideoLayer(target, frameBaseMatrix, width, height, camera.recordly!, (layer, pass) =>
+                    drawWithClipTransition(layer, clip, timeMs, snapshot.canvas, (transitionTarget) =>
+                      drawScreenMedia(
+                        transitionTarget,
+                        clip,
+                        media,
+                        snapshot.canvas,
+                        timeMs,
+                        appearanceScale,
+                        shadowPixelRatio,
+                        pass,
+                      ),
+                    ),
+                  );
+                  if (layers.scene && clip.id === screen?.id && resolvedCursorMotionPlayer)
+                    drawWithClipTransition(target, clip, timeMs, snapshot.canvas, (transitionTarget) =>
+                      drawCursorLayer(
+                        transitionTarget,
+                        snapshot,
+                        screenTime,
+                        clip,
+                        sourceWidth,
+                        sourceHeight,
+                        width,
+                        height,
+                        cursorImages,
+                        resolvedCursorMotionPlayer,
+                        cursorMotion,
+                        pixelScale,
+                      ),
+                    );
+                  continue;
+                }
                 drawWithClipTransition(target, clip, timeMs, snapshot.canvas, (transitionTarget) => {
                   drawScreenMedia(
                     transitionTarget,
@@ -405,7 +439,7 @@ function renderCompositionFrameContent(
         layers,
         false,
         width / snapshot.canvas.width,
-        evaluation,
+        evaluation ?? { camera, cursorMotion },
       ),
     dispose: releaseCompositedLayerSurface,
   });
@@ -419,6 +453,7 @@ function renderCompositionFrameContent(
 
 export function disposeCompositionRenderer() {
   disposeGpuCursor();
+  disposeRecordlyVideoLayer();
   disposeWaterRippleRenderer();
   disposeAnimatedFrameRenderer();
   disposeGlassHighlights();
@@ -445,17 +480,9 @@ export function renderCompositionFrame(
   snapshot = snapshotWithScreenCursor(snapshot, layers.screen);
   if (layers.screen?.cursorSettings && video && !evaluation)
     cursorMotionPlayer = snapshotCursorMotion(snapshot, video.width, video.height);
-  const transition = resolveCanvasTransitionState(
-    snapshot.canvas.transitions ?? EMPTY_CLIP_TRANSITIONS,
-    time * 1_000,
-    snapshot.duration * 1_000,
-  );
-  const transitionTarget = transition
-    ? getCanvasTransitionSurface(snapshot.canvas.width, snapshot.canvas.height)
-    : null;
-  if (!transition || !transitionTarget?.context) {
+  renderCanvasTransitionPass(ctx, snapshot, time, (target) =>
     renderCompositionFrameContent(
-      ctx,
+      target,
       video,
       snapshot,
       time,
@@ -468,30 +495,6 @@ export function renderCompositionFrame(
       true,
       1,
       evaluation,
-    );
-    return;
-  }
-  renderCompositionFrameContent(
-    transitionTarget.context,
-    video,
-    snapshot,
-    time,
-    background,
-    cursorImages,
-    visuals,
-    cursorMotionPlayer,
-    cameraEvaluator,
-    layers,
-    true,
-    1,
-    evaluation,
-  );
-  drawCanvasTransitionFrame(
-    ctx,
-    transitionTarget.surface,
-    { width: snapshot.canvas.width, height: snapshot.canvas.height },
-    { x: 0, y: 0, width: snapshot.canvas.width, height: snapshot.canvas.height },
-    transition,
-    OUTPUT_FALLBACK_COLOR,
+    ),
   );
 }

@@ -121,6 +121,6 @@ Share a recording, ask for help, suggest a feature, or show us what you made.
 
 ## License and credits
 
-Beam's source is licensed under **[MPL-2.0](./LICENSE)**. See [licensing](./LICENSING.md) for commercial use, forks, third-party assets, and the planned Desktop Pro policy. Current Free features remain available; Pro is planned.
+Beam's original source retains **[MPL-2.0](./LICENSE)**. The experimental camera includes **AGPL-3.0** Recordly source; combined builds must respect both notices in [third-party source licensing](./THIRD_PARTY_NOTICES.md). See [licensing](./LICENSING.md) for commercial use, forks, third-party assets, and the planned Desktop Pro policy. Current Free features remain available; Pro is planned.
 
-Beam takes inspiration from [Recordly](https://github.com/webadderallorg/Recordly/) and is an independent rewrite. Third-party code and artwork retain their own licenses; see the [licensing notices](./LICENSING.md#third-party-material-and-branding) and [README image credits](./docs/assets/readme/NOTICE.md).
+Beam includes the pinned 2D zoom algorithm from [Recordly](https://github.com/webadderallorg/Recordly/) behind the experimental Zoom switch; see its [source inventory](./docs/experimental-zoom.md). Third-party code and artwork retain their own licenses; see the [licensing notices](./LICENSING.md#third-party-material-and-branding) and [README image credits](./docs/assets/readme/NOTICE.md).

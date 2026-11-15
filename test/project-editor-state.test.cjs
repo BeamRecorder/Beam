@@ -1,3 +1,4 @@
+const { normalizeRecordlyZoom } = require('../packages/engine/src/zoom/recordly-settings-schema.js');
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const {
@@ -936,4 +937,61 @@ test('preserves disabled cursor follow independently of the tuning values', () =
   const value = zoomState({ elements: [], generatedSessions: [], autoFollow });
   assert.deepEqual(value.autoFollow, autoFollow);
   assert.deepEqual(zoomState(value).autoFollow, autoFollow);
+});
+
+test('experimental zoom is opt-in and survives persisted project normalization', () => {
+  assert.equal(zoomState({ elements: [], generatedSessions: [] }).autoFollow.experimentalZoom, undefined);
+  assert.equal(
+    zoomState({ elements: [], generatedSessions: [], autoFollow: { experimentalZoom: true } }).autoFollow
+      .experimentalZoom,
+    true,
+  );
+  for (const value of [false, 'true', 1, null])
+    assert.equal(
+      zoomState({ elements: [], generatedSessions: [], autoFollow: { experimentalZoom: value } }).autoFollow
+        .experimentalZoom,
+      undefined,
+    );
+});
+
+test('roundtrips experimental presets, spatial blur, background override and explicit focus space', () => {
+  const recordly = normalizeRecordlyZoom({
+    zoomClassicMode: true,
+    loopCursor: true,
+    connectZooms: false,
+    zoomInDurationMs: 410,
+    zoomOutDurationMs: 750,
+    defaultDurationMs: 3200,
+    zoomMotionBlurTuning: { maxDirectionalBlurPx: 30 },
+  });
+  const input = {
+    elements: [
+      {
+        id: 'source',
+        sessionId: 'take',
+        startMs: 1000,
+        endMs: 5000,
+        depth: 3,
+        mode: 'manual',
+        focusSpace: 'source',
+        focus: { cx: 0.25, cy: 0.75 },
+      },
+    ],
+    generatedSessions: [],
+    autoFollow: { experimentalZoom: true, recordly, zoomBackground: false },
+  };
+  const first = zoomState(input),
+    second = zoomState(JSON.parse(JSON.stringify(first)));
+  assert.deepEqual(first, second);
+  assert.deepEqual(first.autoFollow.recordly, recordly);
+  assert.equal(first.autoFollow.zoomBackground, false);
+  assert.equal(first.elements[0].focusSpace, 'source');
+  assert.notEqual(first.autoFollow.recordly.zoomMotionBlurTuning, recordly.zoomMotionBlurTuning);
+  for (const value of ['bad', null, 1])
+    assert.throws(
+      () => zoomState({ ...input, elements: [{ ...input.elements[0], focusSpace: value }] }),
+      /zoom invalides/,
+    );
+  for (const value of ['true', null, 1])
+    assert.equal(zoomState({ ...input, autoFollow: { zoomBackground: value } }).autoFollow.zoomBackground, undefined);
 });

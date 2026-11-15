@@ -430,6 +430,8 @@
     "savingProject": "正在保存项目"
   },
   "ZoomPanel": {
+    "experimentalZoom": "实验性缩放",
+    "experimentalZoomDesc": "使用 Recordly 风格的 2D 缩放。切换时会重新生成未锁定的自动缩放，撤销可恢复。3D 和放大镜仍保持 Beam 的行为。",
     "applyToTrackHint": "统一未锁定缩放片段的样式，保留各自的目标和时间。",
     "cameraFollow": "镜头跟随",
     "followCursor": "跟随光标",
@@ -507,7 +509,28 @@
     "cameraLeadMs": "预判时间",
     "cameraFollowHint": "旋转设置基础角度。跟随叠加光标运动，响应时间控制平滑程度。",
     "cameraManualHint": "相机角度保持固定。使用焦点控件选择要放大的区域。",
-    "cameraIntensity": "3D 强度"
+    "cameraIntensity": "3D 强度",
+    "zoomBackground": "缩放背景",
+    "zoomBackgroundDesc": "让背景随镜头移动。关闭后背景保持固定。",
+    "recordlyFocused": "聚焦",
+    "recordlyCinematic": "电影感",
+    "recordlyClassic": "经典动画",
+    "recordlyConnect": "连接相邻缩放",
+    "recordlyGap": "最大连接间隔",
+    "recordlyPan": "连接平移时长",
+    "recordlyEntry": "放大时长",
+    "recordlyExit": "缩小时长",
+    "recordlyDuration": "新自动缩放时长",
+    "recordlySmoothness": "镜头平滑度",
+    "recordlyStiffness": "镜头刚度",
+    "recordlyDamping": "镜头阻尼",
+    "recordlyMass": "镜头质量",
+    "recordlyNoSlots": "没有空间添加更多自动缩放。",
+    "recordlyNoTelemetry": "记录的光标数据不足，无法生成自动缩放。",
+    "recordlyPanThreshold": "平移速度阈值",
+    "recordlyZoomThreshold": "缩放速度阈值",
+    "recordlyDirectionalMax": "最大方向模糊",
+    "recordlyRadialMax": "最大径向模糊"
   },
   "backgroundCatalog": {
     "images": "图片",

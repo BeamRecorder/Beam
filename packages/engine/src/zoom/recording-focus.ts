@@ -2,7 +2,7 @@ import type { VisualClip } from '../shared/composition-types';
 import { resolveScreenRenderGeometry } from '../composition/camera-layout';
 import { frameMediaRect, frameOuterRect } from '../shared/frame-layout';
 import { rotateMediaVector } from '../layout/media-rotation';
-import type { ZoomGenerationOptions } from './glass-generation-types';
+import type { ZoomGenerationCanvas } from './glass-generation-types';
 
 /** Match the decorated media painter, rejecting clicks outside the visible source crop. */
 export function recordingFocus(
@@ -10,7 +10,7 @@ export function recordingFocus(
   point: { cx: number; cy: number },
   sourceWidth: number,
   sourceHeight: number,
-  canvas: ZoomGenerationOptions['canvas'],
+  canvas: ZoomGenerationCanvas,
 ) {
   const geometry = resolveScreenRenderGeometry(
     clip,

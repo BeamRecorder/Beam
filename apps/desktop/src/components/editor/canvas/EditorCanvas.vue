@@ -94,6 +94,7 @@ const frameScheduler = createCanvasFrameScheduler(
   () => renderCanvas(),
   () => props.isPlaying || isTransitioningBackground.value,
   () => !props.domPreviewActive,
+  () => (props.isPlaying && props.zoomAutoFollow?.experimentalZoom ? 60 : 0),
 );
 const renderOnce = frameScheduler.requestRender;
 watch(() => props.domPreviewActive, renderOnce);
@@ -146,6 +147,8 @@ cameraZoom = useCameraZoom({
   zoomElements: () => props.zoomElements,
   zoomMotionBlur: () => props.zoomMotionBlur ?? DEFAULT_ZOOM_MOTION_BLUR,
   zoomAutoFollow: () => props.zoomAutoFollow ?? DEFAULT_ZOOM_AUTO_FOLLOW,
+  isSeeking: () => props.isSeeking,
+  seekVersion: () => props.seekVersion,
   selectedZoom: () => props.selectedZoom,
   currentTime: () => props.currentTime,
   isPlaying: () => props.isPlaying,
@@ -280,7 +283,7 @@ const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
   ctx.restore();
 };
 const renderCanvas = () => {
-  if (props.domPreviewActive) return;
+  if (props.domPreviewActive || (props.isSeeking && props.zoomAutoFollow?.experimentalZoom)) return;
   const canvas = canvasRef.value;
   const ctx = canvas?.getContext('2d');
   if (!canvas || !ctx || !logicalSize.value.width || !logicalSize.value.height) return;

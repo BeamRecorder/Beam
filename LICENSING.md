@@ -54,6 +54,20 @@ otherwise or identified as third-party material under its original license.
 Contributors retain their copyright; submitting a contribution is not a copyright
 assignment or permission to relicense it under a proprietary license.
 
+## Experimental Recordly camera
+
+The experimental 2D camera contains copied Recordly source under AGPL-3.0, with
+its original licence preserved in `packages/engine/src/zoom/recordly/LICENSE.md`.
+See [third-party source notices](THIRD_PARTY_NOTICES.md) for the pinned revision,
+file inventory, adaptations and the MIT Pixi Filters kernels.
+
+The camera is statically included in the combined application/export build,
+including when its UI switch is Off. The MPL statements above describe original
+Beam-covered files; they do not replace the AGPL terms for the combined build.
+Distributors must preserve the applicable notices and provide corresponding
+source under the applicable licences. The prior independent-rewrite description
+no longer describes this experimental camera implementation.
+
 ## Third-party material and branding
 
 The repository license does not relicense dependencies, fonts, cursor artwork,

@@ -98,6 +98,7 @@ const create = (
   defaults: EditorPreferenceDefaults = normalizeEditorPreferenceDefaults(undefined),
   mode: RecordingZoomMode | null = '2d',
   canvas?: OutputCanvasSettings,
+  freshRecording?: () => boolean,
 ) => {
   const activeTab = ref('canvas');
   const editorData = ref(initialData);
@@ -114,8 +115,11 @@ const create = (
       editorDefaults,
       recordingZoomMode,
       canvas: canvas ? ref(canvas) : undefined,
+      freshRecording,
     }),
     recordingZoomMode,
+    composition,
+    editorData,
     durationMs,
     activeTab,
     editorDefaults,
@@ -760,4 +764,169 @@ it('reuses saved camera settings on a new zoom with independent values', () => {
     orbitSettings: settings,
   });
   expect(state.zoomElements.value[0]!.orbitSettings).not.toBe(defaults.zoom!.orbitSettings);
+});
+
+describe('experimental zoom mode', () => {
+  it('defaults off, regenerates automatic shots on switch and preserves locked, detached and manual shots', () => {
+    const input = data();
+    input.cursor.telemetry.push({ timeMs: 6100, cx: 0.2, cy: 0.8, interactionType: 'mouseup' });
+    const { state } = create(input);
+    expect(state.zoomAutoFollow.value.experimentalZoom).toBeUndefined();
+    state.zoomElements.value = [
+      { ...zoom('locked', 'auto'), locked: true },
+      { ...zoom('detached', 'auto'), linkedClipId: null },
+      zoom('manual'),
+      { ...zoom('old', 'auto'), startMs: 4000, endMs: 8000 },
+    ];
+    state.updateZoomAutoFollow({ ...state.zoomAutoFollow.value, experimentalZoom: true });
+    expect(state.zoomElements.value.slice(0, 3).map((z) => z.id)).toEqual(['locked', 'detached', 'manual']);
+    expect(state.zoomElements.value.some((z) => z.id === 'old')).toBe(false);
+    expect(state.zoomElements.value.at(-1)).toMatchObject({ startMs: 5000, endMs: 7000, depth: 3, projection: '2d' });
+    state.updateZoomAutoFollow({ ...state.zoomAutoFollow.value, experimentalZoom: false });
+    expect(state.zoomAutoFollow.value.experimentalZoom).toBeUndefined();
+    expect(state.zoomElements.value.at(-1)!.id).not.toContain('experimental:');
+  });
+  it('fills only free slots on explicit experimental generation, retaining current shots', () => {
+    const input = data();
+    input.cursor.telemetry.push({ timeMs: 6100, cx: 0.2, cy: 0.8, interactionType: 'mouseup' });
+    const { state } = create(input);
+    state.updateZoomAutoFollow({ ...state.zoomAutoFollow.value, experimentalZoom: true });
+    const before = structuredClone(state.zoomElements.value.map((z) => ({ ...z, focus: { ...z.focus } })));
+    state.generateZooms();
+    expect(state.zoomElements.value).toEqual(before);
+  });
+  it('does not regenerate for tuning changes or without recorded clicks', () => {
+    const { state } = create(data({ cursor: { ...data().cursor, telemetry: [] } }));
+    state.zoomElements.value = [zoom('existing')];
+    state.updateZoomAutoFollow({ ...state.zoomAutoFollow.value, experimentalZoom: true });
+    state.updateZoomAutoFollow({ ...state.zoomAutoFollow.value, responsiveness: 0.3 });
+    expect(state.zoomElements.value.map((z) => z.id)).toEqual(['existing']);
+  });
+});
+
+describe('Recordly fresh-source generation lifecycle', () => {
+  const twoSamples = () => {
+    const value = data();
+    value.cursor.telemetry.push({ timeMs: 6100, cx: 0.2, cy: 0.8, interactionType: 'mouseup' });
+    return value;
+  };
+  it('does not automatically modify a saved project', () => {
+    const { state } = create(
+      twoSamples(),
+      10000,
+      normalizeEditorPreferenceDefaults(undefined),
+      '2d',
+      undefined,
+      () => false,
+    );
+    state.zoomAutoFollow.value = { ...state.zoomAutoFollow.value, experimentalZoom: true };
+    state.ensureAutomaticZooms();
+    expect(state.zoomElements.value).toEqual([]);
+    expect(state.generatedSessions.value).toEqual([]);
+  });
+  it('waits for matching telemetry and uses upstream initial duration independently of the explicit generator setting', () => {
+    const { state, editorData } = create(data());
+    state.zoomAutoFollow.value = {
+      ...state.zoomAutoFollow.value,
+      experimentalZoom: true,
+      recordly: {
+        zoomInDurationMs: 200,
+        zoomOutDurationMs: 200 / 0.7,
+        zoomSmoothness: 0.5,
+        zoomClassicMode: false,
+        connectZooms: true,
+        connectedZoomGapMs: 1500,
+        connectedZoomDurationMs: 1000,
+        cameraSpringStiffnessMultiplier: 1,
+        cameraSpringDampingMultiplier: 1.13,
+        cameraSpringMassMultiplier: 1.12,
+        defaultDurationMs: 3500,
+        zoomMotionBlur: 0.35,
+        loopCursor: false,
+        zoomMotionBlurTuning: {
+          panVelocityThreshold: 0,
+          zoomVelocityThreshold: 0,
+          maxDirectionalBlurPx: 41.8,
+          maxRadialBlurStrength: 1,
+          panResponsePerSecond: 11,
+          zoomResponsePerSecond: 9,
+          zoomSafeZoneRadiusPx: 6,
+        },
+      },
+    };
+    state.ensureAutomaticZooms();
+    expect(state.zoomElements.value).toEqual([]);
+    editorData.value = twoSamples();
+    state.ensureAutomaticZooms();
+    expect(state.zoomElements.value).toHaveLength(1);
+    expect(state.zoomElements.value[0]!.endMs - state.zoomElements.value[0]!.startMs).toBe(2000);
+    state.zoomElements.value = [];
+    state.generateZooms();
+    expect(state.zoomElements.value[0]!.endMs - state.zoomElements.value[0]!.startMs).toBe(3500);
+  });
+  it('does not regenerate on undo after checking a fresh source', () => {
+    const { state } = create(twoSamples());
+    state.zoomAutoFollow.value = { ...state.zoomAutoFollow.value, experimentalZoom: true };
+    state.ensureAutomaticZooms();
+    expect(state.zoomElements.value).toHaveLength(1);
+    state.zoomElements.value = [];
+    state.generatedSessions.value = [];
+    state.ensureAutomaticZooms();
+    expect(state.zoomElements.value).toEqual([]);
+  });
+  it('latches an edited source instead of generating when a later undo makes it unedited again', () => {
+    const { state, composition } = create(twoSamples());
+    state.zoomAutoFollow.value = { ...state.zoomAutoFollow.value, experimentalZoom: true };
+    const original = composition.value;
+    composition.value = { ...original, clips: original.clips.map((clip) => ({ ...clip, timelineStartMs: 100 })) };
+    state.ensureAutomaticZooms();
+    composition.value = original;
+    state.ensureAutomaticZooms();
+    expect(state.zoomElements.value).toEqual([]);
+  });
+  it('waits while clips are hydrating rather than latching an empty composition', () => {
+    const { state, composition } = create(twoSamples());
+    state.zoomAutoFollow.value = { ...state.zoomAutoFollow.value, experimentalZoom: true };
+    const original = composition.value;
+    composition.value = { ...original, clips: [] };
+    state.ensureAutomaticZooms();
+    composition.value = original;
+    state.ensureAutomaticZooms();
+    expect(state.zoomElements.value).toHaveLength(1);
+  });
+  it('allows explicit generation from a single recorded click and reports when the available slot is occupied', () => {
+    const { state } = create(data());
+    state.updateZoomAutoFollow({ ...state.zoomAutoFollow.value, experimentalZoom: true });
+    expect(state.canGenerateZooms.value).toBe(true);
+    expect(state.zoomElements.value).toHaveLength(1);
+    expect(state.generationStatus.value).toBe('ok');
+    const before = state.zoomElements.value;
+    state.generateZooms();
+    expect(state.zoomElements.value).toEqual(before);
+    expect(state.generationStatus.value).toBe('no-slots');
+  });
+  it('converts an automatic source focus to canvas coordinates when switching to Beam manual handles', () => {
+    const { state, composition } = create(
+      twoSamples(),
+      10000,
+      normalizeEditorPreferenceDefaults(undefined),
+      '2d',
+      DEFAULT_OUTPUT_CANVAS,
+    );
+    composition.value = {
+      ...composition.value,
+      clips: composition.value.clips.map((clip) => ({
+        ...clip,
+        transform: { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
+      })),
+    };
+    state.updateZoomAutoFollow({ ...state.zoomAutoFollow.value, experimentalZoom: true });
+    const automatic = state.zoomElements.value[0]!;
+    expect(automatic.focusSpace).toBe('source');
+    state.updateZoom({ ...automatic, mode: 'manual' });
+    expect(state.zoomElements.value[0]!.focusSpace).toBeUndefined();
+    const focus = state.zoomElements.value[0]!.focus;
+    expect(focus.cx).toBeGreaterThan(automatic.focus.cx);
+    expect(focus.cy).toBeLessThan(automatic.focus.cy);
+  });
 });

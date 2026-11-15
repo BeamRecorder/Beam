@@ -1,3 +1,12 @@
+import { cameraZoomsBackground } from '@beam/engine/zoom/recordly-settings';
+import {
+  drawRecordlyVideoLayer,
+  hasRecordlyBlur,
+  disposeRecordlyVideoLayer,
+} from '@beam/runtime/zoom/recordly/video-layer';
+import { drawScreenPreview } from './screen-preview-painter';
+import { createPreviewCamera } from './preview-camera';
+import { recordingFrameRate } from '@beam/engine/capture/recording-frame-rate';
 import { cameraFollowInputs } from '../camera-follow-inputs';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 import { computed, getCurrentScope, onScopeDispose, ref, toRaw } from 'vue';
@@ -11,14 +20,11 @@ import {
   type MotionBlurSurface,
 } from '@beam/runtime/zoom/zoom-motion-blur-compositor';
 import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from '@beam/engine/layout/output-canvas';
-import { sessionTimeAt, type MediaFrame } from '@beam/runtime/shared/index';
+import { type MediaFrame } from '@beam/runtime/shared/index';
 import type { VisualClip } from '@beam/engine/shared/composition-types';
-import { createDefaultClipAppearance } from '@beam/engine/shared/composition-defaults';
-import { drawDecoratedMedia } from '@beam/runtime/composition/appearance/render-decorated-media';
-import { drawFrameOverlay } from '@beam/runtime/composition/appearance/frames';
-import { frameMediaRect, frameOuterRect, transformedFrameOuterRect } from '@beam/engine/shared/frame-layout';
+import { frameOuterRect, transformedFrameOuterRect } from '@beam/engine/shared/frame-layout';
 import { isPhoneFrame } from '@beam/engine/shared/phone-frame-types';
-import { mapSourcePointToScreen, resolveScreenRenderGeometry } from '@beam/engine/composition/camera-layout';
+import { resolveScreenRenderGeometry } from '@beam/engine/composition/camera-layout';
 import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '@beam/engine/composition/scene-layers';
 import { createCurrentScreenResolver } from './current-screen-resolver';
 import type {
@@ -33,6 +39,8 @@ import { cameraFocusTargetStyle, cameraFocusAtPoint, cameraFocusContainsPoint } 
 export type { RenderedVideoWindow, UseCameraZoomOptions, VideoWindowBounds } from './useCameraZoom.types';
 const EMPTY_TELEMETRY = [] as const;
 export function useCameraZoom(options: UseCameraZoomOptions) {
+  let lastSeekVersion: number | undefined;
+  let lastEvaluator: unknown;
   let cameraEvaluator: ReturnType<typeof createCompositionCameraEvaluator> | null = null;
   const retainedCamera = createRetainedCamera();
   const videoWindowBounds = ref<VideoWindowBounds | null>(null);
@@ -157,7 +165,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       draftFocus.value = null;
       zoomDragGeometry = null;
       if (selected?.mode === 'manual' && focus) {
-        options.onUpdateZoom({ ...selected, focus });
+        options.onUpdateZoom({ ...selected, focus, focusSpace: undefined });
       }
       const target = (event.currentTarget as HTMLElement) ?? options.canvasRef();
       if (target?.hasPointerCapture?.(event.pointerId)) target.releasePointerCapture(event.pointerId);
@@ -168,6 +176,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     onScopeDispose(() => {
       if (zoomDragFrame !== null) cancelAnimationFrame(zoomDragFrame);
       retainedCamera.clear();
+      disposeRecordlyVideoLayer();
     });
   }
 
@@ -243,11 +252,12 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       const zooms = toRaw(options.zoomElements());
       const evaluatorInputs = [
         telemetry,
+        recordingFrameRate(options.editorData()?.tracks),
         toRaw(output),
         selectedZoom?.id,
         selectedZoom?.mode,
         ...cameraFollowInputs(options.zoomAutoFollow?.()),
-        options.isPlaying(),
+        options.zoomAutoFollow?.()?.experimentalZoom ? undefined : options.isPlaying(),
         videoWidth,
         videoHeight,
         dw,
@@ -255,53 +265,45 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       ] as const;
       cameraEvaluator = retainedCamera.get({
         composition,
+        liveKey: options.zoomAutoFollow?.()?.experimentalZoom ? telemetry : undefined,
         zooms,
         stableInputs: evaluatorInputs,
         create: (reuse) => {
-          const previewZooms =
-            !options.isPlaying() && selectedZoom?.mode === 'manual' && selectedZoom.effect !== 'glass'
-              ? zooms.filter((zoom) => zoom.id !== selectedZoom.id)
-              : zooms;
-          return createCompositionCameraEvaluator(
+          return createPreviewCamera(
             {
-              zooms: previewZooms,
+              options,
+              selectedZoom,
+              zooms,
               telemetry,
-              autoFollow: options.zoomAutoFollow?.(),
-              mapTelemetryTime: (timeMs) => {
-                const activeScreen = screens.at(timeMs);
-                return activeScreen ? (sessionTimeAt(activeScreen, timeMs, composition) ?? timeMs) : timeMs;
-              },
-              mapFocus: (focus, zoom, timeMs) => {
-                const activeScreen = screens.at(timeMs);
-                if (!activeScreen || zoom.mode !== 'auto') return focus;
-                const activeGeometry = resolveScreenRenderGeometry(
-                  activeScreen,
-                  videoWidth,
-                  videoHeight,
-                  dw,
-                  dh,
-                  output.showBackground,
-                );
-                const positioned = isPhoneFrame(activeScreen.appearance.frame)
-                  ? frameMediaRect(
-                      activeGeometry.positioned,
-                      activeScreen.appearance.frame,
-                      activeGeometry.source.width,
-                      activeGeometry.source.height,
-                    )
-                  : activeGeometry.positioned;
-                return mapSourcePointToScreen(focus, videoWidth, videoHeight, dw, dh, {
-                  ...activeGeometry,
-                  positioned,
-                });
-              },
+              composition,
+              output,
+              videoWidth,
+              videoHeight,
+              dw,
+              dh,
+              screenAt: (timeMs) => screens.at(timeMs),
             },
             reuse,
           );
         },
       });
     }
-    const sample = evaluation?.camera ?? cameraEvaluator.sample(currentTime * 1_000);
+    const sample =
+      evaluation?.camera ??
+      (cameraEvaluator.compose
+        ? cameraEvaluator.compose({
+            timeMs: currentTime * 1000,
+            isPlaying: options.isPlaying(),
+            isSeeking: options.isSeeking?.(),
+            shouldSnapPausedFrame:
+              lastSeekVersion !== options.seekVersion?.() ||
+              (!options.isPlaying() && lastEvaluator !== cameraEvaluator),
+          })
+        : cameraEvaluator.sample(currentTime * 1000));
+    if (!options.isSeeking?.()) {
+      lastSeekVersion = options.seekVersion?.();
+      lastEvaluator = cameraEvaluator;
+    }
     const selectedPerspectivePreview = selectedZoomPreviewTilt(selectedZoom, options.isPlaying());
     const camera = {
       focusX: dx + sample.focus.cx * dw,
@@ -327,46 +329,34 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       orbit: camera.orbit,
     };
     if (paint) {
-      const drawScreen = (target: Canvas2DContext = ctx) => {
-        if (!screen) return;
-        if (frame) {
-          drawDecoratedMedia(target, {
-            source: frame.bitmap,
-            sourceRect: source,
-            rect: { x: dx + positioned.x, y: dy + positioned.y, width: positioned.width, height: positioned.height },
-            appearance: editingPhoneCrop
-              ? { ...screen.appearance, frame: 'none' }
-              : (screen.appearance ?? createDefaultClipAppearance('screen', output.showBackground)),
-            shadowScale: Math.min(dw / Math.max(1, output.width), dh / Math.max(1, output.height)),
-            title: screen.name,
-            mirrored: screen.isMirrored,
-            mirroredY: screen.isMirroredY,
-            rotation: screen.rotation,
-            mask: screenGeometry?.mask,
-          });
-          if (cropFrame)
-            drawFrameOverlay(
-              target,
-              {
-                x: dx + cropFrame.x,
-                y: dy + cropFrame.y,
-                width: cropFrame.width,
-                height: cropFrame.height,
-              },
-              screen.appearance.frame,
-              screen.name,
-              screen.appearance.frameColor,
-              {
-                showMenu: screen.appearance.frameShowMenu,
-                showScrollbars: screen.appearance.frameShowScrollbars,
-                chromeScale: screen.appearance.frameChromeScale,
-                ...(screen.appearance.frameTheme !== undefined ? { theme: screen.appearance.frameTheme } : {}),
-              },
-            );
-        }
+      const stageBase = hasRecordlyBlur(sample.recordly) ? ctx.getTransform().translate(dx, dy) : null;
+      const paint = {
+        screen,
+        frame,
+        source,
+        positioned,
+        output,
+        preview,
+        editingPhoneCrop,
+        cropFrame,
+        geometry: screenGeometry,
       };
+      const drawScreen = (target: Canvas2DContext = ctx) => {
+        if (hasRecordlyBlur(sample.recordly))
+          drawRecordlyVideoLayer(target, stageBase!, Math.round(dw), Math.round(dh), sample.recordly!, (layer, pass) =>
+            drawScreenPreview(layer, paint, pass),
+          );
+        else drawScreenPreview(target, paint);
+      };
+      const zoomBackground = cameraZoomsBackground(options.zoomAutoFollow?.());
+      if (!zoomBackground) options.drawBackground(ctx, { x: dx, y: dy, width: dw, height: dh });
       const blurSettings = options.zoomMotionBlur?.();
-      const blurIntensity = blurSettings?.enabled ? blurSettings.intensity : 0;
+      const blurIntensity =
+        options.zoomAutoFollow?.()?.experimentalZoom && !sample.orbit && !sample.tiltX && !sample.tiltY
+          ? 0
+          : blurSettings?.enabled
+            ? blurSettings.intensity
+            : 0;
       const blurPlan = createCameraMotionBlurPlan({
         sampleAt: (timeMs) => cameraEvaluator!.sample(timeMs),
         center: sample,
@@ -392,7 +382,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
         target.translate(dx + dw / 2, dy + dh / 2);
         target.scale(projectedCamera.scale, projectedCamera.scale);
         target.translate(-projectedCamera.focusX, -projectedCamera.focusY);
-        options.drawBackground(target, { x: dx, y: dy, width: dw, height: dh });
+        if (zoomBackground) options.drawBackground(target, { x: dx, y: dy, width: dw, height: dh });
         if (options.renderVisualStack)
           options.renderVisualStack(
             target,

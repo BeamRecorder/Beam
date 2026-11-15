@@ -1,3 +1,9 @@
+import { normalizeRecordlyZoom } from '@beam/engine/zoom/recordly-settings';
+import { recordlyFocusOnCanvas } from '@beam/engine/zoom/experimental/recordly-focus';
+import { experimentalScreenGeometry } from '@beam/engine/zoom/experimental/experimental-camera-geometry';
+import { experimentalRecordingZoomPlan } from '@beam/engine/zoom/experimental/experimental-recording-zooms';
+import type { InteractionZoomSuggestionStatus } from '@beam/engine/zoom/recordly/timeline/zoomSuggestionUtils';
+import { recordlyCompositionClips } from '@beam/engine/zoom/experimental/recordly-inputs';
 import { useZoomTrackProperties } from './useZoomTrackProperties';
 import type { ClipComposition } from '@beam/engine/shared/composition-types';
 import { applyRecordingZoomMode } from '@beam/engine/zoom/recording-zoom-preference';
@@ -39,6 +45,7 @@ export function useProjectZoom(options: {
   editorDefaults: Ref<EditorPreferenceDefaults>;
   recordingZoomMode?: Ref<RecordingZoomMode | null>;
   canvas?: Ref<OutputCanvasSettings>;
+  freshRecording?: () => boolean;
 }) {
   const { editorData, durationMs, activeTab } = options;
   const { state: zoomElements, restore: restoreZoomElements } = useLockedState<ZoomElement[]>([], (value) => value);
@@ -49,6 +56,8 @@ export function useProjectZoom(options: {
   const zoomAutoFollow = ref<ZoomAutoFollowSettings>({
     ...DEFAULT_ZOOM_AUTO_FOLLOW,
   });
+  const generationStatus = ref<InteractionZoomSuggestionStatus | null>(null);
+  const experimentalChecked = new Set<string>();
   const selectedZoomId = ref<string | null>(null);
   const selectedZoomIds = ref<string[]>([]);
   const propertyScope = useZoomTrackProperties(zoomElements, selectedZoomId, selectedZoomIds);
@@ -129,32 +138,54 @@ export function useProjectZoom(options: {
     selectZooms([zoom.id], zoom.id);
   };
 
-  const generateZooms = (selectPanel = false, style?: ZoomStyle) => {
+  const generateZooms = (
+    selectPanel = false,
+    style?: ZoomStyle,
+    replaceAutomatic?: boolean,
+    initialRecording = false,
+  ) => {
     const preferredMode = options.recordingZoomMode?.value ?? '2d';
     const generationStyle = style ?? (preferredMode === 'off' ? '2d' : preferredMode);
+    const replace = replaceAutomatic ?? !(zoomAutoFollow.value.experimentalZoom && generationStyle === '2d');
     const data = editorData.value;
     if (!data?.cursor.available) return;
     const generationDurationMs = Math.min(durationMs.value, data.manifest.durationNs / 1_000_000);
     if (generationDurationMs <= 0) return;
     if (generationStyle === 'glass' && !options.canvas) throw new Error('Automatic lenses require an output canvas.');
-    const generated = generateRecordingZooms(
-      options.composition.value,
-      data.sessionId,
-      data.cursor.telemetry,
-      zoomElements.value.filter(
-        (element) =>
-          !isAutomaticZoom(element) ||
-          element.locked ||
-          element.linkedClipId === null ||
-          element.sessionId !== data.sessionId,
-      ),
-      options.canvas ? { style: generationStyle, canvas: options.canvas.value } : undefined,
+    const retained = zoomElements.value.filter(
+      (element) =>
+        !replace ||
+        !isAutomaticZoom(element) ||
+        element.locked ||
+        element.linkedClipId === null ||
+        element.sessionId !== data.sessionId,
     );
+    const experimental =
+      zoomAutoFollow.value.experimentalZoom && generationStyle === '2d'
+        ? experimentalRecordingZoomPlan(
+            options.composition.value,
+            data.sessionId,
+            data.cursor.telemetry,
+            retained,
+            data.cursor.events,
+            initialRecording
+              ? { ...normalizeRecordlyZoom(zoomAutoFollow.value.recordly), defaultDurationMs: 2000 }
+              : zoomAutoFollow.value.recordly,
+          )
+        : null;
+    generationStatus.value = experimental?.status ?? null;
+    const generated =
+      experimental?.elements ??
+      generateRecordingZooms(options.composition.value, data.sessionId, data.cursor.telemetry, retained, {
+        style: generationStyle,
+        canvas: options.canvas?.value,
+      });
     const projected =
       generationStyle === 'glass' ? generated : generated.map((zoom) => applyRecordingZoomMode(zoom, generationStyle));
     zoomElements.value = [
       ...zoomElements.value.filter(
         (element) =>
+          !replace ||
           element.locked ||
           element.linkedClipId === null ||
           element.sessionId !== data.sessionId ||
@@ -170,10 +201,11 @@ export function useProjectZoom(options: {
         generatedAt: new Date().toISOString(),
       },
     ];
-    selectZooms(
-      generated.map((zoom) => zoom.id),
-      generated[0]?.id ?? null,
-    );
+    if (generated.length)
+      selectZooms(
+        generated.map((zoom) => zoom.id),
+        generated[0]?.id ?? null,
+      );
     if (selectPanel) activeTab.value = 'zoom';
   };
 
@@ -181,6 +213,28 @@ export function useProjectZoom(options: {
     if (options.recordingZoomMode && (!options.recordingZoomMode.value || options.recordingZoomMode.value === 'off'))
       return;
     const sessionId = editorData.value?.sessionId;
+    if (zoomAutoFollow.value.experimentalZoom) {
+      if (!sessionId || experimentalChecked.has(sessionId) || options.freshRecording?.() === false) return;
+      if (zoomElements.value.length) {
+        experimentalChecked.add(sessionId);
+        return;
+      }
+      const clips = recordlyCompositionClips(options.composition.value);
+      const clip = clips[0];
+      if (!clip) return;
+      if (
+        clips.length !== 1 ||
+        clip.startMs !== 0 ||
+        Math.abs(clip.endMs - durationMs.value) > 1 ||
+        (clip.sourceStartMs ?? 0) !== 0 ||
+        clip.speed !== 1
+      ) {
+        experimentalChecked.add(sessionId);
+        return;
+      }
+      if ((editorData.value?.cursor.telemetry.length ?? 0) < 2) return;
+      experimentalChecked.add(sessionId);
+    }
     if (
       !sessionId ||
       generatedSessions.value.some(
@@ -188,7 +242,7 @@ export function useProjectZoom(options: {
       )
     )
       return;
-    generateZooms(false);
+    generateZooms(false, undefined, undefined, true);
   };
   watch(
     [() => editorData.value?.sessionId, () => editorData.value?.cursor.available, durationMs],
@@ -197,6 +251,32 @@ export function useProjectZoom(options: {
   );
   const updateZoom = (next: ZoomElement) => {
     if (next.startMs < 0 || next.endMs <= next.startMs) return;
+    const previous = zoomElements.value.find((zoom) => zoom.id === next.id);
+    if (next.mode === 'manual' && previous?.mode === 'auto' && next.focusSpace && options.canvas) {
+      const composition = options.composition.value;
+      const screen = composition.clips.find(
+        (clip) =>
+          clip.kind === 'screen' &&
+          (clip.id === next.linkedClipId ||
+            (!next.linkedClipId &&
+              next.startMs >= clip.timelineStartMs &&
+              next.startMs < clip.timelineStartMs + clip.timelineDurationMs)),
+      );
+      const asset =
+        screen && 'assetId' in screen ? composition.assets.find((asset) => asset.id === screen.assetId) : undefined;
+      if (screen?.kind === 'screen' && asset?.width && asset.height) {
+        const canvas = options.canvas.value;
+        const geometry = experimentalScreenGeometry(
+          screen,
+          asset.width,
+          asset.height,
+          canvas.width,
+          canvas.height,
+          canvas.showBackground,
+        );
+        next = { ...next, focus: recordlyFocusOnCanvas(next, geometry), focusSpace: undefined };
+      }
+    }
     zoomElements.value = propertyScope.synchronize(
       zoomElements.value.map((element) => (element.id === next.id ? next : element)),
     );
@@ -243,7 +323,9 @@ export function useProjectZoom(options: {
     zoomMotionBlur.value = normalizeZoomMotionBlur(value);
   };
   const updateZoomAutoFollow = (value: ZoomAutoFollowSettings) => {
+    const changed = Boolean(zoomAutoFollow.value.experimentalZoom) !== Boolean(value.experimentalZoom);
     zoomAutoFollow.value = normalizeZoomAutoFollow(value);
+    if (changed && canGenerateZooms.value) generateZooms(false, '2d', true);
   };
   const pasteZoomAtTime = (copiedZoom: ZoomElement, startMs: number) => {
     const pasted = pasteZoomAt(zoomElements.value, copiedZoom, startMs, durationMs.value);
@@ -256,6 +338,7 @@ export function useProjectZoom(options: {
 
   return {
     propertyScope,
+    generationStatus,
     zoomElements,
     restoreZoomElements,
     generatedSessions,

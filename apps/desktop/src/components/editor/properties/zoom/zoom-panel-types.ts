@@ -1,3 +1,4 @@
+import type { InteractionZoomSuggestionStatus } from '@beam/engine/zoom/recordly/timeline/zoomSuggestionUtils';
 import type {
   ZoomAutoFollowSettings,
   ZoomElement,
@@ -18,6 +19,7 @@ export interface ZoomPanelProps {
   hasAutomaticZooms: boolean;
   motionBlur: ZoomMotionBlurSettings;
   autoFollow?: ZoomAutoFollowSettings;
+  generationStatus?: InteractionZoomSuggestionStatus | null;
   canvasSize?: { width: number; height: number };
   still?: boolean;
   editorData?: ZoomGenerationButtonProps['editorData'];

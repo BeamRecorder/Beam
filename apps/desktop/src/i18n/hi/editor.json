@@ -430,6 +430,8 @@
     "savingProject": "प्रोजेक्ट सेव हो रहा है"
   },
   "ZoomPanel": {
+    "experimentalZoom": "प्रयोगात्मक ज़ूम",
+    "experimentalZoomDesc": "Recordly जैसे 2D ज़ूम इस्तेमाल करें। मोड बदलने पर अनलॉक किए गए स्वचालित ज़ूम फिर से बनेंगे; पूर्ववत करें उन्हें वापस लाएगा। 3D और आवर्धक लेंस Beam की तरह काम करते रहेंगे।",
     "applyToTrackHint": "अनलॉक ज़ूम के लक्ष्य और समय बदले बिना उनकी शैली एक जैसी रखें।",
     "cameraFollow": "कैमरा फ़ॉलो",
     "followCursor": "कर्सर का अनुसरण करें",
@@ -507,7 +509,28 @@
     "cameraLeadMs": "पूर्वानुमान",
     "cameraFollowHint": "घुमाव आधार कोण तय करता है। अनुसरण कर्सर की गति जोड़ता है; प्रतिक्रिया समय उसकी सहजता नियंत्रित करता है।",
     "cameraManualHint": "कैमरे का कोण स्थिर रहता है। बड़ा करने वाला क्षेत्र चुनने के लिए फ़ोकस नियंत्रण इस्तेमाल करें।",
-    "cameraIntensity": "3D तीव्रता"
+    "cameraIntensity": "3D तीव्रता",
+    "zoomBackground": "पृष्ठभूमि ज़ूम करें",
+    "zoomBackgroundDesc": "पृष्ठभूमि को कैमरे के साथ चलाएँ। स्थिर रखने के लिए बंद करें।",
+    "recordlyFocused": "केंद्रित",
+    "recordlyCinematic": "सिनेमाई",
+    "recordlyClassic": "क्लासिक एनिमेशन",
+    "recordlyConnect": "पास के ज़ूम जोड़ें",
+    "recordlyGap": "जोड़ने का अधिकतम अंतर",
+    "recordlyPan": "जोड़ने वाले पैन की अवधि",
+    "recordlyEntry": "ज़ूम इन की अवधि",
+    "recordlyExit": "ज़ूम आउट की अवधि",
+    "recordlyDuration": "नए ऑटो ज़ूम की अवधि",
+    "recordlySmoothness": "कैमरे की सहजता",
+    "recordlyStiffness": "कैमरे की कठोरता",
+    "recordlyDamping": "कैमरे की डैम्पिंग",
+    "recordlyMass": "कैमरे का द्रव्यमान",
+    "recordlyNoSlots": "अतिरिक्त ऑटो ज़ूम के लिए खाली जगह नहीं है।",
+    "recordlyNoTelemetry": "ऑटो ज़ूम बनाने के लिए रिकॉर्ड किया गया कर्सर डेटा पर्याप्त नहीं है।",
+    "recordlyPanThreshold": "पैन गति की सीमा",
+    "recordlyZoomThreshold": "ज़ूम गति की सीमा",
+    "recordlyDirectionalMax": "अधिकतम दिशात्मक धुंधलापन",
+    "recordlyRadialMax": "अधिकतम रेडियल धुंधलापन"
   },
   "backgroundCatalog": {
     "images": "इमेज",

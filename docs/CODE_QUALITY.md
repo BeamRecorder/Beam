@@ -84,3 +84,13 @@ Report commands that cannot run because of platform, toolchain, permissions, or 
 - Are tests present for branches and edge cases?
 - Does coverage remain at or above 90% across statements, branches, functions, and lines?
 - Are TypeScript and Rust checks documented in the handoff?
+
+## Pinned third-party camera source
+
+`packages/engine/src/zoom/recordly/` retains the pinned upstream layout, formatting
+and declarations so its executable algorithm can be audited against `upstream.json`.
+This folder alone may retain upstream colocated types/implementations; Beam adapters
+and UI keep types in dedicated files. Do not mechanically format the copied files.
+Changes require updating provenance and parity tests. The 500-line limit, static
+import rule and package boundaries still apply. See `docs/experimental-zoom.md` and
+`THIRD_PARTY_NOTICES.md` for scope and licensing.

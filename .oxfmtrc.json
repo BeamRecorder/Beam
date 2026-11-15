@@ -18,6 +18,7 @@
     "coverage",
     ".vite",
     "*.map",
-    "public/wallpapers"
+    "public/wallpapers",
+    "packages/engine/src/zoom/recordly/**"
   ]
 }

@@ -57,6 +57,8 @@ export interface EditorCanvasProps {
   backgroundBlurPercent?: number;
   frameFor: (clipId: string) => MediaFrame | null;
   frameVersion: number;
+  isSeeking?: boolean;
+  seekVersion?: number;
   captureCompositionPreview?: () => Promise<CanvasFrameCapture>;
   domPreviewActive?: boolean;
   previewQuality: PreviewQuality;

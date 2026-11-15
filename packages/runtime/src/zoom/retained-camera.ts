@@ -18,17 +18,20 @@ export function createRetainedCamera() {
           (request.zooms.length === previous.zooms.length &&
             request.zooms.every((zoom, index) => zoom === previous!.zooms[index])));
       if (stable && request.composition === previous!.composition && sameZooms) return evaluator!;
-      const reuse = stable
-        ? {
-            previous: evaluator!,
-            unchangedBeforeMs: cameraEditInvalidationTime(
-              previous!.composition,
-              request.composition,
-              previous!.zooms,
-              request.zooms,
-            ),
-          }
-        : undefined;
+      const preserveLive = Boolean(request.liveKey && request.liveKey === previous?.liveKey);
+      const reuse =
+        stable || preserveLive
+          ? {
+              previous: evaluator!,
+              ...(preserveLive ? { preserveLive: true } : {}),
+              unchangedBeforeMs: cameraEditInvalidationTime(
+                previous!.composition,
+                request.composition,
+                previous!.zooms,
+                request.zooms,
+              ),
+            }
+          : undefined;
       evaluator = request.create(reuse);
       previous = request;
       return evaluator;

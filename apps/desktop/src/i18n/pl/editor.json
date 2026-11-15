@@ -430,6 +430,8 @@
     "savingProject": "Zapisywanie projektu"
   },
   "ZoomPanel": {
+    "experimentalZoom": "Eksperymentalny zoom",
+    "experimentalZoomDesc": "Użyj zoomu 2D w stylu Recordly. Zmiana trybu ponownie generuje odblokowane automatyczne zbliżenia; Cofnij je przywraca. Efekty 3D i lupy zachowują działanie Beam.",
     "applyToTrackHint": "Ujednolić wygląd odblokowanych zbliżeń, zachowując ich cele i czas.",
     "cameraFollow": "Śledzenie kamery",
     "followCursor": "Śledź kursor",
@@ -507,7 +509,28 @@
     "cameraLeadMs": "Wyprzedzenie",
     "cameraFollowHint": "Obrót określa kąt bazowy. Śledzenie dodaje ruch kursora, a czas reakcji reguluje jego płynność.",
     "cameraManualHint": "Kąt kamery pozostaje stały. Użyj ustawień ostrości, aby wybrać obszar do powiększenia.",
-    "cameraIntensity": "Intensywność 3D"
+    "cameraIntensity": "Intensywność 3D",
+    "zoomBackground": "Powiększaj tło",
+    "zoomBackgroundDesc": "Przesuwaj tło razem z kamerą. Wyłącz, aby tło pozostało nieruchome.",
+    "recordlyFocused": "Skupiony",
+    "recordlyCinematic": "Filmowy",
+    "recordlyClassic": "Klasyczna animacja",
+    "recordlyConnect": "Łącz pobliskie zbliżenia",
+    "recordlyGap": "Maksymalny odstęp połączenia",
+    "recordlyPan": "Czas przesunięcia między zbliżeniami",
+    "recordlyEntry": "Czas przybliżania",
+    "recordlyExit": "Czas oddalania",
+    "recordlyDuration": "Czas nowych automatycznych zbliżeń",
+    "recordlySmoothness": "Płynność kamery",
+    "recordlyStiffness": "Sztywność kamery",
+    "recordlyDamping": "Tłumienie kamery",
+    "recordlyMass": "Masa kamery",
+    "recordlyNoSlots": "Brak wolnego miejsca na kolejne automatyczne zbliżenia.",
+    "recordlyNoTelemetry": "Za mało zapisanych danych kursora do utworzenia automatycznych zbliżeń.",
+    "recordlyPanThreshold": "Próg prędkości przesunięcia",
+    "recordlyZoomThreshold": "Próg prędkości powiększania",
+    "recordlyDirectionalMax": "Maksymalne rozmycie kierunkowe",
+    "recordlyRadialMax": "Maksymalne rozmycie promieniste"
   },
   "backgroundCatalog": {
     "images": "Obrazy",

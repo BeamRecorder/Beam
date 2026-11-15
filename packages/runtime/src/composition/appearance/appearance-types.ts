@@ -22,6 +22,7 @@ export interface DecoratedMediaOptions {
   source: CanvasImageSource;
   sourceRect?: MediaRect;
   rect: MediaRect;
+  paintPass?: 'shadow' | 'content';
   appearance?: ClipAppearance;
   /** Pixel-based appearance values are stored in output pixels; preview callers provide their display scale. */
   shadowScale?: number;

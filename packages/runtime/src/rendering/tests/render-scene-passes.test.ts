@@ -204,3 +204,19 @@ it('rerenders glass at lens density using the same prepared center, then dispose
   expect(state.disposePerspective).toHaveBeenCalledOnce();
   expect(state.disposeShapes).toHaveBeenCalledOnce();
 });
+
+it('advances the experimental camera only once when a glass effect oversamples the completed frame', () => {
+  const { value, source, visuals } = scene(false);
+  state.glass = true;
+  const camera = {
+    sample: vi.fn(() => {
+      throw new Error('Query sampling is not a presented frame');
+    }),
+    compose: vi.fn(() => ({ scale: 1.8, focus: { cx: 0.4, cy: 0.5 } })),
+    invalidate: vi.fn(),
+  };
+  renderCompositionFrame(context(), source, value, 0.5, null, undefined, visuals, undefined, camera);
+  expect(camera.compose).toHaveBeenCalledOnce();
+  expect(camera.compose).toHaveBeenCalledWith({ timeMs: 500, isPlaying: true, exporting: true });
+  expect(camera.sample).not.toHaveBeenCalled();
+});

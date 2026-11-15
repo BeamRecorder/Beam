@@ -430,6 +430,8 @@
     "savingProject": "Salvataggio progetto"
   },
   "ZoomPanel": {
+    "experimentalZoom": "Zoom sperimentale",
+    "experimentalZoomDesc": "Usa gli zoom 2D in stile Recordly. Il cambio rigenera gli zoom automatici sbloccati; Annulla li ripristina. Gli effetti 3D e le lenti mantengono il comportamento di Beam.",
     "applyToTrackHint": "Condividi lo stile tra gli zoom sbloccati, mantenendo destinazioni e tempi.",
     "cameraFollow": "Segui fotocamera",
     "followCursor": "Segui il cursore",
@@ -507,7 +509,28 @@
     "cameraLeadMs": "Anticipo",
     "cameraFollowHint": "La rotazione imposta l’angolo di base. L’inseguimento aggiunge i movimenti del cursore; il tempo di risposta ne regola la fluidità.",
     "cameraManualHint": "L’angolo della fotocamera resta fisso. Usa i controlli di messa a fuoco per scegliere l’area da ingrandire.",
-    "cameraIntensity": "Intensità 3D"
+    "cameraIntensity": "Intensità 3D",
+    "zoomBackground": "Ingrandisci lo sfondo",
+    "zoomBackgroundDesc": "Muovi lo sfondo con la videocamera. Disattiva per mantenerlo fisso.",
+    "recordlyFocused": "Mirato",
+    "recordlyCinematic": "Cinematico",
+    "recordlyClassic": "Animazione classica",
+    "recordlyConnect": "Collega zoom vicini",
+    "recordlyGap": "Intervallo massimo di collegamento",
+    "recordlyPan": "Durata del movimento di collegamento",
+    "recordlyEntry": "Durata dello zoom avanti",
+    "recordlyExit": "Durata dello zoom indietro",
+    "recordlyDuration": "Durata dei nuovi zoom automatici",
+    "recordlySmoothness": "Fluidità della videocamera",
+    "recordlyStiffness": "Rigidità della videocamera",
+    "recordlyDamping": "Smorzamento della videocamera",
+    "recordlyMass": "Massa della videocamera",
+    "recordlyNoSlots": "Nessuno spazio libero per altri zoom automatici.",
+    "recordlyNoTelemetry": "Dati del cursore insufficienti per generare zoom automatici.",
+    "recordlyPanThreshold": "Soglia velocità di spostamento",
+    "recordlyZoomThreshold": "Soglia velocità dello zoom",
+    "recordlyDirectionalMax": "Sfocatura direzionale massima",
+    "recordlyRadialMax": "Sfocatura radiale massima"
   },
   "backgroundCatalog": {
     "images": "Immagini",

@@ -26,6 +26,7 @@ export function validateZoomElement(zoom) {
     ![1, 2, 3, 4, 5, 6].includes(zoom.depth) ||
     !['auto', 'manual'].includes(zoom.mode) ||
     (zoom.enabled !== undefined && typeof zoom.enabled !== 'boolean') ||
+    (zoom.focusSpace !== undefined && !['source', 'viewport'].includes(zoom.focusSpace)) ||
     (zoom.projection !== undefined && !['2d', '3d', 'orbit'].includes(zoom.projection)) ||
     (zoom.transition !== undefined && zoom.transition !== 'cinematic') ||
     ['tiltIntensity', 'tiltHorizontal', 'tiltVertical'].some(

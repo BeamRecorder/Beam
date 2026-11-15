@@ -4,6 +4,11 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Optional Experimental zoom in the Zoom inspector uses Recordly's 2D camera and click-grouping algorithms, with Focused and Cinematic presets, Classic animation, configurable connections and spatial motion blur. Settings and generated zooms support saving and undo/redo; existing recordings work without recording again. Available in all fifteen languages.
+- Zoom the background independently, or keep it fixed while the video camera moves, in both standard and experimental mode.
+
 ## [0.6.0] - 2026-11-09
 
 ### Fixed

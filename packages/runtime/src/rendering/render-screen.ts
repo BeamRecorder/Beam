@@ -12,6 +12,7 @@ export function drawScreenMedia(
   timeMs = 0,
   appearanceScale = 1,
   shadowPixelRatio = 1,
+  paintPass?: 'shadow' | 'content',
 ) {
   const geometry = resolveScreenRenderGeometry(
     clip,
@@ -23,6 +24,7 @@ export function drawScreenMedia(
   );
   drawDecoratedMedia(context, {
     timeMs,
+    paintPass,
     shadowScale: appearanceScale,
     shadowPixelRatio,
     source: media.source,
