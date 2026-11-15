@@ -1,7 +1,9 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import RecordingWindowPreview from './RecordingWindowPreview.vue';
 import RecorderBar from '../recorder/RecorderBar.vue';
+
+vi.mock('~/api/capture', () => ({ capture: { getRecordingDiagnosticReport: vi.fn() } }));
 
 describe('instructional recording previews', () => {
   it('reuses the capture cards inside an inert, decorative setup preview', () => {

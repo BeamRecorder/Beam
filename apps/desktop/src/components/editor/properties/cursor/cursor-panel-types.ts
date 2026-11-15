@@ -14,6 +14,7 @@ export type CursorPanelProps = {
   cursorColor: string;
   enableShadow: boolean;
   shadowBlur: number;
+  shadowDistance?: number;
   shadowColor: string;
   shadowDirection: ShadowDirection;
   clickEffects: CursorClickEffects;
@@ -28,6 +29,7 @@ export type CursorPanelEmits = {
   'update:cursorColor': [value: string];
   'update:enableShadow': [value: boolean];
   'update:shadowBlur': [value: number];
+  'update:shadowDistance': [value: number | undefined];
   'update:shadowColor': [value: string];
   'update:shadowDirection': [value: ShadowDirection];
   'update:clickEffects': [value: CursorClickEffects];

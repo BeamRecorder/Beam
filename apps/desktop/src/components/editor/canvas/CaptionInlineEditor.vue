@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { shadowOffset } from '@beam/engine/shared/shadow';
 import { computed, nextTick, onMounted, ref, watch, type CSSProperties } from 'vue';
 import { TriangleAlert } from '@lucide/vue';
 import type { CaptionClip } from '@beam/engine/shared/composition-types';
@@ -29,18 +30,15 @@ const textShadow = computed(() => {
   const style = props.clip.caption.style;
   const scale = props.renderScale;
   const shadows: string[] = [];
-  if (style.shadowBlur > 0) {
+  if (style.shadowBlur > 0 || (style.shadowDistance ?? 0) > 0) {
     const blur = style.shadowBlur * scale;
-    const direction = style.shadowDirection;
-    const x =
-      style.shadowOffsetX ?? (direction === 'top-left' ? -blur * 0.5 : direction === 'bottom-right' ? blur * 0.5 : 0);
-    const y =
-      style.shadowOffsetY ??
-      (direction === 'top-left'
-        ? -blur * 0.5
-        : direction === 'bottom' || direction === 'bottom-right'
-          ? blur * 0.5
-          : 0);
+    const offset = shadowOffset(
+      style.shadowDirection,
+      style.shadowDistance === undefined ? undefined : style.shadowDistance * scale,
+      blur * 0.5,
+    );
+    const x = style.shadowDistance !== undefined ? offset.x : (style.shadowOffsetX ?? offset.x);
+    const y = style.shadowDistance !== undefined ? offset.y : (style.shadowOffsetY ?? offset.y);
     shadows.push(`${x}px ${y}px ${blur}px ${style.shadowColor}`);
   }
   const extrusion = Math.min(16, Math.ceil(Math.max(0, style.extrusionDepth) * scale));

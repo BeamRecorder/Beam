@@ -25,6 +25,7 @@ export interface SelectedClipProperties {
   crop?: NormalizedCrop;
   cropDimensions?: CropDimensions | null;
   shadowBlur?: number;
+  shadowDistance?: number;
   shadowMode?: ClipShadowMode;
   shadowSize?: string;
   shadowColor?: string;

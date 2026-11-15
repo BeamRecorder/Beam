@@ -1,3 +1,4 @@
+import ShadowDistanceControl from '../../shared/ShadowDistanceControl.vue';
 import { setCurrentLocale } from '~/i18n';
 import { SUPPORTED_LOCALES } from '~/i18n/locales';
 import { defineComponent, h, nextTick } from 'vue';
@@ -212,7 +213,7 @@ describe('ClipAppearanceControls', () => {
     );
 
     const sliders = wrapper.findAll('.big-slider-stub');
-    expect(sliders).toHaveLength(2);
+    expect(sliders).toHaveLength(3);
     expect(sliders[0]!.attributes('data-label')).toMatch(/radius/i);
     expect(sliders[0]!.find('.big-slider-value').text()).toBe('32px');
     expect(sliders[1]!.attributes('data-label')).toMatch(/blur/i);
@@ -369,7 +370,7 @@ describe('ClipAppearanceControls', () => {
       }),
     });
     await nextTick();
-    expect(wrapper.findAll('.big-slider-stub')).toHaveLength(1);
+    expect(wrapper.findAll('.big-slider-stub')).toHaveLength(2);
     expect(wrapper.find('.big-slider-value').text()).toBe('12px');
     expect(wrapper.findComponent({ name: 'InfoTooltip' }).props('content')).toContain('Adaptive:');
     expect(wrapper.get('.direction-button[data-direction="top-left"]').classes()).toContain('active');
@@ -461,4 +462,16 @@ it.each(SUPPORTED_LOCALES)('explains both shadow modes on separate lines in %s',
   expect(text).not.toContain('ClipPropertiesPanel.');
   expect(text.split('\n').every((line) => line.trim().length > 0)).toBe(true);
   wrapper.unmount();
+});
+
+it('changes media shadow distance independently and keeps it when changing blur', async () => {
+  const wrapper = mountAppearance(
+    clip({ shadowSize: 'custom', shadowBlur: 40, shadowDistance: 25, shadowDirection: 'bottom' }),
+  );
+  wrapper.findComponent(ShadowDistanceControl).vm.$emit('update:modelValue', 0);
+  await nextTick();
+  expect(wrapper.emitted('update:shadow')?.at(-1)).toEqual([expect.objectContaining({ distance: 0, blur: 40 })]);
+  const blur = wrapper.findAll('.big-slider-stub').find((item) => /blur/i.test(item.attributes('data-label') ?? ''))!;
+  await blur.trigger('click');
+  expect(wrapper.emitted('update:shadow')?.at(-1)).toEqual([expect.objectContaining({ distance: 0 })]);
 });

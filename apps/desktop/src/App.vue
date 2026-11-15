@@ -412,7 +412,7 @@ const dismissRecorderLauncher = async () => {
       :preparing-editor="isPreparingEditor || isFinalizingRecording"
       :finalizing-recording="isFinalizingRecording"
       :editor-loading-progress="editorLoadingProgress"
-      :external-error="recordingStartupError"
+      :external-error="recordingStartupError || recording.error.value"
       :recorder-launcher-context="recorderLauncherContext"
       @start-recording="startRecording"
       @open-project="handleOpenProject"

@@ -12,6 +12,7 @@ const props = withDefaults(
     size?: 'default' | 'compact';
     showValue?: boolean;
     label?: string;
+    valueText?: string;
   }>(),
   {
     min: 0,
@@ -58,6 +59,7 @@ const handleCommit = (event: Event) => {
         :value="modelValue"
         :disabled="disabled"
         :aria-label="label"
+        :aria-valuetext="valueText"
         class="slider-input"
         :style="{
           background: `linear-gradient(to right, var(--text-secondary) 0%, var(--text-secondary) ${percentage}%, var(--color-border) ${percentage}%, var(--color-border) 100%)`,

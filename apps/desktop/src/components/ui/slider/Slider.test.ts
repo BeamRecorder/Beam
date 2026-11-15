@@ -79,3 +79,13 @@ describe('Slider', () => {
     expect(invalid.get('input').attributes('style')).toContain('0%');
   });
 });
+
+it('exposes formatted values to assistive technology without changing the numeric range', async () => {
+  const wrapper = mount(Slider, { props: { modelValue: 65, valueText: '01:05 / 02:00', max: 120 } });
+  expect(wrapper.get('input').attributes('aria-valuetext')).toBe('01:05 / 02:00');
+  expect((wrapper.get('input').element as HTMLInputElement).value).toBe('65');
+  await wrapper.setProps({ valueText: '00:00 / 02:00', modelValue: 0 });
+  expect(wrapper.get('input').attributes('aria-valuetext')).toBe('00:00 / 02:00');
+  await wrapper.setProps({ valueText: undefined });
+  expect(wrapper.get('input').attributes('aria-valuetext')).toBeUndefined();
+});

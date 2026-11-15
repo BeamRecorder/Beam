@@ -281,6 +281,20 @@ const settle = async () => {
 };
 
 describe('App', () => {
+  it('preserves a controller failure on the HUD after recording ends', async () => {
+    mocks.controller.recording.phase.value = 'recording';
+    await settle();
+    mocks.controller.recording.error.value = 'Capture engine stopped unexpectedly';
+    mocks.controller.recording.phase.value = 'idle';
+    await settle();
+    expect(wrapper.getComponent({ name: 'MockHud' }).attributes('external-error')).toBe(
+      'Capture engine stopped unexpectedly',
+    );
+    mocks.controller.recording.error.value = '';
+    await settle();
+    expect(wrapper.getComponent({ name: 'MockHud' }).attributes('external-error')).toBe('');
+  });
+
   it('cancels editor preparation and ignores its late completion and loading events', async () => {
     let finish!: (value: boolean) => void;
     mocks.capture.openEditor.mockReturnValueOnce(

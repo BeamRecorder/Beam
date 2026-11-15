@@ -167,3 +167,17 @@ it('rejects invalid cameras, tiny GPUs and overflowing geometry before allocatio
     RangeError,
   );
 });
+
+it('includes distant directional shadows but ignores stored distance when shadows are disabled or centered', () => {
+  const value = clip();
+  const baseline = perspectiveSourceBounds({ width: 400, height: 240 }, [value]);
+  value.appearance.shadowDistance = 40;
+  expect(perspectiveSourceBounds({ width: 400, height: 240 }, [value])).toEqual(baseline);
+  value.appearance.shadowSize = 'custom';
+  value.appearance.shadowBlur = 0;
+  value.appearance.shadowDirection = 'bottom';
+  const distant = perspectiveSourceBounds({ width: 400, height: 240 }, [value]);
+  expect(distant.width).toBeCloseTo(baseline.width + 80);
+  value.appearance.shadowDirection = 'all';
+  expect(perspectiveSourceBounds({ width: 400, height: 240 }, [value])).toEqual(baseline);
+});

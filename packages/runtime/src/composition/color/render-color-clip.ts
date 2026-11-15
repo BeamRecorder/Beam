@@ -57,6 +57,7 @@ export function drawColorClip(
       cornerRadius: style.cornerRadius,
       shadowSize: style.shadowSize,
       shadowBlur: style.shadowBlur,
+      shadowDistance: style.shadowDistance,
       shadowMode: 'solid',
       shadowColor: style.shadowMode === 'adaptive' ? adaptiveShadowColor : style.shadowColor,
       shadowDirection: style.shadowDirection,

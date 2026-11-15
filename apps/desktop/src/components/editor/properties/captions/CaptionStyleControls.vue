@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ShadowDistanceControl from '../shared/ShadowDistanceControl.vue';
+import { shadowDistance } from '@beam/engine/shared/shadow';
 import { computed, ref } from 'vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
@@ -315,6 +317,11 @@ const shadowDirectionOptions = computed(() => [
           @update:model-value="emit('update', 'shadowDirection', $event as CaptionStyle['shadowDirection'])"
         />
       </div>
+      <ShadowDistanceControl
+        :model-value="shadowDistance(style.shadowDirection, style.shadowDistance, style.shadowBlur * 0.5)"
+        :disabled="style.shadowDirection === 'all'"
+        @update:model-value="emit('update', 'shadowDistance', $event)"
+      />
       <BigSlider
         :display-precision="2"
         :label="t('shadowBlur')"

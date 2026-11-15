@@ -213,11 +213,12 @@ describe('internationalization', () => {
     }
   });
 
-  it('keeps the merged English message leaf keys and placeholders in every locale', () => {
+  it('keeps the merged English message leaf keys and placeholders in every locale', async () => {
     const english = i18n.global.getLocaleMessage('en')!;
     const englishLeaves = messageLeaves(english);
 
     for (const locale of SUPPORTED_LOCALES) {
+      await setCurrentLocale(locale);
       const messages = i18n.global.getLocaleMessage(locale);
       for (const [path, englishValue] of englishLeaves) {
         const translated = messageAt(messages, path);

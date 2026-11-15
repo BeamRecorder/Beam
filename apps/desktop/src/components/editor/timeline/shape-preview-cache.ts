@@ -20,6 +20,7 @@ export const SHAPE_PREVIEW_FIELDS = [
   'shadowEnabled',
   'shadowColor',
   'shadowBlur',
+  'shadowDistance',
   'shadowDirection',
   'text',
   'drawing',

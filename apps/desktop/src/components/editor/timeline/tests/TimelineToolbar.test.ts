@@ -405,3 +405,23 @@ describe('TimelineToolbar', () => {
     expect(wrapper.emitted('update:previewQuality')).toEqual([['full'], ['half'], ['quarter']]);
   });
 });
+
+it('shows a seek bar only in fullscreen and relays scrubbing and exact seeks to the editor', async () => {
+  const wrapper = mount(TimelineToolbar, {
+    props: { currentTime: 12, duration: 120, isPlaying: false, zoomLevel: 100 },
+    global: { stubs: { Popover, BigSlider, Button, PreviewQualityPopover } },
+  });
+  expect(wrapper.find('input[aria-label="Seek in preview"]').exists()).toBe(false);
+  await wrapper.setProps({ isCanvasFullscreen: true });
+  const seek = wrapper.get('input[aria-label="Seek in preview"]');
+  (seek.element as HTMLInputElement).value = '60';
+  await seek.trigger('input');
+  await seek.trigger('change');
+  expect(wrapper.emitted('update:currentTime')).toEqual([
+    [60, 'scrub'],
+    [60, 'seek'],
+  ]);
+  expect(wrapper.find('.center-section').exists()).toBe(true);
+  await wrapper.setProps({ isCanvasFullscreen: false });
+  expect(wrapper.find('input[aria-label="Seek in preview"]').exists()).toBe(false);
+});

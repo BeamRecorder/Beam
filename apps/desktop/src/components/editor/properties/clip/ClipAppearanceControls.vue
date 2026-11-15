@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ShadowDistanceControl from '../shared/ShadowDistanceControl.vue';
+import { shadowDistance } from '@beam/engine/shared/shadow';
 import type { ClipAppearanceEmits } from './clip-properties-types';
 import { computed, ref, watch } from 'vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
@@ -39,6 +41,7 @@ const shadowPresets = computed(() => [
 
 const selectedShadowSize = ref<ClipShadowSize>((props.selectedClip?.shadowSize as ClipShadowSize | undefined) ?? 'md');
 const customShadowBlur = ref(props.selectedClip?.shadowBlur ?? 40);
+const selectedShadowDistance = ref(props.selectedClip?.shadowDistance);
 const selectedShadowMode = ref<ClipShadowMode>(props.selectedClip?.shadowMode ?? 'solid');
 const selectedShadowColor = ref(props.selectedClip?.shadowColor ?? '#000000');
 const selectedShadowDirection = ref<ShadowDirection>(
@@ -50,6 +53,7 @@ watch(
   (clip) => {
     selectedShadowSize.value = (clip?.shadowSize as ClipShadowSize | undefined) ?? 'md';
     customShadowBlur.value = clip?.shadowBlur ?? 40;
+    selectedShadowDistance.value = clip?.shadowDistance;
     selectedShadowMode.value = clip?.shadowMode ?? 'solid';
     selectedShadowColor.value = clip?.shadowColor ?? '#000000';
     selectedShadowDirection.value = (clip?.shadowDirection as ShadowDirection | undefined) ?? 'all';
@@ -70,9 +74,23 @@ const {
   onInteractionChange: (interacting) => emit('corner-radius-interaction', interacting),
 });
 
+const displayedShadowDistance = computed(() =>
+  shadowDistance(
+    selectedShadowDirection.value,
+    selectedShadowDistance.value,
+    (selectedShadowSize.value === 'custom'
+      ? customShadowBlur.value
+      : ({ sm: 16, md: 24, lg: 32, none: 0 }[selectedShadowSize.value] ?? 0)) * 0.5,
+  ),
+);
+const handleShadowDistanceChange = (distance: number) => {
+  selectedShadowDistance.value = distance;
+  handleShadowPresetChange(selectedShadowSize.value);
+};
 const handleShadowPresetChange = (sizeId: string) => {
   selectedShadowSize.value = sizeId as ClipShadowSize;
   emit('update:shadow', {
+    ...(selectedShadowDistance.value !== undefined ? { distance: selectedShadowDistance.value } : {}),
     size: selectedShadowSize.value,
     blur: customShadowBlur.value,
     mode: selectedShadowMode.value,
@@ -84,6 +102,7 @@ const handleShadowPresetChange = (sizeId: string) => {
 const handleShadowModeChange = (mode: ClipShadowMode) => {
   selectedShadowMode.value = mode;
   emit('update:shadow', {
+    ...(selectedShadowDistance.value !== undefined ? { distance: selectedShadowDistance.value } : {}),
     size: selectedShadowSize.value,
     blur: customShadowBlur.value,
     mode,
@@ -95,6 +114,7 @@ const handleShadowModeChange = (mode: ClipShadowMode) => {
 const handleCustomShadowBlurChange = (blur: number) => {
   customShadowBlur.value = blur;
   emit('update:shadow', {
+    ...(selectedShadowDistance.value !== undefined ? { distance: selectedShadowDistance.value } : {}),
     size: 'custom',
     blur,
     mode: selectedShadowMode.value,
@@ -106,6 +126,7 @@ const handleCustomShadowBlurChange = (blur: number) => {
 const handleShadowDirectionChange = (directionId: ShadowDirection) => {
   selectedShadowDirection.value = directionId;
   emit('update:shadow', {
+    ...(selectedShadowDistance.value !== undefined ? { distance: selectedShadowDistance.value } : {}),
     size: selectedShadowSize.value,
     blur: customShadowBlur.value,
     mode: selectedShadowMode.value,
@@ -117,6 +138,7 @@ const handleShadowDirectionChange = (directionId: ShadowDirection) => {
 const handleShadowColorChange = (color: string) => {
   selectedShadowColor.value = color;
   emit('update:shadow', {
+    ...(selectedShadowDistance.value !== undefined ? { distance: selectedShadowDistance.value } : {}),
     size: selectedShadowSize.value,
     blur: customShadowBlur.value,
     mode: selectedShadowMode.value,
@@ -211,6 +233,12 @@ const handleShadowColorChange = (color: string) => {
           @update:modelValue="handleCustomShadowBlurChange"
         />
 
+        <ShadowDistanceControl
+          v-if="selectedShadowSize !== 'none'"
+          :model-value="displayedShadowDistance"
+          :disabled="selectedShadowDirection === 'all'"
+          @update:model-value="handleShadowDistanceChange"
+        />
         <div v-if="selectedShadowSize !== 'none'" class="sub-group margin-top-sm">
           <span class="sub-label">{{ t('direction') }}</span>
           <ShadowDirectionGroup

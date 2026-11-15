@@ -129,7 +129,7 @@ describe('CaptionClipPanel', () => {
         },
       },
     });
-    expect(wrapper.findAll('.caption-slider')).toHaveLength(9);
+    expect(wrapper.findAll('.caption-slider')).toHaveLength(10);
     expect(wrapper.findAll('.color-picker-stub')).toHaveLength(4);
     expect(wrapper.get('.wrap-switch').attributes('aria-checked')).toBe('true');
     expect(wrapper.get('.font-select').attributes('data-variant')).toBe('search');

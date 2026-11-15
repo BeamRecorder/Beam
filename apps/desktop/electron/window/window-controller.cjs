@@ -1,4 +1,4 @@
-const { DEFAULT_HUD_WINDOW_SIZE, normalizeHudWindowSize } = require('./hud-window-size.cjs');
+const { DEFAULT_HUD_WINDOW_SIZE, normalizeHudWindowSize, restoreHudWindowSize } = require('./hud-window-size.cjs');
 const { RECORDER_SIZE, bottomCenterRecorder } = require('./recorder-layout.cjs');
 
 const { applyPreparationMaterial, PREPARATION_SIZE } = require('./capture-preparation-layout.cjs');
@@ -58,6 +58,7 @@ class WindowController {
     }
     this.setMousePolicy(true);
     const applyNativeWindowPolicy = () => {
+      restoreHudWindowSize(this.window, this.mode, this.hudSize);
       this.applyInteractionPolicy();
       this.applyZOrderPolicy();
     };
@@ -68,6 +69,7 @@ class WindowController {
       this.hiddenByController = false;
       applyNativeWindowPolicy();
     });
+    this.window.on('resize', () => restoreHudWindowSize(this.window, this.mode, this.hudSize));
     this.window.on('hide', applyNativeWindowPolicy);
     this.window.on('minimize', applyNativeWindowPolicy);
     this.window.on('restore', applyNativeWindowPolicy);
@@ -152,7 +154,7 @@ class WindowController {
   }
 
   readHudSize() {
-    return normalizeHudWindowSize(this.preferencesStore?.read()?.hudWindow);
+    return this.userHudSize ?? normalizeHudWindowSize(this.preferencesStore?.read()?.hudWindow);
   }
 
   rememberHudPosition() {
@@ -291,7 +293,7 @@ class WindowController {
 
   applySizeConstraints() {
     const minimumSize =
-      this.mode === 'preparation' ? this.preparationSize : this.mode === 'recorder' ? RECORDER_SIZE : this.hudSize;
+      this.mode === 'preparation' ? this.preparationSize : this.mode === 'recorder' ? RECORDER_SIZE : HUD_SIZE;
     this.window.setMinimumSize?.(minimumSize.width, minimumSize.height);
   }
 
@@ -428,7 +430,7 @@ class WindowController {
       if (this.window.isDestroyed()) return;
       this.window.setResizable?.(false);
       this.window.setMaximizable?.(false);
-      this.window.setMinimumSize?.(this.hudSize.width, this.hudSize.height);
+      this.window.setMinimumSize?.(HUD_SIZE.width, HUD_SIZE.height);
       this.window.setSize?.(this.hudSize.width, this.hudSize.height);
       if (this.hudPosition && Array.isArray(this.hudPosition)) {
         const display = this.screen.getDisplayNearestPoint({

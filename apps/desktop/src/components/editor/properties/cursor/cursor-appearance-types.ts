@@ -8,6 +8,7 @@ export interface CursorAppearanceProps {
   cursorColor: string;
   enableShadow: boolean;
   shadowBlur: number;
+  shadowDistance?: number;
   shadowColor: string;
   shadowDirection: ShadowDirection;
   still?: boolean;
@@ -20,6 +21,7 @@ export interface CursorAppearanceEmits {
   'update:cursorColor': [value: string];
   'update:enableShadow': [value: boolean];
   'update:shadowBlur': [value: number];
+  'update:shadowDistance': [value: number | undefined];
   'update:shadowColor': [value: string];
   'update:shadowDirection': [value: ShadowDirection];
 }

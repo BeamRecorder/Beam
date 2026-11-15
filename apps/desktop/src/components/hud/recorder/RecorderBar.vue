@@ -5,6 +5,7 @@ import type { RecordingBarVisibility, RecordingPhase } from './recording-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import Button from '~/ui/button/Button.vue';
 import Throbber from '~/ui/throbber/Throbber.vue';
+import RecordingDiagnosticCopy from './RecordingDiagnosticCopy.vue';
 
 const { t } = useTranslate('RecorderBar');
 const props = withDefaults(
@@ -133,6 +134,12 @@ watch(
           <span v-if="warning" class="recording-warning" role="alert" :aria-label="warning">
             <TriangleAlert :size="12" class="warning-icon" aria-hidden="true" />
             <span class="warning-label">{{ t('captureIssue') }}</span>
+            <RecordingDiagnosticCopy
+              :message="warning"
+              :phase="phase"
+              :recording-time="recordingTime"
+              variant="ghost"
+            />
           </span>
         </template>
       </p>

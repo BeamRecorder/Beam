@@ -21,7 +21,11 @@ export function snapshotWithScreenCursor(
     settings = {
       ...settings,
       size: settings.size * previewScale,
-      shadow: { ...settings.shadow, blur: settings.shadow.blur * previewScale },
+      shadow: {
+        ...settings.shadow,
+        blur: settings.shadow.blur * previewScale,
+        ...(settings.shadow.distance !== undefined ? { distance: settings.shadow.distance * previewScale } : {}),
+      },
     };
   if (previewSelection) settings = { ...settings, selection: previewSelection };
   const pack =

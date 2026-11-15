@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ShadowDistanceControl from '../shared/ShadowDistanceControl.vue';
+import ShadowDirectionGroup from '../cursor/ShadowDirectionGroup.vue';
 import { computed } from 'vue';
 import { ArrowDownLeft, ArrowDownRight, ArrowUpLeft, ArrowUpRight, SlidersHorizontal } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
@@ -164,6 +166,15 @@ const positions = [
         :label="t('watermarkShadow')"
         :format-value="(shadow: number) => `${Math.round(shadow)}%`"
         @update:model-value="update({ shadow: $event })"
+      />
+      <ShadowDirectionGroup
+        :model-value="value.shadowDirection ?? 'all'"
+        @update:model-value="update({ shadowDirection: $event })"
+      />
+      <ShadowDistanceControl
+        :model-value="value.shadowDistance ?? 0"
+        :disabled="(value.shadowDirection ?? 'all') === 'all'"
+        @update:model-value="update({ shadowDistance: $event })"
       />
       <ColorPicker
         :model-value="value.backgroundColor"

@@ -1,7 +1,9 @@
 import { triggerPointer } from '../../../../../../tests/support/pointer';
 import { flushPromises, mount } from '@vue/test-utils';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import RecorderBar from './RecorderBar.vue';
+
+vi.mock('~/api/capture', () => ({ capture: { getRecordingDiagnosticReport: vi.fn() } }));
 
 const props = {
   phase: 'recording' as const,
@@ -28,7 +30,7 @@ describe('compact RecorderBar', () => {
     expect(wrapper.get('[role="alert"]').attributes('aria-label')).toBe(warning);
     expect(wrapper.get('[role="alert"]').text()).toBe('Capture issue');
     expect(wrapper.get('.recording-time').text()).toContain('00:12.3');
-    expect(wrapper.findAll('button')).toHaveLength(4);
+    expect(wrapper.findAll('button')).toHaveLength(5);
     expect(wrapper.get('.recorder-bar').classes()).toContain('has-warning');
   });
 

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ShadowDistanceControl from '../shared/ShadowDistanceControl.vue';
+import { shadowDistance } from '@beam/engine/shared/shadow';
 import ElementTextControls from '../../elements/ElementTextControls.vue';
 import ShapeGeometryControls from './ShapeGeometryControls.vue';
 import TransformControls from '../shared/TransformControls.vue';
@@ -216,6 +218,11 @@ const number = (value: string | number, key: keyof ElementLayerPatch, max: numbe
             ><template #suffix>px</template></Input
           >
         </div>
+        <ShadowDistanceControl
+          :model-value="shadowDistance(style.shadowDirection, style.shadowDistance, 12)"
+          :disabled="style.shadowDirection === 'all'"
+          @update:model-value="update({ shadowDistance: $event })"
+        />
         <ShadowDirectionGroup
           :model-value="style.shadowDirection"
           @update:model-value="update({ shadowDirection: $event })"

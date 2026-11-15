@@ -3,6 +3,7 @@
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "types": ["vite/client"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "paths": {
       "@desktop/*": ["./apps/desktop/src/*"],
       "~/ui/*": ["./apps/desktop/src/components/ui/*"],

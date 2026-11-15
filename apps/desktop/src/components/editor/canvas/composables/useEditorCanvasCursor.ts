@@ -20,6 +20,7 @@ export function useEditorCanvasCursor(props: EditorCanvasProps, options: EditorC
     motion: () => resolved.value.settings.motion,
     autoHide: () => resolved.value.settings.autoHide,
     shadowBlur: () => resolved.value.settings.shadow.blur,
+    shadowDistance: () => resolved.value.settings.shadow.distance,
     shadowColor: () => resolved.value.settings.shadow.color,
     shadowDirection: () => resolved.value.settings.shadow.direction,
     outputCanvas: () => props.outputCanvas,

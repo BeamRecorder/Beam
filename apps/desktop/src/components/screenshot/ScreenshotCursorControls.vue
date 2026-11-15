@@ -22,6 +22,7 @@ const { t } = useTranslate('CanvasPanel');
       :cursor-color="cursor.color"
       :enable-shadow="cursor.shadowEnabled"
       :shadow-blur="cursor.shadowBlur"
+      :shadow-distance="cursor.shadowDistance"
       :shadow-color="cursor.shadowColor"
       :shadow-direction="cursor.shadowDirection"
       @update:selection="emit('update', { selection: $event })"
@@ -29,6 +30,7 @@ const { t } = useTranslate('CanvasPanel');
       @update:cursor-color="emit('update', { color: $event })"
       @update:enable-shadow="emit('update', { shadowEnabled: $event })"
       @update:shadow-blur="emit('update', { shadowBlur: $event })"
+      @update:shadow-distance="emit('update', { shadowDistance: $event })"
       @update:shadow-color="emit('update', { shadowColor: $event })"
       @update:shadow-direction="emit('update', { shadowDirection: $event })"
     >

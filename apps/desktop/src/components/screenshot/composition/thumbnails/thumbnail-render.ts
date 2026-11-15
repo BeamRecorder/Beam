@@ -44,11 +44,11 @@ export async function renderLayerThumbnail(
   const cursor = state.cursors?.find((item) => item.id === layer.id);
   const shape = state.shapes.find((item) => item.id === layer.id);
   const shadow = cursor?.shadowEnabled
-    ? 4.4 * cursor.shadowBlur * unit
+    ? (4.4 * cursor.shadowBlur + (cursor.shadowDistance ?? 0)) * unit
     : shape?.shadowEnabled
-      ? (4 * shape.shadowBlur + 12) * unit
+      ? (4 * shape.shadowBlur + (shape.shadowDistance ?? 12)) * unit
       : layer.kind === 'image'
-        ? 4 * shadowBlurForAppearance(state.image.appearance)
+        ? 4 * shadowBlurForAppearance(state.image.appearance) + (state.image.appearance.shadowDistance ?? 0)
         : 0;
   const padding = shadow + (shape?.borderWidth ?? 0) * unit;
   const scale = 176 / Math.max(1, rotatedWidth + padding * 2, rotatedHeight + padding * 2);

@@ -238,7 +238,7 @@ export function createScreenshotEditorTestHarness(
   const clickText = async (wrapper: ReturnType<typeof mount>, text: string) => {
     const insert = ['Shape', 'Arrow', 'Text', 'Draw', 'Highlight', 'Blur', 'Image', 'Cursor'].includes(text);
     if (insert) {
-      const menu = wrapper.findComponent({ name: 'ScreenshotAddMenu' });
+      const menu = wrapper.findComponent({ name: 'ScreenshotToolbar' });
       const ids: Record<string, string> = {
         Shape: 'shape',
         Arrow: 'arrow',

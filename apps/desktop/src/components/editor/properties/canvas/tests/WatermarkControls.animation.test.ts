@@ -2,6 +2,7 @@ import { enableAutoUnmount, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import WatermarkControls from '../WatermarkControls.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
+import ShadowDirectionGroup from '../../cursor/ShadowDirectionGroup.vue';
 import { DEFAULT_WATERMARK, type WatermarkSettings } from '@beam/engine/layout/output-canvas';
 
 enableAutoUnmount(afterEach);
@@ -68,14 +69,20 @@ describe('watermark selection animation', () => {
   });
 
   it('restores indicators to the saved choices after re-enabling the watermark', async () => {
-    const wrapper = controls({ text: 'custom', position: 'top-right' });
+    const wrapper = controls({ text: 'custom', position: 'top-right', shadowDirection: 'top-left' });
     const value = wrapper.props('modelValue')!;
     await wrapper.setProps({ modelValue: { ...value, enabled: false } });
     expect(wrapper.findAllComponents(ButtonGroup)).toHaveLength(0);
     await wrapper.setProps({ modelValue: { ...value, enabled: true } });
-    expect(wrapper.findAllComponents(ButtonGroup).map((group) => group.props('selection'))).toEqual([
+    expect(
+      wrapper
+        .findAllComponents(ButtonGroup)
+        .slice(0, 2)
+        .map((group) => group.props('selection')),
+    ).toEqual([
       { count: 4, index: 3 },
       { count: 4, index: 1 },
     ]);
+    expect(wrapper.getComponent(ShadowDirectionGroup).props('modelValue')).toBe('top-left');
   });
 });

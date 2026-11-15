@@ -166,6 +166,7 @@
     "colorFormat": "Color format"
   },
   "TimelineToolbar": {
+    "seekPreview": "Seek in preview",
     "add": "Add",
     "composition": "Composition",
     "split": "Split",
@@ -367,6 +368,8 @@
     "changelog": "Changelog"
   },
   "VideoEditor": {
+    "pauseGapsRemoved": "Pauses were removed automatically. You can restore them or use Undo.",
+    "restorePauseGaps": "Restore",
     "exportBanner": "Export in progress. Live edits will not affect the file currently being exported.",
     "mediaDropTitle": "Drop media to add it",
     "mediaDropDescription": "Videos, images and audio files will be added at the playhead.",

@@ -85,6 +85,7 @@ export interface CaptionStyle {
   wrap: boolean;
   shadowColor: string;
   shadowBlur: number;
+  shadowDistance?: number;
   shadowDirection?: 'all' | 'bottom' | 'bottom-right' | 'top-left';
   shadowOffsetX?: number;
   shadowOffsetY?: number;
@@ -129,6 +130,7 @@ export type ClipShadowMode = 'solid' | 'adaptive';
 export interface WebcamAppearance {
   shadowSize: ClipShadowSize;
   shadowBlur: number;
+  shadowDistance?: number;
   shadowMode: ClipShadowMode;
   cornerRadius: 'none' | 'sm' | 'md' | 'lg' | 'full' | number;
 }
@@ -251,6 +253,7 @@ export interface ColorClip extends ClipBase {
   cornerRadius?: ColorLayerStyle['cornerRadius'];
   shadowSize?: ColorLayerStyle['shadowSize'];
   shadowBlur?: ColorLayerStyle['shadowBlur'];
+  shadowDistance?: number;
   shadowMode?: ColorLayerStyle['shadowMode'];
   shadowColor?: ColorLayerStyle['shadowColor'];
   shadowDirection?: ColorLayerStyle['shadowDirection'];

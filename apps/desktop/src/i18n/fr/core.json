@@ -416,6 +416,7 @@
     "deleteClip": "Supprimer le clip",
     "deleteVideo": "Supprimer la vidéo",
     "deleteWebcam": "Supprimer la webcam",
+    "shadowDistance": "Distance de l’ombre",
     "shadowBlur": "Flou d'ombre",
     "crop": "Recadrage"
   },
@@ -595,6 +596,8 @@
     "viewImage": "Voir l’image"
   },
   "HUD": {
+    "copyDiagnostics": "Copier le diagnostic d’enregistrement",
+    "copyDiagnosticsFailed": "Impossible de copier le diagnostic",
     "issues": "Problèmes",
     "inputAccessFailed": "Impossible de demander l’accès aux interactions.",
     "title": "Beam",

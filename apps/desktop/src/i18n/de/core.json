@@ -416,6 +416,7 @@
     "deleteClip": "Clip löschen",
     "deleteVideo": "Video löschen",
     "deleteWebcam": "Webcam löschen",
+    "shadowDistance": "Schattenabstand",
     "shadowBlur": "Schattenunschärfe",
     "crop": "Zuschneiden"
   },
@@ -595,6 +596,8 @@
     "viewImage": "Bild ansehen"
   },
   "HUD": {
+    "copyDiagnostics": "Aufnahmediagnose kopieren",
+    "copyDiagnosticsFailed": "Diagnose konnte nicht kopiert werden",
     "issues": "Probleme",
     "inputAccessFailed": "Der Zugriff auf Interaktionen konnte nicht angefordert werden.",
     "title": "Beam",
@@ -1388,5 +1391,17 @@
   "RecordingHealth": {
     "captureStopped": "Die Bildschirmaufnahme wurde beendet. Deine aufgenommenen Dateien wurden behalten.",
     "transitionFailed": "Pausieren oder Fortsetzen fehlgeschlagen. Die Aufnahme wurde beendet, um deine Dateien zu erhalten. {reason}"
+  },
+  "SourcePicker": {
+    "hoverHint": "Zum Vorschauen mit der Maus darüberfahren. Zum Auswählen klicken.",
+    "close": "Schließen",
+    "search": "Fenster oder Bildschirme suchen…",
+    "sourceCount": "{count} Quellen",
+    "livePreview": "Live-Vorschau",
+    "previewHint": "Deine nächste großartige Aufnahme",
+    "navigate": "Navigieren",
+    "noResults": "Keine Quellen entsprechen deiner Suche.",
+    "confirm": "Ausgewählte Quelle aufnehmen",
+    "developmentNotice": "Entwicklungsvorschau · Alle Quellen sind simuliert. Es wird keine Aufnahme erstellt."
   }
 }

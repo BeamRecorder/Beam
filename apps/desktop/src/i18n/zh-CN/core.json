@@ -416,6 +416,7 @@
     "deleteClip": "删除片段",
     "deleteVideo": "删除视频",
     "deleteWebcam": "删除摄像头",
+    "shadowDistance": "阴影距离",
     "shadowBlur": "阴影模糊",
     "crop": "裁剪"
   },
@@ -595,6 +596,8 @@
     "viewImage": "查看图片"
   },
   "HUD": {
+    "copyDiagnostics": "复制录制诊断信息",
+    "copyDiagnosticsFailed": "无法复制诊断信息",
     "issues": "问题",
     "inputAccessFailed": "无法请求交互访问权限。",
     "title": "Beam",
@@ -1388,5 +1391,17 @@
   "RecordingHealth": {
     "captureStopped": "屏幕录制已停止。已保留录制的文件。",
     "transitionFailed": "暂停或继续录制失败。为保留文件，录制已停止。{reason}"
+  },
+  "SourcePicker": {
+    "hoverHint": "悬停以预览，点击以选择。",
+    "close": "关闭",
+    "search": "搜索窗口或屏幕…",
+    "sourceCount": "{count} 个来源",
+    "livePreview": "实时预览",
+    "previewHint": "你的下一次精彩录制",
+    "navigate": "导航",
+    "noResults": "没有与搜索匹配的来源。",
+    "confirm": "捕获所选来源",
+    "developmentNotice": "开发预览 · 所有来源均为模拟，不会创建录制。"
   }
 }

@@ -24,6 +24,7 @@ export function useCursorReplacer() {
   const cursorColor = ref('#000000');
   const enableShadow = ref(true);
   const shadowBlur = ref(6);
+  const shadowDistance = ref<number | undefined>();
   const shadowColor = ref('#000000');
   const shadowDirection = ref<ShadowDirection>('bottom');
   const clickEffects = ref<CursorClickEffects>(createDefaultCursorClickEffects());
@@ -49,6 +50,7 @@ export function useCursorReplacer() {
     cursorColor,
     enableShadow,
     shadowBlur,
+    shadowDistance,
     shadowColor,
     shadowDirection,
     clickEffects,

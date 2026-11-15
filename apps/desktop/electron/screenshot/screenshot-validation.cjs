@@ -152,7 +152,9 @@ function validateScreenshotState(state, projectId) {
       typeof shape.enabled !== 'boolean' ||
       !finite(shape.rotation) ||
       !finite(shape.borderWidth) ||
-      !finite(shape.shadowBlur)
+      !finite(shape.shadowBlur) ||
+      (shape.shadowDistance !== undefined &&
+        (!finite(shape.shadowDistance) || shape.shadowDistance < 0 || shape.shadowDistance > 256))
     )
       throw new Error('Invalid screenshot shape.');
     Object.assign(shape, normalizeShapeLayerStyle(shape));

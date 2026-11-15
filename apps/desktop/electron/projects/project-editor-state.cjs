@@ -276,6 +276,8 @@ const cursorState = (value) => {
     !value.shadow ||
     typeof value.shadow.enabled !== 'boolean' ||
     !finite(value.shadow.blur) ||
+    (value.shadow.distance !== undefined &&
+      (!finite(value.shadow.distance) || value.shadow.distance < 0 || value.shadow.distance > 256)) ||
     typeof value.shadow.color !== 'string' ||
     !value.shadow.color ||
     !['all', 'bottom', 'bottom-right', 'top-left'].includes(value.shadow.direction) ||
@@ -303,6 +305,7 @@ const cursorState = (value) => {
     shadow: {
       enabled: value.shadow.enabled,
       blur: clamp(value.shadow.blur, 0, 96),
+      ...(value.shadow.distance !== undefined ? { distance: value.shadow.distance } : {}),
       color: value.shadow.color,
       direction: value.shadow.direction,
     },
@@ -348,6 +351,16 @@ const canvasState = (value) => {
       typeof watermarkInput.renderedText === 'string' ? watermarkInput.renderedText.slice(0, 80) : undefined,
     position: watermarkPositions.has(watermarkInput.position) ? watermarkInput.position : 'bottom-right',
     size: finite(watermarkInput.size) ? clamp(Math.round(watermarkInput.size), 50, 200) : 100,
+    ...(watermarkInput.shadowDistance !== undefined &&
+    finite(watermarkInput.shadowDistance) &&
+    watermarkInput.shadowDistance >= 0 &&
+    watermarkInput.shadowDistance <= 256
+      ? { shadowDistance: watermarkInput.shadowDistance }
+      : {}),
+    ...(watermarkInput.shadowDirection !== undefined &&
+    ['all', 'bottom', 'bottom-right', 'top-left'].includes(watermarkInput.shadowDirection)
+      ? { shadowDirection: watermarkInput.shadowDirection }
+      : {}),
     shadow: finite(watermarkInput.shadow) ? clamp(Math.round(watermarkInput.shadow), 0, 100) : 20,
     backgroundColor:
       typeof watermarkInput.backgroundColor === 'string' && /^#[0-9a-f]{6}$/i.test(watermarkInput.backgroundColor)

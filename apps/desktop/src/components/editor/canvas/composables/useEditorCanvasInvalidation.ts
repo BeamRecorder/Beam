@@ -47,6 +47,7 @@ export function useEditorCanvasInvalidation(options: {
         options.props.cursorColor,
         options.props.enableShadow,
         options.props.shadowBlur,
+        options.props.shadowDistance,
         options.props.shadowColor,
         options.props.shadowDirection,
         options.props.clickEffects,

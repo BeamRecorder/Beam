@@ -226,7 +226,7 @@ describe('ClipPropertiesPanel', () => {
 
   it('updates placement, radius, shadow, mirror, frame, speed and destructive actions', async () => {
     const wrapper = mountPanel(clip(), true);
-    expect(wrapper.findAll('.slider-stub')).toHaveLength(1);
+    expect(wrapper.findAll('.slider-stub')).toHaveLength(2);
     const placementInputs = wrapper.findComponent(TransformControls).findAllComponents(Input);
     placementInputs[0]!.vm.$emit('update:modelValue', 10);
     placementInputs[1]!.vm.$emit('update:modelValue', 10);
@@ -423,7 +423,7 @@ describe('ClipPropertiesPanel', () => {
       selectedClip: clip({ clipTransform: undefined }),
     });
     await nextTick();
-    expect(wrapper.findAll('.slider-stub')).toHaveLength(1);
+    expect(wrapper.findAll('.slider-stub')).toHaveLength(2);
     expect(wrapper.findComponent(TransformControls).exists()).toBe(false);
   });
 });

@@ -48,6 +48,7 @@ const colorProperties = [
   'cornerRadius',
   'shadowSize',
   'shadowBlur',
+  'shadowDistance',
   'shadowMode',
   'shadowColor',
   'shadowDirection',
@@ -71,6 +72,7 @@ const shapeProperties = [
   'shadowEnabled',
   'shadowColor',
   'shadowBlur',
+  'shadowDistance',
   'shadowDirection',
 ] as const satisfies readonly (keyof ShapeClip)[];
 

@@ -5,6 +5,7 @@ import type { CachedShapePaintStyle } from './shape-paint-style-types';
 
 const fields: readonly (keyof ShapeLayerStyle)[] = [
   ...(Object.keys(DEFAULT_SHAPE_LAYER_STYLE) as (keyof ShapeLayerStyle)[]),
+  'shadowDistance',
   'fill',
   'text',
   'drawing',

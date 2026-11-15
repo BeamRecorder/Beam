@@ -177,6 +177,7 @@ vi.mock('../composables/useVideoEditor', async () => {
         cursorColor: ref('#fff'),
         enableShadow: ref(true),
         shadowBlur: ref(4),
+        shadowDistance: ref<number | undefined>(),
         shadowColor: ref('#000'),
         shadowDirection: ref('bottom'),
         clickEffects: ref({}),
@@ -307,6 +308,8 @@ vi.mock('../composables/useVideoEditor', async () => {
         return pasted;
       });
       const zoomState = {
+        zoomAutoFollow: ref({ experimentalZoom: false }),
+        generationStatus: ref(null),
         propertyScope: useZoomTrackProperties(zoomElements, selectedZoomId, selectedZoomIds),
         zoomElements,
         restoreZoomElements: vi.fn((value: ZoomElement[]) => {

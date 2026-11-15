@@ -416,6 +416,7 @@
     "deleteClip": "刪除片段",
     "deleteVideo": "刪除影片",
     "deleteWebcam": "刪除視訊鏡頭",
+    "shadowDistance": "陰影距離",
     "shadowBlur": "陰影模糊",
     "crop": "裁剪"
   },
@@ -595,6 +596,8 @@
     "viewImage": "檢視圖片"
   },
   "HUD": {
+    "copyDiagnostics": "複製錄製診斷資訊",
+    "copyDiagnosticsFailed": "無法複製診斷資訊",
     "issues": "問題",
     "inputAccessFailed": "無法請求互動存取權限。",
     "title": "Beam",
@@ -1388,5 +1391,17 @@
   "RecordingHealth": {
     "captureStopped": "螢幕錄影已停止。已保留錄製的檔案。",
     "transitionFailed": "暫停或繼續錄影失敗。為保留檔案，錄影已停止。{reason}"
+  },
+  "SourcePicker": {
+    "hoverHint": "懸停以預覽，點擊以選取。",
+    "close": "關閉",
+    "search": "搜尋視窗或螢幕…",
+    "sourceCount": "{count} 個來源",
+    "livePreview": "即時預覽",
+    "previewHint": "你的下一次精彩錄製",
+    "navigate": "導覽",
+    "noResults": "沒有符合搜尋的來源。",
+    "confirm": "擷取所選來源",
+    "developmentNotice": "開發預覽 · 所有來源均為模擬，不會建立錄製。"
   }
 }

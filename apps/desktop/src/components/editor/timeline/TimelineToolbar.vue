@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import FullscreenSeekBar from './FullscreenSeekBar.vue';
+import { formatPlaybackTime } from './playback-time';
+import type { PlaybackSeekMode } from '@beam/runtime/playback/index';
 import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut, Scissors, Magnet, Maximize2 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Popover from '~/ui/popover/Popover.vue';
@@ -43,7 +46,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: 'update:isPlaying', value: boolean): void;
-  (e: 'update:currentTime', value: number): void;
+  (e: 'update:currentTime', value: number, mode?: PlaybackSeekMode): void;
   (e: 'update:zoomLevel', value: number): void;
   (e: 'update:isSnappingEnabled', value: boolean): void;
   (e: 'update:previewQuality', value: PreviewQuality): void;
@@ -56,17 +59,6 @@ const emit = defineEmits<{
 const zoomPercentageText = computed(() => {
   return `${Math.round(props.zoomLevel)}%`;
 });
-const formatTime = (time: number) => {
-  if (!Number.isFinite(time) || time < 0) time = 0;
-  const totalSeconds = Math.floor(time);
-  const hours = Math.floor(totalSeconds / 3600);
-  const mins = Math.floor((totalSeconds % 3600) / 60);
-  const secs = Math.floor(totalSeconds % 60);
-  if (hours > 0) {
-    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-};
 
 const handleZoomReset = () => {
   emit('update:zoomLevel', MIN_TIMELINE_ZOOM);
@@ -167,11 +159,20 @@ const handleFullscreenClick = (event?: MouseEvent) => {
         </div>
 
         <div class="time-display-container">
-          <span class="time-current">{{ formatTime(currentTime) }}</span>
+          <span class="time-current">{{ formatPlaybackTime(currentTime) }}</span>
           <span class="time-separator">/</span>
-          <span class="time-total">{{ formatTime(duration) }}</span>
+          <span class="time-total">{{ formatPlaybackTime(duration) }}</span>
         </div>
       </div>
+
+      <FullscreenSeekBar
+        v-if="isCanvasFullscreen"
+        class="fullscreen-seek-bar"
+        :current-time="currentTime"
+        :duration="duration"
+        :loading="loading"
+        @seek="(time, mode) => emit('update:currentTime', time, mode)"
+      />
 
       <!-- Right Section: Compact Segmented Zoom with Popover -->
       <div v-if="!isCanvasFullscreen" class="right-section">
@@ -280,8 +281,21 @@ const handleFullscreenClick = (event?: MouseEvent) => {
 .timeline-toolbar.is-loading > :not(.timeline-toolbar-loading-skeleton) {
   visibility: hidden;
 }
+.timeline-toolbar.is-canvas-fullscreen .timeline-toolbar-content {
+  height: auto;
+  min-height: 76px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
 .timeline-toolbar.is-canvas-fullscreen .center-section {
-  grid-column: 2;
+  grid-column: 1;
+  justify-self: center;
+}
+.fullscreen-seek-bar {
+  grid-column: 1;
+  width: min(100%, 960px);
+  min-width: 0;
+  justify-self: center;
 }
 
 .left-section {

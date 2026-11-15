@@ -96,7 +96,11 @@ export function drawScreenshotCursor(
   ctx.rotate((cursor.rotation * Math.PI) / 180);
   if (cursor.shadowEnabled) {
     const blur = cursor.shadowBlur * scale;
-    const offset = cursorShadowOffset(blur, cursor.shadowDirection);
+    const offset = cursorShadowOffset(
+      blur,
+      cursor.shadowDirection,
+      cursor.shadowDistance === undefined ? undefined : cursor.shadowDistance * scale,
+    );
     ctx.shadowBlur = blur;
     ctx.shadowColor = cursor.shadowColor;
     ctx.shadowOffsetX = offset.x;

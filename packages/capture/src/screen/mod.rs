@@ -11,6 +11,8 @@ mod frame;
 mod frame_buffer;
 #[cfg(any(windows, test))]
 mod frame_pool;
+#[cfg(any(target_os = "macos", test))]
+mod mac_dimensions;
 mod metrics;
 mod preview;
 mod recording;

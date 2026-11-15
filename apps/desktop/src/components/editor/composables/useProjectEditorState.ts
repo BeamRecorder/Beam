@@ -58,6 +58,7 @@ export function useProjectEditorState(options: {
   cursorColor: Ref<string>;
   cursorShadowEnabled: Ref<boolean>;
   cursorShadowBlur: Ref<number>;
+  cursorShadowDistance?: Ref<number | undefined>;
   cursorShadowColor: Ref<string>;
   cursorShadowDirection: Ref<CursorShadowDirection>;
   availableBackgrounds: Ref<Array<{ items: BackgroundMedia[] }>>;
@@ -95,6 +96,7 @@ export function useProjectEditorState(options: {
       shadow: {
         enabled: options.cursorShadowEnabled.value,
         blur: options.cursorShadowBlur.value,
+        ...(options.cursorShadowDistance?.value !== undefined ? { distance: options.cursorShadowDistance.value } : {}),
         color: options.cursorShadowColor.value,
         direction: options.cursorShadowDirection.value,
       },
@@ -219,6 +221,7 @@ export function useProjectEditorState(options: {
       options.cursorColor.value = cursor.color;
       options.cursorShadowEnabled.value = cursor.shadow.enabled;
       options.cursorShadowBlur.value = cursor.shadow.blur;
+      if (options.cursorShadowDistance) options.cursorShadowDistance.value = cursor.shadow.distance;
       options.cursorShadowColor.value = cursor.shadow.color;
       options.cursorShadowDirection.value = cursor.shadow.direction;
       options.cursorEffects.value = clone(cursor.clickEffects);
@@ -262,6 +265,7 @@ export function useProjectEditorState(options: {
       options.cursorColor,
       options.cursorShadowEnabled,
       options.cursorShadowBlur,
+      ...(options.cursorShadowDistance ? [options.cursorShadowDistance] : []),
       options.cursorShadowColor,
       options.cursorShadowDirection,
     ],

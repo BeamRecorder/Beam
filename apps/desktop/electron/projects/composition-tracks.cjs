@@ -34,6 +34,7 @@ const visualSignature = (clip) =>
             shadowEnabled: clip.shadowEnabled,
             shadowColor: clip.shadowColor,
             shadowBlur: clip.shadowBlur,
+            ...(clip.shadowDistance !== undefined ? { shadowDistance: clip.shadowDistance } : {}),
             shadowDirection: clip.shadowDirection,
           }
         : undefined,

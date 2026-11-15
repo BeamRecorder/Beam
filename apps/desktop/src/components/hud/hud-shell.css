@@ -1,4 +1,5 @@
 .hud-wrapper {
+  position: relative;
   width: calc(100% - 32px);
   margin: 16px;
   background: var(--color-bg-surface);
@@ -7,7 +8,7 @@
   box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   font-family: var(--font-sans);
 }
 .hud-wrapper.embedded {

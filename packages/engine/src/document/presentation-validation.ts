@@ -1,3 +1,4 @@
+import { isShadowDistance } from '../shared/shadow';
 import type { OutputCanvasSettings } from '../layout/output-canvas-types';
 import { isColorGradient } from '../shared/color-fill-types';
 
@@ -12,6 +13,9 @@ export function validateCanvas(canvas: OutputCanvasSettings) {
   if (canvas.watermark) {
     const value = canvas.watermark;
     if (
+      !isShadowDistance(value.shadowDistance) ||
+      (value.shadowDirection !== undefined &&
+        !['all', 'bottom', 'bottom-right', 'top-left'].includes(value.shadowDirection)) ||
       typeof value.enabled !== 'boolean' ||
       typeof value.showLogo !== 'boolean' ||
       typeof value.localized !== 'boolean' ||

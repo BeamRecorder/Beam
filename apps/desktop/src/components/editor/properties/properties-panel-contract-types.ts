@@ -41,6 +41,7 @@ export interface PropertiesPanelProps {
   cursorColor: string;
   enableShadow: boolean;
   shadowBlur: number;
+  shadowDistance?: number;
   shadowColor: string;
   shadowDirection: ShadowDirection;
   clickEffects: CursorClickEffects;
@@ -79,6 +80,7 @@ export interface PropertiesPanelEmits {
   (event: 'update:cursorColor', value: string): void;
   (event: 'update:enableShadow', value: boolean): void;
   (event: 'update:shadowBlur', value: number): void;
+  (event: 'update:shadowDistance', value: number | undefined): void;
   (event: 'update:shadowColor', value: string): void;
   (event: 'update:shadowDirection', value: ShadowDirection): void;
   (event: 'update:clickEffects', value: CursorClickEffects): void;

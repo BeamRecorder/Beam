@@ -39,7 +39,14 @@ export function perspectiveSourceBounds(
       : isShapeClip(clip)
         ? (clip.borderWidth * Math.min(width, height)) / 1080
         : 0;
-    const pad = 4 * shadow + border + 2,
+    const distance = isVisualClip(clip)
+      ? clip.appearance.shadowSize !== 'none' && clip.appearance.shadowDirection !== 'all'
+        ? (clip.appearance.shadowDistance ?? 0) * appearanceScale
+        : 0
+      : isShapeClip(clip) && clip.shadowEnabled && clip.shadowDirection !== 'all'
+        ? ((clip.shadowDistance ?? 0) * Math.min(width, height)) / 1080
+        : 0;
+    const pad = 4 * shadow + distance + border + 2,
       rotation = 'rotation' in clip ? (clip.rotation ?? 0) : 0;
     for (const x of [-pad, outer.width + pad])
       for (const y of [-pad, outer.height + pad]) {

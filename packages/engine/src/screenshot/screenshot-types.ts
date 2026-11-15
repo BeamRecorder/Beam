@@ -54,6 +54,7 @@ export interface ScreenshotCursorLayer {
   color: string;
   shadowEnabled: boolean;
   shadowBlur: number;
+  shadowDistance?: number;
   shadowColor: string;
   shadowDirection: ShadowDirection;
 }
@@ -68,6 +69,7 @@ export interface ScreenshotCursorUpdate {
   color?: string;
   shadowEnabled?: boolean;
   shadowBlur?: number;
+  shadowDistance?: number;
   shadowColor?: string;
   shadowDirection?: ShadowDirection;
   rotation?: number;

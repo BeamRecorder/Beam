@@ -65,6 +65,7 @@ function validateScreenshotComposition(state) {
         !color(cursor.shadowColor) ||
         typeof cursor.shadowEnabled !== 'boolean' ||
         !bounded(cursor.shadowBlur, 0, 24) ||
+        (cursor.shadowDistance !== undefined && !bounded(cursor.shadowDistance, 0, 256)) ||
         !['all', 'bottom', 'bottom-right', 'top-left'].includes(cursor.shadowDirection)
       )
         throw new Error('Invalid screenshot cursor.');

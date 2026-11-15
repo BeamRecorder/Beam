@@ -6,6 +6,7 @@ import type { CaptureProject } from '@beam/engine/capture/capture-session';
 const listProjects = vi.fn();
 
 export const captureMock = {
+  getRecordingDiagnosticReport: vi.fn().mockResolvedValue('diagnostic report'),
   onProjectLocationsChanged: vi.fn(() => vi.fn()),
   openHudSettings: vi.fn().mockResolvedValue(true),
   openHudProjects: vi.fn().mockResolvedValue(true),
@@ -55,6 +56,7 @@ export const captureMock = {
   startRecording: vi.fn(),
   stop: vi.fn(),
   discardRecording: vi.fn(),
+  resizeHud: vi.fn().mockResolvedValue({ width: 672, height: 268 }),
   setSize: vi.fn(),
   resizeHudPopover: vi.fn().mockResolvedValue(268),
   close: vi.fn(),

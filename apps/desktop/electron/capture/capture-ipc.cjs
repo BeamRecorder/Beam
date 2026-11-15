@@ -1,5 +1,6 @@
 const { readJsonSync } = require('@beam/storage/node/json-file');
 const path = require('path');
+const { registerRecordingDiagnosticIpc } = require('./recording-diagnostic-ipc.cjs');
 const { captureWindowExclusions } = require('./capture-window-exclusions.cjs');
 const { buildDefaultCaptureConfig } = require('./capture-config.cjs');
 const { createSystemAudioPreview } = require('./system-audio-preview.cjs');
@@ -62,6 +63,7 @@ function registerCaptureIpc({
     isTrustedRenderer,
     canAcceptWork,
   });
+  const diagnostics = registerRecordingDiagnosticIpc({ ipcMain, BrowserWindow, isTrustedRenderer, canAcceptWork });
   let activeSessionId = null;
   const registerSession = (session) => {
     activeSessionId = session?.sessionId ?? null;
@@ -78,7 +80,10 @@ function registerCaptureIpc({
   const requestEngine = async (command, payload = {}) => {
     if (command === 'prepare' && deferredStoppedSession)
       throw new Error('Complete the previous recording before starting another recording.');
-    if (command === 'prepare') systemAudioPreview?.invalidate();
+    if (command === 'prepare') {
+      diagnostics.begin();
+      systemAudioPreview?.invalidate();
+    }
     try {
       const cursor = payload.config?.cursor;
       if (
@@ -90,8 +95,11 @@ function registerCaptureIpc({
         await inputAccess.ensureReady(cursor);
       // A poisoned engine respawns a fresh process on its next request; the
       // previous (timed out) session is gone and must not be completed.
-      return await captureEngine.request(command, payload);
+      const result = await captureEngine.request(command, payload);
+      diagnostics.record(command, result);
+      return result;
     } catch (error) {
+      diagnostics.record(command, null, error);
       if (captureEngine.isPoisoned) {
         if (activeSessionId) {
           for (const storage of trackStorages) storage.forgetSession(activeSessionId);
@@ -137,6 +145,7 @@ function registerCaptureIpc({
       return pendingDefaultPreparation.promise;
     }
     const promise = (async () => {
+      diagnostics.begin();
       const catalog = await requestEngine('discover');
       const config = buildDefaultCaptureConfig(catalog, options || {}, {
         platform,

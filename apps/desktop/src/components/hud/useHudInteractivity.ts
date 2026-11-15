@@ -1,7 +1,7 @@
 import { onBeforeUnmount, onMounted } from 'vue';
 import { capture } from '~/api/capture';
 const INTERACTIVE_SELECTORS =
-  '.hud-wrapper, .recorder-bar, .camera-overlay-container, .camera-settings-popover, button, a, input, select, textarea, [role="button"], [tabindex], label, video, .popover-content, .popover-trigger, .action-menu-content';
+  '.hud-resize-edge, .hud-wrapper, .recorder-bar, .camera-overlay-container, .camera-settings-popover, button, a, input, select, textarea, [role="button"], [tabindex], label, video, .popover-content, .popover-trigger, .action-menu-content';
 
 export function useHudInteractivity(enabled: () => boolean) {
   let lastInteractive: boolean | null = null;
@@ -15,10 +15,15 @@ export function useHudInteractivity(enabled: () => boolean) {
     lastInteractive = interactive;
     capture.setInteractive(interactive);
   };
+  const resizing = () => Boolean(document.querySelector('.hud-resize-edge[data-resizing]'));
   const move = (event: MouseEvent) => {
     lastMouseEvent = event;
     pointerInside = true;
     if (!enabled()) return;
+    if (resizing()) {
+      apply(true);
+      return;
+    }
     const target = document.elementFromPoint(event.clientX, event.clientY);
     apply(
       Boolean(
@@ -30,6 +35,10 @@ export function useHudInteractivity(enabled: () => boolean) {
     );
   };
   const leave = () => {
+    if (resizing()) {
+      apply(true);
+      return;
+    }
     pointerInside = false;
     apply(false);
   };

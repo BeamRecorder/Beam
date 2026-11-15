@@ -166,6 +166,7 @@
     "colorFormat": "色の形式"
   },
   "TimelineToolbar": {
+    "seekPreview": "プレビューをシーク",
     "add": "追加",
     "composition": "コンポジション",
     "split": "分割",
@@ -367,6 +368,8 @@
     "changelog": "変更履歴"
   },
   "VideoEditor": {
+    "pauseGapsRemoved": "一時停止の空白を自動的に削除しました。復元するか、元に戻す操作で戻せます。",
+    "restorePauseGaps": "復元",
     "exportBanner": "書き出し中です。書き出し中のファイルにはライブ編集は反映されません。",
     "timelineCopied": "コピーしました",
     "timelinePasted": "貼り付けました",

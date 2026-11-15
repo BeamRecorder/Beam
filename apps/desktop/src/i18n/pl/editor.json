@@ -166,6 +166,7 @@
     "colorFormat": "Format koloru"
   },
   "TimelineToolbar": {
+    "seekPreview": "Przewiń podgląd",
     "add": "Dodaj",
     "composition": "Kompozycja",
     "split": "Podziel",
@@ -367,6 +368,8 @@
     "changelog": "Zmiany"
   },
   "VideoEditor": {
+    "pauseGapsRemoved": "Przerwy zostały automatycznie usunięte. Możesz je przywrócić lub użyć opcji Cofnij.",
+    "restorePauseGaps": "Przywróć",
     "exportBanner": "Eksportowanie w toku. Bieżące zmiany nie wpłyną na aktualnie eksportowany plik.",
     "timelineCopied": "Skopiowano",
     "timelinePasted": "Wklejono",

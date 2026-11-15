@@ -997,14 +997,14 @@ describe('useClipComposition', () => {
     const mounted = mountComposable();
     mockMediaMetadata();
     getAudioTracks.mockResolvedValueOnce([{ id: 'audio-track' }]);
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(new Blob(['video']), { status: 200 }));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response('video', { status: 200 }));
     capture.pickProjectMedia.mockResolvedValueOnce(videoAsset());
     await mounted.state.addElement('video');
     expect(mounted.state.composition.value.clips.filter((clip) => clip.groupId)).toHaveLength(2);
     expect(mounted.state.selectedWebcamClip.value).toBeNull();
 
     getAudioTracks.mockRejectedValueOnce(new Error('cannot inspect'));
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(new Blob(['video']), { status: 200 }));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response('video', { status: 200 }));
     capture.pickProjectMedia.mockResolvedValueOnce({
       ...videoAsset(),
       id: 'video-2',

@@ -23,6 +23,7 @@ export interface ClipPropertiesEmits {
     shadow: {
       size: ClipShadowSize;
       blur?: number;
+      distance?: number;
       mode?: ClipShadowMode;
       color?: string;
       direction?: string;
@@ -67,6 +68,7 @@ export interface ClipAppearanceEmits {
     shadow: {
       size: ClipShadowSize;
       blur?: number;
+      distance?: number;
       mode?: ClipShadowMode;
       color?: string;
       direction?: string;

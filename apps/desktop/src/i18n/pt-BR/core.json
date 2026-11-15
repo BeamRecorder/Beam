@@ -416,6 +416,7 @@
     "deleteClip": "Excluir clipe",
     "deleteVideo": "Excluir vídeo",
     "deleteWebcam": "Excluir webcam",
+    "shadowDistance": "Distância da sombra",
     "shadowBlur": "Desfoque da sombra",
     "crop": "Recorte"
   },
@@ -595,6 +596,8 @@
     "viewImage": "Ver imagem"
   },
   "HUD": {
+    "copyDiagnostics": "Copiar diagnóstico da gravação",
+    "copyDiagnosticsFailed": "Não foi possível copiar o diagnóstico",
     "issues": "Problemas",
     "inputAccessFailed": "Não foi possível solicitar acesso às interações.",
     "title": "Beam",
@@ -1388,5 +1391,17 @@
   "RecordingHealth": {
     "captureStopped": "A gravação da tela parou. Os arquivos gravados foram preservados.",
     "transitionFailed": "Não foi possível pausar ou retomar. A gravação foi interrompida para preservar seus arquivos. {reason}"
+  },
+  "SourcePicker": {
+    "hoverHint": "Passe o cursor para ver uma prévia. Clique para selecionar.",
+    "close": "Fechar",
+    "search": "Buscar janelas ou telas…",
+    "sourceCount": "{count} fontes",
+    "livePreview": "Prévia ao vivo",
+    "previewHint": "Sua próxima grande captura",
+    "navigate": "Navegar",
+    "noResults": "Nenhuma fonte corresponde à busca.",
+    "confirm": "Capturar a fonte selecionada",
+    "developmentNotice": "Prévia de desenvolvimento · Todas as fontes são simuladas. Nenhuma gravação é criada."
   }
 }

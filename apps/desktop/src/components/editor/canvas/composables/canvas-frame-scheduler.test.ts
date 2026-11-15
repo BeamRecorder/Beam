@@ -173,7 +173,7 @@ it('caps experimental playback with the same cadence remainder as the reference 
       referenceClock = timestamp;
       expected++;
     } else {
-      const delta = (timestamp - referenceClock) | 0;
+      const delta: number = (timestamp - referenceClock) | 0;
       if (delta >= 1000 / 60) {
         referenceClock = timestamp - (delta % (1000 / 60));
         expected++;

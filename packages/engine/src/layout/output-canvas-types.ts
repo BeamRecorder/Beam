@@ -13,6 +13,8 @@ export interface WatermarkSettings {
   position: WatermarkPosition;
   size: number;
   shadow: number;
+  shadowDistance?: number;
+  shadowDirection?: 'all' | 'bottom' | 'bottom-right' | 'top-left';
   backgroundColor: string;
   backgroundOpacity: number;
   backgroundRadius: number;

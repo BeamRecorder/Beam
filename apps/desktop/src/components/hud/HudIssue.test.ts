@@ -1,7 +1,9 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import HudIssue from './HudIssue.vue';
 import type { HudIssueModel, HudIssueTone } from './hud-issue-types';
+
+vi.mock('~/api/capture', () => ({ capture: { getRecordingDiagnosticReport: vi.fn() } }));
 
 const issue = (tone: HudIssueTone, overrides: Partial<HudIssueModel> = {}): HudIssueModel => ({
   id: `issue-${tone}`,

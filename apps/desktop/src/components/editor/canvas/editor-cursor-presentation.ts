@@ -11,6 +11,7 @@ export function editorCursorPresentation(props: EditorCanvasProps, screen: Visua
     shadow: {
       enabled: props.enableShadow,
       blur: props.shadowBlur,
+      ...(props.shadowDistance !== undefined ? { distance: props.shadowDistance } : {}),
       color: props.shadowColor,
       direction: props.shadowDirection,
     },

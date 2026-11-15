@@ -231,7 +231,7 @@ export class CursorGpuPainter {
     if (samples.length > 1) this.exposure ??= new CursorBlurTarget(gl);
     gl.useProgram(this.program);
     const shadowColor = this.color(options.shadow.color),
-      offset = cursorShadowOffset(options.shadow.blur, options.shadow.direction);
+      offset = cursorShadowOffset(options.shadow.blur, options.shadow.direction, options.shadow.distance);
     gl.uniform4f(this.uniforms.get('shadowColor')!, shadowColor[0]!, shadowColor[1]!, shadowColor[2]!, shadowColor[3]!);
     gl.uniform2f(this.uniforms.get('shadowOffset')!, offset.x * resolution, offset.y * resolution);
     gl.uniform2f(
@@ -241,7 +241,7 @@ export class CursorGpuPainter {
     );
     gl.uniform1f(
       this.uniforms.get('shadowPad')!,
-      (options.shadow.blur * 3) / Math.min(geometry.width, geometry.height),
+      (options.shadow.blur * 3 + (options.shadow.distance ?? 0)) / Math.min(geometry.width, geometry.height),
     );
     for (const sample of samples) {
       if (samples.length > 1) this.exposure!.begin(width, height);

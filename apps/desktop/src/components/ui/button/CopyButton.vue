@@ -8,6 +8,7 @@ type CopyState = 'idle' | 'copying' | 'copied' | 'error';
 const props = withDefaults(
   defineProps<{
     text: string;
+    getText?: () => Promise<string>;
     display?: 'icon' | 'text';
     label?: string;
     copiedLabel?: string;
@@ -86,7 +87,7 @@ const copy = async () => {
   if (state.value === 'copying') return;
   state.value = 'copying';
   try {
-    await writeText(props.text);
+    await writeText(props.getText ? await props.getText() : props.text);
     state.value = 'copied';
     emit('copied');
   } catch (cause) {

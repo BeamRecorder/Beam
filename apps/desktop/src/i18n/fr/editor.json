@@ -166,6 +166,7 @@
     "colorFormat": "Format couleur"
   },
   "TimelineToolbar": {
+    "seekPreview": "Naviguer dans l’aperçu",
     "add": "Ajouter",
     "composition": "Composition",
     "split": "Découper",
@@ -367,6 +368,8 @@
     "changelog": "Changelog"
   },
   "VideoEditor": {
+    "pauseGapsRemoved": "Les intervalles de pause ont été retirés automatiquement. Vous pouvez les restaurer ou utiliser Annuler.",
+    "restorePauseGaps": "Restaurer",
     "exportBanner": "Exportation en cours. Les modifications effectuées en direct n'auront pas d'effet sur le fichier actuellement en cours d'exportation.",
     "mediaDropTitle": "Déposez vos médias pour les ajouter",
     "mediaDropDescription": "Les vidéos, images et fichiers audio seront ajoutés au niveau du playhead.",

@@ -52,25 +52,29 @@ function recordingAssetDiagnostic(directory, relativePath) {
   }
 }
 
+function recordingEnvironment() {
+  return {
+    beamVersion: version,
+    electronVersion: process.versions.electron ?? null,
+    chromiumVersion: process.versions.chrome ?? null,
+    platform: process.platform,
+    osRelease: os.release(),
+    architecture: process.arch,
+    cpuModel: os.cpus()[0]?.model ?? null,
+    logicalCpuCount: os.availableParallelism(),
+    totalMemoryBytes: os.totalmem(),
+    availableMemoryBytes: os.freemem(),
+  };
+}
+
 function recordingDiagnostics(directory, tracks) {
   return {
     sampledAt: new Date().toISOString(),
-    environment: {
-      beamVersion: version,
-      electronVersion: process.versions.electron ?? null,
-      chromiumVersion: process.versions.chrome ?? null,
-      platform: process.platform,
-      osRelease: os.release(),
-      architecture: process.arch,
-      cpuModel: os.cpus()[0]?.model ?? null,
-      logicalCpuCount: os.availableParallelism(),
-      totalMemoryBytes: os.totalmem(),
-      availableMemoryBytes: os.freemem(),
-    },
+    environment: recordingEnvironment(),
     assets: tracks.flatMap((track) =>
       track.assets.map((asset) => ({ trackId: track.trackId, ...recordingAssetDiagnostic(directory, asset.path) })),
     ),
   };
 }
 
-module.exports = { recordingAssetDiagnostic, recordingDiagnostics };
+module.exports = { recordingAssetDiagnostic, recordingDiagnostics, recordingEnvironment };

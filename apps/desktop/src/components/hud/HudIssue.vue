@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { AlertCircle, AlertTriangle, CheckCircle2, Info } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import CopyButton from '~/ui/button/CopyButton.vue';
+import RecordingDiagnosticCopy from './recorder/RecordingDiagnosticCopy.vue';
 import type { HudIssueModel } from './hud-issue-types';
 import { useTranslate } from '~/i18n/useTranslate';
 const { t } = useTranslate('HUD');
@@ -45,7 +46,13 @@ const icon = computed(() => {
         {{ issue.actionLabel }}
       </Button>
     </slot>
+    <RecordingDiagnosticCopy
+      v-if="issue.id === 'recording-error'"
+      :message="issue.copyText ?? [issue.title, ...issue.details].join('\n')"
+      class="hud-issue-action"
+    />
     <CopyButton
+      v-else
       :text="issue.copyText ?? [issue.title, ...issue.details].join('\n')"
       display="icon"
       variant="secondary"

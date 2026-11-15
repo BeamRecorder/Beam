@@ -58,6 +58,7 @@ export interface CursorPresentationSettings {
   shadow: {
     enabled: boolean;
     blur: number;
+    distance?: number;
     color: string;
     direction: CursorShadowDirection;
   };

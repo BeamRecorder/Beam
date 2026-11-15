@@ -166,6 +166,7 @@
     "colorFormat": "颜色格式"
   },
   "TimelineToolbar": {
+    "seekPreview": "预览进度",
     "add": "添加",
     "composition": "合成",
     "split": "分割",
@@ -367,6 +368,8 @@
     "changelog": "更新日志"
   },
   "VideoEditor": {
+    "pauseGapsRemoved": "已自动移除暂停间隔。你可以恢复间隔或使用撤销。",
+    "restorePauseGaps": "恢复",
     "exportBanner": "正在导出。实时编辑不会影响当前正在导出的文件。",
     "timelineCopied": "已复制",
     "timelinePasted": "已粘贴",

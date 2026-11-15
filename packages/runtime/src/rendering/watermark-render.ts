@@ -1,3 +1,4 @@
+import { shadowOffset } from '@beam/engine/shared/shadow';
 import { normalizeWatermark, type OutputCanvasSettings } from '@beam/engine/layout/output-canvas';
 import type { Canvas2DContext } from '@beam/runtime/canvas-types';
 
@@ -56,11 +57,16 @@ export function drawBeamWatermark(
     .padStart(2, '0')}`;
   context.shadowColor = `rgba(0, 0, 0, ${settings.shadow / 160})`;
   context.shadowBlur = 18 * scale * (settings.shadow / 100);
+  const offset = shadowOffset(settings.shadowDirection, (settings.shadowDistance ?? 0) * scale, 0);
+  context.shadowOffsetX = offset.x;
+  context.shadowOffsetY = offset.y;
   context.beginPath();
   context.roundRect(x, y, width, height, Math.min(height / 2, 12 * scale) * (settings.backgroundRadius / 100));
   context.fill();
   context.shadowColor = 'transparent';
   context.shadowBlur = 0;
+  context.shadowOffsetX = 0;
+  context.shadowOffsetY = 0;
   let contentX = x + paddingX;
   if (logoSize && logo) {
     context.drawImage(logo, contentX, y + (height - logoSize) / 2, logoSize, logoSize);

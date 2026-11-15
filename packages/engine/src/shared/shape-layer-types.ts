@@ -28,5 +28,6 @@ export interface ShapeLayerStyle {
   shadowEnabled: boolean;
   shadowColor: string;
   shadowBlur: number;
+  shadowDistance?: number;
   shadowDirection: 'all' | 'bottom' | 'bottom-right' | 'top-left';
 }

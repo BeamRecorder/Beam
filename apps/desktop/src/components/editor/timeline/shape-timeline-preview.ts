@@ -19,10 +19,13 @@ export function renderShapeTimelinePreview(
     ? text.outlineWidth +
       text.extrusionDepth +
       text.shadowBlur * 4 +
+      (text.shadowDistance ?? 0) +
       Math.max(Math.abs(text.shadowOffsetX ?? 0), Math.abs(text.shadowOffsetY ?? 0))
     : 0;
   const shapePadding =
-    clip.borderWidth + (clip.drawing?.strokeWidth ?? 0) / 2 + (clip.shadowEnabled ? clip.shadowBlur * 4 + 12 : 0);
+    clip.borderWidth +
+    (clip.drawing?.strokeWidth ?? 0) / 2 +
+    (clip.shadowEnabled ? clip.shadowBlur * 4 + (clip.shadowDistance ?? 12) : 0);
   const padding = Math.max(shapePadding, textPadding) * unit;
   const rotatedWidth = Math.abs(width * Math.cos(angle)) + Math.abs(height * Math.sin(angle)) + padding * 2;
   const rotatedHeight = Math.abs(height * Math.cos(angle)) + Math.abs(width * Math.sin(angle)) + padding * 2;

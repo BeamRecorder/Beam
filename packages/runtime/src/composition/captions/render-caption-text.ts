@@ -1,3 +1,4 @@
+import { shadowOffset } from '@beam/engine/shared/shadow';
 import { drawTextDecoration } from '@beam/runtime/composition/captions/text-decoration';
 import type { CaptionClip, CaptionStyle } from '@beam/engine/shared/composition-types';
 import { wrapCaptionHighlightLines } from '@beam/engine/shared/caption-text-layout';
@@ -15,11 +16,6 @@ export interface CaptionViewport {
   width: number;
   height: number;
 }
-
-const shadowOffsets = (blur: number, direction: string | undefined) => ({
-  x: direction === 'top-left' ? -blur * 0.5 : direction === 'bottom-right' ? blur * 0.5 : 0,
-  y: direction === 'top-left' ? -blur * 0.5 : direction === 'bottom' || direction === 'bottom-right' ? blur * 0.5 : 0,
-});
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -164,16 +160,22 @@ export function drawCaptionText(
       scale,
     );
   const shadowBlur = Math.max(0, style.shadowBlur) * scale;
-  const offsets = shadowOffsets(shadowBlur, style.shadowDirection);
+  const offsets = shadowOffset(
+    style.shadowDirection,
+    style.shadowDistance === undefined ? undefined : style.shadowDistance * scale,
+    shadowBlur * 0.5,
+  );
   applyCanvasCaptionFont(ctx, style, fontSize);
   ctx.textAlign = style.textAlign ?? 'center';
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
-  if (shadowBlur > 0) {
+  if (shadowBlur > 0 || (style.shadowDistance ?? 0) > 0) {
     ctx.shadowColor = style.shadowColor || 'rgba(0,0,0,.85)';
     ctx.shadowBlur = shadowBlur;
-    ctx.shadowOffsetX = style.shadowOffsetX === undefined ? offsets.x : style.shadowOffsetX * scale;
-    ctx.shadowOffsetY = style.shadowOffsetY === undefined ? offsets.y : style.shadowOffsetY * scale;
+    ctx.shadowOffsetX =
+      style.shadowDistance !== undefined || style.shadowOffsetX === undefined ? offsets.x : style.shadowOffsetX * scale;
+    ctx.shadowOffsetY =
+      style.shadowDistance !== undefined || style.shadowOffsetY === undefined ? offsets.y : style.shadowOffsetY * scale;
   }
 
   if (options.wordHighlight?.words.length) {

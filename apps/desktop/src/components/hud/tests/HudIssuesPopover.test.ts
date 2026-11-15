@@ -3,6 +3,9 @@ import { h } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import HudIssuesPopover from '../HudIssuesPopover.vue';
 import HudIssue from '../HudIssue.vue';
+
+vi.mock('~/api/capture', () => ({ capture: { getRecordingDiagnosticReport: vi.fn() } }));
+
 const writeText = vi.fn().mockResolvedValue(undefined);
 const issues = [
   {

@@ -178,6 +178,7 @@ vi.mock('../../properties/cursor/useCursorReplacer', async () => {
       cursorColor: ref('#ffffff'),
       enableShadow: ref(true),
       shadowBlur: ref(8),
+      shadowDistance: ref<number | undefined>(),
       shadowColor: ref('#000000'),
       shadowDirection: ref('bottom-right'),
       clickEffects: ref({ left: {}, right: {} }),

@@ -460,4 +460,16 @@ describe('drawShapeClip', () => {
     expect(elementContent.drawElementText).not.toHaveBeenCalled();
     expect(elementContent.drawFreehand).not.toHaveBeenCalled();
   });
+  it.each([0, 4, 48])(
+    'renders a shape distance independently of blur %s and reacts to mutable still edits',
+    (shadowBlur) => {
+      const ctx = context();
+      const clip = shapeClip({ shadowEnabled: true, shadowBlur, shadowDistance: 40, shadowDirection: 'bottom' });
+      drawShapeClip(ctx, clip, { x: 0, y: 0, width: 1920, height: 1080 });
+      expect(ctx.shadowOffsetY).toBe(40);
+      clip.shadowDistance = 0;
+      drawShapeClip(ctx, clip, { x: 0, y: 0, width: 1920, height: 1080 });
+      expect(ctx.shadowOffsetY).toBe(0);
+    },
+  );
 });

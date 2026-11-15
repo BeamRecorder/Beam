@@ -648,3 +648,24 @@ it.each([32.75, 90, 270])('rotates caption drawing at the precise angle %s aroun
   expect(ctx.fillText).toHaveBeenCalled();
   expect(vi.mocked(ctx.save).mock.calls).toHaveLength(vi.mocked(ctx.restore).mock.calls.length);
 });
+
+it.each([0, 4, 48])('renders caption shadow distance independently of blur %s', (shadowBlur) => {
+  const ctx = context();
+  const clip = caption();
+  clip.caption.style = {
+    ...clip.caption.style,
+    shadowBlur,
+    shadowDirection: 'bottom',
+    shadowDistance: 40,
+    shadowOffsetX: 100,
+    shadowOffsetY: 100,
+  };
+  drawCaptionText(ctx.value, {
+    clip,
+    text: 'Shadow',
+    canvas: { width: 1920, height: 1080 },
+    viewport: { x: 0, y: 0, width: 1920, height: 1080 },
+  });
+  expect(ctx.value.shadowOffsetX).toBe(0);
+  expect(ctx.value.shadowOffsetY).toBe(40);
+});

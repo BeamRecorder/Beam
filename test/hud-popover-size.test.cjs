@@ -45,3 +45,16 @@ test('rejects invalid sizes and never resizes recorder, editor or disposed windo
   assert.equal(resizeHudPopover(f.win, { mode: 'hud' }, f.screen, 400), null);
   assert.deepEqual(f.calls, []);
 });
+
+test('repairs an expanded native width even when the requested height is unchanged', () => {
+  const f = fixture(20, 420);
+  f.win.getBounds = () => ({ x: 20, y: 20, width: 2560, height: 420 });
+  assert.equal(resizeHudPopover(f.win, { mode: 'hud' }, f.screen, 420, 'darwin'), 420);
+  assert.deepEqual(f.calls, [[672, 420]]);
+});
+
+test('popover expansion restores the user size rather than the default compact size', () => {
+  const f = fixture(20, 600);
+  resizeHudPopover(f.win, { mode: 'hud', hudSize: { width: 900, height: 400 } }, f.screen, 268, 'darwin');
+  assert.deepEqual(f.calls, [[900, 400]]);
+});

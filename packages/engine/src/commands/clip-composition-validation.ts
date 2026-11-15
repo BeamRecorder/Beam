@@ -1,3 +1,4 @@
+import { isShadowDistance } from '../shared/shadow';
 import { validateScreenCursorSettings } from '../capture/screen-cursor-schema';
 import {
   COMPOSITION_SCHEMA_VERSION,
@@ -126,6 +127,8 @@ export function validateComposition(composition: ClipComposition): void {
       throw new CompositionEngineError(`Missing asset for clip: ${clip.id}`);
     if (clip.kind === 'caption') {
       const caption = clip.caption;
+      if (!isShadowDistance(caption?.style.shadowDistance))
+        throw new CompositionEngineError('Invalid text shadow distance.');
       const textCaption = caption?.type === 'text' && Array.isArray(caption.sentences);
       const keyboardCaption =
         caption?.type === 'keyboard' &&
@@ -193,6 +196,8 @@ export function validateComposition(composition: ClipComposition): void {
       !isPhoneFrameFill(clip.appearance.phoneFrameFill)
     )
       throw new CompositionEngineError('Invalid phone frame fill.');
+    if (isVisualClip(clip) && !isShadowDistance(clip.appearance.shadowDistance))
+      throw new CompositionEngineError('Invalid shadow distance.');
     if (isVisualClip(clip) && clip.appearance.animatedFrame !== undefined)
       validateAnimatedFrame(clip.appearance.animatedFrame);
     if (isBlurClip(clip)) {

@@ -1,4 +1,5 @@
 const path = require('node:path');
+const { registerHudResizeIpc } = require('./hud-resize.cjs');
 const { registerCapturePreparationIpc } = require('./capture-preparation-ipc.cjs');
 const { BrowserWindow, screen, app } = require('electron');
 const { resizeHudPopover } = require('./hud-popover-size.cjs');
@@ -16,6 +17,7 @@ function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {})
     isPackaged: app.isPackaged,
   });
   registerWindowVisibilityIpc(ipcMain, windowForEvent);
+  registerHudResizeIpc(ipcMain, windowForEvent, controllerForWindow, screen);
   const logWindow = (message, details) => {
     if (!debug) return;
     if (details === undefined) console.log(`[electron window] ${message}`);
@@ -47,8 +49,9 @@ function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {})
   ipcMain.on('window:setSize', (event, width, height) => {
     const win = windowForEvent(event);
     if (!win) return;
-    const targetWidth = Math.round(width);
-    const targetHeight = Math.round(height);
+    const custom = controllerForWindow(win)?.mode === 'hud' && controllerForWindow(win)?.userHudSize;
+    const targetWidth = custom?.width ?? Math.round(width);
+    const targetHeight = custom?.height ?? Math.round(height);
     if (win.webContents.getURL().includes('cameraOverlay')) {
       const [x, y] = win.getPosition();
       return win.setBounds({ x, y, width: targetWidth, height: targetHeight });

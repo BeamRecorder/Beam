@@ -7,6 +7,7 @@ import type { EditorLoadingProgress, RecorderLauncherContext } from '~/api/types
 import Button from '~/ui/button/Button.vue';
 import Select from '~/ui/select/Select.vue';
 import TopbarHUD from './TopbarHUD.vue';
+import HudResizeHandles from './HudResizeHandles.vue';
 import CaptureModeGroup from './CaptureModeGroup.vue';
 import HudCaptureCards from './HudCaptureCards.vue';
 import CaptureCameraIcon from './CaptureCameraIcon.vue';
@@ -21,6 +22,8 @@ import KeyboardChip from '~/ui/Kbd/KeyboardChip.vue';
 import type { HudCaptureTarget } from './hud-state-types';
 import { useHudPopoverViewport } from './useHudPopoverViewport';
 import type { PrepareRecording } from './recorder/capture-preparation-types';
+
+const resizedHeight = ref<number | null>(null);
 
 const props = withDefaults(
   defineProps<{
@@ -161,8 +164,9 @@ useCaptureActionShortcuts({
       'region-selection-leaving': isRegionSelectionLeaving,
       'region-selection-entering': isRegionSelectionEntering,
     }"
-    :style="{ height: `${hudHeight}px` }"
+    :style="{ height: `${resizedHeight ?? hudHeight}px` }"
   >
+    <HudResizeHandles v-if="!embedded && !preparingEditor" @resize="resizedHeight = $event.height - 32" />
     <TopbarHUD
       v-if="!preparingEditor && (!embedded || showTopbar)"
       :title="preparingEditor ? t('preparingEditor') : undefined"

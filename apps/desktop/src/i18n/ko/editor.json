@@ -166,6 +166,7 @@
     "colorFormat": "색상 형식"
   },
   "TimelineToolbar": {
+    "seekPreview": "미리보기 탐색",
     "add": "추가",
     "composition": "컴포지션",
     "split": "분할",
@@ -367,6 +368,8 @@
     "changelog": "변경 내역"
   },
   "VideoEditor": {
+    "pauseGapsRemoved": "일시 정지 구간의 공백을 자동으로 제거했습니다. 복원하거나 실행 취소할 수 있습니다.",
+    "restorePauseGaps": "복원",
     "exportBanner": "내보내는 중입니다. 현재 내보내는 파일에는 실시간 편집 내용이 적용되지 않습니다.",
     "timelineCopied": "복사됨",
     "timelinePasted": "붙여넣음",

@@ -416,6 +416,7 @@
     "deleteClip": "Elimina clip",
     "deleteVideo": "Elimina video",
     "deleteWebcam": "Elimina webcam",
+    "shadowDistance": "Distanza dell’ombra",
     "shadowBlur": "Sfocatura ombra",
     "crop": "Ritaglio"
   },
@@ -595,6 +596,8 @@
     "viewImage": "Visualizza immagine"
   },
   "HUD": {
+    "copyDiagnostics": "Copia diagnostica della registrazione",
+    "copyDiagnosticsFailed": "Impossibile copiare la diagnostica",
     "issues": "Problemi",
     "inputAccessFailed": "Impossibile richiedere l’accesso alle interazioni.",
     "title": "Beam",
@@ -1388,5 +1391,17 @@
   "RecordingHealth": {
     "captureStopped": "La registrazione dello schermo si è interrotta. I file registrati sono stati conservati.",
     "transitionFailed": "Impossibile mettere in pausa o riprendere. La registrazione è stata interrotta per conservare i file. {reason}"
+  },
+  "SourcePicker": {
+    "hoverHint": "Passa il puntatore per vedere un’anteprima. Fai clic per selezionare.",
+    "close": "Chiudi",
+    "search": "Cerca finestre o schermi…",
+    "sourceCount": "{count} sorgenti",
+    "livePreview": "Anteprima dal vivo",
+    "previewHint": "La tua prossima grande cattura",
+    "navigate": "Naviga",
+    "noResults": "Nessuna sorgente corrisponde alla ricerca.",
+    "confirm": "Cattura la sorgente selezionata",
+    "developmentNotice": "Anteprima di sviluppo · Tutte le sorgenti sono simulate. Non viene creata alcuna registrazione."
   }
 }

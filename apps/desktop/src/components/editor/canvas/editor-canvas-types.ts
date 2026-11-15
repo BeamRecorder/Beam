@@ -48,6 +48,7 @@ export interface EditorCanvasProps {
   cursorColor: string;
   enableShadow: boolean;
   shadowBlur: number;
+  shadowDistance?: number;
   shadowColor: string;
   shadowDirection: ShadowDirection;
   clickEffects: CursorClickEffects;

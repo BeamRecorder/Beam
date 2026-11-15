@@ -23,6 +23,7 @@ export function useCursorPropertyFields(scope: CursorPropertyScope) {
     cursorColor: field('color'),
     enableShadow: shadow('enabled'),
     shadowBlur: shadow('blur'),
+    shadowDistance: shadow('distance'),
     shadowColor: shadow('color'),
     shadowDirection: shadow('direction'),
     clickEffects: field('clickEffects'),

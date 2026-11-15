@@ -888,3 +888,38 @@ for (const platform of ['linux', 'darwin', 'win32'])
         [],
       );
   });
+
+for (const event of ['resize', 'focus', 'restore']) {
+  test(`macOS HUD repairs stretched bounds on ${event} without closing its popover`, () => {
+    const win = fakeWindow();
+    new WindowController(win, { platform: 'darwin', screenModule: {} });
+    win.setBounds({ width: 2560, height: 420 });
+    win.emit(event);
+    assert.equal(win.getBounds().width, 672);
+    assert.equal(win.getBounds().height, 420);
+    win.calls.length = 0;
+    win.emit(event);
+    assert.equal(win.calls.filter((call) => call[0] === 'size').length, 0);
+  });
+}
+
+test('a user HUD size survives recorder transitions and showHud without raising the resize minimum', () => {
+  const win = fakeWindow();
+  const display = {
+    id: 1,
+    bounds: { x: 0, y: 0, width: 2560, height: 1440 },
+    workArea: { x: 0, y: 0, width: 2560, height: 1400 },
+  };
+  const controller = new WindowController(win, {
+    screenModule: {
+      getDisplayNearestPoint: () => display,
+      getCursorScreenPoint: () => ({ x: 500, y: 500 }),
+    },
+  });
+  controller.userHudSize = { width: 900, height: 400 };
+  controller.hudSize = controller.userHudSize;
+  controller.setMode('recorder');
+  controller.showHud();
+  assert.deepEqual(win.getBounds(), { x: 1104, y: 1296, width: 900, height: 400 });
+  assert.ok(win.calls.some((call) => call[0] === 'minimumSize' && call[1] === 672 && call[2] === 268));
+});

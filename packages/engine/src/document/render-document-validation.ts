@@ -1,3 +1,4 @@
+import { isShadowDistance } from '../shared/shadow';
 import type { CompositionSnapshot } from '../shared/render-document-types';
 import { validateComposition } from '../commands/clip-composition-validation';
 import { validateCanvas, validateBackground } from './presentation-validation';
@@ -31,6 +32,8 @@ export function validateRenderDocument(snapshot: CompositionSnapshot) {
     typeof snapshot.cursorSettings.enabled !== 'boolean'
   )
     throw new TypeError('Invalid render document settings.');
+  if (!isShadowDistance(snapshot.cursorSettings.shadow?.distance))
+    throw new TypeError('Invalid cursor shadow distance.');
   validateCanvas(snapshot.canvas);
   if (snapshot.cursor.hoverSync !== undefined) validateCursorHoverSync(snapshot.cursor.hoverSync);
   if (snapshot.cursor.hoverSources !== undefined) validateCursorHoverSources(snapshot.cursor.hoverSources);

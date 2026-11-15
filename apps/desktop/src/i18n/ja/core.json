@@ -416,6 +416,7 @@
     "deleteClip": "クリップを削除",
     "deleteVideo": "ビデオを削除",
     "deleteWebcam": "ウェブカメラを削除",
+    "shadowDistance": "影の距離",
     "shadowBlur": "影のぼかし",
     "crop": "クロップ"
   },
@@ -595,6 +596,8 @@
     "viewImage": "画像を表示"
   },
   "HUD": {
+    "copyDiagnostics": "録画の診断情報をコピー",
+    "copyDiagnosticsFailed": "診断情報をコピーできませんでした",
     "issues": "問題",
     "inputAccessFailed": "操作へのアクセス権限をリクエストできませんでした。",
     "title": "Beam",
@@ -1388,5 +1391,17 @@
   "RecordingHealth": {
     "captureStopped": "画面録画が停止しました。録画済みのファイルは保持されています。",
     "transitionFailed": "一時停止または再開に失敗しました。ファイルを保持するため録画を停止しました。{reason}"
+  },
+  "SourcePicker": {
+    "hoverHint": "カーソルを合わせてプレビューし、クリックして選択します。",
+    "close": "閉じる",
+    "search": "ウィンドウや画面を検索…",
+    "sourceCount": "{count} 個のソース",
+    "livePreview": "ライブプレビュー",
+    "previewHint": "次の素晴らしいキャプチャ",
+    "navigate": "移動",
+    "noResults": "検索に一致するソースはありません。",
+    "confirm": "選択したソースをキャプチャ",
+    "developmentNotice": "開発用プレビュー · すべてのソースはシミュレーションです。録画は作成されません。"
   }
 }

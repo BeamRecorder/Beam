@@ -54,17 +54,30 @@ describe('automatic zoom inspector action', () => {
   });
 });
 
-it('offers the opt-in switch directly in Zoom and emits the complete project setting', async () => {
-  const wrapper = create();
-  const toggle = wrapper.get('[role="switch"][aria-label="Experimental zoom"]');
-  expect(toggle.attributes('aria-checked')).toBe('false');
-  await toggle.trigger('click');
-  expect(wrapper.emitted('update:autoFollow')?.[0]?.[0]).toMatchObject({
-    experimentalZoom: true,
-    safeZone: 0.5,
-    responsiveness: 0.55,
-  });
-  expect(create({ still: true }).find('[aria-label="Experimental zoom"]').exists()).toBe(false);
+it.each([false, true])(
+  'hides the experimental switch while keeping background zoom for experimental=%s',
+  async (experimentalZoom) => {
+    const autoFollow = {
+      experimentalZoom,
+      zoomBackground: true,
+      safeZone: 0.5,
+      responsiveness: 0.55,
+      directionLock: true,
+    };
+    const wrapper = create({ autoFollow });
+    expect(wrapper.find('.experimental-zoom-setting').exists()).toBe(false);
+    expect(wrapper.find('[aria-label="Experimental zoom"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('Use Recordly-style 2D zooms');
+    const toggle = wrapper.get('[role="switch"][aria-label="Zoom background"]');
+    expect(toggle.attributes('aria-checked')).toBe('true');
+    await toggle.trigger('click');
+    expect(wrapper.emitted('update:autoFollow')?.[0]?.[0]).toEqual({ ...autoFollow, zoomBackground: false });
+  },
+);
+it('keeps project camera switches out of Screenshot', () => {
+  const wrapper = create({ still: true });
+  expect(wrapper.find('[aria-label="Experimental zoom"]').exists()).toBe(false);
+  expect(wrapper.find('[aria-label="Zoom background"]').exists()).toBe(false);
 });
 it('generates free-slot experimental zooms without presenting a replace confirmation', async () => {
   const wrapper = create({

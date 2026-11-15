@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld(
     resume: () => invoke('resume'),
     stop: () => invoke('stop'),
     status: () => invoke('status'),
+    getRecordingDiagnosticReport: (context) => ipcRenderer.invoke('capture:diagnostic-report', context),
     startSystemAudioPreview: async () => {
       await invoke('start-system-audio-preview');
     },
@@ -140,6 +141,7 @@ contextBridge.exposeInMainWorld(
       return () => ipcRenderer.removeListener('editor:recorder-launcher', callback);
     },
     setPosition: (x, y) => ipcRenderer.send('window:setPosition', x, y),
+    resizeHud: (edge, phase) => ipcRenderer.invoke('window:resize-hud', edge, phase),
     setSize: (width, height) => ipcRenderer.send('window:setSize', width, height),
     resizeHudPopover: (height) => ipcRenderer.invoke('window:resize-hud-popover', height),
     setSizeSmooth: (width, height) => ipcRenderer.send('window:setSizeSmooth', width, height),

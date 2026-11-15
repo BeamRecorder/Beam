@@ -59,6 +59,7 @@ const reset = () => {
   emit('update:cursorColor', '#000000');
   emit('update:enableShadow', true);
   emit('update:shadowBlur', 6);
+  emit('update:shadowDistance', undefined);
   emit('update:shadowColor', '#000000');
   emit('update:shadowDirection', 'bottom');
   emit('update:clickEffects', createDefaultCursorClickEffects());
@@ -104,6 +105,7 @@ const selectMotionPreset = (preset: CursorMotionPreset) => {
         :cursor-color="cursorColor"
         :enable-shadow="enableShadow"
         :shadow-blur="shadowBlur"
+        :shadow-distance="shadowDistance"
         :shadow-color="shadowColor"
         :shadow-direction="shadowDirection"
         @update:selection="emit('update:selection', $event)"
@@ -112,6 +114,7 @@ const selectMotionPreset = (preset: CursorMotionPreset) => {
         @update:cursor-color="emit('update:cursorColor', $event)"
         @update:enable-shadow="emit('update:enableShadow', $event)"
         @update:shadow-blur="emit('update:shadowBlur', $event)"
+        @update:shadow-distance="emit('update:shadowDistance', $event)"
         @update:shadow-color="emit('update:shadowColor', $event)"
         @update:shadow-direction="emit('update:shadowDirection', $event)"
       />

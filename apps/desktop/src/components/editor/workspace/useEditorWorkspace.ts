@@ -1,4 +1,5 @@
 import { onMounted } from 'vue';
+import { useRecordingPauseCleanup } from './useRecordingPauseCleanup';
 import { useVideoAuthoring } from '../../authoring/useVideoAuthoring';
 import { capture } from '~/api/capture';
 import { useTimelineResize } from '../composables/useTimelineResize';
@@ -15,6 +16,19 @@ import type { EditorWorkspaceProps, EditorWorkspaceEmit } from './workspace-type
 export function useEditorWorkspace(props: EditorWorkspaceProps, emit: EditorWorkspaceEmit) {
   const state = useEditorWorkspaceState(props, emit);
   const history = useEditorWorkspaceHistory(state);
+  useRecordingPauseCleanup({
+    projectId: () => props.project?.id ?? null,
+    sessionId: () => props.editorData?.sessionId ?? null,
+    ready: () => state.projectStateReady.value,
+    fresh: () => state.editorState.isFreshProject.value,
+    presented: () => state.initialPlaybackSettled.value,
+    composition: state.composition,
+    zoomElements: state.zoomElements,
+    snapshot: history.createEditorSnapshot,
+    commit: history.commitNow,
+    undo: history.undo,
+    save: () => state.editorState.scheduleSave(false),
+  });
   const authoring = useVideoAuthoring(state, history);
   const selectClip = (clipId: string): void => {
     selection.selectEditorClip(clipId);

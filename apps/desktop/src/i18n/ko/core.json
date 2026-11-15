@@ -416,6 +416,7 @@
     "deleteClip": "클립 삭제",
     "deleteVideo": "비디오 삭제",
     "deleteWebcam": "웹캠 삭제",
+    "shadowDistance": "그림자 거리",
     "shadowBlur": "그림자 흐림",
     "crop": "자르기"
   },
@@ -595,6 +596,8 @@
     "viewImage": "이미지 보기"
   },
   "HUD": {
+    "copyDiagnostics": "녹화 진단 복사",
+    "copyDiagnosticsFailed": "진단을 복사할 수 없습니다",
     "issues": "문제",
     "inputAccessFailed": "상호작용 접근 권한을 요청할 수 없습니다.",
     "title": "Beam",
@@ -1388,5 +1391,17 @@
   "RecordingHealth": {
     "captureStopped": "화면 녹화가 중지되었습니다. 녹화된 파일은 보존되었습니다.",
     "transitionFailed": "일시 정지 또는 재개에 실패했습니다. 파일을 보존하기 위해 녹화를 중지했습니다. {reason}"
+  },
+  "SourcePicker": {
+    "hoverHint": "마우스를 올려 미리 보고 클릭하여 선택하세요.",
+    "close": "닫기",
+    "search": "창 또는 화면 검색…",
+    "sourceCount": "소스 {count}개",
+    "livePreview": "실시간 미리 보기",
+    "previewHint": "다음 멋진 캡처",
+    "navigate": "탐색",
+    "noResults": "검색과 일치하는 소스가 없습니다.",
+    "confirm": "선택한 소스 캡처",
+    "developmentNotice": "개발용 미리 보기 · 모든 소스는 시뮬레이션입니다. 녹화가 생성되지 않습니다."
   }
 }

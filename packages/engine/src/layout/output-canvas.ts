@@ -1,3 +1,4 @@
+import { isShadowDistance } from '../shared/shadow';
 import type {
   OutputCanvasPreset,
   OutputCanvasSettings,
@@ -43,6 +44,13 @@ export const normalizeWatermark = (value: Partial<WatermarkSettings> | null | un
     ? (value!.position as WatermarkPosition)
     : 'bottom-right',
   size: Number.isFinite(value?.size) ? Math.max(50, Math.min(200, Math.round(value!.size!))) : 100,
+  ...(value?.shadowDistance !== undefined && isShadowDistance(value.shadowDistance)
+    ? { shadowDistance: value.shadowDistance }
+    : {}),
+  ...(value?.shadowDirection !== undefined &&
+  ['all', 'bottom', 'bottom-right', 'top-left'].includes(value.shadowDirection)
+    ? { shadowDirection: value.shadowDirection }
+    : {}),
   shadow: Number.isFinite(value?.shadow) ? Math.max(0, Math.min(100, Math.round(value!.shadow!))) : 20,
   backgroundColor:
     typeof value?.backgroundColor === 'string' && /^#[0-9a-f]{6}$/i.test(value.backgroundColor)

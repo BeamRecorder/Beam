@@ -453,6 +453,7 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
                   wrap: typeof style.wrap === 'boolean' ? style.wrap : true,
                   shadowColor: typeof style.shadowColor === 'string' ? style.shadowColor : '#000000',
                   shadowBlur: finite(style.shadowBlur) ? style.shadowBlur : 4,
+                  ...(style.shadowDistance !== undefined ? { shadowDistance: style.shadowDistance } : {}),
                   backdropBlur: finite(style.backdropBlur) ? style.backdropBlur : 0,
                   outlineColor: typeof style.boxColor === 'string' ? style.boxColor : '#000000',
                   outlineWidth: finite(style.boxPadding) ? style.boxPadding : 6,

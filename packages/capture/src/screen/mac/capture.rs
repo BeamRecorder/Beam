@@ -277,18 +277,19 @@ pub(crate) fn resolve_filter(
             .into_iter()
             .find(|window| window.window_id() == window_id)
             .ok_or_else(|| CaptureError::SourceNotFound(source_id.to_string()))?;
-        let frame = window.frame();
         if region.is_some() {
             return Err(CaptureError::InvalidConfiguration(
                 "screen region requires a display source".into(),
             ));
         }
-        return Ok((
-            SCContentFilter::create().with_window(&window).build(),
-            dimension(frame.size.width),
-            dimension(frame.size.height),
-            None,
-        ));
+        let filter = SCContentFilter::create().with_window(&window).build();
+        let rect = filter.content_rect();
+        let (width, height) = super::super::mac_dimensions::window_pixel_dimensions(
+            rect.size.width,
+            rect.size.height,
+            f64::from(filter.point_pixel_scale()),
+        )?;
+        return Ok((filter, width, height, None));
     }
     if source_id.as_str().starts_with("sck:application:") {
         let application = content
@@ -327,12 +328,6 @@ fn application_id(
         application.process_id(),
         application.bundle_identifier()
     ))
-}
-
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-fn dimension(value: f64) -> u32 {
-    let rounded = value.clamp(2.0, f64::from(u32::MAX)) as u32;
-    (rounded & !1).max(2)
 }
 
 fn backend_error(error: impl std::fmt::Display) -> CaptureError {

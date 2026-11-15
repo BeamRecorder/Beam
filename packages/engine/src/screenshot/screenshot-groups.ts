@@ -96,6 +96,9 @@ export function transformScreenshotGroup(
                       letterSpacing: r.text.style.letterSpacing * scale,
                       outlineWidth: r.text.style.outlineWidth * scale,
                       shadowBlur: r.text.style.shadowBlur * scale,
+                      ...(r.text.style.shadowDistance !== undefined
+                        ? { shadowDistance: Math.min(256, r.text.style.shadowDistance * scale) }
+                        : {}),
                       extrusionDepth: r.text.style.extrusionDepth * scale,
                     },
                   },

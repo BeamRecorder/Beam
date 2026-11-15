@@ -187,3 +187,22 @@ test('clamps out-of-range numeric values and defaults an invalid gradient', () =
     ],
   });
 });
+
+test('persists caption and element-text shadow distance independently of blur', () => {
+  for (const shadowBlur of [0, 8, 48]) {
+    const normalized = normalizeCaption(textCaption({ ...baseStyle(), shadowBlur, shadowDistance: 40 }));
+    assert.equal(normalized.style.shadowDistance, 40);
+    assert.equal(normalized.style.shadowBlur, shadowBlur);
+  }
+});
+
+test('preserves zero shadow distance and omits it for legacy caption styles', () => {
+  assert.equal(normalizeCaption(textCaption({ ...baseStyle(), shadowDistance: 0 })).style.shadowDistance, 0);
+  assert.equal(Object.hasOwn(normalizeCaption(textCaption()).style, 'shadowDistance'), false);
+});
+
+test('rejects invalid text shadow distance at native storage', () => {
+  for (const shadowDistance of [-1, 257, NaN, Infinity, '20', null]) {
+    assert.throws(() => normalizeCaption(textCaption({ ...baseStyle(), shadowDistance })));
+  }
+});

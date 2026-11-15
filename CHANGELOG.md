@@ -4,10 +4,27 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-15
+
 ### Added
 
-- Optional Experimental zoom in the Zoom inspector uses Recordly's 2D camera and click-grouping algorithms, with Focused and Cinematic presets, Classic animation, configurable connections and spatial motion blur. Settings and generated zooms support saving and undo/redo; existing recordings work without recording again. Available in all fifteen languages.
+- Copy a recording diagnostic report from capture warnings in the recording bar or errors in recorder setup, including system versions, native session state, track metrics, recent health events and cursor file status.
+- Seek through video directly in fullscreen preview with an accessible playback slider, live scrubbing and keyboard controls.
+- Adjust shadow distance independently of blur for media, webcam, shapes, arrows, drawings, text, captions, cursors and watermarks in Studio and Screenshot. Existing projects retain their original shadow appearance.
+- Resize recorder setup by dragging its edges or corners; bounded custom dimensions remain available during the current app session.
+- The experimental zoom engine uses Recordly's 2D camera and click-grouping algorithms, with Focused and Cinematic presets, Classic animation, configurable connections and spatial motion blur. Settings and generated zooms support saving and undo/redo; existing recordings work without recording again. Available in all fifteen languages.
 - Zoom the background independently, or keep it fixed while the video camera moves, in both standard and experimental mode.
+
+### Changed
+
+- Hide the Experimental zoom switch and its explanation in the Zoom inspector while keeping Zoom background available.
+
+### Fixed
+
+- Complete source picker translations in all supported languages.
+- New recordings automatically close empty pause intervals when opened in Studio, keeping recording tracks, cursor timing and zooms synchronized. A five-second notification offers Restore, and Undo/Redo remains available.
+- Restore the chosen recorder setup width after unexpected native window resizing or returning to Beam, while preserving open popovers.
+- Capture macOS windows at their Retina pixel resolution instead of their logical point size, preserving text detail on HiDPI displays.
 
 ## [0.6.0] - 2026-11-09
 

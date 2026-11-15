@@ -164,7 +164,7 @@ describe('CursorPanel', () => {
     expect(wrapper.find('#cursor-motion-advanced-panel').exists()).toBe(true);
     await wrapper.get('.cursor-size-control').trigger('click');
     await cursorColorControl(wrapper)!.trigger('click');
-    await wrapper.get('#cursor-shadow-options .cursor-slider').trigger('click');
+    await wrapper.findAll('#cursor-shadow-options .cursor-slider')[1]!.trigger('click');
     await wrapper.get('#cursor-shadow-options .cursor-color').trigger('click');
     await wrapper.get('.shadow-direction').trigger('click');
     await wrapper.get('.shadow-options .cursor-switch').trigger('click');

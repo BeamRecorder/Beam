@@ -201,7 +201,11 @@ export function drawCursorLayer(
               ),
             }
           : {}),
-        shadow: { ...settings.shadow, blur: shadowBlur },
+        shadow: {
+          ...settings.shadow,
+          blur: shadowBlur,
+          ...(settings.shadow.distance !== undefined ? { distance: settings.shadow.distance * pixelScale } : {}),
+        },
         resolution,
       });
     } finally {
@@ -216,7 +220,11 @@ export function drawCursorLayer(
     if (settings.shadow.enabled) {
       ctx.shadowColor = settings.shadow.color;
       ctx.shadowBlur = shadowBlur;
-      const offset = cursorShadowOffset(shadowBlur, settings.shadow.direction);
+      const offset = cursorShadowOffset(
+        shadowBlur,
+        settings.shadow.direction,
+        settings.shadow.distance === undefined ? undefined : settings.shadow.distance * pixelScale,
+      );
       ctx.shadowOffsetX = offset.x;
       ctx.shadowOffsetY = offset.y;
     }

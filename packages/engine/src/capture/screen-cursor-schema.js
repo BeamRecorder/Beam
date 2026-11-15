@@ -19,6 +19,7 @@ export function validateScreenCursorSettings(value) {
     !record(value.shadow) ||
     typeof value.shadow.enabled !== 'boolean' ||
     !bounded(value.shadow.blur, 0, 96) ||
+    (value.shadow.distance !== undefined && !bounded(value.shadow.distance, 0, 256)) ||
     !text(value.shadow.color) ||
     !['all', 'bottom', 'bottom-right', 'top-left'].includes(value.shadow.direction) ||
     !record(value.clickEffects) ||

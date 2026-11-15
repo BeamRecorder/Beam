@@ -47,6 +47,7 @@ export interface UseCursorOverlayOptions {
   motion: () => CursorMotionSettings;
   autoHide: () => CursorAutoHideSettings;
   shadowBlur: () => number;
+  shadowDistance?: () => number | undefined;
   shadowColor: () => string;
   shadowDirection: () => ShadowDirection;
   outputCanvas: () => OutputCanvasSettings;
@@ -369,7 +370,11 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
               transitionTarget.shadowColor = options.shadowColor();
               const shadowBlur = options.shadowBlur() * previewScale;
               transitionTarget.shadowBlur = shadowBlur;
-              const offset = cursorShadowOffset(shadowBlur, options.shadowDirection());
+              const offset = cursorShadowOffset(
+                shadowBlur,
+                options.shadowDirection(),
+                options.shadowDistance?.() === undefined ? undefined : options.shadowDistance()! * previewScale,
+              );
               transitionTarget.shadowOffsetX = offset.x;
               transitionTarget.shadowOffsetY = offset.y;
             }

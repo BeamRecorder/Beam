@@ -1,3 +1,4 @@
+import { removeRecordingPauseGaps } from '@beam/engine/composition/recording-pauses';
 import { describe, expect, it } from 'vitest';
 import type { ProjectEditorData, SessionTrackAsset, SessionTrackData } from '../../../../api/types/capture-api';
 import type { InputEventSidecar } from '@beam/engine/capture/capture-session';
@@ -537,4 +538,26 @@ it('preserves explicit microphone unlink when synchronizing the same session aga
     timelineStartMs: 200,
     timelineDurationMs: 1300,
   });
+});
+
+it('keeps automatically joined pause segments and source timing intact on synchronization', () => {
+  const first = segment({ path: 'first.mp4', src: '/first.mp4', startNs: 0, endNs: 2_000_000_000 });
+  const second = segment({ path: 'second.mp4', src: '/second.mp4', startNs: 602_000_000_000, endNs: 604_000_000_000 });
+  const data = editorData([
+    track('screen', [first, second]),
+    track('camera', [first, second]),
+    track('microphone', [first, second]),
+    track('system-audio', [first, second]),
+  ]);
+  const initial = synchronizeRecordingClips(emptyComposition(), data);
+  const result = removeRecordingPauseGaps(initial, data.sessionId);
+  expect(result.removedCount).toBe(1);
+  expect(result.removedDurationMs).toBe(600000);
+  expect(result.composition.clips.filter((clip) => clip.timelineStartMs === 2000)).toHaveLength(4);
+  const joined = synchronizeRecordingClips(result.composition, data);
+  expect(joined).toBe(result.composition);
+  const secondScreen = joined.clips.find((clip) => clip.kind === 'screen' && clip.timelineStartMs === 2000)!;
+  expect(sessionTimeAt(secondScreen, 2500, joined)).toBe(602500);
+  // Restoring the original owned snapshot also survives synchronization.
+  expect(synchronizeRecordingClips(initial, data)).toBe(initial);
 });

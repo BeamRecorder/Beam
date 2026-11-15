@@ -78,6 +78,7 @@ export function useVideoEditor(options: {
       shadow: {
         enabled: cursor.enableShadow.value,
         blur: cursor.shadowBlur.value,
+        ...(cursor.shadowDistance.value !== undefined ? { distance: cursor.shadowDistance.value } : {}),
         color: cursor.shadowColor.value,
         direction: cursor.shadowDirection.value,
       },
@@ -192,6 +193,7 @@ export function useVideoEditor(options: {
     cursorColor: cursor.cursorColor,
     cursorShadowEnabled: cursor.enableShadow,
     cursorShadowBlur: cursor.shadowBlur,
+    cursorShadowDistance: cursor.shadowDistance,
     cursorShadowColor: cursor.shadowColor,
     cursorShadowDirection: cursor.shadowDirection,
     availableBackgrounds: player.backgroundGroups,
@@ -288,6 +290,7 @@ export function useVideoEditor(options: {
         shadow: {
           enabled: cursor.enableShadow.value,
           blur: cursor.shadowBlur.value,
+          ...(cursor.shadowDistance.value !== undefined ? { distance: cursor.shadowDistance.value } : {}),
           color: cursor.shadowColor.value,
           direction: cursor.shadowDirection.value,
         },

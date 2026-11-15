@@ -1,3 +1,4 @@
+import { isShadowDistance } from '@beam/engine/shared/shadow';
 import { validateScreenshotGroups } from './screenshot-group-schema.js';
 import { validateLayerRotation3d } from '../layout/layer-perspective-schema.js';
 import type { StillDocument } from './still-document-types';
@@ -144,6 +145,7 @@ export function validateScreenshotState(state: ScreenshotState) {
       ids.has(cursor.id) ||
       ![cursor.position.x, cursor.position.y, cursor.size, cursor.rotation, cursor.shadowBlur].every(Number.isFinite) ||
       cursor.size <= 0 ||
+      !isShadowDistance(cursor.shadowDistance) ||
       cursor.shadowBlur < 0 ||
       cursor.selection?.mode !== 'fixed' ||
       !cursor.selection.cursorId

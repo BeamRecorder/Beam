@@ -1,3 +1,4 @@
+import { isShadowDistance } from './shadow';
 import type { ColorLayerStyle } from '@beam/engine/shared/color-layer-style-types';
 
 export const DEFAULT_COLOR_LAYER_STYLE: ColorLayerStyle = {
@@ -32,6 +33,9 @@ export const normalizeColorLayerStyle = (value: Partial<ColorLayerStyle> | null 
   shadowSize: ['none', 'sm', 'md', 'lg', 'custom'].includes(value?.shadowSize ?? '')
     ? value!.shadowSize!
     : DEFAULT_COLOR_LAYER_STYLE.shadowSize,
+  ...(value?.shadowDistance !== undefined && isShadowDistance(value.shadowDistance)
+    ? { shadowDistance: value.shadowDistance }
+    : {}),
   shadowBlur: boundedNumber(value?.shadowBlur, DEFAULT_COLOR_LAYER_STYLE.shadowBlur, 96),
   shadowMode: value?.shadowMode === 'adaptive' ? 'adaptive' : 'solid',
   shadowColor: /^#[\da-f]{6}(?:[\da-f]{2})?$/i.test(value?.shadowColor ?? '')
@@ -56,6 +60,7 @@ export const isColorLayerStyle = (value: Partial<ColorLayerStyle>) =>
       : ['none', 'sm', 'md', 'lg'].includes(value.cornerRadius))) &&
   (value.shadowSize === undefined || ['none', 'sm', 'md', 'lg', 'custom'].includes(value.shadowSize)) &&
   optionalPercent(value.shadowBlur, 96) &&
+  isShadowDistance(value.shadowDistance) &&
   (value.shadowMode === undefined || ['solid', 'adaptive'].includes(value.shadowMode)) &&
   (value.shadowColor === undefined || /^#[\da-f]{6}(?:[\da-f]{2})?$/i.test(value.shadowColor)) &&
   (value.shadowDirection === undefined ||

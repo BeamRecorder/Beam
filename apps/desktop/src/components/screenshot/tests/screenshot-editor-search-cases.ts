@@ -112,8 +112,8 @@ export function registerScreenshotEditorSearchTests(harness: ScreenshotEditorTes
       expect(wrapper.find('.canvas-size-popover').exists()).toBe(true);
       await run(wrapper, 'action:recenter');
       expect(harness.canvasResetView).toHaveBeenCalledOnce();
-      wrapper.findComponent(ScreenshotViewControls).vm.$emit('resetView');
-      expect(harness.canvasResetView).toHaveBeenCalledTimes(2);
+      wrapper.findComponent(ScreenshotViewControls).vm.$emit('view', 'fit');
+      expect(harness.canvasSetView).toHaveBeenCalledWith('fit');
       await run(wrapper, 'navigate:clip');
       await run(wrapper, 'action:crop');
       expect(wrapper.findComponent(ScreenshotCanvasStub).props('cropping')).toBe(true);

@@ -1,3 +1,4 @@
+import { shadowOffset } from '@beam/engine/shared/shadow';
 import { DEFAULT_ANIMATED_FRAME } from '@beam/engine/shared/animated-frame-types';
 import { drawAnimatedFrame } from './animated-frame';
 import type { ClipAppearance } from '@beam/engine/shared/composition-types';
@@ -64,12 +65,16 @@ export function applyClipShadow(
     style.shadowMode === 'adaptive' && source
       ? adaptiveShadowColor(source, sourceRect, style.shadowColor)
       : style.shadowColor;
-  ctx.shadowColor = blur > 0 ? shadowColor : 'transparent';
+  ctx.shadowColor =
+    style.shadowSize !== 'none' && (blur > 0 || (style.shadowDistance ?? 0) > 0) ? shadowColor : 'transparent';
   ctx.shadowBlur = blur;
-  const offset = blur * 0.5;
-  ctx.shadowOffsetX =
-    style.shadowDirection === 'top-left' ? -offset : style.shadowDirection === 'bottom-right' ? offset : 0;
-  ctx.shadowOffsetY = style.shadowDirection === 'top-left' ? -offset : style.shadowDirection === 'all' ? 0 : offset;
+  const offset = shadowOffset(
+    style.shadowDirection,
+    style.shadowDistance === undefined ? undefined : style.shadowDistance * Math.max(0, shadowScale),
+    blur * 0.5,
+  );
+  ctx.shadowOffsetX = offset.x;
+  ctx.shadowOffsetY = offset.y;
 }
 const appendMediaPath = (ctx: Canvas2DContext, rect: MediaRect, radius: number, mask?: 'circle' | 'squircle') => {
   if (mask === 'circle') {
@@ -271,7 +276,10 @@ function drawOrientedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions)
   const outerRadius = frameRadius(appearance.frame, appearanceRadius, outer);
   const shadowBlur = shadowBlurForAppearance(appearance) * shadowScale;
   let sourceDrawn = false;
-  if (options.paintPass !== 'content' && shadowBlur > 0) {
+  if (
+    options.paintPass !== 'content' &&
+    (shadowBlur > 0 || (appearance.shadowSize !== 'none' && (appearance.shadowDistance ?? 0) > 0))
+  ) {
     const alphaSurface =
       options.shadowFollowsSourceAlpha && (appearance.frame === 'none' || appearance.frame === 'animated')
         ? alphaShadowSurface(options, outerRadius)
@@ -292,7 +300,13 @@ function drawOrientedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions)
       const paint = (target: Canvas2DContext) => {
         target.save();
         applyClipShadow(target, style, undefined, undefined, shadowScale);
-        clipOutsideMedia(target, outer, outerRadius, mask, shadowBlurForAppearance(appearance) * appearanceScale);
+        clipOutsideMedia(
+          target,
+          outer,
+          outerRadius,
+          mask,
+          (shadowBlurForAppearance(appearance) + (appearance.shadowDistance ?? 0)) * appearanceScale,
+        );
         target.fillStyle = fill;
         mediaPath(target, outer, outerRadius, mask);
         target.fill();
@@ -304,8 +318,16 @@ function drawOrientedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions)
         appearanceScale !== 1 ||
         !drawCachedMediaShadow(ctx, {
           rect: outer,
-          bleed: shadowBlur * 4 + 2,
-          identity: JSON.stringify([outerRadius, mask, shadowBlur, color, appearance.shadowDirection, fill]),
+          bleed: shadowBlur * 4 + (appearance.shadowDistance ?? 0) * shadowScale + 2,
+          identity: JSON.stringify([
+            outerRadius,
+            mask,
+            shadowBlur,
+            appearance.shadowDistance,
+            color,
+            appearance.shadowDirection,
+            fill,
+          ]),
           paint,
         })
       )

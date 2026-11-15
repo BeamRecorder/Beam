@@ -9,6 +9,7 @@ export interface ColorLayerStyle {
   cornerRadius: ColorLayerCornerRadius;
   shadowSize: ColorLayerShadowSize;
   shadowBlur: number;
+  shadowDistance?: number;
   shadowMode: ColorLayerShadowMode;
   shadowColor: string;
   shadowDirection: ColorLayerShadowDirection;

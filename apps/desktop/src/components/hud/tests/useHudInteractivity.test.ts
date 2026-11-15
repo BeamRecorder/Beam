@@ -113,4 +113,18 @@ describe('HUD native input policy', () => {
     window.dispatchEvent(new Event('mouseleave'));
     expect(capture.setInteractive).toHaveBeenCalledTimes(2);
   });
+  it('keeps pointer capture interactive outside the HUD until edge resizing ends', () => {
+    create();
+    const edge = document.createElement('div');
+    edge.className = 'hud-resize-edge';
+    edge.dataset.resizing = 'true';
+    document.body.append(edge);
+    target = null;
+    move();
+    window.dispatchEvent(new Event('mouseleave'));
+    expect(capture.setInteractive.mock.calls).toEqual([[true]]);
+    edge.remove();
+    move();
+    expect(capture.setInteractive).toHaveBeenLastCalledWith(false);
+  });
 });

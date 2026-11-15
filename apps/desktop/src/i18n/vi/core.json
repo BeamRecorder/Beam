@@ -416,6 +416,7 @@
     "deleteClip": "Xóa đoạn",
     "deleteVideo": "Xóa video",
     "deleteWebcam": "Xóa webcam",
+    "shadowDistance": "Khoảng cách bóng",
     "shadowBlur": "Độ mờ bóng",
     "crop": "Cắt"
   },
@@ -595,6 +596,8 @@
     "viewImage": "Xem ảnh"
   },
   "HUD": {
+    "copyDiagnostics": "Sao chép chẩn đoán ghi hình",
+    "copyDiagnosticsFailed": "Không thể sao chép chẩn đoán",
     "issues": "Sự cố",
     "inputAccessFailed": "Không thể yêu cầu quyền truy cập tương tác.",
     "title": "Beam",
@@ -1388,5 +1391,17 @@
   "RecordingHealth": {
     "captureStopped": "Quá trình ghi màn hình đã dừng. Các tệp đã ghi được giữ lại.",
     "transitionFailed": "Không thể tạm dừng hoặc tiếp tục. Quá trình ghi đã dừng để giữ lại các tệp của bạn. {reason}"
+  },
+  "SourcePicker": {
+    "hoverHint": "Di chuột để xem trước. Nhấp để chọn.",
+    "close": "Đóng",
+    "search": "Tìm cửa sổ hoặc màn hình…",
+    "sourceCount": "{count} nguồn",
+    "livePreview": "Xem trước trực tiếp",
+    "previewHint": "Bản ghi tuyệt vời tiếp theo của bạn",
+    "navigate": "Điều hướng",
+    "noResults": "Không có nguồn nào khớp với tìm kiếm.",
+    "confirm": "Ghi nguồn đã chọn",
+    "developmentNotice": "Xem trước phát triển · Tất cả nguồn đều được mô phỏng. Không tạo bản ghi."
   }
 }

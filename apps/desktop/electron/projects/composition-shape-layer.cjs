@@ -57,6 +57,8 @@ const DEFAULTS = {
   shadowDirection: 'bottom-right',
 };
 
+const validDistance = (value) =>
+  value === undefined || (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 256);
 const finite = (value, fallback, max) =>
   typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.min(max, value)) : fallback;
 const color = (value, fallback) =>
@@ -71,6 +73,7 @@ const optionalFill = (value) => {
 };
 
 const normalizeShapeLayerStyle = (value) => {
+  if (!validDistance(value?.shadowDistance)) throw new Error('Invalid shape shadow distance.');
   const family = ['arrow', 'text', 'drawing'].includes(value?.family) ? value.family : 'shape';
   const fill = optionalFill(value?.fill);
   const preset =
@@ -102,6 +105,7 @@ const normalizeShapeLayerStyle = (value) => {
     backdropBlur: finite(value?.backdropBlur, DEFAULTS.backdropBlur, 100),
     shadowEnabled: value?.shadowEnabled === true,
     shadowColor: color(value?.shadowColor, DEFAULTS.shadowColor),
+    ...(value?.shadowDistance !== undefined ? { shadowDistance: value.shadowDistance } : {}),
     shadowBlur: finite(value?.shadowBlur, DEFAULTS.shadowBlur, 96),
     shadowDirection: DIRECTIONS.has(value?.shadowDirection) ? value.shadowDirection : DEFAULTS.shadowDirection,
   };

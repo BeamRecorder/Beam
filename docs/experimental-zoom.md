@@ -1,10 +1,11 @@
 # Experimental zoom
 
-The project-level **Experimental zoom** switch in the Zoom inspector selects the
-pinned Recordly 2D camera. It is off by default. Existing telemetry works; a new
-recording is unnecessary. Switching explicitly regenerates replaceable automatic
+The project-level **Experimental zoom** setting selects the pinned Recordly 2D
+camera. Its switch and explanation are currently hidden in the Zoom inspector;
+existing project values remain supported. It is off by default. Existing telemetry
+works; a new recording is unnecessary. Switching explicitly regenerates replaceable automatic
 2D zooms. Locked, detached, manual and other-session zooms remain owned by the
-user. The switch and regeneration form one undoable edit.
+user. Mode changes and regeneration form one undoable edit.
 
 **Zoom background** is a separate project setting, available in both modes.
 Legacy projects keep their moving background; the experimental default is fixed.

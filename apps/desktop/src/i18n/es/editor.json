@@ -166,6 +166,7 @@
     "colorFormat": "Formato de color"
   },
   "TimelineToolbar": {
+    "seekPreview": "Desplazarse por la vista previa",
     "add": "Añadir",
     "composition": "Composición",
     "split": "Dividir",
@@ -367,6 +368,8 @@
     "changelog": "Cambios"
   },
   "VideoEditor": {
+    "pauseGapsRemoved": "Los intervalos de pausa se eliminaron automáticamente. Puedes restaurarlos o usar Deshacer.",
+    "restorePauseGaps": "Restaurar",
     "exportBanner": "Exportación en curso. Los cambios en directo no afectarán al archivo que se está exportando.",
     "timelineCopied": "Copiado",
     "timelinePasted": "Pegado",

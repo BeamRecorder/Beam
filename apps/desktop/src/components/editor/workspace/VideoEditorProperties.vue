@@ -78,6 +78,7 @@ const {
   cursorColor,
   enableShadow,
   shadowBlur,
+  shadowDistance,
   shadowColor,
   shadowDirection,
   clickEffects,
@@ -103,6 +104,7 @@ const { project, editorData } = toRefs(workspace.props);
     v-model:cursor-color="cursorColor"
     v-model:enable-shadow="enableShadow"
     v-model:shadow-blur="shadowBlur"
+    v-model:shadow-distance="shadowDistance"
     v-model:shadow-color="shadowColor"
     v-model:shadow-direction="shadowDirection"
     v-model:click-effects="clickEffects"
@@ -173,6 +175,7 @@ const { project, editorData } = toRefs(workspace.props);
       updateSelectedAppearance({
         shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg' | 'custom',
         shadowBlur: Number($event.blur ?? 40),
+        ...($event.distance !== undefined ? { shadowDistance: $event.distance } : {}),
         shadowMode: ($event.mode ?? 'solid') as 'solid' | 'adaptive',
         shadowColor: $event.color ?? '#000000',
         shadowDirection: ($event.direction ?? 'bottom') as 'all' | 'bottom' | 'bottom-right' | 'top-left',

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ShadowDistanceControl from '../shared/ShadowDistanceControl.vue';
+import { shadowDistance as resolveShadowDistance } from '@beam/engine/shared/shadow';
 import { computed, reactive, ref } from 'vue';
 import { FolderUp, Info, Search } from '@lucide/vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
@@ -252,6 +254,11 @@ const openDiscovery = () => {
         </div>
         <RafRevealTransition>
           <div v-if="enableShadow" id="cursor-shadow-options" class="advanced-options">
+            <ShadowDistanceControl
+              :model-value="resolveShadowDistance(shadowDirection, shadowDistance, Math.round(shadowBlur * 0.4))"
+              :disabled="shadowDirection === 'all'"
+              @update:model-value="emit('update:shadowDistance', $event)"
+            />
             <BigSlider
               :model-value="shadowBlur"
               :min="1"

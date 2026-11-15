@@ -416,6 +416,7 @@
     "deleteClip": "Usuń klip",
     "deleteVideo": "Usuń wideo",
     "deleteWebcam": "Usuń kamerę",
+    "shadowDistance": "Odległość cienia",
     "shadowBlur": "Rozmycie cienia",
     "crop": "Kadrowanie"
   },
@@ -595,6 +596,8 @@
     "viewImage": "Zobacz obraz"
   },
   "HUD": {
+    "copyDiagnostics": "Kopiuj diagnostykę nagrywania",
+    "copyDiagnosticsFailed": "Nie można skopiować diagnostyki",
     "issues": "Problemy",
     "inputAccessFailed": "Nie udało się poprosić o dostęp do interakcji.",
     "title": "Beam",
@@ -1388,5 +1391,17 @@
   "RecordingHealth": {
     "captureStopped": "Nagrywanie ekranu zostało zatrzymane. Nagrane pliki zostały zachowane.",
     "transitionFailed": "Nie udało się wstrzymać lub wznowić nagrywania. Nagrywanie zatrzymano, aby zachować pliki. {reason}"
+  },
+  "SourcePicker": {
+    "hoverHint": "Najedź, aby zobaczyć podgląd. Kliknij, aby wybrać.",
+    "close": "Zamknij",
+    "search": "Szukaj okien lub ekranów…",
+    "sourceCount": "Źródła: {count}",
+    "livePreview": "Podgląd na żywo",
+    "previewHint": "Twoje kolejne świetne nagranie",
+    "navigate": "Nawiguj",
+    "noResults": "Żadne źródła nie pasują do wyszukiwania.",
+    "confirm": "Przechwyć wybrane źródło",
+    "developmentNotice": "Podgląd deweloperski · Wszystkie źródła są symulowane. Nagranie nie jest tworzone."
   }
 }

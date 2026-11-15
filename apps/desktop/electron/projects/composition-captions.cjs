@@ -21,6 +21,8 @@ const keyboardKeys = new Set([
   ...Array.from({ length: 12 }, (_, index) => `f${index + 1}`),
 ]);
 
+const validDistance = (value) =>
+  value === undefined || (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 256);
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const id = (value) => typeof value === 'string' && value.length > 0 && value.length <= 600;
 
@@ -111,6 +113,7 @@ const normalizeCaptionStyle = (value) => {
     !finite(style.fontSize) ||
     typeof style.wrap !== 'boolean' ||
     typeof style.shadowColor !== 'string' ||
+    !validDistance(style.shadowDistance) ||
     !finite(style.shadowBlur) ||
     typeof style.outlineColor !== 'string' ||
     !finite(style.outlineWidth) ||
@@ -136,6 +139,7 @@ const normalizeCaptionStyle = (value) => {
     fontSize: Math.max(1, Math.min(256, style.fontSize)),
     wrap: style.wrap,
     shadowColor: style.shadowColor,
+    ...(style.shadowDistance !== undefined ? { shadowDistance: style.shadowDistance } : {}),
     shadowBlur: Math.max(0, style.shadowBlur),
     shape: normalizeCaptionShape(style.shape, style.backdropBlur),
     outlineColor: style.outlineColor,

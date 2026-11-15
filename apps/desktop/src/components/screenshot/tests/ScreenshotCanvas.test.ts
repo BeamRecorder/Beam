@@ -1,3 +1,4 @@
+import { hydrateActionBindings } from '~/shortcuts/action-bindings';
 import { triggerPointer } from '../../../../../../tests/support/pointer';
 import { defineComponent, nextTick, reactive } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
@@ -168,6 +169,7 @@ const setCanvasBounds = (wrapper: ReturnType<typeof mountCanvas>) => {
 beforeEach(() => {
   vi.clearAllMocks();
   resetPropertyInteractions();
+  hydrateActionBindings({});
   measurement.set = null;
   animationFrames = new Map();
   frameSequence = 0;
@@ -603,6 +605,7 @@ describe('ScreenshotCanvas', () => {
     ['Meta', { metaKey: true }],
     ['Shift', { shiftKey: true }],
   ] as const)('toggles the topmost layer when canvas selection uses %s', async (_modifier, modifier) => {
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue(_modifier === 'Meta' ? 'MacIntel' : 'Linux');
     const wrapper = mountCanvas();
     await flushPromises();
     setCanvasBounds(wrapper);
@@ -686,39 +689,43 @@ describe('ScreenshotCanvas', () => {
     ['Ctrl', { ctrlKey: true }],
     ['Meta', { metaKey: true }],
     ['Shift', { shiftKey: true }],
-  ] as const)(
-    'modifier-clicking a secondary selected outline with %s raycasts and toggles without dragging',
-    async (_modifier, modifier) => {
-      const wrapper = mountCanvas(stateFixture(), 'shape-upper', undefined, undefined, ['shape-upper', 'shape-lower']);
-      await flushPromises();
-      setCanvasBounds(wrapper);
-      const secondary = wrapper
-        .findAllComponents(SelectionStub)
-        .find((selection) => selection.attributes('data-layer-id') === 'shape-lower');
-      if (!secondary) throw new Error('Expected a secondary selected outline.');
-      const setPointerCapture = vi.fn();
-      const preventDefault = vi.fn();
-      const stopPropagation = vi.fn();
+  ] as const)('handles %s selection gestures on a secondary selected outline', async (_modifier, modifier) => {
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue(_modifier === 'Meta' ? 'MacIntel' : 'Linux');
+    const wrapper = mountCanvas(stateFixture(), 'shape-upper', undefined, undefined, ['shape-upper', 'shape-lower']);
+    await flushPromises();
+    setCanvasBounds(wrapper);
+    const secondary = wrapper
+      .findAllComponents(SelectionStub)
+      .find((selection) => selection.attributes('data-layer-id') === 'shape-lower');
+    if (!secondary) throw new Error('Expected a secondary selected outline.');
+    const setPointerCapture = vi.fn();
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
 
-      secondary.vm.$emit('pointer-down', {
-        button: 0,
-        clientX: 25,
-        clientY: 30,
-        pointerId: 4,
-        currentTarget: { setPointerCapture },
-        preventDefault,
-        stopPropagation,
-        ...modifier,
-      } as unknown as PointerEvent);
+    secondary.vm.$emit('pointer-down', {
+      button: 0,
+      clientX: 25,
+      clientY: 30,
+      pointerId: 4,
+      currentTarget: { setPointerCapture },
+      preventDefault,
+      stopPropagation,
+      ...modifier,
+    } as unknown as PointerEvent);
 
+    if (_modifier === 'Shift') {
+      expect(wrapper.emitted('select')).toBeUndefined();
+      expect(preventDefault).toHaveBeenCalledOnce();
+      expect(setPointerCapture).toHaveBeenCalledWith(4);
+    } else {
       expect(wrapper.emitted('select')).toEqual([['shape-lower', 'toggle-individual']]);
       expect(stopPropagation).toHaveBeenCalledOnce();
       expect(preventDefault).not.toHaveBeenCalled();
       expect(setPointerCapture).not.toHaveBeenCalled();
       expect(propertyInteractionActive.value).toBe(false);
-      wrapper.unmount();
-    },
-  );
+    }
+    wrapper.unmount();
+  });
 
   it('replaces group selection on release when a secondary outline is clicked without movement', async () => {
     const wrapper = mountCanvas(stateFixture(), 'shape-upper', undefined, undefined, ['shape-upper', 'shape-lower']);
@@ -751,6 +758,7 @@ describe('ScreenshotCanvas', () => {
   });
 
   it('moves every selected layer when dragging a secondary outline without resetting the selection', async () => {
+    hydrateActionBindings({ 'gesture.duplicate': { keys: '', scope: 'application', category: 'gestures' } });
     const wrapper = mountCanvas(stateFixture(), 'shape-upper', undefined, undefined, ['shape-upper', 'shape-lower']);
     await flushPromises();
     setCanvasBounds(wrapper);
@@ -829,6 +837,7 @@ describe('ScreenshotCanvas', () => {
   });
 
   it('selects an overlapping layer before moving the selected image, then moves it once selected', async () => {
+    hydrateActionBindings({ 'gesture.duplicate': { keys: '', scope: 'application', category: 'gestures' } });
     const state = stateFixture();
     const wrapper = mountCanvas(state, state.image.id);
     measurement.set?.(800, 600);

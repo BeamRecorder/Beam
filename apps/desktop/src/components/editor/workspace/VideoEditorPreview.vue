@@ -42,6 +42,7 @@ const {
   cursorColor,
   enableShadow,
   shadowBlur,
+  shadowDistance,
   shadowColor,
   shadowDirection,
   clickEffects,
@@ -168,6 +169,7 @@ useActionShortcuts(
         :cursor-color="cursorColor"
         :enable-shadow="enableShadow"
         :shadow-blur="shadowBlur"
+        :shadow-distance="shadowDistance"
         :shadow-color="shadowColor"
         :shadow-direction="shadowDirection"
         :click-effects="clickEffects"

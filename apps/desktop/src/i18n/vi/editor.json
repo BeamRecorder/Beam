@@ -166,6 +166,7 @@
     "colorFormat": "Định dạng màu"
   },
   "TimelineToolbar": {
+    "seekPreview": "Tua bản xem trước",
     "add": "Thêm",
     "composition": "Bố cục",
     "split": "Tách đoạn",
@@ -367,6 +368,8 @@
     "changelog": "Thay đổi"
   },
   "VideoEditor": {
+    "pauseGapsRemoved": "Các khoảng tạm dừng đã được tự động xóa. Bạn có thể khôi phục hoặc dùng Hoàn tác.",
+    "restorePauseGaps": "Khôi phục",
     "exportBanner": "Đang trong quá trình xuất video. Các chỉnh sửa trực tiếp sẽ không ảnh hưởng đến tệp đang được xuất.",
     "timelineCopied": "Đã sao chép",
     "timelinePasted": "Đã dán",

@@ -20,6 +20,7 @@ export interface CursorGpuOptions {
   shadow: {
     enabled: boolean;
     blur: number;
+    distance?: number;
     color: string;
     direction: CursorShadowDirection;
   };

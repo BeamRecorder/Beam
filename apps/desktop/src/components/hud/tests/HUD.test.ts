@@ -411,7 +411,8 @@ describe('toolbar diagnostics and CSS menu lifetime', () => {
     await openIssues(hud);
     expect(document.body.textContent).toContain('Settings unavailable');
     expect(document.body.textContent).toContain('Capture engine unavailable');
-    expect(document.querySelectorAll('.hud-issue button[aria-label="Copy error"]')).toHaveLength(2);
+    expect(document.querySelectorAll('.hud-issue button[aria-label="Copy error"]')).toHaveLength(1);
+    expect(document.querySelectorAll('.hud-issue button[aria-label="Copy recording diagnostics"]')).toHaveLength(1);
     await hud.setProps({ externalError: 'Settings unavailable' });
     expect(hud.get('.issues-indicator').attributes('aria-label')).toBe('Issues (1)');
   });

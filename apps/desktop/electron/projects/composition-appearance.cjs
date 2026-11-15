@@ -1,5 +1,7 @@
 const { normalizePhoneFrameFill } = require('./composition-phone-frame-fill.cjs');
 const { validateAnimatedFrame } = require('../../../../packages/engine/src/shared/animated-frame-schema.js');
+const validDistance = (value) =>
+  value === undefined || (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 256);
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const text = (value, max) => (typeof value === 'string' ? value.slice(0, max) : '');
 const color = (value, fallback) =>
@@ -31,6 +33,7 @@ const normalizeAppearance = (value) => {
       ? value.cornerRadius
       : null;
   if (
+    !validDistance(value.shadowDistance) ||
     radius === null ||
     !['none', 'sm', 'md', 'lg', 'custom'].includes(value.shadowSize) ||
     !finite(value.shadowBlur) ||
@@ -52,6 +55,7 @@ const normalizeAppearance = (value) => {
   return {
     ...(value.animatedFrame !== undefined ? { animatedFrame: { ...value.animatedFrame } } : {}),
     cornerRadius: radius,
+    ...(value.shadowDistance !== undefined ? { shadowDistance: value.shadowDistance } : {}),
     shadowSize: value.shadowSize,
     shadowBlur: Math.max(0, Math.min(96, value.shadowBlur)),
     shadowMode: value.shadowMode,

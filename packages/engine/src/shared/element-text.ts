@@ -1,3 +1,4 @@
+import { isShadowDistance } from '@beam/engine/shared/shadow';
 import type {
   CaptionClip,
   CaptionStyle,
@@ -111,6 +112,7 @@ export function isElementText(value: ElementText): boolean {
     [s.fontSize, s.lineHeight, s.letterSpacing, s.shadowBlur, s.outlineWidth, s.extrusionDepth].every(
       Number.isFinite,
     ) &&
+    isShadowDistance(s.shadowDistance) &&
     s.fontSize >= 1 &&
     s.fontSize <= 256 &&
     s.shape &&

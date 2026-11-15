@@ -1,3 +1,4 @@
+import { shadowOffset } from '@beam/engine/shared/shadow';
 import { drawElementText, drawFreehand } from '@beam/runtime/composition/shape/render-element-content';
 import type { BlurClip, NormalizedTransform, ShapeClip } from '@beam/engine/shared/composition-types';
 import { shapeLayerFill } from '@beam/engine/shared/shape-layer-style';
@@ -10,14 +11,6 @@ import { backgroundFillStyle } from '@beam/runtime/composition/background/render
 import { cachedShapePath } from '@beam/runtime/composition/shape/shape-path-cache';
 import { shapePaintStyle } from './shape-paint-style';
 import { drawVector, vectorPaintPaths } from './render-vector';
-
-const shadowOffset = (direction: ShapeClip['shadowDirection'], scale: number) => {
-  const distance = 12 * scale;
-  if (direction === 'bottom') return { x: 0, y: distance };
-  if (direction === 'bottom-right') return { x: distance, y: distance };
-  if (direction === 'top-left') return { x: -distance, y: -distance };
-  return { x: 0, y: 0 };
-};
 
 const NATIVE_SHAPE_PRESETS = new Set<ShapeKind>([
   'rectangle',
@@ -186,7 +179,11 @@ export function drawShapeClip(
   ctx.save();
   ctx.globalAlpha *= style.opacityEnabled ? style.opacity / 100 : 1;
   if (style.shadowEnabled) {
-    const offset = shadowOffset(style.shadowDirection, scale);
+    const offset = shadowOffset(
+      style.shadowDirection,
+      style.shadowDistance === undefined ? undefined : style.shadowDistance * scale,
+      12 * scale,
+    );
     ctx.shadowColor = style.shadowColor;
     ctx.shadowBlur = style.shadowBlur * scale;
     ctx.shadowOffsetX = offset.x;

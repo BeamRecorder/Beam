@@ -107,6 +107,9 @@ export function createRuntimePreview(options: RuntimePreviewOptions) {
         shadow: {
           enabled: props.enableShadow,
           blur: (props.shadowBlur * size.width) / props.outputCanvas.width,
+          ...(props.shadowDistance !== undefined
+            ? { distance: (props.shadowDistance * size.width) / props.outputCanvas.width }
+            : {}),
           color: props.shadowColor,
           direction: props.shadowDirection,
         },

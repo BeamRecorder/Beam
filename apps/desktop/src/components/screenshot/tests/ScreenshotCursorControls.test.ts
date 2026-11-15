@@ -161,7 +161,7 @@ describe('ScreenshotCursorControls', () => {
       shadowDirection: cursor.shadowDirection,
       still: true,
     });
-    expect(rotation.element.closest('[aria-label="CursorPanel.appearance"]')).not.toBeNull();
+    expect(rotation.element.closest('[data-cursor-section="appearance"]')).not.toBeNull();
     expect(wrapper.find('#cursor-shadow-options').exists()).toBe(true);
     expect(rotation.props('modelValue')).toBe(cursor.rotation);
     expect(rotation.props('min')).toBe(0);
@@ -186,6 +186,7 @@ describe('ScreenshotCursorControls', () => {
     await wrapper.get('input.cursor-size-control').setValue('72');
     await wrapper.get('input[aria-label="CursorPanel.cursorColor"]').setValue('#abcdef');
     await wrapper.get('input[aria-label="CursorPanel.shadowBlur"]').setValue('13');
+    await wrapper.get('input[aria-label="ClipPropertiesPanel.shadowDistance"]').setValue('40');
     await wrapper.get('input[aria-label="CursorPanel.shadowColor"]').setValue('#fedcba');
     await wrapper.get('button[aria-label="ShadowDirectionGroup.topLeft"]').trigger('click');
     await wrapper.get('input.cursor-switch').setValue(false);
@@ -202,6 +203,7 @@ describe('ScreenshotCursorControls', () => {
     expect(toast.success).toHaveBeenCalledOnce();
     expect(wrapper.emitted('imported')).toEqual([[importedPack]]);
     const updates = wrapper.emitted('update') ?? [];
+    expect(updates).toContainEqual([{ shadowDistance: 40 }]);
     expect(updates).toEqual(
       expect.arrayContaining([
         [

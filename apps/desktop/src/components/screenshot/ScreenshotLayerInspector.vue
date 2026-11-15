@@ -88,6 +88,7 @@ const {
           appearance({
             shadowSize: $event.size,
             shadowBlur: $event.blur,
+            ...($event.distance !== undefined ? { shadowDistance: $event.distance } : {}),
             shadowMode: $event.mode,
             shadowColor: $event.color,
             shadowDirection: $event.direction as ClipAppearance['shadowDirection'],

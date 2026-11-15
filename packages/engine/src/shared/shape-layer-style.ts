@@ -1,3 +1,4 @@
+import { isShadowDistance } from './shadow';
 import { isElementText } from '@beam/engine/shared/element-text';
 import { isFreehandDrawing } from '@beam/engine/shared/freehand';
 import { isShapeVector } from './shape-vector-schema';
@@ -77,6 +78,9 @@ export const normalizeShapeLayerStyle = (
     backdropBlur: finite(value?.backdropBlur, DEFAULT_SHAPE_LAYER_STYLE.backdropBlur, 100),
     shadowEnabled: value?.shadowEnabled === true,
     shadowColor: color(value?.shadowColor, DEFAULT_SHAPE_LAYER_STYLE.shadowColor),
+    ...(value?.shadowDistance !== undefined && isShadowDistance(value.shadowDistance)
+      ? { shadowDistance: value.shadowDistance }
+      : {}),
     shadowBlur: finite(value?.shadowBlur, DEFAULT_SHAPE_LAYER_STYLE.shadowBlur, 96),
     shadowDirection: ['all', 'bottom', 'bottom-right', 'top-left'].includes(value?.shadowDirection ?? '')
       ? value!.shadowDirection!
@@ -85,6 +89,7 @@ export const normalizeShapeLayerStyle = (
 };
 
 export const isShapeLayerStyle = (value: Partial<ShapeLayerStyle>) => {
+  if (!isShadowDistance(value.shadowDistance)) return false;
   if (value.vector != null && !isShapeVector(value.vector)) return false;
   if (value.text !== undefined && !isElementText(value.text)) return false;
   if (value.drawing !== undefined && !isFreehandDrawing(value.drawing)) return false;

@@ -24,6 +24,7 @@ function fixture() {
   const module = { exports: {} };
   const dependencies = {
     'node:path': path,
+    './hud-resize.cjs': { registerHudResizeIpc: () => {} },
     electron: {
       BrowserWindow: { fromWebContents: (contents) => (contents === sender ? window : null) },
       screen: {},

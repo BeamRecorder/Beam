@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ShadowDistanceControl from '../shared/ShadowDistanceControl.vue';
+import { shadowDistance } from '@beam/engine/shared/shadow';
 import { computed } from 'vue';
 import { SlidersHorizontal } from '@lucide/vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
@@ -153,6 +155,19 @@ const updateShadowDirection = (shadowDirection: ColorLayerShadowDirection) => em
           :label="t('shadowBlur')"
           :format-value="(value) => `${Math.round(value)}px`"
           @update:model-value="emit('update', { shadowSize: 'custom', shadowBlur: $event })"
+        />
+        <ShadowDistanceControl
+          :model-value="
+            shadowDistance(
+              style.shadowDirection,
+              style.shadowDistance,
+              (style.shadowSize === 'custom'
+                ? style.shadowBlur
+                : ({ sm: 16, md: 24, lg: 32, none: 0 }[style.shadowSize] ?? 0)) * 0.5,
+            )
+          "
+          :disabled="style.shadowDirection === 'all'"
+          @update:model-value="emit('update', { shadowDistance: $event })"
         />
         <div class="sub-group">
           <span class="sub-label">{{ t('direction') }}</span>

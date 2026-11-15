@@ -134,17 +134,6 @@ const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
 
 <template>
   <div class="zoom-panel">
-    <div v-if="!still" class="section-block experimental-zoom-setting">
-      <div class="section-header">
-        <span class="section-title">{{ t('experimentalZoom') }}</span>
-        <Switch
-          :model-value="autoFollow.experimentalZoom === true"
-          :aria-label="t('experimentalZoom')"
-          @update:model-value="emit('update:autoFollow', { ...autoFollow, experimentalZoom: $event })"
-        />
-      </div>
-      <p class="section-description">{{ t('experimentalZoomDesc') }}</p>
-    </div>
     <div v-if="!still" class="section-block background-zoom-setting">
       <div class="section-header">
         <span class="section-title">{{ t('zoomBackground') }}</span

@@ -1,3 +1,5 @@
+const validDistance = (value) =>
+  value === undefined || (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 256);
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const defaults = {
   opacityEnabled: false,
@@ -11,13 +13,14 @@ const defaults = {
   backdropBlurEnabled: false,
   backdropBlur: 35,
 };
-const keys = Object.keys(defaults);
+const keys = [...Object.keys(defaults), 'shadowDistance'];
 const percent = (value, max = 100) => finite(value) && value >= 0 && value <= max;
 
 const normalizeColorLayerStyle = (value) => {
   if (!keys.some((key) => value?.[key] !== undefined)) return {};
   const radius = value.cornerRadius;
   if (
+    !validDistance(value.shadowDistance) ||
     (value.opacityEnabled !== undefined && typeof value.opacityEnabled !== 'boolean') ||
     (value.opacity !== undefined && !percent(value.opacity)) ||
     (radius !== undefined &&
@@ -32,7 +35,11 @@ const normalizeColorLayerStyle = (value) => {
     (value.backdropBlur !== undefined && !percent(value.backdropBlur))
   )
     throw new Error('Apparence de calque couleur invalide');
-  return Object.fromEntries(keys.map((key) => [key, value[key] ?? defaults[key]]));
+  return Object.fromEntries(
+    keys
+      .filter((key) => key !== 'shadowDistance' || value[key] !== undefined)
+      .map((key) => [key, value[key] ?? defaults[key]]),
+  );
 };
 
 module.exports = { normalizeColorLayerStyle };

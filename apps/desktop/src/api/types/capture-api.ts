@@ -1,3 +1,5 @@
+import type { RecordingDiagnosticContext } from './recording-diagnostics';
+import type { HudResizePhase, HudSize } from './hud-resize-types';
 import type { BackgroundCatalogRequest } from './background-catalog';
 import type { DesktopExportApi } from './desktop-export';
 import type { HudPanelApi } from './hud-panel';
@@ -147,6 +149,8 @@ export interface DesktopCaptureApi
   onEditorLoadingProgress(listener: (progress: EditorLoadingProgress) => void): () => void;
   onRecorderLauncherContext(listener: (context: RecorderLauncherContext | null) => void): () => void;
   setPosition(x: number, y: number): void;
+  resizeHud(edge: string | null, phase: HudResizePhase): Promise<HudSize | null>;
+  getRecordingDiagnosticReport(context: RecordingDiagnosticContext): Promise<string>;
   setSize(width: number, height: number): void;
   resizeHudPopover(height: number): Promise<number | null>;
   setSizeSmooth(width: number, height: number): void;

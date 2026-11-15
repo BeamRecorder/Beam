@@ -23,6 +23,8 @@ export function cursorRasterBounds(options: CursorGpuOptions, maxSize: number, d
     geometry.width <= 0 ||
     geometry.height <= 0 ||
     options.resolution <= 0 ||
+    (options.shadow.distance !== undefined &&
+      (!Number.isFinite(options.shadow.distance) || options.shadow.distance < 0)) ||
     options.shadow.blur < 0
   )
     throw new RangeError('Invalid cursor rendering geometry.');
@@ -38,7 +40,10 @@ export function cursorRasterBounds(options: CursorGpuOptions, maxSize: number, d
       pose.height > 1)
   )
     throw new RangeError('Invalid cursor volume pose.');
-  const pad = (pose ? Math.max(geometry.width, geometry.height) * 0.8 : 2) + options.shadow.blur * 3;
+  const pad =
+    (pose ? Math.max(geometry.width, geometry.height) * 0.8 : 2) +
+    options.shadow.blur * 3 +
+    (options.shadow.distance ?? 0);
   const x = Math.min(...samples.map((sample) => sample.x)) - geometry.hotspot.x - pad;
   const y = Math.min(...samples.map((sample) => sample.y)) - geometry.hotspot.y - pad;
   const width = Math.max(...samples.map((sample) => sample.x)) + geometry.width - geometry.hotspot.x + pad - x;

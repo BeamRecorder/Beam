@@ -188,7 +188,7 @@ describe('CursorAppearanceControls', () => {
       global,
     });
     const expectValues = () => {
-      expect(wrapper.get('#cursor-shadow-options .cursor-slider').attributes('data-value')).toBe('13');
+      expect(wrapper.findAll('#cursor-shadow-options .cursor-slider')[1]!.attributes('data-value')).toBe('13');
       expect(wrapper.get('#cursor-shadow-options .cursor-color').attributes('data-value')).toBe('#123456');
       expect(wrapper.get('#cursor-shadow-options .shadow-direction').attributes('data-value')).toBe('top-left');
     };
@@ -330,10 +330,11 @@ describe('CursorAppearanceControls', () => {
     const sliders = wrapper.findAllComponents(BigSlider);
     const colors = wrapper.findAllComponents(ColorInput);
 
-    expect(sliders).toHaveLength(2);
+    expect(sliders).toHaveLength(3);
     expect(colors).toHaveLength(2);
     sliders[0]!.vm.$emit('update:modelValue', 72);
-    sliders[1]!.vm.$emit('update:modelValue', 10);
+    sliders[1]!.vm.$emit('update:modelValue', 25);
+    sliders[2]!.vm.$emit('update:modelValue', 10);
     colors[0]!.vm.$emit('update:modelValue', '#123456');
     colors[1]!.vm.$emit('update:modelValue', '#654321');
     wrapper.findComponent(Switch).vm.$emit('update:modelValue', false);
@@ -341,6 +342,7 @@ describe('CursorAppearanceControls', () => {
 
     expect(wrapper.emitted('update:cursorSize')).toEqual([[72]]);
     expect(wrapper.emitted('update:shadowBlur')).toEqual([[10]]);
+    expect(wrapper.emitted('update:shadowDistance')).toEqual([[25]]);
     expect(wrapper.emitted('update:cursorColor')).toEqual([['#123456']]);
     expect(wrapper.emitted('update:shadowColor')).toEqual([['#654321']]);
     expect(wrapper.emitted('update:enableShadow')).toEqual([[false]]);

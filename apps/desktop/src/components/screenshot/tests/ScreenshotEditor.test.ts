@@ -196,6 +196,7 @@ describe('ScreenshotEditor', () => {
     expect(controls.find('button[aria-label="Dimensions"]').exists()).toBe(true);
     expect(controls.find('button[aria-label="Fullscreen preview"]').exists()).toBe(true);
     expect(controls.findAll('button').map((button) => button.attributes('aria-label'))).toEqual([
+      'Canvas zoom: 67%',
       'Dimensions',
       'Fullscreen preview',
     ]);
@@ -584,7 +585,7 @@ describe('ScreenshotEditor', () => {
     canvas.vm.$emit('cropRequest', 'screenshot');
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.get('button[aria-label="Crop"]').attributes('aria-pressed')).toBe('true');
+    expect(wrapper.findComponent({ name: 'ScreenshotToolbar' }).props('cropping')).toBe(true);
     expect(canvas.props('selectedId')).toBe('screenshot');
     expect(canvas.props('cropping')).toBe(true);
     wrapper.unmount();
