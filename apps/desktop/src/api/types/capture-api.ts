@@ -466,6 +466,7 @@ export interface LinuxCaptureDiagnostics {
   sessionType: string;
   displayServer: string;
   backend: string;
+  x11?: RequirementDiagnostic;
   portal: PortalDiagnostic;
   pipewire: RequirementDiagnostic;
   ffmpeg: FfmpegDiagnostic;

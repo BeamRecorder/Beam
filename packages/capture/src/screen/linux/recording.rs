@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     CaptureError,
     model::{CursorSelection, ScreenSelection},
-    screen::{ScreenCaptureMetrics, ScreenConsumer, ScreenOpenRequest, ScreenSegment, VideoFormat},
+    screen::{ScreenCaptureMetrics, ScreenOpenRequest, ScreenSegment, VideoFormat},
     session::StartGate,
 };
 
@@ -14,6 +14,7 @@ use super::{
 
 pub struct LinuxRecording {
     portal: Option<PreparedPortal>,
+    x11: Option<super::x11::X11Recording>,
     pipewire: Option<PipewireCapture>,
     metrics: Arc<ScreenCaptureMetrics>,
     encoded_output: bool,
@@ -22,6 +23,34 @@ pub struct LinuxRecording {
 
 impl LinuxRecording {
     pub(crate) fn open(request: ScreenOpenRequest<'_>) -> Result<Self, CaptureError> {
+        if let ScreenSelection::Source { source_id } = request.selection {
+            let prepared = super::screen_sink::prepare(
+                request.consumer,
+                request.recording,
+                request.cursor,
+                request.start_ns,
+            )?;
+            let metrics = Arc::new(ScreenCaptureMetrics::default());
+            let capture = super::x11::X11Recording::prepare(super::x11::recording::Request {
+                source: source_id,
+                region: request.region,
+                settings: request.recording,
+                sink: prepared.sink,
+                gate: request.start_gate,
+                cursor: request.cursor,
+                show_real_cursor: request.show_real_cursor,
+                metrics: metrics.clone(),
+                encode: prepared.encoded,
+            })?;
+            return Ok(Self {
+                portal: None,
+                pipewire: None,
+                x11: Some(capture),
+                metrics,
+                encoded_output: prepared.encoded,
+                encoded_codec: prepared.codec,
+            });
+        }
         let ScreenSelection::Portal {
             kind,
             restore_token,
@@ -41,43 +70,24 @@ impl LinuxRecording {
                 "screen region requires a Portal monitor source".into(),
             ));
         }
-        let (sink, encoded_output, encoded_codec): (
-            Box<dyn crate::screen::ScreenSampleSink>,
-            bool,
-            Option<String>,
-        ) = match request.consumer {
-            ScreenConsumer::Samples(sink) => (sink, false, None),
-            ScreenConsumer::EncodedFile {
-                path,
-                cursor_directory,
-            } => {
-                let capabilities = super::probe_ffmpeg()?;
-                let codec = capabilities.encoder.codec.clone();
-                let capture_interactions = matches!(
-                    request.cursor,
-                    CursorSelection::Separate {
-                        capture_clicks: true,
-                        ..
-                    } | CursorSelection::Separate {
-                        capture_shortcuts: true,
-                        ..
-                    }
-                );
-                let sink = super::FfmpegScreenSink::new(
-                    capabilities,
-                    request.recording.clone(),
-                    ScreenSegment {
-                        path,
-                        start_ns: request.start_ns,
-                    },
-                    cursor_directory,
-                    capture_interactions,
-                )?;
-                (Box::new(sink), true, Some(codec))
-            }
-        };
+        let prepared = super::screen_sink::prepare(
+            request.consumer,
+            request.recording,
+            request.cursor,
+            request.start_ns,
+        )?;
+        let sink = prepared.sink;
+        let encoded_output = prepared.encoded;
+        let encoded_codec = prepared.codec;
         let mut portal = match request.region_selection {
-            Some(selection) => selection.linux.portal,
+            Some(selection) => match selection.linux {
+                super::LinuxRegionSelection::Portal(portal) => portal,
+                super::LinuxRegionSelection::X11 => {
+                    return Err(CaptureError::InvalidConfiguration(
+                        "A direct X11 selection cannot authorize a Portal recording".into(),
+                    ));
+                }
+            },
             None => super::portal::prepare_portal(kind.clone(), request.cursor)?,
         };
         if !portal.is_available() {
@@ -114,6 +124,7 @@ impl LinuxRecording {
         })?;
         Ok(Self {
             portal: Some(portal),
+            x11: None,
             pipewire: Some(pipewire),
             metrics,
             encoded_output,
@@ -122,6 +133,9 @@ impl LinuxRecording {
     }
 
     pub fn start(&mut self) -> Result<(), CaptureError> {
+        if let Some(capture) = &mut self.x11 {
+            return capture.start();
+        }
         self.pipewire
             .as_mut()
             .ok_or_else(|| CaptureError::InvalidTransition {
@@ -132,6 +146,9 @@ impl LinuxRecording {
     }
 
     pub fn pause(&mut self) -> Result<(), CaptureError> {
+        if let Some(capture) = &mut self.x11 {
+            return capture.pause();
+        }
         self.pipewire
             .as_mut()
             .ok_or_else(|| CaptureError::InvalidTransition {
@@ -147,6 +164,9 @@ impl LinuxRecording {
         start_gate: Arc<StartGate>,
         segment: Option<ScreenSegment>,
     ) -> Result<(), CaptureError> {
+        if let Some(capture) = &mut self.x11 {
+            return capture.prepare_resume(start_gate, segment);
+        }
         self.pipewire
             .as_mut()
             .ok_or_else(|| CaptureError::InvalidTransition {
@@ -157,6 +177,9 @@ impl LinuxRecording {
     }
 
     pub fn stop(&mut self) -> Result<(), CaptureError> {
+        if let Some(mut capture) = self.x11.take() {
+            return capture.stop();
+        }
         let pipewire_result = self
             .pipewire
             .take()
@@ -169,6 +192,9 @@ impl LinuxRecording {
     }
 
     pub fn is_available(&self) -> bool {
+        if let Some(capture) = &self.x11 {
+            return capture.is_available();
+        }
         self.portal
             .as_ref()
             .is_none_or(PreparedPortal::is_available)
@@ -187,6 +213,7 @@ impl LinuxRecording {
     pub fn video_format(&self) -> Option<VideoFormat> {
         self.metrics
             .first_video_format()
+            .or_else(|| self.x11.as_ref().map(super::x11::X11Recording::format))
             .or_else(|| self.pipewire.as_ref().map(PipewireCapture::video_format))
             .map(|format| {
                 if self.encoded_output {

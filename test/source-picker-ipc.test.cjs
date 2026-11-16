@@ -148,19 +148,6 @@ test('rejects malformed kinds and releases ownership after a synchronous picker 
   await f.open({ ...f.owner });
 });
 
-test('normal Linux and packaged Linux reject custom selection even with a development environment flag', () => {
-  const previous = process.env.DEV_CROSSPLATFORM;
-  try {
-    delete process.env.DEV_CROSSPLATFORM;
-    assert.throws(() => fixture({ platform: 'linux' }).open(), /Portal/);
-    process.env.DEV_CROSSPLATFORM = '1';
-    assert.throws(() => fixture({ platform: 'linux', isPackaged: true }).open(), /Portal/);
-  } finally {
-    if (previous === undefined) delete process.env.DEV_CROSSPLATFORM;
-    else process.env.DEV_CROSSPLATFORM = previous;
-  }
-});
-
 test('development data permits Linux to exercise the same chooser', async () => {
   const previous = process.env.DEV_CROSSPLATFORM;
   try {
@@ -181,4 +168,10 @@ test('shutdown rejects new selection and disposes existing auxiliary windows', a
   ipcMain.emit('source-picker:ready', { sender: chooser });
   app.emit('before-quit');
   assert.deepEqual(calls.slice(-2), [['ready', chooser], ['destroy']]);
+});
+
+test('Linux can open the owned source chooser so the native provider can select the backend', async () => {
+  const { open, calls } = fixture({ platform: 'linux', isPackaged: false });
+  await open();
+  assert.deepEqual(calls[0], ['open', 'window']);
 });

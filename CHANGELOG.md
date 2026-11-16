@@ -4,6 +4,18 @@ User-facing changes to Beam are documented in this file.
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-11-17
+
+### Added
+
+- Add direct native Rust capture for local X11 desktops without a usable ScreenCast portal, including Cinnamon: monitor, window and region selection, native previews, cursor metadata and pause/resume.
+- Report direct X11 availability and connection errors in Linux capture diagnostics.
+
+### Testing notes
+
+- Validated against an isolated X11 server with real MP4 encoding, window occlusion, resizing, region selection, screenshots and pause/resume. Testing on physical Linux Mint/Cinnamon systems is still needed; feedback is welcome.
+- Wayland and X11 sessions with a usable ScreenCast portal retain Portal/PipeWire capture. Audio keeps its existing backends; system audio still requires PipeWire, and click/shortcut recording still requires a working Polkit input helper.
+
 ## [0.6.1] - 2026-11-15
 
 ### Added

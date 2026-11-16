@@ -9,6 +9,7 @@ const { createQuickSnipWindow } = require('./quick-snip-window.cjs');
 const { createQuickSnipStatusWindow } = require('./quick-snip-status-window.cjs');
 const { createQuickSnipRenderer } = require('./quick-snip-renderer.cjs');
 const { createQuickSnipFinalizer } = require('./quick-snip-finalizer.cjs');
+const { linuxDisplaySource } = require('../capture/display-coordinates.cjs');
 
 function createQuickSnipService(options) {
   const {
@@ -44,6 +45,8 @@ function createQuickSnipService(options) {
     platform,
     developmentSources: !options.isPackaged && process.env.DEV_CROSSPLATFORM === '1',
     selectSource: options.selectSource,
+    usesPortalSelection: async () =>
+      platform === 'linux' && (await options.captureEngine.request('discover')).diagnostics?.linux?.backend !== 'x11',
     cancelSourceSelection: options.cancelSourceSelection,
     resolveDisplayForBounds: (bounds) => screen.getDisplayMatching(bounds),
     userPaths,
@@ -58,6 +61,12 @@ function createQuickSnipService(options) {
     cropWindow,
     statusWindow,
     resolveScreenId: async (display) => {
+      if (platform === 'linux')
+        return linuxDisplaySource(
+          screen,
+          (command, payload) => options.captureEngine.request(command, payload),
+          display.bounds,
+        );
       if (platform === 'darwin') return `sck:display:${display.id}`;
       const point = screen.dipToScreenPoint({
         x: Math.round(display.bounds.x + display.bounds.width / 2),

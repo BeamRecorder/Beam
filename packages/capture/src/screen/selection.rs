@@ -73,6 +73,11 @@ pub fn preview_window_selection(
     }
     #[cfg(not(any(windows, target_os = "macos")))]
     {
+        #[cfg(target_os = "linux")]
+        if source.as_str().starts_with("x11:window:") {
+            return super::linux::x11::preview_window(source, raise);
+        }
+        #[cfg(not(target_os = "linux"))]
         let _ = (source, raise);
         Err(CaptureError::Unsupported(
             "Linux source selection belongs to the Portal".into(),

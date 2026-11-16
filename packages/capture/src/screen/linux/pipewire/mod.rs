@@ -16,7 +16,8 @@ mod worker;
 #[cfg(test)]
 mod tests;
 
-use cursor_classifier::*;
+pub(crate) use cursor_classifier::CursorClassifier;
+use cursor_classifier::canonical_bitmap;
 use cursor_queue::*;
 pub(crate) use cursor_state::*;
 use dmabuf_importer::*;

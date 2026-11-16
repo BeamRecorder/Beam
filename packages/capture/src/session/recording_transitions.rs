@@ -23,11 +23,11 @@ impl RecordingSession {
         }
         let now = self.session_ns();
         #[cfg(target_os = "linux")]
-        if matches!(
-            self.request.screen,
-            Some(crate::model::ScreenSelection::Portal { .. })
-        ) {
-            if let Err(error) = self.active.pause_portal(&mut self.manifest.tracks, now) {
+        if self.request.screen.is_some() {
+            if let Err(error) = self
+                .active
+                .pause_linux_screen(&mut self.manifest.tracks, now)
+            {
                 self.state = crate::session::SessionState::Failed;
                 return Err(error);
             }
@@ -47,12 +47,9 @@ impl RecordingSession {
         let now = self.session_ns();
         let start_gate = Arc::new(crate::session::StartGate::new());
         #[cfg(target_os = "linux")]
-        if matches!(
-            self.request.screen,
-            Some(crate::model::ScreenSelection::Portal { .. })
-        ) {
+        if self.request.screen.is_some() {
             self.generation = self.generation.saturating_add(1);
-            let result = self.active.resume_portal(OpenContext {
+            let result = self.active.resume_linux_screen(OpenContext {
                 request: &self.request,
                 region_selection: &mut self.region_selection,
                 snapshot: &self.snapshot,

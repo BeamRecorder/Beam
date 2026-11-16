@@ -364,6 +364,7 @@ fn linux_diagnostics_serialize_as_a_stable_camel_case_contract() {
             session_type: "x11".into(),
             display_server: "x11".into(),
             backend: "xdg-portal-pipewire".into(),
+            x11: None,
             portal: PortalDiagnostic {
                 available: true,
                 version: Some(5),

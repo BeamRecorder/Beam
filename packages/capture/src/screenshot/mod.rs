@@ -46,7 +46,8 @@ pub fn capture_with_selection(
         region.validate()?;
         let display = match &request.screen {
             ScreenSelection::Source { source_id } => {
-                source_id.as_str().starts_with("wgc:monitor:")
+                source_id.as_str().starts_with("x11:monitor:")
+                    || source_id.as_str().starts_with("wgc:monitor:")
                     || source_id.as_str().starts_with("sck:display:")
             }
             ScreenSelection::Portal { kind, .. } => {

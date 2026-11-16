@@ -44,14 +44,18 @@ impl SourceCatalog for NativeCatalog {
 fn platform_catalog() -> Result<PlatformCatalog, CaptureError> {
     use std::time::Duration;
 
-    let permissions = PermissionSnapshot {
+    let mut permissions = PermissionSnapshot {
         screen: Some(crate::model::PermissionState::PromptRequired),
         accessibility: Some(crate::model::PermissionState::NotApplicable),
     };
     let probe = crate::screen::linux::probe_capture_environment(Duration::from_secs(2));
     let native = &probe.capabilities;
-    let mut sources = Vec::new();
-    if should_offer_portal_source(native.portal_selection, native.display_capture) {
+    let direct = probe.direct_sources.is_some();
+    let mut sources = probe.direct_sources.unwrap_or_default();
+    if direct && native.display_capture {
+        permissions.screen = Some(crate::model::PermissionState::Granted);
+    }
+    if !direct && should_offer_portal_source(native.portal_selection, native.display_capture) {
         sources.push(portal_source(
             "portal:monitor",
             SourceKind::Display,
@@ -59,7 +63,7 @@ fn platform_catalog() -> Result<PlatformCatalog, CaptureError> {
             true,
         )?);
     }
-    if should_offer_portal_source(native.portal_selection, native.window_capture) {
+    if !direct && should_offer_portal_source(native.portal_selection, native.window_capture) {
         sources.push(portal_source(
             "portal:window",
             SourceKind::Window,
@@ -114,20 +118,25 @@ fn platform_catalog() -> Result<PlatformCatalog, CaptureError> {
     let mut limitations = vec![
         encoder,
         input_limitation.into(),
-        "Linux cursor shapes are available when the Portal exposes separate cursor metadata".into(),
+        "Linux cursor shapes use XFixes on X11 or separate Portal metadata on Wayland".into(),
     ];
     if let Some(linux) = &probe.diagnostics.linux {
         for requirement in [
             linux
+                .x11
+                .as_ref()
+                .filter(|value| !value.available)
+                .and_then(|value| value.detail.as_ref()),
+            linux
                 .portal
                 .detail
                 .as_ref()
-                .filter(|_| !linux.portal.available),
+                .filter(|_| !direct && !linux.portal.available),
             linux
                 .pipewire
                 .detail
                 .as_ref()
-                .filter(|_| !linux.pipewire.available),
+                .filter(|_| !direct && !linux.pipewire.available),
             linux
                 .ffmpeg
                 .detail

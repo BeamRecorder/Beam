@@ -194,3 +194,19 @@ test('evicts the least recently used entries after the bounded cache is full', a
   await service.get({ sourceId: 'sck:window:1' });
   assert.equal(calls, MAX_CACHE_ENTRIES + 2);
 });
+
+test('Linux X11 previews use the exact native ID while Portal sources stay outside custom preview', async () => {
+  const calls = [];
+  const service = createSourcePreviewService({
+    platform: 'linux',
+    requestNative: async (command, payload) => {
+      calls.push([command, payload]);
+      return preview(payload.source);
+    },
+  });
+  const result = await service.get({ sourceId: 'x11:window:123' });
+  assert.equal(result.thumbnail, preview('x11:window:123').thumbnail);
+  assert.equal(calls[0][1].source, 'x11:window:123');
+  await service.get({ sourceId: 'portal:window' });
+  assert.equal(calls.length, 1);
+});

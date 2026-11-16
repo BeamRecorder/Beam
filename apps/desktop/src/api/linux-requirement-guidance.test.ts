@@ -276,3 +276,44 @@ describe('linuxInteractionGuidance', () => {
     expect(result?.copyText).not.toContain('Reported reason: not-provided');
   });
 });
+
+describe('direct X11 requirements', () => {
+  it('does not require a ScreenCast portal or PipeWire for X11 video', () => {
+    expect(
+      linuxRequirementGuidance(
+        diagnostics({
+          backend: 'x11',
+          recordingAvailable: true,
+          portal: { ...diagnostics().portal, available: false },
+          pipewire: { ...diagnostics().pipewire, available: false },
+          x11: { available: true, errorCode: null, detail: null },
+        }),
+      ),
+    ).toEqual([]);
+  });
+  it('reports the X11 connection failure without portal repair instructions', () => {
+    const result = linuxRequirementGuidance(
+      diagnostics({
+        backend: 'x11',
+        recordingAvailable: false,
+        x11: { available: false, errorCode: 'x11-unavailable', detail: 'Authentication failed' },
+        portal: { ...diagnostics().portal, available: false },
+        pipewire: { ...diagnostics().pipewire, available: false },
+      }),
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0]?.id).toBe('x11');
+    expect(result[0]?.description).toContain('Authentication failed');
+  });
+  it('still reports missing FFmpeg independently of working X11', () => {
+    const result = linuxRequirementGuidance(
+      diagnostics({
+        backend: 'x11',
+        recordingAvailable: false,
+        x11: { available: true, errorCode: null, detail: null },
+        ffmpeg: { ...diagnostics().ffmpeg, available: false },
+      }),
+    );
+    expect(result.map((item) => item.id)).toEqual(['ffmpeg']);
+  });
+});

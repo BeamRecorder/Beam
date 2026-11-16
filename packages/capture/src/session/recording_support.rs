@@ -97,7 +97,7 @@ fn new_track(kind: TrackKind, source_id: Option<SourceId>, format: TrackFormat) 
     }
 }
 
-pub(super) fn add_portal_screen_track(
+pub(super) fn set_native_screen_track(
     tracks: &mut Vec<TrackMetadata>,
     source_id: SourceId,
     codec: String,
@@ -105,16 +105,17 @@ pub(super) fn add_portal_screen_track(
     height: u32,
     nominal_fps: u32,
 ) {
-    tracks.push(new_track(
-        TrackKind::Screen,
-        Some(source_id),
-        TrackFormat::Video {
-            codec,
-            width,
-            height,
-            nominal_fps,
-        },
-    ));
+    let format = TrackFormat::Video {
+        codec,
+        width,
+        height,
+        nominal_fps,
+    };
+    if let Some(track) = track_mut(tracks, TrackKind::Screen) {
+        track.format = format;
+    } else {
+        tracks.push(new_track(TrackKind::Screen, Some(source_id), format));
+    }
 }
 
 pub(super) fn add_system_audio_track(
@@ -265,13 +266,18 @@ pub(super) fn system_audio_source_id() -> Result<SourceId, CaptureError> {
     SourceId::new("system-audio:default-output")
 }
 
-pub(super) fn platform_backend() -> &'static str {
+pub(super) fn platform_backend(_screen: Option<&ScreenSelection>) -> &'static str {
     if cfg!(windows) {
         "windows-graphics-capture"
     } else if cfg!(target_os = "macos") {
         "screen-capture-kit"
     } else if cfg!(target_os = "linux") {
-        "xdg-portal-pipewire"
+        if matches!(_screen, Some(ScreenSelection::Source { source_id }) if source_id.as_str().starts_with("x11:"))
+        {
+            "x11"
+        } else {
+            "xdg-portal-pipewire"
+        }
     } else {
         "unsupported"
     }

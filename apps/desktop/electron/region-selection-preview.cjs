@@ -1,8 +1,9 @@
 const fs = require('node:fs/promises');
+const { x11DipBounds } = require('./capture/x11-display-geometry.cjs');
 const os = require('node:os');
 const path = require('node:path');
 const { captureWindowExclusions } = require('./capture/capture-window-exclusions.cjs');
-const { windowsDisplaySource } = require('./capture/display-coordinates.cjs');
+const { windowsDisplaySource, linuxDisplaySource } = require('./capture/display-coordinates.cjs');
 
 function portalDisplayBounds(geometry, displays) {
   const position = geometry?.position;
@@ -29,14 +30,28 @@ function createRegionSelectionPreview({
 }) {
   let pending = false;
   return {
-    async prepare(bounds) {
+    async prepare(bounds, sourceId) {
+      if (
+        sourceId !== undefined &&
+        (platform !== 'linux' || typeof sourceId !== 'string' || !/^x11:monitor:\d+:\d+$/.test(sourceId))
+      )
+        throw new TypeError('Invalid direct X11 region source');
       if (pending) throw new Error('A region preview is already being prepared.');
       pending = true;
       let directory;
       try {
+        if (platform === 'linux' && sourceId === undefined && bounds) {
+          const resolved = await linuxDisplaySource(
+            screen,
+            (command, payload) => captureEngine.request(command, payload),
+            bounds,
+          );
+          if (resolved.startsWith('x11:')) sourceId = resolved;
+        }
         directory = await fs.mkdtemp(path.join(os.tmpdir(), 'beam-region-'));
         let source;
-        if (platform === 'linux') source = { mode: 'portal', kind: 'monitor', restoreToken: null };
+        if (platform === 'linux')
+          source = sourceId ? { mode: 'source', sourceId } : { mode: 'portal', kind: 'monitor', restoreToken: null };
         else if (platform === 'darwin')
           source = {
             mode: 'source',
@@ -70,7 +85,16 @@ function createRegionSelectionPreview({
           },
         });
         const selectedBounds =
-          platform === 'linux' ? portalDisplayBounds(result.display, screen.getAllDisplays()) : bounds;
+          platform === 'linux'
+            ? sourceId
+              ? x11DipBounds(screen, {
+                  x: result.display.position[0],
+                  y: result.display.position[1],
+                  width: result.display.size[0],
+                  height: result.display.size[1],
+                })
+              : portalDisplayBounds(result.display, screen.getAllDisplays())
+            : bounds;
         if (
           !Number.isInteger(result.width) ||
           !Number.isInteger(result.height) ||

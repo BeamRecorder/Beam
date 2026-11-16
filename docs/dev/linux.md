@@ -1,8 +1,8 @@
 # Linux development
 
-Beam records screens and windows on Linux through the XDG ScreenCast Portal, PipeWire and FFmpeg. Electron never enumerates desktop sources on Linux: the source selector represents the system picker, which opens once during preparation and remains attached across pause/resume.
+Beam records screens and windows on Linux through the XDG ScreenCast Portal, PipeWire and FFmpeg. On a local X11 session without a usable ScreenCast portal, Rust instead enumerates and captures X11 monitors and windows directly. Electron never uses Chromium desktop enumeration on Linux. Wayland and XWayland retain the Portal picker, which opens once during preparation and remains attached across pause/resume.
 
-Electron windows use X11 (`--ozone-platform=x11`) on Linux, including XWayland on a Wayland desktop. This restores global window placement; HUD popovers stay within compact bounds so transparent added space cannot block desktop clicks. Capture remains the Rust Portal/PipeWire backend, and desktop session environment variables remain intact.
+Electron windows use X11 (`--ozone-platform=x11`) on Linux, including XWayland on a Wayland desktop. This restores global window placement; HUD popovers stay within compact bounds so transparent added space cannot block desktop clicks. Capture backend selection belongs to Rust, and desktop session environment variables remain intact.
 
 Video editor export uses WebCodecs, independently of the native capture backend. See [GPU drivers and WebCodecs export](gpu-drivers.md) for driver packages, codec/buffer checks and measured Intel results.
 
@@ -12,14 +12,11 @@ When the portal cannot supply cursor metadata, monitor and region recording use 
 
 ### Cinnamon on X11
 
-Linux Mint's default Cinnamon/X11 session uses the XApp portal backend, which does not implement the ScreenCast interface. Installing or restarting `xdg-desktop-portal` or `xdg-desktop-portal-xapp` alone cannot make Beam record in that session. Beam currently has no direct X11 capture backend.
+Linux Mint's default XApp portal does not implement ScreenCast. Beam uses direct X11 capture when that interface is unavailable in a local X11 session. No additional portal backend is needed for video on this path: keep the session's original `DISPLAY` and `XAUTHORITY`, and install FFmpeg with a supported H.264 encoder.
 
-Use a desktop session with a working ScreenCast portal, such as GNOME or KDE Plasma, and restart Beam. A separately configured ScreenCast backend can also work if it exposes the interface in the active session. Check with:
+Direct capture requires RandR 1.5 and XFixes; window capture additionally requires XComposite. The existing picker lists native monitors and windows. Regions use native pixels, including scaled displays. Hidden windows are captured through their Composite pixmap; resizing preserves the negotiated video dimensions with aspect-preserving letterboxing. Closing or unmapping a selected window, losing the display connection, or changing monitor geometry stops capture with an error. Frame images are limited to 64 MiB and server reads have a two-second idle deadline.
 
-```bash
-gdbus introspect --session --dest org.freedesktop.portal.Desktop \
-  --object-path /org/freedesktop/portal/desktop | grep org.freedesktop.portal.ScreenCast
-```
+This backend is never selected on Wayland, even when XWayland exposes `DISPLAY`, and it does not replace a Portal session after cancellation or permission denial. Audio still requires its existing PipeWire backend. Clicks and shortcuts still require the protected input helper and working Polkit; direct X11 video does not repair a broken `pkexec` installation.
 
 ## Prerequisites
 
@@ -31,7 +28,7 @@ Interaction recording also requires Polkit: `pkexec` on Debian/Ubuntu, `polkit` 
 - a C/C++ compiler, Clang development libraries and pkg-config
 - PipeWire development headers and runtime services
 - FFmpeg with the MP4 muxer and either the `libx264` or `libopenh264` encoder
-- XDG Desktop Portal and the backend for the active desktop environment
+- XDG Desktop Portal and its ScreenCast backend for Portal capture, or a local X11 server with RandR/XFixes (and Composite for windows)
 - `wl-clipboard` on Wayland or `xclip` on X11 for persistent Quick Snip file copies
 
 Install the native packages for your distribution. The commands below target GNOME; replace only the final portal backend package with `xdg-desktop-portal-kde` on KDE or `xdg-desktop-portal-wlr` on a compatible wlroots desktop. Do not install every backend indiscriminately.
@@ -105,7 +102,20 @@ cargo test -p capture --lib \
   -- --ignored --exact
 ```
 
-A real monitor/window smoke remains interactive and must be run manually because the Portal requires explicit user consent.
+The opt-in X11 smoke requires a disposable X server and real FFmpeg. For example, start `Xvfb :98 -screen 0 800x600x24 -nolisten tcp -ac -noreset`, then run:
+
+```bash
+DISPLAY=:98 XDG_SESSION_TYPE=x11 WAYLAND_DISPLAY= \
+DBUS_SESSION_BUS_ADDRESS=unix:path=/tmp/beam-no-session-bus \
+BEAM_X11_TEST_DISPLAY=:98 cargo test -p capture --lib \
+  screen::linux::x11::native_tests::captures_occluded_windows_regions_resize_and_encoded_pause_segments -- --ignored
+```
+
+The separate `monitors_remain_available_without_composite` test runs with `-extension Composite` on the disposable server and verifies that monitor capture does not require window capture support.
+
+The session smoke checks actual monitor/region pixels, Composite window occlusion, resize, closed-window failure, cursor output and playable pause/resume MP4 segments. Never point the fixture at a user's desktop. Stop the disposable server afterward.
+
+A real Portal monitor/window smoke remains interactive and must be run manually because the Portal requires explicit user consent.
 
 Quick Snip publishes completed files through `wl-copy` on Wayland and `xclip` on X11. These tools keep the clipboard selection alive independently of Beam's windows, with no expiration or single-paste limit; replacing the clipboard ends their ownership. DEB/RPM packages declare both dependencies. Development and AppImage installations need the appropriate tool on `PATH`. Missing tools or failed publication are shown as copy errors, with the exported file retained for retry.
 

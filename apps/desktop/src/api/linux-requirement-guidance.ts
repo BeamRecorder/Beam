@@ -3,7 +3,7 @@ import type { InputAccessStatus } from './types/capture-api';
 
 const LINUX_GUIDE_URL = 'https://github.com/BeamRecorder/Beam/blob/master/docs/dev/linux.md';
 
-export type LinuxRequirementId = 'portal' | 'pipewire' | 'ffmpeg';
+export type LinuxRequirementId = 'portal' | 'pipewire' | 'ffmpeg' | 'x11';
 
 export interface LinuxRequirementGuidance {
   id: LinuxRequirementId;
@@ -88,7 +88,15 @@ export const linuxRequirementGuidance = (diagnostics?: LinuxCaptureDiagnostics):
   const guidance: LinuxRequirementGuidance[] = [];
   const family = packageFamily(diagnostics);
 
-  if (!diagnostics.portal.available) {
+  if (diagnostics.backend === 'x11' && diagnostics.x11 && !diagnostics.x11.available) {
+    guidance.push(
+      report(diagnostics, 'x11', 'Direct X11 capture', diagnostics.x11, [
+        'Start Beam in your local X11 desktop session with its original DISPLAY and XAUTHORITY environment.',
+        'Verify the X server is reachable and provides RandR and XFixes; window capture additionally requires XComposite.',
+      ]),
+    );
+  }
+  if (diagnostics.backend !== 'x11' && !diagnostics.portal.available) {
     const cinnamonX11 =
       diagnostics.sessionType.toLowerCase() === 'x11' && diagnostics.desktop?.toLowerCase().includes('cinnamon');
     if (cinnamonX11) {
@@ -124,7 +132,7 @@ export const linuxRequirementGuidance = (diagnostics?: LinuxCaptureDiagnostics):
     }
   }
 
-  if (!diagnostics.pipewire.available) {
+  if (diagnostics.backend !== 'x11' && !diagnostics.pipewire.available) {
     const install = packageCommand(family, ['pipewire', 'wireplumber']);
     guidance.push(
       report(diagnostics, 'pipewire', 'PipeWire', diagnostics.pipewire, [

@@ -88,7 +88,7 @@ impl RecordingSession {
             platform: PlatformMetadata {
                 os: std::env::consts::OS.into(),
                 architecture: std::env::consts::ARCH.into(),
-                backend: platform_backend().into(),
+                backend: platform_backend(request.screen.as_ref()).into(),
             },
             selected_sources: selected_sources(&request, &snapshot),
             tracks: track_metadata(&request, &snapshot)?,
@@ -136,10 +136,7 @@ impl RecordingSession {
             );
         }
         #[cfg(target_os = "linux")]
-        if matches!(
-            session.request.screen,
-            Some(crate::model::ScreenSelection::Portal { .. })
-        ) {
+        if session.request.screen.is_some() {
             let start_gate = Arc::new(super::StartGate::new());
             if let Err(error) = session
                 .open_segment(0, &start_gate)
@@ -271,10 +268,8 @@ impl RecordingSession {
             || self.state == super::SessionState::Recording
             || (cfg!(target_os = "linux")
                 && self.state == super::SessionState::Paused
-                && matches!(
-                    self.request.screen,
-                    Some(crate::model::ScreenSelection::Portal { .. })
-                )) {
+                && self.request.screen.is_some())
+        {
             self.close_segment(now).err()
         } else {
             None

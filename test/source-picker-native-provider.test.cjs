@@ -170,10 +170,10 @@ test('macOS lists native capture IDs and refreshes only the hovered window previ
   assert.equal(target.thumbnail, 'native:sck:window:42');
   assert.equal(calls.at(-1)[1].raise, false);
 });
-test('Linux source enumeration cannot invoke Chromium or native custom window selection', async () => {
+test('Portal sessions discover the backend before rejecting custom selection', async () => {
   const { provider, calls } = fixture('linux');
   await assert.rejects(provider.list(), /Portal/);
-  assert.equal(calls.length, 0);
+  assert.deepEqual(calls, [['discover', undefined]]);
 });
 test('missing display bounds and invalid native window bounds fail explicitly', async () => {
   const { provider } = fixture();
@@ -207,4 +207,57 @@ test('macOS never admits Chromium-only privacy indicators or application entries
     sources.map((source) => source.id),
     ['sck:window:42', 'sck:display:1'],
   );
+});
+
+test('X11 enumerates Rust sources and previews without Chromium capture', async () => {
+  const calls = [];
+  const screen = {
+    getAllDisplays: () => [
+      { id: 1, nativeOrigin: { x: 0, y: 0 }, scaleFactor: 2, bounds: { x: 0, y: 0, width: 800, height: 600 } },
+    ],
+  };
+  const provider = createNativeSourceProvider({
+    platform: 'linux',
+    screen,
+    desktopCapturer: {
+      getSources: () => {
+        throw new Error('Chromium capture forbidden');
+      },
+    },
+    BrowserWindow: {
+      getAllWindows: () => [
+        {
+          isDestroyed: () => false,
+          getMediaSourceId: () => 'window:43:0',
+          webContents: { getURL: () => 'http://localhost/html/index.html' },
+        },
+      ],
+    },
+    requestNative: async (command, payload) => {
+      calls.push([command, payload]);
+      if (command === 'discover')
+        return {
+          diagnostics: { linux: { backend: 'x11' } },
+          sources: [
+            { id: 'x11:monitor:1:2', kind: 'display', displayId: 'x11:monitor:1:2', label: 'Monitor' },
+            { id: 'x11:window:42', kind: 'window', label: 'Editor' },
+            { id: 'x11:window:43', kind: 'window', label: 'Beam HUD' },
+          ],
+        };
+      return command === 'source-bounds'
+        ? { x: 0, y: 0, width: 1600, height: 1200 }
+        : { bounds: { x: 100, y: 80, width: 600, height: 400 } };
+    },
+    getNativePreview: async ({ sourceId }) => ({ thumbnail: `native:${sourceId}` }),
+  });
+  const sources = await provider.list();
+  assert.deepEqual(
+    sources.map((source) => source.id),
+    ['x11:monitor:1:2', 'x11:window:42'],
+  );
+  assert.deepEqual(sources[0].bounds, { x: 0, y: 0, width: 800, height: 600 });
+  const preview = await provider.preview(sources[1], true);
+  assert.deepEqual(preview.bounds, { x: 50, y: 40, width: 300, height: 200 });
+  assert.equal(preview.thumbnail, 'native:x11:window:42');
+  assert.deepEqual(calls.at(-1), ['window-selection-preview', { source: 'x11:window:42', raise: true }]);
 });

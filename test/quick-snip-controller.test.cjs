@@ -80,6 +80,7 @@ function harness({
   openEditor,
   openScreenshot,
   selectSource,
+  usesPortalSelection = async () => true,
   resolveDisplay,
 } = {}) {
   const calls = [];
@@ -203,6 +204,7 @@ function harness({
     cropWindow,
     statusWindow,
     platform,
+    usesPortalSelection,
     selectSource: selectSource ?? (async (kind) => ({ id: 'native-display:1', kind })),
     cancelSourceSelection: () => calls.push('source.cancel'),
     resolveScreenId: async (display) => `native-display:${display.id}`,
@@ -749,3 +751,27 @@ test('clipboard failure preserves the completed output and exposes a retryable e
   assert.equal(f.controller.state().clipboardError, 'Clipboard busy');
   assert.ok(f.controller.state().result.path);
 });
+
+for (const target of ['screen', 'region', 'window']) {
+  test(`X11 Quick Snip ${target} uses native source selection instead of Portal intents`, async () => {
+    const selected = [];
+    const f = harness({
+      platform: 'linux',
+      usesPortalSelection: async () => false,
+      selectSource: async (kind) => {
+        selected.push(kind);
+        return { id: `x11:${kind}:123`, kind };
+      },
+    });
+    await f.controller.record(target);
+    const job = f.controller.state().job;
+    assert.equal(f.controller.state().state, 'preparing');
+    if (target === 'region') {
+      assert.equal(f.selectCalls[0].sourceId, 'native-display:1');
+      assert.equal(job.screenId, 'native-display:1');
+    } else {
+      assert.deepEqual(selected, [target]);
+      assert.equal(job.screenId, `x11:${target}:123`);
+    }
+  });
+}

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::model::CaptureRequest;
+use crate::model::{CaptureRequest, SourceId};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -32,6 +32,9 @@ pub enum Command {
     },
     Formats {
         source: String,
+    },
+    SourceBounds {
+        source: SourceId,
     },
     SourcePreview {
         source: String,

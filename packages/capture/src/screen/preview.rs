@@ -1,6 +1,6 @@
-#[cfg(any(test, target_os = "macos"))]
+#[cfg(any(test, target_os = "macos", target_os = "linux"))]
 use base64::{Engine as _, engine::general_purpose::STANDARD};
-#[cfg(any(test, target_os = "macos"))]
+#[cfg(any(test, target_os = "macos", target_os = "linux"))]
 use jpeg_encoder::{ColorType, Encoder};
 use serde::{Deserialize, Serialize};
 
@@ -8,7 +8,7 @@ use crate::{CaptureError, model::SourceId};
 
 const MAX_PREVIEW_WIDTH: u32 = 640;
 const MAX_PREVIEW_HEIGHT: u32 = 360;
-#[cfg(any(test, target_os = "macos"))]
+#[cfg(any(test, target_os = "macos", target_os = "linux"))]
 const JPEG_QUALITY: u8 = 72;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -28,7 +28,11 @@ pub fn capture_source_preview(
     {
         super::mac::capture_source_preview(source_id, max_width, max_height)
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "linux")]
+    {
+        super::linux::x11_source_preview(source_id, max_width, max_height)
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
     {
         let _ = source_id;
         Err(CaptureError::Unsupported(
@@ -37,7 +41,7 @@ pub fn capture_source_preview(
     }
 }
 
-#[cfg(any(test, target_os = "macos"))]
+#[cfg(any(test, target_os = "macos", target_os = "linux"))]
 pub(crate) fn fit_preview_dimensions(
     source_width: u32,
     source_height: u32,
@@ -68,7 +72,7 @@ pub(crate) fn fit_preview_dimensions(
     )
 }
 
-#[cfg(any(test, target_os = "macos"))]
+#[cfg(any(test, target_os = "macos", target_os = "linux"))]
 pub(crate) fn jpeg_data_url(rgba: &[u8], width: u32, height: u32) -> Result<String, CaptureError> {
     let expected = usize::try_from(width)
         .ok()

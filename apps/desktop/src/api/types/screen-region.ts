@@ -31,6 +31,7 @@ export interface ScreenRegionOverlayConfiguration extends ScreenRegionOverlayOpt
 }
 
 export interface ScreenRegionSelectionOptions {
+  sourceId?: string;
   bounds?: ScreenRegionBounds;
   region?: ScreenRegion | null;
   captureMode?: 'studio' | 'instant' | 'screenshot';

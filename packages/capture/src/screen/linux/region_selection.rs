@@ -24,8 +24,9 @@ pub struct PortalDisplayGeometry {
     pub size: Option<(i32, i32)>,
 }
 
-pub(crate) struct LinuxRegionSelection {
-    pub(super) portal: PreparedPortal,
+pub(crate) enum LinuxRegionSelection {
+    Portal(PreparedPortal),
+    X11,
 }
 struct FirstFrame(Option<mpsc::SyncSender<OwnedVideoFrame>>);
 impl ScreenSampleSink for FirstFrame {
@@ -102,6 +103,6 @@ impl LinuxRegionSelection {
         let stopped = preview.stop();
         let frame = frame?;
         stopped?;
-        Ok((Self { portal }, frame, geometry))
+        Ok((Self::Portal(portal), frame, geometry))
     }
 }

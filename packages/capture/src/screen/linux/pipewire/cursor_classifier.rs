@@ -25,13 +25,13 @@ struct ThemeCursor {
 }
 
 #[derive(Debug)]
-pub(super) struct CursorClassifier {
+pub(crate) struct CursorClassifier {
     candidates: Arc<[ThemeCursor]>,
     cache: HashMap<u64, CursorKind>,
 }
 
 impl CursorClassifier {
-    pub(super) fn system() -> Self {
+    pub(crate) fn system() -> Self {
         static CANDIDATES: OnceLock<Arc<[ThemeCursor]>> = OnceLock::new();
         Self {
             candidates: CANDIDATES
@@ -42,7 +42,7 @@ impl CursorClassifier {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub(super) fn classify(
+    pub(crate) fn classify(
         &mut self,
         shape_id: u64,
         format: VideoFormat,

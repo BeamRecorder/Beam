@@ -93,3 +93,13 @@ describe('unavailableLinuxRequirements', () => {
     ]);
   });
 });
+
+it('ignores missing Portal and PipeWire when direct X11 video is available', () => {
+  const linux = diagnostics(false);
+  linux.backend = 'x11';
+  linux.x11 = { available: true, errorCode: null, detail: null };
+  linux.portal.available = false;
+  expect(unavailableLinuxRequirements(linux)).toEqual(['FFmpeg does not provide the MP4 muxer required by Beam']);
+  linux.x11 = { available: false, errorCode: 'x11-unavailable', detail: 'X11 authentication failed' };
+  expect(unavailableLinuxRequirements(linux)[0]).toBe('X11 authentication failed');
+});

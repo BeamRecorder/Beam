@@ -60,7 +60,8 @@ export function useHudWindow(options: HudWindowOptions) {
 
   const selectScreenRegion = async () => {
     if (props.embedded) return false;
-    const linuxPortalSelection = desktopPlatform === 'linux';
+    const directX11 = selectedScreenId.value?.startsWith('x11:monitor:') === true;
+    const linuxPortalSelection = desktopPlatform === 'linux' && !directX11;
     if (isBusy.value || isRecording.value || isRegionSelectionLeaving.value) return false;
     const resolvedBounds = linuxPortalSelection
       ? null
@@ -85,6 +86,7 @@ export function useHudWindow(options: HudWindowOptions) {
       const currentRegion = selectedScreenRegion.value ?? savedScreenRegion.value;
       const selection = await capture.selectScreenRegion({
         ...(bounds ? { bounds } : {}),
+        ...(directX11 ? { sourceId: selectedScreenId.value! } : {}),
         region: currentRegion ? { ...currentRegion } : null,
         ...(options.regionRecording ? { recording: options.regionRecording() } : {}),
         ...(options.captureMode ? { captureMode: options.captureMode() } : {}),

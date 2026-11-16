@@ -1,9 +1,14 @@
+const { x11DipBounds } = require('../capture/x11-display-geometry.cjs');
 const { windowsDisplaySource } = require('../capture/display-coordinates.cjs');
 
 function windowSourceId(id, platform) {
   const match = /^window:(\d+)(?::|$)/.exec(id);
   if (!match) return id;
-  return platform === 'darwin' ? `sck:window:${match[1]}` : `wgc:window:${BigInt(match[1]).toString(16)}`;
+  return platform === 'linux'
+    ? `x11:window:${match[1]}`
+    : platform === 'darwin'
+      ? `sck:window:${match[1]}`
+      : `wgc:window:${BigInt(match[1]).toString(16)}`;
 }
 
 function sourceDescription(id, kind, name, format, extra = {}) {
@@ -64,8 +69,9 @@ function createNativeSourceProvider({
     return pendingThumbnails;
   };
   const list = async () => {
-    if (platform === 'linux') throw new Error('Linux capture sources are selected by the Portal');
     const catalog = await requestNative('discover');
+    if (platform === 'linux' && catalog?.diagnostics?.linux?.backend !== 'x11')
+      throw new Error('Linux capture sources are selected by the Portal');
     const ownIds = new Set(
       BrowserWindow.getAllWindows()
         .filter((target) => !target.isDestroyed() && !target.webContents.getURL().includes('/editor.html'))
@@ -96,7 +102,7 @@ function createNativeSourceProvider({
           }),
         );
       }
-    } else if (platform === 'darwin') {
+    } else if (platform === 'darwin' || platform === 'linux') {
       for (const native of catalog.sources) {
         if (!['display', 'window'].includes(native.kind) || ownIds.has(native.id)) continue;
         const kind = native.kind === 'display' ? 'screen' : 'window';
@@ -106,7 +112,12 @@ function createNativeSourceProvider({
         sources.push(
           sourceDescription(native.id, kind, native.label, format, {
             displayId: native.displayId,
-            bounds: display ? validBounds(display.bounds) : undefined,
+            bounds:
+              platform === 'linux' && kind === 'screen'
+                ? x11DipBounds(screen, await requestNative('source-bounds', { source: native.id }))
+                : display
+                  ? validBounds(display.bounds)
+                  : undefined,
           }),
         );
       }
@@ -133,11 +144,13 @@ function createNativeSourceProvider({
       });
       bounds = validBounds(target.bounds);
       if (platform === 'win32') bounds = validBounds(screen.screenToDipRect(null, bounds));
+      if (platform === 'linux') bounds = x11DipBounds(screen, bounds);
       warning = target.raiseError || null;
     }
     if (!bounds) throw new Error('The selected display is no longer available');
     let thumbnail;
-    if (platform === 'darwin') thumbnail = (await getNativePreview({ sourceId: source.id, refresh: true })).thumbnail;
+    if (platform === 'darwin' || platform === 'linux')
+      thumbnail = (await getNativePreview({ sourceId: source.id, refresh: true })).thumbnail;
     else {
       const refreshed = await refreshThumbnails();
       const selected = refreshed.find((entry) =>

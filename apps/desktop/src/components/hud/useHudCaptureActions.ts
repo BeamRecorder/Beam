@@ -14,7 +14,11 @@ export function useHudCaptureActions(options: HudCaptureActionsOptions) {
     try {
       if (target === 'region') {
         if (await options.selectRegion()) await options.start();
-      } else if (options.platform === 'linux' && !options.developmentSources) {
+      } else if (
+        options.platform === 'linux' &&
+        !options.developmentSources &&
+        !(options.selectedScreenId.value?.startsWith('x11:') || options.selectedSourceId.value?.startsWith('x11:'))
+      ) {
         await options.start();
       } else {
         const selection = await options.selectSource(target);

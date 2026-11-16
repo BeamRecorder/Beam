@@ -241,3 +241,21 @@ fn region_cancellation_is_idempotent_without_hardware_or_a_recording() -> Result
     assert!(child.wait()?.success());
     Ok(())
 }
+
+#[test]
+fn direct_source_bounds_command_preserves_native_ids_and_requires_a_source()
+-> Result<(), Box<dyn Error>> {
+    for source in ["x11:monitor:1293:100", "x11:window:123"] {
+        let value =
+            serde_json::json!({ "id": "bounds", "command": "source-bounds", "source": source });
+        let request: RequestEnvelope = serde_json::from_value(value.clone())?;
+        assert_eq!(serde_json::to_value(request)?, value);
+    }
+    assert!(
+        serde_json::from_value::<RequestEnvelope>(
+            serde_json::json!({ "id": "bounds", "command": "source-bounds" })
+        )
+        .is_err()
+    );
+    Ok(())
+}

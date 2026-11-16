@@ -1,6 +1,5 @@
 function createQuickSnipSourceSelection(dependencies, { selection, snapshot, publish, start }) {
   const platform = dependencies.platform ?? process.platform;
-  const windowCapture = platform === 'linux';
   const chooseSource = async (target) => {
     if (!['screen', 'region', 'window'].includes(target)) throw new Error('Invalid Quick Snip source.');
     if (snapshot().state !== 'selecting' || !snapshot().job || selection.pending) return snapshot();
@@ -9,6 +8,8 @@ function createQuickSnipSourceSelection(dependencies, { selection, snapshot, pub
     selection.pending = true;
     publish({ job: { ...previous, captureTarget: target, sourceReady: false } });
     try {
+      const portalSelection = platform === 'linux' && (await dependencies.usesPortalSelection());
+      if (generation !== selection.generation || snapshot().state !== 'selecting') return snapshot();
       if (target === 'region') {
         dependencies.cropWindow.hide();
         const result = await dependencies.regionOverlay.select({
@@ -17,6 +18,9 @@ function createQuickSnipSourceSelection(dependencies, { selection, snapshot, pub
           context: 'quick-snip',
           drawOnly: true,
           captureMode: previous.mode,
+          ...(!portalSelection && platform === 'linux'
+            ? { sourceId: await dependencies.resolveScreenId(selection.display) }
+            : {}),
         });
         if (generation !== selection.generation || snapshot().state !== 'selecting') return snapshot();
         selection.pending = false;
@@ -30,7 +34,7 @@ function createQuickSnipSourceSelection(dependencies, { selection, snapshot, pub
         const job = {
           ...snapshot().job,
           screenKind: 'display',
-          screenId: platform === 'linux' ? 'portal:monitor' : await dependencies.resolveScreenId(display),
+          screenId: portalSelection ? 'portal:monitor' : await dependencies.resolveScreenId(display),
           region: result.region,
           regionBounds: result.bounds,
           displayId: String(display.id),
@@ -45,7 +49,7 @@ function createQuickSnipSourceSelection(dependencies, { selection, snapshot, pub
         return start();
       }
       const result =
-        windowCapture && !dependencies.developmentSources
+        portalSelection && !dependencies.developmentSources
           ? { id: target === 'window' ? 'portal:window' : 'portal:monitor', kind: target }
           : await dependencies.selectSource(target);
       if (generation !== selection.generation || snapshot().state !== 'selecting') return snapshot();
@@ -61,9 +65,12 @@ function createQuickSnipSourceSelection(dependencies, { selection, snapshot, pub
         return snapshot();
       }
       if (!['screen', 'window'].includes(result.kind)) throw new Error('Invalid selected capture source.');
-      const display = result.source?.displayId
-        ? dependencies.resolveDisplay(result.source.displayId)
-        : selection.display;
+      const display =
+        platform === 'linux' && result.source?.bounds
+          ? dependencies.resolveDisplayForBounds(result.source.bounds)
+          : result.source?.displayId
+            ? dependencies.resolveDisplay(result.source.displayId)
+            : selection.display;
       selection.display = display;
       const job = {
         ...snapshot().job,

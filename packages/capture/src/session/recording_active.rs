@@ -312,13 +312,20 @@ impl ActiveRecordings {
                 cursor_directory,
             },
         })?;
-        if let ScreenSelection::Portal { kind, .. } = selection {
+        let dynamic_source = match selection {
+            ScreenSelection::Portal { kind, .. } => Some(portal_source_id(kind)?),
+            #[cfg(target_os = "linux")]
+            ScreenSelection::Source { source_id } => Some(source_id.clone()),
+            #[cfg(not(target_os = "linux"))]
+            _ => None,
+        };
+        if let Some(source_id) = dynamic_source {
             let format = recording.video_format().ok_or_else(|| {
                 CaptureError::Backend("Linux screen format was not negotiated".into())
             })?;
-            add_portal_screen_track(
+            set_native_screen_track(
                 tracks,
-                portal_source_id(kind)?,
+                source_id,
                 recording
                     .encoded_codec()
                     .ok_or_else(|| CaptureError::Backend("Linux encoder was not selected".into()))?
@@ -344,7 +351,7 @@ impl ActiveRecordings {
     }
 
     #[cfg(target_os = "linux")]
-    pub(super) fn pause_portal(
+    pub(super) fn pause_linux_screen(
         &mut self,
         tracks: &mut [TrackMetadata],
         end_ns: u64,
@@ -391,7 +398,10 @@ impl ActiveRecordings {
     }
 
     #[cfg(target_os = "linux")]
-    pub(super) fn resume_portal(&mut self, context: OpenContext<'_>) -> Result<(), CaptureError> {
+    pub(super) fn resume_linux_screen(
+        &mut self,
+        context: OpenContext<'_>,
+    ) -> Result<(), CaptureError> {
         let OpenContext {
             request,
             region_selection: _,

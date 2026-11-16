@@ -22,8 +22,12 @@ export const useCaptureSourcePreviews = (options: CaptureSourcePreviewOptions) =
   const previewSources = (type: PreviewKind) =>
     options.sources.value.filter((source) => source.kind === (type === 'screen' ? 'display' : 'window'));
 
+  const usesNativePreviews = () =>
+    options.platform === 'darwin' ||
+    (options.platform === 'linux' && options.catalog.value?.diagnostics?.linux?.backend === 'x11');
+
   const refreshNativeCatalog = (): Promise<void> => {
-    if (options.platform !== 'darwin') return Promise.resolve();
+    if (!usesNativePreviews()) return Promise.resolve();
     if (catalogRequest) return catalogRequest;
     catalogRequest = capture
       .discover()
@@ -56,17 +60,16 @@ export const useCaptureSourcePreviews = (options: CaptureSourcePreviewOptions) =
     const loading = type === 'screen' ? screenPreviewsLoading : windowPreviewsLoading;
     if (target.value.length === 0) loading.value = true;
     const wasLoaded = loaded[type];
-    const operation =
-      options.platform === 'darwin'
-        ? loadNativeSourcePreviews(capture, previewSources(type), target.value, refreshNative)
-        : capture.getSources([type]);
+    const operation = usesNativePreviews()
+      ? loadNativeSourcePreviews(capture, previewSources(type), target.value, refreshNative)
+      : capture.getSources([type]);
     const request = operation
       .then((results) => {
         target.value = results;
         loaded[type] = true;
         if (type !== 'window') return;
         const windows = previewSources('window');
-        if (options.platform === 'darwin') {
+        if (usesNativePreviews()) {
           if (
             options.selectedWindowId.value &&
             !windows.some((source) => source.id === options.selectedWindowId.value)

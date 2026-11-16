@@ -30,7 +30,8 @@ impl RegionSelection {
                 restore_token: None,
             } => true,
             ScreenSelection::Source { source_id } => {
-                source_id.as_str().starts_with("sck:display:")
+                source_id.as_str().starts_with("x11:monitor:")
+                    || source_id.as_str().starts_with("sck:display:")
                     || source_id.as_str().starts_with("wgc:monitor:")
             }
             _ => false,
@@ -49,6 +50,25 @@ impl RegionSelection {
         let screen = config.screen.clone();
         #[cfg(target_os = "linux")]
         {
+            if let ScreenSelection::Source { source_id } = &screen {
+                let mut reader = super::linux::x11::Reader::open(source_id, None, false)?;
+                let bounds = reader.bounds();
+                let frame = reader.read(false, false)?.0;
+                let dimensions = crate::screenshot::write_png(&frame, &config.output)?;
+                return Ok((
+                    Self {
+                        screen,
+                        linux: super::linux::LinuxRegionSelection::X11,
+                    },
+                    RegionSelectionPreview {
+                        dimensions,
+                        display: super::linux::PortalDisplayGeometry {
+                            position: Some((bounds.x, bounds.y)),
+                            size: Some((bounds.width as i32, bounds.height as i32)),
+                        },
+                    },
+                ));
+            }
             if !matches!(
                 config.screen,
                 ScreenSelection::Portal {

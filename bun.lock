@@ -67,7 +67,7 @@
     },
     "apps/desktop": {
       "name": "@beam/desktop",
-      "version": "0.6.0",
+      "version": "0.6.2",
       "dependencies": {
         "@beam/encoder": "workspace:*",
         "@beam/engine": "workspace:*",

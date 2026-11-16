@@ -12,6 +12,7 @@ use super::{
 
 pub(crate) struct LinuxCaptureProbe {
     pub capabilities: LinuxNativeCapabilities,
+    pub direct_sources: Option<Vec<crate::model::SourceDescriptor>>,
     pub ffmpeg: Option<FfmpegCapabilities>,
     pub diagnostics: CaptureDiagnostics,
 }
@@ -21,13 +22,49 @@ pub(crate) fn probe_capture_environment(timeout: Duration) -> LinuxCaptureProbe 
     let pipewire_available = probe_pipewire();
     let ffmpeg_result = probe_ffmpeg();
     let portal_properties = portal_result.as_ref().copied().unwrap_or_default();
-    let capabilities = evaluate_capabilities_with_compositor(
+    let mut capabilities = evaluate_capabilities_with_compositor(
         portal_properties,
         pipewire_available,
         ffmpeg_result.is_ok(),
         super::hyprland::is_hyprland(),
     );
+    let direct = super::x11::session_supported()
+        && (portal_properties.version < 2
+            || (!portal_properties.monitor && !portal_properties.window));
+    let mut direct_sources = None;
+    let x11 = if direct {
+        let result = super::x11::catalog();
+        let available = result.is_ok();
+        let windows = result.as_ref().is_ok_and(|catalog| catalog.windows);
+        let detail = match &result {
+            Ok(_) => "Direct local X11 capture is available".into(),
+            Err(error) => error.to_string(),
+        };
+        direct_sources = Some(result.map_or_else(|_| Vec::new(), |catalog| catalog.sources));
+        capabilities = LinuxNativeCapabilities {
+            backend: "x11".into(),
+            portal_version: portal_properties.version,
+            display_capture: available,
+            window_capture: windows,
+            portal_selection: false,
+            hidden_cursor: available,
+            embedded_cursor: available,
+            separate_cursor: available,
+            cursor_clicks: super::input_helper_supported(),
+            cursor_shapes: available,
+            pipewire_available,
+            recording_available: available && ffmpeg_result.is_ok(),
+        };
+        Some(RequirementDiagnostic {
+            available,
+            error_code: (!available).then(|| "x11-unavailable".into()),
+            detail: Some(detail),
+        })
+    } else {
+        None
+    };
     let recording_available = capabilities.recording_available;
+    let backend = capabilities.backend.clone();
     let portal = match portal_result {
         Ok(properties) => portal_diagnostic(properties),
         Err(error) => PortalDiagnostic {
@@ -70,6 +107,7 @@ pub(crate) fn probe_capture_environment(timeout: Duration) -> LinuxCaptureProbe 
     };
     LinuxCaptureProbe {
         capabilities,
+        direct_sources,
         ffmpeg: ffmpeg_result.ok(),
         diagnostics: CaptureDiagnostics {
             platform: "linux".into(),
@@ -85,7 +123,8 @@ pub(crate) fn probe_capture_environment(timeout: Duration) -> LinuxCaptureProbe 
                 desktop: desktop_name(),
                 session_type: session_type(),
                 display_server: display_server(),
-                backend: "xdg-portal-pipewire".into(),
+                backend,
+                x11,
                 portal,
                 pipewire,
                 ffmpeg,

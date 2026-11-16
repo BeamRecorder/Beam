@@ -18,7 +18,7 @@ use crate::{
     model::{CursorSelection, PortalSourceKind},
 };
 
-pub(super) struct PreparedPortal {
+pub(crate) struct PreparedPortal {
     remote_fd: Option<OwnedFd>,
     pub node_id: u32,
     pub stream_id: Option<String>,

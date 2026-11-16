@@ -37,7 +37,6 @@ function registerSourcePickerIpc({
   const openForWindow = (hudWindow, kind) => {
     if (!['screen', 'window'].includes(kind)) throw new TypeError('Invalid source picker kind');
     if (!canAcceptWork()) throw new Error('Source selection is unavailable during application shutdown');
-    if (platform === 'linux' && !development) throw new Error('Linux capture selection belongs to the Portal');
     if (!hudWindow || hudWindow.isDestroyed()) throw new Error('The capture toolbar is unavailable');
     const owner = hudWindow.webContents;
     if (activeOwner && activeOwner !== owner) throw new Error('Another toolbar owns source selection');

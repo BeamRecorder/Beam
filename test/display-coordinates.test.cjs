@@ -83,3 +83,23 @@ test('preserves native lookup errors rather than selecting another display', asy
     /native lookup failed/,
   );
 });
+
+test('X11 resolves the chosen monitor from physical Rust bounds without catalogue-order guesses', async () => {
+  const { linuxDisplaySource } = require('../apps/desktop/electron/capture/display-coordinates.cjs');
+  const bounds = { x: -800, y: 0, width: 800, height: 600 };
+  const screen = { getAllDisplays: () => [{ bounds, scaleFactor: 2, nativeOrigin: { x: -1600, y: 0 } }] };
+  const request = async (command) =>
+    command === 'discover'
+      ? { diagnostics: { linux: { backend: 'x11' } }, sources: [{ kind: 'display', id: 'x11:monitor:1:2' }] }
+      : { x: -1600, y: 0, width: 1600, height: 1200 };
+  assert.equal(await linuxDisplaySource(screen, request, bounds), 'x11:monitor:1:2');
+  await assert.rejects(linuxDisplaySource(screen, request, { ...bounds, width: 700 }), /no longer available/);
+  assert.equal(
+    await linuxDisplaySource(
+      screen,
+      async () => ({ diagnostics: { linux: { backend: 'xdg-portal-pipewire' } } }),
+      bounds,
+    ),
+    'portal:monitor',
+  );
+});

@@ -59,9 +59,9 @@ function createSourcePreviewService({ requestNative, platform = process.platform
     if (pending.has(key)) return pending.get(key);
 
     // The renderer-facing contract is platform-neutral. macOS is the first
-    // native provider; Windows keeps desktopCapturer and Linux keeps Portal
-    // until their native providers can satisfy the same source-id invariant.
-    if (platform !== 'darwin') {
+    // native provider; direct X11 sources also use Rust. Windows keeps desktopCapturer
+    // and Portal intents never request a native thumbnail.
+    if (platform !== 'darwin' && !(platform === 'linux' && /^x11:(monitor|window):/.test(request.sourceId))) {
       return remember(key, {
         sourceId: request.sourceId,
         thumbnail: null,

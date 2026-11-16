@@ -242,6 +242,20 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
             )?)
             .map_err(Into::into)
         }
+        Command::SourceBounds { source } => {
+            #[cfg(target_os = "linux")]
+            {
+                serde_json::to_value(capture::screen::linux::x11_source_bounds(&source)?)
+                    .map_err(Into::into)
+            }
+            #[cfg(not(target_os = "linux"))]
+            {
+                let _ = source;
+                Err(capture::CaptureError::Unsupported(
+                    "Direct X11 source geometry is Linux-only".into(),
+                ))
+            }
+        }
         Command::SourcePreview {
             source,
             max_width,

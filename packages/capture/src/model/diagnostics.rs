@@ -22,6 +22,8 @@ pub struct LinuxCaptureDiagnostics {
     pub session_type: String,
     pub display_server: String,
     pub backend: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x11: Option<RequirementDiagnostic>,
     pub portal: PortalDiagnostic,
     pub pipewire: RequirementDiagnostic,
     pub ffmpeg: FfmpegDiagnostic,

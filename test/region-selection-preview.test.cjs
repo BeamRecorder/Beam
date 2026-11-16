@@ -153,3 +153,31 @@ test('concurrent preparation is rejected without canceling the original choice',
   release();
   assert.ok((await pending).preview);
 });
+
+test('direct X11 region preview preserves source identity and converts physical pixels to DIP', async () => {
+  const calls = [];
+  const preview = createRegionSelectionPreview({
+    platform: 'linux',
+    BrowserWindow: { getAllWindows: () => [] },
+    screen: { getAllDisplays: () => [{ nativeOrigin: { x: -2000, y: 0 }, scaleFactor: 2, bounds }] },
+    captureEngine: {
+      request: async (command, payload) => {
+        calls.push([command, payload]);
+        if (command === 'capabilities') return { separateCursor: true };
+        if (command === 'prepare-region-selection') {
+          await fs.writeFile(payload.config.output, png);
+          return { width: 2000, height: 1600, display: { position: [-2000, 0], size: [2000, 1600] } };
+        }
+        return {};
+      },
+    },
+  });
+  const result = await preview.prepare(bounds, 'x11:monitor:1:2');
+  assert.deepEqual(result.bounds, bounds);
+  assert.deepEqual(calls.find(([command]) => command === 'prepare-region-selection')[1].config.screen, {
+    mode: 'source',
+    sourceId: 'x11:monitor:1:2',
+  });
+  for (const id of ['portal:monitor', 'x11:window:1', 'x11:monitor:bad'])
+    await assert.rejects(preview.prepare(bounds, id), /Invalid direct X11/);
+});

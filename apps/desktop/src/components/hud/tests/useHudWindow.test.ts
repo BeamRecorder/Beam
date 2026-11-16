@@ -238,6 +238,16 @@ describe('useHudWindow', () => {
     expect(capture.setWindowVisible).not.toHaveBeenCalled();
   });
 
+  it('passes the selected native X11 monitor and DIP bounds to region selection', async () => {
+    capture.platform = 'linux';
+    const hud = mountWindow({ selectedScreenId: 'x11:monitor:1:2' });
+    const selection = hud.api.selectScreenRegion();
+    await vi.advanceTimersByTimeAsync(180);
+    await selection;
+    expect(capture.getDisplayBounds).toHaveBeenCalledWith('x11:monitor:1:2');
+    expect(capture.selectScreenRegion).toHaveBeenCalledWith({ bounds, region: null, sourceId: 'x11:monitor:1:2' });
+  });
+
   it('accepts native Linux portal selection without display bounds', async () => {
     capture.platform = 'linux';
     capture.selectScreenRegion.mockResolvedValueOnce(null);

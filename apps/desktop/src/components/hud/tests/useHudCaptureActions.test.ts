@@ -78,6 +78,13 @@ describe('HUD capture actions', () => {
       expect(options.selectSource).not.toHaveBeenCalled();
     },
   );
+  it.each(['screen', 'window'] as const)('uses the native chooser for direct X11 %s capture', async (kind) => {
+    const { options, actions } = fixture('linux');
+    options.selectedScreenId.value = 'x11:monitor:1:2';
+    await actions.chooseCapture(kind);
+    expect(options.selectSource).toHaveBeenCalledWith(kind);
+    expect(options.start).toHaveBeenCalledOnce();
+  });
   it.each(['linux', 'darwin', 'win32'])(
     'uses the same chooser with development data on %s without recording fake IDs',
     async (platform) => {

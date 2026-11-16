@@ -3,7 +3,7 @@ const { randomUUID } = require('crypto');
 function parseHwnd(id) {
   if (!id) return null;
   const str = String(id)
-    .replace(/^(wgc:window:|sck:window:|window:)/, '')
+    .replace(/^(wgc:window:|sck:window:|x11:window:|window:)/, '')
     .split(':')[0];
   if (!str) return null;
   const numDec = /^\d+$/.test(str) ? Number(str) : null;
@@ -29,7 +29,11 @@ function canonicalWindowSourceId(requestedId, platform) {
   if (!parsed) return null;
   const numericId = parsed.dec ?? parsed.hex;
   if (!Number.isSafeInteger(numericId) || numericId <= 0) return null;
-  return platform === 'darwin' ? `sck:window:${numericId}` : `wgc:window:${numericId.toString(16)}`;
+  return platform === 'linux'
+    ? `x11:window:${numericId}`
+    : platform === 'darwin'
+      ? `sck:window:${numericId}`
+      : `wgc:window:${numericId.toString(16)}`;
 }
 
 function stablePortalSource(requestedId, kind, platform) {
@@ -109,7 +113,8 @@ function buildDefaultCaptureConfig(catalog, options, environment) {
   // Beam's exact Linux Portal IDs here; Rust revalidates Portal, PipeWire and
   // FFmpeg before opening the system picker.
   const screen =
-    stablePortalSource(options.screenId, screenKind, environment.platform) ||
+    (catalog?.diagnostics?.linux?.backend !== 'x11' &&
+      stablePortalSource(options.screenId, screenKind, environment.platform)) ||
     selectSource(sources, screenKind, options.screenId, environment.platform);
   if (!screen) throw new Error('Aucun écran ou fenêtre capturable n’est disponible');
   const portalSelection = screen.selectionMode === 'portal';

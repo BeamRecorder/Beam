@@ -244,7 +244,7 @@ function createScreenRegionOverlayWindow({
         ensureWindow(bounds);
         const preview =
           (platform === 'win32' || options.context !== 'quick-snip' || options.drawOnly === true) && selectionPreview
-            ? await selectionPreview.prepare(bounds)
+            ? await selectionPreview.prepare(bounds, options.sourceId)
             : {};
         if (pending !== request) {
           await selectionPreview?.cancel();

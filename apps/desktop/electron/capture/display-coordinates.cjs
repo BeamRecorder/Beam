@@ -1,3 +1,5 @@
+const { x11DipBounds } = require('./x11-display-geometry.cjs');
+
 async function windowsDisplaySource(screen, requestNative, bounds) {
   const point = screen.dipToScreenPoint({
     x: Math.round(bounds.x + bounds.width / 2),
@@ -16,6 +18,9 @@ async function windowsDisplaySource(screen, requestNative, bounds) {
 
 async function nativeDisplayBounds(screen, requestNative, displayId, platform) {
   if (typeof displayId !== 'string' || !displayId.length || displayId.length > 128) return null;
+  if (platform === 'linux' && /^x11:monitor:\d+:\d+$/.test(displayId)) {
+    return x11DipBounds(screen, await requestNative('source-bounds', { source: displayId }));
+  }
   const displays = screen.getAllDisplays();
   let display = displays.find((item) => String(item.id) === displayId);
   // Rust identifies Windows monitors by device name; Electron exposes numeric IDs.
@@ -40,4 +45,16 @@ async function nativeDisplayBounds(screen, requestNative, displayId, platform) {
   return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
 }
 
-module.exports = { nativeDisplayBounds, windowsDisplaySource };
+async function linuxDisplaySource(screen, requestNative, bounds) {
+  const catalog = await requestNative('discover');
+  if (catalog?.diagnostics?.linux?.backend !== 'x11') return 'portal:monitor';
+  for (const source of catalog.sources) {
+    if (source.kind !== 'display' || !/^x11:monitor:\d+:\d+$/.test(source.id)) continue;
+    const physical = await requestNative('source-bounds', { source: source.id });
+    const candidate = x11DipBounds(screen, physical);
+    if (['x', 'y', 'width', 'height'].every((key) => candidate[key] === bounds[key])) return source.id;
+  }
+  throw new Error('The selected X11 monitor is no longer available');
+}
+
+module.exports = { nativeDisplayBounds, windowsDisplaySource, linuxDisplaySource };

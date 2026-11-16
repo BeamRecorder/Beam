@@ -76,13 +76,7 @@ pub fn evaluate_capabilities_with_compositor(
 pub fn probe_native_capabilities(
     timeout: Duration,
 ) -> Result<LinuxNativeCapabilities, CaptureError> {
-    let portal = probe_portal_properties(timeout)?;
-    Ok(evaluate_capabilities_with_compositor(
-        portal,
-        probe_pipewire(),
-        super::probe_ffmpeg().is_ok(),
-        super::hyprland::is_hyprland(),
-    ))
+    Ok(super::probe_capture_environment(timeout).capabilities)
 }
 
 pub(super) fn probe_portal_properties(timeout: Duration) -> Result<PortalProperties, CaptureError> {

@@ -312,3 +312,21 @@ test('defaults native cursor off and rejects non-boolean cursor options', () => 
   for (const showRealCursor of ['true', null, 1])
     assert.throws(() => buildDefaultCaptureConfig(catalog, { showRealCursor }, environment), /showRealCursor/);
 });
+
+test('X11 rejects stale Portal choices and uses native monitor IDs', () => {
+  const direct = {
+    ...catalog,
+    diagnostics: { linux: { backend: 'x11' } },
+    sources: [
+      { id: 'x11:monitor:1:2', kind: 'display', isDefault: true },
+      { id: 'x11:window:123', kind: 'window' },
+    ],
+  };
+  const env = { ...environment, platform: 'linux' };
+  assert.throws(() => buildDefaultCaptureConfig(direct, { screenId: 'portal:monitor' }, env), /introuvable/);
+  assert.equal(buildDefaultCaptureConfig(direct, {}, env).screen.sourceId, 'x11:monitor:1:2');
+  assert.equal(
+    buildDefaultCaptureConfig(direct, { screenKind: 'window', screenId: 'window:123:0' }, env).screen.sourceId,
+    'x11:window:123',
+  );
+});

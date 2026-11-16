@@ -10,7 +10,11 @@ export const latestCaptureCatalog = (): CaptureCatalog | null => latestCatalog;
 
 export const unavailableLinuxRequirements = (diagnostics?: LinuxCaptureDiagnostics): string[] => {
   if (!diagnostics || diagnostics.recordingAvailable) return [];
-  return [diagnostics.portal, diagnostics.pipewire, diagnostics.ffmpeg]
+  const requirements =
+    diagnostics.backend === 'x11'
+      ? [...(diagnostics.x11 ? [diagnostics.x11] : []), diagnostics.ffmpeg]
+      : [diagnostics.portal, diagnostics.pipewire, diagnostics.ffmpeg];
+  return requirements
     .filter((requirement) => !requirement.available)
     .map((requirement) => requirement.detail || requirement.errorCode || 'Unknown Linux capture requirement failure');
 };
